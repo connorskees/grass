@@ -52,6 +52,7 @@ impl<'a> Iterator for Lexer<'a> {
             '{' => symbol!(self, OpenBrace),
             '*' => symbol!(self, Mul),
             '}' => symbol!(self, CloseBrace),
+            '/' => self.lex_forward_slash(),
             '%' => {
                 self.buf.next();
                 self.pos.next_char();
@@ -115,6 +116,27 @@ impl<'a> Lexer<'a> {
         } else {
             panic!("expected ident after `@`")
         }
+    }
+
+    fn lex_forward_slash(&mut self) -> TokenKind {
+        self.buf.next();
+        self.pos.next_char();
+        match self.buf.peek().expect("expected something after '/'") {
+            '/' => {
+                self.buf.by_ref().skip_while(|x| x != &'\n').count();
+            }
+            '*' => {
+                while let Some(tok) = self.buf.next() {
+                    if tok == '*' {
+                        if self.buf.next() == Some('/') {
+                            break;
+                        }
+                    }
+                }
+            }
+            _ => return TokenKind::Symbol(Symbol::Div),
+        }
+        TokenKind::Whitespace(Whitespace::Newline)
     }
 
     fn lex_num(&mut self) -> TokenKind {
