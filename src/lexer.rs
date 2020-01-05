@@ -127,10 +127,8 @@ impl<'a> Lexer<'a> {
             }
             '*' => {
                 while let Some(tok) = self.buf.next() {
-                    if tok == '*' {
-                        if self.buf.next() == Some('/') {
-                            break;
-                        }
+                    if tok == '*' && self.buf.next() == Some('/') {
+                        break;
                     }
                 }
             }

@@ -1,7 +1,6 @@
-//! # Convert from SCSS AST to CSS 
+//! # Convert from SCSS AST to CSS
+use crate::{RuleSet, Selector, Stmt, Style, StyleSheet};
 use std::io;
-use crate::{Selector, Style, StyleSheet, Stmt, RuleSet};
-
 
 #[derive(Debug, Clone)]
 pub struct Block {
@@ -10,7 +9,7 @@ pub struct Block {
 }
 
 impl Block {
-    fn new(selector: Selector) -> Self {
+    const fn new(selector: Selector) -> Self {
         Block {
             selector,
             styles: Vec::new(),
@@ -29,7 +28,7 @@ pub struct Css {
 }
 
 impl Css {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Css {
             blocks: Vec::new(),
             idx: 0,

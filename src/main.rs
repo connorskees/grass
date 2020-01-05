@@ -240,7 +240,9 @@ impl<'a> StyleSheetParser<'a> {
                 | TokenKind::Symbol(Symbol::Hash)
                 | TokenKind::Symbol(Symbol::Colon)
                 | TokenKind::Symbol(Symbol::Mul)
-                | TokenKind::Symbol(Symbol::Period) => rules.extend(self.eat_rules(Selector::None)),
+                | TokenKind::Symbol(Symbol::Period) => {
+                    rules.extend(self.eat_rules(&Selector::None))
+                }
                 TokenKind::Whitespace(_) | TokenKind::Symbol(_) => {
                     self.lexer.next();
                     continue;
@@ -251,13 +253,13 @@ impl<'a> StyleSheetParser<'a> {
         StyleSheet { rules }
     }
 
-    fn eat_rules(&mut self, super_selector: Selector) -> Vec<Stmt> {
+    fn eat_rules(&mut self, super_selector: &Selector) -> Vec<Stmt> {
         let mut stmts = Vec::new();
         while let Ok(tok) = self.eat_expr() {
             match tok {
                 Expr::Style(s) => stmts.push(Stmt::Style(s)),
                 Expr::Selector(s) => {
-                    let rules = self.eat_rules(super_selector.clone().zip(s.clone()));
+                    let rules = self.eat_rules(&super_selector.clone().zip(s.clone()));
                     stmts.push(Stmt::RuleSet(RuleSet {
                         super_selector: super_selector.clone(),
                         selector: s,
@@ -306,7 +308,10 @@ fn main() -> io::Result<()> {
     let mut stdout = std::io::stdout();
     let s = StyleSheet::new(&input);
     // dbg!(s);
-    s.pretty_print(&mut stdout)?;
+    // s.pretty_print(&mut stdout)?;
+    // s.pretty_print_selectors(&mut stdout)?;
+    s.print_as_css(&mut stdout)?;
+    // dbg!(Css::from_stylesheet(s));
     // println!("{}", s);
     // drop(input);
     Ok(())

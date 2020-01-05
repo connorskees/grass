@@ -99,7 +99,10 @@ impl<W: Write> PrettyPrinter<W> {
     /// Pretty print a special form of SCSS that shows what the full selectors are for children
     /// Meant for debugging
     /// Empty rules are included
-    pub(crate) fn pretty_print_preserve_super_selectors(&mut self, s: &StyleSheet) -> io::Result<()> {
+    pub(crate) fn pretty_print_preserve_super_selectors(
+        &mut self,
+        s: &StyleSheet,
+    ) -> io::Result<()> {
         for rule in &s.rules {
             self.pretty_print_stmt(rule)?;
         }
