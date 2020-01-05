@@ -2,10 +2,6 @@ use std::io::{self, Write};
 
 use crate::{RuleSet, Stmt, Style, StyleSheet};
 
-/// Pretty print SCSS
-///
-/// The result should be an exact copy of the SCSS input
-/// Empty rules are included
 pub(crate) struct PrettyPrinter<W: Write> {
     buf: W,
     scope: usize,
@@ -16,6 +12,8 @@ impl<W: Write> PrettyPrinter<W> {
         PrettyPrinter { buf, scope: 0 }
     }
 
+    /// Pretty print `crate::Stmt`
+    /// Throws away super selectors
     fn pretty_print_stmt(&mut self, stmt: &Stmt) -> io::Result<()> {
         let padding = vec![' '; self.scope * 2].iter().collect::<String>();
         match stmt {
@@ -47,26 +45,20 @@ impl<W: Write> PrettyPrinter<W> {
         Ok(())
     }
 
-    pub(crate) fn pretty_print(&mut self, s: &StyleSheet) -> io::Result<()> {
+    /// Pretty print SCSS
+    ///
+    /// The result should be an exact copy of the SCSS input
+    /// Empty rules are included
+    pub fn pretty_print(&mut self, s: &StyleSheet) -> io::Result<()> {
         for rule in &s.rules {
             self.pretty_print_stmt(rule)?;
         }
         Ok(())
     }
-}
 
-/// Used solely in debugging to ensure that selectors aren't the issue
-pub(crate) struct CssPrettyPrinter<W: Write> {
-    buf: W,
-    scope: usize,
-}
-
-impl<W: Write> CssPrettyPrinter<W> {
-    pub(crate) fn new(buf: W) -> Self {
-        CssPrettyPrinter { buf, scope: 0 }
-    }
-
-    fn pretty_print_stmt(&mut self, stmt: &Stmt) -> io::Result<()> {
+    /// Pretty print `crate::Stmt`
+    /// Keeps super selectors
+    fn pretty_print_stmt_preserve_super_selectors(&mut self, stmt: &Stmt) -> io::Result<()> {
         let padding = vec![' '; self.scope * 2].iter().collect::<String>();
         match stmt {
             Stmt::RuleSet(RuleSet {
@@ -104,7 +96,10 @@ impl<W: Write> CssPrettyPrinter<W> {
         Ok(())
     }
 
-    pub(crate) fn pretty_print(&mut self, s: &StyleSheet) -> io::Result<()> {
+    /// Pretty print a special form of SCSS that shows what the full selectors are for children
+    /// Meant for debugging
+    /// Empty rules are included
+    pub(crate) fn pretty_print_preserve_super_selectors(&mut self, s: &StyleSheet) -> io::Result<()> {
         for rule in &s.rules {
             self.pretty_print_stmt(rule)?;
         }
