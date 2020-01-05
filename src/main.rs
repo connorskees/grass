@@ -188,7 +188,7 @@ pub struct RuleSet {
     selector: Selector,
     rules: Vec<Stmt>,
     // potential optimization: we don't *need* to own the selector
-    super_selector: Option<Selector>,
+    super_selector: Selector,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -328,7 +328,7 @@ impl<'a> StyleSheetParser<'a> {
                 | TokenKind::Symbol(Symbol::Hash)
                 | TokenKind::Symbol(Symbol::Colon)
                 | TokenKind::Symbol(Symbol::Mul)
-                | TokenKind::Symbol(Symbol::Period) => rules.extend(self.eat_rules(&None)),
+                | TokenKind::Symbol(Symbol::Period) => rules.extend(self.eat_rules(Selector::None)),
                 TokenKind::Whitespace(_) | TokenKind::Symbol(_) => {
                     self.lexer.next();
                     continue;
@@ -339,13 +339,13 @@ impl<'a> StyleSheetParser<'a> {
         StyleSheet { rules }
     }
 
-    fn eat_rules(&mut self, super_selector: &Option<Selector>) -> Vec<Stmt> {
+    fn eat_rules(&mut self, super_selector: Selector) -> Vec<Stmt> {
         let mut stmts = Vec::new();
         while let Ok(tok) = self.eat_expr() {
             match tok {
                 Expr::Style(s) => stmts.push(Stmt::Style(s)),
                 Expr::Selector(s) => {
-                    let rules = self.eat_rules(&Some(s.clone()));
+                    let rules = self.eat_rules(super_selector.clone().zip(s.clone()));
                     stmts.push(Stmt::RuleSet(RuleSet {
                         super_selector: super_selector.clone(),
                         selector: s,
