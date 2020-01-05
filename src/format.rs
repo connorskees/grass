@@ -2,6 +2,10 @@ use std::io::{self, Write};
 
 use crate::{RuleSet, Stmt, Style, StyleSheet};
 
+/// Pretty print SCSS
+///
+/// The result should be an exact copy of the SCSS input
+/// Empty rules are included
 pub(crate) struct PrettyPrinter<W: Write> {
     buf: W,
     scope: usize,
@@ -47,6 +51,64 @@ impl<W: Write> PrettyPrinter<W> {
         for rule in &s.rules {
             self.pretty_print_stmt(rule)?;
         }
+        Ok(())
+    }
+}
+
+/// Used solely in debugging to ensure that selectors aren't the issue
+pub(crate) struct CssPrettyPrinter<W: Write> {
+    buf: W,
+    scope: usize,
+}
+
+impl<W: Write> CssPrettyPrinter<W> {
+    pub(crate) fn new(buf: W) -> Self {
+        CssPrettyPrinter { buf, scope: 0 }
+    }
+
+    fn pretty_print_stmt(&mut self, stmt: &Stmt) -> io::Result<()> {
+        let padding = vec![' '; self.scope * 2].iter().collect::<String>();
+        match stmt {
+            Stmt::RuleSet(RuleSet {
+                selector,
+                rules,
+                super_selector,
+            }) => {
+                writeln!(
+                    self.buf,
+                    "{}{} {{",
+                    padding,
+                    super_selector.clone().zip(selector.clone())
+                )?;
+                self.scope += 1;
+                for rule in rules {
+                    self.pretty_print_stmt(rule)?;
+                }
+                writeln!(self.buf, "{}}}", padding)?;
+                self.scope -= 1;
+            }
+            Stmt::Style(Style { property, value }) => {
+                writeln!(
+                    self.buf,
+                    "{}{}: {};",
+                    padding,
+                    property,
+                    value
+                        .iter()
+                        .map(ToString::to_string)
+                        .collect::<Vec<String>>()
+                        .join(" ")
+                )?;
+            }
+        }
+        Ok(())
+    }
+
+    pub(crate) fn pretty_print(&mut self, s: &StyleSheet) -> io::Result<()> {
+        for rule in &s.rules {
+            self.pretty_print_stmt(rule)?;
+        }
+        writeln!(self.buf)?;
         Ok(())
     }
 }
@@ -120,6 +182,11 @@ mod test {
 
     test!(basic_style, "a {\n  color: red;\n}\n");
     test!(two_styles, "a {\n  color: red;\n  color: blue;\n}\n");
+    test!(
+        multiline_style,
+        "a {\n  color: red\n  blue;\n}\n",
+        "a {\n  color: red blue;\n}\n"
+    );
     test!(hyphenated_style_property, "a {\n  font-family: Arial;\n}\n");
     test!(hyphenated_style_value, "a {\n  color: Open-Sans;\n}\n");
     test!(
@@ -156,4 +223,27 @@ mod test {
     test!(unit_em, "a {\n  height: 1em;\n}\n");
     test!(unit_rem, "a {\n  height: 1rem;\n}\n");
     test!(unit_percent, "a {\n  height: 1%;\n}\n");
+    test!(
+        deeply_nested_selector,
+        "\
+a {
+  b {
+    c {
+      d {
+        e {
+          f {
+            g {
+              h {
+                i {
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+"
+    );
 }
