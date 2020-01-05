@@ -32,6 +32,8 @@ pub enum Selector {
     Attribute(Attribute),
     /// Pseudo selector: `:hover`
     Pseudo(String),
+    /// Used to signify no selector (when there is no super_selector of a rule)
+    None,
 }
 
 impl Display for Selector {
@@ -49,6 +51,7 @@ impl Display for Selector {
             Selector::Preceding(lhs, rhs) => write!(f, "{} ~ {}", lhs, rhs),
             Selector::Attribute(attr) => write!(f, "{}", attr),
             Selector::Pseudo(s) => write!(f, ":{}", s),
+            Selector::None => write!(f, ""),
         }
     }
 }
@@ -182,6 +185,19 @@ impl<'a> SelectorParser<'a> {
 impl Selector {
     pub fn from_tokens(tokens: Peekable<Iter<Token>>) -> Selector {
         SelectorParser::new(tokens).all_selectors()
+    }
+
+    pub fn zip(self, other: Selector) -> Selector {
+        if let Selector::Multiple(lhs, rhs) = other {
+            return Selector::Multiple(Box::new(self.clone().zip(*lhs)), Box::new(self.zip(*rhs)));
+        }
+        match self {
+            Selector::Multiple(lhs, rhs) => {
+                Selector::Multiple(Box::new(lhs.zip(other.clone())), Box::new(rhs.zip(other)))
+            }
+            Selector::None => other,
+            _ => Selector::Descendant(Box::new(self), Box::new(other)),
+        }
     }
 }
 
