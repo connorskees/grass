@@ -1,6 +1,6 @@
 use std::io::{self, Write};
 
-use crate::{RuleSet, Stmt, Style, StyleSheet};
+use crate::{RuleSet, Stmt, StyleSheet};
 
 pub(crate) struct PrettyPrinter<W: Write> {
     buf: W,
@@ -28,18 +28,8 @@ impl<W: Write> PrettyPrinter<W> {
                 writeln!(self.buf, "{}}}", padding)?;
                 self.scope -= 1;
             }
-            Stmt::Style(Style { property, value }) => {
-                writeln!(
-                    self.buf,
-                    "{}{}: {};",
-                    padding,
-                    property,
-                    value
-                        .iter()
-                        .map(ToString::to_string)
-                        .collect::<Vec<String>>()
-                        .join(" ")
-                )?;
+            Stmt::Style(s) => {
+                writeln!(self.buf, "{}{}", padding, s)?;
             }
         }
         Ok(())
@@ -79,18 +69,8 @@ impl<W: Write> PrettyPrinter<W> {
                 writeln!(self.buf, "{}}}", padding)?;
                 self.scope -= 1;
             }
-            Stmt::Style(Style { property, value }) => {
-                writeln!(
-                    self.buf,
-                    "{}{}: {};",
-                    padding,
-                    property,
-                    value
-                        .iter()
-                        .map(ToString::to_string)
-                        .collect::<Vec<String>>()
-                        .join(" ")
-                )?;
+            Stmt::Style(s) => {
+                writeln!(self.buf, "{}{}", padding, s)?;
             }
         }
         Ok(())
@@ -161,6 +141,8 @@ mod test_scss {
     test!(selector_universal_el_descendant, "* a {\n}\n");
     test!(selector_attribute_any, "[attr] {\n}\n");
     test!(selector_attribute_equals, "[attr=val] {\n}\n");
+    test!(selector_attribute_single_quotes, "[attr='val'] {\n}\n");
+    test!(selector_attribute_double_quotes, "[attr=\"val\"] {\n}\n");
     test!(selector_attribute_in, "[attr~=val] {\n}\n");
     test!(
         selector_attribute_begins_hyphen_or_exact,
@@ -192,17 +174,15 @@ mod test_scss {
         space_separated_style_value,
         "a {\n  border: solid red;\n}\n"
     );
-    test!(
-        single_quoted_style_value,
-        "a {\n  font: 'Open-Sans';\n}\n",
-        "a {\n  font: Open-Sans;\n}\n"
-    );
+    test!(single_quoted_style_value, "a {\n  font: 'Open-Sans';\n}\n");
     test!(
         double_quoted_style_value,
-        "a {\n  font: \"Open-Sans\";\n}\n",
-        "a {\n  font: Open-Sans;\n}\n"
+        "a {\n  font: \"Open-Sans\";\n}\n"
     );
-    // test!(comma_style_value, "a {\n  font: Open-Sans, sans-serif;\n}\n");
+    test!(
+        comma_style_value,
+        "a {\n  font: Open-Sans, sans-serif;\n}\n"
+    );
     test!(
         nested_style_in_parent,
         "a {\n  color: red;\n  b {\n  }\n}\n"

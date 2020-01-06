@@ -214,22 +214,11 @@ impl<'a> Lexer<'a> {
 
         self.devour_whitespace();
 
-        match self
-            .buf
-            .peek()
-            .expect("todo! expected either value or quote")
-        {
-            '\'' | '"' => {
-                self.buf.next();
-            }
-            _ => {}
-        }
-
         let mut value = String::with_capacity(99);
         let mut case_sensitive = true;
 
         while let Some(c) = self.buf.peek() {
-            if !c.is_alphabetic() && c != &'-' && c != &'_' {
+            if !c.is_alphabetic() && c != &'-' && c != &'_' && c != &'"' && c != &'\'' {
                 break;
             }
 
@@ -258,17 +247,6 @@ impl<'a> Lexer<'a> {
                 .expect("this is impossible because we have already peeked");
             self.pos.next_char();
             value.push(tok);
-        }
-
-        match self
-            .buf
-            .peek()
-            .expect("todo! expected either value or quote")
-        {
-            '\'' | '"' => {
-                self.buf.next();
-            }
-            _ => {}
         }
 
         self.devour_whitespace();

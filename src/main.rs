@@ -83,27 +83,6 @@ impl Display for TokenKind {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum StyleToken {
-    Ident(String),
-    Function(String, Vec<String>),
-    Keyword(Keyword),
-    Symbol(Symbol),
-    Dimension(String, Unit),
-}
-
-impl Display for StyleToken {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            StyleToken::Ident(s) => write!(f, "{}", s),
-            StyleToken::Symbol(s) => write!(f, "{}", s),
-            StyleToken::Function(name, args) => write!(f, "{}({})", name, args.join(", ")),
-            StyleToken::Keyword(kw) => write!(f, "{}", kw),
-            StyleToken::Dimension(val, unit) => write!(f, "{}{}", val, unit),
-        }
-    }
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Token {
     pos: Pos,
     pub kind: TokenKind,
@@ -117,27 +96,18 @@ pub struct StyleSheet {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Style {
     property: String,
-    value: Vec<StyleToken>,
+    value: String,
 }
 
 impl Display for Style {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}: {};",
-            self.property,
-            self.value
-                .iter()
-                .map(|x| format!("{}", x))
-                .collect::<Vec<String>>()
-                .join(" ")
-        )
+        write!(f, "{}:{};", self.property, self.value)
     }
 }
 
 impl Style {
     pub fn from_tokens(tokens: &[Token], vars: &HashMap<String, Vec<Token>>) -> Result<Self, ()> {
-        StyleParser::new(tokens, vars).parse()
+        Ok(StyleParser::new(tokens, vars)?.parse())
     }
 }
 
@@ -147,8 +117,11 @@ struct StyleParser<'a> {
 }
 
 impl<'a> StyleParser<'a> {
-    const fn new(tokens: &'a [Token], vars: &'a HashMap<String, Vec<Token>>) -> Self {
-        StyleParser { tokens, vars }
+    fn new(tokens: &'a [Token], vars: &'a HashMap<String, Vec<Token>>) -> Result<Self, ()> {
+        if tokens.is_empty() {
+            return Err(());
+        }
+        Ok(StyleParser { tokens, vars })
     }
 
     fn deref_variable(&mut self, variable: &TokenKind) -> String {
@@ -180,22 +153,18 @@ impl<'a> StyleParser<'a> {
         val
     }
 
-    fn parse(&mut self) -> Result<Style, ()> {
-        let mut iter = self.tokens.iter();
-        let property: String;
-        loop {
-            if let Some(tok) = iter.next() {
-                match tok.kind {
-                    TokenKind::Whitespace(_) => continue,
-                    TokenKind::Ident(ref s) => {
-                        property = s.clone();
-                        break;
-                    }
-                    _ => todo!(),
-                };
-            } else {
-                return Err(());
-            }
+    fn parse(&mut self) -> Style {
+        let mut iter = self.tokens.iter().peekable();
+        let mut property = String::new();
+        while let Some(tok) = iter.next() {
+            match tok.kind {
+                TokenKind::Whitespace(_) => continue,
+                TokenKind::Ident(ref s) => {
+                    property = s.clone();
+                    break;
+                }
+                _ => todo!(),
+            };
         }
 
         while let Some(tok) = iter.next() {
@@ -206,42 +175,25 @@ impl<'a> StyleParser<'a> {
             }
         }
 
-        let mut value = Vec::new();
+        let mut value = String::new();
 
         while let Some(tok) = iter.next() {
-            match tok.kind {
-                TokenKind::Whitespace(_)
-                | TokenKind::Symbol(Symbol::SingleQuote)
-                | TokenKind::Symbol(Symbol::DoubleQuote) => continue,
-                TokenKind::Ident(ref s) => value.push(StyleToken::Ident(s.clone())),
-                TokenKind::Symbol(s) => value.push(StyleToken::Symbol(s)),
-                TokenKind::Unit(u) => value.push(StyleToken::Ident(u.into())),
-                TokenKind::Variable(_) => {
-                    value.push(StyleToken::Ident(self.deref_variable(&tok.kind)))
-                }
-                TokenKind::Number(ref num) => {
-                    if let Some(t) = iter.next() {
-                        match &t.kind {
-                            &TokenKind::Unit(unit) => {
-                                value.push(StyleToken::Dimension(num.clone(), unit))
-                            }
-                            TokenKind::Ident(ref s) => {
-                                value.push(StyleToken::Dimension(num.clone(), Unit::None));
-                                value.push(StyleToken::Ident(s.clone()));
-                            }
-                            TokenKind::Whitespace(_) => {
-                                value.push(StyleToken::Dimension(num.clone(), Unit::None))
-                            }
-                            _ => todo!(),
+            match &tok.kind {
+                TokenKind::Whitespace(_) => {
+                    while let Some(w) = iter.peek() {
+                        if let TokenKind::Whitespace(_) = w.kind {
+                            iter.next();
+                        } else {
+                            value.push(' ');
+                            break;
                         }
-                    } else {
-                        value.push(StyleToken::Dimension(num.clone(), Unit::None))
                     }
                 }
-                _ => todo!("style value not ident or dimension"),
+                TokenKind::Variable(_) => value.push_str(&self.deref_variable(&tok.kind)),
+                _ => value.push_str(&tok.kind.to_string()),
             }
         }
-        Ok(Style { property, value })
+        Style { property, value }
     }
 }
 
@@ -462,7 +414,11 @@ mod test_css {
         };
     }
 
-    test!(nesting_el_mul_el, "a, b {\n  a, b {\n  color: red\n}\n}\n", "a a, b a, a b, b b {\n  color: red;\n}\n");
+    test!(
+        nesting_el_mul_el,
+        "a, b {\n  a, b {\n  color: red\n}\n}\n",
+        "a a, b a, a b, b b {\n  color: red;\n}\n"
+    );
     test!(basic_style, "a {\n  color: red;\n}\n");
     test!(two_styles, "a {\n  color: red;\n  color: blue;\n}\n");
     test!(selector_mul, "a, b {\n  color: red;\n}\n");
