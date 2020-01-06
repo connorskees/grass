@@ -235,6 +235,16 @@ mod test {
         "$a   :    1px   ;\na {\n  height: $a;\n}\n",
         "a {\n  height: 1px;\n}\n"
     );
+    test!(
+        literal_and_variable_as_val,
+        "$a: 1px;\na {\n  height: 1 $a;\n}\n",
+        "a {\n  height: 1 1px;\n}\n"
+    );
+    test!(
+        literal_and_variable_as_var,
+        "$a: 1px;\n$b: 1 $a;\na {\n  height: $b;\n}\n",
+        "a {\n  height: 1 1px;\n}\n"
+    );
 
     test!(unit_none, "a {\n  height: 1;\n}\n");
     test!(unit_not_attached, "a {\n  height: 1 px;\n}\n");
