@@ -84,7 +84,7 @@ impl<W: Write> PrettyPrinter<W> {
         s: &StyleSheet,
     ) -> io::Result<()> {
         for rule in &s.rules {
-            self.pretty_print_stmt(rule)?;
+            self.pretty_print_stmt_preserve_super_selectors(rule)?;
         }
         writeln!(self.buf)?;
         Ok(())
