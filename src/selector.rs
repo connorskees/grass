@@ -137,26 +137,24 @@ impl<'a> SelectorParser<'a> {
 
     fn consume_selector(&mut self) -> Option<Selector> {
         if let Some(tok) = self.tokens.next() {
-            let selector = match tok.kind {
+            let selector = match &tok.kind {
                 TokenKind::Symbol(Symbol::Period) => match self
                     .tokens
                     .next()
                     .expect("expected ident after `.`")
-                    .clone()
                     .kind
                 {
-                    TokenKind::Ident(tok) => Selector::Class(tok),
+                    TokenKind::Ident(ref tok) => Selector::Class(tok.clone()),
                     _ => todo!("there should normally be an ident after `.`"),
                 },
                 TokenKind::Symbol(Symbol::Mul) => Selector::Universal,
-                TokenKind::Symbol(Symbol::Hash) => match self
+                TokenKind::Symbol(Symbol::Hash) => match &self
                     .tokens
                     .next()
                     .expect("expected ident after `#`")
-                    .clone()
                     .kind
                 {
-                    TokenKind::Ident(tok) => Selector::Id(tok),
+                    TokenKind::Ident(ref tok) => Selector::Id(tok.clone()),
                     _ => todo!("there should normally be an ident after `#`"),
                 },
                 TokenKind::Symbol(Symbol::Colon) => {
@@ -164,15 +162,14 @@ impl<'a> SelectorParser<'a> {
                         .tokens
                         .next()
                         .expect("expected ident after `:`")
-                        .clone()
                         .kind
                     {
-                        TokenKind::Ident(tok) => Selector::Pseudo(tok),
+                        TokenKind::Ident(ref tok) => Selector::Pseudo(tok.clone()),
                         _ => todo!("there should normally be an ident after `:`"),
                     }
                 }
-                TokenKind::Ident(ref tok) => Selector::Element(tok.clone()),
-                TokenKind::Selector(ref sel) => sel.clone(),
+                TokenKind::Ident(tok) => Selector::Element(tok.clone()),
+                TokenKind::Selector(sel) => sel.clone(),
                 _ => todo!(),
             };
             Some(selector)
