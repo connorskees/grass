@@ -677,3 +677,9 @@ impl Pos {
         self.column += num;
     }
 }
+
+impl Display for Pos {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "line:{} col:{}", self.line, self.column)
+    }
+}
