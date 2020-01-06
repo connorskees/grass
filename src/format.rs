@@ -227,6 +227,24 @@ mod test_scss {
         "a {\n  height: 1 1px;\n}\n"
     );
 
+    test!(keyword_important, "a {\n  height: 1 !important;\n}\n");
+    test!(
+        keyword_important_uppercase,
+        "a {\n  height: 1 !IMPORTANT;\n}\n",
+        "a {\n  height: 1 !important;\n}\n"
+    );
+
+    test!(
+        combines_hyphens,
+        "a {\n  foo: bar - baz;\n}\n",
+        "a {\n  foo: bar-baz;\n}\n"
+    );
+    test!(does_not_combine_hyphens, "a {\n  foo: bar -baz;\n}\n");
+    test!(
+        ident_starts_with_hyphen,
+        "a {\n  foo: -webkit-bar-baz;\n}\n"
+    );
+
     test!(unit_none, "a {\n  height: 1;\n}\n");
     test!(unit_not_attached, "a {\n  height: 1 px;\n}\n");
     test!(unit_px, "a {\n  height: 1px;\n}\n");
