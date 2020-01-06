@@ -32,7 +32,7 @@ use std::{
     iter::Peekable,
 };
 
-use crate::common::{Keyword, Pos, Symbol, Whitespace};
+use crate::common::{Keyword, Op, Pos, Symbol, Whitespace};
 use crate::css::Css;
 use crate::format::PrettyPrinter;
 use crate::lexer::Lexer;
@@ -61,6 +61,7 @@ pub enum TokenKind {
     Variable(String),
     Selector(Selector),
     Style(Vec<Token>),
+    Op(Op),
     // todo! preserve multi-line comments
     MultilineComment(String),
 }
@@ -70,6 +71,7 @@ impl Display for TokenKind {
         match self {
             TokenKind::Ident(s) | TokenKind::Number(s) | TokenKind::AtRule(s) => write!(f, "{}", s),
             TokenKind::Symbol(s) => write!(f, "{}", s),
+            TokenKind::Op(s) => write!(f, "{}", s),
             TokenKind::Unit(s) => write!(f, "{}", s),
             TokenKind::Whitespace(s) => write!(f, "{}", s),
             TokenKind::Selector(s) => write!(f, "{}", s),
@@ -112,7 +114,7 @@ impl Style {
 }
 
 struct StyleParser<'a> {
-    tokens: &'a [Token],
+    tokens: Peekable<std::slice::Iter<'a, Token>>,
     vars: &'a HashMap<String, Vec<Token>>,
 }
 
@@ -121,6 +123,7 @@ impl<'a> StyleParser<'a> {
         if tokens.is_empty() {
             return Err(());
         }
+        let tokens = tokens.iter().peekable();
         Ok(StyleParser { tokens, vars })
     }
 
@@ -153,10 +156,20 @@ impl<'a> StyleParser<'a> {
         val
     }
 
+    fn devour_whitespace(&mut self) {
+        while let Some(tok) = self.tokens.peek() {
+            if let TokenKind::Whitespace(_) = tok.kind {
+                self.tokens.next();
+            } else {
+                break;
+            }
+        }
+    }
+
     fn parse(&mut self) -> Style {
-        let mut iter = self.tokens.iter().peekable();
         let mut property = String::new();
-        while let Some(tok) = iter.next() {
+        // read property
+        while let Some(tok) = self.tokens.next() {
             match tok.kind {
                 TokenKind::Whitespace(_) => continue,
                 TokenKind::Ident(ref s) => {
@@ -167,7 +180,8 @@ impl<'a> StyleParser<'a> {
             };
         }
 
-        while let Some(tok) = iter.next() {
+        // read until `:`
+        while let Some(tok) = self.tokens.next() {
             match tok.kind {
                 TokenKind::Whitespace(_) => continue,
                 TokenKind::Symbol(Symbol::Colon) => break,
@@ -177,16 +191,24 @@ impl<'a> StyleParser<'a> {
 
         let mut value = String::new();
 
-        while let Some(tok) = iter.next() {
+        // read styles
+        while let Some(tok) = self.tokens.next() {
             match &tok.kind {
                 TokenKind::Whitespace(_) => {
-                    while let Some(w) = iter.peek() {
+                    while let Some(w) = self.tokens.peek() {
                         if let TokenKind::Whitespace(_) = w.kind {
-                            iter.next();
-                        } else {
-                            value.push(' ');
-                            break;
+                            self.tokens.next();
+                            continue;
+                        } else if let TokenKind::Ident(ref s) = w.kind {
+                            if s == &String::from("-") {
+                                self.tokens.next();
+                                value.push('-');
+                                self.devour_whitespace();
+                                break;
+                            }
                         }
+                        value.push(' ');
+                        break;
                     }
                 }
                 TokenKind::Variable(_) => value.push_str(&self.deref_variable(&tok.kind)),
