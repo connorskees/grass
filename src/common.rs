@@ -209,6 +209,17 @@ pub enum Whitespace {
     CarriageReturn,
 }
 
+impl Display for Whitespace {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Whitespace::Space => write!(f, " "),
+            Whitespace::Tab => write!(f, "\t"),
+            Whitespace::Newline => write!(f, "\n"),
+            Whitespace::CarriageReturn => write!(f, "\r"),
+        }
+    }
+}
+
 impl TryFrom<char> for Whitespace {
     type Error = &'static str;
 
