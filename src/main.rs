@@ -31,6 +31,7 @@ use std::iter::{Iterator, Peekable};
 
 use crate::common::{Keyword, Op, Pos, Symbol, Whitespace};
 use crate::css::Css;
+use crate::error::SassError;
 use crate::format::PrettyPrinter;
 use crate::lexer::Lexer;
 use crate::selector::Selector;
@@ -46,6 +47,8 @@ mod lexer;
 mod selector;
 mod style;
 mod units;
+
+type SassResult<T> = Result<T, SassError>;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum TokenKind {
@@ -117,11 +120,12 @@ enum Expr {
 
 impl StyleSheet {
     #[must_use]
-    pub fn new(input: &str) -> StyleSheet {
+    pub fn new(input: &str) -> SassResult<StyleSheet> {
         StyleSheetParser {
             global_variables: HashMap::new(),
             lexer: Lexer::new(input).peekable(),
             rules: Vec::new(),
+            scope: 0,
         }
         .parse_toplevel()
     }
@@ -144,10 +148,11 @@ struct StyleSheetParser<'a> {
     global_variables: HashMap<String, Vec<Token>>,
     lexer: Peekable<Lexer<'a>>,
     rules: Vec<Stmt>,
+    scope: u32,
 }
 
 impl<'a> StyleSheetParser<'a> {
-    fn parse_toplevel(&mut self) -> StyleSheet {
+    fn parse_toplevel(&mut self) -> SassResult<StyleSheet> {
         let mut rules = Vec::new();
         while let Some(tok) = self.lexer.peek() {
             match tok.kind.clone() {
@@ -169,6 +174,7 @@ impl<'a> StyleSheetParser<'a> {
                         .lexer
                         .next()
                         .expect("expected something after variable")
+                        // .unwrap_or(Err(SassError::new("expected value after variable", this_tok.pos))?)
                         .kind
                         != TokenKind::Symbol(Symbol::Colon)
                     {
@@ -265,10 +271,10 @@ impl<'a> StyleSheetParser<'a> {
     }
 }
 
-fn main() -> io::Result<()> {
+fn main() -> SassResult<()> {
     let input = fs::read_to_string("input.scss")?;
     let mut stdout = std::io::stdout();
-    let s = StyleSheet::new(&input);
+    let s = StyleSheet::new(&input)?;
     // dbg!(s);
     // s.pretty_print(&mut stdout)?;
     // s.pretty_print_selectors(&mut stdout)?;
@@ -287,7 +293,7 @@ mod test_css {
             #[test]
             fn $func() {
                 let mut buf = Vec::new();
-                StyleSheet::new($input)
+                StyleSheet::new($input).expect(concat!("failed to parse on ", $input))
                     .print_as_css(&mut buf)
                     .expect(concat!("failed to pretty print on ", $input));
                 assert_eq!(
@@ -300,7 +306,7 @@ mod test_css {
             #[test]
             fn $func() {
                 let mut buf = Vec::new();
-                StyleSheet::new($input)
+                StyleSheet::new($input).expect(concat!("failed to parse on ", $input))
                     .print_as_css(&mut buf)
                     .expect(concat!("failed to pretty print on ", $input));
                 assert_eq!(
