@@ -150,7 +150,7 @@ impl<'a> Lexer<'a> {
         self.pos.next_char();
         match self.buf.peek().expect("expected something after '/'") {
             '/' => {
-                self.buf.by_ref().skip_while(|x| x != &'\n').count();
+                self.buf.by_ref().take_while(|x| x != &'\n').for_each(drop);
             }
             '*' => {
                 while let Some(tok) = self.buf.next() {
