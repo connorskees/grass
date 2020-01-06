@@ -1,10 +1,8 @@
 use crate::common::Symbol;
 use crate::{Token, TokenKind};
 use std::iter::Peekable;
-use std::{
-    fmt::{self, Display},
-    slice::Iter,
-};
+use std::slice::Iter;
+use std::fmt::{self, Display};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Selector {

@@ -1,9 +1,9 @@
-use crate::{Token, TokenKind};
 use crate::common::Symbol;
-use std::fmt::{self, Display};
+use crate::{Token, TokenKind};
 use std::collections::HashMap;
-use std::slice::Iter;
+use std::fmt::{self, Display};
 use std::iter::Peekable;
+use std::slice::Iter;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Style {

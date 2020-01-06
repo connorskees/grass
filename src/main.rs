@@ -24,13 +24,10 @@
     clippy::missing_errors_doc
 )]
 use std::collections::HashMap;
+use std::fmt::{self, Display};
 use std::fs;
 use std::io;
-use std::iter::Iterator;
-use std::{
-    fmt::{self, Display},
-    iter::Peekable,
-};
+use std::iter::{Iterator, Peekable};
 
 use crate::common::{Keyword, Op, Pos, Symbol, Whitespace};
 use crate::css::Css;
