@@ -135,29 +135,53 @@ impl Display for Style {
     }
 }
 
+impl Style {
+    pub fn from_tokens(tokens: &[Token], vars: &HashMap<String, Vec<Token>>) -> Result<Self, ()> {
+        StyleParser::new(tokens, vars).parse()
+    }
+}
+
 struct StyleParser<'a> {
     tokens: &'a [Token],
     vars: &'a HashMap<String, Vec<Token>>,
 }
 
-impl Style {
-    fn deref_variable(variable: &TokenKind, vars: &HashMap<String, Vec<Token>>) -> String {
-        let mut val = String::with_capacity(15);
-        let v = match variable {
-            TokenKind::Variable(ref v) => vars.get(v).expect("todo! expected variable to exist"),
+impl<'a> StyleParser<'a> {
+    const fn new(tokens: &'a [Token], vars: &'a HashMap<String, Vec<Token>>) -> Self {
+        StyleParser { tokens, vars }
+    }
+
+    fn deref_variable(&mut self, variable: &TokenKind) -> String {
+        let mut val = String::with_capacity(25);
+        let mut v = match variable {
+            TokenKind::Variable(ref v) => {
+                self.vars.get(v).expect("todo! expected variable to exist")
+            }
             _ => panic!("expected variable"),
-        };
-        for tok in v {
+        }
+        .iter()
+        .peekable();
+        while let Some(tok) = v.next() {
             match &tok.kind {
-                TokenKind::Variable(_) => val.push_str(&Self::deref_variable(&tok.kind, vars)),
+                TokenKind::Variable(_) => val.push_str(&self.deref_variable(&tok.kind)),
+                TokenKind::Whitespace(_) => {
+                    while let Some(w) = v.peek() {
+                        if let TokenKind::Whitespace(_) = w.kind {
+                            v.next();
+                        } else {
+                            val.push(' ');
+                            break;
+                        }
+                    }
+                }
                 _ => val.push_str(&tok.kind.to_string()),
             };
         }
         val
     }
 
-    fn from_tokens(raw: &[Token], vars: &HashMap<String, Vec<Token>>) -> Result<Style, ()> {
-        let mut iter = raw.iter();
+    fn parse(&mut self) -> Result<Style, ()> {
+        let mut iter = self.tokens.iter();
         let property: String;
         loop {
             if let Some(tok) = iter.next() {
@@ -193,7 +217,7 @@ impl Style {
                 TokenKind::Symbol(s) => value.push(StyleToken::Symbol(s)),
                 TokenKind::Unit(u) => value.push(StyleToken::Ident(u.into())),
                 TokenKind::Variable(_) => {
-                    value.push(StyleToken::Ident(Self::deref_variable(&tok.kind, vars)))
+                    value.push(StyleToken::Ident(self.deref_variable(&tok.kind)))
                 }
                 TokenKind::Number(ref num) => {
                     if let Some(t) = iter.next() {
@@ -346,7 +370,6 @@ impl<'a> StyleSheetParser<'a> {
     fn eat_expr(&mut self, vars: &HashMap<String, Vec<Token>>) -> Result<Expr, ()> {
         let mut values = Vec::with_capacity(5);
         while let Some(tok) = self.lexer.next() {
-            dbg!(&tok.kind);
             match tok.kind {
                 TokenKind::Symbol(Symbol::SemiColon) | TokenKind::Symbol(Symbol::CloseBrace) => {
                     self.devour_whitespace();
