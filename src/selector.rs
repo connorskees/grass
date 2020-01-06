@@ -138,32 +138,21 @@ impl<'a> SelectorParser<'a> {
     fn consume_selector(&mut self) -> Option<Selector> {
         if let Some(tok) = self.tokens.next() {
             let selector = match &tok.kind {
-                TokenKind::Symbol(Symbol::Period) => match self
-                    .tokens
-                    .next()
-                    .expect("expected ident after `.`")
-                    .kind
-                {
-                    TokenKind::Ident(ref tok) => Selector::Class(tok.clone()),
-                    _ => todo!("there should normally be an ident after `.`"),
-                },
+                TokenKind::Symbol(Symbol::Period) => {
+                    match self.tokens.next().expect("expected ident after `.`").kind {
+                        TokenKind::Ident(ref tok) => Selector::Class(tok.clone()),
+                        _ => todo!("there should normally be an ident after `.`"),
+                    }
+                }
                 TokenKind::Symbol(Symbol::Mul) => Selector::Universal,
-                TokenKind::Symbol(Symbol::Hash) => match &self
-                    .tokens
-                    .next()
-                    .expect("expected ident after `#`")
-                    .kind
-                {
-                    TokenKind::Ident(ref tok) => Selector::Id(tok.clone()),
-                    _ => todo!("there should normally be an ident after `#`"),
-                },
+                TokenKind::Symbol(Symbol::Hash) => {
+                    match &self.tokens.next().expect("expected ident after `#`").kind {
+                        TokenKind::Ident(ref tok) => Selector::Id(tok.clone()),
+                        _ => todo!("there should normally be an ident after `#`"),
+                    }
+                }
                 TokenKind::Symbol(Symbol::Colon) => {
-                    match self
-                        .tokens
-                        .next()
-                        .expect("expected ident after `:`")
-                        .kind
-                    {
+                    match self.tokens.next().expect("expected ident after `:`").kind {
                         TokenKind::Ident(ref tok) => Selector::Pseudo(tok.clone()),
                         _ => todo!("there should normally be an ident after `:`"),
                     }
