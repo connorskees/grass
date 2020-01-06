@@ -61,6 +61,25 @@ pub enum TokenKind {
     Variable(String),
     Selector(Selector),
     Style(Vec<Token>),
+    // todo! preserve multi-line comments
+    MultilineComment(String),
+}
+
+impl Display for TokenKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TokenKind::Ident(s) | TokenKind::Number(s) | TokenKind::AtRule(s) => write!(f, "{}", s),
+            TokenKind::Symbol(s) => write!(f, "{}", s),
+            TokenKind::Unit(s) => write!(f, "{}", s),
+            TokenKind::Whitespace(s) => write!(f, "{}", s),
+            TokenKind::Selector(s) => write!(f, "{}", s),
+            TokenKind::Function(name, args) => write!(f, "{}({})", name, args.join(", ")),
+            TokenKind::Keyword(kw) => write!(f, "{}", kw),
+            TokenKind::MultilineComment(s) => write!(f, "/*{}*/", s),
+            TokenKind::Variable(s) => write!(f, "${}", s),
+            TokenKind::Style(_) => panic!("TokenKind should not be used to format styles"),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -116,8 +135,28 @@ impl Display for Style {
     }
 }
 
+struct StyleParser<'a> {
+    tokens: &'a [Token],
+    vars: &'a HashMap<String, Vec<Token>>,
+}
+
 impl Style {
-    fn from_tokens(raw: &[Token]) -> Result<Style, ()> {
+    fn deref_variable(variable: &TokenKind, vars: &HashMap<String, Vec<Token>>) -> String {
+        let mut val = String::with_capacity(15);
+        let v = match variable {
+            TokenKind::Variable(ref v) => vars.get(v).expect("todo! expected variable to exist"),
+            _ => panic!("expected variable"),
+        };
+        for tok in v {
+            match &tok.kind {
+                TokenKind::Variable(_) => val.push_str(&Self::deref_variable(&tok.kind, vars)),
+                _ => val.push_str(&tok.kind.to_string()),
+            };
+        }
+        val
+    }
+
+    fn from_tokens(raw: &[Token], vars: &HashMap<String, Vec<Token>>) -> Result<Style, ()> {
         let mut iter = raw.iter();
         let property: String;
         loop {
@@ -153,6 +192,9 @@ impl Style {
                 TokenKind::Ident(ref s) => value.push(StyleToken::Ident(s.clone())),
                 TokenKind::Symbol(s) => value.push(StyleToken::Symbol(s)),
                 TokenKind::Unit(u) => value.push(StyleToken::Ident(u.into())),
+                TokenKind::Variable(_) => {
+                    value.push(StyleToken::Ident(Self::deref_variable(&tok.kind, vars)))
+                }
                 TokenKind::Number(ref num) => {
                     if let Some(t) = iter.next() {
                         match &t.kind {
@@ -197,13 +239,14 @@ pub struct RuleSet {
 enum Expr {
     Style(Style),
     Selector(Selector),
+    VariableDecl(String, Vec<Token>),
 }
 
 impl StyleSheet {
     #[must_use]
     pub fn new(input: &str) -> StyleSheet {
         StyleSheetParser {
-            variables: HashMap::new(),
+            global_variables: HashMap::new(),
             lexer: Lexer::new(input).peekable(),
             rules: Vec::new(),
         }
@@ -225,27 +268,41 @@ impl StyleSheet {
 
 #[derive(Debug, Clone)]
 struct StyleSheetParser<'a> {
-    variables: HashMap<String, String>,
+    global_variables: HashMap<String, Vec<Token>>,
     lexer: Peekable<Lexer<'a>>,
     rules: Vec<Stmt>,
 }
 
 impl<'a> StyleSheetParser<'a> {
-    fn parse_toplevel(&'a mut self) -> StyleSheet {
+    fn parse_toplevel(&mut self) -> StyleSheet {
         let mut rules = Vec::new();
         while let Some(tok) = self.lexer.peek() {
-            match tok.kind {
+            match tok.kind.clone() {
                 TokenKind::Ident(_)
                 | TokenKind::Selector(_)
                 | TokenKind::Symbol(Symbol::Hash)
                 | TokenKind::Symbol(Symbol::Colon)
                 | TokenKind::Symbol(Symbol::Mul)
-                | TokenKind::Symbol(Symbol::Period) => {
-                    rules.extend(self.eat_rules(&Selector::None))
-                }
+                | TokenKind::Symbol(Symbol::Period) => rules
+                    .extend(self.eat_rules(&Selector::None, &mut self.global_variables.clone())),
                 TokenKind::Whitespace(_) | TokenKind::Symbol(_) => {
                     self.lexer.next();
                     continue;
+                }
+                TokenKind::Variable(name) => {
+                    self.lexer.next();
+                    self.devour_whitespace();
+                    if self
+                        .lexer
+                        .next()
+                        .expect("expected something after variable")
+                        .kind
+                        != TokenKind::Symbol(Symbol::Colon)
+                    {
+                        panic!("unexpected variable use at toplevel")
+                    }
+                    let val = self.eat_variable_value();
+                    self.global_variables.insert(name, val);
                 }
                 _ => todo!("unexpected toplevel token"),
             };
@@ -253,37 +310,70 @@ impl<'a> StyleSheetParser<'a> {
         StyleSheet { rules }
     }
 
-    fn eat_rules(&mut self, super_selector: &Selector) -> Vec<Stmt> {
+    fn eat_variable_value(&mut self) -> Vec<Token> {
+        self.devour_whitespace();
+        self.lexer
+            .by_ref()
+            .take_while(|x| x.kind != TokenKind::Symbol(Symbol::SemiColon))
+            .collect::<Vec<Token>>()
+    }
+
+    fn eat_rules(
+        &mut self,
+        super_selector: &Selector,
+        vars: &mut HashMap<String, Vec<Token>>,
+    ) -> Vec<Stmt> {
         let mut stmts = Vec::new();
-        while let Ok(tok) = self.eat_expr() {
+        while let Ok(tok) = self.eat_expr(vars) {
             match tok {
                 Expr::Style(s) => stmts.push(Stmt::Style(s)),
                 Expr::Selector(s) => {
-                    let rules = self.eat_rules(&super_selector.clone().zip(s.clone()));
+                    let rules = self.eat_rules(&super_selector.clone().zip(s.clone()), vars);
                     stmts.push(Stmt::RuleSet(RuleSet {
                         super_selector: super_selector.clone(),
                         selector: s,
                         rules,
                     }));
                 }
+                Expr::VariableDecl(name, val) => {
+                    vars.insert(name, val);
+                }
             }
         }
         stmts
     }
 
-    fn eat_expr(&mut self) -> Result<Expr, ()> {
+    fn eat_expr(&mut self, vars: &HashMap<String, Vec<Token>>) -> Result<Expr, ()> {
         let mut values = Vec::with_capacity(5);
         while let Some(tok) = self.lexer.next() {
+            dbg!(&tok.kind);
             match tok.kind {
                 TokenKind::Symbol(Symbol::SemiColon) | TokenKind::Symbol(Symbol::CloseBrace) => {
                     self.devour_whitespace();
-                    return Ok(Expr::Style(Style::from_tokens(&values)?));
+                    return Ok(Expr::Style(Style::from_tokens(&values, vars)?));
                 }
                 TokenKind::Symbol(Symbol::OpenBrace) => {
                     self.devour_whitespace();
                     return Ok(Expr::Selector(Selector::from_tokens(
                         values.iter().peekable(),
                     )));
+                }
+                TokenKind::Variable(name) => {
+                    if self
+                        .lexer
+                        .next()
+                        .expect("expected something after variable")
+                        .kind
+                        == TokenKind::Symbol(Symbol::Colon)
+                    {
+                        self.devour_whitespace();
+                        return Ok(Expr::VariableDecl(name, self.eat_variable_value()));
+                    } else {
+                        values.push(Token {
+                            kind: TokenKind::Variable(name),
+                            pos: tok.pos,
+                        });
+                    }
                 }
                 _ => values.push(tok.clone()),
             };
