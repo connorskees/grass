@@ -94,6 +94,8 @@ impl<'a> Lexer<'a> {
             if !is_whitespace(*c) {
                 break;
             }
+            self.buf.next();
+            self.pos.next_char();
         }
     }
 
@@ -282,7 +284,9 @@ impl<'a> Lexer<'a> {
     }
 
     fn lex_variable(&mut self) -> TokenKind {
-        let mut string = String::with_capacity(99);
+        self.buf.next();
+        self.pos.next_char();
+        let mut name = String::with_capacity(99);
         while let Some(c) = self.buf.peek() {
             if !c.is_alphabetic() && c != &'-' {
                 break;
@@ -292,9 +296,9 @@ impl<'a> Lexer<'a> {
                 .next()
                 .expect("this is impossible because we have already peeked");
             self.pos.next_char();
-            string.push(tok);
+            name.push(tok);
         }
-        TokenKind::Variable(string)
+        TokenKind::Variable(name)
     }
 
     fn lex_ident(&mut self) -> TokenKind {
