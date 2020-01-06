@@ -214,7 +214,7 @@ impl Display for Whitespace {
         match self {
             Whitespace::Space => write!(f, " "),
             Whitespace::Tab => write!(f, "\t"),
-            Whitespace::Newline => write!(f, "\n"),
+            Whitespace::Newline => writeln!(f),
             Whitespace::CarriageReturn => write!(f, "\r"),
         }
     }
