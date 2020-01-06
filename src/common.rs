@@ -235,6 +235,25 @@ impl TryFrom<char> for Whitespace {
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum Op {
+    Equal,
+    NotEqual,
+    GreaterThanEqual,
+    LessThanEqual,
+}
+
+impl Display for Op {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Op::Equal => write!(f, "=="),
+            Op::NotEqual => write!(f, "!="),
+            Op::GreaterThanEqual => write!(f, ">="),
+            Op::LessThanEqual => write!(f, "<="),
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Keyword {
     Important,
     Infinity,
@@ -243,6 +262,12 @@ pub enum Keyword {
     Inherit,
     Initial,
     Unset,
+    True,
+    False,
+    Not,
+    And,
+    Or,
+    Null,
 }
 
 impl Display for Keyword {
@@ -255,6 +280,12 @@ impl Display for Keyword {
             Keyword::Inherit => write!(f, "inherit"),
             Keyword::Initial => write!(f, "initial"),
             Keyword::Unset => write!(f, "unset"),
+            Keyword::True => write!(f, "true"),
+            Keyword::False => write!(f, "false"),
+            Keyword::Not => write!(f, "not"),
+            Keyword::And => write!(f, "and"),
+            Keyword::Or => write!(f, "or"),
+            Keyword::Null => write!(f, "null"),
         }
     }
 }
@@ -269,6 +300,12 @@ impl Into<&'static str> for Keyword {
             Keyword::Inherit => "inherit",
             Keyword::Initial => "initial",
             Keyword::Unset => "unset",
+            Keyword::True => "true",
+            Keyword::False => "false",
+            Keyword::Not => "not",
+            Keyword::And => "and",
+            Keyword::Or => "or",
+            Keyword::Null => "null",
         }
     }
 }
@@ -286,6 +323,12 @@ impl TryFrom<&str> for Keyword {
             "inherit" => Ok(Keyword::Inherit),
             "initial" => Ok(Keyword::Initial),
             "unset" => Ok(Keyword::Unset),
+            "true" => Ok(Keyword::True),
+            "false" => Ok(Keyword::False),
+            "not" => Ok(Keyword::Not),
+            "and" => Ok(Keyword::And),
+            "or" => Ok(Keyword::Or),
+            "null" => Ok(Keyword::Null),
             _ => Err("invalid keyword"),
         }
     }
