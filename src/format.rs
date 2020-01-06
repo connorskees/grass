@@ -13,7 +13,7 @@ impl<W: Write> PrettyPrinter<W> {
     }
 
     /// Pretty print `crate::Stmt`
-    /// Throws away super selectors
+    /// Throws away super selectors and variables
     fn pretty_print_stmt(&mut self, stmt: &Stmt) -> io::Result<()> {
         let padding = vec![' '; self.scope * 2].iter().collect::<String>();
         match stmt {
@@ -213,6 +213,27 @@ mod test {
     test!(
         nested_style_in_both,
         "a {\n  color: red;\n  b {\n    color: red;\n  }\n}\n"
+    );
+
+    test!(
+        basic_variable,
+        "$height: 1px;\na {\n  height: $height;\n}\n",
+        "a {\n  height: 1px;\n}\n"
+    );
+    test!(
+        variable_redeclaration,
+        "$a: 1px;\n$a: 2px;\na {\n  height: $a;\n}\n",
+        "a {\n  height: 2px;\n}\n"
+    );
+    test!(
+        variable_shadowing,
+        "$a: 1px;\n$b: $a;\na {\n  height: $b;\n}\n",
+        "a {\n  height: 1px;\n}\n"
+    );
+    test!(
+        variable_whitespace,
+        "$a   :    1px   ;\na {\n  height: $a;\n}\n",
+        "a {\n  height: 1px;\n}\n"
     );
 
     test!(unit_none, "a {\n  height: 1;\n}\n");
