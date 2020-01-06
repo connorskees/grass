@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 use std::iter::Peekable;
 use std::str::Chars;
 
-use crate::common::{Keyword, Pos, Symbol};
+use crate::common::{Keyword, Op, Pos, Symbol};
 use crate::selector::{Attribute, AttributeKind, Selector};
 use crate::units::Unit;
 use crate::{Token, TokenKind, Whitespace};
@@ -32,7 +32,7 @@ impl<'a> Iterator for Lexer<'a> {
             }};
         }
         let kind: TokenKind = match self.buf.peek().unwrap_or(&'\0') {
-            'a'..='z' | 'A'..='Z' => self.lex_ident(),
+            'a'..='z' | 'A'..='Z' | '-' | '_' => self.lex_ident(),
             '@' => self.lex_at_rule(),
             '0'..='9' => self.lex_num(),
             '$' => self.lex_variable(),
@@ -63,6 +63,7 @@ impl<'a> Iterator for Lexer<'a> {
                 self.pos.next_char();
                 self.lex_attr()
             }
+            '!' => self.lex_exclamation(),
             '<' => symbol!(self, Lt),
             '>' => symbol!(self, Gt),
             '\0' => return None,
@@ -87,6 +88,30 @@ impl<'a> Lexer<'a> {
             buf: buf.chars().peekable(),
             pos: Pos::new(),
         }
+    }
+
+    fn lex_exclamation(&mut self) -> TokenKind {
+        self.buf.next();
+        self.pos.next_char();
+        macro_rules! assert_char {
+            ($self:ident, $($char:literal)*) => {
+                $(
+                    assert_eq!($char, $self.buf.next().expect("expected char").to_ascii_lowercase(), "expected keyword `important`");
+                )*
+            }
+        };
+        match self.buf.peek() {
+            Some('i') | Some('I') => {
+                self.buf.next();
+                assert_char!(self, 'm' 'p' 'o' 'r' 't' 'a' 'n' 't');
+            }
+            Some('=') => {
+                self.buf.next();
+                return TokenKind::Op(Op::NotEqual);
+            }
+            _ => todo!("expected either `i` or `=` after `!`"),
+        };
+        TokenKind::Keyword(Keyword::Important)
     }
 
     fn devour_whitespace(&mut self) {
