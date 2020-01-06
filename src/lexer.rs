@@ -102,7 +102,7 @@ impl<'a> Lexer<'a> {
     fn lex_at_rule(&mut self) -> TokenKind {
         let mut string = String::with_capacity(99);
         while let Some(c) = self.buf.peek() {
-            if !c.is_alphabetic() && c != &'-' {
+            if !c.is_alphabetic() && c != &'-' && c != &'_' {
                 break;
             }
             let tok = self
@@ -163,7 +163,7 @@ impl<'a> Lexer<'a> {
     fn lex_attr(&mut self) -> TokenKind {
         let mut attr = String::with_capacity(99);
         while let Some(c) = self.buf.peek() {
-            if !c.is_alphabetic() && c != &'-' {
+            if !c.is_alphabetic() && c != &'-' && c != &'_' {
                 break;
             }
             let tok = self
@@ -229,7 +229,7 @@ impl<'a> Lexer<'a> {
         let mut case_sensitive = true;
 
         while let Some(c) = self.buf.peek() {
-            if !c.is_alphabetic() && c != &'-' {
+            if !c.is_alphabetic() && c != &'-' && c != &'_' {
                 break;
             }
 
@@ -288,7 +288,7 @@ impl<'a> Lexer<'a> {
         self.pos.next_char();
         let mut name = String::with_capacity(99);
         while let Some(c) = self.buf.peek() {
-            if !c.is_alphabetic() && c != &'-' {
+            if !c.is_alphabetic() && c != &'-' && c != &'_' {
                 break;
             }
             let tok = self
@@ -305,7 +305,7 @@ impl<'a> Lexer<'a> {
         let mut string = String::with_capacity(99);
         while let Some(c) = self.buf.peek() {
             // we know that the first char is alphabetic from peeking
-            if !c.is_alphanumeric() && c != &'-' {
+            if !c.is_alphanumeric() && c != &'-' && c != &'_' {
                 break;
             }
             let tok = self

@@ -112,7 +112,7 @@ impl<W: Write> PrettyPrinter<W> {
 }
 
 #[cfg(test)]
-mod test {
+mod test_scss {
     use super::StyleSheet;
     macro_rules! test {
         ($func:ident, $input:literal) => {
@@ -145,6 +145,7 @@ mod test {
 
     test!(empty, "");
     test!(basic_nesting, "a {\n  b {\n  }\n}\n");
+    test!(mul_nesting, "a, b {\n  a, b {\n  }\n}\n");
     test!(ident_with_num, "el1 {\n}\n");
 
     test!(selector_element, "a {\n}\n");
