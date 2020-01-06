@@ -99,7 +99,7 @@ mod test_scss {
             #[test]
             fn $func() {
                 let mut buf = Vec::new();
-                StyleSheet::new($input)
+                StyleSheet::new($input).expect(concat!("failed to parse on ", $input))
                     .pretty_print(&mut buf)
                     .expect(concat!("failed to pretty print on ", $input));
                 assert_eq!(
@@ -112,7 +112,7 @@ mod test_scss {
             #[test]
             fn $func() {
                 let mut buf = Vec::new();
-                StyleSheet::new($input)
+                StyleSheet::new($input).expect(concat!("failed to parse on ", $input))
                     .pretty_print(&mut buf)
                     .expect(concat!("failed to pretty print on ", $input));
                 assert_eq!(
@@ -212,9 +212,19 @@ mod test_scss {
         "a {\n  height: 1px;\n}\n"
     );
     test!(
+        variable_shadowing_val_does_not_change,
+        "$a: 1px;\n$b: $a; $a: 2px;\na {\n  height: $b;\n}\n",
+        "a {\n  height: 1px;\n}\n"
+    );
+    test!(
         variable_whitespace,
         "$a   :    1px   ;\na {\n  height: $a;\n}\n",
         "a {\n  height: 1px;\n}\n"
+    );
+    test!(
+        style_after_variable,
+        "$a: 1px;\na {\n  height: $a;\n  color: red;\n}\n",
+        "a {\n  height: 1px;\n  color: red;\n}\n"
     );
     test!(
         literal_and_variable_as_val,
