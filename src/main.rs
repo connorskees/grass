@@ -29,7 +29,7 @@ use std::fs;
 use std::io;
 use std::iter::{Iterator, Peekable};
 
-use crate::common::{Keyword, Op, Pos, Symbol, Whitespace};
+use crate::common::{AtRule, Keyword, Op, Pos, Symbol, Whitespace};
 use crate::css::Css;
 use crate::error::SassError;
 use crate::format::PrettyPrinter;
@@ -55,7 +55,7 @@ pub enum TokenKind {
     Ident(String),
     Symbol(Symbol),
     Function(String, Vec<String>),
-    AtRule(String),
+    AtRule(AtRule),
     Keyword(Keyword),
     Number(String),
     Unit(Unit),
@@ -71,8 +71,9 @@ pub enum TokenKind {
 impl Display for TokenKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            TokenKind::Ident(s) | TokenKind::Number(s) | TokenKind::AtRule(s) => write!(f, "{}", s),
+            TokenKind::Ident(s) | TokenKind::Number(s) => write!(f, "{}", s),
             TokenKind::Symbol(s) => write!(f, "{}", s),
+            TokenKind::AtRule(s) => write!(f, "{}", s),
             TokenKind::Op(s) => write!(f, "{}", s),
             TokenKind::Unit(s) => write!(f, "{}", s),
             TokenKind::Whitespace(s) => write!(f, "{}", s),
@@ -119,7 +120,6 @@ enum Expr {
 }
 
 impl StyleSheet {
-    #[must_use]
     pub fn new(input: &str) -> SassResult<StyleSheet> {
         StyleSheetParser {
             global_variables: HashMap::new(),
@@ -154,8 +154,8 @@ struct StyleSheetParser<'a> {
 impl<'a> StyleSheetParser<'a> {
     fn parse_toplevel(&mut self) -> SassResult<StyleSheet> {
         let mut rules = Vec::new();
-        while let Some(tok) = self.lexer.peek() {
-            match tok.kind.clone() {
+        while let Some(Token { kind, .. }) = self.lexer.peek() {
+            match kind.clone() {
                 TokenKind::Ident(_)
                 | TokenKind::Selector(_)
                 | TokenKind::Symbol(Symbol::Hash)
@@ -168,25 +168,67 @@ impl<'a> StyleSheetParser<'a> {
                     continue;
                 }
                 TokenKind::Variable(name) => {
-                    self.lexer.next();
-                    self.devour_whitespace();
-                    if self
+                    let Token { pos, .. } = self
                         .lexer
                         .next()
-                        .expect("expected something after variable")
-                        // .unwrap_or(Err(SassError::new("expected value after variable", this_tok.pos))?)
+                        .expect("this cannot occur as we have already peeked");
+                    self.devour_whitespace();
+                    if  self
+                        .lexer
+                        .next()
+                        .unwrap_or_else(|| self.error(pos, "expected value after variable"))
                         .kind
                         != TokenKind::Symbol(Symbol::Colon)
                     {
-                        panic!("unexpected variable use at toplevel")
+                        self.error(pos, "unexpected variable use at toplevel");
                     }
                     let val = self.eat_variable_value();
                     self.global_variables.insert(name, val);
                 }
+                TokenKind::AtRule(_) => self.eat_at_rule(),
                 _ => todo!("unexpected toplevel token"),
             };
         }
         Ok(StyleSheet { rules })
+    }
+
+    fn eat_at_rule(&mut self) {
+        if let Some(Token {
+            kind: TokenKind::AtRule(rule),
+            pos,
+        }) = self.lexer.next()
+        {
+            match rule {
+                AtRule::Error => {
+                    let message = self
+                        .lexer
+                        .by_ref()
+                        .take_while(|x| x.kind != TokenKind::Symbol(Symbol::SemiColon))
+                        .map(|x| x.kind.to_string())
+                        .collect::<String>();
+                    self.error(pos, &message);
+                }
+                _ => todo!("encountered unimplemented at rule"),
+            }
+        }
+    }
+
+    fn error(&mut self, pos: Pos, message: &str) -> ! {
+        eprintln!("Error: {}", message);
+        eprintln!(
+            "filename {}:{} scope on line {} at column {}",
+            pos.line(),
+            pos.column(),
+            pos.line(),
+            pos.column()
+        );
+        let padding = vec![' '; format!("{}", pos.line()).len() + 1].iter().collect::<String>();
+        eprintln!("{}|", padding);
+        eprint!("{} | ", pos.line());
+        eprintln!("placeholder!");
+        eprintln!("{}| {}^", padding, vec![' '; pos.column() as usize].iter().collect::<String>());
+        eprintln!("{}|", padding);
+        std::process::exit(1);
     }
 
     fn eat_variable_value(&mut self) -> Vec<Token> {
@@ -230,6 +272,9 @@ impl<'a> StyleSheetParser<'a> {
                         rules,
                     }));
                     self.scope -= 1;
+                    if self.scope == 0 {
+                        return stmts;
+                    }
                 }
                 Expr::VariableDecl(name, val) => {
                     if self.scope == 0 {

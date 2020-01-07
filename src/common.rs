@@ -201,6 +201,87 @@ pub enum AtRule {
     CounterStyle,
 }
 
+impl TryFrom<&str> for AtRule {
+    type Error = &'static str;
+
+    fn try_from(c: &str) -> Result<Self, &'static str> {
+        match c {
+            "use" => Ok(AtRule::Use),
+            "forward" => Ok(AtRule::Forward),
+            "import" => Ok(AtRule::Import),
+            "mixin" => Ok(AtRule::Mixin),
+            "include" => Ok(AtRule::Include),
+            "function" => Ok(AtRule::Function),
+            "extend" => Ok(AtRule::Extend),
+            "atroot" => Ok(AtRule::AtRoot),
+            "error" => Ok(AtRule::Error),
+            "warn" => Ok(AtRule::Warn),
+            "debug" => Ok(AtRule::Debug),
+            "if" => Ok(AtRule::If),
+            "each" => Ok(AtRule::Each),
+            "for" => Ok(AtRule::For),
+            "while" => Ok(AtRule::While),
+            "charset" => Ok(AtRule::Charset),
+            "namespace" => Ok(AtRule::Namespace),
+            "media" => Ok(AtRule::Media),
+            "supports" => Ok(AtRule::Supports),
+            "page" => Ok(AtRule::Page),
+            "fontface" => Ok(AtRule::FontFace),
+            "keyframes" => Ok(AtRule::Keyframes),
+            "fontfeaturevalues" => Ok(AtRule::FontFeatureValues),
+            "swash" => Ok(AtRule::Swash),
+            "ornaments" => Ok(AtRule::Ornaments),
+            "annotation" => Ok(AtRule::Annotation),
+            "stylistic" => Ok(AtRule::Stylistic),
+            "styleset" => Ok(AtRule::Styleset),
+            "charactervariant" => Ok(AtRule::CharacterVariant),
+            "viewport" => Ok(AtRule::Viewport),
+            "document" => Ok(AtRule::Document),
+            "counterstyle" => Ok(AtRule::CounterStyle),
+            _ => Err("invalid at rule"),
+        }
+    }
+}
+
+impl Display for AtRule {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            AtRule::Use => write!(f, "@use"),
+            AtRule::Forward => write!(f, "@forward"),
+            AtRule::Import => write!(f, "@import"),
+            AtRule::Mixin => write!(f, "@mixin"),
+            AtRule::Include => write!(f, "@include"),
+            AtRule::Function => write!(f, "@function"),
+            AtRule::Extend => write!(f, "@extend"),
+            AtRule::AtRoot => write!(f, "@atroot"),
+            AtRule::Error => write!(f, "@error"),
+            AtRule::Warn => write!(f, "@warn"),
+            AtRule::Debug => write!(f, "@debug"),
+            AtRule::If => write!(f, "@if"),
+            AtRule::Each => write!(f, "@each"),
+            AtRule::For => write!(f, "@for"),
+            AtRule::While => write!(f, "@while"),
+            AtRule::Charset => write!(f, "@charset"),
+            AtRule::Namespace => write!(f, "@namespace"),
+            AtRule::Media => write!(f, "@media"),
+            AtRule::Supports => write!(f, "@supports"),
+            AtRule::Page => write!(f, "@page"),
+            AtRule::FontFace => write!(f, "@fontface"),
+            AtRule::Keyframes => write!(f, "@keyframes"),
+            AtRule::FontFeatureValues => write!(f, "@fontfeaturevalues"),
+            AtRule::Swash => write!(f, "@swash"),
+            AtRule::Ornaments => write!(f, "@ornaments"),
+            AtRule::Annotation => write!(f, "@annotation"),
+            AtRule::Stylistic => write!(f, "@stylistic"),
+            AtRule::Styleset => write!(f, "@styleset"),
+            AtRule::CharacterVariant => write!(f, "@charactervariant"),
+            AtRule::Viewport => write!(f, "@viewport"),
+            AtRule::Document => write!(f, "@document"),
+            AtRule::CounterStyle => write!(f, "@counterstyle"),
+        }
+    }
+}
+
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Whitespace {
     Space,
@@ -268,6 +349,7 @@ pub enum Keyword {
     And,
     Or,
     Null,
+    In,
 }
 
 impl Display for Keyword {
@@ -286,6 +368,7 @@ impl Display for Keyword {
             Keyword::And => write!(f, "and"),
             Keyword::Or => write!(f, "or"),
             Keyword::Null => write!(f, "null"),
+            Keyword::In => write!(f, "in"),
         }
     }
 }
@@ -306,6 +389,7 @@ impl Into<&'static str> for Keyword {
             Keyword::And => "and",
             Keyword::Or => "or",
             Keyword::Null => "null",
+            Keyword::In => "in",
         }
     }
 }
@@ -329,6 +413,7 @@ impl TryFrom<&str> for Keyword {
             "and" => Ok(Keyword::And),
             "or" => Ok(Keyword::Or),
             "null" => Ok(Keyword::Null),
+            "in" => Ok(Keyword::In),
             _ => Err("invalid keyword"),
         }
     }
@@ -653,7 +738,7 @@ pub struct Pos {
 
 impl Pos {
     pub const fn new() -> Self {
-        Pos { line: 0, column: 0 }
+        Pos { line: 1, column: 1 }
     }
 
     pub const fn line(self) -> u32 {

@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 use std::iter::Peekable;
 use std::str::Chars;
 
-use crate::common::{Keyword, Op, Pos, Symbol};
+use crate::common::{AtRule, Keyword, Op, Pos, Symbol};
 use crate::selector::{Attribute, AttributeKind, Selector};
 use crate::units::Unit;
 use crate::{Token, TokenKind, Whitespace};
@@ -46,8 +46,15 @@ impl<'a> Iterator for Lexer<'a> {
             '"' => symbol!(self, DoubleQuote),
             ' ' => whitespace!(self, Space),
             '\t' => whitespace!(self, Tab),
-            '\n' => whitespace!(self, Newline),
-            '\r' => whitespace!(self, CarriageReturn),
+            '\n' => {
+                self.buf.next();
+                self.pos.newline();
+                TokenKind::Whitespace(Whitespace::Newline)
+            }
+            '\r' => {
+                self.buf.next();
+                TokenKind::Whitespace(Whitespace::CarriageReturn)
+            }
             '#' => symbol!(self, Hash),
             '{' => symbol!(self, OpenBrace),
             '*' => symbol!(self, Mul),
@@ -125,6 +132,7 @@ impl<'a> Lexer<'a> {
     }
 
     fn lex_at_rule(&mut self) -> TokenKind {
+        self.buf.next();
         let mut string = String::with_capacity(99);
         while let Some(c) = self.buf.peek() {
             if !c.is_alphabetic() && c != &'-' && c != &'_' {
@@ -138,8 +146,8 @@ impl<'a> Lexer<'a> {
             string.push(tok);
         }
 
-        if let Ok(kw) = Unit::try_from(string.as_ref()) {
-            TokenKind::Unit(kw)
+        if let Ok(rule) = AtRule::try_from(string.as_ref()) {
+            TokenKind::AtRule(rule)
         } else {
             panic!("expected ident after `@`")
         }
