@@ -186,15 +186,30 @@ impl<'a> StyleSheetParser<'a> {
                 _ => todo!("unexpected toplevel token"),
             };
         }
-        StyleSheet { rules }
+        Ok(StyleSheet { rules })
     }
 
     fn eat_variable_value(&mut self) -> Vec<Token> {
         self.devour_whitespace();
-        self.lexer
+        let iter1 = self
+            .lexer
             .by_ref()
             .take_while(|x| x.kind != TokenKind::Symbol(Symbol::SemiColon))
-            .collect::<Vec<Token>>()
+            .collect::<Vec<Token>>();
+        let mut iter2 = Vec::with_capacity(iter1.len());
+        for tok in iter1 {
+            if let TokenKind::Variable(name) = tok.kind {
+                iter2.extend(
+                    self.global_variables
+                        .get(&name)
+                        .expect("expected variable")
+                        .clone(),
+                );
+            } else {
+                iter2.push(tok);
+            }
+        }
+        iter2
     }
 
     fn eat_rules(
@@ -207,15 +222,22 @@ impl<'a> StyleSheetParser<'a> {
             match tok {
                 Expr::Style(s) => stmts.push(Stmt::Style(s)),
                 Expr::Selector(s) => {
+                    self.scope += 1;
                     let rules = self.eat_rules(&super_selector.clone().zip(s.clone()), vars);
                     stmts.push(Stmt::RuleSet(RuleSet {
                         super_selector: super_selector.clone(),
                         selector: s,
                         rules,
                     }));
+                    self.scope -= 1;
                 }
                 Expr::VariableDecl(name, val) => {
-                    vars.insert(name, val);
+                    if self.scope == 0 {
+                        vars.insert(name.clone(), val.clone());
+                        self.global_variables.insert(name, val);
+                    } else {
+                        vars.insert(name, val);
+                    }
                 }
             }
         }
@@ -237,13 +259,13 @@ impl<'a> StyleSheetParser<'a> {
                     )));
                 }
                 TokenKind::Variable(name) => {
-                    if self
+                    if let TokenKind::Symbol(Symbol::Colon) = self
                         .lexer
-                        .next()
+                        .peek()
                         .expect("expected something after variable")
                         .kind
-                        == TokenKind::Symbol(Symbol::Colon)
                     {
+                        self.lexer.next();
                         self.devour_whitespace();
                         return Ok(Expr::VariableDecl(name, self.eat_variable_value()));
                     } else {
@@ -293,7 +315,8 @@ mod test_css {
             #[test]
             fn $func() {
                 let mut buf = Vec::new();
-                StyleSheet::new($input).expect(concat!("failed to parse on ", $input))
+                StyleSheet::new($input)
+                    .expect(concat!("failed to parse on ", $input))
                     .print_as_css(&mut buf)
                     .expect(concat!("failed to pretty print on ", $input));
                 assert_eq!(
@@ -306,7 +329,8 @@ mod test_css {
             #[test]
             fn $func() {
                 let mut buf = Vec::new();
-                StyleSheet::new($input).expect(concat!("failed to parse on ", $input))
+                StyleSheet::new($input)
+                    .expect(concat!("failed to parse on ", $input))
                     .print_as_css(&mut buf)
                     .expect(concat!("failed to pretty print on ", $input));
                 assert_eq!(
