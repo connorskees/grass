@@ -6,16 +6,22 @@ use std::io;
 #[derive(Debug)]
 pub struct SassError {
     message: String,
-    pos: Pos
+    pos: Pos,
 }
 
 impl SassError {
     pub fn new<S: Into<String>>(message: S, pos: Pos) -> Self {
-        SassError { message: message.into(), pos }
+        SassError {
+            message: message.into(),
+            pos,
+        }
     }
 
     pub fn unexpected_eof(pos: Pos) -> Self {
-        SassError { message: String::from("unexpected eof"), pos }
+        SassError {
+            message: String::from("unexpected eof"),
+            pos,
+        }
     }
 }
 
@@ -27,7 +33,10 @@ impl Display for SassError {
 
 impl From<io::Error> for SassError {
     fn from(error: io::Error) -> Self {
-        SassError{ pos: Pos::new(), message: format!("{}", error) }
+        SassError {
+            pos: Pos::new(),
+            message: format!("{}", error),
+        }
     }
 }
 

@@ -99,7 +99,8 @@ mod test_scss {
             #[test]
             fn $func() {
                 let mut buf = Vec::new();
-                StyleSheet::new($input).expect(concat!("failed to parse on ", $input))
+                StyleSheet::new($input)
+                    .expect(concat!("failed to parse on ", $input))
                     .pretty_print(&mut buf)
                     .expect(concat!("failed to pretty print on ", $input));
                 assert_eq!(
@@ -112,7 +113,8 @@ mod test_scss {
             #[test]
             fn $func() {
                 let mut buf = Vec::new();
-                StyleSheet::new($input).expect(concat!("failed to parse on ", $input))
+                StyleSheet::new($input)
+                    .expect(concat!("failed to parse on ", $input))
                     .pretty_print(&mut buf)
                     .expect(concat!("failed to pretty print on ", $input));
                 assert_eq!(
@@ -217,6 +219,11 @@ mod test_scss {
         "a {\n  height: 1px;\n}\n"
     );
     test!(
+        variable_shadowing_val_does_not_change_complex,
+        "a {\n}\n$y: before;\n$x: 1 2 $y;\n$y: after;\nfoo {\n  a: $x;\n}",
+        "a {\n}\nfoo {\n  a: 1 2 before;\n}\n"
+    );
+    test!(
         variable_whitespace,
         "$a   :    1px   ;\na {\n  height: $a;\n}\n",
         "a {\n  height: 1px;\n}\n"
@@ -237,11 +244,21 @@ mod test_scss {
         "a {\n  height: 1 1px;\n}\n"
     );
 
+    test!(
+        removes_single_line_comment,
+        "// a { color: red }\na {\n  height: 1 1px;\n}\n",
+        "a {\n  height: 1 1px;\n}\n"
+    );
+
     test!(keyword_important, "a {\n  height: 1 !important;\n}\n");
     test!(
         keyword_important_uppercase,
         "a {\n  height: 1 !IMPORTANT;\n}\n",
         "a {\n  height: 1 !important;\n}\n"
+    );
+    test!(
+        keyword_important_not_at_end,
+        "a {\n  height: !important 1;\n}\n"
     );
 
     test!(
