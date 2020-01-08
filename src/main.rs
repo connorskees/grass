@@ -27,8 +27,8 @@ use std::collections::HashMap;
 use std::fmt::{self, Display};
 use std::fs;
 use std::io;
-use std::path::Path;
 use std::iter::{Iterator, Peekable};
+use std::path::Path;
 
 use crate::common::{AtRule, Keyword, Op, Pos, Symbol, Whitespace};
 use crate::css::Css;
@@ -103,6 +103,7 @@ pub struct StyleSheet {
 pub enum Stmt {
     Style(Style),
     RuleSet(RuleSet),
+    // MultilineComment(String),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -187,7 +188,7 @@ impl<'a> StyleSheetParser<'a> {
                         .next()
                         .expect("this cannot occur as we have already peeked");
                     self.devour_whitespace();
-                    if  self
+                    if self
                         .lexer
                         .next()
                         .unwrap_or_else(|| self.error(pos, "expected value after variable"))
@@ -198,6 +199,10 @@ impl<'a> StyleSheetParser<'a> {
                     }
                     let val = self.eat_variable_value();
                     self.global_variables.insert(name, val);
+                }
+                TokenKind::MultilineComment(comment) => {
+                    todo!("MultilineComment");
+                    // rules.push(Stmt::MultilineComment(comment));
                 }
                 TokenKind::AtRule(_) => self.eat_at_rule(),
                 _ => todo!("unexpected toplevel token"),
@@ -238,11 +243,17 @@ impl<'a> StyleSheetParser<'a> {
             pos.line(),
             pos.column()
         );
-        let padding = vec![' '; format!("{}", pos.line()).len() + 1].iter().collect::<String>();
+        let padding = vec![' '; format!("{}", pos.line()).len() + 1]
+            .iter()
+            .collect::<String>();
         eprintln!("{}|", padding);
         eprint!("{} | ", pos.line());
         eprintln!("todo! get line to print as error");
-        eprintln!("{}| {}^", padding, vec![' '; pos.column() as usize].iter().collect::<String>());
+        eprintln!(
+            "{}| {}^",
+            padding,
+            vec![' '; pos.column() as usize].iter().collect::<String>()
+        );
         eprintln!("{}|", padding);
         std::process::exit(1);
     }
@@ -256,7 +267,11 @@ impl<'a> StyleSheetParser<'a> {
             .collect::<Vec<Token>>();
         let mut iter2 = Vec::with_capacity(iter1.len());
         for tok in iter1 {
-            if let Token { kind: TokenKind::Variable(ref name), ref pos } = tok {
+            if let Token {
+                kind: TokenKind::Variable(ref name),
+                ref pos,
+            } = tok
+            {
                 iter2.extend(
                     self.global_variables
                         .get(name)
@@ -409,4 +424,6 @@ mod test_css {
     test!(basic_style, "a {\n  color: red;\n}\n");
     test!(two_styles, "a {\n  color: red;\n  color: blue;\n}\n");
     test!(selector_mul, "a, b {\n  color: red;\n}\n");
+    test!(removes_empty_outer_styles, "a {\n  b {\n    color: red;\n  }\n", "a b {\n  color: red;\n}\n");
+    test!(removes_empty_styles, "a {}\n", "");
 }
