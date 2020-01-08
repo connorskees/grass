@@ -27,6 +27,7 @@ use std::collections::HashMap;
 use std::fmt::{self, Display};
 use std::fs;
 use std::io;
+use std::path::Path;
 use std::iter::{Iterator, Peekable};
 
 use crate::common::{AtRule, Keyword, Op, Pos, Symbol, Whitespace};
@@ -126,6 +127,18 @@ impl StyleSheet {
             lexer: Lexer::new(input).peekable(),
             rules: Vec::new(),
             scope: 0,
+            file: String::from("stdin"),
+        }
+        .parse_toplevel()
+    }
+
+    pub fn from_path<P: AsRef<Path> + Into<String>>(p: P) -> SassResult<StyleSheet> {
+        StyleSheetParser {
+            global_variables: HashMap::new(),
+            lexer: Lexer::new(&fs::read_to_string(p.as_ref())?).peekable(),
+            rules: Vec::new(),
+            scope: 0,
+            file: p.into(),
         }
         .parse_toplevel()
     }
@@ -149,10 +162,11 @@ struct StyleSheetParser<'a> {
     lexer: Peekable<Lexer<'a>>,
     rules: Vec<Stmt>,
     scope: u32,
+    file: String,
 }
 
 impl<'a> StyleSheetParser<'a> {
-    fn parse_toplevel(&mut self) -> SassResult<StyleSheet> {
+    fn parse_toplevel(mut self) -> SassResult<StyleSheet> {
         let mut rules = Vec::new();
         while let Some(Token { kind, .. }) = self.lexer.peek() {
             match kind.clone() {
@@ -168,7 +182,7 @@ impl<'a> StyleSheetParser<'a> {
                     continue;
                 }
                 TokenKind::Variable(name) => {
-                    let Token { pos, .. } = self
+                    let Token { ref pos, .. } = self
                         .lexer
                         .next()
                         .expect("this cannot occur as we have already peeked");
@@ -194,12 +208,13 @@ impl<'a> StyleSheetParser<'a> {
 
     fn eat_at_rule(&mut self) {
         if let Some(Token {
-            kind: TokenKind::AtRule(rule),
-            pos,
+            kind: TokenKind::AtRule(ref rule),
+            ref pos,
         }) = self.lexer.next()
         {
             match rule {
                 AtRule::Error => {
+                    self.devour_whitespace();
                     let message = self
                         .lexer
                         .by_ref()
@@ -213,10 +228,11 @@ impl<'a> StyleSheetParser<'a> {
         }
     }
 
-    fn error(&mut self, pos: Pos, message: &str) -> ! {
+    fn error(&self, pos: &Pos, message: &str) -> ! {
         eprintln!("Error: {}", message);
         eprintln!(
-            "filename {}:{} scope on line {} at column {}",
+            "{} {}:{} scope on line {} at column {}",
+            self.file,
             pos.line(),
             pos.column(),
             pos.line(),
@@ -225,7 +241,7 @@ impl<'a> StyleSheetParser<'a> {
         let padding = vec![' '; format!("{}", pos.line()).len() + 1].iter().collect::<String>();
         eprintln!("{}|", padding);
         eprint!("{} | ", pos.line());
-        eprintln!("placeholder!");
+        eprintln!("todo! get line to print as error");
         eprintln!("{}| {}^", padding, vec![' '; pos.column() as usize].iter().collect::<String>());
         eprintln!("{}|", padding);
         std::process::exit(1);
@@ -240,11 +256,11 @@ impl<'a> StyleSheetParser<'a> {
             .collect::<Vec<Token>>();
         let mut iter2 = Vec::with_capacity(iter1.len());
         for tok in iter1 {
-            if let TokenKind::Variable(name) = tok.kind {
+            if let Token { kind: TokenKind::Variable(ref name), ref pos } = tok {
                 iter2.extend(
                     self.global_variables
-                        .get(&name)
-                        .expect("expected variable")
+                        .get(name)
+                        .unwrap_or_else(|| self.error(pos, "Undefined variable"))
                         .clone(),
                 );
             } else {
@@ -339,9 +355,8 @@ impl<'a> StyleSheetParser<'a> {
 }
 
 fn main() -> SassResult<()> {
-    let input = fs::read_to_string("input.scss")?;
     let mut stdout = std::io::stdout();
-    let s = StyleSheet::new(&input)?;
+    let s = StyleSheet::from_path("input.scss")?;
     // dbg!(s);
     // s.pretty_print(&mut stdout)?;
     // s.pretty_print_selectors(&mut stdout)?;
