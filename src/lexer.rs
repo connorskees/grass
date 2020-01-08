@@ -161,11 +161,20 @@ impl<'a> Lexer<'a> {
                 self.buf.by_ref().take_while(|x| x != &'\n').for_each(drop);
             }
             '*' => {
+                let mut comment = String::new();
                 while let Some(tok) = self.buf.next() {
-                    if tok == '*' && self.buf.next() == Some('/') {
+                    if tok == '\n' {
+                        self.pos.newline()
+                    } else {
+                        self.pos.next_char();
+                    }
+                    if tok == '*' && self.buf.peek() == Some(&'/') {
+                        self.buf.next();
                         break;
                     }
+                    comment.push(tok);
                 }
+                return TokenKind::MultilineComment(comment)
             }
             _ => return TokenKind::Symbol(Symbol::Div),
         }
