@@ -94,6 +94,8 @@ impl Display for TokenKind {
     }
 }
 
+
+/// Represents a parsed SASS stylesheet with nesting
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct StyleSheet {
     rules: Vec<Stmt>,
@@ -101,11 +103,22 @@ pub struct StyleSheet {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Stmt {
+    /// A style: `color: red`
     Style(Style),
+    /// An entire `[RuleSet](crate::RuleSet)`
     RuleSet(RuleSet),
+    /// A multiline comment: `/* foo bar */`
     MultilineComment(String),
 }
 
+/// Represents a single rule set. Rule sets can contain other rule sets
+/// 
+/// a {
+///   color: blue;
+///   b {
+///     color: red;
+///   }
+/// }
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RuleSet {
     selector: Selector,
@@ -114,11 +127,17 @@ pub struct RuleSet {
     super_selector: Selector,
 }
 
+/// An intermediate representation of what are essentially single lines
+/// todo! rename this
 #[derive(Clone, Debug, Eq, PartialEq)]
 enum Expr {
+    /// A style: `color: red`
     Style(Style),
+    /// A full selector `a > h1`
     Selector(Selector),
+    /// A variable declaration `$var: 1px`
     VariableDecl(String, Vec<Token>),
+    /// A multiline comment: `/* foobar */`
     MultilineComment(String),
 }
 
@@ -145,14 +164,21 @@ impl StyleSheet {
         .parse_toplevel()
     }
 
+    /// Print the internal representation of a parsed stylesheet
+    /// 
+    /// Very closely resembles the origin SASS, but contains only things translatable
+    /// to pure CSS
+    /// 
+    /// Used mainly in debugging, but can at times be useful
     pub fn pretty_print<W: std::io::Write>(&self, buf: W) -> io::Result<()> {
         PrettyPrinter::new(buf).pretty_print(self)
     }
 
-    pub fn pretty_print_selectors<W: std::io::Write>(&self, buf: W) -> io::Result<()> {
+    fn pretty_print_selectors<W: std::io::Write>(&self, buf: W) -> io::Result<()> {
         PrettyPrinter::new(buf).pretty_print_preserve_super_selectors(self)
     }
 
+    /// Write the internal representation as CSS to `buf`
     pub fn print_as_css<W: std::io::Write>(self, buf: &mut W) -> io::Result<()> {
         Css::from_stylesheet(self).pretty_print(buf)
     }

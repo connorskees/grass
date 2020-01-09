@@ -5,6 +5,7 @@ use std::fmt::{self, Display};
 use std::iter::Peekable;
 use std::slice::Iter;
 
+/// A style: `color: red`
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Style {
     property: String,
