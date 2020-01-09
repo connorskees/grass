@@ -52,6 +52,12 @@ mod units;
 type SassResult<T> = Result<T, SassError>;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Token {
+    pos: Pos,
+    pub kind: TokenKind,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum TokenKind {
     Ident(String),
     Symbol(Symbol),
@@ -88,12 +94,6 @@ impl Display for TokenKind {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Token {
-    pos: Pos,
-    pub kind: TokenKind,
-}
-
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct StyleSheet {
     rules: Vec<Stmt>,
@@ -103,7 +103,7 @@ pub struct StyleSheet {
 pub enum Stmt {
     Style(Style),
     RuleSet(RuleSet),
-    // MultilineComment(String),
+    MultilineComment(String),
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -119,6 +119,7 @@ enum Expr {
     Style(Style),
     Selector(Selector),
     VariableDecl(String, Vec<Token>),
+    MultilineComment(String),
 }
 
 impl StyleSheet {
@@ -201,8 +202,8 @@ impl<'a> StyleSheetParser<'a> {
                     self.global_variables.insert(name, val);
                 }
                 TokenKind::MultilineComment(comment) => {
-                    todo!("MultilineComment");
-                    // rules.push(Stmt::MultilineComment(comment));
+                    self.lexer.next();
+                    rules.push(Stmt::MultilineComment(comment));
                 }
                 TokenKind::AtRule(_) => self.eat_at_rule(),
                 _ => todo!("unexpected toplevel token"),
@@ -315,6 +316,7 @@ impl<'a> StyleSheetParser<'a> {
                         vars.insert(name, val);
                     }
                 }
+                Expr::MultilineComment(s) => stmts.push(Stmt::MultilineComment(s)),
             }
         }
         stmts
@@ -349,6 +351,14 @@ impl<'a> StyleSheetParser<'a> {
                             kind: TokenKind::Variable(name),
                             pos: tok.pos,
                         });
+                    }
+                }
+                TokenKind::MultilineComment(ref s) => {
+                    self.devour_whitespace();
+                    if values.is_empty() {
+                        return Ok(Expr::MultilineComment(s.clone()));
+                    } else {
+                        values.push(tok.clone())
                     }
                 }
                 _ => values.push(tok.clone()),
@@ -424,6 +434,42 @@ mod test_css {
     test!(basic_style, "a {\n  color: red;\n}\n");
     test!(two_styles, "a {\n  color: red;\n  color: blue;\n}\n");
     test!(selector_mul, "a, b {\n  color: red;\n}\n");
-    test!(removes_empty_outer_styles, "a {\n  b {\n    color: red;\n  }\n", "a b {\n  color: red;\n}\n");
+    test!(
+        removes_empty_outer_styles,
+        "a {\n  b {\n    color: red;\n  }\n",
+        "a b {\n  color: red;\n}\n"
+    );
     test!(removes_empty_styles, "a {}\n", "");
+
+    test!(
+        removes_inner_comments,
+        "a {\n  color: red/* hi */;\n}\n",
+        "a {\n  color: red;\n}\n"
+    );
+    test!(
+        removes_inner_comments_whitespace,
+        "a {\n  color: red    /* hi */;\n}\n",
+        "a {\n  color: red;\n}\n"
+    );
+    test!(
+        preserves_outer_comments_before,
+        "a {\n  /* hi */\n  color: red;\n}\n"
+    );
+    test!(
+        preserves_outer_comments_after,
+        "a {\n  color: red;\n  /* hi */\n}\n"
+    );
+    test!(
+        preserves_outer_comments_two,
+        "a {\n  /* foo */\n  /* bar */\n  color: red;\n}\n"
+    );
+    test!(
+        preserves_toplevel_comment,
+        "/* foo */\na {\n  color: red;\n}\n"
+    );
+    test!(
+        removes_single_line_comment,
+        "// a { color: red }\na {\n  height: 1 1px;\n}\n",
+        "a {\n  height: 1 1px;\n}\n"
+    );
 }

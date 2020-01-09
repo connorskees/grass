@@ -1,29 +1,53 @@
 //! # Convert from SCSS AST to CSS
 use crate::{RuleSet, Selector, Stmt, Style, StyleSheet};
+// use crate::common::AtRule;
+use std::fmt;
 use std::io;
 
 #[derive(Debug, Clone)]
-pub struct Block {
-    selector: Selector,
-    styles: Vec<Style>,
+pub enum Toplevel {
+    RuleSet(Selector, Vec<BlockEntry>),
+    MultilineComment(String),
+    // AtRule(AtRule),
 }
 
-impl Block {
-    const fn new(selector: Selector) -> Self {
-        Block {
-            selector,
-            styles: Vec::new(),
+#[derive(Debug, Clone)]
+pub enum BlockEntry {
+    Style(Style),
+    MultilineComment(String),
+    // AtRule(AtRule),
+}
+
+impl fmt::Display for BlockEntry {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            BlockEntry::Style(s) => writeln!(f, "  {}", s),
+            BlockEntry::MultilineComment(s) => writeln!(f, "  /*{}*/", s),
+        }
+    }
+}
+
+impl Toplevel {
+    const fn new_rule(selector: Selector) -> Self {
+        Toplevel::RuleSet(selector, Vec::new())
+    }
+
+    fn push_style(&mut self, s: Style) {
+        if let Toplevel::RuleSet(_, entries) = self {
+            entries.push(BlockEntry::Style(s));
         }
     }
 
-    fn push(&mut self, s: Style) {
-        self.styles.push(s);
+    fn push_comment(&mut self, s: String) {
+        if let Toplevel::RuleSet(_, entries) = self {
+            entries.push(BlockEntry::MultilineComment(s));
+        }
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct Css {
-    blocks: Vec<Block>,
+    blocks: Vec<Toplevel>,
     idx: usize,
 }
 
@@ -36,16 +60,19 @@ impl Css {
     }
 
     pub fn from_stylesheet(s: StyleSheet) -> Self {
-        Css {
-            blocks: Vec::new(),
-            idx: 0,
-        }
-        .parse_stylesheet(s)
+        Css::new().parse_stylesheet(s)
     }
 
     fn parse_stmt(&mut self, stmt: Stmt) {
         match stmt {
-            Stmt::Style(s) => self.blocks[self.idx - 1].push(s),
+            Stmt::Style(s) => self.blocks[self.idx - 1].push_style(s),
+            Stmt::MultilineComment(s) => {
+                if self.idx == 0 {
+                    self.blocks.push(Toplevel::MultilineComment(s));
+                } else {
+                    self.blocks[self.idx - 1].push_comment(s)
+                }
+            }
             Stmt::RuleSet(RuleSet {
                 selector,
                 super_selector,
@@ -53,14 +80,16 @@ impl Css {
             }) => {
                 if self.idx == 0 {
                     self.idx = self.blocks.len() + 1;
-                    self.blocks.push(Block::new(super_selector.zip(selector)));
+                    self.blocks
+                        .push(Toplevel::new_rule(super_selector.zip(selector)));
                     for rule in rules {
                         self.parse_stmt(rule);
                     }
                     self.idx = 0;
                 } else {
                     self.idx += 1;
-                    self.blocks.push(Block::new(super_selector.zip(selector)));
+                    self.blocks
+                        .push(Toplevel::new_rule(super_selector.zip(selector)));
                     for rule in rules {
                         self.parse_stmt(rule);
                     }
@@ -79,14 +108,21 @@ impl Css {
 
     pub fn pretty_print<W: std::io::Write>(self, buf: &mut W) -> io::Result<()> {
         for block in self.blocks {
-            if block.styles.is_empty() {
-                continue;
+            match block {
+                Toplevel::RuleSet(selector, styles) => {
+                    if styles.is_empty() {
+                        continue;
+                    }
+                    writeln!(buf, "{} {{", selector)?;
+                    for style in styles {
+                        write!(buf, "{}", style)?;
+                    }
+                    writeln!(buf, "}}")?;
+                }
+                Toplevel::MultilineComment(s) => {
+                    writeln!(buf, "/*{}*/", s)?;
+                }
             }
-            writeln!(buf, "{} {{", block.selector)?;
-            for style in block.styles {
-                writeln!(buf, "  {}", style)?;
-            }
-            writeln!(buf, "}}")?;
         }
         Ok(())
     }

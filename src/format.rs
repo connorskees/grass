@@ -17,6 +17,7 @@ impl<W: Write> PrettyPrinter<W> {
     fn pretty_print_stmt(&mut self, stmt: &Stmt) -> io::Result<()> {
         let padding = vec![' '; self.scope * 2].iter().collect::<String>();
         match stmt {
+            Stmt::MultilineComment(s) => writeln!(self.buf, "{}/*{}*/", padding, s)?,
             Stmt::RuleSet(RuleSet {
                 selector, rules, ..
             }) => {
@@ -51,6 +52,7 @@ impl<W: Write> PrettyPrinter<W> {
     fn pretty_print_stmt_preserve_super_selectors(&mut self, stmt: &Stmt) -> io::Result<()> {
         let padding = vec![' '; self.scope * 2].iter().collect::<String>();
         match stmt {
+            Stmt::MultilineComment(s) => writeln!(self.buf, "/*{}*/", s)?,
             Stmt::RuleSet(RuleSet {
                 selector,
                 rules,
@@ -244,12 +246,6 @@ mod test_scss {
         "a {\n  height: 1 1px;\n}\n"
     );
 
-    test!(
-        removes_single_line_comment,
-        "// a { color: red }\na {\n  height: 1 1px;\n}\n",
-        "a {\n  height: 1 1px;\n}\n"
-    );
-
     test!(keyword_important, "a {\n  height: 1 !important;\n}\n");
     test!(
         keyword_important_uppercase,
@@ -270,6 +266,38 @@ mod test_scss {
     test!(
         ident_starts_with_hyphen,
         "a {\n  foo: -webkit-bar-baz;\n}\n"
+    );
+
+    test!(
+        removes_inner_comments,
+        "a {\n  color: red/* hi */;\n}\n",
+        "a {\n  color: red;\n}\n"
+    );
+    test!(
+        removes_inner_comments_whitespace,
+        "a {\n  color: red    /* hi */;\n}\n",
+        "a {\n  color: red;\n}\n"
+    );
+    test!(
+        preserves_outer_comments_before,
+        "a {\n  /* hi */\n  color: red;\n}\n"
+    );
+    test!(
+        preserves_outer_comments_after,
+        "a {\n  color: red;\n  /* hi */\n}\n"
+    );
+    test!(
+        preserves_outer_comments_two,
+        "a {\n  /* foo */\n  /* bar */\n  color: red;\n}\n"
+    );
+    test!(
+        preserves_toplevel_comment,
+        "/* foo */\na {\n  color: red;\n}\n"
+    );
+    test!(
+        removes_single_line_comment,
+        "// a { color: red }\na {\n  height: 1 1px;\n}\n",
+        "a {\n  height: 1 1px;\n}\n"
     );
 
     test!(unit_none, "a {\n  height: 1;\n}\n");
