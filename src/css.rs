@@ -93,7 +93,6 @@ impl Css {
                     for rule in rules {
                         self.parse_stmt(rule);
                     }
-                    self.idx -= 1;
                 }
             }
         }

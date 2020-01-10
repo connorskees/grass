@@ -459,6 +459,16 @@ mod test_css {
     );
     test!(basic_style, "a {\n  color: red;\n}\n");
     test!(two_styles, "a {\n  color: red;\n  color: blue;\n}\n");
+    test!(
+        two_inner_rulesets,
+        "a {\n  b {\n  color: red;\n}\n  c {\n  color: white;\n}\n}\n",
+        "a b {\n  color: red;\n}\na c {\n  color: white;\n}\n"
+    );
+    test!(
+        two_rulesets,
+        "a {\n  color: red;\n}\nc {\n  color: white;\n}\n"
+    );
+    test!(two_inner_outer_rulesets, "a {\n  b {\n  color: red;\n}\n  c {\n  color: white;\n}\n}\na {\n  b {\n  color: red;\n}\n  c {\n  color: white;\n}\n}\n", "a b {\n  color: red;\n}\na c {\n  color: white;\n}\na b {\n  color: red;\n}\na c {\n  color: white;\n}\n");
     test!(selector_mul, "a, b {\n  color: red;\n}\n");
     test!(
         removes_empty_outer_styles,
