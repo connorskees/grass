@@ -103,9 +103,9 @@ pub struct StyleSheet {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Stmt {
-    /// A style: `color: red`
+    /// A [`Style`](/grass/style/struct.Style)
     Style(Style),
-    /// An entire `[RuleSet](crate::RuleSet)`
+    /// A  [`RuleSet`](/grass/struct.RuleSet.html)
     RuleSet(RuleSet),
     /// A multiline comment: `/* foo bar */`
     MultilineComment(String),
@@ -490,8 +490,12 @@ mod test_css {
         "a {\n  /* foo */\n  /* bar */\n  color: red;\n}\n"
     );
     test!(
-        preserves_toplevel_comment,
+        preserves_toplevel_comment_before,
         "/* foo */\na {\n  color: red;\n}\n"
+    );
+    test!(
+        preserves_toplevel_comment_after,
+        "a {\n  color: red;\n}\n/* foo */\n"
     );
     test!(
         removes_single_line_comment,
