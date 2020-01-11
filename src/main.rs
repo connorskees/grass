@@ -620,4 +620,14 @@ mod test_css {
         "a, b {\n& {\n  color: red;\n}\n}\n",
         "a, b {\n  color: red;\n}\n"
     );
+    test!(
+        bem_dash_dash_selector,
+        "a {\n&--b {\n  color: red;\n}\n}\n",
+        "a--b {\n  color: red;\n}\n"
+    );
+    test!(
+        bem_underscore_selector,
+        "a {\n&__b {\n  color: red;\n}\n}\n",
+        "a__b {\n  color: red;\n}\n"
+    );
 }
