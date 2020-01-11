@@ -22,7 +22,8 @@
     clippy::too_many_lines,
     clippy::integer_arithmetic,
     clippy::missing_errors_doc,
-    clippy::let_underscore_must_use
+    clippy::let_underscore_must_use,
+    clippy::module_name_repetitions
 )]
 use std::collections::HashMap;
 use std::fmt::{self, Display};
@@ -592,5 +593,26 @@ mod test_css {
         removes_single_line_comment,
         "// a { color: red }\na {\n  height: 1 1px;\n}\n",
         "a {\n  height: 1 1px;\n}\n"
+    );
+
+    test!(
+        outer_ampersand,
+        "a, b {\n& c {\n  color: red;\n}\n}\n",
+        "a c, b c {\n  color: red;\n}\n"
+    );
+    test!(
+        inner_ampersand,
+        "a, b {\na & c {\n  color: red;\n}\n}\n",
+        "a a c, a b c {\n  color: red;\n}\n"
+    );
+    test!(
+        ampersand_multiple_whitespace,
+        " a  ,  b   {\n&c {\n  color: red;\n}\n}\n",
+        "ac, bc {\n  color: red;\n}\n"
+    );
+    test!(
+        ampersand_alone,
+        "a, b {\n& {\n  color: red;\n}\n}\n",
+        "a, b {\n  color: red;\n}\n"
     );
 }

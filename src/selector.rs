@@ -38,7 +38,7 @@ impl Display for Selector {
                             | Some(SelectorKind::Id)
                             | Some(SelectorKind::Universal)
                             | Some(SelectorKind::Element(_)) => {
-                                write!(f, " {}", iter.next().expect("already peeked here"))?;
+                                write!(f, " ")?;
                             }
                             _ => {}
                         }
@@ -74,7 +74,7 @@ pub enum SelectorKind {
     /// Pseudo selector: `:hover`
     Pseudo(String),
     /// Use the super selector: `&.red`
-    // Super,
+    Super,
     /// Used to signify no selector (when there is no super_selector of a rule)
     None,
     Whitespace,
@@ -94,8 +94,7 @@ impl Display for SelectorKind {
             SelectorKind::Preceding => write!(f, " ~ "),
             SelectorKind::Attribute(attr) => write!(f, "{}", attr),
             SelectorKind::Pseudo(s) => write!(f, ":{}", s),
-            // SelectorKind::Super => write!(f, "{}"),
-            SelectorKind::None => write!(f, ""),
+            SelectorKind::Super | SelectorKind::None => write!(f, ""),
         }
     }
 }
@@ -135,6 +134,17 @@ mod test_selector_display {
         )),
         "a c"
     );
+    test_selector_display!(
+        keeps_one_whitespace_with_three_els,
+        Selector((
+            Element("a".to_string()),
+            Whitespace,
+            Element("a".to_string()),
+            Whitespace,
+            Element("c".to_string()),
+        )),
+        "a a c"
+    );
 }
 
 struct SelectorParser<'a> {
@@ -154,15 +164,29 @@ impl<'a> SelectorParser<'a> {
     }
 
     fn all_selectors(&mut self) -> Selector {
-        let mut v = Vec::new();
+        let mut v = Vec::with_capacity(self.tokens.len());
         while let Some(s) = self.consume_selector() {
             v.push(s);
+        }
+        while let Some(x) = v.pop() {
+            if x != SelectorKind::Whitespace {
+                v.push(x);
+                break;
+            }
         }
         Selector(v)
     }
 
     fn consume_selector(&mut self) -> Option<SelectorKind> {
         if self.devour_whitespace() {
+            if let Some(&&Token {
+                kind: TokenKind::Symbol(Symbol::Comma),
+                ..
+            }) = self.tokens.peek()
+            {
+                self.tokens.next();
+                return Some(SelectorKind::Multiple);
+            }
             return Some(SelectorKind::Whitespace);
         }
         if let Some(Token { kind, .. }) = self.tokens.next() {
@@ -186,7 +210,7 @@ impl<'a> SelectorParser<'a> {
                 TokenKind::Symbol(Symbol::Plus) => SelectorKind::Following,
                 TokenKind::Symbol(Symbol::Tilde) => SelectorKind::Preceding,
                 TokenKind::Symbol(Symbol::Mul) => SelectorKind::Universal,
-                // TokenKind::Symbol(Symbol::BitAnd) => SelectorKind::Super,
+                TokenKind::Symbol(Symbol::BitAnd) => SelectorKind::Super,
                 TokenKind::Attribute(attr) => SelectorKind::Attribute(attr.clone()),
                 _ => todo!("unimplemented selector"),
             });
@@ -221,7 +245,7 @@ impl Selector {
         if self.0.is_empty() {
             return Selector(other.0);
         }
-        let mut rules: Vec<SelectorKind> = Vec::with_capacity(self.0.len());
+        let mut rules: Vec<SelectorKind> = Vec::with_capacity(self.0.len() + other.0.len());
         let sel1_split: Vec<Vec<SelectorKind>> = self
             .0
             .split(|sel| sel == &SelectorKind::Multiple)
@@ -234,9 +258,24 @@ impl Selector {
             .collect();
         for (idx, sel1) in sel1_split.iter().enumerate() {
             for (idx2, sel2) in sel2_split.iter().enumerate() {
-                rules.extend(sel1.iter().cloned());
-                rules.push(SelectorKind::Whitespace);
-                rules.extend(sel2.iter().cloned());
+                let mut this_selector = Vec::with_capacity(other.0.len());
+                let mut found_super = false;
+
+                for sel in sel2 {
+                    if sel == &SelectorKind::Super {
+                        this_selector.extend(sel1.iter().cloned());
+                        found_super = true;
+                    } else {
+                        this_selector.push(sel.clone());
+                    }
+                }
+
+                if !found_super {
+                    rules.extend(sel1.iter().cloned());
+                    rules.push(SelectorKind::Whitespace);
+                }
+                rules.extend(this_selector);
+
                 if !(idx + 1 == sel1_split.len() && idx2 + 1 == sel2_split.len()) {
                     rules.push(SelectorKind::Multiple);
                 }
