@@ -70,7 +70,6 @@ impl Css {
     fn parse_stmt(&mut self, stmt: Stmt) {
         match stmt {
             Stmt::Style(s) => {
-                assert!(self.idx >= 1);
                 if self.at_root {
                     self.blocks[self.idx - 1].push_style(s)
                 } else {
@@ -78,7 +77,6 @@ impl Css {
                 }
             },
             Stmt::MultilineComment(s) => {
-                assert!(self.idx >= 1);
                 if self.idx == 0 {
                     self.blocks.push(Toplevel::MultilineComment(s));
                 } else {
