@@ -5,118 +5,193 @@ use std::iter::Peekable;
 use std::slice::Iter;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum Selector {
-    /// An element selector: `button`
-    Element(String),
-    /// An id selector: `#footer`
-    Id(String),
-    /// A single class selector: `.button-active`
-    Class(String),
-    /// A universal selector: `*`
-    Universal,
-    /// A simple child selector: `ul li`
-    Descendant(Box<Selector>, Box<Selector>),
-    /// And selector: `button.active`
-    And(Box<Selector>, Box<Selector>),
-    /// Multiple unrelated selectors: `button, .active`
-    Multiple(Box<Selector>, Box<Selector>),
-    /// Select all immediate children: `ul > li`
-    ImmediateChild(Box<Selector>, Box<Selector>),
-    /// Select all elements immediately following: `div + p`
-    Following(Box<Selector>, Box<Selector>),
-    /// Select elements preceeded by: `p ~ ul`
-    Preceding(Box<Selector>, Box<Selector>),
-    /// Select elements with attribute: `html[lang|=en]`
-    Attribute(Attribute),
-    /// Pseudo selector: `:hover`
-    Pseudo(String),
-    /// Used to signify no selector (when there is no super_selector of a rule)
-    None,
+pub struct Selector(pub Vec<SelectorKind>);
+
+fn devour_whitespace(i: &mut Peekable<Iter<SelectorKind>>) -> bool {
+    let mut found_whitespace = false;
+    while let Some(SelectorKind::Whitespace) = i.peek() {
+        i.next();
+        found_whitespace = true;
+    }
+    found_whitespace
 }
 
 impl Display for Selector {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut iter = self.0.iter().peekable();
+
+        while let Some(s) = iter.next() {
+            match s {
+                SelectorKind::Whitespace => continue,
+                SelectorKind::Attribute(_)
+                | SelectorKind::Pseudo(_)
+                | SelectorKind::Class
+                | SelectorKind::Id
+                | SelectorKind::Universal
+                | SelectorKind::Element(_) => {
+                    write!(f, "{}", s)?;
+                    if devour_whitespace(&mut iter) {
+                        match iter.peek() {
+                            Some(SelectorKind::Attribute(_))
+                            | Some(SelectorKind::Pseudo(_))
+                            | Some(SelectorKind::Class)
+                            | Some(SelectorKind::Id)
+                            | Some(SelectorKind::Universal)
+                            | Some(SelectorKind::Element(_)) => {
+                                write!(f, " {}", iter.next().expect("already peeked here"))?;
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+                _ => write!(f, "{}", s)?,
+            }
+        }
+        write!(f, "")
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum SelectorKind {
+    /// An element selector: `button`
+    Element(String),
+    /// An id selector: `#footer`
+    Id,
+    /// A single class selector: `.button-active`
+    Class,
+    /// A universal selector: `*`
+    Universal,
+    /// Multiple unrelated selectors: `button, .active`
+    Multiple,
+    /// Select all immediate children: `ul > li`
+    ImmediateChild,
+    /// Select all elements immediately following: `div + p`
+    Following,
+    /// Select elements preceeded by: `p ~ ul`
+    Preceding,
+    /// Select elements with attribute: `html[lang|=en]`
+    Attribute(Attribute),
+    /// Pseudo selector: `:hover`
+    Pseudo(String),
+    /// Use the super selector: `&.red`
+    // Super,
+    /// Used to signify no selector (when there is no super_selector of a rule)
+    None,
+    Whitespace,
+}
+
+impl Display for SelectorKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Selector::Element(s) => write!(f, "{}", s),
-            Selector::Id(s) => write!(f, "#{}", s),
-            Selector::Class(s) => write!(f, ".{}", s),
-            Selector::Universal => write!(f, "*"),
-            Selector::Descendant(lhs, rhs) => write!(f, "{} {}", lhs, rhs),
-            Selector::And(lhs, rhs) => write!(f, "{}{}", lhs, rhs),
-            Selector::Multiple(lhs, rhs) => write!(f, "{}, {}", lhs, rhs),
-            Selector::ImmediateChild(lhs, rhs) => write!(f, "{} > {}", lhs, rhs),
-            Selector::Following(lhs, rhs) => write!(f, "{} + {}", lhs, rhs),
-            Selector::Preceding(lhs, rhs) => write!(f, "{} ~ {}", lhs, rhs),
-            Selector::Attribute(attr) => write!(f, "{}", attr),
-            Selector::Pseudo(s) => write!(f, ":{}", s),
-            Selector::None => write!(f, ""),
+            SelectorKind::Element(s) => write!(f, "{}", s),
+            SelectorKind::Id => write!(f, "#"),
+            SelectorKind::Class => write!(f, "."),
+            SelectorKind::Universal => write!(f, "*"),
+            SelectorKind::Whitespace => write!(f, " "),
+            SelectorKind::Multiple => write!(f, ", "),
+            SelectorKind::ImmediateChild => write!(f, " > "),
+            SelectorKind::Following => write!(f, " + "),
+            SelectorKind::Preceding => write!(f, " ~ "),
+            SelectorKind::Attribute(attr) => write!(f, "{}", attr),
+            SelectorKind::Pseudo(s) => write!(f, ":{}", s),
+            // SelectorKind::Super => write!(f, "{}"),
+            SelectorKind::None => write!(f, ""),
         }
     }
+}
+
+#[cfg(test)]
+mod test_selector_display {
+    use super::*;
+    use SelectorKind::*;
+    macro_rules! test_selector_display {
+
+        ($func:ident, Selector($tok:tt), $output:literal) => {
+            #[test]
+            fn $func() {
+                    assert_eq!(format!("{}", Selector(vec!$tok)), $output);
+            }
+        }
+    }
+
+    test_selector_display!(el, Selector((Element("a".to_string()))), "a");
+    test_selector_display!(
+        keeps_one_whitespace,
+        Selector((
+            Element("a".to_string()),
+            Whitespace,
+            Element("b".to_string()),
+        )),
+        "a b"
+    );
+    test_selector_display!(
+        keeps_one_whitespace_with_two,
+        Selector((
+            Element("a".to_string()),
+            Whitespace,
+            Whitespace,
+            Element("c".to_string()),
+            Whitespace,
+        )),
+        "a c"
+    );
 }
 
 struct SelectorParser<'a> {
     tokens: Peekable<Iter<'a, Token>>,
+    super_selector: &'a Selector,
 }
 
 impl<'a> SelectorParser<'a> {
-    const fn new(tokens: Peekable<Iter<'a, Token>>) -> SelectorParser<'a> {
-        SelectorParser { tokens }
+    const fn new(
+        tokens: Peekable<Iter<'a, Token>>,
+        super_selector: &'a Selector,
+    ) -> SelectorParser<'a> {
+        SelectorParser {
+            tokens,
+            super_selector,
+        }
     }
 
     fn all_selectors(&mut self) -> Selector {
-        self.devour_whitespace();
-        let left = self
-            .consume_selector()
-            .expect("expected left handed selector");
-        let whitespace: bool = self.devour_whitespace();
-        match self.tokens.peek() {
-            Some(tok) => match tok.kind {
-                TokenKind::Ident(_) => {
-                    return Selector::Descendant(Box::new(left), Box::new(self.all_selectors()))
-                }
-                TokenKind::Symbol(Symbol::Plus) => {
-                    self.tokens.next();
-                    self.devour_whitespace();
-                    return Selector::Following(Box::new(left), Box::new(self.all_selectors()));
-                }
-                TokenKind::Symbol(Symbol::Tilde) => {
-                    self.tokens.next();
-                    self.devour_whitespace();
-                    return Selector::Preceding(Box::new(left), Box::new(self.all_selectors()));
-                }
-                TokenKind::Symbol(Symbol::Comma) => {
-                    self.tokens.next();
-                    self.devour_whitespace();
-                    return Selector::Multiple(Box::new(left), Box::new(self.all_selectors()));
-                }
-                TokenKind::Symbol(Symbol::Gt) => {
-                    self.tokens.next();
-                    self.devour_whitespace();
-                    return Selector::ImmediateChild(
-                        Box::new(left),
-                        Box::new(self.all_selectors()),
-                    );
-                }
-                TokenKind::Symbol(Symbol::Colon)
-                | TokenKind::Symbol(Symbol::Period)
-                | TokenKind::Symbol(Symbol::Mul)
-                | TokenKind::Selector(_)
-                | TokenKind::Symbol(Symbol::Hash) => {
-                    if whitespace {
-                        return Selector::Descendant(
-                            Box::new(left),
-                            Box::new(self.all_selectors()),
-                        );
+        let mut v = Vec::new();
+        while let Some(s) = self.consume_selector() {
+            v.push(s);
+        }
+        Selector(v)
+    }
+
+    fn consume_selector(&mut self) -> Option<SelectorKind> {
+        if self.devour_whitespace() {
+            return Some(SelectorKind::Whitespace);
+        }
+        if let Some(Token { kind, .. }) = self.tokens.next() {
+            return Some(match &kind {
+                TokenKind::Ident(tok) => SelectorKind::Element(tok.clone()),
+                TokenKind::Symbol(Symbol::Period) => SelectorKind::Class,
+                TokenKind::Symbol(Symbol::Hash) => SelectorKind::Id,
+                TokenKind::Symbol(Symbol::Colon) => {
+                    if let Some(Token {
+                        kind: TokenKind::Ident(s),
+                        ..
+                    }) = self.tokens.next()
+                    {
+                        SelectorKind::Pseudo(s.clone())
                     } else {
-                        return Selector::And(Box::new(left), Box::new(self.all_selectors()));
+                        todo!("expected ident after `:` in selector")
                     }
                 }
-                TokenKind::Symbol(Symbol::Lt) => {}
-                _ => todo!(),
-            },
-            None => return left,
+                TokenKind::Symbol(Symbol::Comma) => SelectorKind::Multiple,
+                TokenKind::Symbol(Symbol::Gt) => SelectorKind::ImmediateChild,
+                TokenKind::Symbol(Symbol::Plus) => SelectorKind::Following,
+                TokenKind::Symbol(Symbol::Tilde) => SelectorKind::Preceding,
+                TokenKind::Symbol(Symbol::Mul) => SelectorKind::Universal,
+                // TokenKind::Symbol(Symbol::BitAnd) => SelectorKind::Super,
+                TokenKind::Attribute(attr) => SelectorKind::Attribute(attr.clone()),
+                _ => todo!("unimplemented selector"),
+            });
         }
-        todo!()
+        None
     }
 
     fn devour_whitespace(&mut self) -> bool {
@@ -132,56 +207,42 @@ impl<'a> SelectorParser<'a> {
         }
         found_whitespace
     }
-
-    fn consume_selector(&mut self) -> Option<Selector> {
-        if let Some(tok) = self.tokens.next() {
-            let selector = match &tok.kind {
-                TokenKind::Symbol(Symbol::Period) => {
-                    match self.tokens.next().expect("expected ident after `.`").kind {
-                        TokenKind::Ident(ref tok) => Selector::Class(tok.clone()),
-                        _ => todo!("there should normally be an ident after `.`"),
-                    }
-                }
-                TokenKind::Symbol(Symbol::Mul) => Selector::Universal,
-                TokenKind::Symbol(Symbol::Hash) => {
-                    match &self.tokens.next().expect("expected ident after `#`").kind {
-                        TokenKind::Ident(ref tok) => Selector::Id(tok.clone()),
-                        _ => todo!("there should normally be an ident after `#`"),
-                    }
-                }
-                TokenKind::Symbol(Symbol::Colon) => {
-                    match self.tokens.next().expect("expected ident after `:`").kind {
-                        TokenKind::Ident(ref tok) => Selector::Pseudo(tok.clone()),
-                        _ => todo!("there should normally be an ident after `:`"),
-                    }
-                }
-                TokenKind::Ident(tok) => Selector::Element(tok.clone()),
-                TokenKind::Selector(sel) => sel.clone(),
-                _ => todo!(),
-            };
-            Some(selector)
-        } else {
-            None
-        }
-    }
 }
 
 impl Selector {
-    pub fn from_tokens(tokens: Peekable<Iter<Token>>) -> Selector {
-        SelectorParser::new(tokens).all_selectors()
+    pub fn from_tokens<'a>(
+        tokens: Peekable<Iter<'a, Token>>,
+        super_selector: &'a Selector,
+    ) -> Selector {
+        SelectorParser::new(tokens, super_selector).all_selectors()
     }
 
     pub fn zip(self, other: Selector) -> Selector {
-        if let Selector::Multiple(lhs, rhs) = other {
-            return Selector::Multiple(Box::new(self.clone().zip(*lhs)), Box::new(self.zip(*rhs)));
+        if self.0.is_empty() {
+            return Selector(other.0);
         }
-        match self {
-            Selector::Multiple(lhs, rhs) => {
-                Selector::Multiple(Box::new(lhs.zip(other.clone())), Box::new(rhs.zip(other)))
+        let mut rules: Vec<SelectorKind> = Vec::with_capacity(self.0.len());
+        let sel1_split: Vec<Vec<SelectorKind>> = self
+            .0
+            .split(|sel| sel == &SelectorKind::Multiple)
+            .map(|x| x.to_vec())
+            .collect();
+        let sel2_split: Vec<Vec<SelectorKind>> = other
+            .0
+            .split(|sel| sel == &SelectorKind::Multiple)
+            .map(|x| x.to_vec())
+            .collect();
+        for (idx, sel1) in sel1_split.iter().enumerate() {
+            for (idx2, sel2) in sel2_split.iter().enumerate() {
+                rules.extend(sel1.iter().cloned());
+                rules.push(SelectorKind::Whitespace);
+                rules.extend(sel2.iter().cloned());
+                if !(idx + 1 == sel1_split.len() && idx2 + 1 == sel2_split.len()) {
+                    rules.push(SelectorKind::Multiple);
+                }
             }
-            Selector::None => other,
-            _ => Selector::Descendant(Box::new(self), Box::new(other)),
         }
+        Selector(rules)
     }
 }
 

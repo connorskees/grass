@@ -143,6 +143,7 @@ mod test_scss {
     test!(selector_el_id_descendant, "a #class {\n}\n");
     test!(selector_el_universal_descendant, "a * {\n}\n");
     test!(selector_universal_el_descendant, "* a {\n}\n");
+
     test!(selector_attribute_any, "[attr] {\n}\n");
     test!(selector_attribute_equals, "[attr=val] {\n}\n");
     test!(selector_attribute_single_quotes, "[attr='val'] {\n}\n");
@@ -164,6 +165,7 @@ mod test_scss {
     test!(selector_pseudo, ":pseudo {\n}\n");
     test!(selector_el_pseudo_and, "a:pseudo {\n}\n");
     test!(selector_el_pseudo_descendant, "a :pseudo {\n}\n");
+    test!(selector_pseudo_el_descendant, ":pseudo a {\n}\n");
 
     test!(basic_style, "a {\n  color: red;\n}\n");
     test!(two_styles, "a {\n  color: red;\n  color: blue;\n}\n");

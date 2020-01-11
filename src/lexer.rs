@@ -3,7 +3,7 @@ use std::iter::Peekable;
 use std::str::Chars;
 
 use crate::common::{AtRule, Keyword, Op, Pos, Symbol};
-use crate::selector::{Attribute, AttributeKind, Selector};
+use crate::selector::{Attribute, AttributeKind};
 use crate::units::Unit;
 use crate::{Token, TokenKind, Whitespace};
 
@@ -59,6 +59,7 @@ impl<'a> Iterator for Lexer<'a> {
             '{' => symbol!(self, OpenBrace),
             '*' => symbol!(self, Mul),
             '}' => symbol!(self, CloseBrace),
+            '&' => symbol!(self, BitAnd),
             '/' => self.lex_forward_slash(),
             '%' => {
                 self.buf.next();
@@ -226,22 +227,22 @@ impl<'a> Lexer<'a> {
             .expect("todo! expected kind (should be error)")
         {
             ']' => {
-                return TokenKind::Selector(Selector::Attribute(Attribute {
+                return TokenKind::Attribute(Attribute {
                     kind: AttributeKind::Any,
                     attr,
                     value: String::new(),
                     case_sensitive: true,
-                }))
+                })
             }
             'i' => {
                 self.devour_whitespace();
                 assert!(self.buf.next() == Some(']'));
-                return TokenKind::Selector(Selector::Attribute(Attribute {
+                return TokenKind::Attribute(Attribute {
                     kind: AttributeKind::Any,
                     attr,
                     value: String::new(),
                     case_sensitive: false,
-                }));
+                });
             }
             '=' => AttributeKind::Equals,
             '~' => AttributeKind::InList,
@@ -297,12 +298,12 @@ impl<'a> Lexer<'a> {
 
         assert!(self.buf.next() == Some(']'));
 
-        TokenKind::Selector(Selector::Attribute(Attribute {
+        TokenKind::Attribute(Attribute {
             kind,
             attr,
             value,
             case_sensitive,
-        }))
+        })
     }
 
     fn lex_variable(&mut self) -> TokenKind {

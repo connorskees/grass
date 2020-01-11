@@ -21,7 +21,8 @@
     clippy::unused_self,
     clippy::too_many_lines,
     clippy::integer_arithmetic,
-    clippy::missing_errors_doc
+    clippy::missing_errors_doc,
+    clippy::let_underscore_must_use
 )]
 use std::collections::HashMap;
 use std::fmt::{self, Display};
@@ -35,7 +36,7 @@ use crate::css::Css;
 use crate::error::SassError;
 use crate::format::PrettyPrinter;
 use crate::lexer::Lexer;
-use crate::selector::Selector;
+use crate::selector::{Attribute, Selector};
 use crate::style::Style;
 use crate::units::Unit;
 
@@ -68,7 +69,7 @@ pub enum TokenKind {
     Unit(Unit),
     Whitespace(Whitespace),
     Variable(String),
-    Selector(Selector),
+    Attribute(Attribute),
     Style(Vec<Token>),
     Op(Op),
     // todo! preserve multi-line comments
@@ -84,7 +85,7 @@ impl Display for TokenKind {
             TokenKind::Op(s) => write!(f, "{}", s),
             TokenKind::Unit(s) => write!(f, "{}", s),
             TokenKind::Whitespace(s) => write!(f, "{}", s),
-            TokenKind::Selector(s) => write!(f, "{}", s),
+            TokenKind::Attribute(s) => write!(f, "{}", s),
             TokenKind::Function(name, args) => write!(f, "{}({})", name, args.join(", ")),
             TokenKind::Keyword(kw) => write!(f, "{}", kw),
             TokenKind::MultilineComment(s) => write!(f, "/*{}*/", s),
@@ -93,7 +94,6 @@ impl Display for TokenKind {
         }
     }
 }
-
 
 /// Represents a parsed SASS stylesheet with nesting
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -112,7 +112,7 @@ pub enum Stmt {
 }
 
 /// Represents a single rule set. Rule sets can contain other rule sets
-/// 
+///
 /// a {
 ///   color: blue;
 ///   b {
@@ -165,10 +165,10 @@ impl StyleSheet {
     }
 
     /// Print the internal representation of a parsed stylesheet
-    /// 
+    ///
     /// Very closely resembles the origin SASS, but contains only things translatable
     /// to pure CSS
-    /// 
+    ///
     /// Used mainly in debugging, but can at times be useful
     pub fn pretty_print<W: std::io::Write>(&self, buf: W) -> io::Result<()> {
         PrettyPrinter::new(buf).pretty_print(self)
@@ -199,12 +199,13 @@ impl<'a> StyleSheetParser<'a> {
         while let Some(Token { kind, .. }) = self.lexer.peek() {
             match kind.clone() {
                 TokenKind::Ident(_)
-                | TokenKind::Selector(_)
+                | TokenKind::Attribute(_)
                 | TokenKind::Symbol(Symbol::Hash)
                 | TokenKind::Symbol(Symbol::Colon)
                 | TokenKind::Symbol(Symbol::Mul)
-                | TokenKind::Symbol(Symbol::Period) => rules
-                    .extend(self.eat_rules(&Selector::None, &mut self.global_variables.clone())),
+                | TokenKind::Symbol(Symbol::Period) => rules.extend(
+                    self.eat_rules(&Selector(Vec::new()), &mut self.global_variables.clone()),
+                ),
                 TokenKind::Whitespace(_) | TokenKind::Symbol(_) => {
                     self.lexer.next();
                     continue;
@@ -318,7 +319,7 @@ impl<'a> StyleSheetParser<'a> {
         vars: &mut HashMap<String, Vec<Token>>,
     ) -> Vec<Stmt> {
         let mut stmts = Vec::new();
-        while let Ok(tok) = self.eat_expr(vars) {
+        while let Ok(tok) = self.eat_expr(vars, super_selector) {
             match tok {
                 Expr::Style(s) => stmts.push(Stmt::Style(s)),
                 Expr::Selector(s) => {
@@ -348,7 +349,11 @@ impl<'a> StyleSheetParser<'a> {
         stmts
     }
 
-    fn eat_expr(&mut self, vars: &HashMap<String, Vec<Token>>) -> Result<Expr, ()> {
+    fn eat_expr(
+        &mut self,
+        vars: &HashMap<String, Vec<Token>>,
+        super_selector: &Selector,
+    ) -> Result<Expr, ()> {
         let mut values = Vec::with_capacity(5);
         while let Some(tok) = self.lexer.next() {
             match tok.kind {
@@ -360,6 +365,7 @@ impl<'a> StyleSheetParser<'a> {
                     self.devour_whitespace();
                     return Ok(Expr::Selector(Selector::from_tokens(
                         values.iter().peekable(),
+                        super_selector,
                     )));
                 }
                 TokenKind::Variable(name) => {
@@ -453,10 +459,85 @@ mod test_css {
     }
 
     test!(
-        nesting_el_mul_el,
+        selector_nesting_el_mul_el,
         "a, b {\n  a, b {\n  color: red\n}\n}\n",
-        "a a, b a, a b, b b {\n  color: red;\n}\n"
+        "a a, a b, b a, b b {\n  color: red;\n}\n"
     );
+
+    test!(selector_element, "a {\n  color: red;\n}\n");
+    test!(selector_id, "#id {\n  color: red;\n}\n");
+    test!(selector_class, ".class {\n  color: red;\n}\n");
+    test!(selector_el_descendant, "a a {\n  color: red;\n}\n");
+    test!(selector_universal, "* {\n  color: red;\n}\n");
+    test!(selector_el_class_and, "a.class {\n  color: red;\n}\n");
+    test!(selector_el_id_and, "a#class {\n  color: red;\n}\n");
+    test!(
+        selector_el_class_descendant,
+        "a .class {\n  color: red;\n}\n"
+    );
+    test!(selector_el_id_descendant, "a #class {\n  color: red;\n}\n");
+    test!(
+        selector_el_universal_descendant,
+        "a * {\n  color: red;\n}\n"
+    );
+    test!(
+        selector_universal_el_descendant,
+        "* a {\n  color: red;\n}\n"
+    );
+
+    test!(selector_attribute_any, "[attr] {\n  color: red;\n}\n");
+    test!(
+        selector_attribute_equals,
+        "[attr=val] {\n  color: red;\n}\n"
+    );
+    test!(
+        selector_attribute_single_quotes,
+        "[attr='val'] {\n  color: red;\n}\n"
+    );
+    test!(
+        selector_attribute_double_quotes,
+        "[attr=\"val\"] {\n  color: red;\n}\n"
+    );
+    test!(selector_attribute_in, "[attr~=val] {\n  color: red;\n}\n");
+    test!(
+        selector_attribute_begins_hyphen_or_exact,
+        "[attr|=val] {\n  color: red;\n}\n"
+    );
+    test!(
+        selector_attribute_starts_with,
+        "[attr^=val] {\n  color: red;\n}\n"
+    );
+    test!(
+        selector_attribute_ends_with,
+        "[attr$=val] {\n  color: red;\n}\n"
+    );
+    test!(
+        selector_attribute_contains,
+        "[attr*=val] {\n  color: red;\n}\n"
+    );
+    test!(selector_el_attribute_and, "a[attr] {\n  color: red;\n}\n");
+    test!(
+        selector_el_attribute_descendant,
+        "a [attr] {\n  color: red;\n}\n"
+    );
+    test!(selector_el_mul_el, "a, b {\n  color: red;\n}\n");
+    test!(
+        selector_el_immediate_child_el,
+        "a > b {\n  color: red;\n}\n"
+    );
+    test!(selector_el_following_el, "a + b {\n  color: red;\n}\n");
+    test!(selector_el_preceding_el, "a ~ b {\n  color: red;\n}\n");
+    test!(selector_pseudo, ":pseudo {\n  color: red;\n}\n");
+    test!(selector_el_pseudo_and, "a:pseudo {\n  color: red;\n}\n");
+    test!(
+        selector_el_pseudo_descendant,
+        "a :pseudo {\n  color: red;\n}\n"
+    );
+    test!(
+        selector_pseudo_el_descendant,
+        ":pseudo a {\n  color: red;\n}\n"
+    );
+
     test!(basic_style, "a {\n  color: red;\n}\n");
     test!(two_styles, "a {\n  color: red;\n  color: blue;\n}\n");
     test!(
