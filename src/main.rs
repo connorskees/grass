@@ -46,6 +46,7 @@ mod common;
 mod css;
 mod error;
 mod format;
+mod imports;
 mod lexer;
 mod selector;
 mod style;
