@@ -464,7 +464,6 @@ mod test_css {
         "a, b {\n  a, b {\n  color: red\n}\n}\n",
         "a a, a b, b a, b b {\n  color: red;\n}\n"
     );
-
     test!(selector_element, "a {\n  color: red;\n}\n");
     test!(selector_id, "#id {\n  color: red;\n}\n");
     test!(selector_class, ".class {\n  color: red;\n}\n");
@@ -558,6 +557,11 @@ mod test_css {
         "a b {\n  color: red;\n}\n"
     );
     test!(removes_empty_styles, "a {}\n", "");
+    test!(
+        doesnt_eat_style_after_ruleset,
+        "a {\n  b {\n  color: red;\n}\n  color: blue;\n}\n",
+        "a {\n  color: blue;\n}\na b {\n  color: red;\n}\n"
+    );
 
     test!(
         removes_inner_comments,

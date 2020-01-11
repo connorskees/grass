@@ -49,6 +49,8 @@ impl Toplevel {
 pub struct Css {
     blocks: Vec<Toplevel>,
     idx: usize,
+    inner_rulesets: usize,
+    at_root: bool,
 }
 
 impl Css {
@@ -56,6 +58,8 @@ impl Css {
         Css {
             blocks: Vec::new(),
             idx: 0,
+            inner_rulesets: 0,
+            at_root: true,
         }
     }
 
@@ -65,12 +69,20 @@ impl Css {
 
     fn parse_stmt(&mut self, stmt: Stmt) {
         match stmt {
-            Stmt::Style(s) => self.blocks[self.idx - 1].push_style(s),
+            Stmt::Style(s) => {
+                assert!(self.idx >= 1);
+                if self.at_root {
+                    self.blocks[self.idx - 1].push_style(s)
+                } else {
+                    self.blocks[self.idx + self.inner_rulesets - 1].push_style(s)
+                }
+            },
             Stmt::MultilineComment(s) => {
+                assert!(self.idx >= 1);
                 if self.idx == 0 {
                     self.blocks.push(Toplevel::MultilineComment(s));
                 } else {
-                    self.blocks[self.idx - 1].push_comment(s)
+                    self.blocks[self.idx + self.inner_rulesets - 1].push_comment(s)
                 }
             }
             Stmt::RuleSet(RuleSet {
@@ -80,19 +92,25 @@ impl Css {
             }) => {
                 if self.idx == 0 {
                     self.idx = self.blocks.len() + 1;
+                    self.inner_rulesets = 0;
                     self.blocks
                         .push(Toplevel::new_rule(super_selector.zip(selector)));
                     for rule in rules {
+                        self.at_root = true;
                         self.parse_stmt(rule);
+                        self.at_root = true;
                     }
                     self.idx = 0;
                 } else {
                     self.idx += 1;
+                    self.at_root = false;
                     self.blocks
                         .push(Toplevel::new_rule(super_selector.zip(selector)));
                     for rule in rules {
                         self.parse_stmt(rule);
                     }
+                    self.idx -= 1;
+                    self.inner_rulesets += 1;
                 }
             }
         }
