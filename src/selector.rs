@@ -3,6 +3,7 @@ use crate::{Token, TokenKind};
 use std::fmt::{self, Display};
 use std::iter::Peekable;
 use std::slice::Iter;
+use std::string::ToString;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Selector(pub Vec<SelectorKind>);
@@ -25,6 +26,7 @@ impl Display for Selector {
                 SelectorKind::Whitespace => continue,
                 SelectorKind::Attribute(_)
                 | SelectorKind::Pseudo(_)
+                | SelectorKind::PseudoParen(..)
                 | SelectorKind::Class
                 | SelectorKind::Id
                 | SelectorKind::Universal
@@ -34,6 +36,7 @@ impl Display for Selector {
                         match iter.peek() {
                             Some(SelectorKind::Attribute(_))
                             | Some(SelectorKind::Pseudo(_))
+                            | Some(SelectorKind::PseudoParen(..))
                             | Some(SelectorKind::Class)
                             | Some(SelectorKind::Id)
                             | Some(SelectorKind::Universal)
@@ -73,6 +76,8 @@ pub enum SelectorKind {
     Attribute(Attribute),
     /// Pseudo selector: `:hover`
     Pseudo(String),
+    /// Pseudo selector with additional parens: `:any(h1, h2, h3, h4, h5, h6)`
+    PseudoParen(String, Vec<TokenKind>),
     /// Use the super selector: `&.red`
     Super,
     /// Used to signify no selector (when there is no super_selector of a rule)
@@ -94,6 +99,12 @@ impl Display for SelectorKind {
             SelectorKind::Preceding => write!(f, " ~ "),
             SelectorKind::Attribute(attr) => write!(f, "{}", attr),
             SelectorKind::Pseudo(s) => write!(f, ":{}", s),
+            SelectorKind::PseudoParen(s, toks) => write!(
+                f,
+                ":{}({})",
+                s,
+                toks.iter().map(ToString::to_string).collect::<String>()
+            ),
             SelectorKind::Super | SelectorKind::None => write!(f, ""),
         }
     }
@@ -177,6 +188,36 @@ impl<'a> SelectorParser<'a> {
         Selector(v)
     }
 
+    fn consume_pseudo_selector(&mut self) -> Option<SelectorKind> {
+        if let Some(Token {
+            kind: TokenKind::Ident(s),
+            ..
+        }) = self.tokens.next()
+        {
+            if let Some(Token {
+                kind: TokenKind::Symbol(Symbol::OpenParen),
+                ..
+            }) = self.tokens.peek()
+            {
+                self.tokens.next();
+                let mut toks = Vec::new();
+                while let Some(Token { kind, .. }) = self.tokens.peek() {
+                    if kind == &TokenKind::Symbol(Symbol::CloseParen) {
+                        break;
+                    }
+                    let tok = self.tokens.next().unwrap();
+                    toks.push(tok.kind.clone());
+                }
+                self.tokens.next();
+                Some(SelectorKind::PseudoParen(s.clone(), toks))
+            } else {
+                Some(SelectorKind::Pseudo(s.clone()))
+            }
+        } else {
+            todo!("expected ident after `:` in selector")
+        }
+    }
+
     fn consume_selector(&mut self) -> Option<SelectorKind> {
         if self.devour_whitespace() {
             if let Some(&&Token {
@@ -194,17 +235,7 @@ impl<'a> SelectorParser<'a> {
                 TokenKind::Ident(tok) => SelectorKind::Element(tok.clone()),
                 TokenKind::Symbol(Symbol::Period) => SelectorKind::Class,
                 TokenKind::Symbol(Symbol::Hash) => SelectorKind::Id,
-                TokenKind::Symbol(Symbol::Colon) => {
-                    if let Some(Token {
-                        kind: TokenKind::Ident(s),
-                        ..
-                    }) = self.tokens.next()
-                    {
-                        SelectorKind::Pseudo(s.clone())
-                    } else {
-                        todo!("expected ident after `:` in selector")
-                    }
-                }
+                TokenKind::Symbol(Symbol::Colon) => return self.consume_pseudo_selector(),
                 TokenKind::Symbol(Symbol::Comma) => SelectorKind::Multiple,
                 TokenKind::Symbol(Symbol::Gt) => SelectorKind::ImmediateChild,
                 TokenKind::Symbol(Symbol::Plus) => SelectorKind::Following,

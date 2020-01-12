@@ -538,6 +538,31 @@ mod test_css {
         selector_pseudo_el_descendant,
         ":pseudo a {\n  color: red;\n}\n"
     );
+    test!(
+        selector_pseudo_paren_comma,
+        ":pseudo(a, b, c) {\n  color: red;\n}\n"
+    );
+    test!(
+        selector_pseudo_paren_space,
+        ":pseudo(a b c) {\n  color: red;\n}\n"
+    );
+    test!(
+        selector_el_pseudo_paren_and,
+        "a:pseudo(a, b, c) {\n  color: red;\n}\n"
+    );
+    test!(
+        selector_el_pseudo_paren_descendant,
+        "a :pseudo(a, b, c) {\n  color: red;\n}\n"
+    );
+    test!(
+        selector_pseudo_paren_el_descendant,
+        ":pseudo(a, b, c) a {\n  color: red;\n}\n"
+    );
+    test!(
+        selector_pseudo_paren_el_nested,
+        "a {\n  :pseudo(a, b, c) {\n  color: red;\n  }\n}\n",
+        "a :pseudo(a, b, c) {\n  color: red;\n}\n"
+    );
 
     test!(basic_style, "a {\n  color: red;\n}\n");
     test!(two_styles, "a {\n  color: red;\n  color: blue;\n}\n");

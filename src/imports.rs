@@ -3,11 +3,7 @@ use crate::StyleSheetParser;
 pub struct Importer {}
 
 impl Importer {
-    pub fn import(path: &str) {
+    pub fn import(path: &str) {}
 
-    }
-
-    fn find_files() {
-        
-    }
+    fn find_files() {}
 }

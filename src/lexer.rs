@@ -40,6 +40,8 @@ impl<'a> Iterator for Lexer<'a> {
             ',' => symbol!(self, Comma),
             '.' => symbol!(self, Period),
             ';' => symbol!(self, SemiColon),
+            '(' => symbol!(self, OpenParen),
+            ')' => symbol!(self, CloseParen),
             '+' => symbol!(self, Plus),
             '~' => symbol!(self, Tilde),
             '\'' => symbol!(self, SingleQuote),

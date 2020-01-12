@@ -75,7 +75,7 @@ impl Css {
                 } else {
                     self.blocks[self.idx + self.inner_rulesets - 1].push_style(s)
                 }
-            },
+            }
             Stmt::MultilineComment(s) => {
                 if self.idx == 0 {
                     self.blocks.push(Toplevel::MultilineComment(s));
