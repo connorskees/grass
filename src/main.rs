@@ -25,7 +25,7 @@
     clippy::let_underscore_must_use,
     clippy::module_name_repetitions
 )]
-// todo! handle erroring on styles at the toplevel 
+// todo! handle erroring on styles at the toplevel
 use std::collections::HashMap;
 use std::fmt::{self, Display};
 use std::fs;
@@ -65,7 +65,6 @@ pub struct Token {
 pub enum TokenKind {
     Ident(String),
     Symbol(Symbol),
-    Function(String, Vec<String>),
     AtRule(AtRule),
     Keyword(Keyword),
     Number(String),
@@ -75,6 +74,7 @@ pub enum TokenKind {
     Attribute(Attribute),
     Op(Op),
     MultilineComment(String),
+    Interpolation,
 }
 
 impl Display for TokenKind {
@@ -87,10 +87,12 @@ impl Display for TokenKind {
             TokenKind::Unit(s) => write!(f, "{}", s),
             TokenKind::Whitespace(s) => write!(f, "{}", s),
             TokenKind::Attribute(s) => write!(f, "{}", s),
-            TokenKind::Function(name, args) => write!(f, "{}({})", name, args.join(", ")),
             TokenKind::Keyword(kw) => write!(f, "{}", kw),
             TokenKind::MultilineComment(s) => write!(f, "/*{}*/", s),
             TokenKind::Variable(s) => write!(f, "${}", s),
+            TokenKind::Interpolation => {
+                panic!("we don't want to format TokenKind::Interpolation using Display")
+            }
         }
     }
 }
@@ -139,6 +141,8 @@ enum Expr {
     VariableDecl(String, Vec<Token>),
     /// A multiline comment: `/* foobar */`
     MultilineComment(String),
+    // /// Function call: `calc(10vw - 1px)`
+    // FuncCall(String, Vec<Token>),
 }
 
 impl StyleSheet {
@@ -200,6 +204,7 @@ impl<'a> StyleSheetParser<'a> {
             match kind.clone() {
                 TokenKind::Ident(_)
                 | TokenKind::Attribute(_)
+                | TokenKind::Interpolation
                 | TokenKind::Symbol(Symbol::Hash)
                 | TokenKind::Symbol(Symbol::Colon)
                 | TokenKind::Symbol(Symbol::Mul)
@@ -239,7 +244,7 @@ impl<'a> StyleSheetParser<'a> {
                     } else {
                         unsafe { std::hint::unreachable_unchecked() }
                     }
-                },
+                }
             };
         }
         Ok(StyleSheet { rules })
@@ -314,9 +319,7 @@ impl<'a> StyleSheetParser<'a> {
         iter2
     }
 
-    fn eat_func_call(&mut self) {
-
-    }
+    fn eat_func_call(&mut self) {}
 
     fn eat_rules(
         &mut self,
@@ -373,6 +376,7 @@ impl<'a> StyleSheetParser<'a> {
                     return Ok(Expr::Selector(Selector::from_tokens(
                         values.iter().peekable(),
                         super_selector,
+                        vars,
                     )));
                 }
                 TokenKind::Variable(_) => {
@@ -413,6 +417,15 @@ impl<'a> StyleSheetParser<'a> {
                     }
                 }
                 TokenKind::AtRule(_) => self.eat_at_rule(),
+                TokenKind::Interpolation => {
+                    while let Some(tok) = self.lexer.next() {
+                        if tok.kind == TokenKind::Symbol(Symbol::CloseBrace) {
+                            values.push(tok);
+                            break;
+                        }
+                        values.push(tok);
+                    }
+                }
                 _ => {
                     if let Some(tok) = self.lexer.next() {
                         values.push(tok.clone())
@@ -716,9 +729,75 @@ mod test_css {
         "a {\n&--b {\n  color: red;\n}\n}\n",
         "a--b {\n  color: red;\n}\n"
     );
+    // test!(
+    //     bem_underscore_selector,
+    //     "a {\n&__b {\n  color: red;\n}\n}\n",
+    //     "a__b {\n  color: red;\n}\n"
+    // );
     test!(
-        bem_underscore_selector,
-        "a {\n&__b {\n  color: red;\n}\n}\n",
-        "a__b {\n  color: red;\n}\n"
+        selector_interpolation_start,
+        "#{a}bc {\n  color: red;\n}\n",
+        "abc {\n  color: red;\n}\n"
+    );
+    test!(
+        selector_interpolation_middle,
+        "a#{b}c {\n  color: red;\n}\n",
+        "abc {\n  color: red;\n}\n"
+    );
+    test!(
+        selector_interpolation_end,
+        "ab#{c} {\n  color: red;\n}\n",
+        "abc {\n  color: red;\n}\n"
+    );
+    test!(
+        selector_interpolation_variable,
+        "$a: foo;\nab#{$a} {\n  color: red;\n}\n",
+        "abfoo {\n  color: red;\n}\n"
+    );
+    test!(
+        style_interpolation_start,
+        "a {\n  #{c}olor: red;\n}\n",
+        "a {\n  color: red;\n}\n"
+    );
+    test!(
+        style_interpolation_middle,
+        "a {\n  co#{l}or: red;\n}\n",
+        "a {\n  color: red;\n}\n"
+    );
+    test!(
+        style_interpolation_end,
+        "a {\n  colo#{r}: red;\n}\n",
+        "a {\n  color: red;\n}\n"
+    );
+    test!(
+        style_interpolation_variable,
+        "$a: foo;\na {\n  co#{$a}lor: red;\n}\n",
+        "a {\n  cofoolor: red;\n}\n"
+    );
+
+    test!(
+        style_val_interpolation_start,
+        "a {\n  color: #{r}ed;\n}\n",
+        "a {\n  color: red;\n}\n"
+    );
+    test!(
+        style_val_interpolation_middle,
+        "a {\n  color: r#{e}d;\n}\n",
+        "a {\n  color: red;\n}\n"
+    );
+    test!(
+        style_val_interpolation_end,
+        "a {\n  color: re#{d};\n}\n",
+        "a {\n  color: red;\n}\n"
+    );
+    test!(
+        style_val_interpolation_variable,
+        "$a: foo;\na {\n  color: r#{$a}ed;\n}\n",
+        "a {\n  color: rfooed;\n}\n"
+    );
+    test!(
+        style_whitespace,
+        "a {\n     color      :       red    ;    \n}\n",
+        "a {\n  color: red;\n}\n"
     );
 }

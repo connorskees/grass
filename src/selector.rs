@@ -1,5 +1,6 @@
 use crate::common::Symbol;
 use crate::{Token, TokenKind};
+use std::collections::HashMap;
 use std::fmt::{self, Display};
 use std::iter::Peekable;
 use std::slice::Iter;
@@ -11,6 +12,19 @@ pub struct Selector(pub Vec<SelectorKind>);
 fn devour_whitespace(i: &mut Peekable<Iter<SelectorKind>>) -> bool {
     let mut found_whitespace = false;
     while let Some(SelectorKind::Whitespace) = i.peek() {
+        i.next();
+        found_whitespace = true;
+    }
+    found_whitespace
+}
+
+fn devour_whitespace_from_tokens(i: &mut Peekable<Iter<Token>>) -> bool {
+    let mut found_whitespace = false;
+    while let Some(Token {
+        kind: TokenKind::Whitespace(_),
+        ..
+    }) = i.peek()
+    {
         i.next();
         found_whitespace = true;
     }
@@ -83,6 +97,8 @@ pub enum SelectorKind {
     /// Used to signify no selector (when there is no super_selector of a rule)
     None,
     Whitespace,
+    /// Intemediate value to simplify usage with identifier interpolation
+    Several(Vec<SelectorKind>),
 }
 
 impl Display for SelectorKind {
@@ -106,6 +122,9 @@ impl Display for SelectorKind {
                 toks.iter().map(ToString::to_string).collect::<String>()
             ),
             SelectorKind::Super | SelectorKind::None => write!(f, ""),
+            SelectorKind::Several(_) => {
+                panic!("SelectorKind::Several should not be rendered using Display")
+            }
         }
     }
 }
@@ -161,23 +180,113 @@ mod test_selector_display {
 struct SelectorParser<'a> {
     tokens: Peekable<Iter<'a, Token>>,
     super_selector: &'a Selector,
+    vars: &'a HashMap<String, Vec<Token>>,
+}
+
+/// Methods to handle dealing with interpolation
+impl<'a> SelectorParser<'a> {
+    fn consume_interpolation(&mut self) -> SelectorKind {
+        let mut v = Vec::new();
+        let toks = self
+            .tokens
+            .by_ref()
+            .take_while(|x| x.kind != TokenKind::Symbol(Symbol::CloseBrace))
+            .cloned()
+            .collect::<Vec<Token>>(); //.iter().peekable();
+        let mut toks = toks.iter().peekable();
+        while let Some(Token { kind, .. }) = toks.peek() {
+            if let TokenKind::Variable(_) = kind {
+                toks.next();
+                let these_toks = self.deref_variable(kind);
+                let mut these_toks = these_toks.iter().peekable();
+                while let Some(s) = self.selector_from_token_stream(&mut these_toks) {
+                    v.push(s);
+                }
+            } else if let Some(s) = self.selector_from_token_stream(&mut toks) {
+                v.push(s);
+            } else {
+                return SelectorKind::Several(v);
+            }
+        }
+        SelectorKind::Several(v)
+    }
+
+    fn selector_from_token_stream(
+        &mut self,
+        toks: &mut Peekable<Iter<'_, Token>>,
+    ) -> Option<SelectorKind> {
+        if devour_whitespace_from_tokens(toks) {
+            if let Some(&&Token {
+                kind: TokenKind::Symbol(Symbol::Comma),
+                ..
+            }) = toks.peek()
+            {
+                toks.next();
+                return Some(SelectorKind::Multiple);
+            }
+            return Some(SelectorKind::Whitespace);
+        }
+        if let Some(Token { kind, .. }) = toks.next() {
+            return Some(match &kind {
+                TokenKind::Ident(tok) => SelectorKind::Element(tok.clone()),
+                TokenKind::Symbol(Symbol::Period) => SelectorKind::Class,
+                TokenKind::Symbol(Symbol::Hash) => SelectorKind::Id,
+                TokenKind::Symbol(Symbol::Colon) => return self.consume_pseudo_selector(),
+                TokenKind::Symbol(Symbol::Comma) => SelectorKind::Multiple,
+                TokenKind::Symbol(Symbol::Gt) => SelectorKind::ImmediateChild,
+                TokenKind::Symbol(Symbol::Plus) => SelectorKind::Following,
+                TokenKind::Symbol(Symbol::Tilde) => SelectorKind::Preceding,
+                TokenKind::Symbol(Symbol::Mul) => SelectorKind::Universal,
+                TokenKind::Symbol(Symbol::BitAnd) => SelectorKind::Super,
+                TokenKind::Interpolation => self.consume_interpolation(),
+                TokenKind::Attribute(attr) => SelectorKind::Attribute(attr.clone()),
+                _ => todo!("unimplemented selector"),
+            });
+        }
+        None
+    }
+
+    fn deref_variable(&mut self, variable: &TokenKind) -> Vec<Token> {
+        let mut val = Vec::with_capacity(25);
+        let v = match variable {
+            TokenKind::Variable(ref v) => {
+                self.vars.get(v).expect("todo! expected variable to exist")
+            }
+            _ => todo!("expected variable"),
+        }
+        .iter()
+        .peekable();
+        for tok in v {
+            match &tok.kind {
+                TokenKind::Variable(_) => val.extend(self.deref_variable(&tok.kind)),
+                _ => val.push(tok.clone()),
+            };
+        }
+        val
+    }
 }
 
 impl<'a> SelectorParser<'a> {
     const fn new(
         tokens: Peekable<Iter<'a, Token>>,
         super_selector: &'a Selector,
+        vars: &'a HashMap<String, Vec<Token>>,
     ) -> SelectorParser<'a> {
         SelectorParser {
             tokens,
             super_selector,
+            vars,
         }
     }
 
     fn all_selectors(&mut self) -> Selector {
         let mut v = Vec::with_capacity(self.tokens.len());
         while let Some(s) = self.consume_selector() {
-            v.push(s);
+            if let SelectorKind::Several(sels) = s {
+                v.extend(sels);
+            } else {
+                v.push(s);
+            }
         }
         while let Some(x) = v.pop() {
             if x != SelectorKind::Whitespace {
@@ -242,6 +351,7 @@ impl<'a> SelectorParser<'a> {
                 TokenKind::Symbol(Symbol::Tilde) => SelectorKind::Preceding,
                 TokenKind::Symbol(Symbol::Mul) => SelectorKind::Universal,
                 TokenKind::Symbol(Symbol::BitAnd) => SelectorKind::Super,
+                TokenKind::Interpolation => self.consume_interpolation(),
                 TokenKind::Attribute(attr) => SelectorKind::Attribute(attr.clone()),
                 _ => todo!("unimplemented selector"),
             });
@@ -268,8 +378,9 @@ impl Selector {
     pub fn from_tokens<'a>(
         tokens: Peekable<Iter<'a, Token>>,
         super_selector: &'a Selector,
+        vars: &'a HashMap<String, Vec<Token>>,
     ) -> Selector {
-        SelectorParser::new(tokens, super_selector).all_selectors()
+        SelectorParser::new(tokens, super_selector, vars).all_selectors()
     }
 
     pub fn zip(self, other: Selector) -> Selector {

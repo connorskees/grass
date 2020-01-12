@@ -14,7 +14,7 @@ pub struct Style {
 
 impl Display for Style {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}:{};", self.property, self.value)
+        write!(f, "{}: {};", self.property, self.value)
     }
 }
 
@@ -76,28 +76,33 @@ impl<'a> StyleParser<'a> {
         }
     }
 
+    fn eat_interpolation(&mut self) -> String {
+        let mut val = String::new();
+        while let Some(Token { kind, .. }) = self.tokens.next() {
+            match &kind {
+                TokenKind::Symbol(Symbol::CloseBrace) => break,
+                TokenKind::Symbol(Symbol::OpenBrace) => todo!("invalid character in interpolation"),
+                TokenKind::Variable(_) => val.push_str(&self.deref_variable(kind)),
+                _ => val.push_str(&kind.to_string()),
+            }
+        }
+        val
+    }
+
     fn parse(&mut self) -> Style {
         let mut property = String::new();
-        // read property
+        // read property until `:`
         while let Some(Token { kind, .. }) = self.tokens.next() {
             match kind {
                 TokenKind::Whitespace(_) | TokenKind::MultilineComment(_) => continue,
-                TokenKind::Ident(ref s) => {
-                    property = s.clone();
-                    break;
-                }
-                _ => todo!(),
+                TokenKind::Ident(ref s) => property.push_str(s),
+                TokenKind::Interpolation => property.push_str(&self.eat_interpolation()),
+                TokenKind::Symbol(Symbol::Colon) => break,
+                _ => property.push_str(&kind.to_string()),
             };
         }
 
-        // read until `:`
-        while let Some(Token { kind, .. }) = self.tokens.next() {
-            match kind {
-                TokenKind::Whitespace(_) | TokenKind::MultilineComment(_) => continue,
-                TokenKind::Symbol(Symbol::Colon) => break,
-                _ => todo!("found tokens before style value"),
-            }
-        }
+        self.devour_whitespace_or_comment();
 
         let mut value = String::new();
 
@@ -119,6 +124,11 @@ impl<'a> StyleParser<'a> {
                                     break;
                                 }
                             }
+                            TokenKind::Interpolation => {
+                                self.tokens.next();
+                                value.push_str(&self.eat_interpolation());
+                                break;
+                            }
                             _ => {}
                         }
                         value.push(' ');
@@ -127,6 +137,7 @@ impl<'a> StyleParser<'a> {
                 }
                 TokenKind::Variable(_) => value.push_str(&self.deref_variable(&tok.kind)),
                 TokenKind::MultilineComment(_) => continue,
+                TokenKind::Interpolation => value.push_str(&self.eat_interpolation()),
                 _ => value.push_str(&tok.kind.to_string()),
             }
         }
