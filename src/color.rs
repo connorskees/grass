@@ -314,7 +314,6 @@ impl fmt::UpperHex for Color {
     }
 }
 
-
 impl Display for Color {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:X}", self)

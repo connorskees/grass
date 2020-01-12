@@ -25,6 +25,7 @@
     clippy::let_underscore_must_use,
     clippy::module_name_repetitions
 )]
+// todo! handle erroring on styles at the toplevel 
 use std::collections::HashMap;
 use std::fmt::{self, Display};
 use std::fs;
@@ -205,7 +206,7 @@ impl<'a> StyleSheetParser<'a> {
                 | TokenKind::Symbol(Symbol::Period) => rules.extend(
                     self.eat_rules(&Selector(Vec::new()), &mut self.global_variables.clone()),
                 ),
-                TokenKind::Whitespace(_) | TokenKind::Symbol(_) => {
+                TokenKind::Whitespace(_) => {
                     self.lexer.next();
                     continue;
                 }
@@ -232,7 +233,13 @@ impl<'a> StyleSheetParser<'a> {
                     rules.push(Stmt::MultilineComment(comment));
                 }
                 TokenKind::AtRule(_) => self.eat_at_rule(),
-                _ => todo!("unexpected toplevel token"),
+                _ => {
+                    if let Some(Token { pos, .. }) = self.lexer.next() {
+                        self.error(pos.clone(), "unexpected toplevel token")
+                    } else {
+                        unsafe { std::hint::unreachable_unchecked() }
+                    }
+                },
             };
         }
         Ok(StyleSheet { rules })
@@ -255,34 +262,29 @@ impl<'a> StyleSheetParser<'a> {
                         .collect::<String>();
                     self.error(pos, &message);
                 }
+                AtRule::Warn => {
+                    self.devour_whitespace();
+                    let message = self
+                        .lexer
+                        .by_ref()
+                        .take_while(|x| x.kind != TokenKind::Symbol(Symbol::SemiColon))
+                        .map(|x| x.kind.to_string())
+                        .collect::<String>();
+                    self.warn(pos, &message);
+                }
+                AtRule::Debug => {
+                    self.devour_whitespace();
+                    let message = self
+                        .lexer
+                        .by_ref()
+                        .take_while(|x| x.kind != TokenKind::Symbol(Symbol::SemiColon))
+                        .map(|x| x.kind.to_string())
+                        .collect::<String>();
+                    self.debug(pos, &message);
+                }
                 _ => todo!("encountered unimplemented at rule"),
             }
         }
-    }
-
-    fn error(&self, pos: Pos, message: &str) -> ! {
-        eprintln!("Error: {}", message);
-        eprintln!(
-            "{} {}:{} scope on line {} at column {}",
-            self.file,
-            pos.line(),
-            pos.column(),
-            pos.line(),
-            pos.column()
-        );
-        let padding = vec![' '; format!("{}", pos.line()).len() + 1]
-            .iter()
-            .collect::<String>();
-        eprintln!("{}|", padding);
-        eprint!("{} | ", pos.line());
-        eprintln!("todo! get line to print as error");
-        eprintln!(
-            "{}| {}^",
-            padding,
-            vec![' '; pos.column() as usize].iter().collect::<String>()
-        );
-        eprintln!("{}|", padding);
-        std::process::exit(1);
     }
 
     fn eat_variable_value(&mut self) -> Vec<Token> {
@@ -310,6 +312,10 @@ impl<'a> StyleSheetParser<'a> {
             }
         }
         iter2
+    }
+
+    fn eat_func_call(&mut self) {
+
     }
 
     fn eat_rules(
@@ -354,20 +360,28 @@ impl<'a> StyleSheetParser<'a> {
         super_selector: &Selector,
     ) -> Result<Expr, ()> {
         let mut values = Vec::with_capacity(5);
-        while let Some(tok) = self.lexer.next() {
-            match tok.kind {
+        while let Some(tok) = self.lexer.peek() {
+            match &tok.kind {
                 TokenKind::Symbol(Symbol::SemiColon) | TokenKind::Symbol(Symbol::CloseBrace) => {
+                    self.lexer.next();
                     self.devour_whitespace();
                     return Ok(Expr::Style(Style::from_tokens(&values, vars)?));
                 }
                 TokenKind::Symbol(Symbol::OpenBrace) => {
+                    self.lexer.next();
                     self.devour_whitespace();
                     return Ok(Expr::Selector(Selector::from_tokens(
                         values.iter().peekable(),
                         super_selector,
                     )));
                 }
-                TokenKind::Variable(name) => {
+                TokenKind::Variable(_) => {
+                    let tok = self.lexer.next().unwrap();
+                    let name = if let TokenKind::Variable(n) = tok.kind {
+                        n
+                    } else {
+                        unsafe { std::hint::unreachable_unchecked() }
+                    };
                     if let TokenKind::Symbol(Symbol::Colon) = self
                         .lexer
                         .peek()
@@ -384,7 +398,13 @@ impl<'a> StyleSheetParser<'a> {
                         });
                     }
                 }
-                TokenKind::MultilineComment(ref s) => {
+                TokenKind::MultilineComment(_) => {
+                    let tok = self.lexer.next().unwrap();
+                    let s = if let TokenKind::MultilineComment(s) = &tok.kind {
+                        s
+                    } else {
+                        unsafe { std::hint::unreachable_unchecked() }
+                    };
                     self.devour_whitespace();
                     if values.is_empty() {
                         return Ok(Expr::MultilineComment(s.clone()));
@@ -392,7 +412,14 @@ impl<'a> StyleSheetParser<'a> {
                         values.push(tok.clone())
                     }
                 }
-                _ => values.push(tok.clone()),
+                TokenKind::AtRule(_) => self.eat_at_rule(),
+                _ => {
+                    if let Some(tok) = self.lexer.next() {
+                        values.push(tok.clone())
+                    } else {
+                        unsafe { std::hint::unreachable_unchecked() }
+                    }
+                }
             };
         }
         Err(())
@@ -407,6 +434,48 @@ impl<'a> StyleSheetParser<'a> {
                 _ => break,
             }
         }
+    }
+}
+
+/// Functions that print to stdout or stderr
+impl<'a> StyleSheetParser<'a> {
+    fn debug(&self, pos: Pos, message: &str) {
+        println!("{}:{} Debug: {}", self.file, pos.line(), message);
+    }
+
+    fn warn(&self, pos: Pos, message: &str) {
+        eprintln!(
+            "Warning: {}\n\t{} {}:{} todo!(scope)",
+            message,
+            self.file,
+            pos.line(),
+            pos.column()
+        );
+    }
+
+    fn error(&self, pos: Pos, message: &str) -> ! {
+        eprintln!("Error: {}", message);
+        eprintln!(
+            "{} {}:{} todo!(scope) on line {} at column {}",
+            self.file,
+            pos.line(),
+            pos.column(),
+            pos.line(),
+            pos.column()
+        );
+        let padding = vec![' '; format!("{}", pos.line()).len() + 1]
+            .iter()
+            .collect::<String>();
+        eprintln!("{}|", padding);
+        eprint!("{} | ", pos.line());
+        eprintln!("todo! get line to print as error");
+        eprintln!(
+            "{}| {}^",
+            padding,
+            vec![' '; pos.column() as usize].iter().collect::<String>()
+        );
+        eprintln!("{}|", padding);
+        std::process::exit(1);
     }
 }
 

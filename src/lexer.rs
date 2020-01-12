@@ -321,7 +321,11 @@ impl<'a> Lexer<'a> {
                 .next()
                 .expect("this is impossible because we have already peeked");
             self.pos.next_char();
-            name.push(tok);
+            if tok == '_' {
+                name.push('-');
+            } else {
+                name.push(tok);
+            }
         }
         TokenKind::Variable(name)
     }
@@ -338,7 +342,11 @@ impl<'a> Lexer<'a> {
                 .next()
                 .expect("this is impossible because we have already peeked");
             self.pos.next_char();
-            string.push(tok);
+            if tok == '_' {
+                string.push('-');
+            } else {
+                string.push(tok);
+            }
         }
 
         if let Ok(kw) = Keyword::try_from(string.as_ref()) {
