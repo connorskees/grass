@@ -1,6 +1,5 @@
 use crate::common::Symbol;
-use crate::{Token, TokenKind};
-use std::collections::HashMap;
+use crate::{Scope, Token, TokenKind};
 use std::fmt::{self, Display};
 use std::iter::Peekable;
 use std::slice::Iter;
@@ -180,7 +179,7 @@ mod test_selector_display {
 struct SelectorParser<'a> {
     tokens: Peekable<Iter<'a, Token>>,
     super_selector: &'a Selector,
-    vars: &'a HashMap<String, Vec<Token>>,
+    scope: &'a Scope,
 }
 
 /// Methods to handle dealing with interpolation
@@ -250,7 +249,7 @@ impl<'a> SelectorParser<'a> {
         let mut val = Vec::with_capacity(25);
         let v = match variable {
             TokenKind::Variable(ref v) => {
-                self.vars.get(v).expect("todo! expected variable to exist")
+                self.scope.vars.get(v).expect("todo! expected variable to exist")
             }
             _ => todo!("expected variable"),
         }
@@ -270,12 +269,12 @@ impl<'a> SelectorParser<'a> {
     const fn new(
         tokens: Peekable<Iter<'a, Token>>,
         super_selector: &'a Selector,
-        vars: &'a HashMap<String, Vec<Token>>,
+        scope: &'a Scope,
     ) -> SelectorParser<'a> {
         SelectorParser {
             tokens,
             super_selector,
-            vars,
+            scope,
         }
     }
 
@@ -378,9 +377,9 @@ impl Selector {
     pub fn from_tokens<'a>(
         tokens: Peekable<Iter<'a, Token>>,
         super_selector: &'a Selector,
-        vars: &'a HashMap<String, Vec<Token>>,
+        scope: &'a Scope,
     ) -> Selector {
-        SelectorParser::new(tokens, super_selector, vars).all_selectors()
+        SelectorParser::new(tokens, super_selector, scope).all_selectors()
     }
 
     pub fn zip(self, other: Selector) -> Selector {

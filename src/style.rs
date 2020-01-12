@@ -1,6 +1,5 @@
 use crate::common::Symbol;
-use crate::{Token, TokenKind};
-use std::collections::HashMap;
+use crate::{Scope, Token, TokenKind};
 use std::fmt::{self, Display};
 use std::iter::Peekable;
 use std::slice::Iter;
@@ -19,30 +18,30 @@ impl Display for Style {
 }
 
 impl Style {
-    pub fn from_tokens(tokens: &[Token], vars: &HashMap<String, Vec<Token>>) -> Result<Self, ()> {
-        Ok(StyleParser::new(tokens, vars)?.parse())
+    pub fn from_tokens(tokens: &[Token], scope: &Scope) -> Result<Self, ()> {
+        Ok(StyleParser::new(tokens, scope)?.parse())
     }
 }
 
 struct StyleParser<'a> {
     tokens: Peekable<Iter<'a, Token>>,
-    vars: &'a HashMap<String, Vec<Token>>,
+    scope: &'a Scope,
 }
 
 impl<'a> StyleParser<'a> {
-    fn new(tokens: &'a [Token], vars: &'a HashMap<String, Vec<Token>>) -> Result<Self, ()> {
+    fn new(tokens: &'a [Token], scope: &'a Scope) -> Result<Self, ()> {
         if tokens.is_empty() {
             return Err(());
         }
         let tokens = tokens.iter().peekable();
-        Ok(StyleParser { tokens, vars })
+        Ok(StyleParser { tokens, scope })
     }
 
     fn deref_variable(&mut self, variable: &TokenKind) -> String {
         let mut val = String::with_capacity(25);
         let mut v = match variable {
             TokenKind::Variable(ref v) => {
-                self.vars.get(v).expect("todo! expected variable to exist")
+                self.scope.vars.get(v).expect("todo! expected variable to exist")
             }
             _ => panic!("expected variable"),
         }

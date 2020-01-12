@@ -38,6 +38,7 @@ use crate::css::Css;
 use crate::error::SassError;
 use crate::format::PrettyPrinter;
 use crate::lexer::Lexer;
+use crate::mixin::{CallArgs, FuncArgs, Mixin};
 use crate::selector::{Attribute, Selector};
 use crate::style::Style;
 use crate::units::Unit;
@@ -49,6 +50,7 @@ mod error;
 mod format;
 mod imports;
 mod lexer;
+mod mixin;
 mod selector;
 mod style;
 mod units;
@@ -115,12 +117,14 @@ pub enum Stmt {
 
 /// Represents a single rule set. Rule sets can contain other rule sets
 ///
+/// ```scss
 /// a {
 ///   color: blue;
 ///   b {
 ///     color: red;
 ///   }
 /// }
+/// ```
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RuleSet {
     selector: Selector,
@@ -148,7 +152,7 @@ enum Expr {
 impl StyleSheet {
     pub fn new(input: &str) -> SassResult<StyleSheet> {
         StyleSheetParser {
-            global_variables: HashMap::new(),
+            global_scope: Scope::new(),
             lexer: Lexer::new(input).peekable(),
             rules: Vec::new(),
             scope: 0,
@@ -159,7 +163,7 @@ impl StyleSheet {
 
     pub fn from_path<P: AsRef<Path> + Into<String>>(p: P) -> SassResult<StyleSheet> {
         StyleSheetParser {
-            global_variables: HashMap::new(),
+            global_scope: Scope::new(),
             lexer: Lexer::new(&fs::read_to_string(p.as_ref())?).peekable(),
             rules: Vec::new(),
             scope: 0,
@@ -190,11 +194,32 @@ impl StyleSheet {
 
 #[derive(Debug, Clone)]
 struct StyleSheetParser<'a> {
-    global_variables: HashMap<String, Vec<Token>>,
+    global_scope: Scope,
     lexer: Peekable<Lexer<'a>>,
     rules: Vec<Stmt>,
     scope: u32,
     file: String,
+}
+
+#[derive(Debug, Clone, std::default::Default)]
+pub struct Scope {
+    pub vars: HashMap<String, Vec<Token>>,
+    pub mixins: HashMap<String, Mixin>,
+}
+
+impl Scope {
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            vars: HashMap::new(),
+            mixins: HashMap::new(),
+        }
+    }
+
+    pub fn merge(&mut self, other: Scope) {
+        self.vars.extend(other.vars);
+        self.mixins.extend(other.mixins);
+    }
 }
 
 impl<'a> StyleSheetParser<'a> {
@@ -209,7 +234,7 @@ impl<'a> StyleSheetParser<'a> {
                 | TokenKind::Symbol(Symbol::Colon)
                 | TokenKind::Symbol(Symbol::Mul)
                 | TokenKind::Symbol(Symbol::Period) => rules.extend(
-                    self.eat_rules(&Selector(Vec::new()), &mut self.global_variables.clone()),
+                    self.eat_rules(&Selector(Vec::new()), &mut self.global_scope.clone()),
                 ),
                 TokenKind::Whitespace(_) => {
                     self.lexer.next();
@@ -231,7 +256,7 @@ impl<'a> StyleSheetParser<'a> {
                         self.error(pos, "unexpected variable use at toplevel");
                     }
                     let val = self.eat_variable_value();
-                    self.global_variables.insert(name, val);
+                    self.global_scope.vars.insert(name, val);
                 }
                 TokenKind::MultilineComment(comment) => {
                     self.lexer.next();
@@ -248,6 +273,30 @@ impl<'a> StyleSheetParser<'a> {
             };
         }
         Ok(StyleSheet { rules })
+    }
+
+    fn eat_mixin(&mut self) {
+        let Token { pos, .. } = self.lexer.next().unwrap();
+        self.devour_whitespace();
+        let name = if let Some(Token { kind: TokenKind::Ident(s), .. }) = self.lexer.next() {
+            s
+        } else {
+            self.error(pos, "expected identifier after mixin declaration")
+        };
+        self.devour_whitespace();
+        let args = match self.lexer.next() {
+            Some(Token { kind: TokenKind::Symbol(Symbol::OpenParen), .. }) => self.eat_func_args(),
+            Some(Token { kind: TokenKind::Symbol(Symbol::OpenBracket), .. }) => FuncArgs::new(),
+            _ => self.error(pos, "expected `(` or `{`"),
+        };
+
+        let body = self.lexer.by_ref().take_while(|x| x.kind != TokenKind::Symbol(Symbol::CloseBrace)).collect();
+
+        self.global_scope.mixins.insert(name, Mixin::new(self.global_scope.clone(), args, body));
+    }
+
+    fn eat_func_args(&mut self) -> FuncArgs {
+        todo!()
     }
 
     fn eat_at_rule(&mut self) {
@@ -287,6 +336,7 @@ impl<'a> StyleSheetParser<'a> {
                         .collect::<String>();
                     self.debug(pos, &message);
                 }
+                AtRule::Mixin => self.eat_mixin(),
                 _ => todo!("encountered unimplemented at rule"),
             }
         }
@@ -307,7 +357,7 @@ impl<'a> StyleSheetParser<'a> {
             } = tok
             {
                 iter2.extend(
-                    self.global_variables
+                    self.global_scope.vars
                         .get(name)
                         .unwrap_or_else(|| self.error(pos, "Undefined variable"))
                         .clone(),
@@ -324,15 +374,15 @@ impl<'a> StyleSheetParser<'a> {
     fn eat_rules(
         &mut self,
         super_selector: &Selector,
-        vars: &mut HashMap<String, Vec<Token>>,
+        scope: &mut Scope,
     ) -> Vec<Stmt> {
         let mut stmts = Vec::new();
-        while let Ok(tok) = self.eat_expr(vars, super_selector) {
+        while let Ok(tok) = self.eat_expr(scope, super_selector) {
             match tok {
                 Expr::Style(s) => stmts.push(Stmt::Style(s)),
                 Expr::Selector(s) => {
                     self.scope += 1;
-                    let rules = self.eat_rules(&super_selector.clone().zip(s.clone()), vars);
+                    let rules = self.eat_rules(&super_selector.clone().zip(s.clone()), scope);
                     stmts.push(Stmt::RuleSet(RuleSet {
                         super_selector: super_selector.clone(),
                         selector: s,
@@ -345,10 +395,10 @@ impl<'a> StyleSheetParser<'a> {
                 }
                 Expr::VariableDecl(name, val) => {
                     if self.scope == 0 {
-                        vars.insert(name.clone(), val.clone());
-                        self.global_variables.insert(name, val);
+                        scope.vars.insert(name.clone(), val.clone());
+                        self.global_scope.vars.insert(name, val);
                     } else {
-                        vars.insert(name, val);
+                        scope.vars.insert(name, val);
                     }
                 }
                 Expr::MultilineComment(s) => stmts.push(Stmt::MultilineComment(s)),
@@ -359,7 +409,7 @@ impl<'a> StyleSheetParser<'a> {
 
     fn eat_expr(
         &mut self,
-        vars: &HashMap<String, Vec<Token>>,
+        scope: &Scope,
         super_selector: &Selector,
     ) -> Result<Expr, ()> {
         let mut values = Vec::with_capacity(5);
@@ -368,7 +418,7 @@ impl<'a> StyleSheetParser<'a> {
                 TokenKind::Symbol(Symbol::SemiColon) | TokenKind::Symbol(Symbol::CloseBrace) => {
                     self.lexer.next();
                     self.devour_whitespace();
-                    return Ok(Expr::Style(Style::from_tokens(&values, vars)?));
+                    return Ok(Expr::Style(Style::from_tokens(&values, scope)?));
                 }
                 TokenKind::Symbol(Symbol::OpenBrace) => {
                     self.lexer.next();
@@ -376,7 +426,7 @@ impl<'a> StyleSheetParser<'a> {
                     return Ok(Expr::Selector(Selector::from_tokens(
                         values.iter().peekable(),
                         super_selector,
-                        vars,
+                        scope,
                     )));
                 }
                 TokenKind::Variable(_) => {
@@ -493,7 +543,7 @@ impl<'a> StyleSheetParser<'a> {
 }
 
 fn main() -> SassResult<()> {
-    let mut stdout = std::io::stdout();
+    let mut stdout = std::io::BufWriter::new(std::io::stdout());
     let s = StyleSheet::from_path("input.scss")?;
     // dbg!(s);
     // s.pretty_print(&mut stdout)?;
@@ -608,7 +658,7 @@ mod test_css {
     test!(selector_el_following_el, "a + b {\n  color: red;\n}\n");
     test!(selector_el_preceding_el, "a ~ b {\n  color: red;\n}\n");
     test!(selector_pseudo, ":pseudo {\n  color: red;\n}\n");
-    test!(selector_el_pseudo_and, "a:pseudo {\n  color: red;\n}\n");
+    test!(selector_el_and_pseudo, "a:pseudo {\n  color: red;\n}\n");
     test!(
         selector_el_pseudo_descendant,
         "a :pseudo {\n  color: red;\n}\n"
