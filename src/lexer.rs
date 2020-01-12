@@ -57,7 +57,7 @@ impl<'a> Iterator for Lexer<'a> {
                 self.buf.next();
                 TokenKind::Whitespace(Whitespace::CarriageReturn)
             }
-            '#' => symbol!(self, Hash),
+            '#' => self.lex_hash(),
             '{' => symbol!(self, OpenBrace),
             '*' => symbol!(self, Mul),
             '}' => symbol!(self, CloseBrace),
@@ -204,7 +204,14 @@ impl<'a> Lexer<'a> {
     }
 
     fn lex_hash(&mut self) -> TokenKind {
-        todo!()
+        self.buf.next();
+        self.pos.next_char();
+        if self.buf.peek() == Some(&'{') {
+            self.buf.next();
+            self.pos.next_char();
+            return TokenKind::Interpolation;
+        }
+        TokenKind::Symbol(Symbol::Hash)
     }
 
     fn lex_attr(&mut self) -> TokenKind {
