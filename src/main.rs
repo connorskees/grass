@@ -72,7 +72,6 @@ pub enum TokenKind {
     Whitespace(Whitespace),
     Variable(String),
     Attribute(Attribute),
-    Style(Vec<Token>),
     Op(Op),
     MultilineComment(String),
 }
@@ -91,7 +90,6 @@ impl Display for TokenKind {
             TokenKind::Keyword(kw) => write!(f, "{}", kw),
             TokenKind::MultilineComment(s) => write!(f, "/*{}*/", s),
             TokenKind::Variable(s) => write!(f, "${}", s),
-            TokenKind::Style(_) => panic!("TokenKind should not be used to format styles"),
         }
     }
 }
@@ -212,7 +210,7 @@ impl<'a> StyleSheetParser<'a> {
                     continue;
                 }
                 TokenKind::Variable(name) => {
-                    let Token { ref pos, .. } = self
+                    let Token { pos, .. } = self
                         .lexer
                         .next()
                         .expect("this cannot occur as we have already peeked");
@@ -243,7 +241,7 @@ impl<'a> StyleSheetParser<'a> {
     fn eat_at_rule(&mut self) {
         if let Some(Token {
             kind: TokenKind::AtRule(ref rule),
-            ref pos,
+            pos,
         }) = self.lexer.next()
         {
             match rule {
@@ -262,7 +260,7 @@ impl<'a> StyleSheetParser<'a> {
         }
     }
 
-    fn error(&self, pos: &Pos, message: &str) -> ! {
+    fn error(&self, pos: Pos, message: &str) -> ! {
         eprintln!("Error: {}", message);
         eprintln!(
             "{} {}:{} scope on line {} at column {}",
@@ -298,7 +296,7 @@ impl<'a> StyleSheetParser<'a> {
         for tok in iter1 {
             if let Token {
                 kind: TokenKind::Variable(ref name),
-                ref pos,
+                pos,
             } = tok
             {
                 iter2.extend(
