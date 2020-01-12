@@ -319,7 +319,9 @@ impl TryFrom<char> for Whitespace {
 pub enum Op {
     Equal,
     NotEqual,
+    GreaterThan,
     GreaterThanEqual,
+    LessThan,
     LessThanEqual,
 }
 
@@ -330,6 +332,8 @@ impl Display for Op {
             Op::NotEqual => write!(f, "!="),
             Op::GreaterThanEqual => write!(f, ">="),
             Op::LessThanEqual => write!(f, "<="),
+            Op::GreaterThan => write!(f, ">"),
+            Op::LessThan => write!(f, "<"),
         }
     }
 }
