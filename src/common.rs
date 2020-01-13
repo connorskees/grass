@@ -1,5 +1,10 @@
 use std::convert::TryFrom;
+use std::default::Default;
+use std::collections::HashMap;
 use std::fmt::{self, Display};
+
+use crate::Token;
+use crate::mixin::Mixin;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Symbol {
@@ -16,13 +21,13 @@ pub enum Symbol {
     /// )
     CloseParen,
     /// {
-    OpenBrace,
+    OpenCurlyBrace,
     /// }
-    CloseBrace,
+    CloseCurlyBrace,
     /// [
-    OpenBracket,
+    OpenSquareBrace,
     /// ]
-    CloseBracket,
+    CloseSquareBrace,
     /// ,
     Comma,
     /// +
@@ -68,10 +73,10 @@ impl Display for Symbol {
             Symbol::Dollar => write!(f, "$"),
             Symbol::OpenParen => write!(f, "("),
             Symbol::CloseParen => write!(f, "),"),
-            Symbol::OpenBrace => write!(f, "{{"),
-            Symbol::CloseBrace => write!(f, "}}"),
-            Symbol::OpenBracket => write!(f, "["),
-            Symbol::CloseBracket => write!(f, "]"),
+            Symbol::OpenCurlyBrace => write!(f, "{{"),
+            Symbol::CloseCurlyBrace => write!(f, "}}"),
+            Symbol::OpenSquareBrace => write!(f, "["),
+            Symbol::CloseSquareBrace => write!(f, "]"),
             Symbol::Comma => write!(f, ","),
             Symbol::Plus => write!(f, "+"),
             Symbol::Minus => write!(f, "-"),
@@ -104,10 +109,10 @@ impl TryFrom<char> for Symbol {
             '$' => Ok(Symbol::Dollar),
             '(' => Ok(Symbol::OpenParen),
             ')' => Ok(Symbol::CloseParen),
-            '{' => Ok(Symbol::OpenBrace),
-            '}' => Ok(Symbol::CloseBrace),
-            '[' => Ok(Symbol::OpenBracket),
-            ']' => Ok(Symbol::CloseBracket),
+            '{' => Ok(Symbol::OpenCurlyBrace),
+            '}' => Ok(Symbol::CloseCurlyBrace),
+            '[' => Ok(Symbol::OpenSquareBrace),
+            ']' => Ok(Symbol::CloseSquareBrace),
             ',' => Ok(Symbol::Comma),
             '+' => Ok(Symbol::Plus),
             '-' => Ok(Symbol::Minus),
@@ -459,5 +464,26 @@ impl Pos {
 impl Display for Pos {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "line:{} col:{}", self.line, self.column)
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct Scope {
+    pub vars: HashMap<String, Vec<Token>>,
+    pub mixins: HashMap<String, Mixin>,
+}
+
+impl Scope {
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            vars: HashMap::new(),
+            mixins: HashMap::new(),
+        }
+    }
+
+    pub fn merge(&mut self, other: Scope) {
+        self.vars.extend(other.vars);
+        self.mixins.extend(other.mixins);
     }
 }
