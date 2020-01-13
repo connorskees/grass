@@ -1,5 +1,5 @@
 use crate::common::{Scope, Symbol};
-use crate::utils::{devour_whitespace, IsWhitespace};
+use crate::utils::{deref_variable, devour_whitespace, IsWhitespace};
 use crate::{Token, TokenKind};
 use std::fmt::{self, Display};
 use std::iter::Peekable;
@@ -185,9 +185,9 @@ impl<'a> SelectorParser<'a> {
             .collect::<Vec<Token>>(); //.iter().peekable();
         let mut toks = toks.iter().peekable();
         while let Some(Token { kind, .. }) = toks.peek() {
-            if let TokenKind::Variable(_) = kind {
+            if let TokenKind::Variable(ref var) = kind {
                 toks.next();
-                let these_toks = self.deref_variable(kind);
+                let these_toks = deref_variable(var, self.scope);
                 let mut these_toks = these_toks.iter().peekable();
                 while let Some(s) = self.selector_from_token_stream(&mut these_toks) {
                     v.push(s);
@@ -234,27 +234,6 @@ impl<'a> SelectorParser<'a> {
             });
         }
         None
-    }
-
-    fn deref_variable(&mut self, variable: &TokenKind) -> Vec<Token> {
-        let mut val = Vec::with_capacity(25);
-        let v = match variable {
-            TokenKind::Variable(ref v) => self
-                .scope
-                .vars
-                .get(v)
-                .expect("todo! expected variable to exist"),
-            _ => todo!("expected variable"),
-        }
-        .iter()
-        .peekable();
-        for tok in v {
-            match &tok.kind {
-                TokenKind::Variable(_) => val.extend(self.deref_variable(&tok.kind)),
-                _ => val.push(tok.clone()),
-            };
-        }
-        val
     }
 }
 

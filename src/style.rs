@@ -1,4 +1,5 @@
 use crate::common::{Scope, Symbol};
+use crate::utils::deref_variable;
 use crate::{Token, TokenKind};
 use std::fmt::{self, Display};
 use std::iter::Peekable;
@@ -37,37 +38,6 @@ impl<'a> StyleParser<'a> {
         Ok(StyleParser { tokens, scope })
     }
 
-    fn deref_variable(&mut self, variable: &TokenKind) -> String {
-        let mut val = String::with_capacity(25);
-        let mut v = match variable {
-            TokenKind::Variable(ref v) => self
-                .scope
-                .vars
-                .get(v)
-                .expect("todo! expected variable to exist"),
-            _ => panic!("expected variable"),
-        }
-        .iter()
-        .peekable();
-        while let Some(tok) = v.next() {
-            match &tok.kind {
-                TokenKind::Variable(_) => val.push_str(&self.deref_variable(&tok.kind)),
-                TokenKind::Whitespace(_) => {
-                    while let Some(w) = v.peek() {
-                        if let TokenKind::Whitespace(_) = w.kind {
-                            v.next();
-                        } else {
-                            val.push(' ');
-                            break;
-                        }
-                    }
-                }
-                _ => val.push_str(&tok.kind.to_string()),
-            };
-        }
-        val
-    }
-
     fn devour_whitespace_or_comment(&mut self) {
         while let Some(Token { kind, .. }) = self.tokens.peek() {
             match kind {
@@ -85,7 +55,12 @@ impl<'a> StyleParser<'a> {
                 TokenKind::Symbol(Symbol::OpenCurlyBrace) => {
                     todo!("invalid character in interpolation")
                 }
-                TokenKind::Variable(_) => val.push_str(&self.deref_variable(kind)),
+                TokenKind::Variable(ref v) => val.push_str(
+                    &deref_variable(v, self.scope)
+                        .iter()
+                        .map(|x| x.kind.to_string())
+                        .collect::<String>(),
+                ),
                 _ => val.push_str(&kind.to_string()),
             }
         }
@@ -138,7 +113,12 @@ impl<'a> StyleParser<'a> {
                         break;
                     }
                 }
-                TokenKind::Variable(_) => value.push_str(&self.deref_variable(&tok.kind)),
+                TokenKind::Variable(ref v) => value.push_str(
+                    &deref_variable(v, self.scope)
+                        .iter()
+                        .map(|x| x.kind.to_string())
+                        .collect::<String>(),
+                ),
                 TokenKind::MultilineComment(_) => continue,
                 TokenKind::Interpolation => value.push_str(&self.eat_interpolation()),
                 _ => value.push_str(&tok.kind.to_string()),
