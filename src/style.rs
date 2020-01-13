@@ -1,5 +1,5 @@
-use crate::common::Symbol;
-use crate::{Scope, Token, TokenKind};
+use crate::common::{Scope, Symbol};
+use crate::{Token, TokenKind};
 use std::fmt::{self, Display};
 use std::iter::Peekable;
 use std::slice::Iter;
@@ -40,9 +40,11 @@ impl<'a> StyleParser<'a> {
     fn deref_variable(&mut self, variable: &TokenKind) -> String {
         let mut val = String::with_capacity(25);
         let mut v = match variable {
-            TokenKind::Variable(ref v) => {
-                self.scope.vars.get(v).expect("todo! expected variable to exist")
-            }
+            TokenKind::Variable(ref v) => self
+                .scope
+                .vars
+                .get(v)
+                .expect("todo! expected variable to exist"),
             _ => panic!("expected variable"),
         }
         .iter()
@@ -79,8 +81,8 @@ impl<'a> StyleParser<'a> {
         let mut val = String::new();
         while let Some(Token { kind, .. }) = self.tokens.next() {
             match &kind {
-                TokenKind::Symbol(Symbol::CloseBrace) => break,
-                TokenKind::Symbol(Symbol::OpenBrace) => todo!("invalid character in interpolation"),
+                TokenKind::Symbol(Symbol::CloseCurlyBrace) => break,
+                TokenKind::Symbol(Symbol::OpenCurlyBrace) => todo!("invalid character in interpolation"),
                 TokenKind::Variable(_) => val.push_str(&self.deref_variable(kind)),
                 _ => val.push_str(&kind.to_string()),
             }

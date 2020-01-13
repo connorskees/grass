@@ -58,9 +58,9 @@ impl<'a> Iterator for Lexer<'a> {
                 TokenKind::Whitespace(Whitespace::CarriageReturn)
             }
             '#' => self.lex_hash(),
-            '{' => symbol!(self, OpenBrace),
+            '{' => symbol!(self, OpenCurlyBrace),
             '*' => symbol!(self, Mul),
-            '}' => symbol!(self, CloseBrace),
+            '}' => symbol!(self, CloseCurlyBrace),
             '&' => symbol!(self, BitAnd),
             '/' => self.lex_forward_slash(),
             '%' => {

@@ -1,5 +1,5 @@
-use crate::common::Symbol;
-use crate::{Scope, Token, TokenKind};
+use crate::common::{Scope, Symbol};
+use crate::{Token, TokenKind};
 use std::fmt::{self, Display};
 use std::iter::Peekable;
 use std::slice::Iter;
@@ -189,7 +189,7 @@ impl<'a> SelectorParser<'a> {
         let toks = self
             .tokens
             .by_ref()
-            .take_while(|x| x.kind != TokenKind::Symbol(Symbol::CloseBrace))
+            .take_while(|x| x.kind != TokenKind::Symbol(Symbol::CloseCurlyBrace))
             .cloned()
             .collect::<Vec<Token>>(); //.iter().peekable();
         let mut toks = toks.iter().peekable();
@@ -248,9 +248,11 @@ impl<'a> SelectorParser<'a> {
     fn deref_variable(&mut self, variable: &TokenKind) -> Vec<Token> {
         let mut val = Vec::with_capacity(25);
         let v = match variable {
-            TokenKind::Variable(ref v) => {
-                self.scope.vars.get(v).expect("todo! expected variable to exist")
-            }
+            TokenKind::Variable(ref v) => self
+                .scope
+                .vars
+                .get(v)
+                .expect("todo! expected variable to exist"),
             _ => todo!("expected variable"),
         }
         .iter()
