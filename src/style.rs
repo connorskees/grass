@@ -82,7 +82,9 @@ impl<'a> StyleParser<'a> {
         while let Some(Token { kind, .. }) = self.tokens.next() {
             match &kind {
                 TokenKind::Symbol(Symbol::CloseCurlyBrace) => break,
-                TokenKind::Symbol(Symbol::OpenCurlyBrace) => todo!("invalid character in interpolation"),
+                TokenKind::Symbol(Symbol::OpenCurlyBrace) => {
+                    todo!("invalid character in interpolation")
+                }
                 TokenKind::Variable(_) => val.push_str(&self.deref_variable(kind)),
                 _ => val.push_str(&kind.to_string()),
             }

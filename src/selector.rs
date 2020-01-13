@@ -1,4 +1,5 @@
 use crate::common::{Scope, Symbol};
+use crate::utils::{devour_whitespace, IsWhitespace};
 use crate::{Token, TokenKind};
 use std::fmt::{self, Display};
 use std::iter::Peekable;
@@ -7,28 +8,6 @@ use std::string::ToString;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Selector(pub Vec<SelectorKind>);
-
-fn devour_whitespace(i: &mut Peekable<Iter<SelectorKind>>) -> bool {
-    let mut found_whitespace = false;
-    while let Some(SelectorKind::Whitespace) = i.peek() {
-        i.next();
-        found_whitespace = true;
-    }
-    found_whitespace
-}
-
-fn devour_whitespace_from_tokens(i: &mut Peekable<Iter<Token>>) -> bool {
-    let mut found_whitespace = false;
-    while let Some(Token {
-        kind: TokenKind::Whitespace(_),
-        ..
-    }) = i.peek()
-    {
-        i.next();
-        found_whitespace = true;
-    }
-    found_whitespace
-}
 
 impl Display for Selector {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -98,6 +77,18 @@ pub enum SelectorKind {
     Whitespace,
     /// Intemediate value to simplify usage with identifier interpolation
     Several(Vec<SelectorKind>),
+}
+
+impl IsWhitespace for SelectorKind {
+    fn is_whitespace(&self) -> bool {
+        self == &Self::Whitespace
+    }
+}
+
+impl IsWhitespace for &SelectorKind {
+    fn is_whitespace(&self) -> bool {
+        self == &&SelectorKind::Whitespace
+    }
 }
 
 impl Display for SelectorKind {
@@ -214,7 +205,7 @@ impl<'a> SelectorParser<'a> {
         &mut self,
         toks: &mut Peekable<Iter<'_, Token>>,
     ) -> Option<SelectorKind> {
-        if devour_whitespace_from_tokens(toks) {
+        if devour_whitespace(toks) {
             if let Some(&&Token {
                 kind: TokenKind::Symbol(Symbol::Comma),
                 ..
@@ -329,7 +320,7 @@ impl<'a> SelectorParser<'a> {
     }
 
     fn consume_selector(&mut self) -> Option<SelectorKind> {
-        if self.devour_whitespace() {
+        if devour_whitespace(&mut self.tokens) {
             if let Some(&&Token {
                 kind: TokenKind::Symbol(Symbol::Comma),
                 ..
@@ -358,20 +349,6 @@ impl<'a> SelectorParser<'a> {
             });
         }
         None
-    }
-
-    fn devour_whitespace(&mut self) -> bool {
-        let mut found_whitespace = false;
-        while let Some(tok) = self.tokens.peek() {
-            match tok.kind {
-                TokenKind::Whitespace(_) => {
-                    self.tokens.next();
-                    found_whitespace = true;
-                }
-                _ => break,
-            }
-        }
-        found_whitespace
     }
 }
 

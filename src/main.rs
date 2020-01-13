@@ -41,7 +41,7 @@ use crate::mixin::{CallArgs, FuncArgs, Mixin};
 use crate::selector::{Attribute, Selector};
 use crate::style::Style;
 use crate::units::Unit;
-use crate::utils::{IsWhitespace, devour_whitespace};
+use crate::utils::{devour_whitespace, IsWhitespace};
 
 mod color;
 mod common;
@@ -62,6 +62,24 @@ type SassResult<T> = Result<T, SassError>;
 pub struct Token {
     pos: Pos,
     pub kind: TokenKind,
+}
+
+impl IsWhitespace for Token {
+    fn is_whitespace(&self) -> bool {
+        if let TokenKind::Whitespace(_) = self.kind {
+            return true;
+        }
+        false
+    }
+}
+
+impl IsWhitespace for &Token {
+    fn is_whitespace(&self) -> bool {
+        if let TokenKind::Whitespace(_) = self.kind {
+            return true;
+        }
+        false
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -226,7 +244,7 @@ impl<'a> StyleSheetParser<'a> {
                         .lexer
                         .next()
                         .expect("this cannot occur as we have already peeked");
-                    self.devour_whitespace();
+                    devour_whitespace(&mut self.lexer);
                     if self
                         .lexer
                         .next()
@@ -243,7 +261,9 @@ impl<'a> StyleSheetParser<'a> {
                     self.lexer.next();
                     rules.push(Stmt::MultilineComment(comment));
                 }
-                TokenKind::AtRule(_) => {self.eat_at_rule();},
+                TokenKind::AtRule(_) => {
+                    self.eat_at_rule();
+                }
                 _ => {
                     if let Some(Token { pos, .. }) = self.lexer.next() {
                         self.error(pos.clone(), "unexpected toplevel token")
@@ -258,7 +278,7 @@ impl<'a> StyleSheetParser<'a> {
 
     fn eat_mixin(&mut self) {
         let Token { pos, .. } = self.lexer.next().unwrap();
-        self.devour_whitespace();
+        devour_whitespace(&mut self.lexer);
         let name = if let Some(Token {
             kind: TokenKind::Ident(s),
             ..
@@ -268,7 +288,7 @@ impl<'a> StyleSheetParser<'a> {
         } else {
             self.error(pos, "expected identifier after mixin declaration")
         };
-        self.devour_whitespace();
+        devour_whitespace(&mut self.lexer);
         let args = match self.lexer.next() {
             Some(Token {
                 kind: TokenKind::Symbol(Symbol::OpenParen),
@@ -304,7 +324,7 @@ impl<'a> StyleSheetParser<'a> {
         {
             match rule {
                 AtRule::Error => {
-                    self.devour_whitespace();
+                    devour_whitespace(&mut self.lexer);
                     let message = self
                         .lexer
                         .by_ref()
@@ -314,7 +334,7 @@ impl<'a> StyleSheetParser<'a> {
                     self.error(pos, &message);
                 }
                 AtRule::Warn => {
-                    self.devour_whitespace();
+                    devour_whitespace(&mut self.lexer);
                     let message = self
                         .lexer
                         .by_ref()
@@ -324,7 +344,7 @@ impl<'a> StyleSheetParser<'a> {
                     self.warn(pos, &message);
                 }
                 AtRule::Debug => {
-                    self.devour_whitespace();
+                    devour_whitespace(&mut self.lexer);
                     let message = self
                         .lexer
                         .by_ref()
@@ -342,7 +362,7 @@ impl<'a> StyleSheetParser<'a> {
     }
 
     fn eat_include(&mut self) -> Expr {
-        self.devour_whitespace();
+        devour_whitespace(&mut self.lexer);
         let Token { kind, pos } = self.lexer.next().unwrap();
         let name = if let TokenKind::Ident(s) = kind {
             s
@@ -350,11 +370,17 @@ impl<'a> StyleSheetParser<'a> {
             self.error(pos, "expected identifier")
         };
 
-        self.devour_whitespace();
+        devour_whitespace(&mut self.lexer);
 
         match self.lexer.next() {
-            Some(Token { kind: TokenKind::Symbol(Symbol::SemiColon), .. }) => {},
-            Some(Token { kind: TokenKind::Symbol(Symbol::OpenParen), .. }) => {},
+            Some(Token {
+                kind: TokenKind::Symbol(Symbol::SemiColon),
+                ..
+            }) => {}
+            Some(Token {
+                kind: TokenKind::Symbol(Symbol::OpenParen),
+                ..
+            }) => {}
             Some(Token { pos, .. }) => self.error(pos, "expected `(` or `;`"),
             None => self.error(pos, "unexpected EOF"),
         }
@@ -365,12 +391,12 @@ impl<'a> StyleSheetParser<'a> {
             self.error(pos, "expected identifier")
         };
         let styles = mixin.eval();
-        self.devour_whitespace();
+        devour_whitespace(&mut self.lexer);
         Expr::Styles(styles)
     }
 
     fn eat_variable_value(&mut self) -> Vec<Token> {
-        self.devour_whitespace();
+        devour_whitespace(&mut self.lexer);
         let iter1 = self
             .lexer
             .by_ref()
@@ -436,14 +462,15 @@ impl<'a> StyleSheetParser<'a> {
         let mut values = Vec::with_capacity(5);
         while let Some(tok) = self.lexer.peek() {
             match &tok.kind {
-                TokenKind::Symbol(Symbol::SemiColon) | TokenKind::Symbol(Symbol::CloseCurlyBrace) => {
+                TokenKind::Symbol(Symbol::SemiColon)
+                | TokenKind::Symbol(Symbol::CloseCurlyBrace) => {
                     self.lexer.next();
-                    self.devour_whitespace();
+                    devour_whitespace(&mut self.lexer);
                     return Ok(Expr::Style(Style::from_tokens(&values, scope)?));
                 }
                 TokenKind::Symbol(Symbol::OpenCurlyBrace) => {
                     self.lexer.next();
-                    self.devour_whitespace();
+                    devour_whitespace(&mut self.lexer);
                     return Ok(Expr::Selector(Selector::from_tokens(
                         values.iter().peekable(),
                         super_selector,
@@ -464,7 +491,7 @@ impl<'a> StyleSheetParser<'a> {
                         .kind
                     {
                         self.lexer.next();
-                        self.devour_whitespace();
+                        devour_whitespace(&mut self.lexer);
                         return Ok(Expr::VariableDecl(name, self.eat_variable_value()));
                     } else {
                         values.push(Token {
@@ -480,7 +507,7 @@ impl<'a> StyleSheetParser<'a> {
                     } else {
                         unsafe { std::hint::unreachable_unchecked() }
                     };
-                    self.devour_whitespace();
+                    devour_whitespace(&mut self.lexer);
                     if values.is_empty() {
                         return Ok(Expr::MultilineComment(s.clone()));
                     } else {
@@ -491,7 +518,7 @@ impl<'a> StyleSheetParser<'a> {
                     if let Some(a) = self.eat_at_rule() {
                         return Ok(a);
                     }
-                },
+                }
                 TokenKind::Interpolation => {
                     while let Some(tok) = self.lexer.next() {
                         if tok.kind == TokenKind::Symbol(Symbol::CloseCurlyBrace) {
@@ -511,17 +538,6 @@ impl<'a> StyleSheetParser<'a> {
             };
         }
         Err(())
-    }
-
-    fn devour_whitespace(&mut self) {
-        while let Some(tok) = self.lexer.peek() {
-            match tok.kind {
-                TokenKind::Whitespace(_) => {
-                    self.lexer.next();
-                }
-                _ => break,
-            }
-        }
     }
 }
 
