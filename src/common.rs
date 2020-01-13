@@ -1,10 +1,10 @@
+use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::default::Default;
-use std::collections::HashMap;
 use std::fmt::{self, Display};
 
-use crate::Token;
 use crate::mixin::Mixin;
+use crate::Token;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Symbol {
