@@ -1,5 +1,5 @@
 use crate::common::{Scope, Symbol};
-use crate::utils::deref_variable;
+use crate::utils::{deref_variable, eat_interpolation};
 use crate::{Token, TokenKind};
 use std::fmt::{self, Display};
 use std::iter::Peekable;
@@ -47,26 +47,6 @@ impl<'a> StyleParser<'a> {
         }
     }
 
-    fn eat_interpolation(&mut self) -> String {
-        let mut val = String::new();
-        while let Some(Token { kind, .. }) = self.tokens.next() {
-            match &kind {
-                TokenKind::Symbol(Symbol::CloseCurlyBrace) => break,
-                TokenKind::Symbol(Symbol::OpenCurlyBrace) => {
-                    todo!("invalid character in interpolation")
-                }
-                TokenKind::Variable(ref v) => val.push_str(
-                    &deref_variable(v, self.scope)
-                        .iter()
-                        .map(|x| x.kind.to_string())
-                        .collect::<String>(),
-                ),
-                _ => val.push_str(&kind.to_string()),
-            }
-        }
-        val
-    }
-
     fn parse(&mut self) -> Style {
         let mut property = String::new();
         // read property until `:`
@@ -74,7 +54,12 @@ impl<'a> StyleParser<'a> {
             match kind {
                 TokenKind::Whitespace(_) | TokenKind::MultilineComment(_) => continue,
                 TokenKind::Ident(ref s) => property.push_str(s),
-                TokenKind::Interpolation => property.push_str(&self.eat_interpolation()),
+                TokenKind::Interpolation => property.push_str(
+                    &eat_interpolation(&mut self.tokens, self.scope)
+                        .iter()
+                        .map(|x| x.kind.to_string())
+                        .collect::<String>(),
+                ),
                 TokenKind::Symbol(Symbol::Colon) => break,
                 _ => property.push_str(&kind.to_string()),
             };
@@ -104,7 +89,12 @@ impl<'a> StyleParser<'a> {
                             }
                             TokenKind::Interpolation => {
                                 self.tokens.next();
-                                value.push_str(&self.eat_interpolation());
+                                value.push_str(
+                                    &eat_interpolation(&mut self.tokens, self.scope)
+                                        .iter()
+                                        .map(|x| x.kind.to_string())
+                                        .collect::<String>(),
+                                );
                                 break;
                             }
                             _ => {}
@@ -120,7 +110,12 @@ impl<'a> StyleParser<'a> {
                         .collect::<String>(),
                 ),
                 TokenKind::MultilineComment(_) => continue,
-                TokenKind::Interpolation => value.push_str(&self.eat_interpolation()),
+                TokenKind::Interpolation => value.push_str(
+                    &eat_interpolation(&mut self.tokens, self.scope)
+                        .iter()
+                        .map(|x| x.kind.to_string())
+                        .collect::<String>(),
+                ),
                 _ => value.push_str(&tok.kind.to_string()),
             }
         }

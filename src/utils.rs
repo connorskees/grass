@@ -1,7 +1,6 @@
-use crate::common::Whitespace;
+use crate::common::{Symbol, Whitespace};
 use crate::{Scope, Token, TokenKind};
-use std::iter::Iterator;
-use std::iter::Peekable;
+use std::iter::{Iterator, Peekable};
 
 pub trait IsWhitespace {
     fn is_whitespace(&self) -> bool;
@@ -39,6 +38,24 @@ pub fn deref_variable(name: &str, scope: &Scope) -> Vec<Token> {
                     });
                 }
             }
+            _ => val.push(tok.clone()),
+        }
+    }
+    val
+}
+
+pub fn eat_interpolation<'a, I: Iterator<Item = &'a Token>>(
+    tokens: &mut Peekable<I>,
+    scope: &Scope,
+) -> Vec<Token> {
+    let mut val = Vec::new();
+    for tok in tokens {
+        match &tok.kind {
+            TokenKind::Symbol(Symbol::CloseCurlyBrace) => break,
+            TokenKind::Symbol(Symbol::OpenCurlyBrace) => {
+                todo!("invalid character in interpolation")
+            }
+            TokenKind::Variable(ref v) => val.extend(deref_variable(v, scope)),
             _ => val.push(tok.clone()),
         }
     }

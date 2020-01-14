@@ -472,7 +472,7 @@ impl<'a> StyleSheetParser<'a> {
                     self.lexer.next();
                     devour_whitespace(&mut self.lexer);
                     return Ok(Expr::Selector(Selector::from_tokens(
-                        values.iter().peekable(),
+                        &mut values.iter().peekable(),
                         super_selector,
                         scope,
                     )));
@@ -745,7 +745,11 @@ mod test_css {
         two_rulesets,
         "a {\n  color: red;\n}\nc {\n  color: white;\n}\n"
     );
-    test!(two_inner_outer_rulesets, "a {\n  b {\n  color: red;\n}\n  c {\n  color: white;\n}\n}\na {\n  b {\n  color: red;\n}\n  c {\n  color: white;\n}\n}\n", "a b {\n  color: red;\n}\na c {\n  color: white;\n}\na b {\n  color: red;\n}\na c {\n  color: white;\n}\n");
+    test!(
+        two_inner_outer_rulesets,
+        "a {\n  b {\n  color: red;\n}\n  c {\n  color: white;\n}\n}\na {\n  b {\n  color: red;\n}\n  c {\n  color: white;\n}\n}\n",
+        "a b {\n  color: red;\n}\na c {\n  color: white;\n}\na b {\n  color: red;\n}\na c {\n  color: white;\n}\n"
+    );
     test!(selector_mul, "a, b {\n  color: red;\n}\n");
     test!(
         removes_empty_outer_styles,
