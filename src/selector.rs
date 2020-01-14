@@ -75,8 +75,6 @@ pub enum SelectorKind {
     /// Used to signify no selector (when there is no super_selector of a rule)
     None,
     Whitespace,
-    /// Intemediate value to simplify usage with identifier interpolation
-    Several(Vec<SelectorKind>),
 }
 
 impl IsWhitespace for SelectorKind {
@@ -112,9 +110,6 @@ impl Display for SelectorKind {
                 toks.iter().map(ToString::to_string).collect::<String>()
             ),
             SelectorKind::Super | SelectorKind::None => write!(f, ""),
-            SelectorKind::Several(_) => {
-                panic!("SelectorKind::Several should not be rendered using Display")
-            }
         }
     }
 }
