@@ -216,6 +216,7 @@ impl<'a> Lexer<'a> {
 
     fn lex_attr(&mut self) -> TokenKind {
         let mut attr = String::with_capacity(99);
+        self.devour_whitespace();
         while let Some(c) = self.buf.peek() {
             if !c.is_alphabetic() && c != &'-' && c != &'_' {
                 break;

@@ -19,10 +19,11 @@ impl Mixin {
         let mut toks = self.body.iter().peekable();
         let mut styles = Vec::new();
         let mut value = Vec::new();
+        dbg!(&self.body);
         while let Some(tok) = &toks.peek() {
-            dbg!(&tok.kind);
             match &tok.kind {
-                TokenKind::Symbol(Symbol::SemiColon) => {
+                TokenKind::Symbol(Symbol::SemiColon)
+                | TokenKind::Symbol(Symbol::CloseCurlyBrace) => {
                     toks.next();
                     if let Ok(s) = Style::from_tokens(&value, &self.scope) {
                         styles.push(s);
@@ -34,7 +35,7 @@ impl Mixin {
                 TokenKind::Variable(ref name) => {
                     toks.next();
                     if let TokenKind::Symbol(Symbol::Colon) =
-                    toks.peek().expect("expected something after variable").kind
+                        toks.peek().expect("expected something after variable").kind
                     {
                         toks.next();
                         devour_whitespace(&mut toks);

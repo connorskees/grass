@@ -573,39 +573,90 @@ fn main() -> SassResult<()> {
 }
 
 #[cfg(test)]
-mod test_css {
-    use super::StyleSheet;
-    macro_rules! test {
-        ($func:ident, $input:literal) => {
-            #[test]
-            fn $func() {
-                let mut buf = Vec::new();
-                StyleSheet::new($input)
-                    .expect(concat!("failed to parse on ", $input))
-                    .print_as_css(&mut buf)
-                    .expect(concat!("failed to pretty print on ", $input));
-                assert_eq!(
-                    String::from($input),
-                    String::from_utf8(buf).expect("produced invalid utf8")
-                );
-            }
-        };
-        ($func:ident, $input:literal, $output:literal) => {
-            #[test]
-            fn $func() {
-                let mut buf = Vec::new();
-                StyleSheet::new($input)
-                    .expect(concat!("failed to parse on ", $input))
-                    .print_as_css(&mut buf)
-                    .expect(concat!("failed to pretty print on ", $input));
-                assert_eq!(
-                    String::from($output),
-                    String::from_utf8(buf).expect("produced invalid utf8")
-                );
-            }
-        };
-    }
+macro_rules! test {
+    ($func:ident, $input:literal) => {
+        #[test]
+        fn $func() {
+            let mut buf = Vec::new();
+            StyleSheet::new($input)
+                .expect(concat!("failed to parse on ", $input))
+                .print_as_css(&mut buf)
+                .expect(concat!("failed to pretty print on ", $input));
+            assert_eq!(
+                String::from($input),
+                String::from_utf8(buf).expect("produced invalid utf8")
+            );
+        }
+    };
+    ($func:ident, $input:literal, $output:literal) => {
+        #[test]
+        fn $func() {
+            let mut buf = Vec::new();
+            StyleSheet::new($input)
+                .expect(concat!("failed to parse on ", $input))
+                .print_as_css(&mut buf)
+                .expect(concat!("failed to pretty print on ", $input));
+            assert_eq!(
+                String::from($output),
+                String::from_utf8(buf).expect("produced invalid utf8")
+            );
+        }
+    };
+}
 
+#[cfg(test)]
+mod css_variables {
+    use super::StyleSheet;
+    test!(
+        basic_variable,
+        "$height: 1px;\na {\n  height: $height;\n}\n",
+        "a {\n  height: 1px;\n}\n"
+    );
+    test!(
+        variable_redeclaration,
+        "$a: 1px;\n$a: 2px;\na {\n  height: $a;\n}\n",
+        "a {\n  height: 2px;\n}\n"
+    );
+    test!(
+        variable_shadowing,
+        "$a: 1px;\n$b: $a;\na {\n  height: $b;\n}\n",
+        "a {\n  height: 1px;\n}\n"
+    );
+    test!(
+        variable_shadowing_val_does_not_change,
+        "$a: 1px;\n$b: $a; $a: 2px;\na {\n  height: $b;\n}\n",
+        "a {\n  height: 1px;\n}\n"
+    );
+    test!(
+        variable_shadowing_val_does_not_change_complex,
+        "a {\n  color: red;\n}\n$y: before;\n$x: 1 2 $y;\n$y: after;\nfoo {\n  a: $x;\n}",
+        "a {\n  color: red;\n}\nfoo {\n  a: 1 2 before;\n}\n"
+    );
+    test!(
+        variable_whitespace,
+        "$a   :    1px   ;\na {\n  height: $a;\n}\n",
+        "a {\n  height: 1px;\n}\n"
+    );
+    test!(
+        style_after_variable,
+        "$a: 1px;\na {\n  height: $a;\n  color: red;\n}\n",
+        "a {\n  height: 1px;\n  color: red;\n}\n"
+    );
+    test!(
+        literal_and_variable_as_val,
+        "$a: 1px;\na {\n  height: 1 $a;\n}\n",
+        "a {\n  height: 1 1px;\n}\n"
+    );
+    test!(
+        literal_and_variable_as_var,
+        "$a: 1px;\n$b: 1 $a;\na {\n  height: $b;\n}\n",
+        "a {\n  height: 1 1px;\n}\n"
+    );
+}
+
+#[cfg(test)]
+mod css_selectors {
+    use super::StyleSheet;
     test!(
         selector_nesting_el_mul_el,
         "a, b {\n  a, b {\n  color: red\n}\n}\n",
@@ -709,72 +760,7 @@ mod test_css {
         "a {\n  :pseudo(a, b, c) {\n  color: red;\n  }\n}\n",
         "a :pseudo(a, b, c) {\n  color: red;\n}\n"
     );
-
-    test!(basic_style, "a {\n  color: red;\n}\n");
-    test!(two_styles, "a {\n  color: red;\n  color: blue;\n}\n");
-    test!(
-        two_inner_rulesets,
-        "a {\n  b {\n  color: red;\n}\n  c {\n  color: white;\n}\n}\n",
-        "a b {\n  color: red;\n}\na c {\n  color: white;\n}\n"
-    );
-    test!(
-        two_rulesets,
-        "a {\n  color: red;\n}\nc {\n  color: white;\n}\n"
-    );
-    test!(
-        two_inner_outer_rulesets,
-        "a {\n  b {\n  color: red;\n}\n  c {\n  color: white;\n}\n}\na {\n  b {\n  color: red;\n}\n  c {\n  color: white;\n}\n}\n",
-        "a b {\n  color: red;\n}\na c {\n  color: white;\n}\na b {\n  color: red;\n}\na c {\n  color: white;\n}\n"
-    );
     test!(selector_mul, "a, b {\n  color: red;\n}\n");
-    test!(
-        removes_empty_outer_styles,
-        "a {\n  b {\n    color: red;\n  }\n",
-        "a b {\n  color: red;\n}\n"
-    );
-    test!(removes_empty_styles, "a {}\n", "");
-    test!(
-        doesnt_eat_style_after_ruleset,
-        "a {\n  b {\n  color: red;\n}\n  color: blue;\n}\n",
-        "a {\n  color: blue;\n}\na b {\n  color: red;\n}\n"
-    );
-
-    test!(
-        removes_inner_comments,
-        "a {\n  color: red/* hi */;\n}\n",
-        "a {\n  color: red;\n}\n"
-    );
-    test!(
-        removes_inner_comments_whitespace,
-        "a {\n  color: red    /* hi */;\n}\n",
-        "a {\n  color: red;\n}\n"
-    );
-    test!(
-        preserves_outer_comments_before,
-        "a {\n  /* hi */\n  color: red;\n}\n"
-    );
-    test!(
-        preserves_outer_comments_after,
-        "a {\n  color: red;\n  /* hi */\n}\n"
-    );
-    test!(
-        preserves_outer_comments_two,
-        "a {\n  /* foo */\n  /* bar */\n  color: red;\n}\n"
-    );
-    test!(
-        preserves_toplevel_comment_before,
-        "/* foo */\na {\n  color: red;\n}\n"
-    );
-    test!(
-        preserves_toplevel_comment_after,
-        "a {\n  color: red;\n}\n/* foo */\n"
-    );
-    test!(
-        removes_single_line_comment,
-        "// a { color: red }\na {\n  height: 1 1px;\n}\n",
-        "a {\n  height: 1 1px;\n}\n"
-    );
-
     test!(
         outer_ampersand,
         "a, b {\n& c {\n  color: red;\n}\n}\n",
@@ -826,6 +812,114 @@ mod test_css {
         "abfoo {\n  color: red;\n}\n"
     );
     test!(
+        selector_whitespace,
+        "  a  >  b  ,  c  ~  d  e  .f  #g  :h  i.j  [  k  ]  { color: red }",
+        "a > b, c ~ d e .f #g :h i.j [k] {\n  color: red;\n}\n"
+    );
+}
+
+#[cfg(test)]
+mod css_units {
+    use super::StyleSheet;
+    test!(unit_none, "a {\n  height: 1;\n}\n");
+    test!(unit_not_attached, "a {\n  height: 1 px;\n}\n");
+    test!(unit_px, "a {\n  height: 1px;\n}\n");
+    test!(unit_em, "a {\n  height: 1em;\n}\n");
+    test!(unit_rem, "a {\n  height: 1rem;\n}\n");
+    test!(unit_percent, "a {\n  height: 1%;\n}\n");
+}
+
+#[cfg(test)]
+mod css_comments {
+    use super::StyleSheet;
+    test!(
+        removes_inner_comments,
+        "a {\n  color: red/* hi */;\n}\n",
+        "a {\n  color: red;\n}\n"
+    );
+    test!(
+        removes_inner_comments_whitespace,
+        "a {\n  color: red    /* hi */;\n}\n",
+        "a {\n  color: red;\n}\n"
+    );
+    test!(
+        preserves_outer_comments_before,
+        "a {\n  /* hi */\n  color: red;\n}\n"
+    );
+    test!(
+        preserves_outer_comments_after,
+        "a {\n  color: red;\n  /* hi */\n}\n"
+    );
+    test!(
+        preserves_outer_comments_two,
+        "a {\n  /* foo */\n  /* bar */\n  color: red;\n}\n"
+    );
+    test!(
+        preserves_toplevel_comment_before,
+        "/* foo */\na {\n  color: red;\n}\n"
+    );
+    test!(
+        preserves_toplevel_comment_after,
+        "a {\n  color: red;\n}\n/* foo */\n"
+    );
+    test!(
+        removes_single_line_comment,
+        "// a { color: red }\na {\n  height: 1 1px;\n}\n",
+        "a {\n  height: 1 1px;\n}\n"
+    );
+}
+
+#[cfg(test)]
+mod css_styles {
+    use super::StyleSheet;
+    test!(basic_style, "a {\n  color: red;\n}\n");
+    test!(two_styles, "a {\n  color: red;\n  color: blue;\n}\n");
+    test!(
+        two_inner_rulesets,
+        "a {\n  b {\n  color: red;\n}\n  c {\n  color: white;\n}\n}\n",
+        "a b {\n  color: red;\n}\na c {\n  color: white;\n}\n"
+    );
+    test!(
+        two_rulesets,
+        "a {\n  color: red;\n}\nc {\n  color: white;\n}\n"
+    );
+    test!(
+        two_inner_outer_rulesets,
+        "a {\n  b {\n  color: red;\n}\n  c {\n  color: white;\n}\n}\na {\n  b {\n  color: red;\n}\n  c {\n  color: white;\n}\n}\n",
+        "a b {\n  color: red;\n}\na c {\n  color: white;\n}\na b {\n  color: red;\n}\na c {\n  color: white;\n}\n"
+    );
+    test!(
+        removes_empty_outer_styles,
+        "a {\n  b {\n    color: red;\n  }\n",
+        "a b {\n  color: red;\n}\n"
+    );
+    test!(removes_empty_styles, "a {}\n", "");
+    test!(
+        doesnt_eat_style_after_ruleset,
+        "a {\n  b {\n  color: red;\n}\n  color: blue;\n}\n",
+        "a {\n  color: blue;\n}\na b {\n  color: red;\n}\n"
+    );
+    test!(
+        multiline_style,
+        "a {\n  color: red\n  blue;\n}\n",
+        "a {\n  color: red blue;\n}\n"
+    );
+    test!(hyphenated_style_property, "a {\n  font-family: Arial;\n}\n");
+    test!(hyphenated_style_value, "a {\n  color: Open-Sans;\n}\n");
+    test!(
+        space_separated_style_value,
+        "a {\n  border: solid red;\n}\n"
+    );
+    test!(single_quoted_style_value, "a {\n  font: 'Open-Sans';\n}\n");
+    test!(
+        double_quoted_style_value,
+        "a {\n  font: \"Open-Sans\";\n}\n"
+    );
+    test!(
+        comma_style_value,
+        "a {\n  font: Open-Sans, sans-serif;\n}\n"
+    );
+    test!(
         style_interpolation_start,
         "a {\n  #{c}olor: red;\n}\n",
         "a {\n  color: red;\n}\n"
@@ -845,7 +939,6 @@ mod test_css {
         "$a: foo;\na {\n  co#{$a}lor: red;\n}\n",
         "a {\n  cofoolor: red;\n}\n"
     );
-
     test!(
         style_val_interpolation_start,
         "a {\n  color: #{r}ed;\n}\n",
@@ -870,5 +963,41 @@ mod test_css {
         style_whitespace,
         "a {\n     color      :       red    ;    \n}\n",
         "a {\n  color: red;\n}\n"
+    );
+}
+
+#[cfg(test)]
+mod css_misc {
+    use super::*;
+    test!(
+        combines_hyphens,
+        "a {\n  foo: bar - baz;\n}\n",
+        "a {\n  foo: bar-baz;\n}\n"
+    );
+    test!(does_not_combine_hyphens, "a {\n  foo: bar -baz;\n}\n");
+    test!(
+        ident_starts_with_hyphen,
+        "a {\n  foo: -webkit-bar-baz;\n}\n"
+    );
+    test!(ident_with_num, "el1 {\n  a: b;\n}\n");
+    test!(keyword_important, "a {\n  height: 1 !important;\n}\n");
+    test!(
+        keyword_important_uppercase,
+        "a {\n  height: 1 !IMPORTANT;\n}\n",
+        "a {\n  height: 1 !important;\n}\n"
+    );
+    test!(
+        keyword_important_not_at_end,
+        "a {\n  height: !important 1;\n}\n"
+    );
+}
+
+#[cfg(test)]
+mod css_mixins {
+    use super::*;
+    test!(
+        basic_mixin,
+        "@mixin a {\n  color: red;\n}\n\nb {\n  @include a;\n}\n",
+        "b {\n  color: red;\n}\n"
     );
 }
