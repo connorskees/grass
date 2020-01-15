@@ -1,6 +1,6 @@
-use crate::common::Scope;
-use crate::common::Symbol;
+use crate::common::{Pos, Scope, Symbol};
 use crate::style::Style;
+use crate::utils::{devour_whitespace, eat_variable_value_ref};
 use crate::{Token, TokenKind};
 
 #[derive(Debug, Clone)]
@@ -19,37 +19,36 @@ impl Mixin {
         let mut toks = self.body.iter().peekable();
         let mut styles = Vec::new();
         let mut value = Vec::new();
-        while let Some(tok) = toks.peek() {
-            match tok.kind {
+        while let Some(tok) = &toks.peek() {
+            dbg!(&tok.kind);
+            match &tok.kind {
                 TokenKind::Symbol(Symbol::SemiColon) => {
+                    toks.next();
                     if let Ok(s) = Style::from_tokens(&value, &self.scope) {
                         styles.push(s);
+                        value.clear();
                     } else {
                         return styles;
                     }
                 }
-                // TokenKind::Variable(_) => {
-                //     let tok = toks.next().unwrap();
-                //     let name = if let TokenKind::Variable(n) = tok.kind {
-                //         n
-                //     } else {
-                //         unsafe { std::hint::unreachable_unchecked() }
-                //     };
-                //     if let TokenKind::Symbol(Symbol::Colon) = toks
-                //         .peek()
-                //         .expect("expected something after variable")
-                //         .kind
-                //     {
-                //         toks.next();
-                //         devour_whitespace(&mut toks);
-                //         return Ok(Expr::VariableDecl(name, self.eat_variable_value()));
-                //     } else {
-                //         values.push(Token {
-                //             kind: TokenKind::Variable(name),
-                //             pos: tok.pos,
-                //         });
-                //     }
-                // }
+                TokenKind::Variable(ref name) => {
+                    toks.next();
+                    if let TokenKind::Symbol(Symbol::Colon) =
+                    toks.peek().expect("expected something after variable").kind
+                    {
+                        toks.next();
+                        devour_whitespace(&mut toks);
+                        self.scope.vars.insert(
+                            name.clone(),
+                            eat_variable_value_ref(&mut toks, &self.scope).unwrap(),
+                        );
+                    } else {
+                        value.push(Token {
+                            kind: TokenKind::Variable(name.clone()),
+                            pos: Pos::new(),
+                        });
+                    }
+                }
                 _ => {
                     if let Some(tok) = toks.next() {
                         value.push(tok.clone())

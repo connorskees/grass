@@ -13,7 +13,6 @@
     clippy::use_self,
     clippy::missing_docs_in_private_items,
     clippy::todo,
-    clippy::dbg_macro,
     clippy::unreachable,
     clippy::wildcard_enum_match_arm,
     clippy::option_expect_used,
@@ -41,7 +40,7 @@ use crate::mixin::{CallArgs, FuncArgs, Mixin};
 use crate::selector::{Attribute, Selector};
 use crate::style::Style;
 use crate::units::Unit;
-use crate::utils::{devour_whitespace, IsWhitespace};
+use crate::utils::{devour_whitespace, eat_variable_value, IsWhitespace};
 
 mod color;
 mod common;
@@ -254,7 +253,8 @@ impl<'a> StyleSheetParser<'a> {
                     {
                         self.error(pos, "unexpected variable use at toplevel");
                     }
-                    let val = self.eat_variable_value();
+                    let val = eat_variable_value(&mut self.lexer, &self.global_scope)
+                        .unwrap_or_else(|err| self.error(err.0, err.1));
                     self.global_scope.vars.insert(name, val);
                 }
                 TokenKind::MultilineComment(comment) => {
@@ -395,34 +395,6 @@ impl<'a> StyleSheetParser<'a> {
         Expr::Styles(styles)
     }
 
-    fn eat_variable_value(&mut self) -> Vec<Token> {
-        devour_whitespace(&mut self.lexer);
-        let iter1 = self
-            .lexer
-            .by_ref()
-            .take_while(|x| x.kind != TokenKind::Symbol(Symbol::SemiColon))
-            .collect::<Vec<Token>>();
-        let mut iter2 = Vec::with_capacity(iter1.len());
-        for tok in iter1 {
-            if let Token {
-                kind: TokenKind::Variable(ref name),
-                pos,
-            } = tok
-            {
-                iter2.extend(
-                    self.global_scope
-                        .vars
-                        .get(name)
-                        .unwrap_or_else(|| self.error(pos, "Undefined variable"))
-                        .clone(),
-                );
-            } else {
-                iter2.push(tok);
-            }
-        }
-        iter2
-    }
-
     fn eat_func_call(&mut self) {}
 
     fn eat_rules(&mut self, super_selector: &Selector, scope: &mut Scope) -> Vec<Stmt> {
@@ -492,7 +464,11 @@ impl<'a> StyleSheetParser<'a> {
                     {
                         self.lexer.next();
                         devour_whitespace(&mut self.lexer);
-                        return Ok(Expr::VariableDecl(name, self.eat_variable_value()));
+                        return Ok(Expr::VariableDecl(
+                            name,
+                            eat_variable_value(&mut self.lexer, scope)
+                                .unwrap_or_else(|err| self.error(err.0, err.1)),
+                        ));
                     } else {
                         values.push(Token {
                             kind: TokenKind::Variable(name),

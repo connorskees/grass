@@ -1,4 +1,4 @@
-use crate::common::{Symbol, Whitespace};
+use crate::common::{Pos, Symbol, Whitespace};
 use crate::{Scope, Token, TokenKind};
 use std::iter::{Iterator, Peekable};
 
@@ -60,4 +60,36 @@ pub fn eat_interpolation<'a, I: Iterator<Item = &'a Token>>(
         }
     }
     val
+}
+
+pub fn eat_variable_value<I: Iterator<Item = Token>>(
+    toks: &mut Peekable<I>,
+    scope: &Scope,
+) -> Result<Vec<Token>, (Pos, &'static str)> {
+    devour_whitespace(toks);
+    let iter1 = toks.take_while(|x| x.kind != TokenKind::Symbol(Symbol::SemiColon));
+    let mut iter2 = Vec::new();
+    for tok in iter1 {
+        match tok.kind {
+            TokenKind::Variable(ref name) => iter2.extend(deref_variable(name, scope)),
+            _ => iter2.push(tok),
+        };
+    }
+    Ok(iter2)
+}
+
+pub fn eat_variable_value_ref<'a, I: Iterator<Item = &'a Token>>(
+    toks: &mut Peekable<I>,
+    scope: &Scope,
+) -> Result<Vec<Token>, (Pos, &'static str)> {
+    devour_whitespace(toks);
+    let iter1 = toks.take_while(|x| x.kind != TokenKind::Symbol(Symbol::SemiColon));
+    let mut iter2 = Vec::new();
+    for tok in iter1 {
+        match tok.kind {
+            TokenKind::Variable(ref name) => iter2.extend(deref_variable(name, scope)),
+            _ => iter2.push(tok.clone()),
+        };
+    }
+    Ok(iter2)
 }
