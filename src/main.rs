@@ -35,8 +35,9 @@ use crate::common::{AtRule, Keyword, Op, Pos, Printer, Scope, Symbol, Whitespace
 use crate::css::Css;
 use crate::error::SassError;
 use crate::format::PrettyPrinter;
+use crate::function::{eat_call_args, eat_func_args, CallArgs, FuncArgs};
 use crate::lexer::Lexer;
-use crate::mixin::{CallArg, CallArgs, FuncArg, FuncArgs, Mixin};
+use crate::mixin::Mixin;
 use crate::selector::{Attribute, Selector};
 use crate::style::Style;
 use crate::units::Unit;
@@ -47,6 +48,7 @@ mod common;
 mod css;
 mod error;
 mod format;
+mod function;
 mod imports;
 mod lexer;
 mod mixin;
@@ -379,98 +381,10 @@ fn eat_include<I: Iterator<Item = Token>>(
     } else {
         return Err((pos, "expected identifier"));
     };
-    let rules = mixin.call_with_args(&args).eval(super_selector, &mut scope.clone());
+    let rules = mixin
+        .call_with_args(&args)
+        .eval(super_selector, &mut scope.clone());
     Ok(rules)
-}
-
-fn eat_func_args<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -> FuncArgs {
-    let mut args: Vec<FuncArg> = Vec::new();
-
-    devour_whitespace(toks);
-    while let Some(Token { kind, .. }) = toks.next() {
-        let name = match kind {
-            TokenKind::Variable(v) => v,
-            TokenKind::Symbol(Symbol::CloseParen) => break,
-            _ => todo!(),
-        };
-        devour_whitespace(toks);
-        let kind = if let Some(Token { kind, .. }) = toks.next() {
-            kind
-        } else {
-            todo!()
-        };
-        match kind {
-            TokenKind::Symbol(Symbol::Colon) => {
-                todo!("handle default values")
-                // let mut val: Vec<Token> = Vec::new();
-                // while let Some(tok) = toks.next() {
-                //     match &kind {
-                //         _ => val.push(tok),
-                //     }
-                // }
-            }
-            TokenKind::Symbol(Symbol::Period) => todo!("handle varargs"),
-            TokenKind::Symbol(Symbol::CloseParen) => {
-                args.push(FuncArg {
-                    name,
-                    default: None,
-                });
-                break;
-            }
-            TokenKind::Symbol(Symbol::Comma) => args.push(FuncArg {
-                name,
-                default: None,
-            }),
-            _ => {}
-        }
-        devour_whitespace(toks);
-    }
-    devour_whitespace(toks);
-    if let Some(Token { kind: TokenKind::Symbol(Symbol::OpenCurlyBrace), .. }) = toks.next() {} else {
-        todo!("expected `{{` after mixin args")
-    }
-    FuncArgs(args)
-}
-
-fn eat_call_args<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -> CallArgs {
-    let mut args: Vec<CallArg> = Vec::new();
-    devour_whitespace(toks);
-    let mut name: Option<String> = None;
-    let mut val = Vec::new();
-    while let Some(Token { kind, pos }) = toks.next() {
-        match kind {
-            TokenKind::Variable(v) => name = Some(v),
-            TokenKind::Symbol(Symbol::Colon) => {
-                todo!("handle default values")
-                // let mut val: Vec<Token> = Vec::new();
-                // while let Some(Token { kind, .. }) = toks.next() {
-                //     match &kind {
-                //         _ => {}
-                //     }
-                // }
-            }
-            TokenKind::Symbol(Symbol::CloseParen) => {
-                args.push(CallArg {
-                    name: name.clone(),
-                    val: val.clone(),
-                });
-                break;
-            },
-            TokenKind::Symbol(Symbol::Comma) => {
-                args.push(CallArg {
-                    name: name.clone(),
-                    val: val.clone(),
-                });
-                if let Some(ref mut s) = name {
-                    s.clear();
-                }
-                val.clear();
-            }
-            _ => val.push(Token { kind, pos }),
-        }
-        devour_whitespace(toks);
-    }
-    CallArgs(args)
 }
 
 fn parse_mixin<I: Iterator<Item = Token>>(

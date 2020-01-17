@@ -1,8 +1,10 @@
-use crate::common::Scope;
-use crate::selector::Selector;
-use crate::{eat_expr, Expr, RuleSet, Stmt, Token};
 use std::iter::Peekable;
 use std::vec::IntoIter;
+
+use crate::common::Scope;
+use crate::function::{CallArgs, FuncArgs};
+use crate::selector::Selector;
+use crate::{eat_expr, Expr, RuleSet, Stmt, Token};
 
 #[derive(Debug, Clone)]
 pub struct Mixin {
@@ -29,7 +31,9 @@ impl Mixin {
                 todo!("keyword args")
             } else {
                 // dbg!(&self.args.0[idx].name.clone());
-                self.scope.vars.insert(self.args.0[idx].name.clone(), arg.val.clone());
+                self.scope
+                    .vars
+                    .insert(self.args.0[idx].name.clone(), arg.val.clone());
             }
         }
         self
@@ -65,45 +69,5 @@ impl Mixin {
             }
         }
         stmts
-    }
-}
-
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub struct FuncArgs(pub Vec<FuncArg>);
-
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub struct FuncArg {
-    pub name: String,
-    pub default: Option<Vec<Token>>,
-}
-
-impl FuncArgs {
-    pub const fn new() -> Self {
-        FuncArgs(Vec::new())
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct CallArgs(pub Vec<CallArg>);
-
-#[derive(Debug, Clone)]
-pub struct CallArg {
-    pub name: Option<String>,
-    pub val: Vec<Token>,
-}
-
-impl CallArg {
-    pub fn is_named(&self) -> bool {
-        self.name.is_some()
-    }
-}
-
-impl CallArgs {
-    pub const fn new() -> Self {
-        CallArgs(Vec::new())
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
     }
 }
