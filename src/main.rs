@@ -36,7 +36,7 @@ use crate::css::Css;
 use crate::error::SassError;
 use crate::format::PrettyPrinter;
 use crate::lexer::Lexer;
-use crate::mixin::{CallArgs, FuncArgs, Mixin};
+use crate::mixin::{FuncArgs, Mixin};
 use crate::selector::{Attribute, Selector};
 use crate::style::Style;
 use crate::units::Unit;
@@ -266,7 +266,8 @@ impl<'a> StyleSheetParser<'a> {
                     rules.push(Stmt::MultilineComment(comment));
                 }
                 TokenKind::AtRule(AtRule::Mixin) => {
-                    let (name, mixin) = parse_mixin(&mut self.lexer, self.global_scope.clone()).unwrap();
+                    let (name, mixin) =
+                        parse_mixin(&mut self.lexer, self.global_scope.clone()).unwrap();
                     self.global_scope.mixins.insert(name, mixin);
                 }
                 TokenKind::AtRule(_) => {
@@ -276,7 +277,7 @@ impl<'a> StyleSheetParser<'a> {
                     }) = self.lexer.next()
                     {
                         match eat_at_rule(rule, pos, &mut self.lexer, &mut self.global_scope) {
-                            Ok(a) => todo!(),
+                            Ok(_) => todo!(),
                             Err(Printer::Error(pos, message)) => self.error(pos, &message),
                             Err(Printer::Warn(pos, message)) => self.warn(pos, &message),
                             Err(Printer::Debug(pos, message)) => self.debug(pos, &message),
@@ -284,9 +285,8 @@ impl<'a> StyleSheetParser<'a> {
                     }
                 }
                 _ => {
-                    if let Some(Token { pos, kind }) = self.lexer.next() {
-                        dbg!(kind);
-                        self.error(pos.clone(), "unexpected toplevel token")
+                    if let Some(Token { pos, .. }) = self.lexer.next() {
+                        self.error(pos, "unexpected toplevel token")
                     } else {
                         unsafe { std::hint::unreachable_unchecked() }
                     }
@@ -337,40 +337,44 @@ impl<'a> StyleSheetParser<'a> {
     }
 }
 
-fn eat_include<I: std::iter::Iterator<Item = Token>>(toks: &mut Peekable<I>, scope: &Scope) -> Result<Vec<Stmt>, (Pos, &'static str)> {
-        toks.next();
-        devour_whitespace(toks);
-        let Token { kind, pos } = toks.next().unwrap();
-        let name = if let TokenKind::Ident(s) = kind {
-            s
-        } else {
-            return Err((pos, "expected identifier"));
-        };
+fn eat_include<I: std::iter::Iterator<Item = Token>>(
+    toks: &mut Peekable<I>,
+    scope: &Scope,
+    super_selector: &Selector,
+) -> Result<Vec<Stmt>, (Pos, &'static str)> {
+    toks.next();
+    devour_whitespace(toks);
+    let Token { kind, pos } = toks.next().unwrap();
+    let name = if let TokenKind::Ident(s) = kind {
+        s
+    } else {
+        return Err((pos, "expected identifier"));
+    };
 
-        devour_whitespace(toks);
+    devour_whitespace(toks);
 
-        match toks.next() {
-            Some(Token {
-                kind: TokenKind::Symbol(Symbol::SemiColon),
-                ..
-            }) => {}
-            Some(Token {
-                kind: TokenKind::Symbol(Symbol::OpenParen),
-                ..
-            }) => {}
-            Some(Token { pos, .. }) => return Err((pos, "expected `(` or `;`")),
-            None => return Err((pos, "unexpected EOF")),
-        }
-
-        let mut mixin = if let Some(m) = scope.mixins.get(&name) {
-            m.clone()
-        } else {
-            return Err((pos, "expected identifier"));
-        };
-        let rules = mixin.eval(&Selector(Vec::new()), &mut scope.clone());
-        devour_whitespace(toks);
-        Ok(rules)
+    match toks.next() {
+        Some(Token {
+            kind: TokenKind::Symbol(Symbol::SemiColon),
+            ..
+        }) => {}
+        Some(Token {
+            kind: TokenKind::Symbol(Symbol::OpenParen),
+            ..
+        }) => {}
+        Some(Token { pos, .. }) => return Err((pos, "expected `(` or `;`")),
+        None => return Err((pos, "unexpected EOF")),
     }
+
+    let mut mixin = if let Some(m) = scope.mixins.get(&name) {
+        m.clone()
+    } else {
+        return Err((pos, "expected identifier"));
+    };
+    let rules = mixin.eval(super_selector, &mut scope.clone());
+    devour_whitespace(toks);
+    Ok(rules)
+}
 
 fn eat_func_args() -> FuncArgs {
     todo!()
@@ -534,7 +538,14 @@ pub(crate) fn eat_expr<I: std::iter::Iterator<Item = Token>>(
                 }
             }
             TokenKind::AtRule(AtRule::Include) => {
-                return Ok(Expr::Include(eat_include(toks, scope).unwrap()));
+                return Ok(Expr::Include(
+                    eat_include(toks, scope, super_selector).unwrap(),
+                ));
+            }
+            TokenKind::AtRule(AtRule::Mixin) => {
+                toks.next();
+                let (name, mixin) = parse_mixin(toks, scope.clone()).unwrap();
+                return Ok(Expr::MixinDecl(name, mixin));
             }
             TokenKind::AtRule(_) => {
                 if let Some(Token {
@@ -543,8 +554,7 @@ pub(crate) fn eat_expr<I: std::iter::Iterator<Item = Token>>(
                 }) = toks.next()
                 {
                     if let Ok(a) = eat_at_rule(rule, pos, toks, scope) {
-                        dbg!("hi");
-                        // return Ok(a);
+                        return Ok(a);
                     }
                 }
             }
@@ -561,8 +571,7 @@ pub(crate) fn eat_expr<I: std::iter::Iterator<Item = Token>>(
                 if let Some(tok) = toks.next() {
                     values.push(tok.clone())
                 } else {
-                    dbg!("hi");
-                    // unsafe { std::hint::unreachable_unchecked() }
+                    unsafe { std::hint::unreachable_unchecked() }
                 }
             }
         };
@@ -1048,9 +1057,24 @@ mod css_misc {
 #[cfg(test)]
 mod css_mixins {
     use super::*;
-    // test!(
-    //     basic_mixin,
-    //     "@mixin a {\n  color: red;\n}\n\nb {\n  @include a;\n}\n",
-    //     "b {\n  color: red;\n}\n"
-    // );
+    test!(
+        basic_mixin,
+        "@mixin a {\n  color: red;\n}\n\nb {\n  @include a;\n}\n",
+        "b {\n  color: red;\n}\n"
+    );
+    test!(
+        mixin_two_styles,
+        "@mixin a {\n  color: red;\n  color: blue;\n}\n\nb {\n  @include a;\n}\n",
+        "b {\n  color: red;\n  color: blue;\n}\n"
+    );
+    test!(
+        mixin_ruleset,
+        "@mixin a {\n  b {\n    color: red;\n  }\n}\nb {\n  @include a;\n}\n",
+        "b b {\n  color: red;\n}\n"
+    );
+    test!(
+        mixin_two_rulesets,
+        "@mixin a {\n  b {\n    color: red;\n  }\n  c {\n    color: blue;\n  }\n}\nd {\n  @include a;\n}\n",
+        "d b {\n  color: red;\n}\nd c {\n  color: blue;\n}\n"
+    );
 }
