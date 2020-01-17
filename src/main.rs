@@ -711,9 +711,9 @@ fn main() -> SassResult<()> {
     let mut stdout = std::io::BufWriter::new(std::io::stdout());
     let s = StyleSheet::from_path("input.scss")?;
     // dbg!(s);
-    s.pretty_print(&mut stdout)?;
+    // s.pretty_print(&mut stdout)?;
     // s.pretty_print_selectors(&mut stdout)?;
-    // s.print_as_css(&mut stdout)?;
+    s.print_as_css(&mut stdout)?;
     // dbg!(Css::from_stylesheet(s));
     // println!("{}", s);
     // drop(input);
@@ -1162,5 +1162,20 @@ mod css_mixins {
         mixin_two_rulesets,
         "@mixin a {\n  b {\n    color: red;\n  }\n  c {\n    color: blue;\n  }\n}\nd {\n  @include a;\n}\n",
         "d b {\n  color: red;\n}\nd c {\n  color: blue;\n}\n"
+    );
+    test!(
+        mixin_ruleset_and_style,
+        "@mixin a {\n  b {\n    color: red;\n  }\n  color: blue;\n}\nd {\n  @include a;\n}\n",
+        "d {\n  color: blue;\n}\nd b {\n  color: red;\n}\n"
+    );
+    test!(
+        mixin_style_and_ruleset,
+        "@mixin a {\n  color: blue;\n  b {\n    color: red;\n}\n}\nd {\n  @include a;\n}\n",
+        "d {\n  color: blue;\n}\nd b {\n  color: red;\n}\n"
+    );
+    test!(
+        mixin_nested_rulesets,
+        "@mixin a {\n  b {\n    c {\n      color: red;\n}\n}\n}\nd {\n  @include a;\n}\n",
+        "d b c {\n  color: red;\n}\n"
     );
 }
