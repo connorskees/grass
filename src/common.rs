@@ -487,3 +487,10 @@ impl Scope {
         self.mixins.extend(other.mixins);
     }
 }
+
+#[derive(Debug)]
+pub(crate) enum Printer {
+    Error(Pos, String),
+    Warn(Pos, String),
+    Debug(Pos, String),
+}

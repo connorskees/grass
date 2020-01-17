@@ -126,7 +126,8 @@ impl TryFrom<&str> for Unit {
             b"kHz" => Ok(Unit::Khz),
             b"dpi" => Ok(Unit::Dpi),
             b"dpcm" => Ok(Unit::Dpcm),
-            b"dppx" | b"x" => Ok(Unit::Dppx),
+            b"dppx" => Ok(Unit::Dppx),
+            b"x" => Ok(Unit::X),
             b"fr" => Ok(Unit::Fr),
             _ => Err("invalid unit"),
         }
@@ -168,7 +169,8 @@ impl Into<String> for Unit {
             Unit::Khz => "kHz",
             Unit::Dpi => "dpi",
             Unit::Dpcm => "dpcm",
-            Unit::Dppx | Unit::X => "dppx",
+            Unit::Dppx => "dppx",
+            Unit::X => "x",
             Unit::Fr => "fr",
             Unit::None => "",
         }
@@ -211,7 +213,8 @@ impl Into<&'static str> for Unit {
             Unit::Khz => "kHz",
             Unit::Dpi => "dpi",
             Unit::Dpcm => "dpcm",
-            Unit::Dppx | Unit::X => "dppx",
+            Unit::Dppx => "dppx",
+            Unit::X => "x",
             Unit::Fr => "fr",
             Unit::None => "",
         }
@@ -253,7 +256,8 @@ impl fmt::Display for Unit {
             Unit::Khz => write!(f, "kHz"),
             Unit::Dpi => write!(f, "dpi"),
             Unit::Dpcm => write!(f, "dpcm"),
-            Unit::Dppx | Unit::X => write!(f, "dppx"),
+            Unit::Dppx => write!(f, "dppx"),
+            Unit::X => write!(f, "x"),
             Unit::Fr => write!(f, "fr"),
             Unit::None => write!(f, ""),
         }

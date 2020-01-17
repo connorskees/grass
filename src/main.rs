@@ -31,12 +31,12 @@ use std::io;
 use std::iter::{Iterator, Peekable};
 use std::path::Path;
 
-use crate::common::{AtRule, Keyword, Op, Pos, Scope, Symbol, Whitespace};
+use crate::common::{AtRule, Keyword, Op, Pos, Printer, Scope, Symbol, Whitespace};
 use crate::css::Css;
 use crate::error::SassError;
 use crate::format::PrettyPrinter;
 use crate::lexer::Lexer;
-use crate::mixin::{FuncArgs, Mixin};
+use crate::mixin::{CallArg, CallArgs, FuncArg, FuncArgs, Mixin};
 use crate::selector::{Attribute, Selector};
 use crate::style::Style;
 use crate::units::Unit;
@@ -296,8 +296,6 @@ impl<'a> StyleSheetParser<'a> {
         Ok(StyleSheet { rules })
     }
 
-    fn eat_func_call(&mut self) {}
-
     fn eat_rules(&mut self, super_selector: &Selector, scope: &mut Scope) -> Vec<Stmt> {
         let mut stmts = Vec::new();
         while let Ok(tok) = eat_expr(&mut self.lexer, scope, super_selector) {
@@ -337,7 +335,7 @@ impl<'a> StyleSheetParser<'a> {
     }
 }
 
-fn eat_include<I: std::iter::Iterator<Item = Token>>(
+fn eat_include<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
     scope: &Scope,
     super_selector: &Selector,
@@ -353,34 +351,129 @@ fn eat_include<I: std::iter::Iterator<Item = Token>>(
 
     devour_whitespace(toks);
 
-    match toks.next() {
+    let args = match toks.next() {
         Some(Token {
             kind: TokenKind::Symbol(Symbol::SemiColon),
             ..
-        }) => {}
+        }) => CallArgs::new(),
         Some(Token {
             kind: TokenKind::Symbol(Symbol::OpenParen),
             ..
-        }) => {}
+        }) => eat_call_args(toks),
         Some(Token { pos, .. }) => return Err((pos, "expected `(` or `;`")),
         None => return Err((pos, "unexpected EOF")),
+    };
+
+    devour_whitespace(toks);
+
+    if !args.is_empty() {
+        if let Some(tok) = toks.next() {
+            assert_eq!(tok.kind, TokenKind::Symbol(Symbol::SemiColon));
+        }
     }
+
+    devour_whitespace(toks);
 
     let mut mixin = if let Some(m) = scope.mixins.get(&name) {
         m.clone()
     } else {
         return Err((pos, "expected identifier"));
     };
-    let rules = mixin.eval(super_selector, &mut scope.clone());
-    devour_whitespace(toks);
+    let rules = mixin.call_with_args(&args).eval(super_selector, &mut scope.clone());
     Ok(rules)
 }
 
-fn eat_func_args() -> FuncArgs {
-    todo!()
+fn eat_func_args<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -> FuncArgs {
+    let mut args: Vec<FuncArg> = Vec::new();
+
+    devour_whitespace(toks);
+    while let Some(Token { kind, .. }) = toks.next() {
+        let name = match kind {
+            TokenKind::Variable(v) => v,
+            TokenKind::Symbol(Symbol::CloseParen) => break,
+            _ => todo!(),
+        };
+        devour_whitespace(toks);
+        let kind = if let Some(Token { kind, .. }) = toks.next() {
+            kind
+        } else {
+            todo!()
+        };
+        match kind {
+            TokenKind::Symbol(Symbol::Colon) => {
+                todo!("handle default values")
+                // let mut val: Vec<Token> = Vec::new();
+                // while let Some(tok) = toks.next() {
+                //     match &kind {
+                //         _ => val.push(tok),
+                //     }
+                // }
+            }
+            TokenKind::Symbol(Symbol::Period) => todo!("handle varargs"),
+            TokenKind::Symbol(Symbol::CloseParen) => {
+                args.push(FuncArg {
+                    name,
+                    default: None,
+                });
+                break;
+            }
+            TokenKind::Symbol(Symbol::Comma) => args.push(FuncArg {
+                name,
+                default: None,
+            }),
+            _ => {}
+        }
+        devour_whitespace(toks);
+    }
+    devour_whitespace(toks);
+    if let Some(Token { kind: TokenKind::Symbol(Symbol::OpenCurlyBrace), .. }) = toks.next() {} else {
+        todo!("expected `{{` after mixin args")
+    }
+    FuncArgs(args)
 }
 
-fn parse_mixin<I: std::iter::Iterator<Item = Token>>(
+fn eat_call_args<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -> CallArgs {
+    let mut args: Vec<CallArg> = Vec::new();
+    devour_whitespace(toks);
+    let mut name: Option<String> = None;
+    let mut val = Vec::new();
+    while let Some(Token { kind, pos }) = toks.next() {
+        match kind {
+            TokenKind::Variable(v) => name = Some(v),
+            TokenKind::Symbol(Symbol::Colon) => {
+                todo!("handle default values")
+                // let mut val: Vec<Token> = Vec::new();
+                // while let Some(Token { kind, .. }) = toks.next() {
+                //     match &kind {
+                //         _ => {}
+                //     }
+                // }
+            }
+            TokenKind::Symbol(Symbol::CloseParen) => {
+                args.push(CallArg {
+                    name: name.clone(),
+                    val: val.clone(),
+                });
+                break;
+            },
+            TokenKind::Symbol(Symbol::Comma) => {
+                args.push(CallArg {
+                    name: name.clone(),
+                    val: val.clone(),
+                });
+                if let Some(ref mut s) = name {
+                    s.clear();
+                }
+                val.clear();
+            }
+            _ => val.push(Token { kind, pos }),
+        }
+        devour_whitespace(toks);
+    }
+    CallArgs(args)
+}
+
+fn parse_mixin<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
     scope: Scope,
 ) -> Result<(String, Mixin), Printer> {
@@ -403,7 +496,7 @@ fn parse_mixin<I: std::iter::Iterator<Item = Token>>(
         Some(Token {
             kind: TokenKind::Symbol(Symbol::OpenParen),
             ..
-        }) => eat_func_args(),
+        }) => eat_func_args(toks),
         Some(Token {
             kind: TokenKind::Symbol(Symbol::OpenCurlyBrace),
             ..
@@ -430,14 +523,7 @@ fn parse_mixin<I: std::iter::Iterator<Item = Token>>(
     Ok((name, Mixin::new(scope, args, body)))
 }
 
-#[derive(Debug)]
-enum Printer {
-    Error(Pos, String),
-    Warn(Pos, String),
-    Debug(Pos, String),
-}
-
-fn eat_at_rule<I: std::iter::Iterator<Item = Token>>(
+fn eat_at_rule<I: Iterator<Item = Token>>(
     rule: AtRule,
     pos: Pos,
     toks: &mut Peekable<I>,
@@ -478,7 +564,7 @@ fn eat_at_rule<I: std::iter::Iterator<Item = Token>>(
     }
 }
 
-pub(crate) fn eat_expr<I: std::iter::Iterator<Item = Token>>(
+pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
     scope: &Scope,
     super_selector: &Selector,
@@ -569,7 +655,7 @@ pub(crate) fn eat_expr<I: std::iter::Iterator<Item = Token>>(
             }
             _ => {
                 if let Some(tok) = toks.next() {
-                    values.push(tok.clone())
+                    values.push(tok)
                 } else {
                     unsafe { std::hint::unreachable_unchecked() }
                 }

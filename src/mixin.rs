@@ -23,8 +23,21 @@ impl Mixin {
         }
     }
 
+    pub fn call_with_args(&mut self, args: &CallArgs) -> &mut Mixin {
+        for (idx, arg) in args.0.iter().enumerate() {
+            if arg.is_named() {
+                todo!("keyword args")
+            } else {
+                // dbg!(&self.args.0[idx].name.clone());
+                self.scope.vars.insert(self.args.0[idx].name.clone(), arg.val.clone());
+            }
+        }
+        self
+    }
+
     pub fn eval(&mut self, super_selector: &Selector, scope: &mut Scope) -> Vec<Stmt> {
         let mut stmts = Vec::new();
+        // dbg!(&scope);
         while let Ok(expr) = eat_expr(&mut self.body, scope, super_selector) {
             match expr {
                 Expr::Style(s) => stmts.push(Stmt::Style(s)),
@@ -56,7 +69,13 @@ impl Mixin {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct FuncArgs(pub Vec<(Option<String>, Vec<Token>)>);
+pub struct FuncArgs(pub Vec<FuncArg>);
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct FuncArg {
+    pub name: String,
+    pub default: Option<Vec<Token>>,
+}
 
 impl FuncArgs {
     pub const fn new() -> Self {
@@ -65,4 +84,26 @@ impl FuncArgs {
 }
 
 #[derive(Debug, Clone)]
-pub struct CallArgs(Vec<(Option<String>, Vec<Token>)>);
+pub struct CallArgs(pub Vec<CallArg>);
+
+#[derive(Debug, Clone)]
+pub struct CallArg {
+    pub name: Option<String>,
+    pub val: Vec<Token>,
+}
+
+impl CallArg {
+    pub fn is_named(&self) -> bool {
+        self.name.is_some()
+    }
+}
+
+impl CallArgs {
+    pub const fn new() -> Self {
+        CallArgs(Vec::new())
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+}
