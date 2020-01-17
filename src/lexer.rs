@@ -136,6 +136,7 @@ impl<'a> Lexer<'a> {
 
     fn lex_at_rule(&mut self) -> TokenKind {
         self.buf.next();
+        self.pos.next_char();
         let mut string = String::with_capacity(99);
         while let Some(c) = self.buf.peek() {
             if !c.is_alphabetic() && c != &'-' && c != &'_' {
@@ -161,7 +162,8 @@ impl<'a> Lexer<'a> {
         self.pos.next_char();
         match self.buf.peek().expect("expected something after '/'") {
             '/' => {
-                self.buf.by_ref().take_while(|x| x != &'\n').for_each(drop);
+                self.pos.chars(self.buf.by_ref().take_while(|x| x != &'\n').count() as u32);//.for_each();
+                self.pos.newline();
             }
             '*' => {
                 self.buf.next();

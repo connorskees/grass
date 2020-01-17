@@ -1,77 +1,73 @@
 use crate::common::{Pos, Scope, Symbol};
+use crate::selector::Selector;
 use crate::style::Style;
 use crate::utils::{devour_whitespace, eat_variable_value_ref};
-use crate::{Token, TokenKind};
+use crate::{eat_expr, Expr, RuleSet, Stmt, Token, TokenKind};
+use std::vec::IntoIter;
+use std::iter::Peekable;
 
 #[derive(Debug, Clone)]
 pub struct Mixin {
     scope: Scope,
     args: FuncArgs,
-    body: Vec<Token>,
+    // body: Vec<Token>,
+    body: Peekable<IntoIter<Token>>,
+    nesting: u32,
 }
+
+// struct MixinEvaluator<'a> {
+//     body: Vec<Token>,
+//     nesting: u32,
+// }
 
 impl Mixin {
     pub fn new(scope: Scope, args: FuncArgs, body: Vec<Token>) -> Self {
-        Mixin { scope, args, body }
+        let body = body.clone().into_iter().peekable();
+        Mixin {
+            scope,
+            args,
+            body,
+            nesting: 0,
+        }
     }
 
-    pub fn eval(&mut self) -> Vec<Style> {
-        let mut toks = self.body.iter().peekable();
-        let mut styles = Vec::new();
-        let mut value = Vec::new();
-        dbg!(&self.body);
-        while let Some(tok) = &toks.peek() {
-            match &tok.kind {
-                TokenKind::Symbol(Symbol::SemiColon)
-                | TokenKind::Symbol(Symbol::CloseCurlyBrace) => {
-                    toks.next();
-                    if let Ok(s) = Style::from_tokens(&value, &self.scope) {
-                        styles.push(s);
-                        value.clear();
-                    } else {
-                        return styles;
+    pub fn eval(&mut self, super_selector: &Selector, scope: &mut Scope) -> Vec<Stmt> {
+        let mut stmts = Vec::new();
+        while let Ok(expr) = eat_expr(&mut self.body, scope, super_selector) {
+            match expr {
+                Expr::Style(s) => stmts.push(Stmt::Style(s)),
+                Expr::Include(_) => todo!(), 
+                Expr::MixinDecl(_, _) => todo!(), 
+                Expr::Selector(s) => {
+                    self.nesting += 1;
+                    dbg!(&self.nesting);
+                    let rules = self.eval(&super_selector.clone().zip(s.clone()), scope);
+                    stmts.push(Stmt::RuleSet(RuleSet {
+                        super_selector: super_selector.clone(),
+                        selector: s,
+                        rules,
+                    }));
+                    self.nesting -= 1;
+                    if self.nesting == 0 {
+                        return stmts;
                     }
                 }
-                TokenKind::Variable(ref name) => {
-                    toks.next();
-                    if let TokenKind::Symbol(Symbol::Colon) =
-                        toks.peek().expect("expected something after variable").kind
-                    {
-                        toks.next();
-                        devour_whitespace(&mut toks);
-                        self.scope.vars.insert(
-                            name.clone(),
-                            eat_variable_value_ref(&mut toks, &self.scope).unwrap(),
-                        );
+                Expr::VariableDecl(name, val) => {
+                    if self.nesting == 0 {
+                        scope.vars.insert(name.clone(), val.clone());
+                        self.scope.vars.insert(name, val);
                     } else {
-                        value.push(Token {
-                            kind: TokenKind::Variable(name.clone()),
-                            pos: Pos::new(),
-                        });
+                        scope.vars.insert(name, val);
                     }
                 }
-                _ => {
-                    if let Some(tok) = toks.next() {
-                        value.push(tok.clone())
-                    } else {
-                        unsafe { std::hint::unreachable_unchecked() }
-                    }
-                }
-            }
-
-            while let Some(Token {
-                kind: TokenKind::Whitespace(_),
-                ..
-            }) = toks.peek()
-            {
-                toks.next();
+                Expr::MultilineComment(s) => stmts.push(Stmt::MultilineComment(s)),
             }
         }
-        styles
+        stmts
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct FuncArgs(pub Vec<(Option<String>, Vec<Token>)>);
 
 impl FuncArgs {
