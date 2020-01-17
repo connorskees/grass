@@ -162,7 +162,7 @@ impl<'a> Lexer<'a> {
         self.pos.next_char();
         match self.buf.peek().expect("expected something after '/'") {
             '/' => {
-                self.pos.chars(self.buf.by_ref().take_while(|x| x != &'\n').count() as u32);//.for_each();
+                self.buf.by_ref().take_while(|x| x != &'\n').for_each(drop);
                 self.pos.newline();
             }
             '*' => {
