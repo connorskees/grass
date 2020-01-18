@@ -39,7 +39,11 @@ impl Mixin {
         self
     }
 
-    pub fn eval(&mut self, super_selector: &Selector, scope: &mut Scope) -> Result<Vec<Stmt>, (Pos, &'static str)> {
+    pub fn eval(
+        &mut self,
+        super_selector: &Selector,
+        scope: &mut Scope,
+    ) -> Result<Vec<Stmt>, (Pos, &'static str)> {
         let mut stmts = Vec::new();
         while let Some(expr) = eat_expr(&mut self.body, scope, super_selector)? {
             match expr {

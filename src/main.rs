@@ -432,7 +432,7 @@ fn parse_mixin<I: Iterator<Item = Token>>(
             }
             body.push(tok)
         } else {
-            todo!("unexpected EOF")
+            return Err(Printer::Error(pos, String::from("unexpected EOF")));
         }
     }
 
@@ -518,7 +518,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                     devour_whitespace(toks);
                     return Ok(Some(Expr::VariableDecl(
                         name,
-                        eat_variable_value(toks, scope)?
+                        eat_variable_value(toks, scope)?,
                     )));
                 } else {
                     values.push(Token {
@@ -542,9 +542,11 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                 }
             }
             TokenKind::AtRule(AtRule::Include) => {
-                return Ok(Some(Expr::Include(
-                    eat_include(toks, scope, super_selector)?,
-                )));
+                return Ok(Some(Expr::Include(eat_include(
+                    toks,
+                    scope,
+                    super_selector,
+                )?)));
             }
             TokenKind::AtRule(AtRule::Mixin) => {
                 toks.next();
