@@ -37,6 +37,7 @@ use crate::css::Css;
 use crate::error::SassError;
 use crate::format::PrettyPrinter;
 use crate::function::{eat_call_args, eat_func_args, CallArgs, FuncArgs};
+use crate::imports::import;
 use crate::lexer::Lexer;
 use crate::mixin::Mixin;
 use crate::selector::{Attribute, Selector};
@@ -88,6 +89,7 @@ impl IsWhitespace for &Token {
 pub enum TokenKind {
     Ident(String),
     Symbol(Symbol),
+    String(String),
     AtRule(AtRule),
     Keyword(Keyword),
     Number(String),
@@ -105,6 +107,7 @@ impl Display for TokenKind {
         match self {
             TokenKind::Ident(s) | TokenKind::Number(s) => write!(f, "{}", s),
             TokenKind::Symbol(s) => write!(f, "{}", s),
+            TokenKind::String(s) => write!(f, "\"{}\"", s),
             TokenKind::AtRule(s) => write!(f, "{}", s),
             TokenKind::Op(s) => write!(f, "{}", s),
             TokenKind::Unit(s) => write!(f, "{}", s),
@@ -284,6 +287,38 @@ impl<'a> StyleSheetParser<'a> {
                 TokenKind::MultilineComment(comment) => {
                     self.lexer.next();
                     rules.push(Stmt::MultilineComment(comment));
+                }
+                TokenKind::AtRule(AtRule::Import) => {
+                    self.lexer.next();
+                    devour_whitespace(&mut self.lexer);
+                    let mut file_name = String::new();
+                    match self.lexer.next().unwrap().kind {
+                        TokenKind::Symbol(Symbol::DoubleQuote) => {
+                            while let Some(tok) = self.lexer.next() {
+                                if tok.kind == TokenKind::Symbol(Symbol::DoubleQuote) {
+                                    break;
+                                }
+                                file_name.push_str(&tok.kind.to_string());
+                            }
+                        }
+                        TokenKind::Symbol(Symbol::SingleQuote) => {
+                            while let Some(tok) = self.lexer.next() {
+                                if tok.kind == TokenKind::Symbol(Symbol::SingleQuote) {
+                                    break;
+                                }
+                                file_name.push_str(&tok.kind.to_string());
+                            }
+                        }
+                        _ => todo!("expected ' or \" after @import")
+                    }
+                    let Token { kind, pos } = self.lexer.next().unwrap();
+                    if kind != TokenKind::Symbol(Symbol::SemiColon) {
+                        self.error(pos, "expected `;` after @import declaration");
+                    }
+
+                    let (new_rules, new_scope) = import(file_name);
+                    rules.extend(new_rules);
+                    self.global_scope.merge(new_scope);
                 }
                 TokenKind::AtRule(AtRule::Mixin) => {
                     let (name, mixin) =
@@ -694,7 +729,7 @@ macro_rules! test {
 }
 
 #[cfg(test)]
-mod css_variables {
+mod test_variables {
     use super::StyleSheet;
     test!(
         basic_variable,
@@ -754,7 +789,7 @@ mod css_variables {
 }
 
 #[cfg(test)]
-mod css_selectors {
+mod test_selectors {
     use super::StyleSheet;
     test!(
         selector_nesting_el_mul_el,
@@ -918,7 +953,7 @@ mod css_selectors {
 }
 
 #[cfg(test)]
-mod css_units {
+mod test_units {
     use super::StyleSheet;
     test!(unit_none, "a {\n  height: 1;\n}\n");
     test!(unit_not_attached, "a {\n  height: 1 px;\n}\n");
@@ -929,7 +964,7 @@ mod css_units {
 }
 
 #[cfg(test)]
-mod css_comments {
+mod test_comments {
     use super::StyleSheet;
     test!(
         removes_inner_comments,
@@ -969,7 +1004,7 @@ mod css_comments {
 }
 
 #[cfg(test)]
-mod css_styles {
+mod test_styles {
     use super::StyleSheet;
     test!(basic_style, "a {\n  color: red;\n}\n");
     test!(two_styles, "a {\n  color: red;\n  color: blue;\n}\n");
@@ -1066,7 +1101,7 @@ mod css_styles {
 }
 
 #[cfg(test)]
-mod css_misc {
+mod test_misc {
     use super::*;
     test!(
         combines_hyphens,
@@ -1092,7 +1127,7 @@ mod css_misc {
 }
 
 #[cfg(test)]
-mod css_mixins {
+mod test_mixins {
     use super::*;
     test!(
         basic_mixin,
@@ -1164,4 +1199,39 @@ mod css_mixins {
         "@mixin a($b) {\n  color: #{$b};\n}\nd {\n  @include a(red);\n}\n",
         "d {\n  color: red;\n}\n"
     );
+}
+
+#[cfg(test)]
+mod test_imports {
+    use super::*;
+    use std::io::Write;
+    use tempfile::Builder;
+
+    macro_rules! test_import {
+        ($func:ident, $input:literal => $output:literal | $( $name:literal($content:literal) ),*) => {
+            #[test]
+            fn $func() {
+                $(
+                    write!(Builder::new().prefix($name).tempfile().unwrap(), $content).unwrap();
+                )*
+                let mut buf = Vec::new();
+                StyleSheet::new($input)
+                .expect(concat!("failed to parse on ", $input))
+                .print_as_css(&mut buf)
+                .expect(concat!("failed to pretty print on ", $input));
+                assert_eq!(
+                    String::from($output),
+                    String::from_utf8(buf).expect("produced invalid utf8")
+                );
+            }
+        }
+    }
+
+    // redundant test to ensure that the import tests are working
+    test_import!(basic, "a {\n  color: red;\n}\n" => "a {\n  color: red;\n}\n" | );
+
+    test_import!(imports_variable, "@import \"foo\";\na {\n color: $a;\n}" => "a {\n  color: red;\n}\n" | "foo"("$a: red;"));
+    test_import!(single_quotes_import, "@import 'foo';\na {\n color: $a;\n}" => "a {\n  color: red;\n}\n" | "foo"("$a: red;"));
+    test_import!(finds_name_scss, "@import \"foo\";\na {\n color: $a;\n}" => "a {\n  color: red;\n}\n" | "foo.scss"("$a: red;"));
+    test_import!(finds_underscore_name_scss, "@import \"foo\";\na {\n color: $a;\n}" => "a {\n  color: red;\n}\n" | "_foo.scss"("$a: red;"));
 }
