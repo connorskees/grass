@@ -1,7 +1,7 @@
 use std::iter::Peekable;
 use std::vec::IntoIter;
 
-use crate::common::Scope;
+use crate::common::{Pos, Scope};
 use crate::function::{CallArgs, FuncArgs};
 use crate::selector::Selector;
 use crate::{eat_expr, Expr, RuleSet, Stmt, Token};
@@ -39,16 +39,16 @@ impl Mixin {
         self
     }
 
-    pub fn eval(&mut self, super_selector: &Selector, scope: &mut Scope) -> Vec<Stmt> {
+    pub fn eval(&mut self, super_selector: &Selector, scope: &mut Scope) -> Result<Vec<Stmt>, (Pos, &'static str)> {
         let mut stmts = Vec::new();
-        while let Ok(expr) = eat_expr(&mut self.body, scope, super_selector) {
+        while let Some(expr) = eat_expr(&mut self.body, scope, super_selector)? {
             match expr {
                 Expr::Style(s) => stmts.push(Stmt::Style(s)),
                 Expr::Include(_) => todo!(),
                 Expr::MixinDecl(_, _) => todo!(),
                 Expr::Selector(s) => {
                     self.nesting += 1;
-                    let rules = self.eval(&super_selector.clone().zip(s.clone()), scope);
+                    let rules = self.eval(&super_selector.clone().zip(s.clone()), scope)?;
                     stmts.push(Stmt::RuleSet(RuleSet {
                         super_selector: super_selector.clone(),
                         selector: s,
@@ -67,6 +67,6 @@ impl Mixin {
                 Expr::MultilineComment(s) => stmts.push(Stmt::MultilineComment(s)),
             }
         }
-        stmts
+        Ok(stmts)
     }
 }

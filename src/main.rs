@@ -229,7 +229,7 @@ struct StyleSheetParser<'a> {
 
 impl<'a> StyleSheetParser<'a> {
     fn parse_toplevel(mut self) -> SassResult<StyleSheet> {
-        let mut rules = Vec::new();
+        let mut rules: Vec<Stmt> = Vec::new();
         while let Some(Token { kind, .. }) = self.lexer.peek() {
             match kind.clone() {
                 TokenKind::Ident(_)
@@ -300,7 +300,9 @@ impl<'a> StyleSheetParser<'a> {
 
     fn eat_rules(&mut self, super_selector: &Selector, scope: &mut Scope) -> Vec<Stmt> {
         let mut stmts = Vec::new();
-        while let Ok(tok) = eat_expr(&mut self.lexer, scope, super_selector) {
+        while let Some(tok) = eat_expr(&mut self.lexer, scope, super_selector)
+            .unwrap_or_else(|error| self.error(error.0, error.1))
+        {
             match tok {
                 Expr::Style(s) => stmts.push(Stmt::Style(s)),
                 Expr::MixinDecl(name, mixin) => {
@@ -383,7 +385,7 @@ fn eat_include<I: Iterator<Item = Token>>(
     };
     let rules = mixin
         .call_with_args(&args)
-        .eval(super_selector, &mut scope.clone());
+        .eval(super_selector, &mut scope.clone())?;
     Ok(rules)
 }
 
@@ -482,23 +484,25 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
     scope: &Scope,
     super_selector: &Selector,
-) -> Result<Expr, ()> {
+) -> Result<Option<Expr>, (Pos, &'static str)> {
     let mut values = Vec::with_capacity(5);
     while let Some(tok) = toks.peek() {
         match &tok.kind {
             TokenKind::Symbol(Symbol::SemiColon) | TokenKind::Symbol(Symbol::CloseCurlyBrace) => {
                 toks.next();
                 devour_whitespace(toks);
-                return Ok(Expr::Style(Style::from_tokens(&values, scope)?));
+                return Ok(Some(Expr::Style(
+                    Style::from_tokens(&values, scope).unwrap(),
+                )));
             }
             TokenKind::Symbol(Symbol::OpenCurlyBrace) => {
                 toks.next();
                 devour_whitespace(toks);
-                return Ok(Expr::Selector(Selector::from_tokens(
+                return Ok(Some(Expr::Selector(Selector::from_tokens(
                     &mut values.iter().peekable(),
                     super_selector,
                     scope,
-                )));
+                ))));
             }
             TokenKind::Variable(_) => {
                 let tok = toks.next().unwrap();
@@ -512,10 +516,10 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                 {
                     toks.next();
                     devour_whitespace(toks);
-                    return Ok(Expr::VariableDecl(
+                    return Ok(Some(Expr::VariableDecl(
                         name,
-                        eat_variable_value(toks, scope).unwrap(), // .unwrap_or_else(|err| self.error(err.0, err.1)),
-                    ));
+                        eat_variable_value(toks, scope)?
+                    )));
                 } else {
                     values.push(Token {
                         kind: TokenKind::Variable(name),
@@ -532,20 +536,20 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                 };
                 devour_whitespace(toks);
                 if values.is_empty() {
-                    return Ok(Expr::MultilineComment(s.clone()));
+                    return Ok(Some(Expr::MultilineComment(s.clone())));
                 } else {
                     values.push(tok.clone())
                 }
             }
             TokenKind::AtRule(AtRule::Include) => {
-                return Ok(Expr::Include(
-                    eat_include(toks, scope, super_selector).unwrap(),
-                ));
+                return Ok(Some(Expr::Include(
+                    eat_include(toks, scope, super_selector)?,
+                )));
             }
             TokenKind::AtRule(AtRule::Mixin) => {
                 toks.next();
                 let (name, mixin) = parse_mixin(toks, scope.clone()).unwrap();
-                return Ok(Expr::MixinDecl(name, mixin));
+                return Ok(Some(Expr::MixinDecl(name, mixin)));
             }
             TokenKind::AtRule(_) => {
                 if let Some(Token {
@@ -554,7 +558,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                 }) = toks.next()
                 {
                     if let Ok(a) = eat_at_rule(rule, pos, toks, scope) {
-                        return Ok(a);
+                        return Ok(Some(a));
                     }
                 }
             }
@@ -576,7 +580,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
             }
         };
     }
-    Err(())
+    Ok(None)
 }
 
 /// Functions that print to stdout or stderr
