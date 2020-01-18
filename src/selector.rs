@@ -242,7 +242,8 @@ impl<'a> SelectorParser<'a> {
         }
         if let Some(Token { kind, .. }) = tokens.next() {
             match &kind {
-                TokenKind::Ident(tok) => self.selectors.push(SelectorKind::Element(tok.clone())),
+                TokenKind::Ident(ident) => self.selectors.push(SelectorKind::Element(ident.clone())),
+                TokenKind::Unit(u) => self.selectors.push(SelectorKind::Element(u.to_string())),
                 TokenKind::Symbol(Symbol::Period) => self.selectors.push(SelectorKind::Class),
                 TokenKind::Symbol(Symbol::Hash) => self.selectors.push(SelectorKind::Id),
                 TokenKind::Symbol(Symbol::Colon) => self.consume_pseudo_selector(tokens),
