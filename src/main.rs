@@ -492,7 +492,10 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                 toks.next();
                 devour_whitespace(toks);
                 return Ok(Some(Expr::Style(
-                    Style::from_tokens(&values, scope).unwrap(),
+                    match Style::from_tokens(&values, scope) {
+                        Ok(x) => x,
+                        Err(_) => return Ok(None),
+                    },
                 )));
             }
             TokenKind::Symbol(Symbol::OpenCurlyBrace) => {
