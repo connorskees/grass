@@ -714,6 +714,11 @@ mod css_variables {
         "$a: 1px;\n$b: 1 $a;\na {\n  height: $b;\n}\n",
         "a {\n  height: 1 1px;\n}\n"
     );
+    test!(
+        eats_whitespace_after_variable_value,
+        "a {\n  b {\n    $c: red;\n  }\n  color: red;\n}\n",
+        "a {\n  color: red;\n}\n"
+    );
 }
 
 #[cfg(test)]
