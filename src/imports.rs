@@ -7,7 +7,8 @@ pub fn import<P: AsRef<Path>>(name: P) -> (Vec<Stmt>, Scope) {
     let mut scope = Scope::new();
     let path = name.as_ref().to_path_buf();
     let name = path.file_name().unwrap();
-    if path.extension() == Some(std::ffi::OsStr::new(".css")) {// || name.starts_with("http://") || name.starts_with("https://") {
+    if path.extension() == Some(std::ffi::OsStr::new(".css")) {
+        // || name.starts_with("http://") || name.starts_with("https://") {
         todo!("handle css imports")
     }
     let mut p1 = path.clone();

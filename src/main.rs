@@ -309,7 +309,7 @@ impl<'a> StyleSheetParser<'a> {
                                 file_name.push_str(&tok.kind.to_string());
                             }
                         }
-                        _ => todo!("expected ' or \" after @import")
+                        _ => todo!("expected ' or \" after @import"),
                     }
                     let Token { kind, pos } = self.lexer.next().unwrap();
                     if kind != TokenKind::Symbol(Symbol::SemiColon) {
@@ -685,14 +685,15 @@ impl<'a> StyleSheetParser<'a> {
 
 fn main() -> SassResult<()> {
     let mut stdout = std::io::BufWriter::new(std::io::stdout());
-    let s = StyleSheet::from_path("input.scss")?;
+    let mut args = std::env::args();
+    args.next();
+    for arg in args {
+        let s = StyleSheet::from_path(arg)?;
+        s.print_as_css(&mut stdout)?;
+    }
     // dbg!(s);
     // s.pretty_print(&mut stdout)?;
     // s.pretty_print_selectors(&mut stdout)?;
-    s.print_as_css(&mut stdout)?;
-    // dbg!(Css::from_stylesheet(s));
-    // println!("{}", s);
-    // drop(input);
     Ok(())
 }
 
