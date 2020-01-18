@@ -115,7 +115,7 @@ impl Css {
     }
 
     fn parse_stylesheet(mut self, s: StyleSheet) -> Css {
-        for stmt in s.rules {
+        for stmt in s.0 {
             self.parse_stmt(stmt);
         }
         self

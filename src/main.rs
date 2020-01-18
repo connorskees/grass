@@ -122,9 +122,7 @@ impl Display for TokenKind {
 
 /// Represents a parsed SASS stylesheet with nesting
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct StyleSheet {
-    rules: Vec<Stmt>,
-}
+pub struct StyleSheet(Vec<Stmt>);
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Stmt {
@@ -178,25 +176,44 @@ enum Expr {
 
 impl StyleSheet {
     pub fn new(input: &str) -> SassResult<StyleSheet> {
-        StyleSheetParser {
-            global_scope: Scope::new(),
-            lexer: Lexer::new(input).peekable(),
-            rules: Vec::new(),
-            scope: 0,
-            file: String::from("stdin"),
-        }
-        .parse_toplevel()
+        Ok(StyleSheet(
+            StyleSheetParser {
+                global_scope: Scope::new(),
+                lexer: Lexer::new(input).peekable(),
+                rules: Vec::new(),
+                scope: 0,
+                file: String::from("stdin"),
+            }
+            .parse_toplevel()?
+            .0,
+        ))
     }
 
     pub fn from_path<P: AsRef<Path> + Into<String>>(p: P) -> SassResult<StyleSheet> {
-        StyleSheetParser {
+        Ok(StyleSheet(
+            StyleSheetParser {
+                global_scope: Scope::new(),
+                lexer: Lexer::new(&fs::read_to_string(p.as_ref())?).peekable(),
+                rules: Vec::new(),
+                scope: 0,
+                file: p.into(),
+            }
+            .parse_toplevel()?
+            .0,
+        ))
+    }
+
+    pub(crate) fn export_from_path<P: AsRef<Path> + Into<String>>(
+        p: P,
+    ) -> SassResult<(Vec<Stmt>, Scope)> {
+        Ok(StyleSheetParser {
             global_scope: Scope::new(),
             lexer: Lexer::new(&fs::read_to_string(p.as_ref())?).peekable(),
             rules: Vec::new(),
             scope: 0,
             file: p.into(),
         }
-        .parse_toplevel()
+        .parse_toplevel()?)
     }
 
     /// Print the internal representation of a parsed stylesheet
@@ -229,7 +246,7 @@ struct StyleSheetParser<'a> {
 }
 
 impl<'a> StyleSheetParser<'a> {
-    fn parse_toplevel(mut self) -> SassResult<StyleSheet> {
+    fn parse_toplevel(mut self) -> SassResult<(Vec<Stmt>, Scope)> {
         let mut rules: Vec<Stmt> = Vec::new();
         while let Some(Token { kind, .. }) = self.lexer.peek() {
             match kind.clone() {
@@ -296,7 +313,7 @@ impl<'a> StyleSheetParser<'a> {
                 }
             };
         }
-        Ok(StyleSheet { rules })
+        Ok((rules, self.global_scope))
     }
 
     fn eat_rules(&mut self, super_selector: &Selector, scope: &mut Scope) -> Vec<Stmt> {

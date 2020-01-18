@@ -41,7 +41,7 @@ impl<W: Write> PrettyPrinter<W> {
     /// The result should be an exact copy of the SCSS input
     /// Empty rules are included
     pub fn pretty_print(&mut self, s: &StyleSheet) -> io::Result<()> {
-        for rule in &s.rules {
+        for rule in &s.0 {
             self.pretty_print_stmt(rule)?;
         }
         Ok(())
@@ -85,7 +85,7 @@ impl<W: Write> PrettyPrinter<W> {
         &mut self,
         s: &StyleSheet,
     ) -> io::Result<()> {
-        for rule in &s.rules {
+        for rule in &s.0 {
             self.pretty_print_stmt_preserve_super_selectors(rule)?;
         }
         writeln!(self.buf)?;
