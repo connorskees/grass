@@ -38,7 +38,7 @@ impl Mixin {
         self
     }
 
-    pub fn call(&mut self, super_selector: &Selector,) -> Result<Vec<Stmt>, (Pos, &'static str)> {
+    pub fn call(&mut self, super_selector: &Selector) -> Result<Vec<Stmt>, (Pos, &'static str)> {
         self.eval(super_selector, &mut self.scope.clone())
     }
 

@@ -384,9 +384,7 @@ fn eat_include<I: Iterator<Item = Token>>(
     } else {
         return Err((pos, "expected identifier"));
     };
-    let rules = mixin
-        .args(&args)
-        .call(super_selector)?;
+    let rules = mixin.args(&args).call(super_selector)?;
     Ok(rules)
 }
 
