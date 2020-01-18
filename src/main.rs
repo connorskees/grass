@@ -28,7 +28,7 @@
 // todo! handle erroring on styles at the toplevel
 use std::fmt::{self, Display};
 use std::fs;
-use std::io;
+use std::io::{self, Write, BufWriter, stdout};
 use std::iter::{Iterator, Peekable};
 use std::path::Path;
 
@@ -225,16 +225,16 @@ impl StyleSheet {
     /// to pure CSS
     ///
     /// Used mainly in debugging, but can at times be useful
-    pub fn pretty_print<W: std::io::Write>(&self, buf: W) -> io::Result<()> {
+    pub fn pretty_print<W: Write>(&self, buf: W) -> io::Result<()> {
         PrettyPrinter::new(buf).pretty_print(self)
     }
 
-    fn pretty_print_selectors<W: std::io::Write>(&self, buf: W) -> io::Result<()> {
+    fn pretty_print_selectors<W: Write>(&self, buf: W) -> io::Result<()> {
         PrettyPrinter::new(buf).pretty_print_preserve_super_selectors(self)
     }
 
     /// Write the internal representation as CSS to `buf`
-    pub fn print_as_css<W: std::io::Write>(self, buf: &mut W) -> io::Result<()> {
+    pub fn print_as_css<W: Write>(self, buf: &mut W) -> io::Result<()> {
         Css::from_stylesheet(self).pretty_print(buf)
     }
 }
@@ -684,7 +684,7 @@ impl<'a> StyleSheetParser<'a> {
 }
 
 fn main() -> SassResult<()> {
-    let mut stdout = std::io::BufWriter::new(std::io::stdout());
+    let mut stdout = BufWriter::new(stdout());
     let mut args = std::env::args();
     args.next();
     for arg in args {
@@ -1205,7 +1205,7 @@ mod test_mixins {
 #[cfg(test)]
 mod test_imports {
     use super::*;
-    use std::io::Write;
+    use Write;
     use tempfile::Builder;
 
     macro_rules! test_import {

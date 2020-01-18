@@ -1,8 +1,7 @@
 //! # Convert from SCSS AST to CSS
 use crate::{RuleSet, Selector, Stmt, Style, StyleSheet};
-// use crate::common::AtRule;
 use std::fmt;
-use std::io;
+use std::io::{self, Write};
 
 #[derive(Debug, Clone)]
 pub enum Toplevel {
@@ -121,7 +120,7 @@ impl Css {
         self
     }
 
-    pub fn pretty_print<W: std::io::Write>(self, buf: &mut W) -> io::Result<()> {
+    pub fn pretty_print<W: Write>(self, buf: &mut W) -> io::Result<()> {
         for block in self.blocks {
             match block {
                 Toplevel::RuleSet(selector, styles) => {
