@@ -117,8 +117,8 @@ pub fn eat_call_args<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -> CallA
             }
             TokenKind::Symbol(Symbol::CloseParen) => {
                 args.push(CallArg {
-                    name: name.clone(),
-                    val: val.clone(),
+                    name: name,
+                    val: val,
                 });
                 break;
             }

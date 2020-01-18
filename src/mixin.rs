@@ -16,7 +16,7 @@ pub struct Mixin {
 
 impl Mixin {
     pub fn new(scope: Scope, args: FuncArgs, body: Vec<Token>) -> Self {
-        let body = body.clone().into_iter().peekable();
+        let body = body.into_iter().peekable();
         Mixin {
             scope,
             args,

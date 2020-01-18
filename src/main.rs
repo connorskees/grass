@@ -274,11 +274,11 @@ impl<'a> StyleSheetParser<'a> {
                 }
                 TokenKind::AtRule(_) => {
                     if let Some(Token {
-                        kind: TokenKind::AtRule(rule),
+                        kind: TokenKind::AtRule(ref rule),
                         pos,
                     }) = self.lexer.next()
                     {
-                        match eat_at_rule(rule, pos, &mut self.lexer, &mut self.global_scope) {
+                        match eat_at_rule(rule, pos, &mut self.lexer, &self.global_scope) {
                             Ok(_) => todo!(),
                             Err(Printer::Error(pos, message)) => self.error(pos, &message),
                             Err(Printer::Warn(pos, message)) => self.warn(pos, &message),
@@ -438,7 +438,7 @@ fn parse_mixin<I: Iterator<Item = Token>>(
 }
 
 fn eat_at_rule<I: Iterator<Item = Token>>(
-    rule: AtRule,
+    rule: &AtRule,
     pos: Pos,
     toks: &mut Peekable<I>,
     scope: &Scope,
@@ -549,7 +549,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
             }
             TokenKind::AtRule(_) => {
                 if let Some(Token {
-                    kind: TokenKind::AtRule(rule),
+                    kind: TokenKind::AtRule(ref rule),
                     pos,
                 }) = toks.next()
                 {
