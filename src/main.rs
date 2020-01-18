@@ -384,8 +384,8 @@ fn eat_include<I: Iterator<Item = Token>>(
         return Err((pos, "expected identifier"));
     };
     let rules = mixin
-        .call_with_args(&args)
-        .eval(super_selector, &mut scope.clone())?;
+        .args(&args)
+        .call(super_selector)?;
     Ok(rules)
 }
 
@@ -1120,5 +1120,20 @@ mod css_mixins {
         mixin_variable_scope_one_ruleset,
         "@mixin a {\n  $a: blue;\nb {\n  $a: red;\n}  color: $a\n}\nd {\n  @include a;\n}\n",
         "d {\n  color: red;\n}\n"
+    );
+    test!(
+        mixin_single_arg,
+        "@mixin a($b) {\n  color: $b;\n}\nd {\n  @include a(red);\n}\n",
+        "d {\n  color: red;\n}\n"
+    );
+    test!(
+        mixin_two_args,
+        "@mixin a($b, $c) {\n  color: $b;\n  color: $c\n}\nd {\n  @include a(red, blue);\n}\n",
+        "d {\n  color: red;\n  color: blue;\n}\n"
+    );
+    test!(
+        mixin_arg_trailing_comma,
+        "@mixin a($b, $c,) {\n  color: $b;\n  color: $c\n}\nd {\n  @include a(red, blue);\n}\n",
+        "d {\n  color: red;\n  color: blue;\n}\n"
     );
 }

@@ -25,18 +25,21 @@ impl Mixin {
         }
     }
 
-    pub fn call_with_args(&mut self, args: &CallArgs) -> &mut Mixin {
+    pub fn args(&mut self, args: &CallArgs) -> &mut Mixin {
         for (idx, arg) in args.0.iter().enumerate() {
             if arg.is_named() {
                 todo!("keyword args")
             } else {
-                // dbg!(&self.args.0[idx].name.clone());
                 self.scope
                     .vars
                     .insert(self.args.0[idx].name.clone(), arg.val.clone());
             }
         }
         self
+    }
+
+    pub fn call(&mut self, super_selector: &Selector,) -> Result<Vec<Stmt>, (Pos, &'static str)> {
+        self.eval(super_selector, &mut self.scope.clone())
     }
 
     pub fn eval(
