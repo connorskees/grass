@@ -18,6 +18,7 @@ pub fn devour_whitespace<I: Iterator<Item = W>, W: IsWhitespace>(s: &mut Peekabl
     found_whitespace
 }
 
+#[track_caller]
 pub fn deref_variable(name: &str, scope: &Scope) -> Vec<Token> {
     let mut toks = scope
         .vars
@@ -67,6 +68,7 @@ pub fn eat_variable_value<I: Iterator<Item = Token>>(
     scope: &Scope,
 ) -> Result<Vec<Token>, (Pos, &'static str)> {
     devour_whitespace(toks);
+    // todo!(line might not end with semicolon)
     let iter1 = toks.take_while(|x| x.kind != TokenKind::Symbol(Symbol::SemiColon));
     let mut iter2 = Vec::new();
     for tok in iter1 {

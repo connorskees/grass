@@ -24,6 +24,7 @@
     clippy::let_underscore_must_use,
     clippy::module_name_repetitions
 )]
+#![feature(track_caller)]
 // todo! handle erroring on styles at the toplevel
 use std::fmt::{self, Display};
 use std::fs;
@@ -426,7 +427,9 @@ fn parse_mixin<I: Iterator<Item = Token>>(
     while nesting > 0 {
         if let Some(tok) = toks.next() {
             match &tok.kind {
-                TokenKind::Symbol(Symbol::OpenCurlyBrace) => nesting += 1,
+                TokenKind::Symbol(Symbol::OpenCurlyBrace)
+                // interpolation token eats the opening brace but not the closing
+                | TokenKind::Interpolation => nesting += 1,
                 TokenKind::Symbol(Symbol::CloseCurlyBrace) => nesting -= 1,
                 _ => {}
             }
@@ -1135,5 +1138,15 @@ mod css_mixins {
         mixin_arg_trailing_comma,
         "@mixin a($b, $c,) {\n  color: $b;\n  color: $c\n}\nd {\n  @include a(red, blue);\n}\n",
         "d {\n  color: red;\n  color: blue;\n}\n"
+    );
+    test!(
+        mixin_property_interpolation,
+        "@mixin a($b) {\n  #{$b}: red;\n}\nd {\n  @include a(color);\n}\n",
+        "d {\n  color: red;\n}\n"
+    );
+    test!(
+        mixin_style_interpolation,
+        "@mixin a($b) {\n  color: #{$b};\n}\nd {\n  @include a(red);\n}\n",
+        "d {\n  color: red;\n}\n"
     );
 }
