@@ -719,6 +719,11 @@ mod css_variables {
         "a {\n  b {\n    $c: red;\n  }\n  color: red;\n}\n",
         "a {\n  color: red;\n}\n"
     );
+    test!(
+        variable_changes_through_new_ruleset,
+        "a {\n  $c: red;\nb {\n    $c: blue;\n  }\n  color: $c;\n}\n",
+        "a {\n  color: blue;\n}\n"
+    );
 }
 
 #[cfg(test)]
@@ -1096,5 +1101,15 @@ mod css_mixins {
         mixin_nested_rulesets,
         "@mixin a {\n  b {\n    c {\n      color: red;\n}\n}\n}\nd {\n  @include a;\n}\n",
         "d b c {\n  color: red;\n}\n"
+    );
+    test!(
+        mixin_removes_empty_ruleset,
+        "@mixin a {\n  color:red; b {\n}\n}\nd {\n  @include a;\n}\n",
+        "d {\n  color: red;\n}\n"
+    );
+    test!(
+        mixin_variable_scope_one_ruleset,
+        "@mixin a {\n  $a: blue;\nb {\n  $a: red;\n}  color: $a\n}\nd {\n  @include a;\n}\n",
+        "d {\n  color: red;\n}\n"
     );
 }

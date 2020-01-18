@@ -41,7 +41,6 @@ impl Mixin {
 
     pub fn eval(&mut self, super_selector: &Selector, scope: &mut Scope) -> Vec<Stmt> {
         let mut stmts = Vec::new();
-        // dbg!(&scope);
         while let Ok(expr) = eat_expr(&mut self.body, scope, super_selector) {
             match expr {
                 Expr::Style(s) => stmts.push(Stmt::Style(s)),
