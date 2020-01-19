@@ -115,7 +115,7 @@ impl Mixin {
                 Expr::Include(_) | Expr::MixinDecl(_, _) => todo!(),
                 Expr::Selector(s) => {
                     self.nesting += 1;
-                    let rules = self.eval(&super_selector.clone().zip(s.clone()), scope)?;
+                    let rules = self.eval(&super_selector.zip(&s), scope)?;
                     stmts.push(Stmt::RuleSet(RuleSet {
                         super_selector: super_selector.clone(),
                         selector: s,

@@ -58,12 +58,7 @@ impl<W: Write> PrettyPrinter<W> {
                 rules,
                 super_selector,
             }) => {
-                writeln!(
-                    self.buf,
-                    "{}{} {{",
-                    padding,
-                    super_selector.clone().zip(selector.clone())
-                )?;
+                writeln!(self.buf, "{}{} {{", padding, super_selector.zip(selector))?;
                 self.scope += 1;
                 for rule in rules {
                     self.pretty_print_stmt(rule)?;

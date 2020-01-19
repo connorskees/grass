@@ -100,7 +100,7 @@ impl Css {
                     self.idx = self.blocks.len() + 1;
                     self.inner_rulesets = 0;
                     self.blocks
-                        .push(Toplevel::new_rule(super_selector.zip(selector)));
+                        .push(Toplevel::new_rule(super_selector.zip(&selector)));
                     for rule in rules {
                         self.at_root = true;
                         self.parse_stmt(rule);
@@ -111,7 +111,7 @@ impl Css {
                     self.idx += 1;
                     self.at_root = false;
                     self.blocks
-                        .push(Toplevel::new_rule(super_selector.zip(selector)));
+                        .push(Toplevel::new_rule(super_selector.zip(&selector)));
                     for rule in rules {
                         self.parse_stmt(rule);
                     }

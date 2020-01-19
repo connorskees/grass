@@ -268,29 +268,27 @@ impl Selector {
         SelectorParser::new(scope).all_selectors(tokens)
     }
 
-    pub fn zip(self, other: Selector) -> Selector {
+    pub fn zip(&self, other: &Selector) -> Selector {
         if self.0.is_empty() {
-            return Selector(other.0);
+            return Selector(other.0.clone());
         }
         let mut rules: Vec<SelectorKind> = Vec::with_capacity(self.0.len() + other.0.len());
-        let sel1_split: Vec<Vec<SelectorKind>> = self
+        let sel1_split: Vec<&[SelectorKind]> =
+            self.0.split(|sel| sel == &SelectorKind::Multiple).collect();
+        let sel2_split: Vec<&[SelectorKind]> = other
             .0
             .split(|sel| sel == &SelectorKind::Multiple)
-            .map(|x| x.to_vec())
             .collect();
-        let sel2_split: Vec<Vec<SelectorKind>> = other
-            .0
-            .split(|sel| sel == &SelectorKind::Multiple)
-            .map(|x| x.to_vec())
-            .collect();
-        for (idx, sel1) in sel1_split.iter().enumerate() {
+        let len1 = sel1_split.len();
+        let len2 = sel2_split.len();
+        for (idx, sel1) in sel1_split.into_iter().enumerate() {
             for (idx2, sel2) in sel2_split.iter().enumerate() {
-                let mut this_selector = Vec::with_capacity(other.0.len());
+                let mut this_selector: Vec<SelectorKind> = Vec::with_capacity(other.0.len());
                 let mut found_super = false;
 
-                for sel in sel2 {
+                for sel in *sel2 {
                     if sel == &SelectorKind::Super {
-                        this_selector.extend(sel1.iter().cloned());
+                        this_selector.extend(sel1.to_vec());
                         found_super = true;
                     } else {
                         this_selector.push(sel.clone());
@@ -298,12 +296,12 @@ impl Selector {
                 }
 
                 if !found_super {
-                    rules.extend(sel1.iter().cloned());
+                    rules.extend(sel1.to_vec());
                     rules.push(SelectorKind::Whitespace);
                 }
                 rules.extend(this_selector);
 
-                if !(idx + 1 == sel1_split.len() && idx2 + 1 == sel2_split.len()) {
+                if !(idx + 1 == len1 && idx2 + 1 == len2) {
                     rules.push(SelectorKind::Multiple);
                 }
             }

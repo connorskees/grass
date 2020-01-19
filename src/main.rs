@@ -405,7 +405,7 @@ impl<'a> StyleSheetParser<'a> {
                 }
                 Expr::Selector(s) => {
                     self.scope += 1;
-                    let rules = self.eat_rules(&super_selector.clone().zip(s.clone()), scope);
+                    let rules = self.eat_rules(&super_selector.zip(&s), scope);
                     stmts.push(Stmt::RuleSet(RuleSet {
                         super_selector: super_selector.clone(),
                         selector: s,
@@ -634,7 +634,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
 /// Functions that print to stdout or stderr
 impl<'a> StyleSheetParser<'a> {
     fn debug(&self, pos: Pos, message: &str) {
-        println!("{}:{} Debug: {}", self.file, pos.line(), message);
+        eprintln!("{}:{} Debug: {}", self.file, pos.line(), message);
     }
 
     fn warn(&self, pos: Pos, message: &str) {
