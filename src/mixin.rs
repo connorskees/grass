@@ -2,7 +2,7 @@ use std::iter::Peekable;
 use std::vec::IntoIter;
 
 use crate::common::{Pos, Printer, Scope, Symbol};
-use crate::function::{eat_func_args, CallArgs, FuncArgs};
+use crate::function::{eat_call_args, eat_func_args, CallArgs, FuncArgs};
 use crate::selector::Selector;
 use crate::utils::devour_whitespace;
 use crate::{eat_expr, Expr, RuleSet, Stmt, Token, TokenKind};
@@ -99,7 +99,7 @@ impl Mixin {
 
     pub fn eval(&mut self, super_selector: &Selector) -> Result<Vec<Stmt>, (Pos, &'static str)> {
         let mut stmts = Vec::new();
-        while let Some(expr) = eat_expr(&mut self.body, &mut self.scope, super_selector)? {
+        while let Some(expr) = eat_expr(&mut self.body, &self.scope, super_selector)? {
             match expr {
                 Expr::Style(s) => stmts.push(Stmt::Style(s)),
                 Expr::Include(_) | Expr::MixinDecl(_, _) => todo!(),
@@ -119,4 +119,50 @@ impl Mixin {
         }
         Ok(stmts)
     }
+}
+
+pub fn eat_include<I: Iterator<Item = Token>>(
+    toks: &mut Peekable<I>,
+    scope: &Scope,
+    super_selector: &Selector,
+) -> Result<Vec<Stmt>, (Pos, &'static str)> {
+    toks.next();
+    devour_whitespace(toks);
+    let Token { kind, pos } = toks
+        .next()
+        .expect("this must exist because we have already peeked");
+    let name = match kind {
+        TokenKind::Ident(s) => s,
+        _ => return Err((pos, "expected identifier")),
+    };
+
+    devour_whitespace(toks);
+
+    let args = if let Some(tok) = toks.next() {
+        match tok.kind {
+            TokenKind::Symbol(Symbol::SemiColon) => CallArgs::new(),
+            TokenKind::Symbol(Symbol::OpenParen) => eat_call_args(toks),
+            _ => return Err((pos, "expected `(` or `;`")),
+        }
+    } else {
+        return Err((pos, "unexpected EOF"));
+    };
+
+    devour_whitespace(toks);
+
+    if !args.is_empty() {
+        if let Some(tok) = toks.next() {
+            assert_eq!(tok.kind, TokenKind::Symbol(Symbol::SemiColon));
+        }
+    }
+
+    devour_whitespace(toks);
+
+    let mixin = match scope.mixins.get(&name) {
+        Some(m) => m.clone(),
+        _ => return Err((pos, "expected identifier")),
+    };
+
+    let rules = mixin.args(&args).call(super_selector)?;
+    Ok(rules)
 }

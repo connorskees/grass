@@ -51,10 +51,9 @@ use crate::common::{AtRule, Keyword, Op, Pos, Printer, Scope, Symbol, Whitespace
 use crate::css::Css;
 use crate::error::SassError;
 use crate::format::PrettyPrinter;
-use crate::function::{eat_call_args, CallArgs};
 use crate::imports::import;
 use crate::lexer::Lexer;
-use crate::mixin::Mixin;
+use crate::mixin::{eat_include, Mixin};
 use crate::selector::{Attribute, Selector};
 use crate::style::Style;
 use crate::units::Unit;
@@ -429,56 +428,6 @@ impl<'a> StyleSheetParser<'a> {
         }
         stmts
     }
-}
-
-fn eat_include<I: Iterator<Item = Token>>(
-    toks: &mut Peekable<I>,
-    scope: &Scope,
-    super_selector: &Selector,
-) -> Result<Vec<Stmt>, (Pos, &'static str)> {
-    toks.next();
-    devour_whitespace(toks);
-    let Token { kind, pos } = toks
-        .next()
-        .expect("this must exist because we have already peeked");
-    let name = if let TokenKind::Ident(s) = kind {
-        s
-    } else {
-        return Err((pos, "expected identifier"));
-    };
-
-    devour_whitespace(toks);
-
-    let args = match toks.next() {
-        Some(Token {
-            kind: TokenKind::Symbol(Symbol::SemiColon),
-            ..
-        }) => CallArgs::new(),
-        Some(Token {
-            kind: TokenKind::Symbol(Symbol::OpenParen),
-            ..
-        }) => eat_call_args(toks),
-        Some(Token { pos, .. }) => return Err((pos, "expected `(` or `;`")),
-        None => return Err((pos, "unexpected EOF")),
-    };
-
-    devour_whitespace(toks);
-
-    if !args.is_empty() {
-        if let Some(tok) = toks.next() {
-            assert_eq!(tok.kind, TokenKind::Symbol(Symbol::SemiColon));
-        }
-    }
-
-    devour_whitespace(toks);
-
-    let mixin = if let Some(m) = scope.mixins.get(&name) {
-        m.clone()
-    } else {
-        return Err((pos, "expected identifier"));
-    };
-    let rules = mixin.args(&args).call(super_selector)?;
-    Ok(rules)
 }
 
 fn eat_at_rule<I: Iterator<Item = Token>>(
