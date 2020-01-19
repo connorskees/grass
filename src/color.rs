@@ -156,9 +156,9 @@ pub enum Color {
 }
 
 impl fmt::UpperHex for Color {
+    #[allow(clippy::match_same_arms, clippy::many_single_char_names)]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // I want them all to be on separate lines so doing things with regex or multiple cursors is easier
-        #[allow(clippy::match_same_arms)]
         match self {
             Self::AliceBlue => write!(f, "#F0F8FF"),
             Self::AntiqueWhite => write!(f, "#FAEBD7"),

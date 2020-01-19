@@ -70,16 +70,25 @@ impl Css {
         match stmt {
             Stmt::Style(s) => {
                 if self.at_root {
-                    self.blocks[self.idx - 1].push_style(s)
+                    self.blocks
+                        .get_mut(self.idx - 1)
+                        .expect("expected block to exist at root")
+                        .push_style(s)
                 } else {
-                    self.blocks[self.idx + self.inner_rulesets - 1].push_style(s)
+                    self.blocks
+                        .get_mut(self.idx + self.inner_rulesets - 1)
+                        .expect("expected block to exist")
+                        .push_style(s)
                 }
             }
             Stmt::MultilineComment(s) => {
                 if self.idx == 0 {
                     self.blocks.push(Toplevel::MultilineComment(s));
                 } else {
-                    self.blocks[self.idx + self.inner_rulesets - 1].push_comment(s)
+                    self.blocks
+                        .get_mut(self.idx + self.inner_rulesets - 1)
+                        .expect("expected block to exist")
+                        .push_comment(s)
                 }
             }
             Stmt::RuleSet(RuleSet {

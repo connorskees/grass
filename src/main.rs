@@ -3,7 +3,7 @@
     clippy::restriction,
     clippy::pedantic,
     clippy::nursery,
-    // clippy::cargo
+    clippy::cargo
 )]
 #![deny(missing_debug_implementations)]
 #![allow(
@@ -28,7 +28,7 @@
 // todo! handle erroring on styles at the toplevel
 use std::fmt::{self, Display};
 use std::fs;
-use std::io::{self, Write, BufWriter, stdout};
+use std::io::{self, stdout, BufWriter, Write};
 use std::iter::{Iterator, Peekable};
 use std::path::Path;
 
@@ -289,10 +289,18 @@ impl<'a> StyleSheetParser<'a> {
                     rules.push(Stmt::MultilineComment(comment));
                 }
                 TokenKind::AtRule(AtRule::Import) => {
-                    self.lexer.next();
+                    let Token { pos, .. } = self
+                        .lexer
+                        .next()
+                        .expect("this must exist because we have already peeked");
                     devour_whitespace(&mut self.lexer);
                     let mut file_name = String::new();
-                    match self.lexer.next().unwrap().kind {
+                    match self
+                        .lexer
+                        .next()
+                        .unwrap_or_else(|| self.error(pos, "expected value after @import"))
+                        .kind
+                    {
                         TokenKind::Symbol(Symbol::DoubleQuote) => {
                             while let Some(tok) = self.lexer.next() {
                                 if tok.kind == TokenKind::Symbol(Symbol::DoubleQuote) {
@@ -311,12 +319,15 @@ impl<'a> StyleSheetParser<'a> {
                         }
                         _ => todo!("expected ' or \" after @import"),
                     }
-                    let Token { kind, pos } = self.lexer.next().unwrap();
+                    let Token { kind, pos } = self
+                        .lexer
+                        .next()
+                        .expect("this must exist because we have already peeked");
                     if kind != TokenKind::Symbol(Symbol::SemiColon) {
                         self.error(pos, "expected `;` after @import declaration");
                     }
 
-                    let (new_rules, new_scope) = import(file_name);
+                    let (new_rules, new_scope) = import(file_name)?;
                     rules.extend(new_rules);
                     self.global_scope.merge(new_scope);
                 }
@@ -399,7 +410,9 @@ fn eat_include<I: Iterator<Item = Token>>(
 ) -> Result<Vec<Stmt>, (Pos, &'static str)> {
     toks.next();
     devour_whitespace(toks);
-    let Token { kind, pos } = toks.next().unwrap();
+    let Token { kind, pos } = toks
+        .next()
+        .expect("this must exist because we have already peeked");
     let name = if let TokenKind::Ident(s) = kind {
         s
     } else {
@@ -444,7 +457,9 @@ fn parse_mixin<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
     scope: Scope,
 ) -> Result<(String, Mixin), Printer> {
-    let Token { pos, .. } = toks.next().unwrap();
+    let Token { pos, .. } = toks
+        .next()
+        .expect("this must exist because we have already peeked");
     devour_whitespace(toks);
     let name = if let Some(Token {
         kind: TokenKind::Ident(s),
@@ -561,7 +576,9 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                 ))));
             }
             TokenKind::Variable(_) => {
-                let tok = toks.next().unwrap();
+                let tok = toks
+                    .next()
+                    .expect("this must exist because we have already peeked");
                 let name = if let TokenKind::Variable(n) = tok.kind {
                     n
                 } else {
@@ -584,7 +601,9 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                 }
             }
             TokenKind::MultilineComment(_) => {
-                let tok = toks.next().unwrap();
+                let tok = toks
+                    .next()
+                    .expect("this must exist because we have already peeked");
                 let s = if let TokenKind::MultilineComment(s) = &tok.kind {
                     s
                 } else {
@@ -1205,8 +1224,8 @@ mod test_mixins {
 #[cfg(test)]
 mod test_imports {
     use super::*;
-    use Write;
     use tempfile::Builder;
+    use Write;
 
     macro_rules! test_import {
         ($func:ident, $input:literal => $output:literal | $( $name:literal($content:literal) ),*) => {

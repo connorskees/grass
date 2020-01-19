@@ -30,9 +30,15 @@ impl Mixin {
             if arg.is_named() {
                 todo!("keyword args")
             } else {
-                self.scope
-                    .vars
-                    .insert(self.args.0[idx].name.clone(), arg.val.clone());
+                self.scope.vars.insert(
+                    self.args
+                        .0
+                        .get(idx)
+                        .expect("too many args passed to mixin")
+                        .name
+                        .clone(),
+                    arg.val.clone(),
+                );
             }
         }
         self
