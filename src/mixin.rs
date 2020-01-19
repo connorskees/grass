@@ -75,20 +75,15 @@ impl Mixin {
     }
 
     pub fn args(mut self, args: &CallArgs) -> Mixin {
-        for (idx, arg) in args.0.iter().enumerate() {
-            if arg.is_named() {
-                todo!("keyword args")
-            } else {
-                self.scope.vars.insert(
-                    self.args
-                        .0
-                        .get(idx)
-                        .expect("too many args passed to mixin")
-                        .name
-                        .clone(),
-                    arg.val.clone(),
-                );
-            }
+        for (idx, arg) in self.args.0.iter().enumerate() {
+            let val = match args.get(&format!("{}", idx)) {
+                Some(v) => v.val.clone(),
+                None => match args.get(&arg.name) {
+                    Some(v) => v.val.clone(),
+                    None => arg.default.clone().expect("missing variable!"),
+                },
+            };
+            self.scope.vars.insert(arg.name.clone(), val);
         }
         self
     }

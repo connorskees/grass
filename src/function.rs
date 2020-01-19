@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::iter::Peekable;
 
 use crate::common::Symbol;
@@ -19,8 +20,8 @@ impl FuncArgs {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct CallArgs(pub Vec<CallArg>);
+#[derive(Debug, Clone, std::default::Default)]
+pub struct CallArgs(pub BTreeMap<String, CallArg>);
 
 #[derive(Debug, Clone)]
 pub struct CallArg {
@@ -35,12 +36,16 @@ impl CallArg {
 }
 
 impl CallArgs {
-    pub const fn new() -> Self {
-        CallArgs(Vec::new())
+    pub fn new() -> Self {
+        CallArgs(BTreeMap::new())
     }
 
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
+    }
+
+    pub fn get(&self, val: &str) -> Option<&CallArg> {
+        self.0.get(val)
     }
 }
 
@@ -54,27 +59,48 @@ pub fn eat_func_args<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -> FuncA
             TokenKind::Symbol(Symbol::CloseParen) => break,
             _ => todo!(),
         };
+        let mut default: Vec<Token> = Vec::new();
         devour_whitespace(toks);
-        let kind = if let Some(Token { kind, .. }) = toks.next() {
-            kind
-        } else {
-            todo!()
+        let kind = match toks.next() {
+            Some(Token { kind, .. }) => kind,
+            _ => todo!("unexpected eof"),
         };
         match kind {
             TokenKind::Symbol(Symbol::Colon) => {
-                todo!("handle default values")
-                // let mut val: Vec<Token> = Vec::new();
-                // while let Some(tok) = toks.next() {
-                //     match &kind {
-                //         _ => val.push(tok),
-                //     }
-                // }
+                devour_whitespace(toks);
+                while let Some(tok) = toks.peek() {
+                    match &tok.kind {
+                        TokenKind::Symbol(Symbol::Comma) => {
+                            toks.next();
+                            args.push(FuncArg {
+                                name,
+                                default: Some(default),
+                            });
+                            break;
+                        }
+                        TokenKind::Symbol(Symbol::CloseParen) => {
+                            args.push(FuncArg {
+                                name,
+                                default: Some(default),
+                            });
+                            break;
+                        }
+                        _ => {
+                            let tok = toks.next().expect("we know this exists!");
+                            default.push(tok)
+                        }
+                    }
+                }
             }
             TokenKind::Symbol(Symbol::Period) => todo!("handle varargs"),
             TokenKind::Symbol(Symbol::CloseParen) => {
                 args.push(FuncArg {
                     name,
-                    default: None,
+                    default: if default.is_empty() {
+                        None
+                    } else {
+                        Some(default)
+                    },
                 });
                 break;
             }
@@ -99,7 +125,7 @@ pub fn eat_func_args<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -> FuncA
 }
 
 pub fn eat_call_args<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -> CallArgs {
-    let mut args: Vec<CallArg> = Vec::new();
+    let mut args: BTreeMap<String, CallArg> = BTreeMap::new();
     devour_whitespace(toks);
     let mut name: Option<String> = None;
     let mut val = Vec::new();
@@ -116,14 +142,31 @@ pub fn eat_call_args<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -> CallA
                 // }
             }
             TokenKind::Symbol(Symbol::CloseParen) => {
-                args.push(CallArg { name, val });
+                if name.is_some() {
+                    args.insert(name.clone().unwrap(), CallArg { name, val });
+                } else {
+                    args.insert(format!("{}", args.len()), CallArg { name, val });
+                }
                 break;
             }
             TokenKind::Symbol(Symbol::Comma) => {
-                args.push(CallArg {
-                    name: name.clone(),
-                    val: val.clone(),
-                });
+                if name.is_some() {
+                    args.insert(
+                        name.clone().unwrap(),
+                        CallArg {
+                            name: name.clone(),
+                            val: val.clone(),
+                        },
+                    );
+                } else {
+                    args.insert(
+                        format!("{}", args.len()),
+                        CallArg {
+                            name: name.clone(),
+                            val: val.clone(),
+                        },
+                    );
+                }
                 if let Some(ref mut s) = name {
                     s.clear();
                 }
