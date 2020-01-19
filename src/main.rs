@@ -1154,6 +1154,31 @@ mod test_mixins {
         "@mixin a($a: red) {\n  color: $a;\n}\nd {\n  @include a(blue);\n}\n",
         "d {\n  color: blue;\n}\n"
     );
+    test!(
+        mixin_keyword_arg,
+        "@mixin a($a) {\n  color: $a;\n}\nd {\n  @include a($a: blue);\n}\n",
+        "d {\n  color: blue;\n}\n"
+    );
+    test!(
+        mixin_keyword_arg_override_default,
+        "@mixin a($a: red) {\n  color: $a;\n}\nd {\n  @include a($a: blue);\n}\n",
+        "d {\n  color: blue;\n}\n"
+    );
+    test!(
+        mixin_keyword_applies_to_second_arg,
+        "@mixin a($a: red, $b) {\n  color: $a $b;\n}\nd {\n  @include a($b: blue);\n}\n",
+        "d {\n  color: red blue;\n}\n"
+    );
+    test!(
+        mixin_two_keywords,
+        "@mixin a($a, $b) {\n  color: $a $b;\n}\nd {\n  @include a($a: red, $b: blue);\n}\n",
+        "d {\n  color: red blue;\n}\n"
+    );
+    test!(
+        mixin_two_keywords_wrong_direction,
+        "@mixin a($a, $b) {\n  color: $a $b;\n}\nd {\n  @include a($b: blue, $a: red);\n}\n",
+        "d {\n  color: red blue;\n}\n"
+    );
 }
 
 #[cfg(test)]

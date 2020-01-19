@@ -133,13 +133,44 @@ pub fn eat_call_args<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -> CallA
         match kind {
             TokenKind::Variable(v) => name = Some(v),
             TokenKind::Symbol(Symbol::Colon) => {
-                todo!("handle default values")
-                // let mut val: Vec<Token> = Vec::new();
-                // while let Some(Token { kind, .. }) = toks.next() {
-                //     match &kind {
-                //         _ => {}
-                //     }
-                // }
+                devour_whitespace(toks);
+                while let Some(tok) = toks.peek() {
+                    match &tok.kind {
+                        TokenKind::Symbol(Symbol::Comma) => {
+                            toks.next();
+                            args.insert(
+                                name.clone().unwrap(),
+                                CallArg {
+                                    name: name.clone(),
+                                    val: val.clone(),
+                                },
+                            );
+                            if let Some(ref mut s) = name {
+                                s.clear();
+                            }
+                            val.clear();
+                            break;
+                        }
+                        TokenKind::Symbol(Symbol::CloseParen) => {
+                            args.insert(
+                                name.clone().unwrap(),
+                                CallArg {
+                                    name: name.clone(),
+                                    val: val.clone(),
+                                },
+                            );
+                            if let Some(ref mut s) = name {
+                                s.clear();
+                            }
+                            val.clear();
+                            break;
+                        }
+                        _ => {
+                            let tok = toks.next().expect("we know this exists!");
+                            val.push(tok)
+                        }
+                    }
+                }
             }
             TokenKind::Symbol(Symbol::CloseParen) => {
                 if name.is_some() {
@@ -150,11 +181,11 @@ pub fn eat_call_args<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -> CallA
                 break;
             }
             TokenKind::Symbol(Symbol::Comma) => {
-                if name.is_some() {
+                if let Some(ref name) = name {
                     args.insert(
-                        name.clone().unwrap(),
+                        name.clone(),
                         CallArg {
-                            name: name.clone(),
+                            name: Some(name.clone()),
                             val: val.clone(),
                         },
                     );
