@@ -379,13 +379,10 @@ impl<'a> StyleSheetParser<'a> {
                         }
                     }
                 }
-                _ => {
-                    if let Some(Token { pos, .. }) = self.lexer.next() {
-                        self.error(pos, "unexpected toplevel token")
-                    } else {
-                        unsafe { std::hint::unreachable_unchecked() }
-                    }
-                }
+                _ => match self.lexer.next() {
+                    Some(Token { pos, .. }) => self.error(pos, "unexpected toplevel token"),
+                    _ => unsafe { std::hint::unreachable_unchecked() },
+                },
             };
         }
         Ok((rules, self.global_scope))
@@ -400,15 +397,6 @@ impl<'a> StyleSheetParser<'a> {
                 Expr::Style(s) => stmts.push(Stmt::Style(s)),
                 Expr::MixinDecl(name, mixin) => {
                     scope.mixins.insert(name, mixin);
-                }
-                Expr::Include(rules) => {
-                    stmts.extend(rules);
-                }
-                Expr::Debug(pos, ref message) => {
-                    self.debug(pos, message);
-                }
-                Expr::Warn(pos, ref message) => {
-                    self.warn(pos, message);
                 }
                 Expr::Selector(s) => {
                     self.scope += 1;
@@ -431,6 +419,9 @@ impl<'a> StyleSheetParser<'a> {
                         scope.vars.insert(name, val);
                     }
                 }
+                Expr::Include(rules) => stmts.extend(rules),
+                Expr::Debug(pos, ref message) => self.debug(pos, message),
+                Expr::Warn(pos, ref message) => self.warn(pos, message),
                 Expr::MultilineComment(s) => stmts.push(Stmt::MultilineComment(s)),
             }
         }
@@ -444,9 +435,9 @@ fn eat_at_rule<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
     scope: &Scope,
 ) -> Result<Expr, Printer> {
+    devour_whitespace(toks);
     match rule {
         AtRule::Error => {
-            devour_whitespace(toks);
             let message = toks
                 .take_while(|x| x.kind != TokenKind::Symbol(Symbol::SemiColon))
                 .map(|x| x.kind.to_string())
@@ -454,7 +445,6 @@ fn eat_at_rule<I: Iterator<Item = Token>>(
             Err(Printer::Error(pos, message))
         }
         AtRule::Warn => {
-            devour_whitespace(toks);
             let message = toks
                 .take_while(|x| x.kind != TokenKind::Symbol(Symbol::SemiColon))
                 .map(|x| x.kind.to_string())
@@ -462,7 +452,6 @@ fn eat_at_rule<I: Iterator<Item = Token>>(
             Err(Printer::Warn(pos, message))
         }
         AtRule::Debug => {
-            devour_whitespace(toks);
             let message = toks
                 .by_ref()
                 .take_while(|x| x.kind != TokenKind::Symbol(Symbol::SemiColon))
@@ -1143,6 +1132,11 @@ mod test_mixins {
     test!(
         mixin_style_interpolation,
         "@mixin a($b) {\n  color: #{$b};\n}\nd {\n  @include a(red);\n}\n",
+        "d {\n  color: red;\n}\n"
+    );
+    test!(
+        mixin_default_value,
+        "@mixin a($b: red) {\n  color: $b;\n}\nd {\n  @include a;\n}\n",
         "d {\n  color: red;\n}\n"
     );
 }
