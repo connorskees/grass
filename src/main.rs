@@ -1135,9 +1135,24 @@ mod test_mixins {
         "d {\n  color: red;\n}\n"
     );
     test!(
-        mixin_default_value,
+        mixin_simple_default_value,
         "@mixin a($b: red) {\n  color: $b;\n}\nd {\n  @include a;\n}\n",
         "d {\n  color: red;\n}\n"
+    );
+    test!(
+        mixin_second_value_default,
+        "@mixin a($a, $b: blue) {\n  color: $a $b;\n}\nd {\n  @include a(red);\n}\n",
+        "d {\n  color: red blue;\n}\n"
+    );
+    test!(
+        mixin_two_default_values,
+        "@mixin a($a: red, $b: blue) {\n  color: $a $b;\n}\nd {\n  @include a;\n}\n",
+        "d {\n  color: red blue;\n}\n"
+    );
+    test!(
+        mixin_override_default_value_positionally,
+        "@mixin a($a: red) {\n  color: $a;\n}\nd {\n  @include a(blue);\n}\n",
+        "d {\n  color: blue;\n}\n"
     );
 }
 
