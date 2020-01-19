@@ -12,18 +12,12 @@ pub struct Mixin {
     scope: Scope,
     args: FuncArgs,
     body: Peekable<IntoIter<Token>>,
-    nesting: u32,
 }
 
 impl Mixin {
     pub fn new(scope: Scope, args: FuncArgs, body: Vec<Token>) -> Self {
         let body = body.into_iter().peekable();
-        Mixin {
-            scope,
-            args,
-            body,
-            nesting: 0,
-        }
+        Mixin { scope, args, body }
     }
 
     pub fn from_tokens<I: Iterator<Item = Token>>(
@@ -100,36 +94,25 @@ impl Mixin {
     }
 
     pub fn call(mut self, super_selector: &Selector) -> Result<Vec<Stmt>, (Pos, &'static str)> {
-        self.eval(super_selector, &mut self.scope.clone())
+        self.eval(super_selector)
     }
 
-    pub fn eval(
-        &mut self,
-        super_selector: &Selector,
-        scope: &mut Scope,
-    ) -> Result<Vec<Stmt>, (Pos, &'static str)> {
+    pub fn eval(&mut self, super_selector: &Selector) -> Result<Vec<Stmt>, (Pos, &'static str)> {
         let mut stmts = Vec::new();
-        while let Some(expr) = eat_expr(&mut self.body, scope, super_selector)? {
+        while let Some(expr) = eat_expr(&mut self.body, &mut self.scope, super_selector)? {
             match expr {
                 Expr::Style(s) => stmts.push(Stmt::Style(s)),
                 Expr::Include(_) | Expr::MixinDecl(_, _) => todo!(),
-                Expr::Selector(s) => {
-                    self.nesting += 1;
-                    let rules = self.eval(&super_selector.zip(&s), scope)?;
+                Expr::Selector(selector) => {
+                    let rules = self.eval(&super_selector.zip(&selector))?;
                     stmts.push(Stmt::RuleSet(RuleSet {
                         super_selector: super_selector.clone(),
-                        selector: s,
+                        selector,
                         rules,
                     }));
-                    self.nesting -= 1;
                 }
                 Expr::VariableDecl(name, val) => {
-                    if self.nesting == 0 {
-                        scope.vars.insert(name.clone(), val.clone());
-                        self.scope.vars.insert(name, val);
-                    } else {
-                        scope.vars.insert(name, val);
-                    }
+                    self.scope.vars.insert(name, val);
                 }
                 Expr::MultilineComment(s) => stmts.push(Stmt::MultilineComment(s)),
             }
