@@ -507,10 +507,9 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                 let tok = toks
                     .next()
                     .expect("this must exist because we have already peeked");
-                let name = if let TokenKind::Variable(n) = tok.kind {
-                    n
-                } else {
-                    unsafe { std::hint::unreachable_unchecked() }
+                let name = match tok.kind {
+                    TokenKind::Variable(n) => n,
+                    _ => unsafe { std::hint::unreachable_unchecked() },
                 };
                 if let TokenKind::Symbol(Symbol::Colon) =
                     toks.peek().expect("expected something after variable").kind
@@ -578,13 +577,10 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                     values.push(tok);
                 }
             }
-            _ => {
-                if let Some(tok) = toks.next() {
-                    values.push(tok)
-                } else {
-                    unsafe { std::hint::unreachable_unchecked() }
-                }
-            }
+            _ => match toks.next() {
+                Some(tok) => values.push(tok),
+                _ => unsafe { std::hint::unreachable_unchecked() },
+            },
         };
     }
     Ok(None)

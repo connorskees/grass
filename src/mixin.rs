@@ -28,17 +28,17 @@ impl Mixin {
             .next()
             .expect("this must exist because we have already peeked");
         devour_whitespace(toks);
-        let name = if let Some(Token {
-            kind: TokenKind::Ident(s),
-            ..
-        }) = toks.next()
-        {
-            s
-        } else {
-            return Err(Printer::Error(
-                pos,
-                String::from("expected identifier after mixin declaration"),
-            ));
+        let name = match toks.next() {
+            Some(Token {
+                kind: TokenKind::Ident(s),
+                ..
+            }) => s,
+            _ => {
+                return Err(Printer::Error(
+                    pos,
+                    String::from("expected identifier after mixin declaration"),
+                ))
+            }
         };
         devour_whitespace(toks);
         let args = match toks.next() {
@@ -59,12 +59,12 @@ impl Mixin {
         while nesting > 0 {
             if let Some(tok) = toks.next() {
                 match &tok.kind {
-                TokenKind::Symbol(Symbol::OpenCurlyBrace)
-                // interpolation token eats the opening brace but not the closing
-                | TokenKind::Interpolation => nesting += 1,
-                TokenKind::Symbol(Symbol::CloseCurlyBrace) => nesting -= 1,
-                _ => {}
-            }
+                    TokenKind::Symbol(Symbol::OpenCurlyBrace)
+                    // interpolation token eats the opening brace but not the closing
+                    | TokenKind::Interpolation => nesting += 1,
+                    TokenKind::Symbol(Symbol::CloseCurlyBrace) => nesting -= 1,
+                    _ => {}
+                }
                 body.push(tok)
             } else {
                 return Err(Printer::Error(pos, String::from("unexpected EOF")));
