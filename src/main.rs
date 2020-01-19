@@ -532,16 +532,15 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                 let tok = toks
                     .next()
                     .expect("this must exist because we have already peeked");
-                let s = if let TokenKind::MultilineComment(s) = &tok.kind {
-                    s
-                } else {
-                    unsafe { std::hint::unreachable_unchecked() }
-                };
                 devour_whitespace(toks);
                 if values.is_empty() {
-                    return Ok(Some(Expr::MultilineComment(s.clone())));
+                    let s = match tok.kind {
+                        TokenKind::MultilineComment(s) => s,
+                        _ => unsafe { std::hint::unreachable_unchecked() },
+                    };
+                    return Ok(Some(Expr::MultilineComment(s)));
                 } else {
-                    values.push(tok.clone())
+                    values.push(tok);
                 }
             }
             TokenKind::AtRule(AtRule::Include) => {
