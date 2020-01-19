@@ -489,7 +489,7 @@ impl Scope {
 }
 
 #[derive(Debug)]
-pub(crate) enum Printer {
+pub enum Printer {
     Error(Pos, String),
     Warn(Pos, String),
     Debug(Pos, String),

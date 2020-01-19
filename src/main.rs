@@ -349,7 +349,7 @@ impl<'a> StyleSheetParser<'a> {
                 }
                 TokenKind::AtRule(AtRule::Mixin) => {
                     let (name, mixin) =
-                        parse_mixin(&mut self.lexer, self.global_scope.clone()).unwrap();
+                        Mixin::from_tokens(&mut self.lexer, &self.global_scope).unwrap();
                     self.global_scope.mixins.insert(name, mixin);
                 }
                 TokenKind::AtRule(_) => {
@@ -469,60 +469,6 @@ fn eat_include<I: Iterator<Item = Token>>(
     Ok(rules)
 }
 
-fn parse_mixin<I: Iterator<Item = Token>>(
-    toks: &mut Peekable<I>,
-    scope: Scope,
-) -> Result<(String, Mixin), Printer> {
-    let Token { pos, .. } = toks
-        .next()
-        .expect("this must exist because we have already peeked");
-    devour_whitespace(toks);
-    let name = if let Some(Token {
-        kind: TokenKind::Ident(s),
-        ..
-    }) = toks.next()
-    {
-        s
-    } else {
-        return Err(Printer::Error(
-            pos,
-            String::from("expected identifier after mixin declaration"),
-        ));
-    };
-    devour_whitespace(toks);
-    let args = match toks.next() {
-        Some(Token {
-            kind: TokenKind::Symbol(Symbol::OpenParen),
-            ..
-        }) => eat_func_args(toks),
-        Some(Token {
-            kind: TokenKind::Symbol(Symbol::OpenCurlyBrace),
-            ..
-        }) => FuncArgs::new(),
-        _ => return Err(Printer::Error(pos, String::from("expected `(` or `{`"))),
-    };
-
-    let mut nesting = 1;
-    let mut body = Vec::new();
-
-    while nesting > 0 {
-        if let Some(tok) = toks.next() {
-            match &tok.kind {
-                TokenKind::Symbol(Symbol::OpenCurlyBrace)
-                // interpolation token eats the opening brace but not the closing
-                | TokenKind::Interpolation => nesting += 1,
-                TokenKind::Symbol(Symbol::CloseCurlyBrace) => nesting -= 1,
-                _ => {}
-            }
-            body.push(tok)
-        } else {
-            return Err(Printer::Error(pos, String::from("unexpected EOF")));
-        }
-    }
-
-    Ok((name, Mixin::new(scope, args, body)))
-}
-
 fn eat_at_rule<I: Iterator<Item = Token>>(
     rule: &AtRule,
     pos: Pos,
@@ -556,7 +502,7 @@ fn eat_at_rule<I: Iterator<Item = Token>>(
             Err(Printer::Debug(pos, message))
         }
         AtRule::Mixin => {
-            let (name, mixin) = parse_mixin(toks, scope.clone())?;
+            let (name, mixin) = Mixin::from_tokens(toks, scope)?;
             Ok(Expr::MixinDecl(name, mixin))
         }
         // AtRule::Include => return Some(self.eat_include()),
@@ -640,7 +586,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
             }
             TokenKind::AtRule(AtRule::Mixin) => {
                 toks.next();
-                let (name, mixin) = parse_mixin(toks, scope.clone()).unwrap();
+                let (name, mixin) = Mixin::from_tokens(toks, scope).unwrap();
                 return Ok(Some(Expr::MixinDecl(name, mixin)));
             }
             TokenKind::AtRule(_) => {

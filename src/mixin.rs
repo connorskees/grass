@@ -1,10 +1,11 @@
 use std::iter::Peekable;
 use std::vec::IntoIter;
 
-use crate::common::{Pos, Scope};
-use crate::function::{CallArgs, FuncArgs};
+use crate::common::{Pos, Printer, Scope, Symbol};
+use crate::function::{eat_func_args, CallArgs, FuncArgs};
 use crate::selector::Selector;
-use crate::{eat_expr, Expr, RuleSet, Stmt, Token};
+use crate::utils::devour_whitespace;
+use crate::{eat_expr, Expr, RuleSet, Stmt, Token, TokenKind};
 
 #[derive(Debug, Clone)]
 pub struct Mixin {
@@ -23,6 +24,60 @@ impl Mixin {
             body,
             nesting: 0,
         }
+    }
+
+    pub fn from_tokens<I: Iterator<Item = Token>>(
+        toks: &mut Peekable<I>,
+        scope: &Scope,
+    ) -> Result<(String, Mixin), Printer> {
+        let Token { pos, .. } = toks
+            .next()
+            .expect("this must exist because we have already peeked");
+        devour_whitespace(toks);
+        let name = if let Some(Token {
+            kind: TokenKind::Ident(s),
+            ..
+        }) = toks.next()
+        {
+            s
+        } else {
+            return Err(Printer::Error(
+                pos,
+                String::from("expected identifier after mixin declaration"),
+            ));
+        };
+        devour_whitespace(toks);
+        let args = match toks.next() {
+            Some(Token {
+                kind: TokenKind::Symbol(Symbol::OpenParen),
+                ..
+            }) => eat_func_args(toks),
+            Some(Token {
+                kind: TokenKind::Symbol(Symbol::OpenCurlyBrace),
+                ..
+            }) => FuncArgs::new(),
+            _ => return Err(Printer::Error(pos, String::from("expected `(` or `{`"))),
+        };
+
+        let mut nesting = 1;
+        let mut body = Vec::new();
+
+        while nesting > 0 {
+            if let Some(tok) = toks.next() {
+                match &tok.kind {
+                TokenKind::Symbol(Symbol::OpenCurlyBrace)
+                // interpolation token eats the opening brace but not the closing
+                | TokenKind::Interpolation => nesting += 1,
+                TokenKind::Symbol(Symbol::CloseCurlyBrace) => nesting -= 1,
+                _ => {}
+            }
+                body.push(tok)
+            } else {
+                return Err(Printer::Error(pos, String::from("unexpected EOF")));
+            }
+        }
+
+        Ok((name, Mixin::new(scope.clone(), args, body)))
     }
 
     pub fn args(&mut self, args: &CallArgs) -> &mut Mixin {
@@ -57,8 +112,7 @@ impl Mixin {
         while let Some(expr) = eat_expr(&mut self.body, scope, super_selector)? {
             match expr {
                 Expr::Style(s) => stmts.push(Stmt::Style(s)),
-                Expr::Include(_)
-                | Expr::MixinDecl(_, _) => todo!(),
+                Expr::Include(_) | Expr::MixinDecl(_, _) => todo!(),
                 Expr::Selector(s) => {
                     self.nesting += 1;
                     let rules = self.eval(&super_selector.clone().zip(s.clone()), scope)?;
