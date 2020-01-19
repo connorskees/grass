@@ -77,9 +77,9 @@ impl Mixin {
     pub fn args(mut self, args: &CallArgs) -> Mixin {
         for (idx, arg) in self.args.0.iter().enumerate() {
             let val = match args.get(&format!("{}", idx)) {
-                Some(v) => v.val.clone(),
+                Some(v) => v.clone(),
                 None => match args.get(&arg.name) {
-                    Some(v) => v.val.clone(),
+                    Some(v) => v.clone(),
                     None => arg.default.clone().expect("missing variable!"),
                 },
             };

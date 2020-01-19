@@ -21,19 +21,7 @@ impl FuncArgs {
 }
 
 #[derive(Debug, Clone, std::default::Default)]
-pub struct CallArgs(pub BTreeMap<String, CallArg>);
-
-#[derive(Debug, Clone)]
-pub struct CallArg {
-    pub name: Option<String>,
-    pub val: Vec<Token>,
-}
-
-impl CallArg {
-    pub fn is_named(&self) -> bool {
-        self.name.is_some()
-    }
-}
+pub struct CallArgs(pub BTreeMap<String, Vec<Token>>);
 
 impl CallArgs {
     pub fn new() -> Self {
@@ -44,7 +32,7 @@ impl CallArgs {
         self.0.is_empty()
     }
 
-    pub fn get(&self, val: &str) -> Option<&CallArg> {
+    pub fn get(&self, val: &str) -> Option<&Vec<Token>> {
         self.0.get(val)
     }
 }
@@ -125,7 +113,7 @@ pub fn eat_func_args<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -> FuncA
 }
 
 pub fn eat_call_args<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -> CallArgs {
-    let mut args: BTreeMap<String, CallArg> = BTreeMap::new();
+    let mut args: BTreeMap<String, Vec<Token>> = BTreeMap::new();
     devour_whitespace(toks);
     let mut name: Option<String> = None;
     let mut val = Vec::new();
@@ -138,13 +126,7 @@ pub fn eat_call_args<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -> CallA
                     match &tok.kind {
                         TokenKind::Symbol(Symbol::Comma) => {
                             toks.next();
-                            args.insert(
-                                name.clone().unwrap(),
-                                CallArg {
-                                    name: name.clone(),
-                                    val: val.clone(),
-                                },
-                            );
+                            args.insert(name.clone().unwrap(), val.clone());
                             if let Some(ref mut s) = name {
                                 s.clear();
                             }
@@ -152,17 +134,7 @@ pub fn eat_call_args<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -> CallA
                             break;
                         }
                         TokenKind::Symbol(Symbol::CloseParen) => {
-                            args.insert(
-                                name.clone().unwrap(),
-                                CallArg {
-                                    name: name.clone(),
-                                    val: val.clone(),
-                                },
-                            );
-                            if let Some(ref mut s) = name {
-                                s.clear();
-                            }
-                            val.clear();
+                            args.insert(name.clone().unwrap(), val.clone());
                             break;
                         }
                         _ => {
@@ -173,30 +145,18 @@ pub fn eat_call_args<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -> CallA
                 }
             }
             TokenKind::Symbol(Symbol::CloseParen) => {
-                if name.is_some() {
-                    args.insert(name.clone().unwrap(), CallArg { name, val });
+                if let Some(name) = name {
+                    args.insert(name, val);
                 } else {
-                    args.insert(format!("{}", args.len()), CallArg { name, val });
+                    args.insert(format!("{}", args.len()), val);
                 }
                 break;
             }
             TokenKind::Symbol(Symbol::Comma) => {
                 if let Some(ref name) = name {
-                    args.insert(
-                        name.clone(),
-                        CallArg {
-                            name: Some(name.clone()),
-                            val: val.clone(),
-                        },
-                    );
+                    args.insert(name.clone(), val.clone());
                 } else {
-                    args.insert(
-                        format!("{}", args.len()),
-                        CallArg {
-                            name: name.clone(),
-                            val: val.clone(),
-                        },
-                    );
+                    args.insert(format!("{}", args.len()), val.clone());
                 }
                 if let Some(ref mut s) = name {
                     s.clear();
