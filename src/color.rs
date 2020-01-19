@@ -151,7 +151,9 @@ pub enum Color {
     WhiteSmoke,           // = 0xF5F5F5,
     Yellow,               // = 0xFFFF00,
     YellowGreen,          // = 0x9ACD32,
+    #[allow(dead_code)]
     RGB(u8, u8, u8),
+    #[allow(dead_code)]
     RGBA(u8, u8, u8, u8),
 }
 

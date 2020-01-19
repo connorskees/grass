@@ -57,8 +57,8 @@ impl Mixin {
         while let Some(expr) = eat_expr(&mut self.body, scope, super_selector)? {
             match expr {
                 Expr::Style(s) => stmts.push(Stmt::Style(s)),
-                Expr::Include(_) => todo!(),
-                Expr::MixinDecl(_, _) => todo!(),
+                Expr::Include(_)
+                | Expr::MixinDecl(_, _) => todo!(),
                 Expr::Selector(s) => {
                     self.nesting += 1;
                     let rules = self.eval(&super_selector.clone().zip(s.clone()), scope)?;

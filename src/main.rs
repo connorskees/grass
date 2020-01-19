@@ -7,21 +7,36 @@
 )]
 #![deny(missing_debug_implementations)]
 #![allow(
-    dead_code,
-    clippy::pub_enum_variant_names,
+    // explicit return makes some things look ugly
     clippy::implicit_return,
+    // Self { .. } is less explicit than Foo { .. }
     clippy::use_self,
+    // this is way too pedantic -- some things don't need docs!
     clippy::missing_docs_in_private_items,
+    // this crate is too new to deny todo!()
     clippy::todo,
+    // unreachable!() has many valid use cases
     clippy::unreachable,
+    // _ => {} has many valid use cases
     clippy::wildcard_enum_match_arm,
+    // .expect() has many valid use cases, like when we know a value is `Some(..)`
     clippy::option_expect_used,
+    // for now, panic() is an acceptable solution
     clippy::panic,
-    clippy::unused_self,
+    // for now, some functions require a lot of lines
+    // future refactoring should make functions small and make
+    // this lint less annoying
     clippy::too_many_lines,
+    // this is too pedantic -- we are allowed to add numbers!
     clippy::integer_arithmetic,
+    // this is too pedantic for now -- the library is changing too quickly for
+    // good docs to be written
     clippy::missing_errors_doc,
+    // this incorrectly results in errors for types that derive `Debug`
+    // https://github.com/rust-lang/rust-clippy/issues/4980
     clippy::let_underscore_must_use,
+    // this is too pedantic -- it results in some names being less explicit
+    // than they should
     clippy::module_name_repetitions
 )]
 #![feature(track_caller)]
@@ -229,6 +244,7 @@ impl StyleSheet {
         PrettyPrinter::new(buf).pretty_print(self)
     }
 
+    #[allow(dead_code)]
     fn pretty_print_selectors<W: Write>(&self, buf: W) -> io::Result<()> {
         PrettyPrinter::new(buf).pretty_print_preserve_super_selectors(self)
     }
@@ -571,7 +587,6 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                 devour_whitespace(toks);
                 return Ok(Some(Expr::Selector(Selector::from_tokens(
                     &mut values.iter().peekable(),
-                    super_selector,
                     scope,
                 ))));
             }

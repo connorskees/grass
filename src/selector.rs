@@ -163,15 +163,13 @@ mod test_selector_display {
 }
 
 struct SelectorParser<'a> {
-    super_selector: &'a Selector,
     scope: &'a Scope,
     selectors: Vec<SelectorKind>,
 }
 
 impl<'a> SelectorParser<'a> {
-    const fn new(super_selector: &'a Selector, scope: &'a Scope) -> SelectorParser<'a> {
+    const fn new(scope: &'a Scope) -> SelectorParser<'a> {
         SelectorParser {
-            super_selector,
             scope,
             selectors: Vec::new(),
         }
@@ -270,10 +268,9 @@ impl<'a> SelectorParser<'a> {
 impl Selector {
     pub fn from_tokens<'a>(
         tokens: &'a mut Peekable<Iter<'a, Token>>,
-        super_selector: &'a Selector,
         scope: &'a Scope,
     ) -> Selector {
-        SelectorParser::new(super_selector, scope).all_selectors(tokens)
+        SelectorParser::new(scope).all_selectors(tokens)
     }
 
     pub fn zip(self, other: Selector) -> Selector {
