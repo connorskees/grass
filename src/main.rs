@@ -187,6 +187,8 @@ enum Expr {
     Include(Vec<Stmt>),
     /// A multiline comment: `/* foobar */`
     MultilineComment(String),
+    Debug(Pos, String),
+    Warn(Pos, String),
     // /// Function call: `calc(10vw - 1px)`
     // FuncCall(String, Vec<Token>),
 }
@@ -300,7 +302,7 @@ impl<'a> StyleSheetParser<'a> {
                         self.error(pos, "unexpected variable use at toplevel");
                     }
                     let val = eat_variable_value(&mut self.lexer, &self.global_scope)
-                        .unwrap_or_else(|err| self.error(err.0, err.1));
+                        .unwrap_or_else(|err| self.error(err.0, &err.1));
                     self.global_scope.vars.insert(name, val);
                 }
                 TokenKind::MultilineComment(_) => {
@@ -392,7 +394,7 @@ impl<'a> StyleSheetParser<'a> {
     fn eat_rules(&mut self, super_selector: &Selector, scope: &mut Scope) -> Vec<Stmt> {
         let mut stmts = Vec::new();
         while let Some(tok) = eat_expr(&mut self.lexer, scope, super_selector)
-            .unwrap_or_else(|error| self.error(error.0, error.1))
+            .unwrap_or_else(|error| self.error(error.0, &error.1))
         {
             match tok {
                 Expr::Style(s) => stmts.push(Stmt::Style(s)),
@@ -401,6 +403,12 @@ impl<'a> StyleSheetParser<'a> {
                 }
                 Expr::Include(rules) => {
                     stmts.extend(rules);
+                }
+                Expr::Debug(pos, ref message) => {
+                    self.debug(pos, message);
+                }
+                Expr::Warn(pos, ref message) => {
+                    self.warn(pos, message);
                 }
                 Expr::Selector(s) => {
                     self.scope += 1;
@@ -475,7 +483,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
     scope: &Scope,
     super_selector: &Selector,
-) -> Result<Option<Expr>, (Pos, &'static str)> {
+) -> Result<Option<Expr>, (Pos, String)> {
     let mut values = Vec::with_capacity(5);
     while let Some(tok) = toks.peek() {
         match &tok.kind {
@@ -554,8 +562,11 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                     pos,
                 }) = toks.next()
                 {
-                    if let Ok(a) = eat_at_rule(rule, pos, toks, scope) {
-                        return Ok(Some(a));
+                    match eat_at_rule(rule, pos, toks, scope) {
+                        Ok(a) => return Ok(Some(a)),
+                        Err(Printer::Debug(a, b)) => return Ok(Some(Expr::Debug(a, b))),
+                        Err(Printer::Warn(a, b)) => return Ok(Some(Expr::Warn(a, b))),
+                        Err(Printer::Error(a, b)) => return Err((a, b)),
                     }
                 }
             }

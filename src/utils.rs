@@ -66,7 +66,7 @@ pub fn eat_interpolation<I: Iterator<Item = Token>>(
 pub fn eat_variable_value<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
     scope: &Scope,
-) -> Result<Vec<Token>, (Pos, &'static str)> {
+) -> Result<Vec<Token>, (Pos, String)> {
     devour_whitespace(toks);
     // todo!(line might not end with semicolon)
     let iter1 = toks.take_while(|x| x.kind != TokenKind::Symbol(Symbol::SemiColon));

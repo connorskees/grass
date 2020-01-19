@@ -93,16 +93,18 @@ impl Mixin {
         self
     }
 
-    pub fn call(mut self, super_selector: &Selector) -> Result<Vec<Stmt>, (Pos, &'static str)> {
+    pub fn call(mut self, super_selector: &Selector) -> Result<Vec<Stmt>, (Pos, String)> {
         self.eval(super_selector)
     }
 
-    pub fn eval(&mut self, super_selector: &Selector) -> Result<Vec<Stmt>, (Pos, &'static str)> {
+    pub fn eval(&mut self, super_selector: &Selector) -> Result<Vec<Stmt>, (Pos, String)> {
         let mut stmts = Vec::new();
         while let Some(expr) = eat_expr(&mut self.body, &self.scope, super_selector)? {
             match expr {
                 Expr::Style(s) => stmts.push(Stmt::Style(s)),
-                Expr::Include(_) | Expr::MixinDecl(_, _) => todo!(),
+                Expr::Include(..) | Expr::MixinDecl(..) | Expr::Debug(..) | Expr::Warn(..) => {
+                    todo!()
+                }
                 Expr::Selector(selector) => {
                     let rules = self.eval(&super_selector.zip(&selector))?;
                     stmts.push(Stmt::RuleSet(RuleSet {
@@ -125,7 +127,7 @@ pub fn eat_include<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
     scope: &Scope,
     super_selector: &Selector,
-) -> Result<Vec<Stmt>, (Pos, &'static str)> {
+) -> Result<Vec<Stmt>, (Pos, String)> {
     toks.next();
     devour_whitespace(toks);
     let Token { kind, pos } = toks
@@ -133,7 +135,7 @@ pub fn eat_include<I: Iterator<Item = Token>>(
         .expect("this must exist because we have already peeked");
     let name = match kind {
         TokenKind::Ident(s) => s,
-        _ => return Err((pos, "expected identifier")),
+        _ => return Err((pos, String::from("expected identifier"))),
     };
 
     devour_whitespace(toks);
@@ -142,10 +144,10 @@ pub fn eat_include<I: Iterator<Item = Token>>(
         match tok.kind {
             TokenKind::Symbol(Symbol::SemiColon) => CallArgs::new(),
             TokenKind::Symbol(Symbol::OpenParen) => eat_call_args(toks),
-            _ => return Err((pos, "expected `(` or `;`")),
+            _ => return Err((pos, String::from("expected `(` or `;`"))),
         }
     } else {
-        return Err((pos, "unexpected EOF"));
+        return Err((pos, String::from("unexpected EOF")));
     };
 
     devour_whitespace(toks);
@@ -160,7 +162,7 @@ pub fn eat_include<I: Iterator<Item = Token>>(
 
     let mixin = match scope.mixins.get(&name) {
         Some(m) => m.clone(),
-        _ => return Err((pos, "expected identifier")),
+        _ => return Err((pos, String::from("expected identifier"))),
     };
 
     let rules = mixin.args(&args).call(super_selector)?;
