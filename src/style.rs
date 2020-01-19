@@ -3,7 +3,7 @@ use crate::utils::{deref_variable, eat_interpolation};
 use crate::{Token, TokenKind};
 use std::fmt::{self, Display};
 use std::iter::Peekable;
-use std::slice::Iter;
+use std::vec::IntoIter;
 
 /// A style: `color: red`
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -19,22 +19,22 @@ impl Display for Style {
 }
 
 impl Style {
-    pub fn from_tokens(tokens: &[Token], scope: &Scope) -> Result<Self, ()> {
+    pub fn from_tokens(tokens: Vec<Token>, scope: &Scope) -> Result<Self, ()> {
         Ok(StyleParser::new(tokens, scope)?.parse())
     }
 }
 
 struct StyleParser<'a> {
-    tokens: Peekable<Iter<'a, Token>>,
+    tokens: Peekable<IntoIter<Token>>,
     scope: &'a Scope,
 }
 
 impl<'a> StyleParser<'a> {
-    fn new(tokens: &'a [Token], scope: &'a Scope) -> Result<Self, ()> {
+    fn new(tokens: Vec<Token>, scope: &'a Scope) -> Result<Self, ()> {
         if tokens.is_empty() {
             return Err(());
         }
-        let tokens = tokens.iter().peekable();
+        let tokens = tokens.into_iter().peekable();
         Ok(StyleParser { tokens, scope })
     }
 

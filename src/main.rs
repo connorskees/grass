@@ -51,7 +51,7 @@ use crate::common::{AtRule, Keyword, Op, Pos, Printer, Scope, Symbol, Whitespace
 use crate::css::Css;
 use crate::error::SassError;
 use crate::format::PrettyPrinter;
-use crate::function::{eat_call_args, eat_func_args, CallArgs, FuncArgs};
+use crate::function::{eat_call_args, CallArgs};
 use crate::imports::import;
 use crate::lexer::Lexer;
 use crate::mixin::Mixin;
@@ -268,7 +268,7 @@ impl<'a> StyleSheetParser<'a> {
     fn parse_toplevel(mut self) -> SassResult<(Vec<Stmt>, Scope)> {
         let mut rules: Vec<Stmt> = Vec::new();
         while let Some(Token { kind, .. }) = self.lexer.peek() {
-            match kind.clone() {
+            match kind {
                 TokenKind::Ident(_)
                 | TokenKind::Attribute(_)
                 | TokenKind::Interpolation
@@ -281,11 +281,15 @@ impl<'a> StyleSheetParser<'a> {
                     self.lexer.next();
                     continue;
                 }
-                TokenKind::Variable(name) => {
-                    let Token { pos, .. } = self
+                TokenKind::Variable(_) => {
+                    let Token { pos, kind } = self
                         .lexer
                         .next()
-                        .expect("this cannot occur as we have already peeked");
+                        .expect("this must exist because we have already peeked");
+                    let name = match kind {
+                        TokenKind::Variable(n) => n,
+                        _ => unsafe { std::hint::unreachable_unchecked() },
+                    };
                     devour_whitespace(&mut self.lexer);
                     if self
                         .lexer
@@ -300,8 +304,16 @@ impl<'a> StyleSheetParser<'a> {
                         .unwrap_or_else(|err| self.error(err.0, err.1));
                     self.global_scope.vars.insert(name, val);
                 }
-                TokenKind::MultilineComment(comment) => {
-                    self.lexer.next();
+                TokenKind::MultilineComment(_) => {
+                    let comment = match self
+                        .lexer
+                        .next()
+                        .expect("this must exist because we have already peeked")
+                        .kind
+                    {
+                        TokenKind::MultilineComment(c) => c,
+                        _ => unsafe { std::hint::unreachable_unchecked() },
+                    };
                     rules.push(Stmt::MultilineComment(comment));
                 }
                 TokenKind::AtRule(AtRule::Import) => {
@@ -460,7 +472,7 @@ fn eat_include<I: Iterator<Item = Token>>(
 
     devour_whitespace(toks);
 
-    let mut mixin = if let Some(m) = scope.mixins.get(&name) {
+    let mixin = if let Some(m) = scope.mixins.get(&name) {
         m.clone()
     } else {
         return Err((pos, "expected identifier"));
@@ -521,18 +533,16 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
             TokenKind::Symbol(Symbol::SemiColon) | TokenKind::Symbol(Symbol::CloseCurlyBrace) => {
                 toks.next();
                 devour_whitespace(toks);
-                return Ok(Some(Expr::Style(
-                    match Style::from_tokens(&values, scope) {
-                        Ok(x) => x,
-                        Err(_) => return Ok(None),
-                    },
-                )));
+                return Ok(Some(Expr::Style(match Style::from_tokens(values, scope) {
+                    Ok(x) => x,
+                    Err(_) => return Ok(None),
+                })));
             }
             TokenKind::Symbol(Symbol::OpenCurlyBrace) => {
                 toks.next();
                 devour_whitespace(toks);
                 return Ok(Some(Expr::Selector(Selector::from_tokens(
-                    &mut values.iter().peekable(),
+                    &mut values.into_iter().peekable(),
                     scope,
                 ))));
             }

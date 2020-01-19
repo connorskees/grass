@@ -80,7 +80,7 @@ impl Mixin {
         Ok((name, Mixin::new(scope.clone(), args, body)))
     }
 
-    pub fn args(&mut self, args: &CallArgs) -> &mut Mixin {
+    pub fn args(mut self, args: &CallArgs) -> Mixin {
         for (idx, arg) in args.0.iter().enumerate() {
             if arg.is_named() {
                 todo!("keyword args")
@@ -99,7 +99,7 @@ impl Mixin {
         self
     }
 
-    pub fn call(&mut self, super_selector: &Selector) -> Result<Vec<Stmt>, (Pos, &'static str)> {
+    pub fn call(mut self, super_selector: &Selector) -> Result<Vec<Stmt>, (Pos, &'static str)> {
         self.eval(super_selector, &mut self.scope.clone())
     }
 

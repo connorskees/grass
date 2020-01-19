@@ -3,8 +3,8 @@ use crate::utils::{devour_whitespace, eat_interpolation, IsWhitespace};
 use crate::{Token, TokenKind};
 use std::fmt::{self, Display};
 use std::iter::Peekable;
-use std::slice::Iter;
 use std::string::ToString;
+use std::vec::IntoIter;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Selector(pub Vec<SelectorKind>);
@@ -175,7 +175,7 @@ impl<'a> SelectorParser<'a> {
         }
     }
 
-    fn all_selectors(&mut self, tokens: &'a mut Peekable<Iter<'_, Token>>) -> Selector {
+    fn all_selectors(mut self, tokens: &'a mut Peekable<IntoIter<Token>>) -> Selector {
         self.tokens_to_selectors(tokens);
         // remove trailing whitespace
         while let Some(x) = self.selectors.pop() {
@@ -184,10 +184,10 @@ impl<'a> SelectorParser<'a> {
                 break;
             }
         }
-        Selector(self.selectors.clone())
+        Selector(self.selectors)
     }
 
-    fn consume_pseudo_selector(&mut self, tokens: &'_ mut Peekable<Iter<'_, Token>>) {
+    fn consume_pseudo_selector(&mut self, tokens: &'_ mut Peekable<IntoIter<Token>>) {
         if let Some(Token {
             kind: TokenKind::Ident(s),
             ..
@@ -205,28 +205,27 @@ impl<'a> SelectorParser<'a> {
                         break;
                     }
                     let tok = tokens.next().unwrap();
-                    toks.push(tok.kind.clone());
+                    toks.push(tok.kind);
                 }
                 tokens.next();
-                self.selectors
-                    .push(SelectorKind::PseudoParen(s.clone(), toks))
+                self.selectors.push(SelectorKind::PseudoParen(s, toks))
             } else {
-                self.selectors.push(SelectorKind::Pseudo(s.clone()))
+                self.selectors.push(SelectorKind::Pseudo(s))
             }
         } else {
             todo!("expected ident after `:` in selector")
         }
     }
 
-    fn tokens_to_selectors(&mut self, tokens: &'_ mut Peekable<Iter<'_, Token>>) {
+    fn tokens_to_selectors(&mut self, tokens: &'_ mut Peekable<IntoIter<Token>>) {
         while tokens.peek().is_some() {
             self.consume_selector(tokens)
         }
     }
 
-    fn consume_selector(&mut self, tokens: &'_ mut Peekable<Iter<'_, Token>>) {
+    fn consume_selector(&mut self, tokens: &'_ mut Peekable<IntoIter<Token>>) {
         if devour_whitespace(tokens) {
-            if let Some(&&Token {
+            if let Some(Token {
                 kind: TokenKind::Symbol(Symbol::Comma),
                 ..
             }) = tokens.peek()
@@ -239,10 +238,8 @@ impl<'a> SelectorParser<'a> {
             return;
         }
         if let Some(Token { kind, .. }) = tokens.next() {
-            match &kind {
-                TokenKind::Ident(ident) => {
-                    self.selectors.push(SelectorKind::Element(ident.clone()))
-                }
+            match kind {
+                TokenKind::Ident(ident) => self.selectors.push(SelectorKind::Element(ident)),
                 TokenKind::Unit(u) => self.selectors.push(SelectorKind::Element(u.to_string())),
                 TokenKind::Symbol(Symbol::Period) => self.selectors.push(SelectorKind::Class),
                 TokenKind::Symbol(Symbol::Hash) => self.selectors.push(SelectorKind::Id),
@@ -254,11 +251,9 @@ impl<'a> SelectorParser<'a> {
                 TokenKind::Symbol(Symbol::Mul) => self.selectors.push(SelectorKind::Universal),
                 TokenKind::Symbol(Symbol::BitAnd) => self.selectors.push(SelectorKind::Super),
                 TokenKind::Interpolation => self.tokens_to_selectors(
-                    &mut eat_interpolation(tokens, self.scope).iter().peekable(),
+                    &mut eat_interpolation(tokens, self.scope).into_iter().peekable(),
                 ),
-                TokenKind::Attribute(attr) => {
-                    self.selectors.push(SelectorKind::Attribute(attr.clone()))
-                }
+                TokenKind::Attribute(attr) => self.selectors.push(SelectorKind::Attribute(attr)),
                 _ => todo!("unimplemented selector"),
             };
         }
@@ -267,7 +262,7 @@ impl<'a> SelectorParser<'a> {
 
 impl Selector {
     pub fn from_tokens<'a>(
-        tokens: &'a mut Peekable<Iter<'a, Token>>,
+        tokens: &'a mut Peekable<IntoIter<Token>>,
         scope: &'a Scope,
     ) -> Selector {
         SelectorParser::new(scope).all_selectors(tokens)

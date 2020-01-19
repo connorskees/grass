@@ -28,7 +28,7 @@ pub fn deref_variable(name: &str, scope: &Scope) -> Vec<Token> {
         .peekable();
     let mut val = Vec::with_capacity(toks.len());
     while let Some(tok) = toks.next() {
-        match &tok.kind {
+        match tok.kind {
             TokenKind::Variable(ref v) => val.extend(deref_variable(v, scope)),
             TokenKind::Whitespace(_) => {
                 devour_whitespace(&mut toks);
@@ -45,19 +45,19 @@ pub fn deref_variable(name: &str, scope: &Scope) -> Vec<Token> {
     val
 }
 
-pub fn eat_interpolation<'a, I: Iterator<Item = &'a Token>>(
+pub fn eat_interpolation<I: Iterator<Item = Token>>(
     tokens: &mut Peekable<I>,
     scope: &Scope,
 ) -> Vec<Token> {
     let mut val = Vec::new();
     for tok in tokens {
-        match &tok.kind {
+        match tok.kind {
             TokenKind::Symbol(Symbol::CloseCurlyBrace) => break,
             TokenKind::Symbol(Symbol::OpenCurlyBrace) => {
                 todo!("invalid character in interpolation")
             }
             TokenKind::Variable(ref v) => val.extend(deref_variable(v, scope)),
-            _ => val.push(tok.clone()),
+            _ => val.push(tok),
         }
     }
     val
