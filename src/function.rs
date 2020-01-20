@@ -137,27 +137,22 @@ pub fn eat_call_args<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -> CallA
                             args.insert(name.clone().unwrap(), val.clone());
                             break;
                         }
-                        _ => {
-                            let tok = toks.next().expect("we know this exists!");
-                            val.push(tok)
-                        }
+                        _ => val.push(toks.next().expect("we know this exists!")),
                     }
                 }
             }
             TokenKind::Symbol(Symbol::CloseParen) => {
-                if let Some(name) = name {
-                    args.insert(name, val);
-                } else {
-                    args.insert(format!("{}", args.len()), val);
-                }
+                match name {
+                    Some(name) => args.insert(name, val),
+                    None => args.insert(format!("{}", args.len()), val),
+                };
                 break;
             }
             TokenKind::Symbol(Symbol::Comma) => {
-                if let Some(ref name) = name {
-                    args.insert(name.clone(), val.clone());
-                } else {
-                    args.insert(format!("{}", args.len()), val.clone());
-                }
+                match name {
+                    Some(ref name) => args.insert(name.clone(), val.clone()),
+                    None => args.insert(format!("{}", args.len()), val.clone()),
+                };
                 if let Some(ref mut s) = name {
                     s.clear();
                 }
