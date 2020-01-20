@@ -139,7 +139,7 @@ impl TryFrom<char> for Symbol {
 pub struct MediaQuery {}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum AtRule {
+pub enum AtRuleKind {
     // SASS specific @rules
     /// Loads mixins, functions, and variables from other Sass stylesheets, and combines CSS from multiple stylesheets together
     Use,
@@ -206,7 +206,7 @@ pub enum AtRule {
     CounterStyle,
 }
 
-impl TryFrom<&str> for AtRule {
+impl TryFrom<&str> for AtRuleKind {
     type Error = &'static str;
 
     fn try_from(c: &str) -> Result<Self, &'static str> {
@@ -248,7 +248,7 @@ impl TryFrom<&str> for AtRule {
     }
 }
 
-impl Display for AtRule {
+impl Display for AtRuleKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Use => write!(f, "@use"),

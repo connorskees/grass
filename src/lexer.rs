@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 use std::iter::Peekable;
 use std::str::Chars;
 
-use crate::common::{AtRule, Keyword, Op, Pos, Symbol};
+use crate::common::{AtRuleKind, Keyword, Op, Pos, Symbol};
 use crate::selector::{Attribute, AttributeKind};
 use crate::units::Unit;
 use crate::{Token, TokenKind, Whitespace};
@@ -150,7 +150,7 @@ impl<'a> Lexer<'a> {
             string.push(tok);
         }
 
-        if let Ok(rule) = AtRule::try_from(string.as_ref()) {
+        if let Ok(rule) = AtRuleKind::try_from(string.as_ref()) {
             TokenKind::AtRule(rule)
         } else {
             panic!("expected ident after `@`")

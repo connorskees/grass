@@ -47,7 +47,7 @@ use std::io::{self, stdout, BufWriter, Write};
 use std::iter::{Iterator, Peekable};
 use std::path::Path;
 
-use crate::common::{AtRule, Keyword, Op, Pos, Printer, Scope, Symbol, Whitespace};
+use crate::common::{AtRuleKind, Keyword, Op, Pos, Printer, Scope, Symbol, Whitespace};
 use crate::css::Css;
 use crate::error::SassError;
 use crate::format::PrettyPrinter;
@@ -104,7 +104,7 @@ pub enum TokenKind {
     Ident(String),
     Symbol(Symbol),
     String(String),
-    AtRule(AtRule),
+    AtRule(AtRuleKind),
     Keyword(Keyword),
     Number(String),
     Unit(Unit),
@@ -317,7 +317,7 @@ impl<'a> StyleSheetParser<'a> {
                     };
                     rules.push(Stmt::MultilineComment(comment));
                 }
-                TokenKind::AtRule(AtRule::Import) => {
+                TokenKind::AtRule(AtRuleKind::Import) => {
                     let Token { pos, .. } = self
                         .lexer
                         .next()
@@ -360,7 +360,7 @@ impl<'a> StyleSheetParser<'a> {
                     rules.extend(new_rules);
                     self.global_scope.merge(new_scope);
                 }
-                TokenKind::AtRule(AtRule::Mixin) => {
+                TokenKind::AtRule(AtRuleKind::Mixin) => {
                     let (name, mixin) =
                         Mixin::from_tokens(&mut self.lexer, &self.global_scope).unwrap();
                     self.global_scope.mixins.insert(name, mixin);
@@ -430,40 +430,41 @@ impl<'a> StyleSheetParser<'a> {
 }
 
 fn eat_at_rule<I: Iterator<Item = Token>>(
-    rule: &AtRule,
+    rule: &AtRuleKind,
     pos: Pos,
     toks: &mut Peekable<I>,
     scope: &Scope,
 ) -> Result<Expr, Printer> {
     devour_whitespace(toks);
     match rule {
-        AtRule::Error => {
+        AtRuleKind::Error => {
             let message = toks
                 .take_while(|x| x.kind != TokenKind::Symbol(Symbol::SemiColon))
                 .map(|x| x.kind.to_string())
                 .collect::<String>();
             Err(Printer::Error(pos, message))
         }
-        AtRule::Warn => {
+        AtRuleKind::Warn => {
             let message = toks
                 .take_while(|x| x.kind != TokenKind::Symbol(Symbol::SemiColon))
                 .map(|x| x.kind.to_string())
                 .collect::<String>();
+            devour_whitespace(toks);
             Err(Printer::Warn(pos, message))
         }
-        AtRule::Debug => {
+        AtRuleKind::Debug => {
             let message = toks
                 .by_ref()
                 .take_while(|x| x.kind != TokenKind::Symbol(Symbol::SemiColon))
                 .map(|x| x.kind.to_string())
                 .collect::<String>();
+            devour_whitespace(toks);
             Err(Printer::Debug(pos, message))
         }
-        AtRule::Mixin => {
+        AtRuleKind::Mixin => {
             let (name, mixin) = Mixin::from_tokens(toks, scope)?;
             Ok(Expr::MixinDecl(name, mixin))
         }
-        // AtRule::Include => return Some(self.eat_include()),
         _ => todo!("encountered unimplemented at rule"),
     }
 }
@@ -531,14 +532,14 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                     values.push(tok);
                 }
             }
-            TokenKind::AtRule(AtRule::Include) => {
+            TokenKind::AtRule(AtRuleKind::Include) => {
                 return Ok(Some(Expr::Include(eat_include(
                     toks,
                     scope,
                     super_selector,
                 )?)));
             }
-            TokenKind::AtRule(AtRule::Mixin) => {
+            TokenKind::AtRule(AtRuleKind::Mixin) => {
                 toks.next();
                 let (name, mixin) = Mixin::from_tokens(toks, scope).unwrap();
                 return Ok(Some(Expr::MixinDecl(name, mixin)));
