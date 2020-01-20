@@ -604,21 +604,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                     }
                 }
             }
-            TokenKind::Interpolation => {
-                let mut n = 0;
-                while let Some(tok) = toks.next() {
-                    match tok.kind {
-                        TokenKind::Symbol(Symbol::OpenCurlyBrace) => n += 1,
-                        TokenKind::Symbol(Symbol::CloseCurlyBrace) => n -= 1,
-                        TokenKind::Interpolation => n += 1,
-                        _ => {},
-                    }
-                    values.push(tok);
-                    if n == 0 {
-                        break;
-                    }
-                }
-            }
+            TokenKind::Interpolation => values.extend(eat_interpolation(toks)),
             _ => match toks.next() {
                 Some(tok) => values.push(tok),
                 _ => unsafe { std::hint::unreachable_unchecked() },
@@ -626,6 +612,24 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
         };
     }
     Ok(None)
+}
+
+fn eat_interpolation<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -> Vec<Token> {
+    let mut vals = Vec::new();
+    let mut n = 0;
+    while let Some(tok) = toks.next() {
+        match tok.kind {
+            TokenKind::Symbol(Symbol::OpenCurlyBrace) => n += 1,
+            TokenKind::Symbol(Symbol::CloseCurlyBrace) => n -= 1,
+            TokenKind::Interpolation => n += 1,
+            _ => {}
+        }
+        vals.push(tok);
+        if n == 0 {
+            break;
+        }
+    }
+    vals
 }
 
 /// Functions that print to stdout or stderr
