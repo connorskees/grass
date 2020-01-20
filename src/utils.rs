@@ -18,7 +18,7 @@ pub(crate) fn devour_whitespace<I: Iterator<Item = W>, W: IsWhitespace>(s: &mut 
     found_whitespace
 }
 
-#[track_caller]
+#[cfg_attr(feature = "nightly", track_caller)]
 pub(crate) fn deref_variable(name: &str, scope: &Scope) -> Vec<Token> {
     let mut toks = scope
         .vars

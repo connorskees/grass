@@ -39,7 +39,7 @@
     // than they should
     clippy::module_name_repetitions
 )]
-#![feature(track_caller)]
+#![cfg_attr(feature = "nightly", feature(track_caller))]
 // todo! handle erroring on styles at the toplevel
 use std::fmt::{self, Display};
 use std::fs;

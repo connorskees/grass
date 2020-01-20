@@ -3,7 +3,7 @@ name = "grass"
 version = "0.1.0"
 description = "An SCSS compiler in Rust"
 readme = "README.md"
-license = "MIT OR Apache-2.0"
+license = "MIT"
 categories = ["command-line-utilities", "web-programming"]
 keywords = ["scss", "sass", "css"]
 repository = "https://github.com/connorskees/grass"
@@ -26,6 +26,7 @@ clap = { version = "2.33.0", optional = true }
 [features]
 default = ["commandline"]
 commandline = ["clap"]
+nightly = []
 
 [dev-dependencies]
 # test imports
