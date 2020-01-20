@@ -244,7 +244,7 @@ impl StyleSheet {
     /// Used mainly in debugging, but can at times be useful
     #[inline]
     #[allow(dead_code)]
-    fn pretty_print<W: Write>(&self, buf: W) -> SassResult<()> {
+    pub fn pretty_print<W: Write>(&self, buf: W) -> SassResult<()> {
         PrettyPrinter::new(buf).pretty_print(self)
     }
 
@@ -409,10 +409,10 @@ impl<'a> StyleSheetParser<'a> {
 
     fn eat_rules(&mut self, super_selector: &Selector, scope: &mut Scope) -> Vec<Stmt> {
         let mut stmts = Vec::new();
-        while let Some(tok) = eat_expr(&mut self.lexer, scope, super_selector)
+        while let Some(expr) = eat_expr(&mut self.lexer, scope, super_selector)
             .unwrap_or_else(|error| self.error(error.0, &error.1))
         {
-            match tok {
+            match expr {
                 Expr::Style(s) => stmts.push(Stmt::Style(s)),
                 Expr::MixinDecl(name, mixin) => {
                     scope.mixins.insert(name, mixin);
@@ -499,9 +499,20 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
     let mut values = Vec::with_capacity(5);
     while let Some(tok) = toks.peek() {
         match &tok.kind {
-            TokenKind::Symbol(Symbol::SemiColon) | TokenKind::Symbol(Symbol::CloseCurlyBrace) => {
+            TokenKind::Symbol(Symbol::SemiColon) => {
                 toks.next();
                 devour_whitespace(toks);
+                return Ok(Some(Expr::Style(match Style::from_tokens(values, scope) {
+                    Ok(x) => x,
+                    Err(_) => return Ok(None),
+                })));
+            }
+            TokenKind::Symbol(Symbol::CloseCurlyBrace) => {
+                if values.is_empty() {
+                    toks.next();
+                    devour_whitespace(toks);
+                    return Ok(None);
+                }
                 return Ok(Some(Expr::Style(match Style::from_tokens(values, scope) {
                     Ok(x) => x,
                     Err(_) => return Ok(None),
@@ -970,6 +981,11 @@ mod test_styles {
     );
     test!(
         two_rulesets,
+        "a {\n  color: red;\n}\nc {\n  color: white;\n}\n"
+    );
+    test!(
+        two_rulesets_first_no_semicolon,
+        "a {\n  color: red\n}\nc {\n  color: white;\n}\n",
         "a {\n  color: red;\n}\nc {\n  color: white;\n}\n"
     );
     test!(
