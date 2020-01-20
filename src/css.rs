@@ -47,84 +47,49 @@ impl Toplevel {
 #[derive(Debug, Clone)]
 pub struct Css {
     blocks: Vec<Toplevel>,
-    idx: usize,
-    inner_rulesets: usize,
-    at_root: bool,
 }
 
 impl Css {
     pub const fn new() -> Self {
-        Css {
-            blocks: Vec::new(),
-            idx: 0,
-            inner_rulesets: 0,
-            at_root: true,
-        }
+        Css { blocks: Vec::new() }
     }
 
     pub fn from_stylesheet(s: StyleSheet) -> Self {
         Css::new().parse_stylesheet(s)
     }
 
-    fn parse_stmt(&mut self, stmt: Stmt) {
+    fn parse_stmt(&mut self, stmt: Stmt) -> Vec<Toplevel> {
         match stmt {
-            Stmt::Style(s) => {
-                if self.at_root {
-                    self.blocks
-                        .get_mut(self.idx - 1)
-                        .expect("expected block to exist at root")
-                        .push_style(s)
-                } else {
-                    self.blocks
-                        .get_mut(self.idx + self.inner_rulesets - 1)
-                        .expect("expected block to exist")
-                        .push_style(s)
-                }
-            }
-            Stmt::MultilineComment(s) => {
-                if self.idx == 0 {
-                    self.blocks.push(Toplevel::MultilineComment(s));
-                } else {
-                    self.blocks
-                        .get_mut(self.idx + self.inner_rulesets - 1)
-                        .expect("expected block to exist")
-                        .push_comment(s)
-                }
-            }
             Stmt::RuleSet(RuleSet {
                 selector,
                 super_selector,
                 rules,
             }) => {
-                if self.idx == 0 {
-                    self.idx = self.blocks.len() + 1;
-                    self.inner_rulesets = 0;
-                    self.blocks
-                        .push(Toplevel::new_rule(super_selector.zip(&selector)));
-                    for rule in rules {
-                        self.at_root = true;
-                        self.parse_stmt(rule);
-                        self.at_root = true;
-                    }
-                    self.idx = 0;
-                } else {
-                    self.idx += 1;
-                    self.at_root = false;
-                    self.blocks
-                        .push(Toplevel::new_rule(super_selector.zip(&selector)));
-                    for rule in rules {
-                        self.parse_stmt(rule);
-                    }
-                    self.idx -= 1;
-                    self.inner_rulesets += 1;
+                let mut vals = vec![Toplevel::new_rule(super_selector.zip(&selector))];
+                for rule in rules {
+                    match rule {
+                        Stmt::RuleSet(_) => vals.extend(self.parse_stmt(rule)),
+                        Stmt::Style(s) => vals
+                            .get_mut(0)
+                            .expect("expected block to exist")
+                            .push_style(s),
+                        Stmt::MultilineComment(s) => vals
+                            .get_mut(0)
+                            .expect("expected block to exist")
+                            .push_comment(s),
+                    };
                 }
+                vals
             }
+            Stmt::MultilineComment(s) => vec![Toplevel::MultilineComment(s)],
+            Stmt::Style(_) => panic!("expected toplevel element, found style"),
         }
     }
 
     fn parse_stylesheet(mut self, s: StyleSheet) -> Css {
         for stmt in s.0 {
-            self.parse_stmt(stmt);
+            let v = self.parse_stmt(stmt);
+            self.blocks.extend(v);
         }
         self
     }

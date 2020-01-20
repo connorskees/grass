@@ -624,9 +624,9 @@ fn main() -> SassResult<()> {
     for arg in args {
         let s = StyleSheet::from_path(arg)?;
         s.print_as_css(&mut stdout)?;
+        // s.pretty_print(&mut stdout)?;
     }
     // dbg!(s);
-    // s.pretty_print(&mut stdout)?;
     // s.pretty_print_selectors(&mut stdout)?;
     Ok(())
 }
@@ -1032,6 +1032,16 @@ mod test_styles {
         style_whitespace,
         "a {\n     color      :       red    ;    \n}\n",
         "a {\n  color: red;\n}\n"
+    );
+    test!(
+        triple_nested_preceding_ruleset,
+        "a {\n  b {\n    foo: bar;\n    c {}\n  }\n}\n",
+        "a b {\n  foo: bar;\n}\n"
+    );
+    test!(
+        triple_nested_following_ruleset,
+        "a {\n  b {\n    c {}\n    foo: bar;\n  }\n}\n",
+        "a b {\n  foo: bar;\n}\n"
     );
 }
 
