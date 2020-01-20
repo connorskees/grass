@@ -2,6 +2,22 @@
 
 An implementation of the SASS spec in rust with 0 dependencies
 
+To run the official test suite,
+
+```bash
+git clone https://github.com/ConnorSkees/grass
+cd grass
+git submodule init
+git submodule update
+cargo b --release
+./sass-spec/sass-spec.rb -c './target/release/grass'
+```
+
+2020-01-20
+PASSING: 143
+FAILING: 4950
+TOTAL: 5093
+
 ## Features
 
 `grass` is far from being feature complete! Below you can see what SCSS features are currently supported.
