@@ -228,7 +228,7 @@ impl StyleSheet {
     ) -> SassResult<(Vec<Stmt>, Scope)> {
         Ok(StyleSheetParser {
             global_scope: Scope::new(),
-            lexer: Lexer::new(&fs::read_to_string(p.as_ref())?).peekable(),
+            lexer: Lexer::new(&String::from_utf8(fs::read(p.as_ref())?)?).peekable(),
             rules: Vec::new(),
             scope: 0,
             file: p.into(),
@@ -255,13 +255,13 @@ impl StyleSheet {
     }
 
     /// Write the internal representation as CSS to `buf`
-    /// 
+    ///
     /// ```
     /// use std::io::{BufWriter, stdout};
     /// use grass::{SassResult, StyleSheet};
     /// # use tempfile::Builder;
     /// # use std::io::Write;
-    /// 
+    ///
     /// fn main() -> SassResult<()> {
     ///     # let mut file = Builder::new().prefix("input.scss").tempfile().unwrap();
     ///     # write!(file, "a {{\n  color: red}}")?;
@@ -730,6 +730,11 @@ mod test_variables {
         "a {\n  $c: red;\nb {\n    $c: blue;\n  }\n  color: $c;\n}\n",
         "a {\n  color: blue;\n}\n"
     );
+    // test!(
+    //     nested_interpolation,
+    //     "$a: red; a {\n  color: #{#{$a}};\n}\n",
+    //     "a {\n  color: red;\n}\n"
+    // );
 }
 
 #[cfg(test)]
@@ -1210,11 +1215,11 @@ mod test_imports {
             #[test]
             fn $func() {
                 $(
-                    write!(Builder::new().prefix($name).tempfile().unwrap(), $content).unwrap();
+                    write!(Builder::new().rand_bytes(0).prefix("").suffix($name).tempfile_in("").unwrap(), $content).unwrap();
                 )*
                 let mut buf = Vec::new();
                 StyleSheet::new($input)
-                .expect(concat!("failed to parse on ", $input))
+                .expect(concat!("failed to parse in "))
                 .print_as_css(&mut buf)
                 .expect(concat!("failed to pretty print on ", $input));
                 assert_eq!(
@@ -1225,11 +1230,9 @@ mod test_imports {
         }
     }
 
-    // redundant test to ensure that the import tests are working
-    test_import!(basic, "a {\n  color: red;\n}\n" => "a {\n  color: red;\n}\n" | );
-
-    test_import!(imports_variable, "@import \"foo\";\na {\n color: $a;\n}" => "a {\n  color: red;\n}\n" | "foo"("$a: red;"));
-    test_import!(single_quotes_import, "@import 'foo';\na {\n color: $a;\n}" => "a {\n  color: red;\n}\n" | "foo"("$a: red;"));
-    test_import!(finds_name_scss, "@import \"foo\";\na {\n color: $a;\n}" => "a {\n  color: red;\n}\n" | "foo.scss"("$a: red;"));
-    test_import!(finds_underscore_name_scss, "@import \"foo\";\na {\n color: $a;\n}" => "a {\n  color: red;\n}\n" | "_foo.scss"("$a: red;"));
+    // we have to use test name as filename because tests are run multithreaded in the same directory, so some names may conflict
+    test_import!(imports_variable, "@import \"imports_variable\";\na {\n color: $a;\n}" => "a {\n  color: red;\n}\n" | "imports_variable"("$a: red;"));
+    test_import!(single_quotes_import, "@import 'single_quotes_import';\na {\n color: $a;\n}" => "a {\n  color: red;\n}\n" | "single_quotes_import"("$a: red;"));
+    test_import!(finds_name_scss, "@import \"finds_name_scss\";\na {\n color: $a;\n}" => "a {\n  color: red;\n}\n" | "finds_name_scss.scss"("$a: red;"));
+    test_import!(finds_underscore_name_scss, "@import \"finds_underscore_name_scss\";\na {\n color: $a;\n}" => "a {\n  color: red;\n}\n" | "_finds_underscore_name_scss.scss"("$a: red;"));
 }
