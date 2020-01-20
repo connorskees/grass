@@ -7,6 +7,7 @@ fn main() -> SassResult<()> {
     let matches = App::new("grass")
         .version(env!("CARGO_PKG_VERSION"))
         .about("SCSS Compiler in rust")
+        .version_short("v")
         .arg(
             Arg::with_name("stdin")
                 .long("stdin")
