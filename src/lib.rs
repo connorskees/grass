@@ -1221,7 +1221,8 @@ mod test_imports {
             #[test]
             fn $func() {
                 $(
-                    write!(Builder::new().rand_bytes(0).prefix("").suffix($name).tempfile_in("").unwrap(), $content).unwrap();
+                    let mut f = Builder::new().rand_bytes(0).prefix("").suffix($name).tempfile_in("").unwrap();
+                    write!(f, $content).unwrap();
                 )*
                 let mut buf = Vec::new();
                 StyleSheet::new($input)
