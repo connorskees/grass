@@ -19,7 +19,6 @@ required-features = ["commandline"]
 [lib]
 name = "grass"
 path = "src/lib.rs"
-edition = "2018"
 
 [dependencies]
 clap = { version = "2.33.0", optional = true }
