@@ -43,12 +43,15 @@ impl<'a> Iterator for Lexer<'a> {
             '(' => symbol!(self, OpenParen),
             ')' => symbol!(self, CloseParen),
             '+' => symbol!(self, Plus),
+            '=' => symbol!(self, Equal),
+            '?' => symbol!(self, QuestionMark),
+            '\\' => symbol!(self, BackSlash),
             '~' => symbol!(self, Tilde),
             '\'' => symbol!(self, SingleQuote),
             '"' => symbol!(self, DoubleQuote),
             ' ' => whitespace!(self, Space),
             '\t' => whitespace!(self, Tab),
-            '\n' => {
+            '\n' | '\x0C' => {
                 self.buf.next();
                 self.pos.newline();
                 TokenKind::Whitespace(Whitespace::Newline)
@@ -62,6 +65,7 @@ impl<'a> Iterator for Lexer<'a> {
             '*' => symbol!(self, Mul),
             '}' => symbol!(self, CloseCurlyBrace),
             '&' => symbol!(self, BitAnd),
+            '|' => symbol!(self, BitOr),
             '/' => self.lex_forward_slash(),
             '%' => {
                 self.buf.next();

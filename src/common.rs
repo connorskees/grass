@@ -62,6 +62,10 @@ pub enum Symbol {
     DoubleQuote,
     /// '
     SingleQuote,
+    /// ?
+    QuestionMark,
+    /// \
+    BackSlash,
 }
 
 impl Display for Symbol {
@@ -94,6 +98,8 @@ impl Display for Symbol {
             Self::Percent => write!(f, "%"),
             Self::DoubleQuote => write!(f, "\""),
             Self::SingleQuote => write!(f, "'"),
+            Self::QuestionMark => write!(f, "?"),
+            Self::BackSlash => write!(f, "\\"),
         }
     }
 }
@@ -130,6 +136,8 @@ impl TryFrom<char> for Symbol {
             '%' => Ok(Self::Percent),
             '"' => Ok(Self::DoubleQuote),
             '\'' => Ok(Self::SingleQuote),
+            '?' => Ok(Self::QuestionMark),
+            '\\' => Ok(Self::BackSlash),
             _ => Err("invalid symbol"),
         }
     }
