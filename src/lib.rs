@@ -43,7 +43,7 @@
 // todo! handle erroring on styles at the toplevel
 use std::fmt::{self, Display};
 use std::fs;
-use std::io::{self, Write};
+use std::io::Write;
 use std::iter::{Iterator, Peekable};
 use std::path::Path;
 
@@ -209,10 +209,12 @@ impl StyleSheet {
     }
 
     pub fn from_path<P: AsRef<Path> + Into<String>>(p: P) -> SassResult<StyleSheet> {
+        let s = String::from_utf8(fs::read(p.as_ref())?)?;
+        dbg!(&s);
         Ok(StyleSheet(
             StyleSheetParser {
                 global_scope: Scope::new(),
-                lexer: Lexer::new(&fs::read_to_string(p.as_ref())?).peekable(),
+                lexer: Lexer::new(&s).peekable(),
                 rules: Vec::new(),
                 scope: 0,
                 file: p.into(),
@@ -241,17 +243,17 @@ impl StyleSheet {
     /// to pure CSS
     ///
     /// Used mainly in debugging, but can at times be useful
-    pub fn pretty_print<W: Write>(&self, buf: W) -> io::Result<()> {
+    pub fn pretty_print<W: Write>(&self, buf: W) -> SassResult<()> {
         PrettyPrinter::new(buf).pretty_print(self)
     }
 
     #[allow(dead_code)]
-    fn pretty_print_selectors<W: Write>(&self, buf: W) -> io::Result<()> {
+    fn pretty_print_selectors<W: Write>(&self, buf: W) -> SassResult<()> {
         PrettyPrinter::new(buf).pretty_print_preserve_super_selectors(self)
     }
 
     /// Write the internal representation as CSS to `buf`
-    pub fn print_as_css<W: Write>(self, buf: &mut W) -> io::Result<()> {
+    pub fn print_as_css<W: Write>(self, buf: &mut W) -> SassResult<()> {
         Css::from_stylesheet(self).pretty_print(buf)
     }
 }

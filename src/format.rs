@@ -1,6 +1,6 @@
-use std::io::{self, Write};
+use std::io::Write;
 
-use crate::{RuleSet, Stmt, StyleSheet};
+use crate::{RuleSet, SassResult, Stmt, StyleSheet};
 
 pub(crate) struct PrettyPrinter<W: Write> {
     buf: W,
@@ -14,7 +14,7 @@ impl<W: Write> PrettyPrinter<W> {
 
     /// Pretty print `crate::Stmt`
     /// Throws away super selectors and variables
-    fn pretty_print_stmt(&mut self, stmt: &Stmt) -> io::Result<()> {
+    fn pretty_print_stmt(&mut self, stmt: &Stmt) -> SassResult<()> {
         let padding = vec![' '; self.scope * 2].iter().collect::<String>();
         match stmt {
             Stmt::MultilineComment(s) => writeln!(self.buf, "{}/*{}*/", padding, s)?,
@@ -40,7 +40,7 @@ impl<W: Write> PrettyPrinter<W> {
     ///
     /// The result should be an exact copy of the SCSS input
     /// Empty rules are included
-    pub fn pretty_print(&mut self, s: &StyleSheet) -> io::Result<()> {
+    pub fn pretty_print(&mut self, s: &StyleSheet) -> SassResult<()> {
         for rule in &s.0 {
             self.pretty_print_stmt(rule)?;
         }
@@ -49,7 +49,7 @@ impl<W: Write> PrettyPrinter<W> {
 
     /// Pretty print `crate::Stmt`
     /// Keeps super selectors
-    fn pretty_print_stmt_preserve_super_selectors(&mut self, stmt: &Stmt) -> io::Result<()> {
+    fn pretty_print_stmt_preserve_super_selectors(&mut self, stmt: &Stmt) -> SassResult<()> {
         let padding = vec![' '; self.scope * 2].iter().collect::<String>();
         match stmt {
             Stmt::MultilineComment(s) => writeln!(self.buf, "/*{}*/", s)?,
@@ -79,7 +79,7 @@ impl<W: Write> PrettyPrinter<W> {
     pub(crate) fn pretty_print_preserve_super_selectors(
         &mut self,
         s: &StyleSheet,
-    ) -> io::Result<()> {
+    ) -> SassResult<()> {
         for rule in &s.0 {
             self.pretty_print_stmt_preserve_super_selectors(rule)?;
         }

@@ -1,9 +1,9 @@
 use clap::{App, Arg};
-use std::io::{BufWriter, stdout};
+use std::io::{stdout, BufWriter};
 
-use grass::{SassResult, StyleSheet};
+use grass::StyleSheet;
 
-fn main() -> SassResult<()> {
+fn main() -> Result<(), String> {
     let matches = App::new("grass")
         .version(env!("CARGO_PKG_VERSION"))
         .about("SCSS Compiler in rust")
