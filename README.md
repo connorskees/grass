@@ -13,15 +13,15 @@ cargo b --release
 ./sass-spec/sass-spec.rb -c './target/release/grass'
 ```
 
-2020-01-20
-PASSING: 143
-FAILING: 4950
-TOTAL: 5093
+2020-01-20  
+PASSING: 143  
+FAILING: 4950  
+TOTAL: 5093  
 
 ## Features
 
 `grass` is far from being feature complete! Below you can see what SCSS features are currently supported.
-My MVP will include `values`, `@mixin`, `@include`, `@media`, `styles`, `operators`, `css functions` and `css at rules`.
+My personal MVP focuses on `values`, `@mixin`, `@include`, `@media`, `styles`, `operators`, `css functions` and `css at rules`.
 
 - [ ] Variables
   - [x] Scoping
@@ -29,7 +29,10 @@ My MVP will include `values`, `@mixin`, `@include`, `@media`, `styles`, `operato
   - [ ] Built-in variables
   - [ ] !default
   - [ ] !global
-- [x] @import
+- [ ] @import
+  - [x] SCSS imports
+  - [ ] CSS imports
+  - [ ] URL imports
 - [x] @error
 - [x] @warn
 - [x] @debug
