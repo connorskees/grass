@@ -44,6 +44,7 @@ impl From<FromUtf8Error> for SassError {
 }
 
 impl From<SassError> for String {
+    #[inline]
     fn from(error: SassError) -> String {
         error.message
     }

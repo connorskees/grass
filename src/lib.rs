@@ -117,6 +117,7 @@ pub enum TokenKind {
 }
 
 impl Display for TokenKind {
+    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             TokenKind::Ident(s) | TokenKind::Number(s) => write!(f, "{}", s),
@@ -194,6 +195,7 @@ enum Expr {
 }
 
 impl StyleSheet {
+    #[inline]
     pub fn new(input: &str) -> SassResult<StyleSheet> {
         Ok(StyleSheet(
             StyleSheetParser {
@@ -208,13 +210,12 @@ impl StyleSheet {
         ))
     }
 
+    #[inline]
     pub fn from_path<P: AsRef<Path> + Into<String>>(p: P) -> SassResult<StyleSheet> {
-        let s = String::from_utf8(fs::read(p.as_ref())?)?;
-        dbg!(&s);
         Ok(StyleSheet(
             StyleSheetParser {
                 global_scope: Scope::new(),
-                lexer: Lexer::new(&s).peekable(),
+                lexer: Lexer::new(&String::from_utf8(fs::read(p.as_ref())?)?).peekable(),
                 rules: Vec::new(),
                 scope: 0,
                 file: p.into(),
@@ -243,6 +244,7 @@ impl StyleSheet {
     /// to pure CSS
     ///
     /// Used mainly in debugging, but can at times be useful
+    #[inline]
     pub fn pretty_print<W: Write>(&self, buf: W) -> SassResult<()> {
         PrettyPrinter::new(buf).pretty_print(self)
     }
@@ -253,6 +255,7 @@ impl StyleSheet {
     }
 
     /// Write the internal representation as CSS to `buf`
+    #[inline]
     pub fn print_as_css<W: Write>(self, buf: &mut W) -> SassResult<()> {
         Css::from_stylesheet(self).pretty_print(buf)
     }
