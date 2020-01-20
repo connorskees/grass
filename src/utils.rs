@@ -48,17 +48,18 @@ pub(crate) fn deref_variable(name: &str, scope: &Scope) -> Vec<Token> {
 }
 
 pub(crate) fn eat_interpolation<I: Iterator<Item = Token>>(
-    tokens: &mut Peekable<I>,
+    tokens: &mut I,
     scope: &Scope,
 ) -> Vec<Token> {
     let mut val = Vec::new();
-    for tok in tokens {
+    while let Some(tok) = tokens.next() {
         match tok.kind {
             TokenKind::Symbol(Symbol::CloseCurlyBrace) => break,
             TokenKind::Symbol(Symbol::OpenCurlyBrace) => {
                 todo!("invalid character in interpolation")
             }
             TokenKind::Variable(ref v) => val.extend(deref_variable(v, scope)),
+            TokenKind::Interpolation => val.extend(eat_interpolation(tokens, scope)),
             _ => val.push(tok),
         }
     }

@@ -581,12 +581,18 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                 }
             }
             TokenKind::Interpolation => {
+                let mut n = 0;
                 while let Some(tok) = toks.next() {
-                    if tok.kind == TokenKind::Symbol(Symbol::CloseCurlyBrace) {
-                        values.push(tok);
-                        break;
+                    match tok.kind {
+                        TokenKind::Symbol(Symbol::OpenCurlyBrace) => n += 1,
+                        TokenKind::Symbol(Symbol::CloseCurlyBrace) => n -= 1,
+                        TokenKind::Interpolation => n += 1,
+                        _ => {},
                     }
                     values.push(tok);
+                    if n == 0 {
+                        break;
+                    }
                 }
             }
             _ => match toks.next() {
@@ -730,11 +736,11 @@ mod test_variables {
         "a {\n  $c: red;\nb {\n    $c: blue;\n  }\n  color: $c;\n}\n",
         "a {\n  color: blue;\n}\n"
     );
-    // test!(
-    //     nested_interpolation,
-    //     "$a: red; a {\n  color: #{#{$a}};\n}\n",
-    //     "a {\n  color: red;\n}\n"
-    // );
+    test!(
+        nested_interpolation,
+        "$a: red; a {\n  color: #{#{$a}};\n}\n",
+        "a {\n  color: red;\n}\n"
+    );
 }
 
 #[cfg(test)]
