@@ -6,10 +6,10 @@ use crate::utils::devour_whitespace;
 use crate::{Token, TokenKind};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct FuncArgs(pub Vec<FuncArg>);
+pub(crate) struct FuncArgs(pub Vec<FuncArg>);
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct FuncArg {
+pub(crate) struct FuncArg {
     pub name: String,
     pub default: Option<Vec<Token>>,
 }
@@ -21,7 +21,7 @@ impl FuncArgs {
 }
 
 #[derive(Debug, Clone, std::default::Default)]
-pub struct CallArgs(pub BTreeMap<String, Vec<Token>>);
+pub(crate) struct CallArgs(pub BTreeMap<String, Vec<Token>>);
 
 impl CallArgs {
     pub fn new() -> Self {
@@ -37,7 +37,7 @@ impl CallArgs {
     }
 }
 
-pub fn eat_func_args<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -> FuncArgs {
+pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -> FuncArgs {
     let mut args: Vec<FuncArg> = Vec::new();
 
     devour_whitespace(toks);
@@ -112,7 +112,7 @@ pub fn eat_func_args<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -> FuncA
     FuncArgs(args)
 }
 
-pub fn eat_call_args<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -> CallArgs {
+pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -> CallArgs {
     let mut args: BTreeMap<String, Vec<Token>> = BTreeMap::new();
     devour_whitespace(toks);
     let mut name: Option<String> = None;

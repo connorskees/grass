@@ -3,7 +3,7 @@ use crate::{SassResult, Stmt, StyleSheet};
 use std::ffi::OsStr;
 use std::path::Path;
 
-pub fn import<P: AsRef<Path>>(path: P) -> SassResult<(Vec<Stmt>, Scope)> {
+pub(crate) fn import<P: AsRef<Path>>(path: P) -> SassResult<(Vec<Stmt>, Scope)> {
     let mut rules: Vec<Stmt> = Vec::new();
     let mut scope = Scope::new();
     let path_buf = path.as_ref().to_path_buf();

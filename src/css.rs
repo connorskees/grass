@@ -4,14 +4,14 @@ use std::fmt;
 use std::io::Write;
 
 #[derive(Debug, Clone)]
-pub enum Toplevel {
+enum Toplevel {
     RuleSet(Selector, Vec<BlockEntry>),
     MultilineComment(String),
     // AtRule(AtRule),
 }
 
 #[derive(Debug, Clone)]
-pub enum BlockEntry {
+enum BlockEntry {
     Style(Style),
     MultilineComment(String),
     // AtRule(AtRule),

@@ -7,7 +7,7 @@ use std::vec::IntoIter;
 
 /// A style: `color: red`
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Style {
+pub(crate) struct Style {
     property: String,
     value: String,
 }

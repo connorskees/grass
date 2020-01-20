@@ -476,7 +476,7 @@ impl Display for Pos {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct Scope {
+pub(crate) struct Scope {
     pub vars: HashMap<String, Vec<Token>>,
     pub mixins: HashMap<String, Mixin>,
 }

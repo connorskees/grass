@@ -8,7 +8,7 @@ use crate::units::Unit;
 use crate::{Token, TokenKind, Whitespace};
 
 #[derive(Debug, Clone)]
-pub struct Lexer<'a> {
+pub(crate) struct Lexer<'a> {
     tokens: Vec<Token>,
     buf: Peekable<Chars<'a>>,
     pos: Pos,

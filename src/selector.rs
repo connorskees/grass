@@ -7,7 +7,7 @@ use std::string::ToString;
 use std::vec::IntoIter;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Selector(pub Vec<SelectorKind>);
+pub(crate) struct Selector(pub Vec<SelectorKind>);
 
 impl Display for Selector {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -47,7 +47,7 @@ impl Display for Selector {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum SelectorKind {
+pub(crate) enum SelectorKind {
     /// An element selector: `button`
     Element(String),
     /// An id selector: `#footer`

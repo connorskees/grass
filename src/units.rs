@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 use std::fmt;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum Unit {
+pub(crate) enum Unit {
     // Absolute units
     /// Pixels
     Px,

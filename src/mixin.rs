@@ -8,7 +8,7 @@ use crate::utils::devour_whitespace;
 use crate::{eat_expr, Expr, RuleSet, Stmt, Token, TokenKind};
 
 #[derive(Debug, Clone)]
-pub struct Mixin {
+pub(crate) struct Mixin {
     scope: Scope,
     args: FuncArgs,
     body: Peekable<IntoIter<Token>>,
@@ -92,7 +92,7 @@ impl Mixin {
         self.eval(super_selector)
     }
 
-    pub fn eval(&mut self, super_selector: &Selector) -> Result<Vec<Stmt>, (Pos, String)> {
+    fn eval(&mut self, super_selector: &Selector) -> Result<Vec<Stmt>, (Pos, String)> {
         let mut stmts = Vec::new();
         while let Some(expr) = eat_expr(&mut self.body, &self.scope, super_selector)? {
             match expr {
@@ -118,7 +118,7 @@ impl Mixin {
     }
 }
 
-pub fn eat_include<I: Iterator<Item = Token>>(
+pub(crate) fn eat_include<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
     scope: &Scope,
     super_selector: &Selector,

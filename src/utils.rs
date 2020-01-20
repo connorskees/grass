@@ -2,11 +2,11 @@ use crate::common::{Pos, Symbol, Whitespace};
 use crate::{Scope, Token, TokenKind};
 use std::iter::{Iterator, Peekable};
 
-pub trait IsWhitespace {
+pub(crate) trait IsWhitespace {
     fn is_whitespace(&self) -> bool;
 }
 
-pub fn devour_whitespace<I: Iterator<Item = W>, W: IsWhitespace>(s: &mut Peekable<I>) -> bool {
+pub(crate) fn devour_whitespace<I: Iterator<Item = W>, W: IsWhitespace>(s: &mut Peekable<I>) -> bool {
     let mut found_whitespace = false;
     while let Some(w) = s.peek() {
         if !w.is_whitespace() {
@@ -19,7 +19,7 @@ pub fn devour_whitespace<I: Iterator<Item = W>, W: IsWhitespace>(s: &mut Peekabl
 }
 
 #[track_caller]
-pub fn deref_variable(name: &str, scope: &Scope) -> Vec<Token> {
+pub(crate) fn deref_variable(name: &str, scope: &Scope) -> Vec<Token> {
     let mut toks = scope
         .vars
         .get(name)
@@ -45,7 +45,7 @@ pub fn deref_variable(name: &str, scope: &Scope) -> Vec<Token> {
     val
 }
 
-pub fn eat_interpolation<I: Iterator<Item = Token>>(
+pub(crate) fn eat_interpolation<I: Iterator<Item = Token>>(
     tokens: &mut Peekable<I>,
     scope: &Scope,
 ) -> Vec<Token> {
@@ -63,7 +63,7 @@ pub fn eat_interpolation<I: Iterator<Item = Token>>(
     val
 }
 
-pub fn eat_variable_value<I: Iterator<Item = Token>>(
+pub(crate) fn eat_variable_value<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
     scope: &Scope,
 ) -> Result<Vec<Token>, (Pos, String)> {

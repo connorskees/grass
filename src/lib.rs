@@ -76,7 +76,7 @@ mod utils;
 pub type SassResult<T> = Result<T, SassError>;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Token {
+pub(crate) struct Token {
     pos: Pos,
     pub kind: TokenKind,
 }
@@ -100,10 +100,9 @@ impl IsWhitespace for &Token {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum TokenKind {
+pub(crate) enum TokenKind {
     Ident(String),
     Symbol(Symbol),
-    String(String),
     AtRule(AtRuleKind),
     Keyword(Keyword),
     Number(String),
@@ -122,7 +121,6 @@ impl Display for TokenKind {
         match self {
             TokenKind::Ident(s) | TokenKind::Number(s) => write!(f, "{}", s),
             TokenKind::Symbol(s) => write!(f, "{}", s),
-            TokenKind::String(s) => write!(f, "\"{}\"", s),
             TokenKind::AtRule(s) => write!(f, "{}", s),
             TokenKind::Op(s) => write!(f, "{}", s),
             TokenKind::Unit(s) => write!(f, "{}", s),
@@ -143,7 +141,7 @@ impl Display for TokenKind {
 pub struct StyleSheet(Vec<Stmt>);
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum Stmt {
+pub(crate) enum Stmt {
     /// A [`Style`](/grass/style/struct.Style)
     Style(Style),
     /// A  [`RuleSet`](/grass/struct.RuleSet.html)
@@ -163,7 +161,7 @@ pub enum Stmt {
 /// }
 /// ```
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct RuleSet {
+pub(crate) struct RuleSet {
     selector: Selector,
     rules: Vec<Stmt>,
     // potential optimization: we don't *need* to own the selector
@@ -245,16 +243,32 @@ impl StyleSheet {
     ///
     /// Used mainly in debugging, but can at times be useful
     #[inline]
-    pub fn pretty_print<W: Write>(&self, buf: W) -> SassResult<()> {
+    #[allow(dead_code)]
+    fn pretty_print<W: Write>(&self, buf: W) -> SassResult<()> {
         PrettyPrinter::new(buf).pretty_print(self)
     }
 
+    #[inline]
     #[allow(dead_code)]
     fn pretty_print_selectors<W: Write>(&self, buf: W) -> SassResult<()> {
         PrettyPrinter::new(buf).pretty_print_preserve_super_selectors(self)
     }
 
     /// Write the internal representation as CSS to `buf`
+    /// 
+    /// ```
+    /// use std::io::{BufWriter, stdout};
+    /// use grass::{SassResult, StyleSheet};
+    /// # use tempfile::Builder;
+    /// # use std::io::Write;
+    /// 
+    /// fn main() -> SassResult<()> {
+    ///     # let mut file = Builder::new().prefix("input.scss").tempfile().unwrap();
+    ///     # write!(file, "a {{\n  color: red}}")?;
+    ///     let mut buf = BufWriter::new(stdout());
+    ///     StyleSheet::from_path("input.scss")?.print_as_css(&mut buf)
+    /// }
+    /// ```
     #[inline]
     pub fn print_as_css<W: Write>(self, buf: &mut W) -> SassResult<()> {
         Css::from_stylesheet(self).pretty_print(buf)
@@ -1190,7 +1204,6 @@ mod test_mixins {
 mod test_imports {
     use super::*;
     use tempfile::Builder;
-    use Write;
 
     macro_rules! test_import {
         ($func:ident, $input:literal => $output:literal | $( $name:literal($content:literal) ),*) => {
