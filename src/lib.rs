@@ -487,6 +487,19 @@ fn eat_at_rule<I: Iterator<Item = Token>>(
             };
             Ok(Expr::MixinDecl(name, mixin))
         }
+        AtRuleKind::Use => todo!("@use not yet implemented"),
+        AtRuleKind::Annotation => todo!("@annotation not yet implemented"),
+        AtRuleKind::AtRoot => todo!("@at-root not yet implemented"),
+        AtRuleKind::Charset => todo!("@charset not yet implemented"),
+        AtRuleKind::Each => todo!("@each not yet implemented"),
+        AtRuleKind::Extend => todo!("@extend not yet implemented"),
+        AtRuleKind::If => todo!("@if not yet implemented"),
+        AtRuleKind::Else => todo!("@else not yet implemented"),
+        AtRuleKind::For => todo!("@for not yet implemented"),
+        AtRuleKind::While => todo!("@while not yet implemented"),
+        AtRuleKind::Media => todo!("@media not yet implemented"),
+        AtRuleKind::Function => todo!("@function not yet implemented"),
+        AtRuleKind::Keyframes => todo!("@keyframes not yet implemented"),
         _ => todo!("encountered unimplemented at rule"),
     }
 }

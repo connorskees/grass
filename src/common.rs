@@ -170,6 +170,7 @@ pub enum AtRuleKind {
     /// Prints a message for debugging purposes
     Debug,
     If,
+    Else,
     Each,
     For,
     While,
@@ -231,6 +232,7 @@ impl TryFrom<&str> for AtRuleKind {
             "warn" => Ok(Self::Warn),
             "debug" => Ok(Self::Debug),
             "if" => Ok(Self::If),
+            "else" => Ok(Self::Else),
             "each" => Ok(Self::Each),
             "for" => Ok(Self::For),
             "while" => Ok(Self::While),
@@ -271,6 +273,7 @@ impl Display for AtRuleKind {
             Self::Warn => write!(f, "@warn"),
             Self::Debug => write!(f, "@debug"),
             Self::If => write!(f, "@if"),
+            Self::Else => write!(f, "@else"),
             Self::Each => write!(f, "@each"),
             Self::For => write!(f, "@for"),
             Self::While => write!(f, "@while"),
