@@ -1,7 +1,7 @@
 use std::iter::Peekable;
 use std::vec::IntoIter;
 
-use crate::common::{Pos, Printer, Scope, Symbol};
+use crate::common::{Pos, Scope, Symbol};
 use crate::function::{eat_call_args, eat_func_args, CallArgs, FuncArgs};
 use crate::selector::Selector;
 use crate::utils::devour_whitespace;
@@ -20,10 +20,10 @@ impl Mixin {
         Mixin { scope, args, body }
     }
 
-    pub fn from_tokens<I: Iterator<Item = Token>>(
+    pub fn decl_from_tokens<I: Iterator<Item = Token>>(
         toks: &mut Peekable<I>,
         scope: &Scope,
-    ) -> Result<(String, Mixin), Printer> {
+    ) -> Result<(String, Mixin), (Pos, String)> {
         let Token { pos, .. } = toks
             .next()
             .expect("this must exist because we have already peeked");
@@ -34,7 +34,7 @@ impl Mixin {
                 ..
             }) => s,
             _ => {
-                return Err(Printer::Error(
+                return Err((
                     pos,
                     String::from("expected identifier after mixin declaration"),
                 ))
@@ -50,7 +50,7 @@ impl Mixin {
                 kind: TokenKind::Symbol(Symbol::OpenCurlyBrace),
                 ..
             }) => FuncArgs::new(),
-            _ => return Err(Printer::Error(pos, String::from("expected `(` or `{`"))),
+            _ => return Err((pos, String::from("expected `(` or `{`"))),
         };
 
         let mut nesting = 1;
@@ -67,7 +67,7 @@ impl Mixin {
                 }
                 body.push(tok)
             } else {
-                return Err(Printer::Error(pos, String::from("unexpected EOF")));
+                return Err((pos, String::from("unexpected EOF")));
             }
         }
 

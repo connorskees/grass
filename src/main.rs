@@ -362,7 +362,7 @@ impl<'a> StyleSheetParser<'a> {
                 }
                 TokenKind::AtRule(AtRuleKind::Mixin) => {
                     let (name, mixin) =
-                        Mixin::from_tokens(&mut self.lexer, &self.global_scope).unwrap();
+                        Mixin::decl_from_tokens(&mut self.lexer, &self.global_scope).unwrap();
                     self.global_scope.mixins.insert(name, mixin);
                 }
                 TokenKind::AtRule(_) => {
@@ -462,7 +462,10 @@ fn eat_at_rule<I: Iterator<Item = Token>>(
             Err(Printer::Debug(pos, message))
         }
         AtRuleKind::Mixin => {
-            let (name, mixin) = Mixin::from_tokens(toks, scope)?;
+            let (name, mixin) = match Mixin::decl_from_tokens(toks, scope) {
+                Ok(m) => m,
+                Err(e) => return Err(Printer::Error(e.0, e.1)),
+            };
             Ok(Expr::MixinDecl(name, mixin))
         }
         _ => todo!("encountered unimplemented at rule"),
@@ -541,7 +544,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
             }
             TokenKind::AtRule(AtRuleKind::Mixin) => {
                 toks.next();
-                let (name, mixin) = Mixin::from_tokens(toks, scope).unwrap();
+                let (name, mixin) = Mixin::decl_from_tokens(toks, scope)?;
                 return Ok(Some(Expr::MixinDecl(name, mixin)));
             }
             TokenKind::AtRule(_) => {
