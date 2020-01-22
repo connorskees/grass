@@ -4,7 +4,6 @@ use std::str::Chars;
 
 use crate::common::{AtRuleKind, Keyword, Op, Pos, Symbol};
 use crate::selector::{Attribute, AttributeKind};
-use crate::units::Unit;
 use crate::{Token, TokenKind, Whitespace};
 
 #[derive(Debug, Clone)]
@@ -67,11 +66,7 @@ impl<'a> Iterator for Lexer<'a> {
             '&' => symbol!(self, BitAnd),
             '|' => symbol!(self, BitOr),
             '/' => self.lex_forward_slash(),
-            '%' => {
-                self.buf.next();
-                self.pos.next_char();
-                TokenKind::Unit(Unit::Percent)
-            }
+            '%' => symbol!(self, Percent),
             '[' => {
                 self.buf.next();
                 self.pos.next_char();
@@ -361,10 +356,6 @@ impl<'a> Lexer<'a> {
 
         if let Ok(kw) = Keyword::try_from(string.as_ref()) {
             return TokenKind::Keyword(kw);
-        }
-
-        if let Ok(kw) = Unit::try_from(string.as_ref()) {
-            return TokenKind::Unit(kw);
         }
 
         TokenKind::Ident(string)
