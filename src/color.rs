@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 use std::fmt::{self, Display};
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum Color {
     AliceBlue,            // = 0xF0F8FF,
     AntiqueWhite,         // = 0xFAEBD7,
