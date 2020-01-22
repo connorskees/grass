@@ -1,7 +1,6 @@
-use std::convert::TryFrom;
 use std::fmt;
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) enum Unit {
     // Absolute units
     /// Pixels
@@ -85,51 +84,52 @@ pub(crate) enum Unit {
 
     /// Represents a fraction of the available space in the grid container
     Fr,
+
+    /// Unknown unit
+    Unknown(String),
     /// Unspecified unit
     None,
 }
 
-impl TryFrom<&str> for Unit {
-    type Error = &'static str;
-
-    fn try_from(unit: &str) -> Result<Self, Self::Error> {
+impl From<&String> for Unit {
+    fn from(unit: &String) -> Self {
         match unit.to_ascii_lowercase().as_bytes() {
-            b"px" => Ok(Unit::Px),
-            b"mm" => Ok(Unit::Mm),
-            b"in" => Ok(Unit::In),
-            b"cm" => Ok(Unit::Cm),
-            b"Q" => Ok(Unit::Q),
-            b"pt" => Ok(Unit::Pt),
-            b"pc" => Ok(Unit::Pc),
-            b"em" => Ok(Unit::Em),
-            b"rem" => Ok(Unit::Rem),
-            b"lh" => Ok(Unit::Lh),
-            b"%" => Ok(Unit::Percent),
-            b"ex" => Ok(Unit::Ex),
-            b"ch" => Ok(Unit::Ch),
-            b"cap" => Ok(Unit::Cap),
-            b"ic" => Ok(Unit::Ic),
-            b"rlh" => Ok(Unit::Rlh),
-            b"vw" => Ok(Unit::Vw),
-            b"vh" => Ok(Unit::Vh),
-            b"vmin" => Ok(Unit::Vmin),
-            b"vmax" => Ok(Unit::Vmax),
-            b"vi" => Ok(Unit::Vi),
-            b"vb" => Ok(Unit::Vb),
-            b"deg" => Ok(Unit::Deg),
-            b"grad" => Ok(Unit::Grad),
-            b"rad" => Ok(Unit::Rad),
-            b"turn" => Ok(Unit::Turn),
-            b"s" => Ok(Unit::S),
-            b"ms" => Ok(Unit::Ms),
-            b"Hz" => Ok(Unit::Hz),
-            b"kHz" => Ok(Unit::Khz),
-            b"dpi" => Ok(Unit::Dpi),
-            b"dpcm" => Ok(Unit::Dpcm),
-            b"dppx" => Ok(Unit::Dppx),
-            b"x" => Ok(Unit::X),
-            b"fr" => Ok(Unit::Fr),
-            _ => Err("invalid unit"),
+            b"px" => Unit::Px,
+            b"mm" => Unit::Mm,
+            b"in" => Unit::In,
+            b"cm" => Unit::Cm,
+            b"Q" => Unit::Q,
+            b"pt" => Unit::Pt,
+            b"pc" => Unit::Pc,
+            b"em" => Unit::Em,
+            b"rem" => Unit::Rem,
+            b"lh" => Unit::Lh,
+            b"%" => Unit::Percent,
+            b"ex" => Unit::Ex,
+            b"ch" => Unit::Ch,
+            b"cap" => Unit::Cap,
+            b"ic" => Unit::Ic,
+            b"rlh" => Unit::Rlh,
+            b"vw" => Unit::Vw,
+            b"vh" => Unit::Vh,
+            b"vmin" => Unit::Vmin,
+            b"vmax" => Unit::Vmax,
+            b"vi" => Unit::Vi,
+            b"vb" => Unit::Vb,
+            b"deg" => Unit::Deg,
+            b"grad" => Unit::Grad,
+            b"rad" => Unit::Rad,
+            b"turn" => Unit::Turn,
+            b"s" => Unit::S,
+            b"ms" => Unit::Ms,
+            b"Hz" => Unit::Hz,
+            b"kHz" => Unit::Khz,
+            b"dpi" => Unit::Dpi,
+            b"dpcm" => Unit::Dpcm,
+            b"dppx" => Unit::Dppx,
+            b"x" => Unit::X,
+            b"fr" => Unit::Fr,
+            _ => Unit::Unknown(String::from(unit)),
         }
     }
 }
@@ -173,51 +173,9 @@ impl Into<String> for Unit {
             Unit::X => "x",
             Unit::Fr => "fr",
             Unit::None => "",
+            Unit::Unknown(ref s) => s,
         }
         .into()
-    }
-}
-
-impl Into<&'static str> for Unit {
-    fn into(self) -> &'static str {
-        match self {
-            Unit::Px => "px",
-            Unit::Mm => "mm",
-            Unit::In => "in",
-            Unit::Cm => "cm",
-            Unit::Q => "Q",
-            Unit::Pt => "pt",
-            Unit::Pc => "pc",
-            Unit::Em => "em",
-            Unit::Rem => "rem",
-            Unit::Lh => "lh",
-            Unit::Percent => "%",
-            Unit::Ex => "ex",
-            Unit::Ch => "ch",
-            Unit::Cap => "cap",
-            Unit::Ic => "ic",
-            Unit::Rlh => "rlh",
-            Unit::Vw => "vw",
-            Unit::Vh => "vh",
-            Unit::Vmin => "vmin",
-            Unit::Vmax => "vmax",
-            Unit::Vi => "vi",
-            Unit::Vb => "vb",
-            Unit::Deg => "deg",
-            Unit::Grad => "grad",
-            Unit::Rad => "rad",
-            Unit::Turn => "turn",
-            Unit::S => "s",
-            Unit::Ms => "ms",
-            Unit::Hz => "Hz",
-            Unit::Khz => "kHz",
-            Unit::Dpi => "dpi",
-            Unit::Dpcm => "dpcm",
-            Unit::Dppx => "dppx",
-            Unit::X => "x",
-            Unit::Fr => "fr",
-            Unit::None => "",
-        }
     }
 }
 
@@ -259,6 +217,7 @@ impl fmt::Display for Unit {
             Unit::Dppx => write!(f, "dppx"),
             Unit::X => write!(f, "x"),
             Unit::Fr => write!(f, "fr"),
+            Unit::Unknown(s) => write!(f, "{}", s),
             Unit::None => write!(f, ""),
         }
     }
