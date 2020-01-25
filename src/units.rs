@@ -17,6 +17,7 @@ pub(crate) enum Unit {
     Pt,
     /// Picas
     Pc,
+
     // Font relative units
     /// Font size of the parent element
     Em,
@@ -82,6 +83,7 @@ pub(crate) enum Unit {
     /// Alias for dppx
     X,
 
+    // Other units
     /// Represents a fraction of the available space in the grid container
     Fr,
 
