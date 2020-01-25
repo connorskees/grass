@@ -1,6 +1,7 @@
 use std::iter::Peekable;
 use std::vec::IntoIter;
 
+use crate::atrule::AtRule;
 use crate::common::{Pos, Scope, Symbol};
 use crate::args::{eat_func_args, FuncArgs};
 use crate::utils::devour_whitespace;
@@ -10,12 +11,12 @@ use crate::{Token, TokenKind};
 pub(crate) struct Function {
     scope: Scope,
     args: FuncArgs,
-    body: Peekable<IntoIter<Token>>,
+    body: Peekable<IntoIter<AtRule>>,
 }
 
 
 impl Function {
-    pub fn new(scope: Scope, args: FuncArgs, body: Vec<Token>) -> Self {
+    pub fn new(scope: Scope, args: FuncArgs, body: Vec<AtRule>) -> Self {
         let body = body.into_iter().peekable();
         Function { scope, args, body }
     }
@@ -47,18 +48,16 @@ impl Function {
         };
 
         let mut nesting = 1;
-        let mut body = Vec::new();
+        let mut body: Vec<AtRule> = Vec::new();
 
         while nesting > 0 {
             if let Some(tok) = toks.next() {
                 match &tok.kind {
-                    TokenKind::Symbol(Symbol::OpenCurlyBrace)
-                    // interpolation token eats the opening brace but not the closing
-                    | TokenKind::Interpolation => nesting += 1,
+                    TokenKind::AtRule(rule) => body.push(AtRule::from_tokens(&rule, tok.pos, toks, scope)),
                     TokenKind::Symbol(Symbol::CloseCurlyBrace) => nesting -= 1,
                     _ => {}
                 }
-                body.push(tok)
+                
             } else {
                 return Err((pos, String::from("unexpected EOF")));
             }
