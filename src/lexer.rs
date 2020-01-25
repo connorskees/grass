@@ -2,7 +2,8 @@ use std::convert::TryFrom;
 use std::iter::Peekable;
 use std::str::Chars;
 
-use crate::common::{AtRuleKind, Keyword, Op, Pos, Symbol};
+use crate::atrule::AtRuleKind;
+use crate::common::{Keyword, Op, Pos, Symbol};
 use crate::selector::{Attribute, AttributeKind};
 use crate::{Token, TokenKind, Whitespace};
 

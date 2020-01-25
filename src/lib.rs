@@ -47,7 +47,8 @@ use std::io::Write;
 use std::iter::{Iterator, Peekable};
 use std::path::Path;
 
-use crate::common::{AtRuleKind, Keyword, Op, Pos, Printer, Scope, Symbol, Whitespace};
+use crate::atrule::AtRuleKind;
+use crate::common::{Keyword, Op, Pos, Printer, Scope, Symbol, Whitespace};
 use crate::css::Css;
 use crate::error::SassError;
 use crate::format::PrettyPrinter;
@@ -59,6 +60,7 @@ use crate::style::Style;
 use crate::utils::{devour_whitespace, eat_variable_value, IsComment, IsWhitespace};
 
 mod args;
+mod atrule;
 mod color;
 mod common;
 mod css;
