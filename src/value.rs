@@ -271,9 +271,8 @@ impl Value {
             TokenKind::Symbol(Symbol::DoubleQuote) => {
                 let mut s = String::new();
                 while let Some(tok) = toks.next() {
-                    match tok.kind {
-                        TokenKind::Symbol(Symbol::DoubleQuote) => break,
-                        _ => {}
+                    if tok.kind == TokenKind::Symbol(Symbol::DoubleQuote) {
+                        break;
                     }
                     s.push_str(&tok.kind.to_string());
                 }
@@ -282,9 +281,8 @@ impl Value {
             TokenKind::Symbol(Symbol::SingleQuote) => {
                 let mut s = String::new();
                 while let Some(tok) = toks.next() {
-                    match tok.kind {
-                        TokenKind::Symbol(Symbol::SingleQuote) => break,
-                        _ => {}
+                    if tok.kind == TokenKind::Symbol(Symbol::SingleQuote) {
+                        break;
                     }
                     s.push_str(&tok.kind.to_string());
                 }

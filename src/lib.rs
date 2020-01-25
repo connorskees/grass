@@ -639,7 +639,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
 fn eat_interpolation<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -> Vec<Token> {
     let mut vals = Vec::new();
     let mut n = 0;
-    while let Some(tok) = toks.next() {
+    for tok in toks {
         match tok.kind {
             TokenKind::Symbol(Symbol::OpenCurlyBrace) => n += 1,
             TokenKind::Symbol(Symbol::CloseCurlyBrace) => n -= 1,
