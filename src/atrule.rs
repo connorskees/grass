@@ -5,6 +5,7 @@ use crate::common::Pos;
 use crate::function::Function;
 use crate::mixin::Mixin;
 
+#[derive(Debug, Clone)]
 pub(crate) enum AtRule {
     Error(Pos, String),
     Warn(Pos, String),
