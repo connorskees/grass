@@ -10,7 +10,7 @@ use std::vec::IntoIter;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Style {
     property: String,
-    value: String,
+    value: Value,
 }
 
 impl Display for Style {
@@ -59,58 +59,8 @@ impl<'a> StyleParser<'a> {
 
         devour_whitespace_or_comment(&mut self.tokens);
 
-        let mut value = String::new();
+        let value = Value::from_tokens(&mut self.tokens, self.scope).unwrap();
 
-        // read styles
-        while let Some(tok) = self.tokens.next() {
-            match &tok.kind {
-                TokenKind::Whitespace(_) => {
-                    while let Some(Token { kind, .. }) = self.tokens.peek() {
-                        match kind {
-                            TokenKind::Whitespace(_) | TokenKind::MultilineComment(_) => {
-                                self.tokens.next();
-                                continue;
-                            }
-                            TokenKind::Ident(ref s) => {
-                                if s == &String::from("-") {
-                                    self.tokens.next();
-                                    value.push('-');
-                                    self.devour_whitespace_or_comment();
-                                    break;
-                                }
-                            }
-                            TokenKind::Interpolation => {
-                                self.tokens.next();
-                                value.push_str(
-                                    &eat_interpolation(&mut self.tokens, self.scope)
-                                        .iter()
-                                        .map(|x| x.kind.to_string())
-                                        .collect::<String>(),
-                                );
-                                break;
-                            }
-                            _ => {}
-                        }
-                        value.push(' ');
-                        break;
-                    }
-                }
-                TokenKind::Variable(ref v) => value.push_str(
-                    &deref_variable(v, self.scope)
-                        .iter()
-                        .map(|x| x.kind.to_string())
-                        .collect::<String>(),
-                ),
-                TokenKind::MultilineComment(_) => continue,
-                TokenKind::Interpolation => value.push_str(
-                    &eat_interpolation(&mut self.tokens, self.scope)
-                        .iter()
-                        .map(|x| x.kind.to_string())
-                        .collect::<String>(),
-                ),
-                _ => value.push_str(&tok.kind.to_string()),
-            }
-        }
         Style { property, value }
     }
 }

@@ -71,6 +71,7 @@ mod selector;
 mod style;
 mod units;
 mod utils;
+mod value;
 
 pub type SassResult<T> = Result<T, SassError>;
 
@@ -1290,4 +1291,25 @@ mod test_imports {
     test_import!(single_quotes_import, "@import 'single_quotes_import';\na {\n color: $a;\n}" => "a {\n  color: red;\n}\n" | "single_quotes_import"("$a: red;"));
     test_import!(finds_name_scss, "@import \"finds_name_scss\";\na {\n color: $a;\n}" => "a {\n  color: red;\n}\n" | "finds_name_scss.scss"("$a: red;"));
     test_import!(finds_underscore_name_scss, "@import \"finds_underscore_name_scss\";\na {\n color: $a;\n}" => "a {\n  color: red;\n}\n" | "_finds_underscore_name_scss.scss"("$a: red;"));
+}
+
+#[cfg(test)]
+mod test_values {
+    use super::*;
+    test!(comma_list_ident, "a {\n  color: red, white, blue;\n}\n");
+    test!(space_list_ident, "a {\n  color: red white blue;\n}\n");
+    test!(comma_list_number, "a {\n  color: 1, 2, 3;\n}\n");
+    test!(space_list_number, "a {\n  color: 1 2 3;\n}\n");
+    test!(comma_space_list_number, "a {\n  color: 1 1, 2 2, 3 3;\n}\n");
+    test!(
+        whitespace_space_list_number,
+        "a {\n  color:  1  2  3  ;\n}\n",
+        "a {\n  color: 1 2 3;\n}\n"
+    );
+    test!(
+        whitespace_comma_list_number,
+        "a {\n  color:  1 ,  2 ,  3  ;\n}\n",
+        "a {\n  color: 1, 2, 3;\n}\n"
+    );
+    test!(number, "a {\n  color: 1;\n}\n");
 }
