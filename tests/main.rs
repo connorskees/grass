@@ -459,6 +459,11 @@ mod test_mixins {
         "b {\n  color: red;\n}\n"
     );
     test!(
+        empty_mixin,
+        "@mixin a {}\n\nb {\n  @include a;\n}\n",
+        ""
+    );
+    test!(
         mixin_two_styles,
         "@mixin a {\n  color: red;\n  color: blue;\n}\n\nb {\n  @include a;\n}\n",
         "b {\n  color: red;\n  color: blue;\n}\n"
