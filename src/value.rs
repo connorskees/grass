@@ -159,6 +159,7 @@ impl Value {
             None => return Some(left),
         };
         match next.kind {
+            TokenKind::Symbol(Symbol::SemiColon) => return Some(left),
             TokenKind::Symbol(Symbol::Comma) => {
                 toks.next();
                 devour_whitespace_or_comment(toks);
