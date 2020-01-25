@@ -47,8 +47,8 @@ use std::io::Write;
 use std::iter::{Iterator, Peekable};
 use std::path::Path;
 
-use crate::atrule::AtRuleKind;
-use crate::common::{Keyword, Op, Pos, Printer, Scope, Symbol, Whitespace};
+use crate::atrule::{AtRule, AtRuleKind};
+use crate::common::{Keyword, Op, Pos, Scope, Symbol, Whitespace};
 use crate::css::Css;
 use crate::error::SassError;
 use crate::format::PrettyPrinter;
@@ -410,10 +410,11 @@ impl<'a> StyleSheetParser<'a> {
                     }) = self.lexer.next()
                     {
                         match eat_at_rule(rule, pos, &mut self.lexer, &self.global_scope) {
-                            Ok(_) => todo!(),
-                            Err(Printer::Error(pos, message)) => self.error(pos, &message),
-                            Err(Printer::Warn(pos, message)) => self.warn(pos, &message),
-                            Err(Printer::Debug(pos, message)) => self.debug(pos, &message),
+                            AtRule::Mixin(name, mixin) => {self.global_scope.mixins.insert(name, mixin);},
+                            AtRule::Error(pos, message) => self.error(pos, &message),
+                            AtRule::Warn(pos, message) => self.warn(pos, &message),
+                            AtRule::Debug(pos, message) => self.debug(pos, &message),
+                            _ => todo!(),
                         }
                     }
                 }
@@ -472,7 +473,7 @@ fn eat_at_rule<I: Iterator<Item = Token>>(
     pos: Pos,
     toks: &mut Peekable<I>,
     scope: &Scope,
-) -> Result<Expr, Printer> {
+) -> AtRule {
     devour_whitespace(toks);
     match rule {
         AtRuleKind::Error => {
@@ -480,7 +481,7 @@ fn eat_at_rule<I: Iterator<Item = Token>>(
                 .take_while(|x| x.kind != TokenKind::Symbol(Symbol::SemiColon))
                 .map(|x| x.kind.to_string())
                 .collect::<String>();
-            Err(Printer::Error(pos, message))
+            AtRule::Error(pos, message)
         }
         AtRuleKind::Warn => {
             let message = toks
@@ -488,7 +489,7 @@ fn eat_at_rule<I: Iterator<Item = Token>>(
                 .map(|x| x.kind.to_string())
                 .collect::<String>();
             devour_whitespace(toks);
-            Err(Printer::Warn(pos, message))
+            AtRule::Warn(pos, message)
         }
         AtRuleKind::Debug => {
             let message = toks
@@ -497,12 +498,19 @@ fn eat_at_rule<I: Iterator<Item = Token>>(
                 .map(|x| x.kind.to_string())
                 .collect::<String>();
             devour_whitespace(toks);
-            Err(Printer::Debug(pos, message))
+            AtRule::Debug(pos, message)
         }
         AtRuleKind::Mixin => {
             let (name, mixin) = match Mixin::decl_from_tokens(toks, scope) {
                 Ok(m) => m,
-                Err(e) => return Err(Printer::Error(e.0, e.1)),
+                Err(e) => return AtRule::Error(e.0, e.1),
+            };
+            AtRule::Mixin(name, mixin)
+        }
+        AtRuleKind::Function => {
+            let (name, mixin) = match Function::decl_from_tokens(toks, scope) {
+                Ok(m) => m,
+                Err(e) => return AtRule::Error(e.0, e.1),
             };
             Ok(Expr::MixinDecl(name, mixin))
         }
@@ -604,22 +612,18 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                     super_selector,
                 )?)));
             }
-            TokenKind::AtRule(AtRuleKind::Mixin) => {
-                toks.next();
-                let (name, mixin) = Mixin::decl_from_tokens(toks, scope)?;
-                return Ok(Some(Expr::MixinDecl(name, mixin)));
-            }
             TokenKind::AtRule(_) => {
                 if let Some(Token {
                     kind: TokenKind::AtRule(ref rule),
                     pos,
                 }) = toks.next()
                 {
-                    match eat_at_rule(rule, pos, toks, scope) {
-                        Ok(a) => return Ok(Some(a)),
-                        Err(Printer::Debug(a, b)) => return Ok(Some(Expr::Debug(a, b))),
-                        Err(Printer::Warn(a, b)) => return Ok(Some(Expr::Warn(a, b))),
-                        Err(Printer::Error(a, b)) => return Err((a, b)),
+                    return match eat_at_rule(rule, pos, toks, scope) {
+                        AtRule::Mixin(name, mixin) => Ok(Some(Expr::MixinDecl(name, mixin))),
+                        AtRule::Debug(a, b) => Ok(Some(Expr::Debug(a, b))),
+                        AtRule::Warn(a, b) => Ok(Some(Expr::Warn(a, b))),
+                        AtRule::Error(a, b) => Err((a, b)),
+                        _ => todo!(),
                     }
                 }
             }

@@ -360,10 +360,3 @@ impl Scope {
         self.functions.extend(other.functions);
     }
 }
-
-#[derive(Debug)]
-pub enum Printer {
-    Error(Pos, String),
-    Warn(Pos, String),
-    Debug(Pos, String),
-}

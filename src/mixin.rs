@@ -24,15 +24,12 @@ impl Mixin {
         toks: &mut Peekable<I>,
         scope: &Scope,
     ) -> Result<(String, Mixin), (Pos, String)> {
-        let Token { pos, .. } = toks
+        let Token { pos, kind } = toks
             .next()
             .expect("this must exist because we have already peeked");
         devour_whitespace(toks);
-        let name = match toks.next() {
-            Some(Token {
-                kind: TokenKind::Ident(s),
-                ..
-            }) => s,
+        let name = match kind {
+            TokenKind::Ident(s) => s,
             _ => {
                 return Err((
                     pos,
