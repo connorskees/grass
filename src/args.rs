@@ -107,7 +107,7 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -
     }) = toks.next()
     {
     } else {
-        todo!("expected `{{` after mixin args")
+        todo!("expected `{{` after args")
     }
     FuncArgs(args)
 }
