@@ -2,7 +2,7 @@ use std::iter::Peekable;
 use std::vec::IntoIter;
 
 use crate::common::{Pos, Scope, Symbol};
-use crate::function::{eat_call_args, eat_func_args, CallArgs, FuncArgs};
+use crate::args::{eat_call_args, eat_func_args, CallArgs, FuncArgs};
 use crate::selector::Selector;
 use crate::utils::devour_whitespace;
 use crate::{eat_expr, Expr, RuleSet, Stmt, Token, TokenKind};
