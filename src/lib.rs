@@ -1312,4 +1312,19 @@ mod test_values {
         "a {\n  color: 1, 2, 3;\n}\n"
     );
     test!(number, "a {\n  color: 1;\n}\n");
+    test!(
+        removes_paren_around_single_value,
+        "a {\n  color: (red);\n}\n",
+        "a {\n  color: red;\n}\n"
+    );
+    test!(
+        removes_paren_around_space_list,
+        "a {\n  color: (red blue);\n}\n",
+        "a {\n  color: red blue;\n}\n"
+    );
+    test!(
+        removes_paren_around_item_in_list,
+        "a {\n  color: 1 (red blue);\n}\n",
+        "a {\n  color: 1 red blue;\n}\n"
+    );
 }

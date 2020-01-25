@@ -127,7 +127,7 @@ impl Display for Value {
                     .join(sep.as_str())
             ),
             Self::Color(c) => write!(f, "{}", c),
-            Self::Paren(val) => write!(f, "({})", val),
+            Self::Paren(val) => write!(f, "{}", val),
             Self::Ident(val, kind) => write!(f, "{}{}{}", kind.as_str(), val, kind.as_str()),
             Self::True => write!(f, "true"),
             Self::False => write!(f, "false"),
@@ -165,6 +165,7 @@ impl Value {
                 };
                 Some(Value::List(vec![left, right], ListSeparator::Comma))
             }
+            TokenKind::Symbol(Symbol::CloseParen) => Some(left),
             TokenKind::Symbol(Symbol::Plus) => {
                 toks.next();
                 devour_whitespace_or_comment(toks);
@@ -221,6 +222,15 @@ impl Value {
                     },
                     unit,
                 ))
+            }
+            TokenKind::Symbol(Symbol::OpenParen) => {
+                devour_whitespace_or_comment(toks);
+                let val = Self::from_tokens(toks, scope)?;
+                assert_eq!(
+                    toks.next().unwrap().kind,
+                    TokenKind::Symbol(Symbol::CloseParen)
+                );
+                Some(Value::Paren(Box::new(val)))
             }
             TokenKind::Ident(mut s) => {
                 while let Some(tok) = toks.peek() {
