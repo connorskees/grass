@@ -339,6 +339,11 @@ pub enum Op {
     GreaterThanEqual,
     LessThan,
     LessThanEqual,
+    Plus,
+    Minus,
+    Mul,
+    Div,
+    Rem,
 }
 
 impl Display for Op {
@@ -350,6 +355,11 @@ impl Display for Op {
             Self::LessThanEqual => write!(f, "<="),
             Self::GreaterThan => write!(f, ">"),
             Self::LessThan => write!(f, "<"),
+            Self::Plus => write!(f, "+"),
+            Self::Minus => write!(f, "-"),
+            Self::Mul => write!(f, "*"),
+            Self::Div => write!(f, "/"),
+            Self::Rem => write!(f, "%"),
         }
     }
 }
