@@ -88,6 +88,7 @@ pub(crate) enum Value {
     Dimension(Dimension, Unit),
     List(Vec<Value>, ListSeparator),
     Color(Color),
+    BinaryOp(Box<Value>, Op, Box<Value>),
     Paren(Box<Value>),
     Ident(String, QuoteKind),
 }
@@ -107,6 +108,7 @@ impl Add for Value {
             },
             Self::List(..) => todo!(),
             Self::Color(..) => todo!(),
+            Self::BinaryOp(..) => todo!(),
             Self::Paren(..) => todo!(),
             Self::Ident(..) => todo!(),
         }
@@ -127,6 +129,7 @@ impl Display for Value {
                     .join(sep.as_str())
             ),
             Self::Color(c) => write!(f, "{}", c),
+            Self::BinaryOp(lhs, op, rhs) => write!(f, "{}{}{}", lhs, op, rhs),
             Self::Paren(val) => write!(f, "{}", val),
             Self::Ident(val, kind) => write!(f, "{}{}{}", kind.as_str(), val, kind.as_str()),
             Self::True => write!(f, "true"),
@@ -166,14 +169,26 @@ impl Value {
                 Some(Value::List(vec![left, right], ListSeparator::Comma))
             }
             TokenKind::Symbol(Symbol::CloseParen) => Some(left),
-            TokenKind::Symbol(Symbol::Plus) => {
+            TokenKind::Symbol(Symbol::Plus)
+            | TokenKind::Symbol(Symbol::Minus)
+            | TokenKind::Symbol(Symbol::Mul)
+            | TokenKind::Symbol(Symbol::Div)
+            | TokenKind::Symbol(Symbol::Percent) => {
+                let op = match next.kind {
+                    TokenKind::Symbol(Symbol::Plus) => Op::Plus,
+                    TokenKind::Symbol(Symbol::Minus) => Op::Minus,
+                    TokenKind::Symbol(Symbol::Mul) => Op::Mul,
+                    TokenKind::Symbol(Symbol::Div) => Op::Div,
+                    TokenKind::Symbol(Symbol::Percent) => Op::Rem,
+                    _ => unsafe { std::hint::unreachable_unchecked() }
+                };
                 toks.next();
                 devour_whitespace_or_comment(toks);
                 let right = match Self::from_tokens(toks, scope) {
                     Some(x) => x,
                     None => return Some(left),
                 };
-                Some(left + right)
+                Some(Value::BinaryOp(Box::new(left), op, Box::new(right)))
             }
             _ if whitespace => {
                 devour_whitespace_or_comment(toks);
