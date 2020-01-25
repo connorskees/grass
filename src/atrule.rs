@@ -1,6 +1,18 @@
 use std::convert::TryFrom;
 use std::fmt::{self, Display};
 
+use crate::common::Pos;
+use crate::function::Function;
+use crate::mixin::Mixin;
+
+pub(crate) enum AtRule {
+    Error(Pos, String),
+    Warn(Pos, String),
+    Debug(Pos, String),
+    Mixin(String, Mixin),
+    Function(String, Function),
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum AtRuleKind {
     // SASS specific @rules
