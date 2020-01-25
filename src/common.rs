@@ -3,6 +3,7 @@ use std::convert::TryFrom;
 use std::default::Default;
 use std::fmt::{self, Display};
 
+use crate::function::Function;
 use crate::mixin::Mixin;
 use crate::Token;
 
@@ -340,6 +341,7 @@ impl Display for Pos {
 pub(crate) struct Scope {
     pub vars: HashMap<String, Vec<Token>>,
     pub mixins: HashMap<String, Mixin>,
+    pub functions: HashMap<String, Function>,
 }
 
 impl Scope {
@@ -348,12 +350,14 @@ impl Scope {
         Self {
             vars: HashMap::new(),
             mixins: HashMap::new(),
+            functions: HashMap::new(),
         }
     }
 
     pub fn merge(&mut self, other: Scope) {
         self.vars.extend(other.vars);
         self.mixins.extend(other.mixins);
+        self.functions.extend(other.functions);
     }
 }
 
