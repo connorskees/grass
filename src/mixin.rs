@@ -94,7 +94,7 @@ impl Mixin {
         while let Some(expr) = eat_expr(&mut self.body, &self.scope, super_selector)? {
             match expr {
                 Expr::Style(s) => stmts.push(Stmt::Style(s)),
-                Expr::Include(..) | Expr::MixinDecl(..) | Expr::Debug(..) | Expr::Warn(..) => {
+                Expr::Include(..) | Expr::MixinDecl(..) | Expr::FunctionDecl(..) | Expr::Debug(..) | Expr::Warn(..) => {
                     todo!()
                 }
                 Expr::Selector(selector) => {

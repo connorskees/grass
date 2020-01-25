@@ -52,6 +52,7 @@ use crate::common::{Keyword, Op, Pos, Scope, Symbol, Whitespace};
 use crate::css::Css;
 use crate::error::SassError;
 use crate::format::PrettyPrinter;
+use crate::function::Function;
 use crate::imports::import;
 use crate::lexer::Lexer;
 use crate::mixin::{eat_include, Mixin};
@@ -201,6 +202,7 @@ enum Expr {
     VariableDecl(String, Vec<Token>),
     /// A mixin declaration `@mixin foo {}`
     MixinDecl(String, Mixin),
+    FunctionDecl(String, Function),
     /// An include statement `@include foo;`
     Include(Vec<Stmt>),
     /// A multiline comment: `/* foobar */`
@@ -398,11 +400,6 @@ impl<'a> StyleSheetParser<'a> {
                     rules.extend(new_rules);
                     self.global_scope.merge(new_scope);
                 }
-                TokenKind::AtRule(AtRuleKind::Mixin) => {
-                    let (name, mixin) =
-                        Mixin::decl_from_tokens(&mut self.lexer, &self.global_scope).unwrap();
-                    self.global_scope.mixins.insert(name, mixin);
-                }
                 TokenKind::AtRule(_) => {
                     if let Some(Token {
                         kind: TokenKind::AtRule(ref rule),
@@ -411,10 +408,10 @@ impl<'a> StyleSheetParser<'a> {
                     {
                         match eat_at_rule(rule, pos, &mut self.lexer, &self.global_scope) {
                             AtRule::Mixin(name, mixin) => {self.global_scope.mixins.insert(name, mixin);},
+                            AtRule::Function(name, func) => {self.global_scope.functions.insert(name, func);},
                             AtRule::Error(pos, message) => self.error(pos, &message),
                             AtRule::Warn(pos, message) => self.warn(pos, &message),
                             AtRule::Debug(pos, message) => self.debug(pos, &message),
-                            _ => todo!(),
                         }
                     }
                 }
@@ -436,6 +433,9 @@ impl<'a> StyleSheetParser<'a> {
                 Expr::Style(s) => stmts.push(Stmt::Style(s)),
                 Expr::MixinDecl(name, mixin) => {
                     scope.mixins.insert(name, mixin);
+                }
+                Expr::FunctionDecl(name, func) => {
+                    scope.functions.insert(name, func);
                 }
                 Expr::Selector(s) => {
                     self.scope += 1;
@@ -512,7 +512,7 @@ fn eat_at_rule<I: Iterator<Item = Token>>(
                 Ok(m) => m,
                 Err(e) => return AtRule::Error(e.0, e.1),
             };
-            Ok(Expr::MixinDecl(name, mixin))
+            AtRule::Function(name, mixin)
         }
         AtRuleKind::Use => todo!("@use not yet implemented"),
         AtRuleKind::Annotation => todo!("@annotation not yet implemented"),
@@ -525,7 +525,6 @@ fn eat_at_rule<I: Iterator<Item = Token>>(
         AtRuleKind::For => todo!("@for not yet implemented"),
         AtRuleKind::While => todo!("@while not yet implemented"),
         AtRuleKind::Media => todo!("@media not yet implemented"),
-        AtRuleKind::Function => todo!("@function not yet implemented"),
         AtRuleKind::Keyframes => todo!("@keyframes not yet implemented"),
         _ => todo!("encountered unimplemented at rule"),
     }
@@ -620,10 +619,10 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                 {
                     return match eat_at_rule(rule, pos, toks, scope) {
                         AtRule::Mixin(name, mixin) => Ok(Some(Expr::MixinDecl(name, mixin))),
+                        AtRule::Function(name, func) => Ok(Some(Expr::FunctionDecl(name, func))),
                         AtRule::Debug(a, b) => Ok(Some(Expr::Debug(a, b))),
                         AtRule::Warn(a, b) => Ok(Some(Expr::Warn(a, b))),
                         AtRule::Error(a, b) => Err((a, b)),
-                        _ => todo!(),
                     }
                 }
             }
