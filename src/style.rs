@@ -1,5 +1,6 @@
 use crate::common::{Scope, Symbol};
-use crate::utils::{deref_variable, eat_interpolation};
+use crate::utils::{devour_whitespace_or_comment, eat_interpolation};
+use crate::value::Value;
 use crate::{Token, TokenKind};
 use std::fmt::{self, Display};
 use std::iter::Peekable;
@@ -38,15 +39,6 @@ impl<'a> StyleParser<'a> {
         Ok(StyleParser { tokens, scope })
     }
 
-    fn devour_whitespace_or_comment(&mut self) {
-        while let Some(Token { kind, .. }) = self.tokens.peek() {
-            match kind {
-                TokenKind::Whitespace(_) | TokenKind::MultilineComment(_) => self.tokens.next(),
-                _ => break,
-            };
-        }
-    }
-
     fn parse(&mut self) -> Style {
         let mut property = String::new();
         // read property until `:`
@@ -65,7 +57,7 @@ impl<'a> StyleParser<'a> {
             };
         }
 
-        self.devour_whitespace_or_comment();
+        devour_whitespace_or_comment(&mut self.tokens);
 
         let mut value = String::new();
 

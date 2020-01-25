@@ -20,6 +20,24 @@ pub(crate) fn devour_whitespace<I: Iterator<Item = W>, W: IsWhitespace>(
     found_whitespace
 }
 
+pub(crate) trait IsComment {
+    fn is_comment(&self) -> bool;
+}
+
+pub(crate) fn devour_whitespace_or_comment<I: Iterator<Item = W>, W: IsWhitespace + IsComment>(
+    s: &mut Peekable<I>,
+) -> bool {
+    let mut found_whitespace = false;
+    while let Some(w) = s.peek() {
+        if !w.is_whitespace() && !w.is_comment() {
+            break;
+        }
+        found_whitespace = true;
+        s.next();
+    }
+    found_whitespace
+}
+
 #[cfg_attr(feature = "nightly", track_caller)]
 pub(crate) fn deref_variable(name: &str, scope: &Scope) -> Vec<Token> {
     let mut toks = scope

@@ -56,8 +56,7 @@ use crate::lexer::Lexer;
 use crate::mixin::{eat_include, Mixin};
 use crate::selector::{Attribute, Selector};
 use crate::style::Style;
-use crate::units::Unit;
-use crate::utils::{devour_whitespace, eat_variable_value, IsWhitespace};
+use crate::utils::{devour_whitespace, eat_variable_value, IsComment, IsWhitespace};
 
 mod color;
 mod common;
@@ -93,6 +92,24 @@ impl IsWhitespace for Token {
 impl IsWhitespace for &Token {
     fn is_whitespace(&self) -> bool {
         if let TokenKind::Whitespace(_) = self.kind {
+            return true;
+        }
+        false
+    }
+}
+
+impl IsComment for Token {
+    fn is_comment(&self) -> bool {
+        if let TokenKind::MultilineComment(_) = self.kind {
+            return true;
+        }
+        false
+    }
+}
+
+impl IsComment for &Token {
+    fn is_comment(&self) -> bool {
+        if let TokenKind::MultilineComment(_) = self.kind {
             return true;
         }
         false
