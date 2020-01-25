@@ -406,12 +406,13 @@ impl<'a> StyleSheetParser<'a> {
                         pos,
                     }) = self.lexer.next()
                     {
-                        match eat_at_rule(rule, pos, &mut self.lexer, &self.global_scope) {
-                            AtRule::Mixin(name, mixin) => {self.global_scope.mixins.insert(name, mixin);},
-                            AtRule::Function(name, func) => {self.global_scope.functions.insert(name, func);},
+                        match AtRule::from_tokens(rule, pos, &mut self.lexer, &self.global_scope) {
+                            AtRule::Mixin(name, mixin) => {self.global_scope.mixins.insert(name, *mixin);},
+                            AtRule::Function(name, func) => {self.global_scope.functions.insert(name, *func);},
                             AtRule::Error(pos, message) => self.error(pos, &message),
                             AtRule::Warn(pos, message) => self.warn(pos, &message),
                             AtRule::Debug(pos, message) => self.debug(pos, &message),
+                            AtRule::Return(_) => todo!("@return in unexpected location!"),
                         }
                     }
                 }
@@ -465,68 +466,6 @@ impl<'a> StyleSheetParser<'a> {
             }
         }
         stmts
-    }
-}
-
-fn eat_at_rule<I: Iterator<Item = Token>>(
-    rule: &AtRuleKind,
-    pos: Pos,
-    toks: &mut Peekable<I>,
-    scope: &Scope,
-) -> AtRule {
-    devour_whitespace(toks);
-    match rule {
-        AtRuleKind::Error => {
-            let message = toks
-                .take_while(|x| x.kind != TokenKind::Symbol(Symbol::SemiColon))
-                .map(|x| x.kind.to_string())
-                .collect::<String>();
-            AtRule::Error(pos, message)
-        }
-        AtRuleKind::Warn => {
-            let message = toks
-                .take_while(|x| x.kind != TokenKind::Symbol(Symbol::SemiColon))
-                .map(|x| x.kind.to_string())
-                .collect::<String>();
-            devour_whitespace(toks);
-            AtRule::Warn(pos, message)
-        }
-        AtRuleKind::Debug => {
-            let message = toks
-                .by_ref()
-                .take_while(|x| x.kind != TokenKind::Symbol(Symbol::SemiColon))
-                .map(|x| x.kind.to_string())
-                .collect::<String>();
-            devour_whitespace(toks);
-            AtRule::Debug(pos, message)
-        }
-        AtRuleKind::Mixin => {
-            let (name, mixin) = match Mixin::decl_from_tokens(toks, scope) {
-                Ok(m) => m,
-                Err(e) => return AtRule::Error(e.0, e.1),
-            };
-            AtRule::Mixin(name, mixin)
-        }
-        AtRuleKind::Function => {
-            let (name, mixin) = match Function::decl_from_tokens(toks, scope) {
-                Ok(m) => m,
-                Err(e) => return AtRule::Error(e.0, e.1),
-            };
-            AtRule::Function(name, mixin)
-        }
-        AtRuleKind::Use => todo!("@use not yet implemented"),
-        AtRuleKind::Annotation => todo!("@annotation not yet implemented"),
-        AtRuleKind::AtRoot => todo!("@at-root not yet implemented"),
-        AtRuleKind::Charset => todo!("@charset not yet implemented"),
-        AtRuleKind::Each => todo!("@each not yet implemented"),
-        AtRuleKind::Extend => todo!("@extend not yet implemented"),
-        AtRuleKind::If => todo!("@if not yet implemented"),
-        AtRuleKind::Else => todo!("@else not yet implemented"),
-        AtRuleKind::For => todo!("@for not yet implemented"),
-        AtRuleKind::While => todo!("@while not yet implemented"),
-        AtRuleKind::Media => todo!("@media not yet implemented"),
-        AtRuleKind::Keyframes => todo!("@keyframes not yet implemented"),
-        _ => todo!("encountered unimplemented at rule"),
     }
 }
 
@@ -617,12 +556,13 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                     pos,
                 }) = toks.next()
                 {
-                    return match eat_at_rule(rule, pos, toks, scope) {
-                        AtRule::Mixin(name, mixin) => Ok(Some(Expr::MixinDecl(name, mixin))),
-                        AtRule::Function(name, func) => Ok(Some(Expr::FunctionDecl(name, func))),
+                    return match AtRule::from_tokens(rule, pos, toks, scope) {
+                        AtRule::Mixin(name, mixin) => Ok(Some(Expr::MixinDecl(name, *mixin))),
+                        AtRule::Function(name, func) => Ok(Some(Expr::FunctionDecl(name, *func))),
                         AtRule::Debug(a, b) => Ok(Some(Expr::Debug(a, b))),
                         AtRule::Warn(a, b) => Ok(Some(Expr::Warn(a, b))),
                         AtRule::Error(a, b) => Err((a, b)),
+                        AtRule::Return(_) => todo!("@return in unexpected location!"),
                     }
                 }
             }

@@ -1,17 +1,87 @@
 use std::convert::TryFrom;
+use std::iter::Peekable;
 use std::fmt::{self, Display};
 
-use crate::common::Pos;
+use crate::{Token, TokenKind};
+use crate::common::{Pos, Scope, Symbol};
 use crate::function::Function;
 use crate::mixin::Mixin;
+use crate::utils::devour_whitespace;
+use crate::value::Value;
 
 #[derive(Debug, Clone)]
 pub(crate) enum AtRule {
     Error(Pos, String),
     Warn(Pos, String),
     Debug(Pos, String),
-    Mixin(String, Mixin),
-    Function(String, Function),
+    Mixin(String, Box<Mixin>),
+    Function(String, Box<Function>),
+    Return(Value),
+}
+
+impl AtRule {
+    pub fn from_tokens<I: Iterator<Item = Token>>(
+        rule: &AtRuleKind,
+        pos: Pos,
+        toks: &mut Peekable<I>,
+        scope: &Scope,
+    ) -> AtRule {
+        devour_whitespace(toks);
+        match rule {
+            AtRuleKind::Error => {
+                let message = toks
+                    .take_while(|x| x.kind != TokenKind::Symbol(Symbol::SemiColon))
+                    .map(|x| x.kind.to_string())
+                    .collect::<String>();
+                AtRule::Error(pos, message)
+            }
+            AtRuleKind::Warn => {
+                let message = toks
+                    .take_while(|x| x.kind != TokenKind::Symbol(Symbol::SemiColon))
+                    .map(|x| x.kind.to_string())
+                    .collect::<String>();
+                devour_whitespace(toks);
+                AtRule::Warn(pos, message)
+            }
+            AtRuleKind::Debug => {
+                let message = toks
+                    .by_ref()
+                    .take_while(|x| x.kind != TokenKind::Symbol(Symbol::SemiColon))
+                    .map(|x| x.kind.to_string())
+                    .collect::<String>();
+                devour_whitespace(toks);
+                AtRule::Debug(pos, message)
+            }
+            AtRuleKind::Mixin => {
+                let (name, mixin) = match Mixin::decl_from_tokens(toks, scope) {
+                    Ok(m) => m,
+                    Err(e) => return AtRule::Error(e.0, e.1),
+                };
+                AtRule::Mixin(name, Box::new(mixin))
+            }
+            AtRuleKind::Function => {
+                let (name, func) = match Function::decl_from_tokens(toks, scope) {
+                    Ok(m) => m,
+                    Err(e) => return AtRule::Error(e.0, e.1),
+                };
+                AtRule::Function(name, Box::new(func))
+            }
+            AtRuleKind::Return => AtRule::Return(Value::from_tokens(toks, scope).unwrap()),
+            AtRuleKind::Use => todo!("@use not yet implemented"),
+            AtRuleKind::Annotation => todo!("@annotation not yet implemented"),
+            AtRuleKind::AtRoot => todo!("@at-root not yet implemented"),
+            AtRuleKind::Charset => todo!("@charset not yet implemented"),
+            AtRuleKind::Each => todo!("@each not yet implemented"),
+            AtRuleKind::Extend => todo!("@extend not yet implemented"),
+            AtRuleKind::If => todo!("@if not yet implemented"),
+            AtRuleKind::Else => todo!("@else not yet implemented"),
+            AtRuleKind::For => todo!("@for not yet implemented"),
+            AtRuleKind::While => todo!("@while not yet implemented"),
+            AtRuleKind::Media => todo!("@media not yet implemented"),
+            AtRuleKind::Keyframes => todo!("@keyframes not yet implemented"),
+            _ => todo!("encountered unimplemented at rule"),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -27,6 +97,7 @@ pub enum AtRuleKind {
     Include,
     /// Defines custom functions that can be used in SassScript expressions
     Function,
+    Return,
     /// Allows selectors to inherit styles from one another
     Extend,
     /// Puts styles within it at the root of the CSS document
@@ -94,6 +165,7 @@ impl TryFrom<&str> for AtRuleKind {
             "mixin" => Ok(Self::Mixin),
             "include" => Ok(Self::Include),
             "function" => Ok(Self::Function),
+            "return" => Ok(Self::Return),
             "extend" => Ok(Self::Extend),
             "atroot" => Ok(Self::AtRoot),
             "error" => Ok(Self::Error),
@@ -135,6 +207,7 @@ impl Display for AtRuleKind {
             Self::Mixin => write!(f, "@mixin"),
             Self::Include => write!(f, "@include"),
             Self::Function => write!(f, "@function"),
+            Self::Return => write!(f, "@return"),
             Self::Extend => write!(f, "@extend"),
             Self::AtRoot => write!(f, "@atroot"),
             Self::Error => write!(f, "@error"),
