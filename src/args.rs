@@ -207,6 +207,9 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
                 }
             }
             TokenKind::Symbol(Symbol::CloseParen) => {
+                if val.is_empty() {
+                    break;
+                }
                 match name {
                     Some(name) => args.insert(
                         name,
