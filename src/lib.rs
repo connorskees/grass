@@ -62,6 +62,7 @@ use crate::utils::{devour_whitespace, eat_variable_value, IsComment, IsWhitespac
 
 mod args;
 mod atrule;
+mod builtin;
 mod color;
 mod common;
 mod css;
