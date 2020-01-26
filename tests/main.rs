@@ -255,6 +255,16 @@ mod test_selectors {
         "abfoo {\n  color: red;\n}\n"
     );
     test!(
+        selector_interpolation_super_selector,
+        "a {\nb #{&} { color: red; }}",
+        "a b a {\n  color: red;\n}\n"
+    );
+    test!(
+        selector_interpolation_super_selector_root,
+        "a#{&} {\nb { color: red; }}",
+        "a b {\n  color: red;\n}\n"
+    );
+    test!(
         selector_whitespace,
         "  a  >  b  ,  c  ~  d  e  .f  #g  :h  i.j  [  k  ]  { color: red }",
         "a > b, c ~ d e .f #g :h i.j [k] {\n  color: red;\n}\n"

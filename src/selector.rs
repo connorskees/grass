@@ -72,6 +72,8 @@ pub(crate) enum SelectorKind {
     PseudoParen(String, Vec<TokenKind>),
     /// Use the super selector: `&.red`
     Super,
+    /// Super selector in an interpolated context: `a #{&}`
+    InterpolatedSuper,
     /// Used to signify no selector (when there is no super_selector of a rule)
     None,
     Whitespace,
@@ -109,7 +111,10 @@ impl Display for SelectorKind {
                 s,
                 toks.iter().map(ToString::to_string).collect::<String>()
             ),
-            SelectorKind::Super | SelectorKind::None => write!(f, ""),
+            SelectorKind::InterpolatedSuper => write!(f, " "),
+            SelectorKind::Super | SelectorKind::None => {
+                write!(f, "")
+            }
         }
     }
 }
@@ -165,6 +170,7 @@ mod test_selector_display {
 struct SelectorParser<'a> {
     scope: &'a Scope,
     selectors: Vec<SelectorKind>,
+    is_interpolated: bool,
 }
 
 impl<'a> SelectorParser<'a> {
@@ -172,6 +178,7 @@ impl<'a> SelectorParser<'a> {
         SelectorParser {
             scope,
             selectors: Vec::new(),
+            is_interpolated: false,
         }
     }
 
@@ -248,10 +255,19 @@ impl<'a> SelectorParser<'a> {
                 TokenKind::Symbol(Symbol::Plus) => self.selectors.push(SelectorKind::Following),
                 TokenKind::Symbol(Symbol::Tilde) => self.selectors.push(SelectorKind::Preceding),
                 TokenKind::Symbol(Symbol::Mul) => self.selectors.push(SelectorKind::Universal),
-                TokenKind::Symbol(Symbol::BitAnd) => self.selectors.push(SelectorKind::Super),
-                TokenKind::Interpolation => self.tokens_to_selectors(
-                    &mut eat_interpolation(tokens, self.scope).into_iter().peekable(),
-                ),
+                TokenKind::Symbol(Symbol::BitAnd) => self.selectors.push(if self.is_interpolated {
+                    SelectorKind::InterpolatedSuper
+                } else {
+                    SelectorKind::Super
+                }),
+                TokenKind::Interpolation => {
+                    self.is_interpolated = true;
+                    let v = self.tokens_to_selectors(
+                        &mut eat_interpolation(tokens, self.scope).into_iter().peekable(),
+                    );
+                    self.is_interpolated = false;
+                    v
+                }
                 TokenKind::Attribute(attr) => self.selectors.push(SelectorKind::Attribute(attr)),
                 _ => todo!("unimplemented selector"),
             };
@@ -289,6 +305,8 @@ impl Selector {
                     if sel == &SelectorKind::Super {
                         this_selector.extend(sel1.to_vec());
                         found_super = true;
+                    } else if sel == &SelectorKind::InterpolatedSuper {
+                        this_selector.extend(sel1.to_vec());
                     } else {
                         this_selector.push(sel.clone());
                     }
