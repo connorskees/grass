@@ -1,13 +1,12 @@
 use std::convert::TryFrom;
-use std::iter::Peekable;
 use std::fmt::{self, Display};
+use std::iter::Peekable;
 
-use crate::{Token, TokenKind};
 use crate::common::{Pos, Scope, Symbol};
 use crate::function::Function;
 use crate::mixin::Mixin;
 use crate::utils::devour_whitespace;
-use crate::value::Value;
+use crate::{Token, TokenKind};
 
 #[derive(Debug, Clone)]
 pub(crate) enum AtRule {
@@ -16,7 +15,7 @@ pub(crate) enum AtRule {
     Debug(Pos, String),
     Mixin(String, Box<Mixin>),
     Function(String, Box<Function>),
-    Return(Value),
+    Return(Vec<Token>),
 }
 
 impl AtRule {
@@ -66,7 +65,11 @@ impl AtRule {
                 };
                 AtRule::Function(name, Box::new(func))
             }
-            AtRuleKind::Return => AtRule::Return(Value::from_tokens(toks, scope).unwrap()),
+            AtRuleKind::Return => AtRule::Return(
+                // todo: return may not end in semicolon
+                toks.take_while(|t| t.kind != TokenKind::Symbol(Symbol::SemiColon))
+                    .collect(),
+            ),
             AtRuleKind::Use => todo!("@use not yet implemented"),
             AtRuleKind::Annotation => todo!("@annotation not yet implemented"),
             AtRuleKind::AtRoot => todo!("@at-root not yet implemented"),
