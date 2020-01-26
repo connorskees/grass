@@ -535,6 +535,11 @@ mod test_mixins {
         "d {\n  color: red;\n}\n"
     );
     test!(
+        mixin_no_args,
+        "@mixin a {\n  color: red;\n}\nd {\n  @include a();\n}\n",
+        "d {\n  color: red;\n}\n"
+    );
+    test!(
         mixin_single_arg,
         "@mixin a($b) {\n  color: $b;\n}\nd {\n  @include a(red);\n}\n",
         "d {\n  color: red;\n}\n"
@@ -609,6 +614,36 @@ mod test_mixins {
         "@mixin a($a) {\n  color: $a;\n}\nd {\n  $c: red;\n  @include a($c);\n}\n",
         "d {\n  color: red;\n}\n"
     );
+    test!(
+        comment_before_positional_call_arg,
+        "@mixin a($a) {\n  color: $a;\n}\nd {\n  @include a(/*foo*/red);\n}\n",
+        "d {\n  color: red;\n}\n"
+    );
+    test!(
+        comment_after_positional_call_arg,
+        "@mixin a($a) {\n  color: $a;\n}\nd {\n  @include a(red/*foo*/);\n}\n",
+        "d {\n  color: red;\n}\n"
+    );
+    test!(
+        comment_before_keyword_call_arg_val,
+        "@mixin a($a) {\n  color: $a;\n}\nd {\n  @include a($a: /*foo*/red);\n}\n",
+        "d {\n  color: red;\n}\n"
+    );
+    test!(
+        comment_after_keyword_call_arg_val,
+        "@mixin a($a) {\n  color: $a;\n}\nd {\n  @include a($a: red/*foo*/);\n}\n",
+        "d {\n  color: red;\n}\n"
+    );
+    test!(
+        comment_before_keyword_call_arg_name,
+        "@mixin a($a) {\n  color: $a;\n}\nd {\n  @include a(/*foo*/$a: red);\n}\n",
+        "d {\n  color: red;\n}\n"
+    );
+    test!(
+        comment_after_keyword_call_arg_name,
+        "@mixin a($a) {\n  color: $a;\n}\nd {\n  @include a($a/*foo*/: red);\n}\n",
+        "d {\n  color: red;\n}\n"
+    );
 }
 
 #[cfg(test)]
@@ -656,6 +691,14 @@ mod test_values {
     test!(preserves_keyword_true, "a {\n  color: true;\n}\n");
     test!(preserves_keyword_false, "a {\n  color: false;\n}\n");
     test!(preserves_keyword_null, "a {\n  color: null;\n}\n");
+    test!(preserves_keyword_auto, "a {\n  color: auto;\n}\n");
+    test!(preserves_keyword_initial, "a {\n  color: initial;\n}\n");
+    test!(preserves_keyword_infinity, "a {\n  color: infinity;\n}\n");
+    test!(preserves_keyword_not, "a {\n  color: not;\n}\n");
+    test!(preserves_keyword_and, "a {\n  color: and;\n}\n");
+    test!(preserves_keyword_or, "a {\n  color: or;\n}\n");
+    test!(preserves_keyword_unset, "a {\n  color: unset;\n}\n");
+    test!(preserves_keyword_nan, "a {\n  color: NaN;\n}\n");
     test!(
         whitespace_space_list_number,
         "a {\n  color:  1  2  3  ;\n}\n",

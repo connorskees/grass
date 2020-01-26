@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::iter::Peekable;
 
 use crate::common::{Scope, Symbol};
-use crate::utils::devour_whitespace;
+use crate::utils::{devour_whitespace, devour_whitespace_or_comment};
 use crate::value::Value;
 use crate::{Token, TokenKind};
 
@@ -129,13 +129,13 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
     scope: &Scope,
 ) -> CallArgs {
     let mut args: BTreeMap<String, Value> = BTreeMap::new();
-    devour_whitespace(toks);
+    devour_whitespace_or_comment(toks);
     let mut name: Option<String> = None;
     let mut val = Vec::new();
     while let Some(Token { kind, pos }) = toks.next() {
         match kind {
             TokenKind::Variable(v) => {
-                devour_whitespace(toks);
+                devour_whitespace_or_comment(toks);
                 match toks.peek() {
                     Some(Token {
                         kind: TokenKind::Symbol(Symbol::Colon),
@@ -178,7 +178,7 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
                 }
             }
             TokenKind::Symbol(Symbol::Colon) => {
-                devour_whitespace(toks);
+                devour_whitespace_or_comment(toks);
                 while let Some(tok) = toks.peek() {
                     match &tok.kind {
                         TokenKind::Symbol(Symbol::Comma) => {
@@ -240,7 +240,7 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
             }
             _ => val.push(Token { kind, pos }),
         }
-        devour_whitespace(toks);
+        devour_whitespace_or_comment(toks);
     }
     CallArgs(args)
 }
