@@ -42,7 +42,7 @@ impl Mixin {
             Some(Token {
                 kind: TokenKind::Symbol(Symbol::OpenParen),
                 ..
-            }) => eat_func_args(toks),
+            }) => eat_func_args(toks, scope),
             Some(Token {
                 kind: TokenKind::Symbol(Symbol::OpenCurlyBrace),
                 ..
@@ -137,7 +137,7 @@ pub(crate) fn eat_include<I: Iterator<Item = Token>>(
     let args = if let Some(tok) = toks.next() {
         match tok.kind {
             TokenKind::Symbol(Symbol::SemiColon) => CallArgs::new(),
-            TokenKind::Symbol(Symbol::OpenParen) => eat_call_args(toks),
+            TokenKind::Symbol(Symbol::OpenParen) => eat_call_args(toks, scope),
             _ => return Err((pos, String::from("expected `(` or `;`"))),
         }
     } else {

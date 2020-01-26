@@ -1,11 +1,10 @@
 use std::collections::HashMap;
 use std::convert::TryFrom;
-use std::default::Default;
 use std::fmt::{self, Display};
 
 use crate::function::Function;
 use crate::mixin::Mixin;
-use crate::Token;
+use crate::value::Value;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Symbol {
@@ -337,9 +336,9 @@ impl Display for Pos {
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub(crate) struct Scope {
-    pub vars: HashMap<String, Vec<Token>>,
+    pub vars: HashMap<String, Value>,
     pub mixins: HashMap<String, Mixin>,
     pub functions: HashMap<String, Function>,
 }

@@ -1,8 +1,9 @@
 use std::collections::BTreeMap;
 use std::iter::Peekable;
 
-use crate::common::Symbol;
+use crate::common::{Scope, Symbol};
 use crate::utils::devour_whitespace;
+use crate::value::Value;
 use crate::{Token, TokenKind};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -11,7 +12,7 @@ pub(crate) struct FuncArgs(pub Vec<FuncArg>);
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub(crate) struct FuncArg {
     pub name: String,
-    pub default: Option<Vec<Token>>,
+    pub default: Option<Value>,
 }
 
 impl FuncArgs {
@@ -21,7 +22,7 @@ impl FuncArgs {
 }
 
 #[derive(Debug, Clone, std::default::Default)]
-pub(crate) struct CallArgs(pub BTreeMap<String, Vec<Token>>);
+pub(crate) struct CallArgs(pub BTreeMap<String, Value>);
 
 impl CallArgs {
     pub fn new() -> Self {
@@ -32,12 +33,15 @@ impl CallArgs {
         self.0.is_empty()
     }
 
-    pub fn get(&self, val: &str) -> Option<&Vec<Token>> {
+    pub fn get(&self, val: &str) -> Option<&Value> {
         self.0.get(val)
     }
 }
 
-pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -> FuncArgs {
+pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
+    toks: &mut Peekable<I>,
+    scope: &Scope,
+) -> FuncArgs {
     let mut args: Vec<FuncArg> = Vec::new();
 
     devour_whitespace(toks);
@@ -62,14 +66,20 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -
                             toks.next();
                             args.push(FuncArg {
                                 name,
-                                default: Some(default),
+                                default: Some(
+                                    Value::from_tokens(&mut default.into_iter().peekable(), scope)
+                                        .unwrap(),
+                                ),
                             });
                             break;
                         }
                         TokenKind::Symbol(Symbol::CloseParen) => {
                             args.push(FuncArg {
                                 name,
-                                default: Some(default),
+                                default: Some(
+                                    Value::from_tokens(&mut default.into_iter().peekable(), scope)
+                                        .unwrap(),
+                                ),
                             });
                             break;
                         }
@@ -87,7 +97,9 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -
                     default: if default.is_empty() {
                         None
                     } else {
-                        Some(default)
+                        Some(
+                            Value::from_tokens(&mut default.into_iter().peekable(), scope).unwrap(),
+                        )
                     },
                 });
                 break;
@@ -112,21 +124,70 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -
     FuncArgs(args)
 }
 
-pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -> CallArgs {
-    let mut args: BTreeMap<String, Vec<Token>> = BTreeMap::new();
+pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
+    toks: &mut Peekable<I>,
+    scope: &Scope,
+) -> CallArgs {
+    let mut args: BTreeMap<String, Value> = BTreeMap::new();
     devour_whitespace(toks);
     let mut name: Option<String> = None;
     let mut val = Vec::new();
     while let Some(Token { kind, pos }) = toks.next() {
         match kind {
-            TokenKind::Variable(v) => name = Some(v),
+            TokenKind::Variable(v) => {
+                devour_whitespace(toks);
+                match toks.peek() {
+                    Some(Token {
+                        kind: TokenKind::Symbol(Symbol::Colon),
+                        ..
+                    }) => name = Some(v),
+                    Some(Token {
+                        kind: TokenKind::Symbol(Symbol::Comma),
+                        ..
+                    }) => {
+                        toks.next();
+                        match name {
+                            Some(ref name) => {
+                                args.insert(name.clone(), scope.vars.get(&v).unwrap().clone())
+                            }
+                            None => args.insert(
+                                format!("{}", args.len()),
+                                scope.vars.get(&v).unwrap().clone(),
+                            ),
+                        };
+                        if let Some(ref mut s) = name {
+                            s.clear();
+                        }
+                        val.clear();
+                    }
+                    Some(Token {
+                        kind: TokenKind::Symbol(Symbol::CloseParen),
+                        ..
+                    }) => {
+                        toks.next();
+                        match name {
+                            Some(name) => args.insert(name, scope.vars.get(&v).unwrap().clone()),
+                            None => args.insert(
+                                format!("{}", args.len()),
+                                scope.vars.get(&v).unwrap().clone(),
+                            ),
+                        };
+                        break;
+                    }
+                    _ => todo!("unexpected token after variable in call args"),
+                }
+            }
             TokenKind::Symbol(Symbol::Colon) => {
                 devour_whitespace(toks);
                 while let Some(tok) = toks.peek() {
                     match &tok.kind {
                         TokenKind::Symbol(Symbol::Comma) => {
                             toks.next();
-                            args.insert(name.clone().unwrap(), val.clone());
+                            args.insert(
+                                name.clone().unwrap(),
+                                Value::from_tokens(&mut val.clone().into_iter().peekable(), scope)
+                                    .unwrap(),
+                            );
                             if let Some(ref mut s) = name {
                                 s.clear();
                             }
@@ -134,7 +195,11 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -
                             break;
                         }
                         TokenKind::Symbol(Symbol::CloseParen) => {
-                            args.insert(name.clone().unwrap(), val.clone());
+                            args.insert(
+                                name.clone().unwrap(),
+                                Value::from_tokens(&mut val.clone().into_iter().peekable(), scope)
+                                    .unwrap(),
+                            );
                             break;
                         }
                         _ => val.push(toks.next().expect("we know this exists!")),
@@ -143,15 +208,27 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -
             }
             TokenKind::Symbol(Symbol::CloseParen) => {
                 match name {
-                    Some(name) => args.insert(name, val),
-                    None => args.insert(format!("{}", args.len()), val),
+                    Some(name) => args.insert(
+                        name,
+                        Value::from_tokens(&mut val.into_iter().peekable(), scope).unwrap(),
+                    ),
+                    None => args.insert(
+                        format!("{}", args.len()),
+                        Value::from_tokens(&mut val.into_iter().peekable(), scope).unwrap(),
+                    ),
                 };
                 break;
             }
             TokenKind::Symbol(Symbol::Comma) => {
                 match name {
-                    Some(ref name) => args.insert(name.clone(), val.clone()),
-                    None => args.insert(format!("{}", args.len()), val.clone()),
+                    Some(ref name) => args.insert(
+                        name.clone(),
+                        Value::from_tokens(&mut val.clone().into_iter().peekable(), scope).unwrap(),
+                    ),
+                    None => args.insert(
+                        format!("{}", args.len()),
+                        Value::from_tokens(&mut val.clone().into_iter().peekable(), scope).unwrap(),
+                    ),
                 };
                 if let Some(ref mut s) = name {
                     s.clear();

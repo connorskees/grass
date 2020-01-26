@@ -42,7 +42,7 @@ impl Function {
             Some(Token {
                 kind: TokenKind::Symbol(Symbol::OpenParen),
                 ..
-            }) => eat_func_args(toks),
+            }) => eat_func_args(toks, scope),
             _ => return Err((pos, String::from("expected `(` after function declaration"))),
         };
 

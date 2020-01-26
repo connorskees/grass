@@ -59,6 +59,7 @@ use crate::mixin::{eat_include, Mixin};
 use crate::selector::{Attribute, Selector};
 use crate::style::Style;
 use crate::utils::{devour_whitespace, eat_variable_value, IsComment, IsWhitespace};
+use crate::value::Value;
 
 mod args;
 mod atrule;
@@ -200,7 +201,7 @@ enum Expr {
     /// A full selector `a > h1`
     Selector(Selector),
     /// A variable declaration `$var: 1px`
-    VariableDecl(String, Vec<Token>),
+    VariableDecl(String, Value),
     /// A mixin declaration `@mixin foo {}`
     MixinDecl(String, Mixin),
     FunctionDecl(String, Function),
