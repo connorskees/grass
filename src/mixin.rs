@@ -1,8 +1,8 @@
 use std::iter::Peekable;
 use std::vec::IntoIter;
 
-use crate::common::{Pos, Scope, Symbol};
 use crate::args::{eat_call_args, eat_func_args, CallArgs, FuncArgs};
+use crate::common::{Pos, Scope, Symbol};
 use crate::selector::Selector;
 use crate::utils::devour_whitespace;
 use crate::{eat_expr, Expr, RuleSet, Stmt, Token, TokenKind};
@@ -94,9 +94,11 @@ impl Mixin {
         while let Some(expr) = eat_expr(&mut self.body, &self.scope, super_selector)? {
             match expr {
                 Expr::Style(s) => stmts.push(Stmt::Style(s)),
-                Expr::Include(..) | Expr::MixinDecl(..) | Expr::FunctionDecl(..) | Expr::Debug(..) | Expr::Warn(..) => {
-                    todo!()
-                }
+                Expr::Include(..)
+                | Expr::MixinDecl(..)
+                | Expr::FunctionDecl(..)
+                | Expr::Debug(..)
+                | Expr::Warn(..) => todo!(),
                 Expr::Selector(selector) => {
                     let rules = self.eval(&super_selector.zip(&selector))?;
                     stmts.push(Stmt::RuleSet(RuleSet {
