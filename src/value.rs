@@ -6,7 +6,7 @@ use std::ops::Add;
 use crate::args::eat_call_args;
 use crate::builtin::GLOBAL_FUNCTIONS;
 use crate::color::Color;
-use crate::common::{Keyword, Op, Scope, Symbol};
+use crate::common::{Keyword, Op, QuoteKind, Scope, Symbol};
 use crate::units::Unit;
 use crate::utils::{devour_whitespace_or_comment, eat_interpolation};
 use crate::{Token, TokenKind};
@@ -60,23 +60,6 @@ impl Display for ListSeparator {
         match self {
             Self::Space => write!(f, " "),
             Self::Comma => write!(f, ", "),
-        }
-    }
-}
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub(crate) enum QuoteKind {
-    Single,
-    Double,
-    None,
-}
-
-impl QuoteKind {
-    pub fn as_str(self) -> &'static str {
-        match self {
-            Self::Single => "'",
-            Self::Double => "\"",
-            Self::None => "",
         }
     }
 }

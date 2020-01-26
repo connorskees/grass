@@ -359,3 +359,20 @@ impl Scope {
         self.functions.extend(other.functions);
     }
 }
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub(crate) enum QuoteKind {
+    Single,
+    Double,
+    None,
+}
+
+impl QuoteKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Single => "'",
+            Self::Double => "\"",
+            Self::None => "",
+        }
+    }
+}
