@@ -4,7 +4,7 @@ use std::str::Chars;
 
 use crate::atrule::AtRuleKind;
 use crate::common::{Keyword, Op, Pos, Symbol};
-use crate::selector::{Attribute, AttributeKind};
+use crate::selector::{Attribute, AttributeKind, CaseKind};
 use crate::{Token, TokenKind, Whitespace};
 
 #[derive(Debug, Clone)]
@@ -243,7 +243,7 @@ impl<'a> Lexer<'a> {
                     kind: AttributeKind::Any,
                     attr,
                     value: String::new(),
-                    case_sensitive: true,
+                    case_sensitive: CaseKind::Sensitive,
                 })
             }
             'i' => {
@@ -253,7 +253,17 @@ impl<'a> Lexer<'a> {
                     kind: AttributeKind::Any,
                     attr,
                     value: String::new(),
-                    case_sensitive: false,
+                    case_sensitive: CaseKind::InsensitiveLowercase,
+                });
+            }
+            'I' => {
+                self.devour_whitespace();
+                assert!(self.buf.next() == Some(']'));
+                return TokenKind::Attribute(Attribute {
+                    kind: AttributeKind::Any,
+                    attr,
+                    value: String::new(),
+                    case_sensitive: CaseKind::InsensitiveCapital,
                 });
             }
             '=' => AttributeKind::Equals,
@@ -272,14 +282,19 @@ impl<'a> Lexer<'a> {
         self.devour_whitespace();
 
         let mut value = String::with_capacity(99);
-        let mut case_sensitive = true;
+        let mut case_sensitive = CaseKind::Sensitive;
 
         while let Some(c) = self.buf.peek() {
             if !c.is_alphabetic() && c != &'-' && c != &'_' && c != &'"' && c != &'\'' {
                 break;
             }
 
-            if c == &'i' {
+            if c == &'i' || c == &'I' {
+                if c == &'i' {
+                    case_sensitive = CaseKind::InsensitiveLowercase;
+                } else if c == &'I' {
+                    case_sensitive = CaseKind::InsensitiveCapital;
+                }
                 let tok = self
                     .buf
                     .next()
@@ -287,7 +302,14 @@ impl<'a> Lexer<'a> {
                 self.pos.next_char();
                 self.devour_whitespace();
                 match self.buf.next() {
-                    Some(']') => case_sensitive = false,
+                    Some(']') => {
+                        return TokenKind::Attribute(Attribute {
+                            kind,
+                            attr,
+                            value,
+                            case_sensitive,
+                        })
+                    }
                     Some(val) => {
                         self.pos.next_char();
                         value.push(tok);
@@ -304,6 +326,7 @@ impl<'a> Lexer<'a> {
                 .expect("this is impossible because we have already peeked");
             self.pos.next_char();
             value.push(tok);
+            self.devour_whitespace();
         }
 
         self.devour_whitespace();

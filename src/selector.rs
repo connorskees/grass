@@ -329,38 +329,51 @@ impl Selector {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Attribute {
+pub(crate) struct Attribute {
     pub attr: String,
     pub value: String,
-    pub case_sensitive: bool,
+    pub case_sensitive: CaseKind,
     pub kind: AttributeKind,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) enum CaseKind {
+    InsensitiveCapital,
+    InsensitiveLowercase,
+    Sensitive,
+}
+
+impl Display for CaseKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::InsensitiveCapital => write!(f, " I"),
+            Self::InsensitiveLowercase => write!(f, " i"),
+            Self::Sensitive => write!(f, ""),
+        }
+    }
 }
 
 impl Display for Attribute {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.case_sensitive {
-            match self.kind {
-                AttributeKind::Any => write!(f, "[{}]", self.attr),
-                AttributeKind::Equals => write!(f, "[{}={}]", self.attr, self.value),
-                AttributeKind::InList => write!(f, "[{}~={}]", self.attr, self.value),
-                AttributeKind::BeginsWithHyphenOrExact => {
-                    write!(f, "[{}|={}]", self.attr, self.value)
-                }
-                AttributeKind::StartsWith => write!(f, "[{}^={}]", self.attr, self.value),
-                AttributeKind::EndsWith => write!(f, "[{}$={}]", self.attr, self.value),
-                AttributeKind::Contains => write!(f, "[{}*={}]", self.attr, self.value),
+        match self.kind {
+            AttributeKind::Any => write!(f, "[{}{}]", self.attr, self.case_sensitive),
+            AttributeKind::Equals => {
+                write!(f, "[{}={}{}]", self.attr, self.value, self.case_sensitive)
             }
-        } else {
-            match self.kind {
-                AttributeKind::Any => write!(f, "[{} i]", self.attr),
-                AttributeKind::Equals => write!(f, "[{}={} i]", self.attr, self.value),
-                AttributeKind::InList => write!(f, "[{}~={} i]", self.attr, self.value),
-                AttributeKind::BeginsWithHyphenOrExact => {
-                    write!(f, "[{}|={} i]", self.attr, self.value)
-                }
-                AttributeKind::StartsWith => write!(f, "[{}^={} i]", self.attr, self.value),
-                AttributeKind::EndsWith => write!(f, "[{}$={} i]", self.attr, self.value),
-                AttributeKind::Contains => write!(f, "[{}*={} i]", self.attr, self.value),
+            AttributeKind::InList => {
+                write!(f, "[{}~={}{}]", self.attr, self.value, self.case_sensitive)
+            }
+            AttributeKind::BeginsWithHyphenOrExact => {
+                write!(f, "[{}|={}{}]", self.attr, self.value, self.case_sensitive)
+            }
+            AttributeKind::StartsWith => {
+                write!(f, "[{}^={}{}]", self.attr, self.value, self.case_sensitive)
+            }
+            AttributeKind::EndsWith => {
+                write!(f, "[{}$={}{}]", self.attr, self.value, self.case_sensitive)
+            }
+            AttributeKind::Contains => {
+                write!(f, "[{}*={}{}]", self.attr, self.value, self.case_sensitive)
             }
         }
     }
