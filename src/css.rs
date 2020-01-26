@@ -1,4 +1,5 @@
 //! # Convert from SCSS AST to CSS
+use crate::atrule::AtRule;
 use crate::{RuleSet, SassResult, Selector, Stmt, Style, StyleSheet};
 use std::fmt;
 use std::io::Write;
@@ -7,14 +8,14 @@ use std::io::Write;
 enum Toplevel {
     RuleSet(Selector, Vec<BlockEntry>),
     MultilineComment(String),
-    // AtRule(AtRule),
+    AtRule(AtRule),
 }
 
 #[derive(Debug, Clone)]
 enum BlockEntry {
     Style(Style),
     MultilineComment(String),
-    // AtRule(AtRule),
+    AtRule(AtRule),
 }
 
 impl fmt::Display for BlockEntry {
@@ -22,6 +23,7 @@ impl fmt::Display for BlockEntry {
         match self {
             BlockEntry::Style(s) => writeln!(f, "  {}", s),
             BlockEntry::MultilineComment(s) => writeln!(f, "  /*{}*/", s),
+            BlockEntry::AtRule(r) => writeln!(f, "{}", r),
         }
     }
 }
@@ -77,12 +79,14 @@ impl Css {
                             .get_mut(0)
                             .expect("expected block to exist")
                             .push_comment(s),
+                        Stmt::AtRule(_) => todo!("at rule inside css block"),
                     };
                 }
                 vals
             }
             Stmt::MultilineComment(s) => vec![Toplevel::MultilineComment(s)],
             Stmt::Style(_) => panic!("expected toplevel element, found style"),
+            Stmt::AtRule(r) => vec![Toplevel::AtRule(r)],
         }
     }
 
@@ -109,6 +113,9 @@ impl Css {
                 }
                 Toplevel::MultilineComment(s) => {
                     writeln!(buf, "/*{}*/", s)?;
+                }
+                Toplevel::AtRule(r) => {
+                    writeln!(buf, "{}", r)?;
                 }
             }
         }

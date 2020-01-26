@@ -32,6 +32,9 @@ impl<W: Write> PrettyPrinter<W> {
             Stmt::Style(s) => {
                 writeln!(self.buf, "{}{}", padding, s)?;
             }
+            Stmt::AtRule(r) => {
+                writeln!(self.buf, "{}{}", padding, r)?;
+            }
         }
         Ok(())
     }
@@ -68,6 +71,9 @@ impl<W: Write> PrettyPrinter<W> {
             }
             Stmt::Style(s) => {
                 writeln!(self.buf, "{}{}", padding, s)?;
+            }
+            Stmt::AtRule(r) => {
+                writeln!(self.buf, "{}{}", padding, r)?;
             }
         }
         Ok(())

@@ -159,10 +159,10 @@ impl Display for TokenKind {
 }
 
 /// Represents a parsed SASS stylesheet with nesting
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct StyleSheet(Vec<Stmt>);
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug)]
 pub(crate) enum Stmt {
     /// A [`Style`](/grass/style/struct.Style)
     Style(Style),
@@ -170,6 +170,8 @@ pub(crate) enum Stmt {
     RuleSet(RuleSet),
     /// A multiline comment: `/* foo bar */`
     MultilineComment(String),
+    /// A CSS rule: `@charset "UTF-8";`
+    AtRule(AtRule),
 }
 
 /// Represents a single rule set. Rule sets can contain other rule sets
@@ -182,7 +184,7 @@ pub(crate) enum Stmt {
 ///   }
 /// }
 /// ```
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug)]
 pub(crate) struct RuleSet {
     selector: Selector,
     rules: Vec<Stmt>,
@@ -415,6 +417,7 @@ impl<'a> StyleSheetParser<'a> {
                             AtRule::Function(name, func) => {
                                 self.global_scope.functions.insert(name, *func);
                             }
+                            AtRule::Charset(toks) => rules.push(Stmt::AtRule(AtRule::Charset(toks))),
                             AtRule::Error(pos, message) => self.error(pos, &message),
                             AtRule::Warn(pos, message) => self.warn(pos, &message),
                             AtRule::Debug(pos, message) => self.debug(pos, &message),
@@ -568,6 +571,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                     return match AtRule::from_tokens(rule, pos, toks, scope) {
                         AtRule::Mixin(name, mixin) => Ok(Some(Expr::MixinDecl(name, *mixin))),
                         AtRule::Function(name, func) => Ok(Some(Expr::FunctionDecl(name, *func))),
+                        AtRule::Charset(_) => todo!("@charset as expr"),
                         AtRule::Debug(a, b) => Ok(Some(Expr::Debug(a, b))),
                         AtRule::Warn(a, b) => Ok(Some(Expr::Warn(a, b))),
                         AtRule::Error(a, b) => Err((a, b)),
