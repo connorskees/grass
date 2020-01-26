@@ -129,7 +129,7 @@ pub(crate) fn eat_include<I: Iterator<Item = Token>>(
         .expect("this must exist because we have already peeked");
     let name = match kind {
         TokenKind::Ident(s) => s,
-        _ => return Err((pos, String::from("expected identifier"))),
+        _ => return Err((pos, String::from("Expected identifier."))),
     };
 
     devour_whitespace(toks);
@@ -156,7 +156,7 @@ pub(crate) fn eat_include<I: Iterator<Item = Token>>(
 
     let mixin = match scope.mixins.get(&name) {
         Some(m) => m.clone(),
-        _ => return Err((pos, String::from("expected identifier"))),
+        _ => return Err((pos, String::from("Expected identifier."))),
     };
 
     let rules = mixin.args(&args).call(super_selector)?;
