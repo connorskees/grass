@@ -408,8 +408,12 @@ impl<'a> StyleSheetParser<'a> {
                     }) = self.lexer.next()
                     {
                         match AtRule::from_tokens(rule, pos, &mut self.lexer, &self.global_scope) {
-                            AtRule::Mixin(name, mixin) => {self.global_scope.mixins.insert(name, *mixin);},
-                            AtRule::Function(name, func) => {self.global_scope.functions.insert(name, *func);},
+                            AtRule::Mixin(name, mixin) => {
+                                self.global_scope.mixins.insert(name, *mixin);
+                            }
+                            AtRule::Function(name, func) => {
+                                self.global_scope.functions.insert(name, *func);
+                            }
                             AtRule::Error(pos, message) => self.error(pos, &message),
                             AtRule::Warn(pos, message) => self.warn(pos, &message),
                             AtRule::Debug(pos, message) => self.debug(pos, &message),
@@ -564,7 +568,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                         AtRule::Warn(a, b) => Ok(Some(Expr::Warn(a, b))),
                         AtRule::Error(a, b) => Err((a, b)),
                         AtRule::Return(_) => todo!("@return in unexpected location!"),
-                    }
+                    };
                 }
             }
             TokenKind::Interpolation => values.extend(eat_interpolation(toks)),
