@@ -361,6 +361,9 @@ impl<'a> StyleSheetParser<'a> {
                     };
                     rules.push(Stmt::MultilineComment(comment));
                 }
+                TokenKind::AtRule(AtRuleKind::Include) => {
+                    rules.extend(eat_include(&mut self.lexer, &self.global_scope, &Selector(Vec::new())).unwrap_or_else(|e| self.error(e.0, &e.1)))
+                }
                 TokenKind::AtRule(AtRuleKind::Import) => {
                     let Token { pos, .. } = self
                         .lexer

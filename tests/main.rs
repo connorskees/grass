@@ -664,6 +664,11 @@ mod test_mixins {
         "@mixin a($a) {\n  color: $a;\n}\nd {\n  @include a($a/*foo*/: red);\n}\n",
         "d {\n  color: red;\n}\n"
     );
+    test!(
+        toplevel_include,
+        "@mixin a {\n  a {\n    color: red;\n  }\n}\n\n@include a;\n",
+        "a {\n  color: red;\n}\n"
+    );
 }
 
 #[cfg(test)]
