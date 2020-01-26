@@ -346,8 +346,8 @@ pub(crate) enum CaseKind {
 impl Display for CaseKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::InsensitiveCapital => write!(f, " I"),
-            Self::InsensitiveLowercase => write!(f, " i"),
+            Self::InsensitiveCapital => write!(f, "I"),
+            Self::InsensitiveLowercase => write!(f, "i"),
             Self::Sensitive => write!(f, ""),
         }
     }

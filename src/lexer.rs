@@ -272,7 +272,7 @@ impl<'a> Lexer<'a> {
             '^' => AttributeKind::StartsWith,
             '$' => AttributeKind::EndsWith,
             '*' => AttributeKind::Contains,
-            _ => todo!("expected kind (should be error)"),
+            _ => todo!("Expected ']'")
         };
 
         if kind != AttributeKind::Equals {
@@ -285,7 +285,7 @@ impl<'a> Lexer<'a> {
         let mut case_sensitive = CaseKind::Sensitive;
 
         while let Some(c) = self.buf.peek() {
-            if !c.is_alphabetic() && c != &'-' && c != &'_' && c != &'"' && c != &'\'' {
+            if c == &']' && !c.is_whitespace() {
                 break;
             }
 
@@ -326,7 +326,6 @@ impl<'a> Lexer<'a> {
                 .expect("this is impossible because we have already peeked");
             self.pos.next_char();
             value.push(tok);
-            self.devour_whitespace();
         }
 
         self.devour_whitespace();

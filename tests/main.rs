@@ -129,12 +129,24 @@ mod test_selectors {
     test!(selector_attribute_any, "[attr] {\n  color: red;\n}\n");
     test!(
         selector_attribute_any_lower_case_insensitive,
-        "[attr i] {\n  color: red;\n}\n"
+        "[attr=val i] {\n  color: red;\n}\n"
     );
     test!(
         selector_attribute_any_upper_case_insensitive,
-        "[attr I] {\n  color: red;\n}\n"
+        "[attr=val I] {\n  color: red;\n}\n"
     );
+    test!(
+        selector_attribute_arbitrary_modifier,
+        "[attr=val c] {\n  color: red;\n}\n"
+    );
+    test!(
+        selector_attribute_i_in_attr,
+        "[atitr=val] {\n  color: red;\n}\n"
+    );
+    // test!(
+    //     selector_attribute_i_in_val,
+    //     "[attr=vail] {\n  color: red;\n}\n"
+    // );
     test!(
         selector_attribute_equals,
         "[attr=val] {\n  color: red;\n}\n"
