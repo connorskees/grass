@@ -335,6 +335,9 @@ impl Value {
                 Some(Value::Ident(s, QuoteKind::None))
             }
             TokenKind::Keyword(Keyword::Important) => Some(Value::Important),
+            TokenKind::Keyword(Keyword::True) => Some(Value::True),
+            TokenKind::Keyword(Keyword::False) => Some(Value::False),
+            TokenKind::Keyword(Keyword::Null) => Some(Value::Null),
             _ => None,
         }
     }
