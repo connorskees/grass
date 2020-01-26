@@ -592,6 +592,11 @@ mod test_mixins {
         "@mixin a($a, $b) {\n  color: $a $b;\n}\nd {\n  @include a($b: blue, $a: red);\n}\n",
         "d {\n  color: red blue;\n}\n"
     );
+    test!(
+        variable_in_call_args,
+        "@mixin a($a) {\n  color: $a;\n}\nd {\n  $c: red;\n  @include a($c);\n}\n",
+        "d {\n  color: red;\n}\n"
+    );
 }
 
 #[cfg(test)]
@@ -680,6 +685,11 @@ mod test_functions {
     test!(
         single_arg,
         "@function a($c) {\n  @return $c;\n}\n\nb {\ncolor: a(1);\n}\n",
+        "b {\n  color: 1;\n}\n"
+    );
+    test!(
+        return_variable,
+        "@function a($a) {\n  @return $a;\n}\n\nb {\ncolor: a(1);\n}\n",
         "b {\n  color: 1;\n}\n"
     );
     // test!(
