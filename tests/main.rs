@@ -345,6 +345,21 @@ mod test_comments {
         "// a { color: red }\na {\n  height: 1 1px;\n}\n",
         "a {\n  height: 1 1px;\n}\n"
     );
+    test!(
+        converts_form_feed_in_comment,
+        "a {\n  /*  \x0C*/ color: red;\n}\n",
+        "a {\n  /*  \n*/\n  color: red;\n}\n"
+    );
+    test!(
+        converts_crlf_in_comment,
+        "a {\n  /*  \r\n*/ color: red;\n}\n",
+        "a {\n  /*  \n*/\n  color: red;\n}\n"
+    );
+    test!(
+        converts_cr_in_comment,
+        "a {\n  /*  \r*/ color: red;\n}\n",
+        "a {\n  /*  \n*/\n  color: red;\n}\n"
+    );
 }
 
 #[cfg(test)]
@@ -699,6 +714,10 @@ mod test_values {
     test!(preserves_keyword_or, "a {\n  color: or;\n}\n");
     test!(preserves_keyword_unset, "a {\n  color: unset;\n}\n");
     test!(preserves_keyword_nan, "a {\n  color: NaN;\n}\n");
+    test!(
+        preserves_quotes,
+        "a {\n  color: \"'red' \\\"blue\\\"\";\n}\n"
+    );
     test!(
         whitespace_space_list_number,
         "a {\n  color:  1  2  3  ;\n}\n",

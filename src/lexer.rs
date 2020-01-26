@@ -7,6 +7,9 @@ use crate::common::{Keyword, Op, Pos, Symbol};
 use crate::selector::{Attribute, AttributeKind, CaseKind};
 use crate::{Token, TokenKind, Whitespace};
 
+// Rust does not allow us to escape '\f'
+const FORM_FEED: char = '\x0C';
+
 #[derive(Debug, Clone)]
 pub(crate) struct Lexer<'a> {
     tokens: Vec<Token>,
@@ -51,7 +54,7 @@ impl<'a> Iterator for Lexer<'a> {
             '"' => symbol!(self, DoubleQuote),
             ' ' => whitespace!(self, Space),
             '\t' => whitespace!(self, Tab),
-            '\n' | '\x0C' => {
+            '\n' | &FORM_FEED => {
                 self.buf.next();
                 self.pos.newline();
                 TokenKind::Whitespace(Whitespace::Newline)
@@ -170,14 +173,26 @@ impl<'a> Lexer<'a> {
                 self.pos.next_char();
                 let mut comment = String::new();
                 while let Some(tok) = self.buf.next() {
-                    if tok == '\n' {
-                        self.pos.newline()
-                    } else {
-                        self.pos.next_char();
-                    }
-                    if tok == '*' && self.buf.peek() == Some(&'/') {
-                        self.buf.next();
-                        break;
+                    match tok {
+                        '\n' => self.pos.newline(),
+                        FORM_FEED => {
+                            self.pos.newline();
+                            comment.push('\n');
+                            continue;
+                        }
+                        '\r' => {
+                            if self.buf.peek() == Some(&'\n') {
+                                self.buf.next();
+                            }
+                            self.pos.newline();
+                            comment.push('\n');
+                            continue;
+                        }
+                        '*' if self.buf.peek() == Some(&'/') => {
+                            self.buf.next();
+                            break;
+                        }
+                        _ => self.pos.next_char(),
                     }
                     comment.push(tok);
                 }
