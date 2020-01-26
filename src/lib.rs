@@ -425,7 +425,7 @@ impl<'a> StyleSheetParser<'a> {
                 TokenKind::Symbol(Symbol::BitAnd) => {
                     return Err(SassError::new("Base-level rules cannot contain the parent-selector-referencing character '&'.", pos.clone()))
                 }
-                _ => match self.lexer.next() {
+                _ => match dbg!(self.lexer.next()) {
                     Some(Token { pos, .. }) => self.error(pos, "unexpected toplevel token"),
                     _ => unsafe { std::hint::unreachable_unchecked() },
                 },
