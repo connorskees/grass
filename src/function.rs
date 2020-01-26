@@ -1,23 +1,22 @@
 use std::iter::Peekable;
-use std::vec::IntoIter;
 
+use crate::args::CallArgs;
+use crate::args::{eat_func_args, FuncArgs};
 use crate::atrule::AtRule;
 use crate::common::{Pos, Scope, Symbol};
-use crate::args::{eat_func_args, FuncArgs};
 use crate::utils::devour_whitespace;
+use crate::value::Value;
 use crate::{Token, TokenKind};
 
 #[derive(Debug, Clone)]
 pub(crate) struct Function {
     scope: Scope,
     args: FuncArgs,
-    body: Peekable<IntoIter<AtRule>>,
+    body: Vec<AtRule>,
 }
-
 
 impl Function {
     pub fn new(scope: Scope, args: FuncArgs, body: Vec<AtRule>) -> Self {
-        let body = body.into_iter().peekable();
         Function { scope, args, body }
     }
 
@@ -53,11 +52,12 @@ impl Function {
         while nesting > 0 {
             if let Some(tok) = toks.next() {
                 match &tok.kind {
-                    TokenKind::AtRule(rule) => body.push(AtRule::from_tokens(&rule, tok.pos, toks, scope)),
+                    TokenKind::AtRule(rule) => {
+                        body.push(AtRule::from_tokens(rule, tok.pos, toks, scope))
+                    }
                     TokenKind::Symbol(Symbol::CloseCurlyBrace) => nesting -= 1,
                     _ => {}
                 }
-                
             } else {
                 return Err((pos, String::from("unexpected EOF")));
             }
@@ -66,4 +66,33 @@ impl Function {
         Ok((name, Function::new(scope.clone(), args, body)))
     }
 
+    pub fn args(mut self, args: &CallArgs) -> Function {
+        for (idx, arg) in self.args.0.iter().enumerate() {
+            let val = match args.get(&format!("{}", idx)) {
+                Some(v) => v.clone(),
+                None => match args.get(&arg.name) {
+                    Some(v) => v.clone(),
+                    None => arg.default.clone().expect("missing variable!"),
+                },
+            };
+            self.scope.vars.insert(arg.name.clone(), val);
+        }
+        self
+    }
+
+    pub fn call(&self) -> Value {
+        for rule in &self.body {
+            match rule {
+                AtRule::Return(toks) => {
+                    return Value::from_tokens(
+                        &mut toks.clone().into_iter().peekable(),
+                        &self.scope,
+                    )
+                    .unwrap()
+                }
+                _ => todo!("unimplemented at rule in function body"),
+            }
+        }
+        todo!()
+    }
 }
