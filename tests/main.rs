@@ -458,11 +458,7 @@ mod test_mixins {
         "@mixin a {\n  color: red;\n}\n\nb {\n  @include a;\n}\n",
         "b {\n  color: red;\n}\n"
     );
-    test!(
-        empty_mixin,
-        "@mixin a {}\n\nb {\n  @include a;\n}\n",
-        ""
-    );
+    test!(empty_mixin, "@mixin a {}\n\nb {\n  @include a;\n}\n", "");
     test!(
         mixin_two_styles,
         "@mixin a {\n  color: red;\n  color: blue;\n}\n\nb {\n  @include a;\n}\n",
@@ -643,4 +639,29 @@ mod test_values {
         "a {\n  color: 1 (red blue);\n}\n",
         "a {\n  color: 1 red blue;\n}\n"
     );
+}
+
+#[cfg(test)]
+mod test_functions {
+    use super::*;
+    test!(
+        return_num,
+        "@function a() {\n  @return 1;\n}\n\nb {\ncolor: a();\n}\n",
+        "b {\n  color: 1;\n}\n"
+    );
+    test!(
+        return_spaced_list,
+        "@function a() {\n  @return a b;\n}\n\nb {\ncolor: a();\n}\n",
+        "b {\n  color: a b;\n}\n"
+    );
+    test!(
+        single_arg,
+        "@function a($c) {\n  @return $c;\n}\n\nb {\ncolor: a(1);\n}\n",
+        "b {\n  color: 1;\n}\n"
+    );
+    // test!(
+    //     return_no_semicolon,
+    //     "@function a() {\n  @return 1\n}\n\nb {\ncolor: a();\n}\n",
+    //     "b {\n  color: 1;\n}\n"
+    // );
 }
