@@ -279,7 +279,7 @@ impl Value {
                         let func = match scope.functions.get(&s) {
                             Some(f) => f,
                             None => match GLOBAL_FUNCTIONS.get(&s) {
-                                Some(f) => f,
+                                Some(f) => return Some(f(&args)),
                                 None => todo!("called undefined function"),
                             },
                         };
