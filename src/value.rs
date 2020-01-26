@@ -8,7 +8,7 @@ use crate::builtin::GLOBAL_FUNCTIONS;
 use crate::color::Color;
 use crate::common::{Keyword, Op, Scope, Symbol};
 use crate::units::Unit;
-use crate::utils::{deref_variable, devour_whitespace_or_comment, eat_interpolation};
+use crate::utils::{devour_whitespace_or_comment, eat_interpolation};
 use crate::{Token, TokenKind};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -275,7 +275,7 @@ impl Value {
                         ..
                     }) => {
                         toks.next();
-                        let args = eat_call_args(toks);
+                        let args = eat_call_args(toks, scope);
                         let func = match scope.functions.get(&s) {
                             Some(f) => f,
                             None => match GLOBAL_FUNCTIONS.get(&s) {
@@ -308,9 +308,7 @@ impl Value {
                 }
                 Some(Value::Ident(s, QuoteKind::Single))
             }
-            TokenKind::Variable(ref v) => {
-                Value::from_tokens(&mut deref_variable(v, scope).into_iter().peekable(), scope)
-            }
+            TokenKind::Variable(ref v) => Some(scope.vars.get(v).unwrap().clone()),
             TokenKind::Interpolation => {
                 let mut s = eat_interpolation(toks, scope)
                     .iter()

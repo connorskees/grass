@@ -1,4 +1,5 @@
-use crate::common::{Pos, Symbol, Whitespace};
+use crate::common::{Pos, Symbol};
+use crate::value::Value;
 use crate::{Scope, Token, TokenKind};
 use std::iter::{Iterator, Peekable};
 
@@ -38,33 +39,6 @@ pub(crate) fn devour_whitespace_or_comment<I: Iterator<Item = W>, W: IsWhitespac
     found_whitespace
 }
 
-#[cfg_attr(feature = "nightly", track_caller)]
-pub(crate) fn deref_variable(name: &str, scope: &Scope) -> Vec<Token> {
-    let mut toks = scope
-        .vars
-        .get(name)
-        .expect("todo! expected variable to exist")
-        .iter()
-        .peekable();
-    let mut val = Vec::with_capacity(toks.len());
-    while let Some(tok) = toks.next() {
-        match tok.kind {
-            TokenKind::Variable(ref v) => val.extend(deref_variable(v, scope)),
-            TokenKind::Whitespace(_) => {
-                devour_whitespace(&mut toks);
-                if toks.peek().is_some() {
-                    val.push(Token {
-                        kind: TokenKind::Whitespace(Whitespace::Space),
-                        pos: tok.pos,
-                    });
-                }
-            }
-            _ => val.push(tok.clone()),
-        }
-    }
-    val
-}
-
 pub(crate) fn eat_interpolation<I: Iterator<Item = Token>>(
     tokens: &mut I,
     scope: &Scope,
@@ -76,7 +50,10 @@ pub(crate) fn eat_interpolation<I: Iterator<Item = Token>>(
             TokenKind::Symbol(Symbol::OpenCurlyBrace) => {
                 todo!("invalid character in interpolation")
             }
-            TokenKind::Variable(ref v) => val.extend(deref_variable(v, scope)),
+            TokenKind::Variable(ref v) => val.push(Token {
+                pos: tok.pos,
+                kind: TokenKind::Ident(scope.vars.get(v).unwrap().to_string()),
+            }),
             TokenKind::Interpolation => val.extend(eat_interpolation(tokens, scope)),
             _ => val.push(tok),
         }
@@ -87,17 +64,12 @@ pub(crate) fn eat_interpolation<I: Iterator<Item = Token>>(
 pub(crate) fn eat_variable_value<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
     scope: &Scope,
-) -> Result<Vec<Token>, (Pos, String)> {
+) -> Result<Value, (Pos, String)> {
     devour_whitespace(toks);
     // todo!(line might not end with semicolon)
-    let iter1 = toks.take_while(|x| x.kind != TokenKind::Symbol(Symbol::SemiColon));
-    let mut iter2 = Vec::new();
-    for tok in iter1 {
-        match tok.kind {
-            TokenKind::Variable(ref name) => iter2.extend(deref_variable(name, scope)),
-            _ => iter2.push(tok),
-        };
-    }
+    let iter1: Vec<Token> = toks
+        .take_while(|x| x.kind != TokenKind::Symbol(Symbol::SemiColon))
+        .collect();
     devour_whitespace(toks);
-    Ok(iter2)
+    Ok(Value::from_tokens(&mut iter1.into_iter().peekable(), scope).unwrap())
 }
