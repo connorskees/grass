@@ -272,7 +272,7 @@ impl<'a> Lexer<'a> {
             '^' => AttributeKind::StartsWith,
             '$' => AttributeKind::EndsWith,
             '*' => AttributeKind::Contains,
-            _ => todo!("Expected ']'")
+            _ => todo!("Expected ']'"),
         };
 
         if kind != AttributeKind::Equals {

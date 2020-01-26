@@ -95,10 +95,9 @@ impl Mixin {
             match expr {
                 Expr::Style(s) => stmts.push(Stmt::Style(s)),
                 Expr::Include(s) => stmts.extend(s),
-                Expr::MixinDecl(..)
-                | Expr::FunctionDecl(..)
-                | Expr::Debug(..)
-                | Expr::Warn(..) => todo!(),
+                Expr::MixinDecl(..) | Expr::FunctionDecl(..) | Expr::Debug(..) | Expr::Warn(..) => {
+                    todo!()
+                }
                 Expr::Selector(selector) => {
                     let rules = self.eval(&super_selector.zip(&selector))?;
                     stmts.push(Stmt::RuleSet(RuleSet {
@@ -144,7 +143,7 @@ pub(crate) fn eat_include<I: Iterator<Item = Token>>(
                     assert_eq!(tok.kind, TokenKind::Symbol(Symbol::SemiColon));
                 }
                 tmp
-            },
+            }
             _ => return Err((pos, String::from("expected `(` or `;`"))),
         }
     } else {
