@@ -299,6 +299,11 @@ mod test_selectors {
         "a /* foo */ b {\n  color: red;\n}\n",
         "a b {\n  color: red;\n}\n"
     );
+    test!(
+        interpolates_comma,
+        "$x: oo, ba;\nf#{$x}r {\n  baz {\n    color: red;\n  }\n}\n",
+        "foo baz, bar baz {\n  color: red;\n}\n"
+    );
 }
 
 #[cfg(test)]

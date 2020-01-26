@@ -1,5 +1,7 @@
 use crate::common::{Scope, Symbol};
-use crate::utils::{devour_whitespace, devour_whitespace_or_comment, eat_interpolation, IsWhitespace};
+use crate::utils::{
+    devour_whitespace, devour_whitespace_or_comment, eat_interpolation, IsWhitespace,
+};
 use crate::{Token, TokenKind};
 use std::fmt::{self, Display};
 use std::iter::Peekable;

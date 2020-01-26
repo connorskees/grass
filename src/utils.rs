@@ -1,4 +1,5 @@
 use crate::common::{Pos, Symbol};
+use crate::lexer::Lexer;
 use crate::value::Value;
 use crate::{Scope, Token, TokenKind};
 use std::iter::{Iterator, Peekable};
@@ -50,10 +51,9 @@ pub(crate) fn eat_interpolation<I: Iterator<Item = Token>>(
             TokenKind::Symbol(Symbol::OpenCurlyBrace) => {
                 todo!("invalid character in interpolation")
             }
-            TokenKind::Variable(ref v) => val.push(Token {
-                pos: tok.pos,
-                kind: TokenKind::Ident(scope.vars.get(v).unwrap().to_string()),
-            }),
+            TokenKind::Variable(ref v) => val.extend(
+                Lexer::new(&scope.vars.get(v).unwrap().to_string()).collect::<Vec<Token>>(),
+            ),
             TokenKind::Interpolation => val.extend(eat_interpolation(tokens, scope)),
             _ => val.push(tok),
         }
