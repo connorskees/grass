@@ -294,6 +294,11 @@ mod test_selectors {
         "  a  >  b  ,  c  ~  d  e  .f  #g  :h  i.j  [  k  ]  { color: red }",
         "a > b, c ~ d e .f #g :h i.j [k] {\n  color: red;\n}\n"
     );
+    test!(
+        comment_between_selectors,
+        "a /* foo */ b {\n  color: red;\n}\n",
+        "a b {\n  color: red;\n}\n"
+    );
 }
 
 #[cfg(test)]

@@ -1,5 +1,5 @@
 use crate::common::{Scope, Symbol};
-use crate::utils::{devour_whitespace, eat_interpolation, IsWhitespace};
+use crate::utils::{devour_whitespace, devour_whitespace_or_comment, eat_interpolation, IsWhitespace};
 use crate::{Token, TokenKind};
 use std::fmt::{self, Display};
 use std::iter::Peekable;
@@ -232,7 +232,7 @@ impl<'a> SelectorParser<'a> {
     }
 
     fn consume_selector(&mut self, tokens: &'_ mut Peekable<IntoIter<Token>>) {
-        if devour_whitespace(tokens) {
+        if devour_whitespace_or_comment(tokens) {
             if let Some(Token {
                 kind: TokenKind::Symbol(Symbol::Comma),
                 ..
