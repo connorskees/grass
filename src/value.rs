@@ -142,6 +142,10 @@ impl Display for Value {
 }
 
 impl Value {
+    pub fn is_null(&self) -> bool {
+        self == &Value::Null
+    }
+
     pub fn is_true(&self) -> bool {
         todo!()
     }
@@ -174,6 +178,7 @@ impl Value {
             TokenKind::Symbol(Symbol::CloseParen) => Some(left),
             TokenKind::Symbol(Symbol::Plus)
             | TokenKind::Symbol(Symbol::Minus)
+            | TokenKind::Op(_)
             | TokenKind::Symbol(Symbol::Mul)
             | TokenKind::Symbol(Symbol::Div)
             | TokenKind::Symbol(Symbol::Percent) => {
@@ -183,6 +188,7 @@ impl Value {
                     TokenKind::Symbol(Symbol::Mul) => Op::Mul,
                     TokenKind::Symbol(Symbol::Div) => Op::Div,
                     TokenKind::Symbol(Symbol::Percent) => Op::Rem,
+                    TokenKind::Op(op) => op,
                     _ => unsafe { std::hint::unreachable_unchecked() },
                 };
                 toks.next();
@@ -279,7 +285,7 @@ impl Value {
                         let func = match scope.functions.get(&s) {
                             Some(f) => f,
                             None => match GLOBAL_FUNCTIONS.get(&s) {
-                                Some(f) => return Some(f(&args)),
+                                Some(f) => return f(&args),
                                 None => todo!("called undefined function"),
                             },
                         };
