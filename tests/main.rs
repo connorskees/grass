@@ -260,8 +260,13 @@ mod test_selectors {
         "a b a {\n  color: red;\n}\n"
     );
     test!(
-        selector_interpolation_super_selector_root,
+        selector_interpolation_super_selector_root_postfix,
         "a#{&} {\nb { color: red; }}",
+        "a b {\n  color: red;\n}\n"
+    );
+    test!(
+        selector_interpolation_super_selector_root_prefix,
+        "#{&}a {\nb { color: red; }}",
         "a b {\n  color: red;\n}\n"
     );
     test!(

@@ -22,6 +22,7 @@ impl Display for Selector {
                 | SelectorKind::Class
                 | SelectorKind::Id
                 | SelectorKind::Universal
+                | SelectorKind::InterpolatedSuper
                 | SelectorKind::Element(_) => {
                     write!(f, "{}", s)?;
                     if devour_whitespace(&mut iter) {
@@ -32,6 +33,7 @@ impl Display for Selector {
                             | Some(SelectorKind::Class)
                             | Some(SelectorKind::Id)
                             | Some(SelectorKind::Universal)
+                            | Some(SelectorKind::InterpolatedSuper)
                             | Some(SelectorKind::Element(_)) => {
                                 write!(f, " ")?;
                             }
@@ -111,8 +113,7 @@ impl Display for SelectorKind {
                 s,
                 toks.iter().map(ToString::to_string).collect::<String>()
             ),
-            SelectorKind::InterpolatedSuper => write!(f, " "),
-            SelectorKind::Super | SelectorKind::None => {
+            SelectorKind::Super | SelectorKind::None | SelectorKind::InterpolatedSuper => {
                 write!(f, "")
             }
         }
