@@ -653,6 +653,9 @@ mod test_values {
     test!(comma_list_number, "a {\n  color: 1, 2, 3;\n}\n");
     test!(space_list_number, "a {\n  color: 1 2 3;\n}\n");
     test!(comma_space_list_number, "a {\n  color: 1 1, 2 2, 3 3;\n}\n");
+    test!(preserves_keyword_true, "a {\n  color: true;\n}\n");
+    test!(preserves_keyword_false, "a {\n  color: false;\n}\n");
+    test!(preserves_keyword_null, "a {\n  color: null;\n}\n");
     test!(
         whitespace_space_list_number,
         "a {\n  color:  1  2  3  ;\n}\n",
