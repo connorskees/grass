@@ -1,8 +1,10 @@
 #![allow(dead_code, unused_variables)]
 use std::fmt::{self, Display};
 use std::iter::{Iterator, Peekable};
-use std::ops::{Add, Div, Mul, Rem, Sub};
+use std::ops::Add;
 
+use crate::args::eat_call_args;
+use crate::builtin::GLOBAL_FUNCTIONS;
 use crate::color::Color;
 use crate::common::{Keyword, Op, Scope, Symbol};
 use crate::units::Unit;
@@ -159,7 +161,7 @@ impl Value {
             None => return Some(left),
         };
         match next.kind {
-            TokenKind::Symbol(Symbol::SemiColon) => return Some(left),
+            TokenKind::Symbol(Symbol::SemiColon) => Some(left),
             TokenKind::Symbol(Symbol::Comma) => {
                 toks.next();
                 devour_whitespace_or_comment(toks);
@@ -181,7 +183,7 @@ impl Value {
                     TokenKind::Symbol(Symbol::Mul) => Op::Mul,
                     TokenKind::Symbol(Symbol::Div) => Op::Div,
                     TokenKind::Symbol(Symbol::Percent) => Op::Rem,
-                    _ => unsafe { std::hint::unreachable_unchecked() }
+                    _ => unsafe { std::hint::unreachable_unchecked() },
                 };
                 toks.next();
                 devour_whitespace_or_comment(toks);
@@ -267,7 +269,24 @@ impl Value {
                         _ => break,
                     }
                 }
-                Some(Value::Ident(s, QuoteKind::None))
+                match toks.peek() {
+                    Some(Token {
+                        kind: TokenKind::Symbol(Symbol::OpenParen),
+                        ..
+                    }) => {
+                        toks.next();
+                        let args = eat_call_args(toks);
+                        let func = match scope.functions.get(&s) {
+                            Some(f) => f,
+                            None => match GLOBAL_FUNCTIONS.get(&s) {
+                                Some(f) => f,
+                                None => todo!("called undefined function"),
+                            },
+                        };
+                        Some(func.clone().args(&args).call())
+                    }
+                    _ => Some(Value::Ident(s, QuoteKind::None)),
+                }
             }
             TokenKind::Symbol(Symbol::DoubleQuote) => {
                 let mut s = String::new();
