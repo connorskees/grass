@@ -310,7 +310,7 @@ struct StyleSheetParser<'a> {
 impl<'a> StyleSheetParser<'a> {
     fn parse_toplevel(mut self) -> SassResult<(Vec<Stmt>, Scope)> {
         let mut rules: Vec<Stmt> = Vec::new();
-        while let Some(Token { kind, .. }) = self.lexer.peek() {
+        while let Some(Token { kind, pos }) = self.lexer.peek() {
             match kind {
                 TokenKind::Ident(_)
                 | TokenKind::Attribute(_)
@@ -421,6 +421,9 @@ impl<'a> StyleSheetParser<'a> {
                             AtRule::Return(_) => todo!("@return in unexpected location!"),
                         }
                     }
+                }
+                TokenKind::Symbol(Symbol::BitAnd) => {
+                    return Err(SassError::new("Base-level rules cannot contain the parent-selector-referencing character '&'.", pos.clone()))
                 }
                 _ => match self.lexer.next() {
                     Some(Token { pos, .. }) => self.error(pos, "unexpected toplevel token"),
