@@ -279,9 +279,16 @@ impl Value {
             }
             TokenKind::Symbol(Symbol::DoubleQuote) => {
                 let mut s = String::new();
+                let mut is_escaped = false;
                 while let Some(tok) = toks.next() {
-                    if tok.kind == TokenKind::Symbol(Symbol::DoubleQuote) {
-                        break;
+                    match tok.kind {
+                        TokenKind::Symbol(Symbol::DoubleQuote) if !is_escaped => break,
+                        TokenKind::Symbol(Symbol::BackSlash) if !is_escaped => is_escaped = true,
+                        TokenKind::Symbol(Symbol::BackSlash) => s.push('\\'),
+                        _ => {}
+                    }
+                    if is_escaped && tok.kind != TokenKind::Symbol(Symbol::BackSlash) {
+                        is_escaped = false;
                     }
                     s.push_str(&tok.kind.to_string());
                 }
