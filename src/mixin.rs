@@ -94,8 +94,8 @@ impl Mixin {
         while let Some(expr) = eat_expr(&mut self.body, &self.scope, super_selector)? {
             match expr {
                 Expr::Style(s) => stmts.push(Stmt::Style(s)),
-                Expr::Include(..)
-                | Expr::MixinDecl(..)
+                Expr::Include(s) => stmts.extend(s),
+                Expr::MixinDecl(..)
                 | Expr::FunctionDecl(..)
                 | Expr::Debug(..)
                 | Expr::Warn(..) => todo!(),
@@ -137,20 +137,19 @@ pub(crate) fn eat_include<I: Iterator<Item = Token>>(
     let args = if let Some(tok) = toks.next() {
         match tok.kind {
             TokenKind::Symbol(Symbol::SemiColon) => CallArgs::new(),
-            TokenKind::Symbol(Symbol::OpenParen) => eat_call_args(toks, scope),
+            TokenKind::Symbol(Symbol::OpenParen) => {
+                let tmp = eat_call_args(toks, scope);
+                devour_whitespace(toks);
+                if let Some(tok) = toks.next() {
+                    assert_eq!(tok.kind, TokenKind::Symbol(Symbol::SemiColon));
+                }
+                tmp
+            },
             _ => return Err((pos, String::from("expected `(` or `;`"))),
         }
     } else {
         return Err((pos, String::from("unexpected EOF")));
     };
-
-    devour_whitespace(toks);
-
-    if !args.is_empty() {
-        if let Some(tok) = toks.next() {
-            assert_eq!(tok.kind, TokenKind::Symbol(Symbol::SemiColon));
-        }
-    }
 
     devour_whitespace(toks);
 
