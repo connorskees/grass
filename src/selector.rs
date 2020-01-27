@@ -43,6 +43,17 @@ impl Display for Selector {
                         }
                     }
                 }
+                SelectorKind::Multiple => {
+                    devour_whitespace(&mut iter);
+                    while let Some(sel) = iter.peek() {
+                        if sel != &&SelectorKind::Multiple {
+                            write!(f, ", ")?;
+                            break;
+                        }
+                        iter.next();
+                        devour_whitespace(&mut iter);
+                    }
+                }
                 _ => write!(f, "{}", s)?,
             }
         }

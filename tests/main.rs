@@ -309,6 +309,11 @@ mod test_selectors {
         "$x: oo, ba;\nf#{$x}r {\n  baz {\n    color: red;\n  }\n}\n",
         "foo baz, bar baz {\n  color: red;\n}\n"
     );
+    test!(
+        extra_commas,
+        "div,, , span, ,, {\n  color: red;\n}\n",
+        "div, span {\n  color: red;\n}\n"
+    );
 }
 
 #[cfg(test)]
