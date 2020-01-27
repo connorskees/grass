@@ -48,6 +48,9 @@ pub(crate) fn eat_interpolation<I: Iterator<Item = Token>>(
     while let Some(tok) = tokens.next() {
         match tok.kind {
             TokenKind::Symbol(Symbol::CloseCurlyBrace) => break,
+            TokenKind::Symbol(Symbol::SingleQuote) | TokenKind::Symbol(Symbol::DoubleQuote) => {
+                continue
+            }
             TokenKind::Symbol(Symbol::OpenCurlyBrace) => {
                 todo!("invalid character in interpolation")
             }

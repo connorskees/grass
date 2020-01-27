@@ -521,6 +521,21 @@ mod test_misc {
 }
 
 #[cfg(test)]
+mod test_interpolation {
+    use super::*;
+    test!(
+        removes_double_quotes,
+        "a {\n  color: #{\"red\"};\n}\n",
+        "a {\n  color: red;\n}\n"
+    );
+    test!(
+        removes_single_quotes,
+        "a {\n  color: #{'red'};\n}\n",
+        "a {\n  color: red;\n}\n"
+    );
+}
+
+#[cfg(test)]
 mod test_mixins {
     use super::*;
     test!(
