@@ -95,6 +95,11 @@ mod test_variables {
         "$a: red; a {\n  color: #{#{$a}};\n}\n",
         "a {\n  color: red;\n}\n"
     );
+    test!(
+        numbers_in_variable,
+        "$var1: red; a {\n  color: $var1;\n}\n",
+        "a {\n  color: red;\n}\n"
+    );
 }
 
 #[cfg(test)]

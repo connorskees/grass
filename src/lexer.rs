@@ -372,7 +372,7 @@ impl<'a> Lexer<'a> {
         self.pos.next_char();
         let mut name = String::with_capacity(99);
         while let Some(c) = self.buf.peek() {
-            if !c.is_alphabetic() && c != &'-' && c != &'_' {
+            if !c.is_alphanumeric() && c != &'-' && c != &'_' {
                 break;
             }
             let tok = self
