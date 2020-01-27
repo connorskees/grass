@@ -13,6 +13,11 @@ cargo b --release
 ./sass-spec/sass-spec.rb -c './target/release/grass'
 ```
 
+2020-01-27  
+PASSING: 171  
+FAILING: 4922  
+TOTAL: 5093
+
 2020-01-20  
 PASSING: 143  
 FAILING: 4950  
@@ -20,80 +25,9 @@ TOTAL: 5093
 
 ## Features
 
-`grass` is far from being feature complete! Below you can see what SCSS features are currently supported.
-My personal MVP focuses on `values`, `@mixin`, `@include`, `@media`, `styles`, `operators`, `css functions` and `css at rules`.
+`grass` is far from being feature complete!
 
-- [ ] Variables
-  - [x] Scoping
-  - [x] Shadowing
-  - [ ] Built-in variables
-  - [ ] !default
-  - [ ] !global
-- [ ] @import
-  - [x] SCSS imports
-  - [ ] CSS imports
-  - [ ] URL imports
-- [x] @error
-- [x] @warn
-- [x] @debug
-- [ ] Styles
-  - [x] !important
-  - [x] Interpolation
-  - [ ] Nesting
-  - [ ] Custom properties
-  - [ ] Hidden declarations
-- [ ] Selectors
-  - [x] Attributes
-  - [x] Parent selector &
-  - [x] All other selectors
-  - [x] Nesting
-  - [ ] Placeholder selector %
-- [x] Comments
-  - [x] Removes single line comments
-  - [x] Preserves toplevel multiline comments
-  - [x] Removes inline multiline comments
-- [ ] @mixin
-  - [x] Keyword args
-  - [x] Default arg values
-  - [ ] Variadic args
-  - [ ] @content
-- [ ] @include
-  - [x] Keyword args
-  - [x] Default arg values
-  - [ ] Content blocks
-- [ ] Functions
-  - [ ] @return
-- [ ] Control flow
-  - [ ] @if
-  - [ ] @else
-  - [ ] @for
-  - [ ] @while
-  - [ ] @each
-- [ ] Constant folding
-- [ ] Unit arithmetic
-- [ ] CSS at rules
-- [ ] CSS functions
-  - [ ] calc()
-  - [ ] url()
-  - [ ] element()
-  - [ ] progid:...()
-  - [ ] expression()
-  - [ ] min()
-  - [ ] max()
-- [ ] @media
-- [ ] @use
-- [ ] @extend
-- [ ] @at-root
-- [ ] @forward
-- [ ] Values
-  - [ ] Numbers
-  - [ ] Strings
-  - [ ] Colors
-  - [ ] Lists
-  - [ ] Maps
-  - [ ] Booleans
-  - [ ] Null
-- [ ] Operators
-- [ ] Built-in modules
-- [ ] Content encoding
-- [ ] WASM bindings
+Right now, I am focusing on just getting the most basic tests to pass. This is actually very close to being done!
+Major tasks (not basic) remaining include builtin functions, control flow, and values.
+
+I would eventually like to focus heavily on performance and WASM bindings -- two areas that a Rust implementation has an advantage over Dart
