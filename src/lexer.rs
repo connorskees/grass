@@ -127,14 +127,17 @@ impl<'a> Lexer<'a> {
         TokenKind::Keyword(Keyword::Important)
     }
 
-    fn devour_whitespace(&mut self) {
+    fn devour_whitespace(&mut self) -> bool {
+        let mut found_whitespace = false;
         while let Some(c) = self.buf.peek() {
             if !is_whitespace(*c) {
-                break;
+                return found_whitespace;
             }
+            found_whitespace = true;
             self.buf.next();
             self.pos.next_char();
         }
+        found_whitespace
     }
 
     fn lex_at_rule(&mut self) -> TokenKind {
@@ -300,39 +303,8 @@ impl<'a> Lexer<'a> {
         let mut case_sensitive = CaseKind::Sensitive;
 
         while let Some(c) = self.buf.peek() {
-            if c == &']' && !c.is_whitespace() {
+            if c == &']' || c.is_whitespace() {
                 break;
-            }
-
-            if c == &'i' || c == &'I' {
-                if c == &'i' {
-                    case_sensitive = CaseKind::InsensitiveLowercase;
-                } else if c == &'I' {
-                    case_sensitive = CaseKind::InsensitiveCapital;
-                }
-                let tok = self
-                    .buf
-                    .next()
-                    .expect("this is impossible because we have already peeked");
-                self.pos.next_char();
-                self.devour_whitespace();
-                match self.buf.next() {
-                    Some(']') => {
-                        return TokenKind::Attribute(Attribute {
-                            kind,
-                            attr,
-                            value,
-                            case_sensitive,
-                        })
-                    }
-                    Some(val) => {
-                        self.pos.next_char();
-                        value.push(tok);
-                        value.push(val);
-                    }
-                    None => todo!("expected something to come after "),
-                }
-                continue;
             }
 
             let tok = self
@@ -343,9 +315,49 @@ impl<'a> Lexer<'a> {
             value.push(tok);
         }
 
-        self.devour_whitespace();
-
-        assert!(self.buf.next() == Some(']'));
+        if self.devour_whitespace() {
+            let n = self.buf.next();
+            match n {
+                Some('i') | Some('I') => {
+                    let case_sensitive = match n {
+                        Some('i') => CaseKind::InsensitiveLowercase,
+                        Some('I') => CaseKind::InsensitiveCapital,
+                        _ => unsafe { std::hint::unreachable_unchecked() },
+                    };
+                    self.pos.next_char();
+                    self.devour_whitespace();
+                    match self.buf.next() {
+                        Some(']') => {
+                            return TokenKind::Attribute(Attribute {
+                                kind,
+                                attr,
+                                value,
+                                case_sensitive,
+                            })
+                        }
+                        Some(_) => todo!("modifier must be 1 character"),
+                        None => todo!("unexpected EOF"),
+                    }
+                }
+                Some(']') => {
+                    return TokenKind::Attribute(Attribute {
+                        kind,
+                        attr,
+                        value,
+                        case_sensitive,
+                    })
+                }
+                Some(c) => {
+                    value.push(' ');
+                    value.push(c.clone());
+                    self.devour_whitespace();
+                    assert!(self.buf.next() == Some(']'));
+                }
+                None => todo!(),
+            }
+        } else {
+            assert!(self.buf.next() == Some(']'));
+        }
 
         TokenKind::Attribute(Attribute {
             kind,

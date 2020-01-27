@@ -143,10 +143,15 @@ mod test_selectors {
         selector_attribute_i_in_attr,
         "[atitr=val] {\n  color: red;\n}\n"
     );
-    // test!(
-    //     selector_attribute_i_in_val,
-    //     "[attr=vail] {\n  color: red;\n}\n"
-    // );
+    test!(
+        selector_attribute_i_in_val,
+        "[attr=vail] {\n  color: red;\n}\n"
+    );
+    test!(
+        selector_attribute_whitespace,
+        "[attr   *=   val      ] {\n  color: red;\n}\n",
+        "[attr*=val] {\n  color: red;\n}\n"
+    );
     test!(
         selector_attribute_equals,
         "[attr=val] {\n  color: red;\n}\n"
