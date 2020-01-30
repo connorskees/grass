@@ -100,6 +100,36 @@ mod test_variables {
         "$var1: red; a {\n  color: $var1;\n}\n",
         "a {\n  color: red;\n}\n"
     );
+    test!(
+        default_var_after,
+        "$a: red;\n$a: blue !default;\na {\n  color: $a;\n}",
+        "a {\n  color: red;\n}\n"
+    );
+    test!(
+        default_var_before,
+        "$a: red !default;\n$a: blue;\na {\n  color: $a;\n}",
+        "a {\n  color: blue;\n}\n"
+    );
+    test!(
+        default_var_whitespace,
+        "$a: red     !default          ;\na {\n  color: $a;\n}",
+        "a {\n  color: red;\n}\n"
+    );
+    test!(
+        default_var_inside_rule,
+        "a {\n  $a: red;\n  $a: blue !default;\n  color: $a;\n}",
+        "a {\n  color: red;\n}\n"
+    );
+    test!(
+        interpolation_in_variable,
+        "$a: #{red};\na {\n  color: $a\n}\n",
+        "a {\n  color: red;\n}\n"
+    );
+    test!(
+        variable_decl_doesnt_end_in_semicolon,
+        "a {\n  $a: red\n}\n\nb {\n  color: blue;\n}\n",
+        "b {\n  color: blue;\n}\n"
+    );
 }
 
 #[cfg(test)]

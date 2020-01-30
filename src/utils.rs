@@ -1,4 +1,4 @@
-use crate::common::{Pos, Symbol};
+use crate::common::{Keyword, Pos, Symbol};
 use crate::lexer::Lexer;
 use crate::value::Value;
 use crate::{Scope, Token, TokenKind};
@@ -64,15 +64,51 @@ pub(crate) fn eat_interpolation<I: Iterator<Item = Token>>(
     val
 }
 
+pub(crate) struct VariableDecl {
+    pub val: Value,
+    pub default: bool,
+}
+
+impl VariableDecl {
+    pub fn new(val: Value, default: bool) -> VariableDecl {
+        VariableDecl { val, default }
+    }
+}
+
 pub(crate) fn eat_variable_value<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
     scope: &Scope,
-) -> Result<Value, (Pos, String)> {
+) -> Result<VariableDecl, (Pos, String)> {
     devour_whitespace(toks);
-    // todo!(line might not end with semicolon)
-    let iter1: Vec<Token> = toks
-        .take_while(|x| x.kind != TokenKind::Symbol(Symbol::SemiColon))
-        .collect();
+    let mut default = false;
+    let mut raw: Vec<Token> = Vec::new();
+    let mut nesting = 0;
+    while let Some(tok) = toks.peek() {
+        match tok.kind {
+            TokenKind::Symbol(Symbol::SemiColon) => {
+                toks.next();
+                break;
+            }
+            TokenKind::Keyword(Keyword::Default) => {
+                toks.next();
+                default = true
+            }
+            TokenKind::Interpolation | TokenKind::Symbol(Symbol::OpenCurlyBrace) => {
+                nesting += 1;
+                raw.push(toks.next().unwrap());
+            }
+            TokenKind::Symbol(Symbol::CloseCurlyBrace) => {
+                if nesting == 0 {
+                    break;
+                } else {
+                    nesting -= 1;
+                    raw.push(toks.next().unwrap());
+                }
+            }
+            _ => raw.push(toks.next().unwrap()),
+        }
+    }
     devour_whitespace(toks);
-    Ok(Value::from_tokens(&mut iter1.into_iter().peekable(), scope).unwrap())
+    let val = Value::from_tokens(&mut raw.into_iter().peekable(), scope).unwrap();
+    Ok(VariableDecl::new(val, default))
 }

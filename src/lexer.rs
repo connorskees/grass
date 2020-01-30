@@ -117,14 +117,19 @@ impl<'a> Lexer<'a> {
             Some('i') | Some('I') => {
                 self.buf.next();
                 assert_char!(self, 'm' 'p' 'o' 'r' 't' 'a' 'n' 't');
+                TokenKind::Keyword(Keyword::Important)
+            }
+            Some('d') | Some('D') => {
+                self.buf.next();
+                assert_char!(self, 'e' 'f' 'a' 'u' 'l' 't');
+                TokenKind::Keyword(Keyword::Default)
             }
             Some('=') => {
                 self.buf.next();
-                return TokenKind::Op(Op::NotEqual);
+                TokenKind::Op(Op::NotEqual)
             }
             _ => todo!("expected either `i` or `=` after `!`"),
-        };
-        TokenKind::Keyword(Keyword::Important)
+        }
     }
 
     fn devour_whitespace(&mut self) -> bool {

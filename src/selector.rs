@@ -272,7 +272,9 @@ impl<'a> SelectorParser<'a> {
                 TokenKind::Symbol(Symbol::Plus) => self.selectors.push(SelectorKind::Following),
                 TokenKind::Symbol(Symbol::Tilde) => self.selectors.push(SelectorKind::Preceding),
                 TokenKind::Symbol(Symbol::Mul) => self.selectors.push(SelectorKind::Universal),
-                TokenKind::Symbol(Symbol::Percent) => self.selectors.push(SelectorKind::Placeholder),
+                TokenKind::Symbol(Symbol::Percent) => {
+                    self.selectors.push(SelectorKind::Placeholder)
+                }
                 TokenKind::Symbol(Symbol::BitAnd) => self.selectors.push(if self.is_interpolated {
                     SelectorKind::InterpolatedSuper
                 } else {

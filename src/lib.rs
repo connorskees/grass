@@ -58,7 +58,7 @@ use crate::lexer::Lexer;
 use crate::mixin::{eat_include, Mixin};
 use crate::selector::{Attribute, Selector};
 use crate::style::Style;
-use crate::utils::{devour_whitespace, eat_variable_value, IsComment, IsWhitespace};
+use crate::utils::{devour_whitespace, eat_variable_value, IsComment, IsWhitespace, VariableDecl};
 use crate::value::Value;
 
 mod args;
@@ -346,9 +346,11 @@ impl<'a> StyleSheetParser<'a> {
                     {
                         self.error(pos, "unexpected variable use at toplevel");
                     }
-                    let val = eat_variable_value(&mut self.lexer, &self.global_scope)
+                    let VariableDecl { val, default } = eat_variable_value(&mut self.lexer, &self.global_scope)
                         .unwrap_or_else(|err| self.error(err.0, &err.1));
-                    self.global_scope.vars.insert(name, val);
+                    if !default || self.global_scope.vars.get(&name).is_none() {
+                        self.global_scope.vars.insert(name, val);
+                    }
                 }
                 TokenKind::MultilineComment(_) => {
                     let comment = match self
@@ -533,10 +535,10 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                 {
                     toks.next();
                     devour_whitespace(toks);
-                    return Ok(Some(Expr::VariableDecl(
-                        name,
-                        eat_variable_value(toks, scope)?,
-                    )));
+                    let VariableDecl { val, default } = eat_variable_value(toks, scope)?;
+                    if !default || scope.vars.get(&name).is_none() {
+                        return Ok(Some(Expr::VariableDecl(name, val)));
+                    }
                 } else {
                     values.push(Token {
                         kind: TokenKind::Variable(name),
