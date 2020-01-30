@@ -1,6 +1,7 @@
+#![cfg(test)]
+
 use grass::StyleSheet;
 
-#[cfg(test)]
 macro_rules! test {
     ($func:ident, $input:literal) => {
         #[test]
@@ -32,7 +33,6 @@ macro_rules! test {
     };
 }
 
-#[cfg(test)]
 mod test_variables {
     use super::*;
     test!(
@@ -132,7 +132,6 @@ mod test_variables {
     );
 }
 
-#[cfg(test)]
 mod test_selectors {
     use super::StyleSheet;
     test!(
@@ -351,7 +350,6 @@ mod test_selectors {
     );
 }
 
-#[cfg(test)]
 mod test_units {
     use super::StyleSheet;
     test!(unit_none, "a {\n  height: 1;\n}\n");
@@ -362,7 +360,6 @@ mod test_units {
     test!(unit_percent, "a {\n  height: 1%;\n}\n");
 }
 
-#[cfg(test)]
 mod test_comments {
     use super::StyleSheet;
     test!(
@@ -417,7 +414,6 @@ mod test_comments {
     );
 }
 
-#[cfg(test)]
 mod test_styles {
     use super::StyleSheet;
     test!(basic_style, "a {\n  color: red;\n}\n");
@@ -529,7 +525,6 @@ mod test_styles {
     );
 }
 
-#[cfg(test)]
 mod test_misc {
     use super::*;
     // test!(
@@ -555,7 +550,6 @@ mod test_misc {
     );
 }
 
-#[cfg(test)]
 mod test_interpolation {
     use super::*;
     test!(
@@ -570,7 +564,6 @@ mod test_interpolation {
     );
 }
 
-#[cfg(test)]
 mod test_mixins {
     use super::*;
     test!(
@@ -736,7 +729,6 @@ mod test_mixins {
     );
 }
 
-#[cfg(test)]
 mod test_imports {
     use super::*;
     use std::io::Write;
@@ -770,7 +762,6 @@ mod test_imports {
     test_import!(finds_underscore_name_scss, "@import \"finds_underscore_name_scss\";\na {\n color: $a;\n}" => "a {\n  color: red;\n}\n" | "_finds_underscore_name_scss.scss"("$a: red;"));
 }
 
-#[cfg(test)]
 mod test_values {
     use super::*;
     test!(comma_list_ident, "a {\n  color: red, white, blue;\n}\n");
@@ -821,7 +812,6 @@ mod test_values {
     );
 }
 
-#[cfg(test)]
 mod test_functions {
     use super::*;
     test!(
