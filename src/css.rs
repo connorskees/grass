@@ -9,6 +9,7 @@ enum Toplevel {
     RuleSet(Selector, Vec<BlockEntry>),
     MultilineComment(String),
     AtRule(AtRule),
+    Newline,
 }
 
 #[derive(Debug, Clone)]
@@ -91,20 +92,33 @@ impl Css {
     }
 
     fn parse_stylesheet(mut self, s: StyleSheet) -> Css {
+        let mut is_first = true;
         for stmt in s.0 {
             let v = self.parse_stmt(stmt);
+            // this is how we print newlines between unrelated styles
+            // it could probably be refactored
+            if !v.is_empty() {
+                if let Toplevel::MultilineComment(..) = v[0] {}
+                else if is_first {
+                    is_first = false;
+                } else {
+                    self.blocks.push(Toplevel::Newline);
+                }
+            }
             self.blocks.extend(v);
         }
         self
     }
 
     pub fn pretty_print<W: Write>(self, buf: &mut W) -> SassResult<()> {
+        let mut has_written = false;
         for block in self.blocks {
             match block {
                 Toplevel::RuleSet(selector, styles) => {
                     if styles.is_empty() {
                         continue;
                     }
+                    has_written = true;
                     writeln!(buf, "{} {{", selector)?;
                     for style in styles {
                         write!(buf, "{}", style)?;
@@ -112,10 +126,15 @@ impl Css {
                     writeln!(buf, "}}")?;
                 }
                 Toplevel::MultilineComment(s) => {
+                    has_written = true;
                     writeln!(buf, "/*{}*/", s)?;
                 }
                 Toplevel::AtRule(r) => {
+                    has_written = true;
                     writeln!(buf, "{}", r)?;
+                }
+                Toplevel::Newline => if has_written {
+                    writeln!(buf)?
                 }
             }
         }

@@ -58,7 +58,7 @@ mod test_variables {
     test!(
         variable_shadowing_val_does_not_change_complex,
         "a {\n  color: red;\n}\n$y: before;\n$x: 1 2 $y;\n$y: after;\nfoo {\n  a: $x;\n}",
-        "a {\n  color: red;\n}\nfoo {\n  a: 1 2 before;\n}\n"
+        "a {\n  color: red;\n}\n\nfoo {\n  a: 1 2 before;\n}\n"
     );
     test!(
         variable_whitespace,
@@ -425,17 +425,17 @@ mod test_styles {
     );
     test!(
         two_rulesets,
-        "a {\n  color: red;\n}\nc {\n  color: white;\n}\n"
+        "a {\n  color: red;\n}\n\nc {\n  color: white;\n}\n"
     );
     test!(
         two_rulesets_first_no_semicolon,
         "a {\n  color: red\n}\nc {\n  color: white;\n}\n",
-        "a {\n  color: red;\n}\nc {\n  color: white;\n}\n"
+        "a {\n  color: red;\n}\n\nc {\n  color: white;\n}\n"
     );
     test!(
         two_inner_outer_rulesets,
         "a {\n  b {\n  color: red;\n}\n  c {\n  color: white;\n}\n}\na {\n  b {\n  color: red;\n}\n  c {\n  color: white;\n}\n}\n",
-        "a b {\n  color: red;\n}\na c {\n  color: white;\n}\na b {\n  color: red;\n}\na c {\n  color: white;\n}\n"
+        "a b {\n  color: red;\n}\na c {\n  color: white;\n}\n\na b {\n  color: red;\n}\na c {\n  color: white;\n}\n"
     );
     test!(
         removes_empty_outer_styles,
@@ -547,6 +547,10 @@ mod test_misc {
     test!(
         keyword_important_not_at_end,
         "a {\n  height: !important 1;\n}\n"
+    );
+    test!(
+        double_newline_between_unrelated_styles,
+        "a {\n  color: red;\n}\n\nb {\n  color: blue;\n}\n"
     );
 }
 
