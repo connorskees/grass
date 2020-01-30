@@ -105,6 +105,8 @@ impl AtRule {
     }
 }
 
+fn eat_media_query<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) {}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum AtRuleKind {
     // SASS specific @rules
