@@ -304,7 +304,7 @@ impl Value {
                 }
                 Some(Value::Ident(s, QuoteKind::Single))
             }
-            TokenKind::Variable(ref v) => Some(scope.vars.get(v).unwrap().clone()),
+            TokenKind::Variable(ref v) => Some(scope.vars.get(v).expect("expected variable").clone()),
             TokenKind::Interpolation => {
                 let mut s = eat_interpolation(toks, scope)
                     .iter()

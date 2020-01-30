@@ -320,6 +320,7 @@ impl<'a> StyleSheetParser<'a> {
                 | TokenKind::Symbol(Symbol::Hash)
                 | TokenKind::Symbol(Symbol::Colon)
                 | TokenKind::Symbol(Symbol::Mul)
+                | TokenKind::Symbol(Symbol::Percent)
                 | TokenKind::Symbol(Symbol::Period) => rules
                     .extend(self.eat_rules(&Selector(Vec::new()), &mut self.global_scope.clone())),
                 TokenKind::Whitespace(_) => {
