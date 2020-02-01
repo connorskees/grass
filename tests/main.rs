@@ -130,6 +130,21 @@ mod test_variables {
         "a {\n  $a: red\n}\n\nb {\n  color: blue;\n}\n",
         "b {\n  color: blue;\n}\n"
     );
+    test!(
+        combinator_following,
+        "a + {\n  b {\n    color: red;\n  }\n}\n",
+        "a + b {\n  color: red;\n}\n"
+    );
+    test!(
+        combinator_preceding,
+        "a {\n  + b {\n    color: red;\n  }\n}\n",
+        "a + b {\n  color: red;\n}\n"
+    );
+    test!(
+        combinator_alone,
+        "a {\n  + {\n    b {\n      color: red;\n  }\n}\n",
+        "a + b {\n  color: red;\n}\n"
+    );
 }
 
 mod test_selectors {
