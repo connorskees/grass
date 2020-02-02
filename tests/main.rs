@@ -548,6 +548,11 @@ mod test_styles {
         "a {\n  webkit: {\n    webkit: {\n     color: red;\n    }\n  }\n}\n",
         "a {\n  webkit-webkit-color: red;\n}\n"
     );
+    test!(
+        no_space_between_colon,
+        "a {\n  color:red;\n}\n",
+        "a {\n  color: red;\n}\n"
+    );
 }
 
 mod test_misc {
@@ -633,7 +638,7 @@ mod test_mixins {
     );
     test!(
         mixin_removes_empty_ruleset,
-        "@mixin a {\n  color:red; b {\n}\n}\nd {\n  @include a;\n}\n",
+        "@mixin a {\n  color: red; b {\n}\n}\nd {\n  @include a;\n}\n",
         "d {\n  color: red;\n}\n"
     );
     test!(

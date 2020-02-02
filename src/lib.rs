@@ -58,10 +58,7 @@ use crate::lexer::Lexer;
 use crate::mixin::{eat_include, Mixin};
 use crate::selector::{Attribute, Selector};
 use crate::style::Style;
-use crate::utils::{
-    devour_whitespace, eat_variable_value, parse_interpolation, IsComment, IsWhitespace,
-    VariableDecl,
-};
+use crate::utils::{devour_whitespace, eat_variable_value, IsComment, IsWhitespace, VariableDecl};
 use crate::value::Value;
 
 mod args;
@@ -493,148 +490,6 @@ impl<'a> StyleSheetParser<'a> {
     }
 }
 
-pub(crate) fn eat_style_group<I: Iterator<Item = Token>>(
-    toks: &mut Peekable<I>,
-    scope: &Scope,
-    super_selector: &Selector,
-    super_property: String,
-) -> Result<Option<Expr>, (Pos, String)> {
-    let mut styles = Vec::new();
-    devour_whitespace(toks);
-    while let Some(tok) = toks.peek() {
-        match tok.kind {
-            TokenKind::Symbol(Symbol::OpenCurlyBrace) => {
-                toks.next();
-                devour_whitespace(toks);
-                loop {
-                    let property =
-                        parse_property(toks, scope, super_selector, super_property.clone());
-                    if let Some(tok) = toks.peek() {
-                        match tok.kind {
-                            TokenKind::Symbol(Symbol::OpenCurlyBrace) => {
-                                if let Some(Expr::Styles(s)) =
-                                    eat_style_group(toks, scope, super_selector, property)?
-                                {
-                                    styles.extend(s);
-                                }
-                                devour_whitespace(toks);
-                                if let Some(tok) = toks.peek() {
-                                    match tok.kind {
-                                        TokenKind::Symbol(Symbol::CloseCurlyBrace) => {
-                                            toks.next();
-                                            devour_whitespace(toks);
-                                            return Ok(Some(Expr::Styles(styles)));
-                                        }
-                                        _ => continue,
-                                    }
-                                }
-                                continue;
-                            }
-                            _ => {}
-                        }
-                    }
-                    let value = parse_style_value(toks, scope, super_selector);
-                    styles.push(Style { property, value });
-                    if let Some(tok) = toks.peek() {
-                        match tok.kind {
-                            TokenKind::Symbol(Symbol::CloseCurlyBrace) => {
-                                toks.next();
-                                devour_whitespace(toks);
-                                return Ok(Some(Expr::Styles(styles)));
-                            }
-                            _ => continue,
-                        }
-                    }
-                }
-            }
-            _ => {
-                let val = parse_style_value(toks, scope, super_selector);
-                return Ok(Some(Expr::Style(Style {
-                    property: super_property,
-                    value: val,
-                })));
-            }
-        }
-    }
-    Ok(Some(Expr::Styles(styles)))
-}
-
-pub(crate) fn parse_style_value<I: Iterator<Item = Token>>(
-    toks: &mut Peekable<I>,
-    scope: &Scope,
-    super_selector: &Selector,
-) -> Value {
-    let mut style = Vec::new();
-    let mut n = 0;
-    devour_whitespace(toks);
-    while let Some(tok) = toks.peek() {
-        match tok.kind {
-            TokenKind::MultilineComment(_) => {
-                toks.next();
-                continue;
-            }
-            TokenKind::Symbol(Symbol::OpenCurlyBrace) | TokenKind::Interpolation => n += 1,
-            TokenKind::Symbol(Symbol::CloseCurlyBrace) => {
-                if n == 0 {
-                    break;
-                } else {
-                    // todo: toks.next() and push
-                    n -= 1;
-                }
-            }
-            TokenKind::Symbol(Symbol::SemiColon) => {
-                toks.next();
-                break;
-            }
-            TokenKind::Symbol(Symbol::BitAnd) => {
-                style.push(Token {
-                    kind: TokenKind::Ident(super_selector.to_string()),
-                    pos: Pos::new(),
-                });
-                toks.next();
-                continue;
-            }
-            _ => {}
-        };
-        style.push(toks.next().unwrap());
-    }
-    devour_whitespace(toks);
-    Value::from_tokens(&mut style.into_iter().peekable(), scope).unwrap()
-}
-
-pub(crate) fn parse_property<I: Iterator<Item = Token>>(
-    toks: &mut Peekable<I>,
-    scope: &Scope,
-    super_selector: &Selector,
-    mut super_property: String,
-) -> String {
-    let mut property = String::new();
-    while let Some(Token { kind, .. }) = toks.next() {
-        match kind {
-            TokenKind::Whitespace(_) | TokenKind::MultilineComment(_) => continue,
-            TokenKind::Ident(ref s) => property.push_str(s),
-            TokenKind::Interpolation => property.push_str(
-                &parse_interpolation(toks, scope)
-                    .iter()
-                    .map(|x| x.kind.to_string())
-                    .collect::<String>(),
-            ),
-            TokenKind::Symbol(Symbol::Colon) => break,
-            TokenKind::Symbol(Symbol::BitAnd) => property.push_str(&super_selector.to_string()),
-            _ => property.push_str(&kind.to_string()),
-        };
-    }
-    devour_whitespace(toks);
-    if !super_property.is_empty() {
-        super_property.reserve(1 + property.len());
-        super_property.push('-');
-        super_property.push_str(&property);
-        super_property
-    } else {
-        property
-    }
-}
-
 pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
     scope: &Scope,
@@ -646,13 +501,13 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
             TokenKind::Symbol(Symbol::Colon) => {
                 let tok = toks.next();
                 if devour_whitespace(toks) {
-                    let prop = parse_property(
+                    let prop = Style::parse_property(
                         &mut values.into_iter().peekable(),
                         scope,
                         super_selector,
                         String::new(),
                     );
-                    return eat_style_group(toks, scope, super_selector, prop);
+                    return Ok(Some(Style::from_tokens(toks, scope, super_selector, prop)?));
                 } else {
                     values.push(tok.unwrap());
                 }
@@ -660,10 +515,12 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
             TokenKind::Symbol(Symbol::SemiColon) => {
                 toks.next();
                 devour_whitespace(toks);
-                return Ok(Some(Expr::Style(match Style::from_tokens(values, scope) {
-                    Ok(x) => x,
-                    Err(_) => return Ok(None),
-                })));
+                // special edge case where there was no space between the colon
+                // in a style `color:red`. todo: refactor
+                let mut v = values.clone().into_iter().peekable();
+                let property = Style::parse_property(&mut v, scope, super_selector, String::new());
+                let value = Style::parse_value(&mut v, scope, super_selector);
+                return Ok(Some(Expr::Style(Style { property, value })));
             }
             TokenKind::Symbol(Symbol::CloseCurlyBrace) => {
                 if values.is_empty() {
@@ -671,10 +528,6 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                     devour_whitespace(toks);
                     return Ok(None);
                 }
-                return Ok(Some(Expr::Style(match Style::from_tokens(values, scope) {
-                    Ok(x) => x,
-                    Err(_) => return Ok(None),
-                })));
             }
             TokenKind::Symbol(Symbol::OpenCurlyBrace) => {
                 toks.next();
