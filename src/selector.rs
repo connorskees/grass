@@ -20,6 +20,7 @@ impl Display for Selector {
                 SelectorKind::Whitespace => continue,
                 SelectorKind::Attribute(_)
                 | SelectorKind::Pseudo(_)
+                | SelectorKind::PseudoElement(_)
                 | SelectorKind::PseudoParen(..)
                 | SelectorKind::Class
                 | SelectorKind::Id
@@ -31,6 +32,7 @@ impl Display for Selector {
                         match iter.peek() {
                             Some(SelectorKind::Attribute(_))
                             | Some(SelectorKind::Pseudo(_))
+                            | Some(SelectorKind::PseudoElement(_))
                             | Some(SelectorKind::PseudoParen(..))
                             | Some(SelectorKind::Class)
                             | Some(SelectorKind::Id)
@@ -83,6 +85,8 @@ pub(crate) enum SelectorKind {
     Attribute(Attribute),
     /// Pseudo selector: `:hover`
     Pseudo(String),
+    /// Pseudo element selector: `::before`
+    PseudoElement(String),
     /// Pseudo selector with additional parens: `:any(h1, h2, h3, h4, h5, h6)`
     PseudoParen(String, Vec<TokenKind>),
     /// Use the super selector: `&.red`
@@ -122,6 +126,7 @@ impl Display for SelectorKind {
             SelectorKind::Preceding => write!(f, " ~ "),
             SelectorKind::Attribute(attr) => write!(f, "{}", attr),
             SelectorKind::Pseudo(s) => write!(f, ":{}", s),
+            SelectorKind::PseudoElement(s) => write!(f, "::{}", s),
             SelectorKind::PseudoParen(s, toks) => write!(
                 f,
                 ":{}({})",
@@ -212,32 +217,40 @@ impl<'a> SelectorParser<'a> {
     }
 
     fn consume_pseudo_selector(&mut self, tokens: &'_ mut Peekable<IntoIter<Token>>) {
-        if let Some(Token {
-            kind: TokenKind::Ident(s),
-            ..
-        }) = tokens.next()
-        {
-            if let Some(Token {
-                kind: TokenKind::Symbol(Symbol::OpenParen),
-                ..
-            }) = tokens.peek()
-            {
-                tokens.next();
-                let mut toks = Vec::new();
-                while let Some(Token { kind, .. }) = tokens.peek() {
-                    if kind == &TokenKind::Symbol(Symbol::CloseParen) {
-                        break;
+        if let Some(tok) = tokens.next() {
+            match tok.kind {
+                TokenKind::Ident(s) => {
+                    if let Some(Token {
+                        kind: TokenKind::Symbol(Symbol::OpenParen),
+                        ..
+                    }) = tokens.peek()
+                    {
+                        tokens.next();
+                        let mut toks = Vec::new();
+                        while let Some(Token { kind, .. }) = tokens.peek() {
+                            if kind == &TokenKind::Symbol(Symbol::CloseParen) {
+                                break;
+                            }
+                            let tok = tokens.next().unwrap();
+                            toks.push(tok.kind);
+                        }
+                        tokens.next();
+                        self.selectors.push(SelectorKind::PseudoParen(s, toks))
+                    } else {
+                        self.selectors.push(SelectorKind::Pseudo(s))
                     }
-                    let tok = tokens.next().unwrap();
-                    toks.push(tok.kind);
                 }
-                tokens.next();
-                self.selectors.push(SelectorKind::PseudoParen(s, toks))
-            } else {
-                self.selectors.push(SelectorKind::Pseudo(s))
+                TokenKind::Symbol(Symbol::Colon) => {
+                    if let Some(Token {
+                        kind: TokenKind::Ident(s),
+                        ..
+                    }) = tokens.next()
+                    {
+                        self.selectors.push(SelectorKind::PseudoElement(s))
+                    }
+                }
+                _ => todo!("expected ident or `:` after `:` in selector"),
             }
-        } else {
-            todo!("expected ident after `:` in selector")
         }
     }
 

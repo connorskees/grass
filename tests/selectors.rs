@@ -106,6 +106,19 @@ test!(
     selector_pseudo_el_descendant,
     ":pseudo a {\n  color: red;\n}\n"
 );
+test!(selector_pseudoelement, "::before {\n  color: red;\n}\n");
+test!(
+    selector_el_and_pseudoelement,
+    "a::before {\n  color: red;\n}\n"
+);
+test!(
+    selector_el_pseudoelement_descendant,
+    "a ::before {\n  color: red;\n}\n"
+);
+test!(
+    selector_pseudoelement_el_descendant,
+    "::before a {\n  color: red;\n}\n"
+);
 test!(
     selector_pseudo_paren_comma,
     ":pseudo(a, b, c) {\n  color: red;\n}\n"
