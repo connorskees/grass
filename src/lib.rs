@@ -527,6 +527,14 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                     toks.next();
                     devour_whitespace(toks);
                     return Ok(None);
+                } else {
+                    // special edge case where there was no space between the colon
+                    // and no semicolon following the style
+                    // in a style `color:red`. todo: refactor
+                    let mut v = values.clone().into_iter().peekable();
+                    let property = Style::parse_property(&mut v, scope, super_selector, String::new());
+                    let value = Style::parse_value(&mut v, scope, super_selector);
+                    return Ok(Some(Expr::Style(Style { property, value })));
                 }
             }
             TokenKind::Symbol(Symbol::OpenCurlyBrace) => {

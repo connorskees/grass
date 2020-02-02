@@ -125,3 +125,8 @@ test!(
     "a {\n  color:red;\n}\n",
     "a {\n  color: red;\n}\n"
 );
+test!(
+    no_space_between_colon_no_semicolon,
+    "a {\n  color:red\n}\n",
+    "a {\n  color: red;\n}\n"
+);
