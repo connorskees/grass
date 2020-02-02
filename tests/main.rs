@@ -130,21 +130,6 @@ mod test_variables {
         "a {\n  $a: red\n}\n\nb {\n  color: blue;\n}\n",
         "b {\n  color: blue;\n}\n"
     );
-    test!(
-        combinator_following,
-        "a + {\n  b {\n    color: red;\n  }\n}\n",
-        "a + b {\n  color: red;\n}\n"
-    );
-    test!(
-        combinator_preceding,
-        "a {\n  + b {\n    color: red;\n  }\n}\n",
-        "a + b {\n  color: red;\n}\n"
-    );
-    test!(
-        combinator_alone,
-        "a {\n  + {\n    b {\n      color: red;\n  }\n}\n",
-        "a + b {\n  color: red;\n}\n"
-    );
 }
 
 mod test_selectors {
@@ -363,6 +348,21 @@ mod test_selectors {
         "div,, , span, ,, {\n  color: red;\n}\n",
         "div, span {\n  color: red;\n}\n"
     );
+    test!(
+        combinator_following,
+        "a + {\n  b {\n    color: red;\n  }\n}\n",
+        "a + b {\n  color: red;\n}\n"
+    );
+    test!(
+        combinator_preceding,
+        "a {\n  + b {\n    color: red;\n  }\n}\n",
+        "a + b {\n  color: red;\n}\n"
+    );
+    test!(
+        combinator_alone,
+        "a {\n  + {\n    b {\n      color: red;\n  }\n}\n",
+        "a + b {\n  color: red;\n}\n"
+    );
 }
 
 mod test_units {
@@ -537,6 +537,16 @@ mod test_styles {
         triple_nested_following_ruleset,
         "a {\n  b {\n    c {}\n    foo: bar;\n  }\n}\n",
         "a b {\n  foo: bar;\n}\n"
+    );
+    test!(
+        single_nested_styles,
+        "a {\n  webkit: {\n    color: red;\n    color: orange\n  }\n}\n",
+        "a {\n  webkit-color: red;\n  webkit-color: orange;\n}\n"
+    );
+    test!(
+        multiple_nested_styles,
+        "a {\n  webkit: {\n    webkit: {\n     color: red;\n    }\n  }\n}\n",
+        "a {\n  webkit-webkit-color: red;\n}\n"
     );
 }
 
