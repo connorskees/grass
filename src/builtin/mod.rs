@@ -5,6 +5,12 @@ use crate::args::CallArgs;
 use crate::value::Value;
 
 mod color;
+mod list;
+mod map;
+mod math;
+mod meta;
+mod selector;
+mod string;
 
 pub(crate) type Builtin = Box<dyn Fn(&CallArgs) -> Option<Value> + Send + Sync>;
 
