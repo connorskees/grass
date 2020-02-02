@@ -305,7 +305,7 @@ impl<'a> Lexer<'a> {
         self.devour_whitespace();
 
         let mut value = String::with_capacity(99);
-        let mut case_sensitive = CaseKind::Sensitive;
+        let case_sensitive = CaseKind::Sensitive;
 
         while let Some(c) = self.buf.peek() {
             if c == &']' || c.is_whitespace() {

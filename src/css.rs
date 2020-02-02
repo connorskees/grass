@@ -16,6 +16,7 @@ enum Toplevel {
 enum BlockEntry {
     Style(Style),
     MultilineComment(String),
+    #[allow(dead_code)]
     AtRule(AtRule),
 }
 

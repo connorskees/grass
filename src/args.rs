@@ -29,10 +29,6 @@ impl CallArgs {
         CallArgs(BTreeMap::new())
     }
 
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-
     pub fn get(&self, val: &str) -> Option<&Value> {
         self.0.get(val)
     }

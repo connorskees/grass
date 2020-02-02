@@ -568,7 +568,6 @@ pub(crate) fn parse_style_value<I: Iterator<Item = Token>>(
     let mut n = 0;
     devour_whitespace(toks);
     while let Some(tok) = toks.peek() {
-        dbg!(&tok.pos);
         match tok.kind {
             TokenKind::MultilineComment(_) => {
                 toks.next();
