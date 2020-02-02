@@ -127,12 +127,7 @@ impl Display for SelectorKind {
             SelectorKind::Attribute(attr) => write!(f, "{}", attr),
             SelectorKind::Pseudo(s) => write!(f, ":{}", s),
             SelectorKind::PseudoElement(s) => write!(f, "::{}", s),
-            SelectorKind::PseudoParen(s, val) => write!(
-                f,
-                ":{}({})",
-                s,
-                val
-            ),
+            SelectorKind::PseudoParen(s, val) => write!(f, ":{}({})", s, val),
             SelectorKind::Super | SelectorKind::None | SelectorKind::InterpolatedSuper => {
                 write!(f, "")
             }
@@ -239,7 +234,8 @@ impl<'a> SelectorParser<'a> {
                                 toks.push(' ');
                             }
                         }
-                        self.selectors.push(SelectorKind::PseudoParen(s, toks.trim_end().to_owned()))
+                        self.selectors
+                            .push(SelectorKind::PseudoParen(s, toks.trim_end().to_owned()))
                     } else {
                         self.selectors.push(SelectorKind::Pseudo(s))
                     }

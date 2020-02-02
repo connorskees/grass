@@ -10,6 +10,11 @@ test!(
 );
 test!(empty_mixin, "@mixin a {}\n\nb {\n  @include a;\n}\n", "");
 test!(
+    just_a_comment,
+    "@mixin foo() {\n  /* begin foo */\n}\n\na {\n    @include foo();\n}\n",
+    "a {\n  /* begin foo */\n}\n"
+);
+test!(
     mixin_two_styles,
     "@mixin a {\n  color: red;\n  color: blue;\n}\n\nb {\n  @include a;\n}\n",
     "b {\n  color: red;\n  color: blue;\n}\n"

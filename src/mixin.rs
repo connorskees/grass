@@ -50,6 +50,8 @@ impl Mixin {
             _ => return Err((pos, String::from("expected `(` or `{`"))),
         };
 
+        devour_whitespace(toks);
+
         let mut nesting = 1;
         let mut body = Vec::new();
 
