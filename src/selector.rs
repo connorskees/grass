@@ -1,6 +1,6 @@
 use crate::common::{Scope, Symbol};
 use crate::utils::{
-    devour_whitespace, devour_whitespace_or_comment, eat_interpolation, IsWhitespace,
+    devour_whitespace, devour_whitespace_or_comment, parse_interpolation, IsWhitespace,
 };
 use crate::{Token, TokenKind};
 use std::fmt::{self, Display};
@@ -283,7 +283,9 @@ impl<'a> SelectorParser<'a> {
                 TokenKind::Interpolation => {
                     self.is_interpolated = true;
                     let v = self.tokens_to_selectors(
-                        &mut eat_interpolation(tokens, self.scope).into_iter().peekable(),
+                        &mut parse_interpolation(tokens, self.scope)
+                            .into_iter()
+                            .peekable(),
                     );
                     self.is_interpolated = false;
                     v

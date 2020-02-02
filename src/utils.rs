@@ -40,7 +40,7 @@ pub(crate) fn devour_whitespace_or_comment<I: Iterator<Item = W>, W: IsWhitespac
     found_whitespace
 }
 
-pub(crate) fn eat_interpolation<I: Iterator<Item = Token>>(
+pub(crate) fn parse_interpolation<I: Iterator<Item = Token>>(
     tokens: &mut I,
     scope: &Scope,
 ) -> Vec<Token> {
@@ -57,7 +57,7 @@ pub(crate) fn eat_interpolation<I: Iterator<Item = Token>>(
             TokenKind::Variable(ref v) => val.extend(
                 Lexer::new(&scope.vars.get(v).unwrap().to_string()).collect::<Vec<Token>>(),
             ),
-            TokenKind::Interpolation => val.extend(eat_interpolation(tokens, scope)),
+            TokenKind::Interpolation => val.extend(parse_interpolation(tokens, scope)),
             _ => val.push(tok),
         }
     }

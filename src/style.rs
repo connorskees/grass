@@ -1,5 +1,5 @@
 use crate::common::{Scope, Symbol};
-use crate::utils::{devour_whitespace_or_comment, eat_interpolation};
+use crate::utils::{devour_whitespace_or_comment, parse_interpolation};
 use crate::value::Value;
 use crate::{Token, TokenKind};
 use std::fmt::{self, Display};
@@ -47,7 +47,7 @@ impl<'a> StyleParser<'a> {
                 TokenKind::Whitespace(_) | TokenKind::MultilineComment(_) => continue,
                 TokenKind::Ident(ref s) => property.push_str(s),
                 TokenKind::Interpolation => property.push_str(
-                    &eat_interpolation(&mut self.tokens, self.scope)
+                    &parse_interpolation(&mut self.tokens, self.scope)
                         .iter()
                         .map(|x| x.kind.to_string())
                         .collect::<String>(),

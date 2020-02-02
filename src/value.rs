@@ -8,7 +8,7 @@ use crate::builtin::GLOBAL_FUNCTIONS;
 use crate::color::Color;
 use crate::common::{Keyword, Op, QuoteKind, Scope, Symbol};
 use crate::units::Unit;
-use crate::utils::{devour_whitespace_or_comment, eat_interpolation};
+use crate::utils::{devour_whitespace_or_comment, parse_interpolation};
 use crate::{Token, TokenKind};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -245,7 +245,7 @@ impl Value {
                         TokenKind::Interpolation => {
                             toks.next();
                             s.push_str(
-                                &eat_interpolation(toks, scope)
+                                &parse_interpolation(toks, scope)
                                     .iter()
                                     .map(|x| x.kind.to_string())
                                     .collect::<String>(),
@@ -308,7 +308,7 @@ impl Value {
                 Some(scope.vars.get(v).expect("expected variable").clone())
             }
             TokenKind::Interpolation => {
-                let mut s = eat_interpolation(toks, scope)
+                let mut s = parse_interpolation(toks, scope)
                     .iter()
                     .map(|x| x.kind.to_string())
                     .collect::<String>();
@@ -317,7 +317,7 @@ impl Value {
                         TokenKind::Interpolation => {
                             toks.next();
                             s.push_str(
-                                &eat_interpolation(toks, scope)
+                                &parse_interpolation(toks, scope)
                                     .iter()
                                     .map(|x| x.kind.to_string())
                                     .collect::<String>(),
