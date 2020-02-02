@@ -454,7 +454,7 @@ impl<'a> StyleSheetParser<'a> {
             match expr {
                 Expr::Style(s) => stmts.push(Stmt::Style(s)),
                 #[allow(clippy::redundant_closure)]
-                Expr::Styles(s) => stmts.extend(s.into_iter().map(|s| Stmt::Style(s))),
+                Expr::Styles(s) => stmts.extend(s.into_iter().map(Stmt::Style)),
                 Expr::MixinDecl(name, mixin) => {
                     scope.mixins.insert(name, *mixin);
                 }

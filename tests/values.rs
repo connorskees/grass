@@ -49,3 +49,118 @@ test!(
     "a {\n  color: 1 (red blue);\n}\n",
     "a {\n  color: 1 red blue;\n}\n"
 );
+test!(
+    adds_idents,
+    "a {\n  color: red + blue;\n}\n",
+    "a {\n  color: redblue;\n}\n"
+);
+test!(
+    adds_dbl_quoted_idents,
+    "a {\n  color: \"red\" + \"blue\";\n}\n",
+    "a {\n  color: \"redblue\";\n}\n"
+);
+test!(
+    adds_sgl_quoted_idents,
+    "a {\n  color: 'red' + 'blue';\n}\n",
+    "a {\n  color: \"redblue\";\n}\n"
+);
+test!(
+    adds_dbl_and_un_quoted_idents,
+    "a {\n  color: \"red\" + blue;\n}\n",
+    "a {\n  color: \"redblue\";\n}\n"
+);
+test!(
+    adds_sgl_and_un_quoted_idents,
+    "a {\n  color: 'red' + blue;\n}\n",
+    "a {\n  color: \"redblue\";\n}\n"
+);
+test!(
+    adds_un_and_dbl_quoted_idents,
+    "a {\n  color: red + \"blue\";\n}\n",
+    "a {\n  color: \"redblue\";\n}\n"
+);
+test!(
+    adds_un_and_sgl_quoted_idents,
+    "a {\n  color: red + 'blue';\n}\n",
+    "a {\n  color: \"redblue\";\n}\n"
+);
+test!(
+    adds_sgl_and_dbl_quoted_idents,
+    "a {\n  color: 'red' + \"blue\";\n}\n",
+    "a {\n  color: \"redblue\";\n}\n"
+);
+test!(
+    adds_dbl_and_sgl_quoted_idents,
+    "a {\n  color: \"red\" + 'blue';\n}\n",
+    "a {\n  color: \"redblue\";\n}\n"
+);
+test!(
+    adds_ident_true,
+    "a {\n  color: red + true;\n}\n",
+    "a {\n  color: redtrue;\n}\n"
+);
+test!(
+    adds_dbl_quoted_ident_true,
+    "a {\n  color: \"red\" + true;\n}\n",
+    "a {\n  color: \"redtrue\";\n}\n"
+);
+test!(
+    adds_ident_false,
+    "a {\n  color: red + false;\n}\n",
+    "a {\n  color: redfalse;\n}\n"
+);
+test!(
+    adds_dbl_quoted_ident_false,
+    "a {\n  color: \"red\" + false;\n}\n",
+    "a {\n  color: \"redfalse\";\n}\n"
+);
+test!(
+    adds_ident_important,
+    "a {\n  color: red + !important;\n}\n",
+    "a {\n  color: red!important;\n}\n"
+);
+test!(
+    adds_ident_null,
+    "a {\n  color: red + null;\n}\n",
+    "a {\n  color: red;\n}\n"
+);
+test!(
+    adds_dbl_quoted_ident_null,
+    "a {\n  color: \"red\" + null;\n}\n",
+    "a {\n  color: \"red\";\n}\n"
+);
+test!(
+    adds_sgl_quoted_ident_null,
+    "a {\n  color: 'red' + null;\n}\n",
+    "a {\n  color: \"red\";\n}\n"
+);
+test!(
+    adds_ident_number,
+    "a {\n  color: red + 1;\n}\n",
+    "a {\n  color: red1;\n}\n"
+);
+test!(
+    adds_dbl_quoted_ident_number,
+    "a {\n  color: \"red\" + 1;\n}\n",
+    "a {\n  color: \"red1\";\n}\n"
+);
+test!(
+    adds_sgl_quoted_ident_number,
+    "a {\n  color: 'red' + 1;\n}\n",
+    "a {\n  color: \"red1\";\n}\n"
+);
+test!(
+    adds_ident_dimension,
+    "a {\n  color: red + 1px;\n}\n",
+    "a {\n  color: red1px;\n}\n"
+);
+test!(
+    adds_dbl_quoted_ident_dimension,
+    "a {\n  color: \"red\" + 1px;\n}\n",
+    "a {\n  color: \"red1px\";\n}\n"
+);
+test!(
+    adds_sgl_quoted_ident_dimension,
+    "a {\n  color: 'red' + 1px;\n}\n",
+    "a {\n  color: \"red1px\";\n}\n"
+);
