@@ -188,13 +188,13 @@ impl<'a> StyleParser<'a> {
             };
         }
         devour_whitespace(toks);
-        if !super_property.is_empty() {
+        if super_property.is_empty() {
+            property
+        } else {
             super_property.reserve(1 + property.len());
             super_property.push('-');
             super_property.push_str(&property);
             super_property
-        } else {
-            property
         }
     }
 }

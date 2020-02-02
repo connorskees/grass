@@ -37,7 +37,8 @@
     clippy::let_underscore_must_use,
     // this is too pedantic -- it results in some names being less explicit
     // than they should
-    clippy::module_name_repetitions
+    clippy::module_name_repetitions,
+    clippy::option_unwrap_used,
 )]
 #![cfg_attr(feature = "nightly", feature(track_caller))]
 // todo! handle erroring on styles at the toplevel
@@ -207,8 +208,8 @@ enum Expr {
     /// A variable declaration `$var: 1px`
     VariableDecl(String, Value),
     /// A mixin declaration `@mixin foo {}`
-    MixinDecl(String, Mixin),
-    FunctionDecl(String, Function),
+    MixinDecl(String, Box<Mixin>),
+    FunctionDecl(String, Box<Function>),
     /// An include statement `@include foo;`
     Include(Vec<Stmt>),
     /// A multiline comment: `/* foobar */`
@@ -434,7 +435,7 @@ impl<'a> StyleSheetParser<'a> {
                     }
                 }
                 TokenKind::Symbol(Symbol::BitAnd) => {
-                    return Err(SassError::new("Base-level rules cannot contain the parent-selector-referencing character '&'.", pos.clone()))
+                    return Err(SassError::new("Base-level rules cannot contain the parent-selector-referencing character '&'.", *pos))
                 }
                 _ => match dbg!(self.lexer.next()) {
                     Some(Token { pos, .. }) => self.error(pos, "unexpected toplevel token"),
@@ -452,12 +453,13 @@ impl<'a> StyleSheetParser<'a> {
         {
             match expr {
                 Expr::Style(s) => stmts.push(Stmt::Style(s)),
+                #[allow(clippy::redundant_closure)]
                 Expr::Styles(s) => stmts.extend(s.into_iter().map(|s| Stmt::Style(s))),
                 Expr::MixinDecl(name, mixin) => {
-                    scope.mixins.insert(name, mixin);
+                    scope.mixins.insert(name, *mixin);
                 }
                 Expr::FunctionDecl(name, func) => {
-                    scope.functions.insert(name, func);
+                    scope.functions.insert(name, *func);
                 }
                 Expr::Selector(s) => {
                     self.scope += 1;
@@ -517,7 +519,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                 devour_whitespace(toks);
                 // special edge case where there was no space between the colon
                 // in a style `color:red`. todo: refactor
-                let mut v = values.clone().into_iter().peekable();
+                let mut v = values.into_iter().peekable();
                 let property = Style::parse_property(&mut v, scope, super_selector, String::new());
                 let value = Style::parse_value(&mut v, scope, super_selector);
                 return Ok(Some(Expr::Style(Style { property, value })));
@@ -531,8 +533,9 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                     // special edge case where there was no space between the colon
                     // and no semicolon following the style
                     // in a style `color:red`. todo: refactor
-                    let mut v = values.clone().into_iter().peekable();
-                    let property = Style::parse_property(&mut v, scope, super_selector, String::new());
+                    let mut v = values.into_iter().peekable();
+                    let property =
+                        Style::parse_property(&mut v, scope, super_selector, String::new());
                     let value = Style::parse_value(&mut v, scope, super_selector);
                     return Ok(Some(Expr::Style(Style { property, value })));
                 }
@@ -598,8 +601,8 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                 }) = toks.next()
                 {
                     return match AtRule::from_tokens(rule, pos, toks, scope) {
-                        AtRule::Mixin(name, mixin) => Ok(Some(Expr::MixinDecl(name, *mixin))),
-                        AtRule::Function(name, func) => Ok(Some(Expr::FunctionDecl(name, *func))),
+                        AtRule::Mixin(name, mixin) => Ok(Some(Expr::MixinDecl(name, mixin))),
+                        AtRule::Function(name, func) => Ok(Some(Expr::FunctionDecl(name, func))),
                         AtRule::Charset(_) => todo!("@charset as expr"),
                         AtRule::Debug(a, b) => Ok(Some(Expr::Debug(a, b))),
                         AtRule::Warn(a, b) => Ok(Some(Expr::Warn(a, b))),

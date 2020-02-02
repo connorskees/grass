@@ -83,19 +83,20 @@ impl Add for Value {
 
     fn add(self, other: Self) -> Self {
         match self {
-            Self::Important => todo!(),
-            Self::True => todo!(),
-            Self::False => todo!(),
-            Self::Null => todo!(),
+            // Self::Important => todo!(),
+            // Self::True => todo!(),
+            // Self::False => todo!(),
+            // Self::Null => todo!(),
             Self::Dimension(num, unit) => match other {
                 Self::Dimension(num2, unit2) => Value::Dimension(num + num2, unit),
                 _ => todo!(),
             },
-            Self::List(..) => todo!(),
-            Self::Color(..) => todo!(),
-            Self::BinaryOp(..) => todo!(),
-            Self::Paren(..) => todo!(),
-            Self::Ident(..) => todo!(),
+            // Self::List(..) => todo!(),
+            // Self::Color(..) => todo!(),
+            // Self::BinaryOp(..) => todo!(),
+            // Self::Paren(..) => todo!(),
+            // Self::Ident(..) => todo!(),
+            _ => todo!(),
         }
     }
 }
@@ -148,7 +149,9 @@ impl Value {
             None => return Some(left),
         };
         match next.kind {
-            TokenKind::Symbol(Symbol::SemiColon) => Some(left),
+            TokenKind::Symbol(Symbol::SemiColon) | TokenKind::Symbol(Symbol::CloseParen) => {
+                Some(left)
+            }
             TokenKind::Symbol(Symbol::Comma) => {
                 toks.next();
                 devour_whitespace_or_comment(toks);
@@ -158,7 +161,6 @@ impl Value {
                 };
                 Some(Value::List(vec![left, right], ListSeparator::Comma))
             }
-            TokenKind::Symbol(Symbol::CloseParen) => Some(left),
             TokenKind::Symbol(Symbol::Plus)
             | TokenKind::Symbol(Symbol::Minus)
             | TokenKind::Op(_)
