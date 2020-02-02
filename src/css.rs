@@ -98,8 +98,8 @@ impl Css {
             // this is how we print newlines between unrelated styles
             // it could probably be refactored
             if !v.is_empty() {
-                if let Toplevel::MultilineComment(..) = v[0] {}
-                else if is_first {
+                if let Toplevel::MultilineComment(..) = v[0] {
+                } else if is_first {
                     is_first = false;
                 } else {
                     self.blocks.push(Toplevel::Newline);
@@ -133,8 +133,10 @@ impl Css {
                     has_written = true;
                     writeln!(buf, "{}", r)?;
                 }
-                Toplevel::Newline => if has_written {
-                    writeln!(buf)?
+                Toplevel::Newline => {
+                    if has_written {
+                        writeln!(buf)?
+                    }
                 }
             }
         }
