@@ -88,7 +88,7 @@ pub(crate) enum SelectorKind {
     /// Pseudo element selector: `::before`
     PseudoElement(String),
     /// Pseudo selector with additional parens: `:any(h1, h2, h3, h4, h5, h6)`
-    PseudoParen(String, Vec<TokenKind>),
+    PseudoParen(String, String),
     /// Use the super selector: `&.red`
     Super,
     /// Super selector in an interpolated context: `a #{&}`
@@ -127,11 +127,11 @@ impl Display for SelectorKind {
             SelectorKind::Attribute(attr) => write!(f, "{}", attr),
             SelectorKind::Pseudo(s) => write!(f, ":{}", s),
             SelectorKind::PseudoElement(s) => write!(f, "::{}", s),
-            SelectorKind::PseudoParen(s, toks) => write!(
+            SelectorKind::PseudoParen(s, val) => write!(
                 f,
                 ":{}({})",
                 s,
-                toks.iter().map(ToString::to_string).collect::<String>()
+                val
             ),
             SelectorKind::Super | SelectorKind::None | SelectorKind::InterpolatedSuper => {
                 write!(f, "")
@@ -226,16 +226,20 @@ impl<'a> SelectorParser<'a> {
                     }) = tokens.peek()
                     {
                         tokens.next();
-                        let mut toks = Vec::new();
+                        devour_whitespace_or_comment(tokens);
+                        let mut toks = String::new();
                         while let Some(Token { kind, .. }) = tokens.peek() {
                             if kind == &TokenKind::Symbol(Symbol::CloseParen) {
+                                tokens.next();
                                 break;
                             }
                             let tok = tokens.next().unwrap();
-                            toks.push(tok.kind);
+                            toks.push_str(&tok.kind.to_string());
+                            if devour_whitespace(tokens) {
+                                toks.push(' ');
+                            }
                         }
-                        tokens.next();
-                        self.selectors.push(SelectorKind::PseudoParen(s, toks))
+                        self.selectors.push(SelectorKind::PseudoParen(s, toks.trim_end().to_owned()))
                     } else {
                         self.selectors.push(SelectorKind::Pseudo(s))
                     }

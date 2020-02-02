@@ -128,6 +128,11 @@ test!(
     ":pseudo(a b c) {\n  color: red;\n}\n"
 );
 test!(
+    selector_pseudo_paren_whitespacespace,
+    ":pseudo(  -2n+1 ) {\n  color: red;\n}\n",
+    ":pseudo(-2n+1) {\n  color: red;\n}\n"
+);
+test!(
     selector_el_pseudo_paren_and,
     "a:pseudo(a, b, c) {\n  color: red;\n}\n"
 );
