@@ -164,3 +164,118 @@ test!(
     "a {\n  color: 'red' + 1px;\n}\n",
     "a {\n  color: \"red1px\";\n}\n"
 );
+test!(
+    subs_idents,
+    "a {\n  color: red - blue;\n}\n",
+    "a {\n  color: red-blue;\n}\n"
+);
+test!(
+    subs_dbl_quoted_idents,
+    "a {\n  color: \"red\" - \"blue\";\n}\n",
+    "a {\n  color: \"red\"-\"blue\";\n}\n"
+);
+test!(
+    subs_sgl_quoted_idents,
+    "a {\n  color: 'red' - 'blue';\n}\n",
+    "a {\n  color: \"red\"-\"blue\";\n}\n"
+);
+test!(
+    subs_dbl_and_un_quoted_idents,
+    "a {\n  color: \"red\" - blue;\n}\n",
+    "a {\n  color: \"red\"-blue;\n}\n"
+);
+test!(
+    subs_sgl_and_un_quoted_idents,
+    "a {\n  color: 'red' - blue;\n}\n",
+    "a {\n  color: \"red\"-blue;\n}\n"
+);
+test!(
+    subs_un_and_dbl_quoted_idents,
+    "a {\n  color: red - \"blue\";\n}\n",
+    "a {\n  color: red-\"blue\";\n}\n"
+);
+test!(
+    subs_un_and_sgl_quoted_idents,
+    "a {\n  color: red - 'blue';\n}\n",
+    "a {\n  color: red-\"blue\";\n}\n"
+);
+test!(
+    subs_sgl_and_dbl_quoted_idents,
+    "a {\n  color: 'red' - \"blue\";\n}\n",
+    "a {\n  color: \"red\"-\"blue\";\n}\n"
+);
+test!(
+    subs_dbl_and_sgl_quoted_idents,
+    "a {\n  color: \"red\" - 'blue';\n}\n",
+    "a {\n  color: \"red\"-\"blue\";\n}\n"
+);
+test!(
+    subs_ident_true,
+    "a {\n  color: red - true;\n}\n",
+    "a {\n  color: red-true;\n}\n"
+);
+test!(
+    subs_dbl_quoted_ident_true,
+    "a {\n  color: \"red\" - true;\n}\n",
+    "a {\n  color: \"red\"-true;\n}\n"
+);
+test!(
+    subs_ident_false,
+    "a {\n  color: red - false;\n}\n",
+    "a {\n  color: red-false;\n}\n"
+);
+test!(
+    subs_dbl_quoted_ident_false,
+    "a {\n  color: \"red\" - false;\n}\n",
+    "a {\n  color: \"red\"-false;\n}\n"
+);
+test!(
+    subs_ident_important,
+    "a {\n  color: red - !important;\n}\n",
+    "a {\n  color: red-!important;\n}\n"
+);
+test!(
+    subs_ident_null,
+    "a {\n  color: red - null;\n}\n",
+    "a {\n  color: red-;\n}\n"
+);
+test!(
+    subs_dbl_quoted_ident_null,
+    "a {\n  color: \"red\" - null;\n}\n",
+    "a {\n  color: \"red\"-;\n}\n"
+);
+test!(
+    subs_sgl_quoted_ident_null,
+    "a {\n  color: 'red' - null;\n}\n",
+    "a {\n  color: \"red\"-;\n}\n"
+);
+test!(
+    subs_ident_number,
+    "a {\n  color: red - 1;\n}\n",
+    "a {\n  color: red-1;\n}\n"
+);
+test!(
+    subs_dbl_quoted_ident_number,
+    "a {\n  color: \"red\" - 1;\n}\n",
+    "a {\n  color: \"red\"-1;\n}\n"
+);
+test!(
+    subs_sgl_quoted_ident_number,
+    "a {\n  color: 'red' - 1;\n}\n",
+    "a {\n  color: \"red\"-1;\n}\n"
+);
+test!(
+    subs_ident_dimension,
+    "a {\n  color: red - 1px;\n}\n",
+    "a {\n  color: red-1px;\n}\n"
+);
+test!(
+    subs_dbl_quoted_ident_dimension,
+    "a {\n  color: \"red\" - 1px;\n}\n",
+    "a {\n  color: \"red\"-1px;\n}\n"
+);
+test!(
+    subs_sgl_quoted_ident_dimension,
+    "a {\n  color: 'red' - 1px;\n}\n",
+    "a {\n  color: \"red\"-1px;\n}\n"
+);

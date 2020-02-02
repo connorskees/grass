@@ -413,6 +413,10 @@ impl<'a> Lexer<'a> {
             return TokenKind::Keyword(kw);
         }
 
+        if string == "-" {
+            return TokenKind::Symbol(Symbol::Minus);
+        }
+
         TokenKind::Ident(string)
     }
 }

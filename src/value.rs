@@ -1,7 +1,7 @@
 #![allow(dead_code, unused_variables)]
 use std::fmt::{self, Display};
 use std::iter::{Iterator, Peekable};
-use std::ops::Add;
+use std::ops::{Add, Sub};
 
 use crate::args::eat_call_args;
 use crate::builtin::GLOBAL_FUNCTIONS;
@@ -127,6 +127,62 @@ impl Add for Value {
     }
 }
 
+impl Sub for Value {
+    type Output = Self;
+
+    fn sub(self, other: Self) -> Self {
+        match self {
+            // Self::Important => todo!(),
+            // Self::True => todo!(),
+            // Self::False => todo!(),
+            // Self::Null => todo!(),
+            Self::Dimension(num, unit) => match other {
+                // Self::Dimension(num2, unit2) => Value::Dimension(num - num2, unit),
+                _ => todo!(),
+            },
+            // Self::List(..) => todo!(),
+            // Self::Color(..) => todo!(),
+            // Self::BinaryOp(..) => todo!(),
+            // Self::Paren(..) => todo!(),
+            Self::Ident(s1, quotes1) => match other {
+                Self::Ident(s2, quotes2) => {
+                    let quotes1 = match quotes1 {
+                        QuoteKind::Double | QuoteKind::Single => QuoteKind::Double,
+                        QuoteKind::None => QuoteKind::None,
+                    };
+                    let quotes2 = match quotes2 {
+                        QuoteKind::Double | QuoteKind::Single => QuoteKind::Double,
+                        QuoteKind::None => QuoteKind::None,
+                    };
+                    Value::Ident(
+                        format!("{}{}{}-{}{}{}", quotes1, s1, quotes1, quotes2, s2, quotes2),
+                        QuoteKind::None,
+                    )
+                }
+                Self::Important | Self::True | Self::False | Self::Dimension(..) => {
+                    let quotes = match quotes1 {
+                        QuoteKind::Double | QuoteKind::Single => QuoteKind::Double,
+                        QuoteKind::None => QuoteKind::None,
+                    };
+                    Value::Ident(
+                        format!("{}{}{}-{}", quotes, s1, quotes, other),
+                        QuoteKind::None,
+                    )
+                }
+                Self::Null => {
+                    let quotes = match quotes1 {
+                        QuoteKind::Double | QuoteKind::Single => QuoteKind::Double,
+                        QuoteKind::None => QuoteKind::None,
+                    };
+                    Value::Ident(format!("{}{}{}-", quotes, s1, quotes), QuoteKind::None)
+                }
+                _ => todo!(),
+            },
+            _ => todo!(),
+        }
+    }
+}
+
 impl Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -143,6 +199,7 @@ impl Display for Value {
             Self::Color(c) => write!(f, "{}", c),
             Self::BinaryOp(lhs, op, rhs) => match op {
                 Op::Plus => write!(f, "{}", *lhs.clone() + *rhs.clone()),
+                Op::Minus => write!(f, "{}", *lhs.clone() - *rhs.clone()),
                 _ => write!(f, "{}{}{}", lhs, op, rhs),
             },
             Self::Paren(val) => write!(f, "{}", val),

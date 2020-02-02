@@ -371,6 +371,17 @@ pub(crate) enum QuoteKind {
     None,
 }
 
+impl Display for QuoteKind {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Single => write!(f, "'"),
+            Self::Double => write!(f, "\""),
+            Self::None => write!(f, ""),
+        }
+    }
+}
+
 impl QuoteKind {
     pub fn as_str(self) -> &'static str {
         match self {
