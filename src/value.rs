@@ -217,7 +217,7 @@ impl Value {
     }
 
     pub fn is_true(&self) -> bool {
-        todo!()
+        !(self == &Value::Null || self == &Value::False)
     }
 
     pub fn unquote(self) -> Self {
