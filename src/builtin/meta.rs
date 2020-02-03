@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 
 use super::Builtin;
 use crate::common::QuoteKind;
+use crate::units::Unit;
 use crate::value::Value;
 
 pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
@@ -47,5 +48,13 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     decl!(f "type-of", |args| {
         let value = arg!(args, 0, "value");
         Some(Value::Ident(value.kind().to_owned(), QuoteKind::None))
+    });
+    decl!(f "unitless", |args| {
+        let number = arg!(args, 0, "number");
+        match number {
+            Value::Dimension(_, Unit::None) => Some(Value::True),
+            Value::Dimension(_, _) => Some(Value::False),
+            _ => Some(Value::True)
+        }
     });
 }

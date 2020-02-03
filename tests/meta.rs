@@ -123,3 +123,18 @@ test!(
     "a {\n  color: type-of(hi + bye)\n}\n",
     "a {\n  color: string;\n}\n"
 );
+test!(
+    unitless_px,
+    "a {\n  color: unitless(1px)\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    unitless_num,
+    "a {\n  color: unitless(1)\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    unitless_string,
+    "a {\n  color: unitless(foo)\n}\n",
+    "a {\n  color: true;\n}\n"
+);
