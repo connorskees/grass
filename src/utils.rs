@@ -48,9 +48,6 @@ pub(crate) fn parse_interpolation<I: Iterator<Item = Token>>(
     while let Some(tok) = tokens.next() {
         match tok.kind {
             TokenKind::Symbol(Symbol::CloseCurlyBrace) => break,
-            TokenKind::Symbol(Symbol::SingleQuote) | TokenKind::Symbol(Symbol::DoubleQuote) => {
-                continue
-            }
             TokenKind::Symbol(Symbol::OpenCurlyBrace) => {
                 todo!("invalid character in interpolation")
             }
@@ -61,7 +58,14 @@ pub(crate) fn parse_interpolation<I: Iterator<Item = Token>>(
             _ => val.push(tok),
         }
     }
-    val
+    Lexer::new(
+        &Value::from_tokens(&mut val.into_iter().peekable(), scope)
+            .unwrap()
+            .to_string()
+            .replace("\"", "")
+            .replace("'", ""),
+    )
+    .collect::<Vec<Token>>()
 }
 
 pub(crate) struct VariableDecl {

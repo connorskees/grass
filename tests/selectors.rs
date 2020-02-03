@@ -175,11 +175,16 @@ test!(
     "a {\n&--b {\n  color: red;\n}\n}\n",
     "a--b {\n  color: red;\n}\n"
 );
-// test!(
-//     bem_underscore_selector,
-//     "a {\n&__b {\n  color: red;\n}\n}\n",
-//     "a__b {\n  color: red;\n}\n"
-// );
+test!(
+    bem_underscore_selector,
+    "a {\n&__b {\n  color: red;\n}\n}\n",
+    "a__b {\n  color: red;\n}\n"
+);
+test!(
+    selector_interpolation_addition,
+    "#{\"foo\" + \" bar\"}baz {color: red;}",
+    "foo barbaz {\n  color: red;\n}\n"
+);
 test!(
     selector_interpolation_start,
     "#{a}bc {\n  color: red;\n}\n",

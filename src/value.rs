@@ -220,8 +220,11 @@ impl Value {
         todo!()
     }
 
-    pub fn unquote(&mut self) -> &mut Self {
-        todo!()
+    pub fn unquote(self) -> Self {
+        match self {
+            Self::Ident(s1, _) => Self::Ident(s1, QuoteKind::None),
+            _ => todo!(),
+        }
     }
 
     pub fn from_tokens<I: Iterator<Item = Token>>(
@@ -326,6 +329,9 @@ impl Value {
                     TokenKind::Symbol(Symbol::CloseParen)
                 );
                 Some(Value::Paren(Box::new(val)))
+            }
+            TokenKind::Symbol(Symbol::BitAnd) => {
+                Some(Value::Ident(String::from("&"), QuoteKind::None))
             }
             TokenKind::Ident(mut s) => {
                 while let Some(tok) = toks.peek() {
