@@ -165,6 +165,21 @@ test!(
     "a {\n  color: \"red1px\";\n}\n"
 );
 test!(
+    adds_true_false,
+    "a {\n  color: true + false;\n}\n",
+    "a {\n  color: truefalse;\n}\n"
+);
+test!(
+    adds_false_null_is_string,
+    "a {\n  color: if(false+null, 1, 2);\n}\n",
+    "a {\n  color: 1;\n}\n"
+);
+test!(
+    adds_null_num_is_string,
+    "a {\n  color: null + 1;\n}\n",
+    "a {\n  color: 1;\n}\n"
+);
+test!(
     subs_idents,
     "a {\n  color: red - blue;\n}\n",
     "a {\n  color: red-blue;\n}\n"

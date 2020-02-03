@@ -83,10 +83,18 @@ impl Add for Value {
 
     fn add(self, other: Self) -> Self {
         match self {
-            // Self::Important => todo!(),
-            // Self::True => todo!(),
-            // Self::False => todo!(),
-            // Self::Null => todo!(),
+            Self::Important
+            | Self::True
+            | Self::False => match other {
+                Self::Ident(s, QuoteKind::Double)
+                | Self::Ident(s, QuoteKind::Single) => Value::Ident(format!("{}{}", self, s), QuoteKind::Double),
+                Self::Null => Value::Ident(self.to_string(), QuoteKind::None),
+                _ => Value::Ident(format!("{}{}", self, other), QuoteKind::None)
+            },
+            Self::Null => match other {
+                Self::Null => Self::Null,
+                _ => Value::Ident(format!("{}{}", self, other), QuoteKind::None)
+            },
             Self::Dimension(num, unit) => match other {
                 Self::Dimension(num2, unit2) => Value::Dimension(num + num2, unit),
                 _ => todo!(),
@@ -234,7 +242,6 @@ impl Value {
             Value::Null => "null",
             Value::BinaryOp(..) => self.eval().kind(),
             _ => "unknown",
-
         }
     }
 
