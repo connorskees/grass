@@ -16,7 +16,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     });
     decl!(f "feature-exists", |args| {
         let feature: &Value = arg!(args, 0, "feature");
-        match feature.to_string().as_str() {
+        match feature.clone().unquote().to_string().as_str() {
             // A local variable will shadow a global variable unless
             // `!global` is used.
             "global-variable-shadowing" => Some(Value::False),
