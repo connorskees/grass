@@ -164,3 +164,73 @@ test!(
     "a {\n  color: unitless(foo)\n}\n",
     "a {\n  color: true;\n}\n"
 );
+test!(
+    inspect_unquoted_string,
+    "a {\n  color: inspect(foo)\n}\n",
+    "a {\n  color: foo;\n}\n"
+);
+test!(
+    inspect_dbl_quoted_string,
+    "a {\n  color: inspect(\"foo\")\n}\n",
+    "a {\n  color: \"foo\";\n}\n"
+);
+test!(
+    inspect_sgl_quoted_string,
+    "a {\n  color: inspect('foo')\n}\n",
+    "a {\n  color: 'foo';\n}\n"
+);
+test!(
+    inspect_unitless_number,
+    "a {\n  color: inspect(1)\n}\n",
+    "a {\n  color: 1;\n}\n"
+);
+test!(
+    inspect_px_number,
+    "a {\n  color: inspect(1px)\n}\n",
+    "a {\n  color: 1px;\n}\n"
+);
+// test!(
+//     inspect_color_3_hex,
+//     "a {\n  color: inspect(#fff)\n}\n",
+//     "a {\n  color: #fff;\n}\n"
+// );
+// test!(
+//     inspect_color_6_hex,
+//     "a {\n  color: inspect(#ffffff)\n}\n",
+//     "a {\n  color: #ffffff;\n}\n"
+// );
+test!(
+    inspect_color_name,
+    "a {\n  color: inspect(red)\n}\n",
+    "a {\n  color: red;\n}\n"
+);
+test!(
+    inspect_true,
+    "a {\n  color: inspect(true)\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    inspect_false,
+    "a {\n  color: inspect(false)\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    inspect_null,
+    "a {\n  color: inspect(null)\n}\n",
+    "a {\n  color: null;\n}\n"
+);
+// test!(
+//     inspect_empty_list,
+//     "a {\n  color: inspect(())\n}\n",
+//     "a {\n  color: ();\n}\n"
+// );
+// test!(
+//     inspect_spaced_list,
+//     "a {\n  color: inspect(1 2 3)\n}\n",
+//     "a {\n  color: 1 2 3;\n}\n"
+// );
+// test!(
+//     inspect_comma_list,
+//     "a {\n  color: inspect(1, 2, 3)\n}\n",
+//     "a {\n  color: 1, 2, 3;\n}\n"
+// );
