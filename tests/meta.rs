@@ -38,3 +38,23 @@ test!(
     "a {\n  color: feature-exists($feature: at-error)\n}\n",
     "a {\n  color: true;\n}\n"
 );
+test!(
+    unit_px,
+    "a {\n  color: unit(1px)\n}\n",
+    "a {\n  color: \"px\";\n}\n"
+);
+test!(
+    unit_none,
+    "a {\n  color: unit(1)\n}\n",
+    "a {\n  color: \"\";\n}\n"
+);
+test!(
+    unit_non_numeric,
+    "a {\n  color: unit(red)\n}\n",
+    "a {\n  color: \"\";\n}\n"
+);
+test!(
+    unit_named_args,
+    "a {\n  color: unit($number: 1px)\n}\n",
+    "a {\n  color: \"px\";\n}\n"
+);

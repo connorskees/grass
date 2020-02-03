@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 
 use super::Builtin;
+use crate::common::QuoteKind;
 use crate::value::Value;
 
 pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
@@ -34,5 +35,13 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             "custom-property" => Some(Value::False),
             _ => Some(Value::False),
         }
+    });
+    decl!(f "unit", |args| {
+        let number = arg!(args, 0, "number");
+        let unit = match number {
+            Value::Dimension(_, u) => u.to_string(),
+            _ => String::new()
+        };
+        Some(Value::Ident(unit, QuoteKind::Double))
     });
 }
