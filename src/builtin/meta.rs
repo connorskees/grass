@@ -44,4 +44,8 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         };
         Some(Value::Ident(unit, QuoteKind::Double))
     });
+    decl!(f "type-of", |args| {
+        let value = arg!(args, 0, "value");
+        Some(Value::Ident(value.kind().to_owned(), QuoteKind::None))
+    });
 }

@@ -197,11 +197,7 @@ impl Display for Value {
                     .join(sep.as_str())
             ),
             Self::Color(c) => write!(f, "{}", c),
-            Self::BinaryOp(lhs, op, rhs) => match op {
-                Op::Plus => write!(f, "{}", *lhs.clone() + *rhs.clone()),
-                Op::Minus => write!(f, "{}", *lhs.clone() - *rhs.clone()),
-                _ => write!(f, "{}{}{}", lhs, op, rhs),
-            },
+            Self::BinaryOp(..) => write!(f, "{}", self.eval()),
             Self::Paren(val) => write!(f, "{}", val),
             Self::Ident(val, kind) => write!(f, "{}{}{}", kind.as_str(), val, kind.as_str()),
             Self::True => write!(f, "true"),
@@ -224,6 +220,32 @@ impl Value {
         match self {
             Self::Ident(s1, _) => Self::Ident(s1, QuoteKind::None),
             _ => todo!(),
+        }
+    }
+
+    pub fn kind(&self) -> &'static str {
+        match self {
+            Value::Color(..) => "color",
+            Value::Ident(..) => "string",
+            Value::Dimension(..) => "number",
+            Value::List(..) => "list",
+            // Value::Function(..) => "function",
+            Value::True | Value::False => "bool",
+            Value::Null => "null",
+            Value::BinaryOp(..) => self.eval().kind(),
+            _ => "unknown",
+
+        }
+    }
+
+    pub fn eval(&self) -> Self {
+        match self {
+            Self::BinaryOp(lhs, op, rhs) => match op {
+                Op::Plus => *lhs.clone() + *rhs.clone(),
+                Op::Minus => *lhs.clone() - *rhs.clone(),
+                _ => Self::BinaryOp(lhs.clone(), op.clone(), rhs.clone()),
+            }
+            _ => self.clone(),
         }
     }
 

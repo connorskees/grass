@@ -58,3 +58,68 @@ test!(
     "a {\n  color: unit($number: 1px)\n}\n",
     "a {\n  color: \"px\";\n}\n"
 );
+test!(
+    type_of_number,
+    "a {\n  color: type-of(1)\n}\n",
+    "a {\n  color: number;\n}\n"
+);
+test!(
+    type_of_number_unit,
+    "a {\n  color: type-of(1px)\n}\n",
+    "a {\n  color: number;\n}\n"
+);
+test!(
+    type_of_unquoted,
+    "a {\n  color: type-of(foo)\n}\n",
+    "a {\n  color: string;\n}\n"
+);
+test!(
+    type_of_sgl_unquoted,
+    "a {\n  color: type-of('red')\n}\n",
+    "a {\n  color: string;\n}\n"
+);
+test!(
+    type_of_dbl_unquoted,
+    "a {\n  color: type-of(\"red\")\n}\n",
+    "a {\n  color: string;\n}\n"
+);
+// test!(
+//     type_of_3_hex_color,
+//     "a {\n  color: type-of(#fff)\n}\n",
+//     "a {\n  color: color;\n}\n"
+// );
+// test!(
+//     type_of_6_hex_color,
+//     "a {\n  color: type-of(#ffffff)\n}\n",
+//     "a {\n  color: color;\n}\n"
+// );
+// test!(
+//     type_of_named_color,
+//     "a {\n  color: type-of(red)\n}\n",
+//     "a {\n  color: color;\n}\n"
+// );
+// test!(
+//     type_of_spaced_list,
+//     "a {\n  color: type-of(1 2 3)\n}\n",
+//     "a {\n  color: list;\n}\n"
+// );
+test!(
+    type_of_true,
+    "a {\n  color: type-of(true)\n}\n",
+    "a {\n  color: bool;\n}\n"
+);
+test!(
+    type_of_false,
+    "a {\n  color: type-of(false)\n}\n",
+    "a {\n  color: bool;\n}\n"
+);
+test!(
+    type_of_null,
+    "a {\n  color: type-of(null)\n}\n",
+    "a {\n  color: null;\n}\n"
+);
+test!(
+    type_of_ident_plus_ident,
+    "a {\n  color: type-of(hi + bye)\n}\n",
+    "a {\n  color: string;\n}\n"
+);
