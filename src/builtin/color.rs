@@ -1,8 +1,8 @@
 use std::collections::BTreeMap;
 
 use super::Builtin;
-use crate::value::Value;
 use crate::color::Color;
+use crate::value::Value;
 
 pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     f.insert(

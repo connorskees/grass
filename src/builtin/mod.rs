@@ -7,7 +7,6 @@ use crate::value::Value;
 #[macro_use]
 mod macros;
 
-
 mod color;
 mod list;
 mod map;

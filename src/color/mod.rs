@@ -1,6 +1,6 @@
 use std::fmt::{self, Display};
 
-use name::ColorName;
+pub(crate) use name::ColorName;
 
 mod name;
 
@@ -11,6 +11,12 @@ pub(crate) struct Color {
     blue: u16,
     alpha: u16,
     repr: ColorRepr,
+}
+
+impl Color {
+    pub const fn new(red: u16, green: u16, blue: u16, alpha: u16, repr: ColorRepr) -> Self {
+        Color { red, green, blue, alpha, repr }
+    }
 }
 
 impl Display for Color {
@@ -35,7 +41,7 @@ impl Display for Color {
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
-enum ColorRepr {
+pub(crate) enum ColorRepr {
     Name(ColorName),
     Hex3,
     Hex6,

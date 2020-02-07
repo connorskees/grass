@@ -83,17 +83,16 @@ impl Add for Value {
 
     fn add(self, other: Self) -> Self {
         match self {
-            Self::Important
-            | Self::True
-            | Self::False => match other {
-                Self::Ident(s, QuoteKind::Double)
-                | Self::Ident(s, QuoteKind::Single) => Value::Ident(format!("{}{}", self, s), QuoteKind::Double),
+            Self::Important | Self::True | Self::False => match other {
+                Self::Ident(s, QuoteKind::Double) | Self::Ident(s, QuoteKind::Single) => {
+                    Value::Ident(format!("{}{}", self, s), QuoteKind::Double)
+                }
                 Self::Null => Value::Ident(self.to_string(), QuoteKind::None),
-                _ => Value::Ident(format!("{}{}", self, other), QuoteKind::None)
+                _ => Value::Ident(format!("{}{}", self, other), QuoteKind::None),
             },
             Self::Null => match other {
                 Self::Null => Self::Null,
-                _ => Value::Ident(format!("{}{}", self, other), QuoteKind::None)
+                _ => Value::Ident(format!("{}", other), QuoteKind::None),
             },
             Self::Dimension(num, unit) => match other {
                 Self::Dimension(num2, unit2) => Value::Dimension(num + num2, unit),
@@ -250,8 +249,8 @@ impl Value {
             Self::BinaryOp(lhs, op, rhs) => match op {
                 Op::Plus => *lhs.clone() + *rhs.clone(),
                 Op::Minus => *lhs.clone() - *rhs.clone(),
-                _ => Self::BinaryOp(lhs.clone(), op.clone(), rhs.clone()),
-            }
+                _ => Self::BinaryOp(lhs.clone(), *op, rhs.clone()),
+            },
             _ => self.clone(),
         }
     }
@@ -378,6 +377,10 @@ impl Value {
                             toks.next();
                             s.push_str(i)
                         }
+                        TokenKind::Color(c) => {
+                            toks.next();
+                            s.push_str(&c.to_string())
+                        }
                         _ => break,
                     }
                 }
@@ -455,6 +458,7 @@ impl Value {
                 }
                 Some(Value::Ident(s, QuoteKind::None))
             }
+            TokenKind::Color(c) => Some(Value::Color(c)),
             TokenKind::Keyword(Keyword::Important) => Some(Value::Important),
             TokenKind::Keyword(Keyword::True) => Some(Value::True),
             TokenKind::Keyword(Keyword::False) => Some(Value::False),
