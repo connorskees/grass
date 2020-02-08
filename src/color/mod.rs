@@ -4,47 +4,44 @@ pub(crate) use name::ColorName;
 
 mod name;
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub(crate) struct Color {
     red: u16,
     green: u16,
     blue: u16,
     alpha: u16,
-    repr: ColorRepr,
+    repr: String,
 }
 
 impl Color {
-    pub const fn new(red: u16, green: u16, blue: u16, alpha: u16, repr: ColorRepr) -> Self {
-        Color { red, green, blue, alpha, repr }
+    pub const fn new(red: u16, green: u16, blue: u16, alpha: u16, repr: String) -> Self {
+        Color {
+            red,
+            green,
+            blue,
+            alpha,
+            repr,
+        }
+    }
+
+    pub fn from_values(red: u16, green: u16, blue: u16, alpha: u16) -> Self {
+        let repr = if alpha >= 1 {
+            format!("#{:X}{:X}{:X}", red, green, blue)
+        } else {
+            format!("#{:X}{:X}{:X}{:X}", red, green, blue, alpha)
+        };
+        Color {
+            red,
+            green,
+            blue,
+            alpha,
+            repr,
+        }
     }
 }
 
 impl Display for Color {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self.repr {
-            ColorRepr::Name(n) => write!(f, "{}", n),
-            ColorRepr::Hex3 => todo!(), //write!(f, "#{}{}{}", self.red, self.green, self.blue),
-            ColorRepr::Hex6 => write!(f, "#{:X}{:X}{:X}", self.red, self.green, self.blue),
-            ColorRepr::Hex8 => write!(
-                f,
-                "#{:X}{:X}{:X}{:X}",
-                self.red, self.green, self.blue, self.alpha
-            ),
-            ColorRepr::Function if self.alpha < 1 => write!(
-                f,
-                "rgba({}, {}, {}, {})",
-                self.red, self.green, self.blue, self.alpha
-            ),
-            ColorRepr::Function => write!(f, "#{:X}{:X}{:X}", self.red, self.green, self.blue),
-        }
+        write!(f, "{}", self.repr)
     }
-}
-
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
-pub(crate) enum ColorRepr {
-    Name(ColorName),
-    Hex3,
-    Hex6,
-    Hex8,
-    Function,
 }

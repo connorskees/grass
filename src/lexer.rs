@@ -3,7 +3,7 @@ use std::iter::Peekable;
 use std::str::Chars;
 
 use crate::atrule::AtRuleKind;
-use crate::color::{ColorName};
+use crate::color::ColorName;
 use crate::common::{Keyword, Op, Pos, Symbol};
 use crate::selector::{Attribute, AttributeKind, CaseKind};
 use crate::{Token, TokenKind, Whitespace};
@@ -413,9 +413,9 @@ impl<'a> Lexer<'a> {
         if let Ok(kw) = Keyword::try_from(string.as_ref()) {
             return TokenKind::Keyword(kw);
         }
-        
+
         if let Ok(c) = ColorName::try_from(string.as_ref()) {
-            return TokenKind::Color(c.into());
+            return TokenKind::Color(c.into_color(string));
         }
 
         if string == "-" {

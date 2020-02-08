@@ -361,6 +361,89 @@ impl Value {
             TokenKind::Symbol(Symbol::BitAnd) => {
                 Some(Value::Ident(String::from("&"), QuoteKind::None))
             }
+            TokenKind::Symbol(Symbol::Hash) => {
+                let mut s = String::new();
+                while let Some(tok) = toks.peek() {
+                    match tok.kind.clone() {
+                        TokenKind::Interpolation => {
+                            toks.next();
+                            s.push_str(
+                                &parse_interpolation(toks, scope)
+                                    .iter()
+                                    .map(|x| x.kind.to_string())
+                                    .collect::<String>(),
+                            )
+                        }
+                        TokenKind::Ident(ref i) => {
+                            toks.next();
+                            s.push_str(i)
+                        }
+                        TokenKind::Number(ref n) => {
+                            toks.next();
+                            s.push_str(n)
+                        }
+                        _ => break,
+                    }
+                }
+
+                match s.len() {
+                    3 => {
+                        let v = u16::from_str_radix(&s, 16).unwrap();
+                        let red = ((v & 0xf00) >> 8) * 0x11;
+                        let green = ((v & 0x0f0) >> 4) * 0x11;
+                        let blue = (v & 0x00f) * 0x11;
+                        Some(Value::Color(Color::new(
+                            red,
+                            green,
+                            blue,
+                            1,
+                            format!("#{}", s),
+                        )))
+                    }
+                    4 => {
+                        let v = u16::from_str_radix(&s, 16).unwrap();
+                        let red = ((v & 0xf000) >> 12) * 0x11;
+                        let green = ((v & 0x0f00) >> 8) * 0x11;
+                        let blue = ((v & 0x00f0) >> 4) * 0x11;
+                        let alpha = (v & 0x000f) * 0x11;
+                        Some(Value::Color(Color::new(
+                            red,
+                            green,
+                            blue,
+                            alpha,
+                            format!("#{}", s),
+                        )))
+                    }
+                    6 => {
+                        let v = u32::from_str_radix(&s, 16).unwrap();
+                        let red: u16 = ((v & 0xff0000) >> 16) as u16;
+                        let green: u16 = ((v & 0x00ff00) >> 8) as u16;
+                        let blue: u16 = (v & 0x0000ff) as u16;
+                        Some(Value::Color(Color::new(
+                            red,
+                            green,
+                            blue,
+                            1,
+                            format!("#{}", s),
+                        )))
+                    }
+                    8 => {
+                        let v = u32::from_str_radix(&s, 16).unwrap();
+                        let red = ((v & 0xff000000) >> 24) as u16;
+                        let green = ((v & 0x00ff0000) >> 16) as u16;
+                        let blue = ((v & 0x0000ff00) >> 8) as u16;
+                        let alpha = (v & 0x000000ff) as u16;
+                        Some(Value::Color(Color::new(
+                            red,
+                            green,
+                            blue,
+                            alpha,
+                            format!("#{}", s),
+                        )))
+                    }
+                    _ => Some(Value::Ident(s, QuoteKind::None)),
+                }
+            }
             TokenKind::Ident(mut s) => {
                 while let Some(tok) = toks.peek() {
                     match tok.kind.clone() {
