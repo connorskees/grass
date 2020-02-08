@@ -39,4 +39,16 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             _ => todo!("non-color given to builtin function `blue()`")
         }
     });
+    decl!(f "opacity", |args, _| {
+        match arg!(args, 0, "color") {
+            Value::Color(c) => Some(Value::Dimension(BigRational::from_integer(BigInt::from(c.alpha())), Unit::None)),
+            _ => todo!("non-color given to builtin function `opacity()`")
+        }
+    });
+    decl!(f "alpha", |args, _| {
+        match arg!(args, 0, "color") {
+            Value::Color(c) => Some(Value::Dimension(BigRational::from_integer(BigInt::from(c.alpha())), Unit::None)),
+            _ => todo!("non-color given to builtin function `alpha()`")
+        }
+    });
 }
