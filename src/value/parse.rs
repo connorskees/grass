@@ -46,6 +46,33 @@ fn parse_hex(s: String) -> Value {
     }
 }
 
+fn flatten_ident<I: Iterator<Item = Token>>(toks: &mut Peekable<I>, scope: &Scope) -> String {
+    let mut s = String::new();
+    while let Some(tok) = toks.peek() {
+        match tok.kind.clone() {
+            TokenKind::Interpolation => {
+                toks.next();
+                s.push_str(
+                    &parse_interpolation(toks, scope)
+                        .iter()
+                        .map(|x| x.kind.to_string())
+                        .collect::<String>(),
+                )
+            }
+            TokenKind::Ident(ref i) => {
+                toks.next();
+                s.push_str(i)
+            }
+            TokenKind::Number(ref n) => {
+                toks.next();
+                s.push_str(n)
+            }
+            _ => break,
+        }
+    }
+    s
+}
+
 impl Value {
     pub fn from_tokens<I: Iterator<Item = Token>>(
         toks: &mut Peekable<I>,
@@ -151,32 +178,7 @@ impl Value {
             TokenKind::Symbol(Symbol::BitAnd) => {
                 Some(Value::Ident(String::from("&"), QuoteKind::None))
             }
-            TokenKind::Symbol(Symbol::Hash) => {
-                let mut s = String::new();
-                while let Some(tok) = toks.peek() {
-                    match tok.kind.clone() {
-                        TokenKind::Interpolation => {
-                            toks.next();
-                            s.push_str(
-                                &parse_interpolation(toks, scope)
-                                    .iter()
-                                    .map(|x| x.kind.to_string())
-                                    .collect::<String>(),
-                            )
-                        }
-                        TokenKind::Ident(ref i) => {
-                            toks.next();
-                            s.push_str(i)
-                        }
-                        TokenKind::Number(ref n) => {
-                            toks.next();
-                            s.push_str(n)
-                        }
-                        _ => break,
-                    }
-                }
-                Some(parse_hex(s))
-            }
+            TokenKind::Symbol(Symbol::Hash) => Some(parse_hex(flatten_ident(toks, scope))),
             // TokenKind::Interpolation => {
             //     Some(Value::Ident(
             //         parse_interpolation(toks, scope)
@@ -187,24 +189,7 @@ impl Value {
             //     ))
             // }
             TokenKind::Ident(mut s) => {
-                while let Some(tok) = toks.peek() {
-                    match tok.kind.clone() {
-                        TokenKind::Interpolation => {
-                            toks.next();
-                            s.push_str(
-                                &parse_interpolation(toks, scope)
-                                    .iter()
-                                    .map(|x| x.kind.to_string())
-                                    .collect::<String>(),
-                            )
-                        }
-                        TokenKind::Ident(ref i) => {
-                            toks.next();
-                            s.push_str(i)
-                        }
-                        _ => break,
-                    }
-                }
+                s.push_str(&flatten_ident(toks, scope));
                 match toks.peek() {
                     Some(Token {
                         kind: TokenKind::Symbol(Symbol::OpenParen),
