@@ -1,7 +1,11 @@
 #![allow(dead_code, unused_variables)]
+use std::convert::TryInto;
 use std::fmt::{self, Display};
 use std::iter::{Iterator, Peekable};
 use std::ops::{Add, Sub};
+
+use num_rational::BigRational;
+use num_bigint::BigInt;
 
 use crate::args::eat_call_args;
 use crate::builtin::GLOBAL_FUNCTIONS;
@@ -70,7 +74,7 @@ pub(crate) enum Value {
     True,
     False,
     Null,
-    Dimension(Dimension, Unit),
+    Dimension(BigRational, Unit),
     List(Vec<Value>, ListSeparator),
     Color(Color),
     BinaryOp(Box<Value>, Op, Box<Value>),
@@ -214,6 +218,28 @@ impl Display for Value {
     }
 }
 
+impl TryInto<u16> for Value {
+    type Error = &'static str;
+    fn try_into(self) -> Result<u16, Self::Error> {
+        match self {
+            Self::Dimension(n, Unit::Percent) => {
+                todo!()
+            }
+            Self::Dimension(n, Unit::None) => {
+                if n >= BigRational::from_integer(BigInt::from(255)) {
+                    Ok(255)
+                } else {
+                    Ok(n.to_integer().to_str_radix(10).parse().unwrap())
+                }
+            }
+            Self::Dimension(n, _) => {
+                Err("Expected `val` to have no units or \"%\".")
+            }
+            _ => Err("expected number")
+        }
+    }
+}
+
 impl Value {
     pub fn is_null(&self) -> bool {
         self == &Value::Null
@@ -343,9 +369,7 @@ impl Value {
                     Unit::None
                 };
                 Some(Value::Dimension(
-                    Dimension {
-                        val: val.parse().unwrap(),
-                    },
+                    val.parse().expect("error parsing integer"),
                     unit,
                 ))
             }

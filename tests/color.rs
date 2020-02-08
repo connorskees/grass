@@ -27,7 +27,17 @@ test!(preserves_hex_3_val_000, "a {\n  color: #000;\n}\n");
 test!(preserves_hex_3_val_123, "a {\n  color: #123;\n}\n");
 test!(preserves_hex_3_val_ab2, "a {\n  color: #ab2;\n}\n");
 // test!(
-//     ,
-//     "a {\n  color: OrAnGe;\n}\n",
-//     "a {\n  color: OrAnGe;\n}\n"
+//     converts_rgb_to_named_color,
+//     "a {\n  color: rgb(0, 0, 0);\n}\n",
+//     "a {\n  color: black;\n}\n"
 // );
+test!(
+    rgb_pads_0,
+    "a {\n  color: rgb(1, 2, 3);\n}\n",
+    "a {\n  color: #010203;\n}\n"
+);
+test!(
+    rgb_double_digits,
+    "a {\n  color: rgb(255, 255, 255);\n}\n",
+    "a {\n  color: #ffffff;\n}\n"
+);
