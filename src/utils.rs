@@ -52,7 +52,7 @@ pub(crate) fn parse_interpolation<I: Iterator<Item = Token>>(
                 todo!("invalid character in interpolation")
             }
             TokenKind::Variable(ref v) => val.extend(
-                Lexer::new(&scope.vars.get(v).unwrap().to_string()).collect::<Vec<Token>>(),
+                Lexer::new(&scope.get_var(v).unwrap().to_string()).collect::<Vec<Token>>(),
             ),
             TokenKind::Interpolation => val.extend(parse_interpolation(tokens, scope)),
             _ => val.push(tok),

@@ -144,11 +144,11 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
                         toks.next();
                         match name {
                             Some(ref name) => {
-                                args.insert(name.clone(), scope.vars.get(&v).unwrap().clone())
+                                args.insert(name.clone(), scope.get_var(&v).unwrap().clone())
                             }
                             None => args.insert(
                                 format!("{}", args.len()),
-                                scope.vars.get(&v).unwrap().clone(),
+                                scope.get_var(&v).unwrap().clone(),
                             ),
                         };
                         if let Some(ref mut s) = name {
@@ -162,10 +162,10 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
                     }) => {
                         toks.next();
                         match name {
-                            Some(name) => args.insert(name, scope.vars.get(&v).unwrap().clone()),
+                            Some(name) => args.insert(name, scope.get_var(&v).unwrap().clone()),
                             None => args.insert(
                                 format!("{}", args.len()),
-                                scope.vars.get(&v).unwrap().clone(),
+                                scope.get_var(&v).unwrap().clone(),
                             ),
                         };
                         break;

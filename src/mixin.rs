@@ -82,7 +82,7 @@ impl Mixin {
                     None => arg.default.clone().expect("missing variable!"),
                 },
             };
-            self.scope.vars.insert(arg.name.clone(), val);
+            self.scope.insert_var(&arg.name, val);
         }
         self
     }
@@ -110,7 +110,7 @@ impl Mixin {
                     }));
                 }
                 Expr::VariableDecl(name, val) => {
-                    self.scope.vars.insert(name, val);
+                    self.scope.insert_var(&name, val);
                 }
                 Expr::MultilineComment(s) => stmts.push(Stmt::MultilineComment(s)),
             }
@@ -155,8 +155,8 @@ pub(crate) fn eat_include<I: Iterator<Item = Token>>(
 
     devour_whitespace(toks);
 
-    let mixin = match scope.mixins.get(&name) {
-        Some(m) => m.clone(),
+    let mixin = match scope.get_mixin(&name) {
+        Ok(m) => m.clone(),
         _ => return Err((pos, String::from("Expected identifier."))),
     };
 

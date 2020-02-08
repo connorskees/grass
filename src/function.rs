@@ -75,7 +75,7 @@ impl Function {
                     None => arg.default.clone().expect("missing variable!"),
                 },
             };
-            self.scope.vars.insert(arg.name.clone(), val);
+            self.scope.insert_var(&arg.name, val);
         }
         self
     }

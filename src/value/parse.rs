@@ -197,9 +197,9 @@ impl Value {
                     }) => {
                         toks.next();
                         let args = eat_call_args(toks, scope);
-                        let func = match scope.functions.get(&s) {
-                            Some(f) => f,
-                            None => match GLOBAL_FUNCTIONS.get(&s) {
+                        let func = match scope.get_fn(&s) {
+                            Ok(f) => f,
+                            Err(_) => match GLOBAL_FUNCTIONS.get(&s) {
                                 Some(f) => return f(&args),
                                 None => todo!("called undefined function"),
                             },
@@ -243,7 +243,7 @@ impl Value {
                 Some(Value::Ident(s, QuoteKind::Single))
             }
             TokenKind::Variable(ref v) => {
-                Some(scope.vars.get(v).expect("expected variable").clone())
+                Some(scope.get_var(v).expect("expected variable").clone())
             }
             TokenKind::Interpolation => {
                 let mut s = parse_interpolation(toks, scope)

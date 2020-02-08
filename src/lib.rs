@@ -353,8 +353,8 @@ impl<'a> StyleSheetParser<'a> {
                     }
                     let VariableDecl { val, default } = eat_variable_value(&mut self.lexer, &self.global_scope)
                         .unwrap_or_else(|err| self.error(err.0, &err.1));
-                    if !default || self.global_scope.vars.get(&name).is_none() {
-                        self.global_scope.vars.insert(name, val);
+                    if !default || self.global_scope.get_var(&name).is_err() {
+                        self.global_scope.insert_var(&name, val);
                     }
                 }
                 TokenKind::MultilineComment(_) => {
@@ -413,7 +413,7 @@ impl<'a> StyleSheetParser<'a> {
 
                     let (new_rules, new_scope) = import(file_name)?;
                     rules.extend(new_rules);
-                    self.global_scope.merge(new_scope);
+                    self.global_scope.extend(new_scope);
                 }
                 TokenKind::AtRule(_) => {
                     if let Some(Token {
@@ -423,10 +423,10 @@ impl<'a> StyleSheetParser<'a> {
                     {
                         match AtRule::from_tokens(rule, pos, &mut self.lexer, &self.global_scope) {
                             AtRule::Mixin(name, mixin) => {
-                                self.global_scope.mixins.insert(name, *mixin);
+                                self.global_scope.insert_mixin(&name, *mixin);
                             }
                             AtRule::Function(name, func) => {
-                                self.global_scope.functions.insert(name, *func);
+                                self.global_scope.insert_fn(&name, *func);
                             }
                             AtRule::Charset(toks) => rules.push(Stmt::AtRule(AtRule::Charset(toks))),
                             AtRule::Error(pos, message) => self.error(pos, &message),
@@ -458,10 +458,10 @@ impl<'a> StyleSheetParser<'a> {
                 #[allow(clippy::redundant_closure)]
                 Expr::Styles(s) => stmts.extend(s.into_iter().map(Stmt::Style)),
                 Expr::MixinDecl(name, mixin) => {
-                    scope.mixins.insert(name, *mixin);
+                    scope.insert_mixin(&name, *mixin);
                 }
                 Expr::FunctionDecl(name, func) => {
-                    scope.functions.insert(name, *func);
+                    scope.insert_fn(&name, *func);
                 }
                 Expr::Selector(s) => {
                     self.scope += 1;
@@ -478,10 +478,10 @@ impl<'a> StyleSheetParser<'a> {
                 }
                 Expr::VariableDecl(name, val) => {
                     if self.scope == 0 {
-                        scope.vars.insert(name.clone(), val.clone());
-                        self.global_scope.vars.insert(name, val);
+                        scope.insert_var(&name, val.clone());
+                        self.global_scope.insert_var(&name, val);
                     } else {
-                        scope.vars.insert(name, val);
+                        scope.insert_var(&name, val);
                     }
                 }
                 Expr::Include(rules) => stmts.extend(rules),
@@ -564,7 +564,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                     toks.next();
                     devour_whitespace(toks);
                     let VariableDecl { val, default } = eat_variable_value(toks, scope)?;
-                    if !default || scope.vars.get(&name).is_none() {
+                    if !default || scope.get_var(&name).is_err() {
                         return Ok(Some(Expr::VariableDecl(name, val)));
                     }
                 } else {

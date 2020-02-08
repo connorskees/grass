@@ -342,9 +342,9 @@ impl Display for Pos {
 
 #[derive(Debug, Clone)]
 pub(crate) struct Scope {
-    pub vars: HashMap<String, Value>,
-    pub mixins: HashMap<String, Mixin>,
-    pub functions: HashMap<String, Function>,
+    vars: HashMap<String, Value>,
+    mixins: HashMap<String, Mixin>,
+    functions: HashMap<String, Function>,
 }
 
 impl Scope {
@@ -357,7 +357,52 @@ impl Scope {
         }
     }
 
-    pub fn merge(&mut self, other: Scope) {
+    pub fn get_var(&self, v: &str) -> Result<&Value, String> {
+        match self.vars.get(&v.replace('_', "-")) {
+            Some(v) => Ok(v),
+            None => Err(format!("Undefined variable `{}`.", v))
+        }
+    }
+
+    pub fn insert_var(&mut self, s: &str, v: Value) -> Option<Value> {
+        self.vars.insert(s.replace('_', "-"), v)
+    }
+
+    pub fn var_exists(&self, v: &str) -> bool {
+        self.vars.contains_key(&v.replace('_', "-"))
+    }
+
+    pub fn get_mixin(&self, v: &str) -> Result<&Mixin, String> {
+        match self.mixins.get(&v.replace('_', "-")) {
+            Some(v) => Ok(v),
+            None => Err(format!("Undefined mixin `{}`.", v))
+        }
+    }
+
+    pub fn insert_mixin(&mut self, s: &str, v: Mixin) -> Option<Mixin> {
+        self.mixins.insert(s.replace('_', "-"), v)
+    }
+
+    pub fn mixin_exists(&self, v: &str) -> bool {
+        self.mixins.contains_key(&v.replace('_', "-"))
+    }
+
+    pub fn get_fn(&self, v: &str) -> Result<&Function, String> {
+        match self.functions.get(&v.replace('_', "-")) {
+            Some(v) => Ok(v),
+            None => Err(format!("Undefined function `{}`.", v))
+        }
+    }
+
+    pub fn insert_fn(&mut self, s: &str, v: Function) -> Option<Function> {
+        self.functions.insert(s.replace('_', "-"), v)
+    }
+
+    pub fn fn_exists(&self, v: &str) -> bool {
+        self.functions.contains_key(&v.replace('_', "-"))
+    }
+
+    pub fn extend(&mut self, other: Scope) {
         self.vars.extend(other.vars);
         self.mixins.extend(other.mixins);
         self.functions.extend(other.functions);
