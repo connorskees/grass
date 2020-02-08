@@ -55,9 +55,9 @@ impl<'a> Iterator for Lexer<'a> {
                         self.pos.next_char();
                         TokenKind::Op(Op::Equal)
                     }
-                    _ => TokenKind::Symbol(Symbol::Equal)
+                    _ => TokenKind::Symbol(Symbol::Equal),
                 }
-            },
+            }
             '?' => symbol!(self, QuestionMark),
             '\\' => symbol!(self, BackSlash),
             '~' => symbol!(self, Tilde),

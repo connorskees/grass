@@ -1,13 +1,13 @@
 use std::collections::BTreeMap;
 use std::convert::TryInto;
 
-use num_rational::BigRational;
 use num_bigint::BigInt;
+use num_rational::BigRational;
 
 use super::Builtin;
 use crate::color::Color;
-use crate::value::Value;
 use crate::units::Unit;
+use crate::value::Value;
 
 pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     decl!(f "rgb", |args| {
