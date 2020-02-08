@@ -56,3 +56,11 @@ test!(
     "a {\n  color: alpha(red);\n}\n",
     "a {\n  color: 1;\n}\n"
 );
+test!(
+    opacity_function_number,
+    "a {\n  color: opacity(1);\n}\n"
+);
+test!(
+    opacity_function_number_unit,
+    "a {\n  color: opacity(1px);\n}\n"
+);

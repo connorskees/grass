@@ -6,6 +6,7 @@ use num_rational::BigRational;
 
 use super::Builtin;
 use crate::color::Color;
+use crate::common::QuoteKind;
 use crate::units::Unit;
 use crate::value::{Number, Value};
 
@@ -42,6 +43,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     decl!(f "opacity", |args, _| {
         match arg!(args, 0, "color") {
             Value::Color(c) => Some(Value::Dimension(Number::new(BigRational::new(BigInt::from(c.alpha()), BigInt::from(255))), Unit::None)),
+            Value::Dimension(num, unit) => Some(Value::Ident(format!("opacity({}{})", num , unit), QuoteKind::None)),
             _ => todo!("non-color given to builtin function `opacity()`")
         }
     });
