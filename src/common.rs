@@ -391,3 +391,36 @@ impl QuoteKind {
         }
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ListSeparator {
+    Space,
+    Comma,
+}
+
+impl ListSeparator {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Space => " ",
+            Self::Comma => ", ",
+        }
+    }
+
+    #[allow(dead_code)]
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Space => "space",
+            Self::Comma => "comma",
+        }
+    }
+}
+
+impl Display for ListSeparator {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Space => write!(f, " "),
+            Self::Comma => write!(f, ", "),
+        }
+    }
+}
