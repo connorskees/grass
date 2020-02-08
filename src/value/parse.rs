@@ -10,6 +10,8 @@ use crate::utils::{devour_whitespace_or_comment, parse_interpolation};
 use crate::value::Value;
 use crate::{Token, TokenKind};
 
+use super::number::Number;
+
 fn parse_hex(s: String) -> Value {
     match s.len() {
         3 => {
@@ -162,7 +164,7 @@ impl Value {
                     Unit::None
                 };
                 Some(Value::Dimension(
-                    val.parse().expect("error parsing integer"),
+                    Number::new(val.parse().expect("error parsing integer")),
                     unit,
                 ))
             }

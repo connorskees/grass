@@ -4,12 +4,13 @@ use std::fmt::{self, Display};
 use std::iter::Iterator;
 
 use num_bigint::BigInt;
-use num_rational::BigRational;
 
 use crate::color::Color;
 use crate::common::{ListSeparator, Op, QuoteKind};
 use crate::units::Unit;
+pub(crate) use number::Number;
 
+mod number;
 mod ops;
 mod parse;
 
@@ -19,7 +20,7 @@ pub(crate) enum Value {
     True,
     False,
     Null,
-    Dimension(BigRational, Unit),
+    Dimension(Number, Unit),
     List(Vec<Value>, ListSeparator),
     Color(Color),
     BinaryOp(Box<Value>, Op, Box<Value>),
@@ -58,7 +59,7 @@ impl TryInto<u16> for Value {
             Self::BinaryOp(..) => self.eval().try_into(),
             Self::Dimension(n, Unit::Percent) => todo!(),
             Self::Dimension(n, Unit::None) => {
-                if n >= BigRational::from_integer(BigInt::from(255)) {
+                if n >= Number::from(BigInt::from(255)) {
                     Ok(255)
                 } else {
                     Ok(n.to_integer().to_str_radix(10).parse().unwrap())

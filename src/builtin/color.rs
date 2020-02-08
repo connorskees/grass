@@ -7,7 +7,7 @@ use num_rational::BigRational;
 use super::Builtin;
 use crate::color::Color;
 use crate::units::Unit;
-use crate::value::Value;
+use crate::value::{Number, Value};
 
 pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     decl!(f "rgb", |args, _| {
@@ -23,31 +23,31 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     });
     decl!(f "red", |args, _| {
         match arg!(args, 0, "red") {
-            Value::Color(c) => Some(Value::Dimension(BigRational::from_integer(BigInt::from(c.red())), Unit::None)),
+            Value::Color(c) => Some(Value::Dimension(Number::from(BigInt::from(c.red())), Unit::None)),
             _ => todo!("non-color given to builtin function `red()`")
         }
     });
     decl!(f "green", |args, _| {
         match arg!(args, 0, "green") {
-            Value::Color(c) => Some(Value::Dimension(BigRational::from_integer(BigInt::from(c.green())), Unit::None)),
+            Value::Color(c) => Some(Value::Dimension(Number::from(BigInt::from(c.green())), Unit::None)),
             _ => todo!("non-color given to builtin function `green()`")
         }
     });
     decl!(f "blue", |args, _| {
         match arg!(args, 0, "blue") {
-            Value::Color(c) => Some(Value::Dimension(BigRational::from_integer(BigInt::from(c.blue())), Unit::None)),
+            Value::Color(c) => Some(Value::Dimension(Number::from(BigInt::from(c.blue())), Unit::None)),
             _ => todo!("non-color given to builtin function `blue()`")
         }
     });
     decl!(f "opacity", |args, _| {
         match arg!(args, 0, "color") {
-            Value::Color(c) => Some(Value::Dimension(BigRational::from_integer(BigInt::from(c.alpha())), Unit::None)),
+            Value::Color(c) => Some(Value::Dimension(Number::new(BigRational::new(BigInt::from(c.alpha()), BigInt::from(255))), Unit::None)),
             _ => todo!("non-color given to builtin function `opacity()`")
         }
     });
     decl!(f "alpha", |args, _| {
         match arg!(args, 0, "color") {
-            Value::Color(c) => Some(Value::Dimension(BigRational::from_integer(BigInt::from(c.alpha())), Unit::None)),
+            Value::Color(c) => Some(Value::Dimension(Number::new(BigRational::new(BigInt::from(c.alpha()), BigInt::from(255))), Unit::None)),
             _ => todo!("non-color given to builtin function `alpha()`")
         }
     });

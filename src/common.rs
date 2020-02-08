@@ -360,7 +360,7 @@ impl Scope {
     pub fn get_var(&self, v: &str) -> Result<&Value, String> {
         match self.vars.get(&v.replace('_', "-")) {
             Some(v) => Ok(v),
-            None => Err(format!("Undefined variable `{}`.", v))
+            None => Err(format!("Undefined variable `{}`.", v)),
         }
     }
 
@@ -375,7 +375,7 @@ impl Scope {
     pub fn get_mixin(&self, v: &str) -> Result<&Mixin, String> {
         match self.mixins.get(&v.replace('_', "-")) {
             Some(v) => Ok(v),
-            None => Err(format!("Undefined mixin `{}`.", v))
+            None => Err(format!("Undefined mixin `{}`.", v)),
         }
     }
 
@@ -390,7 +390,7 @@ impl Scope {
     pub fn get_fn(&self, v: &str) -> Result<&Function, String> {
         match self.functions.get(&v.replace('_', "-")) {
             Some(v) => Ok(v),
-            None => Err(format!("Undefined function `{}`.", v))
+            None => Err(format!("Undefined function `{}`.", v)),
         }
     }
 

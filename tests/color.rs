@@ -46,3 +46,8 @@ test!(
     "a {\n  color: rgb(255, 255, 255);\n}\n",
     "a {\n  color: #ffffff;\n}\n"
 );
+test!(
+    alpha_function_4_hex,
+    "a {\n  color: alpha(#0123);\n}\n",
+    "a {\n  color: .25;\n}\n"
+);
