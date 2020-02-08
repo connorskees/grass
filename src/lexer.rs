@@ -46,7 +46,18 @@ impl<'a> Iterator for Lexer<'a> {
             '(' => symbol!(self, OpenParen),
             ')' => symbol!(self, CloseParen),
             '+' => symbol!(self, Plus),
-            '=' => symbol!(self, Equal),
+            '=' => {
+                self.buf.next();
+                self.pos.next_char();
+                match self.buf.peek() {
+                    Some('=') => {
+                        self.buf.next();
+                        self.pos.next_char();
+                        TokenKind::Op(Op::Equal)
+                    }
+                    _ => TokenKind::Symbol(Symbol::Equal)
+                }
+            },
             '?' => symbol!(self, QuestionMark),
             '\\' => symbol!(self, BackSlash),
             '~' => symbol!(self, Tilde),

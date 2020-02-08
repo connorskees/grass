@@ -226,7 +226,8 @@ impl Value {
     }
 
     pub fn is_true(&self) -> bool {
-        !(self == &Value::Null || self == &Value::False)
+        let s = self.eval();
+        !(s == Value::Null || s == Value::False)
     }
 
     pub fn unquote(self) -> Self {
@@ -250,11 +251,21 @@ impl Value {
         }
     }
 
+    pub fn bool(b: bool) -> Self {
+        if b {
+            Value::True
+        } else {
+            Value::False
+        }
+    }
+
     pub fn eval(&self) -> Self {
         match self {
             Self::BinaryOp(lhs, op, rhs) => match op {
                 Op::Plus => *lhs.clone() + *rhs.clone(),
                 Op::Minus => *lhs.clone() - *rhs.clone(),
+                Op::Equal => Self::bool(*lhs == *rhs),
+                Op::NotEqual => Self::bool(*lhs != *rhs),
                 _ => Self::BinaryOp(lhs.clone(), *op, rhs.clone()),
             },
             _ => self.clone(),
