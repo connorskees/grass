@@ -49,5 +49,10 @@ test!(
 test!(
     alpha_function_4_hex,
     "a {\n  color: alpha(#0123);\n}\n",
-    "a {\n  color: .25;\n}\n"
+    "a {\n  color: 0.2;\n}\n"
+);
+test!(
+    alpha_function_named_color,
+    "a {\n  color: alpha(red);\n}\n",
+    "a {\n  color: 1;\n}\n"
 );

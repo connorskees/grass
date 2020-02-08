@@ -44,6 +44,10 @@ impl Display for Number {
                     break;
                 }
             }
+            if frac != BigRational::from_integer(BigInt::from(0)) {
+                write!(f, "{}", (frac * BigRational::from_integer(BigInt::from(10))).round().to_integer())?;
+            }
+
         }
         Ok(())
     }
