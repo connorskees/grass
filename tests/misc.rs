@@ -22,3 +22,8 @@ test!(
     emits_double_newline_between_unrelated_styles,
     "a {\n  color: red;\n}\n\nb {\n  color: blue;\n}\n"
 );
+test!(
+    variable_interchangable_hypen_dash,
+    "$a-b: red; $a_b: green; a {\n  color: $a-b;\n}\n",
+    "a {\n  color: green;\n}\n"
+);

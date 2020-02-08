@@ -13,3 +13,8 @@ test!(
     "a {\n  color: #{'red'};\n}\n",
     "a {\n  color: red;\n}\n"
 );
+test!(
+    number_after_interpolation,
+    "a {\n  color: a#{foo}1;\n}\n",
+    "a {\n  color: afoo1;\n}\n"
+);
