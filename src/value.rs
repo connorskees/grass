@@ -1,5 +1,5 @@
 #![allow(dead_code, unused_variables)]
-use std::convert::TryInto;
+use std::convert::{TryFrom, TryInto};
 use std::fmt::{self, Display};
 use std::iter::{Iterator, Peekable};
 use std::ops::{Add, Sub};
@@ -201,6 +201,7 @@ impl TryInto<u16> for Value {
     type Error = &'static str;
     fn try_into(self) -> Result<u16, Self::Error> {
         match self {
+            Self::BinaryOp(..) => self.eval().try_into(),
             Self::Dimension(n, Unit::Percent) => {
                 todo!()
             }
@@ -447,6 +448,15 @@ impl Value {
                     _ => Some(Value::Ident(s, QuoteKind::None)),
                 }
             }
+            // TokenKind::Interpolation => {
+            //     Some(Value::Ident(
+            //         parse_interpolation(toks, scope)
+            //             .iter()
+            //             .map(|x| x.kind.to_string())
+            //             .collect::<String>(),
+            //             QuoteKind::None
+            //     ))
+            // }
             TokenKind::Ident(mut s) => {
                 while let Some(tok) = toks.peek() {
                     match tok.kind.clone() {
@@ -462,10 +472,6 @@ impl Value {
                         TokenKind::Ident(ref i) => {
                             toks.next();
                             s.push_str(i)
-                        }
-                        TokenKind::Color(c) => {
-                            toks.next();
-                            s.push_str(&c.to_string())
                         }
                         _ => break,
                     }
@@ -486,7 +492,11 @@ impl Value {
                         };
                         Some(func.clone().args(&args).call())
                     }
-                    _ => Some(Value::Ident(s, QuoteKind::None)),
+                    _ => if let Ok(c) = crate::color::ColorName::try_from(s.as_ref()) {
+                        Some(Value::Color(c.into_color(s)))
+                    } else {
+                        Some(Value::Ident(s, QuoteKind::None))
+                    }
                 }
             }
             TokenKind::Symbol(Symbol::DoubleQuote) => {
@@ -544,7 +554,6 @@ impl Value {
                 }
                 Some(Value::Ident(s, QuoteKind::None))
             }
-            TokenKind::Color(c) => Some(Value::Color(c)),
             TokenKind::Keyword(Keyword::Important) => Some(Value::Important),
             TokenKind::Keyword(Keyword::True) => Some(Value::True),
             TokenKind::Keyword(Keyword::False) => Some(Value::False),

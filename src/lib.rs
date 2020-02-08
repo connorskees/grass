@@ -49,7 +49,6 @@ use std::iter::{Iterator, Peekable};
 use std::path::Path;
 
 use crate::atrule::{AtRule, AtRuleKind};
-use crate::color::Color;
 use crate::common::{Keyword, Op, Pos, Scope, Symbol, Whitespace};
 use crate::css::Css;
 use crate::error::SassError;
@@ -137,7 +136,6 @@ pub(crate) enum TokenKind {
     Attribute(Attribute),
     Op(Op),
     MultilineComment(String),
-    Color(Color),
     Interpolation,
 }
 
@@ -148,7 +146,6 @@ impl Display for TokenKind {
             TokenKind::Ident(s) | TokenKind::Number(s) => write!(f, "{}", s),
             TokenKind::Symbol(s) => write!(f, "{}", s),
             TokenKind::AtRule(s) => write!(f, "{}", s),
-            TokenKind::Color(s) => write!(f, "{}", s),
             TokenKind::Op(s) => write!(f, "{}", s),
             TokenKind::Whitespace(s) => write!(f, "{}", s),
             TokenKind::Attribute(s) => write!(f, "{}", s),

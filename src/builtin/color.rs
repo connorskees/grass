@@ -1,9 +1,13 @@
 use std::collections::BTreeMap;
 use std::convert::TryInto;
 
+use num_rational::BigRational;
+use num_bigint::BigInt;
+
 use super::Builtin;
 use crate::color::Color;
 use crate::value::Value;
+use crate::units::Unit;
 
 pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     decl!(f "rgb", |args| {
@@ -15,6 +19,24 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             Some(Value::Color(Color::from_values(red, green, blue, 1)))
         } else {
             todo!("channels variable in `rgb`")
+        }
+    });
+    decl!(f "red", |args| {
+        match arg!(args, 0, "red") {
+            Value::Color(c) => Some(Value::Dimension(BigRational::from_integer(BigInt::from(c.red())), Unit::None)),
+            _ => todo!("non-color given to builtin function `red()`")
+        }
+    });
+    decl!(f "green", |args| {
+        match arg!(args, 0, "green") {
+            Value::Color(c) => Some(Value::Dimension(BigRational::from_integer(BigInt::from(c.green())), Unit::None)),
+            _ => todo!("non-color given to builtin function `green()`")
+        }
+    });
+    decl!(f "blue", |args| {
+        match arg!(args, 0, "blue") {
+            Value::Color(c) => Some(Value::Dimension(BigRational::from_integer(BigInt::from(c.blue())), Unit::None)),
+            _ => todo!("non-color given to builtin function `blue()`")
         }
     });
 }

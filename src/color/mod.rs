@@ -24,6 +24,18 @@ impl Color {
         }
     }
 
+    pub const fn red(&self) -> u16 {
+        self.red
+    }
+
+    pub const fn blue(&self) -> u16 {
+        self.blue
+    }
+
+    pub const fn green(&self) -> u16 {
+        self.green
+    }
+
     pub fn from_values(red: u16, green: u16, blue: u16, alpha: u16) -> Self {
         let repr = if alpha >= 1 {
             format!("#{:0>2x}{:0>2x}{:0>2x}", red, green, blue)

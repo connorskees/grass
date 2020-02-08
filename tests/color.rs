@@ -32,6 +32,11 @@ test!(preserves_hex_3_val_ab2, "a {\n  color: #ab2;\n}\n");
 //     "a {\n  color: black;\n}\n"
 // );
 test!(
+    rgb_binop,
+    "a {\n  color: rgb(1, 2, 1+2);\n}\n",
+    "a {\n  color: #010203;\n}\n"
+);
+test!(
     rgb_pads_0,
     "a {\n  color: rgb(1, 2, 3);\n}\n",
     "a {\n  color: #010203;\n}\n"
