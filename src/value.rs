@@ -226,8 +226,11 @@ impl Value {
     }
 
     pub fn is_true(&self) -> bool {
-        let s = self.eval();
-        !(s == Value::Null || s == Value::False)
+        match self {
+            Value::Null | Value::False => false,
+            Self::BinaryOp(..) => self.eval().is_true(),
+            _ => true
+        }
     }
 
     pub fn unquote(self) -> Self {
