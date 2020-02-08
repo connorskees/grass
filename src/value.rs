@@ -16,27 +16,6 @@ use crate::utils::{devour_whitespace_or_comment, parse_interpolation};
 use crate::{Token, TokenKind};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) struct Dimension {
-    val: u64,
-}
-
-impl Add for Dimension {
-    type Output = Self;
-
-    fn add(self, other: Self) -> Self {
-        Dimension {
-            val: self.val + other.val,
-        }
-    }
-}
-
-impl Display for Dimension {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.val)
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum ListSeparator {
     Space,
     Comma,
