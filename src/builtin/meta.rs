@@ -58,7 +58,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         }
     });
     decl!(f "inspect", |args| {
-        let value = arg!(args, 0, "v­alue");
+        let value = arg!(args, 0, "value");
         Some(Value::Ident(value.to_string(), QuoteKind::None))
     });
 }

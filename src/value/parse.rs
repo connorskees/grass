@@ -29,17 +29,17 @@ fn parse_hex(s: String) -> Value {
         }
         6 => {
             let v = u32::from_str_radix(&s, 16).unwrap();
-            let red: u16 = ((v & 0xff0000) >> 16) as u16;
-            let green: u16 = ((v & 0x00ff00) >> 8) as u16;
-            let blue: u16 = (v & 0x0000ff) as u16;
+            let red: u16 = ((v & 0x00ff_0000) >> 16) as u16;
+            let green: u16 = ((v & 0x0000_ff00) >> 8) as u16;
+            let blue: u16 = (v & 0x0000_00ff) as u16;
             Value::Color(Color::new(red, green, blue, 1, format!("#{}", s)))
         }
         8 => {
             let v = u32::from_str_radix(&s, 16).unwrap();
-            let red = ((v & 0xff000000) >> 24) as u16;
-            let green = ((v & 0x00ff0000) >> 16) as u16;
-            let blue = ((v & 0x0000ff00) >> 8) as u16;
-            let alpha = (v & 0x000000ff) as u16;
+            let red = ((v & 0xff00_0000) >> 24) as u16;
+            let green = ((v & 0x00ff_0000) >> 16) as u16;
+            let blue = ((v & 0x0000_ff00) >> 8) as u16;
+            let alpha = (v & 0x0000_00ff) as u16;
             Value::Color(Color::new(red, green, blue, alpha, format!("#{}", s)))
         }
         _ => Value::Ident(s, QuoteKind::None),

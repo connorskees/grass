@@ -39,6 +39,8 @@
     // than they should
     clippy::module_name_repetitions,
     clippy::option_unwrap_used,
+    // this is too pedantic -- it is sometimes useful to break up `impl`s
+    clippy::multiple_inherent_impl,
 )]
 #![cfg_attr(feature = "nightly", feature(track_caller))]
 // todo! handle erroring on styles at the toplevel

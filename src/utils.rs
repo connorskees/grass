@@ -74,7 +74,7 @@ pub(crate) struct VariableDecl {
 }
 
 impl VariableDecl {
-    pub fn new(val: Value, default: bool) -> VariableDecl {
+    pub const fn new(val: Value, default: bool) -> VariableDecl {
         VariableDecl { val, default }
     }
 }

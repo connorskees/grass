@@ -36,7 +36,7 @@ impl Display for Value {
                 f,
                 "{}",
                 vals.iter()
-                    .map(|x| x.to_string())
+                    .map(std::string::ToString::to_string)
                     .collect::<Vec<String>>()
                     .join(sep.as_str())
             ),
