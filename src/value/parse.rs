@@ -200,7 +200,7 @@ impl Value {
                         let func = match scope.get_fn(&s) {
                             Ok(f) => f,
                             Err(_) => match GLOBAL_FUNCTIONS.get(&s) {
-                                Some(f) => return f(&args),
+                                Some(f) => return f(&args, scope),
                                 None => todo!("called undefined function"),
                             },
                         };

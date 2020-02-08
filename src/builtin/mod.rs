@@ -2,6 +2,7 @@ use lazy_static::lazy_static;
 use std::collections::BTreeMap;
 
 use crate::args::CallArgs;
+use crate::common::Scope;
 use crate::value::Value;
 
 #[macro_use]
@@ -15,7 +16,7 @@ mod meta;
 mod selector;
 mod string;
 
-pub(crate) type Builtin = Box<dyn Fn(&CallArgs) -> Option<Value> + Send + Sync>;
+pub(crate) type Builtin = Box<dyn Fn(&CallArgs, &Scope) -> Option<Value> + Send + Sync>;
 
 lazy_static! {
     pub(crate) static ref GLOBAL_FUNCTIONS: BTreeMap<String, Builtin> = {

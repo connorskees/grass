@@ -229,6 +229,51 @@ test!(
     "a {\n  color: inspect(null)\n}\n",
     "a {\n  color: null;\n}\n"
 );
+test!(
+    variable_does_exist,
+    "$a: red; a {\n  color: variable-exists(a)\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    variable_does_not_exist,
+    "a {\n  color: variable-exists(a)\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    variable_exists_named,
+    "$a: red; a {\n  color: variable-exists($name: a)\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    mixin_does_exist,
+    "@mixin a{} a {\n  color: mixin-exists(a)\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    mixin_does_not_exist,
+    "a {\n  color: mixin-exists(a)\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    mixin_exists_named,
+    "@mixin a{} a {\n  color: mixin-exists($name: a)\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    function_does_exist,
+    "@function a(){} a {\n  color: function-exists(a)\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    function_does_not_exist,
+    "a {\n  color: function-exists(a)\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    function_exists_named,
+    "@function a(){} a {\n  color: function-exists($name: a)\n}\n",
+    "a {\n  color: true;\n}\n"
+);
 // test!(
 //     inspect_empty_list,
 //     "a {\n  color: inspect(())\n}\n",
