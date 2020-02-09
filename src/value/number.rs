@@ -30,13 +30,21 @@ impl From<BigInt> for Number {
     }
 }
 
-impl From<u16> for Number {
-    fn from(b: u16) -> Self {
-        Number {
-            val: BigRational::from_integer(BigInt::from(b)),
+macro_rules! from_integer {
+    ($ty:ty) => {
+        impl From<$ty> for Number {
+            fn from(b: $ty) -> Self {
+                Number {
+                    val: BigRational::from_integer(BigInt::from(b)),
+                }
+            }
         }
-    }
+    };
 }
+
+from_integer!(u16);
+from_integer!(usize);
+from_integer!(i32);
 
 impl Display for Number {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
