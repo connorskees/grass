@@ -150,4 +150,10 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             _ => todo!("non-color given to builtin function `alpha()`")
         }
     });
+    decl!(f "invert", |args, _| {
+        match arg!(args, 0, "color") {
+            Value::Color(c) => Some(Value::Color(c.invert())),
+            _ => todo!("non-color given to builtin function `alpha()`")
+        }
+    });
 }

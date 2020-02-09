@@ -61,6 +61,7 @@ macro_rules! from_integer {
 from_integer!(u16);
 from_integer!(usize);
 from_integer!(i32);
+from_integer!(u8);
 
 impl Display for Number {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

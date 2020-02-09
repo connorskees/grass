@@ -469,10 +469,11 @@ impl TryFrom<&str> for ColorName {
         }
     }
 }
-impl TryFrom<[u16; 3]> for ColorName {
+
+impl TryFrom<[u8; 3]> for ColorName {
     type Error = &'static str;
 
-    fn try_from(c: [u16; 3]) -> Result<Self, Self::Error> {
+    fn try_from(c: [u8; 3]) -> Result<Self, Self::Error> {
         match c {
             [0xF0, 0xF8, 0xFF] => Ok(Self::AliceBlue),
             [0xFA, 0xEB, 0xD7] => Ok(Self::AntiqueWhite),

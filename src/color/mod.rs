@@ -10,15 +10,15 @@ mod name;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub(crate) struct Color {
-    red: u16,
-    green: u16,
-    blue: u16,
+    red: u8,
+    green: u8,
+    blue: u8,
     alpha: Number,
     repr: String,
 }
 
 impl Color {
-    pub fn new(red: u16, green: u16, blue: u16, alpha: u16, repr: String) -> Self {
+    pub fn new(red: u8, green: u8, blue: u8, alpha: u8, repr: String) -> Self {
         Color {
             red,
             green,
@@ -28,15 +28,15 @@ impl Color {
         }
     }
 
-    pub const fn red(&self) -> u16 {
+    pub const fn red(&self) -> u8 {
         self.red
     }
 
-    pub const fn blue(&self) -> u16 {
+    pub const fn blue(&self) -> u8 {
         self.blue
     }
 
-    pub const fn green(&self) -> u16 {
+    pub const fn green(&self) -> u8 {
         self.green
     }
 
@@ -122,7 +122,7 @@ impl Color {
             };
             let val = (luminance.clone() * Number::from(255))
                 .to_integer()
-                .to_u16()
+                .to_u8()
                 .unwrap();
             let repr = repr(val, val, val, &alpha);
             return Color {
@@ -175,8 +175,8 @@ impl Color {
                 } * Number::from(255))
                 .round()
                 .to_integer()
-                .to_u16()
-                .expect("expected channel to fit inside u16");
+                .to_u8()
+                .expect("expected channel to fit inside u8");
             };
         }
 
@@ -198,11 +198,11 @@ impl Color {
         macro_rules! clamp {
             ($channel:ident) => {
                 let $channel = if $channel > Number::from(255) {
-                    255_u16
+                    255_u8
                 } else if $channel < Number::from(0) {
-                    0_u16
+                    0_u8
                 } else {
-                    $channel.round().to_integer().to_u16().unwrap()
+                    $channel.round().to_integer().to_u8().unwrap()
                 };
             };
         }
@@ -210,6 +210,14 @@ impl Color {
         clamp!(red);
         clamp!(green);
         clamp!(blue);
+
+        let alpha = if alpha > Number::from(1) {
+            Number::from(1)
+        } else if alpha < Number::from(0) {
+            Number::from(0)
+        } else {
+            alpha
+        };
 
         let repr = repr(red, green, blue, &alpha);
         Color {
@@ -220,10 +228,24 @@ impl Color {
             repr,
         }
     }
+
+    pub fn invert(&self) -> Self {
+        let red = std::u8::MAX - self.red;
+        let green = std::u8::MAX - self.green;
+        let blue = std::u8::MAX - self.blue;
+        let repr = repr(red, green, blue, &self.alpha);
+        Color {
+            red,
+            green,
+            blue,
+            alpha: self.alpha.clone(),
+            repr,
+        }
+    }
 }
 
 /// Get the proper representation from RGBA values
-fn repr(red: u16, green: u16, blue: u16, alpha: &Number) -> String {
+fn repr(red: u8, green: u8, blue: u8, alpha: &Number) -> String {
     if alpha < &Number::from(1) {
         format!("rgba({}, {}, {}, {})", red, green, blue, alpha)
     } else if let Ok(c) = ColorName::try_from([red, green, blue]) {

@@ -171,3 +171,8 @@ test!(
     "$a: hsl(193, 67%, 28%);\n\na {\n  color: lightness($a);\n}\n",
     "a {\n  color: 28%;\n}\n"
 );
+test!(
+    invert_no_weight,
+    "a {\n  color: invert(white);\n}\n",
+    "a {\n  color: black;\n}\n"
+);
