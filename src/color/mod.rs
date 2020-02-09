@@ -62,13 +62,7 @@ impl Color {
                 .to_integer()
                 .to_u16()
                 .unwrap();
-            let repr = if alpha < Number::from(1) {
-                format!("rgba({}, {}, {}, {})", val, val, val, alpha)
-            } else if let Ok(c) = ColorName::try_from([val, val, val]) {
-                format!("{}", c)
-            } else {
-                format!("#{:0>2x}{:0>2x}{:0>2x}", val, val, val)
-            };
+            let repr = repr(val, val, val, &alpha);
             return Color {
                 red: val,
                 green: val,
@@ -128,13 +122,7 @@ impl Color {
         channel!(green, temporary_g, temporary_1, temporary_2);
         channel!(blue, temporary_b, temporary_1, temporary_2);
 
-        let repr = if alpha < Number::from(1) {
-            format!("rgba({}, {}, {}, {})", red, green, blue, alpha)
-        } else if let Ok(c) = ColorName::try_from([red, green, blue]) {
-            format!("{}", c)
-        } else {
-            format!("#{:0>2x}{:0>2x}{:0>2x}", red, green, blue)
-        };
+        let repr = repr(red, green, blue, &alpha);
         Color {
             red,
             green,
@@ -161,13 +149,7 @@ impl Color {
         clamp!(green);
         clamp!(blue);
 
-        let repr = if alpha < Number::from(1) {
-            format!("rgba({}, {}, {}, {})", red, green, blue, alpha)
-        } else if let Ok(c) = ColorName::try_from([red, green, blue]) {
-            format!("{}", c)
-        } else {
-            format!("#{:0>2x}{:0>2x}{:0>2x}", red, green, blue)
-        };
+        let repr = repr(red, green, blue, &alpha);
         Color {
             red,
             green,
@@ -175,6 +157,17 @@ impl Color {
             alpha,
             repr,
         }
+    }
+}
+
+/// Get the proper representation from RGBA values
+fn repr(red: u16, green: u16, blue: u16, alpha: &Number) -> String {
+    if alpha < &Number::from(1) {
+        format!("rgba({}, {}, {}, {})", red, green, blue, alpha)
+    } else if let Ok(c) = ColorName::try_from([red, green, blue]) {
+        format!("{}", c)
+    } else {
+        format!("#{:0>2x}{:0>2x}{:0>2x}", red, green, blue)
     }
 }
 
