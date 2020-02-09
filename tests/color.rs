@@ -87,6 +87,11 @@ test!(
     "a {\n  color: #010203;\n}\n"
 );
 test!(
+    rgba_negative_alpha,
+    "a {\n  color: rgba(1, 2, 3, -10%);\n}\n",
+    "a {\n  color: rgba(1, 2, 3, 0);\n}\n"
+);
+test!(
     rgba_opacity_decimal,
     "a {\n  color: rgba(1, 2, 3, .6);\n}\n",
     "a {\n  color: rgba(1, 2, 3, 0.6);\n}\n"

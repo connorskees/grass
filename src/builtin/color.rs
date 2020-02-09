@@ -25,7 +25,12 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
                 Value::Dimension(n, Unit::Percent) => (n / Number::from(100)) * Number::from(255),
                 _ => todo!("expected either unitless or % number for alpha"),
             };
-            Some(Value::Color(Color::from_rgba(red, green, blue, Number::from(1))))
+            let alpha = match arg!(args, 3, "alpha"=Value::Dimension(Number::from(1), Unit::None)) {
+                Value::Dimension(n, Unit::None) => n,
+                Value::Dimension(n, Unit::Percent) => n / Number::from(100),
+                _ => todo!("non-number alpha given to builtin function `rgb()`")
+            };
+            Some(Value::Color(Color::from_rgba(red, green, blue, alpha)))
         } else {
             todo!("channels variable in `rgb`")
         }
@@ -154,7 +159,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         let weight = match arg!(args, 1, "weight"=Value::Dimension(Number::from(100), Unit::Percent)) {
             Value::Dimension(n, Unit::None)
             | Value::Dimension(n, Unit::Percent) => n / Number::from(100),
-            _ => todo!("non-number weight in given to builtin function `invert()`")
+            _ => todo!("non-number weight given to builtin function `invert()`")
         };
         match arg!(args, 0, "color") {
             Value::Color(c) => Some(Value::Color(c.invert(weight))),
