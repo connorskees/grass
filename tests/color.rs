@@ -76,3 +76,23 @@ test!(
     "a {\n  color: rgba(1, 2, 3, 50%);\n}\n",
     "a {\n  color: rgba(1, 2, 3, 0.5);\n}\n"
 );
+test!(
+    hsl_basic,
+    "a {\n  color: hsl(193, 67%, 99);\n}\n",
+    "a {\n  color: #fbfdfe;\n}\n"
+);
+test!(
+    hsla_basic,
+    "a {\n  color: hsla(193, 67%, 99, .6);\n}\n",
+    "a {\n  color: rgba(251, 253, 254, 0.6);\n}\n"
+);
+test!(
+    hsl_named,
+    "a {\n  color: hsl($hue: 193, $saturation: 67%, $luminance: 99);\n}\n",
+    "a {\n  color: #fbfdfe;\n}\n"
+);
+test!(
+    hsla_named,
+    "a {\n  color: hsla($hue: 193, $saturation: 67%, $luminance: 99, $alpha: .6);\n}\n",
+    "a {\n  color: rgba(251, 253, 254, 0.6);\n}\n"
+);

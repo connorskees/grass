@@ -1,6 +1,6 @@
 use std::convert::From;
 use std::fmt::{self, Display, Write};
-use std::ops::{Add, Div, Mul, Sub};
+use std::ops::{Add, AddAssign, Div, Mul, Sub, SubAssign};
 
 use num_bigint::BigInt;
 use num_rational::BigRational;
@@ -19,6 +19,22 @@ impl Number {
 
     pub fn to_integer(&self) -> BigInt {
         self.val.to_integer()
+    }
+
+    pub fn ratio<A: Into<BigInt>, B: Into<BigInt>>(a: A, b: B) -> Self {
+        Number::new(BigRational::new(a.into(), b.into()))
+    }
+
+    pub fn round(self) -> Self {
+        Number {
+            val: self.val.round(),
+        }
+    }
+}
+
+impl fmt::LowerHex for Number {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:0>2x}", self.val.to_integer())
     }
 }
 
@@ -84,6 +100,12 @@ impl Add for Number {
     }
 }
 
+impl AddAssign for Number {
+    fn add_assign(&mut self, other: Self) {
+        self.val += other.val
+    }
+}
+
 impl Sub for Number {
     type Output = Self;
 
@@ -91,6 +113,12 @@ impl Sub for Number {
         Number {
             val: self.val - other.val,
         }
+    }
+}
+
+impl SubAssign for Number {
+    fn sub_assign(&mut self, other: Self) {
+        self.val -= other.val
     }
 }
 

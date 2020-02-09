@@ -34,8 +34,49 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             };
             Some(Value::Color(Color::from_values(red, green, blue, alpha)))
         } else {
-            todo!("channels variable in `rgb`")
+            todo!("channels variable in `rgba`")
         }
+    });
+    decl!(f "hsl", |args, _| {
+        let hue = match arg!(args, 0, "hue").clone().eval() {
+            Value::Dimension(n, Unit::None)
+            | Value::Dimension(n, Unit::Percent) => n,
+            _ => todo!("expected either unitless or % number for alpha"),
+        };
+        let saturation = match arg!(args, 1, "saturation").clone().eval() {
+            Value::Dimension(n, Unit::None)
+            | Value::Dimension(n, Unit::Percent) => n / Number::from(100),
+            _ => todo!("expected either unitless or % number for alpha"),
+        };
+        let luminance = match arg!(args, 2, "luminance").clone().eval() {
+            Value::Dimension(n, Unit::None)
+            | Value::Dimension(n, Unit::Percent) => n / Number::from(100),
+            _ => todo!("expected either unitless or % number for alpha"),
+        };
+        Some(Value::Color(Color::from_hsla(hue, saturation, luminance, Number::from(1))))
+    });
+    decl!(f "hsla", |args, _| {
+        let hue = match arg!(args, 0, "hue").clone().eval() {
+            Value::Dimension(n, Unit::None)
+            | Value::Dimension(n, Unit::Percent) => n,
+            _ => todo!("expected either unitless or % number for alpha"),
+        };
+        let saturation = match arg!(args, 1, "saturation").clone().eval() {
+            Value::Dimension(n, Unit::None)
+            | Value::Dimension(n, Unit::Percent) => n / Number::from(100),
+            _ => todo!("expected either unitless or % number for alpha"),
+        };
+        let luminance = match arg!(args, 2, "luminance").clone().eval() {
+            Value::Dimension(n, Unit::None)
+            | Value::Dimension(n, Unit::Percent) => n / Number::from(100),
+            _ => todo!("expected either unitless or % number for alpha"),
+        };
+        let alpha = match arg!(args, 3, "alpha").clone().eval() {
+            Value::Dimension(n, Unit::None) => n,
+            Value::Dimension(n, Unit::Percent) => n / Number::from(100),
+            _ => todo!("expected either unitless or % number for alpha"),
+        };
+        Some(Value::Color(Color::from_hsla(hue, saturation, luminance, alpha)))
     });
     decl!(f "red", |args, _| {
         match arg!(args, 0, "red") {
