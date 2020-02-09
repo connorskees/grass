@@ -116,3 +116,23 @@ test!(
     "a {\n  color: hsla($hue: 193, $saturation: 67%, $luminance: 99, $alpha: .6);\n}\n",
     "a {\n  color: rgba(251, 253, 254, 0.6);\n}\n"
 );
+test!(
+    color_plus_ident,
+    "a {\n  color: red + foo;\n}\n",
+    "a {\n  color: redfoo;\n}\n"
+);
+test!(
+    ident_plus_color,
+    "a {\n  color: foo + red;\n}\n",
+    "a {\n  color: foored;\n}\n"
+);
+test!(
+    color_minus_ident,
+    "a {\n  color: red - foo;\n}\n",
+    "a {\n  color: red-foo;\n}\n"
+);
+test!(
+    ident_minus_color,
+    "a {\n  color: foo - red;\n}\n",
+    "a {\n  color: foo-red;\n}\n"
+);

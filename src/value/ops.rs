@@ -24,7 +24,14 @@ impl Add for Value {
                 _ => todo!(),
             },
             // Self::List(..) => todo!(),
-            // Self::Color(..) => todo!(),
+            Self::Color(c) => match other {
+                Self::Ident(s, QuoteKind::Double) | Self::Ident(s, QuoteKind::Single) => {
+                    Value::Ident(format!("{}{}", c, s), QuoteKind::Double)
+                }
+                Self::Null => Value::Ident(c.to_string(), QuoteKind::None),
+                Self::Color(..) => todo!("figure out if it's possible to add colors"),
+                _ => Value::Ident(format!("{}{}", c, other), QuoteKind::None),
+            }
             // Self::BinaryOp(..) => todo!(),
             // Self::Paren(..) => todo!(),
             Self::Ident(s1, quotes1) => match other {
@@ -51,6 +58,13 @@ impl Add for Value {
                         QuoteKind::None => QuoteKind::None,
                     };
                     Value::Ident(s1, quotes)
+                }
+                Self::Color(c) => {
+                    let quotes = match quotes1 {
+                        QuoteKind::Double | QuoteKind::Single => QuoteKind::Double,
+                        QuoteKind::None => QuoteKind::None,
+                    };
+                    Value::Ident(format!("{}{}", s1, c), quotes)
                 }
                 _ => todo!(),
             },
