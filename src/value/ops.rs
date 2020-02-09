@@ -1,4 +1,4 @@
-use std::ops::{Add, Sub, Mul, Div};
+use std::ops::{Add, Div, Mul, Sub};
 
 use crate::common::QuoteKind;
 use crate::units::Unit;
@@ -97,8 +97,7 @@ impl Sub for Value {
                 Self::Dimension(..) => todo!("investigate adding numbers and colors"),
                 _ => Value::Ident(format!("{}-{}", c, other), QuoteKind::None),
             },
-            Self::BinaryOp(..)
-            | Self::Paren(..) => self.eval(),
+            Self::BinaryOp(..) | Self::Paren(..) => self.eval(),
             Self::Ident(s1, quotes1) => match other {
                 Self::Ident(s2, quotes2) => {
                     let quotes1 = match quotes1 {
@@ -143,7 +142,10 @@ impl Sub for Value {
                         QuoteKind::Double | QuoteKind::Single => QuoteKind::Double,
                         QuoteKind::None => QuoteKind::None,
                     };
-                    Value::Ident(format!("{}-{}{}{}", self, quotes, s, quotes), QuoteKind::None)
+                    Value::Ident(
+                        format!("{}-{}{}{}", self, quotes, s, quotes),
+                        QuoteKind::None,
+                    )
                 }
                 Self::Null => Value::Ident(format!("{}-", self), QuoteKind::None),
                 _ => Value::Ident(format!("{}-{}", self, other), QuoteKind::None),
@@ -162,9 +164,8 @@ impl Mul for Value {
                 Self::Dimension(num2, unit2) => Value::Dimension(num - num2, unit),
                 _ => todo!(),
             },
-            Self::BinaryOp(..)
-            | Self::Paren(..) => self.eval(),
-            _ => todo!("incompatible mul types")
+            Self::BinaryOp(..) | Self::Paren(..) => self.eval(),
+            _ => todo!("incompatible mul types"),
         }
     }
 }
@@ -175,11 +176,13 @@ impl Div for Value {
         match self {
             Self::Null => todo!(),
             Self::Dimension(num, unit) => match other {
-                Self::Dimension(num2, unit2) => if unit == unit2 {
-                    Value::Dimension(num / num2, Unit::None)
-                } else {
-                    todo!("unit conversions")
-                },
+                Self::Dimension(num2, unit2) => {
+                    if unit == unit2 {
+                        Value::Dimension(num / num2, Unit::None)
+                    } else {
+                        todo!("unit conversions")
+                    }
+                }
                 _ => todo!(),
             },
             // Self::List(..) => todo!(),
@@ -195,8 +198,7 @@ impl Div for Value {
                 Self::Dimension(..) => todo!("investigate adding numbers and colors"),
                 _ => Value::Ident(format!("{}/{}", c, other), QuoteKind::None),
             },
-            Self::BinaryOp(..)
-            | Self::Paren(..) => self.eval(),
+            Self::BinaryOp(..) | Self::Paren(..) => self.eval(),
             Self::Ident(s1, quotes1) => match other {
                 Self::Ident(s2, quotes2) => {
                     let quotes1 = match quotes1 {
@@ -241,7 +243,10 @@ impl Div for Value {
                         QuoteKind::Double | QuoteKind::Single => QuoteKind::Double,
                         QuoteKind::None => QuoteKind::None,
                     };
-                    Value::Ident(format!("{}/{}{}{}", self, quotes, s, quotes), QuoteKind::None)
+                    Value::Ident(
+                        format!("{}/{}{}{}", self, quotes, s, quotes),
+                        QuoteKind::None,
+                    )
                 }
                 Self::Null => Value::Ident(format!("{}/", self), QuoteKind::None),
                 _ => Value::Ident(format!("{}/{}", self, other), QuoteKind::None),

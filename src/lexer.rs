@@ -60,7 +60,7 @@ impl<'a> Iterator for Lexer<'a> {
                             TokenKind::Ident(s)
                         }
                         _ => unsafe { std::hint::unreachable_unchecked() },
-                    }
+                    },
                     _ => TokenKind::Symbol(Symbol::Minus),
                 }
             }
