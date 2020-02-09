@@ -13,10 +13,22 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     decl!(f "rgb", |args, _| {
         let channels = args.get("channels").unwrap_or(&Value::Null);
         if channels.is_null() {
-            let red: u16 = arg!(args, 0, "red").clone().try_into().unwrap();
-            let green: u16 = arg!(args, 1, "green").clone().try_into().unwrap();
-            let blue: u16 = arg!(args, 2, "blue").clone().try_into().unwrap();
-            Some(Value::Color(Color::from_values(red, green, blue, Number::from(1))))
+            let red = match arg!(args, 0, "red").clone().eval() {
+                Value::Dimension(n, Unit::None) => n,
+                Value::Dimension(n, Unit::Percent) => (n / Number::from(100)) * Number::from(255),
+                _ => todo!("expected either unitless or % number for alpha"),
+            };
+            let green = match arg!(args, 1, "green").clone().eval() {
+                Value::Dimension(n, Unit::None) => n,
+                Value::Dimension(n, Unit::Percent) => (n / Number::from(100)) * Number::from(255),
+                _ => todo!("expected either unitless or % number for alpha"),
+            };
+            let blue = match arg!(args, 2, "blue").clone().eval() {
+                Value::Dimension(n, Unit::None) => n,
+                Value::Dimension(n, Unit::Percent) => (n / Number::from(100)) * Number::from(255),
+                _ => todo!("expected either unitless or % number for alpha"),
+            };
+            Some(Value::Color(Color::from_rgba(red, green, blue, Number::from(1))))
         } else {
             todo!("channels variable in `rgb`")
         }
@@ -24,15 +36,27 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     decl!(f "rgba", |args, _| {
         let channels = args.get("channels").unwrap_or(&Value::Null);
         if channels.is_null() {
-            let red: u16 = arg!(args, 0, "red").clone().try_into().unwrap();
-            let green: u16 = arg!(args, 1, "green").clone().try_into().unwrap();
-            let blue: u16 = arg!(args, 2, "blue").clone().try_into().unwrap();
+            let red = match arg!(args, 0, "red").clone().eval() {
+                Value::Dimension(n, Unit::None) => n,
+                Value::Dimension(n, Unit::Percent) => (n / Number::from(100)) * Number::from(255),
+                _ => todo!("expected either unitless or % number for alpha"),
+            };
+            let green = match arg!(args, 1, "green").clone().eval() {
+                Value::Dimension(n, Unit::None) => n,
+                Value::Dimension(n, Unit::Percent) => (n / Number::from(100)) * Number::from(255),
+                _ => todo!("expected either unitless or % number for alpha"),
+            };
+            let blue = match arg!(args, 2, "blue").clone().eval() {
+                Value::Dimension(n, Unit::None) => n,
+                Value::Dimension(n, Unit::Percent) => (n / Number::from(100)) * Number::from(255),
+                _ => todo!("expected either unitless or % number for alpha"),
+            };
             let alpha = match arg!(args, 3, "alpha").clone().eval() {
                 Value::Dimension(n, Unit::None) => n,
                 Value::Dimension(n, Unit::Percent) => n / Number::from(100),
                 _ => todo!("expected either unitless or % number for alpha"),
             };
-            Some(Value::Color(Color::from_values(red, green, blue, alpha)))
+            Some(Value::Color(Color::from_rgba(red, green, blue, alpha)))
         } else {
             todo!("channels variable in `rgba`")
         }

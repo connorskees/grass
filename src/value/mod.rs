@@ -1,9 +1,6 @@
 #![allow(dead_code, unused_variables)]
-use std::convert::TryInto;
 use std::fmt::{self, Display};
 use std::iter::Iterator;
-
-use num_bigint::BigInt;
 
 use crate::color::Color;
 use crate::common::{ListSeparator, Op, QuoteKind};
@@ -48,25 +45,6 @@ impl Display for Value {
             Self::True => write!(f, "true"),
             Self::False => write!(f, "false"),
             Self::Null => write!(f, "null"),
-        }
-    }
-}
-
-impl TryInto<u16> for Value {
-    type Error = &'static str;
-    fn try_into(self) -> Result<u16, Self::Error> {
-        match self {
-            Self::BinaryOp(..) => self.eval().try_into(),
-            Self::Dimension(n, Unit::Percent) => todo!(),
-            Self::Dimension(n, Unit::None) => {
-                if n >= Number::from(BigInt::from(255)) {
-                    Ok(255)
-                } else {
-                    Ok(n.to_integer().to_str_radix(10).parse().unwrap())
-                }
-            }
-            Self::Dimension(n, _) => Err("Expected `val` to have no units or \"%\"."),
-            _ => Err("expected number"),
         }
     }
 }

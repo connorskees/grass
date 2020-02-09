@@ -47,6 +47,16 @@ test!(
     "a {\n  color: #010203;\n}\n"
 );
 test!(
+    rgba_percent,
+    "a {\n  color: rgba(159%, 169, 169%, 50%);\n}\n",
+    "a {\n  color: rgba(255, 169, 255, 0.5);\n}\n"
+);
+test!(
+    rgba_percent_round_up,
+    "a {\n  color: rgba(59%, 169, 69%, 50%);\n}\n",
+    "a {\n  color: rgba(150, 169, 176, 0.5);\n}\n"
+);
+test!(
     rgb_double_digits,
     "a {\n  color: rgb(254, 255, 255);\n}\n",
     "a {\n  color: #feffff;\n}\n"

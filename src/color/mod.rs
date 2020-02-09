@@ -144,7 +144,23 @@ impl Color {
         }
     }
 
-    pub fn from_values(red: u16, green: u16, blue: u16, alpha: Number) -> Self {
+    pub fn from_rgba(red: Number, green: Number, blue: Number, alpha: Number) -> Self {
+        macro_rules! clamp {
+            ($channel:ident) => {
+                let $channel = if $channel > Number::from(255) {
+                    255_u16
+                } else if $channel < Number::from(0) {
+                    0_u16
+                } else {
+                    $channel.round().to_integer().to_u16().unwrap()
+                };
+            };
+        }
+
+        clamp!(red);
+        clamp!(green);
+        clamp!(blue);
+
         let repr = if alpha < Number::from(1) {
             format!("rgba({}, {}, {}, {})", red, green, blue, alpha)
         } else if let Ok(c) = ColorName::try_from([red, green, blue]) {
