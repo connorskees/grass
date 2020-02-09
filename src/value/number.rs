@@ -1,6 +1,6 @@
 use std::convert::From;
 use std::fmt::{self, Display, Write};
-use std::ops::{Add, Sub, Mul, Div};
+use std::ops::{Add, Div, Mul, Sub};
 
 use num_bigint::BigInt;
 use num_rational::BigRational;
@@ -53,9 +53,14 @@ impl Display for Number {
                 }
             }
             if frac != BigRational::from_integer(BigInt::from(0)) {
-                write!(f, "{}", (frac * BigRational::from_integer(BigInt::from(10))).round().to_integer())?;
+                write!(
+                    f,
+                    "{}",
+                    (frac * BigRational::from_integer(BigInt::from(10)))
+                        .round()
+                        .to_integer()
+                )?;
             }
-
         }
         Ok(())
     }

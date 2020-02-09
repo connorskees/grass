@@ -1,8 +1,8 @@
 use std::convert::TryFrom;
 use std::iter::{Iterator, Peekable};
 
-use num_rational::BigRational;
 use num_bigint::BigInt;
+use num_rational::BigRational;
 use num_traits::pow;
 
 use crate::args::eat_call_args;
@@ -188,10 +188,7 @@ impl Value {
                         BigRational::new(num.parse().unwrap(), pow(BigInt::from(10), num_dec))
                     }
                 };
-                Some(Value::Dimension(
-                    Number::new(n),
-                    unit,
-                ))
+                Some(Value::Dimension(Number::new(n), unit))
             }
             TokenKind::Symbol(Symbol::OpenParen) => {
                 devour_whitespace_or_comment(toks);

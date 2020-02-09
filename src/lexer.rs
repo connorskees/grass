@@ -48,9 +48,9 @@ impl<'a> Iterator for Lexer<'a> {
                             s.push_str(&n);
                             TokenKind::Number(s)
                         }
-                        _ => unsafe { std::hint::unreachable_unchecked() }
-                    }
-                    _ => TokenKind::Symbol(Symbol::Period)
+                        _ => unsafe { std::hint::unreachable_unchecked() },
+                    },
+                    _ => TokenKind::Symbol(Symbol::Period),
                 }
             }
             '$' => self.lex_variable(),

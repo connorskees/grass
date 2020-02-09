@@ -1,7 +1,7 @@
 use std::fmt::{self, Display};
 
+use crate::value::Number;
 pub(crate) use name::ColorName;
-use crate::value::{Number, Value};
 
 mod name;
 
