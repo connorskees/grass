@@ -35,7 +35,35 @@ impl<'a> Iterator for Lexer<'a> {
             }};
         }
         let kind: TokenKind = match self.buf.peek().unwrap_or(&'\0') {
-            'a'..='z' | 'A'..='Z' | '-' | '_' => self.lex_ident(),
+            'a'..='z' | 'A'..='Z' | '_' => self.lex_ident(),
+            '-' => {
+                self.buf.next();
+                self.pos.next_char();
+                match self.buf.peek().unwrap() {
+                    '0'..='9' => match self.lex_num() {
+                        TokenKind::Number(n) => {
+                            let mut s = String::from("-");
+                            s.push_str(&n);
+                            TokenKind::Number(s)
+                        }
+                        _ => unsafe { std::hint::unreachable_unchecked() },
+                    },
+                    'a'..='z' | 'A'..='Z' | '_' | '-' => match self.lex_ident() {
+                        TokenKind::Ident(i) => {
+                            let mut s = String::from("-");
+                            s.push_str(&i);
+                            TokenKind::Ident(s)
+                        }
+                        TokenKind::Keyword(kw) => {
+                            let mut s = String::from("-");
+                            s.push_str(&kw.to_string());
+                            TokenKind::Ident(s)
+                        }
+                        _ => unsafe { std::hint::unreachable_unchecked() },
+                    }
+                    _ => TokenKind::Symbol(Symbol::Minus),
+                }
+            }
             '@' => self.lex_at_rule(),
             '0'..='9' => self.lex_num(),
             '.' => {

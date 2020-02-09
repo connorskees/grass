@@ -112,7 +112,7 @@ impl Color {
         mut hue: Number,
         mut saturation: Number,
         mut luminance: Number,
-        alpha: Number,
+        mut alpha: Number,
     ) -> Self {
 
         macro_rules! clamp {
@@ -128,6 +128,7 @@ impl Color {
         clamp!(hue, 0, 360);
         clamp!(saturation, 0, 1);
         clamp!(luminance, 0, 1);
+        clamp!(alpha, 0, 1);
 
         if saturation.clone() == Number::from(0) {
             let luminance = if luminance > Number::from(100) {
