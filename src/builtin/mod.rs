@@ -23,6 +23,7 @@ lazy_static! {
         let mut m = BTreeMap::new();
         color::register(&mut m);
         meta::register(&mut m);
+        string::register(&mut m);
         m
     };
 }
