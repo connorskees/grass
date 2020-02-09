@@ -73,4 +73,16 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         let value = arg!(args, 0, "name");
         Some(Value::bool(scope.fn_exists(&value.to_string())))
     });
+    decl!(f "call", |_args, _scope| {
+        todo!("builtin function `call()` is blocked on refactoring how call args are stored and parsed")
+        // let func = arg!(args, 0, "function").to_string();
+        // let func = match scope.get_fn(&func) {
+        //     Ok(f) => f,
+        //     Err(_) => match GLOBAL_FUNCTIONS.get(&func) {
+        //         Some(f) => return f(&args, scope),
+        //         None => todo!("called undefined function"),
+        //     },
+        // };
+        // Some(func.clone().args(&args).call())
+    });
 }
