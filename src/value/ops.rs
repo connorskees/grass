@@ -87,7 +87,18 @@ impl Sub for Value {
                 _ => todo!(),
             },
             // Self::List(..) => todo!(),
-            // Self::Color(..) => todo!(),
+            Self::Color(c) => match other {
+                Self::Ident(s, quotes) => {
+                    let quotes = match quotes {
+                        QuoteKind::Double | QuoteKind::Single => QuoteKind::Double,
+                        QuoteKind::None => QuoteKind::None,
+                    };
+                    Value::Ident(format!("{}-{}{}{}", c, quotes, s, quotes), QuoteKind::None)
+                }
+                Self::Null => Value::Ident(format!("{}-", c), QuoteKind::None),
+                Self::Dimension(..) => todo!("investigate adding numbers and colors"),
+                _ => Value::Ident(format!("{}-{}", c, other), QuoteKind::None)
+            },
             // Self::BinaryOp(..) => todo!(),
             // Self::Paren(..) => todo!(),
             Self::Ident(s1, quotes1) => match other {
@@ -105,7 +116,7 @@ impl Sub for Value {
                         QuoteKind::None,
                     )
                 }
-                Self::Important | Self::True | Self::False | Self::Dimension(..) => {
+                Self::Important | Self::True | Self::False | Self::Dimension(..) | Self::Color(..) => {
                     let quotes = match quotes1 {
                         QuoteKind::Double | QuoteKind::Single => QuoteKind::Double,
                         QuoteKind::None => QuoteKind::None,
