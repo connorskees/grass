@@ -98,6 +98,8 @@ impl Value {
                 Op::Minus => *lhs.clone() - *rhs.clone(),
                 Op::Equal => Self::bool(*lhs == *rhs),
                 Op::NotEqual => Self::bool(*lhs != *rhs),
+                Op::Mul => *lhs.clone() * *rhs.clone(),
+                Op::Div => *lhs.clone() / *rhs.clone(),
                 _ => Self::BinaryOp(lhs.clone(), *op, rhs.clone()),
             },
             _ => self.clone(),

@@ -1,6 +1,7 @@
-use std::ops::{Add, Sub};
+use std::ops::{Add, Sub, Mul, Div};
 
 use crate::common::QuoteKind;
+use crate::units::Unit;
 use crate::value::Value;
 
 impl Add for Value {
@@ -78,12 +79,9 @@ impl Sub for Value {
 
     fn sub(self, other: Self) -> Self {
         match self {
-            // Self::Important => todo!(),
-            // Self::True => todo!(),
-            // Self::False => todo!(),
-            // Self::Null => todo!(),
+            Self::Null => todo!(),
             Self::Dimension(num, unit) => match other {
-                // Self::Dimension(num2, unit2) => Value::Dimension(num - num2, unit),
+                Self::Dimension(num2, unit2) => Value::Dimension(num - num2, unit),
                 _ => todo!(),
             },
             // Self::List(..) => todo!(),
@@ -99,8 +97,8 @@ impl Sub for Value {
                 Self::Dimension(..) => todo!("investigate adding numbers and colors"),
                 _ => Value::Ident(format!("{}-{}", c, other), QuoteKind::None),
             },
-            // Self::BinaryOp(..) => todo!(),
-            // Self::Paren(..) => todo!(),
+            Self::BinaryOp(..)
+            | Self::Paren(..) => self.eval(),
             Self::Ident(s1, quotes1) => match other {
                 Self::Ident(s2, quotes2) => {
                     let quotes1 = match quotes1 {
@@ -139,7 +137,115 @@ impl Sub for Value {
                 }
                 _ => todo!(),
             },
-            _ => todo!(),
+            _ => match other {
+                Self::Ident(s, quotes) => {
+                    let quotes = match quotes {
+                        QuoteKind::Double | QuoteKind::Single => QuoteKind::Double,
+                        QuoteKind::None => QuoteKind::None,
+                    };
+                    Value::Ident(format!("{}-{}{}{}", self, quotes, s, quotes), QuoteKind::None)
+                }
+                Self::Null => Value::Ident(format!("{}-", self), QuoteKind::None),
+                _ => Value::Ident(format!("{}-{}", self, other), QuoteKind::None),
+            },
+        }
+    }
+}
+
+impl Mul for Value {
+    type Output = Self;
+
+    fn mul(self, other: Self) -> Self {
+        match self {
+            Self::Null => todo!(),
+            Self::Dimension(num, unit) => match other {
+                Self::Dimension(num2, unit2) => Value::Dimension(num - num2, unit),
+                _ => todo!(),
+            },
+            Self::BinaryOp(..)
+            | Self::Paren(..) => self.eval(),
+            _ => todo!("incompatible mul types")
+        }
+    }
+}
+impl Div for Value {
+    type Output = Self;
+
+    fn div(self, other: Self) -> Self {
+        match self {
+            Self::Null => todo!(),
+            Self::Dimension(num, unit) => match other {
+                Self::Dimension(num2, unit2) => if unit == unit2 {
+                    Value::Dimension(num / num2, Unit::None)
+                } else {
+                    todo!("unit conversions")
+                },
+                _ => todo!(),
+            },
+            // Self::List(..) => todo!(),
+            Self::Color(c) => match other {
+                Self::Ident(s, quotes) => {
+                    let quotes = match quotes {
+                        QuoteKind::Double | QuoteKind::Single => QuoteKind::Double,
+                        QuoteKind::None => QuoteKind::None,
+                    };
+                    Value::Ident(format!("{}/{}{}{}", c, quotes, s, quotes), QuoteKind::None)
+                }
+                Self::Null => Value::Ident(format!("{}/", c), QuoteKind::None),
+                Self::Dimension(..) => todo!("investigate adding numbers and colors"),
+                _ => Value::Ident(format!("{}/{}", c, other), QuoteKind::None),
+            },
+            Self::BinaryOp(..)
+            | Self::Paren(..) => self.eval(),
+            Self::Ident(s1, quotes1) => match other {
+                Self::Ident(s2, quotes2) => {
+                    let quotes1 = match quotes1 {
+                        QuoteKind::Double | QuoteKind::Single => QuoteKind::Double,
+                        QuoteKind::None => QuoteKind::None,
+                    };
+                    let quotes2 = match quotes2 {
+                        QuoteKind::Double | QuoteKind::Single => QuoteKind::Double,
+                        QuoteKind::None => QuoteKind::None,
+                    };
+                    Value::Ident(
+                        format!("{}{}{}/{}{}{}", quotes1, s1, quotes1, quotes2, s2, quotes2),
+                        QuoteKind::None,
+                    )
+                }
+                Self::Important
+                | Self::True
+                | Self::False
+                | Self::Dimension(..)
+                | Self::Color(..) => {
+                    let quotes = match quotes1 {
+                        QuoteKind::Double | QuoteKind::Single => QuoteKind::Double,
+                        QuoteKind::None => QuoteKind::None,
+                    };
+                    Value::Ident(
+                        format!("{}{}{}/{}", quotes, s1, quotes, other),
+                        QuoteKind::None,
+                    )
+                }
+                Self::Null => {
+                    let quotes = match quotes1 {
+                        QuoteKind::Double | QuoteKind::Single => QuoteKind::Double,
+                        QuoteKind::None => QuoteKind::None,
+                    };
+                    Value::Ident(format!("{}{}{}/", quotes, s1, quotes), QuoteKind::None)
+                }
+                _ => todo!(),
+            },
+            _ => match other {
+                Self::Ident(s, quotes) => {
+                    let quotes = match quotes {
+                        QuoteKind::Double | QuoteKind::Single => QuoteKind::Double,
+                        QuoteKind::None => QuoteKind::None,
+                    };
+                    Value::Ident(format!("{}/{}{}{}", self, quotes, s, quotes), QuoteKind::None)
+                }
+                Self::Null => Value::Ident(format!("{}/", self), QuoteKind::None),
+                _ => Value::Ident(format!("{}/{}", self, other), QuoteKind::None),
+            },
         }
     }
 }

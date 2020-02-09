@@ -22,6 +22,7 @@ lazy_static! {
     pub(crate) static ref GLOBAL_FUNCTIONS: BTreeMap<String, Builtin> = {
         let mut m = BTreeMap::new();
         color::register(&mut m);
+        math::register(&mut m);
         meta::register(&mut m);
         string::register(&mut m);
         m
