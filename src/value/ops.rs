@@ -31,7 +31,7 @@ impl Add for Value {
                 Self::Null => Value::Ident(c.to_string(), QuoteKind::None),
                 Self::Color(..) => todo!("figure out if it's possible to add colors"),
                 _ => Value::Ident(format!("{}{}", c, other), QuoteKind::None),
-            }
+            },
             // Self::BinaryOp(..) => todo!(),
             // Self::Paren(..) => todo!(),
             Self::Ident(s1, quotes1) => match other {
@@ -97,7 +97,7 @@ impl Sub for Value {
                 }
                 Self::Null => Value::Ident(format!("{}-", c), QuoteKind::None),
                 Self::Dimension(..) => todo!("investigate adding numbers and colors"),
-                _ => Value::Ident(format!("{}-{}", c, other), QuoteKind::None)
+                _ => Value::Ident(format!("{}-{}", c, other), QuoteKind::None),
             },
             // Self::BinaryOp(..) => todo!(),
             // Self::Paren(..) => todo!(),
@@ -116,7 +116,11 @@ impl Sub for Value {
                         QuoteKind::None,
                     )
                 }
-                Self::Important | Self::True | Self::False | Self::Dimension(..) | Self::Color(..) => {
+                Self::Important
+                | Self::True
+                | Self::False
+                | Self::Dimension(..)
+                | Self::Color(..) => {
                     let quotes = match quotes1 {
                         QuoteKind::Double | QuoteKind::Single => QuoteKind::Double,
                         QuoteKind::None => QuoteKind::None,

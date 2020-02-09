@@ -156,3 +156,18 @@ test!(
     "a {\n  color: foo - red;\n}\n",
     "a {\n  color: foo-red;\n}\n"
 );
+test!(
+    hue,
+    "$a: hsl(193, 67%, 28%);\n\na {\n  color: hue($a);\n}\n",
+    "a {\n  color: 193deg;\n}\n"
+);
+test!(
+    saturation,
+    "$a: hsl(193, 67%, 28%);\n\na {\n  color: saturation($a);\n}\n",
+    "a {\n  color: 67%;\n}\n"
+);
+test!(
+    lightness,
+    "$a: hsl(193, 67%, 28%);\n\na {\n  color: lightness($a);\n}\n",
+    "a {\n  color: 28%;\n}\n"
+);

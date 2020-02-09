@@ -1,7 +1,5 @@
 use std::collections::BTreeMap;
 
-use num_bigint::BigInt;
-
 use super::Builtin;
 use crate::color::Color;
 use crate::common::QuoteKind;
@@ -104,21 +102,39 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         Some(Value::Color(Color::from_hsla(hue, saturation, luminance, alpha)))
     });
     decl!(f "red", |args, _| {
-        match arg!(args, 0, "red") {
-            Value::Color(c) => Some(Value::Dimension(Number::from(BigInt::from(c.red())), Unit::None)),
+        match arg!(args, 0, "color") {
+            Value::Color(c) => Some(Value::Dimension(Number::from(c.red()), Unit::None)),
             _ => todo!("non-color given to builtin function `red()`")
         }
     });
     decl!(f "green", |args, _| {
-        match arg!(args, 0, "green") {
-            Value::Color(c) => Some(Value::Dimension(Number::from(BigInt::from(c.green())), Unit::None)),
+        match arg!(args, 0, "color") {
+            Value::Color(c) => Some(Value::Dimension(Number::from(c.green()), Unit::None)),
             _ => todo!("non-color given to builtin function `green()`")
         }
     });
     decl!(f "blue", |args, _| {
-        match arg!(args, 0, "blue") {
-            Value::Color(c) => Some(Value::Dimension(Number::from(BigInt::from(c.blue())), Unit::None)),
+        match arg!(args, 0, "color") {
+            Value::Color(c) => Some(Value::Dimension(Number::from(c.blue()), Unit::None)),
             _ => todo!("non-color given to builtin function `blue()`")
+        }
+    });
+    decl!(f "hue", |args, _| {
+        match arg!(args, 0, "color") {
+            Value::Color(c) => Some(Value::Dimension(c.hue(), Unit::Deg)),
+            _ => todo!("non-color given to builtin function `hue()`")
+        }
+    });
+    decl!(f "saturation", |args, _| {
+        match arg!(args, 0, "color") {
+            Value::Color(c) => Some(Value::Dimension(c.saturation(), Unit::Percent)),
+            _ => todo!("non-color given to builtin function `saturation()`")
+        }
+    });
+    decl!(f "lightness", |args, _| {
+        match arg!(args, 0, "color") {
+            Value::Color(c) => Some(Value::Dimension(c.lightness(), Unit::Percent)),
+            _ => todo!("non-color given to builtin function `lightness()`")
         }
     });
     decl!(f "opacity", |args, _| {

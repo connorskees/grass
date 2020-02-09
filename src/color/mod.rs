@@ -40,6 +40,68 @@ impl Color {
         self.green
     }
 
+    /// Calculate hue from RGBA values
+    /// Algorithm adapted from http://www.niwa.nu/2013/05/math-behind-colorspace-conversions-rgb-hsl/
+    pub fn hue(&self) -> Number {
+        let red = Number::ratio(self.red, 255);
+        let green = Number::ratio(self.green, 255);
+        let blue = Number::ratio(self.blue, 255);
+        let min = red.clone().min(green.clone().min(blue.clone()));
+        let max = red.clone().max(green.clone().max(blue.clone()));
+        if &min == &max {
+            return Number::from(0);
+        }
+
+        let mut hue = if &red == &max {
+            (green - blue) / (max - min)
+        } else if &green == &max {
+            Number::from(2) + (blue - red) / (max - min)
+        } else {
+            Number::from(4) + (red - green) / (max - min)
+        };
+
+        if hue < Number::from(0) {
+            hue += Number::from(360);
+        }
+
+        (hue * Number::from(60)).round()
+    }
+
+    /// Calculate saturation from RGBA values
+    /// Algorithm adapted from http://www.niwa.nu/2013/05/math-behind-colorspace-conversions-rgb-hsl/
+    pub fn saturation(&self) -> Number {
+        let red = Number::ratio(self.red, 255);
+        let green = Number::ratio(self.green, 255);
+        let blue = Number::ratio(self.blue, 255);
+        let mut min = red.clone().min(green.clone().min(blue.clone()));
+        min = Number::ratio((min * Number::from(100)).to_integer(), 100);
+        let mut max = red.max(green.max(blue));
+        max = Number::ratio((max * Number::from(100)).to_integer(), 100);
+        let luminance = (min.clone() + max.clone()) / Number::from(2);
+        if &min == &max {
+            return Number::from(0);
+        }
+
+        let saturation = if luminance < Number::ratio(1, 2) {
+            (max.clone() - min.clone()) / (max + min)
+        } else {
+            (max.clone() - min.clone()) / (Number::from(2) - max - min)
+        } * Number::from(100);
+
+        saturation.round()
+    }
+
+    /// Calculate luminance from RGBA values
+    /// Algorithm adapted from http://www.niwa.nu/2013/05/math-behind-colorspace-conversions-rgb-hsl/
+    pub fn lightness(&self) -> Number {
+        let red = Number::ratio(self.red, 255);
+        let green = Number::ratio(self.green, 255);
+        let blue = Number::ratio(self.blue, 255);
+        let min = red.clone().min(green.clone().min(blue.clone()));
+        let max = red.max(green.max(blue));
+        (((min + max) / Number::from(2)) * Number::from(100)).round()
+    }
+
     pub fn alpha(&self) -> Number {
         self.alpha.clone()
     }
@@ -77,7 +139,7 @@ impl Color {
             luminance.clone() + saturation.clone() - luminance.clone() * saturation.clone()
         };
         let temporary_2 = Number::from(2) * luminance.clone() - temporary_1.clone();
-        hue = hue / Number::from(360);
+        hue /= Number::from(360);
         let mut temporary_r = hue.clone() + Number::ratio(1, 3);
         let mut temporary_g = hue.clone();
         let mut temporary_b = hue.clone() - Number::ratio(1, 3);
