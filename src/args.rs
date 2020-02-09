@@ -202,6 +202,27 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
                     }
                 }
             }
+            TokenKind::Symbol(Symbol::OpenParen) => {
+                val.push(Token { kind, pos });
+                let mut unclosed_parens = 0;
+                while let Some(tok) = toks.next() {
+                    match &tok.kind {
+                        TokenKind::Symbol(Symbol::OpenParen) => {
+                            unclosed_parens += 1;
+                        }
+                        TokenKind::Symbol(Symbol::CloseParen) => {
+                            if unclosed_parens <= 1 {
+                                val.push(tok);
+                                break;
+                            } else {
+                                unclosed_parens -= 1;
+                            }
+                        }
+                        _ => {}
+                    }
+                    val.push(tok);
+                }
+            }
             TokenKind::Symbol(Symbol::CloseParen) => {
                 if val.is_empty() {
                     break;

@@ -23,6 +23,11 @@ test!(
     "@function a($a) {\n  @return $a;\n}\n\nb {\ncolor: a(1);\n}\n",
     "b {\n  color: 1;\n}\n"
 );
+test!(
+    function_call_as_arg,
+    "@function a($a) {\n  @return $a;\n}\n\nb {\ncolor: a(a(2));\n}\n",
+    "b {\n  color: 2;\n}\n"
+);
 // test!(
 //     return_no_semicolon,
 //     "@function a() {\n  @return 1\n}\n\nb {\ncolor: a();\n}\n",
