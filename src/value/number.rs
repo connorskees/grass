@@ -1,6 +1,6 @@
 use std::convert::From;
 use std::fmt::{self, Display, Write};
-use std::ops::{Add, Sub};
+use std::ops::{Add, Sub, Mul, Div};
 
 use num_bigint::BigInt;
 use num_rational::BigRational;
@@ -26,6 +26,14 @@ impl From<BigInt> for Number {
     fn from(b: BigInt) -> Self {
         Number {
             val: BigRational::from_integer(b),
+        }
+    }
+}
+
+impl From<u16> for Number {
+    fn from(b: u16) -> Self {
+        Number {
+            val: BigRational::from_integer(BigInt::from(b)),
         }
     }
 }
@@ -69,6 +77,26 @@ impl Sub for Number {
     fn sub(self, other: Self) -> Self {
         Number {
             val: self.val - other.val,
+        }
+    }
+}
+
+impl Mul for Number {
+    type Output = Self;
+
+    fn mul(self, other: Self) -> Self {
+        Number {
+            val: self.val * other.val,
+        }
+    }
+}
+
+impl Div for Number {
+    type Output = Self;
+
+    fn div(self, other: Self) -> Self {
+        Number {
+            val: self.val / other.val,
         }
     }
 }

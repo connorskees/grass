@@ -38,10 +38,24 @@ impl<'a> Iterator for Lexer<'a> {
             'a'..='z' | 'A'..='Z' | '-' | '_' => self.lex_ident(),
             '@' => self.lex_at_rule(),
             '0'..='9' => self.lex_num(),
+            '.' => {
+                self.buf.next();
+                self.pos.next_char();
+                match self.buf.peek().unwrap() {
+                    '0'..='9' => match self.lex_num() {
+                        TokenKind::Number(n) => {
+                            let mut s = String::from("0.");
+                            s.push_str(&n);
+                            TokenKind::Number(s)
+                        }
+                        _ => unsafe { std::hint::unreachable_unchecked() }
+                    }
+                    _ => TokenKind::Symbol(Symbol::Period)
+                }
+            }
             '$' => self.lex_variable(),
             ':' => symbol!(self, Colon),
             ',' => symbol!(self, Comma),
-            '.' => symbol!(self, Period),
             ';' => symbol!(self, SemiColon),
             '(' => symbol!(self, OpenParen),
             ')' => symbol!(self, CloseParen),

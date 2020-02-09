@@ -1,6 +1,10 @@
 use std::convert::TryFrom;
 use std::iter::{Iterator, Peekable};
 
+use num_rational::BigRational;
+use num_bigint::BigInt;
+use num_traits::pow;
+
 use crate::args::eat_call_args;
 use crate::builtin::GLOBAL_FUNCTIONS;
 use crate::color::Color;
@@ -163,8 +167,29 @@ impl Value {
                 } else {
                     Unit::None
                 };
+                let n = match val.parse::<BigRational>() {
+                    // the number is an integer!
+                    Ok(v) => v,
+                    // the number is floating point
+                    Err(_) => {
+                        let mut num = String::new();
+                        let mut chars = val.chars().into_iter();
+                        let mut num_dec = 0;
+                        while let Some(c) = chars.next() {
+                            if c == '.' {
+                                break;
+                            }
+                            num.push(c);
+                        }
+                        for c in chars {
+                            num_dec += 1;
+                            num.push(c);
+                        }
+                        BigRational::new(num.parse().unwrap(), pow(BigInt::from(10), num_dec))
+                    }
+                };
                 Some(Value::Dimension(
-                    Number::new(val.parse().expect("error parsing integer")),
+                    Number::new(n),
                     unit,
                 ))
             }

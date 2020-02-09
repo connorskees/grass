@@ -64,3 +64,18 @@ test!(
     opacity_function_number_unit,
     "a {\n  color: opacity(1px);\n}\n"
 );
+test!(
+    rgba_opacity_over_1,
+    "a {\n  color: rgba(1, 2, 3, 3);\n}\n",
+    "a {\n  color: #010203;\n}\n"
+);
+test!(
+    rgba_opacity_decimal,
+    "a {\n  color: rgba(1, 2, 3, .6);\n}\n",
+    "a {\n  color: rgba(1, 2, 3, 0.6);\n}\n"
+);
+test!(
+    rgba_opacity_percent,
+    "a {\n  color: rgba(1, 2, 3, 50%);\n}\n",
+    "a {\n  color: rgba(1, 2, 3, 0.5);\n}\n"
+);

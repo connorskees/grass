@@ -25,6 +25,7 @@ clap = { version = "2.33.0", optional = true }
 lazy_static = "1.4.0"
 num-rational = "0.2.3"
 num-bigint = "0.2.6"
+num-traits = "0.2.11"
 
 [features]
 default = ["commandline"]

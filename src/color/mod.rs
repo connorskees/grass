@@ -1,6 +1,7 @@
 use std::fmt::{self, Display};
 
 pub(crate) use name::ColorName;
+use crate::value::{Number, Value};
 
 mod name;
 
@@ -9,17 +10,17 @@ pub(crate) struct Color {
     red: u16,
     green: u16,
     blue: u16,
-    alpha: u16,
+    alpha: Number,
     repr: String,
 }
 
 impl Color {
-    pub const fn new(red: u16, green: u16, blue: u16, alpha: u16, repr: String) -> Self {
+    pub fn new(red: u16, green: u16, blue: u16, alpha: u16, repr: String) -> Self {
         Color {
             red,
             green,
             blue,
-            alpha,
+            alpha: alpha.into(),
             repr,
         }
     }
@@ -36,15 +37,15 @@ impl Color {
         self.green
     }
 
-    pub const fn alpha(&self) -> u16 {
-        self.alpha
+    pub fn alpha(&self) -> Number {
+        self.alpha.clone()
     }
 
-    pub fn from_values(red: u16, green: u16, blue: u16, alpha: u16) -> Self {
-        let repr = if alpha >= 1 {
+    pub fn from_values(red: u16, green: u16, blue: u16, alpha: Number) -> Self {
+        let repr = if alpha >= Number::from(1) {
             format!("#{:0>2x}{:0>2x}{:0>2x}", red, green, blue)
         } else {
-            format!("#{:0>2x}{:0>2x}{:0>2x}{:0>2x}", red, green, blue, alpha)
+            format!("rgba({}, {}, {}, {})", red, green, blue, alpha)
         };
         Color {
             red,
