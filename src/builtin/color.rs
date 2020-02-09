@@ -40,7 +40,8 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     decl!(f "hsl", |args, _| {
         let hue = match arg!(args, 0, "hue").clone().eval() {
             Value::Dimension(n, Unit::None)
-            | Value::Dimension(n, Unit::Percent) => n,
+            | Value::Dimension(n, Unit::Percent)
+            | Value::Dimension(n, Unit::Deg) => n,
             _ => todo!("expected either unitless or % number for alpha"),
         };
         let saturation = match arg!(args, 1, "saturation").clone().eval() {
@@ -58,7 +59,8 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     decl!(f "hsla", |args, _| {
         let hue = match arg!(args, 0, "hue").clone().eval() {
             Value::Dimension(n, Unit::None)
-            | Value::Dimension(n, Unit::Percent) => n,
+            | Value::Dimension(n, Unit::Percent)
+            | Value::Dimension(n, Unit::Deg) => n,
             _ => todo!("expected either unitless or % number for alpha"),
         };
         let saturation = match arg!(args, 1, "saturation").clone().eval() {
