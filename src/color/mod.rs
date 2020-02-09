@@ -10,9 +10,9 @@ mod name;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub(crate) struct Color {
-    red: u8,
-    green: u8,
-    blue: u8,
+    red: Number,
+    green: Number,
+    blue: Number,
     alpha: Number,
     repr: String,
 }
@@ -20,32 +20,32 @@ pub(crate) struct Color {
 impl Color {
     pub fn new(red: u8, green: u8, blue: u8, alpha: u8, repr: String) -> Self {
         Color {
-            red,
-            green,
-            blue,
+            red: red.into(),
+            green: green.into(),
+            blue: blue.into(),
             alpha: alpha.into(),
             repr,
         }
     }
 
-    pub const fn red(&self) -> u8 {
-        self.red
+    pub fn red(&self) -> Number {
+        self.red.clone()
     }
 
-    pub const fn blue(&self) -> u8 {
-        self.blue
+    pub fn blue(&self) -> Number {
+        self.blue.clone()
     }
 
-    pub const fn green(&self) -> u8 {
-        self.green
+    pub fn green(&self) -> Number {
+        self.green.clone()
     }
 
     /// Calculate hue from RGBA values
     /// Algorithm adapted from http://www.niwa.nu/2013/05/math-behind-colorspace-conversions-rgb-hsl/
     pub fn hue(&self) -> Number {
-        let red = Number::ratio(self.red, 255);
-        let green = Number::ratio(self.green, 255);
-        let blue = Number::ratio(self.blue, 255);
+        let red = self.red.clone() / Number::from(255);
+        let green = self.green.clone() / Number::from(255);
+        let blue = self.blue.clone() / Number::from(255);
         let min = red.clone().min(green.clone().min(blue.clone()));
         let max = red.clone().max(green.clone().max(blue.clone()));
         if &min == &max {
@@ -70,33 +70,29 @@ impl Color {
     /// Calculate saturation from RGBA values
     /// Algorithm adapted from http://www.niwa.nu/2013/05/math-behind-colorspace-conversions-rgb-hsl/
     pub fn saturation(&self) -> Number {
-        let red = Number::ratio(self.red, 255);
-        let green = Number::ratio(self.green, 255);
-        let blue = Number::ratio(self.blue, 255);
-        let mut min = red.clone().min(green.clone().min(blue.clone()));
-        min = Number::ratio((min * Number::from(100)).to_integer(), 100);
-        let mut max = red.max(green.max(blue));
-        max = Number::ratio((max * Number::from(100)).to_integer(), 100);
-        let luminance = (min.clone() + max.clone()) / Number::from(2);
+        let red = self.red.clone() / Number::from(255);
+        let green = self.green.clone() / Number::from(255);
+        let blue = self.blue.clone() / Number::from(255);
+
+        let min = red.clone().min(green.clone().min(blue.clone()));
+        let max = red.max(green.max(blue));
+
         if &min == &max {
             return Number::from(0);
         }
 
-        let saturation = if luminance < Number::ratio(1, 2) {
-            (max.clone() - min.clone()) / (max + min)
-        } else {
-            (max.clone() - min.clone()) / (Number::from(2) - max - min)
-        } * Number::from(100);
-
-        saturation.round()
+        let d = max.clone() - min.clone();
+        let mm = max + min;
+        let s = d / if mm > Number::from(1) { Number::from(2) - mm } else { mm };
+        (s * Number::from(100)).round()
     }
 
     /// Calculate luminance from RGBA values
     /// Algorithm adapted from http://www.niwa.nu/2013/05/math-behind-colorspace-conversions-rgb-hsl/
     pub fn lightness(&self) -> Number {
-        let red = Number::ratio(self.red, 255);
-        let green = Number::ratio(self.green, 255);
-        let blue = Number::ratio(self.blue, 255);
+        let red = self.red.clone() / Number::from(255);
+        let green = self.green.clone() / Number::from(255);
+        let blue = self.blue.clone() / Number::from(255);
         let min = red.clone().min(green.clone().min(blue.clone()));
         let max = red.max(green.max(blue));
         (((min + max) / Number::from(2)) * Number::from(100)).round()
@@ -114,7 +110,6 @@ impl Color {
         mut luminance: Number,
         mut alpha: Number,
     ) -> Self {
-
         macro_rules! clamp {
             ($c:ident, $min:literal, $max:literal) => {
                 if $c > Number::from($max) {
@@ -122,7 +117,7 @@ impl Color {
                 } else if $c < Number::from($min) {
                     $c = Number::from($min)
                 }
-            }
+            };
         }
 
         clamp!(hue, 0, 360);
@@ -136,14 +131,11 @@ impl Color {
             } else {
                 luminance
             };
-            let val = (luminance.clone() * Number::from(255))
-                .to_integer()
-                .to_u8()
-                .unwrap();
-            let repr = repr(val, val, val, &alpha);
+            let val = luminance.clone() * Number::from(255);
+            let repr = repr(&val, &val, &val, &alpha);
             return Color {
-                red: val,
-                green: val,
+                red: val.clone(),
+                green: val.clone(),
                 blue: val,
                 alpha: Number::from(alpha),
                 repr,
@@ -176,7 +168,7 @@ impl Color {
 
         macro_rules! channel {
             ($name:ident, $temp:ident, $temp1:ident, $temp2:ident) => {
-                let $name = (if Number::from(6) * $temp.clone() < Number::from(1) {
+                let $name = if Number::from(6) * $temp.clone() < Number::from(1) {
                     $temp2.clone()
                         + ($temp1.clone() - $temp2.clone()) * Number::from(6) * $temp.clone()
                 } else if Number::from(2) * $temp.clone() < Number::from(1) {
@@ -188,11 +180,7 @@ impl Color {
                             * Number::from(6)
                 } else {
                     $temp2.clone()
-                } * Number::from(255))
-                .round()
-                .to_integer()
-                .to_u8()
-                .expect("expected channel to fit inside u8");
+                } * Number::from(255);
             };
         }
 
@@ -200,7 +188,7 @@ impl Color {
         channel!(green, temporary_g, temporary_1, temporary_2);
         channel!(blue, temporary_b, temporary_1, temporary_2);
 
-        let repr = repr(red, green, blue, &alpha);
+        let repr = repr(&red, &green, &blue, &alpha);
         Color {
             red,
             green,
@@ -214,11 +202,11 @@ impl Color {
         macro_rules! clamp {
             ($channel:ident) => {
                 let $channel = if $channel > Number::from(255) {
-                    255_u8
+                    Number::from(255)
                 } else if $channel < Number::from(0) {
-                    0_u8
+                    Number::from(0)
                 } else {
-                    $channel.round().to_integer().to_u8().unwrap()
+                    $channel
                 };
             };
         }
@@ -235,7 +223,7 @@ impl Color {
             alpha
         };
 
-        let repr = repr(red, green, blue, &alpha);
+        let repr = repr(&red, &green, &blue, &alpha);
         Color {
             red,
             green,
@@ -253,22 +241,10 @@ impl Color {
         } else {
             weight
         };
-        let red = (Number::from(std::u8::MAX) - (Number::from(self.red) * weight.clone()))
-            .round()
-            .to_integer()
-            .to_u8()
-            .unwrap();
-        let green = (Number::from(std::u8::MAX) - (Number::from(self.green) * weight.clone()))
-            .round()
-            .to_integer()
-            .to_u8()
-            .unwrap();
-        let blue = (Number::from(std::u8::MAX) - (Number::from(self.blue) * weight))
-            .round()
-            .to_integer()
-            .to_u8()
-            .unwrap();
-        let repr = repr(red, green, blue, &self.alpha);
+        let red = Number::from(std::u8::MAX) - (Number::from(self.red.clone()) * weight.clone());
+        let green = Number::from(std::u8::MAX) - (Number::from(self.green.clone()) * weight.clone());
+        let blue = Number::from(std::u8::MAX) - (Number::from(self.blue.clone()) * weight);
+        let repr = repr(&red, &green, &blue, &self.alpha);
         Color {
             red,
             green,
@@ -280,7 +256,23 @@ impl Color {
 }
 
 /// Get the proper representation from RGBA values
-fn repr(red: u8, green: u8, blue: u8, alpha: &Number) -> String {
+fn repr(red: &Number, green: &Number, blue: &Number, alpha: &Number) -> String {
+    macro_rules! into_u8 {
+        ($channel:ident) => {
+            let $channel = if $channel > &Number::from(255) {
+                255_u8
+            } else if $channel < &Number::from(0) {
+                0_u8
+            } else {
+                $channel.clone().round().to_integer().to_u8().unwrap()
+            };
+        };
+    }
+
+    into_u8!(red);
+    into_u8!(green);
+    into_u8!(blue);
+
     if alpha < &Number::from(1) {
         format!("rgba({}, {}, {}, {})", red, green, blue, alpha)
     } else if let Ok(c) = ColorName::try_from([red, green, blue]) {

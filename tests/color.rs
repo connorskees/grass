@@ -172,6 +172,11 @@ test!(
     "a {\n  color: 67%;\n}\n"
 );
 test!(
+    saturation_2,
+    "$a: hsl(1, 1, 10);\n\na {\n  color: saturation($a);\n}\n",
+    "a {\n  color: 1%;\n}\n"
+);
+test!(
     lightness,
     "$a: hsl(193, 67%, 28%);\n\na {\n  color: lightness($a);\n}\n",
     "a {\n  color: 28%;\n}\n"
