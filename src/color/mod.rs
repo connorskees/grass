@@ -229,10 +229,17 @@ impl Color {
         }
     }
 
-    pub fn invert(&self) -> Self {
-        let red = std::u8::MAX - self.red;
-        let green = std::u8::MAX - self.green;
-        let blue = std::u8::MAX - self.blue;
+    pub fn invert(&self, weight: Number) -> Self {
+        let weight = if weight > Number::from(1) {
+            Number::from(1)
+        } else if weight < Number::from(0) {
+            Number::from(0)
+        } else {
+            weight
+        };
+        let red = (Number::from(std::u8::MAX) - (Number::from(self.red) * weight.clone())).round().to_integer().to_u8().unwrap();
+        let green = (Number::from(std::u8::MAX) - (Number::from(self.green) * weight.clone())).round().to_integer().to_u8().unwrap();
+        let blue = (Number::from(std::u8::MAX) - (Number::from(self.blue) * weight)).round().to_integer().to_u8().unwrap();
         let repr = repr(red, green, blue, &self.alpha);
         Color {
             red,

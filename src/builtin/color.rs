@@ -151,8 +151,13 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         }
     });
     decl!(f "invert", |args, _| {
+        let weight = match arg!(args, 1, "weight"=Value::Dimension(Number::from(100), Unit::Percent)) {
+            Value::Dimension(n, Unit::None)
+            | Value::Dimension(n, Unit::Percent) => n / Number::from(100),
+            _ => todo!("non-number weight in given to builtin function `invert()`")
+        };
         match arg!(args, 0, "color") {
-            Value::Color(c) => Some(Value::Color(c.invert())),
+            Value::Color(c) => Some(Value::Color(c.invert(weight))),
             _ => todo!("non-color given to builtin function `alpha()`")
         }
     });

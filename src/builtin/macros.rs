@@ -8,11 +8,11 @@ macro_rules! arg {
             },
         };
     };
-    ($args:ident, $idx:literal, $name:literal=$default:literal) => {
+    ($args:ident, $idx:literal, $name:literal=$default:expr) => {
         match $args.get(stringify!($idx)) {
-            Some(v) => v,
+            Some(v) => v.clone(),
             None => match $args.get($name) {
-                Some(v) => v,
+                Some(v) => v.clone(),
                 None => $default,
             },
         };
