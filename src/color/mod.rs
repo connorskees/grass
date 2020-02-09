@@ -110,10 +110,25 @@ impl Color {
     /// Algorithm adapted from http://www.niwa.nu/2013/05/math-behind-colorspace-conversions-rgb-hsl/
     pub fn from_hsla(
         mut hue: Number,
-        saturation: Number,
-        luminance: Number,
+        mut saturation: Number,
+        mut luminance: Number,
         alpha: Number,
     ) -> Self {
+
+        macro_rules! clamp {
+            ($c:ident, $min:literal, $max:literal) => {
+                if $c > Number::from($max) {
+                    $c = Number::from($max)
+                } else if $c < Number::from($min) {
+                    $c = Number::from($min)
+                }
+            }
+        }
+
+        clamp!(hue, 0, 360);
+        clamp!(saturation, 0, 1);
+        clamp!(luminance, 0, 1);
+
         if saturation.clone() == Number::from(0) {
             let luminance = if luminance > Number::from(100) {
                 Number::from(100)
@@ -144,7 +159,7 @@ impl Color {
         let mut temporary_g = hue.clone();
         let mut temporary_b = hue.clone() - Number::ratio(1, 3);
 
-        macro_rules! clamp {
+        macro_rules! clamp_temp {
             ($temp:ident) => {
                 if $temp > Number::from(1) {
                     $temp -= Number::from(1);
@@ -154,9 +169,9 @@ impl Color {
             };
         }
 
-        clamp!(temporary_r);
-        clamp!(temporary_g);
-        clamp!(temporary_b);
+        clamp_temp!(temporary_r);
+        clamp_temp!(temporary_g);
+        clamp_temp!(temporary_b);
 
         macro_rules! channel {
             ($name:ident, $temp:ident, $temp1:ident, $temp2:ident) => {
@@ -237,9 +252,21 @@ impl Color {
         } else {
             weight
         };
-        let red = (Number::from(std::u8::MAX) - (Number::from(self.red) * weight.clone())).round().to_integer().to_u8().unwrap();
-        let green = (Number::from(std::u8::MAX) - (Number::from(self.green) * weight.clone())).round().to_integer().to_u8().unwrap();
-        let blue = (Number::from(std::u8::MAX) - (Number::from(self.blue) * weight)).round().to_integer().to_u8().unwrap();
+        let red = (Number::from(std::u8::MAX) - (Number::from(self.red) * weight.clone()))
+            .round()
+            .to_integer()
+            .to_u8()
+            .unwrap();
+        let green = (Number::from(std::u8::MAX) - (Number::from(self.green) * weight.clone()))
+            .round()
+            .to_integer()
+            .to_u8()
+            .unwrap();
+        let blue = (Number::from(std::u8::MAX) - (Number::from(self.blue) * weight))
+            .round()
+            .to_integer()
+            .to_u8()
+            .unwrap();
         let repr = repr(red, green, blue, &self.alpha);
         Color {
             red,
