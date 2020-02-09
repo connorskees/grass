@@ -30,6 +30,18 @@ impl Number {
             val: self.val.round(),
         }
     }
+
+    pub fn ceil(self) -> Self {
+        Number {
+            val: self.val.ceil(),
+        }
+    }
+
+    pub fn floor(self) -> Self {
+        Number {
+            val: self.val.floor(),
+        }
+    }
 }
 
 impl fmt::LowerHex for Number {

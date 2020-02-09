@@ -18,4 +18,16 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             _ => todo!("expected number in builtin function `round()`")
         }
     });
+    decl!(f "ceil", |args, _| {
+        match arg!(args, 0, "number").eval() {
+            Value::Dimension(n, u) => Some(Value::Dimension(n.ceil(), u)),
+            _ => todo!("expected number in builtin function `ceil()`")
+        }
+    });
+    decl!(f "floor", |args, _| {
+        match arg!(args, 0, "number").eval() {
+            Value::Dimension(n, u) => Some(Value::Dimension(n.floor(), u)),
+            _ => todo!("expected number in builtin function `floor()`")
+        }
+    });
 }
