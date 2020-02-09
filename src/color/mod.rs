@@ -1,3 +1,4 @@
+use std::convert::TryFrom;
 use std::fmt::{self, Display};
 
 use crate::value::Number;
@@ -51,7 +52,6 @@ impl Color {
         luminance: Number,
         alpha: Number,
     ) -> Self {
-        println!("{}-{}-{}", &hue, &saturation, &luminance);
         if saturation.clone() == Number::from(0) {
             let luminance = if luminance > Number::from(100) {
                 Number::from(100)
@@ -62,10 +62,12 @@ impl Color {
                 .to_integer()
                 .to_u16()
                 .unwrap();
-            let repr = if alpha >= Number::from(1) {
-                format!("#{:0>2x}{:0>2x}{:0>2x}", val, val, val)
-            } else {
+            let repr = if alpha < Number::from(1) {
                 format!("rgba({}, {}, {}, {})", val, val, val, alpha)
+            } else if let Ok(c) = ColorName::try_from([val, val, val]) {
+                format!("{}", c)
+            } else {
+                format!("#{:0>2x}{:0>2x}{:0>2x}", val, val, val)
             };
             return Color {
                 red: val,
@@ -126,11 +128,12 @@ impl Color {
         channel!(green, temporary_g, temporary_1, temporary_2);
         channel!(blue, temporary_b, temporary_1, temporary_2);
 
-        let repr = if alpha >= Number::from(1) {
-            format!("#{:0>2x}{:0>2x}{:0>2x}", red, green, blue)
-        } else {
-            dbg!("hi");
+        let repr = if alpha < Number::from(1) {
             format!("rgba({}, {}, {}, {})", red, green, blue, alpha)
+        } else if let Ok(c) = ColorName::try_from([red, green, blue]) {
+            format!("{}", c)
+        } else {
+            format!("#{:0>2x}{:0>2x}{:0>2x}", red, green, blue)
         };
         Color {
             red,
@@ -142,10 +145,12 @@ impl Color {
     }
 
     pub fn from_values(red: u16, green: u16, blue: u16, alpha: Number) -> Self {
-        let repr = if alpha >= Number::from(1) {
-            format!("#{:0>2x}{:0>2x}{:0>2x}", red, green, blue)
-        } else {
+        let repr = if alpha < Number::from(1) {
             format!("rgba({}, {}, {}, {})", red, green, blue, alpha)
+        } else if let Ok(c) = ColorName::try_from([red, green, blue]) {
+            format!("{}", c)
+        } else {
+            format!("#{:0>2x}{:0>2x}{:0>2x}", red, green, blue)
         };
         Color {
             red,

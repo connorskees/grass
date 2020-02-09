@@ -6,8 +6,8 @@ mod macros;
 test!(preserves_named_color_case, "a {\n  color: OrAnGe;\n}\n");
 test!(preserves_hex_color_case, "a {\n  color: #FfFfFf;\n}\n");
 test!(
-    preserves_hex_8_val_00000000,
-    "a {\n  color: #00000000;\n}\n"
+    preserves_hex_8_val_10000000,
+    "a {\n  color: #10000000;\n}\n"
 );
 test!(
     preserves_hex_8_val_12312312,
@@ -26,11 +26,16 @@ test!(preserves_hex_4_val_ab2f, "a {\n  color: #ab2f;\n}\n");
 test!(preserves_hex_3_val_000, "a {\n  color: #000;\n}\n");
 test!(preserves_hex_3_val_123, "a {\n  color: #123;\n}\n");
 test!(preserves_hex_3_val_ab2, "a {\n  color: #ab2;\n}\n");
-// test!(
-//     converts_rgb_to_named_color,
-//     "a {\n  color: rgb(0, 0, 0);\n}\n",
-//     "a {\n  color: black;\n}\n"
-// );
+test!(
+    converts_rgb_to_named_color,
+    "a {\n  color: rgb(0, 0, 0);\n}\n",
+    "a {\n  color: black;\n}\n"
+);
+test!(
+    converts_rgba_to_named_color_red,
+    "a {\n  color: rgb(255, 0, 0, 255);\n}\n",
+    "a {\n  color: red;\n}\n"
+);
 test!(
     rgb_binop,
     "a {\n  color: rgb(1, 2, 1+2);\n}\n",
@@ -43,8 +48,13 @@ test!(
 );
 test!(
     rgb_double_digits,
+    "a {\n  color: rgb(254, 255, 255);\n}\n",
+    "a {\n  color: #feffff;\n}\n"
+);
+test!(
+    rgb_double_digits_white,
     "a {\n  color: rgb(255, 255, 255);\n}\n",
-    "a {\n  color: #ffffff;\n}\n"
+    "a {\n  color: white;\n}\n"
 );
 test!(
     alpha_function_4_hex,
