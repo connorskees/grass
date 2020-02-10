@@ -214,11 +214,7 @@ impl<'a> Lexer<'a> {
             string.push(tok);
         }
 
-        if let Ok(rule) = AtRuleKind::try_from(string.as_ref()) {
-            TokenKind::AtRule(rule)
-        } else {
-            panic!("expected ident after `@`")
-        }
+        TokenKind::AtRule(AtRuleKind::from(string.as_ref()))
     }
 
     fn lex_forward_slash(&mut self) -> TokenKind {

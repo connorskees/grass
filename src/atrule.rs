@@ -1,4 +1,3 @@
-use std::convert::TryFrom;
 use std::fmt::{self, Display};
 use std::iter::Peekable;
 
@@ -100,6 +99,7 @@ impl AtRule {
             AtRuleKind::While => todo!("@while not yet implemented"),
             AtRuleKind::Media => todo!("@media not yet implemented"),
             AtRuleKind::Keyframes => todo!("@keyframes not yet implemented"),
+            AtRuleKind::Unknown(_) => todo!("unknown @ rules are not yet implemented"),
             _ => todo!("encountered unimplemented at rule"),
         }
     }
@@ -111,15 +111,20 @@ fn eat_media_query<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) {}
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum AtRuleKind {
     // SASS specific @rules
-    /// Loads mixins, functions, and variables from other Sass stylesheets, and combines CSS from multiple stylesheets together
+    /// Loads mixins, functions, and variables from other Sass
+    /// stylesheets, and combines CSS from multiple stylesheets together
     Use,
-    /// Loads a Sass stylesheet and makes its mixins, functions, and variables available when your stylesheet is loaded with the `@use` rule
+    /// Loads a Sass stylesheet and makes its mixins, functions,
+    /// and variables available when your stylesheet is loaded
+    /// with the `@use` rule
     Forward,
-    /// Extends the CSS at-rule to load styles, mixins, functions, and variables from other stylesheets
+    /// Extends the CSS at-rule to load styles, mixins, functions,
+    /// and variables from other stylesheets
     Import,
     Mixin,
     Include,
-    /// Defines custom functions that can be used in SassScript expressions
+    /// Defines custom functions that can be used in SassScript
+    /// expressions
     Function,
     Return,
     /// Allows selectors to inherit styles from one another
@@ -141,13 +146,18 @@ pub enum AtRuleKind {
     // CSS @rules
     /// Defines the character set used by the style sheet
     Charset,
-    /// Tells the CSS engine that all its content must be considered prefixed with an XML namespace
+    /// Tells the CSS engine that all its content must be considered
+    /// prefixed with an XML namespace
     Namespace,
-    /// A conditional group rule that will apply its content if the device meets the criteria of the condition defined using a media query
+    /// A conditional group rule that will apply its content if
+    /// the device meets the criteria of the
+    /// condition defined using a media query
     Media,
-    /// A conditional group rule that will apply its content if the browser meets the criteria of the given condition
+    /// A conditional group rule that will apply its content if the
+    /// browser meets the criteria of the given condition
     Supports,
-    /// Describes the aspect of layout changes that will be applied when printing the document
+    /// Describes the aspect of layout changes that will be
+    /// applied when printing the document
     Page,
     /// Describes the aspect of an external font to be downloaded
     FontFace,
@@ -168,7 +178,8 @@ pub enum AtRuleKind {
     ///
     /// Currently at the Working Draft stage
     Viewport,
-    /// A conditional group rule that will apply its content if the document in which the style sheet is applied meets the criteria of the given condition
+    /// A conditional group rule that will apply its content if the document in
+    /// which the style sheet is applied meets the criteria of the given condition
     ///
     /// Deferred to Level 4 of CSS Spec
     Document,
@@ -176,48 +187,50 @@ pub enum AtRuleKind {
     ///
     /// At the Candidate Recommendation stage
     CounterStyle,
+
+    /// An unknown at rule.
+    /// For compatibility, they are parsed the same as @media
+    Unknown(String),
 }
 
-impl TryFrom<&str> for AtRuleKind {
-    type Error = &'static str;
-
-    fn try_from(c: &str) -> Result<Self, &'static str> {
-        match c {
-            "use" => Ok(Self::Use),
-            "forward" => Ok(Self::Forward),
-            "import" => Ok(Self::Import),
-            "mixin" => Ok(Self::Mixin),
-            "include" => Ok(Self::Include),
-            "function" => Ok(Self::Function),
-            "return" => Ok(Self::Return),
-            "extend" => Ok(Self::Extend),
-            "at-root" => Ok(Self::AtRoot),
-            "error" => Ok(Self::Error),
-            "warn" => Ok(Self::Warn),
-            "debug" => Ok(Self::Debug),
-            "if" => Ok(Self::If),
-            "else" => Ok(Self::Else),
-            "each" => Ok(Self::Each),
-            "for" => Ok(Self::For),
-            "while" => Ok(Self::While),
-            "charset" => Ok(Self::Charset),
-            "namespace" => Ok(Self::Namespace),
-            "media" => Ok(Self::Media),
-            "supports" => Ok(Self::Supports),
-            "page" => Ok(Self::Page),
-            "fontface" => Ok(Self::FontFace),
-            "keyframes" => Ok(Self::Keyframes),
-            "fontfeaturevalues" => Ok(Self::FontFeatureValues),
-            "swash" => Ok(Self::Swash),
-            "ornaments" => Ok(Self::Ornaments),
-            "annotation" => Ok(Self::Annotation),
-            "stylistic" => Ok(Self::Stylistic),
-            "styleset" => Ok(Self::Styleset),
-            "charactervariant" => Ok(Self::CharacterVariant),
-            "viewport" => Ok(Self::Viewport),
-            "document" => Ok(Self::Document),
-            "counterstyle" => Ok(Self::CounterStyle),
-            _ => Err("invalid at rule"),
+impl From<&str> for AtRuleKind {
+    fn from(c: &str) -> Self {
+        match c.to_ascii_lowercase().as_str() {
+            "use" => Self::Use,
+            "forward" => Self::Forward,
+            "import" => Self::Import,
+            "mixin" => Self::Mixin,
+            "include" => Self::Include,
+            "function" => Self::Function,
+            "return" => Self::Return,
+            "extend" => Self::Extend,
+            "at-root" => Self::AtRoot,
+            "error" => Self::Error,
+            "warn" => Self::Warn,
+            "debug" => Self::Debug,
+            "if" => Self::If,
+            "else" => Self::Else,
+            "each" => Self::Each,
+            "for" => Self::For,
+            "while" => Self::While,
+            "charset" => Self::Charset,
+            "namespace" => Self::Namespace,
+            "media" => Self::Media,
+            "supports" => Self::Supports,
+            "page" => Self::Page,
+            "fontface" => Self::FontFace,
+            "keyframes" => Self::Keyframes,
+            "fontfeaturevalues" => Self::FontFeatureValues,
+            "swash" => Self::Swash,
+            "ornaments" => Self::Ornaments,
+            "annotation" => Self::Annotation,
+            "stylistic" => Self::Stylistic,
+            "styleset" => Self::Styleset,
+            "charactervariant" => Self::CharacterVariant,
+            "viewport" => Self::Viewport,
+            "document" => Self::Document,
+            "counterstyle" => Self::CounterStyle,
+            s => Self::Unknown(s.to_owned()),
         }
     }
 }
@@ -259,6 +272,7 @@ impl Display for AtRuleKind {
             Self::Viewport => write!(f, "@viewport"),
             Self::Document => write!(f, "@document"),
             Self::CounterStyle => write!(f, "@counterstyle"),
+            Self::Unknown(s) => write!(f, "@{}", s),
         }
     }
 }
