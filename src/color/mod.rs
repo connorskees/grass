@@ -41,20 +41,20 @@ impl Color {
     }
 
     /// Calculate hue from RGBA values
-    /// Algorithm adapted from http://www.niwa.nu/2013/05/math-behind-colorspace-conversions-rgb-hsl/
+    /// Algorithm adapted from <http://www.niwa.nu/2013/05/math-behind-colorspace-conversions-rgb-hsl/>
     pub fn hue(&self) -> Number {
         let red = self.red.clone() / Number::from(255);
         let green = self.green.clone() / Number::from(255);
         let blue = self.blue.clone() / Number::from(255);
         let min = red.clone().min(green.clone().min(blue.clone()));
         let max = red.clone().max(green.clone().max(blue.clone()));
-        if &min == &max {
+        if min == max {
             return Number::from(0);
         }
 
-        let mut hue = if &red == &max {
+        let mut hue = if red == max {
             (green - blue) / (max - min)
-        } else if &green == &max {
+        } else if green == max {
             Number::from(2) + (blue - red) / (max - min)
         } else {
             Number::from(4) + (red - green) / (max - min)
@@ -68,7 +68,7 @@ impl Color {
     }
 
     /// Calculate saturation from RGBA values
-    /// Algorithm adapted from http://www.niwa.nu/2013/05/math-behind-colorspace-conversions-rgb-hsl/
+    /// Algorithm adapted from <http://www.niwa.nu/2013/05/math-behind-colorspace-conversions-rgb-hsl/>
     pub fn saturation(&self) -> Number {
         let red = self.red.clone() / Number::from(255);
         let green = self.green.clone() / Number::from(255);
@@ -77,18 +77,22 @@ impl Color {
         let min = red.clone().min(green.clone().min(blue.clone()));
         let max = red.max(green.max(blue));
 
-        if &min == &max {
+        if min == max {
             return Number::from(0);
         }
 
         let d = max.clone() - min.clone();
         let mm = max + min;
-        let s = d / if mm > Number::from(1) { Number::from(2) - mm } else { mm };
+        let s = d / if mm > Number::from(1) {
+            Number::from(2) - mm
+        } else {
+            mm
+        };
         (s * Number::from(100)).round()
     }
 
     /// Calculate luminance from RGBA values
-    /// Algorithm adapted from http://www.niwa.nu/2013/05/math-behind-colorspace-conversions-rgb-hsl/
+    /// Algorithm adapted from <http://www.niwa.nu/2013/05/math-behind-colorspace-conversions-rgb-hsl/>
     pub fn lightness(&self) -> Number {
         let red = self.red.clone() / Number::from(255);
         let green = self.green.clone() / Number::from(255);
@@ -103,7 +107,7 @@ impl Color {
     }
 
     /// Create RGBA representation from HSLA values
-    /// Algorithm adapted from http://www.niwa.nu/2013/05/math-behind-colorspace-conversions-rgb-hsl/
+    /// Algorithm adapted from <http://www.niwa.nu/2013/05/math-behind-colorspace-conversions-rgb-hsl/>
     pub fn from_hsla(
         mut hue: Number,
         mut saturation: Number,
@@ -131,26 +135,26 @@ impl Color {
             } else {
                 luminance
             };
-            let val = luminance.clone() * Number::from(255);
+            let val = luminance * Number::from(255);
             let repr = repr(&val, &val, &val, &alpha);
             return Color {
                 red: val.clone(),
                 green: val.clone(),
                 blue: val,
-                alpha: Number::from(alpha),
+                alpha,
                 repr,
             };
         }
         let temporary_1 = if luminance.clone() < Number::ratio(1, 2) {
             luminance.clone() * (Number::from(1) + saturation)
         } else {
-            luminance.clone() + saturation.clone() - luminance.clone() * saturation.clone()
+            luminance.clone() + saturation.clone() - luminance.clone() * saturation
         };
-        let temporary_2 = Number::from(2) * luminance.clone() - temporary_1.clone();
+        let temporary_2 = Number::from(2) * luminance - temporary_1.clone();
         hue /= Number::from(360);
         let mut temporary_r = hue.clone() + Number::ratio(1, 3);
         let mut temporary_g = hue.clone();
-        let mut temporary_b = hue.clone() - Number::ratio(1, 3);
+        let mut temporary_b = hue - Number::ratio(1, 3);
 
         macro_rules! clamp_temp {
             ($temp:ident) => {
@@ -241,9 +245,9 @@ impl Color {
         } else {
             weight
         };
-        let red = Number::from(std::u8::MAX) - (Number::from(self.red.clone()) * weight.clone());
-        let green = Number::from(std::u8::MAX) - (Number::from(self.green.clone()) * weight.clone());
-        let blue = Number::from(std::u8::MAX) - (Number::from(self.blue.clone()) * weight);
+        let red = Number::from(u8::max_value()) - self.red.clone() * weight.clone();
+        let green = Number::from(u8::max_value()) - self.green.clone() * weight.clone();
+        let blue = Number::from(u8::max_value()) - self.blue.clone() * weight;
         let repr = repr(&red, &green, &blue, &self.alpha);
         Color {
             red,

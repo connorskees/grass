@@ -53,7 +53,7 @@ struct StyleParser<'a> {
 }
 
 impl<'a> StyleParser<'a> {
-    fn new(scope: &'a Scope, super_selector: &'a Selector) -> Self {
+    const fn new(scope: &'a Scope, super_selector: &'a Selector) -> Self {
         StyleParser {
             scope,
             super_selector,

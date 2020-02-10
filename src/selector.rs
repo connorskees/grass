@@ -295,13 +295,12 @@ impl<'a> SelectorParser<'a> {
                 }),
                 TokenKind::Interpolation => {
                     self.is_interpolated = true;
-                    let v = self.tokens_to_selectors(
+                    self.tokens_to_selectors(
                         &mut parse_interpolation(tokens, self.scope)
                             .into_iter()
                             .peekable(),
                     );
                     self.is_interpolated = false;
-                    v
                 }
                 TokenKind::Attribute(attr) => self.selectors.push(SelectorKind::Attribute(attr)),
                 _ => todo!("unimplemented selector"),

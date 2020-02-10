@@ -161,7 +161,7 @@ impl Mul for Value {
         match self {
             Self::Null => todo!(),
             Self::Dimension(num, unit) => match other {
-                Self::Dimension(num2, unit2) => Value::Dimension(num - num2, unit),
+                Self::Dimension(num2, unit2) => Value::Dimension(num * num2, unit),
                 _ => todo!(),
             },
             Self::BinaryOp(..) | Self::Paren(..) => self.eval(),
