@@ -219,15 +219,47 @@ impl Value {
                         ..
                     }) => {
                         toks.next();
-                        let args = eat_call_args(toks, scope);
                         let func = match scope.get_fn(&s) {
                             Ok(f) => f,
                             Err(_) => match GLOBAL_FUNCTIONS.get(&s) {
-                                Some(f) => return f(&args, scope),
-                                None => todo!("called undefined function"),
+                                Some(f) => return f(&eat_call_args(toks, scope), scope),
+                                None => {
+                                    s.push('(');
+                                    let mut unclosed_parens = 0;
+                                    while let Some(t) = toks.next() {
+                                        match &t.kind {
+                                            TokenKind::Symbol(Symbol::OpenParen) => {
+                                                unclosed_parens += 1;
+                                            }
+                                            TokenKind::Interpolation => s.push_str(
+                                                &parse_interpolation(toks, scope)
+                                                    .iter()
+                                                    .map(|x| x.kind.to_string())
+                                                    .collect::<String>(),
+                                            ),
+                                            TokenKind::Variable(v) => s.push_str(
+                                                &scope
+                                                    .get_var(v)
+                                                    .expect("expected variable to exist")
+                                                    .to_string(),
+                                            ),
+                                            TokenKind::Symbol(Symbol::CloseParen) => {
+                                                if unclosed_parens <= 1 {
+                                                    s.push(')');
+                                                    break;
+                                                } else {
+                                                    unclosed_parens -= 1;
+                                                }
+                                            }
+                                            _ => {}
+                                        }
+                                        s.push_str(&t.kind.to_string());
+                                    }
+                                    return Some(Value::Ident(s, QuoteKind::None));
+                                }
                             },
                         };
-                        Some(func.clone().args(&args).call())
+                        Some(func.clone().args(&eat_call_args(toks, scope)).call())
                     }
                     _ => {
                         if let Ok(c) = crate::color::ColorName::try_from(s.as_ref()) {

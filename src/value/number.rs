@@ -81,7 +81,7 @@ impl Display for Number {
         let mut frac = self.val.fract();
         if frac != BigRational::from_integer(BigInt::from(0)) {
             f.write_char('.')?;
-            for _ in 0..(PRECISION-1) {
+            for _ in 0..(PRECISION - 1) {
                 frac *= BigRational::from_integer(BigInt::from(10));
                 write!(f, "{}", frac.to_integer())?;
                 frac = frac.fract();

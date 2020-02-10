@@ -294,3 +294,12 @@ test!(
     "a {\n  color: 'foo' - 1px;\n}\n",
     "a {\n  color: \"foo\"-1px;\n}\n"
 );
+test!(
+    undefined_function_call_is_ident,
+    "a {\n  color: foo();\n}\n"
+);
+test!(
+    undefined_function_call_is_ident_adds,
+    "a {\n  color: 1 + foo();\n}\n",
+    "a {\n  color: 1foo();\n}\n"
+);

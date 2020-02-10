@@ -76,7 +76,7 @@ impl Display for Symbol {
             Self::At => write!(f, "@"),
             Self::Dollar => write!(f, "$"),
             Self::OpenParen => write!(f, "("),
-            Self::CloseParen => write!(f, "),"),
+            Self::CloseParen => write!(f, ")"),
             Self::OpenCurlyBrace => write!(f, "{{"),
             Self::CloseCurlyBrace => write!(f, "}}"),
             Self::OpenSquareBrace => write!(f, "["),

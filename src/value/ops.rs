@@ -22,6 +22,13 @@ impl Add for Value {
             },
             Self::Dimension(num, unit) => match other {
                 Self::Dimension(num2, unit2) => Value::Dimension(num + num2, unit),
+                Self::Ident(s, q) => {
+                    let quotes = match q {
+                        QuoteKind::Double | QuoteKind::Single => QuoteKind::Double,
+                        QuoteKind::None => QuoteKind::None,
+                    };
+                    Value::Ident(format!("{}{}{}", num, unit, s), quotes)
+                }
                 _ => todo!(),
             },
             // Self::List(..) => todo!(),
