@@ -314,4 +314,11 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         };
         Some(Value::Color(color.fade_out(amount)))
     });
+    decl!(f "grayscale", |args, _| {
+        let color = match arg!(args, 0, "color").eval() {
+            Value::Color(c) => c,
+            _ => todo!("non-color given to builtin function `grayscale()`")
+        };
+        Some(Value::Color(color.desaturate(Number::from(1))))
+    });
 }

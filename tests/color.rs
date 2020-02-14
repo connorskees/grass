@@ -341,3 +341,13 @@ test!(
     "a {\n  color: opacify(rgba(0, 0, 17, 0.8), 0.2);\n}\n",
     "a {\n  color: #000011;\n}\n"
 );
+test!(
+    grayscale_1,
+    "a {\n  color: grayscale(plum);\n}\n",
+    "a {\n  color: #bfbfbf;\n}\n"
+);
+test!(
+    grayscale_2,
+    "a {\n  color: grayscale(red);\n}\n",
+    "a {\n  color: gray;\n}\n"
+);
