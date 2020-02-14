@@ -304,3 +304,8 @@ test!(
     "a {\n  color: desaturate(#855, 20%);\n}\n",
     "a {\n  color: #726b6b;\n}\n"
 );
+test!(
+    desaturate_correctly_calculates_hue,
+    "a {\n  color: desaturate(plum, 14%);\n}\n",
+    "a {\n  color: #d4a9d4;\n}\n"
+);

@@ -102,7 +102,7 @@ impl Color {
         (((min + max) / Number::from(2)) * Number::from(100)).round()
     }
 
-    pub fn as_hsla(&self) -> (Number, Number, Number, Number) {
+    fn as_hsla(&self) -> (Number, Number, Number, Number) {
         let red = self.red.clone() / Number::from(255);
         let green = self.green.clone() / Number::from(255);
         let blue = self.blue.clone() / Number::from(255);
@@ -125,12 +125,12 @@ impl Color {
 
         let mut hue = if min == max {
             Number::from(0)
-        } else if red == max {
-            (green - blue) / (max - min)
+        } else if blue == max {
+            Number::from(4) + (red - green) / (max - min)
         } else if green == max {
             Number::from(2) + (blue - red) / (max - min)
         } else {
-            Number::from(4) + (red - green) / (max - min)
+            (green - blue) / (max - min)
         };
 
         if hue < Number::from(0) {
