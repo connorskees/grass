@@ -376,3 +376,18 @@ test!(
     "a {\n  color: mix(black, white);\n}\n",
     "a {\n  color: gray;\n}\n"
 );
+test!(
+    change_color_blue,
+    "a {\n  color: change-color(#102030, $blue: 5);\n}\n",
+    "a {\n  color: #102005;\n}\n"
+);
+test!(
+    change_color_red_blue,
+    "a {\n  color: change-color(#102030, $red: 120, $blue: 5);\n}\n",
+    "a {\n  color: #782005;\n}\n"
+);
+test!(
+    change_color_lum_alpha,
+    "a {\n  color: change-color(hsl(25, 100%, 80%), $lightness: 40%, $alpha: 0.8);\n}\n",
+    "a {\n  color: rgba(204, 85, 0, 0.8);\n}\n"
+);

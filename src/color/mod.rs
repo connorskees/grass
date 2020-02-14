@@ -91,7 +91,7 @@ impl Color {
     }
 
     /// Mix two colors together with weight
-    /// Algorithm adapted from 
+    /// Algorithm adapted from
     /// <https://github.com/sass/dart-sass/blob/0d0270cb12a9ac5cce73a4d0785fecb00735feee/lib/src/functions/color.dart#L718>
     pub fn mix(self, other: Color, weight: Number) -> Self {
         let weight = clamp!(weight, 0, 100);
@@ -179,7 +179,7 @@ impl Color {
         (((min + max) / Number::from(2)) * Number::from(100)).round()
     }
 
-    fn as_hsla(&self) -> (Number, Number, Number, Number) {
+    pub fn as_hsla(&self) -> (Number, Number, Number, Number) {
         let red = self.red.clone() / Number::from(255);
         let green = self.green.clone() / Number::from(255);
         let blue = self.blue.clone() / Number::from(255);
