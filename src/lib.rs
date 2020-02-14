@@ -286,15 +286,11 @@ impl StyleSheet {
 
     /// Write the internal representation as CSS to `buf`
     ///
-    /// ```norun
+    /// ```
     /// use std::io::{BufWriter, stdout};
     /// use grass::{SassResult, StyleSheet};
-    /// # use tempfile::Builder;
-    /// # use std::io::Write;
     ///
     /// fn main() -> SassResult<()> {
-    ///     # let mut file = Builder::new().prefix("input.scss").tempfile().unwrap();
-    ///     # write!(file, "a {{\n  color: red}}")?;
     ///     let mut buf = BufWriter::new(stdout());
     ///     StyleSheet::from_path("input.scss")?.print_as_css(&mut buf)
     /// }
