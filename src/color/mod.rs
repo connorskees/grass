@@ -17,6 +17,7 @@ pub(crate) struct Color {
     repr: String,
 }
 
+// RGBA color functions
 impl Color {
     pub fn new(red: u8, green: u8, blue: u8, alpha: u8, repr: String) -> Self {
         Color {
@@ -24,6 +25,43 @@ impl Color {
             green: green.into(),
             blue: blue.into(),
             alpha: alpha.into(),
+            repr,
+        }
+    }
+
+    /// Create a new `Color` with just RGBA values.
+    /// Color representation is created automatically.
+    pub fn from_rgba(red: Number, green: Number, blue: Number, alpha: Number) -> Self {
+        macro_rules! clamp {
+            ($channel:ident) => {
+                let $channel = if $channel > Number::from(255) {
+                    Number::from(255)
+                } else if $channel < Number::from(0) {
+                    Number::from(0)
+                } else {
+                    $channel
+                };
+            };
+        }
+
+        clamp!(red);
+        clamp!(green);
+        clamp!(blue);
+
+        let alpha = if alpha > Number::from(1) {
+            Number::from(1)
+        } else if alpha < Number::from(0) {
+            Number::from(0)
+        } else {
+            alpha
+        };
+
+        let repr = repr(&red, &green, &blue, &alpha);
+        Color {
+            red,
+            green,
+            blue,
+            alpha,
             repr,
         }
     }
@@ -39,9 +77,12 @@ impl Color {
     pub fn green(&self) -> Number {
         self.green.clone()
     }
+}
 
+/// HSLA color functions
+/// Algorithms adapted from <http://www.niwa.nu/2013/05/math-behind-colorspace-conversions-rgb-hsl/>
+impl Color {
     /// Calculate hue from RGBA values
-    /// Algorithm adapted from <http://www.niwa.nu/2013/05/math-behind-colorspace-conversions-rgb-hsl/>
     pub fn hue(&self) -> Number {
         let red = self.red.clone() / Number::from(255);
         let green = self.green.clone() / Number::from(255);
@@ -68,7 +109,6 @@ impl Color {
     }
 
     /// Calculate saturation from RGBA values
-    /// Algorithm adapted from <http://www.niwa.nu/2013/05/math-behind-colorspace-conversions-rgb-hsl/>
     pub fn saturation(&self) -> Number {
         let red = self.red.clone() / Number::from(255);
         let green = self.green.clone() / Number::from(255);
@@ -92,7 +132,6 @@ impl Color {
     }
 
     /// Calculate luminance from RGBA values
-    /// Algorithm adapted from <http://www.niwa.nu/2013/05/math-behind-colorspace-conversions-rgb-hsl/>
     pub fn lightness(&self) -> Number {
         let red = self.red.clone() / Number::from(255);
         let green = self.green.clone() / Number::from(255);
@@ -167,30 +206,7 @@ impl Color {
         Color::from_hsla(hue, saturation - amount, luminance, alpha)
     }
 
-    pub fn alpha(&self) -> Number {
-        self.alpha.clone()
-    }
-
-    pub fn with_alpha(self, alpha: Number) -> Self {
-        Color::from_rgba(self.red, self.green, self.blue, alpha)
-    }
-
-    /// Makes a color more opaque.
-    /// Takes a color and a number between 0 and 1,
-    /// and returns a color with the opacity increased by that amount.
-    pub fn fade_in(self, amount: Number) -> Self {
-        Color::from_rgba(self.red, self.green, self.blue, self.alpha + amount)
-    }
-
-    /// Makes a color more transparent.
-    /// Takes a color and a number between 0 and 1,
-    /// and returns a color with the opacity decreased by that amount.
-    pub fn fade_out(self, amount: Number) -> Self {
-        Color::from_rgba(self.red, self.green, self.blue, self.alpha - amount)
-    }
-
     /// Create RGBA representation from HSLA values
-    /// Algorithm adapted from <http://www.niwa.nu/2013/05/math-behind-colorspace-conversions-rgb-hsl/>
     pub fn from_hsla(
         mut hue: Number,
         mut saturation: Number,
@@ -285,41 +301,6 @@ impl Color {
         }
     }
 
-    pub fn from_rgba(red: Number, green: Number, blue: Number, alpha: Number) -> Self {
-        macro_rules! clamp {
-            ($channel:ident) => {
-                let $channel = if $channel > Number::from(255) {
-                    Number::from(255)
-                } else if $channel < Number::from(0) {
-                    Number::from(0)
-                } else {
-                    $channel
-                };
-            };
-        }
-
-        clamp!(red);
-        clamp!(green);
-        clamp!(blue);
-
-        let alpha = if alpha > Number::from(1) {
-            Number::from(1)
-        } else if alpha < Number::from(0) {
-            Number::from(0)
-        } else {
-            alpha
-        };
-
-        let repr = repr(&red, &green, &blue, &alpha);
-        Color {
-            red,
-            green,
-            blue,
-            alpha,
-            repr,
-        }
-    }
-
     pub fn invert(&self, weight: Number) -> Self {
         let weight = if weight > Number::from(1) {
             Number::from(1)
@@ -349,6 +330,32 @@ impl Color {
             hue + Number::from(180)
         };
         Color::from_hsla(hue, saturation, luminance, alpha)
+    }
+}
+
+/// Opacity color functions
+impl Color {
+    pub fn alpha(&self) -> Number {
+        self.alpha.clone()
+    }
+
+    /// Change `alpha` to value given
+    pub fn with_alpha(self, alpha: Number) -> Self {
+        Color::from_rgba(self.red, self.green, self.blue, alpha)
+    }
+
+    /// Makes a color more opaque.
+    /// Takes a color and a number between 0 and 1,
+    /// and returns a color with the opacity increased by that amount.
+    pub fn fade_in(self, amount: Number) -> Self {
+        Color::from_rgba(self.red, self.green, self.blue, self.alpha + amount)
+    }
+
+    /// Makes a color more transparent.
+    /// Takes a color and a number between 0 and 1,
+    /// and returns a color with the opacity decreased by that amount.
+    pub fn fade_out(self, amount: Number) -> Self {
+        Color::from_rgba(self.red, self.green, self.blue, self.alpha - amount)
     }
 }
 
