@@ -1,6 +1,6 @@
 use std::convert::From;
 use std::fmt::{self, Display, Write};
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Rem, RemAssign, Sub, SubAssign};
 
 use num_bigint::BigInt;
 use num_rational::BigRational;
@@ -170,5 +170,21 @@ impl Div for Number {
 impl DivAssign for Number {
     fn div_assign(&mut self, other: Self) {
         self.val /= other.val
+    }
+}
+
+impl Rem for Number {
+    type Output = Self;
+
+    fn rem(self, other: Self) -> Self {
+        Number {
+            val: self.val % other.val,
+        }
+    }
+}
+
+impl RemAssign for Number {
+    fn rem_assign(&mut self, other: Self) {
+        self.val %= other.val
     }
 }
