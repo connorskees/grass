@@ -111,7 +111,7 @@ impl Color {
         Color::from_rgba(
             self.red * weight1.clone() + other.red * weight2.clone(),
             self.green * weight1.clone() + other.green * weight2.clone(),
-            self.blue * weight1.clone() + other.blue * weight2,
+            self.blue * weight1 + other.blue * weight2,
             self.alpha * weight.clone() + other.alpha * (Number::from(1) - weight),
         )
     }
@@ -188,7 +188,7 @@ impl Color {
 
         let lightness = (min.clone() + max.clone()) / Number::from(2);
 
-        let saturation = if &min == &max {
+        let saturation = if min == max {
             Number::from(0)
         } else {
             let d = max.clone() - min.clone();

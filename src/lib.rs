@@ -13,20 +13,12 @@
     clippy::use_self,
     // this is way too pedantic -- some things don't need docs!
     clippy::missing_docs_in_private_items,
-    // this crate is too new to deny todo!()
-    clippy::todo,
     // unreachable!() has many valid use cases
     clippy::unreachable,
     // _ => {} has many valid use cases
     clippy::wildcard_enum_match_arm,
     // .expect() has many valid use cases, like when we know a value is `Some(..)`
     clippy::option_expect_used,
-    // for now, panic() is an acceptable solution
-    clippy::panic,
-    // for now, some functions require a lot of lines
-    // future refactoring should make functions small and make
-    // this lint less annoying
-    clippy::too_many_lines,
     // this is too pedantic -- we are allowed to add numbers!
     clippy::integer_arithmetic,
     // this is too pedantic for now -- the library is changing too quickly for
@@ -41,6 +33,20 @@
     clippy::option_unwrap_used,
     // this is too pedantic -- it is sometimes useful to break up `impl`s
     clippy::multiple_inherent_impl,
+
+    // temporarily allowed while under heavy development.
+    // eventually these allows should be refactored away
+    // to no longer be necessary
+    clippy::as_conversions,
+    clippy::todo,
+    clippy::too_many_lines,
+    clippy::panic,
+    clippy::result_unwrap_used,
+    clippy::result_expect_used,
+    clippy::cast_possible_truncation,
+    clippy::single_match_else,
+    clippy::indexing_slicing,
+    clippy::match_same_arms
 )]
 #![cfg_attr(feature = "nightly", feature(track_caller))]
 // todo! handle erroring on styles at the toplevel
@@ -231,6 +237,7 @@ enum Expr {
 impl Display for StyleSheet {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // todo!(implement into fmt::Result for SassResult)
         Ok(PrettyPrinter::new(f).pretty_print(self).unwrap())
     }
 }

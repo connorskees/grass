@@ -14,7 +14,7 @@ enum Toplevel {
 
 #[derive(Debug, Clone)]
 enum BlockEntry {
-    Style(Style),
+    Style(Box<Style>),
     MultilineComment(String),
     #[allow(dead_code)]
     AtRule(AtRule),
@@ -37,7 +37,7 @@ impl Toplevel {
 
     fn push_style(&mut self, s: Style) {
         if let Toplevel::RuleSet(_, entries) = self {
-            entries.push(BlockEntry::Style(s));
+            entries.push(BlockEntry::Style(Box::new(s)));
         }
     }
 

@@ -66,6 +66,7 @@ impl From<BigInt> for Number {
 }
 
 impl From<Number> for BigInt {
+    #[inline]
     fn from(b: Number) -> Self {
         b.to_integer()
     }

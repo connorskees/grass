@@ -42,7 +42,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
                 _ => todo!("missing element $green")
             };
 
-            assert_eq!(channels.len(), 3usize);
+            assert_eq!(channels.len(), 3_usize);
 
             let blue = match channels.pop() {
                 Some(Value::Dimension(n, Unit::None)) => n,
@@ -103,19 +103,19 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     });
     decl!(f "red", |args, _| {
         match arg!(args, 0, "color") {
-            Value::Color(c) => Some(Value::Dimension(Number::from(c.red()), Unit::None)),
+            Value::Color(c) => Some(Value::Dimension(c.red(), Unit::None)),
             _ => todo!("non-color given to builtin function `red()`")
         }
     });
     decl!(f "green", |args, _| {
         match arg!(args, 0, "color") {
-            Value::Color(c) => Some(Value::Dimension(Number::from(c.green()), Unit::None)),
+            Value::Color(c) => Some(Value::Dimension(c.green(), Unit::None)),
             _ => todo!("non-color given to builtin function `green()`")
         }
     });
     decl!(f "blue", |args, _| {
         match arg!(args, 0, "color") {
-            Value::Color(c) => Some(Value::Dimension(Number::from(c.blue()), Unit::None)),
+            Value::Color(c) => Some(Value::Dimension(c.blue(), Unit::None)),
             _ => todo!("non-color given to builtin function `blue()`")
         }
     });
