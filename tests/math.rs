@@ -48,3 +48,18 @@ test!(
     "a {\n  color: ceil(10.6px);\n}\n",
     "a {\n  color: 11px;\n}\n"
 );
+test!(
+    abs_positive,
+    "a {\n  color: abs(10);\n}\n",
+    "a {\n  color: 10;\n}\n"
+);
+test!(
+    abs_negative,
+    "a {\n  color: abs(-10);\n}\n",
+    "a {\n  color: 10;\n}\n"
+);
+test!(
+    abs_unit,
+    "a {\n  color: abs(-10px);\n}\n",
+    "a {\n  color: 10px;\n}\n"
+);

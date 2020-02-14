@@ -4,6 +4,7 @@ use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Rem, RemAssign, S
 
 use num_bigint::BigInt;
 use num_rational::BigRational;
+use num_traits::sign::Signed;
 
 const PRECISION: usize = 10;
 
@@ -40,6 +41,12 @@ impl Number {
     pub fn floor(self) -> Self {
         Number {
             val: self.val.floor(),
+        }
+    }
+
+    pub fn abs(self) -> Self {
+        Number {
+            val: self.val.abs(),
         }
     }
 }
