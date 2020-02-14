@@ -1,1 +1,15 @@
+use std::collections::BTreeMap;
 
+use super::Builtin;
+use crate::units::Unit;
+use crate::value::{Number, Value};
+
+pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
+    decl!(f "length", |args, _| {
+        let len = match arg!(args, 0, "list").eval() {
+            Value::List(v, _) => Number::from(v.len()),
+            _ => Number::from(1)
+        };
+        Some(Value::Dimension(len, Unit::None))
+    });
+}
