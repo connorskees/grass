@@ -135,6 +135,13 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         };
         Some(Value::Color(color.desaturate(Number::from(1))))
     });
+    decl!(f "complement", |args, _| {
+        let color = match arg!(args, 0, "color").eval() {
+            Value::Color(c) => c,
+            _ => todo!("non-color given to builtin function `complement()`")
+        };
+        Some(Value::Color(color.complement()))
+    });
     decl!(f "invert", |args, _| {
         let weight = match arg!(args, 1, "weight"=Value::Dimension(Number::from(100), Unit::Percent)) {
             Value::Dimension(n, Unit::None)

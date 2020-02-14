@@ -351,3 +351,8 @@ test!(
     "a {\n  color: grayscale(red);\n}\n",
     "a {\n  color: gray;\n}\n"
 );
+test!(
+    complement,
+    "a {\n  color: complement(red);\n}\n",
+    "a {\n  color: aqua;\n}\n"
+);
