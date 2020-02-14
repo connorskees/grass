@@ -134,6 +134,16 @@ test!(
     "a {\n  color: fuchsia;\n}\n"
 );
 test!(
+    hsl_hue_above_max,
+    "a {\n  color: hsl(540, 100%, 50%);\n}\n",
+    "a {\n  color: aqua;\n}\n"
+);
+test!(
+    hsl_hue_below_min,
+    "a {\n  color: hsl(-540, 100%, 50%);\n}\n",
+    "a {\n  color: aqua;\n}\n"
+);
+test!(
     hsla_named,
     "a {\n  color: hsla($hue: 193, $saturation: 67%, $luminance: 99, $alpha: .6);\n}\n",
     "a {\n  color: rgba(251, 253, 254, 0.6);\n}\n"
