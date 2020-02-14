@@ -171,6 +171,20 @@ impl Color {
         self.alpha.clone()
     }
 
+    /// Makes a color more opaque.
+    /// Takes a color and a number between 0 and 1,
+    /// and returns a color with the opacity increased by that amount.
+    pub fn fade_in(self, amount: Number) -> Self {
+        Color::from_rgba(self.red, self.green, self.blue, self.alpha + amount)
+    }
+
+    /// Makes a color more transparent.
+    /// Takes a color and a number between 0 and 1,
+    /// and returns a color with the opacity decreased by that amount.
+    pub fn fade_out(self, amount: Number) -> Self {
+        Color::from_rgba(self.red, self.green, self.blue, self.alpha - amount)
+    }
+
     /// Create RGBA representation from HSLA values
     /// Algorithm adapted from <http://www.niwa.nu/2013/05/math-behind-colorspace-conversions-rgb-hsl/>
     pub fn from_hsla(

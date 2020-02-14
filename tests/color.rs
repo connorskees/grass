@@ -309,3 +309,23 @@ test!(
     "a {\n  color: desaturate(plum, 14%);\n}\n",
     "a {\n  color: #d4a9d4;\n}\n"
 );
+test!(
+    transparentize,
+    "a {\n  color: transparentize(rgba(0, 0, 0, 0.5), 0.1);\n}\n",
+    "a {\n  color: rgba(0, 0, 0, 0.4);\n}\n"
+);
+test!(
+    fade_out,
+    "a {\n  color: fade-out(rgba(0, 0, 0, 0.8), 0.2);\n}\n",
+    "a {\n  color: rgba(0, 0, 0, 0.6);\n}\n"
+);
+test!(
+    opacify,
+    "a {\n  color: opacify(rgba(0, 0, 0, 0.5), 0.1);\n}\n",
+    "a {\n  color: rgba(0, 0, 0, 0.6);\n}\n"
+);
+test!(
+    fade_in,
+    "a {\n  color: opacify(rgba(0, 0, 17, 0.8), 0.2);\n}\n",
+    "a {\n  color: #000011;\n}\n"
+);
