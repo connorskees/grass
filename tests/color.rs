@@ -81,6 +81,18 @@ test!(
     opacity_function_number_unit,
     "a {\n  color: opacity(1px);\n}\n"
 );
+// blocked on better function-call argument parsing
+// specifically, passing lists as values
+// test!(
+//     rgba_one_arg,
+//     "a {\n  color: rgba(1 2 3);;\n}\n",
+//     "a {\n  color: #010203;\n}\n"
+// );
+test!(
+    rgba_two_args,
+    "a {\n  color: rgba(red, 0.5);\n}\n",
+    "a {\n  color: rgba(255, 0, 0, 0.5);\n}\n"
+);
 test!(
     rgba_opacity_over_1,
     "a {\n  color: rgba(1, 2, 3, 3);\n}\n",

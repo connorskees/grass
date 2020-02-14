@@ -171,6 +171,10 @@ impl Color {
         self.alpha.clone()
     }
 
+    pub fn with_alpha(self, alpha: Number) -> Self {
+        Color::from_rgba(self.red, self.green, self.blue, alpha)
+    }
+
     /// Makes a color more opaque.
     /// Takes a color and a number between 0 and 1,
     /// and returns a color with the opacity increased by that amount.

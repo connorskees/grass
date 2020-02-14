@@ -32,6 +32,10 @@ impl CallArgs {
     pub fn get(&self, val: &str) -> Option<&Value> {
         self.0.get(val)
     }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
 }
 
 pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
