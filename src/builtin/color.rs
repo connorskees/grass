@@ -191,4 +191,16 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         };
         Some(Value::Color(color.lighten(amount)))
     });
+    decl!(f "darken", |args, _| {
+        let color = match arg!(args, 0, "color").eval() {
+            Value::Color(c) => c,
+            _ => todo!("non-color given to builtin function `darken()`")
+        };
+        let amount = match arg!(args, 1, "amount").eval() {
+            Value::Dimension(n, Unit::None) => n,
+            Value::Dimension(n, Unit::Percent) => n / Number::from(100),
+            _ => todo!("expected either unitless or % number for amount"),
+        };
+        Some(Value::Color(color.darken(amount)))
+    });
 }

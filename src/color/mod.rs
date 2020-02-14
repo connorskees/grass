@@ -152,6 +152,11 @@ impl Color {
         Color::from_hsla(hue, saturation, luminance + amount, alpha)
     }
 
+    pub fn darken(&self, amount: Number) -> Self {
+        let (hue, saturation, luminance, alpha) = self.as_hsla();
+        Color::from_hsla(hue, saturation, luminance - amount, alpha)
+    }
+
     pub fn alpha(&self) -> Number {
         self.alpha.clone()
     }

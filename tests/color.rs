@@ -234,3 +234,21 @@ test!(
     // blocked on recognizing when to use 3-hex over 6-hex
     "a {\n  color: #ee0000;\n}\n"
 );
+// blocked on better parsing of call args
+// test!(
+//     darken_named_args,
+//     "a {\n  color: darken($color: hsl(25, 100%, 80%), $amount: 30%);\n}\n",
+//     "a {\n  color: #ff6a00;\n}\n"
+// );
+test!(
+    darken_basic,
+    "a {\n  color: darken(hsl(25, 100%, 80%), 30%);\n}\n",
+    "a {\n  color: #ff6a00;\n}\n"
+);
+test!(
+    darken_3_hex,
+    "a {\n  color: darken(#800, 20%);\n}\n",
+    // eventually, this should become `#200`
+    // blocked on recognizing when to use 3-hex over 6-hex
+    "a {\n  color: #220000;\n}\n"
+);
