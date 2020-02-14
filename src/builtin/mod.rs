@@ -9,7 +9,6 @@ use crate::value::Value;
 mod macros;
 
 mod color;
-mod color_hsl;
 mod list;
 mod map;
 mod math;
@@ -23,7 +22,6 @@ lazy_static! {
     pub(crate) static ref GLOBAL_FUNCTIONS: BTreeMap<String, Builtin> = {
         let mut m = BTreeMap::new();
         color::register(&mut m);
-        color_hsl::register(&mut m);
         list::register(&mut m);
         math::register(&mut m);
         meta::register(&mut m);
