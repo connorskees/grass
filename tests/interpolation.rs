@@ -18,3 +18,8 @@ test!(
     "a {\n  color: a#{foo}1;\n}\n",
     "a {\n  color: afoo1;\n}\n"
 );
+test!(
+    double_hyphen_before_interpolation,
+    "a {\n  --#{foo}: red;\n}\n",
+    "a {\n  --foo: red;\n}\n"
+);

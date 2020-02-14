@@ -59,6 +59,7 @@ impl<'a> Iterator for Lexer<'a> {
                             s.push_str(&kw.to_string());
                             TokenKind::Ident(s)
                         }
+                        TokenKind::Symbol(Symbol::Minus) => TokenKind::Ident(String::from("--")),
                         _ => unsafe { std::hint::unreachable_unchecked() },
                     },
                     _ => TokenKind::Symbol(Symbol::Minus),
