@@ -203,4 +203,28 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         };
         Some(Value::Color(color.darken(amount)))
     });
+    decl!(f "saturate", |args, _| {
+        let color = match arg!(args, 0, "color").eval() {
+            Value::Color(c) => c,
+            _ => todo!("non-color given to builtin function `saturate()`")
+        };
+        let amount = match arg!(args, 1, "amount").eval() {
+            Value::Dimension(n, Unit::None) => n,
+            Value::Dimension(n, Unit::Percent) => n / Number::from(100),
+            _ => todo!("expected either unitless or % number for amount"),
+        };
+        Some(Value::Color(color.saturate(amount)))
+    });
+    decl!(f "desaturate", |args, _| {
+        let color = match arg!(args, 0, "color").eval() {
+            Value::Color(c) => c,
+            _ => todo!("non-color given to builtin function `desaturate()`")
+        };
+        let amount = match arg!(args, 1, "amount").eval() {
+            Value::Dimension(n, Unit::None) => n,
+            Value::Dimension(n, Unit::Percent) => n / Number::from(100),
+            _ => todo!("expected either unitless or % number for amount"),
+        };
+        Some(Value::Color(color.desaturate(amount)))
+    });
 }

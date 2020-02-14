@@ -252,3 +252,35 @@ test!(
     // blocked on recognizing when to use 3-hex over 6-hex
     "a {\n  color: #220000;\n}\n"
 );
+// blocked on better parsing of call args
+// test!(
+//     saturate_named_args,
+//     "a {\n  color: saturate($color: hsl(25, 100%, 80%), $amount: 30%);\n}\n",
+//     "a {\n  color: #ff6a00;\n}\n"
+// );
+test!(
+    saturate_basic,
+    "a {\n  color: saturate(hsl(120, 30%, 90%), 20%);\n}\n",
+    "a {\n  color: #d9f2d9;\n}\n"
+);
+test!(
+    saturate_3_hex,
+    "a {\n  color: saturate(#855, 20%);\n}\n",
+    "a {\n  color: #9e3f3f;\n}\n"
+);
+// blocked on better parsing of call args
+// test!(
+//     desaturate_named_args,
+//     "a {\n  color: desaturate($color: hsl(25, 100%, 80%), $amount: 30%);\n}\n",
+//     "a {\n  color: #ff6a00;\n}\n"
+// );
+test!(
+    desaturate_basic,
+    "a {\n  color: desaturate(hsl(120, 30%, 90%), 20%);\n}\n",
+    "a {\n  color: #e3e8e3;\n}\n"
+);
+test!(
+    desaturate_3_hex,
+    "a {\n  color: desaturate(#855, 20%);\n}\n",
+    "a {\n  color: #726b6b;\n}\n"
+);
