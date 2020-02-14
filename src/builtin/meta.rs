@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use super::Builtin;
+use super::{Builtin, GLOBAL_FUNCTIONS};
 use crate::common::QuoteKind;
 use crate::units::Unit;
 use crate::value::Value;
@@ -71,7 +71,8 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     });
     decl!(f "function-exists", |args, scope| {
         let value = arg!(args, 0, "name");
-        Some(Value::bool(scope.fn_exists(&value.to_string())))
+        let s = value.eval().unquote().to_string();
+        Some(Value::bool(scope.fn_exists(&s) || GLOBAL_FUNCTIONS.contains_key(&s)))
     });
     decl!(f "call", |_args, _scope| {
         todo!("builtin function `call()` is blocked on refactoring how call args are stored and parsed")
