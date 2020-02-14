@@ -129,6 +129,11 @@ test!(
     "a {\n  color: #fbfdfe;\n}\n"
 );
 test!(
+    hsl_negative_hue,
+    "a {\n  color: hsl(-60deg, 100%, 50%);\n}\n",
+    "a {\n  color: fuchsia;\n}\n"
+);
+test!(
     hsla_named,
     "a {\n  color: hsla($hue: 193, $saturation: 67%, $luminance: 99, $alpha: .6);\n}\n",
     "a {\n  color: rgba(251, 253, 254, 0.6);\n}\n"

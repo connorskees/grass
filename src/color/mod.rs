@@ -246,7 +246,11 @@ impl Color {
 
     /// Create RGBA representation from HSLA values
     pub fn from_hsla(hue: Number, saturation: Number, luminance: Number, alpha: Number) -> Self {
-        let mut hue = clamp!(hue, 0, 360);
+        let mut hue = if hue < Number::from(0) {
+            Number::from(360) + clamp!(hue, -360, 360)
+        } else {
+            clamp!(hue, -360, 360)
+        };
         let saturation = clamp!(saturation, 0, 1);
         let luminance = clamp!(luminance, 0, 1);
         let alpha = clamp!(alpha, 0, 1);
