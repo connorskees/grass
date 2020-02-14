@@ -60,9 +60,8 @@ pub(crate) fn parse_interpolation<I: Iterator<Item = Token>>(
     Lexer::new(
         &Value::from_tokens(&mut val.into_iter().peekable(), scope)
             .unwrap()
+            .unquote()
             .to_string()
-            .replace("\"", "")
-            .replace("'", ""),
     )
     .collect::<Vec<Token>>()
 }
