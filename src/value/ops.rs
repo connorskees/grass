@@ -190,6 +190,17 @@ impl Div for Value {
                         todo!("unit conversions")
                     }
                 }
+                Self::Ident(s, q) => {
+                    let quotes = match q {
+                        QuoteKind::Double | QuoteKind::Single => QuoteKind::Double,
+                        QuoteKind::None => QuoteKind::None,
+                    };
+                    Value::Ident(
+                        format!("{}{}/{}{}{}", num, unit, quotes, s, quotes),
+                        QuoteKind::None,
+                    )
+                }
+                Self::BinaryOp(..) | Self::Paren(..) => Self::Dimension(num, unit) / other.eval(),
                 _ => todo!(),
             },
             // Self::List(..) => todo!(),
