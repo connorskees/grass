@@ -34,6 +34,15 @@ impl From<io::Error> for SassError {
     }
 }
 
+impl From<std::fmt::Error> for SassError {
+    fn from(error: std::fmt::Error) -> Self {
+        SassError {
+            pos: Pos::new(),
+            message: format!("{}", error),
+        }
+    }
+}
+
 impl From<FromUtf8Error> for SassError {
     fn from(error: FromUtf8Error) -> Self {
         SassError {

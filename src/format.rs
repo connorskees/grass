@@ -1,4 +1,4 @@
-use std::io::Write;
+use std::fmt::Write;
 
 use crate::{RuleSet, SassResult, Stmt, StyleSheet};
 
@@ -49,49 +49,6 @@ impl<W: Write> PrettyPrinter<W> {
         }
         Ok(())
     }
-
-    /// Pretty print `crate::Stmt`
-    /// Keeps super selectors
-    fn pretty_print_stmt_preserve_super_selectors(&mut self, stmt: &Stmt) -> SassResult<()> {
-        let padding = vec![' '; self.scope * 2].iter().collect::<String>();
-        match stmt {
-            Stmt::MultilineComment(s) => writeln!(self.buf, "/*{}*/", s)?,
-            Stmt::RuleSet(RuleSet {
-                selector,
-                rules,
-                super_selector,
-            }) => {
-                writeln!(self.buf, "{}{} {{", padding, super_selector.zip(selector))?;
-                self.scope += 1;
-                for rule in rules {
-                    self.pretty_print_stmt(rule)?;
-                }
-                writeln!(self.buf, "{}}}", padding)?;
-                self.scope -= 1;
-            }
-            Stmt::Style(s) => {
-                writeln!(self.buf, "{}{}", padding, s)?;
-            }
-            Stmt::AtRule(r) => {
-                writeln!(self.buf, "{}{}", padding, r)?;
-            }
-        }
-        Ok(())
-    }
-
-    /// Pretty print a special form of SCSS that shows what the full selectors are for children
-    /// Meant for debugging
-    /// Empty rules are included
-    pub(crate) fn pretty_print_preserve_super_selectors(
-        &mut self,
-        s: &StyleSheet,
-    ) -> SassResult<()> {
-        for rule in &s.0 {
-            self.pretty_print_stmt_preserve_super_selectors(rule)?;
-        }
-        writeln!(self.buf)?;
-        Ok(())
-    }
 }
 
 #[cfg(test)]
@@ -101,28 +58,22 @@ mod test_scss {
         ($func:ident, $input:literal) => {
             #[test]
             fn $func() {
-                let mut buf = Vec::new();
-                StyleSheet::new($input)
-                    .expect(concat!("failed to parse on ", $input))
-                    .pretty_print(&mut buf)
-                    .expect(concat!("failed to pretty print on ", $input));
                 assert_eq!(
                     String::from($input),
-                    String::from_utf8(buf).expect("produced invalid utf8")
+                    StyleSheet::new($input)
+                        .expect(concat!("failed to parse on ", $input))
+                        .to_string()
                 );
             }
         };
         ($func:ident, $input:literal, $output:literal) => {
             #[test]
             fn $func() {
-                let mut buf = Vec::new();
-                StyleSheet::new($input)
-                    .expect(concat!("failed to parse on ", $input))
-                    .pretty_print(&mut buf)
-                    .expect(concat!("failed to pretty print on ", $input));
                 assert_eq!(
                     String::from($output),
-                    String::from_utf8(buf).expect("produced invalid utf8")
+                    StyleSheet::new($input)
+                        .expect(concat!("failed to parse on ", $input))
+                        .to_string()
                 );
             }
         };

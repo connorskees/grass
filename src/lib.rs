@@ -222,6 +222,19 @@ enum Expr {
     // FuncCall(String, Vec<Token>),
 }
 
+/// Print the internal representation of a parsed stylesheet
+///
+/// Very closely resembles the original SASS, but contains only things translatable
+/// to pure CSS: functions, variables, values, and mixins have all been evaluated.
+///
+/// Use `StyleSheet::print_as_css` to properly convert to CSS.
+impl Display for StyleSheet {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        Ok(PrettyPrinter::new(f).pretty_print(self).unwrap())
+    }
+}
+
 impl StyleSheet {
     #[inline]
     pub fn new(input: &str) -> SassResult<StyleSheet> {
@@ -264,24 +277,6 @@ impl StyleSheet {
             file: p.into(),
         }
         .parse_toplevel()?)
-    }
-
-    /// Print the internal representation of a parsed stylesheet
-    ///
-    /// Very closely resembles the origin SASS, but contains only things translatable
-    /// to pure CSS
-    ///
-    /// Used mainly in debugging, but can at times be useful
-    #[inline]
-    #[allow(dead_code)]
-    pub fn pretty_print<W: Write>(&self, buf: W) -> SassResult<()> {
-        PrettyPrinter::new(buf).pretty_print(self)
-    }
-
-    #[inline]
-    #[allow(dead_code)]
-    fn pretty_print_selectors<W: Write>(&self, buf: W) -> SassResult<()> {
-        PrettyPrinter::new(buf).pretty_print_preserve_super_selectors(self)
     }
 
     /// Write the internal representation as CSS to `buf`
