@@ -33,3 +33,33 @@ test!(
     "a {\n  color: str-length($string: aBc123);\n}\n",
     "a {\n  color: 6;\n}\n"
 );
+test!(
+    str_slice_dbl_quote,
+    "a {\n  color: str-slice(\"abcd\", 2, 3);\n}\n",
+    "a {\n  color: \"bc\";\n}\n"
+);
+test!(
+    str_slice_sgl_quote,
+    "a {\n  color: str-slice('abcd', 2, 3);\n}\n",
+    "a {\n  color: \"bc\";\n}\n"
+);
+test!(
+    str_slice_no_quote,
+    "a {\n  color: str-slice(abcd, 2, 3);\n}\n",
+    "a {\n  color: bc;\n}\n"
+);
+test!(
+    str_slice_no_end,
+    "a {\n  color: str-slice(abcd, 2);\n}\n",
+    "a {\n  color: bcd;\n}\n"
+);
+test!(
+    str_slice_negative_start_negative_end,
+    "a {\n  color: str-slice(abcd, -3, -2);\n}\n",
+    "a {\n  color: bc;\n}\n"
+);
+test!(
+    str_slice_negative_end,
+    "a {\n  color: str-slice(abcd, 2, -2);\n}\n",
+    "a {\n  color: bc;\n}\n"
+);

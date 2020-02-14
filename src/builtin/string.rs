@@ -1,5 +1,9 @@
 use std::collections::BTreeMap;
 
+use num_bigint::BigInt;
+use num_traits::cast::ToPrimitive;
+use num_traits::sign::Signed;
+
 use super::Builtin;
 use crate::common::QuoteKind;
 use crate::units::Unit;
@@ -36,5 +40,43 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     });
     decl!(f "unquote", |args, _| {
         Some(arg!(args, 0, "string").eval().unquote())
+    });
+    decl!(f "str-slice", |args, _| {
+        let (string, quotes) = match arg!(args, 0, "string").eval() {
+            Value::Ident(s, q) => (s, q),
+            _ => todo!("____ is not a string")
+        };
+        let str_len = string.len();
+        let start = match arg!(args, 1, "start-at").eval() {
+            Value::Dimension(n, Unit::None) if n.to_integer().is_positive() => n.to_integer().to_usize().unwrap(),
+            Value::Dimension(n, Unit::None) => (BigInt::from(str_len + 1) + n.to_integer()).to_usize().unwrap(),
+            Value::Dimension(..) => todo!("$start: Expected ___ to have no units."),
+            _ => todo!("$start-at: ____ is not a number")
+        };
+        let mut end = match arg!(args, 2, "end-at"=Value::Null).eval() {
+            Value::Dimension(n, Unit::None) if n.to_integer().is_positive() => n.to_integer().to_usize().unwrap(),
+            Value::Dimension(n, Unit::None) => (BigInt::from(str_len + 1) + n.to_integer()).to_usize().unwrap(),
+            Value::Dimension(..) => todo!("$end: Expected ___ to have no units."),
+            Value::Null => str_len,
+            _ => todo!("$end-at: ____ is not a number")
+        };
+
+        if end > str_len {
+            end = str_len;
+        }
+
+        if start > end || start > str_len {
+            match quotes {
+                QuoteKind::Double | QuoteKind::Single => Some(Value::Ident(String::new(), QuoteKind::Double)),
+                QuoteKind::None => Some(Value::Null),
+            }
+        } else {
+            let s = string[start-1..end].to_string();
+            match quotes {
+                QuoteKind::Double | QuoteKind::Single => Some(Value::Ident(s, QuoteKind::Double)),
+                QuoteKind::None => Some(Value::Ident(s, QuoteKind::None)),
+            }
+        }
+
     });
 }
