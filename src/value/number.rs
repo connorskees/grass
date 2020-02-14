@@ -58,6 +58,12 @@ impl From<BigInt> for Number {
     }
 }
 
+impl From<Number> for BigInt {
+    fn from(b: Number) -> Self {
+        b.to_integer()
+    }
+}
+
 macro_rules! from_integer {
     ($ty:ty) => {
         impl From<$ty> for Number {

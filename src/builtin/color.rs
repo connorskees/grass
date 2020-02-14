@@ -166,4 +166,17 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             _ => todo!("non-color given to builtin function `alpha()`")
         }
     });
+    decl!(f "adjust-hue", |args, _| {
+        let color = match arg!(args, 0, "color").eval() {
+            Value::Color(c) => c,
+            _ => todo!("non-color given to builtin function `adjust-hue()`")
+        };
+        let degrees = match arg!(args, 1, "degrees").eval() {
+            Value::Dimension(n, Unit::None)
+            | Value::Dimension(n, Unit::Percent)
+            | Value::Dimension(n, Unit::Deg) => n,
+            _ => todo!("expected either unitless or % number for alpha"),
+        };
+        Some(Value::Color(color.adjust_hue(degrees)))
+    });
 }

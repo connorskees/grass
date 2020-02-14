@@ -102,6 +102,13 @@ impl Color {
         (((min + max) / Number::from(2)) * Number::from(100)).round()
     }
 
+    pub fn adjust_hue(&self, degrees: Number) -> Self {
+        let hue = self.hue();
+        let saturation = Number::ratio(self.saturation(), 100);
+        let luminance = Number::ratio(self.lightness(), 100);
+        Color::from_hsla(hue + degrees, saturation, luminance, self.alpha())
+    }
+
     pub fn alpha(&self) -> Number {
         self.alpha.clone()
     }

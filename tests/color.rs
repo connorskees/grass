@@ -196,3 +196,24 @@ test!(
     "a {\n  color: invert(white, 20);\n}\n",
     "a {\n  color: #cccccc;\n}\n"
 );
+test!(
+    adjust_hue_positive,
+    "a {\n  color: adjust-hue(hsl(120, 30%, 90%), 60deg);\n}\n",
+    "a {\n  color: #deeded;\n}\n"
+);
+test!(
+    adjust_hue_negative,
+    "a {\n  color: adjust-hue(hsl(120, 30%, 90%), -60deg);\n}\n",
+    "a {\n  color: #ededde;\n}\n"
+);
+test!(
+    adjust_hue_3_hex,
+    "a {\n  color: adjust-hue(#811, 45deg);\n}\n",
+    "a {\n  color: #886a11;\n}\n"
+);
+// blocked on better parsing of call args
+// test!(
+//     adjust_hue_named_args,
+//     "a {\n  color: adjust-hue($color: hsl(120, 30%, 90%), $degrees: 60deg);\n}\n",
+//     "a {\n  color: #deeded;\n}\n"
+// );
