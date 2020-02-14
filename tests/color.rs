@@ -356,3 +356,23 @@ test!(
     "a {\n  color: complement(red);\n}\n",
     "a {\n  color: aqua;\n}\n"
 );
+test!(
+    mix_no_weight,
+    "a {\n  color: mix(#f00, #00f);\n}\n",
+    "a {\n  color: purple;\n}\n"
+);
+test!(
+    mix_weight_25,
+    "a {\n  color: mix(#f00, #00f, 25%);\n}\n",
+    "a {\n  color: #4000bf;\n}\n"
+);
+test!(
+    mix_opacity,
+    "a {\n  color: mix(rgba(255, 0, 0, 0.5), #00f);\n}\n",
+    "a {\n  color: rgba(64, 0, 191, 0.75);\n}\n"
+);
+test!(
+    mix_sanity_check,
+    "a {\n  color: mix(black, white);\n}\n",
+    "a {\n  color: gray;\n}\n"
+);

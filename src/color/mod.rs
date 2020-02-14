@@ -8,6 +8,18 @@ use num_traits::cast::ToPrimitive;
 
 mod name;
 
+macro_rules! clamp {
+    ($c:expr, $min:literal, $max:literal) => {
+        if $c > Number::from($max) {
+            Number::from($max)
+        } else if $c < Number::from($min) {
+            Number::from($min)
+        } else {
+            $c
+        }
+    };
+}
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub(crate) struct Color {
     red: Number,
@@ -76,6 +88,32 @@ impl Color {
 
     pub fn green(&self) -> Number {
         self.green.clone()
+    }
+
+    /// Mix two colors together with weight
+    /// Algorithm adapted from 
+    /// <https://github.com/sass/dart-sass/blob/0d0270cb12a9ac5cce73a4d0785fecb00735feee/lib/src/functions/color.dart#L718>
+    pub fn mix(self, other: Color, weight: Number) -> Self {
+        let weight = clamp!(weight, 0, 100);
+        let normalized_weight = weight.clone() * Number::from(2) - Number::from(1);
+        let alpha_distance = self.alpha.clone() - other.alpha.clone();
+
+        let combined_weight1 =
+            if normalized_weight.clone() * alpha_distance.clone() == Number::from(-1) {
+                normalized_weight
+            } else {
+                (normalized_weight.clone() + alpha_distance.clone())
+                    / (Number::from(1) + normalized_weight * alpha_distance)
+            };
+        let weight1 = (combined_weight1 + Number::from(1)) / Number::from(2);
+        let weight2 = Number::from(1) - weight1.clone();
+
+        Color::from_rgba(
+            self.red * weight1.clone() + other.red * weight2.clone(),
+            self.green * weight1.clone() + other.green * weight2.clone(),
+            self.blue * weight1.clone() + other.blue * weight2,
+            self.alpha * weight.clone() + other.alpha * (Number::from(1) - weight),
+        )
     }
 }
 
@@ -207,26 +245,11 @@ impl Color {
     }
 
     /// Create RGBA representation from HSLA values
-    pub fn from_hsla(
-        mut hue: Number,
-        mut saturation: Number,
-        mut luminance: Number,
-        mut alpha: Number,
-    ) -> Self {
-        macro_rules! clamp {
-            ($c:ident, $min:literal, $max:literal) => {
-                if $c > Number::from($max) {
-                    $c = Number::from($max)
-                } else if $c < Number::from($min) {
-                    $c = Number::from($min)
-                }
-            };
-        }
-
-        clamp!(hue, 0, 360);
-        clamp!(saturation, 0, 1);
-        clamp!(luminance, 0, 1);
-        clamp!(alpha, 0, 1);
+    pub fn from_hsla(hue: Number, saturation: Number, luminance: Number, alpha: Number) -> Self {
+        let mut hue = clamp!(hue, 0, 360);
+        let saturation = clamp!(saturation, 0, 1);
+        let luminance = clamp!(luminance, 0, 1);
+        let alpha = clamp!(alpha, 0, 1);
 
         if saturation.clone() == Number::from(0) {
             let luminance = if luminance > Number::from(100) {

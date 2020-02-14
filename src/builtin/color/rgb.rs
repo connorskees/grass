@@ -119,4 +119,22 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             _ => todo!("non-color given to builtin function `blue()`")
         }
     });
+    decl!(f "mix", |args, _| {
+        let color1 = match arg!(args, 0, "color1").eval() {
+            Value::Color(c) => c,
+            _ => todo!("non-color given to builtin function `mix()`")
+        };
+
+        let color2 = match arg!(args, 1, "color2").eval() {
+            Value::Color(c) => c,
+            _ => todo!("non-color given to builtin function `mix()`")
+        };
+
+        let weight = match arg!(args, 2, "weight"=Value::Dimension(Number::ratio(1, 2), Unit::None)) {
+            Value::Dimension(n, Unit::None) => n,
+            Value::Dimension(n, Unit::Percent) => n / Number::from(100),
+            _ => todo!("expected either unitless or % number for $weight")
+        };
+        Some(Value::Color(color1.mix(color2, weight)))
+    });
 }
