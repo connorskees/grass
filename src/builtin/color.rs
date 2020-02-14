@@ -10,17 +10,17 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     decl!(f "rgb", |args, _| {
         let channels = args.get("channels").unwrap_or(&Value::Null);
         if channels.is_null() {
-            let red = match arg!(args, 0, "red").clone().eval() {
+            let red = match arg!(args, 0, "red").eval() {
                 Value::Dimension(n, Unit::None) => n,
                 Value::Dimension(n, Unit::Percent) => (n / Number::from(100)) * Number::from(255),
                 _ => todo!("expected either unitless or % number for alpha"),
             };
-            let green = match arg!(args, 1, "green").clone().eval() {
+            let green = match arg!(args, 1, "green").eval() {
                 Value::Dimension(n, Unit::None) => n,
                 Value::Dimension(n, Unit::Percent) => (n / Number::from(100)) * Number::from(255),
                 _ => todo!("expected either unitless or % number for alpha"),
             };
-            let blue = match arg!(args, 2, "blue").clone().eval() {
+            let blue = match arg!(args, 2, "blue").eval() {
                 Value::Dimension(n, Unit::None) => n,
                 Value::Dimension(n, Unit::Percent) => (n / Number::from(100)) * Number::from(255),
                 _ => todo!("expected either unitless or % number for alpha"),
@@ -38,22 +38,22 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     decl!(f "rgba", |args, _| {
         let channels = args.get("channels").unwrap_or(&Value::Null);
         if channels.is_null() {
-            let red = match arg!(args, 0, "red").clone().eval() {
+            let red = match arg!(args, 0, "red").eval() {
                 Value::Dimension(n, Unit::None) => n,
                 Value::Dimension(n, Unit::Percent) => (n / Number::from(100)) * Number::from(255),
                 _ => todo!("expected either unitless or % number for alpha"),
             };
-            let green = match arg!(args, 1, "green").clone().eval() {
+            let green = match arg!(args, 1, "green").eval() {
                 Value::Dimension(n, Unit::None) => n,
                 Value::Dimension(n, Unit::Percent) => (n / Number::from(100)) * Number::from(255),
                 _ => todo!("expected either unitless or % number for alpha"),
             };
-            let blue = match arg!(args, 2, "blue").clone().eval() {
+            let blue = match arg!(args, 2, "blue").eval() {
                 Value::Dimension(n, Unit::None) => n,
                 Value::Dimension(n, Unit::Percent) => (n / Number::from(100)) * Number::from(255),
                 _ => todo!("expected either unitless or % number for alpha"),
             };
-            let alpha = match arg!(args, 3, "alpha").clone().eval() {
+            let alpha = match arg!(args, 3, "alpha").eval() {
                 Value::Dimension(n, Unit::None) => n,
                 Value::Dimension(n, Unit::Percent) => n / Number::from(100),
                 _ => todo!("expected either unitless or % number for alpha"),
@@ -64,18 +64,18 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         }
     });
     decl!(f "hsl", |args, _| {
-        let hue = match arg!(args, 0, "hue").clone().eval() {
+        let hue = match arg!(args, 0, "hue").eval() {
             Value::Dimension(n, Unit::None)
             | Value::Dimension(n, Unit::Percent)
             | Value::Dimension(n, Unit::Deg) => n,
             _ => todo!("expected either unitless or % number for alpha"),
         };
-        let saturation = match arg!(args, 1, "saturation").clone().eval() {
+        let saturation = match arg!(args, 1, "saturation").eval() {
             Value::Dimension(n, Unit::None)
             | Value::Dimension(n, Unit::Percent) => n / Number::from(100),
             _ => todo!("expected either unitless or % number for alpha"),
         };
-        let luminance = match arg!(args, 2, "luminance").clone().eval() {
+        let luminance = match arg!(args, 2, "luminance").eval() {
             Value::Dimension(n, Unit::None)
             | Value::Dimension(n, Unit::Percent) => n / Number::from(100),
             _ => todo!("expected either unitless or % number for alpha"),
@@ -83,23 +83,23 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         Some(Value::Color(Color::from_hsla(hue, saturation, luminance, Number::from(1))))
     });
     decl!(f "hsla", |args, _| {
-        let hue = match arg!(args, 0, "hue").clone().eval() {
+        let hue = match arg!(args, 0, "hue").eval() {
             Value::Dimension(n, Unit::None)
             | Value::Dimension(n, Unit::Percent)
             | Value::Dimension(n, Unit::Deg) => n,
             _ => todo!("expected either unitless or % number for alpha"),
         };
-        let saturation = match arg!(args, 1, "saturation").clone().eval() {
+        let saturation = match arg!(args, 1, "saturation").eval() {
             Value::Dimension(n, Unit::None)
             | Value::Dimension(n, Unit::Percent) => n / Number::from(100),
             _ => todo!("expected either unitless or % number for alpha"),
         };
-        let luminance = match arg!(args, 2, "luminance").clone().eval() {
+        let luminance = match arg!(args, 2, "luminance").eval() {
             Value::Dimension(n, Unit::None)
             | Value::Dimension(n, Unit::Percent) => n / Number::from(100),
             _ => todo!("expected either unitless or % number for alpha"),
         };
-        let alpha = match arg!(args, 3, "alpha").clone().eval() {
+        let alpha = match arg!(args, 3, "alpha").eval() {
             Value::Dimension(n, Unit::None) => n,
             Value::Dimension(n, Unit::Percent) => n / Number::from(100),
             _ => todo!("expected either unitless or % number for alpha"),
