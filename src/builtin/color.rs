@@ -175,8 +175,20 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             Value::Dimension(n, Unit::None)
             | Value::Dimension(n, Unit::Percent)
             | Value::Dimension(n, Unit::Deg) => n,
-            _ => todo!("expected either unitless or % number for alpha"),
+            _ => todo!("expected either unitless or % number for degrees"),
         };
         Some(Value::Color(color.adjust_hue(degrees)))
+    });
+    decl!(f "lighten", |args, _| {
+        let color = match arg!(args, 0, "color").eval() {
+            Value::Color(c) => c,
+            _ => todo!("non-color given to builtin function `lighten()`")
+        };
+        let amount = match arg!(args, 1, "amount").eval() {
+            Value::Dimension(n, Unit::None) => n,
+            Value::Dimension(n, Unit::Percent) => n / Number::from(100),
+            _ => todo!("expected either unitless or % number for amount"),
+        };
+        Some(Value::Color(color.lighten(amount)))
     });
 }

@@ -217,3 +217,20 @@ test!(
 //     "a {\n  color: adjust-hue($color: hsl(120, 30%, 90%), $degrees: 60deg);\n}\n",
 //     "a {\n  color: #deeded;\n}\n"
 // );
+// test!(
+//     lighten_named_args,
+//     "a {\n  color: lighten($color: hsl(0, 0%, 0%), $amount: 30%);\n}\n",
+//     "a {\n  color: #deeded;\n}\n"
+// );
+test!(
+    lighten_basic,
+    "a {\n  color: lighten(hsl(0, 0%, 0%), 30%);\n}\n",
+    "a {\n  color: #4d4d4d;\n}\n"
+);
+test!(
+    lighten_3_hex,
+    "a {\n  color: lighten(#800, 20%);\n}\n",
+    // eventually, this should become `#e00`
+    // blocked on recognizing when to use 3-hex over 6-hex
+    "a {\n  color: #ee0000;\n}\n"
+);

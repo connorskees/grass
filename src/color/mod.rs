@@ -102,11 +102,54 @@ impl Color {
         (((min + max) / Number::from(2)) * Number::from(100)).round()
     }
 
+    pub fn as_hsla(&self) -> (Number, Number, Number, Number) {
+        let red = self.red.clone() / Number::from(255);
+        let green = self.green.clone() / Number::from(255);
+        let blue = self.blue.clone() / Number::from(255);
+        let min = red.clone().min(green.clone().min(blue.clone()));
+        let max = red.clone().max(green.clone().max(blue.clone()));
+
+        let lightness = (min.clone() + max.clone()) / Number::from(2);
+
+        let saturation = if &min == &max {
+            Number::from(0)
+        } else {
+            let d = max.clone() - min.clone();
+            let mm = max.clone() + min.clone();
+            d / if mm > Number::from(1) {
+                Number::from(2) - mm
+            } else {
+                mm
+            }
+        };
+
+        let mut hue = if min == max {
+            Number::from(0)
+        } else if red == max {
+            (green - blue) / (max - min)
+        } else if green == max {
+            Number::from(2) + (blue - red) / (max - min)
+        } else {
+            Number::from(4) + (red - green) / (max - min)
+        };
+
+        if hue < Number::from(0) {
+            hue += Number::from(360);
+        }
+
+        hue *= Number::from(60);
+
+        (hue, saturation, lightness, self.alpha())
+    }
+
     pub fn adjust_hue(&self, degrees: Number) -> Self {
-        let hue = self.hue();
-        let saturation = Number::ratio(self.saturation(), 100);
-        let luminance = Number::ratio(self.lightness(), 100);
-        Color::from_hsla(hue + degrees, saturation, luminance, self.alpha())
+        let (hue, saturation, luminance, alpha) = self.as_hsla();
+        Color::from_hsla(hue + degrees, saturation, luminance, alpha)
+    }
+
+    pub fn lighten(&self, amount: Number) -> Self {
+        let (hue, saturation, luminance, alpha) = self.as_hsla();
+        Color::from_hsla(hue, saturation, luminance + amount, alpha)
     }
 
     pub fn alpha(&self) -> Number {
