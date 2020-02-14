@@ -52,12 +52,12 @@ impl Color {
             return Number::from(0);
         }
 
-        let mut hue = if red == max {
-            (green - blue) / (max - min)
+        let mut hue = if blue == max {
+            Number::from(4) + (red - green) / (max - min)
         } else if green == max {
             Number::from(2) + (blue - red) / (max - min)
         } else {
-            Number::from(4) + (red - green) / (max - min)
+            (green - blue) / (max - min)
         };
 
         if hue < Number::from(0) {

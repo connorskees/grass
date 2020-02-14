@@ -163,12 +163,32 @@ test!(
 );
 test!(
     hue,
-    "$a: hsl(193, 67%, 28%);\n\na {\n  color: hue($a);\n}\n",
+    "a {\n  color: hue(hsl(193, 67%, 28%));\n}\n",
     "a {\n  color: 193deg;\n}\n"
 );
 test!(
+    hue_red_equals_blue,
+    "a {\n  color: hue(rgb(1, 0, 1));\n}\n",
+    "a {\n  color: 300deg;\n}\n"
+);
+test!(
+    hue_green_equals_blue,
+    "a {\n  color: hue(rgb(0, 1, 1));\n}\n",
+    "a {\n  color: 180deg;\n}\n"
+);
+test!(
+    hue_green_is_1,
+    "a {\n  color: hue(rgb(0, 1, 0));\n}\n",
+    "a {\n  color: 120deg;\n}\n"
+);
+test!(
+    hue_rgb_all_equal,
+    "a {\n  color: hue(rgb(1, 1, 1));\n}\n",
+    "a {\n  color: 0deg;\n}\n"
+);
+test!(
     saturation,
-    "$a: hsl(193, 67%, 28%);\n\na {\n  color: saturation($a);\n}\n",
+    "a {\n  color: saturation(hsl(193, 67%, 28%));\n}\n",
     "a {\n  color: 67%;\n}\n"
 );
 test!(
@@ -178,7 +198,7 @@ test!(
 );
 test!(
     lightness,
-    "$a: hsl(193, 67%, 28%);\n\na {\n  color: lightness($a);\n}\n",
+    "a {\n  color: lightness(hsl(193, 67%, 28%));\n}\n",
     "a {\n  color: 28%;\n}\n"
 );
 test!(
