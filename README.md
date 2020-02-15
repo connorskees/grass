@@ -13,8 +13,14 @@ cargo b --release
 ./sass-spec/sass-spec.rb -c './target/release/grass'
 ```
 
-
 The focus right now is just getting the most basic tests to pass.
+
+```
+2020-02-15
+PASSING: 812
+FAILING: 4281
+TOTAL: 5093
+```
 
 ```
 2020-02-10
