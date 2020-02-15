@@ -406,3 +406,18 @@ test!(
     "a {\n  color: change-color(hsl(25, 100%, 80%), $lightness: 40%, $alpha: 0.8);\n}\n",
     "a {\n  color: rgba(204, 85, 0, 0.8);\n}\n"
 );
+test!(
+    adjust_color_blue,
+    "a {\n  color: adjust-color(#102030, $blue: 5);\n}\n",
+    "a {\n  color: #102035;\n}\n"
+);
+test!(
+    adjust_color_negative,
+    "a {\n  color: adjust-color(#102030, $red: -5, $blue: 5);\n}\n",
+    "a {\n  color: #0b2035;\n}\n"
+);
+test!(
+    adjust_color_lum_alpha,
+    "a {\n  color: adjust-color(hsl(25, 100%, 80%), $lightness: -30%, $alpha: -0.4);\n}\n",
+    "a {\n  color: rgba(255, 106, 0, 0.6);\n}\n"
+);
