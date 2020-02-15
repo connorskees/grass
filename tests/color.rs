@@ -441,3 +441,18 @@ test!(
     "a {\n  color: scale-color(sienna, $alpha: -70%);\n}\n",
     "a {\n  color: rgba(160, 82, 45, 0.3);\n}\n"
 );
+test!(
+    ie_hex_str_hex_3,
+    "a {\n  color: ie-hex-str(#abc);\n}\n",
+    "a {\n  color: #FFAABBCC;\n}\n"
+);
+test!(
+    ie_hex_str_hex_6,
+    "a {\n  color: ie-hex-str(#3322BB);\n}\n",
+    "a {\n  color: #FF3322BB;\n}\n"
+);
+test!(
+    ie_hex_str_rgb,
+    "a {\n  color: ie-hex-str(rgba(0, 255, 0, 0.5));\n}\n",
+    "a {\n  color: #8000FF00;\n}\n"
+);

@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 
 use super::Builtin;
 use crate::color::Color;
+use crate::common::QuoteKind;
 use crate::units::Unit;
 use crate::value::{Number, Value};
 
@@ -171,6 +172,13 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         } else {
             color
         }))
+    });
+    decl!(f "ie-hex-str", |args, _| {
+        let color = match arg!(args, 0, "color").eval() {
+            Value::Color(c) => c.clone(),
+            _ => todo!("non-color given to builtin function `ie-hex-str()`")
+        };
+        Some(Value::Ident(color.to_ie_hex_str(), QuoteKind::None))
     });
 }
 

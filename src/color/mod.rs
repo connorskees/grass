@@ -396,6 +396,21 @@ impl Color {
     }
 }
 
+/// Other color functions
+impl Color {
+    pub fn to_ie_hex_str(&self) -> String {
+        format!(
+            "#{:02X}{:02X}{:02X}{:02X}",
+            (self.alpha.clone() * Number::from(255))
+                .round()
+                .to_integer(),
+            self.red.to_integer(),
+            self.green.to_integer(),
+            self.blue.to_integer()
+        )
+    }
+}
+
 /// Get the proper representation from RGBA values
 fn repr(red: &Number, green: &Number, blue: &Number, alpha: &Number) -> String {
     macro_rules! into_u8 {
