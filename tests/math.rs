@@ -63,3 +63,33 @@ test!(
     "a {\n  color: abs(-10px);\n}\n",
     "a {\n  color: 10px;\n}\n"
 );
+test!(
+    comparable_unitless,
+    "a {\n  color: comparable(1, 2);\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    comparable_none_px,
+    "a {\n  color: comparable(1, 2px);\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    comparable_px_px,
+    "a {\n  color: comparable(1px, 2px);\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    comparable_absolute,
+    "a {\n  color: comparable(1px, 2in);\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    comparable_absolute_font_relative,
+    "a {\n  color: comparable(1px, 2em);\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    comparable_named,
+    "a {\n  color: comparable($number1: 1, $number2: 2);\n}\n",
+    "a {\n  color: true;\n}\n"
+);

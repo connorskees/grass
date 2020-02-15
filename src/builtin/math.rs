@@ -36,4 +36,16 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             _ => todo!("expected number in builtin function `abs()`")
         }
     });
+    decl!(f "comparable", |args, _| {
+        let unit1 = match arg!(args, 0, "number1").eval() {
+            Value::Dimension(_, u) => u,
+            _ => todo!("$number1: ___ is not a number.")
+        };
+        let unit2 = match arg!(args, 1, "number2").eval() {
+            Value::Dimension(_, u) => u,
+            _ => todo!("$number2: ____ is not a number.")
+        };
+
+        Some(Value::bool(unit1.comparable(&unit2)))
+    });
 }

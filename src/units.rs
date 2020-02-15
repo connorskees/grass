@@ -25,7 +25,6 @@ pub(crate) enum Unit {
     Rem,
     /// Line height of the element
     Lh,
-    Percent,
     /// x-height of the element's font
     Ex,
     /// The advance measure (width) of the glyph "0" of the element's font
@@ -86,11 +85,75 @@ pub(crate) enum Unit {
     // Other units
     /// Represents a fraction of the available space in the grid container
     Fr,
+    Percent,
 
     /// Unknown unit
     Unknown(String),
     /// Unspecified unit
     None,
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub(crate) enum UnitKind {
+    Absolute,
+    FontRelative,
+    ViewportRelative,
+    Angle,
+    Time,
+    Frequency,
+    Resolution,
+    Other,
+    None,
+}
+
+impl Unit {
+    pub fn comparable(&self, other: &Unit) -> bool {
+        match self.kind() {
+            UnitKind::FontRelative | UnitKind::ViewportRelative | UnitKind::Other => self == other,
+            UnitKind::None => true,
+            u => other.kind() == u || other.kind() == UnitKind::None,
+        }
+    }
+
+    pub fn kind(&self) -> UnitKind {
+        match self {
+            Unit::Px
+            | Unit::Mm
+            | Unit::In
+            | Unit::Cm
+            | Unit::Q
+            | Unit::Pt
+            | Unit::Pc => UnitKind::Absolute,
+            Unit::Em
+            | Unit::Rem
+            | Unit::Lh
+            | Unit::Ex
+            | Unit::Ch
+            | Unit::Cap
+            | Unit::Ic
+            | Unit::Rlh => UnitKind::FontRelative,
+            Unit::Vw
+            | Unit::Vh
+            | Unit::Vmin
+            | Unit::Vmax
+            | Unit::Vi
+            | Unit::Vb => UnitKind::ViewportRelative,
+            Unit::Deg
+            | Unit::Grad
+            | Unit::Rad
+            | Unit::Turn => UnitKind::Angle,
+            Unit::S
+            | Unit::Ms => UnitKind::Time,
+            Unit::Hz
+            | Unit::Khz => UnitKind::Frequency,
+            Unit::Dpi
+            | Unit::Dpcm
+            | Unit::Dppx
+            | Unit::X => UnitKind::Resolution,
+            Unit::None => UnitKind::None,
+            _ => UnitKind::Other,
+        }
+    }
 }
 
 impl From<&String> for Unit {
