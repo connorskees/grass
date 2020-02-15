@@ -23,7 +23,12 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             | Value::Dimension(n, Unit::Percent) => n / Number::from(100),
             _ => todo!("expected either unitless or % number for alpha"),
         };
-        Some(Value::Color(Color::from_hsla(hue, saturation, luminance, Number::from(1))))
+        let alpha = match arg!(args, 3, "alpha"=Value::Dimension(Number::from(1), Unit::None)) {
+            Value::Dimension(n, Unit::None) => n,
+            Value::Dimension(n, Unit::Percent) => n / Number::from(100),
+            _ => todo!("non-number alpha given to builtin function `rgb()`")
+        };
+        Some(Value::Color(Color::from_hsla(hue, saturation, luminance, alpha)))
     });
     decl!(f "hsla", |args, _| {
         let hue = match arg!(args, 0, "hue").eval() {

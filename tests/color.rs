@@ -129,6 +129,11 @@ test!(
     "a {\n  color: #fbfdfe;\n}\n"
 );
 test!(
+    hsl_four_args,
+    "a {\n  color: hsl(0, 0, 0, 0.456);\n}\n",
+    "a {\n  color: rgba(0, 0, 0, 0.456);\n}\n"
+);
+test!(
     hsl_negative_hue,
     "a {\n  color: hsl(-60deg, 100%, 50%);\n}\n",
     "a {\n  color: fuchsia;\n}\n"
