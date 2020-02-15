@@ -5,7 +5,7 @@ An implementation of the SASS spec in pure Rust
 To run the official test suite,
 
 ```bash
-git clone https://github.com/ConnorSkees/grass
+git clone https://github.com/connorskees/grass
 cd grass
 git submodule init
 git submodule update
