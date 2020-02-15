@@ -57,6 +57,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         };
         let mut end = match arg!(args, 2, "end-at"=Value::Null).eval() {
             Value::Dimension(n, Unit::None) if n.to_integer().is_positive() => n.to_integer().to_usize().unwrap(),
+            Value::Dimension(n, Unit::None) if n == Number::from(0) => 0_usize,
             Value::Dimension(n, Unit::None) if n < -Number::from(str_len) => 0_usize,
             Value::Dimension(n, Unit::None) => (BigInt::from(str_len + 1) + n.to_integer()).to_usize().unwrap(),
             Value::Dimension(..) => todo!("$end: Expected ___ to have no units."),

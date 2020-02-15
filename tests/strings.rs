@@ -78,3 +78,8 @@ test!(
     "a {\n  color: str-slice(\"cde\", 0, -100);\n}\n",
     "a {\n  color: \"\";\n}\n"
 );
+test!(
+    str_slice_end_0,
+    "a {\n  color: str-slice(\"cde\", 1, 0);\n}\n",
+    "a {\n  color: \"\";\n}\n"
+);
