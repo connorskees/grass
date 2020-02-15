@@ -130,3 +130,8 @@ test!(
     "a {\n  color:red\n}\n",
     "a {\n  color: red;\n}\n"
 );
+test!(
+    removes_null_value,
+    "a {\n  color: null;\n}\n",
+    ""
+);

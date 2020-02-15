@@ -36,6 +36,9 @@ impl Toplevel {
     }
 
     fn push_style(&mut self, s: Style) {
+        if s.value.is_null() {
+            return;
+        }
         if let Toplevel::RuleSet(_, entries) = self {
             entries.push(BlockEntry::Style(Box::new(s)));
         }
