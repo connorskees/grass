@@ -63,3 +63,8 @@ test!(
     "a {\n  color: str-slice(abcd, 2, -2);\n}\n",
     "a {\n  color: bc;\n}\n"
 );
+test!(
+    str_slice_start_0,
+    "a {\n  color: str-slice(cde, 0);\n}\n",
+    "a {\n  color: cde;\n}\n"
+);

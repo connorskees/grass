@@ -49,6 +49,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         let str_len = string.len();
         let start = match arg!(args, 1, "start-at").eval() {
             Value::Dimension(n, Unit::None) if n.to_integer().is_positive() => n.to_integer().to_usize().unwrap(),
+            Value::Dimension(n, Unit::None) if n == Number::from(0) => 1_usize,
             Value::Dimension(n, Unit::None) => (BigInt::from(str_len + 1) + n.to_integer()).to_usize().unwrap(),
             Value::Dimension(..) => todo!("$start: Expected ___ to have no units."),
             _ => todo!("$start-at: ____ is not a number")
