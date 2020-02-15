@@ -255,6 +255,7 @@ impl Color {
         } else {
             hue
         };
+
         let saturation = clamp!(saturation, 0, 1);
         let luminance = clamp!(luminance, 0, 1);
         let alpha = clamp!(alpha, 0, 1);
@@ -367,7 +368,12 @@ impl Color {
 /// Opacity color functions
 impl Color {
     pub fn alpha(&self) -> Number {
-        self.alpha.clone()
+        let a = self.alpha.clone();
+        if a > Number::from(1) {
+            a / Number::from(255)
+        } else {
+            a
+        }
     }
 
     /// Change `alpha` to value given

@@ -8,13 +8,13 @@ use crate::value::{Number, Value};
 pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     decl!(f "alpha", |args, _| {
         match arg!(args, 0, "color") {
-            Value::Color(c) => Some(Value::Dimension(c.alpha() / Number::from(255), Unit::None)),
+            Value::Color(c) => Some(Value::Dimension(c.alpha(), Unit::None)),
             _ => todo!("non-color given to builtin function `alpha()`")
         }
     });
     decl!(f "opacity", |args, _| {
         match arg!(args, 0, "color") {
-            Value::Color(c) => Some(Value::Dimension(c.alpha() / Number::from(255), Unit::None)),
+            Value::Color(c) => Some(Value::Dimension(c.alpha(), Unit::None)),
             Value::Dimension(num, unit) => Some(Value::Ident(format!("opacity({}{})", num , unit), QuoteKind::None)),
             _ => todo!("non-color given to builtin function `opacity()`")
         }

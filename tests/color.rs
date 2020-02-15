@@ -436,3 +436,8 @@ test!(
     "a {\n  color: scale-color(hsl(200, 70%, 80%), $saturation: -90%, $alpha: -30%);\n}\n",
     "a {\n  color: rgba(200, 205, 208, 0.7);\n}\n"
 );
+test!(
+    scale_color_alpha_over_1,
+    "a {\n  color: scale-color(sienna, $alpha: -70%);\n}\n",
+    "a {\n  color: rgba(160, 82, 45, 0.3);\n}\n"
+);
