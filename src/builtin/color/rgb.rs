@@ -93,10 +93,10 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
                 Value::Dimension(n, Unit::Percent) => (n / Number::from(100)) * Number::from(255),
                 _ => todo!("expected either unitless or % number for alpha"),
             };
-            let alpha = match arg!(args, 3, "alpha").eval() {
+            let alpha = match arg!(args, 3, "alpha"=Value::Dimension(Number::from(1), Unit::None)).eval() {
                 Value::Dimension(n, Unit::None) => n,
                 Value::Dimension(n, Unit::Percent) => n / Number::from(100),
-                _ => todo!("expected either unitless or % number for alpha"),
+                _ => todo!("expected either unitless or % number for alpha")
             };
             Some(Value::Color(Color::from_rgba(red, green, blue, alpha)))
         }

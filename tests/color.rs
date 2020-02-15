@@ -114,6 +114,11 @@ test!(
     "a {\n  color: rgba(1, 2, 3, 0.5);\n}\n"
 );
 test!(
+    rgba_3_args,
+    "a {\n  color: rgba(7.1%, 20.4%, 33.9%);\n}\n",
+    "a {\n  color: #123456;\n}\n"
+);
+test!(
     hsl_basic,
     "a {\n  color: hsl(193, 67%, 99);\n}\n",
     "a {\n  color: #fbfdfe;\n}\n"
