@@ -68,3 +68,13 @@ test!(
     "a {\n  color: str-slice(cde, 0);\n}\n",
     "a {\n  color: cde;\n}\n"
 );
+test!(
+    str_slice_start_below_negative_str_len,
+    "a {\n  color: str-slice(cde, -100);\n}\n",
+    "a {\n  color: cde;\n}\n"
+);
+test!(
+    str_slice_end_below_negative_str_len,
+    "a {\n  color: str-slice(\"cde\", 0, -100);\n}\n",
+    "a {\n  color: \"\";\n}\n"
+);
