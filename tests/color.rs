@@ -421,3 +421,18 @@ test!(
     "a {\n  color: adjust-color(hsl(25, 100%, 80%), $lightness: -30%, $alpha: -0.4);\n}\n",
     "a {\n  color: rgba(255, 106, 0, 0.6);\n}\n"
 );
+test!(
+    scale_color_lightness,
+    "a {\n  color: scale-color(hsl(120, 70%, 80%), $lightness: 50%);\n}\n",
+    "a {\n  color: #d4f7d4;\n}\n"
+);
+test!(
+    scale_color_negative,
+    "a {\n  color: scale-color(rgb(200, 150%, 170%), $green: -40%, $blue: 70%);\n}\n",
+    "a {\n  color: #c899ff;\n}\n"
+);
+test!(
+    scale_color_alpha,
+    "a {\n  color: scale-color(hsl(200, 70%, 80%), $saturation: -90%, $alpha: -30%);\n}\n",
+    "a {\n  color: rgba(200, 205, 208, 0.7);\n}\n"
+);
