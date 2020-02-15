@@ -89,6 +89,11 @@ test!(
 //     "a {\n  color: #010203;\n}\n"
 // );
 test!(
+    rgb_two_args,
+    "a {\n  color: rgb(#123, 0);\n}\n",
+    "a {\n  color: rgba(17, 34, 51, 0);\n}\n"
+);
+test!(
     rgba_two_args,
     "a {\n  color: rgba(red, 0.5);\n}\n",
     "a {\n  color: rgba(255, 0, 0, 0.5);\n}\n"
