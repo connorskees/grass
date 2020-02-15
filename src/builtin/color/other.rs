@@ -5,6 +5,26 @@ use crate::color::Color;
 use crate::units::Unit;
 use crate::value::{Number, Value};
 
+macro_rules! opt_arg {
+    ($args:ident, $name:ident, $arg:literal) => {
+        let $name = match arg!($args, -1, $arg = Value::Null).eval() {
+            Value::Dimension(n, Unit::None) => Some(n),
+            Value::Dimension(n, Unit::Percent) => Some(n / Number::from(100)),
+            Value::Null => None,
+            _ => todo!(concat!("expected either unitless or % number for $", $arg)),
+        };
+    };
+    (hsl: $args:ident, $name:ident, $arg:literal) => {
+        let $name = match arg!($args, -1, $arg = Value::Null).eval() {
+            Value::Dimension(n, Unit::None) | Value::Dimension(n, Unit::Percent) => {
+                Some(n / Number::from(100))
+            }
+            Value::Null => None,
+            _ => todo!(concat!("expected either unitless or % number for $", $arg)),
+        };
+    };
+}
+
 pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     decl!(f "change-color", |args, _| {
         let color = match arg!(args, 0, "color").eval() {
@@ -12,31 +32,10 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             _ => todo!("non-color given to builtin function `change-color()`")
         };
 
-        let alpha = match arg!(args, -1, "alpha"=Value::Null).eval() {
-            Value::Dimension(n, Unit::None) => Some(n),
-            Value::Dimension(n, Unit::Percent) => Some(n / Number::from(100)),
-            Value::Null => None,
-            _ => todo!("expected either unitless or % number for $alpha")
-        };
-
-        let red = match arg!(args, -1, "red"=Value::Null).eval() {
-            Value::Dimension(n, Unit::None) => Some(n),
-            Value::Dimension(n, Unit::Percent) => Some(n / Number::from(100)),
-            Value::Null => None,
-            _ => todo!("expected either unitless or % number for $red")
-        };
-        let green = match arg!(args, -1, "green"=Value::Null).eval() {
-            Value::Dimension(n, Unit::None) => Some(n),
-            Value::Dimension(n, Unit::Percent) => Some(n / Number::from(100)),
-            Value::Null => None,
-            _ => todo!("expected either unitless or % number for $green")
-        };
-        let blue = match arg!(args, -1, "blue"=Value::Null).eval() {
-            Value::Dimension(n, Unit::None) => Some(n),
-            Value::Dimension(n, Unit::Percent) => Some(n / Number::from(100)),
-            Value::Null => None,
-            _ => todo!("expected either unitless or % number for $blue")
-        };
+        opt_arg!(args, alpha, "alpha");
+        opt_arg!(args, red, "red");
+        opt_arg!(args, green, "green");
+        opt_arg!(args, blue, "blue");
 
         if red.is_some() || green.is_some() || blue.is_some() {
             return Some(Value::Color(Color::from_rgba(red.unwrap_or(color.red()), green.unwrap_or(color.green()), blue.unwrap_or(color.blue()), alpha.unwrap_or(color.alpha()))))
@@ -49,18 +48,9 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             Value::Null => None,
             _ => todo!("expected either unitless or % number for hue"),
         };
-        let saturation = match arg!(args, -1, "saturation"=Value::Null).eval() {
-            Value::Dimension(n, Unit::None)
-            | Value::Dimension(n, Unit::Percent) => Some(n / Number::from(100)),
-            Value::Null => None,
-            _ => todo!("expected either unitless or % number for saturation"),
-        };
-        let luminance = match arg!(args, -1, "lightness"=Value::Null).eval() {
-            Value::Dimension(n, Unit::None)
-            | Value::Dimension(n, Unit::Percent) => Some(n / Number::from(100)),
-            Value::Null => None,
-            _ => todo!("expected either unitless or % number for luminance"),
-        };
+
+        opt_arg!(hsl: args, saturation, "saturation");
+        opt_arg!(hsl: args, luminance, "lightness");
 
         if hue.is_some() || saturation.is_some() || luminance.is_some() {
             // Color::as_hsla() returns more exact values than Color::hue(), etc.
