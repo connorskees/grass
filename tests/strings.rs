@@ -83,3 +83,21 @@ test!(
     "a {\n  color: str-slice(\"cde\", 1, 0);\n}\n",
     "a {\n  color: \"\";\n}\n"
 );
+test!(
+    str_len_dbl_quotes,
+    "a {\n  color: str-length(\"cde\");\n}\n",
+    "a {\n  color: 3;\n}\n"
+);
+test!(
+    str_len_unquoted,
+    "a {\n  color: str-length(cde);\n}\n",
+    "a {\n  color: 3;\n}\n"
+);
+// blocked on refactoring how function-call args are parsed
+// right now, whitespace is eaten between idents with no
+// regard for quotes
+// test!(
+//     str_len_space,
+//     "a {\n  color: str-length(\"foo bar\");\n}\n",
+//     "a {\n  color: 7;\n}\n"
+// );
