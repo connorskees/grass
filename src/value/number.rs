@@ -51,6 +51,10 @@ impl Number {
             val: self.val.abs(),
         }
     }
+
+    pub fn is_decimal(&self) -> bool {
+        self.val.denom() != &BigInt::from(1)
+    }
 }
 
 impl fmt::LowerHex for Number {

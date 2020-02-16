@@ -58,6 +58,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         };
         let str_len = string.len();
         let start = match arg!(args, 1, "start-at").eval() {
+            Value::Dimension(n, Unit::None) if n.is_decimal() => return Err(format!("{} is not an int.", n).into()),
             Value::Dimension(n, Unit::None) if n.to_integer().is_positive() => n.to_integer().to_usize().unwrap(),
             Value::Dimension(n, Unit::None) if n == Number::from(0) => 1_usize,
             Value::Dimension(n, Unit::None) if n < -Number::from(str_len) => 1_usize,
@@ -66,6 +67,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             _ => todo!("$start-at: ____ is not a number")
         };
         let mut end = match arg!(args, 2, "end-at"=Value::Null).eval() {
+            Value::Dimension(n, Unit::None) if n.is_decimal() => return Err(format!("{} is not an int.", n).into()),
             Value::Dimension(n, Unit::None) if n.to_integer().is_positive() => n.to_integer().to_usize().unwrap(),
             Value::Dimension(n, Unit::None) if n == Number::from(0) => 0_usize,
             Value::Dimension(n, Unit::None) if n < -Number::from(str_len) => 0_usize,
