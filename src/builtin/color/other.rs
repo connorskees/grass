@@ -39,7 +39,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         opt_arg!(args, blue, "blue");
 
         if red.is_some() || green.is_some() || blue.is_some() {
-            return Some(Value::Color(Color::from_rgba(red.unwrap_or(color.red()), green.unwrap_or(color.green()), blue.unwrap_or(color.blue()), alpha.unwrap_or(color.alpha()))))
+            return Ok(Value::Color(Color::from_rgba(red.unwrap_or(color.red()), green.unwrap_or(color.green()), blue.unwrap_or(color.blue()), alpha.unwrap_or(color.alpha()))))
         }
 
         let hue = match arg!(args, -1, "hue"=Value::Null).eval() {
@@ -56,10 +56,10 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         if hue.is_some() || saturation.is_some() || luminance.is_some() {
             // Color::as_hsla() returns more exact values than Color::hue(), etc.
             let (this_hue, this_saturation, this_luminance, this_alpha) = color.as_hsla();
-            return Some(Value::Color(Color::from_hsla(hue.unwrap_or(this_hue), saturation.unwrap_or(this_saturation), luminance.unwrap_or(this_luminance), alpha.unwrap_or(this_alpha))))
+            return Ok(Value::Color(Color::from_hsla(hue.unwrap_or(this_hue), saturation.unwrap_or(this_saturation), luminance.unwrap_or(this_luminance), alpha.unwrap_or(this_alpha))))
         }
 
-        Some(Value::Color(if let Some(a) = alpha {
+        Ok(Value::Color(if let Some(a) = alpha {
             color.with_alpha(a)
         } else {
             color
@@ -78,7 +78,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
 
         if red.is_some() || green.is_some() || blue.is_some() {
             return
-            Some(Value::Color(
+            Ok(Value::Color(
                 Color::from_rgba(
                     color.red() + red.unwrap_or(Number::from(0)),
                     color.green() + green.unwrap_or(Number::from(0)),
@@ -102,7 +102,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         if hue.is_some() || saturation.is_some() || luminance.is_some() {
             // Color::as_hsla() returns more exact values than Color::hue(), etc.
             let (this_hue, this_saturation, this_luminance, this_alpha) = color.as_hsla();
-            return Some(Value::Color(
+            return Ok(Value::Color(
                 Color::from_hsla(
                     this_hue + hue.unwrap_or(Number::from(0)),
                     this_saturation + saturation.unwrap_or(Number::from(0)),
@@ -112,7 +112,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             ))
         }
 
-        Some(Value::Color(if let Some(a) = alpha {
+        Ok(Value::Color(if let Some(a) = alpha {
             let temp_alpha = color.alpha();
             color.with_alpha(temp_alpha + a)
         } else {
@@ -132,7 +132,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
 
         if red.is_some() || green.is_some() || blue.is_some() {
             return
-            Some(Value::Color(
+            Ok(Value::Color(
                 Color::from_rgba(
                     scale(color.red(), red.unwrap_or(Number::from(0)), Number::from(255)),
                     scale(color.green(), green.unwrap_or(Number::from(0)), Number::from(255)),
@@ -156,7 +156,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         if hue.is_some() || saturation.is_some() || luminance.is_some() {
             // Color::as_hsla() returns more exact values than Color::hue(), etc.
             let (this_hue, this_saturation, this_luminance, this_alpha) = color.as_hsla();
-            return Some(Value::Color(
+            return Ok(Value::Color(
                 Color::from_hsla(
                     scale(this_hue, hue.unwrap_or(Number::from(0)), Number::from(360)),
                     scale(this_saturation, saturation.unwrap_or(Number::from(0)), Number::from(1)),
@@ -166,7 +166,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             ))
         }
 
-        Some(Value::Color(if let Some(a) = alpha {
+        Ok(Value::Color(if let Some(a) = alpha {
             let temp_alpha = color.alpha();
             color.with_alpha(scale(temp_alpha, a, Number::from(1)))
         } else {
@@ -178,7 +178,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             Value::Color(c) => c.clone(),
             _ => todo!("non-color given to builtin function `ie-hex-str()`")
         };
-        Some(Value::Ident(color.to_ie_hex_str(), QuoteKind::None))
+        Ok(Value::Ident(color.to_ie_hex_str(), QuoteKind::None))
     });
 }
 

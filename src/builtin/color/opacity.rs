@@ -8,14 +8,14 @@ use crate::value::{Number, Value};
 pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     decl!(f "alpha", |args, _| {
         match arg!(args, 0, "color") {
-            Value::Color(c) => Some(Value::Dimension(c.alpha(), Unit::None)),
+            Value::Color(c) => Ok(Value::Dimension(c.alpha(), Unit::None)),
             _ => todo!("non-color given to builtin function `alpha()`")
         }
     });
     decl!(f "opacity", |args, _| {
         match arg!(args, 0, "color") {
-            Value::Color(c) => Some(Value::Dimension(c.alpha(), Unit::None)),
-            Value::Dimension(num, unit) => Some(Value::Ident(format!("opacity({}{})", num , unit), QuoteKind::None)),
+            Value::Color(c) => Ok(Value::Dimension(c.alpha(), Unit::None)),
+            Value::Dimension(num, unit) => Ok(Value::Ident(format!("opacity({}{})", num , unit), QuoteKind::None)),
             _ => todo!("non-color given to builtin function `opacity()`")
         }
     });
@@ -29,7 +29,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             Value::Dimension(n, Unit::Percent) => n / Number::from(100),
             _ => todo!("expected either unitless or % number for amount"),
         };
-        Some(Value::Color(color.fade_in(amount)))
+        Ok(Value::Color(color.fade_in(amount)))
     });
     decl!(f "fade-in", |args, _| {
         let color = match arg!(args, 0, "color").eval() {
@@ -41,7 +41,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             Value::Dimension(n, Unit::Percent) => n / Number::from(100),
             _ => todo!("expected either unitless or % number for amount"),
         };
-        Some(Value::Color(color.fade_in(amount)))
+        Ok(Value::Color(color.fade_in(amount)))
     });
     decl!(f "transparentize", |args, _| {
         let color = match arg!(args, 0, "color").eval() {
@@ -53,7 +53,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             Value::Dimension(n, Unit::Percent) => n / Number::from(100),
             _ => todo!("expected either unitless or % number for amount"),
         };
-        Some(Value::Color(color.fade_out(amount)))
+        Ok(Value::Color(color.fade_out(amount)))
     });
     decl!(f "fade-out", |args, _| {
         let color = match arg!(args, 0, "color").eval() {
@@ -65,6 +65,6 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             Value::Dimension(n, Unit::Percent) => n / Number::from(100),
             _ => todo!("expected either unitless or % number for amount"),
         };
-        Some(Value::Color(color.fade_out(amount)))
+        Ok(Value::Color(color.fade_out(amount)))
     });
 }

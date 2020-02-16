@@ -10,6 +10,6 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             Value::List(v, _) => Number::from(v.len()),
             _ => Number::from(1)
         };
-        Some(Value::Dimension(len, Unit::None))
+        Ok(Value::Dimension(len, Unit::None))
     });
 }

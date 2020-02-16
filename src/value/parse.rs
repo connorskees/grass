@@ -222,7 +222,7 @@ impl Value {
                         let func = match scope.get_fn(&s) {
                             Ok(f) => f,
                             Err(_) => match GLOBAL_FUNCTIONS.get(&s) {
-                                Some(f) => return f(&eat_call_args(toks, scope), scope),
+                                Some(f) => return f(&eat_call_args(toks, scope), scope).ok(),
                                 None => {
                                     s.push('(');
                                     let mut unclosed_parens = 0;

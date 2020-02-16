@@ -35,7 +35,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
 
             let color = Color::from_rgba(red, green, blue, Number::from(1));
 
-            Some(Value::Color(color))
+            Ok(Value::Color(color))
 
         } else if args.len() == 2 {
             let color = match arg!(args, 0, "color").eval() {
@@ -47,7 +47,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
                 Value::Dimension(n, Unit::Percent) => n / Number::from(100),
                 _ => todo!("expected either unitless or % number for alpha"),
             };
-            Some(Value::Color(color.with_alpha(alpha)))
+            Ok(Value::Color(color.with_alpha(alpha)))
         } else {
             let red = match arg!(args, 0, "red").eval() {
                 Value::Dimension(n, Unit::None) => n,
@@ -69,7 +69,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
                 Value::Dimension(n, Unit::Percent) => n / Number::from(100),
                 _ => todo!("expected either unitless or % number for alpha")
             };
-            Some(Value::Color(Color::from_rgba(red, green, blue, alpha)))
+            Ok(Value::Color(Color::from_rgba(red, green, blue, alpha)))
         }
     });
     decl!(f "rgba", |args, _| {
@@ -101,7 +101,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
 
             let color = Color::from_rgba(red, green, blue, Number::from(1));
 
-            Some(Value::Color(color))
+            Ok(Value::Color(color))
 
         } else if args.len() == 2 {
             let color = match arg!(args, 0, "color").eval() {
@@ -113,7 +113,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
                 Value::Dimension(n, Unit::Percent) => n / Number::from(100),
                 _ => todo!("expected either unitless or % number for alpha"),
             };
-            Some(Value::Color(color.with_alpha(alpha)))
+            Ok(Value::Color(color.with_alpha(alpha)))
         } else {
             let red = match arg!(args, 0, "red").eval() {
                 Value::Dimension(n, Unit::None) => n,
@@ -135,24 +135,24 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
                 Value::Dimension(n, Unit::Percent) => n / Number::from(100),
                 _ => todo!("expected either unitless or % number for alpha")
             };
-            Some(Value::Color(Color::from_rgba(red, green, blue, alpha)))
+            Ok(Value::Color(Color::from_rgba(red, green, blue, alpha)))
         }
     });
     decl!(f "red", |args, _| {
         match arg!(args, 0, "color") {
-            Value::Color(c) => Some(Value::Dimension(c.red(), Unit::None)),
+            Value::Color(c) => Ok(Value::Dimension(c.red(), Unit::None)),
             _ => todo!("non-color given to builtin function `red()`")
         }
     });
     decl!(f "green", |args, _| {
         match arg!(args, 0, "color") {
-            Value::Color(c) => Some(Value::Dimension(c.green(), Unit::None)),
+            Value::Color(c) => Ok(Value::Dimension(c.green(), Unit::None)),
             _ => todo!("non-color given to builtin function `green()`")
         }
     });
     decl!(f "blue", |args, _| {
         match arg!(args, 0, "color") {
-            Value::Color(c) => Some(Value::Dimension(c.blue(), Unit::None)),
+            Value::Color(c) => Ok(Value::Dimension(c.blue(), Unit::None)),
             _ => todo!("non-color given to builtin function `blue()`")
         }
     });
@@ -172,6 +172,6 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             Value::Dimension(n, Unit::Percent) => n / Number::from(100),
             _ => todo!("expected either unitless or % number for $weight")
         };
-        Some(Value::Color(color1.mix(color2, weight)))
+        Ok(Value::Color(color1.mix(color2, weight)))
     });
 }

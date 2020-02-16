@@ -10,29 +10,29 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             Value::Dimension(n, Unit::None) => n * Number::from(100),
             _ => todo!("expected unitless number in builtin function `percentage()`")
         };
-        Some(Value::Dimension(num, Unit::Percent))
+        Ok(Value::Dimension(num, Unit::Percent))
     });
     decl!(f "round", |args, _| {
         match arg!(args, 0, "number").eval() {
-            Value::Dimension(n, u) => Some(Value::Dimension(n.round(), u)),
+            Value::Dimension(n, u) =>  Ok(Value::Dimension(n.round(), u)),
             _ => todo!("expected number in builtin function `round()`")
         }
     });
     decl!(f "ceil", |args, _| {
         match arg!(args, 0, "number").eval() {
-            Value::Dimension(n, u) => Some(Value::Dimension(n.ceil(), u)),
+            Value::Dimension(n, u) =>  Ok(Value::Dimension(n.ceil(), u)),
             _ => todo!("expected number in builtin function `ceil()`")
         }
     });
     decl!(f "floor", |args, _| {
         match arg!(args, 0, "number").eval() {
-            Value::Dimension(n, u) => Some(Value::Dimension(n.floor(), u)),
+            Value::Dimension(n, u) =>  Ok(Value::Dimension(n.floor(), u)),
             _ => todo!("expected number in builtin function `floor()`")
         }
     });
     decl!(f "abs", |args, _| {
         match arg!(args, 0, "number").eval() {
-            Value::Dimension(n, u) => Some(Value::Dimension(n.abs(), u)),
+            Value::Dimension(n, u) =>  Ok(Value::Dimension(n.abs(), u)),
             _ => todo!("expected number in builtin function `abs()`")
         }
     });
@@ -46,6 +46,6 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             _ => todo!("$number2: ____ is not a number.")
         };
 
-        Some(Value::bool(unit1.comparable(&unit2)))
+        Ok(Value::bool(unit1.comparable(&unit2)))
     });
 }

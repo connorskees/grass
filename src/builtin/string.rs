@@ -13,33 +13,33 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     decl!(f "to-upper-case", |args, _| {
         let s: &Value = arg!(args, 0, "string");
         match s.eval() {
-            Value::Ident(i, q) => Some(Value::Ident(i.to_ascii_uppercase(), q)),
+            Value::Ident(i, q) => Ok(Value::Ident(i.to_ascii_uppercase(), q)),
             _ => todo!("")
         }
     });
     decl!(f "to-lower-case", |args, _| {
         let s: &Value = arg!(args, 0, "string");
         match s.eval() {
-            Value::Ident(i, q) => Some(Value::Ident(i.to_ascii_lowercase(), q)),
+            Value::Ident(i, q) => Ok(Value::Ident(i.to_ascii_lowercase(), q)),
             _ => todo!("")
         }
     });
     decl!(f "str-length", |args, _| {
         let s: &Value = arg!(args, 0, "string");
         match s.eval() {
-            Value::Ident(i, _) => Some(Value::Dimension(Number::from(i.len()), Unit::None)),
+            Value::Ident(i, _) => Ok(Value::Dimension(Number::from(i.len()), Unit::None)),
             _ => todo!("")
         }
     });
     decl!(f "quote", |args, _| {
         let s = arg!(args, 0, "string").eval();
         match s {
-            Value::Ident(i, _) => Some(Value::Ident(i, QuoteKind::Double)),
+            Value::Ident(i, _) => Ok(Value::Ident(i, QuoteKind::Double)),
             _ => todo!("")
         }
     });
     decl!(f "unquote", |args, _| {
-        Some(arg!(args, 0, "string").eval().unquote())
+        Ok(arg!(args, 0, "string").eval().unquote())
     });
     decl!(f "str-slice", |args, _| {
         let (string, quotes) = match arg!(args, 0, "string").eval() {
@@ -71,14 +71,14 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
 
         if start > end || start > str_len {
             match quotes {
-                QuoteKind::Double | QuoteKind::Single => Some(Value::Ident(String::new(), QuoteKind::Double)),
-                QuoteKind::None => Some(Value::Null),
+                QuoteKind::Double | QuoteKind::Single => Ok(Value::Ident(String::new(), QuoteKind::Double)),
+                QuoteKind::None => Ok(Value::Null),
             }
         } else {
             let s = string[start-1..end].to_string();
             match quotes {
-                QuoteKind::Double | QuoteKind::Single => Some(Value::Ident(s, QuoteKind::Double)),
-                QuoteKind::None => Some(Value::Ident(s, QuoteKind::None)),
+                QuoteKind::Double | QuoteKind::Single => Ok(Value::Ident(s, QuoteKind::Double)),
+                QuoteKind::None => Ok(Value::Ident(s, QuoteKind::None)),
             }
         }
     });
