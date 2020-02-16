@@ -93,6 +93,11 @@ test!(
     "a {\n  color: str-length(cde);\n}\n",
     "a {\n  color: 3;\n}\n"
 );
+test!(
+    unquote_empty_string_is_null,
+    "a {\n  color: unquote('');\n}\n",
+    ""
+);
 // blocked on refactoring how function-call args are parsed
 // right now, whitespace is eaten between idents with no
 // regard for quotes

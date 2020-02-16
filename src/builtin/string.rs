@@ -45,7 +45,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     decl!(f "unquote", |args, _| {
         max_args!(args, 1);
         match arg!(args, 0, "string").eval() {
-            Value::Ident(i, QuoteKind::None) if i.is_empty() => Ok(Value::Null),
+            Value::Ident(i, _) if i.is_empty() => Ok(Value::Null),
             i @ Value::Ident(..) => Ok(i.unquote()),
             v => Err(format!("$string: {} is not a string.", v).into()),
         }
