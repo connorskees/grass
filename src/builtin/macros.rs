@@ -4,7 +4,7 @@ macro_rules! arg {
             Some(v) => v,
             None => match $args.get($name) {
                 Some(v) => v,
-                None => panic!("missing variable"),
+                None => return Err(concat!("Missing argument $", $name, ".").into()),
             },
         };
     };
