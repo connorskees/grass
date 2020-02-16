@@ -29,9 +29,19 @@ macro_rules! max_args {
     ($args:ident, $count:literal) => {
         if $args.len() > $count {
             if $count > 1 {
-                return Err(format!("Only {} arguments allowed, but {} were passed.", $count, $args.len()).into());
+                return Err(format!(
+                    "Only {} arguments allowed, but {} were passed.",
+                    $count,
+                    $args.len()
+                )
+                .into());
             } else {
-                return Err(format!("Only {} argument allowed, but {} were passed.", $count, $args.len()).into());
+                return Err(format!(
+                    "Only {} argument allowed, but {} were passed.",
+                    $count,
+                    $args.len()
+                )
+                .into());
             }
         }
     };
