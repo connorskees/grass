@@ -2,8 +2,8 @@ use std::collections::BTreeMap;
 
 use super::Builtin;
 use crate::common::QuoteKind;
-use crate::value::Number;
 use crate::units::Unit;
+use crate::value::Number;
 use crate::value::Value;
 
 pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {

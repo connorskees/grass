@@ -258,10 +258,7 @@ test!(
     "a {\n  color: invert(white);\n}\n",
     "a {\n  color: black;\n}\n"
 );
-test!(
-    invert_number,
-    "a {\n  color: invert(10%);\n}\n"
-);
+test!(invert_number, "a {\n  color: invert(10%);\n}\n");
 // test!(
 //     invert_number_casing,
 //     "a {\n  color: iNveRt(10%);\n}\n"
@@ -404,10 +401,7 @@ test!(
     "a {\n  color: grayscale(red);\n}\n",
     "a {\n  color: gray;\n}\n"
 );
-test!(
-    grayscale_number,
-    "a {\n  color: grayscale(15%);\n}\n"
-);
+test!(grayscale_number, "a {\n  color: grayscale(15%);\n}\n");
 // test!(
 //     grayscale_number_casing,
 //     "a {\n  color: grAyscaLe(15%);\n}\n"

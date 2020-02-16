@@ -428,7 +428,7 @@ impl<'a> StyleSheetParser<'a> {
                             AtRule::Error(pos, message) => self.error(pos, &message),
                             AtRule::Warn(pos, message) => self.warn(pos, &message),
                             AtRule::Debug(pos, message) => self.debug(pos, &message),
-                            AtRule::Return(_) => todo!("@return in unexpected location!"),
+                            AtRule::Return(_) => return Err("This at-rule is not allowed here.".into()),
                         }
                     }
                 }
