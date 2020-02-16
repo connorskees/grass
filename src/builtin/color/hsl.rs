@@ -88,7 +88,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             v => return Err(format!("$color: {} is not a color.", v).into()),
         };
         let amount = match arg!(args, 1, "amount").eval() {
-            Value::Dimension(n, u) => bound!(n, u, 0, 100) / Number::from(100),
+            Value::Dimension(n, u) => bound!("amount", n, u, 0, 100) / Number::from(100),
             v => return Err(format!("$amount: {} is not a number.", v).into())
         };
         Ok(Value::Color(color.lighten(amount)))
