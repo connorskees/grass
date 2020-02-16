@@ -10,7 +10,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         if args.len() == 1 {
             let mut channels = match arg!(args, 0, "channels").eval() {
                 Value::List(v, _) => v,
-                _ => return Err("Missing argument $channels.".into())
+                _ => return Err("Missing element $green.".into())
             };
 
             assert_eq!(channels.len(), 3_usize);
@@ -84,7 +84,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         if args.len() == 1 {
             let mut channels = match arg!(args, 0, "channels").eval() {
                 Value::List(v, _) => v,
-                _ => todo!("missing element $green")
+                _ => return Err("Missing element $green.".into())
             };
 
             assert_eq!(channels.len(), 3_usize);
@@ -92,19 +92,22 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             let blue = match channels.pop() {
                 Some(Value::Dimension(n, Unit::None)) => n,
                 Some(Value::Dimension(n, Unit::Percent)) => n / Number::from(100),
-                _ => todo!("$blue: ___ is not a color")
+                Some(v) => return Err(format!("$blue: {} is not a color", v).into()),
+                None => return Err("Missing element $blue.".into()),
             };
 
             let green = match channels.pop() {
                 Some(Value::Dimension(n, Unit::None)) => n,
                 Some(Value::Dimension(n, Unit::Percent)) => n / Number::from(100),
-                _ => todo!("$green: ___ is not a color")
+                Some(v) => return Err(format!("$green: {} is not a color", v).into()),
+                None => return Err("Missing element $green.".into()),
             };
 
             let red = match channels.pop() {
                 Some(Value::Dimension(n, Unit::None)) => n,
                 Some(Value::Dimension(n, Unit::Percent)) => n / Number::from(100),
-                _ => todo!("$red: ___ is not a color")
+                Some(v) => return Err(format!("$red: {} is not a color", v).into()),
+                None => return Err("Missing element $red.".into()),
             };
 
             let color = Color::from_rgba(red, green, blue, Number::from(1));
@@ -152,30 +155,30 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     decl!(f "red", |args, _| {
         match arg!(args, 0, "color") {
             Value::Color(c) => Ok(Value::Dimension(c.red(), Unit::None)),
-            _ => todo!("non-color given to builtin function `red()`")
+            v => return Err(format!("$color: {} is not a color.", v).into()),
         }
     });
     decl!(f "green", |args, _| {
         match arg!(args, 0, "color") {
             Value::Color(c) => Ok(Value::Dimension(c.green(), Unit::None)),
-            _ => todo!("non-color given to builtin function `green()`")
+            v => return Err(format!("$color: {} is not a color.", v).into()),
         }
     });
     decl!(f "blue", |args, _| {
         match arg!(args, 0, "color") {
             Value::Color(c) => Ok(Value::Dimension(c.blue(), Unit::None)),
-            _ => todo!("non-color given to builtin function `blue()`")
+            v => return Err(format!("$color: {} is not a color.", v).into()),
         }
     });
     decl!(f "mix", |args, _| {
         let color1 = match arg!(args, 0, "color1").eval() {
             Value::Color(c) => c,
-            _ => todo!("non-color given to builtin function `mix()`")
+            v => return Err(format!("$color: {} is not a color.", v).into()),
         };
 
         let color2 = match arg!(args, 1, "color2").eval() {
             Value::Color(c) => c,
-            _ => todo!("non-color given to builtin function `mix()`")
+            v => return Err(format!("$color: {} is not a color.", v).into()),
         };
 
         let weight = match arg!(args, 2, "weight"=Value::Dimension(Number::ratio(1, 2), Unit::None)) {
