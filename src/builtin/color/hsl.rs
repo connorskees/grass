@@ -108,13 +108,14 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     });
     decl!(f "saturate", |args, _| {
         max_args!(args, 2);
-        let color = match arg!(args, 0, "color").eval() {
-            Value::Color(c) => c,
-            v => return Err(format!("$color: {} is not a color.", v).into()),
-        };
         let amount = match arg!(args, 1, "amount").eval() {
             Value::Dimension(n, u) => bound!("amount", n, u, 0, 100) / Number::from(100),
             v => return Err(format!("$amount: {} is not a number.", v).into())
+        };
+        let color = match arg!(args, 0, "color").eval() {
+            Value::Color(c) => c,
+            Value::Dimension(n, u) => return Ok(Value::Ident(format!("saturate({}{})", n, u), QuoteKind::None)),
+            v => return Err(format!("$color: {} is not a color.", v).into()),
         };
         Ok(Value::Color(color.saturate(amount)))
     });

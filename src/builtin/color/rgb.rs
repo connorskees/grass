@@ -188,7 +188,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         };
 
         let weight = match arg!(args, 2, "weight"=Value::Dimension(Number::from(50), Unit::None)) {
-            Value::Dimension(n, _) => n / Number::from(100),
+            Value::Dimension(n, u) => bound!("weight", n, u, 0, 100) / Number::from(100),
             v => return Err(format!("$weight: {} is not a number.", v).into()),
         };
         Ok(Value::Color(color1.mix(color2, weight)))
