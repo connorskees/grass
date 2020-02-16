@@ -9,20 +9,20 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     decl!(f "alpha", |args, _| {
         match arg!(args, 0, "color") {
             Value::Color(c) => Ok(Value::Dimension(c.alpha(), Unit::None)),
-            _ => todo!("non-color given to builtin function `alpha()`")
+            v => return Err(format!("$color: {} is not a color.", v).into()),
         }
     });
     decl!(f "opacity", |args, _| {
         match arg!(args, 0, "color") {
             Value::Color(c) => Ok(Value::Dimension(c.alpha(), Unit::None)),
             Value::Dimension(num, unit) => Ok(Value::Ident(format!("opacity({}{})", num , unit), QuoteKind::None)),
-            _ => todo!("non-color given to builtin function `opacity()`")
+            v => return Err(format!("$color: {} is not a color.", v).into()),
         }
     });
     decl!(f "opacify", |args, _| {
         let color = match arg!(args, 0, "color").eval() {
             Value::Color(c) => c,
-            _ => todo!("non-color given to builtin function `opacify()`")
+            v => return Err(format!("$color: {} is not a color.", v).into()),
         };
         let amount = match arg!(args, 1, "amount").eval() {
             Value::Dimension(n, Unit::None) => n,
@@ -34,7 +34,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     decl!(f "fade-in", |args, _| {
         let color = match arg!(args, 0, "color").eval() {
             Value::Color(c) => c,
-            _ => todo!("non-color given to builtin function `fade-in()`")
+            v => return Err(format!("$color: {} is not a color.", v).into()),
         };
         let amount = match arg!(args, 1, "amount").eval() {
             Value::Dimension(n, Unit::None) => n,
@@ -46,7 +46,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     decl!(f "transparentize", |args, _| {
         let color = match arg!(args, 0, "color").eval() {
             Value::Color(c) => c,
-            _ => todo!("non-color given to builtin function `transparentize()`")
+            v => return Err(format!("$color: {} is not a color.", v).into()),
         };
         let amount = match arg!(args, 1, "amount").eval() {
             Value::Dimension(n, Unit::None) => n,
@@ -58,7 +58,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     decl!(f "fade-out", |args, _| {
         let color = match arg!(args, 0, "color").eval() {
             Value::Color(c) => c,
-            _ => todo!("non-color given to builtin function `fade-out()`")
+            v => return Err(format!("$color: {} is not a color.", v).into()),
         };
         let amount = match arg!(args, 1, "amount").eval() {
             Value::Dimension(n, Unit::None) => n,

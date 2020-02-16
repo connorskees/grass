@@ -30,7 +30,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     decl!(f "change-color", |args, _| {
         let color = match arg!(args, 0, "color").eval() {
             Value::Color(c) => c,
-            _ => todo!("non-color given to builtin function `change-color()`")
+            v => return Err(format!("$color: {} is not a color.", v).into()),
         };
 
         opt_arg!(args, alpha, "alpha");
@@ -68,7 +68,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     decl!(f "adjust-color", |args, _| {
         let color = match arg!(args, 0, "color").eval() {
             Value::Color(c) => c.clone(),
-            _ => todo!("non-color given to builtin function `adjust-color()`")
+            v => return Err(format!("$color: {} is not a color.", v).into()),
         };
 
         opt_arg!(args, alpha, "alpha");
@@ -122,7 +122,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     decl!(f "scale-color", |args, _| {
         let color = match arg!(args, 0, "color").eval() {
             Value::Color(c) => c.clone(),
-            _ => todo!("non-color given to builtin function `scale-color()`")
+            v => return Err(format!("$color: {} is not a color.", v).into()),
         };
 
         opt_arg!(args, alpha, "alpha");
@@ -176,7 +176,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     decl!(f "ie-hex-str", |args, _| {
         let color = match arg!(args, 0, "color").eval() {
             Value::Color(c) => c.clone(),
-            _ => todo!("non-color given to builtin function `ie-hex-str()`")
+            v => return Err(format!("$color: {} is not a color.", v).into()),
         };
         Ok(Value::Ident(color.to_ie_hex_str(), QuoteKind::None))
     });

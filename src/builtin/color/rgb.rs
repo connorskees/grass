@@ -10,7 +10,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         if args.len() == 1 {
             let mut channels = match arg!(args, 0, "channels").eval() {
                 Value::List(v, _) => v,
-                _ => todo!("missing element $green")
+                _ => return Err("Missing argument $channels.".into())
             };
 
             assert_eq!(channels.len(), 3_usize);
@@ -18,19 +18,22 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             let blue = match channels.pop() {
                 Some(Value::Dimension(n, Unit::None)) => n,
                 Some(Value::Dimension(n, Unit::Percent)) => n / Number::from(100),
-                _ => todo!("$blue: ___ is not a color")
+                Some(v) => return Err(format!("$blue: {} is not a color", v).into()),
+                None => return Err("Missing element $blue.".into()),
             };
 
             let green = match channels.pop() {
                 Some(Value::Dimension(n, Unit::None)) => n,
                 Some(Value::Dimension(n, Unit::Percent)) => n / Number::from(100),
-                _ => todo!("$green: ___ is not a color")
+                Some(v) => return Err(format!("$green: {} is not a color", v).into()),
+                None => return Err("Missing element $green.".into()),
             };
 
             let red = match channels.pop() {
                 Some(Value::Dimension(n, Unit::None)) => n,
                 Some(Value::Dimension(n, Unit::Percent)) => n / Number::from(100),
-                _ => todo!("$red: ___ is not a color")
+                Some(v) => return Err(format!("$red: {} is not a color", v).into()),
+                None => return Err("Missing element $red.".into()),
             };
 
             let color = Color::from_rgba(red, green, blue, Number::from(1));
@@ -52,7 +55,8 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             let red = match arg!(args, 0, "red").eval() {
                 Value::Dimension(n, Unit::None) => n,
                 Value::Dimension(n, Unit::Percent) => (n / Number::from(100)) * Number::from(255),
-                _ => todo!("expected either unitless or % number for alpha"),
+                v @ Value::Dimension(..) => return Err(format!("Expected {} to have no units or \"%\".", v).into()),
+                v => return Err(format!("$red: {} is not a number.", v).into()),
             };
             let green = match arg!(args, 1, "green").eval() {
                 Value::Dimension(n, Unit::None) => n,
