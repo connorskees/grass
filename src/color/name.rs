@@ -153,6 +153,7 @@ pub(crate) enum ColorName {
     WhiteSmoke,           // = 0xF5F5F5,
     Yellow,               // = 0xFFFF00,
     YellowGreen,          // = 0x9ACD32,
+    Transparent,          // = 0x000000,
 }
 
 impl Display for ColorName {
@@ -308,6 +309,7 @@ impl Display for ColorName {
             Self::WhiteSmoke => write!(f, "whitesmoke"),
             Self::Yellow => write!(f, "yellow"),
             Self::YellowGreen => write!(f, "yellowgreen"),
+            Self::Transparent => write!(f, "transparent"),
         }
     }
 }
@@ -465,6 +467,7 @@ impl TryFrom<&str> for ColorName {
             "whitesmoke" => Ok(Self::WhiteSmoke),
             "yellow" => Ok(Self::Yellow),
             "yellowgreen" => Ok(Self::YellowGreen),
+            "transparent" => Ok(Self::Transparent),
             _ => Err("invalid color"),
         }
     }
@@ -764,6 +767,7 @@ impl ColorName {
             Self::WhiteSmoke => Color::new(0xF5, 0xF5, 0xF5, 0xFF, repr),
             Self::Yellow => Color::new(0xFF, 0xFF, 0x00, 0xFF, repr),
             Self::YellowGreen => Color::new(0x9A, 0xCD, 0x32, 0xFF, repr),
+            Self::Transparent => Color::new(0x00, 0x00, 0x00, 0x00, repr),
         }
     }
 }
