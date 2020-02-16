@@ -73,7 +73,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         };
         let degrees = match arg!(args, 1, "degrees").eval() {
             Value::Dimension(n, _) => n,
-            _ => todo!("expected either unitless or % number for degrees"),
+            v => return Err(format!("$degrees: {} is not a number.", v).into()),
         };
         Ok(Value::Color(color.adjust_hue(degrees)))
     });
@@ -137,9 +137,8 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     });
     decl!(f "invert", |args, _| {
         let weight = match arg!(args, 1, "weight"=Value::Dimension(Number::from(100), Unit::Percent)) {
-            Value::Dimension(n, Unit::None)
-            | Value::Dimension(n, Unit::Percent) => n / Number::from(100),
-            _ => todo!("non-number weight given to builtin function `invert()`")
+            Value::Dimension(n, _) => n / Number::from(100),
+            v => return Err(format!("$weight: {} is not a number.", v).into()),
         };
         match arg!(args, 0, "color") {
             Value::Color(c) => Ok(Value::Color(c.invert(weight))),

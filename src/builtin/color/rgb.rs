@@ -117,7 +117,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         } else if args.len() == 2 {
             let color = match arg!(args, 0, "color").eval() {
                 Value::Color(c) => c,
-                _ => todo!("expected color")
+                v => return Err(format!("$color: {} is not a color.", v).into()),
             };
             let alpha = match arg!(args, 1, "alpha").eval() {
                 Value::Dimension(n, Unit::None) => n,
@@ -183,10 +183,9 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             v => return Err(format!("$color: {} is not a color.", v).into()),
         };
 
-        let weight = match arg!(args, 2, "weight"=Value::Dimension(Number::ratio(1, 2), Unit::None)) {
-            Value::Dimension(n, Unit::None) => n,
-            Value::Dimension(n, Unit::Percent) => n / Number::from(100),
-            _ => todo!("expected either unitless or % number for $weight")
+        let weight = match arg!(args, 2, "weight"=Value::Dimension(Number::from(50), Unit::None)) {
+            Value::Dimension(n, _) => n / Number::from(100),
+            v => return Err(format!("$weight: {} is not a number.", v).into()),
         };
         Ok(Value::Color(color1.mix(color2, weight)))
     });

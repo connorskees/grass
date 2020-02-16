@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use super::Builtin;
 use crate::common::QuoteKind;
 use crate::units::Unit;
-use crate::value::{Number, Value};
+use crate::value::Value;
 
 pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     decl!(f "alpha", |args, _| {
@@ -25,9 +25,8 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             v => return Err(format!("$color: {} is not a color.", v).into()),
         };
         let amount = match arg!(args, 1, "amount").eval() {
-            Value::Dimension(n, Unit::None) => n,
-            Value::Dimension(n, Unit::Percent) => n / Number::from(100),
-            _ => todo!("expected either unitless or % number for amount"),
+            Value::Dimension(n, _) => n,
+            v => return Err(format!("$amount: {} is not a number.", v).into()),
         };
         Ok(Value::Color(color.fade_in(amount)))
     });
@@ -37,9 +36,8 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             v => return Err(format!("$color: {} is not a color.", v).into()),
         };
         let amount = match arg!(args, 1, "amount").eval() {
-            Value::Dimension(n, Unit::None) => n,
-            Value::Dimension(n, Unit::Percent) => n / Number::from(100),
-            _ => todo!("expected either unitless or % number for amount"),
+            Value::Dimension(n, _) => n,
+            v => return Err(format!("$amount: {} is not a number.", v).into()),
         };
         Ok(Value::Color(color.fade_in(amount)))
     });
@@ -49,9 +47,8 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             v => return Err(format!("$color: {} is not a color.", v).into()),
         };
         let amount = match arg!(args, 1, "amount").eval() {
-            Value::Dimension(n, Unit::None) => n,
-            Value::Dimension(n, Unit::Percent) => n / Number::from(100),
-            _ => todo!("expected either unitless or % number for amount"),
+            Value::Dimension(n, _) => n,
+            v => return Err(format!("$amount: {} is not a number.", v).into()),
         };
         Ok(Value::Color(color.fade_out(amount)))
     });
@@ -61,9 +58,8 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             v => return Err(format!("$color: {} is not a color.", v).into()),
         };
         let amount = match arg!(args, 1, "amount").eval() {
-            Value::Dimension(n, Unit::None) => n,
-            Value::Dimension(n, Unit::Percent) => n / Number::from(100),
-            _ => todo!("expected either unitless or % number for amount"),
+            Value::Dimension(n, _) => n,
+            v => return Err(format!("$amount: {} is not a number.", v).into()),
         };
         Ok(Value::Color(color.fade_out(amount)))
     });
