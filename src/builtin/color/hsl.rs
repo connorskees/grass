@@ -29,15 +29,15 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     decl!(f "hsla", |args, _| {
         let hue = match arg!(args, 0, "hue").eval() {
             Value::Dimension(n, _) => n,
-            _ => todo!("$hue: ____ is not a number."),
+            v => return Err(format!("$hue: {} is not a number.", v).into()),
         };
         let saturation = match arg!(args, 1, "saturation").eval() {
             Value::Dimension(n, _) => n / Number::from(100),
-            _ => todo!("$saturation: ____ is not a number."),
+            v => return Err(format!("$saturation: {} is not a number.", v).into()),
         };
         let luminance = match arg!(args, 2, "luminance").eval() {
             Value::Dimension(n, _) => n / Number::from(100),
-            _ => todo!("$luminance: ____ is not a number."),
+            v => return Err(format!("$luminance: {} is not a number.", v).into()),
         };
         let alpha = match arg!(args, 3, "alpha").eval() {
             Value::Dimension(n, Unit::None) => n,
