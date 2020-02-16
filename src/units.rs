@@ -117,13 +117,9 @@ impl Unit {
 
     pub fn kind(&self) -> UnitKind {
         match self {
-            Unit::Px
-            | Unit::Mm
-            | Unit::In
-            | Unit::Cm
-            | Unit::Q
-            | Unit::Pt
-            | Unit::Pc => UnitKind::Absolute,
+            Unit::Px | Unit::Mm | Unit::In | Unit::Cm | Unit::Q | Unit::Pt | Unit::Pc => {
+                UnitKind::Absolute
+            }
             Unit::Em
             | Unit::Rem
             | Unit::Lh
@@ -132,24 +128,13 @@ impl Unit {
             | Unit::Cap
             | Unit::Ic
             | Unit::Rlh => UnitKind::FontRelative,
-            Unit::Vw
-            | Unit::Vh
-            | Unit::Vmin
-            | Unit::Vmax
-            | Unit::Vi
-            | Unit::Vb => UnitKind::ViewportRelative,
-            Unit::Deg
-            | Unit::Grad
-            | Unit::Rad
-            | Unit::Turn => UnitKind::Angle,
-            Unit::S
-            | Unit::Ms => UnitKind::Time,
-            Unit::Hz
-            | Unit::Khz => UnitKind::Frequency,
-            Unit::Dpi
-            | Unit::Dpcm
-            | Unit::Dppx
-            | Unit::X => UnitKind::Resolution,
+            Unit::Vw | Unit::Vh | Unit::Vmin | Unit::Vmax | Unit::Vi | Unit::Vb => {
+                UnitKind::ViewportRelative
+            }
+            Unit::Deg | Unit::Grad | Unit::Rad | Unit::Turn => UnitKind::Angle,
+            Unit::S | Unit::Ms => UnitKind::Time,
+            Unit::Hz | Unit::Khz => UnitKind::Frequency,
+            Unit::Dpi | Unit::Dpcm | Unit::Dppx | Unit::X => UnitKind::Resolution,
             Unit::None => UnitKind::None,
             _ => UnitKind::Other,
         }

@@ -1,6 +1,8 @@
 use std::convert::From;
 use std::fmt::{self, Display, Write};
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Rem, RemAssign, Sub, SubAssign, Neg};
+use std::ops::{
+    Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign,
+};
 
 use num_bigint::BigInt;
 use num_rational::BigRational;
@@ -201,8 +203,6 @@ impl Neg for Number {
     type Output = Self;
 
     fn neg(self) -> Self {
-        Number {
-            val: -self.val,
-        }
+        Number { val: -self.val }
     }
 }

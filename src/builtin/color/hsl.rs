@@ -22,7 +22,8 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         let alpha = match arg!(args, 3, "alpha"=Value::Dimension(Number::from(1), Unit::None)) {
             Value::Dimension(n, Unit::None) => n,
             Value::Dimension(n, Unit::Percent) => n / Number::from(100),
-            _ => todo!("non-number alpha given to builtin function `rgb()`")
+            v @ Value::Dimension(..) => return Err(format!("$alpha: Expected {} to have no units or \"%\".", v).into()),
+            v => return Err(format!("$alpha: {} is not a number.", v).into()),
         };
         Ok(Value::Color(Color::from_hsla(hue, saturation, luminance, alpha)))
     });
@@ -42,7 +43,8 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         let alpha = match arg!(args, 3, "alpha").eval() {
             Value::Dimension(n, Unit::None) => n,
             Value::Dimension(n, Unit::Percent) => n / Number::from(100),
-            _ => todo!("$alpha: Expected ____ to have no units or \"%\"."),
+            v @ Value::Dimension(..) => return Err(format!("$alpha: Expected {} to have no units or \"%\".", v).into()),
+            v => return Err(format!("$alpha: {} is not a number.", v).into()),
         };
         Ok(Value::Color(Color::from_hsla(hue, saturation, luminance, alpha)))
     });
@@ -70,9 +72,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             v => return Err(format!("$color: {} is not a color.", v).into()),
         };
         let degrees = match arg!(args, 1, "degrees").eval() {
-            Value::Dimension(n, Unit::None)
-            | Value::Dimension(n, Unit::Percent)
-            | Value::Dimension(n, Unit::Deg) => n,
+            Value::Dimension(n, _) => n,
             _ => todo!("expected either unitless or % number for degrees"),
         };
         Ok(Value::Color(color.adjust_hue(degrees)))
@@ -83,9 +83,8 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             v => return Err(format!("$color: {} is not a color.", v).into()),
         };
         let amount = match arg!(args, 1, "amount").eval() {
-            Value::Dimension(n, Unit::None) => n,
-            Value::Dimension(n, Unit::Percent) => n / Number::from(100),
-            _ => todo!("expected either unitless or % number for amount"),
+            Value::Dimension(n, _) => n / Number::from(100),
+            v => return Err(format!("$amount: {} is not a number.", v).into())
         };
         Ok(Value::Color(color.lighten(amount)))
     });
@@ -95,9 +94,8 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             v => return Err(format!("$color: {} is not a color.", v).into()),
         };
         let amount = match arg!(args, 1, "amount").eval() {
-            Value::Dimension(n, Unit::None) => n,
-            Value::Dimension(n, Unit::Percent) => n / Number::from(100),
-            _ => todo!("expected either unitless or % number for amount"),
+            Value::Dimension(n, _) => n / Number::from(100),
+            v => return Err(format!("$amount: {} is not a number.", v).into())
         };
         Ok(Value::Color(color.darken(amount)))
     });
@@ -119,7 +117,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         };
         let amount = match arg!(args, 1, "amount").eval() {
             Value::Dimension(n, _) => n / Number::from(100),
-           v => return Err(format!("$amount: {} is not a number.", v).into())
+            v => return Err(format!("$amount: {} is not a number.", v).into())
         };
         Ok(Value::Color(color.desaturate(amount)))
     });

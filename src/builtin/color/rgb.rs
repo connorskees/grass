@@ -122,7 +122,8 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             let alpha = match arg!(args, 1, "alpha").eval() {
                 Value::Dimension(n, Unit::None) => n,
                 Value::Dimension(n, Unit::Percent) => n / Number::from(100),
-                _ => todo!("expected either unitless or % number for alpha"),
+                v @ Value::Dimension(..) => return Err(format!("$alpha: Expected {} to have no units or \"%\".", v).into()),
+                v => return Err(format!("$alpha: {} is not a number.", v).into()),
             };
             Ok(Value::Color(color.with_alpha(alpha)))
         } else {
@@ -147,7 +148,8 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             let alpha = match arg!(args, 3, "alpha"=Value::Dimension(Number::from(1), Unit::None)).eval() {
                 Value::Dimension(n, Unit::None) => n,
                 Value::Dimension(n, Unit::Percent) => n / Number::from(100),
-                _ => todo!("expected either unitless or % number for alpha")
+                v @ Value::Dimension(..) => return Err(format!("$alpha: Expected {} to have no units or \"%\".", v).into()),
+                v => return Err(format!("$alpha: {} is not a number.", v).into()),
             };
             Ok(Value::Color(Color::from_rgba(red, green, blue, alpha)))
         }

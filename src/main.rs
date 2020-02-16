@@ -69,7 +69,9 @@ fn main() {
                     eprintln!("{}", b);
                     std::process::exit(1)
                 }
-            }.print_as_css(&mut stdout).unwrap();
+            }
+            .print_as_css(&mut stdout)
+            .unwrap();
         }
     }
 }
