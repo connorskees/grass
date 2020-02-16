@@ -3,7 +3,7 @@ use std::io::{stdout, BufWriter};
 
 use grass::StyleSheet;
 
-fn main() -> Result<(), String> {
+fn main() {
     let matches = App::new("grass")
         .version(env!("CARGO_PKG_VERSION"))
         .about("SCSS Compiler in rust")
@@ -63,8 +63,13 @@ fn main() -> Result<(), String> {
     let mut stdout = BufWriter::new(stdout());
     if let Some(inputs) = matches.values_of("INPUT") {
         for name in inputs {
-            StyleSheet::from_path(name)?.print_as_css(&mut stdout)?;
+            match StyleSheet::from_path(name) {
+                Ok(a) => a,
+                Err(b) => {
+                    eprintln!("{}", b);
+                    std::process::exit(1)
+                }
+            }.print_as_css(&mut stdout).unwrap();
         }
     }
-    Ok(())
 }
