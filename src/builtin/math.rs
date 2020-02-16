@@ -15,35 +15,35 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     decl!(f "round", |args, _| {
         match arg!(args, 0, "number").eval() {
             Value::Dimension(n, u) =>  Ok(Value::Dimension(n.round(), u)),
-            _ => todo!("expected number in builtin function `round()`")
+            v => return Err(format!("$number: {} is not a number.", v).into()),
         }
     });
     decl!(f "ceil", |args, _| {
         match arg!(args, 0, "number").eval() {
             Value::Dimension(n, u) =>  Ok(Value::Dimension(n.ceil(), u)),
-            _ => todo!("expected number in builtin function `ceil()`")
+            v => return Err(format!("$number: {} is not a number.", v).into()),
         }
     });
     decl!(f "floor", |args, _| {
         match arg!(args, 0, "number").eval() {
             Value::Dimension(n, u) =>  Ok(Value::Dimension(n.floor(), u)),
-            _ => todo!("expected number in builtin function `floor()`")
+            v => return Err(format!("$number: {} is not a number.", v).into()),
         }
     });
     decl!(f "abs", |args, _| {
         match arg!(args, 0, "number").eval() {
             Value::Dimension(n, u) =>  Ok(Value::Dimension(n.abs(), u)),
-            _ => todo!("expected number in builtin function `abs()`")
+            v => return Err(format!("$number: {} is not a number.", v).into()),
         }
     });
     decl!(f "comparable", |args, _| {
         let unit1 = match arg!(args, 0, "number1").eval() {
             Value::Dimension(_, u) => u,
-            _ => todo!("$number1: ___ is not a number.")
+            v => return Err(format!("$number1: {} is not a number.", v).into()),
         };
         let unit2 = match arg!(args, 1, "number2").eval() {
             Value::Dimension(_, u) => u,
-            _ => todo!("$number2: ____ is not a number.")
+            v => return Err(format!("$number2: {} is not a number.", v).into()),
         };
 
         Ok(Value::bool(unit1.comparable(&unit2)))
