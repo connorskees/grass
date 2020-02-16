@@ -40,7 +40,7 @@ impl<'a> Iterator for Lexer<'a> {
                 self.buf.next();
                 self.pos.next_char();
                 match self.buf.peek().unwrap() {
-                    '0'..='9' => match self.lex_num() {
+                    '0'..='9' | '.' => match self.lex_num() {
                         TokenKind::Number(n) => {
                             let mut s = String::from("-");
                             s.push_str(&n);

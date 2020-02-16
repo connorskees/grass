@@ -93,13 +93,16 @@ from_integer!(u8);
 
 impl Display for Number {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.val.to_integer())?;
+        if self.val.is_negative() {
+            f.write_char('-')?;
+        }
+        write!(f, "{}", self.val.to_integer().abs())?;
         let mut frac = self.val.fract();
         if frac != BigRational::from_integer(BigInt::from(0)) {
             f.write_char('.')?;
             for _ in 0..(PRECISION - 1) {
                 frac *= BigRational::from_integer(BigInt::from(10));
-                write!(f, "{}", frac.to_integer())?;
+                write!(f, "{}", frac.to_integer().abs())?;
                 frac = frac.fract();
                 if frac == BigRational::from_integer(BigInt::from(0)) {
                     break;
