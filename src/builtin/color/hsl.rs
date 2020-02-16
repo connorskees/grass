@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 
 use super::Builtin;
 use crate::color::Color;
+use crate::common::QuoteKind;
 use crate::units::Unit;
 use crate::value::{Number, Value};
 
@@ -133,6 +134,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         max_args!(args, 1);
         let color = match arg!(args, 0, "color").eval() {
             Value::Color(c) => c,
+            Value::Dimension(n, u) => return Ok(Value::Ident(format!("grayscale({}{})", n, u), QuoteKind::None)),
             v => return Err(format!("$color: {} is not a color.", v).into()),
         };
         Ok(Value::Color(color.desaturate(Number::from(1))))

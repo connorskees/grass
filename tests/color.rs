@@ -392,6 +392,14 @@ test!(
     "a {\n  color: gray;\n}\n"
 );
 test!(
+    grayscale_number,
+    "a {\n  color: grayscale(15%);\n}\n"
+);
+// test!(
+//     grayscale_number_casing,
+//     "a {\n  color: grAyscaLe(15%);\n}\n"
+// );
+test!(
     complement,
     "a {\n  color: complement(red);\n}\n",
     "a {\n  color: aqua;\n}\n"
