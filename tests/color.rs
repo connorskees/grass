@@ -214,6 +214,11 @@ test!(
     "a {\n  color: 193deg;\n}\n"
 );
 test!(
+    hue_maintains_value_when_created_through_hsl,
+    "a {\n  color: hue(hsl(0.544, 100%, 100%));\n}\n",
+    "a {\n  color: 0.544deg;\n}\n"
+);
+test!(
     hue_red_equals_blue,
     "a {\n  color: hue(rgb(1, 0, 1));\n}\n",
     "a {\n  color: 300deg;\n}\n"
