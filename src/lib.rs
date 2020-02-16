@@ -237,8 +237,8 @@ enum Expr {
 impl Display for StyleSheet {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // todo!(implement into fmt::Result for SassResult)
-        Ok(PrettyPrinter::new(f).pretty_print(self).unwrap())
+        PrettyPrinter::new(f).pretty_print(self).unwrap();
+        Ok(())
     }
 }
 
