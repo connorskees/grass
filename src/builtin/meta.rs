@@ -7,6 +7,7 @@ use crate::value::Value;
 
 pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     decl!(f "if", |args, _| {
+        max_args!(args, 3);
         if arg!(args, 0, "condition").is_true() {
             Ok(arg!(args, 1, "if-true").eval())
         } else {
@@ -14,6 +15,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         }
     });
     decl!(f "feature-exists", |args, _| {
+        max_args!(args, 1);
         match arg!(args, 0, "feature").eval().unquote().to_string().as_str() {
             // A local variable will shadow a global variable unless
             // `!global` is used.
@@ -34,6 +36,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         }
     });
     decl!(f "unit", |args, _| {
+        max_args!(args, 1);
         let unit = match arg!(args, 0, "number") {
             Value::Dimension(_, u) => u.to_string(),
             _ => String::new()
@@ -41,10 +44,12 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         Ok(Value::Ident(unit, QuoteKind::Double))
     });
     decl!(f "type-of", |args, _| {
+        max_args!(args, 1);
         let value = arg!(args, 0, "value").eval();
         Ok(Value::Ident(value.kind().to_owned(), QuoteKind::None))
     });
     decl!(f "unitless", |args, _| {
+        max_args!(args, 1);
         match arg!(args, 0, "number") {
             Value::Dimension(_, Unit::None) => Ok(Value::True),
             Value::Dimension(_, _) => Ok(Value::False),
@@ -52,18 +57,22 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         }
     });
     decl!(f "inspect", |args, _| {
+        max_args!(args, 1);
         let value = arg!(args, 0, "value");
         Ok(Value::Ident(value.to_string(), QuoteKind::None))
     });
     decl!(f "variable-exists", |args, scope| {
+        max_args!(args, 1);
         let value = arg!(args, 0, "name");
         Ok(Value::bool(scope.var_exists(&value.to_string())))
     });
     decl!(f "mixin-exists", |args, scope| {
+        max_args!(args, 1);
         let value = arg!(args, 0, "name");
         Ok(Value::bool(scope.mixin_exists(&value.to_string())))
     });
     decl!(f "function-exists", |args, scope| {
+        max_args!(args, 1);
         let value = arg!(args, 0, "name");
         let s = value.eval().unquote().to_string();
         Ok(Value::bool(scope.fn_exists(&s) || GLOBAL_FUNCTIONS.contains_key(&s)))

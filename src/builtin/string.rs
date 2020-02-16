@@ -11,6 +11,7 @@ use crate::value::{Number, Value};
 
 pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     decl!(f "to-upper-case", |args, _| {
+        max_args!(args, 1);
         let s: &Value = arg!(args, 0, "string");
         match s.eval() {
             Value::Ident(i, q) => Ok(Value::Ident(i.to_ascii_uppercase(), q)),
@@ -18,6 +19,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         }
     });
     decl!(f "to-lower-case", |args, _| {
+        max_args!(args, 1);
         let s: &Value = arg!(args, 0, "string");
         match s.eval() {
             Value::Ident(i, q) => Ok(Value::Ident(i.to_ascii_lowercase(), q)),
@@ -25,6 +27,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         }
     });
     decl!(f "str-length", |args, _| {
+        max_args!(args, 1);
         let s: &Value = arg!(args, 0, "string");
         match s.eval() {
             Value::Ident(i, _) => Ok(Value::Dimension(Number::from(i.len()), Unit::None)),
@@ -32,6 +35,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         }
     });
     decl!(f "quote", |args, _| {
+        max_args!(args, 1);
         let s = arg!(args, 0, "string").eval();
         match s {
             Value::Ident(i, _) => Ok(Value::Ident(i, QuoteKind::Double)),
@@ -39,9 +43,11 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         }
     });
     decl!(f "unquote", |args, _| {
+        max_args!(args, 1);
         Ok(arg!(args, 0, "string").eval().unquote())
     });
     decl!(f "str-slice", |args, _| {
+        max_args!(args, 3);
         let (string, quotes) = match arg!(args, 0, "string").eval() {
             Value::Ident(s, q) => (s, q),
             _ => todo!("____ is not a string")
