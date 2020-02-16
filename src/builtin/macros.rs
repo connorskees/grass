@@ -24,3 +24,11 @@ macro_rules! decl {
         $f.insert($name.to_owned(), Box::new($body));
     };
 }
+
+macro_rules! max_args {
+    ($args:ident, $count:literal) => {
+        if $args.len() > $count {
+            return Err(format!("Only {} argument allowed, but {} were passed.", $count, $args.len()).into());
+        }
+    };
+}

@@ -174,6 +174,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         }))
     });
     decl!(f "ie-hex-str", |args, _| {
+        max_args!(args, 1);
         let color = match arg!(args, 0, "color").eval() {
             Value::Color(c) => c.clone(),
             v => return Err(format!("$color: {} is not a color.", v).into()),

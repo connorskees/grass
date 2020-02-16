@@ -175,12 +175,12 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     decl!(f "mix", |args, _| {
         let color1 = match arg!(args, 0, "color1").eval() {
             Value::Color(c) => c,
-            v => return Err(format!("$color: {} is not a color.", v).into()),
+            v => return Err(format!("$color1: {} is not a color.", v).into()),
         };
 
         let color2 = match arg!(args, 1, "color2").eval() {
             Value::Color(c) => c,
-            v => return Err(format!("$color: {} is not a color.", v).into()),
+            v => return Err(format!("$color2: {} is not a color.", v).into()),
         };
 
         let weight = match arg!(args, 2, "weight"=Value::Dimension(Number::from(50), Unit::None)) {
