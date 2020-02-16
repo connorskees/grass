@@ -158,21 +158,21 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         max_args!(args, 1);
         match arg!(args, 0, "color") {
             Value::Color(c) => Ok(Value::Dimension(c.red(), Unit::None)),
-            v => return Err(format!("$color: {} is not a color.", v).into()),
+            v => Err(format!("$color: {} is not a color.", v).into()),
         }
     });
     decl!(f "green", |args, _| {
         max_args!(args, 1);
         match arg!(args, 0, "color") {
             Value::Color(c) => Ok(Value::Dimension(c.green(), Unit::None)),
-            v => return Err(format!("$color: {} is not a color.", v).into()),
+            v => Err(format!("$color: {} is not a color.", v).into()),
         }
     });
     decl!(f "blue", |args, _| {
         max_args!(args, 1);
         match arg!(args, 0, "color") {
             Value::Color(c) => Ok(Value::Dimension(c.blue(), Unit::None)),
-            v => return Err(format!("$color: {} is not a color.", v).into()),
+            v => Err(format!("$color: {} is not a color.", v).into()),
         }
     });
     decl!(f "mix", |args, _| {
@@ -191,6 +191,6 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             Value::Dimension(n, u) => bound!("weight", n, u, 0, 100) / Number::from(100),
             v => return Err(format!("$weight: {} is not a number.", v).into()),
         };
-        Ok(Value::Color(color1.mix(color2, weight)))
+        Ok(Value::Color(color1.mix(&color2, weight)))
     });
 }

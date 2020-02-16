@@ -67,7 +67,7 @@ struct Rgba {
 }
 
 impl Rgba {
-    pub fn new(red: Number, green: Number, blue: Number, alpha: Number) -> Self {
+    pub const fn new(red: Number, green: Number, blue: Number, alpha: Number) -> Self {
         Rgba {
             red,
             green,
@@ -90,7 +90,7 @@ struct Hsla {
 }
 
 impl Hsla {
-    pub fn new(hue: Number, saturation: Number, luminance: Number, alpha: Number) -> Self {
+    pub const fn new(hue: Number, saturation: Number, luminance: Number, alpha: Number) -> Self {
         Hsla {
             hue,
             saturation,
@@ -172,7 +172,7 @@ impl Color {
     /// Mix two colors together with weight
     /// Algorithm adapted from
     /// <https://github.com/sass/dart-sass/blob/0d0270cb12a9ac5cce73a4d0785fecb00735feee/lib/src/functions/color.dart#L718>
-    pub fn mix(self, other: Color, weight: Number) -> Self {
+    pub fn mix(self, other: &Color, weight: Number) -> Self {
         let weight = clamp!(weight, 0, 100);
         let normalized_weight = weight.clone() * Number::from(2) - Number::from(1);
         let alpha_distance = self.alpha() - other.alpha();
@@ -432,7 +432,7 @@ impl Color {
         let blue = Number::from(u8::max_value()) - self.blue();
         let repr = repr(&red, &green, &blue, &self.alpha());
         let inverse = Color::new_rgba(red, green, blue, self.alpha(), repr);
-        inverse.mix(self.clone(), weight)
+        inverse.mix(self, weight)
     }
 
     pub fn complement(&self) -> Self {

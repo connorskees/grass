@@ -11,7 +11,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         max_args!(args, 1);
         match arg!(args, 0, "color") {
             Value::Color(c) => Ok(Value::Dimension(c.alpha(), Unit::None)),
-            v => return Err(format!("$color: {} is not a color.", v).into()),
+            v => Err(format!("$color: {} is not a color.", v).into()),
         }
     });
     decl!(f "opacity", |args, _| {
@@ -19,7 +19,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         match arg!(args, 0, "color") {
             Value::Color(c) => Ok(Value::Dimension(c.alpha(), Unit::None)),
             Value::Dimension(num, unit) => Ok(Value::Ident(format!("opacity({}{})", num , unit), QuoteKind::None)),
-            v => return Err(format!("$color: {} is not a color.", v).into()),
+            v => Err(format!("$color: {} is not a color.", v).into()),
         }
     });
     decl!(f "opacify", |args, _| {

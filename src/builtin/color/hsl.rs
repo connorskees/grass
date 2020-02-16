@@ -53,21 +53,21 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         max_args!(args, 1);
         match arg!(args, 0, "color") {
             Value::Color(c) => Ok(Value::Dimension(c.hue(), Unit::Deg)),
-            v => return Err(format!("$color: {} is not a color.", v).into()),
+            v => Err(format!("$color: {} is not a color.", v).into()),
         }
     });
     decl!(f "saturation", |args, _| {
         max_args!(args, 1);
         match arg!(args, 0, "color") {
             Value::Color(c) => Ok(Value::Dimension(c.saturation(), Unit::Percent)),
-            v => return Err(format!("$color: {} is not a color.", v).into()),
+            v => Err(format!("$color: {} is not a color.", v).into()),
         }
     });
     decl!(f "lightness", |args, _| {
         max_args!(args, 1);
         match arg!(args, 0, "color") {
             Value::Color(c) => Ok(Value::Dimension(c.lightness(), Unit::Percent)),
-            v => return Err(format!("$color: {} is not a color.", v).into()),
+            v => Err(format!("$color: {} is not a color.", v).into()),
         }
     });
     decl!(f "adjust-hue", |args, _| {
@@ -157,8 +157,8 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         match arg!(args, 0, "color") {
             Value::Color(c) => Ok(Value::Color(c.invert(weight))),
             Value::Dimension(n, Unit::Percent) => Ok(Value::Ident(format!("invert({}%)", n), QuoteKind::None)),
-            Value::Dimension(..) => return Err("Only one argument may be passed to the plain-CSS invert() function.".into()),
-            v => return Err(format!("$color: {} is not a color.", v).into()),
+            Value::Dimension(..) => Err("Only one argument may be passed to the plain-CSS invert() function.".into()),
+            v => Err(format!("$color: {} is not a color.", v).into()),
         }
     });
 }

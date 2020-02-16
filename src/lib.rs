@@ -46,7 +46,8 @@
     clippy::cast_possible_truncation,
     clippy::single_match_else,
     clippy::indexing_slicing,
-    clippy::match_same_arms
+    clippy::match_same_arms,
+    clippy::or_fun_call,
 )]
 #![cfg_attr(feature = "nightly", feature(track_caller))]
 // todo! handle erroring on styles at the toplevel
@@ -213,7 +214,7 @@ enum Expr {
     /// A full selector `a > h1`
     Selector(Selector),
     /// A variable declaration `$var: 1px`
-    VariableDecl(String, Value),
+    VariableDecl(String, Box<Value>),
     /// A mixin declaration `@mixin foo {}`
     MixinDecl(String, Box<Mixin>),
     FunctionDecl(String, Box<Function>),
@@ -472,10 +473,10 @@ impl<'a> StyleSheetParser<'a> {
                 }
                 Expr::VariableDecl(name, val) => {
                     if self.scope == 0 {
-                        scope.insert_var(&name, val.clone());
-                        self.global_scope.insert_var(&name, val);
+                        scope.insert_var(&name, *val.clone());
+                        self.global_scope.insert_var(&name, *val);
                     } else {
-                        scope.insert_var(&name, val);
+                        scope.insert_var(&name, *val);
                     }
                 }
                 Expr::Include(rules) => stmts.extend(rules),
@@ -559,7 +560,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                     devour_whitespace(toks);
                     let VariableDecl { val, default } = eat_variable_value(toks, scope)?;
                     if !default || scope.get_var(&name).is_err() {
-                        return Ok(Some(Expr::VariableDecl(name, val)));
+                        return Ok(Some(Expr::VariableDecl(name, Box::new(val))));
                     }
                 } else {
                     values.push(Token {
