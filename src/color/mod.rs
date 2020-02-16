@@ -22,21 +22,79 @@ macro_rules! clamp {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub(crate) struct Color {
+    kind: ColorKind,
+    repr: String,
+}
+
+impl Color {
+    pub fn new_rgba(
+        red: Number,
+        green: Number,
+        blue: Number,
+        alpha: Number,
+        repr: String,
+    ) -> Color {
+        Color {
+            kind: ColorKind::new_rgba(red, green, blue, alpha),
+            repr,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+enum ColorKind {
+    Rgba(Rgba),
+    Hsla(Hsla),
+}
+
+impl ColorKind {
+    pub fn new_rgba(red: Number, green: Number, blue: Number, alpha: Number) -> Self {
+        ColorKind::Rgba(Rgba::new(red, green, blue, alpha))
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+struct Rgba {
     red: Number,
     green: Number,
     blue: Number,
     alpha: Number,
-    repr: String,
+}
+
+impl Rgba {
+    pub fn new(red: Number, green: Number, blue: Number, alpha: Number) -> Self {
+        Rgba {
+            red,
+            green,
+            blue,
+            alpha,
+        }
+    }
+
+    pub fn alpha(&self) -> Number {
+        self.alpha.clone()
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+struct Hsla {
+    hue: Number,
+    saturation: Number,
+    luminance: Number,
+    alpha: Number,
+}
+
+impl Hsla {
+    pub fn alpha(&self) -> Number {
+        self.alpha.clone()
+    }
 }
 
 // RGBA color functions
 impl Color {
     pub fn new(red: u8, green: u8, blue: u8, alpha: u8, repr: String) -> Self {
         Color {
-            red: red.into(),
-            green: green.into(),
-            blue: blue.into(),
-            alpha: alpha.into(),
+            kind: ColorKind::new_rgba(red.into(), green.into(), blue.into(), alpha.into()),
             repr,
         }
     }
@@ -69,25 +127,28 @@ impl Color {
         };
 
         let repr = repr(&red, &green, &blue, &alpha);
-        Color {
-            red,
-            green,
-            blue,
-            alpha,
-            repr,
-        }
+        Color::new_rgba(red, green, blue, alpha, repr)
     }
 
     pub fn red(&self) -> Number {
-        self.red.clone()
+        match &self.kind {
+            ColorKind::Rgba(c) => c.red.clone(),
+            ColorKind::Hsla(c) => todo!(),
+        }
     }
 
     pub fn blue(&self) -> Number {
-        self.blue.clone()
+        match &self.kind {
+            ColorKind::Rgba(c) => c.blue.clone(),
+            ColorKind::Hsla(c) => todo!(),
+        }
     }
 
     pub fn green(&self) -> Number {
-        self.green.clone()
+        match &self.kind {
+            ColorKind::Rgba(c) => c.green.clone(),
+            ColorKind::Hsla(c) => todo!(),
+        }
     }
 
     /// Mix two colors together with weight
@@ -96,7 +157,7 @@ impl Color {
     pub fn mix(self, other: Color, weight: Number) -> Self {
         let weight = clamp!(weight, 0, 100);
         let normalized_weight = weight.clone() * Number::from(2) - Number::from(1);
-        let alpha_distance = self.alpha.clone() - other.alpha.clone();
+        let alpha_distance = self.alpha() - other.alpha();
 
         let combined_weight1 =
             if normalized_weight.clone() * alpha_distance.clone() == Number::from(-1) {
@@ -109,10 +170,10 @@ impl Color {
         let weight2 = Number::from(1) - weight1.clone();
 
         Color::from_rgba(
-            self.red * weight1.clone() + other.red * weight2.clone(),
-            self.green * weight1.clone() + other.green * weight2.clone(),
-            self.blue * weight1 + other.blue * weight2,
-            self.alpha * weight.clone() + other.alpha * (Number::from(1) - weight),
+            self.red() * weight1.clone() + other.red() * weight2.clone(),
+            self.green() * weight1.clone() + other.green() * weight2.clone(),
+            self.blue() * weight1 + other.blue() * weight2,
+            self.alpha() * weight.clone() + other.alpha() * (Number::from(1) - weight),
         )
     }
 }
@@ -122,9 +183,9 @@ impl Color {
 impl Color {
     /// Calculate hue from RGBA values
     pub fn hue(&self) -> Number {
-        let red = self.red.clone() / Number::from(255);
-        let green = self.green.clone() / Number::from(255);
-        let blue = self.blue.clone() / Number::from(255);
+        let red = self.red() / Number::from(255);
+        let green = self.green() / Number::from(255);
+        let blue = self.blue() / Number::from(255);
         let min = red.clone().min(green.clone().min(blue.clone()));
         let max = red.clone().max(green.clone().max(blue.clone()));
         if min == max {
@@ -148,9 +209,9 @@ impl Color {
 
     /// Calculate saturation from RGBA values
     pub fn saturation(&self) -> Number {
-        let red = self.red.clone() / Number::from(255);
-        let green = self.green.clone() / Number::from(255);
-        let blue = self.blue.clone() / Number::from(255);
+        let red = self.red() / Number::from(255);
+        let green = self.green() / Number::from(255);
+        let blue = self.blue() / Number::from(255);
 
         let min = red.clone().min(green.clone().min(blue.clone()));
         let max = red.max(green.max(blue));
@@ -171,18 +232,18 @@ impl Color {
 
     /// Calculate luminance from RGBA values
     pub fn lightness(&self) -> Number {
-        let red = self.red.clone() / Number::from(255);
-        let green = self.green.clone() / Number::from(255);
-        let blue = self.blue.clone() / Number::from(255);
+        let red = self.red() / Number::from(255);
+        let green = self.green() / Number::from(255);
+        let blue = self.blue() / Number::from(255);
         let min = red.clone().min(green.clone().min(blue.clone()));
         let max = red.max(green.max(blue));
         (((min + max) / Number::from(2)) * Number::from(100)).round()
     }
 
     pub fn as_hsla(&self) -> (Number, Number, Number, Number) {
-        let red = self.red.clone() / Number::from(255);
-        let green = self.green.clone() / Number::from(255);
-        let blue = self.blue.clone() / Number::from(255);
+        let red = self.red() / Number::from(255);
+        let green = self.green() / Number::from(255);
+        let blue = self.blue() / Number::from(255);
         let min = red.clone().min(green.clone().min(blue.clone()));
         let max = red.clone().max(green.clone().max(blue.clone()));
 
@@ -268,13 +329,7 @@ impl Color {
             };
             let val = luminance * Number::from(255);
             let repr = repr(&val, &val, &val, &alpha);
-            return Color {
-                red: val.clone(),
-                green: val.clone(),
-                blue: val,
-                alpha,
-                repr,
-            };
+            return Color::new_rgba(val.clone(), val.clone(), val, alpha, repr);
         }
         let temporary_1 = if luminance.clone() < Number::ratio(1, 2) {
             luminance.clone() * (Number::from(1) + saturation)
@@ -324,13 +379,7 @@ impl Color {
         channel!(blue, temporary_b, temporary_1, temporary_2);
 
         let repr = repr(&red, &green, &blue, &alpha);
-        Color {
-            red,
-            green,
-            blue,
-            alpha,
-            repr,
-        }
+        Color::new_rgba(red, green, blue, alpha, repr)
     }
 
     pub fn invert(&self, weight: Number) -> Self {
@@ -341,17 +390,11 @@ impl Color {
         } else {
             weight
         };
-        let red = Number::from(u8::max_value()) - self.red.clone() * weight.clone();
-        let green = Number::from(u8::max_value()) - self.green.clone() * weight.clone();
-        let blue = Number::from(u8::max_value()) - self.blue.clone() * weight;
-        let repr = repr(&red, &green, &blue, &self.alpha);
-        Color {
-            red,
-            green,
-            blue,
-            alpha: self.alpha.clone(),
-            repr,
-        }
+        let red = Number::from(u8::max_value()) - self.red() * weight.clone();
+        let green = Number::from(u8::max_value()) - self.green() * weight.clone();
+        let blue = Number::from(u8::max_value()) - self.blue() * weight;
+        let repr = repr(&red, &green, &blue, &self.alpha());
+        Color::new_rgba(red, green, blue, self.alpha(), repr)
     }
 
     pub fn complement(&self) -> Self {
@@ -368,7 +411,10 @@ impl Color {
 /// Opacity color functions
 impl Color {
     pub fn alpha(&self) -> Number {
-        let a = self.alpha.clone();
+        let a = match &self.kind {
+            ColorKind::Rgba(c) => c.alpha(),
+            ColorKind::Hsla(c) => c.alpha(),
+        };
         if a > Number::from(1) {
             a / Number::from(255)
         } else {
@@ -378,21 +424,21 @@ impl Color {
 
     /// Change `alpha` to value given
     pub fn with_alpha(self, alpha: Number) -> Self {
-        Color::from_rgba(self.red, self.green, self.blue, alpha)
+        Color::from_rgba(self.red(), self.green(), self.blue(), alpha)
     }
 
     /// Makes a color more opaque.
     /// Takes a color and a number between 0 and 1,
     /// and returns a color with the opacity increased by that amount.
     pub fn fade_in(self, amount: Number) -> Self {
-        Color::from_rgba(self.red, self.green, self.blue, self.alpha + amount)
+        Color::from_rgba(self.red(), self.green(), self.blue(), self.alpha() + amount)
     }
 
     /// Makes a color more transparent.
     /// Takes a color and a number between 0 and 1,
     /// and returns a color with the opacity decreased by that amount.
     pub fn fade_out(self, amount: Number) -> Self {
-        Color::from_rgba(self.red, self.green, self.blue, self.alpha - amount)
+        Color::from_rgba(self.red(), self.green(), self.blue(), self.alpha() - amount)
     }
 }
 
@@ -401,12 +447,10 @@ impl Color {
     pub fn to_ie_hex_str(&self) -> String {
         format!(
             "#{:02X}{:02X}{:02X}{:02X}",
-            (self.alpha.clone() * Number::from(255))
-                .round()
-                .to_integer(),
-            self.red.to_integer(),
-            self.green.to_integer(),
-            self.blue.to_integer()
+            (self.alpha() * Number::from(255)).round().to_integer(),
+            self.red().to_integer(),
+            self.green().to_integer(),
+            self.blue().to_integer()
         )
     }
 }
