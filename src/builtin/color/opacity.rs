@@ -7,12 +7,14 @@ use crate::value::Value;
 
 pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     decl!(f "alpha", |args, _| {
+        max_args!(args, 1);
         match arg!(args, 0, "color") {
             Value::Color(c) => Ok(Value::Dimension(c.alpha(), Unit::None)),
             v => return Err(format!("$color: {} is not a color.", v).into()),
         }
     });
     decl!(f "opacity", |args, _| {
+        max_args!(args, 1);
         match arg!(args, 0, "color") {
             Value::Color(c) => Ok(Value::Dimension(c.alpha(), Unit::None)),
             Value::Dimension(num, unit) => Ok(Value::Ident(format!("opacity({}{})", num , unit), QuoteKind::None)),
@@ -20,6 +22,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         }
     });
     decl!(f "opacify", |args, _| {
+        max_args!(args, 2);
         let color = match arg!(args, 0, "color").eval() {
             Value::Color(c) => c,
             v => return Err(format!("$color: {} is not a color.", v).into()),
@@ -31,6 +34,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         Ok(Value::Color(color.fade_in(amount)))
     });
     decl!(f "fade-in", |args, _| {
+        max_args!(args, 2);
         let color = match arg!(args, 0, "color").eval() {
             Value::Color(c) => c,
             v => return Err(format!("$color: {} is not a color.", v).into()),
@@ -42,6 +46,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         Ok(Value::Color(color.fade_in(amount)))
     });
     decl!(f "transparentize", |args, _| {
+        max_args!(args, 2);
         let color = match arg!(args, 0, "color").eval() {
             Value::Color(c) => c,
             v => return Err(format!("$color: {} is not a color.", v).into()),
@@ -53,6 +58,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         Ok(Value::Color(color.fade_out(amount)))
     });
     decl!(f "fade-out", |args, _| {
+        max_args!(args, 2);
         let color = match arg!(args, 0, "color").eval() {
             Value::Color(c) => c,
             v => return Err(format!("$color: {} is not a color.", v).into()),
