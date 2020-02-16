@@ -7,18 +7,14 @@ use crate::value::Value;
 
 pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     decl!(f "if", |args, _| {
-        let cond: &Value = arg!(args, 0, "condition");
-        let if_true = arg!(args, 1, "if-true").clone();
-        let if_false = arg!(args, 2, "if-false").clone();
-        if cond.is_true() {
-            Ok(if_true)
+        if arg!(args, 0, "condition").is_true() {
+            Ok(arg!(args, 1, "if-true").eval())
         } else {
-            Ok(if_false)
+            Ok(arg!(args, 2, "if-false").eval())
         }
     });
     decl!(f "feature-exists", |args, _| {
-        let feature: &Value = arg!(args, 0, "feature");
-        match feature.clone().unquote().to_string().as_str() {
+        match arg!(args, 0, "feature").eval().unquote().to_string().as_str() {
             // A local variable will shadow a global variable unless
             // `!global` is used.
             "global-variable-shadowing" => Ok(Value::False),
@@ -38,20 +34,18 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         }
     });
     decl!(f "unit", |args, _| {
-        let number = arg!(args, 0, "number");
-        let unit = match number {
+        let unit = match arg!(args, 0, "number") {
             Value::Dimension(_, u) => u.to_string(),
             _ => String::new()
         };
         Ok(Value::Ident(unit, QuoteKind::Double))
     });
     decl!(f "type-of", |args, _| {
-        let value = arg!(args, 0, "value");
+        let value = arg!(args, 0, "value").eval();
         Ok(Value::Ident(value.kind().to_owned(), QuoteKind::None))
     });
     decl!(f "unitless", |args, _| {
-        let number = arg!(args, 0, "number");
-        match number {
+        match arg!(args, 0, "number") {
             Value::Dimension(_, Unit::None) => Ok(Value::True),
             Value::Dimension(_, _) => Ok(Value::False),
             _ => Ok(Value::True)
