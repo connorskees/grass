@@ -9,7 +9,8 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         max_args!(args, 1);
         let num = match arg!(args, 0, "number").eval() {
             Value::Dimension(n, Unit::None) => n * Number::from(100),
-            _ => todo!("expected unitless number in builtin function `percentage()`")
+            v @ Value::Dimension(..) => return Err(format!("$number: Expected {} to have no units.", v).into()),
+            v => return Err(format!("$number: {} is not a number.", v).into()),
         };
         Ok(Value::Dimension(num, Unit::Percent))
     });
