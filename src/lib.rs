@@ -324,7 +324,7 @@ impl<'a> StyleSheetParser<'a> {
                 | TokenKind::Symbol(Symbol::Mul)
                 | TokenKind::Symbol(Symbol::Percent)
                 | TokenKind::Symbol(Symbol::Period) => rules
-                    .extend(self.eat_rules(&Selector(Vec::new()), &mut self.global_scope.clone())),
+                    .extend(self.eat_rules(&Selector(Vec::new()), &mut self.global_scope.clone())?),
                 TokenKind::Whitespace(_) => {
                     self.lexer.next();
                     continue;
@@ -348,8 +348,7 @@ impl<'a> StyleSheetParser<'a> {
                     {
                         self.error(pos, "unexpected variable use at toplevel");
                     }
-                    let VariableDecl { val, default } = eat_variable_value(&mut self.lexer, &self.global_scope)
-                        .unwrap_or_else(|err| self.error(err.0, &err.1));
+                    let VariableDecl { val, default } = eat_variable_value(&mut self.lexer, &self.global_scope)?;
                     if !default || self.global_scope.get_var(&name).is_err() {
                         self.global_scope.insert_var(&name, val);
                     }
@@ -367,7 +366,7 @@ impl<'a> StyleSheetParser<'a> {
                     rules.push(Stmt::MultilineComment(comment));
                 }
                 TokenKind::AtRule(AtRuleKind::Include) => {
-                    rules.extend(eat_include(&mut self.lexer, &self.global_scope, &Selector(Vec::new())).unwrap_or_else(|e| self.error(e.0, &e.1)))
+                    rules.extend(eat_include(&mut self.lexer, &self.global_scope, &Selector(Vec::new()))?)
                 }
                 TokenKind::AtRule(AtRuleKind::Import) => {
                     let Token { pos, .. } = self
@@ -445,11 +444,9 @@ impl<'a> StyleSheetParser<'a> {
         Ok((rules, self.global_scope))
     }
 
-    fn eat_rules(&mut self, super_selector: &Selector, scope: &mut Scope) -> Vec<Stmt> {
+    fn eat_rules(&mut self, super_selector: &Selector, scope: &mut Scope) -> SassResult<Vec<Stmt>> {
         let mut stmts = Vec::new();
-        while let Some(expr) = eat_expr(&mut self.lexer, scope, super_selector)
-            .unwrap_or_else(|error| self.error(error.0, &error.1))
-        {
+        while let Some(expr) = eat_expr(&mut self.lexer, scope, super_selector)? {
             match expr {
                 Expr::Style(s) => stmts.push(Stmt::Style(s)),
                 #[allow(clippy::redundant_closure)]
@@ -462,7 +459,7 @@ impl<'a> StyleSheetParser<'a> {
                 }
                 Expr::Selector(s) => {
                     self.scope += 1;
-                    let rules = self.eat_rules(&super_selector.zip(&s), scope);
+                    let rules = self.eat_rules(&super_selector.zip(&s), scope)?;
                     stmts.push(Stmt::RuleSet(RuleSet {
                         super_selector: super_selector.clone(),
                         selector: s,
@@ -470,7 +467,7 @@ impl<'a> StyleSheetParser<'a> {
                     }));
                     self.scope -= 1;
                     if self.scope == 0 {
-                        return stmts;
+                        return Ok(stmts);
                     }
                 }
                 Expr::VariableDecl(name, val) => {
@@ -487,7 +484,7 @@ impl<'a> StyleSheetParser<'a> {
                 Expr::MultilineComment(s) => stmts.push(Stmt::MultilineComment(s)),
             }
         }
-        stmts
+        Ok(stmts)
     }
 }
 
@@ -495,7 +492,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
     scope: &Scope,
     super_selector: &Selector,
-) -> Result<Option<Expr>, (Pos, String)> {
+) -> SassResult<Option<Expr>> {
     let mut values = Vec::with_capacity(5);
     while let Some(tok) = toks.peek() {
         match &tok.kind {
@@ -520,7 +517,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                 // in a style `color:red`. todo: refactor
                 let mut v = values.into_iter().peekable();
                 let property = Style::parse_property(&mut v, scope, super_selector, String::new());
-                let value = Style::parse_value(&mut v, scope, super_selector);
+                let value = Style::parse_value(&mut v, scope, super_selector)?;
                 return Ok(Some(Expr::Style(Style { property, value })));
             }
             TokenKind::Symbol(Symbol::CloseCurlyBrace) => {
@@ -535,7 +532,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                     let mut v = values.into_iter().peekable();
                     let property =
                         Style::parse_property(&mut v, scope, super_selector, String::new());
-                    let value = Style::parse_value(&mut v, scope, super_selector);
+                    let value = Style::parse_value(&mut v, scope, super_selector)?;
                     return Ok(Some(Expr::Style(Style { property, value })));
                 }
             }
@@ -605,7 +602,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                         AtRule::Charset(_) => todo!("@charset as expr"),
                         AtRule::Debug(a, b) => Ok(Some(Expr::Debug(a, b))),
                         AtRule::Warn(a, b) => Ok(Some(Expr::Warn(a, b))),
-                        AtRule::Error(a, b) => Err((a, b)),
+                        AtRule::Error(pos, err) => Err(SassError::new(err, pos)),
                         AtRule::Return(_) => todo!("@return in unexpected location!"),
                     };
                 }

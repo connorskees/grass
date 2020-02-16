@@ -61,6 +61,26 @@ impl From<SassError> for String {
     }
 }
 
+impl From<&str> for SassError {
+    #[inline]
+    fn from(error: &str) -> SassError {
+        SassError {
+            pos: Pos::new(),
+            message: error.to_string(),
+        }
+    }
+}
+
+impl From<String> for SassError {
+    #[inline]
+    fn from(error: String) -> SassError {
+        SassError {
+            pos: Pos::new(),
+            message: error,
+        }
+    }
+}
+
 impl Error for SassError {
     fn description(&self) -> &'static str {
         "SASS parsing error"

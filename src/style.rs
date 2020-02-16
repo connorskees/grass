@@ -1,4 +1,5 @@
 use crate::common::{Pos, Scope, Symbol};
+use crate::error::SassResult;
 use crate::selector::Selector;
 use crate::utils::{devour_whitespace, parse_interpolation};
 use crate::value::Value;
@@ -33,7 +34,7 @@ impl Style {
         toks: &mut Peekable<I>,
         scope: &Scope,
         super_selector: &Selector,
-    ) -> Value {
+    ) -> SassResult<Value> {
         StyleParser::new(scope, super_selector).parse_style_value(toks)
     }
 
@@ -42,7 +43,7 @@ impl Style {
         scope: &Scope,
         super_selector: &Selector,
         super_property: String,
-    ) -> Result<Expr, (Pos, String)> {
+    ) -> SassResult<Expr> {
         StyleParser::new(scope, super_selector).eat_style_group(toks, super_property)
     }
 }
@@ -63,7 +64,7 @@ impl<'a> StyleParser<'a> {
     pub(crate) fn parse_style_value<I: Iterator<Item = Token>>(
         &self,
         toks: &mut Peekable<I>,
-    ) -> Value {
+    ) -> SassResult<Value> {
         let mut style = Vec::new();
         let mut n = 0;
         devour_whitespace(toks);
@@ -99,14 +100,14 @@ impl<'a> StyleParser<'a> {
             style.push(toks.next().unwrap());
         }
         devour_whitespace(toks);
-        Value::from_tokens(&mut style.into_iter().peekable(), self.scope).unwrap()
+        Value::from_tokens(&mut style.into_iter().peekable(), self.scope)
     }
 
     pub(crate) fn eat_style_group<I: Iterator<Item = Token>>(
         &self,
         toks: &mut Peekable<I>,
         super_property: String,
-    ) -> Result<Expr, (Pos, String)> {
+    ) -> SassResult<Expr> {
         let mut styles = Vec::new();
         devour_whitespace(toks);
         while let Some(tok) = toks.peek() {
@@ -138,7 +139,7 @@ impl<'a> StyleParser<'a> {
                                 _ => {}
                             }
                         }
-                        let value = self.parse_style_value(toks);
+                        let value = self.parse_style_value(toks)?;
                         styles.push(Style { property, value });
                         if let Some(tok) = toks.peek() {
                             match tok.kind {
@@ -153,7 +154,7 @@ impl<'a> StyleParser<'a> {
                     }
                 }
                 _ => {
-                    let val = self.parse_style_value(toks);
+                    let val = self.parse_style_value(toks)?;
                     return Ok(Expr::Style(Style {
                         property: super_property,
                         value: val,

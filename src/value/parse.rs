@@ -9,6 +9,7 @@ use crate::args::eat_call_args;
 use crate::builtin::GLOBAL_FUNCTIONS;
 use crate::color::Color;
 use crate::common::{Keyword, ListSeparator, Op, QuoteKind, Scope, Symbol};
+use crate::error::SassResult;
 use crate::units::Unit;
 use crate::utils::{devour_whitespace_or_comment, parse_interpolation};
 use crate::value::Value;
@@ -83,25 +84,25 @@ impl Value {
     pub fn from_tokens<I: Iterator<Item = Token>>(
         toks: &mut Peekable<I>,
         scope: &Scope,
-    ) -> Option<Self> {
+    ) -> SassResult<Self> {
         let left = Self::_from_tokens(toks, scope)?;
         let whitespace = devour_whitespace_or_comment(toks);
         let next = match toks.peek() {
             Some(x) => x,
-            None => return Some(left),
+            None => return Ok(left),
         };
         match next.kind {
             TokenKind::Symbol(Symbol::SemiColon) | TokenKind::Symbol(Symbol::CloseParen) => {
-                Some(left)
+                Ok(left)
             }
             TokenKind::Symbol(Symbol::Comma) => {
                 toks.next();
                 devour_whitespace_or_comment(toks);
                 let right = match Self::from_tokens(toks, scope) {
-                    Some(x) => x,
-                    None => return Some(left),
+                    Ok(x) => x,
+                    Err(_) => return Ok(left),
                 };
-                Some(Value::List(vec![left, right], ListSeparator::Comma))
+                Ok(Value::List(vec![left, right], ListSeparator::Comma))
             }
             TokenKind::Symbol(Symbol::Plus)
             | TokenKind::Symbol(Symbol::Minus)
@@ -121,18 +122,18 @@ impl Value {
                 toks.next();
                 devour_whitespace_or_comment(toks);
                 let right = match Self::from_tokens(toks, scope) {
-                    Some(x) => x,
-                    None => return Some(left),
+                    Ok(x) => x,
+                    Err(_) => return Ok(left),
                 };
-                Some(Value::BinaryOp(Box::new(left), op, Box::new(right)))
+                Ok(Value::BinaryOp(Box::new(left), op, Box::new(right)))
             }
             _ if whitespace => {
                 devour_whitespace_or_comment(toks);
                 let right = match Self::from_tokens(toks, scope) {
-                    Some(x) => x,
-                    None => return Some(left),
+                    Ok(x) => x,
+                    Err(_) => return Ok(left),
                 };
-                Some(Value::List(vec![left, right], ListSeparator::Space))
+                Ok(Value::List(vec![left, right], ListSeparator::Space))
             }
             _ => {
                 dbg!(&next.kind);
@@ -144,11 +145,11 @@ impl Value {
     fn _from_tokens<I: Iterator<Item = Token>>(
         toks: &mut Peekable<I>,
         scope: &Scope,
-    ) -> Option<Self> {
+    ) -> SassResult<Self> {
         let kind = if let Some(tok) = toks.next() {
             tok.kind
         } else {
-            return None;
+            return Err("Unexpected EOF".into());
         };
         match kind {
             TokenKind::Number(val) => {
@@ -187,7 +188,7 @@ impl Value {
                     }
                     BigRational::new(num.parse().unwrap(), pow(BigInt::from(10), num_dec))
                 };
-                Some(Value::Dimension(Number::new(n), unit))
+                Ok(Value::Dimension(Number::new(n), unit))
             }
             TokenKind::Symbol(Symbol::OpenParen) => {
                 devour_whitespace_or_comment(toks);
@@ -196,14 +197,14 @@ impl Value {
                     toks.next().unwrap().kind,
                     TokenKind::Symbol(Symbol::CloseParen)
                 );
-                Some(Value::Paren(Box::new(val)))
+                Ok(Value::Paren(Box::new(val)))
             }
             TokenKind::Symbol(Symbol::BitAnd) => {
-                Some(Value::Ident(String::from("&"), QuoteKind::None))
+                Ok(Value::Ident(String::from("&"), QuoteKind::None))
             }
-            TokenKind::Symbol(Symbol::Hash) => Some(parse_hex(flatten_ident(toks, scope))),
+            TokenKind::Symbol(Symbol::Hash) => Ok(parse_hex(flatten_ident(toks, scope))),
             // TokenKind::Interpolation => {
-            //     Some(Value::Ident(
+            //     Ok(Value::Ident(
             //         parse_interpolation(toks, scope)
             //             .iter()
             //             .map(|x| x.kind.to_string())
@@ -222,7 +223,7 @@ impl Value {
                         let func = match scope.get_fn(&s) {
                             Ok(f) => f,
                             Err(_) => match GLOBAL_FUNCTIONS.get(&s) {
-                                Some(f) => return f(&eat_call_args(toks, scope), scope).ok(),
+                                Some(f) => return f(&eat_call_args(toks, scope), scope),
                                 None => {
                                     s.push('(');
                                     let mut unclosed_parens = 0;
@@ -255,17 +256,17 @@ impl Value {
                                         }
                                         s.push_str(&t.kind.to_string());
                                     }
-                                    return Some(Value::Ident(s, QuoteKind::None));
+                                    return Ok(Value::Ident(s, QuoteKind::None));
                                 }
                             },
                         };
-                        Some(func.clone().args(&eat_call_args(toks, scope)).call())
+                        Ok(func.clone().args(&eat_call_args(toks, scope)).call())
                     }
                     _ => {
                         if let Ok(c) = crate::color::ColorName::try_from(s.as_ref()) {
-                            Some(Value::Color(c.into_color(s)))
+                            Ok(Value::Color(c.into_color(s)))
                         } else {
-                            Some(Value::Ident(s, QuoteKind::None))
+                            Ok(Value::Ident(s, QuoteKind::None))
                         }
                     }
                 }
@@ -285,7 +286,7 @@ impl Value {
                     }
                     s.push_str(&tok.kind.to_string());
                 }
-                Some(Value::Ident(s, QuoteKind::Double))
+                Ok(Value::Ident(s, QuoteKind::Double))
             }
             TokenKind::Symbol(Symbol::SingleQuote) => {
                 let mut s = String::new();
@@ -295,10 +296,10 @@ impl Value {
                     }
                     s.push_str(&tok.kind.to_string());
                 }
-                Some(Value::Ident(s, QuoteKind::Single))
+                Ok(Value::Ident(s, QuoteKind::Single))
             }
             TokenKind::Variable(ref v) => {
-                Some(scope.get_var(v).expect("expected variable").clone())
+                Ok(scope.get_var(v).expect("expected variable").clone())
             }
             TokenKind::Interpolation => {
                 let mut s = parse_interpolation(toks, scope)
@@ -323,13 +324,13 @@ impl Value {
                         _ => break,
                     }
                 }
-                Some(Value::Ident(s, QuoteKind::None))
+                Ok(Value::Ident(s, QuoteKind::None))
             }
-            TokenKind::Keyword(Keyword::Important) => Some(Value::Important),
-            TokenKind::Keyword(Keyword::True) => Some(Value::True),
-            TokenKind::Keyword(Keyword::False) => Some(Value::False),
-            TokenKind::Keyword(Keyword::Null) => Some(Value::Null),
-            _ => None,
+            TokenKind::Keyword(Keyword::Important) => Ok(Value::Important),
+            TokenKind::Keyword(Keyword::True) => Ok(Value::True),
+            TokenKind::Keyword(Keyword::False) => Ok(Value::False),
+            TokenKind::Keyword(Keyword::Null) => Ok(Value::Null),
+            _ => Err("Unexpected token in value parsing".into()),
         }
     }
 }

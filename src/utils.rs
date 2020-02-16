@@ -1,4 +1,5 @@
-use crate::common::{Keyword, Pos, Symbol};
+use crate::common::{Keyword, Symbol};
+use crate::error::SassResult;
 use crate::lexer::Lexer;
 use crate::value::Value;
 use crate::{Scope, Token, TokenKind};
@@ -81,7 +82,7 @@ impl VariableDecl {
 pub(crate) fn eat_variable_value<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
     scope: &Scope,
-) -> Result<VariableDecl, (Pos, String)> {
+) -> SassResult<VariableDecl> {
     devour_whitespace(toks);
     let mut default = false;
     let mut raw: Vec<Token> = Vec::new();

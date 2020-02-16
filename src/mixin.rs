@@ -3,6 +3,7 @@ use std::vec::IntoIter;
 
 use crate::args::{eat_call_args, eat_func_args, CallArgs, FuncArgs};
 use crate::common::{Pos, Scope, Symbol};
+use crate::error::{SassError, SassResult};
 use crate::selector::Selector;
 use crate::utils::devour_whitespace;
 use crate::{eat_expr, Expr, RuleSet, Stmt, Token, TokenKind};
@@ -87,11 +88,11 @@ impl Mixin {
         self
     }
 
-    pub fn call(mut self, super_selector: &Selector) -> Result<Vec<Stmt>, (Pos, String)> {
+    pub fn call(mut self, super_selector: &Selector) -> SassResult<Vec<Stmt>> {
         self.eval(super_selector)
     }
 
-    fn eval(&mut self, super_selector: &Selector) -> Result<Vec<Stmt>, (Pos, String)> {
+    fn eval(&mut self, super_selector: &Selector) -> SassResult<Vec<Stmt>> {
         let mut stmts = Vec::new();
         while let Some(expr) = eat_expr(&mut self.body, &self.scope, super_selector)? {
             match expr {
@@ -123,7 +124,7 @@ pub(crate) fn eat_include<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
     scope: &Scope,
     super_selector: &Selector,
-) -> Result<Vec<Stmt>, (Pos, String)> {
+) -> SassResult<Vec<Stmt>> {
     toks.next();
     devour_whitespace(toks);
     let Token { kind, pos } = toks
@@ -131,7 +132,7 @@ pub(crate) fn eat_include<I: Iterator<Item = Token>>(
         .expect("this must exist because we have already peeked");
     let name = match kind {
         TokenKind::Ident(s) => s,
-        _ => return Err((pos, String::from("Expected identifier."))),
+        _ => return Err(SassError::new("Expected identifier.", pos)),
     };
 
     devour_whitespace(toks);
@@ -147,17 +148,17 @@ pub(crate) fn eat_include<I: Iterator<Item = Token>>(
                 }
                 tmp
             }
-            _ => return Err((pos, String::from("expected `(` or `;`"))),
+            _ => return Err(SassError::new("expected `(` or `;`", pos)),
         }
     } else {
-        return Err((pos, String::from("unexpected EOF")));
+        return Err(SassError::new("unexpected EOF", pos));
     };
 
     devour_whitespace(toks);
 
     let mixin = match scope.get_mixin(&name) {
         Ok(m) => m.clone(),
-        _ => return Err((pos, String::from("Expected identifier."))),
+        _ => return Err(SassError::new("Expected identifier.", pos)),
     };
 
     let rules = mixin.args(&args).call(super_selector)?;
