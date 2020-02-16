@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 
 use super::Builtin;
 use crate::common::QuoteKind;
+use crate::value::Number;
 use crate::units::Unit;
 use crate::value::Value;
 
@@ -28,7 +29,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             v => return Err(format!("$color: {} is not a color.", v).into()),
         };
         let amount = match arg!(args, 1, "amount").eval() {
-            Value::Dimension(n, _) => n,
+            Value::Dimension(n, u) => bound!("amount", n, u, 0, 1),
             v => return Err(format!("$amount: {} is not a number.", v).into()),
         };
         Ok(Value::Color(color.fade_in(amount)))
@@ -40,7 +41,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             v => return Err(format!("$color: {} is not a color.", v).into()),
         };
         let amount = match arg!(args, 1, "amount").eval() {
-            Value::Dimension(n, _) => n,
+            Value::Dimension(n, u) => bound!("amount", n, u, 0, 1),
             v => return Err(format!("$amount: {} is not a number.", v).into()),
         };
         Ok(Value::Color(color.fade_in(amount)))
@@ -52,7 +53,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             v => return Err(format!("$color: {} is not a color.", v).into()),
         };
         let amount = match arg!(args, 1, "amount").eval() {
-            Value::Dimension(n, _) => n,
+            Value::Dimension(n, u) => bound!("amount", n, u, 0, 1),
             v => return Err(format!("$amount: {} is not a number.", v).into()),
         };
         Ok(Value::Color(color.fade_out(amount)))
@@ -64,7 +65,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             v => return Err(format!("$color: {} is not a color.", v).into()),
         };
         let amount = match arg!(args, 1, "amount").eval() {
-            Value::Dimension(n, _) => n,
+            Value::Dimension(n, u) => bound!("amount", n, u, 0, 1),
             v => return Err(format!("$amount: {} is not a number.", v).into()),
         };
         Ok(Value::Color(color.fade_out(amount)))
