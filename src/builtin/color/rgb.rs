@@ -43,35 +43,39 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         } else if args.len() == 2 {
             let color = match arg!(args, 0, "color").eval() {
                 Value::Color(c) => c,
-                _ => todo!("expected color")
+                v => return Err(format!("$color: {} is not a color.", v).into()),
             };
             let alpha = match arg!(args, 1, "alpha").eval() {
                 Value::Dimension(n, Unit::None) => n,
                 Value::Dimension(n, Unit::Percent) => n / Number::from(100),
-                _ => todo!("expected either unitless or % number for alpha"),
+                v @ Value::Dimension(..) => return Err(format!("$alpha: Expected {} to have no units or \"%\".", v).into()),
+                v => return Err(format!("$alpha: {} is not a number.", v).into()),
             };
             Ok(Value::Color(color.with_alpha(alpha)))
         } else {
             let red = match arg!(args, 0, "red").eval() {
                 Value::Dimension(n, Unit::None) => n,
                 Value::Dimension(n, Unit::Percent) => (n / Number::from(100)) * Number::from(255),
-                v @ Value::Dimension(..) => return Err(format!("Expected {} to have no units or \"%\".", v).into()),
+                v @ Value::Dimension(..) => return Err(format!("$red: Expected {} to have no units or \"%\".", v).into()),
                 v => return Err(format!("$red: {} is not a number.", v).into()),
             };
             let green = match arg!(args, 1, "green").eval() {
                 Value::Dimension(n, Unit::None) => n,
                 Value::Dimension(n, Unit::Percent) => (n / Number::from(100)) * Number::from(255),
-                _ => todo!("expected either unitless or % number for alpha"),
+                v @ Value::Dimension(..) => return Err(format!("$green: Expected {} to have no units or \"%\".", v).into()),
+                v => return Err(format!("$green: {} is not a number.", v).into()),
             };
             let blue = match arg!(args, 2, "blue").eval() {
                 Value::Dimension(n, Unit::None) => n,
                 Value::Dimension(n, Unit::Percent) => (n / Number::from(100)) * Number::from(255),
-                _ => todo!("expected either unitless or % number for alpha"),
+                v @ Value::Dimension(..) => return Err(format!("$blue: Expected {} to have no units or \"%\".", v).into()),
+                v => return Err(format!("$blue: {} is not a number.", v).into()),
             };
             let alpha = match arg!(args, 3, "alpha"=Value::Dimension(Number::from(1), Unit::None)).eval() {
                 Value::Dimension(n, Unit::None) => n,
                 Value::Dimension(n, Unit::Percent) => n / Number::from(100),
-                _ => todo!("expected either unitless or % number for alpha")
+                v @ Value::Dimension(..) => return Err(format!("$alpha: Expected {} to have no units or \"%\".", v).into()),
+                v => return Err(format!("$alpha: {} is not a number.", v).into()),
             };
             Ok(Value::Color(Color::from_rgba(red, green, blue, alpha)))
         }
@@ -122,17 +126,20 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             let red = match arg!(args, 0, "red").eval() {
                 Value::Dimension(n, Unit::None) => n,
                 Value::Dimension(n, Unit::Percent) => (n / Number::from(100)) * Number::from(255),
-                _ => todo!("expected either unitless or % number for alpha"),
+                v @ Value::Dimension(..) => return Err(format!("$red: Expected {} to have no units or \"%\".", v).into()),
+                v => return Err(format!("$red: {} is not a number.", v).into()),
             };
             let green = match arg!(args, 1, "green").eval() {
                 Value::Dimension(n, Unit::None) => n,
                 Value::Dimension(n, Unit::Percent) => (n / Number::from(100)) * Number::from(255),
-                _ => todo!("expected either unitless or % number for alpha"),
+                v @ Value::Dimension(..) => return Err(format!("$green: Expected {} to have no units or \"%\".", v).into()),
+                v => return Err(format!("$green: {} is not a number.", v).into()),
             };
             let blue = match arg!(args, 2, "blue").eval() {
                 Value::Dimension(n, Unit::None) => n,
                 Value::Dimension(n, Unit::Percent) => (n / Number::from(100)) * Number::from(255),
-                _ => todo!("expected either unitless or % number for alpha"),
+                v @ Value::Dimension(..) => return Err(format!("$blue: Expected {} to have no units or \"%\".", v).into()),
+                v => return Err(format!("$blue: {} is not a number.", v).into()),
             };
             let alpha = match arg!(args, 3, "alpha"=Value::Dimension(Number::from(1), Unit::None)).eval() {
                 Value::Dimension(n, Unit::None) => n,
