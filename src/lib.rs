@@ -59,7 +59,7 @@ use std::path::Path;
 use crate::atrule::{AtRule, AtRuleKind};
 use crate::common::{Keyword, Op, Pos, Scope, Symbol, Whitespace};
 use crate::css::Css;
-use crate::error::SassError;
+use crate::error::{SassError, SassResult};
 use crate::format::PrettyPrinter;
 use crate::function::Function;
 use crate::imports::import;
@@ -87,8 +87,6 @@ mod style;
 mod units;
 mod utils;
 mod value;
-
-pub type SassResult<T> = Result<T, SassError>;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Token {

@@ -1,6 +1,7 @@
 use std::fmt::Write;
 
-use crate::{RuleSet, SassResult, Stmt, StyleSheet};
+use crate::error::SassResult;
+use crate::{RuleSet, Stmt, StyleSheet};
 
 pub(crate) struct PrettyPrinter<W: Write> {
     buf: W,

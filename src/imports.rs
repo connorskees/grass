@@ -1,5 +1,6 @@
 use crate::common::Scope;
-use crate::{SassResult, Stmt, StyleSheet};
+use crate::error::SassResult;
+use crate::{Stmt, StyleSheet};
 use std::ffi::OsStr;
 use std::path::Path;
 

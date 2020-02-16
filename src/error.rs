@@ -4,6 +4,8 @@ use std::fmt::{self, Display};
 use std::io;
 use std::string::FromUtf8Error;
 
+pub type SassResult<T> = Result<T, SassError>;
+
 #[derive(Debug)]
 pub struct SassError {
     message: String,

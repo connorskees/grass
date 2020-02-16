@@ -1,6 +1,7 @@
 //! # Convert from SCSS AST to CSS
 use crate::atrule::AtRule;
-use crate::{RuleSet, SassResult, Selector, Stmt, Style, StyleSheet};
+use crate::error::SassResult;
+use crate::{RuleSet, Selector, Stmt, Style, StyleSheet};
 use std::fmt;
 use std::io::Write;
 
