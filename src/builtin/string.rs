@@ -63,8 +63,8 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             Value::Dimension(n, Unit::None) if n == Number::from(0) => 1_usize,
             Value::Dimension(n, Unit::None) if n < -Number::from(str_len) => 1_usize,
             Value::Dimension(n, Unit::None) => (BigInt::from(str_len + 1) + n.to_integer()).to_usize().unwrap(),
-            Value::Dimension(..) => todo!("$start: Expected ___ to have no units."),
-            _ => todo!("$start-at: ____ is not a number")
+            v @ Value::Dimension(..) => return Err(format!("$start: Expected {} to have no units.", v).into()),
+            v => return Err(format!("$start-at: {} is not a number.", v).into()),
         };
         let mut end = match arg!(args, 2, "end-at"=Value::Null).eval() {
             Value::Dimension(n, Unit::None) if n.is_decimal() => return Err(format!("{} is not an int.", n).into()),
@@ -72,9 +72,9 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             Value::Dimension(n, Unit::None) if n == Number::from(0) => 0_usize,
             Value::Dimension(n, Unit::None) if n < -Number::from(str_len) => 0_usize,
             Value::Dimension(n, Unit::None) => (BigInt::from(str_len + 1) + n.to_integer()).to_usize().unwrap(),
-            Value::Dimension(..) => todo!("$end: Expected ___ to have no units."),
+            v @ Value::Dimension(..) => return Err(format!("$end: Expected {} to have no units.", v).into()),
             Value::Null => str_len,
-            _ => todo!("$end-at: ____ is not a number")
+            v => return Err(format!("$end-at: {} is not a number.", v).into()),
         };
 
         if end > str_len {
