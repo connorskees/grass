@@ -15,7 +15,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         let s: &Value = arg!(args, 0, "string");
         match s.eval() {
             Value::Ident(i, q) => Ok(Value::Ident(i.to_ascii_uppercase(), q)),
-            _ => todo!("")
+            v => Err(format!("$string: {} is not a string.", v).into()),
         }
     });
     decl!(f "to-lower-case", |args, _| {
@@ -23,7 +23,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         let s: &Value = arg!(args, 0, "string");
         match s.eval() {
             Value::Ident(i, q) => Ok(Value::Ident(i.to_ascii_lowercase(), q)),
-            _ => todo!("")
+            v => Err(format!("$string: {} is not a string.", v).into()),
         }
     });
     decl!(f "str-length", |args, _| {
@@ -31,7 +31,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         let s: &Value = arg!(args, 0, "string");
         match s.eval() {
             Value::Ident(i, _) => Ok(Value::Dimension(Number::from(i.len()), Unit::None)),
-            _ => todo!("")
+            v => Err(format!("$string: {} is not a string.", v).into()),
         }
     });
     decl!(f "quote", |args, _| {
@@ -39,18 +39,22 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         let s = arg!(args, 0, "string").eval();
         match s {
             Value::Ident(i, _) => Ok(Value::Ident(i, QuoteKind::Double)),
-            _ => todo!("")
+            v => Err(format!("$string: {} is not a string.", v).into()),
         }
     });
     decl!(f "unquote", |args, _| {
         max_args!(args, 1);
-        Ok(arg!(args, 0, "string").eval().unquote())
+        match arg!(args, 0, "string").eval() {
+            Value::Ident(i, QuoteKind::None) if i.is_empty() => Ok(Value::Null),
+            i @ Value::Ident(..) => Ok(i.unquote()),
+            v => Err(format!("$string: {} is not a string.", v).into()),
+        }
     });
     decl!(f "str-slice", |args, _| {
         max_args!(args, 3);
         let (string, quotes) = match arg!(args, 0, "string").eval() {
             Value::Ident(s, q) => (s, q),
-            _ => todo!("____ is not a string")
+            v => return Err(format!("$string: {} is not a string.", v).into()),
         };
         let str_len = string.len();
         let start = match arg!(args, 1, "start-at").eval() {
