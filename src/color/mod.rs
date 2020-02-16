@@ -232,7 +232,7 @@ impl Color {
     /// Calculate saturation from RGBA values
     pub fn saturation(&self) -> Number {
         if let Some(h) = &self.hsla {
-            return h.saturation()  * Number::from(100);
+            return h.saturation() * Number::from(100);
         }
 
         let red = self.red() / Number::from(255);

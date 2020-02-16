@@ -46,3 +46,17 @@ macro_rules! max_args {
         }
     };
 }
+
+macro_rules! bound {
+    ($arg:ident, $unit:ident, $low:literal, $high:literal) => {
+        if $arg > Number::from($high) || $arg < Number::from($low) {
+            return Err(format!(
+                "Expected {}{} to be within {}{} and {}{}.",
+                $arg, $unit, $low, $unit, $high, $unit,
+            )
+            .into());
+        } else {
+            $arg
+        }
+    };
+}
