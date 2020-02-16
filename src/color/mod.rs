@@ -424,18 +424,15 @@ impl Color {
     }
 
     pub fn invert(&self, weight: Number) -> Self {
-        let weight = if weight > Number::from(1) {
-            Number::from(1)
-        } else if weight < Number::from(0) {
-            Number::from(0)
-        } else {
-            weight
-        };
-        let red = Number::from(u8::max_value()) - self.red() * weight.clone();
-        let green = Number::from(u8::max_value()) - self.green() * weight.clone();
-        let blue = Number::from(u8::max_value()) - self.blue() * weight;
+        if weight == Number::from(0) {
+            return self.clone();
+        }
+        let red = Number::from(u8::max_value()) - self.red();
+        let green = Number::from(u8::max_value()) - self.green();
+        let blue = Number::from(u8::max_value()) - self.blue();
         let repr = repr(&red, &green, &blue, &self.alpha());
-        Color::new_rgba(red, green, blue, self.alpha(), repr)
+        let inverse = Color::new_rgba(red, green, blue, self.alpha(), repr);
+        inverse.mix(self.clone(), weight)
     }
 
     pub fn complement(&self) -> Self {

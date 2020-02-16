@@ -264,6 +264,11 @@ test!(
     "a {\n  color: #cccccc;\n}\n"
 );
 test!(
+    invert_weight_percent_turquoise,
+    "a {\n  color: invert(turquoise, 23%);\n}\n",
+    "a {\n  color: #5db4ab;\n}\n"
+);
+test!(
     invert_weight_no_unit,
     "a {\n  color: invert(white, 20);\n}\n",
     "a {\n  color: #cccccc;\n}\n"

@@ -150,7 +150,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     decl!(f "invert", |args, _| {
         max_args!(args, 2);
         let weight = match arg!(args, 1, "weight"=Value::Dimension(Number::from(100), Unit::Percent)) {
-            Value::Dimension(n, _) => n / Number::from(100),
+            Value::Dimension(n, u) => bound!("amount", n, u, 0, 100) / Number::from(100),
             v => return Err(format!("$weight: {} is not a number.", v).into()),
         };
         match arg!(args, 0, "color") {
