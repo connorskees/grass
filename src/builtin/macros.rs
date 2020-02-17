@@ -9,10 +9,10 @@ macro_rules! arg {
         };
     };
     ($args:ident, $idx:literal, $name:literal=$default:expr) => {
-        match $args.get(stringify!($idx)) {
-            Some(v) => v.clone(),
-            None => match $args.get($name) {
-                Some(v) => v.clone(),
+        match $args.remove(stringify!($idx)) {
+            Some(v) => v.eval(),
+            None => match $args.remove($name) {
+                Some(v) => v.eval(),
                 None => $default,
             },
         };
