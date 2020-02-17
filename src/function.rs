@@ -1,9 +1,9 @@
 use std::iter::Peekable;
 
-use crate::args::CallArgs;
-use crate::args::{eat_func_args, FuncArgs};
+use crate::args::{CallArgs, eat_func_args, FuncArgs};
 use crate::atrule::AtRule;
 use crate::common::{Pos, Scope, Symbol};
+use crate::error::SassResult;
 use crate::utils::devour_whitespace;
 use crate::value::Value;
 use crate::{Token, TokenKind};
@@ -66,18 +66,21 @@ impl Function {
         Ok((name, Function::new(scope.clone(), args, body)))
     }
 
-    pub fn args(mut self, args: &CallArgs) -> Function {
+    pub fn args(mut self, args: &mut CallArgs) -> SassResult<Function> {
         for (idx, arg) in self.args.0.iter().enumerate() {
-            let val = match args.get(&format!("{}", idx)) {
-                Some(v) => v.clone(),
-                None => match args.get(&arg.name) {
-                    Some(v) => v.clone(),
-                    None => arg.default.clone().expect("missing variable!"),
+            let val = match args.remove(&format!("{}", idx)) {
+                Some(v) => v,
+                None => match args.remove(&arg.name) {
+                    Some(v) => v,
+                    None => match &arg.default {
+                        Some(v) => v.clone(),
+                        None => return Err(format!("Missing argument ${}.", &arg.name).into())
+                    }
                 },
             };
             self.scope.insert_var(&arg.name, val);
         }
-        self
+        Ok(self)
     }
 
     pub fn call(&self) -> Value {

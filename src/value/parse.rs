@@ -260,7 +260,7 @@ impl Value {
                                 }
                             },
                         };
-                        Ok(func.clone().args(&eat_call_args(toks, scope)?).call())
+                        Ok(func.clone().args(&mut eat_call_args(toks, scope)?)?.call())
                     }
                     _ => {
                         if let Ok(c) = crate::color::ColorName::try_from(s.as_ref()) {
