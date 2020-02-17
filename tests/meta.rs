@@ -119,21 +119,21 @@ test!(
     "a {\n  color: type-of(\"red\")\n}\n",
     "a {\n  color: string;\n}\n"
 );
-// test!(
-//     type_of_3_hex_color,
-//     "a {\n  color: type-of(#fff)\n}\n",
-//     "a {\n  color: color;\n}\n"
-// );
-// test!(
-//     type_of_6_hex_color,
-//     "a {\n  color: type-of(#ffffff)\n}\n",
-//     "a {\n  color: color;\n}\n"
-// );
-// test!(
-//     type_of_named_color,
-//     "a {\n  color: type-of(red)\n}\n",
-//     "a {\n  color: color;\n}\n"
-// );
+test!(
+    type_of_3_hex_color,
+    "a {\n  color: type-of(#fff)\n}\n",
+    "a {\n  color: color;\n}\n"
+);
+test!(
+    type_of_6_hex_color,
+    "a {\n  color: type-of(#ffffff)\n}\n",
+    "a {\n  color: color;\n}\n"
+);
+test!(
+    type_of_named_color,
+    "a {\n  color: type-of(red)\n}\n",
+    "a {\n  color: color;\n}\n"
+);
 // test!(
 //     type_of_spaced_list,
 //     "a {\n  color: type-of(1 2 3)\n}\n",
@@ -199,16 +199,16 @@ test!(
     "a {\n  color: inspect(1px)\n}\n",
     "a {\n  color: 1px;\n}\n"
 );
-// test!(
-//     inspect_color_3_hex,
-//     "a {\n  color: inspect(#fff)\n}\n",
-//     "a {\n  color: #fff;\n}\n"
-// );
-// test!(
-//     inspect_color_6_hex,
-//     "a {\n  color: inspect(#ffffff)\n}\n",
-//     "a {\n  color: #ffffff;\n}\n"
-// );
+test!(
+    inspect_color_3_hex,
+    "a {\n  color: inspect(#fff)\n}\n",
+    "a {\n  color: #fff;\n}\n"
+);
+test!(
+    inspect_color_6_hex,
+    "a {\n  color: inspect(#ffffff)\n}\n",
+    "a {\n  color: #ffffff;\n}\n"
+);
 test!(
     inspect_color_name,
     "a {\n  color: inspect(red)\n}\n",
