@@ -145,7 +145,7 @@ impl<'a> Iterator for Lexer<'a> {
 }
 
 fn is_whitespace(c: char) -> bool {
-    c == ' ' || c == '\n' || c == '\r'
+    c == ' ' || c == '\n' || c == '\r' || c == FORM_FEED
 }
 
 impl<'a> Lexer<'a> {
