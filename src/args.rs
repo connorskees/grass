@@ -37,6 +37,10 @@ impl CallArgs {
     pub fn len(&self) -> usize {
         self.0.len()
     }
+
+    pub fn remove(&mut self, s: &str) -> Option<Value> {
+        self.0.remove(s)
+    }
 }
 
 pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(

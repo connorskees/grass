@@ -9,14 +9,14 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     decl!(f "if", |args, _| {
         max_args!(args, 3);
         if arg!(args, 0, "condition").is_true() {
-            Ok(arg!(args, 1, "if-true").eval())
+            Ok(arg!(args, 1, "if-true"))
         } else {
-            Ok(arg!(args, 2, "if-false").eval())
+            Ok(arg!(args, 2, "if-false"))
         }
     });
     decl!(f "feature-exists", |args, _| {
         max_args!(args, 1);
-        match arg!(args, 0, "feature").eval().unquote().to_string().as_str() {
+        match arg!(args, 0, "feature").unquote().to_string().as_str() {
             // A local variable will shadow a global variable unless
             // `!global` is used.
             "global-variable-shadowing" => Ok(Value::False),
@@ -45,7 +45,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     });
     decl!(f "type-of", |args, _| {
         max_args!(args, 1);
-        let value = arg!(args, 0, "value").eval();
+        let value = arg!(args, 0, "value");
         Ok(Value::Ident(value.kind().to_owned(), QuoteKind::None))
     });
     decl!(f "unitless", |args, _| {
@@ -74,7 +74,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     decl!(f "function-exists", |args, scope| {
         max_args!(args, 1);
         let value = arg!(args, 0, "name");
-        let s = value.eval().unquote().to_string();
+        let s = value.unquote().to_string();
         Ok(Value::bool(scope.fn_exists(&s) || GLOBAL_FUNCTIONS.contains_key(&s)))
     });
     decl!(f "call", |_args, _scope| {

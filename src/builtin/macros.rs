@@ -1,9 +1,9 @@
 macro_rules! arg {
     ($args:ident, $idx:literal, $name:literal) => {
-        match $args.get(stringify!($idx)) {
-            Some(v) => v,
-            None => match $args.get($name) {
-                Some(v) => v,
+        match $args.remove(stringify!($idx)) {
+            Some(v) => v.eval(),
+            None => match $args.remove($name) {
+                Some(v) => v.eval(),
                 None => return Err(concat!("Missing argument $", $name, ".").into()),
             },
         };

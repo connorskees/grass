@@ -8,7 +8,7 @@ use crate::value::{Number, Value};
 pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     decl!(f "rgb", |args, _| {
         if args.len() == 1 {
-            let mut channels = match arg!(args, 0, "channels").eval() {
+            let mut channels = match arg!(args, 0, "channels") {
                 Value::List(v, _) => v,
                 _ => return Err("Missing element $green.".into())
             };
@@ -41,11 +41,11 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             Ok(Value::Color(color))
 
         } else if args.len() == 2 {
-            let color = match arg!(args, 0, "color").eval() {
+            let color = match arg!(args, 0, "color") {
                 Value::Color(c) => c,
                 v => return Err(format!("$color: {} is not a color.", v).into()),
             };
-            let alpha = match arg!(args, 1, "alpha").eval() {
+            let alpha = match arg!(args, 1, "alpha") {
                 Value::Dimension(n, Unit::None) => n,
                 Value::Dimension(n, Unit::Percent) => n / Number::from(100),
                 v @ Value::Dimension(..) => return Err(format!("$alpha: Expected {} to have no units or \"%\".", v).into()),
@@ -53,25 +53,25 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             };
             Ok(Value::Color(color.with_alpha(alpha)))
         } else {
-            let red = match arg!(args, 0, "red").eval() {
+            let red = match arg!(args, 0, "red") {
                 Value::Dimension(n, Unit::None) => n,
                 Value::Dimension(n, Unit::Percent) => (n / Number::from(100)) * Number::from(255),
                 v @ Value::Dimension(..) => return Err(format!("$red: Expected {} to have no units or \"%\".", v).into()),
                 v => return Err(format!("$red: {} is not a number.", v).into()),
             };
-            let green = match arg!(args, 1, "green").eval() {
+            let green = match arg!(args, 1, "green") {
                 Value::Dimension(n, Unit::None) => n,
                 Value::Dimension(n, Unit::Percent) => (n / Number::from(100)) * Number::from(255),
                 v @ Value::Dimension(..) => return Err(format!("$green: Expected {} to have no units or \"%\".", v).into()),
                 v => return Err(format!("$green: {} is not a number.", v).into()),
             };
-            let blue = match arg!(args, 2, "blue").eval() {
+            let blue = match arg!(args, 2, "blue") {
                 Value::Dimension(n, Unit::None) => n,
                 Value::Dimension(n, Unit::Percent) => (n / Number::from(100)) * Number::from(255),
                 v @ Value::Dimension(..) => return Err(format!("$blue: Expected {} to have no units or \"%\".", v).into()),
                 v => return Err(format!("$blue: {} is not a number.", v).into()),
             };
-            let alpha = match arg!(args, 3, "alpha"=Value::Dimension(Number::from(1), Unit::None)).eval() {
+            let alpha = match arg!(args, 3, "alpha"=Value::Dimension(Number::from(1), Unit::None)) {
                 Value::Dimension(n, Unit::None) => n,
                 Value::Dimension(n, Unit::Percent) => n / Number::from(100),
                 v @ Value::Dimension(..) => return Err(format!("$alpha: Expected {} to have no units or \"%\".", v).into()),
@@ -82,7 +82,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     });
     decl!(f "rgba", |args, _| {
         if args.len() == 1 {
-            let mut channels = match arg!(args, 0, "channels").eval() {
+            let mut channels = match arg!(args, 0, "channels") {
                 Value::List(v, _) => v,
                 _ => return Err("Missing element $green.".into())
             };
@@ -115,11 +115,11 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             Ok(Value::Color(color))
 
         } else if args.len() == 2 {
-            let color = match arg!(args, 0, "color").eval() {
+            let color = match arg!(args, 0, "color") {
                 Value::Color(c) => c,
                 v => return Err(format!("$color: {} is not a color.", v).into()),
             };
-            let alpha = match arg!(args, 1, "alpha").eval() {
+            let alpha = match arg!(args, 1, "alpha") {
                 Value::Dimension(n, Unit::None) => n,
                 Value::Dimension(n, Unit::Percent) => n / Number::from(100),
                 v @ Value::Dimension(..) => return Err(format!("$alpha: Expected {} to have no units or \"%\".", v).into()),
@@ -127,25 +127,25 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             };
             Ok(Value::Color(color.with_alpha(alpha)))
         } else {
-            let red = match arg!(args, 0, "red").eval() {
+            let red = match arg!(args, 0, "red") {
                 Value::Dimension(n, Unit::None) => n,
                 Value::Dimension(n, Unit::Percent) => (n / Number::from(100)) * Number::from(255),
                 v @ Value::Dimension(..) => return Err(format!("$red: Expected {} to have no units or \"%\".", v).into()),
                 v => return Err(format!("$red: {} is not a number.", v).into()),
             };
-            let green = match arg!(args, 1, "green").eval() {
+            let green = match arg!(args, 1, "green") {
                 Value::Dimension(n, Unit::None) => n,
                 Value::Dimension(n, Unit::Percent) => (n / Number::from(100)) * Number::from(255),
                 v @ Value::Dimension(..) => return Err(format!("$green: Expected {} to have no units or \"%\".", v).into()),
                 v => return Err(format!("$green: {} is not a number.", v).into()),
             };
-            let blue = match arg!(args, 2, "blue").eval() {
+            let blue = match arg!(args, 2, "blue") {
                 Value::Dimension(n, Unit::None) => n,
                 Value::Dimension(n, Unit::Percent) => (n / Number::from(100)) * Number::from(255),
                 v @ Value::Dimension(..) => return Err(format!("$blue: Expected {} to have no units or \"%\".", v).into()),
                 v => return Err(format!("$blue: {} is not a number.", v).into()),
             };
-            let alpha = match arg!(args, 3, "alpha"=Value::Dimension(Number::from(1), Unit::None)).eval() {
+            let alpha = match arg!(args, 3, "alpha"=Value::Dimension(Number::from(1), Unit::None)) {
                 Value::Dimension(n, Unit::None) => n,
                 Value::Dimension(n, Unit::Percent) => n / Number::from(100),
                 v @ Value::Dimension(..) => return Err(format!("$alpha: Expected {} to have no units or \"%\".", v).into()),
@@ -177,12 +177,12 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     });
     decl!(f "mix", |args, _| {
         max_args!(args, 3);
-        let color1 = match arg!(args, 0, "color1").eval() {
+        let color1 = match arg!(args, 0, "color1") {
             Value::Color(c) => c,
             v => return Err(format!("$color1: {} is not a color.", v).into()),
         };
 
-        let color2 = match arg!(args, 1, "color2").eval() {
+        let color2 = match arg!(args, 1, "color2") {
             Value::Color(c) => c,
             v => return Err(format!("$color2: {} is not a color.", v).into()),
         };

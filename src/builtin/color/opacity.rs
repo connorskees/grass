@@ -24,11 +24,11 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     });
     decl!(f "opacify", |args, _| {
         max_args!(args, 2);
-        let color = match arg!(args, 0, "color").eval() {
+        let color = match arg!(args, 0, "color") {
             Value::Color(c) => c,
             v => return Err(format!("$color: {} is not a color.", v).into()),
         };
-        let amount = match arg!(args, 1, "amount").eval() {
+        let amount = match arg!(args, 1, "amount") {
             Value::Dimension(n, u) => bound!("amount", n, u, 0, 1),
             v => return Err(format!("$amount: {} is not a number.", v).into()),
         };
@@ -36,11 +36,11 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     });
     decl!(f "fade-in", |args, _| {
         max_args!(args, 2);
-        let color = match arg!(args, 0, "color").eval() {
+        let color = match arg!(args, 0, "color") {
             Value::Color(c) => c,
             v => return Err(format!("$color: {} is not a color.", v).into()),
         };
-        let amount = match arg!(args, 1, "amount").eval() {
+        let amount = match arg!(args, 1, "amount") {
             Value::Dimension(n, u) => bound!("amount", n, u, 0, 1),
             v => return Err(format!("$amount: {} is not a number.", v).into()),
         };
@@ -48,11 +48,11 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     });
     decl!(f "transparentize", |args, _| {
         max_args!(args, 2);
-        let color = match arg!(args, 0, "color").eval() {
+        let color = match arg!(args, 0, "color") {
             Value::Color(c) => c,
             v => return Err(format!("$color: {} is not a color.", v).into()),
         };
-        let amount = match arg!(args, 1, "amount").eval() {
+        let amount = match arg!(args, 1, "amount") {
             Value::Dimension(n, u) => bound!("amount", n, u, 0, 1),
             v => return Err(format!("$amount: {} is not a number.", v).into()),
         };
@@ -60,11 +60,11 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     });
     decl!(f "fade-out", |args, _| {
         max_args!(args, 2);
-        let color = match arg!(args, 0, "color").eval() {
+        let color = match arg!(args, 0, "color") {
             Value::Color(c) => c,
             v => return Err(format!("$color: {} is not a color.", v).into()),
         };
-        let amount = match arg!(args, 1, "amount").eval() {
+        let amount = match arg!(args, 1, "amount") {
             Value::Dimension(n, u) => bound!("amount", n, u, 0, 1),
             v => return Err(format!("$amount: {} is not a number.", v).into()),
         };

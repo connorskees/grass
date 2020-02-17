@@ -8,15 +8,15 @@ use crate::value::{Number, Value};
 
 pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     decl!(f "hsl", |args, _| {
-        let hue = match arg!(args, 0, "hue").eval() {
+        let hue = match arg!(args, 0, "hue") {
             Value::Dimension(n, _) => n,
             v => return Err(format!("$hue: {} is not a number.", v).into()),
         };
-        let saturation = match arg!(args, 1, "saturation").eval() {
+        let saturation = match arg!(args, 1, "saturation") {
             Value::Dimension(n, _) => n / Number::from(100),
             v => return Err(format!("$saturation: {} is not a number.", v).into()),
         };
-        let luminance = match arg!(args, 2, "luminance").eval() {
+        let luminance = match arg!(args, 2, "luminance") {
             Value::Dimension(n, _) => n / Number::from(100),
             v => return Err(format!("$luminance: {} is not a number.", v).into()),
         };
@@ -29,19 +29,19 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         Ok(Value::Color(Color::from_hsla(hue, saturation, luminance, alpha)))
     });
     decl!(f "hsla", |args, _| {
-        let hue = match arg!(args, 0, "hue").eval() {
+        let hue = match arg!(args, 0, "hue") {
             Value::Dimension(n, _) => n,
             v => return Err(format!("$hue: {} is not a number.", v).into()),
         };
-        let saturation = match arg!(args, 1, "saturation").eval() {
+        let saturation = match arg!(args, 1, "saturation") {
             Value::Dimension(n, _) => n / Number::from(100),
             v => return Err(format!("$saturation: {} is not a number.", v).into()),
         };
-        let luminance = match arg!(args, 2, "luminance").eval() {
+        let luminance = match arg!(args, 2, "luminance") {
             Value::Dimension(n, _) => n / Number::from(100),
             v => return Err(format!("$luminance: {} is not a number.", v).into()),
         };
-        let alpha = match arg!(args, 3, "alpha").eval() {
+        let alpha = match arg!(args, 3, "alpha") {
             Value::Dimension(n, Unit::None) => n,
             Value::Dimension(n, Unit::Percent) => n / Number::from(100),
             v @ Value::Dimension(..) => return Err(format!("$alpha: Expected {} to have no units or \"%\".", v).into()),
@@ -72,11 +72,11 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     });
     decl!(f "adjust-hue", |args, _| {
         max_args!(args, 2);
-        let color = match arg!(args, 0, "color").eval() {
+        let color = match arg!(args, 0, "color") {
             Value::Color(c) => c,
             v => return Err(format!("$color: {} is not a color.", v).into()),
         };
-        let degrees = match arg!(args, 1, "degrees").eval() {
+        let degrees = match arg!(args, 1, "degrees") {
             Value::Dimension(n, _) => n,
             v => return Err(format!("$degrees: {} is not a number.", v).into()),
         };
@@ -84,11 +84,11 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     });
     decl!(f "lighten", |args, _| {
         max_args!(args, 2);
-        let color = match arg!(args, 0, "color").eval() {
+        let color = match arg!(args, 0, "color") {
             Value::Color(c) => c,
             v => return Err(format!("$color: {} is not a color.", v).into()),
         };
-        let amount = match arg!(args, 1, "amount").eval() {
+        let amount = match arg!(args, 1, "amount") {
             Value::Dimension(n, u) => bound!("amount", n, u, 0, 100) / Number::from(100),
             v => return Err(format!("$amount: {} is not a number.", v).into())
         };
@@ -96,11 +96,11 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     });
     decl!(f "darken", |args, _| {
         max_args!(args, 2);
-        let color = match arg!(args, 0, "color").eval() {
+        let color = match arg!(args, 0, "color") {
             Value::Color(c) => c,
             v => return Err(format!("$color: {} is not a color.", v).into()),
         };
-        let amount = match arg!(args, 1, "amount").eval() {
+        let amount = match arg!(args, 1, "amount") {
             Value::Dimension(n, u) => bound!("amount", n, u, 0, 100) / Number::from(100),
             v => return Err(format!("$amount: {} is not a number.", v).into())
         };
@@ -108,11 +108,11 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     });
     decl!(f "saturate", |args, _| {
         max_args!(args, 2);
-        let amount = match arg!(args, 1, "amount").eval() {
+        let amount = match arg!(args, 1, "amount") {
             Value::Dimension(n, u) => bound!("amount", n, u, 0, 100) / Number::from(100),
             v => return Err(format!("$amount: {} is not a number.", v).into())
         };
-        let color = match arg!(args, 0, "color").eval() {
+        let color = match arg!(args, 0, "color") {
             Value::Color(c) => c,
             Value::Dimension(n, u) => return Ok(Value::Ident(format!("saturate({}{})", n, u), QuoteKind::None)),
             v => return Err(format!("$color: {} is not a color.", v).into()),
@@ -121,11 +121,11 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     });
     decl!(f "desaturate", |args, _| {
         max_args!(args, 2);
-        let color = match arg!(args, 0, "color").eval() {
+        let color = match arg!(args, 0, "color") {
             Value::Color(c) => c,
             v => return Err(format!("$color: {} is not a color.", v).into()),
         };
-        let amount = match arg!(args, 1, "amount").eval() {
+        let amount = match arg!(args, 1, "amount") {
             Value::Dimension(n, u) => bound!("amount", n, u, 0, 100) / Number::from(100),
             v => return Err(format!("$amount: {} is not a number.", v).into())
         };
@@ -133,7 +133,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     });
     decl!(f "grayscale", |args, _| {
         max_args!(args, 1);
-        let color = match arg!(args, 0, "color").eval() {
+        let color = match arg!(args, 0, "color") {
             Value::Color(c) => c,
             Value::Dimension(n, u) => return Ok(Value::Ident(format!("grayscale({}{})", n, u), QuoteKind::None)),
             v => return Err(format!("$color: {} is not a color.", v).into()),
@@ -142,7 +142,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     });
     decl!(f "complement", |args, _| {
         max_args!(args, 1);
-        let color = match arg!(args, 0, "color").eval() {
+        let color = match arg!(args, 0, "color") {
             Value::Color(c) => c,
             v => return Err(format!("$color: {} is not a color.", v).into()),
         };

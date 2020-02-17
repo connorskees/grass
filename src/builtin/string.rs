@@ -12,39 +12,35 @@ use crate::value::{Number, Value};
 pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     decl!(f "to-upper-case", |args, _| {
         max_args!(args, 1);
-        let s: &Value = arg!(args, 0, "string");
-        match s.eval() {
+        match arg!(args, 0, "string") {
             Value::Ident(i, q) => Ok(Value::Ident(i.to_ascii_uppercase(), q)),
             v => Err(format!("$string: {} is not a string.", v).into()),
         }
     });
     decl!(f "to-lower-case", |args, _| {
         max_args!(args, 1);
-        let s: &Value = arg!(args, 0, "string");
-        match s.eval() {
+        match arg!(args, 0, "string") {
             Value::Ident(i, q) => Ok(Value::Ident(i.to_ascii_lowercase(), q)),
             v => Err(format!("$string: {} is not a string.", v).into()),
         }
     });
     decl!(f "str-length", |args, _| {
         max_args!(args, 1);
-        let s: &Value = arg!(args, 0, "string");
-        match s.eval() {
+        match arg!(args, 0, "string") {
             Value::Ident(i, _) => Ok(Value::Dimension(Number::from(i.len()), Unit::None)),
             v => Err(format!("$string: {} is not a string.", v).into()),
         }
     });
     decl!(f "quote", |args, _| {
         max_args!(args, 1);
-        let s = arg!(args, 0, "string").eval();
-        match s {
+        match arg!(args, 0, "string") {
             Value::Ident(i, _) => Ok(Value::Ident(i, QuoteKind::Double)),
             v => Err(format!("$string: {} is not a string.", v).into()),
         }
     });
     decl!(f "unquote", |args, _| {
         max_args!(args, 1);
-        match arg!(args, 0, "string").eval() {
+        match arg!(args, 0, "string") {
             Value::Ident(i, _) if i.is_empty() => Ok(Value::Null),
             i @ Value::Ident(..) => Ok(i.unquote()),
             v => Err(format!("$string: {} is not a string.", v).into()),
@@ -52,12 +48,12 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     });
     decl!(f "str-slice", |args, _| {
         max_args!(args, 3);
-        let (string, quotes) = match arg!(args, 0, "string").eval() {
+        let (string, quotes) = match arg!(args, 0, "string") {
             Value::Ident(s, q) => (s, q),
             v => return Err(format!("$string: {} is not a string.", v).into()),
         };
         let str_len = string.len();
-        let start = match arg!(args, 1, "start-at").eval() {
+        let start = match arg!(args, 1, "start-at") {
             Value::Dimension(n, Unit::None) if n.is_decimal() => return Err(format!("{} is not an int.", n).into()),
             Value::Dimension(n, Unit::None) if n.to_integer().is_positive() => n.to_integer().to_usize().unwrap(),
             Value::Dimension(n, Unit::None) if n == Number::from(0) => 1_usize,
@@ -66,7 +62,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             v @ Value::Dimension(..) => return Err(format!("$start: Expected {} to have no units.", v).into()),
             v => return Err(format!("$start-at: {} is not a number.", v).into()),
         };
-        let mut end = match arg!(args, 2, "end-at"=Value::Null).eval() {
+        let mut end = match arg!(args, 2, "end-at"=Value::Null) {
             Value::Dimension(n, Unit::None) if n.is_decimal() => return Err(format!("{} is not an int.", n).into()),
             Value::Dimension(n, Unit::None) if n.to_integer().is_positive() => n.to_integer().to_usize().unwrap(),
             Value::Dimension(n, Unit::None) if n == Number::from(0) => 0_usize,
