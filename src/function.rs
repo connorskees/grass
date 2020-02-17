@@ -2,7 +2,7 @@ use std::iter::Peekable;
 
 use crate::args::{CallArgs, eat_func_args, FuncArgs};
 use crate::atrule::AtRule;
-use crate::common::{Pos, Scope, Symbol};
+use crate::common::{Scope, Symbol};
 use crate::error::SassResult;
 use crate::utils::devour_whitespace;
 use crate::value::Value;
@@ -23,19 +23,14 @@ impl Function {
     pub fn decl_from_tokens<I: Iterator<Item = Token>>(
         toks: &mut Peekable<I>,
         scope: &Scope,
-    ) -> Result<(String, Function), (Pos, String)> {
-        let Token { pos, kind } = toks
+    ) -> SassResult<(String, Function)> {
+        let Token { kind, .. } = toks
             .next()
             .expect("this must exist because we have already peeked");
         devour_whitespace(toks);
         let name = match kind {
             TokenKind::Ident(s) => s,
-            _ => {
-                return Err((
-                    pos,
-                    String::from("expected identifier after function declaration"),
-                ))
-            }
+            _ => return Err("Expected identifier.".into())
         };
         devour_whitespace(toks);
         let args = match toks.next() {
@@ -43,7 +38,7 @@ impl Function {
                 kind: TokenKind::Symbol(Symbol::OpenParen),
                 ..
             }) => eat_func_args(toks, scope),
-            _ => return Err((pos, String::from("expected `(` after function declaration"))),
+            _ => return Err("expected \"(\".".into()),
         };
 
         let mut nesting = 1;
@@ -53,13 +48,13 @@ impl Function {
             if let Some(tok) = toks.next() {
                 match &tok.kind {
                     TokenKind::AtRule(rule) => {
-                        body.push(AtRule::from_tokens(rule, tok.pos, toks, scope))
+                        body.push(AtRule::from_tokens(rule, tok.pos, toks, scope)?)
                     }
                     TokenKind::Symbol(Symbol::CloseCurlyBrace) => nesting -= 1,
                     _ => {}
                 }
             } else {
-                return Err((pos, String::from("unexpected EOF")));
+                return Err("unexpected EOF (TODO: better error message)".into());
             }
         }
 

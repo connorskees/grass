@@ -2,6 +2,7 @@ use std::fmt::{self, Display};
 use std::iter::Peekable;
 
 use crate::common::{Pos, Scope, Symbol};
+use crate::error::SassResult;
 use crate::function::Function;
 use crate::mixin::Mixin;
 use crate::utils::devour_whitespace;
@@ -38,7 +39,7 @@ impl AtRule {
         pos: Pos,
         toks: &mut Peekable<I>,
         scope: &Scope,
-    ) -> AtRule {
+    ) -> SassResult<AtRule> {
         devour_whitespace(toks);
         match rule {
             AtRuleKind::Error => {
@@ -46,7 +47,7 @@ impl AtRule {
                     .take_while(|x| x.kind != TokenKind::Symbol(Symbol::SemiColon))
                     .map(|x| x.kind.to_string())
                     .collect::<String>();
-                AtRule::Error(pos, message)
+                Ok(AtRule::Error(pos, message))
             }
             AtRuleKind::Warn => {
                 let message = toks
@@ -54,7 +55,7 @@ impl AtRule {
                     .map(|x| x.kind.to_string())
                     .collect::<String>();
                 devour_whitespace(toks);
-                AtRule::Warn(pos, message)
+                Ok(AtRule::Warn(pos, message))
             }
             AtRuleKind::Debug => {
                 let message = toks
@@ -63,34 +64,28 @@ impl AtRule {
                     .map(|x| x.kind.to_string())
                     .collect::<String>();
                 devour_whitespace(toks);
-                AtRule::Debug(pos, message)
+                Ok(AtRule::Debug(pos, message))
             }
             AtRuleKind::Mixin => {
-                let (name, mixin) = match Mixin::decl_from_tokens(toks, scope) {
-                    Ok(m) => m,
-                    Err(e) => return AtRule::Error(e.0, e.1),
-                };
-                AtRule::Mixin(name, Box::new(mixin))
+                let (name, mixin) = Mixin::decl_from_tokens(toks, scope)?;
+                Ok(AtRule::Mixin(name, Box::new(mixin)))
             }
             AtRuleKind::Function => {
-                let (name, func) = match Function::decl_from_tokens(toks, scope) {
-                    Ok(m) => m,
-                    Err(e) => return AtRule::Error(e.0, e.1),
-                };
-                AtRule::Function(name, Box::new(func))
+                let (name, func) = Function::decl_from_tokens(toks, scope)?;
+                Ok(AtRule::Function(name, Box::new(func)))
             }
-            AtRuleKind::Return => AtRule::Return(
+            AtRuleKind::Return => Ok(AtRule::Return(
                 // todo: return may not end in semicolon
                 toks.take_while(|t| t.kind != TokenKind::Symbol(Symbol::SemiColon))
                     .collect(),
-            ),
+            )),
             AtRuleKind::Use => todo!("@use not yet implemented"),
             AtRuleKind::Annotation => todo!("@annotation not yet implemented"),
             AtRuleKind::AtRoot => todo!("@at-root not yet implemented"),
-            AtRuleKind::Charset => AtRule::Charset(
+            AtRuleKind::Charset => Ok(AtRule::Charset(
                 toks.take_while(|t| t.kind != TokenKind::Symbol(Symbol::SemiColon))
                     .collect(),
-            ),
+            )),
             AtRuleKind::Each => todo!("@each not yet implemented"),
             AtRuleKind::Extend => todo!("@extend not yet implemented"),
             AtRuleKind::If => todo!("@if not yet implemented"),

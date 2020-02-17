@@ -361,7 +361,7 @@ impl Scope {
     pub fn get_var(&self, v: &str) -> SassResult<&Value> {
         match self.vars.get(&v.replace('_', "-")) {
             Some(v) => Ok(v),
-            None => Err(format!("Undefined variable: ${}.", v).into()),
+            None => Err("Undefined variable.".into()),
         }
     }
 
@@ -373,10 +373,10 @@ impl Scope {
         self.vars.contains_key(&v.replace('_', "-"))
     }
 
-    pub fn get_mixin(&self, v: &str) -> Result<&Mixin, String> {
+    pub fn get_mixin(&self, v: &str) -> SassResult<&Mixin> {
         match self.mixins.get(&v.replace('_', "-")) {
             Some(v) => Ok(v),
-            None => Err(format!("Undefined mixin `{}`.", v)),
+            None => Err("Undefined mixin.".into()),
         }
     }
 
@@ -388,10 +388,10 @@ impl Scope {
         self.mixins.contains_key(&v.replace('_', "-"))
     }
 
-    pub fn get_fn(&self, v: &str) -> Result<&Function, String> {
+    pub fn get_fn(&self, v: &str) -> SassResult<&Function> {
         match self.functions.get(&v.replace('_', "-")) {
             Some(v) => Ok(v),
-            None => Err(format!("Undefined function `{}`.", v)),
+            None => Err("Undefined function.".into()),
         }
     }
 

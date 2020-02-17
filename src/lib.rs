@@ -430,7 +430,7 @@ impl<'a> StyleSheetParser<'a> {
                         pos,
                     }) = self.lexer.next()
                     {
-                        match AtRule::from_tokens(rule, pos, &mut self.lexer, &self.global_scope) {
+                        match AtRule::from_tokens(rule, pos, &mut self.lexer, &self.global_scope)? {
                             AtRule::Mixin(name, mixin) => {
                                 self.global_scope.insert_mixin(&name, *mixin);
                             }
@@ -609,7 +609,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                     pos,
                 }) = toks.next()
                 {
-                    return match AtRule::from_tokens(rule, pos, toks, scope) {
+                    return match AtRule::from_tokens(rule, pos, toks, scope)? {
                         AtRule::Mixin(name, mixin) => Ok(Some(Expr::MixinDecl(name, mixin))),
                         AtRule::Function(name, func) => Ok(Some(Expr::FunctionDecl(name, func))),
                         AtRule::Charset(_) => todo!("@charset as expr"),

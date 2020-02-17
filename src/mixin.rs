@@ -2,7 +2,7 @@ use std::iter::Peekable;
 use std::vec::IntoIter;
 
 use crate::args::{eat_call_args, eat_func_args, CallArgs, FuncArgs};
-use crate::common::{Pos, Scope, Symbol};
+use crate::common::{Scope, Symbol};
 use crate::error::{SassError, SassResult};
 use crate::selector::Selector;
 use crate::utils::devour_whitespace;
@@ -24,19 +24,14 @@ impl Mixin {
     pub fn decl_from_tokens<I: Iterator<Item = Token>>(
         toks: &mut Peekable<I>,
         scope: &Scope,
-    ) -> Result<(String, Mixin), (Pos, String)> {
-        let Token { pos, kind } = toks
+    ) -> SassResult<(String, Mixin)> {
+        let Token { kind, .. } = toks
             .next()
             .expect("this must exist because we have already peeked");
         devour_whitespace(toks);
         let name = match kind {
             TokenKind::Ident(s) => s,
-            _ => {
-                return Err((
-                    pos,
-                    String::from("expected identifier after mixin declaration"),
-                ))
-            }
+            _ => return Err("Expected identifier.".into()),
         };
         devour_whitespace(toks);
         let args = match toks.next() {
@@ -48,7 +43,7 @@ impl Mixin {
                 kind: TokenKind::Symbol(Symbol::OpenCurlyBrace),
                 ..
             }) => FuncArgs::new(),
-            _ => return Err((pos, String::from("expected `(` or `{`"))),
+            _ => return Err("expected \"{\"".into()),
         };
 
         devour_whitespace(toks);
@@ -67,7 +62,7 @@ impl Mixin {
                 }
                 body.push(tok)
             } else {
-                return Err((pos, String::from("unexpected EOF")));
+                return Err("unexpected EOF (TODO: better message)".into());
             }
         }
 
@@ -156,10 +151,7 @@ pub(crate) fn eat_include<I: Iterator<Item = Token>>(
 
     devour_whitespace(toks);
 
-    let mixin = match scope.get_mixin(&name) {
-        Ok(m) => m.clone(),
-        _ => return Err(SassError::new("Expected identifier.", pos)),
-    };
+    let mixin = scope.get_mixin(&name)?.clone();
 
     let rules = mixin.args(&args).call(super_selector)?;
     Ok(rules)
