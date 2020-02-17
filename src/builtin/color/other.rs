@@ -58,11 +58,9 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
         }
 
         let hue = match arg!(args, -1, "hue"=Value::Null) {
-            Value::Dimension(n, Unit::None)
-            | Value::Dimension(n, Unit::Percent)
-            | Value::Dimension(n, Unit::Deg) => Some(n),
+            Value::Dimension(n, _) => Some(n),
             Value::Null => None,
-            _ => todo!("expected either unitless or % number for hue"),
+            v => return Err(format!("$hue: {} is not a number.", v).into()),
         };
 
         opt_arg!(args, saturation, "saturation", 0, 100);
