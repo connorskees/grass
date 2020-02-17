@@ -212,7 +212,10 @@ impl<'a> SelectorParser<'a> {
         Ok(Selector(self.selectors))
     }
 
-    fn consume_pseudo_selector(&mut self, tokens: &'_ mut Peekable<IntoIter<Token>>) {
+    fn consume_pseudo_selector(
+        &mut self,
+        tokens: &'_ mut Peekable<IntoIter<Token>>,
+    ) -> SassResult<()> {
         if let Some(tok) = tokens.next() {
             match tok.kind {
                 TokenKind::Ident(s) => {
@@ -250,9 +253,10 @@ impl<'a> SelectorParser<'a> {
                         self.selectors.push(SelectorKind::PseudoElement(s))
                     }
                 }
-                _ => todo!("expected ident or `:` after `:` in selector"),
+                _ => return Err("Expected identifier.".into()),
             }
         }
+        Ok(())
     }
 
     fn tokens_to_selectors(&mut self, tokens: &'_ mut Peekable<IntoIter<Token>>) -> SassResult<()> {
@@ -283,7 +287,7 @@ impl<'a> SelectorParser<'a> {
                 }
                 TokenKind::Symbol(Symbol::Period) => self.selectors.push(SelectorKind::Class),
                 TokenKind::Symbol(Symbol::Hash) => self.selectors.push(SelectorKind::Id),
-                TokenKind::Symbol(Symbol::Colon) => self.consume_pseudo_selector(tokens),
+                TokenKind::Symbol(Symbol::Colon) => self.consume_pseudo_selector(tokens)?,
                 TokenKind::Symbol(Symbol::Comma) => self.selectors.push(SelectorKind::Multiple),
                 TokenKind::Symbol(Symbol::Gt) => self.selectors.push(SelectorKind::ImmediateChild),
                 TokenKind::Symbol(Symbol::Plus) => self.selectors.push(SelectorKind::Following),
