@@ -38,7 +38,7 @@ impl Mixin {
             Some(Token {
                 kind: TokenKind::Symbol(Symbol::OpenParen),
                 ..
-            }) => eat_func_args(toks, scope),
+            }) => eat_func_args(toks, scope)?,
             Some(Token {
                 kind: TokenKind::Symbol(Symbol::OpenCurlyBrace),
                 ..

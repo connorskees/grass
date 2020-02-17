@@ -37,7 +37,7 @@ impl Function {
             Some(Token {
                 kind: TokenKind::Symbol(Symbol::OpenParen),
                 ..
-            }) => eat_func_args(toks, scope),
+            }) => eat_func_args(toks, scope)?,
             _ => return Err("expected \"(\".".into()),
         };
 
@@ -78,7 +78,7 @@ impl Function {
         Ok(self)
     }
 
-    pub fn call(&self) -> Value {
+    pub fn call(&self) -> SassResult<Value> {
         for rule in &self.body {
             match rule {
                 AtRule::Return(toks) => {
@@ -86,7 +86,6 @@ impl Function {
                         &mut toks.clone().into_iter().peekable(),
                         &self.scope,
                     )
-                    .unwrap()
                 }
                 _ => todo!("unimplemented at rule in function body"),
             }

@@ -46,7 +46,7 @@ impl CallArgs {
 pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
     scope: &Scope,
-) -> FuncArgs {
+) -> SassResult<FuncArgs> {
     let mut args: Vec<FuncArg> = Vec::new();
 
     devour_whitespace(toks);
@@ -71,20 +71,20 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
                             toks.next();
                             args.push(FuncArg {
                                 name,
-                                default: Some(
-                                    Value::from_tokens(&mut default.into_iter().peekable(), scope)
-                                        .unwrap(),
-                                ),
+                                default: Some(Value::from_tokens(
+                                    &mut default.into_iter().peekable(),
+                                    scope,
+                                )?),
                             });
                             break;
                         }
                         TokenKind::Symbol(Symbol::CloseParen) => {
                             args.push(FuncArg {
                                 name,
-                                default: Some(
-                                    Value::from_tokens(&mut default.into_iter().peekable(), scope)
-                                        .unwrap(),
-                                ),
+                                default: Some(Value::from_tokens(
+                                    &mut default.into_iter().peekable(),
+                                    scope,
+                                )?),
                             });
                             break;
                         }
@@ -102,9 +102,10 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
                     default: if default.is_empty() {
                         None
                     } else {
-                        Some(
-                            Value::from_tokens(&mut default.into_iter().peekable(), scope).unwrap(),
-                        )
+                        Some(Value::from_tokens(
+                            &mut default.into_iter().peekable(),
+                            scope,
+                        )?)
                     },
                 });
                 break;
@@ -126,7 +127,7 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
     } else {
         todo!("expected `{{` after args")
     }
-    FuncArgs(args)
+    Ok(FuncArgs(args))
 }
 
 pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
