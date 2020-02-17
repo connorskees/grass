@@ -321,3 +321,19 @@ test!(
 );
 test!(positive_float_leading_zero, "a {\n  color: 0.1;\n}\n");
 test!(negative_float_leading_zero, "a {\n  color: -0.1;\n}\n");
+test!(
+    unitless_plus_null,
+    "a {\n  color: 1 + null;\n}\n",
+    "a {\n  color: 1;\n}\n"
+);
+// blocked on proper parsing of binary ops
+// test!(
+//     unitless_plus_null_plus_unitless,
+//     "a {\n  color: 1 + null + 1;\n}\n",
+//     "a {\n  color: 11;\n}\n"
+// );
+test!(
+    unit_plus_null,
+    "a {\n  color: 1px + null;\n}\n",
+    "a {\n  color: 1px;\n}\n"
+);

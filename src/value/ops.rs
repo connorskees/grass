@@ -4,7 +4,7 @@ use crate::common::QuoteKind;
 use crate::error::SassResult;
 use crate::units::Unit;
 use crate::value::Value;
-// Undefined operation "red + white".
+
 impl Add for Value {
     type Output = SassResult<Self>;
 
@@ -30,16 +30,17 @@ impl Add for Value {
                     };
                     Value::Ident(format!("{}{}{}", num, unit, s), quotes)
                 }
+                Self::Null => Value::Ident(format!("{}{}", num, unit), QuoteKind::None),
                 _ => todo!(),
             },
             // Self::List(..) => todo!(),
-            Self::Color(c) => match other {
+            Self::Color(c) => match dbg!(&other) {
                 Self::Ident(s, QuoteKind::Double) | Self::Ident(s, QuoteKind::Single) => {
                     Value::Ident(format!("{}{}", c, s), QuoteKind::Double)
                 }
+                Self::Ident(s, QuoteKind::None) => Value::Ident(format!("{}{}", c, s), QuoteKind::None),
                 Self::Null => Value::Ident(c.to_string(), QuoteKind::None),
-                Self::Color(..) => todo!("figure out if it's possible to add colors"),
-                _ => Value::Ident(format!("{}{}", c, other), QuoteKind::None),
+                _ => return Err(format!("Undefined operation \"{} + {}\".", c, other).into()),
             },
             // Self::BinaryOp(..) => todo!(),
             // Self::Paren(..) => todo!(),
