@@ -65,8 +65,8 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             _ => todo!("expected either unitless or % number for hue"),
         };
 
-        opt_arg!(hsl: args, saturation, "saturation");
-        opt_arg!(hsl: args, luminance, "lightness");
+        opt_arg!(args, saturation, "saturation", 0, 100);
+        opt_arg!(args, luminance, "lightness", 0, 100);
 
         if hue.is_some() || saturation.is_some() || luminance.is_some() {
             // Color::as_hsla() returns more exact values than Color::hue(), etc.
