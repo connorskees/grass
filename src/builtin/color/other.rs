@@ -32,7 +32,7 @@ macro_rules! opt_arg {
                 Some(n / Number::from(100))
             }
             Value::Null => None,
-            _ => todo!(concat!("expected either unitless or % number for $", $arg)),
+            v => return Err(format!("${}: {} is not a number.", $arg, v).into()),
         };
     };
 }
@@ -48,10 +48,10 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             v => return Err(format!("$color: {} is not a color.", v).into()),
         };
 
-        opt_arg!(args, alpha, "alpha", -1, 1);
-        opt_arg!(args, red, "red", -255, 255);
-        opt_arg!(args, green, "green", -255, 255);
-        opt_arg!(args, blue, "blue", -255, 255);
+        opt_arg!(args, alpha, "alpha", 0, 1);
+        opt_arg!(args, red, "red", 0, 255);
+        opt_arg!(args, green, "green", 0, 255);
+        opt_arg!(args, blue, "blue", 0, 255);
 
         if red.is_some() || green.is_some() || blue.is_some() {
             return Ok(Value::Color(Color::from_rgba(red.unwrap_or(color.red()), green.unwrap_or(color.green()), blue.unwrap_or(color.blue()), alpha.unwrap_or(color.alpha()))))
