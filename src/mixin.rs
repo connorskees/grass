@@ -43,7 +43,7 @@ impl Mixin {
                 kind: TokenKind::Symbol(Symbol::OpenCurlyBrace),
                 ..
             }) => FuncArgs::new(),
-            _ => return Err("expected \"{\"".into()),
+            _ => return Err("expected \"{\".".into()),
         };
 
         devour_whitespace(toks);
