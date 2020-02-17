@@ -1,6 +1,6 @@
 use std::iter::Peekable;
 
-use crate::args::{CallArgs, eat_func_args, FuncArgs};
+use crate::args::{eat_func_args, CallArgs, FuncArgs};
 use crate::atrule::AtRule;
 use crate::common::{Scope, Symbol};
 use crate::error::SassResult;
@@ -30,7 +30,7 @@ impl Function {
         devour_whitespace(toks);
         let name = match kind {
             TokenKind::Ident(s) => s,
-            _ => return Err("Expected identifier.".into())
+            _ => return Err("Expected identifier.".into()),
         };
         devour_whitespace(toks);
         let args = match toks.next() {
@@ -69,8 +69,8 @@ impl Function {
                     Some(v) => v,
                     None => match &arg.default {
                         Some(v) => v.clone(),
-                        None => return Err(format!("Missing argument ${}.", &arg.name).into())
-                    }
+                        None => return Err(format!("Missing argument ${}.", &arg.name).into()),
+                    },
                 },
             };
             self.scope.insert_var(&arg.name, val);
