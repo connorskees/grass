@@ -454,7 +454,7 @@ impl<'a> StyleSheetParser<'a> {
                 }
                 TokenKind::Symbol(Symbol::BitAnd) => {
                     return Err(
-                        "Top-level selectors may not contain the parent selector \"&\".".into(),
+                        "Base-level rules cannot contain the parent-selector-referencing character '&'.".into(),
                     )
                 }
                 _ => match dbg!(self.lexer.next()) {
