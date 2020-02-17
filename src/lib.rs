@@ -96,6 +96,12 @@ pub(crate) struct Token {
     pub kind: TokenKind,
 }
 
+impl Token {
+    pub fn equals_symbol(&self, s: Symbol) -> bool {
+        self.kind.equals_symbol(s)
+    }
+}
+
 impl IsWhitespace for Token {
     fn is_whitespace(&self) -> bool {
         if let TokenKind::Whitespace(_) = self.kind {
@@ -147,6 +153,12 @@ pub(crate) enum TokenKind {
     Interpolation,
 }
 
+impl TokenKind {
+    pub fn equals_symbol(&self, s: Symbol) -> bool {
+        self == &TokenKind::Symbol(s)
+    }
+}
+
 impl Display for TokenKind {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -159,7 +171,7 @@ impl Display for TokenKind {
             TokenKind::Attribute(s) => write!(f, "{}", s),
             TokenKind::Keyword(kw) => write!(f, "{}", kw),
             TokenKind::MultilineComment(s) => write!(f, "/*{}*/", s),
-            TokenKind::Variable(s) => write!(f, "${}", s),
+            TokenKind::Variable(s) => write!(f, "{}", s),
             TokenKind::Interpolation => {
                 panic!("we don't want to format TokenKind::Interpolation using Display")
             }

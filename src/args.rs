@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 use std::iter::Peekable;
 
 use crate::common::{Scope, Symbol};
+use crate::error::SassResult;
 use crate::utils::{devour_whitespace, devour_whitespace_or_comment};
 use crate::value::Value;
 use crate::{Token, TokenKind};
@@ -127,141 +128,79 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
 pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
     scope: &Scope,
-) -> CallArgs {
+) -> SassResult<CallArgs> {
     let mut args: BTreeMap<String, Value> = BTreeMap::new();
     devour_whitespace_or_comment(toks);
-    let mut name: Option<String> = None;
-    let mut val = Vec::new();
-    while let Some(Token { kind, pos }) = toks.next() {
-        match kind {
-            TokenKind::Variable(v) => {
+    let mut name: String;
+    let mut val: Vec<Token> = Vec::new();
+    loop {
+        match toks.peek().unwrap().kind {
+            TokenKind::Variable(_) => {
+                let v = toks.next().unwrap();
                 devour_whitespace_or_comment(toks);
-                match toks.peek() {
-                    Some(Token {
-                        kind: TokenKind::Symbol(Symbol::Colon),
-                        ..
-                    }) => name = Some(v),
-                    Some(Token {
-                        kind: TokenKind::Symbol(Symbol::Comma),
-                        ..
-                    }) => {
-                        toks.next();
-                        match name {
-                            Some(ref name) => {
-                                args.insert(name.clone(), scope.get_var(&v).unwrap().clone())
-                            }
-                            None => args.insert(
-                                format!("{}", args.len()),
-                                scope.get_var(&v).unwrap().clone(),
-                            ),
-                        };
-                        if let Some(ref mut s) = name {
-                            s.clear();
-                        }
-                        val.clear();
-                    }
-                    Some(Token {
-                        kind: TokenKind::Symbol(Symbol::CloseParen),
-                        ..
-                    }) => {
-                        toks.next();
-                        match name {
-                            Some(name) => args.insert(name, scope.get_var(&v).unwrap().clone()),
-                            None => args.insert(
-                                format!("{}", args.len()),
-                                scope.get_var(&v).unwrap().clone(),
-                            ),
-                        };
-                        break;
-                    }
-                    _ => todo!("unexpected token after variable in call args"),
-                }
-            }
-            TokenKind::Symbol(Symbol::Colon) => {
-                devour_whitespace_or_comment(toks);
-                while let Some(tok) = toks.peek() {
-                    match &tok.kind {
-                        TokenKind::Symbol(Symbol::Comma) => {
-                            toks.next();
-                            args.insert(
-                                name.clone().unwrap(),
-                                Value::from_tokens(&mut val.clone().into_iter().peekable(), scope)
-                                    .unwrap(),
-                            );
-                            if let Some(ref mut s) = name {
-                                s.clear();
-                            }
-                            val.clear();
-                            break;
-                        }
-                        TokenKind::Symbol(Symbol::CloseParen) => {
-                            args.insert(
-                                name.clone().unwrap(),
-                                Value::from_tokens(&mut val.clone().into_iter().peekable(), scope)
-                                    .unwrap(),
-                            );
-                            break;
-                        }
-                        _ => val.push(toks.next().expect("we know this exists!")),
-                    }
-                }
-            }
-            TokenKind::Symbol(Symbol::OpenParen) => {
-                val.push(Token { kind, pos });
-                let mut unclosed_parens = 0;
-                while let Some(tok) = toks.next() {
-                    match &tok.kind {
-                        TokenKind::Symbol(Symbol::OpenParen) => {
-                            unclosed_parens += 1;
-                        }
-                        TokenKind::Symbol(Symbol::CloseParen) => {
-                            if unclosed_parens <= 1 {
-                                val.push(tok);
-                                break;
-                            } else {
-                                unclosed_parens -= 1;
-                            }
-                        }
-                        _ => {}
-                    }
-                    val.push(tok);
+                if toks.next().unwrap().equals_symbol(Symbol::Colon) {
+                    name = v.kind.to_string();
+                } else {
+                    val.push(v);
+                    name = args.len().to_string();
                 }
             }
             TokenKind::Symbol(Symbol::CloseParen) => {
-                if val.is_empty() {
-                    break;
-                }
-                match name {
-                    Some(name) => args.insert(
-                        name,
-                        Value::from_tokens(&mut val.into_iter().peekable(), scope).unwrap(),
-                    ),
-                    None => args.insert(
-                        format!("{}", args.len()),
-                        Value::from_tokens(&mut val.into_iter().peekable(), scope).unwrap(),
-                    ),
-                };
-                break;
+                toks.next();
+                return Ok(CallArgs(args));
             }
-            TokenKind::Symbol(Symbol::Comma) => {
-                match name {
-                    Some(ref name) => args.insert(
-                        name.clone(),
-                        Value::from_tokens(&mut val.clone().into_iter().peekable(), scope).unwrap(),
-                    ),
-                    None => args.insert(
-                        format!("{}", args.len()),
-                        Value::from_tokens(&mut val.clone().into_iter().peekable(), scope).unwrap(),
-                    ),
-                };
-                if let Some(ref mut s) = name {
-                    s.clear();
-                }
-                val.clear();
-            }
-            _ => val.push(Token { kind, pos }),
+            _ => name = args.len().to_string(),
         }
         devour_whitespace_or_comment(toks);
+
+        while let Some(tok) = toks.next() {
+            match tok.kind {
+                TokenKind::Symbol(Symbol::CloseParen) => {
+                    args.insert(
+                        name,
+                        Value::from_tokens(&mut val.clone().into_iter().peekable(), scope)?,
+                    );
+                    return Ok(CallArgs(args));
+                }
+                TokenKind::Symbol(Symbol::Comma) => break,
+                TokenKind::Symbol(Symbol::OpenParen) => {
+                    val.push(tok);
+                    val.extend(read_until_close_paren(toks));
+                }
+                _ => val.push(tok),
+            }
+        }
+
+        args.insert(
+            name,
+            Value::from_tokens(&mut val.clone().into_iter().peekable(), scope)?,
+        );
+        val.clear();
+        devour_whitespace_or_comment(toks);
+
+        if toks.peek().is_none() {
+            return Ok(CallArgs(args));
+        }
     }
-    CallArgs(args)
+}
+
+fn read_until_close_paren<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -> Vec<Token> {
+    let mut v = Vec::new();
+    let mut scope = 0;
+    while let Some(tok) = toks.next() {
+        match tok.kind {
+            TokenKind::Symbol(Symbol::CloseParen) => {
+                if scope <= 1 {
+                    v.push(tok);
+                    return v;
+                } else {
+                    scope -= 1;
+                }
+            }
+            TokenKind::Symbol(Symbol::OpenParen) => scope += 1,
+            _ => {}
+        }
+        v.push(tok)
+    }
+    v
 }

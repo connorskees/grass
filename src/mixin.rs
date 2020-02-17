@@ -141,7 +141,7 @@ pub(crate) fn eat_include<I: Iterator<Item = Token>>(
         match tok.kind {
             TokenKind::Symbol(Symbol::SemiColon) => CallArgs::new(),
             TokenKind::Symbol(Symbol::OpenParen) => {
-                let tmp = eat_call_args(toks, scope);
+                let tmp = eat_call_args(toks, scope)?;
                 devour_whitespace(toks);
                 if let Some(tok) = toks.next() {
                     assert_eq!(tok.kind, TokenKind::Symbol(Symbol::SemiColon));

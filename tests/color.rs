@@ -81,11 +81,11 @@ test!(
     opacity_function_number_unit,
     "a {\n  color: opacity(1px);\n}\n"
 );
-// blocked on better function-call argument parsing
-// specifically, passing lists as values
+// blocked on better value parsing
+// specifically, this is parsed as a number and a list
 // test!(
 //     rgba_one_arg,
-//     "a {\n  color: rgba(1 2 3);;\n}\n",
+//     "a {\n  color: rgba(1 2 3);\n}\n",
 //     "a {\n  color: #010203;\n}\n"
 // );
 test!(
@@ -293,17 +293,16 @@ test!(
     "a {\n  color: adjust-hue(#811, 45deg);\n}\n",
     "a {\n  color: #886a11;\n}\n"
 );
-// blocked on better parsing of call args
-// test!(
-//     adjust_hue_named_args,
-//     "a {\n  color: adjust-hue($color: hsl(120, 30%, 90%), $degrees: 60deg);\n}\n",
-//     "a {\n  color: #deeded;\n}\n"
-// );
-// test!(
-//     lighten_named_args,
-//     "a {\n  color: lighten($color: hsl(0, 0%, 0%), $amount: 30%);\n}\n",
-//     "a {\n  color: #deeded;\n}\n"
-// );
+test!(
+    adjust_hue_named_args,
+    "a {\n  color: adjust-hue($color: hsl(120, 30%, 90%), $degrees: 60deg);\n}\n",
+    "a {\n  color: #deeded;\n}\n"
+);
+test!(
+    lighten_named_args,
+    "a {\n  color: lighten($color: hsl(0, 0%, 0%), $amount: 30%);\n}\n",
+    "a {\n  color: #4d4d4d;\n}\n"
+);
 test!(
     lighten_basic,
     "a {\n  color: lighten(hsl(0, 0%, 0%), 30%);\n}\n",
@@ -316,12 +315,11 @@ test!(
     // blocked on recognizing when to use 3-hex over 6-hex
     "a {\n  color: #ee0000;\n}\n"
 );
-// blocked on better parsing of call args
-// test!(
-//     darken_named_args,
-//     "a {\n  color: darken($color: hsl(25, 100%, 80%), $amount: 30%);\n}\n",
-//     "a {\n  color: #ff6a00;\n}\n"
-// );
+test!(
+    darken_named_args,
+    "a {\n  color: darken($color: hsl(25, 100%, 80%), $amount: 30%);\n}\n",
+    "a {\n  color: #ff6a00;\n}\n"
+);
 test!(
     darken_basic,
     "a {\n  color: darken(hsl(25, 100%, 80%), 30%);\n}\n",
@@ -334,12 +332,11 @@ test!(
     // blocked on recognizing when to use 3-hex over 6-hex
     "a {\n  color: #220000;\n}\n"
 );
-// blocked on better parsing of call args
-// test!(
-//     saturate_named_args,
-//     "a {\n  color: saturate($color: hsl(25, 100%, 80%), $amount: 30%);\n}\n",
-//     "a {\n  color: #ff6a00;\n}\n"
-// );
+test!(
+    saturate_named_args,
+    "a {\n  color: saturate($color: hsl(25, 100%, 80%), $amount: 30%);\n}\n",
+    "a {\n  color: #ffc499;\n}\n"
+);
 test!(
     saturate_basic,
     "a {\n  color: saturate(hsl(120, 30%, 90%), 20%);\n}\n",
@@ -350,12 +347,11 @@ test!(
     "a {\n  color: saturate(#855, 20%);\n}\n",
     "a {\n  color: #9e3f3f;\n}\n"
 );
-// blocked on better parsing of call args
-// test!(
-//     desaturate_named_args,
-//     "a {\n  color: desaturate($color: hsl(25, 100%, 80%), $amount: 30%);\n}\n",
-//     "a {\n  color: #ff6a00;\n}\n"
-// );
+test!(
+    desaturate_named_args,
+    "a {\n  color: desaturate($color: hsl(25, 100%, 80%), $amount: 30%);\n}\n",
+    "a {\n  color: #f0c6a8;\n}\n"
+);
 test!(
     desaturate_basic,
     "a {\n  color: desaturate(hsl(120, 30%, 90%), 20%);\n}\n",
@@ -402,6 +398,7 @@ test!(
     "a {\n  color: gray;\n}\n"
 );
 test!(grayscale_number, "a {\n  color: grayscale(15%);\n}\n");
+// handle special functions better!
 // test!(
 //     grayscale_number_casing,
 //     "a {\n  color: grAyscaLe(15%);\n}\n"

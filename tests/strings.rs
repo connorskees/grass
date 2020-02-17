@@ -98,11 +98,8 @@ test!(
     "a {\n  color: unquote('');\n}\n",
     ""
 );
-// blocked on refactoring how function-call args are parsed
-// right now, whitespace is eaten between idents with no
-// regard for quotes
-// test!(
-//     str_len_space,
-//     "a {\n  color: str-length(\"foo bar\");\n}\n",
-//     "a {\n  color: 7;\n}\n"
-// );
+test!(
+    str_len_space,
+    "a {\n  color: str-length(\"foo bar\");\n}\n",
+    "a {\n  color: 7;\n}\n"
+);

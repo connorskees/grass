@@ -223,7 +223,7 @@ impl Value {
                         let func = match scope.get_fn(&s) {
                             Ok(f) => f,
                             Err(_) => match GLOBAL_FUNCTIONS.get(&s) {
-                                Some(f) => return f(&eat_call_args(toks, scope), scope),
+                                Some(f) => return f(&eat_call_args(toks, scope)?, scope),
                                 None => {
                                     s.push('(');
                                     let mut unclosed_parens = 0;
@@ -260,7 +260,7 @@ impl Value {
                                 }
                             },
                         };
-                        Ok(func.clone().args(&eat_call_args(toks, scope)).call())
+                        Ok(func.clone().args(&eat_call_args(toks, scope)?).call())
                     }
                     _ => {
                         if let Ok(c) = crate::color::ColorName::try_from(s.as_ref()) {
