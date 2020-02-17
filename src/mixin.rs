@@ -69,18 +69,21 @@ impl Mixin {
         Ok((name, Mixin::new(scope.clone(), args, body)))
     }
 
-    pub fn args(mut self, args: &CallArgs) -> Mixin {
+    pub fn args(mut self, args: &mut CallArgs) -> SassResult<Mixin> {
         for (idx, arg) in self.args.0.iter().enumerate() {
-            let val = match args.get(&format!("{}", idx)) {
-                Some(v) => v.clone(),
-                None => match args.get(&arg.name) {
-                    Some(v) => v.clone(),
-                    None => arg.default.clone().expect("missing variable!"),
+            let val = match args.remove(&format!("{}", idx)) {
+                Some(v) => v,
+                None => match args.remove(&arg.name) {
+                    Some(v) => v,
+                    None => match &arg.default {
+                        Some(v) => v.clone(),
+                        None => return Err(format!("Missing argument ${}.", &arg.name).into()),
+                    },
                 },
             };
             self.scope.insert_var(&arg.name, val);
         }
-        self
+        Ok(self)
     }
 
     pub fn call(mut self, super_selector: &Selector) -> SassResult<Vec<Stmt>> {
@@ -132,7 +135,7 @@ pub(crate) fn eat_include<I: Iterator<Item = Token>>(
 
     devour_whitespace(toks);
 
-    let args = if let Some(tok) = toks.next() {
+    let mut args = if let Some(tok) = toks.next() {
         match tok.kind {
             TokenKind::Symbol(Symbol::SemiColon) => CallArgs::new(),
             TokenKind::Symbol(Symbol::OpenParen) => {
@@ -153,6 +156,6 @@ pub(crate) fn eat_include<I: Iterator<Item = Token>>(
 
     let mixin = scope.get_mixin(&name)?.clone();
 
-    let rules = mixin.args(&args).call(super_selector)?;
+    let rules = mixin.args(&mut args)?.call(super_selector)?;
     Ok(rules)
 }
