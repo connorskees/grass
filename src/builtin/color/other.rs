@@ -7,12 +7,23 @@ use crate::units::Unit;
 use crate::value::{Number, Value};
 
 macro_rules! opt_arg {
-    ($args:ident, $name:ident, $arg:literal) => {
+    ($args:ident, $name:ident, $arg:literal, $high:literal, $low:literal) => {
         let $name = match arg!($args, -1, $arg = Value::Null) {
-            Value::Dimension(n, Unit::None) => Some(n),
-            Value::Dimension(n, Unit::Percent) => Some(n / Number::from(100)),
+            Value::Dimension(n, u) => Some(bound!($arg, n, u, $high, $low)),
             Value::Null => None,
-            _ => todo!(concat!("expected either unitless or % number for $", $arg)),
+            v => return Err(format!("${}: {} is not a number.", $arg, v).into()),
+        };
+    };
+    (scale: $args:ident, $name:ident, $arg:literal, $high:literal, $low:literal) => {
+        let $name = match arg!($args, -1, $arg = Value::Null) {
+            Value::Dimension(n, Unit::Percent) => {
+                Some(bound!($arg, n, Unit::Percent, $high, $low) / Number::from(100))
+            }
+            v @ Value::Dimension(..) => {
+                return Err(format!("${}: Expected {} to have unit \"%\".", $arg, v).into())
+            }
+            Value::Null => None,
+            v => return Err(format!("${}: {} is not a number.", $arg, v).into()),
         };
     };
     (hsl: $args:ident, $name:ident, $arg:literal) => {
@@ -37,10 +48,10 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             v => return Err(format!("$color: {} is not a color.", v).into()),
         };
 
-        opt_arg!(args, alpha, "alpha");
-        opt_arg!(args, red, "red");
-        opt_arg!(args, green, "green");
-        opt_arg!(args, blue, "blue");
+        opt_arg!(args, alpha, "alpha", -1, 1);
+        opt_arg!(args, red, "red", -255, 255);
+        opt_arg!(args, green, "green", -255, 255);
+        opt_arg!(args, blue, "blue", -255, 255);
 
         if red.is_some() || green.is_some() || blue.is_some() {
             return Ok(Value::Color(Color::from_rgba(red.unwrap_or(color.red()), green.unwrap_or(color.green()), blue.unwrap_or(color.blue()), alpha.unwrap_or(color.alpha()))))
@@ -75,10 +86,10 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             v => return Err(format!("$color: {} is not a color.", v).into()),
         };
 
-        opt_arg!(args, alpha, "alpha");
-        opt_arg!(args, red, "red");
-        opt_arg!(args, green, "green");
-        opt_arg!(args, blue, "blue");
+        opt_arg!(args, alpha, "alpha", -1, 1);
+        opt_arg!(args, red, "red", -255, 255);
+        opt_arg!(args, green, "green", -255, 255);
+        opt_arg!(args, blue, "blue", -255, 255);
 
         if red.is_some() || green.is_some() || blue.is_some() {
             return
@@ -129,10 +140,10 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             v => return Err(format!("$color: {} is not a color.", v).into()),
         };
 
-        opt_arg!(args, alpha, "alpha");
-        opt_arg!(args, red, "red");
-        opt_arg!(args, green, "green");
-        opt_arg!(args, blue, "blue");
+        opt_arg!(scale: args, alpha, "alpha", -100, 100);
+        opt_arg!(scale: args, red, "red", -100, 100);
+        opt_arg!(scale: args, green, "green", -100, 100);
+        opt_arg!(scale: args, blue, "blue", -100, 100);
 
         if red.is_some() || green.is_some() || blue.is_some() {
             return

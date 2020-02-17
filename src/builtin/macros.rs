@@ -59,4 +59,15 @@ macro_rules! bound {
             $arg
         }
     };
+    ($name:literal, $arg:ident, $unit:path, $low:literal, $high:literal) => {
+        if $arg > Number::from($high) || $arg < Number::from($low) {
+            return Err(format!(
+                "${}: Expected {}{} to be within {}{} and {}{}.",
+                $name, $arg, $unit, $low, $unit, $high, $unit,
+            )
+            .into());
+        } else {
+            $arg
+        }
+    };
 }
