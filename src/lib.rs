@@ -327,7 +327,7 @@ struct StyleSheetParser<'a> {
 impl<'a> StyleSheetParser<'a> {
     fn parse_toplevel(mut self) -> SassResult<(Vec<Stmt>, Scope)> {
         let mut rules: Vec<Stmt> = Vec::new();
-        while let Some(Token { kind, pos }) = self.lexer.peek() {
+        while let Some(Token { kind, .. }) = self.lexer.peek() {
             match kind {
                 TokenKind::Ident(_)
                 | TokenKind::Attribute(_)
@@ -361,7 +361,8 @@ impl<'a> StyleSheetParser<'a> {
                     {
                         self.error(pos, "unexpected variable use at toplevel");
                     }
-                    let VariableDecl { val, default } = eat_variable_value(&mut self.lexer, &self.global_scope)?;
+                    let VariableDecl { val, default } =
+                        eat_variable_value(&mut self.lexer, &self.global_scope)?;
                     if !default || self.global_scope.get_var(&name).is_err() {
                         self.global_scope.insert_var(&name, val);
                     }
@@ -378,9 +379,11 @@ impl<'a> StyleSheetParser<'a> {
                     };
                     rules.push(Stmt::MultilineComment(comment));
                 }
-                TokenKind::AtRule(AtRuleKind::Include) => {
-                    rules.extend(eat_include(&mut self.lexer, &self.global_scope, &Selector(Vec::new()))?)
-                }
+                TokenKind::AtRule(AtRuleKind::Include) => rules.extend(eat_include(
+                    &mut self.lexer,
+                    &self.global_scope,
+                    &Selector(Vec::new()),
+                )?),
                 TokenKind::AtRule(AtRuleKind::Import) => {
                     let Token { pos, .. } = self
                         .lexer
@@ -437,16 +440,22 @@ impl<'a> StyleSheetParser<'a> {
                             AtRule::Function(name, func) => {
                                 self.global_scope.insert_fn(&name, *func);
                             }
-                            AtRule::Charset(toks) => rules.push(Stmt::AtRule(AtRule::Charset(toks))),
+                            AtRule::Charset(toks) => {
+                                rules.push(Stmt::AtRule(AtRule::Charset(toks)))
+                            }
                             AtRule::Error(pos, message) => self.error(pos, &message),
                             AtRule::Warn(pos, message) => self.warn(pos, &message),
                             AtRule::Debug(pos, message) => self.debug(pos, &message),
-                            AtRule::Return(_) => return Err("This at-rule is not allowed here.".into()),
+                            AtRule::Return(_) => {
+                                return Err("This at-rule is not allowed here.".into())
+                            }
                         }
                     }
                 }
                 TokenKind::Symbol(Symbol::BitAnd) => {
-                    return Err(SassError::new("Base-level rules cannot contain the parent-selector-referencing character '&'.", *pos))
+                    return Err(
+                        "Top-level selectors may not contain the parent selector \"&\".".into(),
+                    )
                 }
                 _ => match dbg!(self.lexer.next()) {
                     Some(Token { pos, .. }) => self.error(pos, "unexpected toplevel token"),
