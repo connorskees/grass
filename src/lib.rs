@@ -517,7 +517,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                         scope,
                         super_selector,
                         String::new(),
-                    );
+                    )?;
                     return Ok(Some(Style::from_tokens(toks, scope, super_selector, prop)?));
                 } else {
                     values.push(tok.unwrap());
@@ -529,7 +529,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                 // special edge case where there was no space between the colon
                 // in a style `color:red`. todo: refactor
                 let mut v = values.into_iter().peekable();
-                let property = Style::parse_property(&mut v, scope, super_selector, String::new());
+                let property = Style::parse_property(&mut v, scope, super_selector, String::new())?;
                 let value = Style::parse_value(&mut v, scope, super_selector)?;
                 return Ok(Some(Expr::Style(Style { property, value })));
             }
@@ -544,7 +544,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                     // in a style `color:red`. todo: refactor
                     let mut v = values.into_iter().peekable();
                     let property =
-                        Style::parse_property(&mut v, scope, super_selector, String::new());
+                        Style::parse_property(&mut v, scope, super_selector, String::new())?;
                     let value = Style::parse_value(&mut v, scope, super_selector)?;
                     return Ok(Some(Expr::Style(Style { property, value })));
                 }
@@ -555,7 +555,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                 return Ok(Some(Expr::Selector(Selector::from_tokens(
                     &mut values.into_iter().peekable(),
                     scope,
-                ))));
+                )?)));
             }
             TokenKind::Variable(_) => {
                 let tok = toks

@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::fmt::{self, Display};
 
+use crate::error::SassResult;
 use crate::function::Function;
 use crate::mixin::Mixin;
 use crate::value::Value;
@@ -357,10 +358,10 @@ impl Scope {
         }
     }
 
-    pub fn get_var(&self, v: &str) -> Result<&Value, String> {
+    pub fn get_var(&self, v: &str) -> SassResult<&Value> {
         match self.vars.get(&v.replace('_', "-")) {
             Some(v) => Ok(v),
-            None => Err(format!("Undefined variable `{}`.", v)),
+            None => Err(format!("Undefined variable: ${}.", v).into()),
         }
     }
 

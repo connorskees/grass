@@ -26,7 +26,7 @@ impl Style {
         scope: &Scope,
         super_selector: &Selector,
         super_property: String,
-    ) -> String {
+    ) -> SassResult<String> {
         StyleParser::new(scope, super_selector).parse_property(toks, super_property)
     }
 
@@ -116,7 +116,7 @@ impl<'a> StyleParser<'a> {
                     toks.next();
                     devour_whitespace(toks);
                     loop {
-                        let property = self.parse_property(toks, super_property.clone());
+                        let property = self.parse_property(toks, super_property.clone())?;
                         if let Some(tok) = toks.peek() {
                             match tok.kind {
                                 TokenKind::Symbol(Symbol::OpenCurlyBrace) => {
@@ -169,14 +169,14 @@ impl<'a> StyleParser<'a> {
         &self,
         toks: &mut Peekable<I>,
         mut super_property: String,
-    ) -> String {
+    ) -> SassResult<String> {
         let mut property = String::new();
         while let Some(Token { kind, .. }) = toks.next() {
             match kind {
                 TokenKind::Whitespace(_) | TokenKind::MultilineComment(_) => continue,
                 TokenKind::Ident(ref s) => property.push_str(s),
                 TokenKind::Interpolation => property.push_str(
-                    &parse_interpolation(toks, self.scope)
+                    &parse_interpolation(toks, self.scope)?
                         .iter()
                         .map(|x| x.kind.to_string())
                         .collect::<String>(),
@@ -190,12 +190,12 @@ impl<'a> StyleParser<'a> {
         }
         devour_whitespace(toks);
         if super_property.is_empty() {
-            property
+            Ok(property)
         } else {
             super_property.reserve(1 + property.len());
             super_property.push('-');
             super_property.push_str(&property);
-            super_property
+            Ok(super_property)
         }
     }
 }

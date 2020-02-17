@@ -53,14 +53,17 @@ fn parse_hex(s: String) -> Value {
     }
 }
 
-fn flatten_ident<I: Iterator<Item = Token>>(toks: &mut Peekable<I>, scope: &Scope) -> String {
+fn flatten_ident<I: Iterator<Item = Token>>(
+    toks: &mut Peekable<I>,
+    scope: &Scope,
+) -> SassResult<String> {
     let mut s = String::new();
     while let Some(tok) = toks.peek() {
         match tok.kind.clone() {
             TokenKind::Interpolation => {
                 toks.next();
                 s.push_str(
-                    &parse_interpolation(toks, scope)
+                    &parse_interpolation(toks, scope)?
                         .iter()
                         .map(|x| x.kind.to_string())
                         .collect::<String>(),
@@ -77,7 +80,7 @@ fn flatten_ident<I: Iterator<Item = Token>>(toks: &mut Peekable<I>, scope: &Scop
             _ => break,
         }
     }
-    s
+    Ok(s)
 }
 
 impl Value {
@@ -202,7 +205,7 @@ impl Value {
             TokenKind::Symbol(Symbol::BitAnd) => {
                 Ok(Value::Ident(String::from("&"), QuoteKind::None))
             }
-            TokenKind::Symbol(Symbol::Hash) => Ok(parse_hex(flatten_ident(toks, scope))),
+            TokenKind::Symbol(Symbol::Hash) => Ok(parse_hex(flatten_ident(toks, scope)?)),
             // TokenKind::Interpolation => {
             //     Ok(Value::Ident(
             //         parse_interpolation(toks, scope)
@@ -213,7 +216,7 @@ impl Value {
             //     ))
             // }
             TokenKind::Ident(mut s) => {
-                s.push_str(&flatten_ident(toks, scope));
+                s.push_str(&flatten_ident(toks, scope)?);
                 match toks.peek() {
                     Some(Token {
                         kind: TokenKind::Symbol(Symbol::OpenParen),
@@ -233,17 +236,14 @@ impl Value {
                                                 unclosed_parens += 1;
                                             }
                                             TokenKind::Interpolation => s.push_str(
-                                                &parse_interpolation(toks, scope)
+                                                &parse_interpolation(toks, scope)?
                                                     .iter()
                                                     .map(|x| x.kind.to_string())
                                                     .collect::<String>(),
                                             ),
-                                            TokenKind::Variable(v) => s.push_str(
-                                                &scope
-                                                    .get_var(v)
-                                                    .expect("expected variable to exist")
-                                                    .to_string(),
-                                            ),
+                                            TokenKind::Variable(v) => {
+                                                s.push_str(&scope.get_var(v)?.to_string())
+                                            }
                                             TokenKind::Symbol(Symbol::CloseParen) => {
                                                 if unclosed_parens <= 1 {
                                                     s.push(')');
@@ -298,9 +298,9 @@ impl Value {
                 }
                 Ok(Value::Ident(s, QuoteKind::Single))
             }
-            TokenKind::Variable(ref v) => Ok(scope.get_var(v).expect("expected variable").clone()),
+            TokenKind::Variable(ref v) => Ok(scope.get_var(v)?.clone()),
             TokenKind::Interpolation => {
-                let mut s = parse_interpolation(toks, scope)
+                let mut s = parse_interpolation(toks, scope)?
                     .iter()
                     .map(|x| x.kind.to_string())
                     .collect::<String>();
@@ -309,7 +309,7 @@ impl Value {
                         TokenKind::Interpolation => {
                             toks.next();
                             s.push_str(
-                                &parse_interpolation(toks, scope)
+                                &parse_interpolation(toks, scope)?
                                     .iter()
                                     .map(|x| x.kind.to_string())
                                     .collect::<String>(),

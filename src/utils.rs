@@ -44,7 +44,7 @@ pub(crate) fn devour_whitespace_or_comment<I: Iterator<Item = W>, W: IsWhitespac
 pub(crate) fn parse_interpolation<I: Iterator<Item = Token>>(
     tokens: &mut I,
     scope: &Scope,
-) -> Vec<Token> {
+) -> SassResult<Vec<Token>> {
     let mut val = Vec::new();
     while let Some(tok) = tokens.next() {
         match tok.kind {
@@ -52,20 +52,21 @@ pub(crate) fn parse_interpolation<I: Iterator<Item = Token>>(
             TokenKind::Symbol(Symbol::OpenCurlyBrace) => {
                 todo!("invalid character in interpolation")
             }
-            TokenKind::Variable(ref v) => val
-                .extend(Lexer::new(&scope.get_var(v).unwrap().to_string()).collect::<Vec<Token>>()),
-            TokenKind::Interpolation => val.extend(parse_interpolation(tokens, scope)),
+            TokenKind::Variable(ref v) => {
+                val.extend(Lexer::new(&scope.get_var(v)?.to_string()).collect::<Vec<Token>>())
+            }
+            TokenKind::Interpolation => val.extend(parse_interpolation(tokens, scope)?),
             _ => val.push(tok),
         }
     }
-    Lexer::new(
+    Ok(Lexer::new(
         &Value::from_tokens(&mut val.into_iter().peekable(), scope)
             .unwrap()
             .to_string()
             .replace("\"", "")
             .replace("'", ""),
     )
-    .collect::<Vec<Token>>()
+    .collect::<Vec<Token>>())
 }
 
 pub(crate) struct VariableDecl {

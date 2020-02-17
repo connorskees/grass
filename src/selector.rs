@@ -1,4 +1,5 @@
 use crate::common::{Scope, Symbol};
+use crate::error::SassResult;
 use crate::utils::{
     devour_whitespace, devour_whitespace_or_comment, parse_interpolation, IsWhitespace,
 };
@@ -199,8 +200,8 @@ impl<'a> SelectorParser<'a> {
         }
     }
 
-    fn all_selectors(mut self, tokens: &'a mut Peekable<IntoIter<Token>>) -> Selector {
-        self.tokens_to_selectors(tokens);
+    fn all_selectors(mut self, tokens: &'a mut Peekable<IntoIter<Token>>) -> SassResult<Selector> {
+        self.tokens_to_selectors(tokens)?;
         // remove trailing whitespace
         while let Some(x) = self.selectors.pop() {
             if x != SelectorKind::Whitespace {
@@ -208,7 +209,7 @@ impl<'a> SelectorParser<'a> {
                 break;
             }
         }
-        Selector(self.selectors)
+        Ok(Selector(self.selectors))
     }
 
     fn consume_pseudo_selector(&mut self, tokens: &'_ mut Peekable<IntoIter<Token>>) {
@@ -254,13 +255,14 @@ impl<'a> SelectorParser<'a> {
         }
     }
 
-    fn tokens_to_selectors(&mut self, tokens: &'_ mut Peekable<IntoIter<Token>>) {
+    fn tokens_to_selectors(&mut self, tokens: &'_ mut Peekable<IntoIter<Token>>) -> SassResult<()> {
         while tokens.peek().is_some() {
-            self.consume_selector(tokens)
+            self.consume_selector(tokens)?;
         }
+        Ok(())
     }
 
-    fn consume_selector(&mut self, tokens: &'_ mut Peekable<IntoIter<Token>>) {
+    fn consume_selector(&mut self, tokens: &'_ mut Peekable<IntoIter<Token>>) -> SassResult<()> {
         if devour_whitespace_or_comment(tokens) {
             if let Some(Token {
                 kind: TokenKind::Symbol(Symbol::Comma),
@@ -269,10 +271,10 @@ impl<'a> SelectorParser<'a> {
             {
                 tokens.next();
                 self.selectors.push(SelectorKind::Multiple);
-                return;
+                return Ok(());
             }
             self.selectors.push(SelectorKind::Whitespace);
-            return;
+            return Ok(());
         }
         if let Some(Token { kind, .. }) = tokens.next() {
             match kind {
@@ -298,16 +300,17 @@ impl<'a> SelectorParser<'a> {
                 TokenKind::Interpolation => {
                     self.is_interpolated = true;
                     self.tokens_to_selectors(
-                        &mut parse_interpolation(tokens, self.scope)
+                        &mut parse_interpolation(tokens, self.scope)?
                             .into_iter()
                             .peekable(),
-                    );
+                    )?;
                     self.is_interpolated = false;
                 }
                 TokenKind::Attribute(attr) => self.selectors.push(SelectorKind::Attribute(attr)),
                 _ => todo!("unimplemented selector"),
             };
         }
+        Ok(())
     }
 }
 
@@ -315,7 +318,7 @@ impl Selector {
     pub fn from_tokens<'a>(
         tokens: &'a mut Peekable<IntoIter<Token>>,
         scope: &'a Scope,
-    ) -> Selector {
+    ) -> SassResult<Selector> {
         SelectorParser::new(scope).all_selectors(tokens)
     }
 
