@@ -26,11 +26,9 @@ macro_rules! opt_arg {
             v => return Err(format!("${}: {} is not a number.", $arg, v).into()),
         };
     };
-    (hsl: $args:ident, $name:ident, $arg:literal) => {
+    (hsl: $args:ident, $name:ident, $arg:literal, $high:literal, $low:literal) => {
         let $name = match arg!($args, -1, $arg = Value::Null) {
-            Value::Dimension(n, Unit::None) | Value::Dimension(n, Unit::Percent) => {
-                Some(n / Number::from(100))
-            }
+            Value::Dimension(n, u) => Some(bound!($arg, n, u, $high, $low) / Number::from(100)),
             Value::Null => None,
             v => return Err(format!("${}: {} is not a number.", $arg, v).into()),
         };
@@ -63,8 +61,8 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             v => return Err(format!("$hue: {} is not a number.", v).into()),
         };
 
-        opt_arg!(args, saturation, "saturation", 0, 100);
-        opt_arg!(args, luminance, "lightness", 0, 100);
+        opt_arg!(hsl: args, saturation, "saturation", 0, 100);
+        opt_arg!(hsl: args, luminance, "lightness", 0, 100);
 
         if hue.is_some() || saturation.is_some() || luminance.is_some() {
             // Color::as_hsla() returns more exact values than Color::hue(), etc.
@@ -109,8 +107,8 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             _ => todo!("expected either unitless or % number for hue"),
         };
 
-        opt_arg!(hsl: args, saturation, "saturation");
-        opt_arg!(hsl: args, luminance, "lightness");
+        opt_arg!(hsl: args, saturation, "saturation", -100, 100);
+        opt_arg!(hsl: args, luminance, "lightness", -100, 100);
 
         if hue.is_some() || saturation.is_some() || luminance.is_some() {
             // Color::as_hsla() returns more exact values than Color::hue(), etc.
@@ -163,8 +161,8 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
             _ => todo!("expected either unitless or % number for hue"),
         };
 
-        opt_arg!(hsl: args, saturation, "saturation");
-        opt_arg!(hsl: args, luminance, "lightness");
+        opt_arg!(scale: args, saturation, "saturation", -100, 100);
+        opt_arg!(scale: args, luminance, "lightness", -100, 100);
 
         if hue.is_some() || saturation.is_some() || luminance.is_some() {
             // Color::as_hsla() returns more exact values than Color::hue(), etc.
