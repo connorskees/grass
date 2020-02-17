@@ -1,14 +1,15 @@
 use std::ops::{Add, Div, Mul, Sub};
 
 use crate::common::QuoteKind;
+use crate::error::SassResult;
 use crate::units::Unit;
 use crate::value::Value;
-
+// Undefined operation "red + white".
 impl Add for Value {
-    type Output = Self;
+    type Output = SassResult<Self>;
 
-    fn add(self, other: Self) -> Self {
-        match self {
+    fn add(self, other: Self) -> Self::Output {
+        Ok(match self {
             Self::Important | Self::True | Self::False => match other {
                 Self::Ident(s, QuoteKind::Double) | Self::Ident(s, QuoteKind::Single) => {
                     Value::Ident(format!("{}{}", self, s), QuoteKind::Double)
@@ -77,15 +78,15 @@ impl Add for Value {
                 _ => todo!(),
             },
             _ => todo!(),
-        }
+        })
     }
 }
 
 impl Sub for Value {
-    type Output = Self;
+    type Output = SassResult<Self>;
 
-    fn sub(self, other: Self) -> Self {
-        match self {
+    fn sub(self, other: Self) -> Self::Output {
+        Ok(match self {
             Self::Null => todo!(),
             Self::Dimension(num, unit) => match other {
                 Self::Dimension(num2, unit2) => Value::Dimension(num - num2, unit),
@@ -104,7 +105,7 @@ impl Sub for Value {
                 Self::Dimension(..) => todo!("investigate adding numbers and colors"),
                 _ => Value::Ident(format!("{}-{}", c, other), QuoteKind::None),
             },
-            Self::BinaryOp(..) | Self::Paren(..) => self.eval(),
+            Self::BinaryOp(..) | Self::Paren(..) => self.eval()?,
             Self::Ident(s1, quotes1) => match other {
                 Self::Ident(s2, quotes2) => {
                     let quotes1 = match quotes1 {
@@ -157,30 +158,30 @@ impl Sub for Value {
                 Self::Null => Value::Ident(format!("{}-", self), QuoteKind::None),
                 _ => Value::Ident(format!("{}-{}", self, other), QuoteKind::None),
             },
-        }
+        })
     }
 }
 
 impl Mul for Value {
-    type Output = Self;
+    type Output = SassResult<Self>;
 
-    fn mul(self, other: Self) -> Self {
-        match self {
+    fn mul(self, other: Self) -> Self::Output {
+        Ok(match self {
             Self::Null => todo!(),
             Self::Dimension(num, unit) => match other {
                 Self::Dimension(num2, unit2) => Value::Dimension(num * num2, unit),
                 _ => todo!(),
             },
-            Self::BinaryOp(..) | Self::Paren(..) => self.eval(),
+            Self::BinaryOp(..) | Self::Paren(..) => self.eval()?,
             _ => todo!("incompatible mul types"),
-        }
+        })
     }
 }
 impl Div for Value {
-    type Output = Self;
+    type Output = SassResult<Self>;
 
-    fn div(self, other: Self) -> Self {
-        match self {
+    fn div(self, other: Self) -> Self::Output {
+        Ok(match self {
             Self::Null => todo!(),
             Self::Dimension(num, unit) => match other {
                 Self::Dimension(num2, unit2) => {
@@ -200,7 +201,9 @@ impl Div for Value {
                         QuoteKind::None,
                     )
                 }
-                Self::BinaryOp(..) | Self::Paren(..) => Self::Dimension(num, unit) / other.eval(),
+                Self::BinaryOp(..) | Self::Paren(..) => {
+                    (Self::Dimension(num, unit) / other.eval()?)?
+                }
                 _ => todo!(),
             },
             // Self::List(..) => todo!(),
@@ -216,7 +219,7 @@ impl Div for Value {
                 Self::Dimension(..) => todo!("investigate adding numbers and colors"),
                 _ => Value::Ident(format!("{}/{}", c, other), QuoteKind::None),
             },
-            Self::BinaryOp(..) | Self::Paren(..) => self.eval(),
+            Self::BinaryOp(..) | Self::Paren(..) => self.eval()?,
             Self::Ident(s1, quotes1) => match other {
                 Self::Ident(s2, quotes2) => {
                     let quotes1 = match quotes1 {
@@ -269,6 +272,6 @@ impl Div for Value {
                 Self::Null => Value::Ident(format!("{}/", self), QuoteKind::None),
                 _ => Value::Ident(format!("{}/{}", self, other), QuoteKind::None),
             },
-        }
+        })
     }
 }

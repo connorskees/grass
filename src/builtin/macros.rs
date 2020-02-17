@@ -1,18 +1,18 @@
 macro_rules! arg {
     ($args:ident, $idx:literal, $name:literal) => {
         match $args.remove(stringify!($idx)) {
-            Some(v) => v.eval(),
+            Some(v) => v.eval()?,
             None => match $args.remove($name) {
-                Some(v) => v.eval(),
+                Some(v) => v.eval()?,
                 None => return Err(concat!("Missing argument $", $name, ".").into()),
             },
         };
     };
     ($args:ident, $idx:literal, $name:literal=$default:expr) => {
         match $args.remove(stringify!($idx)) {
-            Some(v) => v.eval(),
+            Some(v) => v.eval()?,
             None => match $args.remove($name) {
-                Some(v) => v.eval(),
+                Some(v) => v.eval()?,
                 None => $default,
             },
         };

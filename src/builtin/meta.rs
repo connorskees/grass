@@ -8,7 +8,7 @@ use crate::value::Value;
 pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     decl!(f "if", |args, _| {
         max_args!(args, 3);
-        if arg!(args, 0, "condition").is_true() {
+        if arg!(args, 0, "condition").is_true()? {
             Ok(arg!(args, 1, "if-true"))
         } else {
             Ok(arg!(args, 2, "if-false"))
@@ -46,7 +46,7 @@ pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
     decl!(f "type-of", |args, _| {
         max_args!(args, 1);
         let value = arg!(args, 0, "value");
-        Ok(Value::Ident(value.kind().to_owned(), QuoteKind::None))
+        Ok(Value::Ident(value.kind()?.to_owned(), QuoteKind::None))
     });
     decl!(f "unitless", |args, _| {
         max_args!(args, 1);

@@ -4,6 +4,7 @@ use std::iter::Iterator;
 
 use crate::color::Color;
 use crate::common::{ListSeparator, Op, QuoteKind};
+use crate::error::SassResult;
 use crate::units::Unit;
 pub(crate) use number::Number;
 
@@ -39,7 +40,7 @@ impl Display for Value {
                     .join(sep.as_str())
             ),
             Self::Color(c) => write!(f, "{}", c),
-            Self::BinaryOp(..) => write!(f, "{}", self.clone().eval()),
+            Self::BinaryOp(..) => write!(f, "{}", self.clone().eval().unwrap()),
             Self::Paren(val) => write!(f, "{}", val),
             Self::Ident(val, kind) => write!(f, "{}{}{}", kind.as_str(), val, kind.as_str()),
             Self::True => write!(f, "true"),
@@ -54,11 +55,11 @@ impl Value {
         self == &Value::Null
     }
 
-    pub fn is_true(&self) -> bool {
+    pub fn is_true(&self) -> SassResult<bool> {
         match self {
-            Value::Null | Value::False => false,
-            Self::BinaryOp(..) => self.clone().eval().is_true(),
-            _ => true,
+            Value::Null | Value::False => Ok(false),
+            Self::BinaryOp(..) => self.clone().eval()?.is_true(),
+            _ => Ok(true),
         }
     }
 
@@ -69,17 +70,17 @@ impl Value {
         }
     }
 
-    pub fn kind(&self) -> &'static str {
+    pub fn kind(&self) -> SassResult<&'static str> {
         match self {
-            Value::Color(..) => "color",
-            Value::Ident(..) => "string",
-            Value::Dimension(..) => "number",
-            Value::List(..) => "list",
-            // Value::Function(..) => "function",
-            Value::True | Value::False => "bool",
-            Value::Null => "null",
-            Value::BinaryOp(..) => self.clone().eval().kind(),
-            _ => "unknown",
+            Value::Color(..) => Ok("color"),
+            Value::Ident(..) => Ok("string"),
+            Value::Dimension(..) => Ok("number"),
+            Value::List(..) => Ok("list"),
+            // Value::Function(..) => Ok("function"),
+            Value::True | Value::False => Ok("bool"),
+            Value::Null => Ok("null"),
+            Value::BinaryOp(..) => self.clone().eval()?.kind(),
+            _ => Ok("unknown"),
         }
     }
 
@@ -91,18 +92,18 @@ impl Value {
         }
     }
 
-    pub fn eval(self) -> Self {
+    pub fn eval(self) -> SassResult<Self> {
         match self {
             Self::BinaryOp(lhs, op, rhs) => match op {
                 Op::Plus => *lhs + *rhs,
                 Op::Minus => *lhs - *rhs,
-                Op::Equal => Self::bool(*lhs == *rhs),
-                Op::NotEqual => Self::bool(*lhs != *rhs),
+                Op::Equal => Ok(Self::bool(*lhs == *rhs)),
+                Op::NotEqual => Ok(Self::bool(*lhs != *rhs)),
                 Op::Mul => *lhs * *rhs,
                 Op::Div => *lhs / *rhs,
-                _ => Self::BinaryOp(lhs, op, rhs),
+                _ => Ok(Self::BinaryOp(lhs, op, rhs)),
             },
-            _ => self,
+            _ => Ok(self),
         }
     }
 }
