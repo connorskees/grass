@@ -39,7 +39,7 @@ impl Display for Value {
                     .join(sep.as_str())
             ),
             Self::Color(c) => write!(f, "{}", c),
-            Self::BinaryOp(..) => write!(f, "{}", self.eval()),
+            Self::BinaryOp(..) => write!(f, "{}", self.clone().eval()),
             Self::Paren(val) => write!(f, "{}", val),
             Self::Ident(val, kind) => write!(f, "{}{}{}", kind.as_str(), val, kind.as_str()),
             Self::True => write!(f, "true"),
@@ -57,7 +57,7 @@ impl Value {
     pub fn is_true(&self) -> bool {
         match self {
             Value::Null | Value::False => false,
-            Self::BinaryOp(..) => self.eval().is_true(),
+            Self::BinaryOp(..) => self.clone().eval().is_true(),
             _ => true,
         }
     }
@@ -78,7 +78,7 @@ impl Value {
             // Value::Function(..) => "function",
             Value::True | Value::False => "bool",
             Value::Null => "null",
-            Value::BinaryOp(..) => self.eval().kind(),
+            Value::BinaryOp(..) => self.clone().eval().kind(),
             _ => "unknown",
         }
     }
@@ -91,18 +91,18 @@ impl Value {
         }
     }
 
-    pub fn eval(&self) -> Self {
+    pub fn eval(self) -> Self {
         match self {
             Self::BinaryOp(lhs, op, rhs) => match op {
-                Op::Plus => *lhs.clone() + *rhs.clone(),
-                Op::Minus => *lhs.clone() - *rhs.clone(),
+                Op::Plus => *lhs + *rhs,
+                Op::Minus => *lhs - *rhs,
                 Op::Equal => Self::bool(*lhs == *rhs),
                 Op::NotEqual => Self::bool(*lhs != *rhs),
-                Op::Mul => *lhs.clone() * *rhs.clone(),
-                Op::Div => *lhs.clone() / *rhs.clone(),
-                _ => Self::BinaryOp(lhs.clone(), *op, rhs.clone()),
+                Op::Mul => *lhs * *rhs,
+                Op::Div => *lhs / *rhs,
+                _ => Self::BinaryOp(lhs, op, rhs),
             },
-            _ => self.clone(),
+            _ => self,
         }
     }
 }
