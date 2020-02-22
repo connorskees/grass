@@ -106,6 +106,11 @@ impl AtRule {
                             continue;
                         }
                         TokenKind::Variable(..) => params.push('$'),
+                        TokenKind::Whitespace(..) => {
+                            devour_whitespace(toks);
+                            params.push(' ');
+                            continue;
+                        }
                         _ => {}
                     }
                     params.push_str(&tok.kind.to_string());
