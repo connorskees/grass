@@ -57,13 +57,25 @@ impl Display for Selector {
                     while let Some(sel) = iter.peek() {
                         if sel != &&SelectorKind::Multiple {
                             write!(f, ",")?;
-                            if sel != &&SelectorKind::Newline {
+                            if sel == &&SelectorKind::Newline {
+                                iter.next();
+                                f.write_char('\n')?;
+                            } else {
                                 f.write_char(' ')?;
                             }
                             break;
                         }
                         iter.next();
                         devour_whitespace(&mut iter);
+                    }
+                    while let Some(sel) = iter.peek() {
+                        if sel != &&SelectorKind::Multiple
+                            && sel != &&SelectorKind::Newline
+                            && !sel.is_whitespace()
+                        {
+                            break;
+                        }
+                        iter.next();
                     }
                 }
                 _ => write!(f, "{}", s)?,
