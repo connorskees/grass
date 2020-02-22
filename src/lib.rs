@@ -228,7 +228,7 @@ impl RuleSet {
 #[derive(Clone, Debug)]
 enum Expr {
     /// A style: `color: red`
-    Style(Style),
+    Style(Box<Style>),
     /// Several styles
     Styles(Vec<Style>),
     /// A collection of styles, from a mixin or function
@@ -486,7 +486,7 @@ impl<'a> StyleSheetParser<'a> {
         let mut stmts = Vec::new();
         while let Some(expr) = eat_expr(&mut self.lexer, scope, super_selector)? {
             match expr {
-                Expr::Style(s) => stmts.push(Stmt::Style(s)),
+                Expr::Style(s) => stmts.push(Stmt::Style(*s)),
                 Expr::AtRule(s) => stmts.push(Stmt::AtRule(s)),
                 Expr::Styles(s) => stmts.extend(s.into_iter().map(Stmt::Style)),
                 Expr::MixinDecl(name, mixin) => {
@@ -556,7 +556,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                 let mut v = values.into_iter().peekable();
                 let property = Style::parse_property(&mut v, scope, super_selector, String::new())?;
                 let value = Style::parse_value(&mut v, scope, super_selector)?;
-                return Ok(Some(Expr::Style(Style { property, value })));
+                return Ok(Some(Expr::Style(Box::new(Style { property, value }))));
             }
             TokenKind::Symbol(Symbol::CloseCurlyBrace) => {
                 if values.is_empty() {
@@ -571,7 +571,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                     let property =
                         Style::parse_property(&mut v, scope, super_selector, String::new())?;
                     let value = Style::parse_value(&mut v, scope, super_selector)?;
-                    return Ok(Some(Expr::Style(Style { property, value })));
+                    return Ok(Some(Expr::Style(Box::new(Style { property, value }))));
                 }
             }
             TokenKind::Symbol(Symbol::OpenCurlyBrace) => {
@@ -634,7 +634,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                     pos,
                 }) = toks.next()
                 {
-                    return match AtRule::from_tokens(rule, pos, toks, scope, &super_selector)? {
+                    return match AtRule::from_tokens(rule, pos, toks, scope, super_selector)? {
                         AtRule::Mixin(name, mixin) => Ok(Some(Expr::MixinDecl(name, mixin))),
                         AtRule::Function(name, func) => Ok(Some(Expr::FunctionDecl(name, func))),
                         AtRule::Charset(_) => todo!("@charset as expr"),

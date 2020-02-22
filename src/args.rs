@@ -163,7 +163,7 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
                 TokenKind::Symbol(Symbol::CloseParen) => {
                     args.insert(
                         name,
-                        Value::from_tokens(&mut val.clone().into_iter().peekable(), scope)?,
+                        Value::from_tokens(&mut val.into_iter().peekable(), scope)?,
                     );
                     return Ok(CallArgs(args));
                 }
@@ -192,7 +192,7 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
 fn read_until_close_paren<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -> Vec<Token> {
     let mut v = Vec::new();
     let mut scope = 0;
-    while let Some(tok) = toks.next() {
+    for tok in toks {
         match tok.kind {
             TokenKind::Symbol(Symbol::CloseParen) => {
                 if scope <= 1 {

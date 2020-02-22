@@ -118,7 +118,7 @@ impl<'a> StyleParser<'a> {
                             if tok.equals_symbol(Symbol::OpenCurlyBrace) {
                                 match self.eat_style_group(toks, property)? {
                                     Expr::Styles(s) => styles.extend(s),
-                                    Expr::Style(s) => styles.push(s),
+                                    Expr::Style(s) => styles.push(*s),
                                     _ => unreachable!(),
                                 }
                                 devour_whitespace(toks);
@@ -150,7 +150,7 @@ impl<'a> StyleParser<'a> {
                                     value,
                                 });
                                 match self.eat_style_group(toks, property)? {
-                                    Expr::Style(s) => styles.push(s),
+                                    Expr::Style(s) => styles.push(*s),
                                     Expr::Styles(s) => styles.extend(s),
                                     _ => unreachable!(),
                                 }
@@ -186,7 +186,7 @@ impl<'a> StyleParser<'a> {
                                 value: val,
                             }];
                             match self.eat_style_group(toks, super_property)? {
-                                Expr::Style(s) => v.push(s),
+                                Expr::Style(s) => v.push(*s),
                                 Expr::Styles(s) => v.extend(s),
                                 _ => unreachable!(),
                             }
@@ -194,10 +194,10 @@ impl<'a> StyleParser<'a> {
                         }
                         _ => {}
                     }
-                    return Ok(Expr::Style(Style {
+                    return Ok(Expr::Style(Box::new(Style {
                         property: super_property,
                         value: val,
-                    }));
+                    })));
                 }
             }
         }

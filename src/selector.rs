@@ -13,7 +13,7 @@ use std::vec::IntoIter;
 pub(crate) struct Selector(pub Vec<SelectorKind>);
 
 impl Selector {
-    pub fn new() -> Selector {
+    pub const fn new() -> Selector {
         Selector(Vec::new())
     }
 }

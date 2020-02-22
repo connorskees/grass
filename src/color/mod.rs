@@ -28,7 +28,7 @@ pub(crate) struct Color {
 }
 
 impl Color {
-    pub fn new_rgba(
+    pub const fn new_rgba(
         red: Number,
         green: Number,
         blue: Number,
