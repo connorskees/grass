@@ -38,7 +38,9 @@ impl Add for Value {
                 Self::Ident(s, QuoteKind::Double) | Self::Ident(s, QuoteKind::Single) => {
                     Value::Ident(format!("{}{}", c, s), QuoteKind::Double)
                 }
-                Self::Ident(s, QuoteKind::None) => Value::Ident(format!("{}{}", c, s), QuoteKind::None),
+                Self::Ident(s, QuoteKind::None) => {
+                    Value::Ident(format!("{}{}", c, s), QuoteKind::None)
+                }
                 Self::Null => Value::Ident(c.to_string(), QuoteKind::None),
                 _ => return Err(format!("Undefined operation \"{} + {}\".", c, other).into()),
             },
