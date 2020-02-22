@@ -5,8 +5,10 @@ use crate::common::{Pos, Scope, Symbol};
 use crate::error::SassResult;
 use crate::function::Function;
 use crate::mixin::Mixin;
-use crate::utils::devour_whitespace;
-use crate::{Token, TokenKind};
+use crate::selector::Selector;
+use crate::utils::{devour_whitespace, parse_interpolation};
+use crate::{eat_expr, Expr, Stmt};
+use crate::{RuleSet, Token, TokenKind};
 
 #[derive(Debug, Clone)]
 pub(crate) enum AtRule {
@@ -18,19 +20,15 @@ pub(crate) enum AtRule {
     Return(Vec<Token>),
     // todo: emit only when non-ascii char is found
     Charset(Vec<Token>),
+    Unknown(UnknownAtRule),
 }
 
-impl Display for AtRule {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            AtRule::Charset(toks) => write!(
-                f,
-                "@charset {};",
-                toks.iter().map(|x| x.kind.to_string()).collect::<String>()
-            ),
-            _ => panic!("attempted to display non-css at rule"),
-        }
-    }
+#[derive(Debug, Clone)]
+pub(crate) struct UnknownAtRule {
+    pub name: String,
+    pub super_selector: Selector,
+    pub params: String,
+    pub body: Vec<Stmt>,
 }
 
 impl AtRule {
@@ -41,13 +39,13 @@ impl AtRule {
         scope: &Scope,
     ) -> SassResult<AtRule> {
         devour_whitespace(toks);
-        match rule {
+        Ok(match rule {
             AtRuleKind::Error => {
                 let message = toks
                     .take_while(|x| x.kind != TokenKind::Symbol(Symbol::SemiColon))
                     .map(|x| x.kind.to_string())
                     .collect::<String>();
-                Ok(AtRule::Error(pos, message))
+                AtRule::Error(pos, message)
             }
             AtRuleKind::Warn => {
                 let message = toks
@@ -55,7 +53,7 @@ impl AtRule {
                     .map(|x| x.kind.to_string())
                     .collect::<String>();
                 devour_whitespace(toks);
-                Ok(AtRule::Warn(pos, message))
+                AtRule::Warn(pos, message)
             }
             AtRuleKind::Debug => {
                 let message = toks
@@ -64,44 +62,102 @@ impl AtRule {
                     .map(|x| x.kind.to_string())
                     .collect::<String>();
                 devour_whitespace(toks);
-                Ok(AtRule::Debug(pos, message))
+                AtRule::Debug(pos, message)
             }
             AtRuleKind::Mixin => {
                 let (name, mixin) = Mixin::decl_from_tokens(toks, scope)?;
-                Ok(AtRule::Mixin(name, Box::new(mixin)))
+                AtRule::Mixin(name, Box::new(mixin))
             }
             AtRuleKind::Function => {
                 let (name, func) = Function::decl_from_tokens(toks, scope)?;
-                Ok(AtRule::Function(name, Box::new(func)))
+                AtRule::Function(name, Box::new(func))
             }
-            AtRuleKind::Return => Ok(AtRule::Return(
+            AtRuleKind::Return => AtRule::Return(
                 // todo: return may not end in semicolon
                 toks.take_while(|t| t.kind != TokenKind::Symbol(Symbol::SemiColon))
                     .collect(),
-            )),
+            ),
             AtRuleKind::Use => todo!("@use not yet implemented"),
             AtRuleKind::Annotation => todo!("@annotation not yet implemented"),
             AtRuleKind::AtRoot => todo!("@at-root not yet implemented"),
-            AtRuleKind::Charset => Ok(AtRule::Charset(
+            AtRuleKind::Charset => AtRule::Charset(
                 toks.take_while(|t| t.kind != TokenKind::Symbol(Symbol::SemiColon))
                     .collect(),
-            )),
+            ),
             AtRuleKind::Each => todo!("@each not yet implemented"),
             AtRuleKind::Extend => todo!("@extend not yet implemented"),
             AtRuleKind::If => todo!("@if not yet implemented"),
             AtRuleKind::Else => todo!("@else not yet implemented"),
             AtRuleKind::For => todo!("@for not yet implemented"),
             AtRuleKind::While => todo!("@while not yet implemented"),
-            AtRuleKind::Media => todo!("@media not yet implemented"),
             AtRuleKind::Keyframes => todo!("@keyframes not yet implemented"),
-            AtRuleKind::Unknown(_) => todo!("unknown @ rules are not yet implemented"),
+            AtRuleKind::Unknown(name) => {
+                let mut params = String::new();
+                while let Some(tok) = toks.next() {
+                    match tok.kind {
+                        TokenKind::Symbol(Symbol::OpenCurlyBrace) => break,
+                        TokenKind::Interpolation => {
+                            params.push_str(
+                                &parse_interpolation(toks, scope)?
+                                    .into_iter()
+                                    .map(|x| x.kind.to_string())
+                                    .collect::<String>(),
+                            );
+                            continue;
+                        }
+                        TokenKind::Variable(..) => params.push('$'),
+                        _ => {}
+                    }
+                    params.push_str(&tok.kind.to_string());
+                }
+
+                let body = eat_unknown_atrule_body(toks, scope, &Selector::new())?;
+
+                let u = UnknownAtRule {
+                    name: name.clone(),
+                    super_selector: Selector::new(),
+                    params,
+                    body,
+                };
+
+                AtRule::Unknown(u)
+            }
             _ => todo!("encountered unimplemented at rule"),
-        }
+        })
     }
 }
 
-#[allow(dead_code, unused_variables)]
-fn eat_media_query<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) {}
+fn eat_unknown_atrule_body<I: Iterator<Item = Token>>(
+    toks: &mut Peekable<I>,
+    scope: &Scope,
+    super_selector: &Selector,
+) -> SassResult<Vec<Stmt>> {
+    let mut stmts = Vec::new();
+    while let Some(expr) = eat_expr(toks, scope, super_selector)? {
+        match expr {
+            Expr::Style(s) => stmts.push(Stmt::Style(s)),
+            Expr::Styles(s) => stmts.extend(s.into_iter().map(Stmt::Style)),
+            Expr::Include(s) => stmts.extend(s),
+            Expr::MixinDecl(..) | Expr::FunctionDecl(..) | Expr::Debug(..) | Expr::Warn(..) => {
+                todo!()
+            }
+            Expr::Selector(selector) => {
+                let rules = eat_unknown_atrule_body(toks, scope, &super_selector.zip(&selector))?;
+                stmts.push(Stmt::RuleSet(RuleSet {
+                    super_selector: super_selector.clone(),
+                    selector,
+                    rules,
+                }));
+            }
+            Expr::VariableDecl(..) => {
+                todo!()
+                // self.scope.insert_var(&name, *val);
+            }
+            Expr::MultilineComment(s) => stmts.push(Stmt::MultilineComment(s)),
+        }
+    }
+    Ok(stmts)
+}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum AtRuleKind {
@@ -144,10 +200,6 @@ pub enum AtRuleKind {
     /// Tells the CSS engine that all its content must be considered
     /// prefixed with an XML namespace
     Namespace,
-    /// A conditional group rule that will apply its content if
-    /// the device meets the criteria of the
-    /// condition defined using a media query
-    Media,
     /// A conditional group rule that will apply its content if the
     /// browser meets the criteria of the given condition
     Supports,
@@ -184,7 +236,7 @@ pub enum AtRuleKind {
     CounterStyle,
 
     /// An unknown at rule.
-    /// For compatibility, they are parsed the same as @media
+    /// For forward compatibility, they are parsed the same as @media
     Unknown(String),
 }
 
@@ -210,7 +262,6 @@ impl From<&str> for AtRuleKind {
             "while" => Self::While,
             "charset" => Self::Charset,
             "namespace" => Self::Namespace,
-            "media" => Self::Media,
             "supports" => Self::Supports,
             "page" => Self::Page,
             "fontface" => Self::FontFace,
@@ -252,7 +303,6 @@ impl Display for AtRuleKind {
             Self::While => write!(f, "@while"),
             Self::Charset => write!(f, "@charset"),
             Self::Namespace => write!(f, "@namespace"),
-            Self::Media => write!(f, "@media"),
             Self::Supports => write!(f, "@supports"),
             Self::Page => write!(f, "@page"),
             Self::FontFace => write!(f, "@fontface"),
