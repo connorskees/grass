@@ -1,5 +1,6 @@
 use std::fmt::Write;
 
+use crate::atrule::AtRule;
 use crate::error::SassResult;
 use crate::{RuleSet, Stmt, StyleSheet};
 
@@ -33,9 +34,15 @@ impl<W: Write> PrettyPrinter<W> {
             Stmt::Style(s) => {
                 writeln!(self.buf, "{}{}", padding, s)?;
             }
-            Stmt::AtRule(r) => {
-                writeln!(self.buf, "{}{}", padding, r)?;
-            }
+            Stmt::AtRule(r) => match r {
+                AtRule::Unknown(..) => todo!("Display @rules properly"),
+                AtRule::Charset(toks) => write!(
+                    self.buf,
+                    "@charset {};",
+                    toks.iter().map(|x| x.kind.to_string()).collect::<String>()
+                )?,
+                _ => todo!(),
+            },
         }
         Ok(())
     }
