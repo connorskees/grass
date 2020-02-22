@@ -17,8 +17,6 @@ enum Toplevel {
 enum BlockEntry {
     Style(Box<Style>),
     MultilineComment(String),
-    #[allow(dead_code)]
-    AtRule(AtRule),
 }
 
 impl fmt::Display for BlockEntry {
@@ -26,7 +24,6 @@ impl fmt::Display for BlockEntry {
         match self {
             BlockEntry::Style(s) => writeln!(f, "  {}", s),
             BlockEntry::MultilineComment(s) => writeln!(f, "  /*{}*/", s),
-            BlockEntry::AtRule(r) => writeln!(f, "{}", r),
         }
     }
 }
@@ -115,8 +112,9 @@ impl Css {
         self
     }
 
-    pub fn pretty_print<W: Write>(self, buf: &mut W) -> SassResult<()> {
+    pub fn pretty_print<W: Write>(self, buf: &mut W, nesting: usize) -> SassResult<()> {
         let mut has_written = false;
+        let padding = vec![' '; nesting * 2].iter().collect::<String>();
         for block in self.blocks {
             match block {
                 Toplevel::RuleSet(selector, styles) => {
@@ -124,20 +122,31 @@ impl Css {
                         continue;
                     }
                     has_written = true;
-                    writeln!(buf, "{} {{", selector)?;
+                    writeln!(buf, "{}{} {{", padding, selector)?;
                     for style in styles {
-                        write!(buf, "{}", style)?;
+                        write!(buf, "{}{}", padding, style)?;
                     }
-                    writeln!(buf, "}}")?;
+                    writeln!(buf, "{}}}", padding)?;
                 }
                 Toplevel::MultilineComment(s) => {
                     has_written = true;
-                    writeln!(buf, "/*{}*/", s)?;
+                    writeln!(buf, "{}/*{}*/", padding, s)?;
                 }
-                Toplevel::AtRule(r) => {
-                    has_written = true;
-                    writeln!(buf, "{}", r)?;
-                }
+                Toplevel::AtRule(r) => match r {
+                    AtRule::Unknown(u) => {
+                        writeln!(buf, "{}@{} {} {{", padding, u.name, u.params)?;
+                        Css::from_stylesheet(StyleSheet::from_stmts(u.body.clone()))
+                            .pretty_print(buf, nesting + 1)
+                            .unwrap();
+                        writeln!(buf, "{}}}", padding)?;
+                    }
+                    AtRule::Charset(toks) => write!(
+                        buf,
+                        "@charset {};",
+                        toks.iter().map(|x| x.kind.to_string()).collect::<String>()
+                    )?,
+                    _ => todo!(),
+                },
                 Toplevel::Newline => {
                     if has_written {
                         writeln!(buf)?
