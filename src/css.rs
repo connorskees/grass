@@ -134,7 +134,11 @@ impl Css {
                 }
                 Toplevel::AtRule(r) => match r {
                     AtRule::Unknown(u) => {
-                        writeln!(buf, "{}@{} {} {{", padding, u.name, u.params)?;
+                        if u.params.is_empty() {
+                            writeln!(buf, "{}@{} {{", padding, u.name)?;
+                        } else {
+                            writeln!(buf, "{}@{} {} {{", padding, u.name, u.params)?;
+                        }
                         Css::from_stylesheet(StyleSheet::from_stmts(u.body.clone()))
                             .pretty_print(buf, nesting + 1)
                             .unwrap();
