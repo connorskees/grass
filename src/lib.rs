@@ -298,6 +298,10 @@ impl StyleSheet {
         .parse_toplevel()?)
     }
 
+    pub(crate) fn from_stmts(s: Vec<Stmt>) -> StyleSheet {
+        StyleSheet(s)
+    }
+
     /// Write the internal representation as CSS to `buf`
     ///
     /// ```
@@ -311,7 +315,7 @@ impl StyleSheet {
     /// ```
     #[inline]
     pub fn print_as_css<W: Write>(self, buf: &mut W) -> SassResult<()> {
-        Css::from_stylesheet(self).pretty_print(buf)
+        Css::from_stylesheet(self).pretty_print(buf, 0)
     }
 }
 
@@ -449,6 +453,7 @@ impl<'a> StyleSheetParser<'a> {
                             AtRule::Return(_) => {
                                 return Err("This at-rule is not allowed here.".into())
                             }
+                            u @ AtRule::Unknown(..) => rules.push(Stmt::AtRule(u)),
                         }
                     }
                 }
@@ -626,6 +631,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                         AtRule::Warn(a, b) => Ok(Some(Expr::Warn(a, b))),
                         AtRule::Error(pos, err) => Err(SassError::new(err, pos)),
                         AtRule::Return(_) => todo!("@return in unexpected location!"),
+                        AtRule::Unknown(..) => todo!("nested media queries not yet implemented"),
                     };
                 }
             }
