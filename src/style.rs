@@ -74,7 +74,7 @@ impl<'a> StyleParser<'a> {
                     toks.next();
                     continue;
                 }
-                TokenKind::Symbol(Symbol::OpenCurlyBrace) | TokenKind::Interpolation => n += 1,
+                TokenKind::Interpolation => n += 1,
                 TokenKind::Symbol(Symbol::CloseCurlyBrace) => {
                     if n == 0 {
                         break;
@@ -83,10 +83,8 @@ impl<'a> StyleParser<'a> {
                         n -= 1;
                     }
                 }
-                TokenKind::Symbol(Symbol::SemiColon) => {
-                    toks.next();
-                    break;
-                }
+                TokenKind::Symbol(Symbol::OpenCurlyBrace)
+                | TokenKind::Symbol(Symbol::SemiColon) => break,
                 TokenKind::Symbol(Symbol::BitAnd) => {
                     style.push(Token {
                         kind: TokenKind::Ident(self.super_selector.to_string()),
@@ -99,7 +97,6 @@ impl<'a> StyleParser<'a> {
             };
             style.push(toks.next().unwrap());
         }
-        devour_whitespace(toks);
         Value::from_tokens(&mut style.into_iter().peekable(), self.scope)
     }
 
@@ -118,29 +115,51 @@ impl<'a> StyleParser<'a> {
                     loop {
                         let property = self.parse_property(toks, super_property.clone())?;
                         if let Some(tok) = toks.peek() {
-                            match tok.kind {
-                                TokenKind::Symbol(Symbol::OpenCurlyBrace) => {
-                                    if let Expr::Styles(s) = self.eat_style_group(toks, property)? {
-                                        styles.extend(s);
-                                    }
-                                    devour_whitespace(toks);
-                                    if let Some(tok) = toks.peek() {
-                                        match tok.kind {
-                                            TokenKind::Symbol(Symbol::CloseCurlyBrace) => {
-                                                toks.next();
-                                                devour_whitespace(toks);
-                                                return Ok(Expr::Styles(styles));
-                                            }
-                                            _ => continue,
-                                        }
-                                    }
-                                    continue;
+                            if tok.equals_symbol(Symbol::OpenCurlyBrace) {
+                                match self.eat_style_group(toks, property)? {
+                                    Expr::Styles(s) => styles.extend(s),
+                                    Expr::Style(s) => styles.push(s),
+                                    _ => unreachable!(),
                                 }
-                                _ => {}
+                                devour_whitespace(toks);
+                                if let Some(tok) = toks.peek() {
+                                    if tok.equals_symbol(Symbol::CloseCurlyBrace) {
+                                        toks.next();
+                                        devour_whitespace(toks);
+                                        return Ok(Expr::Styles(styles));
+                                    } else {
+                                        continue;
+                                    }
+                                }
+                                continue;
                             }
                         }
                         let value = self.parse_style_value(toks)?;
-                        styles.push(Style { property, value });
+                        match toks.peek().unwrap().kind {
+                            TokenKind::Symbol(Symbol::CloseCurlyBrace) => {
+                                styles.push(Style { property, value });
+                            }
+                            TokenKind::Symbol(Symbol::SemiColon) => {
+                                toks.next();
+                                devour_whitespace(toks);
+                                styles.push(Style { property, value });
+                            }
+                            TokenKind::Symbol(Symbol::OpenCurlyBrace) => {
+                                styles.push(Style {
+                                    property: property.clone(),
+                                    value,
+                                });
+                                match self.eat_style_group(toks, property)? {
+                                    Expr::Style(s) => styles.push(s),
+                                    Expr::Styles(s) => styles.extend(s),
+                                    _ => unreachable!(),
+                                }
+                            }
+                            _ => {
+                                devour_whitespace(toks);
+                                styles.push(Style { property, value });
+                            }
+                        }
                         if let Some(tok) = toks.peek() {
                             match tok.kind {
                                 TokenKind::Symbol(Symbol::CloseCurlyBrace) => {
@@ -155,6 +174,26 @@ impl<'a> StyleParser<'a> {
                 }
                 _ => {
                     let val = self.parse_style_value(toks)?;
+                    match toks.peek().unwrap().kind {
+                        TokenKind::Symbol(Symbol::CloseCurlyBrace) => {}
+                        TokenKind::Symbol(Symbol::SemiColon) => {
+                            toks.next();
+                            devour_whitespace(toks);
+                        }
+                        TokenKind::Symbol(Symbol::OpenCurlyBrace) => {
+                            let mut v = vec![Style {
+                                property: super_property.clone(),
+                                value: val,
+                            }];
+                            match self.eat_style_group(toks, super_property)? {
+                                Expr::Style(s) => v.push(s),
+                                Expr::Styles(s) => v.extend(s),
+                                _ => unreachable!(),
+                            }
+                            return Ok(Expr::Styles(v));
+                        }
+                        _ => {}
+                    }
                     return Ok(Expr::Style(Style {
                         property: super_property,
                         value: val,

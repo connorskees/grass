@@ -131,3 +131,13 @@ test!(
     "a {\n  color: red;\n}\n"
 );
 test!(removes_null_value, "a {\n  color: null;\n}\n", "");
+test!(
+    namespace_before_open_brace,
+    "foo {\n  a: b {\n    c: d;\n  }\n}\n",
+    "foo {\n  a: b;\n  a-c: d;\n}\n"
+);
+test!(
+    namespace_before_open_brace_nested,
+    "foo {\n  a: b {\n    c: d {\n      e: f;\n    }\n  }\n}\n",
+    "foo {\n  a: b;\n  a-c: d;\n  a-c-e: f;\n}\n"
+);
