@@ -143,54 +143,6 @@ impl Display for SelectorKind {
     }
 }
 
-#[cfg(test)]
-mod test_selector_display {
-    use super::*;
-    use SelectorKind::*;
-    macro_rules! test_selector_display {
-
-        ($func:ident, Selector($tok:tt), $output:literal) => {
-            #[test]
-            fn $func() {
-                    assert_eq!(format!("{}", Selector(vec!$tok)), $output);
-            }
-        }
-    }
-
-    test_selector_display!(el, Selector((Element("a".to_string()))), "a");
-    test_selector_display!(
-        keeps_one_whitespace,
-        Selector((
-            Element("a".to_string()),
-            Whitespace,
-            Element("b".to_string()),
-        )),
-        "a b"
-    );
-    test_selector_display!(
-        keeps_one_whitespace_with_two,
-        Selector((
-            Element("a".to_string()),
-            Whitespace,
-            Whitespace,
-            Element("c".to_string()),
-            Whitespace,
-        )),
-        "a c"
-    );
-    test_selector_display!(
-        keeps_one_whitespace_with_three_els,
-        Selector((
-            Element("a".to_string()),
-            Whitespace,
-            Element("a".to_string()),
-            Whitespace,
-            Element("c".to_string()),
-        )),
-        "a a c"
-    );
-}
-
 struct SelectorParser<'a> {
     scope: &'a Scope,
     selectors: Vec<SelectorKind>,
