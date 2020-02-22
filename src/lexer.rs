@@ -115,7 +115,7 @@ impl<'a> Iterator for Lexer<'a> {
             }
             '\r' => {
                 self.buf.next();
-                TokenKind::Whitespace(Whitespace::CarriageReturn)
+                TokenKind::Whitespace(Whitespace::Newline)
             }
             '#' => self.lex_hash(),
             '{' => symbol!(self, OpenCurlyBrace),

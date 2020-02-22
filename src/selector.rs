@@ -1,10 +1,10 @@
-use crate::common::{Scope, Symbol};
+use crate::common::{Scope, Symbol, Whitespace};
 use crate::error::SassResult;
 use crate::utils::{
     devour_whitespace, devour_whitespace_or_comment, parse_interpolation, IsWhitespace,
 };
 use crate::{Token, TokenKind};
-use std::fmt::{self, Display};
+use std::fmt::{self, Display, Write};
 use std::iter::Peekable;
 use std::string::ToString;
 use std::vec::IntoIter;
@@ -56,7 +56,10 @@ impl Display for Selector {
                     devour_whitespace(&mut iter);
                     while let Some(sel) = iter.peek() {
                         if sel != &&SelectorKind::Multiple {
-                            write!(f, ", ")?;
+                            write!(f, ",")?;
+                            if sel != &&SelectorKind::Newline {
+                                f.write_char(' ')?;
+                            }
                             break;
                         }
                         iter.next();
@@ -82,6 +85,8 @@ pub(crate) enum SelectorKind {
     Universal,
     /// Multiple unrelated selectors: `button, .active`
     Multiple,
+    /// Newline (significant if after `SelectorKind::Multiple`)
+    Newline,
     /// Select all immediate children: `ul > li`
     ImmediateChild,
     /// Select all elements immediately following: `div + p`
@@ -102,8 +107,6 @@ pub(crate) enum SelectorKind {
     InterpolatedSuper,
     /// Placeholder selector: `%alert`
     Placeholder,
-    /// Used to signify no selector (when there is no super_selector of a rule)
-    None,
     Whitespace,
 }
 
@@ -128,6 +131,7 @@ impl Display for SelectorKind {
             SelectorKind::Universal => write!(f, "*"),
             SelectorKind::Whitespace => write!(f, " "),
             SelectorKind::Multiple => write!(f, ", "),
+            SelectorKind::Newline => writeln!(f),
             SelectorKind::ImmediateChild => write!(f, " > "),
             SelectorKind::Following => write!(f, " + "),
             SelectorKind::Preceding => write!(f, " ~ "),
@@ -135,9 +139,7 @@ impl Display for SelectorKind {
             SelectorKind::Pseudo(s) => write!(f, ":{}", s),
             SelectorKind::PseudoElement(s) => write!(f, "::{}", s),
             SelectorKind::PseudoParen(s, val) => write!(f, ":{}({})", s, val),
-            SelectorKind::Super | SelectorKind::None | SelectorKind::InterpolatedSuper => {
-                write!(f, "")
-            }
+            SelectorKind::Super | SelectorKind::InterpolatedSuper => write!(f, ""),
             SelectorKind::Placeholder => write!(f, "%"),
         }
     }
@@ -246,7 +248,13 @@ impl<'a> SelectorParser<'a> {
                 TokenKind::Symbol(Symbol::Period) => self.selectors.push(SelectorKind::Class),
                 TokenKind::Symbol(Symbol::Hash) => self.selectors.push(SelectorKind::Id),
                 TokenKind::Symbol(Symbol::Colon) => self.consume_pseudo_selector(tokens)?,
-                TokenKind::Symbol(Symbol::Comma) => self.selectors.push(SelectorKind::Multiple),
+                TokenKind::Symbol(Symbol::Comma) => {
+                    self.selectors.push(SelectorKind::Multiple);
+                    if tokens.peek().unwrap().kind == TokenKind::Whitespace(Whitespace::Newline) {
+                        self.selectors.push(SelectorKind::Newline);
+                        devour_whitespace(tokens);
+                    }
+                }
                 TokenKind::Symbol(Symbol::Gt) => self.selectors.push(SelectorKind::ImmediateChild),
                 TokenKind::Symbol(Symbol::Plus) => self.selectors.push(SelectorKind::Following),
                 TokenKind::Symbol(Symbol::Tilde) => self.selectors.push(SelectorKind::Preceding),

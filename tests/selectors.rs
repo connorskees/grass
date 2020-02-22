@@ -255,3 +255,9 @@ test!(
     "a {\n  + {\n    b {\n      color: red;\n  }\n}\n",
     "a + b {\n  color: red;\n}\n"
 );
+test!(simple_multiple_newline, "a,\nb {\n  color: red;\n}\n");
+test!(
+    nested_multiple_newline,
+    "a,\nb {\n  c {\n    color: blue;\n  }\n  color: red;\n}\n",
+    "a,\nb {\n  color: red;\n}\na c,\nb c {\n  color: blue;\n}\n"
+);
