@@ -337,7 +337,7 @@ impl<'a> StyleSheetParser<'a> {
                 | TokenKind::Symbol(Symbol::Mul)
                 | TokenKind::Symbol(Symbol::Percent)
                 | TokenKind::Symbol(Symbol::Period) => rules
-                    .extend(self.eat_rules(&Selector(Vec::new()), &mut self.global_scope.clone())?),
+                    .extend(self.eat_rules(&Selector::new(), &mut self.global_scope.clone())?),
                 TokenKind::Whitespace(_) => {
                     self.lexer.next();
                     continue;
@@ -382,7 +382,7 @@ impl<'a> StyleSheetParser<'a> {
                 TokenKind::AtRule(AtRuleKind::Include) => rules.extend(eat_include(
                     &mut self.lexer,
                     &self.global_scope,
-                    &Selector(Vec::new()),
+                    &Selector::new(),
                 )?),
                 TokenKind::AtRule(AtRuleKind::Import) => {
                     let Token { pos, .. } = self

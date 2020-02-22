@@ -12,6 +12,12 @@ use std::vec::IntoIter;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Selector(pub Vec<SelectorKind>);
 
+impl Selector {
+    pub fn new() -> Selector {
+        Selector(Vec::new())
+    }
+}
+
 impl Display for Selector {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut iter = self.0.iter().peekable();
