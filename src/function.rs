@@ -4,6 +4,7 @@ use crate::args::{eat_func_args, CallArgs, FuncArgs};
 use crate::atrule::AtRule;
 use crate::common::{Scope, Symbol};
 use crate::error::SassResult;
+use crate::selector::Selector;
 use crate::utils::devour_whitespace;
 use crate::value::Value;
 use crate::{Token, TokenKind};
@@ -47,9 +48,13 @@ impl Function {
         while nesting > 0 {
             if let Some(tok) = toks.next() {
                 match &tok.kind {
-                    TokenKind::AtRule(rule) => {
-                        body.push(AtRule::from_tokens(rule, tok.pos, toks, scope)?)
-                    }
+                    TokenKind::AtRule(rule) => body.push(AtRule::from_tokens(
+                        rule,
+                        tok.pos,
+                        toks,
+                        scope,
+                        &Selector::new(),
+                    )?),
                     TokenKind::Symbol(Symbol::CloseCurlyBrace) => nesting -= 1,
                     _ => {}
                 }

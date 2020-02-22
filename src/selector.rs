@@ -335,6 +335,8 @@ impl Selector {
     pub fn zip(&self, other: &Selector) -> Selector {
         if self.0.is_empty() {
             return Selector(other.0.clone());
+        } else if other.0.is_empty() {
+            return self.clone();
         }
         let mut rules: Vec<SelectorKind> = Vec::with_capacity(self.0.len() + other.0.len());
         let sel1_split: Vec<&[SelectorKind]> =

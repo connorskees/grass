@@ -37,6 +37,7 @@ impl AtRule {
         pos: Pos,
         toks: &mut Peekable<I>,
         scope: &Scope,
+        super_selector: &Selector,
     ) -> SassResult<AtRule> {
         devour_whitespace(toks);
         Ok(match rule {
@@ -116,7 +117,22 @@ impl AtRule {
                     params.push_str(&tok.kind.to_string());
                 }
 
-                let body = eat_unknown_atrule_body(toks, scope, &Selector::new())?;
+                let raw_body = eat_unknown_atrule_body(toks, scope, super_selector)?;
+                let mut body = Vec::with_capacity(raw_body.len());
+                body.push(Stmt::RuleSet(RuleSet::new()));
+                let mut rules = Vec::new();
+                for stmt in raw_body {
+                    match stmt {
+                        s @ Stmt::Style(..) => rules.push(s),
+                        s => body.push(s),
+                    }
+                }
+
+                body[0] = Stmt::RuleSet(RuleSet {
+                    selector: super_selector.clone(),
+                    rules,
+                    super_selector: Selector::new(),
+                });
 
                 let u = UnknownAtRule {
                     name: name.clone(),
@@ -140,6 +156,7 @@ fn eat_unknown_atrule_body<I: Iterator<Item = Token>>(
     let mut stmts = Vec::new();
     while let Some(expr) = eat_expr(toks, scope, super_selector)? {
         match expr {
+            Expr::AtRule(a) => stmts.push(Stmt::AtRule(a)),
             Expr::Style(s) => stmts.push(Stmt::Style(s)),
             Expr::Styles(s) => stmts.extend(s.into_iter().map(Stmt::Style)),
             Expr::Include(s) => stmts.extend(s),

@@ -82,7 +82,7 @@ impl Css {
                             .get_mut(0)
                             .expect("expected block to exist")
                             .push_comment(s),
-                        Stmt::AtRule(_) => todo!("at rule inside css block"),
+                        Stmt::AtRule(r) => vals.push(Toplevel::AtRule(r)),
                     };
                 }
                 vals

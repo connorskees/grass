@@ -94,6 +94,7 @@ impl Mixin {
         let mut stmts = Vec::new();
         while let Some(expr) = eat_expr(&mut self.body, &self.scope, super_selector)? {
             match expr {
+                Expr::AtRule(a) => stmts.push(Stmt::AtRule(a)),
                 Expr::Style(s) => stmts.push(Stmt::Style(s)),
                 Expr::Styles(s) => stmts.extend(s.into_iter().map(Stmt::Style)),
                 Expr::Include(s) => stmts.extend(s),

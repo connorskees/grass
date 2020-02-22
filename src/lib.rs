@@ -213,6 +213,16 @@ pub(crate) struct RuleSet {
     super_selector: Selector,
 }
 
+impl RuleSet {
+    pub(crate) fn new() -> RuleSet {
+        RuleSet {
+            selector: Selector::new(),
+            rules: Vec::new(),
+            super_selector: Selector::new(),
+        }
+    }
+}
+
 /// An intermediate representation of what are essentially single lines
 /// todo! rename this
 #[derive(Clone, Debug)]
@@ -236,6 +246,7 @@ enum Expr {
     MultilineComment(String),
     Debug(Pos, String),
     Warn(Pos, String),
+    AtRule(AtRule),
     // /// Function call: `calc(10vw - 1px)`
     // FuncCall(String, Vec<Token>),
 }
@@ -437,7 +448,7 @@ impl<'a> StyleSheetParser<'a> {
                         pos,
                     }) = self.lexer.next()
                     {
-                        match AtRule::from_tokens(rule, pos, &mut self.lexer, &self.global_scope)? {
+                        match AtRule::from_tokens(rule, pos, &mut self.lexer, &self.global_scope, &Selector::new())? {
                             AtRule::Mixin(name, mixin) => {
                                 self.global_scope.insert_mixin(&name, *mixin);
                             }
@@ -476,7 +487,7 @@ impl<'a> StyleSheetParser<'a> {
         while let Some(expr) = eat_expr(&mut self.lexer, scope, super_selector)? {
             match expr {
                 Expr::Style(s) => stmts.push(Stmt::Style(s)),
-                #[allow(clippy::redundant_closure)]
+                Expr::AtRule(s) => stmts.push(Stmt::AtRule(s)),
                 Expr::Styles(s) => stmts.extend(s.into_iter().map(Stmt::Style)),
                 Expr::MixinDecl(name, mixin) => {
                     scope.insert_mixin(&name, *mixin);
@@ -623,7 +634,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                     pos,
                 }) = toks.next()
                 {
-                    return match AtRule::from_tokens(rule, pos, toks, scope)? {
+                    return match AtRule::from_tokens(rule, pos, toks, scope, &super_selector)? {
                         AtRule::Mixin(name, mixin) => Ok(Some(Expr::MixinDecl(name, mixin))),
                         AtRule::Function(name, func) => Ok(Some(Expr::FunctionDecl(name, func))),
                         AtRule::Charset(_) => todo!("@charset as expr"),
@@ -631,7 +642,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                         AtRule::Warn(a, b) => Ok(Some(Expr::Warn(a, b))),
                         AtRule::Error(pos, err) => Err(SassError::new(err, pos)),
                         AtRule::Return(_) => todo!("@return in unexpected location!"),
-                        AtRule::Unknown(..) => todo!("nested media queries not yet implemented"),
+                        u @ AtRule::Unknown(..) => Ok(Some(Expr::AtRule(u))),
                     };
                 }
             }
