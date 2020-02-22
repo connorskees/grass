@@ -116,7 +116,7 @@ impl AtRule {
                 let u = UnknownAtRule {
                     name: name.clone(),
                     super_selector: Selector::new(),
-                    params,
+                    params: params.trim().to_owned(),
                     body,
                 };
 
