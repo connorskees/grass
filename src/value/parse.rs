@@ -343,6 +343,7 @@ impl Value {
             TokenKind::Keyword(Keyword::True) => Ok(Value::True),
             TokenKind::Keyword(Keyword::False) => Ok(Value::False),
             TokenKind::Keyword(Keyword::Null) => Ok(Value::Null),
+            TokenKind::Unknown(c) => Ok(Value::Ident(c.to_string(), QuoteKind::None)),
             _ => Err("Unexpected token in value parsing".into()),
         }
     }

@@ -151,6 +151,7 @@ pub(crate) enum TokenKind {
     Op(Op),
     MultilineComment(String),
     Interpolation,
+    Unknown(char),
 }
 
 impl TokenKind {
@@ -172,6 +173,7 @@ impl Display for TokenKind {
             TokenKind::Keyword(kw) => write!(f, "{}", kw),
             TokenKind::MultilineComment(s) => write!(f, "/*{}*/", s),
             TokenKind::Variable(s) => write!(f, "{}", s),
+            TokenKind::Unknown(s) => write!(f, "{}", s),
             TokenKind::Interpolation => {
                 panic!("we don't want to format TokenKind::Interpolation using Display")
             }

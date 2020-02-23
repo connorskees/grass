@@ -134,7 +134,10 @@ impl<'a> Iterator for Lexer<'a> {
             '<' => symbol!(self, Lt),
             '>' => symbol!(self, Gt),
             '\0' => return None,
-            _ => todo!("unknown char"),
+            &v => {
+                self.buf.next();
+                TokenKind::Unknown(v.clone())
+            }
         };
         self.pos.next_char();
         Some(Token {
