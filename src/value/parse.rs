@@ -20,14 +20,20 @@ use super::number::Number;
 fn parse_hex(s: String) -> Value {
     match s.len() {
         3 => {
-            let v = u16::from_str_radix(&s, 16).unwrap();
+            let v = match u16::from_str_radix(&s, 16) {
+                Ok(a) => a,
+                Err(_) => return Value::Ident(format!("#{}", s), QuoteKind::None),
+            };
             let red = (((v & 0xf00) >> 8) * 0x11) as u8;
             let green = (((v & 0x0f0) >> 4) * 0x11) as u8;
             let blue = ((v & 0x00f) * 0x11) as u8;
             Value::Color(Color::new(red, green, blue, 1, format!("#{}", s)))
         }
         4 => {
-            let v = u16::from_str_radix(&s, 16).unwrap();
+            let v = match u16::from_str_radix(&s, 16) {
+                Ok(a) => a,
+                Err(_) => return Value::Ident(format!("#{}", s), QuoteKind::None),
+            };
             let red = (((v & 0xf000) >> 12) * 0x11) as u8;
             let green = (((v & 0x0f00) >> 8) * 0x11) as u8;
             let blue = (((v & 0x00f0) >> 4) * 0x11) as u8;
@@ -35,21 +41,27 @@ fn parse_hex(s: String) -> Value {
             Value::Color(Color::new(red, green, blue, alpha, format!("#{}", s)))
         }
         6 => {
-            let v = u32::from_str_radix(&s, 16).unwrap();
+            let v = match u32::from_str_radix(&s, 16) {
+                Ok(a) => a,
+                Err(_) => return Value::Ident(format!("#{}", s), QuoteKind::None),
+            };
             let red = ((v & 0x00ff_0000) >> 16) as u8;
             let green = ((v & 0x0000_ff00) >> 8) as u8;
             let blue = (v & 0x0000_00ff) as u8;
             Value::Color(Color::new(red, green, blue, 1, format!("#{}", s)))
         }
         8 => {
-            let v = u32::from_str_radix(&s, 16).unwrap();
+            let v = match u32::from_str_radix(&s, 16) {
+                Ok(a) => a,
+                Err(_) => return Value::Ident(format!("#{}", s), QuoteKind::None),
+            };
             let red = ((v & 0xff00_0000) >> 24) as u8;
             let green = ((v & 0x00ff_0000) >> 16) as u8;
             let blue = ((v & 0x0000_ff00) >> 8) as u8;
             let alpha = (v & 0x0000_00ff) as u8;
             Value::Color(Color::new(red, green, blue, alpha, format!("#{}", s)))
         }
-        _ => Value::Ident(s, QuoteKind::None),
+        _ => Value::Ident(format!("#{}", s), QuoteKind::None),
     }
 }
 

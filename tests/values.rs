@@ -337,3 +337,9 @@ test!(
     "a {\n  color: 1px + null;\n}\n",
     "a {\n  color: 1px;\n}\n"
 );
+test!(hash_identifier_is_not_color, "a {\n  color: #foo;\n}\n");
+test!(
+    hash_identifier_is_string,
+    "a {\n  color: type-of(#foo);\n}\n",
+    "a {\n  color: string;\n}\n"
+);
