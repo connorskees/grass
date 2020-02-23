@@ -147,7 +147,7 @@ pub(crate) fn eat_include<I: Iterator<Item = Token>>(
                 }
                 tmp
             }
-            _ => return Err(SassError::new("expected `(` or `;`", pos)),
+            _ => return Err("expected \"{\".".into()),
         }
     } else {
         return Err(SassError::new("unexpected EOF", pos));
