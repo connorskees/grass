@@ -35,6 +35,11 @@ test!(
     "[attr=val i] {\n  color: red;\n}\n"
 );
 test!(
+    selector_attribute_interpolate,
+    "[a#{tt}r=v#{a}l] {\n  color: red;\n}\n",
+    "[attr=val] {\n  color: red;\n}\n"
+);
+test!(
     selector_attribute_any_upper_case_insensitive,
     "[attr=val I] {\n  color: red;\n}\n"
 );
