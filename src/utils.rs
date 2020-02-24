@@ -171,14 +171,26 @@ pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
             {
                 break
             }
+            TokenKind::Symbol(Symbol::DoubleQuote) if is_escaped => {
+                s.push('\\');
+                s.push('"');
+                is_escaped = false;
+                continue;
+            }
             TokenKind::Symbol(Symbol::SingleQuote)
                 if !is_escaped && q == TokenKind::Symbol(Symbol::SingleQuote) =>
             {
                 break
             }
+            TokenKind::Symbol(Symbol::SingleQuote) if is_escaped => {
+                s.push('\\');
+                s.push('\'');
+                is_escaped = false;
+                continue;
+            }
             TokenKind::Symbol(Symbol::BackSlash) if !is_escaped => is_escaped = true,
             TokenKind::Symbol(Symbol::BackSlash) => s.push('\\'),
-            TokenKind::Interpolation => {
+            TokenKind::Interpolation if !is_escaped => {
                 found_interpolation = true;
                 s.push_str(
                     &parse_interpolation(toks, scope)?
@@ -188,12 +200,20 @@ pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
                 );
                 continue;
             }
+            TokenKind::Interpolation => {
+                s.push('#');
+                s.push('{');
+                is_escaped = false;
+                continue;
+            }
             _ => {}
         }
         if is_escaped && tok.kind != TokenKind::Symbol(Symbol::BackSlash) {
             is_escaped = false;
         }
-        s.push_str(&tok.kind.to_string());
+        if tok.kind != TokenKind::Symbol(Symbol::BackSlash) {
+            s.push_str(&tok.kind.to_string());
+        }
     }
     let quotes = if found_interpolation {
         QuoteKind::Double

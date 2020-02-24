@@ -141,3 +141,9 @@ test!(
     "foo {\n  a: b {\n    c: d {\n      e: f;\n    }\n  }\n}\n",
     "foo {\n  a: b;\n  a-c: d;\n  a-c-e: f;\n}\n"
 );
+test!(curly_braces_in_quotes, "a {\n  color: \"{foo}\";\n}\n");
+test!(
+    escaped_interpolation,
+    "a {\n  color: \"\\#{foo}\";\n}\n",
+    "a {\n  color: \"#{foo}\";\n}\n"
+);

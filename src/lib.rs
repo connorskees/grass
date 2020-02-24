@@ -100,6 +100,13 @@ impl Token {
     pub fn equals_symbol(&self, s: Symbol) -> bool {
         self.kind.equals_symbol(s)
     }
+
+    pub fn from_string(s: String) -> Self {
+        Token {
+            kind: TokenKind::Ident(s),
+            pos: Pos::new(),
+        }
+    }
 }
 
 impl IsWhitespace for Token {

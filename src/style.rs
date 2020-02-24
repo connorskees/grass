@@ -1,7 +1,7 @@
 use crate::common::{Pos, Scope, Symbol};
 use crate::error::SassResult;
 use crate::selector::Selector;
-use crate::utils::{devour_whitespace, parse_interpolation};
+use crate::utils::{devour_whitespace, parse_interpolation, parse_quoted_string};
 use crate::value::Value;
 use crate::{Expr, Token, TokenKind};
 use std::fmt::{self, Display};
@@ -35,7 +35,7 @@ impl Style {
         scope: &Scope,
         super_selector: &Selector,
     ) -> SassResult<Value> {
-        StyleParser::new(scope, super_selector).parse_style_value(toks)
+        StyleParser::new(scope, super_selector).parse_style_value(toks, scope)
     }
 
     pub fn from_tokens<I: Iterator<Item = Token>>(
@@ -44,7 +44,7 @@ impl Style {
         super_selector: &Selector,
         super_property: String,
     ) -> SassResult<Expr> {
-        StyleParser::new(scope, super_selector).eat_style_group(toks, super_property)
+        StyleParser::new(scope, super_selector).eat_style_group(toks, super_property, scope)
     }
 }
 
@@ -64,6 +64,7 @@ impl<'a> StyleParser<'a> {
     pub(crate) fn parse_style_value<I: Iterator<Item = Token>>(
         &self,
         toks: &mut Peekable<I>,
+        scope: &Scope,
     ) -> SassResult<Value> {
         let mut style = Vec::new();
         let mut n = 0;
@@ -82,6 +83,16 @@ impl<'a> StyleParser<'a> {
                         // todo: toks.next() and push
                         n -= 1;
                     }
+                }
+                ref q @ TokenKind::Symbol(Symbol::DoubleQuote)
+                | ref q @ TokenKind::Symbol(Symbol::SingleQuote) => {
+                    let q = q.clone();
+                    let tok = toks.next().unwrap();
+                    style.push(tok.clone());
+                    style.push(Token::from_string(
+                        parse_quoted_string(toks, scope, q)?.unquote().to_string(),
+                    ));
+                    style.push(tok);
                 }
                 TokenKind::Symbol(Symbol::OpenCurlyBrace)
                 | TokenKind::Symbol(Symbol::SemiColon) => break,
@@ -104,6 +115,7 @@ impl<'a> StyleParser<'a> {
         &self,
         toks: &mut Peekable<I>,
         super_property: String,
+        scope: &Scope,
     ) -> SassResult<Expr> {
         let mut styles = Vec::new();
         devour_whitespace(toks);
@@ -116,7 +128,7 @@ impl<'a> StyleParser<'a> {
                         let property = self.parse_property(toks, super_property.clone())?;
                         if let Some(tok) = toks.peek() {
                             if tok.equals_symbol(Symbol::OpenCurlyBrace) {
-                                match self.eat_style_group(toks, property)? {
+                                match self.eat_style_group(toks, property, scope)? {
                                     Expr::Styles(s) => styles.extend(s),
                                     Expr::Style(s) => styles.push(*s),
                                     _ => unreachable!(),
@@ -134,7 +146,7 @@ impl<'a> StyleParser<'a> {
                                 continue;
                             }
                         }
-                        let value = self.parse_style_value(toks)?;
+                        let value = self.parse_style_value(toks, scope)?;
                         match toks.peek().unwrap().kind {
                             TokenKind::Symbol(Symbol::CloseCurlyBrace) => {
                                 styles.push(Style { property, value });
@@ -149,7 +161,7 @@ impl<'a> StyleParser<'a> {
                                     property: property.clone(),
                                     value,
                                 });
-                                match self.eat_style_group(toks, property)? {
+                                match self.eat_style_group(toks, property, scope)? {
                                     Expr::Style(s) => styles.push(*s),
                                     Expr::Styles(s) => styles.extend(s),
                                     _ => unreachable!(),
@@ -173,7 +185,7 @@ impl<'a> StyleParser<'a> {
                     }
                 }
                 _ => {
-                    let val = self.parse_style_value(toks)?;
+                    let val = self.parse_style_value(toks, scope)?;
                     match toks.peek().unwrap().kind {
                         TokenKind::Symbol(Symbol::CloseCurlyBrace) => {}
                         TokenKind::Symbol(Symbol::SemiColon) => {
@@ -185,7 +197,7 @@ impl<'a> StyleParser<'a> {
                                 property: super_property.clone(),
                                 value: val,
                             }];
-                            match self.eat_style_group(toks, super_property)? {
+                            match self.eat_style_group(toks, super_property, scope)? {
                                 Expr::Style(s) => v.push(*s),
                                 Expr::Styles(s) => v.extend(s),
                                 _ => unreachable!(),
