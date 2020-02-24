@@ -41,7 +41,7 @@ pub(crate) fn devour_whitespace_or_comment<I: Iterator<Item = W>, W: IsWhitespac
     found_whitespace
 }
 
-fn _parse_interpolation<I: Iterator<Item = Token>>(
+pub(crate) fn parse_interpolation<I: Iterator<Item = Token>>(
     tokens: &mut Peekable<I>,
     scope: &Scope,
 ) -> SassResult<Vec<Token>> {
@@ -60,7 +60,7 @@ fn _parse_interpolation<I: Iterator<Item = Token>>(
                 val.push_str(&scope.get_var(v)?.clone().unquote().to_string())
             }
             TokenKind::Interpolation => val.push_str(
-                &_parse_interpolation(tokens, scope)?
+                &parse_interpolation(tokens, scope)?
                     .iter()
                     .map(|x| x.kind.to_string())
                     .collect::<String>(),
@@ -75,13 +75,6 @@ fn _parse_interpolation<I: Iterator<Item = Token>>(
             .to_string(),
     )
     .collect())
-}
-
-pub(crate) fn parse_interpolation<I: Iterator<Item = Token>>(
-    tokens: &mut Peekable<I>,
-    scope: &Scope,
-) -> SassResult<Vec<Token>> {
-    _parse_interpolation(tokens, scope)
 }
 
 pub(crate) struct VariableDecl {
