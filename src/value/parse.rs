@@ -11,7 +11,7 @@ use crate::color::Color;
 use crate::common::{Keyword, ListSeparator, Op, QuoteKind, Scope, Symbol};
 use crate::error::SassResult;
 use crate::units::Unit;
-use crate::utils::{devour_whitespace_or_comment, parse_interpolation};
+use crate::utils::{devour_whitespace_or_comment, parse_interpolation, parse_quoted_string};
 use crate::value::Value;
 use crate::{Token, TokenKind};
 
@@ -287,46 +287,7 @@ impl Value {
                 }
             }
             q @ TokenKind::Symbol(Symbol::DoubleQuote)
-            | q @ TokenKind::Symbol(Symbol::SingleQuote) => {
-                let mut s = String::new();
-                let mut is_escaped = false;
-                while let Some(tok) = toks.next() {
-                    match tok.kind {
-                        TokenKind::Symbol(Symbol::DoubleQuote)
-                            if !is_escaped && q == TokenKind::Symbol(Symbol::DoubleQuote) =>
-                        {
-                            break
-                        }
-                        TokenKind::Symbol(Symbol::SingleQuote)
-                            if !is_escaped && q == TokenKind::Symbol(Symbol::SingleQuote) =>
-                        {
-                            break
-                        }
-                        TokenKind::Symbol(Symbol::BackSlash) if !is_escaped => is_escaped = true,
-                        TokenKind::Symbol(Symbol::BackSlash) => s.push('\\'),
-                        TokenKind::Interpolation => {
-                            s.push_str(
-                                &parse_interpolation(toks, scope)?
-                                    .iter()
-                                    .map(|x| x.kind.to_string())
-                                    .collect::<String>(),
-                            );
-                            continue;
-                        }
-                        _ => {}
-                    }
-                    if is_escaped && tok.kind != TokenKind::Symbol(Symbol::BackSlash) {
-                        is_escaped = false;
-                    }
-                    s.push_str(&tok.kind.to_string());
-                }
-                let quotes = match q {
-                    TokenKind::Symbol(Symbol::DoubleQuote) => QuoteKind::Double,
-                    TokenKind::Symbol(Symbol::SingleQuote) => QuoteKind::Single,
-                    _ => unreachable!(),
-                };
-                Ok(Value::Ident(s, quotes))
-            }
+            | q @ TokenKind::Symbol(Symbol::SingleQuote) => parse_quoted_string(toks, scope, q),
             TokenKind::Variable(ref v) => Ok(scope.get_var(v)?.clone()),
             TokenKind::Interpolation => {
                 let mut s = parse_interpolation(toks, scope)?

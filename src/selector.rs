@@ -375,7 +375,7 @@ impl Attribute {
                 }
                 q @ TokenKind::Symbol(Symbol::DoubleQuote)
                 | q @ TokenKind::Symbol(Symbol::SingleQuote) => {
-                    parse_quoted_string(toks, scope, q)?
+                    parse_quoted_string(toks, scope, q)?.to_string()
                 }
                 _ => return Err("Expected identifier.".into()),
             }
@@ -437,7 +437,7 @@ impl Attribute {
                 }
                 q @ TokenKind::Symbol(Symbol::DoubleQuote)
                 | q @ TokenKind::Symbol(Symbol::SingleQuote) => {
-                    parse_quoted_string(toks, scope, q)?
+                    parse_quoted_string(toks, scope, q)?.to_string()
                 }
                 _ => return Err("Expected identifier.".into()),
             }

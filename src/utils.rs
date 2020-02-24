@@ -152,9 +152,10 @@ pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
     scope: &Scope,
     q: TokenKind,
-) -> SassResult<String> {
+) -> SassResult<Value> {
     let mut s = String::new();
     let mut is_escaped = false;
+    let mut found_interpolation = false;
     while let Some(tok) = toks.next() {
         match tok.kind {
             TokenKind::Symbol(Symbol::DoubleQuote)
@@ -170,6 +171,7 @@ pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
             TokenKind::Symbol(Symbol::BackSlash) if !is_escaped => is_escaped = true,
             TokenKind::Symbol(Symbol::BackSlash) => s.push('\\'),
             TokenKind::Interpolation => {
+                found_interpolation = true;
                 s.push_str(
                     &parse_interpolation(toks, scope)?
                         .iter()
@@ -185,10 +187,14 @@ pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
         }
         s.push_str(&tok.kind.to_string());
     }
-    let quotes = match q {
-        TokenKind::Symbol(Symbol::DoubleQuote) => QuoteKind::Double,
-        TokenKind::Symbol(Symbol::SingleQuote) => QuoteKind::Single,
-        _ => unreachable!(),
+    let quotes = if found_interpolation {
+        QuoteKind::Double
+    } else {
+        match q {
+            TokenKind::Symbol(Symbol::DoubleQuote) => QuoteKind::Double,
+            TokenKind::Symbol(Symbol::SingleQuote) => QuoteKind::Single,
+            _ => unreachable!(),
+        }
     };
-    Ok(format!("{}{}{}", quotes, s, quotes))
+    Ok(Value::Ident(s, quotes))
 }
