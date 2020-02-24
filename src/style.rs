@@ -1,4 +1,4 @@
-use crate::common::{Pos, Scope, Symbol};
+use crate::common::{Pos, QuoteKind, Scope, Symbol};
 use crate::error::SassResult;
 use crate::selector::Selector;
 use crate::utils::{devour_whitespace, parse_interpolation, parse_quoted_string};
@@ -87,12 +87,20 @@ impl<'a> StyleParser<'a> {
                 ref q @ TokenKind::Symbol(Symbol::DoubleQuote)
                 | ref q @ TokenKind::Symbol(Symbol::SingleQuote) => {
                     let q = q.clone();
-                    let tok = toks.next().unwrap();
-                    style.push(tok.clone());
-                    style.push(Token::from_string(
-                        parse_quoted_string(toks, scope, q)?.unquote().to_string(),
-                    ));
-                    style.push(tok);
+                    toks.next();
+                    let (s, q) = if let Value::Ident(s, q) = parse_quoted_string(toks, scope, q)? {
+                        (s, q)
+                    } else {
+                        unreachable!()
+                    };
+                    let quote_kind = Token::from_symbol(match q {
+                        QuoteKind::Single => Symbol::SingleQuote,
+                        QuoteKind::Double => Symbol::DoubleQuote,
+                        _ => unreachable!(),
+                    });
+                    style.push(quote_kind.clone());
+                    style.push(Token::from_string(s));
+                    style.push(quote_kind);
                     continue;
                 }
                 TokenKind::Symbol(Symbol::OpenCurlyBrace)

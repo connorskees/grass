@@ -28,3 +28,8 @@ test!(
     "a {\n  color:  #{\"''\"};\n}\n",
     "a {\n  color: '';\n}\n"
 );
+test!(
+    single_quotes_converted_to_double_when_interpolated,
+    "a {\n  color:  '#{foo}';\n}\n",
+    "a {\n  color: \"foo\";\n}\n"
+);

@@ -107,6 +107,13 @@ impl Token {
             pos: Pos::new(),
         }
     }
+
+    pub fn from_symbol(s: Symbol) -> Self {
+        Token {
+            kind: TokenKind::Symbol(s),
+            pos: Pos::new(),
+        }
+    }
 }
 
 impl IsWhitespace for Token {

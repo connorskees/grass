@@ -3,6 +3,8 @@
 #[macro_use]
 mod macros;
 
+test!(single_quote, "a {\n  color: 'foo';\n}\n");
+test!(double_quote, "a {\n  color: \"foo\";\n}\n");
 test!(comma_list_ident, "a {\n  color: foo, bar, baz;\n}\n");
 test!(space_list_ident, "a {\n  color: foo bar baz;\n}\n");
 test!(comma_list_number, "a {\n  color: 1, 2, 3;\n}\n");
