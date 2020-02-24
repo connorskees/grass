@@ -33,5 +33,4 @@ commandline = ["clap"]
 nightly = []
 
 [dev-dependencies]
-# test imports
 tempfile = "3"
