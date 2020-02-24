@@ -286,14 +286,25 @@ impl Value {
                     }
                 }
             }
-            TokenKind::Symbol(Symbol::DoubleQuote) => {
+            q @ TokenKind::Symbol(Symbol::DoubleQuote) |
+            q @ TokenKind::Symbol(Symbol::SingleQuote) => {
                 let mut s = String::new();
                 let mut is_escaped = false;
                 while let Some(tok) = toks.next() {
                     match tok.kind {
-                        TokenKind::Symbol(Symbol::DoubleQuote) if !is_escaped => break,
+                        TokenKind::Symbol(Symbol::DoubleQuote) if !is_escaped && q == TokenKind::Symbol(Symbol::DoubleQuote) => break,
+                        TokenKind::Symbol(Symbol::SingleQuote) if !is_escaped && q == TokenKind::Symbol(Symbol::SingleQuote) => break,
                         TokenKind::Symbol(Symbol::BackSlash) if !is_escaped => is_escaped = true,
                         TokenKind::Symbol(Symbol::BackSlash) => s.push('\\'),
+                        TokenKind::Interpolation => {
+                            s.push_str(
+                                &parse_interpolation(toks, scope)?
+                                    .iter()
+                                    .map(|x| x.kind.to_string())
+                                    .collect::<String>(),
+                            );
+                            continue;
+                        }
                         _ => {}
                     }
                     if is_escaped && tok.kind != TokenKind::Symbol(Symbol::BackSlash) {
@@ -301,17 +312,12 @@ impl Value {
                     }
                     s.push_str(&tok.kind.to_string());
                 }
-                Ok(Value::Ident(s, QuoteKind::Double))
-            }
-            TokenKind::Symbol(Symbol::SingleQuote) => {
-                let mut s = String::new();
-                while let Some(tok) = toks.next() {
-                    if tok.kind == TokenKind::Symbol(Symbol::SingleQuote) {
-                        break;
-                    }
-                    s.push_str(&tok.kind.to_string());
-                }
-                Ok(Value::Ident(s, QuoteKind::Single))
+                let quotes = match q {
+                    TokenKind::Symbol(Symbol::DoubleQuote) => QuoteKind::Double,
+                    TokenKind::Symbol(Symbol::SingleQuote) => QuoteKind::Single,
+                    _ => unreachable!()
+                };
+                Ok(Value::Ident(s, quotes))
             }
             TokenKind::Variable(ref v) => Ok(scope.get_var(v)?.clone()),
             TokenKind::Interpolation => {
