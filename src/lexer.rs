@@ -4,7 +4,6 @@ use std::str::Chars;
 
 use crate::atrule::AtRuleKind;
 use crate::common::{Keyword, Op, Pos, Symbol};
-use crate::selector::{Attribute, AttributeKind, CaseKind};
 use crate::{Token, TokenKind, Whitespace};
 
 // Rust does not allow us to escape '\f'
@@ -125,14 +124,12 @@ impl<'a> Iterator for Lexer<'a> {
             '|' => symbol!(self, BitOr),
             '/' => self.lex_forward_slash(),
             '%' => symbol!(self, Percent),
-            '[' => {
-                self.buf.next();
-                self.pos.next_char();
-                self.lex_attr()
-            }
+            '[' => symbol!(self, OpenSquareBrace),
+            ']' => symbol!(self, CloseSquareBrace),
             '!' => self.lex_exclamation(),
             '<' => symbol!(self, Lt),
             '>' => symbol!(self, Gt),
+            '^' => symbol!(self, Xor),
             '\0' => return None,
             &v => {
                 self.buf.next();
@@ -147,6 +144,7 @@ impl<'a> Iterator for Lexer<'a> {
     }
 }
 
+#[allow(dead_code)]
 fn is_whitespace(c: char) -> bool {
     c == ' ' || c == '\n' || c == '\r' || c == FORM_FEED
 }
@@ -189,6 +187,7 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    #[allow(dead_code)]
     fn devour_whitespace(&mut self) -> bool {
         let mut found_whitespace = false;
         while let Some(c) = self.buf.peek() {
@@ -292,139 +291,6 @@ impl<'a> Lexer<'a> {
         TokenKind::Symbol(Symbol::Hash)
     }
 
-    fn lex_attr(&mut self) -> TokenKind {
-        let mut attr = String::with_capacity(99);
-        self.devour_whitespace();
-        while let Some(c) = self.buf.peek() {
-            if !c.is_alphabetic() && c != &'-' && c != &'_' {
-                break;
-            }
-            let tok = self
-                .buf
-                .next()
-                .expect("this is impossible because we have already peeked");
-            self.pos.next_char();
-            attr.push(tok);
-        }
-
-        self.devour_whitespace();
-
-        let kind = match self
-            .buf
-            .next()
-            .expect("todo! expected kind (should be error)")
-        {
-            ']' => {
-                return TokenKind::Attribute(Attribute {
-                    kind: AttributeKind::Any,
-                    attr,
-                    value: String::new(),
-                    case_sensitive: CaseKind::Sensitive,
-                })
-            }
-            'i' => {
-                self.devour_whitespace();
-                assert!(self.buf.next() == Some(']'));
-                return TokenKind::Attribute(Attribute {
-                    kind: AttributeKind::Any,
-                    attr,
-                    value: String::new(),
-                    case_sensitive: CaseKind::InsensitiveLowercase,
-                });
-            }
-            'I' => {
-                self.devour_whitespace();
-                assert!(self.buf.next() == Some(']'));
-                return TokenKind::Attribute(Attribute {
-                    kind: AttributeKind::Any,
-                    attr,
-                    value: String::new(),
-                    case_sensitive: CaseKind::InsensitiveCapital,
-                });
-            }
-            '=' => AttributeKind::Equals,
-            '~' => AttributeKind::InList,
-            '|' => AttributeKind::BeginsWithHyphenOrExact,
-            '^' => AttributeKind::StartsWith,
-            '$' => AttributeKind::EndsWith,
-            '*' => AttributeKind::Contains,
-            _ => todo!("Expected ']'"),
-        };
-
-        if kind != AttributeKind::Equals {
-            assert!(self.buf.next() == Some('='));
-        }
-
-        self.devour_whitespace();
-
-        let mut value = String::with_capacity(99);
-        let case_sensitive = CaseKind::Sensitive;
-
-        while let Some(c) = self.buf.peek() {
-            if c == &']' || c.is_whitespace() {
-                break;
-            }
-
-            let tok = self
-                .buf
-                .next()
-                .expect("this is impossible because we have already peeked");
-            self.pos.next_char();
-            value.push(tok);
-        }
-
-        if self.devour_whitespace() {
-            let n = self.buf.next();
-            match n {
-                Some('i') | Some('I') => {
-                    let case_sensitive = match n {
-                        Some('i') => CaseKind::InsensitiveLowercase,
-                        Some('I') => CaseKind::InsensitiveCapital,
-                        _ => unsafe { std::hint::unreachable_unchecked() },
-                    };
-                    self.pos.next_char();
-                    self.devour_whitespace();
-                    match self.buf.next() {
-                        Some(']') => {
-                            return TokenKind::Attribute(Attribute {
-                                kind,
-                                attr,
-                                value,
-                                case_sensitive,
-                            })
-                        }
-                        Some(_) => todo!("modifier must be 1 character"),
-                        None => todo!("unexpected EOF"),
-                    }
-                }
-                Some(']') => {
-                    return TokenKind::Attribute(Attribute {
-                        kind,
-                        attr,
-                        value,
-                        case_sensitive,
-                    })
-                }
-                Some(c) => {
-                    value.push(' ');
-                    value.push(c.clone());
-                    self.devour_whitespace();
-                    assert!(self.buf.next() == Some(']'));
-                }
-                None => todo!(),
-            }
-        } else {
-            assert!(self.buf.next() == Some(']'));
-        }
-
-        TokenKind::Attribute(Attribute {
-            kind,
-            attr,
-            value,
-            case_sensitive,
-        })
-    }
-
     fn lex_variable(&mut self) -> TokenKind {
         self.buf.next();
         self.pos.next_char();
@@ -444,7 +310,11 @@ impl<'a> Lexer<'a> {
                 name.push(tok);
             }
         }
-        TokenKind::Variable(name)
+        if name.is_empty() {
+            TokenKind::Symbol(Symbol::Dollar)
+        } else {
+            TokenKind::Variable(name)
+        }
     }
 
     fn lex_ident(&mut self) -> TokenKind {

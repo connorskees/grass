@@ -67,7 +67,7 @@ use crate::function::Function;
 use crate::imports::import;
 use crate::lexer::Lexer;
 use crate::mixin::{eat_include, Mixin};
-use crate::selector::{Attribute, Selector};
+use crate::selector::Selector;
 use crate::style::Style;
 use crate::utils::{devour_whitespace, eat_variable_value, IsComment, IsWhitespace, VariableDecl};
 use crate::value::Value;
@@ -147,7 +147,6 @@ pub(crate) enum TokenKind {
     Number(String),
     Whitespace(Whitespace),
     Variable(String),
-    Attribute(Attribute),
     Op(Op),
     MultilineComment(String),
     Interpolation,
@@ -169,7 +168,6 @@ impl Display for TokenKind {
             TokenKind::AtRule(s) => write!(f, "{}", s),
             TokenKind::Op(s) => write!(f, "{}", s),
             TokenKind::Whitespace(s) => write!(f, "{}", s),
-            TokenKind::Attribute(s) => write!(f, "{}", s),
             TokenKind::Keyword(kw) => write!(f, "{}", kw),
             TokenKind::MultilineComment(s) => write!(f, "/*{}*/", s),
             TokenKind::Variable(s) => write!(f, "{}", s),
@@ -347,8 +345,8 @@ impl<'a> StyleSheetParser<'a> {
         while let Some(Token { kind, .. }) = self.lexer.peek() {
             match kind {
                 TokenKind::Ident(_)
-                | TokenKind::Attribute(_)
                 | TokenKind::Interpolation
+                | TokenKind::Symbol(Symbol::OpenSquareBrace)
                 | TokenKind::Symbol(Symbol::Hash)
                 | TokenKind::Symbol(Symbol::Colon)
                 | TokenKind::Symbol(Symbol::Mul)

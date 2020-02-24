@@ -1,7 +1,8 @@
 use crate::common::{Scope, Symbol, Whitespace};
 use crate::error::SassResult;
 use crate::utils::{
-    devour_whitespace, devour_whitespace_or_comment, parse_interpolation, IsWhitespace,
+    devour_whitespace, devour_whitespace_or_comment, flatten_ident, parse_interpolation,
+    parse_quoted_string, IsWhitespace,
 };
 use crate::{Token, TokenKind};
 use std::fmt::{self, Display, Write};
@@ -288,7 +289,9 @@ impl<'a> SelectorParser<'a> {
                     )?;
                     self.is_interpolated = false;
                 }
-                TokenKind::Attribute(attr) => self.selectors.push(SelectorKind::Attribute(attr)),
+                TokenKind::Symbol(Symbol::OpenSquareBrace) => self
+                    .selectors
+                    .push(Attribute::from_tokens(tokens, self.scope)?),
                 _ => todo!("unimplemented selector"),
             };
         }
@@ -354,48 +357,145 @@ impl Selector {
 pub(crate) struct Attribute {
     pub attr: String,
     pub value: String,
-    pub case_sensitive: CaseKind,
+    pub modifier: String,
     pub kind: AttributeKind,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub(crate) enum CaseKind {
-    InsensitiveCapital,
-    InsensitiveLowercase,
-    Sensitive,
-}
+impl Attribute {
+    pub fn from_tokens(
+        toks: &mut Peekable<IntoIter<Token>>,
+        scope: &Scope,
+    ) -> SassResult<SelectorKind> {
+        devour_whitespace(toks);
+        let attr = if let Some(t) = toks.next() {
+            match t.kind {
+                TokenKind::Ident(mut s) => {
+                    s.push_str(&flatten_ident(toks, scope)?);
+                    s
+                }
+                q @ TokenKind::Symbol(Symbol::DoubleQuote)
+                | q @ TokenKind::Symbol(Symbol::SingleQuote) => {
+                    parse_quoted_string(toks, scope, q)?
+                }
+                _ => return Err("Expected identifier.".into()),
+            }
+        } else {
+            todo!()
+        };
 
-impl Display for CaseKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::InsensitiveCapital => write!(f, " I"),
-            Self::InsensitiveLowercase => write!(f, " i"),
-            Self::Sensitive => write!(f, ""),
+        devour_whitespace(toks);
+
+        let kind = if let Some(t) = toks.next() {
+            match t.kind {
+                TokenKind::Ident(s) if s.len() == 1 => {
+                    devour_whitespace(toks);
+                    match toks.next().unwrap().kind {
+                        TokenKind::Symbol(Symbol::CloseSquareBrace) => {}
+                        _ => return Err("expected \"]\".".into()),
+                    }
+                    return Ok(SelectorKind::Attribute(Attribute {
+                        kind: AttributeKind::Any,
+                        attr,
+                        value: String::new(),
+                        modifier: s,
+                    }));
+                }
+                TokenKind::Symbol(Symbol::CloseSquareBrace) => {
+                    return Ok(SelectorKind::Attribute(Attribute {
+                        kind: AttributeKind::Any,
+                        attr,
+                        value: String::new(),
+                        modifier: String::new(),
+                    }));
+                }
+                TokenKind::Symbol(Symbol::Equal) => AttributeKind::Equals,
+                TokenKind::Symbol(Symbol::Tilde) => AttributeKind::InList,
+                TokenKind::Symbol(Symbol::BitOr) => AttributeKind::BeginsWithHyphenOrExact,
+                TokenKind::Symbol(Symbol::Xor) => AttributeKind::StartsWith,
+                TokenKind::Symbol(Symbol::Dollar) => AttributeKind::EndsWith,
+                TokenKind::Symbol(Symbol::Mul) => AttributeKind::Contains,
+                _ => return Err("Expected \"]\".".into()),
+            }
+        } else {
+            todo!()
+        };
+
+        if kind != AttributeKind::Equals {
+            match toks.next().unwrap().kind {
+                TokenKind::Symbol(Symbol::Equal) => {}
+                _ => return Err("expected \"=\".".into()),
+            }
         }
+
+        devour_whitespace(toks);
+
+        let value = if let Some(t) = toks.next() {
+            match t.kind {
+                TokenKind::Ident(mut s) => {
+                    s.push_str(&flatten_ident(toks, scope)?);
+                    s
+                }
+                q @ TokenKind::Symbol(Symbol::DoubleQuote)
+                | q @ TokenKind::Symbol(Symbol::SingleQuote) => {
+                    parse_quoted_string(toks, scope, q)?
+                }
+                _ => return Err("Expected identifier.".into()),
+            }
+        } else {
+            todo!()
+        };
+
+        devour_whitespace(toks);
+
+        let modifier = if let Some(t) = toks.next() {
+            match t.kind {
+                TokenKind::Symbol(Symbol::CloseSquareBrace) => {
+                    return Ok(SelectorKind::Attribute(Attribute {
+                        kind,
+                        attr,
+                        value,
+                        modifier: String::new(),
+                    }))
+                }
+                TokenKind::Ident(s) if s.len() == 1 => {
+                    match toks.next().unwrap().kind {
+                        TokenKind::Symbol(Symbol::CloseSquareBrace) => {}
+                        _ => return Err("expected \"]\".".into()),
+                    }
+                    format!(" {}", s)
+                }
+                _ => return Err("Expected \"]\".".into()),
+            }
+        } else {
+            todo!()
+        };
+
+        Ok(SelectorKind::Attribute(Attribute {
+            kind,
+            attr,
+            value,
+            modifier,
+        }))
     }
 }
 
 impl Display for Attribute {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.kind {
-            AttributeKind::Any => write!(f, "[{}{}]", self.attr, self.case_sensitive),
-            AttributeKind::Equals => {
-                write!(f, "[{}={}{}]", self.attr, self.value, self.case_sensitive)
-            }
-            AttributeKind::InList => {
-                write!(f, "[{}~={}{}]", self.attr, self.value, self.case_sensitive)
-            }
+            AttributeKind::Any => write!(f, "[{}{}]", self.attr, self.modifier),
+            AttributeKind::Equals => write!(f, "[{}={}{}]", self.attr, self.value, self.modifier),
+            AttributeKind::InList => write!(f, "[{}~={}{}]", self.attr, self.value, self.modifier),
             AttributeKind::BeginsWithHyphenOrExact => {
-                write!(f, "[{}|={}{}]", self.attr, self.value, self.case_sensitive)
+                write!(f, "[{}|={}{}]", self.attr, self.value, self.modifier)
             }
             AttributeKind::StartsWith => {
-                write!(f, "[{}^={}{}]", self.attr, self.value, self.case_sensitive)
+                write!(f, "[{}^={}{}]", self.attr, self.value, self.modifier)
             }
             AttributeKind::EndsWith => {
-                write!(f, "[{}$={}{}]", self.attr, self.value, self.case_sensitive)
+                write!(f, "[{}$={}{}]", self.attr, self.value, self.modifier)
             }
             AttributeKind::Contains => {
-                write!(f, "[{}*={}{}]", self.attr, self.value, self.case_sensitive)
+                write!(f, "[{}*={}{}]", self.attr, self.value, self.modifier)
             }
         }
     }

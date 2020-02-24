@@ -1,4 +1,4 @@
-use crate::common::{Keyword, Symbol};
+use crate::common::{Keyword, QuoteKind, Symbol};
 use crate::error::SassResult;
 use crate::lexer::Lexer;
 use crate::value::Value;
@@ -116,4 +116,79 @@ pub(crate) fn eat_variable_value<I: Iterator<Item = Token>>(
     devour_whitespace(toks);
     let val = Value::from_tokens(&mut raw.into_iter().peekable(), scope).unwrap();
     Ok(VariableDecl::new(val, default))
+}
+
+pub(crate) fn flatten_ident<I: Iterator<Item = Token>>(
+    toks: &mut Peekable<I>,
+    scope: &Scope,
+) -> SassResult<String> {
+    let mut s = String::new();
+    while let Some(tok) = toks.peek() {
+        match tok.kind.clone() {
+            TokenKind::Interpolation => {
+                toks.next();
+                s.push_str(
+                    &parse_interpolation(toks, scope)?
+                        .iter()
+                        .map(|x| x.kind.to_string())
+                        .collect::<String>(),
+                )
+            }
+            TokenKind::Ident(ref i) => {
+                toks.next();
+                s.push_str(i)
+            }
+            TokenKind::Number(ref n) => {
+                toks.next();
+                s.push_str(n)
+            }
+            _ => break,
+        }
+    }
+    Ok(s)
+}
+
+pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
+    toks: &mut Peekable<I>,
+    scope: &Scope,
+    q: TokenKind,
+) -> SassResult<String> {
+    let mut s = String::new();
+    let mut is_escaped = false;
+    while let Some(tok) = toks.next() {
+        match tok.kind {
+            TokenKind::Symbol(Symbol::DoubleQuote)
+                if !is_escaped && q == TokenKind::Symbol(Symbol::DoubleQuote) =>
+            {
+                break
+            }
+            TokenKind::Symbol(Symbol::SingleQuote)
+                if !is_escaped && q == TokenKind::Symbol(Symbol::SingleQuote) =>
+            {
+                break
+            }
+            TokenKind::Symbol(Symbol::BackSlash) if !is_escaped => is_escaped = true,
+            TokenKind::Symbol(Symbol::BackSlash) => s.push('\\'),
+            TokenKind::Interpolation => {
+                s.push_str(
+                    &parse_interpolation(toks, scope)?
+                        .iter()
+                        .map(|x| x.kind.to_string())
+                        .collect::<String>(),
+                );
+                continue;
+            }
+            _ => {}
+        }
+        if is_escaped && tok.kind != TokenKind::Symbol(Symbol::BackSlash) {
+            is_escaped = false;
+        }
+        s.push_str(&tok.kind.to_string());
+    }
+    let quotes = match q {
+        TokenKind::Symbol(Symbol::DoubleQuote) => QuoteKind::Double,
+        TokenKind::Symbol(Symbol::SingleQuote) => QuoteKind::Single,
+        _ => unreachable!(),
+    };
+    Ok(format!("{}{}{}", quotes, s, quotes))
 }
