@@ -7,6 +7,10 @@ test!(
     ident_starts_with_hyphen,
     "a {\n  foo: -webkit-bar-baz;\n}\n"
 );
+test!(
+    ident_starts_with_double_hyphen,
+    "a {\n  foo: --webkit-bar-baz;\n}\n"
+);
 test!(ident_with_num, "el1 {\n  a: b;\n}\n");
 test!(keyword_important, "a {\n  height: 1 !important;\n}\n");
 test!(
@@ -28,3 +32,8 @@ test!(
     "a {\n  color: green;\n}\n"
 );
 test!(utf8_input, "a {\n  color: 🦆;\n}\n");
+// test!(
+//     ends_with_several_semicolons,
+//     "a {\n  color: red;;\n}\n",
+//     "a {\n  color: red;\n}\n"
+// );

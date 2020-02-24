@@ -37,6 +37,11 @@ test!(
     "a {\n  color: red;\n}\n"
 );
 test!(
+    rgb_negative,
+    "a {\n  color: rgb(-1, 1, 1);\n}\n",
+    "a {\n  color: #000101;\n}\n"
+);
+test!(
     rgb_binop,
     "a {\n  color: rgb(1, 2, 1+2);\n}\n",
     "a {\n  color: #010203;\n}\n"

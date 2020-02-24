@@ -266,3 +266,8 @@ test!(
     "#foo #bar,,\n,#baz #boom, {a: b}",
     "#foo #bar,\n#baz #boom {\n  a: b;\n}\n"
 );
+// test!(
+//     trailing_comma_children,
+//     "a,, {\n  b {\n    color: /**/red;\n  }\n}\n",
+//     "a b {\n  color: red;\n}\n"
+// );
