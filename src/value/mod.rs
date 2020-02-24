@@ -66,7 +66,7 @@ impl Value {
     pub fn unquote(self) -> Self {
         match self {
             Self::Ident(s1, _) => Self::Ident(s1, QuoteKind::None),
-            _ => todo!(),
+            v => v,
         }
     }
 

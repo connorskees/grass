@@ -23,3 +23,8 @@ test!(
     "a {\n  --#{foo}: red;\n}\n",
     "a {\n  --foo: red;\n}\n"
 );
+test!(
+    preserves_inner_single_quotes,
+    "a {\n  color:  #{\"''\"};\n}\n",
+    "a {\n  color: '';\n}\n"
+);

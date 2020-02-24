@@ -41,32 +41,47 @@ pub(crate) fn devour_whitespace_or_comment<I: Iterator<Item = W>, W: IsWhitespac
     found_whitespace
 }
 
-pub(crate) fn parse_interpolation<I: Iterator<Item = Token>>(
-    tokens: &mut I,
+fn _parse_interpolation<I: Iterator<Item = Token>>(
+    tokens: &mut Peekable<I>,
     scope: &Scope,
 ) -> SassResult<Vec<Token>> {
-    let mut val = Vec::new();
+    let mut val = String::new();
     while let Some(tok) = tokens.next() {
         match tok.kind {
             TokenKind::Symbol(Symbol::CloseCurlyBrace) => break,
             TokenKind::Symbol(Symbol::OpenCurlyBrace) => {
                 todo!("invalid character in interpolation")
             }
-            TokenKind::Variable(ref v) => {
-                val.extend(Lexer::new(&scope.get_var(v)?.to_string()).collect::<Vec<Token>>())
+            q @ TokenKind::Symbol(Symbol::DoubleQuote)
+            | q @ TokenKind::Symbol(Symbol::SingleQuote) => {
+                val.push_str(&parse_quoted_string(tokens, scope, q)?.to_string())
             }
-            TokenKind::Interpolation => val.extend(parse_interpolation(tokens, scope)?),
-            _ => val.push(tok),
+            TokenKind::Variable(ref v) => {
+                val.push_str(&scope.get_var(v)?.clone().unquote().to_string())
+            }
+            TokenKind::Interpolation => val.push_str(
+                &_parse_interpolation(tokens, scope)?
+                    .iter()
+                    .map(|x| x.kind.to_string())
+                    .collect::<String>(),
+            ),
+            _ => val.push_str(&tok.kind.to_string()),
         }
     }
     Ok(Lexer::new(
-        &Value::from_tokens(&mut val.into_iter().peekable(), scope)
-            .unwrap()
-            .to_string()
-            .replace("\"", "")
-            .replace("'", ""),
+        &Value::from_tokens(&mut Lexer::new(&val).peekable(), scope)?
+            .eval()?
+            .unquote()
+            .to_string(),
     )
-    .collect::<Vec<Token>>())
+    .collect())
+}
+
+pub(crate) fn parse_interpolation<I: Iterator<Item = Token>>(
+    tokens: &mut Peekable<I>,
+    scope: &Scope,
+) -> SassResult<Vec<Token>> {
+    _parse_interpolation(tokens, scope)
 }
 
 pub(crate) struct VariableDecl {
