@@ -93,6 +93,7 @@ impl<'a> StyleParser<'a> {
                         parse_quoted_string(toks, scope, q)?.unquote().to_string(),
                     ));
                     style.push(tok);
+                    continue;
                 }
                 TokenKind::Symbol(Symbol::OpenCurlyBrace)
                 | TokenKind::Symbol(Symbol::SemiColon) => break,

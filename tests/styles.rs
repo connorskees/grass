@@ -147,3 +147,7 @@ test!(
     "a {\n  color: \"\\#{foo}\";\n}\n",
     "a {\n  color: \"#{foo}\";\n}\n"
 );
+test!(
+    styles_after_quoted,
+    "a {\n  color: \"red\";\n  color: blue;\n}\n"
+);
