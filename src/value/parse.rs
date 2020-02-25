@@ -142,17 +142,13 @@ impl Value {
                 };
                 Ok(Value::BinaryOp(Box::new(left), op, Box::new(right)))
             }
-            _ if whitespace => {
+            _ => {
                 devour_whitespace_or_comment(toks);
                 let right = match Self::from_tokens(toks, scope) {
                     Ok(x) => x,
                     Err(_) => return Ok(left),
                 };
                 Ok(Value::List(vec![left, right], ListSeparator::Space))
-            }
-            _ => {
-                dbg!(&next.kind);
-                todo!("unimplemented token in value")
             }
         }
     }

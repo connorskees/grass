@@ -345,3 +345,8 @@ test!(
     "a {\n  color: type-of(#foo);\n}\n",
     "a {\n  color: string;\n}\n"
 );
+test!(
+    adjacent_strings_get_spaced,
+    "a {\n  color: \"f\"foo;\n}\n",
+    "a {\n  color: \"f\" foo;\n}\n"
+);
