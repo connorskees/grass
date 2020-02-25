@@ -16,6 +16,13 @@ cargo b --release
 The focus right now is just getting the most basic tests to pass.
 
 ```
+2020-02-24
+PASSING: 1192
+FAILING: 3901
+TOTAL: 5093
+```
+
+```
 2020-02-17
 PASSING: 1115
 FAILING: 3978
