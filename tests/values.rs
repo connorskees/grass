@@ -350,3 +350,8 @@ test!(
     "a {\n  color: \"f\"foo;\n}\n",
     "a {\n  color: \"f\" foo;\n}\n"
 );
+test!(
+    escaped_backslash,
+    "a {\n  color: \"\\\\\";\n}\n",
+    "a {\n  color: \"\\\";\n}\n"
+);

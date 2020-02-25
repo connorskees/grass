@@ -189,7 +189,11 @@ pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
                 continue;
             }
             TokenKind::Symbol(Symbol::BackSlash) if !is_escaped => is_escaped = true,
-            TokenKind::Symbol(Symbol::BackSlash) => s.push('\\'),
+            TokenKind::Symbol(Symbol::BackSlash) => {
+                is_escaped = false;
+                s.push('\\');
+                continue;
+            },
             TokenKind::Interpolation if !is_escaped => {
                 found_interpolation = true;
                 s.push_str(
