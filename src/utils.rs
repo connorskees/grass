@@ -172,7 +172,6 @@ pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
                 break
             }
             TokenKind::Symbol(Symbol::DoubleQuote) if is_escaped => {
-                s.push('\\');
                 s.push('"');
                 is_escaped = false;
                 continue;
@@ -183,7 +182,6 @@ pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
                 break
             }
             TokenKind::Symbol(Symbol::SingleQuote) if is_escaped => {
-                s.push('\\');
                 s.push('\'');
                 is_escaped = false;
                 continue;
@@ -193,7 +191,7 @@ pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
                 is_escaped = false;
                 s.push('\\');
                 continue;
-            },
+            }
             TokenKind::Interpolation if !is_escaped => {
                 found_interpolation = true;
                 s.push_str(

@@ -1,5 +1,5 @@
 #![allow(dead_code, unused_variables)]
-use std::fmt::{self, Display};
+use std::fmt::{self, Display, Write};
 use std::iter::Iterator;
 
 use crate::color::Color;
@@ -42,7 +42,36 @@ impl Display for Value {
             Self::Color(c) => write!(f, "{}", c),
             Self::BinaryOp(..) => write!(f, "{}", self.clone().eval().unwrap()),
             Self::Paren(val) => write!(f, "{}", val),
-            Self::Ident(val, kind) => write!(f, "{}{}{}", kind.as_str(), val, kind.as_str()),
+            Self::Ident(val, kind) => {
+                if kind == &QuoteKind::None {
+                    return write!(f, "{}", val);
+                }
+                let has_single_quotes = val.contains(|x| x == '\'');
+                let has_double_quotes = val.contains(|x| x == '"');
+                if has_single_quotes && !has_double_quotes {
+                    write!(f, "\"{}\"", val)
+                } else if !has_single_quotes && has_double_quotes {
+                    write!(f, "'{}'", val)
+                } else {
+                    let quote_char = match kind {
+                        QuoteKind::Double => '"',
+                        QuoteKind::Single => '\'',
+                        _ => unreachable!(),
+                    };
+                    f.write_char(quote_char)?;
+                    for c in val.chars() {
+                        match c {
+                            '"' | '\'' if c == quote_char => {
+                                f.write_char('\\')?;
+                                f.write_char(quote_char)?;
+                            }
+                            v => f.write_char(v)?,
+                        }
+                    }
+                    f.write_char(quote_char)?;
+                    Ok(())
+                }
+            }
             Self::True => write!(f, "true"),
             Self::False => write!(f, "false"),
             Self::Null => write!(f, "null"),
