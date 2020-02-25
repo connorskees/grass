@@ -52,6 +52,9 @@ impl Display for Value {
                     write!(f, "\"{}\"", val)
                 } else if !has_single_quotes && has_double_quotes {
                     write!(f, "'{}'", val)
+                }
+                else if !has_single_quotes && !has_double_quotes {
+                    write!(f, "\"{}\"", val)
                 } else {
                     let quote_char = match kind {
                         QuoteKind::Double => '"',

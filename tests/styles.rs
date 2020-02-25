@@ -46,7 +46,11 @@ test!(
     space_separated_style_value,
     "a {\n  border: solid red;\n}\n"
 );
-test!(single_quoted_style_value, "a {\n  font: 'Open-Sans';\n}\n");
+test!(
+    single_quoted_style_value,
+    "a {\n  font: 'Open-Sans';\n}\n",
+    "a {\n  font: \"Open-Sans\";\n}\n"
+);
 test!(
     double_quoted_style_value,
     "a {\n  font: \"Open-Sans\";\n}\n"

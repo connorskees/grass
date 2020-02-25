@@ -186,8 +186,8 @@ test!(
 );
 test!(
     inspect_sgl_quoted_string,
-    "a {\n  color: inspect('foo')\n}\n",
-    "a {\n  color: 'foo';\n}\n"
+    "a {\n  color: inspect(\"foo\")\n}\n",
+    "a {\n  color: \"foo\";\n}\n"
 );
 test!(
     inspect_unitless_number,
