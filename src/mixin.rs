@@ -98,7 +98,9 @@ impl Mixin {
                 Expr::Style(s) => stmts.push(Stmt::Style(*s)),
                 Expr::Styles(s) => stmts.extend(s.into_iter().map(Stmt::Style)),
                 Expr::Include(s) => stmts.extend(s),
-                Expr::MixinDecl(..) | Expr::FunctionDecl(..) | Expr::Debug(..) | Expr::Warn(..) => {
+                Expr::FunctionDecl(..) => return Err("Mixins may not contain function declarations.".into()),
+                Expr::MixinDecl(..) => return Err("Mixins may not contain mixin declarations.".into()),
+                Expr::Debug(..) | Expr::Warn(..) => {
                     todo!()
                 }
                 Expr::Selector(selector) => {
@@ -131,7 +133,7 @@ pub(crate) fn eat_include<I: Iterator<Item = Token>>(
         .expect("this must exist because we have already peeked");
     let name = match kind {
         TokenKind::Ident(s) => s,
-        _ => return Err(SassError::new("Expected identifier.", pos)),
+        _ => return Err("Expected identifier.".into()),
     };
 
     devour_whitespace(toks);
