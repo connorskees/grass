@@ -1,11 +1,11 @@
 //! # Convert from SCSS AST to CSS
 use crate::atrule::AtRule;
 use crate::error::SassResult;
-use crate::{RuleSet, Selector, Stmt, Style, StyleSheet};
 use crate::lexer::IS_UTF8;
-use std::sync::atomic::Ordering;
+use crate::{RuleSet, Selector, Stmt, Style, StyleSheet};
 use std::fmt;
 use std::io::Write;
+use std::sync::atomic::Ordering;
 
 #[derive(Debug, Clone)]
 enum Toplevel {

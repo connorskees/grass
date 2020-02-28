@@ -98,11 +98,13 @@ impl Mixin {
                 Expr::Style(s) => stmts.push(Stmt::Style(*s)),
                 Expr::Styles(s) => stmts.extend(s.into_iter().map(Stmt::Style)),
                 Expr::Include(s) => stmts.extend(s),
-                Expr::FunctionDecl(..) => return Err("Mixins may not contain function declarations.".into()),
-                Expr::MixinDecl(..) => return Err("Mixins may not contain mixin declarations.".into()),
-                Expr::Debug(..) | Expr::Warn(..) => {
-                    todo!()
+                Expr::FunctionDecl(..) => {
+                    return Err("Mixins may not contain function declarations.".into())
                 }
+                Expr::MixinDecl(..) => {
+                    return Err("Mixins may not contain mixin declarations.".into())
+                }
+                Expr::Debug(..) | Expr::Warn(..) => todo!(),
                 Expr::Selector(selector) => {
                     let rules = self.eval(&super_selector.zip(&selector))?;
                     stmts.push(Stmt::RuleSet(RuleSet {
