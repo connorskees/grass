@@ -73,11 +73,24 @@ impl AtRule {
                 let (name, func) = Function::decl_from_tokens(toks, scope)?;
                 AtRule::Function(name, Box::new(func))
             }
-            AtRuleKind::Return => AtRule::Return(
-                // todo: return may not end in semicolon
-                toks.take_while(|t| t.kind != TokenKind::Symbol(Symbol::SemiColon))
-                    .collect(),
-            ),
+            AtRuleKind::Return => {
+                let mut t = Vec::new();
+                let mut n = 0;
+                while let Some(tok) = toks.peek() {
+                    match tok.kind {
+                        TokenKind::Symbol(Symbol::OpenCurlyBrace) => n += 1,
+                        TokenKind::Symbol(Symbol::CloseCurlyBrace) => n -= 1,
+                        TokenKind::Interpolation => n += 1,
+                        TokenKind::Symbol(Symbol::SemiColon) => break,
+                        _ => {}
+                    }
+                    if n < 0 {
+                        break;
+                    }
+                    t.push(toks.next().unwrap());
+                }
+                AtRule::Return(t)
+            },
             AtRuleKind::Use => todo!("@use not yet implemented"),
             AtRuleKind::Annotation => todo!("@annotation not yet implemented"),
             AtRuleKind::AtRoot => todo!("@at-root not yet implemented"),

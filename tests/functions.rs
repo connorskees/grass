@@ -38,8 +38,13 @@ test!(
     "@function a($a) {\n  @return $a;\n}\n\nb {\ncolor: a(red,);\n}\n",
     "b {\n  color: red;\n}\n"
 );
-// test!(
-//     return_no_semicolon,
-//     "@function a() {\n  @return 1\n}\n\nb {\ncolor: a();\n}\n",
-//     "b {\n  color: 1;\n}\n"
-// );
+test!(
+    return_no_semicolon,
+    "@function a() {\n  @return 1\n}\n\nb {\ncolor: a();\n}\n",
+    "b {\n  color: 1;\n}\n"
+);
+test!(
+    two_returns,
+    "@function a() {\n  @return 1; @return 2;\n}\n\nb {\ncolor: a();\n}\n",
+    "b {\n  color: 1;\n}\n"
+);
