@@ -136,7 +136,7 @@ impl<'a> StyleParser<'a> {
                     loop {
                         let property = self.parse_property(toks, super_property.clone())?;
                         if let Some(tok) = toks.peek() {
-                            if tok.equals_symbol(Symbol::OpenCurlyBrace) {
+                            if tok.is_symbol(Symbol::OpenCurlyBrace) {
                                 match self.eat_style_group(toks, property, scope)? {
                                     Expr::Styles(s) => styles.extend(s),
                                     Expr::Style(s) => styles.push(*s),
@@ -144,7 +144,7 @@ impl<'a> StyleParser<'a> {
                                 }
                                 devour_whitespace(toks);
                                 if let Some(tok) = toks.peek() {
-                                    if tok.equals_symbol(Symbol::CloseCurlyBrace) {
+                                    if tok.is_symbol(Symbol::CloseCurlyBrace) {
                                         toks.next();
                                         devour_whitespace(toks);
                                         return Ok(Expr::Styles(styles));

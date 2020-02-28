@@ -97,8 +97,8 @@ pub(crate) struct Token {
 }
 
 impl Token {
-    pub fn equals_symbol(&self, s: Symbol) -> bool {
-        self.kind.equals_symbol(s)
+    pub fn is_symbol(&self, s: Symbol) -> bool {
+        self.kind.is_symbol(s)
     }
 
     pub fn from_string(s: String) -> Self {
@@ -168,7 +168,7 @@ pub(crate) enum TokenKind {
 }
 
 impl TokenKind {
-    pub fn equals_symbol(&self, s: Symbol) -> bool {
+    pub fn is_symbol(&self, s: Symbol) -> bool {
         self == &TokenKind::Symbol(s)
     }
 }
