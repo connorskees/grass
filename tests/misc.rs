@@ -31,7 +31,6 @@ test!(
     "$a-b: red; $a_b: green; a {\n  color: $a-b;\n}\n",
     "a {\n  color: green;\n}\n"
 );
-test!(utf8_input, "a {\n  color: 🦆;\n}\n");
 // test!(
 //     ends_with_several_semicolons,
 //     "a {\n  color: red;;\n}\n",

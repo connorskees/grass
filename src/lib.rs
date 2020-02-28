@@ -245,8 +245,6 @@ enum Expr {
     Style(Box<Style>),
     /// Several styles
     Styles(Vec<Style>),
-    /// A collection of styles, from a mixin or function
-    // Styles(Vec<Style>),
     /// A full selector `a > h1`
     Selector(Selector),
     /// A variable declaration `$var: 1px`
@@ -469,9 +467,7 @@ impl<'a> StyleSheetParser<'a> {
                             AtRule::Function(name, func) => {
                                 self.global_scope.insert_fn(&name, *func);
                             }
-                            AtRule::Charset(toks) => {
-                                rules.push(Stmt::AtRule(AtRule::Charset(toks)))
-                            }
+                            AtRule::Charset => continue,
                             AtRule::Error(pos, message) => self.error(pos, &message),
                             AtRule::Warn(pos, message) => self.warn(pos, &message),
                             AtRule::Debug(pos, message) => self.debug(pos, &message),
@@ -651,7 +647,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                     return match AtRule::from_tokens(rule, pos, toks, scope, super_selector)? {
                         AtRule::Mixin(name, mixin) => Ok(Some(Expr::MixinDecl(name, mixin))),
                         AtRule::Function(name, func) => Ok(Some(Expr::FunctionDecl(name, func))),
-                        AtRule::Charset(_) => todo!("@charset as expr"),
+                        AtRule::Charset => todo!("@charset as expr"),
                         AtRule::Debug(a, b) => Ok(Some(Expr::Debug(a, b))),
                         AtRule::Warn(a, b) => Ok(Some(Expr::Warn(a, b))),
                         AtRule::Error(pos, err) => Err(SassError::new(err, pos)),

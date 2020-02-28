@@ -36,11 +36,6 @@ impl<W: Write> PrettyPrinter<W> {
             }
             Stmt::AtRule(r) => match r {
                 AtRule::Unknown(..) => todo!("Display @rules properly"),
-                AtRule::Charset(toks) => write!(
-                    self.buf,
-                    "@charset {};",
-                    toks.iter().map(|x| x.kind.to_string()).collect::<String>()
-                )?,
                 _ => todo!(),
             },
         }

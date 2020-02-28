@@ -1,6 +1,7 @@
 use std::convert::TryFrom;
 use std::iter::Peekable;
 use std::str::Chars;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::atrule::AtRuleKind;
 use crate::common::{Keyword, Op, Pos, Symbol};
@@ -8,6 +9,8 @@ use crate::{Token, TokenKind, Whitespace};
 
 // Rust does not allow us to escape '\f'
 const FORM_FEED: char = '\x0C';
+
+pub static IS_UTF8: AtomicBool = AtomicBool::new(false);
 
 #[derive(Debug, Clone)]
 pub(crate) struct Lexer<'a> {
@@ -133,6 +136,9 @@ impl<'a> Iterator for Lexer<'a> {
             '\0' => return None,
             &v => {
                 self.buf.next();
+                if !v.is_ascii() {
+                    IS_UTF8.store(true, Ordering::Relaxed);
+                }
                 TokenKind::Unknown(v.clone())
             }
         };

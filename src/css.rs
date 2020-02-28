@@ -2,6 +2,8 @@
 use crate::atrule::AtRule;
 use crate::error::SassResult;
 use crate::{RuleSet, Selector, Stmt, Style, StyleSheet};
+use crate::lexer::IS_UTF8;
+use std::sync::atomic::Ordering;
 use std::fmt;
 use std::io::Write;
 
@@ -115,6 +117,9 @@ impl Css {
     pub fn pretty_print<W: Write>(self, buf: &mut W, nesting: usize) -> SassResult<()> {
         let mut has_written = false;
         let padding = vec![' '; nesting * 2].iter().collect::<String>();
+        if IS_UTF8.swap(false, Ordering::Relaxed) {
+            writeln!(buf, "@charset \"UTF-8\";")?;
+        }
         for block in self.blocks {
             match block {
                 Toplevel::RuleSet(selector, styles) => {
@@ -144,11 +149,6 @@ impl Css {
                             .unwrap();
                         writeln!(buf, "{}}}", padding)?;
                     }
-                    AtRule::Charset(toks) => write!(
-                        buf,
-                        "@charset {};",
-                        toks.iter().map(|x| x.kind.to_string()).collect::<String>()
-                    )?,
                     _ => todo!(),
                 },
                 Toplevel::Newline => {

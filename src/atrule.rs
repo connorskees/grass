@@ -18,8 +18,7 @@ pub(crate) enum AtRule {
     Mixin(String, Box<Mixin>),
     Function(String, Box<Function>),
     Return(Vec<Token>),
-    // todo: emit only when non-ascii char is found
-    Charset(Vec<Token>),
+    Charset,
     Unknown(UnknownAtRule),
 }
 
@@ -94,10 +93,10 @@ impl AtRule {
             AtRuleKind::Use => todo!("@use not yet implemented"),
             AtRuleKind::Annotation => todo!("@annotation not yet implemented"),
             AtRuleKind::AtRoot => todo!("@at-root not yet implemented"),
-            AtRuleKind::Charset => AtRule::Charset(
-                toks.take_while(|t| t.kind != TokenKind::Symbol(Symbol::SemiColon))
-                    .collect(),
-            ),
+            AtRuleKind::Charset => {
+                toks.take_while(|t| t.kind != TokenKind::Symbol(Symbol::SemiColon)).for_each(drop);
+                AtRule::Charset
+            },
             AtRuleKind::Each => todo!("@each not yet implemented"),
             AtRuleKind::Extend => todo!("@extend not yet implemented"),
             AtRuleKind::If => todo!("@if not yet implemented"),
