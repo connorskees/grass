@@ -428,16 +428,6 @@ impl Display for QuoteKind {
     }
 }
 
-impl QuoteKind {
-    pub fn as_str(self) -> &'static str {
-        match self {
-            Self::Single => "'",
-            Self::Double => "\"",
-            Self::None => "",
-        }
-    }
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum ListSeparator {
     Space,
