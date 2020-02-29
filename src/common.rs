@@ -220,6 +220,9 @@ pub enum Keyword {
     False,
     Null,
     Default,
+    From,
+    To,
+    Through,
     // Infinity,
     // NaN,
     // Auto,
@@ -240,6 +243,10 @@ impl Display for Keyword {
             Self::False => write!(f, "false"),
             Self::Null => write!(f, "null"),
             Self::Default => write!(f, "!default"),
+            // todo!(maintain casing for keywords)
+            Self::From => write!(f, "from"),
+            Self::To => write!(f, "to"),
+            Self::Through => write!(f, "through"),
             // Self::Infinity => write!(f, "Infinity"),
             // Self::NaN => write!(f, "NaN"),
             // Self::Auto => write!(f, "auto"),
@@ -262,6 +269,9 @@ impl Into<&'static str> for Keyword {
             Self::False => "false",
             Self::Null => "null",
             Self::Default => "!default",
+            Self::From => "from",
+            Self::To => "to",
+            Self::Through => "through",
             // Self::Infinity => "Infinity",
             // Self::NaN => "NaN",
             // Self::Auto => "auto",
@@ -280,13 +290,15 @@ impl TryFrom<&str> for Keyword {
     type Error = &'static str;
 
     fn try_from(kw: &str) -> Result<Self, Self::Error> {
-        // todo: case insensitive?
-        match kw {
+        match kw.to_ascii_lowercase().as_str() {
             "important" => Ok(Self::Important),
             "true" => Ok(Self::True),
             "false" => Ok(Self::False),
             "null" => Ok(Self::Null),
             "default" => Ok(Self::Default),
+            "from" => Ok(Self::From),
+            "to" => Ok(Self::To),
+            "through" => Ok(Self::Through),
             // "infinity" => Ok(Self::Infinity),
             // "nan" => Ok(Self::NaN),
             // "auto" => Ok(Self::Auto),

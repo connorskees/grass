@@ -1,12 +1,17 @@
+use std::cmp::Ordering;
 use std::fmt::{self, Display};
 use std::iter::Peekable;
 
-use crate::common::{Pos, Scope, Symbol};
+use num_traits::cast::ToPrimitive;
+
+use crate::common::{Keyword, Pos, Scope, Symbol};
 use crate::error::SassResult;
 use crate::function::Function;
 use crate::mixin::Mixin;
 use crate::selector::Selector;
-use crate::utils::{devour_whitespace, parse_interpolation};
+use crate::units::Unit;
+use crate::utils::{devour_whitespace, devour_whitespace_or_comment, parse_interpolation};
+use crate::value::{Number, Value};
 use crate::{eat_expr, Expr, Stmt};
 use crate::{RuleSet, Token, TokenKind};
 
@@ -20,6 +25,7 @@ pub(crate) enum AtRule {
     Return(Vec<Token>),
     Charset,
     Unknown(UnknownAtRule),
+    For(Vec<Stmt>),
 }
 
 #[derive(Debug, Clone)]
@@ -102,7 +108,98 @@ impl AtRule {
             AtRuleKind::Extend => todo!("@extend not yet implemented"),
             AtRuleKind::If => todo!("@if not yet implemented"),
             AtRuleKind::Else => todo!("@else not yet implemented"),
-            AtRuleKind::For => todo!("@for not yet implemented"),
+            AtRuleKind::For => {
+                let mut stmts = Vec::new();
+                devour_whitespace_or_comment(toks);
+                let var = if let Some(tok) = toks.next() {
+                    match tok.kind {
+                        TokenKind::Variable(s) => s,
+                        _ => return Err("expected \"$\".".into()),
+                    }
+                } else {
+                    return Err("expected \"$\".".into());
+                };
+                devour_whitespace_or_comment(toks);
+                if let Some(tok) = toks.next() {
+                    match tok.kind {
+                        TokenKind::Keyword(Keyword::From) => {}
+                        _ => return Err("Expected \"from\".".into()),
+                    }
+                } else {
+                    return Err("Expected \"from\".".into());
+                };
+                devour_whitespace_or_comment(toks);
+                let mut from_toks = Vec::new();
+                let mut through = 0;
+                while let Some(tok) = toks.next() {
+                    match tok.kind {
+                        TokenKind::Keyword(Keyword::Through) => {
+                            through = 1;
+                            break;
+                        }
+                        TokenKind::Keyword(Keyword::To) => break,
+                        _ => from_toks.push(tok),
+                    }
+                }
+                let from = match Value::from_tokens(&mut from_toks.into_iter().peekable(), scope)? {
+                    Value::Dimension(n, _) => match n.to_integer().to_usize() {
+                        Some(v) => v,
+                        None => todo!(),
+                    },
+                    v => return Err(format!("{} is not a number.", v).into()),
+                };
+                devour_whitespace_or_comment(toks);
+                let mut to_toks = Vec::new();
+                while let Some(tok) = toks.next() {
+                    match tok.kind {
+                        TokenKind::Symbol(Symbol::OpenCurlyBrace) => break,
+                        _ => to_toks.push(tok),
+                    }
+                }
+                let to = match Value::from_tokens(&mut to_toks.into_iter().peekable(), scope)? {
+                    Value::Dimension(n, _) => match n.to_integer().to_usize() {
+                        Some(v) => v,
+                        None => todo!(),
+                    },
+                    v => return Err(format!("{} is not a number.", v).into()),
+                };
+                let mut body = Vec::new();
+                let mut n = 1;
+                for tok in toks {
+                    match tok.kind {
+                        TokenKind::Symbol(Symbol::OpenCurlyBrace) => n += 1,
+                        TokenKind::Symbol(Symbol::CloseCurlyBrace) => n -= 1,
+                        TokenKind::Interpolation => n += 1,
+                        _ => {}
+                    }
+                    body.push(tok);
+                    if n == 0 {
+                        break;
+                    }
+                }
+
+                let mut scope = scope.clone();
+                if from < to {
+                    for i in from..(to + through) {
+                        scope.insert_var(&var, Value::Dimension(Number::from(i), Unit::None));
+                        stmts.extend(eat_unknown_atrule_body(
+                            &mut body.clone().into_iter().peekable(),
+                            &scope,
+                            super_selector,
+                        )?);
+                    }
+                } else if from > to {
+                    for i in ((to - through)..(from + 1)).skip(1).rev() {
+                        scope.insert_var(&var, Value::Dimension(Number::from(i), Unit::None));
+                        stmts.extend(eat_unknown_atrule_body(
+                            &mut body.clone().into_iter().peekable(),
+                            &scope,
+                            super_selector,
+                        )?);
+                    }
+                }
+                AtRule::For(stmts)
+            }
             AtRuleKind::While => todo!("@while not yet implemented"),
             AtRuleKind::Keyframes => todo!("@keyframes not yet implemented"),
             AtRuleKind::Unknown(name) => {

@@ -474,6 +474,7 @@ impl<'a> StyleSheetParser<'a> {
                             AtRule::Return(_) => {
                                 return Err("This at-rule is not allowed here.".into())
                             }
+                            AtRule::For(s) => rules.extend(s),
                             u @ AtRule::Unknown(..) => rules.push(Stmt::AtRule(u)),
                         }
                     }
@@ -652,6 +653,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                         AtRule::Warn(a, b) => Ok(Some(Expr::Warn(a, b))),
                         AtRule::Error(pos, err) => Err(SassError::new(err, pos)),
                         AtRule::Return(_) => todo!("@return in unexpected location!"),
+                        f @ AtRule::For(..) => Ok(Some(Expr::AtRule(f))),
                         u @ AtRule::Unknown(..) => Ok(Some(Expr::AtRule(u))),
                     };
                 }
