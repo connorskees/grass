@@ -566,8 +566,15 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                 toks.next();
                 devour_whitespace(toks);
                 // special edge case where there was no space between the colon
-                // in a style `color:red`. todo: refactor
+                // in a style, e.g. `color:red`. todo: refactor
                 let mut v = values.into_iter().peekable();
+                devour_whitespace(&mut v);
+                if v.peek().is_none() {
+                    return Ok(Some(Expr::Style(Box::new(Style {
+                        property: String::new(),
+                        value: Value::Null,
+                    }))));
+                }
                 let property = Style::parse_property(&mut v, scope, super_selector, String::new())?;
                 let value = Style::parse_value(&mut v, scope, super_selector)?;
                 return Ok(Some(Expr::Style(Box::new(Style { property, value }))));

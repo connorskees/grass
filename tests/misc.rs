@@ -31,8 +31,18 @@ test!(
     "$a-b: red; $a_b: green; a {\n  color: $a-b;\n}\n",
     "a {\n  color: green;\n}\n"
 );
-// test!(
-//     ends_with_several_semicolons,
-//     "a {\n  color: red;;\n}\n",
-//     "a {\n  color: red;\n}\n"
-// );
+test!(
+    two_semicolons,
+    "a {\n  color: red;;\n}\n",
+    "a {\n  color: red;\n}\n"
+);
+test!(
+    five_semicolons,
+    "a {\n  color: red;;;;;\n}\n",
+    "a {\n  color: red;\n}\n"
+);
+test!(
+    two_semicolons_whitespace,
+    "a {\n  color: red; ;\n}\n",
+    "a {\n  color: red;\n}\n"
+);
