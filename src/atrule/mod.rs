@@ -144,7 +144,7 @@ impl AtRule {
                         Some(v) => v,
                         None => return Err(format!("{} is not a int.", n).into()),
                     },
-                    v => return Err(format!("{} is not a number.", v).into()),
+                    v => return Err(format!("{} is not an integer.", v).into()),
                 };
                 devour_whitespace_or_comment(toks);
                 let mut to_toks = Vec::new();
@@ -159,7 +159,7 @@ impl AtRule {
                         Some(v) => v,
                         None => return Err(format!("{} is not a int.", n).into()),
                     },
-                    v => return Err(format!("{} is not a number.", v).into()),
+                    v => return Err(format!("{} is not an integer.", v).into()),
                 };
                 let mut body = Vec::new();
                 let mut n = 1;
