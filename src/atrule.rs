@@ -263,7 +263,8 @@ fn eat_unknown_atrule_body<I: Iterator<Item = Token>>(
     super_selector: &Selector,
 ) -> SassResult<Vec<Stmt>> {
     let mut stmts = Vec::new();
-    while let Some(expr) = eat_expr(toks, scope, super_selector)? {
+    let mut scope = scope.clone();
+    while let Some(expr) = eat_expr(toks, &scope, super_selector)? {
         match expr {
             Expr::AtRule(a) => stmts.push(Stmt::AtRule(a)),
             Expr::Style(s) => stmts.push(Stmt::Style(*s)),
@@ -273,16 +274,15 @@ fn eat_unknown_atrule_body<I: Iterator<Item = Token>>(
                 todo!()
             }
             Expr::Selector(selector) => {
-                let rules = eat_unknown_atrule_body(toks, scope, &super_selector.zip(&selector))?;
+                let rules = eat_unknown_atrule_body(toks, &scope, &super_selector.zip(&selector))?;
                 stmts.push(Stmt::RuleSet(RuleSet {
                     super_selector: super_selector.clone(),
                     selector,
                     rules,
                 }));
             }
-            Expr::VariableDecl(..) => {
-                todo!()
-                // self.scope.insert_var(&name, *val);
+            Expr::VariableDecl(name, val) => {
+                scope.insert_var(&name, *val);
             }
             Expr::MultilineComment(s) => stmts.push(Stmt::MultilineComment(s)),
         }
