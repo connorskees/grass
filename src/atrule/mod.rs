@@ -11,8 +11,7 @@ use crate::selector::Selector;
 use crate::units::Unit;
 use crate::utils::{devour_whitespace, devour_whitespace_or_comment, parse_interpolation};
 use crate::value::{Number, Value};
-use crate::{eat_expr, Expr, Stmt};
-use crate::{RuleSet, Token, TokenKind};
+use crate::{eat_expr, Expr, RuleSet, Stmt, Token, TokenKind};
 
 #[derive(Debug, Clone)]
 pub(crate) enum AtRule {
