@@ -277,3 +277,19 @@ test!(
 //     "a,, {\n  b {\n    color: /**/red;\n  }\n}\n",
 //     "a b {\n  color: red;\n}\n"
 // );
+test!(simple_placeholder, "%a {\n  color: red;\n}\n", "");
+test!(
+    placeholder_first,
+    "%a, b {\n  color: red;\n}\n",
+    "b {\n  color: red;\n}\n"
+);
+test!(
+    placeholder_last,
+    "a, %b {\n  color: red;\n}\n",
+    "a {\n  color: red;\n}\n"
+);
+test!(
+    placeholder_middle,
+    "a, %b, c {\n  color: red;\n}\n",
+    "a, c {\n  color: red;\n}\n"
+);

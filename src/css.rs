@@ -72,7 +72,11 @@ impl Css {
                 super_selector,
                 rules,
             }) => {
-                let mut vals = vec![Toplevel::new_rule(super_selector.zip(&selector))];
+                let selector = super_selector.zip(&selector).remove_placeholders();
+                if selector.is_empty() {
+                    return Vec::new();
+                }
+                let mut vals = vec![Toplevel::new_rule(selector)];
                 for rule in rules {
                     match rule {
                         Stmt::RuleSet(_) => vals.extend(self.parse_stmt(rule)),

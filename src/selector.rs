@@ -351,6 +351,34 @@ impl Selector {
         }
         Selector(rules)
     }
+
+    pub fn remove_placeholders(self) -> Selector {
+        let mut selectors = Vec::with_capacity(self.0.len());
+        let mut temp_sels = Vec::new();
+        let mut found_placeholder = false;
+        for sel in self.0 {
+            match sel {
+                SelectorKind::Placeholder => found_placeholder = true,
+                SelectorKind::Multiple => {
+                    temp_sels.push(SelectorKind::Multiple);
+                    if !found_placeholder {
+                        selectors.extend(temp_sels.clone());
+                    }
+                    temp_sels.clear();
+                    found_placeholder = false;
+                }
+                _ => temp_sels.push(sel),
+            }
+        }
+        if !found_placeholder {
+            selectors.extend(temp_sels);
+        }
+        Selector(selectors)
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
