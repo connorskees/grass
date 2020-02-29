@@ -1,4 +1,3 @@
-use std::cmp::Ordering;
 use std::fmt::{self, Display};
 use std::iter::Peekable;
 
@@ -144,7 +143,7 @@ impl AtRule {
                 let from = match Value::from_tokens(&mut from_toks.into_iter().peekable(), scope)? {
                     Value::Dimension(n, _) => match n.to_integer().to_usize() {
                         Some(v) => v,
-                        None => todo!(),
+                        None => return Err(format!("{} is not a int.", n).into()),
                     },
                     v => return Err(format!("{} is not a number.", v).into()),
                 };
@@ -159,7 +158,7 @@ impl AtRule {
                 let to = match Value::from_tokens(&mut to_toks.into_iter().peekable(), scope)? {
                     Value::Dimension(n, _) => match n.to_integer().to_usize() {
                         Some(v) => v,
-                        None => todo!(),
+                        None => return Err(format!("{} is not a int.", n).into()),
                     },
                     v => return Err(format!("{} is not a number.", v).into()),
                 };
