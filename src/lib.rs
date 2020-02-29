@@ -498,7 +498,10 @@ impl<'a> StyleSheetParser<'a> {
         while let Some(expr) = eat_expr(&mut self.lexer, scope, super_selector)? {
             match expr {
                 Expr::Style(s) => stmts.push(Stmt::Style(*s)),
-                Expr::AtRule(s) => stmts.push(Stmt::AtRule(s)),
+                Expr::AtRule(a) => match a {
+                    AtRule::For(s) => stmts.extend(s),
+                    r => stmts.push(Stmt::AtRule(r)),
+                },
                 Expr::Styles(s) => stmts.extend(s.into_iter().map(Stmt::Style)),
                 Expr::MixinDecl(name, mixin) => {
                     scope.insert_mixin(&name, *mixin);

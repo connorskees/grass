@@ -164,18 +164,20 @@ impl AtRule {
                 };
                 let mut body = Vec::new();
                 let mut n = 1;
-                for tok in toks {
+                while let Some(tok) = toks.next() {
                     match tok.kind {
                         TokenKind::Symbol(Symbol::OpenCurlyBrace) => n += 1,
                         TokenKind::Symbol(Symbol::CloseCurlyBrace) => n -= 1,
                         TokenKind::Interpolation => n += 1,
                         _ => {}
                     }
-                    body.push(tok);
                     if n == 0 {
                         break;
                     }
+                    body.push(tok);
                 }
+
+                devour_whitespace_or_comment(toks);
 
                 let mut scope = scope.clone();
                 if from < to {

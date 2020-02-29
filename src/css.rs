@@ -145,8 +145,7 @@ impl Css {
                             writeln!(buf, "{}@{} {} {{", padding, u.name, u.params)?;
                         }
                         Css::from_stylesheet(StyleSheet::from_stmts(u.body.clone()))
-                            .pretty_print(buf, nesting + 1)
-                            .unwrap();
+                            .pretty_print(buf, nesting + 1)?;
                         writeln!(buf, "{}}}", padding)?;
                     }
                     _ => todo!(),

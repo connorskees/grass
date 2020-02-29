@@ -33,3 +33,8 @@ test!(
     "@for $x from 1 to 3 {\n  $limit: $x;\n\n  a {\n    color: $limit;\n  }\n}\n",
     "a {\n  color: 1;\n}\n\na {\n  color: 2;\n}\n"
 );
+test!(
+    for_styles,
+    "a {\n  @for $i from 1 to 3 {\n    color: $i;\n  }\n}\n",
+    "a {\n  color: 1;\n  color: 2;\n}\n"
+);

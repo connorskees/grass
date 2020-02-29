@@ -160,7 +160,7 @@ impl Value {
         let kind = if let Some(tok) = toks.next() {
             tok.kind
         } else {
-            return Err("Unexpected EOF".into());
+            panic!("Unexpected EOF");
         };
         match kind {
             TokenKind::Number(val) => {
