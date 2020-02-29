@@ -139,7 +139,7 @@ impl<'a> Iterator for Lexer<'a> {
                 if !v.is_ascii() {
                     IS_UTF8.store(true, Ordering::Relaxed);
                 }
-                TokenKind::Unknown(v.clone())
+                TokenKind::Unknown(v)
             }
         };
         self.pos.next_char();

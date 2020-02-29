@@ -54,7 +54,7 @@ pub(crate) fn parse_interpolation<I: Iterator<Item = Token>>(
             }
             q @ TokenKind::Symbol(Symbol::DoubleQuote)
             | q @ TokenKind::Symbol(Symbol::SingleQuote) => {
-                val.push_str(&parse_quoted_string(tokens, scope, q)?.to_string())
+                val.push_str(&parse_quoted_string(tokens, scope, &q)?.to_string())
             }
             TokenKind::Variable(ref v) => {
                 val.push_str(&scope.get_var(v)?.clone().unquote().to_string())
@@ -159,7 +159,7 @@ pub(crate) fn flatten_ident<I: Iterator<Item = Token>>(
 pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
     scope: &Scope,
-    q: TokenKind,
+    q: &TokenKind,
 ) -> SassResult<Value> {
     let mut s = String::new();
     let mut is_escaped = false;
@@ -167,7 +167,7 @@ pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
     while let Some(tok) = toks.next() {
         match tok.kind {
             TokenKind::Symbol(Symbol::DoubleQuote)
-                if !is_escaped && q == TokenKind::Symbol(Symbol::DoubleQuote) =>
+                if !is_escaped && q == &TokenKind::Symbol(Symbol::DoubleQuote) =>
             {
                 break
             }
@@ -177,7 +177,7 @@ pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
                 continue;
             }
             TokenKind::Symbol(Symbol::SingleQuote)
-                if !is_escaped && q == TokenKind::Symbol(Symbol::SingleQuote) =>
+                if !is_escaped && q == &TokenKind::Symbol(Symbol::SingleQuote) =>
             {
                 break
             }

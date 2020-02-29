@@ -79,7 +79,7 @@ impl Css {
                         Stmt::Style(s) => vals
                             .get_mut(0)
                             .expect("expected block to exist")
-                            .push_style(s),
+                            .push_style(*s),
                         Stmt::MultilineComment(s) => vals
                             .get_mut(0)
                             .expect("expected block to exist")

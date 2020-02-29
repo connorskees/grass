@@ -17,7 +17,7 @@ use crate::{Token, TokenKind};
 
 use super::number::Number;
 
-fn parse_hex(s: String) -> Value {
+fn parse_hex(s: &str) -> Value {
     match s.len() {
         3 => {
             let v = match u16::from_str_radix(&s, 16) {
@@ -213,7 +213,7 @@ impl Value {
             TokenKind::Symbol(Symbol::BitAnd) => {
                 Ok(Value::Ident(String::from("&"), QuoteKind::None))
             }
-            TokenKind::Symbol(Symbol::Hash) => Ok(parse_hex(flatten_ident(toks, scope)?)),
+            TokenKind::Symbol(Symbol::Hash) => Ok(parse_hex(&flatten_ident(toks, scope)?)),
             // TokenKind::Interpolation => {
             //     Ok(Value::Ident(
             //         parse_interpolation(toks, scope)
@@ -283,7 +283,7 @@ impl Value {
                 }
             }
             q @ TokenKind::Symbol(Symbol::DoubleQuote)
-            | q @ TokenKind::Symbol(Symbol::SingleQuote) => parse_quoted_string(toks, scope, q),
+            | q @ TokenKind::Symbol(Symbol::SingleQuote) => parse_quoted_string(toks, scope, &q),
             TokenKind::Variable(ref v) => Ok(scope.get_var(v)?.clone()),
             TokenKind::Interpolation => {
                 let mut s = parse_interpolation(toks, scope)?

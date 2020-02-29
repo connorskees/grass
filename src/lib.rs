@@ -200,7 +200,7 @@ pub struct StyleSheet(Vec<Stmt>);
 #[derive(Clone, Debug)]
 pub(crate) enum Stmt {
     /// A [`Style`](/grass/style/struct.Style)
-    Style(Style),
+    Style(Box<Style>),
     /// A  [`RuleSet`](/grass/struct.RuleSet.html)
     RuleSet(RuleSet),
     /// A multiline comment: `/* foo bar */`
@@ -228,7 +228,7 @@ pub(crate) struct RuleSet {
 }
 
 impl RuleSet {
-    pub(crate) fn new() -> RuleSet {
+    pub(crate) const fn new() -> RuleSet {
         RuleSet {
             selector: Selector::new(),
             rules: Vec::new(),
@@ -497,12 +497,12 @@ impl<'a> StyleSheetParser<'a> {
         let mut stmts = Vec::new();
         while let Some(expr) = eat_expr(&mut self.lexer, scope, super_selector)? {
             match expr {
-                Expr::Style(s) => stmts.push(Stmt::Style(*s)),
+                Expr::Style(s) => stmts.push(Stmt::Style(s)),
                 Expr::AtRule(a) => match a {
                     AtRule::For(s) => stmts.extend(s),
                     r => stmts.push(Stmt::AtRule(r)),
                 },
-                Expr::Styles(s) => stmts.extend(s.into_iter().map(Stmt::Style)),
+                Expr::Styles(s) => stmts.extend(s.into_iter().map(Box::new).map(Stmt::Style)),
                 Expr::MixinDecl(name, mixin) => {
                     scope.insert_mixin(&name, *mixin);
                 }

@@ -88,7 +88,7 @@ impl<'a> StyleParser<'a> {
                 | ref q @ TokenKind::Symbol(Symbol::SingleQuote) => {
                     let q = q.clone();
                     toks.next();
-                    let (s, q) = if let Value::Ident(s, q) = parse_quoted_string(toks, scope, q)? {
+                    let (s, q) = if let Value::Ident(s, q) = parse_quoted_string(toks, scope, &q)? {
                         (s, q)
                     } else {
                         unreachable!()
