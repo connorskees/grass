@@ -48,3 +48,8 @@ test!(
     "@function a() {\n  @return 1; @return 2;\n}\n\nb {\ncolor: a();\n}\n",
     "b {\n  color: 1;\n}\n"
 );
+test!(
+    value_after_variable,
+    "$x: 0;\na {\n  color: if($x != 0, a, b);\n}\n",
+    "a {\n  color: b;\n}\n"
+);

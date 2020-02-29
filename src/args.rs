@@ -143,7 +143,8 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
             TokenKind::Variable(_) => {
                 let v = toks.next().unwrap();
                 devour_whitespace_or_comment(toks);
-                if toks.next().unwrap().is_symbol(Symbol::Colon) {
+                if toks.peek().unwrap().is_symbol(Symbol::Colon) {
+                    toks.next();
                     name = v.kind.to_string();
                 } else {
                     val.push(v);
