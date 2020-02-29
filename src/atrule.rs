@@ -121,7 +121,7 @@ impl AtRule {
                 devour_whitespace_or_comment(toks);
                 if let Some(tok) = toks.next() {
                     match tok.kind {
-                        TokenKind::Keyword(Keyword::From) => {}
+                        TokenKind::Keyword(Keyword::From(..)) => {}
                         _ => return Err("Expected \"from\".".into()),
                     }
                 } else {
@@ -132,11 +132,11 @@ impl AtRule {
                 let mut through = 0;
                 while let Some(tok) = toks.next() {
                     match tok.kind {
-                        TokenKind::Keyword(Keyword::Through) => {
+                        TokenKind::Keyword(Keyword::Through(..)) => {
                             through = 1;
                             break;
                         }
-                        TokenKind::Keyword(Keyword::To) => break,
+                        TokenKind::Keyword(Keyword::To(..)) => break,
                         _ => from_toks.push(tok),
                     }
                 }

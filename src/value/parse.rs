@@ -314,6 +314,9 @@ impl Value {
             TokenKind::Keyword(Keyword::True) => Ok(Value::True),
             TokenKind::Keyword(Keyword::False) => Ok(Value::False),
             TokenKind::Keyword(Keyword::Null) => Ok(Value::Null),
+            TokenKind::Keyword(Keyword::From(s)) => Ok(Value::Ident(s, QuoteKind::None)),
+            TokenKind::Keyword(Keyword::Through(s)) => Ok(Value::Ident(s, QuoteKind::None)),
+            TokenKind::Keyword(Keyword::To(s)) => Ok(Value::Ident(s, QuoteKind::None)),
             TokenKind::Unknown(c) => Ok(Value::Ident(c.to_string(), QuoteKind::None)),
             _ => Err("Unexpected token in value parsing".into()),
         }

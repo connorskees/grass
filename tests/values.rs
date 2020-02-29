@@ -29,6 +29,9 @@ test!(preserves_keyword_and, "a {\n  color: and;\n}\n");
 test!(preserves_keyword_or, "a {\n  color: or;\n}\n");
 test!(preserves_keyword_unset, "a {\n  color: unset;\n}\n");
 test!(preserves_keyword_nan, "a {\n  color: NaN;\n}\n");
+test!(preserves_keyword_from, "a {\n  color: FRoM;\n}\n");
+test!(preserves_keyword_to, "a {\n  color: To;\n}\n");
+test!(preserves_keyword_through, "a {\n  color: ThRouGh;\n}\n");
 test!(
     preserves_quotes,
     "a {\n  color: \"'foo' \\\"bar\\\"\";\n}\n"
