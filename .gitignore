@@ -1,3 +1,4 @@
 /target
 *.s[ac]ss
 *.css
+Cargo.lock
