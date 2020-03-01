@@ -3,6 +3,7 @@ use std::iter::Peekable;
 
 use crate::common::{Scope, Symbol};
 use crate::error::SassResult;
+use crate::selector::Selector;
 use crate::utils::{devour_whitespace, devour_whitespace_or_comment};
 use crate::value::Value;
 use crate::{Token, TokenKind};
@@ -46,6 +47,7 @@ impl CallArgs {
 pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
     scope: &Scope,
+    super_selector: &Selector,
 ) -> SassResult<FuncArgs> {
     let mut args: Vec<FuncArg> = Vec::new();
 
@@ -74,6 +76,7 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
                                 default: Some(Value::from_tokens(
                                     &mut default.into_iter().peekable(),
                                     scope,
+                                    super_selector,
                                 )?),
                             });
                             break;
@@ -84,6 +87,7 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
                                 default: Some(Value::from_tokens(
                                     &mut default.into_iter().peekable(),
                                     scope,
+                                    super_selector,
                                 )?),
                             });
                             break;
@@ -105,6 +109,7 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
                         Some(Value::from_tokens(
                             &mut default.into_iter().peekable(),
                             scope,
+                            super_selector,
                         )?)
                     },
                 });
@@ -133,6 +138,7 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
 pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
     scope: &Scope,
+    super_selector: &Selector,
 ) -> SassResult<CallArgs> {
     let mut args: BTreeMap<String, Value> = BTreeMap::new();
     devour_whitespace_or_comment(toks);
@@ -164,7 +170,7 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
                 TokenKind::Symbol(Symbol::CloseParen) => {
                     args.insert(
                         name,
-                        Value::from_tokens(&mut val.into_iter().peekable(), scope)?,
+                        Value::from_tokens(&mut val.into_iter().peekable(), scope, super_selector)?,
                     );
                     return Ok(CallArgs(args));
                 }
@@ -179,7 +185,11 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
 
         args.insert(
             name,
-            Value::from_tokens(&mut val.clone().into_iter().peekable(), scope)?,
+            Value::from_tokens(
+                &mut val.clone().into_iter().peekable(),
+                scope,
+                super_selector,
+            )?,
         );
         val.clear();
         devour_whitespace_or_comment(toks);

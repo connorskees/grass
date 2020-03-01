@@ -67,11 +67,11 @@ impl AtRule {
                 AtRule::Debug(pos, message)
             }
             AtRuleKind::Mixin => {
-                let (name, mixin) = Mixin::decl_from_tokens(toks, scope)?;
+                let (name, mixin) = Mixin::decl_from_tokens(toks, scope, super_selector)?;
                 AtRule::Mixin(name, Box::new(mixin))
             }
             AtRuleKind::Function => {
-                let (name, func) = Function::decl_from_tokens(toks, scope.clone())?;
+                let (name, func) = Function::decl_from_tokens(toks, scope.clone(), super_selector)?;
                 AtRule::Function(name, Box::new(func))
             }
             AtRuleKind::Return => {
@@ -137,7 +137,11 @@ impl AtRule {
                         _ => from_toks.push(tok),
                     }
                 }
-                let from = match Value::from_tokens(&mut from_toks.into_iter().peekable(), scope)? {
+                let from = match Value::from_tokens(
+                    &mut from_toks.into_iter().peekable(),
+                    scope,
+                    super_selector,
+                )? {
                     Value::Dimension(n, _) => match n.to_integer().to_usize() {
                         Some(v) => v,
                         None => return Err(format!("{} is not a int.", n).into()),
@@ -152,7 +156,11 @@ impl AtRule {
                         _ => to_toks.push(tok),
                     }
                 }
-                let to = match Value::from_tokens(&mut to_toks.into_iter().peekable(), scope)? {
+                let to = match Value::from_tokens(
+                    &mut to_toks.into_iter().peekable(),
+                    scope,
+                    super_selector,
+                )? {
                     Value::Dimension(n, _) => match n.to_integer().to_usize() {
                         Some(v) => v,
                         None => return Err(format!("{} is not a int.", n).into()),

@@ -10,8 +10,11 @@ use crate::builtin::GLOBAL_FUNCTIONS;
 use crate::color::Color;
 use crate::common::{Keyword, ListSeparator, Op, QuoteKind, Scope, Symbol};
 use crate::error::SassResult;
+use crate::selector::Selector;
 use crate::units::Unit;
-use crate::utils::{devour_whitespace_or_comment, parse_interpolation, parse_quoted_string};
+use crate::utils::{
+    devour_whitespace_or_comment, flatten_ident, parse_interpolation, parse_quoted_string,
+};
 use crate::value::Value;
 use crate::{Token, TokenKind};
 
@@ -65,42 +68,13 @@ fn parse_hex(s: &str) -> Value {
     }
 }
 
-fn flatten_ident<I: Iterator<Item = Token>>(
-    toks: &mut Peekable<I>,
-    scope: &Scope,
-) -> SassResult<String> {
-    let mut s = String::new();
-    while let Some(tok) = toks.peek() {
-        match tok.kind.clone() {
-            TokenKind::Interpolation => {
-                toks.next();
-                s.push_str(
-                    &parse_interpolation(toks, scope)?
-                        .iter()
-                        .map(|x| x.kind.to_string())
-                        .collect::<String>(),
-                )
-            }
-            TokenKind::Ident(ref i) => {
-                toks.next();
-                s.push_str(i)
-            }
-            TokenKind::Number(ref n) => {
-                toks.next();
-                s.push_str(n)
-            }
-            _ => break,
-        }
-    }
-    Ok(s)
-}
-
 impl Value {
     pub fn from_tokens<I: Iterator<Item = Token>>(
         toks: &mut Peekable<I>,
         scope: &Scope,
+        super_selector: &Selector,
     ) -> SassResult<Self> {
-        let left = Self::_from_tokens(toks, scope)?;
+        let left = Self::_from_tokens(toks, scope, super_selector)?;
         let whitespace = devour_whitespace_or_comment(toks);
         let next = match toks.peek() {
             Some(x) => x,
@@ -113,7 +87,7 @@ impl Value {
             TokenKind::Symbol(Symbol::Comma) => {
                 toks.next();
                 devour_whitespace_or_comment(toks);
-                let right = match Self::from_tokens(toks, scope) {
+                let right = match Self::from_tokens(toks, scope, super_selector) {
                     Ok(x) => x,
                     Err(_) => return Ok(left),
                 };
@@ -136,7 +110,7 @@ impl Value {
                 };
                 toks.next();
                 devour_whitespace_or_comment(toks);
-                let right = match Self::from_tokens(toks, scope) {
+                let right = match Self::from_tokens(toks, scope, super_selector) {
                     Ok(x) => x,
                     Err(_) => return Ok(left),
                 };
@@ -144,7 +118,7 @@ impl Value {
             }
             _ => {
                 devour_whitespace_or_comment(toks);
-                let right = match Self::from_tokens(toks, scope) {
+                let right = match Self::from_tokens(toks, scope, super_selector) {
                     Ok(x) => x,
                     Err(_) => return Ok(left),
                 };
@@ -156,6 +130,7 @@ impl Value {
     fn _from_tokens<I: Iterator<Item = Token>>(
         toks: &mut Peekable<I>,
         scope: &Scope,
+        super_selector: &Selector,
     ) -> SassResult<Self> {
         let kind = if let Some(tok) = toks.next() {
             tok.kind
@@ -203,7 +178,7 @@ impl Value {
             }
             TokenKind::Symbol(Symbol::OpenParen) => {
                 devour_whitespace_or_comment(toks);
-                let val = Self::from_tokens(toks, scope)?;
+                let val = Self::from_tokens(toks, scope, super_selector)?;
                 assert_eq!(
                     toks.next().unwrap().kind,
                     TokenKind::Symbol(Symbol::CloseParen)
@@ -211,20 +186,13 @@ impl Value {
                 Ok(Value::Paren(Box::new(val)))
             }
             TokenKind::Symbol(Symbol::BitAnd) => {
-                Ok(Value::Ident(String::from("&"), QuoteKind::None))
+                Ok(Value::Ident(super_selector.to_string(), QuoteKind::None))
             }
-            TokenKind::Symbol(Symbol::Hash) => Ok(parse_hex(&flatten_ident(toks, scope)?)),
-            // TokenKind::Interpolation => {
-            //     Ok(Value::Ident(
-            //         parse_interpolation(toks, scope)
-            //             .iter()
-            //             .map(|x| x.kind.to_string())
-            //             .collect::<String>(),
-            //             QuoteKind::None
-            //     ))
-            // }
+            TokenKind::Symbol(Symbol::Hash) => {
+                Ok(parse_hex(&flatten_ident(toks, scope, super_selector)?))
+            }
             TokenKind::Ident(mut s) => {
-                s.push_str(&flatten_ident(toks, scope)?);
+                s.push_str(&flatten_ident(toks, scope, super_selector)?);
                 match toks.peek() {
                     Some(Token {
                         kind: TokenKind::Symbol(Symbol::OpenParen),
@@ -234,7 +202,12 @@ impl Value {
                         let func = match scope.get_fn(&s) {
                             Ok(f) => f,
                             Err(_) => match GLOBAL_FUNCTIONS.get(&s) {
-                                Some(f) => return f(&mut eat_call_args(toks, scope)?, scope),
+                                Some(f) => {
+                                    return f(
+                                        &mut eat_call_args(toks, scope, super_selector)?,
+                                        scope,
+                                    )
+                                }
                                 None => {
                                     s.push('(');
                                     let mut unclosed_parens = 0;
@@ -244,10 +217,8 @@ impl Value {
                                                 unclosed_parens += 1;
                                             }
                                             TokenKind::Interpolation => s.push_str(
-                                                &parse_interpolation(toks, scope)?
-                                                    .iter()
-                                                    .map(|x| x.kind.to_string())
-                                                    .collect::<String>(),
+                                                &parse_interpolation(toks, scope, super_selector)?
+                                                    .to_string(),
                                             ),
                                             TokenKind::Variable(v) => {
                                                 s.push_str(&scope.get_var(v)?.to_string())
@@ -270,8 +241,8 @@ impl Value {
                         };
                         Ok(func
                             .clone()
-                            .args(&mut eat_call_args(toks, scope)?)?
-                            .call()?)
+                            .args(&mut eat_call_args(toks, scope, super_selector)?)?
+                            .call(super_selector)?)
                     }
                     _ => {
                         if let Ok(c) = crate::color::ColorName::try_from(s.as_ref()) {
@@ -283,22 +254,18 @@ impl Value {
                 }
             }
             q @ TokenKind::Symbol(Symbol::DoubleQuote)
-            | q @ TokenKind::Symbol(Symbol::SingleQuote) => parse_quoted_string(toks, scope, &q),
+            | q @ TokenKind::Symbol(Symbol::SingleQuote) => {
+                parse_quoted_string(toks, scope, &q, super_selector)
+            }
             TokenKind::Variable(ref v) => Ok(scope.get_var(v)?.clone()),
             TokenKind::Interpolation => {
-                let mut s = parse_interpolation(toks, scope)?
-                    .iter()
-                    .map(|x| x.kind.to_string())
-                    .collect::<String>();
+                let mut s = parse_interpolation(toks, scope, super_selector)?.to_string();
                 while let Some(tok) = toks.peek() {
                     match tok.kind.clone() {
                         TokenKind::Interpolation => {
                             toks.next();
                             s.push_str(
-                                &parse_interpolation(toks, scope)?
-                                    .iter()
-                                    .map(|x| x.kind.to_string())
-                                    .collect::<String>(),
+                                &parse_interpolation(toks, scope, super_selector)?.to_string(),
                             )
                         }
                         TokenKind::Ident(ref i) => {
@@ -318,7 +285,10 @@ impl Value {
             TokenKind::Keyword(Keyword::Through(s)) => Ok(Value::Ident(s, QuoteKind::None)),
             TokenKind::Keyword(Keyword::To(s)) => Ok(Value::Ident(s, QuoteKind::None)),
             TokenKind::Unknown(c) => Ok(Value::Ident(c.to_string(), QuoteKind::None)),
-            _ => Err("Unexpected token in value parsing".into()),
+            v => {
+                dbg!(v);
+                panic!("Unexpected token in value parsing")
+            }
         }
     }
 }

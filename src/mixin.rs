@@ -24,6 +24,7 @@ impl Mixin {
     pub fn decl_from_tokens<I: Iterator<Item = Token>>(
         toks: &mut Peekable<I>,
         scope: &Scope,
+        super_selector: &Selector,
     ) -> SassResult<(String, Mixin)> {
         let Token { kind, .. } = toks
             .next()
@@ -38,7 +39,7 @@ impl Mixin {
             Some(Token {
                 kind: TokenKind::Symbol(Symbol::OpenParen),
                 ..
-            }) => eat_func_args(toks, scope)?,
+            }) => eat_func_args(toks, scope, super_selector)?,
             Some(Token {
                 kind: TokenKind::Symbol(Symbol::OpenCurlyBrace),
                 ..
@@ -144,7 +145,7 @@ pub(crate) fn eat_include<I: Iterator<Item = Token>>(
         match tok.kind {
             TokenKind::Symbol(Symbol::SemiColon) => CallArgs::new(),
             TokenKind::Symbol(Symbol::OpenParen) => {
-                let tmp = eat_call_args(toks, scope)?;
+                let tmp = eat_call_args(toks, scope, super_selector)?;
                 devour_whitespace(toks);
                 if let Some(tok) = toks.next() {
                     assert_eq!(tok.kind, TokenKind::Symbol(Symbol::SemiColon));

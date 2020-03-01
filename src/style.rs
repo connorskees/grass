@@ -88,7 +88,9 @@ impl<'a> StyleParser<'a> {
                 | ref q @ TokenKind::Symbol(Symbol::SingleQuote) => {
                     let q = q.clone();
                     toks.next();
-                    let (s, q) = if let Value::Ident(s, q) = parse_quoted_string(toks, scope, &q)? {
+                    let (s, q) = if let Value::Ident(s, q) =
+                        parse_quoted_string(toks, scope, &q, self.super_selector)?
+                    {
                         (s, q)
                     } else {
                         unreachable!()
@@ -107,7 +109,7 @@ impl<'a> StyleParser<'a> {
                 | TokenKind::Symbol(Symbol::SemiColon) => break,
                 TokenKind::Symbol(Symbol::BitAnd) => {
                     style.push(Token {
-                        kind: TokenKind::Ident(self.super_selector.to_string()),
+                        kind: TokenKind::Symbol(Symbol::BitAnd),
                         pos: Pos::new(),
                     });
                     toks.next();
@@ -117,7 +119,11 @@ impl<'a> StyleParser<'a> {
             };
             style.push(toks.next().unwrap());
         }
-        Value::from_tokens(&mut style.into_iter().peekable(), self.scope)
+        Value::from_tokens(
+            &mut style.into_iter().peekable(),
+            self.scope,
+            self.super_selector,
+        )
     }
 
     pub(crate) fn eat_style_group<I: Iterator<Item = Token>>(
@@ -236,10 +242,7 @@ impl<'a> StyleParser<'a> {
                 TokenKind::Whitespace(_) | TokenKind::MultilineComment(_) => continue,
                 TokenKind::Ident(ref s) => property.push_str(s),
                 TokenKind::Interpolation => property.push_str(
-                    &parse_interpolation(toks, self.scope)?
-                        .iter()
-                        .map(|x| x.kind.to_string())
-                        .collect::<String>(),
+                    &parse_interpolation(toks, self.scope, self.super_selector)?.to_string(),
                 ),
                 TokenKind::Symbol(Symbol::Colon) => break,
                 TokenKind::Symbol(Symbol::BitAnd) => {

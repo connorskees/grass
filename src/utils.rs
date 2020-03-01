@@ -1,6 +1,7 @@
 use crate::common::{Keyword, QuoteKind, Symbol};
 use crate::error::SassResult;
 use crate::lexer::Lexer;
+use crate::selector::Selector;
 use crate::value::Value;
 use crate::{Scope, Token, TokenKind};
 use std::iter::{Iterator, Peekable};
@@ -44,7 +45,8 @@ pub(crate) fn devour_whitespace_or_comment<I: Iterator<Item = W>, W: IsWhitespac
 pub(crate) fn parse_interpolation<I: Iterator<Item = Token>>(
     tokens: &mut Peekable<I>,
     scope: &Scope,
-) -> SassResult<Vec<Token>> {
+    super_selector: &Selector,
+) -> SassResult<Value> {
     let mut val = String::new();
     while let Some(tok) = tokens.next() {
         match tok.kind {
@@ -54,27 +56,27 @@ pub(crate) fn parse_interpolation<I: Iterator<Item = Token>>(
             }
             q @ TokenKind::Symbol(Symbol::DoubleQuote)
             | q @ TokenKind::Symbol(Symbol::SingleQuote) => {
-                val.push_str(&parse_quoted_string(tokens, scope, &q)?.to_string())
+                val.push_str(&parse_quoted_string(tokens, scope, &q, super_selector)?.to_string())
             }
             TokenKind::Variable(ref v) => {
                 val.push_str(&scope.get_var(v)?.clone().unquote().to_string())
             }
             TokenKind::Interpolation => val.push_str(
-                &parse_interpolation(tokens, scope)?
-                    .iter()
+                &Lexer::new(&parse_interpolation(tokens, scope, super_selector)?.to_string())
                     .map(|x| x.kind.to_string())
                     .collect::<String>(),
             ),
             _ => val.push_str(&tok.kind.to_string()),
         }
     }
-    Ok(Lexer::new(
-        &Value::from_tokens(&mut Lexer::new(&val).peekable(), scope)?
+    if val.trim().is_empty() {
+        return Ok(Value::Ident(String::new(), QuoteKind::None));
+    }
+    Ok(
+        Value::from_tokens(&mut Lexer::new(&val).peekable(), scope, super_selector)?
             .eval()?
-            .unquote()
-            .to_string(),
+            .unquote(),
     )
-    .collect())
 }
 
 pub(crate) struct VariableDecl {
@@ -91,6 +93,7 @@ impl VariableDecl {
 pub(crate) fn eat_variable_value<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
     scope: &Scope,
+    super_selector: &Selector,
 ) -> SassResult<VariableDecl> {
     devour_whitespace(toks);
     let mut default = false;
@@ -122,25 +125,21 @@ pub(crate) fn eat_variable_value<I: Iterator<Item = Token>>(
         }
     }
     devour_whitespace(toks);
-    let val = Value::from_tokens(&mut raw.into_iter().peekable(), scope).unwrap();
+    let val = Value::from_tokens(&mut raw.into_iter().peekable(), scope, super_selector).unwrap();
     Ok(VariableDecl::new(val, default))
 }
 
 pub(crate) fn flatten_ident<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
     scope: &Scope,
+    super_selector: &Selector,
 ) -> SassResult<String> {
     let mut s = String::new();
     while let Some(tok) = toks.peek() {
         match tok.kind.clone() {
             TokenKind::Interpolation => {
                 toks.next();
-                s.push_str(
-                    &parse_interpolation(toks, scope)?
-                        .iter()
-                        .map(|x| x.kind.to_string())
-                        .collect::<String>(),
-                )
+                s.push_str(&parse_interpolation(toks, scope, super_selector)?.to_string())
             }
             TokenKind::Ident(ref i) => {
                 toks.next();
@@ -160,6 +159,7 @@ pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
     scope: &Scope,
     q: &TokenKind,
+    super_selector: &Selector,
 ) -> SassResult<Value> {
     let mut s = String::new();
     let mut is_escaped = false;
@@ -194,12 +194,7 @@ pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
             }
             TokenKind::Interpolation if !is_escaped => {
                 found_interpolation = true;
-                s.push_str(
-                    &parse_interpolation(toks, scope)?
-                        .iter()
-                        .map(|x| x.kind.to_string())
-                        .collect::<String>(),
-                );
+                s.push_str(&parse_interpolation(toks, scope, super_selector)?.to_string());
                 continue;
             }
             TokenKind::Interpolation => {

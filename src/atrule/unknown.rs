@@ -27,12 +27,7 @@ impl UnknownAtRule {
             match tok.kind {
                 TokenKind::Symbol(Symbol::OpenCurlyBrace) => break,
                 TokenKind::Interpolation => {
-                    params.push_str(
-                        &parse_interpolation(toks, scope)?
-                            .into_iter()
-                            .map(|x| x.kind.to_string())
-                            .collect::<String>(),
-                    );
+                    params.push_str(&parse_interpolation(toks, scope, super_selector)?.to_string());
                     continue;
                 }
                 TokenKind::Variable(..) => params.push('$'),

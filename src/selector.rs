@@ -1,5 +1,6 @@
 use crate::common::{Scope, Symbol, Whitespace};
 use crate::error::SassResult;
+use crate::lexer::Lexer;
 use crate::utils::{
     devour_whitespace, devour_whitespace_or_comment, flatten_ident, parse_interpolation,
     parse_quoted_string, IsWhitespace,
@@ -8,7 +9,6 @@ use crate::{Token, TokenKind};
 use std::fmt::{self, Display, Write};
 use std::iter::Peekable;
 use std::string::ToString;
-use std::vec::IntoIter;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Selector(pub Vec<SelectorKind>);
@@ -160,20 +160,25 @@ impl Display for SelectorKind {
 
 struct SelectorParser<'a> {
     scope: &'a Scope,
+    super_selector: &'a Selector,
     selectors: Vec<SelectorKind>,
     is_interpolated: bool,
 }
 
 impl<'a> SelectorParser<'a> {
-    const fn new(scope: &'a Scope) -> SelectorParser<'a> {
+    const fn new(scope: &'a Scope, super_selector: &'a Selector) -> SelectorParser<'a> {
         SelectorParser {
             scope,
+            super_selector,
             selectors: Vec::new(),
             is_interpolated: false,
         }
     }
 
-    fn all_selectors(mut self, tokens: &'a mut Peekable<IntoIter<Token>>) -> SassResult<Selector> {
+    fn all_selectors<I: Iterator<Item = Token>>(
+        mut self,
+        tokens: &'a mut Peekable<I>,
+    ) -> SassResult<Selector> {
         self.tokens_to_selectors(tokens)?;
         // remove trailing whitespace
         while let Some(x) = self.selectors.pop() {
@@ -185,9 +190,9 @@ impl<'a> SelectorParser<'a> {
         Ok(Selector(self.selectors))
     }
 
-    fn consume_pseudo_selector(
+    fn consume_pseudo_selector<I: Iterator<Item = Token>>(
         &mut self,
-        tokens: &'_ mut Peekable<IntoIter<Token>>,
+        tokens: &'_ mut Peekable<I>,
     ) -> SassResult<()> {
         if let Some(tok) = tokens.next() {
             match tok.kind {
@@ -232,14 +237,20 @@ impl<'a> SelectorParser<'a> {
         Ok(())
     }
 
-    fn tokens_to_selectors(&mut self, tokens: &'_ mut Peekable<IntoIter<Token>>) -> SassResult<()> {
+    fn tokens_to_selectors<I: Iterator<Item = Token>>(
+        &mut self,
+        tokens: &'_ mut Peekable<I>,
+    ) -> SassResult<()> {
         while tokens.peek().is_some() {
             self.consume_selector(tokens)?;
         }
         Ok(())
     }
 
-    fn consume_selector(&mut self, tokens: &'_ mut Peekable<IntoIter<Token>>) -> SassResult<()> {
+    fn consume_selector<I: Iterator<Item = Token>>(
+        &mut self,
+        tokens: &'_ mut Peekable<I>,
+    ) -> SassResult<()> {
         if devour_whitespace_or_comment(tokens) {
             if let Some(Token {
                 kind: TokenKind::Symbol(Symbol::Comma),
@@ -283,15 +294,21 @@ impl<'a> SelectorParser<'a> {
                 TokenKind::Interpolation => {
                     self.is_interpolated = true;
                     self.tokens_to_selectors(
-                        &mut parse_interpolation(tokens, self.scope)?
-                            .into_iter()
-                            .peekable(),
+                        &mut Lexer::new(
+                            &parse_interpolation(
+                                tokens,
+                                self.scope,
+                                &Selector(vec![SelectorKind::Element(String::from("&"))]),
+                            )?
+                            .to_string(),
+                        )
+                        .peekable(),
                     )?;
                     self.is_interpolated = false;
                 }
-                TokenKind::Symbol(Symbol::OpenSquareBrace) => self
-                    .selectors
-                    .push(Attribute::from_tokens(tokens, self.scope)?),
+                TokenKind::Symbol(Symbol::OpenSquareBrace) => self.selectors.push(
+                    Attribute::from_tokens(tokens, self.scope, self.super_selector)?,
+                ),
                 _ => todo!("unimplemented selector"),
             };
         }
@@ -300,11 +317,12 @@ impl<'a> SelectorParser<'a> {
 }
 
 impl Selector {
-    pub fn from_tokens<'a>(
-        tokens: &'a mut Peekable<IntoIter<Token>>,
+    pub fn from_tokens<'a, I: Iterator<Item = Token>>(
+        tokens: &'a mut Peekable<I>,
         scope: &'a Scope,
+        super_selector: &'a Selector,
     ) -> SassResult<Selector> {
-        SelectorParser::new(scope).all_selectors(tokens)
+        SelectorParser::new(scope, super_selector).all_selectors(tokens)
     }
 
     pub fn zip(&self, other: &Selector) -> Selector {
@@ -390,20 +408,24 @@ pub(crate) struct Attribute {
 }
 
 impl Attribute {
-    pub fn from_tokens(
-        toks: &mut Peekable<IntoIter<Token>>,
+    pub fn from_tokens<I: Iterator<Item = Token>>(
+        toks: &mut Peekable<I>,
         scope: &Scope,
+        super_selector: &Selector,
     ) -> SassResult<SelectorKind> {
         devour_whitespace(toks);
         let attr = if let Some(t) = toks.next() {
             match t.kind {
                 TokenKind::Ident(mut s) => {
-                    s.push_str(&flatten_ident(toks, scope)?);
+                    s.push_str(&flatten_ident(toks, scope, super_selector)?);
                     s
+                }
+                TokenKind::Interpolation => {
+                    parse_interpolation(toks, scope, super_selector)?.to_string()
                 }
                 q @ TokenKind::Symbol(Symbol::DoubleQuote)
                 | q @ TokenKind::Symbol(Symbol::SingleQuote) => {
-                    parse_quoted_string(toks, scope, &q)?.to_string()
+                    parse_quoted_string(toks, scope, &q, super_selector)?.to_string()
                 }
                 _ => return Err("Expected identifier.".into()),
             }
@@ -460,12 +482,12 @@ impl Attribute {
         let value = if let Some(t) = toks.next() {
             match t.kind {
                 TokenKind::Ident(mut s) => {
-                    s.push_str(&flatten_ident(toks, scope)?);
+                    s.push_str(&flatten_ident(toks, scope, super_selector)?);
                     s
                 }
                 q @ TokenKind::Symbol(Symbol::DoubleQuote)
                 | q @ TokenKind::Symbol(Symbol::SingleQuote) => {
-                    parse_quoted_string(toks, scope, &q)?.to_string()
+                    parse_quoted_string(toks, scope, &q, super_selector)?.to_string()
                 }
                 _ => return Err("Expected identifier.".into()),
             }

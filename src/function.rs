@@ -24,6 +24,7 @@ impl Function {
     pub fn decl_from_tokens<I: Iterator<Item = Token>>(
         toks: &mut Peekable<I>,
         mut scope: Scope,
+        super_selector: &Selector,
     ) -> SassResult<(String, Function)> {
         let Token { kind, .. } = toks
             .next()
@@ -38,7 +39,7 @@ impl Function {
             Some(Token {
                 kind: TokenKind::Symbol(Symbol::OpenParen),
                 ..
-            }) => eat_func_args(toks, &scope)?,
+            }) => eat_func_args(toks, &scope, super_selector)?,
             _ => return Err("expected \"(\".".into()),
         };
 
@@ -83,13 +84,14 @@ impl Function {
         Ok(self)
     }
 
-    pub fn call(&self) -> SassResult<Value> {
+    pub fn call(&self, super_selector: &Selector) -> SassResult<Value> {
         for rule in &self.body {
             match rule {
                 AtRule::Return(toks) => {
                     return Value::from_tokens(
                         &mut toks.clone().into_iter().peekable(),
                         &self.scope,
+                        super_selector,
                     )
                 }
                 _ => todo!("unimplemented at rule in function body"),

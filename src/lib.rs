@@ -417,7 +417,7 @@ impl<'a> StyleSheetParser<'a> {
                         self.error(pos, "unexpected variable use at toplevel");
                     }
                     let VariableDecl { val, default } =
-                        eat_variable_value(&mut self.lexer, &self.global_scope)?;
+                        eat_variable_value(&mut self.lexer, &self.global_scope, &Selector::new())?;
                     if !default || self.global_scope.get_var(&name).is_err() {
                         self.global_scope.insert_var(&name, val)?;
                     }
@@ -629,6 +629,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                 return Ok(Some(Expr::Selector(Selector::from_tokens(
                     &mut values.into_iter().peekable(),
                     scope,
+                    super_selector,
                 )?)));
             }
             TokenKind::Variable(_) => {
@@ -644,7 +645,8 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                 {
                     toks.next();
                     devour_whitespace(toks);
-                    let VariableDecl { val, default } = eat_variable_value(toks, scope)?;
+                    let VariableDecl { val, default } =
+                        eat_variable_value(toks, scope, super_selector)?;
                     if !default || scope.get_var(&name).is_err() {
                         return Ok(Some(Expr::VariableDecl(name, Box::new(val))));
                     }

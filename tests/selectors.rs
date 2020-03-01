@@ -95,6 +95,11 @@ test!(
     selector_el_attribute_descendant,
     "a [attr] {\n  color: red;\n}\n"
 );
+test!(
+    selector_attribute_interpolated,
+    "a {\n  [#{&}] {\n    color: red;\n  }\n}\n",
+    "a [a] {\n  color: red;\n}\n"
+);
 test!(selector_el_mul_el, "a, b {\n  color: red;\n}\n");
 test!(
     selector_el_immediate_child_el,
@@ -293,3 +298,8 @@ test!(
     "a, %b, c {\n  color: red;\n}\n",
     "a, c {\n  color: red;\n}\n"
 );
+// test!(
+//     removes_leading_space,
+//     "#{&} a {\n  color: red;\n}\n",
+//     "a {\n  color: red;\n}\n"
+// );
