@@ -48,7 +48,7 @@ impl Add for Value {
                 Self::Null => Value::Ident(c.to_string(), QuoteKind::None),
                 _ => return Err(format!("Undefined operation \"{} + {}\".", c, other).into()),
             },
-            // Self::BinaryOp(..) => todo!(),
+            Self::BinaryOp(..) | Self::Paren(..) => self.eval()?,
             // Self::Paren(..) => todo!(),
             Self::Ident(s1, quotes1) => match other {
                 Self::Ident(s2, quotes2) => {
@@ -82,7 +82,8 @@ impl Add for Value {
                     };
                     Value::Ident(format!("{}{}", s1, c), quotes)
                 }
-                _ => todo!(),
+                Self::BinaryOp(..) | Self::Paren(..) => return Self::Ident(s1, quotes1) + other.eval()?,
+                Self::List(..) => todo!(),
             },
             _ => todo!(),
         })

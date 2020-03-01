@@ -53,6 +53,11 @@ test!(
     "a {\n  color: foo;\n}\n"
 );
 test!(
+    chain_ident_addition,
+    "a {\n  color: a + b + c + d + e + f;\n}\n",
+    "a {\n  color: abcdef;\n}\n"
+);
+test!(
     removes_paren_around_space_list,
     "a {\n  color: (foo bar);\n}\n",
     "a {\n  color: foo bar;\n}\n"
