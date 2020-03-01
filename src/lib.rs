@@ -391,7 +391,7 @@ impl<'a> StyleSheetParser<'a> {
                     let VariableDecl { val, default } =
                         eat_variable_value(&mut self.lexer, &self.global_scope)?;
                     if !default || self.global_scope.get_var(&name).is_err() {
-                        self.global_scope.insert_var(&name, val);
+                        self.global_scope.insert_var(&name, val)?;
                     }
                 }
                 TokenKind::MultilineComment(_) => {
@@ -524,10 +524,10 @@ impl<'a> StyleSheetParser<'a> {
                 }
                 Expr::VariableDecl(name, val) => {
                     if self.scope == 0 {
-                        scope.insert_var(&name, *val.clone());
-                        self.global_scope.insert_var(&name, *val);
+                        scope.insert_var(&name, *val.clone())?;
+                        self.global_scope.insert_var(&name, *val)?;
                     } else {
-                        scope.insert_var(&name, *val);
+                        scope.insert_var(&name, *val)?;
                     }
                 }
                 Expr::Include(rules) => stmts.extend(rules),

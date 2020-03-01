@@ -81,7 +81,7 @@ impl Mixin {
                     },
                 },
             };
-            self.scope.insert_var(&arg.name, val);
+            self.scope.insert_var(&arg.name, val)?;
         }
         Ok(self)
     }
@@ -114,7 +114,7 @@ impl Mixin {
                     }));
                 }
                 Expr::VariableDecl(name, val) => {
-                    self.scope.insert_var(&name, *val);
+                    self.scope.insert_var(&name, *val)?;
                 }
                 Expr::MultilineComment(s) => stmts.push(Stmt::MultilineComment(s)),
             }

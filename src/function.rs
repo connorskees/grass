@@ -78,7 +78,7 @@ impl Function {
                     },
                 },
             };
-            self.scope.insert_var(&arg.name, val);
+            self.scope.insert_var(&arg.name, val)?;
         }
         Ok(self)
     }

@@ -377,8 +377,8 @@ impl Scope {
         }
     }
 
-    pub fn insert_var(&mut self, s: &str, v: Value) -> Option<Value> {
-        self.vars.insert(s.replace('_', "-"), v)
+    pub fn insert_var(&mut self, s: &str, v: Value) -> SassResult<Option<Value>> {
+        Ok(self.vars.insert(s.replace('_', "-"), v.eval()?))
     }
 
     pub fn var_exists(&self, v: &str) -> bool {

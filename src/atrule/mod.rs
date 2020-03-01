@@ -181,7 +181,7 @@ impl AtRule {
                 let mut scope = scope.clone();
                 if from < to {
                     for i in from..(to + through) {
-                        scope.insert_var(&var, Value::Dimension(Number::from(i), Unit::None));
+                        scope.insert_var(&var, Value::Dimension(Number::from(i), Unit::None))?;
                         stmts.extend(eat_unknown_atrule_body(
                             &mut body.clone().into_iter().peekable(),
                             &scope,
@@ -190,7 +190,7 @@ impl AtRule {
                     }
                 } else if from > to {
                     for i in ((to - through)..(from + 1)).skip(1).rev() {
-                        scope.insert_var(&var, Value::Dimension(Number::from(i), Unit::None));
+                        scope.insert_var(&var, Value::Dimension(Number::from(i), Unit::None))?;
                         stmts.extend(eat_unknown_atrule_body(
                             &mut body.clone().into_iter().peekable(),
                             &scope,
@@ -283,7 +283,7 @@ fn eat_unknown_atrule_body<I: Iterator<Item = Token>>(
                 }));
             }
             Expr::VariableDecl(name, val) => {
-                scope.insert_var(&name, *val);
+                scope.insert_var(&name, *val)?;
             }
             Expr::MultilineComment(s) => stmts.push(Stmt::MultilineComment(s)),
         }
