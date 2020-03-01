@@ -460,7 +460,7 @@ impl<'a> StyleSheetParser<'a> {
                         pos,
                     }) = self.lexer.next()
                     {
-                        match AtRule::from_tokens(rule, pos, &mut self.lexer, &self.global_scope, &Selector::new())? {
+                        match AtRule::from_tokens(rule, pos, &mut self.lexer, &mut self.global_scope, &Selector::new())? {
                             AtRule::Mixin(name, mixin) => {
                                 self.global_scope.insert_mixin(&name, *mixin);
                             }
@@ -542,7 +542,7 @@ impl<'a> StyleSheetParser<'a> {
 
 pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
-    scope: &Scope,
+    scope: &mut Scope,
     super_selector: &Selector,
 ) -> SassResult<Option<Expr>> {
     let mut values = Vec::with_capacity(5);

@@ -38,3 +38,8 @@ test!(
     "a {\n  @for $i from 1 to 3 {\n    color: $i;\n  }\n}\n",
     "a {\n  color: 1;\n  color: 2;\n}\n"
 );
+test!(
+    scope,
+    "a {\n  $a: red;\n  @for $i from 1 to 3 {\n    $a: blue;\n  }\n  color: $a;\n}\n",
+    "a {\n  color: blue;\n}\n"
+);

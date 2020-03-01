@@ -37,7 +37,7 @@ impl AtRule {
         rule: &AtRuleKind,
         pos: Pos,
         toks: &mut Peekable<I>,
-        scope: &Scope,
+        scope: &mut Scope,
         super_selector: &Selector,
     ) -> SassResult<AtRule> {
         devour_whitespace(toks);
@@ -71,7 +71,7 @@ impl AtRule {
                 AtRule::Mixin(name, Box::new(mixin))
             }
             AtRuleKind::Function => {
-                let (name, func) = Function::decl_from_tokens(toks, scope)?;
+                let (name, func) = Function::decl_from_tokens(toks, scope.clone())?;
                 AtRule::Function(name, Box::new(func))
             }
             AtRuleKind::Return => {
@@ -176,13 +176,12 @@ impl AtRule {
 
                 devour_whitespace_or_comment(toks);
 
-                let mut scope = scope.clone();
                 if from < to {
                     for i in from..(to + through) {
                         scope.insert_var(&var, Value::Dimension(Number::from(i), Unit::None))?;
                         stmts.extend(eat_stmts(
                             &mut body.clone().into_iter().peekable(),
-                            &scope,
+                            scope,
                             super_selector,
                         )?);
                     }
@@ -191,7 +190,7 @@ impl AtRule {
                         scope.insert_var(&var, Value::Dimension(Number::from(i), Unit::None))?;
                         stmts.extend(eat_stmts(
                             &mut body.clone().into_iter().peekable(),
-                            &scope,
+                            scope,
                             super_selector,
                         )?);
                     }

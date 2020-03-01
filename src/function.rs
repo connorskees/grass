@@ -23,7 +23,7 @@ impl Function {
 
     pub fn decl_from_tokens<I: Iterator<Item = Token>>(
         toks: &mut Peekable<I>,
-        scope: &Scope,
+        mut scope: Scope,
     ) -> SassResult<(String, Function)> {
         let Token { kind, .. } = toks
             .next()
@@ -38,7 +38,7 @@ impl Function {
             Some(Token {
                 kind: TokenKind::Symbol(Symbol::OpenParen),
                 ..
-            }) => eat_func_args(toks, scope)?,
+            }) => eat_func_args(toks, &scope)?,
             _ => return Err("expected \"(\".".into()),
         };
 
@@ -52,7 +52,7 @@ impl Function {
                         rule,
                         tok.pos,
                         toks,
-                        scope,
+                        &mut scope,
                         &Selector::new(),
                     )?),
                     TokenKind::Symbol(Symbol::CloseCurlyBrace) => nesting -= 1,

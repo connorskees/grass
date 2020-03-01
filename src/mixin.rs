@@ -92,7 +92,7 @@ impl Mixin {
 
     fn eval(&mut self, super_selector: &Selector) -> SassResult<Vec<Stmt>> {
         let mut stmts = Vec::new();
-        while let Some(expr) = eat_expr(&mut self.body, &self.scope, super_selector)? {
+        while let Some(expr) = eat_expr(&mut self.body, &mut self.scope, super_selector)? {
             match expr {
                 Expr::AtRule(a) => stmts.push(Stmt::AtRule(a)),
                 Expr::Style(s) => stmts.push(Stmt::Style(s)),

@@ -19,7 +19,7 @@ impl UnknownAtRule {
     pub fn from_tokens<I: Iterator<Item = Token>>(
         toks: &mut Peekable<I>,
         name: &str,
-        scope: &Scope,
+        scope: &mut Scope,
         super_selector: &Selector,
     ) -> SassResult<UnknownAtRule> {
         let mut params = String::new();
