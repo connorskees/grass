@@ -78,7 +78,6 @@
     clippy::or_fun_call,
 )]
 #![cfg_attr(feature = "nightly", feature(track_caller))]
-// todo! handle erroring on styles at the toplevel
 use std::fmt::{self, Display};
 use std::fs;
 use std::io::Write;

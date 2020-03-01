@@ -1,3 +1,7 @@
+use std::fmt::{self, Display, Write};
+use std::iter::Peekable;
+use std::string::ToString;
+
 use crate::common::{Scope, Symbol, Whitespace};
 use crate::error::SassResult;
 use crate::lexer::Lexer;
@@ -6,9 +10,6 @@ use crate::utils::{
     parse_quoted_string, IsWhitespace,
 };
 use crate::{Token, TokenKind};
-use std::fmt::{self, Display, Write};
-use std::iter::Peekable;
-use std::string::ToString;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Selector(pub Vec<SelectorKind>);

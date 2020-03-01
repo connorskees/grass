@@ -22,7 +22,16 @@ impl Add for Value {
                 _ => Value::Ident(format!("{}", other), QuoteKind::None),
             },
             Self::Dimension(num, unit) => match other {
-                Self::Dimension(num2, unit2) => Value::Dimension(num + num2, unit),
+                Self::Dimension(num2, unit2) => {
+                    if !unit.comparable(&unit2) {
+                        return Err(format!("Incompatible units {} and {}.", unit2, unit).into());
+                    }
+                    if unit == unit2 {
+                        Value::Dimension(num + num2, unit)
+                    } else {
+                        todo!("unit conversions")
+                    }
+                }
                 Self::Ident(s, q) => {
                     let quotes = match q {
                         QuoteKind::Double | QuoteKind::Single => QuoteKind::Double,
@@ -99,7 +108,16 @@ impl Sub for Value {
         Ok(match self {
             Self::Null => todo!(),
             Self::Dimension(num, unit) => match other {
-                Self::Dimension(num2, unit2) => Value::Dimension(num - num2, unit),
+                Self::Dimension(num2, unit2) => {
+                    if !unit.comparable(&unit2) {
+                        return Err(format!("Incompatible units {} and {}.", unit2, unit).into());
+                    }
+                    if unit == unit2 {
+                        Value::Dimension(num - num2, unit)
+                    } else {
+                        todo!("unit conversions")
+                    }
+                }
                 _ => todo!(),
             },
             // Self::List(..) => todo!(),
@@ -181,7 +199,22 @@ impl Mul for Value {
         Ok(match self {
             Self::Null => todo!(),
             Self::Dimension(num, unit) => match other {
-                Self::Dimension(num2, unit2) => Value::Dimension(num * num2, unit),
+                Self::Dimension(num2, unit2) => {
+                    if unit2 != Unit::None && unit != Unit::None {
+                        return Err(format!(
+                            "{}{}*{} isn't a valid CSS value.",
+                            num * num2,
+                            unit,
+                            unit2
+                        )
+                        .into());
+                    }
+                    if unit == unit2 {
+                        Value::Dimension(num * num2, unit)
+                    } else {
+                        todo!("unit conversions")
+                    }
+                }
                 _ => {
                     return Err(
                         format!("Undefined operation \"{}{} * {}\".", num, unit, other).into(),

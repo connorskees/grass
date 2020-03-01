@@ -1,8 +1,9 @@
+use std::ffi::OsStr;
+use std::path::Path;
+
 use crate::common::Scope;
 use crate::error::SassResult;
 use crate::{Stmt, StyleSheet};
-use std::ffi::OsStr;
-use std::path::Path;
 
 pub(crate) fn import<P: AsRef<Path>>(path: P) -> SassResult<(Vec<Stmt>, Scope)> {
     let mut rules: Vec<Stmt> = Vec::new();

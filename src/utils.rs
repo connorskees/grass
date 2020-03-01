@@ -1,10 +1,11 @@
+use std::iter::{Iterator, Peekable};
+
 use crate::common::{Keyword, QuoteKind, Symbol};
 use crate::error::SassResult;
 use crate::lexer::Lexer;
 use crate::selector::Selector;
 use crate::value::Value;
 use crate::{Scope, Token, TokenKind};
-use std::iter::{Iterator, Peekable};
 
 pub(crate) trait IsWhitespace {
     fn is_whitespace(&self) -> bool;

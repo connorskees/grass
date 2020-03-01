@@ -1,8 +1,9 @@
-use crate::common::Pos;
 use std::error::Error;
 use std::fmt::{self, Display};
 use std::io;
 use std::string::FromUtf8Error;
+
+use crate::common::Pos;
 
 pub type SassResult<T> = Result<T, SassError>;
 

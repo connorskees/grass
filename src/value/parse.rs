@@ -75,7 +75,7 @@ impl Value {
         super_selector: &Selector,
     ) -> SassResult<Self> {
         let left = Self::_from_tokens(toks, scope, super_selector)?;
-        let whitespace = devour_whitespace_or_comment(toks);
+        devour_whitespace_or_comment(toks);
         let next = match toks.peek() {
             Some(x) => x,
             None => return Ok(left),

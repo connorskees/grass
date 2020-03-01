@@ -1,11 +1,12 @@
+use std::fmt::{self, Display};
+use std::iter::Peekable;
+
 use crate::common::{Pos, QuoteKind, Scope, Symbol};
 use crate::error::SassResult;
 use crate::selector::Selector;
 use crate::utils::{devour_whitespace, parse_interpolation, parse_quoted_string};
 use crate::value::Value;
 use crate::{Expr, Token, TokenKind};
-use std::fmt::{self, Display};
-use std::iter::Peekable;
 
 /// A style: `color: red`
 #[derive(Clone, Debug, Eq, PartialEq)]

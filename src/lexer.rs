@@ -150,11 +150,6 @@ impl<'a> Iterator for Lexer<'a> {
     }
 }
 
-#[allow(dead_code)]
-fn is_whitespace(c: char) -> bool {
-    c == ' ' || c == '\n' || c == '\r' || c == FORM_FEED
-}
-
 impl<'a> Lexer<'a> {
     pub fn new(buf: &'a str) -> Lexer<'a> {
         Lexer {
@@ -191,20 +186,6 @@ impl<'a> Lexer<'a> {
             }
             _ => todo!("expected either `i` or `=` after `!`"),
         }
-    }
-
-    #[allow(dead_code)]
-    fn devour_whitespace(&mut self) -> bool {
-        let mut found_whitespace = false;
-        while let Some(c) = self.buf.peek() {
-            if !is_whitespace(*c) {
-                return found_whitespace;
-            }
-            found_whitespace = true;
-            self.buf.next();
-            self.pos.next_char();
-        }
-        found_whitespace
     }
 
     fn lex_at_rule(&mut self) -> TokenKind {

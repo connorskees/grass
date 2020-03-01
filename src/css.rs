@@ -1,11 +1,12 @@
 //! # Convert from SCSS AST to CSS
+use std::fmt;
+use std::io::Write;
+use std::sync::atomic::Ordering;
+
 use crate::atrule::AtRule;
 use crate::error::SassResult;
 use crate::lexer::IS_UTF8;
 use crate::{RuleSet, Selector, Stmt, Style, StyleSheet};
-use std::fmt;
-use std::io::Write;
-use std::sync::atomic::Ordering;
 
 #[derive(Debug, Clone)]
 enum Toplevel {
@@ -24,8 +25,8 @@ enum BlockEntry {
 impl fmt::Display for BlockEntry {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            BlockEntry::Style(s) => writeln!(f, "  {}", s),
-            BlockEntry::MultilineComment(s) => writeln!(f, "  /*{}*/", s),
+            BlockEntry::Style(s) => writeln!(f, "{}", s),
+            BlockEntry::MultilineComment(s) => writeln!(f, "/*{}*/", s),
         }
     }
 }
@@ -112,8 +113,8 @@ impl Css {
                 } else {
                     self.blocks.push(Toplevel::Newline);
                 }
+                self.blocks.extend(v);
             }
-            self.blocks.extend(v);
         }
         self
     }
@@ -133,7 +134,7 @@ impl Css {
                     has_written = true;
                     writeln!(buf, "{}{} {{", padding, selector)?;
                     for style in styles {
-                        write!(buf, "{}{}", padding, style)?;
+                        write!(buf, "{}  {}", padding, style)?;
                     }
                     writeln!(buf, "{}}}", padding)?;
                 }
@@ -148,7 +149,7 @@ impl Css {
                         } else {
                             writeln!(buf, "{}@{} {} {{", padding, u.name, u.params)?;
                         }
-                        Css::from_stylesheet(StyleSheet::from_stmts(u.body.clone()))
+                        Css::from_stylesheet(StyleSheet::from_stmts(u.body))
                             .pretty_print(buf, nesting + 1)?;
                         writeln!(buf, "{}}}", padding)?;
                     }

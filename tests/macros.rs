@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-#[allow(unused_macros)]
+#[macro_export]
 macro_rules! test {
     ($func:ident, $input:literal) => {
         #[test]

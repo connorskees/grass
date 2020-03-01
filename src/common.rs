@@ -454,6 +454,7 @@ impl ListSeparator {
         }
     }
 
+    // Used in currently unimplemented builtin function
     #[allow(dead_code)]
     pub fn name(self) -> &'static str {
         match self {

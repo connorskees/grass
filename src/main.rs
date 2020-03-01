@@ -1,5 +1,6 @@
-use clap::{App, Arg};
 use std::io::{stdout, BufWriter};
+
+use clap::{App, Arg};
 
 use grass::StyleSheet;
 
