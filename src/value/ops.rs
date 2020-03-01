@@ -82,7 +82,9 @@ impl Add for Value {
                     };
                     Value::Ident(format!("{}{}", s1, c), quotes)
                 }
-                Self::BinaryOp(..) | Self::Paren(..) => return Self::Ident(s1, quotes1) + other.eval()?,
+                Self::BinaryOp(..) | Self::Paren(..) => {
+                    return Self::Ident(s1, quotes1) + other.eval()?
+                }
                 Self::List(..) => todo!(),
             },
             _ => todo!(),

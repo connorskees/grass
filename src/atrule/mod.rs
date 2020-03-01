@@ -9,9 +9,15 @@ use crate::function::Function;
 use crate::mixin::Mixin;
 use crate::selector::Selector;
 use crate::units::Unit;
-use crate::utils::{devour_whitespace, devour_whitespace_or_comment, parse_interpolation};
+use crate::utils::{devour_whitespace, devour_whitespace_or_comment};
 use crate::value::{Number, Value};
-use crate::{eat_expr, Expr, RuleSet, Stmt, Token, TokenKind};
+use crate::{Stmt, Token, TokenKind};
+
+use parse::eat_stmts;
+use unknown::UnknownAtRule;
+
+mod parse;
+mod unknown;
 
 #[derive(Debug, Clone)]
 pub(crate) enum AtRule {
@@ -24,14 +30,6 @@ pub(crate) enum AtRule {
     Charset,
     Unknown(UnknownAtRule),
     For(Vec<Stmt>),
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct UnknownAtRule {
-    pub name: String,
-    pub super_selector: Selector,
-    pub params: String,
-    pub body: Vec<Stmt>,
 }
 
 impl AtRule {
@@ -182,7 +180,7 @@ impl AtRule {
                 if from < to {
                     for i in from..(to + through) {
                         scope.insert_var(&var, Value::Dimension(Number::from(i), Unit::None))?;
-                        stmts.extend(eat_unknown_atrule_body(
+                        stmts.extend(eat_stmts(
                             &mut body.clone().into_iter().peekable(),
                             &scope,
                             super_selector,
@@ -191,7 +189,7 @@ impl AtRule {
                 } else if from > to {
                     for i in ((to - through)..(from + 1)).skip(1).rev() {
                         scope.insert_var(&var, Value::Dimension(Number::from(i), Unit::None))?;
-                        stmts.extend(eat_unknown_atrule_body(
+                        stmts.extend(eat_stmts(
                             &mut body.clone().into_iter().peekable(),
                             &scope,
                             super_selector,
@@ -202,93 +200,15 @@ impl AtRule {
             }
             AtRuleKind::While => todo!("@while not yet implemented"),
             AtRuleKind::Keyframes => todo!("@keyframes not yet implemented"),
-            AtRuleKind::Unknown(name) => {
-                let mut params = String::new();
-                while let Some(tok) = toks.next() {
-                    match tok.kind {
-                        TokenKind::Symbol(Symbol::OpenCurlyBrace) => break,
-                        TokenKind::Interpolation => {
-                            params.push_str(
-                                &parse_interpolation(toks, scope)?
-                                    .into_iter()
-                                    .map(|x| x.kind.to_string())
-                                    .collect::<String>(),
-                            );
-                            continue;
-                        }
-                        TokenKind::Variable(..) => params.push('$'),
-                        TokenKind::Whitespace(..) => {
-                            devour_whitespace(toks);
-                            params.push(' ');
-                            continue;
-                        }
-                        _ => {}
-                    }
-                    params.push_str(&tok.kind.to_string());
-                }
-
-                let raw_body = eat_unknown_atrule_body(toks, scope, super_selector)?;
-                let mut body = Vec::with_capacity(raw_body.len());
-                body.push(Stmt::RuleSet(RuleSet::new()));
-                let mut rules = Vec::new();
-                for stmt in raw_body {
-                    match stmt {
-                        s @ Stmt::Style(..) => rules.push(s),
-                        s => body.push(s),
-                    }
-                }
-
-                body[0] = Stmt::RuleSet(RuleSet {
-                    selector: super_selector.clone(),
-                    rules,
-                    super_selector: Selector::new(),
-                });
-
-                let u = UnknownAtRule {
-                    name: name.clone(),
-                    super_selector: Selector::new(),
-                    params: params.trim().to_owned(),
-                    body,
-                };
-
-                AtRule::Unknown(u)
-            }
+            AtRuleKind::Unknown(name) => AtRule::Unknown(UnknownAtRule::from_tokens(
+                toks,
+                name,
+                scope,
+                super_selector,
+            )?),
             _ => todo!("encountered unimplemented at rule"),
         })
     }
-}
-
-fn eat_unknown_atrule_body<I: Iterator<Item = Token>>(
-    toks: &mut Peekable<I>,
-    scope: &Scope,
-    super_selector: &Selector,
-) -> SassResult<Vec<Stmt>> {
-    let mut stmts = Vec::new();
-    let mut scope = scope.clone();
-    while let Some(expr) = eat_expr(toks, &scope, super_selector)? {
-        match expr {
-            Expr::AtRule(a) => stmts.push(Stmt::AtRule(a)),
-            Expr::Style(s) => stmts.push(Stmt::Style(s)),
-            Expr::Styles(s) => stmts.extend(s.into_iter().map(Box::new).map(Stmt::Style)),
-            Expr::Include(s) => stmts.extend(s),
-            Expr::MixinDecl(..) | Expr::FunctionDecl(..) | Expr::Debug(..) | Expr::Warn(..) => {
-                todo!()
-            }
-            Expr::Selector(selector) => {
-                let rules = eat_unknown_atrule_body(toks, &scope, &super_selector.zip(&selector))?;
-                stmts.push(Stmt::RuleSet(RuleSet {
-                    super_selector: super_selector.clone(),
-                    selector,
-                    rules,
-                }));
-            }
-            Expr::VariableDecl(name, val) => {
-                scope.insert_var(&name, *val)?;
-            }
-            Expr::MultilineComment(s) => stmts.push(Stmt::MultilineComment(s)),
-        }
-    }
-    Ok(stmts)
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
