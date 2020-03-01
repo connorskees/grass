@@ -47,7 +47,7 @@ impl Display for Value {
                     Ok(v) => v,
                     Err(e) => {
                         eprintln!("{}", e);
-                        std::process::exit(0);
+                        std::process::exit(1);
                     }
                 }
             ),
