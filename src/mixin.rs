@@ -2,6 +2,7 @@ use std::iter::Peekable;
 use std::vec::IntoIter;
 
 use crate::args::{eat_call_args, eat_func_args, CallArgs, FuncArgs};
+use crate::atrule::AtRule;
 use crate::common::{Scope, Symbol};
 use crate::error::{SassError, SassResult};
 use crate::selector::Selector;
@@ -95,7 +96,10 @@ impl Mixin {
         let mut stmts = Vec::new();
         while let Some(expr) = eat_expr(&mut self.body, &mut self.scope, super_selector)? {
             match expr {
-                Expr::AtRule(a) => stmts.push(Stmt::AtRule(a)),
+                Expr::AtRule(a) => match a {
+                    AtRule::Content => todo!("@content in mixin"),
+                    _ => stmts.push(Stmt::AtRule(a))
+                },
                 Expr::Style(s) => stmts.push(Stmt::Style(s)),
                 Expr::Styles(s) => stmts.extend(s.into_iter().map(Box::new).map(Stmt::Style)),
                 Expr::Include(s) => stmts.extend(s),

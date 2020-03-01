@@ -28,6 +28,7 @@ pub(crate) enum AtRule {
     Function(String, Box<Function>),
     Return(Vec<Token>),
     Charset,
+    Content,
     Unknown(UnknownAtRule),
     For(Vec<Stmt>),
 }
@@ -213,6 +214,7 @@ impl AtRule {
                 scope,
                 super_selector,
             )?),
+            AtRuleKind::Content => AtRule::Content,
             _ => todo!("encountered unimplemented at rule"),
         })
     }
@@ -232,6 +234,7 @@ pub enum AtRuleKind {
     /// and variables from other stylesheets
     Import,
     Mixin,
+    Content,
     Include,
     /// Defines custom functions that can be used in SassScript
     /// expressions
@@ -335,6 +338,7 @@ impl From<&str> for AtRuleKind {
             "viewport" => Self::Viewport,
             "document" => Self::Document,
             "counterstyle" => Self::CounterStyle,
+            "content" => Self::Content,
             s => Self::Unknown(s.to_owned()),
         }
     }
@@ -376,6 +380,7 @@ impl Display for AtRuleKind {
             Self::Viewport => write!(f, "@viewport"),
             Self::Document => write!(f, "@document"),
             Self::CounterStyle => write!(f, "@counterstyle"),
+            Self::Content => write!(f, "@content"),
             Self::Unknown(s) => write!(f, "@{}", s),
         }
     }

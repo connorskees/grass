@@ -94,7 +94,8 @@ impl Function {
                         super_selector,
                     )
                 }
-                _ => todo!("unimplemented at rule in function body"),
+                AtRule::For(..) => todo!("@for in function"),
+                _ => return Err("This at-rule is not allowed here.".into()),
             }
         }
         todo!()

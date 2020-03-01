@@ -502,6 +502,7 @@ impl<'a> StyleSheetParser<'a> {
                                 return Err("This at-rule is not allowed here.".into())
                             }
                             AtRule::For(s) => rules.extend(s),
+                            AtRule::Content => return Err("@content is only allowed within mixin declarations.".into()),
                             u @ AtRule::Unknown(..) => rules.push(Stmt::AtRule(u)),
                         }
                     }
@@ -527,6 +528,7 @@ impl<'a> StyleSheetParser<'a> {
                 Expr::Style(s) => stmts.push(Stmt::Style(s)),
                 Expr::AtRule(a) => match a {
                     AtRule::For(s) => stmts.extend(s),
+                    AtRule::Content => return Err("@content is only allowed within mixin declarations.".into()),
                     r => stmts.push(Stmt::AtRule(r)),
                 },
                 Expr::Styles(s) => stmts.extend(s.into_iter().map(Box::new).map(Stmt::Style)),
@@ -692,6 +694,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                         AtRule::Warn(a, b) => Ok(Some(Expr::Warn(a, b))),
                         AtRule::Error(pos, err) => Err(SassError::new(err, pos)),
                         AtRule::Return(_) => todo!("@return in unexpected location!"),
+                        AtRule::Content => return Err("@content is only allowed within mixin declarations.".into()),
                         f @ AtRule::For(..) => Ok(Some(Expr::AtRule(f))),
                         u @ AtRule::Unknown(..) => Ok(Some(Expr::AtRule(u))),
                     };

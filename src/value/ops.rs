@@ -47,7 +47,7 @@ impl Add for Value {
                 }
             },
             // Self::List(..) => todo!(),
-            Self::Color(c) => match dbg!(&other) {
+            Self::Color(c) => match other {
                 Self::Ident(s, QuoteKind::Double) | Self::Ident(s, QuoteKind::Single) => {
                     Value::Ident(format!("{}{}", c, s), QuoteKind::Double)
                 }
