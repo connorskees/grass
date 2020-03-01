@@ -1,3 +1,31 @@
+//! # grass
+//! An implementation of the sass specification in pure rust.
+//!
+//! All functionality is currently exposed through [`StyleSheet`].
+//!
+//! Spec progress as of 2020-03-01:
+//!
+//! | Passing | Failing | Total |
+//! |---------|---------|-------|
+//! | 1236    | 3857    | 5093  |
+//!
+//! ## Use as library
+//! ```
+//! use std::io::{BufWriter, stdout};
+//! use grass::{SassResult, StyleSheet};
+//!
+//! fn main() -> SassResult<()> {
+//!     let mut buf = BufWriter::new(stdout());
+//!     StyleSheet::from_path("input.scss")?.print_as_css(&mut buf)
+//! }
+//! ```
+//!
+//! ## Use as binary
+//! ```bash
+//! cargo install grass
+//! grass input.scss
+//! ```
+
 #![warn(
     clippy::all,
     clippy::restriction,
