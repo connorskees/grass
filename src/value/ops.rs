@@ -109,8 +109,8 @@ impl Sub for Value {
                     Value::Ident(format!("{}-{}{}{}", c, quotes, s, quotes), QuoteKind::None)
                 }
                 Self::Null => Value::Ident(format!("{}-", c), QuoteKind::None),
-                v @ Self::Dimension(..) => {
-                    return Err(format!("Undefined operation \"{} - {}\".", c, v).into())
+                Self::Dimension(..) | Self::Color(..) => {
+                    return Err(format!("Undefined operation \"{} - {}\".", c, other).into())
                 }
                 _ => Value::Ident(format!("{}-{}", c, other), QuoteKind::None),
             },
@@ -186,7 +186,7 @@ impl Mul for Value {
                 }
             },
             Self::BinaryOp(..) | Self::Paren(..) => self.eval()?,
-            _ => todo!("incompatible mul types"),
+            _ => return Err(format!("Undefined operation \"{} * {}\".", self, other).into()),
         })
     }
 }
@@ -229,7 +229,7 @@ impl Div for Value {
                     Value::Ident(format!("{}/{}{}{}", c, quotes, s, quotes), QuoteKind::None)
                 }
                 Self::Null => Value::Ident(format!("{}/", c), QuoteKind::None),
-                Self::Dimension(..) => {
+                Self::Dimension(..) | Self::Color(..) => {
                     return Err(format!("Undefined operation \"{} / {}\".", c, other).into())
                 }
                 _ => Value::Ident(format!("{}/{}", c, other), QuoteKind::None),
