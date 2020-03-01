@@ -40,7 +40,17 @@ impl Display for Value {
                     .join(sep.as_str())
             ),
             Self::Color(c) => write!(f, "{}", c),
-            Self::BinaryOp(..) => write!(f, "{}", self.clone().eval().unwrap()),
+            Self::BinaryOp(..) => write!(
+                f,
+                "{}",
+                match self.clone().eval() {
+                    Ok(v) => v,
+                    Err(e) => {
+                        eprintln!("{}", e);
+                        std::process::exit(0);
+                    }
+                }
+            ),
             Self::Paren(val) => write!(f, "{}", val),
             Self::Ident(val, kind) => {
                 if kind == &QuoteKind::None {

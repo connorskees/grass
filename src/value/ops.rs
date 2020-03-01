@@ -31,7 +31,11 @@ impl Add for Value {
                     Value::Ident(format!("{}{}{}", num, unit, s), quotes)
                 }
                 Self::Null => Value::Ident(format!("{}{}", num, unit), QuoteKind::None),
-                _ => todo!(),
+                _ => {
+                    return Err(
+                        format!("Undefined operation \"{}{} + {}\".", num, unit, other).into(),
+                    )
+                }
             },
             // Self::List(..) => todo!(),
             Self::Color(c) => match dbg!(&other) {
@@ -105,7 +109,9 @@ impl Sub for Value {
                     Value::Ident(format!("{}-{}{}{}", c, quotes, s, quotes), QuoteKind::None)
                 }
                 Self::Null => Value::Ident(format!("{}-", c), QuoteKind::None),
-                Self::Dimension(..) => todo!("investigate adding numbers and colors"),
+                v @ Self::Dimension(..) => {
+                    return Err(format!("Undefined operation \"{} - {}\".", c, v).into())
+                }
                 _ => Value::Ident(format!("{}-{}", c, other), QuoteKind::None),
             },
             Self::BinaryOp(..) | Self::Paren(..) => self.eval()?,
@@ -173,7 +179,11 @@ impl Mul for Value {
             Self::Null => todo!(),
             Self::Dimension(num, unit) => match other {
                 Self::Dimension(num2, unit2) => Value::Dimension(num * num2, unit),
-                _ => todo!(),
+                _ => {
+                    return Err(
+                        format!("Undefined operation \"{}{} * {}\".", num, unit, other).into(),
+                    )
+                }
             },
             Self::BinaryOp(..) | Self::Paren(..) => self.eval()?,
             _ => todo!("incompatible mul types"),
@@ -219,7 +229,9 @@ impl Div for Value {
                     Value::Ident(format!("{}/{}{}{}", c, quotes, s, quotes), QuoteKind::None)
                 }
                 Self::Null => Value::Ident(format!("{}/", c), QuoteKind::None),
-                Self::Dimension(..) => todo!("investigate adding numbers and colors"),
+                Self::Dimension(..) => {
+                    return Err(format!("Undefined operation \"{} / {}\".", c, other).into())
+                }
                 _ => Value::Ident(format!("{}/{}", c, other), QuoteKind::None),
             },
             Self::BinaryOp(..) | Self::Paren(..) => self.eval()?,
