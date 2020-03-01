@@ -9,7 +9,7 @@ keywords = ["scss", "sass", "css"]
 repository = "https://github.com/connorskees/grass"
 authors = ["ConnorSkees <39542938+ConnorSkees@users.noreply.github.com>"]
 edition = "2018"
-exclude = ["*.scss", "sass-spec", "tests"]
+exclude = ["*.scss", "sass-spec", "tests", "Cargo.lock"]
 
 [[bin]]
 name = "grass"
