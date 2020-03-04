@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 
 use super::Builtin;
 use crate::common::QuoteKind;
@@ -6,7 +6,7 @@ use crate::units::Unit;
 use crate::value::Number;
 use crate::value::Value;
 
-pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
+pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     decl!(f "alpha", |args, _| {
         max_args!(args, 1);
         match arg!(args, 0, "color") {

@@ -1,10 +1,10 @@
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 
 use super::Builtin;
 use crate::units::Unit;
 use crate::value::{Number, Value};
 
-pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
+pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     decl!(f "length", |args, _| {
         let len = match arg!(args, 0, "list") {
             Value::List(v, _) => Number::from(v.len()),

@@ -1,5 +1,5 @@
 use lazy_static::lazy_static;
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 
 use crate::args::CallArgs;
 use crate::common::Scope;
@@ -20,8 +20,8 @@ mod string;
 pub(crate) type Builtin = Box<dyn Fn(&mut CallArgs, &Scope) -> SassResult<Value> + Send + Sync>;
 
 lazy_static! {
-    pub(crate) static ref GLOBAL_FUNCTIONS: BTreeMap<String, Builtin> = {
-        let mut m = BTreeMap::new();
+    pub(crate) static ref GLOBAL_FUNCTIONS: HashMap<String, Builtin> = {
+        let mut m = HashMap::new();
         color::register(&mut m);
         list::register(&mut m);
         math::register(&mut m);

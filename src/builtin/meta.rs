@@ -1,11 +1,11 @@
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 
 use super::{Builtin, GLOBAL_FUNCTIONS};
 use crate::common::QuoteKind;
 use crate::units::Unit;
 use crate::value::Value;
 
-pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
+pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     decl!(f "if", |args, _| {
         max_args!(args, 3);
         if arg!(args, 0, "condition").is_true()? {

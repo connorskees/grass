@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 
 use super::Builtin;
 use crate::color::Color;
@@ -35,7 +35,7 @@ macro_rules! opt_arg {
     };
 }
 
-pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
+pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     decl!(f "change-color", |args, _| {
         if args.get("1").is_some() {
             return Err("Only one positional argument is allowed. All other arguments must be passed by name.".into());

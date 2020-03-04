@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 
 use num_bigint::BigInt;
 use num_traits::cast::ToPrimitive;
@@ -9,7 +9,7 @@ use crate::common::QuoteKind;
 use crate::units::Unit;
 use crate::value::{Number, Value};
 
-pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
+pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     decl!(f "to-upper-case", |args, _| {
         max_args!(args, 1);
         match arg!(args, 0, "string") {

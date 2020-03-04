@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 
 use super::Builtin;
 use crate::color::Color;
@@ -6,7 +6,7 @@ use crate::common::QuoteKind;
 use crate::units::Unit;
 use crate::value::{Number, Value};
 
-pub(crate) fn register(f: &mut BTreeMap<String, Builtin>) {
+pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     decl!(f "hsl", |args, _| {
         let hue = match arg!(args, 0, "hue") {
             Value::Dimension(n, _) => n,
