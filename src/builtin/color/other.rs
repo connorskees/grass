@@ -7,17 +7,17 @@ use crate::units::Unit;
 use crate::value::{Number, Value};
 
 macro_rules! opt_arg {
-    ($args:ident, $name:ident, $arg:literal, $high:literal, $low:literal) => {
+    ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal) => {
         let $name = match arg!($args, -1, $arg = Value::Null) {
-            Value::Dimension(n, u) => Some(bound!($arg, n, u, $high, $low)),
+            Value::Dimension(n, u) => Some(bound!($arg, n, u, $low, $high)),
             Value::Null => None,
             v => return Err(format!("${}: {} is not a number.", $arg, v).into()),
         };
     };
-    (scale: $args:ident, $name:ident, $arg:literal, $high:literal, $low:literal) => {
+    (scale: $args:ident, $name:ident, $arg:literal, $low:literal, $high:literal) => {
         let $name = match arg!($args, -1, $arg = Value::Null) {
             Value::Dimension(n, Unit::Percent) => {
-                Some(bound!($arg, n, Unit::Percent, $high, $low) / Number::from(100))
+                Some(bound!($arg, n, Unit::Percent, $low, $high) / Number::from(100))
             }
             v @ Value::Dimension(..) => {
                 return Err(format!("${}: Expected {} to have unit \"%\".", $arg, v).into())
@@ -26,9 +26,9 @@ macro_rules! opt_arg {
             v => return Err(format!("${}: {} is not a number.", $arg, v).into()),
         };
     };
-    (hsl: $args:ident, $name:ident, $arg:literal, $high:literal, $low:literal) => {
+    (hsl: $args:ident, $name:ident, $arg:literal, $low:literal, $high:literal) => {
         let $name = match arg!($args, -1, $arg = Value::Null) {
-            Value::Dimension(n, u) => Some(bound!($arg, n, u, $high, $low) / Number::from(100)),
+            Value::Dimension(n, u) => Some(bound!($arg, n, u, $low, $high) / Number::from(100)),
             Value::Null => None,
             v => return Err(format!("${}: {} is not a number.", $arg, v).into()),
         };
