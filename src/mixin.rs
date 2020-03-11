@@ -98,7 +98,7 @@ impl Mixin {
             match expr {
                 Expr::AtRule(a) => match a {
                     AtRule::Content => todo!("@content in mixin"),
-                    _ => stmts.push(Stmt::AtRule(a))
+                    _ => stmts.push(Stmt::AtRule(a)),
                 },
                 Expr::Style(s) => stmts.push(Stmt::Style(s)),
                 Expr::Styles(s) => stmts.extend(s.into_iter().map(Box::new).map(Stmt::Style)),
