@@ -1,4 +1,4 @@
-use lazy_static::lazy_static;
+use once_cell::sync::Lazy;
 use std::collections::HashMap;
 
 use crate::args::CallArgs;
@@ -19,14 +19,12 @@ mod string;
 
 pub(crate) type Builtin = Box<dyn Fn(&mut CallArgs, &Scope) -> SassResult<Value> + Send + Sync>;
 
-lazy_static! {
-    pub(crate) static ref GLOBAL_FUNCTIONS: HashMap<String, Builtin> = {
-        let mut m = HashMap::new();
-        color::register(&mut m);
-        list::register(&mut m);
-        math::register(&mut m);
-        meta::register(&mut m);
-        string::register(&mut m);
-        m
-    };
-}
+pub(crate) static GLOBAL_FUNCTIONS: Lazy<HashMap<String, Builtin>> = Lazy::new(|| {
+    let mut m = HashMap::new();
+    color::register(&mut m);
+    list::register(&mut m);
+    math::register(&mut m);
+    meta::register(&mut m);
+    string::register(&mut m);
+    m
+});
