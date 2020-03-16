@@ -1,11 +1,11 @@
 [package]
 name = "grass"
-version = "0.3.1"
-description = "An SCSS compiler in Rust"
+version = "0.3.2"
+description = "SASS compiler"
 readme = "README.md"
 license = "MIT"
 categories = ["command-line-utilities", "web-programming"]
-keywords = ["scss", "sass", "css"]
+keywords = ["scss", "sass", "css", "web"]
 repository = "https://github.com/connorskees/grass"
 authors = ["ConnorSkees <39542938+ConnorSkees@users.noreply.github.com>"]
 edition = "2018"
