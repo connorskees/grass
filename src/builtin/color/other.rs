@@ -6,7 +6,7 @@ use crate::common::QuoteKind;
 use crate::units::Unit;
 use crate::value::{Number, Value};
 
-macro_rules! opt_arg {
+macro_rules! opt_rgba {
     ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal) => {
         let $name = match arg!($args, -1, $arg = Value::Null) {
             Value::Dimension(n, u) => Some(bound!($arg, n, u, $low, $high)),
@@ -14,19 +14,10 @@ macro_rules! opt_arg {
             v => return Err(format!("${}: {} is not a number.", $arg, v).into()),
         };
     };
-    (scale: $args:ident, $name:ident, $arg:literal, $low:literal, $high:literal) => {
-        let $name = match arg!($args, -1, $arg = Value::Null) {
-            Value::Dimension(n, Unit::Percent) => {
-                Some(bound!($arg, n, Unit::Percent, $low, $high) / Number::from(100))
-            }
-            v @ Value::Dimension(..) => {
-                return Err(format!("${}: Expected {} to have unit \"%\".", $arg, v).into())
-            }
-            Value::Null => None,
-            v => return Err(format!("${}: {} is not a number.", $arg, v).into()),
-        };
-    };
-    (hsl: $args:ident, $name:ident, $arg:literal, $low:literal, $high:literal) => {
+}
+
+macro_rules! opt_hsl {
+    ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal) => {
         let $name = match arg!($args, -1, $arg = Value::Null) {
             Value::Dimension(n, u) => Some(bound!($arg, n, u, $low, $high) / Number::from(100)),
             Value::Null => None,
@@ -46,10 +37,10 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             v => return Err(format!("$color: {} is not a color.", v).into()),
         };
 
-        opt_arg!(args, alpha, "alpha", 0, 1);
-        opt_arg!(args, red, "red", 0, 255);
-        opt_arg!(args, green, "green", 0, 255);
-        opt_arg!(args, blue, "blue", 0, 255);
+        opt_rgba!(args, alpha, "alpha", 0, 1);
+        opt_rgba!(args, red, "red", 0, 255);
+        opt_rgba!(args, green, "green", 0, 255);
+        opt_rgba!(args, blue, "blue", 0, 255);
 
         if red.is_some() || green.is_some() || blue.is_some() {
             return Ok(Value::Color(Color::from_rgba(red.unwrap_or(color.red()), green.unwrap_or(color.green()), blue.unwrap_or(color.blue()), alpha.unwrap_or(color.alpha()))))
@@ -61,8 +52,8 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             v => return Err(format!("$hue: {} is not a number.", v).into()),
         };
 
-        opt_arg!(hsl: args, saturation, "saturation", 0, 100);
-        opt_arg!(hsl: args, luminance, "lightness", 0, 100);
+        opt_hsl!(args, saturation, "saturation", 0, 100);
+        opt_hsl!(args, luminance, "lightness", 0, 100);
 
         if hue.is_some() || saturation.is_some() || luminance.is_some() {
             // Color::as_hsla() returns more exact values than Color::hue(), etc.
@@ -84,10 +75,10 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 v => return Err(format!("$color: {} is not a color.", v).into()),
             };
 
-            opt_arg!(args, alpha, "alpha", -1, 1);
-            opt_arg!(args, red, "red", -255, 255);
-            opt_arg!(args, green, "green", -255, 255);
-            opt_arg!(args, blue, "blue", -255, 255);
+            opt_rgba!(args, alpha, "alpha", -1, 1);
+            opt_rgba!(args, red, "red", -255, 255);
+            opt_rgba!(args, green, "green", -255, 255);
+            opt_rgba!(args, blue, "blue", -255, 255);
 
             if red.is_some() || green.is_some() || blue.is_some() {
                 return Ok(Value::Color(Color::from_rgba(
@@ -106,8 +97,8 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 _ => todo!("expected either unitless or % number for hue"),
             };
 
-            opt_arg!(hsl: args, saturation, "saturation", -100, 100);
-            opt_arg!(hsl: args, luminance, "lightness", -100, 100);
+            opt_hsl!(args, saturation, "saturation", -100, 100);
+            opt_hsl!(args, luminance, "lightness", -100, 100);
 
             if hue.is_some() || saturation.is_some() || luminance.is_some() {
                 // Color::as_hsla() returns more exact values than Color::hue(), etc.
@@ -136,10 +127,25 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 v => return Err(format!("$color: {} is not a color.", v).into()),
             };
 
-            opt_arg!(scale: args, alpha, "alpha", -100, 100);
-            opt_arg!(scale: args, red, "red", -100, 100);
-            opt_arg!(scale: args, green, "green", -100, 100);
-            opt_arg!(scale: args, blue, "blue", -100, 100);
+            macro_rules! opt_scale_arg {
+                ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal) => {
+                    let $name = match arg!($args, -1, $arg = Value::Null) {
+                        Value::Dimension(n, Unit::Percent) => {
+                            Some(bound!($arg, n, Unit::Percent, $low, $high) / Number::from(100))
+                        }
+                        v @ Value::Dimension(..) => {
+                            return Err(format!("${}: Expected {} to have unit \"%\".", $arg, v).into())
+                        }
+                        Value::Null => None,
+                        v => return Err(format!("${}: {} is not a number.", $arg, v).into()),
+                    };
+                };
+            }
+
+            opt_scale_arg!(args, alpha, "alpha", -100, 100);
+            opt_scale_arg!(args, red, "red", -100, 100);
+            opt_scale_arg!(args, green, "green", -100, 100);
+            opt_scale_arg!(args, blue, "blue", -100, 100);
 
             if red.is_some() || green.is_some() || blue.is_some() {
                 return Ok(Value::Color(Color::from_rgba(
@@ -174,8 +180,8 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 _ => todo!("expected either unitless or % number for hue"),
             };
 
-            opt_arg!(scale: args, saturation, "saturation", -100, 100);
-            opt_arg!(scale: args, luminance, "lightness", -100, 100);
+            opt_scale_arg!(args, saturation, "saturation", -100, 100);
+            opt_scale_arg!(args, luminance, "lightness", -100, 100);
 
             if hue.is_some() || saturation.is_some() || luminance.is_some() {
                 // Color::as_hsla() returns more exact values than Color::hue(), etc.
