@@ -36,7 +36,7 @@ macro_rules! opt_arg {
 }
 
 pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
-    decl!(f "change-color", |args, _| {
+    f.insert("change-color".to_owned(), Box::new(|args, _| {
         if args.get("1").is_some() {
             return Err("Only one positional argument is allowed. All other arguments must be passed by name.".into());
         }
@@ -75,123 +75,150 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         } else {
             color
         }))
-    });
-    decl!(f "adjust-color", |args, _| {
-        let color = match arg!(args, 0, "color") {
-            Value::Color(c) => c,
-            v => return Err(format!("$color: {} is not a color.", v).into()),
-        };
+    }));
+    f.insert(
+        "adjust-color".to_owned(),
+        Box::new(|args, _| {
+            let color = match arg!(args, 0, "color") {
+                Value::Color(c) => c,
+                v => return Err(format!("$color: {} is not a color.", v).into()),
+            };
 
-        opt_arg!(args, alpha, "alpha", -1, 1);
-        opt_arg!(args, red, "red", -255, 255);
-        opt_arg!(args, green, "green", -255, 255);
-        opt_arg!(args, blue, "blue", -255, 255);
+            opt_arg!(args, alpha, "alpha", -1, 1);
+            opt_arg!(args, red, "red", -255, 255);
+            opt_arg!(args, green, "green", -255, 255);
+            opt_arg!(args, blue, "blue", -255, 255);
 
-        if red.is_some() || green.is_some() || blue.is_some() {
-            return
-            Ok(Value::Color(
-                Color::from_rgba(
+            if red.is_some() || green.is_some() || blue.is_some() {
+                return Ok(Value::Color(Color::from_rgba(
                     color.red() + red.unwrap_or(Number::from(0)),
                     color.green() + green.unwrap_or(Number::from(0)),
                     color.blue() + blue.unwrap_or(Number::from(0)),
-                    color.alpha() + alpha.unwrap_or(Number::from(0))
-                )
-            ))
-        }
+                    color.alpha() + alpha.unwrap_or(Number::from(0)),
+                )));
+            }
 
-        let hue = match arg!(args, -1, "hue"=Value::Null) {
-            Value::Dimension(n, Unit::None)
-            | Value::Dimension(n, Unit::Percent)
-            | Value::Dimension(n, Unit::Deg) => Some(n),
-            Value::Null => None,
-            _ => todo!("expected either unitless or % number for hue"),
-        };
+            let hue = match arg!(args, -1, "hue" = Value::Null) {
+                Value::Dimension(n, Unit::None)
+                | Value::Dimension(n, Unit::Percent)
+                | Value::Dimension(n, Unit::Deg) => Some(n),
+                Value::Null => None,
+                _ => todo!("expected either unitless or % number for hue"),
+            };
 
-        opt_arg!(hsl: args, saturation, "saturation", -100, 100);
-        opt_arg!(hsl: args, luminance, "lightness", -100, 100);
+            opt_arg!(hsl: args, saturation, "saturation", -100, 100);
+            opt_arg!(hsl: args, luminance, "lightness", -100, 100);
 
-        if hue.is_some() || saturation.is_some() || luminance.is_some() {
-            // Color::as_hsla() returns more exact values than Color::hue(), etc.
-            let (this_hue, this_saturation, this_luminance, this_alpha) = color.as_hsla();
-            return Ok(Value::Color(
-                Color::from_hsla(
+            if hue.is_some() || saturation.is_some() || luminance.is_some() {
+                // Color::as_hsla() returns more exact values than Color::hue(), etc.
+                let (this_hue, this_saturation, this_luminance, this_alpha) = color.as_hsla();
+                return Ok(Value::Color(Color::from_hsla(
                     this_hue + hue.unwrap_or(Number::from(0)),
                     this_saturation + saturation.unwrap_or(Number::from(0)),
                     this_luminance + luminance.unwrap_or(Number::from(0)),
-                    this_alpha + alpha.unwrap_or(Number::from(0))
-                )
-            ))
-        }
+                    this_alpha + alpha.unwrap_or(Number::from(0)),
+                )));
+            }
 
-        Ok(Value::Color(if let Some(a) = alpha {
-            let temp_alpha = color.alpha();
-            color.with_alpha(temp_alpha + a)
-        } else {
-            color
-        }))
-    });
-    decl!(f "scale-color", |args, _| {
-        let color = match arg!(args, 0, "color") {
-            Value::Color(c) => c,
-            v => return Err(format!("$color: {} is not a color.", v).into()),
-        };
+            Ok(Value::Color(if let Some(a) = alpha {
+                let temp_alpha = color.alpha();
+                color.with_alpha(temp_alpha + a)
+            } else {
+                color
+            }))
+        }),
+    );
+    f.insert(
+        "scale-color".to_owned(),
+        Box::new(|args, _| {
+            let color = match arg!(args, 0, "color") {
+                Value::Color(c) => c,
+                v => return Err(format!("$color: {} is not a color.", v).into()),
+            };
 
-        opt_arg!(scale: args, alpha, "alpha", -100, 100);
-        opt_arg!(scale: args, red, "red", -100, 100);
-        opt_arg!(scale: args, green, "green", -100, 100);
-        opt_arg!(scale: args, blue, "blue", -100, 100);
+            opt_arg!(scale: args, alpha, "alpha", -100, 100);
+            opt_arg!(scale: args, red, "red", -100, 100);
+            opt_arg!(scale: args, green, "green", -100, 100);
+            opt_arg!(scale: args, blue, "blue", -100, 100);
 
-        if red.is_some() || green.is_some() || blue.is_some() {
-            return
-            Ok(Value::Color(
-                Color::from_rgba(
-                    scale(color.red(), red.unwrap_or(Number::from(0)), Number::from(255)),
-                    scale(color.green(), green.unwrap_or(Number::from(0)), Number::from(255)),
-                    scale(color.blue(), blue.unwrap_or(Number::from(0)), Number::from(255)),
-                    scale(color.alpha(), alpha.unwrap_or(Number::from(0)), Number::from(1)),
-                )
-            ))
-        }
+            if red.is_some() || green.is_some() || blue.is_some() {
+                return Ok(Value::Color(Color::from_rgba(
+                    scale(
+                        color.red(),
+                        red.unwrap_or(Number::from(0)),
+                        Number::from(255),
+                    ),
+                    scale(
+                        color.green(),
+                        green.unwrap_or(Number::from(0)),
+                        Number::from(255),
+                    ),
+                    scale(
+                        color.blue(),
+                        blue.unwrap_or(Number::from(0)),
+                        Number::from(255),
+                    ),
+                    scale(
+                        color.alpha(),
+                        alpha.unwrap_or(Number::from(0)),
+                        Number::from(1),
+                    ),
+                )));
+            }
 
-        let hue = match arg!(args, -1, "hue"=Value::Null) {
-            Value::Dimension(n, Unit::None)
-            | Value::Dimension(n, Unit::Percent)
-            | Value::Dimension(n, Unit::Deg) => Some(n),
-            Value::Null => None,
-            _ => todo!("expected either unitless or % number for hue"),
-        };
+            let hue = match arg!(args, -1, "hue" = Value::Null) {
+                Value::Dimension(n, Unit::None)
+                | Value::Dimension(n, Unit::Percent)
+                | Value::Dimension(n, Unit::Deg) => Some(n),
+                Value::Null => None,
+                _ => todo!("expected either unitless or % number for hue"),
+            };
 
-        opt_arg!(scale: args, saturation, "saturation", -100, 100);
-        opt_arg!(scale: args, luminance, "lightness", -100, 100);
+            opt_arg!(scale: args, saturation, "saturation", -100, 100);
+            opt_arg!(scale: args, luminance, "lightness", -100, 100);
 
-        if hue.is_some() || saturation.is_some() || luminance.is_some() {
-            // Color::as_hsla() returns more exact values than Color::hue(), etc.
-            let (this_hue, this_saturation, this_luminance, this_alpha) = color.as_hsla();
-            return Ok(Value::Color(
-                Color::from_hsla(
+            if hue.is_some() || saturation.is_some() || luminance.is_some() {
+                // Color::as_hsla() returns more exact values than Color::hue(), etc.
+                let (this_hue, this_saturation, this_luminance, this_alpha) = color.as_hsla();
+                return Ok(Value::Color(Color::from_hsla(
                     scale(this_hue, hue.unwrap_or(Number::from(0)), Number::from(360)),
-                    scale(this_saturation, saturation.unwrap_or(Number::from(0)), Number::from(1)),
-                    scale(this_luminance, luminance.unwrap_or(Number::from(0)), Number::from(1)),
-                    scale(this_alpha, alpha.unwrap_or(Number::from(0)), Number::from(1)),
-                )
-            ))
-        }
+                    scale(
+                        this_saturation,
+                        saturation.unwrap_or(Number::from(0)),
+                        Number::from(1),
+                    ),
+                    scale(
+                        this_luminance,
+                        luminance.unwrap_or(Number::from(0)),
+                        Number::from(1),
+                    ),
+                    scale(
+                        this_alpha,
+                        alpha.unwrap_or(Number::from(0)),
+                        Number::from(1),
+                    ),
+                )));
+            }
 
-        Ok(Value::Color(if let Some(a) = alpha {
-            let temp_alpha = color.alpha();
-            color.with_alpha(scale(temp_alpha, a, Number::from(1)))
-        } else {
-            color
-        }))
-    });
-    decl!(f "ie-hex-str", |args, _| {
-        max_args!(args, 1);
-        let color = match arg!(args, 0, "color") {
-            Value::Color(c) => c,
-            v => return Err(format!("$color: {} is not a color.", v).into()),
-        };
-        Ok(Value::Ident(color.to_ie_hex_str(), QuoteKind::None))
-    });
+            Ok(Value::Color(if let Some(a) = alpha {
+                let temp_alpha = color.alpha();
+                color.with_alpha(scale(temp_alpha, a, Number::from(1)))
+            } else {
+                color
+            }))
+        }),
+    );
+    f.insert(
+        "ie-hex-str".to_owned(),
+        Box::new(|args, _| {
+            max_args!(args, 1);
+            let color = match arg!(args, 0, "color") {
+                Value::Color(c) => c,
+                v => return Err(format!("$color: {} is not a color.", v).into()),
+            };
+            Ok(Value::Ident(color.to_ie_hex_str(), QuoteKind::None))
+        }),
+    );
 }
 
 fn scale(val: Number, by: Number, max: Number) -> Number {

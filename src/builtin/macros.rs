@@ -19,12 +19,6 @@ macro_rules! arg {
     };
 }
 
-macro_rules! decl {
-    ($f:ident $name:literal, $body:expr) => {
-        $f.insert($name.to_owned(), Box::new($body));
-    };
-}
-
 macro_rules! max_args {
     ($args:ident, $count:literal) => {
         if $args.len() > $count {

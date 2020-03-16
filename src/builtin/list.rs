@@ -5,11 +5,14 @@ use crate::units::Unit;
 use crate::value::{Number, Value};
 
 pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
-    decl!(f "length", |args, _| {
-        let len = match arg!(args, 0, "list") {
-            Value::List(v, _) => Number::from(v.len()),
-            _ => Number::from(1)
-        };
-        Ok(Value::Dimension(len, Unit::None))
-    });
+    f.insert(
+        "length".to_owned(),
+        Box::new(|args, _| {
+            let len = match arg!(args, 0, "list") {
+                Value::List(v, _) => Number::from(v.len()),
+                _ => Number::from(1),
+            };
+            Ok(Value::Dimension(len, Unit::None))
+        }),
+    );
 }
