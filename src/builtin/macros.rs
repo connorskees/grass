@@ -53,7 +53,35 @@ macro_rules! bound {
             $arg
         }
     };
+    // HACK: we accept `$low` as an ident here in order to work around
+    // a bug in the nightly compiler.
+    // https://github.com/rust-lang/rust/issues/70050
+    ($name:literal, $arg:ident, $unit:ident, $low:ident, $high:literal) => {
+        if $arg > Number::from($high) || $arg < Number::from($low) {
+            return Err(format!(
+                "${}: Expected {}{} to be within {}{} and {}{}.",
+                $name, $arg, $unit, $low, $unit, $high, $unit,
+            )
+            .into());
+        } else {
+            $arg
+        }
+    };
     ($name:literal, $arg:ident, $unit:path, $low:literal, $high:literal) => {
+        if $arg > Number::from($high) || $arg < Number::from($low) {
+            return Err(format!(
+                "${}: Expected {}{} to be within {}{} and {}{}.",
+                $name, $arg, $unit, $low, $unit, $high, $unit,
+            )
+            .into());
+        } else {
+            $arg
+        }
+    };
+    // HACK: we accept `$low` as an ident here in order to work around
+    // a bug in the nightly compiler.
+    // https://github.com/rust-lang/rust/issues/70050
+    ($name:literal, $arg:ident, $unit:path, $low:ident, $high:literal) => {
         if $arg > Number::from($high) || $arg < Number::from($low) {
             return Err(format!(
                 "${}: Expected {}{} to be within {}{} and {}{}.",

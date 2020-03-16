@@ -8,8 +8,9 @@ use crate::value::{Number, Value};
 
 macro_rules! opt_rgba {
     ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal) => {
+        let x = $low;
         let $name = match arg!($args, -1, $arg = Value::Null) {
-            Value::Dimension(n, u) => Some(bound!($arg, n, u, $low, $high)),
+            Value::Dimension(n, u) => Some(bound!($arg, n, u, x, $high)),
             Value::Null => None,
             v => return Err(format!("${}: {} is not a number.", $arg, v).into()),
         };
@@ -18,8 +19,9 @@ macro_rules! opt_rgba {
 
 macro_rules! opt_hsl {
     ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal) => {
+        let x = $low;
         let $name = match arg!($args, -1, $arg = Value::Null) {
-            Value::Dimension(n, u) => Some(bound!($arg, n, u, $low, $high) / Number::from(100)),
+            Value::Dimension(n, u) => Some(bound!($arg, n, u, x, $high) / Number::from(100)),
             Value::Null => None,
             v => return Err(format!("${}: {} is not a number.", $arg, v).into()),
         };
@@ -129,12 +131,15 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
 
             macro_rules! opt_scale_arg {
                 ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal) => {
+                    let x = $low;
                     let $name = match arg!($args, -1, $arg = Value::Null) {
                         Value::Dimension(n, Unit::Percent) => {
-                            Some(bound!($arg, n, Unit::Percent, $low, $high) / Number::from(100))
+                            Some(bound!($arg, n, Unit::Percent, x, $high) / Number::from(100))
                         }
                         v @ Value::Dimension(..) => {
-                            return Err(format!("${}: Expected {} to have unit \"%\".", $arg, v).into())
+                            return Err(
+                                format!("${}: Expected {} to have unit \"%\".", $arg, v).into()
+                            )
                         }
                         Value::Null => None,
                         v => return Err(format!("${}: {} is not a number.", $arg, v).into()),
