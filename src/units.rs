@@ -91,6 +91,11 @@ pub(crate) enum Unit {
     Unknown(String),
     /// Unspecified unit
     None,
+
+    /// Two units multiplied together
+    Mul(Box<Unit>, Box<Unit>),
+    /// A unit divided by another
+    Div(Box<Unit>, Box<Unit>),
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -223,6 +228,8 @@ impl Into<String> for Unit {
             Unit::X => "x",
             Unit::Fr => "fr",
             Unit::None => "",
+            Unit::Mul(l, r) => return format!("{}*{}", l, r),
+            Unit::Div(l, r) => return format!("{}/{}", l, r),
             Unit::Unknown(ref s) => s,
         }
         .into()
@@ -269,6 +276,8 @@ impl fmt::Display for Unit {
             Unit::Fr => write!(f, "fr"),
             Unit::Unknown(s) => write!(f, "{}", s),
             Unit::None => write!(f, ""),
+            Unit::Mul(l, r) => write!(f, "{}*{}", l, r),
+            Unit::Div(l, r) => write!(f, "{}/{}", l, r),
         }
     }
 }

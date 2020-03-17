@@ -29,7 +29,13 @@ impl Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Important => write!(f, "!important"),
-            Self::Dimension(num, unit) => write!(f, "{}{}", num, unit),
+            Self::Dimension(num, unit) => match unit {
+                Unit::Mul(..) | Unit::Div(..) => {
+                    eprintln!("Error: {}{} isn't a valid CSS value.", num, unit);
+                    std::process::exit(1);
+                }
+                _ => write!(f, "{}{}", num, unit),
+            },
             Self::List(vals, sep) => write!(
                 f,
                 "{}",

@@ -200,19 +200,12 @@ impl Mul for Value {
             Self::Null => todo!(),
             Self::Dimension(num, unit) => match other {
                 Self::Dimension(num2, unit2) => {
-                    if unit2 != Unit::None && unit != Unit::None {
-                        return Err(format!(
-                            "{}{}*{} isn't a valid CSS value.",
-                            num * num2,
-                            unit,
-                            unit2
-                        )
-                        .into());
-                    }
-                    if unit == unit2 {
+                    if unit == Unit::None {
+                        Value::Dimension(num * num2, unit2)
+                    } else if unit2 == Unit::None {
                         Value::Dimension(num * num2, unit)
                     } else {
-                        todo!("unit conversions")
+                        Value::Dimension(num * num2, Unit::Mul(Box::new(unit), Box::new(unit2)))
                     }
                 }
                 _ => {
