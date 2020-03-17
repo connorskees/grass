@@ -47,7 +47,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             max_args!(args, 1);
             let unit = match arg!(args, 0, "number") {
                 Value::Dimension(_, u) => u.to_string(),
-                _ => String::new(),
+                v => return Err(format!("$number: {} is not a number.", v).into()),
             };
             Ok(Value::Ident(unit, QuoteKind::Double))
         }),
