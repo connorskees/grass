@@ -321,20 +321,6 @@ test!(
     "a {\n  color: 1 + foo();\n}\n",
     "a {\n  color: 1foo();\n}\n"
 );
-test!(positive_integer, "a {\n  color: 1;\n}\n");
-test!(negative_integer, "a {\n  color: -1;\n}\n");
-test!(
-    positive_float_no_leading_zero,
-    "a {\n  color: .1;\n}\n",
-    "a {\n  color: 0.1;\n}\n"
-);
-test!(
-    negative_float_no_leading_zero,
-    "a {\n  color: -.1;\n}\n",
-    "a {\n  color: -0.1;\n}\n"
-);
-test!(positive_float_leading_zero, "a {\n  color: 0.1;\n}\n");
-test!(negative_float_leading_zero, "a {\n  color: -0.1;\n}\n");
 test!(
     unitless_plus_null,
     "a {\n  color: 1 + null;\n}\n",

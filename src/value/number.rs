@@ -100,28 +100,47 @@ impl Display for Number {
         if self.val.is_negative() {
             f.write_char('-')?;
         }
-        write!(f, "{}", self.val.to_integer().abs())?;
+
+        let mut whole = self.val.to_integer().abs();
+        let mut dec = String::new();
+
         let mut frac = self.val.fract();
         if frac != BigRational::from_integer(BigInt::from(0)) {
-            f.write_char('.')?;
+            dec.write_char('.')?;
             for _ in 0..(PRECISION - 1) {
                 frac *= BigRational::from_integer(BigInt::from(10));
-                write!(f, "{}", frac.to_integer().abs())?;
+                write!(dec, "{}", frac.to_integer().abs())?;
                 frac = frac.fract();
                 if frac == BigRational::from_integer(BigInt::from(0)) {
                     break;
                 }
             }
             if frac != BigRational::from_integer(BigInt::from(0)) {
-                write!(
-                    f,
-                    "{}",
-                    (frac * BigRational::from_integer(BigInt::from(10)))
-                        .round()
-                        .to_integer()
-                )?;
+                let f = (frac * BigRational::from_integer(BigInt::from(10)))
+                    .round()
+                    .abs()
+                    .to_integer();
+                if f == BigInt::from(10) {
+                    loop {
+                        match dec.pop().unwrap() {
+                            '9' => continue,
+                            '.' => {
+                                whole += 1;
+                                break;
+                            }
+                            c => {
+                                dec.push_str(&(c.to_digit(10).unwrap() + 1).to_string());
+                                break;
+                            }
+                        }
+                    }
+                } else {
+                    write!(dec, "{}", f)?;
+                }
             }
         }
+        write!(f, "{}", whole)?;
+        write!(f, "{}", dec)?;
         Ok(())
     }
 }
