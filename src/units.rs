@@ -92,8 +92,8 @@ pub(crate) enum Unit {
     /// Unspecified unit
     None,
 
-    /// Two units multiplied together
-    Mul(Box<Unit>, Box<Unit>),
+    /// Units multiplied together
+    Mul(Vec<Unit>),
     /// A unit divided by another
     Div(Box<Unit>, Box<Unit>),
 }
@@ -228,7 +228,15 @@ impl Into<String> for Unit {
             Unit::X => "x",
             Unit::Fr => "fr",
             Unit::None => "",
-            Unit::Mul(l, r) => return format!("{}*{}", l, r),
+            Unit::Mul(u) => {
+                return format!(
+                    "{}",
+                    u.into_iter()
+                        .map(|x| x.to_string())
+                        .collect::<Vec<String>>()
+                        .join("*")
+                )
+            }
             Unit::Div(l, r) => return format!("{}/{}", l, r),
             Unit::Unknown(ref s) => s,
         }
@@ -276,7 +284,14 @@ impl fmt::Display for Unit {
             Unit::Fr => write!(f, "fr"),
             Unit::Unknown(s) => write!(f, "{}", s),
             Unit::None => write!(f, ""),
-            Unit::Mul(l, r) => write!(f, "{}*{}", l, r),
+            Unit::Mul(u) => write!(
+                f,
+                "{}",
+                u.into_iter()
+                    .map(|x| x.to_string())
+                    .collect::<Vec<String>>()
+                    .join("*")
+            ),
             Unit::Div(l, r) => write!(f, "{}/{}", l, r),
         }
     }

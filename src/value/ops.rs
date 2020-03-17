@@ -204,9 +204,19 @@ impl Mul for Value {
                         Value::Dimension(num * num2, unit2)
                     } else if unit2 == Unit::None {
                         Value::Dimension(num * num2, unit)
+                    } else if let Unit::Mul(mut u) = unit {
+                        u.push(unit2);
+                        Value::Dimension(num * num2, Unit::Mul(u))
+                    } else if let Unit::Mul(u2) = unit2 {
+                        let mut u = vec![unit];
+                        u.extend(u2);
+                        Value::Dimension(num * num2, Unit::Mul(u))
                     } else {
-                        Value::Dimension(num * num2, Unit::Mul(Box::new(unit), Box::new(unit2)))
+                        Value::Dimension(num * num2, Unit::Mul(vec![unit, unit2]))
                     }
+                }
+                Self::BinaryOp(..) | Self::Paren(..) => {
+                    return Self::Dimension(num, unit) * other.eval()?
                 }
                 _ => {
                     return Err(
@@ -219,6 +229,7 @@ impl Mul for Value {
         })
     }
 }
+
 impl Div for Value {
     type Output = SassResult<Self>;
 

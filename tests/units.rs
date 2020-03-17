@@ -34,3 +34,13 @@ test!(
     "a {\n  color: unit(1px*1px);\n}\n",
     "a {\n  color: \"px*px\";\n}\n"
 );
+test!(
+    unit_fn_unit_times_unit_times_unit,
+    "a {\n  color: unit(1px * 1rad * 1em);\n}\n",
+    "a {\n  color: \"px*rad*em\";\n}\n"
+);
+test!(
+    unit_none_times_none_times_none,
+    "a {\n  color: 1 * 1 * 1;\n}\n",
+    "a {\n  color: 1;\n}\n"
+);
