@@ -85,11 +85,6 @@ test!(
     "a {\n  color: \"\";\n}\n"
 );
 test!(
-    unit_non_numeric,
-    "a {\n  color: unit(red)\n}\n",
-    "a {\n  color: \"\";\n}\n"
-);
-test!(
     unit_named_args,
     "a {\n  color: unit($number: 1px)\n}\n",
     "a {\n  color: \"px\";\n}\n"

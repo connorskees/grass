@@ -46,3 +46,15 @@ test!(
     "a {\n  color: red; ;\n}\n",
     "a {\n  color: red;\n}\n"
 );
+// these two precisiont tests only act like this in dart sass
+// these values are `1` for libsass
+test!(
+    precision_does_not_round_up,
+    "a {\n  color: 0.99999999991;\n}\n",
+    "a {\n  color: 0.9999999999;\n}\n"
+);
+test!(
+    precision_does_round_up,
+    "a {\n  color: 1.00000000009;\n}\n",
+    "a {\n  color: 1.0000000001;\n}\n"
+);
