@@ -54,6 +54,16 @@ test!(
     "a {\n  color: 10 + 10px;\n}\n",
     "a {\n  color: 20px;\n}\n"
 );
+test!(
+    unit_minus_none,
+    "a {\n  color: 10px - 10;\n}\n",
+    "a {\n  color: 0px;\n}\n"
+);
+test!(
+    none_minus_unit,
+    "a {\n  color: 10 - 10px;\n}\n",
+    "a {\n  color: 0px;\n}\n"
+);
 
 macro_rules! test_unit_addition {
     ($u1:ident, $u2:ident, $out:literal) => {
