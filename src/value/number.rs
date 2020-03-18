@@ -124,11 +124,11 @@ impl Display for Number {
                 }
             }
             if frac != BigRational::from_integer(BigInt::from(0)) {
-                let f = (frac * BigRational::from_integer(BigInt::from(10)))
+                let end = (frac * BigRational::from_integer(BigInt::from(10)))
                     .round()
                     .abs()
                     .to_integer();
-                if f == BigInt::from(10) {
+                if end == BigInt::from(10) {
                     loop {
                         match dec.pop().unwrap() {
                             '9' => continue,
@@ -142,8 +142,19 @@ impl Display for Number {
                             }
                         }
                     }
+                } else if end == BigInt::from(0) {
+                    loop {
+                        match dec.pop().unwrap() {
+                            '0' => continue,
+                            '.' => break,
+                            c => {
+                                dec.push(c);
+                                break;
+                            }
+                        }
+                    }
                 } else {
-                    write!(dec, "{}", f)?;
+                    write!(dec, "{}", end)?;
                 }
             }
         }

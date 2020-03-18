@@ -85,9 +85,7 @@ test_unit_addition!(in, q, "1.0098425197");
 test_unit_addition!(in, pt, "1.0138888889");
 test_unit_addition!(in, px, "1.0104166667");
 
-// fails with output `3.5400000000`
-// oddly, `3.5400000000` does normally get changed to `3.54`
-// test_unit_addition!(cm, in, "3.54");
+test_unit_addition!(cm, in, "3.54");
 test_unit_addition!(cm, cm, "2");
 test_unit_addition!(cm, pc, "1.4233333333");
 test_unit_addition!(cm, mm, "1.1");
@@ -168,8 +166,7 @@ test_unit_addition!(kHz, Hz, "1.001");
 test_unit_addition!(kHz, kHz, "2");
 
 test_unit_addition!(dpi, dpi, "2");
-// see above for issues with cm and trailing zeroes
-// test_unit_addition!(dpi, dpcm, "3.54");
+test_unit_addition!(dpi, dpcm, "3.54");
 test_unit_addition!(dpi, dppx, "97");
 
 test_unit_addition!(dpcm, dpi, "1.3937007874");
