@@ -8,8 +8,9 @@ use num_traits::pow;
 use crate::args::eat_call_args;
 use crate::builtin::GLOBAL_FUNCTIONS;
 use crate::color::Color;
-use crate::common::{Keyword, ListSeparator, Op, QuoteKind, Scope, Symbol};
+use crate::common::{Keyword, ListSeparator, Op, QuoteKind, Symbol};
 use crate::error::SassResult;
+use crate::scope::Scope;
 use crate::selector::Selector;
 use crate::units::Unit;
 use crate::utils::{

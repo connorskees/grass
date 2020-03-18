@@ -83,11 +83,16 @@ pub(crate) fn parse_interpolation<I: Iterator<Item = Token>>(
 pub(crate) struct VariableDecl {
     pub val: Value,
     pub default: bool,
+    pub global: bool,
 }
 
 impl VariableDecl {
-    pub const fn new(val: Value, default: bool) -> VariableDecl {
-        VariableDecl { val, default }
+    pub const fn new(val: Value, default: bool, global: bool) -> VariableDecl {
+        VariableDecl {
+            val,
+            default,
+            global,
+        }
     }
 }
 
@@ -98,6 +103,7 @@ pub(crate) fn eat_variable_value<I: Iterator<Item = Token>>(
 ) -> SassResult<VariableDecl> {
     devour_whitespace(toks);
     let mut default = false;
+    let mut global = false;
     let mut raw: Vec<Token> = Vec::new();
     let mut nesting = 0;
     while let Some(tok) = toks.peek() {
@@ -109,6 +115,10 @@ pub(crate) fn eat_variable_value<I: Iterator<Item = Token>>(
             TokenKind::Keyword(Keyword::Default) => {
                 toks.next();
                 default = true
+            }
+            TokenKind::Keyword(Keyword::Global) => {
+                toks.next();
+                global = true
             }
             TokenKind::Interpolation | TokenKind::Symbol(Symbol::OpenCurlyBrace) => {
                 nesting += 1;
@@ -127,7 +137,7 @@ pub(crate) fn eat_variable_value<I: Iterator<Item = Token>>(
     }
     devour_whitespace(toks);
     let val = Value::from_tokens(&mut raw.into_iter().peekable(), scope, super_selector).unwrap();
-    Ok(VariableDecl::new(val, default))
+    Ok(VariableDecl::new(val, default, global))
 }
 
 pub(crate) fn flatten_ident<I: Iterator<Item = Token>>(

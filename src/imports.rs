@@ -1,8 +1,8 @@
 use std::ffi::OsStr;
 use std::path::Path;
 
-use crate::common::Scope;
 use crate::error::SassResult;
+use crate::scope::Scope;
 use crate::{Stmt, StyleSheet};
 
 pub(crate) fn import<P: AsRef<Path>>(path: P) -> SassResult<(Vec<Stmt>, Scope)> {

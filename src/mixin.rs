@@ -3,8 +3,9 @@ use std::vec::IntoIter;
 
 use crate::args::{eat_call_args, eat_func_args, CallArgs, FuncArgs};
 use crate::atrule::AtRule;
-use crate::common::{Scope, Symbol};
+use crate::common::Symbol;
 use crate::error::{SassError, SassResult};
+use crate::scope::Scope;
 use crate::selector::Selector;
 use crate::utils::devour_whitespace;
 use crate::{eat_expr, Expr, RuleSet, Stmt, Token, TokenKind};

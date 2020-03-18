@@ -3,10 +3,11 @@ use std::iter::Peekable;
 
 use num_traits::cast::ToPrimitive;
 
-use crate::common::{Keyword, Pos, Scope, Symbol};
+use crate::common::{Keyword, Pos, Symbol};
 use crate::error::SassResult;
 use crate::function::Function;
 use crate::mixin::Mixin;
+use crate::scope::Scope;
 use crate::selector::Selector;
 use crate::units::Unit;
 use crate::utils::{devour_whitespace, devour_whitespace_or_comment};

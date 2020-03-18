@@ -1,8 +1,9 @@
 use std::iter::Peekable;
 
 use super::parse::eat_stmts;
-use crate::common::{Scope, Symbol};
+use crate::common::Symbol;
 use crate::error::SassResult;
+use crate::scope::Scope;
 use crate::selector::Selector;
 use crate::utils::{devour_whitespace, parse_interpolation};
 use crate::{RuleSet, Stmt, Token, TokenKind};

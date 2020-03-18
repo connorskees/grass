@@ -180,6 +180,11 @@ impl<'a> Lexer<'a> {
                 assert_char!(self, 'e' 'f' 'a' 'u' 'l' 't');
                 TokenKind::Keyword(Keyword::Default)
             }
+            Some('g') | Some('G') => {
+                self.buf.next();
+                assert_char!(self, 'l' 'o' 'b' 'a' 'l');
+                TokenKind::Keyword(Keyword::Global)
+            }
             Some('=') => {
                 self.buf.next();
                 TokenKind::Op(Op::NotEqual)

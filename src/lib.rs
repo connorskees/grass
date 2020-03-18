@@ -85,7 +85,7 @@ use std::iter::{Iterator, Peekable};
 use std::path::Path;
 
 use crate::atrule::{AtRule, AtRuleKind};
-use crate::common::{Keyword, Op, Pos, Scope, Symbol, Whitespace};
+use crate::common::{Keyword, Op, Pos, Symbol, Whitespace};
 use crate::css::Css;
 use crate::error::SassError;
 pub use crate::error::SassResult;
@@ -94,6 +94,7 @@ use crate::function::Function;
 use crate::imports::import;
 use crate::lexer::Lexer;
 use crate::mixin::{eat_include, Mixin};
+use crate::scope::{insert_global_var, Scope, GLOBAL_SCOPE};
 use crate::selector::Selector;
 use crate::style::Style;
 use crate::utils::{devour_whitespace, eat_variable_value, IsComment, IsWhitespace, VariableDecl};
@@ -111,11 +112,17 @@ mod function;
 mod imports;
 mod lexer;
 mod mixin;
+mod scope;
 mod selector;
 mod style;
 mod units;
 mod utils;
 mod value;
+
+pub(crate) fn error<E: Into<String>>(msg: E) -> ! {
+    eprintln!("Error: {}", msg.into());
+    std::process::exit(1);
+}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Token {
@@ -391,7 +398,7 @@ impl<'a> StyleSheetParser<'a> {
                 | TokenKind::Symbol(Symbol::Mul)
                 | TokenKind::Symbol(Symbol::Percent)
                 | TokenKind::Symbol(Symbol::Period) => rules
-                    .extend(self.eat_rules(&Selector::new(), &mut self.global_scope.clone())?),
+                    .extend(self.eat_rules(&Selector::new(), &mut GLOBAL_SCOPE.with(|s| s.borrow().clone()))?),
                 TokenKind::Whitespace(_) => {
                     self.lexer.next();
                     continue;
@@ -415,11 +422,16 @@ impl<'a> StyleSheetParser<'a> {
                     {
                         self.error(pos, "unexpected variable use at toplevel");
                     }
-                    let VariableDecl { val, default } =
-                        eat_variable_value(&mut self.lexer, &self.global_scope, &Selector::new())?;
-                    if !default || self.global_scope.get_var(&name).is_err() {
-                        self.global_scope.insert_var(&name, val)?;
-                    }
+                    let VariableDecl { val, default, .. } =
+                        eat_variable_value(&mut self.lexer, &GLOBAL_SCOPE.with(|s| s.borrow().clone()), &Selector::new())?;
+                    GLOBAL_SCOPE.with(|s| {
+                        if !default || s.borrow().get_var(&name).is_err() {
+                            match s.borrow_mut().insert_var(&name, val) {
+                                Ok(..) => {},
+                                Err(e) => error(e),
+                            }
+                        }
+                    })
                 }
                 TokenKind::MultilineComment(_) => {
                     let comment = match self
@@ -435,7 +447,7 @@ impl<'a> StyleSheetParser<'a> {
                 }
                 TokenKind::AtRule(AtRuleKind::Include) => rules.extend(eat_include(
                     &mut self.lexer,
-                    &self.global_scope,
+                    &GLOBAL_SCOPE.with(|s| s.borrow().clone()),
                     &Selector::new(),
                 )?),
                 TokenKind::AtRule(AtRuleKind::Import) => {
@@ -479,7 +491,9 @@ impl<'a> StyleSheetParser<'a> {
 
                     let (new_rules, new_scope) = import(file_name)?;
                     rules.extend(new_rules);
-                    self.global_scope.extend(new_scope);
+                    GLOBAL_SCOPE.with(|s| {
+                        s.borrow_mut().extend(new_scope);
+                    });
                 }
                 TokenKind::AtRule(_) => {
                     if let Some(Token {
@@ -487,12 +501,16 @@ impl<'a> StyleSheetParser<'a> {
                         pos,
                     }) = self.lexer.next()
                     {
-                        match AtRule::from_tokens(rule, pos, &mut self.lexer, &mut self.global_scope, &Selector::new())? {
+                        match AtRule::from_tokens(rule, pos, &mut self.lexer, &mut GLOBAL_SCOPE.with(|s| s.borrow().clone()), &Selector::new())? {
                             AtRule::Mixin(name, mixin) => {
-                                self.global_scope.insert_mixin(&name, *mixin);
+                                GLOBAL_SCOPE.with(|s| {
+                                    s.borrow_mut().insert_mixin(&name, *mixin);
+                                });
                             }
                             AtRule::Function(name, func) => {
-                                self.global_scope.insert_fn(&name, *func);
+                                GLOBAL_SCOPE.with(|s| {
+                                    s.borrow_mut().insert_fn(&name, *func);
+                                });
                             }
                             AtRule::Charset => continue,
                             AtRule::Error(pos, message) => self.error(pos, &message),
@@ -518,7 +536,7 @@ impl<'a> StyleSheetParser<'a> {
                 },
             };
         }
-        Ok((rules, self.global_scope))
+        Ok((rules, GLOBAL_SCOPE.with(|s| s.borrow().clone())))
     }
 
     fn eat_rules(&mut self, super_selector: &Selector, scope: &mut Scope) -> SassResult<Vec<Stmt>> {
@@ -556,7 +574,7 @@ impl<'a> StyleSheetParser<'a> {
                 Expr::VariableDecl(name, val) => {
                     if self.scope == 0 {
                         scope.insert_var(&name, *val.clone())?;
-                        self.global_scope.insert_var(&name, *val)?;
+                        insert_global_var(&name, *val)?;
                     } else {
                         scope.insert_var(&name, *val)?;
                     }
@@ -648,9 +666,14 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                 {
                     toks.next();
                     devour_whitespace(toks);
-                    let VariableDecl { val, default } =
-                        eat_variable_value(toks, scope, super_selector)?;
-                    if !default || scope.get_var(&name).is_err() {
+                    let VariableDecl {
+                        val,
+                        default,
+                        global,
+                    } = eat_variable_value(toks, scope, super_selector)?;
+                    if global {
+                        insert_global_var(&name, val)?;
+                    } else if !default || scope.get_var(&name).is_err() {
                         return Ok(Some(Expr::VariableDecl(name, Box::new(val))));
                     }
                 } else {

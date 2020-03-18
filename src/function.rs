@@ -2,8 +2,9 @@ use std::iter::Peekable;
 
 use crate::args::{eat_func_args, CallArgs, FuncArgs};
 use crate::atrule::AtRule;
-use crate::common::{Scope, Symbol};
+use crate::common::Symbol;
 use crate::error::SassResult;
+use crate::scope::Scope;
 use crate::selector::Selector;
 use crate::utils::devour_whitespace;
 use crate::value::Value;

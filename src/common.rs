@@ -1,11 +1,5 @@
-use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::fmt::{self, Display};
-
-use crate::error::SassResult;
-use crate::function::Function;
-use crate::mixin::Mixin;
-use crate::value::Value;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Symbol {
@@ -220,6 +214,7 @@ pub enum Keyword {
     False,
     Null,
     Default,
+    Global,
     From(String),
     To(String),
     Through(String),
@@ -243,7 +238,7 @@ impl Display for Keyword {
             Self::False => write!(f, "false"),
             Self::Null => write!(f, "null"),
             Self::Default => write!(f, "!default"),
-            // todo!(maintain casing for keywords)
+            Self::Global => write!(f, "!global"),
             Self::From(s) => write!(f, "{}", s),
             Self::To(s) => write!(f, "{}", s),
             Self::Through(s) => write!(f, "{}", s),
@@ -269,6 +264,7 @@ impl Into<&'static str> for Keyword {
             Self::False => "false",
             Self::Null => "null",
             Self::Default => "!default",
+            Self::Global => "!global",
             Self::From(_) => "from",
             Self::To(_) => "to",
             Self::Through(_) => "through",
@@ -296,6 +292,7 @@ impl TryFrom<&str> for Keyword {
             "false" => Ok(Self::False),
             "null" => Ok(Self::Null),
             "default" => Ok(Self::Default),
+            "global" => Ok(Self::Global),
             "from" => Ok(Self::From(kw.to_owned())),
             "to" => Ok(Self::To(kw.to_owned())),
             "through" => Ok(Self::Through(kw.to_owned())),
@@ -350,75 +347,6 @@ impl Pos {
 impl Display for Pos {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "line:{} col:{}", self.line, self.column)
-    }
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct Scope {
-    vars: HashMap<String, Value>,
-    mixins: HashMap<String, Mixin>,
-    functions: HashMap<String, Function>,
-}
-
-impl Scope {
-    #[must_use]
-    pub fn new() -> Self {
-        Self {
-            vars: HashMap::new(),
-            mixins: HashMap::new(),
-            functions: HashMap::new(),
-        }
-    }
-
-    pub fn get_var(&self, v: &str) -> SassResult<&Value> {
-        match self.vars.get(&v.replace('_', "-")) {
-            Some(v) => Ok(v),
-            None => Err("Undefined variable.".into()),
-        }
-    }
-
-    pub fn insert_var(&mut self, s: &str, v: Value) -> SassResult<Option<Value>> {
-        Ok(self.vars.insert(s.replace('_', "-"), v.eval()?))
-    }
-
-    pub fn var_exists(&self, v: &str) -> bool {
-        self.vars.contains_key(&v.replace('_', "-"))
-    }
-
-    pub fn get_mixin(&self, v: &str) -> SassResult<&Mixin> {
-        match self.mixins.get(&v.replace('_', "-")) {
-            Some(v) => Ok(v),
-            None => Err("Undefined mixin.".into()),
-        }
-    }
-
-    pub fn insert_mixin(&mut self, s: &str, v: Mixin) -> Option<Mixin> {
-        self.mixins.insert(s.replace('_', "-"), v)
-    }
-
-    pub fn mixin_exists(&self, v: &str) -> bool {
-        self.mixins.contains_key(&v.replace('_', "-"))
-    }
-
-    pub fn get_fn(&self, v: &str) -> SassResult<&Function> {
-        match self.functions.get(&v.replace('_', "-")) {
-            Some(v) => Ok(v),
-            None => Err("Undefined function.".into()),
-        }
-    }
-
-    pub fn insert_fn(&mut self, s: &str, v: Function) -> Option<Function> {
-        self.functions.insert(s.replace('_', "-"), v)
-    }
-
-    pub fn fn_exists(&self, v: &str) -> bool {
-        self.functions.contains_key(&v.replace('_', "-"))
-    }
-
-    pub fn extend(&mut self, other: Scope) {
-        self.vars.extend(other.vars);
-        self.mixins.extend(other.mixins);
-        self.functions.extend(other.functions);
     }
 }
 

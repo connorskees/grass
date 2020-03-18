@@ -1,7 +1,7 @@
 use std::iter::Peekable;
 
-use crate::common::Scope;
 use crate::error::SassResult;
+use crate::scope::Scope;
 use crate::selector::Selector;
 use crate::{eat_expr, Expr, RuleSet, Stmt, Token};
 

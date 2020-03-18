@@ -1,8 +1,9 @@
 use std::collections::BTreeMap;
 use std::iter::Peekable;
 
-use crate::common::{Scope, Symbol};
+use crate::common::Symbol;
 use crate::error::SassResult;
+use crate::scope::Scope;
 use crate::selector::Selector;
 use crate::utils::{devour_whitespace, devour_whitespace_or_comment};
 use crate::value::Value;

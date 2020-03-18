@@ -2,8 +2,8 @@ use once_cell::sync::Lazy;
 use std::collections::HashMap;
 
 use crate::args::CallArgs;
-use crate::common::Scope;
 use crate::error::SassResult;
+use crate::scope::Scope;
 use crate::value::Value;
 
 #[macro_use]

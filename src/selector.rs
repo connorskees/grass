@@ -2,9 +2,10 @@ use std::fmt::{self, Display, Write};
 use std::iter::Peekable;
 use std::string::ToString;
 
-use crate::common::{Scope, Symbol, Whitespace};
+use crate::common::{Symbol, Whitespace};
 use crate::error::SassResult;
 use crate::lexer::Lexer;
+use crate::scope::Scope;
 use crate::utils::{
     devour_whitespace, devour_whitespace_or_comment, flatten_ident, parse_interpolation,
     parse_quoted_string, IsWhitespace,
