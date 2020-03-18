@@ -1,4 +1,4 @@
-use std::ops::{Add, Div, Mul, Sub};
+use std::ops::{Add, Div, Mul, Rem, Sub};
 
 use crate::common::QuoteKind;
 use crate::error::SassResult;
@@ -345,6 +345,40 @@ impl Div for Value {
                 Self::Null => Value::Ident(format!("{}/", self), QuoteKind::None),
                 _ => Value::Ident(format!("{}/{}", self, other), QuoteKind::None),
             },
+        })
+    }
+}
+
+impl Rem for Value {
+    type Output = SassResult<Self>;
+
+    fn rem(self, other: Self) -> Self::Output {
+        Ok(match self {
+            Value::Dimension(n, u) => match other {
+                Value::Dimension(n2, u2) => {
+                    if !u.comparable(&u2) {
+                        return Err(format!("Incompatible units {} and {}.", u2, u).into());
+                    }
+                    if u == u2 {
+                        Value::Dimension(n % n2, u)
+                    } else if u == Unit::None {
+                        Value::Dimension(n % n2, u2)
+                    } else if u2 == Unit::None {
+                        Value::Dimension(n % n2, u)
+                    } else {
+                        Value::Dimension(n, u)
+                    }
+                }
+                _ => {
+                    return Err(format!(
+                        "Undefined operation \"{} % {}\".",
+                        Value::Dimension(n, u),
+                        other
+                    )
+                    .into())
+                }
+            },
+            _ => return Err(format!("Undefined operation \"{} % {}\".", self, other).into()),
         })
     }
 }

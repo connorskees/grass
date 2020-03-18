@@ -147,6 +147,7 @@ impl Value {
                 Op::NotEqual => Ok(Self::bool(*lhs != *rhs)),
                 Op::Mul => *lhs * *rhs,
                 Op::Div => *lhs / *rhs,
+                Op::Rem => *lhs % *rhs,
                 _ => Ok(Self::BinaryOp(lhs, op, rhs)),
             },
             _ => Ok(self),
