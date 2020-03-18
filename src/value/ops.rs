@@ -2,7 +2,7 @@ use std::ops::{Add, Div, Mul, Sub};
 
 use crate::common::QuoteKind;
 use crate::error::SassResult;
-use crate::units::Unit;
+use crate::units::{Unit, UNIT_CONVERSION_TABLE};
 use crate::value::Value;
 
 impl Add for Value {
@@ -28,8 +28,17 @@ impl Add for Value {
                     }
                     if unit == unit2 {
                         Value::Dimension(num + num2, unit)
+                    } else if unit == Unit::None {
+                        Value::Dimension(num + num2, unit2)
+                    } else if unit2 == Unit::None {
+                        Value::Dimension(num + num2, unit)
                     } else {
-                        todo!("unit conversions")
+                        Value::Dimension(
+                            num + num2
+                                * UNIT_CONVERSION_TABLE[&unit.to_string()][&unit2.to_string()]
+                                    .clone(),
+                            unit,
+                        )
                     }
                 }
                 Self::Ident(s, q) => {

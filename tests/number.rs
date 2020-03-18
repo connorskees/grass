@@ -32,7 +32,7 @@ test!(
 );
 test!(
     decimal_is_zero,
-    "a {\n  color: 1.0;\n}\n",
+    "a {\n  color: 1.0000;\n}\n",
     "a {\n  color: 1;\n}\n"
 );
 test!(many_nines_not_rounded, "a {\n  color: 0.999999;\n}\n");

@@ -2,8 +2,9 @@
 
 #[macro_export]
 macro_rules! test {
-    ($func:ident, $input:literal) => {
+    ($func:ident, $input:expr) => {
         #[test]
+        #[allow(non_snake_case)]
         fn $func() {
             let mut buf = Vec::new();
             grass::StyleSheet::new($input)
@@ -16,8 +17,9 @@ macro_rules! test {
             );
         }
     };
-    ($func:ident, $input:literal, $output:literal) => {
+    ($func:ident, $input:expr, $output:expr) => {
         #[test]
+        #[allow(non_snake_case)]
         fn $func() {
             let mut buf = Vec::new();
             grass::StyleSheet::new($input)

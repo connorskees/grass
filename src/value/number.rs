@@ -90,6 +90,14 @@ macro_rules! from_integer {
     };
 }
 
+impl From<f64> for Number {
+    fn from(b: f64) -> Self {
+        Number {
+            val: BigRational::from_float(b).unwrap(),
+        }
+    }
+}
+
 from_integer!(u16);
 from_integer!(usize);
 from_integer!(i32);

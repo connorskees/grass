@@ -34,3 +34,4 @@ nightly = []
 
 [dev-dependencies]
 tempfile = "3"
+paste = "0.1"
