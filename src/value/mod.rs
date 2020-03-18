@@ -138,13 +138,23 @@ impl Value {
         }
     }
 
+    pub fn equals(self, other: Value) -> SassResult<bool> {
+        Ok(match self.eval()? {
+            Self::Ident(s1, ..) => match other {
+                Self::Ident(s2, ..) => s1 == s2,
+                _ => false,
+            }
+            s @ _ => s == other.eval()?,
+        })
+    }
+
     pub fn eval(self) -> SassResult<Self> {
         match self {
             Self::BinaryOp(lhs, op, rhs) => match op {
                 Op::Plus => *lhs + *rhs,
                 Op::Minus => *lhs - *rhs,
-                Op::Equal => Ok(Self::bool(*lhs == *rhs)),
-                Op::NotEqual => Ok(Self::bool(*lhs != *rhs)),
+                Op::Equal => Ok(Self::bool(lhs.equals(*rhs)?)),
+                Op::NotEqual => Ok(Self::bool(!lhs.equals(*rhs)?)),
                 Op::Mul => *lhs * *rhs,
                 Op::Div => *lhs / *rhs,
                 Op::Rem => *lhs % *rhs,
