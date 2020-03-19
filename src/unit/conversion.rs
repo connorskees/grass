@@ -1,3 +1,7 @@
+//! A big dictionary of units and their conversion ratios.
+//!
+//! Arbitrary precision is retained.
+
 use std::collections::HashMap;
 use std::f64::consts::PI;
 use std::string::ToString;

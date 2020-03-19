@@ -1,3 +1,19 @@
+//! A color is internally represented as either RGBA or HSLA.
+//! Colors can be constructed in SASS through names (e.g. red, blue, aqua)
+//! or the builtin functions `rgb()`, `rgba()`, `hsl()`, and `hsla()`,
+//! all of which can accept 1-4 arguments.
+//!
+//! It is necessary to retain the original values with which the
+//! color was constructed.
+//! E.g. `hsla(.999999999999, 100, 100, 1)` should retain its full
+//! values to an arbitrary precision.
+//!
+//! Named colors are created using RGB values
+//! E.g. `red` = `rgba(255, 0, 0, 1)`
+//!
+//! In addition, named colors retain their original casing,
+//! so `rEd` should be emitted as `rEd`.
+
 use std::convert::TryFrom;
 use std::fmt::{self, Display};
 

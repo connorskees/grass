@@ -1,3 +1,6 @@
+//! A big dictionary of named colors and their
+//! corresponding RGBA values
+
 use std::convert::TryFrom;
 use std::fmt::{self, Display};
 
