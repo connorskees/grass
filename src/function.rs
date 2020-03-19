@@ -52,7 +52,7 @@ impl Function {
                 match &tok.kind {
                     TokenKind::AtRule(rule) => body.push(AtRule::from_tokens(
                         rule,
-                        tok.pos,
+                        tok.pos(),
                         toks,
                         &mut scope,
                         &Selector::new(),
