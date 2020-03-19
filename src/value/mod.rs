@@ -160,6 +160,7 @@ impl Value {
                 Op::Rem => *lhs % *rhs,
                 _ => Ok(Self::BinaryOp(lhs, op, rhs)),
             },
+            Self::Paren(v) => v.eval(),
             _ => Ok(self),
         }
     }

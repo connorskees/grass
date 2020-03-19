@@ -326,12 +326,11 @@ test!(
     "a {\n  color: 1 + null;\n}\n",
     "a {\n  color: 1;\n}\n"
 );
-// blocked on proper parsing of binary ops
-// test!(
-//     unitless_plus_null_plus_unitless,
-//     "a {\n  color: 1 + null + 1;\n}\n",
-//     "a {\n  color: 11;\n}\n"
-// );
+test!(
+    unitless_plus_null_plus_unitless,
+    "a {\n  color: 1 + null + 1;\n}\n",
+    "a {\n  color: 11;\n}\n"
+);
 test!(
     unit_plus_null,
     "a {\n  color: 1px + null;\n}\n",
@@ -387,4 +386,80 @@ test!(
     multiple_ident_sum,
     "a {\n  color: foo + 1 + bar + 2;\n}\n",
     "a {\n  color: foo1bar2;\n}\n"
+);
+test!(
+    many_parens,
+    "a {\n  color: (((((red)))));\n}\n",
+    "a {\n  color: red;\n}\n"
+);
+
+test!(
+    num_plus_list,
+    "a {\n  color: 1 + (2 3);\n}\n",
+    "a {\n  color: 12 3;\n}\n"
+);
+test!(
+    list_plus_num,
+    "a {\n  color: (1 2) + 3;\n}\n",
+    "a {\n  color: 1 23;\n}\n"
+);
+test!(
+    num_minus_list,
+    "a {\n  color: 1 - (2 3);\n}\n",
+    "a {\n  color: 1-2 3;\n}\n"
+);
+test!(
+    list_minus_num,
+    "a {\n  color: (1 2) - 3;\n}\n",
+    "a {\n  color: 1 2-3;\n}\n"
+);
+test!(
+    dblquoted_plus_list,
+    "a {\n  color: \"1\" + (2 3);\n}\n",
+    "a {\n  color: \"12 3\";\n}\n"
+);
+test!(
+    list_plus_dblquoted,
+    "a {\n  color: (1 2) + \"3\";\n}\n",
+    "a {\n  color: \"1 23\";\n}\n"
+);
+test!(
+    dblquoted_minus_list,
+    "a {\n  color: \"1\" - (2 3);\n}\n",
+    "a {\n  color: \"1\"-2 3;\n}\n"
+);
+test!(
+    list_minus_dblquoted,
+    "a {\n  color: (1 2) - \"3\";\n}\n",
+    "a {\n  color: 1 2-\"3\";\n}\n"
+);
+test!(
+    sglquoted_plus_list,
+    "a {\n  color: 'a' + (b c);\n}\n",
+    "a {\n  color: \"ab c\";\n}\n"
+);
+test!(
+    list_plus_sglquoted,
+    "a {\n  color: (b c) + 'a';\n}\n",
+    "a {\n  color: \"b ca\";\n}\n"
+);
+test!(
+    sglquoted_minus_list,
+    "a {\n  color: 'a' - (b c);\n}\n",
+    "a {\n  color: \"a\"-b c;\n}\n"
+);
+test!(
+    list_minus_sglquoted,
+    "a {\n  color: (b c) - 'a';\n}\n",
+    "a {\n  color: b c-\"a\";\n}\n"
+);
+test!(
+    list_plus_list,
+    "a {\n  color: (a b) + (1 2);\n}\n",
+    "a {\n  color: a b1 2;\n}\n"
+);
+test!(
+    list_minus_list,
+    "a {\n  color: (a b) - (1 2);\n}\n",
+    "a {\n  color: a b-1 2;\n}\n"
 );

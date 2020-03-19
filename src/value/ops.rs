@@ -50,6 +50,9 @@ impl Add for Value {
                     Value::Ident(format!("{}{}{}", num, unit, s), quotes)
                 }
                 Self::Null => Value::Ident(format!("{}{}", num, unit), QuoteKind::None),
+                Self::List(..) => {
+                    Value::Ident(format!("{}{}{}", num, unit, other), QuoteKind::None)
+                }
                 _ => {
                     return Err(
                         format!("Undefined operation \"{}{} + {}\".", num, unit, other).into(),
@@ -64,9 +67,10 @@ impl Add for Value {
                     Value::Ident(format!("{}{}", c, s), QuoteKind::None)
                 }
                 Self::Null => Value::Ident(c.to_string(), QuoteKind::None),
+                Self::List(..) => Value::Ident(format!("{}{}", c, other), QuoteKind::None),
                 _ => return Err(format!("Undefined operation \"{} + {}\".", c, other).into()),
             },
-            Self::BinaryOp(..) | Self::Paren(..) => self.eval()?,
+            Self::BinaryOp(..) | Self::Paren(..) => (self.eval()? + other)?,
             Self::Ident(s1, quotes1) => match other {
                 Self::Ident(s2, quotes2) => {
                     let quotes = match (quotes1, quotes2) {
@@ -99,9 +103,20 @@ impl Add for Value {
                     };
                     Value::Ident(format!("{}{}", s1, c), quotes)
                 }
-                Self::BinaryOp(..) | Self::Paren(..) | Self::List(..) => todo!(),
+                Self::List(..) => Value::Ident(format!("{}{}", s1, other), quotes1),
+                Self::BinaryOp(..) | Self::Paren(..) => todo!(),
             },
-            _ => todo!(),
+            Self::List(..) => match other {
+                Self::Ident(s, q) => {
+                    let quotes = match q {
+                        QuoteKind::Double | QuoteKind::Single => QuoteKind::Double,
+                        QuoteKind::None => QuoteKind::None,
+                    };
+                    Value::Ident(format!("{}{}", self, s), quotes)
+                }
+                Self::Paren(..) => (self + other.eval()?)?,
+                _ => Value::Ident(format!("{}{}", self, other), QuoteKind::None),
+            }
         })
     }
 }
@@ -133,6 +148,9 @@ impl Sub for Value {
                         )
                     }
                 }
+                Self::List(..) => {
+                    Value::Ident(format!("{}{}-{}", num, unit, other), QuoteKind::None)
+                }
                 _ => todo!(),
             },
             Self::Color(c) => match other {
@@ -149,7 +167,7 @@ impl Sub for Value {
                 }
                 _ => Value::Ident(format!("{}-{}", c, other), QuoteKind::None),
             },
-            Self::BinaryOp(..) | Self::Paren(..) => self.eval()?,
+            Self::BinaryOp(..) | Self::Paren(..) => (self.eval()? - other)?,
             Self::Ident(s1, quotes1) => match other {
                 Self::Ident(s2, quotes2) => {
                     let quotes1 = match quotes1 {
@@ -186,8 +204,26 @@ impl Sub for Value {
                     };
                     Value::Ident(format!("{}{}{}-", quotes, s1, quotes), QuoteKind::None)
                 }
+                Self::List(..) => {
+                    let quotes = match quotes1 {
+                        QuoteKind::Double | QuoteKind::Single => QuoteKind::Double,
+                        QuoteKind::None => QuoteKind::None,
+                    };
+                    Value::Ident(format!("{}{}{}-{}", quotes, s1, quotes, other), QuoteKind::None)
+                }
                 _ => todo!(),
             },
+            Self::List(..) => match other {
+                Self::Ident(s, q) => {
+                    let quotes = match q {
+                        QuoteKind::Double | QuoteKind::Single => QuoteKind::Double,
+                        QuoteKind::None => QuoteKind::None,
+                    };
+                    Value::Ident(format!("{}-{}{}{}", self, quotes, s, quotes), QuoteKind::None)
+                }
+                Self::Paren(..) => (self + other.eval()?)?,
+                _ => Value::Ident(format!("{}-{}", self, other), QuoteKind::None),
+            }
             _ => match other {
                 Self::Ident(s, quotes) => {
                     let quotes = match quotes {
