@@ -76,3 +76,8 @@ test!(
     "a {\n  color: 10 % 2;\n}\n",
     "a {\n  color: 0;\n}\n"
 );
+test!(
+    num_plus_div,
+    "a {\n  color: 1 + 3/4;\n}\n",
+    "a {\n  color: 1.75;\n}\n"
+);

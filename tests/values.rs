@@ -383,3 +383,8 @@ test!(
     "a {\n  color: \"foo\" == 'foo';\n}\n",
     "a {\n  color: true;\n}\n"
 );
+test!(
+    multiple_ident_sum,
+    "a {\n  color: foo + 1 + bar + 2;\n}\n",
+    "a {\n  color: foo1bar2;\n}\n"
+);

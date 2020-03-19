@@ -8,7 +8,8 @@ use crate::value::Value;
 impl Add for Value {
     type Output = SassResult<Self>;
 
-    fn add(self, other: Self) -> Self::Output {
+    fn add(self, mut other: Self) -> Self::Output {
+        other = other.eval()?;
         Ok(match self {
             Self::Important | Self::True | Self::False => match other {
                 Self::Ident(s, QuoteKind::Double) | Self::Ident(s, QuoteKind::Single) => {
@@ -55,7 +56,6 @@ impl Add for Value {
                     )
                 }
             },
-            // Self::List(..) => todo!(),
             Self::Color(c) => match other {
                 Self::Ident(s, QuoteKind::Double) | Self::Ident(s, QuoteKind::Single) => {
                     Value::Ident(format!("{}{}", c, s), QuoteKind::Double)
@@ -67,7 +67,6 @@ impl Add for Value {
                 _ => return Err(format!("Undefined operation \"{} + {}\".", c, other).into()),
             },
             Self::BinaryOp(..) | Self::Paren(..) => self.eval()?,
-            // Self::Paren(..) => todo!(),
             Self::Ident(s1, quotes1) => match other {
                 Self::Ident(s2, quotes2) => {
                     let quotes = match (quotes1, quotes2) {
@@ -100,10 +99,7 @@ impl Add for Value {
                     };
                     Value::Ident(format!("{}{}", s1, c), quotes)
                 }
-                Self::BinaryOp(..) | Self::Paren(..) => {
-                    return Self::Ident(s1, quotes1) + other.eval()?
-                }
-                Self::List(..) => todo!(),
+                Self::BinaryOp(..) | Self::Paren(..) | Self::List(..) => todo!(),
             },
             _ => todo!(),
         })
@@ -113,7 +109,8 @@ impl Add for Value {
 impl Sub for Value {
     type Output = SassResult<Self>;
 
-    fn sub(self, other: Self) -> Self::Output {
+    fn sub(self, mut other: Self) -> Self::Output {
+        other = other.eval()?;
         Ok(match self {
             Self::Null => todo!(),
             Self::Dimension(num, unit) => match other {
@@ -138,7 +135,6 @@ impl Sub for Value {
                 }
                 _ => todo!(),
             },
-            // Self::List(..) => todo!(),
             Self::Color(c) => match other {
                 Self::Ident(s, quotes) => {
                     let quotes = match quotes {
@@ -213,7 +209,8 @@ impl Sub for Value {
 impl Mul for Value {
     type Output = SassResult<Self>;
 
-    fn mul(self, other: Self) -> Self::Output {
+    fn mul(self, mut other: Self) -> Self::Output {
+        other = other.eval()?;
         Ok(match self {
             Self::Null => todo!(),
             Self::Dimension(num, unit) => match other {
@@ -232,9 +229,6 @@ impl Mul for Value {
                     } else {
                         Value::Dimension(num * num2, Unit::Mul(vec![unit, unit2]))
                     }
-                }
-                Self::BinaryOp(..) | Self::Paren(..) => {
-                    return Self::Dimension(num, unit) * other.eval()?
                 }
                 _ => {
                     return Err(
@@ -277,7 +271,6 @@ impl Div for Value {
                 }
                 _ => todo!(),
             },
-            // Self::List(..) => todo!(),
             Self::Color(c) => match other {
                 Self::Ident(s, quotes) => {
                     let quotes = match quotes {
