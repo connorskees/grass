@@ -4,7 +4,7 @@ use std::iter::Iterator;
 use crate::color::Color;
 use crate::common::{ListSeparator, Op, QuoteKind};
 use crate::error::SassResult;
-use crate::units::Unit;
+use crate::unit::Unit;
 pub(crate) use number::Number;
 
 mod number;

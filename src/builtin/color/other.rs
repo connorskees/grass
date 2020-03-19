@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use super::Builtin;
 use crate::color::Color;
 use crate::common::QuoteKind;
-use crate::units::Unit;
+use crate::unit::Unit;
 use crate::value::{Number, Value};
 
 macro_rules! opt_rgba {

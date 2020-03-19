@@ -9,7 +9,7 @@ use crate::function::Function;
 use crate::mixin::Mixin;
 use crate::scope::Scope;
 use crate::selector::Selector;
-use crate::units::Unit;
+use crate::unit::Unit;
 use crate::utils::{devour_whitespace, devour_whitespace_or_comment};
 use crate::value::{Number, Value};
 use crate::{Stmt, Token, TokenKind};

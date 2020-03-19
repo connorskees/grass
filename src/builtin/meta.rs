@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use super::{Builtin, GLOBAL_FUNCTIONS};
 use crate::common::QuoteKind;
-use crate::units::Unit;
+use crate::unit::Unit;
 use crate::value::Value;
 
 pub(crate) fn register(f: &mut HashMap<String, Builtin>) {

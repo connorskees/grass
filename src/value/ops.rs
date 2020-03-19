@@ -2,7 +2,7 @@ use std::ops::{Add, Div, Mul, Rem, Sub};
 
 use crate::common::QuoteKind;
 use crate::error::SassResult;
-use crate::units::{Unit, UNIT_CONVERSION_TABLE};
+use crate::unit::{Unit, UNIT_CONVERSION_TABLE};
 use crate::value::Value;
 
 impl Add for Value {
@@ -116,7 +116,7 @@ impl Add for Value {
                 }
                 Self::Paren(..) => (self + other.eval()?)?,
                 _ => Value::Ident(format!("{}{}", self, other), QuoteKind::None),
-            }
+            },
         })
     }
 }
@@ -209,7 +209,10 @@ impl Sub for Value {
                         QuoteKind::Double | QuoteKind::Single => QuoteKind::Double,
                         QuoteKind::None => QuoteKind::None,
                     };
-                    Value::Ident(format!("{}{}{}-{}", quotes, s1, quotes, other), QuoteKind::None)
+                    Value::Ident(
+                        format!("{}{}{}-{}", quotes, s1, quotes, other),
+                        QuoteKind::None,
+                    )
                 }
                 _ => todo!(),
             },
@@ -219,11 +222,14 @@ impl Sub for Value {
                         QuoteKind::Double | QuoteKind::Single => QuoteKind::Double,
                         QuoteKind::None => QuoteKind::None,
                     };
-                    Value::Ident(format!("{}-{}{}{}", self, quotes, s, quotes), QuoteKind::None)
+                    Value::Ident(
+                        format!("{}-{}{}{}", self, quotes, s, quotes),
+                        QuoteKind::None,
+                    )
                 }
                 Self::Paren(..) => (self + other.eval()?)?,
                 _ => Value::Ident(format!("{}-{}", self, other), QuoteKind::None),
-            }
+            },
             _ => match other {
                 Self::Ident(s, quotes) => {
                     let quotes = match quotes {

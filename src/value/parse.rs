@@ -12,7 +12,7 @@ use crate::common::{Keyword, ListSeparator, Op, QuoteKind, Symbol};
 use crate::error::SassResult;
 use crate::scope::Scope;
 use crate::selector::Selector;
-use crate::units::Unit;
+use crate::unit::Unit;
 use crate::utils::{
     devour_whitespace_or_comment, flatten_ident, parse_interpolation, parse_quoted_string,
 };

@@ -6,7 +6,7 @@ use num_traits::sign::Signed;
 
 use super::Builtin;
 use crate::common::QuoteKind;
-use crate::units::Unit;
+use crate::unit::Unit;
 use crate::value::{Number, Value};
 
 pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
