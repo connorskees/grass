@@ -65,7 +65,7 @@ impl Function {
             }
         }
 
-        Ok((name, Function::new(scope.clone(), args, body)))
+        Ok((name, Function::new(scope, args, body)))
     }
 
     pub fn args(mut self, args: &mut CallArgs) -> SassResult<Function> {

@@ -90,6 +90,7 @@ macro_rules! from_integer {
     };
 }
 
+// todo: implement std::convertTryFrom instead
 impl From<f64> for Number {
     fn from(b: f64) -> Self {
         Number {

@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::f64::consts::PI;
 use std::fmt;
+use std::string::ToString;
 
 use once_cell::sync::Lazy;
 
@@ -247,8 +248,6 @@ pub(crate) enum Unit {
 
     /// Units multiplied together
     Mul(Vec<Unit>),
-    /// A unit divided by another
-    Div(Box<Unit>, Box<Unit>),
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub(crate) enum UnitKind {
@@ -381,15 +380,12 @@ impl Into<String> for Unit {
             Unit::Fr => "fr",
             Unit::None => "",
             Unit::Mul(u) => {
-                return format!(
-                    "{}",
-                    u.into_iter()
-                        .map(|x| x.to_string())
-                        .collect::<Vec<String>>()
-                        .join("*")
-                )
+                return u
+                    .iter()
+                    .map(ToString::to_string)
+                    .collect::<Vec<String>>()
+                    .join("*")
             }
-            Unit::Div(l, r) => return format!("{}/{}", l, r),
             Unit::Unknown(ref s) => s,
         }
         .into()
@@ -439,12 +435,11 @@ impl fmt::Display for Unit {
             Unit::Mul(u) => write!(
                 f,
                 "{}",
-                u.into_iter()
-                    .map(|x| x.to_string())
+                u.iter()
+                    .map(ToString::to_string)
                     .collect::<Vec<String>>()
                     .join("*")
             ),
-            Unit::Div(l, r) => write!(f, "{}/{}", l, r),
         }
     }
 }

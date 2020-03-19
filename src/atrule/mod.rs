@@ -186,25 +186,24 @@ impl AtRule {
 
                 devour_whitespace_or_comment(toks);
 
-                if from < to {
-                    for i in from..(to + through) {
-                        scope.insert_var(&var, Value::Dimension(Number::from(i), Unit::None))?;
-                        stmts.extend(eat_stmts(
-                            &mut body.clone().into_iter().peekable(),
-                            scope,
-                            super_selector,
-                        )?);
-                    }
-                } else if from > to {
-                    for i in ((to - through)..(from + 1)).skip(1).rev() {
-                        scope.insert_var(&var, Value::Dimension(Number::from(i), Unit::None))?;
-                        stmts.extend(eat_stmts(
-                            &mut body.clone().into_iter().peekable(),
-                            scope,
-                            super_selector,
-                        )?);
-                    }
+                let (mut x, mut y);
+                let iter: &mut dyn std::iter::Iterator<Item = usize> = if from < to {
+                    x = from..(to + through);
+                    &mut x
+                } else {
+                    y = ((to - through)..(from + 1)).skip(1).rev();
+                    &mut y
+                };
+
+                for i in iter {
+                    scope.insert_var(&var, Value::Dimension(Number::from(i), Unit::None))?;
+                    stmts.extend(eat_stmts(
+                        &mut body.clone().into_iter().peekable(),
+                        scope,
+                        super_selector,
+                    )?);
                 }
+
                 AtRule::For(stmts)
             }
             AtRuleKind::While => todo!("@while not yet implemented"),

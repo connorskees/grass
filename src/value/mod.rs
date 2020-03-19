@@ -30,7 +30,7 @@ impl Display for Value {
         match self {
             Self::Important => write!(f, "!important"),
             Self::Dimension(num, unit) => match unit {
-                Unit::Mul(..) | Unit::Div(..) => {
+                Unit::Mul(..) => {
                     eprintln!("Error: {}{} isn't a valid CSS value.", num, unit);
                     std::process::exit(1);
                 }
@@ -143,8 +143,8 @@ impl Value {
             Self::Ident(s1, ..) => match other {
                 Self::Ident(s2, ..) => s1 == s2,
                 _ => false,
-            }
-            s @ _ => s == other.eval()?,
+            },
+            s => s == other.eval()?,
         })
     }
 

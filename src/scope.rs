@@ -36,15 +36,15 @@ impl Scope {
         }
     }
 
-    pub fn vars(&self) -> &HashMap<String, Value> {
+    pub const fn vars(&self) -> &HashMap<String, Value> {
         &self.vars
     }
 
     pub fn get_var(&self, v: &str) -> SassResult<Value> {
-        let v = &v.replace('_', "-");
-        match self.vars.get(v) {
+        let name = &v.replace('_', "-");
+        match self.vars.get(name) {
             Some(v) => Ok(v.clone()),
-            None => get_global_var(v),
+            None => get_global_var(name),
         }
     }
 

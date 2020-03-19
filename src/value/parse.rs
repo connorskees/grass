@@ -24,7 +24,7 @@ use super::number::Number;
 fn parse_hex(s: &str) -> Value {
     match s.len() {
         3 => {
-            let v = match u16::from_str_radix(&s, 16) {
+            let v = match u16::from_str_radix(s, 16) {
                 Ok(a) => a,
                 Err(_) => return Value::Ident(format!("#{}", s), QuoteKind::None),
             };
@@ -34,7 +34,7 @@ fn parse_hex(s: &str) -> Value {
             Value::Color(Color::new(red, green, blue, 1, format!("#{}", s)))
         }
         4 => {
-            let v = match u16::from_str_radix(&s, 16) {
+            let v = match u16::from_str_radix(s, 16) {
                 Ok(a) => a,
                 Err(_) => return Value::Ident(format!("#{}", s), QuoteKind::None),
             };
@@ -45,7 +45,7 @@ fn parse_hex(s: &str) -> Value {
             Value::Color(Color::new(red, green, blue, alpha, format!("#{}", s)))
         }
         6 => {
-            let v = match u32::from_str_radix(&s, 16) {
+            let v = match u32::from_str_radix(s, 16) {
                 Ok(a) => a,
                 Err(_) => return Value::Ident(format!("#{}", s), QuoteKind::None),
             };
@@ -55,7 +55,7 @@ fn parse_hex(s: &str) -> Value {
             Value::Color(Color::new(red, green, blue, 1, format!("#{}", s)))
         }
         8 => {
-            let v = match u32::from_str_radix(&s, 16) {
+            let v = match u32::from_str_radix(s, 16) {
                 Ok(a) => a,
                 Err(_) => return Value::Ident(format!("#{}", s), QuoteKind::None),
             };
@@ -258,7 +258,7 @@ impl Value {
             | q @ TokenKind::Symbol(Symbol::SingleQuote) => {
                 parse_quoted_string(toks, scope, &q, super_selector)
             }
-            TokenKind::Variable(ref v) => Ok(scope.get_var(v)?.clone()),
+            TokenKind::Variable(ref v) => Ok(scope.get_var(v)?),
             TokenKind::Interpolation => {
                 let mut s = parse_interpolation(toks, scope, super_selector)?.to_string();
                 while let Some(tok) = toks.peek() {
