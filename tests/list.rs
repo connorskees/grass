@@ -80,3 +80,28 @@ test!(
     "a {\n  color: set-nth((a, b, c), 1, e);\n}\n",
     "a {\n  color: e, b, c;\n}\n"
 );
+test!(
+    append_space_separated,
+    "a {\n  color: append(a b, c);\n}\n",
+    "a {\n  color: a b c;\n}\n"
+);
+test!(
+    append_comma_separated,
+    "a {\n  color: append((a, b), c);\n}\n",
+    "a {\n  color: a, b, c;\n}\n"
+);
+test!(
+    append_list,
+    "a {\n  color: append(a b, c d);\n}\n",
+    "a {\n  color: a b c d;\n}\n"
+);
+test!(
+    append_list_separator_comma,
+    "a {\n  color: append(a, b, comma);\n}\n",
+    "a {\n  color: a, b;\n}\n"
+);
+test!(
+    append_list_separator_space,
+    "a {\n  color: append((a, b), c, space);\n}\n",
+    "a {\n  color: a b c;\n}\n"
+);
