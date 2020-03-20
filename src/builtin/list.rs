@@ -70,4 +70,44 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             ))
         }),
     );
+    f.insert(
+        "set-nth".to_owned(),
+        Box::new(|args, _| {
+            max_args!(args, 3);
+            let (mut list, sep) = match arg!(args, 0, "list") {
+                Value::List(v, sep) => (v, sep),
+                v => (vec![v], ListSeparator::Space),
+            };
+            let n = match arg!(args, 1, "n") {
+                Value::Dimension(num, _) => num,
+                v => return Err(format!("$n: {} is not a number.", v).into()),
+            };
+
+            if n == Number::from(0) {
+                return Err("$n: List index may not be 0.".into());
+            }
+
+            let len = list.len();
+
+            if n.abs() > Number::from(len) {
+                return Err(
+                    format!("$n: Invalid index {} for a list with {} elements.", n, len).into(),
+                );
+            }
+
+            if n.is_decimal() {
+                return Err(format!("$n: {} is not an int.", n).into());
+            }
+
+            let val = arg!(args, 2, "value");
+
+            if n > Number::from(0) {
+                list[n.to_integer().to_usize().unwrap() - 1] = val;
+            } else {
+                list[len - n.abs().to_integer().to_usize().unwrap()] = val;
+            }
+
+            Ok(Value::List(list, sep))
+        }),
+    );
 }

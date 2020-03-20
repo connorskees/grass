@@ -60,3 +60,23 @@ test!(
 //     "a {\n  color: list-separator(((a b, c d)));\n}\n",
 //     "a {\n  color: comma;\n}\n"
 // );
+test!(
+    set_nth_named_args,
+    "a {\n  color: set-nth($list: 1 2 3, $n: 2, $value: foo);\n}\n",
+    "a {\n  color: 1 foo 3;\n}\n"
+);
+test!(
+    set_nth_non_list,
+    "a {\n  color: set-nth(c, 1, e);\n}\n",
+    "a {\n  color: e;\n}\n"
+);
+test!(
+    set_nth_2_long,
+    "a {\n  color: set-nth(c d, 1, e);\n}\n",
+    "a {\n  color: e d;\n}\n"
+);
+test!(
+    set_nth_comma_separated,
+    "a {\n  color: set-nth((a, b, c), 1, e);\n}\n",
+    "a {\n  color: e, b, c;\n}\n"
+);
