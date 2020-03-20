@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use num_traits::cast::ToPrimitive;
 
 use super::Builtin;
+use crate::common::{ListSeparator, QuoteKind};
 use crate::unit::Unit;
 use crate::value::{Number, Value};
 
@@ -53,6 +54,20 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             } else {
                 Ok(list[list.len() - n.abs().to_integer().to_usize().unwrap()].clone())
             }
+        }),
+    );
+    f.insert(
+        "list-separator".to_owned(),
+        Box::new(|args, _| {
+            max_args!(args, 1);
+            Ok(Value::Ident(
+                match arg!(args, 0, "list") {
+                    Value::List(_, sep) => sep.name(),
+                    _ => ListSeparator::Space.name(),
+                }
+                .to_owned(),
+                QuoteKind::None,
+            ))
         }),
     );
 }
