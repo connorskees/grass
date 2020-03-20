@@ -19,21 +19,21 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
 
                 let blue = match channels.pop() {
                     Some(Value::Dimension(n, Unit::None)) => n,
-                    Some(Value::Dimension(n, Unit::Percent)) => n / Number::from(100),
+                    Some(Value::Dimension(n, Unit::Percent)) => (n / Number::from(100)) * Number::from(255),
                     Some(v) => return Err(format!("$blue: {} is not a color", v).into()),
                     None => return Err("Missing element $blue.".into()),
                 };
 
                 let green = match channels.pop() {
                     Some(Value::Dimension(n, Unit::None)) => n,
-                    Some(Value::Dimension(n, Unit::Percent)) => n / Number::from(100),
+                    Some(Value::Dimension(n, Unit::Percent)) => (n / Number::from(100)) * Number::from(255),
                     Some(v) => return Err(format!("$green: {} is not a color", v).into()),
                     None => return Err("Missing element $green.".into()),
                 };
 
                 let red = match channels.pop() {
                     Some(Value::Dimension(n, Unit::None)) => n,
-                    Some(Value::Dimension(n, Unit::Percent)) => n / Number::from(100),
+                    Some(Value::Dimension(n, Unit::Percent)) => (n / Number::from(100)) * Number::from(255),
                     Some(v) => return Err(format!("$red: {} is not a color", v).into()),
                     None => return Err("Missing element $red.".into()),
                 };
@@ -125,21 +125,21 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
 
                 let blue = match channels.pop() {
                     Some(Value::Dimension(n, Unit::None)) => n,
-                    Some(Value::Dimension(n, Unit::Percent)) => n / Number::from(100),
+                    Some(Value::Dimension(n, Unit::Percent)) => (n / Number::from(100)) * Number::from(255),
                     Some(v) => return Err(format!("$blue: {} is not a color", v).into()),
                     None => return Err("Missing element $blue.".into()),
                 };
 
                 let green = match channels.pop() {
                     Some(Value::Dimension(n, Unit::None)) => n,
-                    Some(Value::Dimension(n, Unit::Percent)) => n / Number::from(100),
+                    Some(Value::Dimension(n, Unit::Percent)) => (n / Number::from(100)) * Number::from(255),
                     Some(v) => return Err(format!("$green: {} is not a color", v).into()),
                     None => return Err("Missing element $green.".into()),
                 };
 
                 let red = match channels.pop() {
                     Some(Value::Dimension(n, Unit::None)) => n,
-                    Some(Value::Dimension(n, Unit::Percent)) => n / Number::from(100),
+                    Some(Value::Dimension(n, Unit::Percent)) => (n / Number::from(100)) * Number::from(255),
                     Some(v) => return Err(format!("$red: {} is not a color", v).into()),
                     None => return Err("Missing element $red.".into()),
                 };
