@@ -34,6 +34,11 @@ test!(
     "a {\n  color: c;\n}\n"
 );
 test!(
+    nth_non_list,
+    "a {\n  color: nth(foo, 1);\n}\n",
+    "a {\n  color: foo;\n}\n"
+);
+test!(
     list_separator_space_separated,
     "a {\n  color: list-separator(a b c);\n}\n",
     "a {\n  color: space;\n}\n"

@@ -25,7 +25,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             max_args!(args, 2);
             let list = match arg!(args, 0, "list") {
                 Value::List(v, _) => v,
-                _ => return Err("Missing argument $list.".into()),
+                v => vec![v],
             };
             let n = match arg!(args, 1, "n") {
                 Value::Dimension(num, _) => num,
