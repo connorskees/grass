@@ -92,7 +92,13 @@ impl Value {
                     Ok(x) => x,
                     Err(_) => return Ok(left),
                 };
-                Ok(Value::List(vec![left, right], ListSeparator::Comma))
+                if let Value::List(v, ListSeparator::Comma) = right {
+                    let mut v2 = vec![left];
+                    v2.extend(v);
+                    Ok(Value::List(v2, ListSeparator::Comma))
+                } else {
+                    Ok(Value::List(vec![left, right], ListSeparator::Comma))
+                }
             }
             TokenKind::Symbol(Symbol::Plus)
             | TokenKind::Symbol(Symbol::Minus)
