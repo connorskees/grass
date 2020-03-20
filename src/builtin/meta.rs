@@ -30,7 +30,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 "extend-selector-pseudoclass" => Ok(Value::False),
                 // Full support for unit arithmetic using units defined in the
                 // [Values and Units Level 3][] spec.
-                "units-level-3" => Ok(Value::False),
+                "units-level-3" => Ok(Value::True),
                 // The Sass `@error` directive is supported.
                 "at-error" => Ok(Value::True),
                 // The "Custom Properties Level 1" spec is supported. This means

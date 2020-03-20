@@ -54,11 +54,11 @@ test!(
 //     "a {\n  color: feature-exists(extend-selector-pseudoclass)\n}\n",
 //     "a {\n  color: true;\n}\n"
 // );
-// test!(
-//     feature_exists_units_level_3,
-//     "a {\n  color: feature-exists(units-level-3)\n}\n",
-//     "a {\n  color: true;\n}\n"
-// );
+test!(
+    feature_exists_units_level_3,
+    "a {\n  color: feature-exists(units-level-3)\n}\n",
+    "a {\n  color: true;\n}\n"
+);
 // test!(
 //     feature_exists_custom_property,
 //     "a {\n  color: feature-exists(custom-property)\n}\n",
