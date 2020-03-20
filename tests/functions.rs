@@ -53,3 +53,13 @@ test!(
     "$x: 0;\na {\n  color: if($x != 0, a, b);\n}\n",
     "a {\n  color: b;\n}\n"
 );
+test!(
+    function_decl_in_ruleset,
+    "a {\n  @function foo() {\n    @return 3;\n  }\n  color: foo();\n}\n",
+    "a {\n  color: 3;\n}\n"
+);
+test!(
+    function_decl_in_foreign_ruleset,
+    "a {\n  @function foo() {\n    @return 3;\n  }\n}\nb {\n  color: foo();\n}\n",
+    "b {\n  color: foo();\n}\n"
+);

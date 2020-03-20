@@ -64,7 +64,7 @@ impl Function {
                 return Err("unexpected EOF (TODO: better error message)".into());
             }
         }
-
+        devour_whitespace(toks);
         Ok((name, Function::new(scope, args, body)))
     }
 
