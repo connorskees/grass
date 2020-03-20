@@ -28,25 +28,25 @@ impl Number {
         Number::new(BigRational::new(a.into(), b.into()))
     }
 
-    pub fn round(self) -> Self {
+    pub fn round(&self) -> Self {
         Number {
             val: self.val.round(),
         }
     }
 
-    pub fn ceil(self) -> Self {
+    pub fn ceil(&self) -> Self {
         Number {
             val: self.val.ceil(),
         }
     }
 
-    pub fn floor(self) -> Self {
+    pub fn floor(&self) -> Self {
         Number {
             val: self.val.floor(),
         }
     }
 
-    pub fn abs(self) -> Self {
+    pub fn abs(&self) -> Self {
         Number {
             val: self.val.abs(),
         }
