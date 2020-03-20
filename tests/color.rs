@@ -86,13 +86,11 @@ test!(
     opacity_function_number_unit,
     "a {\n  color: opacity(1px);\n}\n"
 );
-// blocked on better value parsing
-// specifically, this is parsed as a number and a list
-// test!(
-//     rgba_one_arg,
-//     "a {\n  color: rgba(1 2 3);\n}\n",
-//     "a {\n  color: #010203;\n}\n"
-// );
+test!(
+    rgba_one_arg,
+    "a {\n  color: rgba(1 2 3);\n}\n",
+    "a {\n  color: #010203;\n}\n"
+);
 test!(
     rgb_two_args,
     "a {\n  color: rgb(#123, 0);\n}\n",

@@ -123,7 +123,13 @@ impl Value {
                     Ok(x) => x,
                     Err(_) => return Ok(left),
                 };
-                Ok(Value::List(vec![left, right], ListSeparator::Space))
+                if let Value::List(v, ListSeparator::Space) = right {
+                    let mut v2 = vec![left];
+                    v2.extend(v);
+                    Ok(Value::List(v2, ListSeparator::Space))
+                } else {
+                    Ok(Value::List(vec![left, right], ListSeparator::Space))
+                }
             }
         }
     }

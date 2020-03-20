@@ -169,3 +169,8 @@ test!(
     "@mixin a {\n  a {\n    color: red;\n  }\n}\n\n@include a;\n",
     "a {\n  color: red;\n}\n"
 );
+test!(
+    include_list,
+    "@mixin foo($x) {\n  color: $x;\n}\na {\n  @include foo(0px 0px 0px 0px #ef8086 inset !important);\n}\n",
+    "a {\n  color: 0px 0px 0px 0px #ef8086 inset !important;\n}\n"
+);

@@ -129,11 +129,11 @@ test!(
     "a {\n  color: type-of(red)\n}\n",
     "a {\n  color: color;\n}\n"
 );
-// test!(
-//     type_of_spaced_list,
-//     "a {\n  color: type-of(1 2 3)\n}\n",
-//     "a {\n  color: list;\n}\n"
-// );
+test!(
+    type_of_spaced_list,
+    "a {\n  color: type-of(1 2 3)\n}\n",
+    "a {\n  color: list;\n}\n"
+);
 test!(
     type_of_true,
     "a {\n  color: type-of(true)\n}\n",
@@ -274,11 +274,11 @@ test!(
 //     "a {\n  color: inspect(())\n}\n",
 //     "a {\n  color: ();\n}\n"
 // );
-// test!(
-//     inspect_spaced_list,
-//     "a {\n  color: inspect(1 2 3)\n}\n",
-//     "a {\n  color: 1 2 3;\n}\n"
-// );
+test!(
+    inspect_spaced_list,
+    "a {\n  color: inspect(1 2 3)\n}\n",
+    "a {\n  color: 1 2 3;\n}\n"
+);
 // test!(
 //     inspect_comma_list,
 //     "a {\n  color: inspect(1, 2, 3)\n}\n",
