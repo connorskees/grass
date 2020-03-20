@@ -10,61 +10,149 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "hsl".to_owned(),
         Box::new(|args, _| {
-            let hue = match arg!(args, 0, "hue") {
-                Value::Dimension(n, _) => n,
-                v => return Err(format!("$hue: {} is not a number.", v).into()),
-            };
-            let saturation = match arg!(args, 1, "saturation") {
-                Value::Dimension(n, _) => n / Number::from(100),
-                v => return Err(format!("$saturation: {} is not a number.", v).into()),
-            };
-            let luminance = match arg!(args, 2, "luminance") {
-                Value::Dimension(n, _) => n / Number::from(100),
-                v => return Err(format!("$luminance: {} is not a number.", v).into()),
-            };
-            let alpha = match arg!(
-                args,
-                3,
-                "alpha" = Value::Dimension(Number::from(1), Unit::None)
-            ) {
-                Value::Dimension(n, Unit::None) => n,
-                Value::Dimension(n, Unit::Percent) => n / Number::from(100),
-                v @ Value::Dimension(..) => {
-                    return Err(format!("$alpha: Expected {} to have no units or \"%\".", v).into())
+            if args.len() == 1 {
+                let mut channels = match arg!(args, 0, "channels") {
+                    Value::List(v, _) => v,
+                    _ => return Err("Missing element $green.".into()),
+                };
+
+                if channels.len() > 3 {
+                    return Err(format!(
+                        "Only 3 elements allowed, but {} were passed.",
+                        channels.len()
+                    )
+                    .into());
                 }
-                v => return Err(format!("$alpha: {} is not a number.", v).into()),
-            };
-            Ok(Value::Color(Color::from_hsla(
-                hue, saturation, luminance, alpha,
-            )))
+
+                let luminance = match channels.pop() {
+                    Some(Value::Dimension(n, _)) => n / Number::from(100),
+                    Some(v) => return Err(format!("$luminance: {} is not a color", v).into()),
+                    None => return Err("Missing element $luminance.".into()),
+                };
+
+                let saturation = match channels.pop() {
+                    Some(Value::Dimension(n, _)) => n / Number::from(100),
+                    Some(v) => return Err(format!("$saturation: {} is not a color", v).into()),
+                    None => return Err("Missing element $saturation.".into()),
+                };
+
+                let hue = match channels.pop() {
+                    Some(Value::Dimension(n, _)) => n,
+                    Some(v) => return Err(format!("$hue: {} is not a color", v).into()),
+                    None => return Err("Missing element $hue.".into()),
+                };
+
+                Ok(Value::Color(Color::from_hsla(
+                    hue,
+                    saturation,
+                    luminance,
+                    Number::from(1),
+                )))
+            } else {
+                let hue = match arg!(args, 0, "hue") {
+                    Value::Dimension(n, _) => n,
+                    v => return Err(format!("$hue: {} is not a number.", v).into()),
+                };
+                let saturation = match arg!(args, 1, "saturation") {
+                    Value::Dimension(n, _) => n / Number::from(100),
+                    v => return Err(format!("$saturation: {} is not a number.", v).into()),
+                };
+                let luminance = match arg!(args, 2, "luminance") {
+                    Value::Dimension(n, _) => n / Number::from(100),
+                    v => return Err(format!("$luminance: {} is not a number.", v).into()),
+                };
+                let alpha = match arg!(
+                    args,
+                    3,
+                    "alpha" = Value::Dimension(Number::from(1), Unit::None)
+                ) {
+                    Value::Dimension(n, Unit::None) => n,
+                    Value::Dimension(n, Unit::Percent) => n / Number::from(100),
+                    v @ Value::Dimension(..) => {
+                        return Err(
+                            format!("$alpha: Expected {} to have no units or \"%\".", v).into()
+                        )
+                    }
+                    v => return Err(format!("$alpha: {} is not a number.", v).into()),
+                };
+                Ok(Value::Color(Color::from_hsla(
+                    hue, saturation, luminance, alpha,
+                )))
+            }
         }),
     );
     f.insert(
         "hsla".to_owned(),
         Box::new(|args, _| {
-            let hue = match arg!(args, 0, "hue") {
-                Value::Dimension(n, _) => n,
-                v => return Err(format!("$hue: {} is not a number.", v).into()),
-            };
-            let saturation = match arg!(args, 1, "saturation") {
-                Value::Dimension(n, _) => n / Number::from(100),
-                v => return Err(format!("$saturation: {} is not a number.", v).into()),
-            };
-            let luminance = match arg!(args, 2, "luminance") {
-                Value::Dimension(n, _) => n / Number::from(100),
-                v => return Err(format!("$luminance: {} is not a number.", v).into()),
-            };
-            let alpha = match arg!(args, 3, "alpha") {
-                Value::Dimension(n, Unit::None) => n,
-                Value::Dimension(n, Unit::Percent) => n / Number::from(100),
-                v @ Value::Dimension(..) => {
-                    return Err(format!("$alpha: Expected {} to have no units or \"%\".", v).into())
+            if args.len() == 1 {
+                let mut channels = match arg!(args, 0, "channels") {
+                    Value::List(v, _) => v,
+                    _ => return Err("Missing element $green.".into()),
+                };
+
+                if channels.len() > 3 {
+                    return Err(format!(
+                        "Only 3 elements allowed, but {} were passed.",
+                        channels.len()
+                    )
+                    .into());
                 }
-                v => return Err(format!("$alpha: {} is not a number.", v).into()),
-            };
-            Ok(Value::Color(Color::from_hsla(
-                hue, saturation, luminance, alpha,
-            )))
+
+                let luminance = match channels.pop() {
+                    Some(Value::Dimension(n, _)) => n / Number::from(100),
+                    Some(v) => return Err(format!("$luminance: {} is not a color", v).into()),
+                    None => return Err("Missing element $luminance.".into()),
+                };
+
+                let saturation = match channels.pop() {
+                    Some(Value::Dimension(n, _)) => n / Number::from(100),
+                    Some(v) => return Err(format!("$saturation: {} is not a color", v).into()),
+                    None => return Err("Missing element $saturation.".into()),
+                };
+
+                let hue = match channels.pop() {
+                    Some(Value::Dimension(n, _)) => n,
+                    Some(v) => return Err(format!("$hue: {} is not a color", v).into()),
+                    None => return Err("Missing element $hue.".into()),
+                };
+
+                Ok(Value::Color(Color::from_hsla(
+                    hue,
+                    saturation,
+                    luminance,
+                    Number::from(1),
+                )))
+            } else {
+                let hue = match arg!(args, 0, "hue") {
+                    Value::Dimension(n, _) => n,
+                    v => return Err(format!("$hue: {} is not a number.", v).into()),
+                };
+                let saturation = match arg!(args, 1, "saturation") {
+                    Value::Dimension(n, _) => n / Number::from(100),
+                    v => return Err(format!("$saturation: {} is not a number.", v).into()),
+                };
+                let luminance = match arg!(args, 2, "luminance") {
+                    Value::Dimension(n, _) => n / Number::from(100),
+                    v => return Err(format!("$luminance: {} is not a number.", v).into()),
+                };
+                let alpha = match arg!(
+                    args,
+                    3,
+                    "alpha" = Value::Dimension(Number::from(1), Unit::None)
+                ) {
+                    Value::Dimension(n, Unit::None) => n,
+                    Value::Dimension(n, Unit::Percent) => n / Number::from(100),
+                    v @ Value::Dimension(..) => {
+                        return Err(
+                            format!("$alpha: Expected {} to have no units or \"%\".", v).into()
+                        )
+                    }
+                    v => return Err(format!("$alpha: {} is not a number.", v).into()),
+                };
+                Ok(Value::Color(Color::from_hsla(
+                    hue, saturation, luminance, alpha,
+                )))
+            }
         }),
     );
     f.insert(

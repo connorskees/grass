@@ -501,3 +501,18 @@ test!(
 //     "a {\n  color: ie_hex-str(rgba(0, 255, 0, 0.5));\n}\n",
 //     "a {\n  color: #8000FF00;\n}\n"
 // );
+test!(
+    rgba_1_arg,
+    "a {\n  color: rgba(74.7% 173 93%);\n}\n",
+    "a {\n  color: #beaded;\n}\n"
+);
+test!(
+    hsla_1_arg,
+    "a {\n  color: hsla(60 60% 50%);\n}\n",
+    "a {\n  color: #cccc33;\n}\n"
+);
+test!(
+    hsla_1_arg_weird_units,
+    "a {\n  color: hsla(60foo 60foo 50foo);\n}\n",
+    "a {\n  color: #cccc33;\n}\n"
+);

@@ -15,25 +15,37 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     _ => return Err("Missing element $green.".into()),
                 };
 
-                assert_eq!(channels.len(), 3_usize);
+                if channels.len() > 3 {
+                    return Err(format!(
+                        "Only 3 elements allowed, but {} were passed.",
+                        channels.len()
+                    )
+                    .into());
+                }
 
                 let blue = match channels.pop() {
                     Some(Value::Dimension(n, Unit::None)) => n,
-                    Some(Value::Dimension(n, Unit::Percent)) => (n / Number::from(100)) * Number::from(255),
+                    Some(Value::Dimension(n, Unit::Percent)) => {
+                        (n / Number::from(100)) * Number::from(255)
+                    }
                     Some(v) => return Err(format!("$blue: {} is not a color", v).into()),
                     None => return Err("Missing element $blue.".into()),
                 };
 
                 let green = match channels.pop() {
                     Some(Value::Dimension(n, Unit::None)) => n,
-                    Some(Value::Dimension(n, Unit::Percent)) => (n / Number::from(100)) * Number::from(255),
+                    Some(Value::Dimension(n, Unit::Percent)) => {
+                        (n / Number::from(100)) * Number::from(255)
+                    }
                     Some(v) => return Err(format!("$green: {} is not a color", v).into()),
                     None => return Err("Missing element $green.".into()),
                 };
 
                 let red = match channels.pop() {
                     Some(Value::Dimension(n, Unit::None)) => n,
-                    Some(Value::Dimension(n, Unit::Percent)) => (n / Number::from(100)) * Number::from(255),
+                    Some(Value::Dimension(n, Unit::Percent)) => {
+                        (n / Number::from(100)) * Number::from(255)
+                    }
                     Some(v) => return Err(format!("$red: {} is not a color", v).into()),
                     None => return Err("Missing element $red.".into()),
                 };
@@ -121,25 +133,37 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     _ => return Err("Missing element $green.".into()),
                 };
 
-                assert_eq!(channels.len(), 3_usize);
+                if channels.len() > 3 {
+                    return Err(format!(
+                        "Only 3 elements allowed, but {} were passed.",
+                        channels.len()
+                    )
+                    .into());
+                }
 
                 let blue = match channels.pop() {
                     Some(Value::Dimension(n, Unit::None)) => n,
-                    Some(Value::Dimension(n, Unit::Percent)) => (n / Number::from(100)) * Number::from(255),
+                    Some(Value::Dimension(n, Unit::Percent)) => {
+                        (n / Number::from(100)) * Number::from(255)
+                    }
                     Some(v) => return Err(format!("$blue: {} is not a color", v).into()),
                     None => return Err("Missing element $blue.".into()),
                 };
 
                 let green = match channels.pop() {
                     Some(Value::Dimension(n, Unit::None)) => n,
-                    Some(Value::Dimension(n, Unit::Percent)) => (n / Number::from(100)) * Number::from(255),
+                    Some(Value::Dimension(n, Unit::Percent)) => {
+                        (n / Number::from(100)) * Number::from(255)
+                    }
                     Some(v) => return Err(format!("$green: {} is not a color", v).into()),
                     None => return Err("Missing element $green.".into()),
                 };
 
                 let red = match channels.pop() {
                     Some(Value::Dimension(n, Unit::None)) => n,
-                    Some(Value::Dimension(n, Unit::Percent)) => (n / Number::from(100)) * Number::from(255),
+                    Some(Value::Dimension(n, Unit::Percent)) => {
+                        (n / Number::from(100)) * Number::from(255)
+                    }
                     Some(v) => return Err(format!("$red: {} is not a color", v).into()),
                     None => return Err("Missing element $red.".into()),
                 };
