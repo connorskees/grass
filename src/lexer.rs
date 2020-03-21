@@ -281,14 +281,17 @@ impl<'a> Lexer<'a> {
         self.buf.next();
         self.pos.next_char();
         let mut name = String::with_capacity(99);
-        if let Some(c) = self.buf.next() {
-            if !c.is_alphabetic() && c != '-' && c != '_' {
+        if let Some(c) = self.buf.peek() {
+            if c == &'=' {
+                return TokenKind::Symbol(Symbol::Dollar);
+            } else if !c.is_alphabetic() && c != &'-' && c != &'_' {
                 eprintln!("Error: Expected identifier.");
                 std::process::exit(1)
             } else {
                 self.pos.next_char();
-                name.push(c);
+                name.push(*c);
             }
+            self.buf.next();
         }
         while let Some(c) = self.buf.peek() {
             if !c.is_alphanumeric() && c != &'-' && c != &'_' {
