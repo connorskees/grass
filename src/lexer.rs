@@ -303,6 +303,8 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    // TODO: handle weird characters that *are* ascii
+    // e.g. how do we handle `color: ;`
     fn lex_ident(&mut self) -> TokenKind {
         let mut string = String::with_capacity(99);
         while let Some(c) = self.buf.peek() {
