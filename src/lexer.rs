@@ -281,6 +281,15 @@ impl<'a> Lexer<'a> {
         self.buf.next();
         self.pos.next_char();
         let mut name = String::with_capacity(99);
+        if let Some(c) = self.buf.next() {
+            if !c.is_alphabetic() && c != '-' && c != '_' {
+                eprintln!("Error: Expected identifier.");
+                std::process::exit(1)
+            } else {
+                self.pos.next_char();
+                name.push(c);
+            }
+        }
         while let Some(c) = self.buf.peek() {
             if !c.is_alphanumeric() && c != &'-' && c != &'_' {
                 break;
@@ -290,11 +299,7 @@ impl<'a> Lexer<'a> {
                 .next()
                 .expect("this is impossible because we have already peeked");
             self.pos.next_char();
-            if tok == '_' {
-                name.push('-');
-            } else {
-                name.push(tok);
-            }
+            name.push(tok);
         }
         if name.is_empty() {
             TokenKind::Symbol(Symbol::Dollar)
