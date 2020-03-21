@@ -134,13 +134,7 @@ impl<'a> Iterator for Lexer<'a> {
             '>' => symbol!(self, Gt),
             '^' => symbol!(self, Xor),
             '\0' => return None,
-            &v => {
-                self.buf.next();
-                if !v.is_ascii() {
-                    IS_UTF8.store(true, Ordering::Relaxed);
-                }
-                TokenKind::Unknown(v)
-            }
+            _ => self.lex_ident(),
         };
         self.pos.next_char();
         Some(Token {
@@ -313,8 +307,11 @@ impl<'a> Lexer<'a> {
         let mut string = String::with_capacity(99);
         while let Some(c) = self.buf.peek() {
             // we know that the first char is alphabetic from peeking
-            if !c.is_alphanumeric() && c != &'-' && c != &'_' {
+            if !c.is_alphanumeric() && c != &'-' && c != &'_' && c.is_ascii() {
                 break;
+            }
+            if !c.is_ascii() {
+                IS_UTF8.store(true, Ordering::Relaxed);
             }
             let tok = self
                 .buf

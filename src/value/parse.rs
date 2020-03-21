@@ -292,7 +292,6 @@ impl Value {
             TokenKind::Keyword(Keyword::From(s)) => Ok(Value::Ident(s, QuoteKind::None)),
             TokenKind::Keyword(Keyword::Through(s)) => Ok(Value::Ident(s, QuoteKind::None)),
             TokenKind::Keyword(Keyword::To(s)) => Ok(Value::Ident(s, QuoteKind::None)),
-            TokenKind::Unknown(c) => Ok(Value::Ident(c.to_string(), QuoteKind::None)),
             TokenKind::AtRule(_) => return Err("expected \";\".".into()),
             v => {
                 dbg!(v);

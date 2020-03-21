@@ -46,3 +46,13 @@ test!(
     "a {\n  color: red; ;\n}\n",
     "a {\n  color: red;\n}\n"
 );
+test!(
+    utf8_ident_before,
+    "a {\n  color: length(😀red);\n}\n",
+    "@charset \"UTF-8\";\na {\n  color: 1;\n}\n"
+);
+test!(
+    utf8_ident_after,
+    "a {\n  color: length(red😁)\n}\n",
+    "@charset \"UTF-8\";\na {\n  color: 1;\n}\n"
+);
