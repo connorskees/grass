@@ -196,10 +196,10 @@ impl Value {
                     return Ok(Value::List(Vec::new(), ListSeparator::Space));
                 }
                 let val = Self::from_tokens(toks, scope, super_selector)?;
-                assert_eq!(
-                    toks.next().unwrap().kind,
-                    TokenKind::Symbol(Symbol::CloseParen)
-                );
+                let next = toks.next();
+                if next.is_none() || !next.unwrap().is_symbol(Symbol::CloseParen) {
+                    return Err("expected \")\".".into());
+                }
                 Ok(Value::Paren(Box::new(val)))
             }
             TokenKind::Symbol(Symbol::BitAnd) => {
