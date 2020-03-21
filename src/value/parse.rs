@@ -293,6 +293,7 @@ impl Value {
             TokenKind::Keyword(Keyword::Through(s)) => Ok(Value::Ident(s, QuoteKind::None)),
             TokenKind::Keyword(Keyword::To(s)) => Ok(Value::Ident(s, QuoteKind::None)),
             TokenKind::AtRule(_) => Err("expected \";\".".into()),
+            TokenKind::Error(e) => return Err(e),
             TokenKind::Op(Op::Plus) | TokenKind::Symbol(Symbol::Plus) => {
                 devour_whitespace_or_comment(toks);
                 let v = Self::_from_tokens(toks, scope, super_selector)?;

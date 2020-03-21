@@ -121,10 +121,6 @@ mod unit;
 mod utils;
 mod value;
 
-pub(crate) fn error<E: Into<String>>(msg: E) -> ! {
-    eprintln!("Error: {}", msg.into());
-    std::process::exit(1);
-}
 /// Represents a parsed SASS stylesheet with nesting
 #[derive(Debug, Clone)]
 pub struct StyleSheet(Vec<Stmt>);
@@ -325,11 +321,13 @@ impl<'a> StyleSheetParser<'a> {
                     GLOBAL_SCOPE.with(|s| {
                         if !default || s.borrow().get_var(&name).is_err() {
                             match s.borrow_mut().insert_var(&name, val) {
-                                Ok(..) => {},
-                                Err(e) => error(e),
+                                Ok(..) => Ok(()),
+                                Err(e) => Err(e),
                             }
+                        } else {
+                            Ok(())
                         }
-                    })
+                    })?
                 }
                 TokenKind::MultilineComment(_) => {
                     let comment = match self

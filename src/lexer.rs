@@ -285,8 +285,7 @@ impl<'a> Lexer<'a> {
             if c == &'=' {
                 return TokenKind::Symbol(Symbol::Dollar);
             } else if !c.is_alphabetic() && c != &'-' && c != &'_' {
-                eprintln!("Error: Expected identifier.");
-                std::process::exit(1)
+                return TokenKind::Error("Expected identifier.".into());
             } else {
                 self.pos.next_char();
                 name.push(*c);

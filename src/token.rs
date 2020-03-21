@@ -2,6 +2,7 @@ use std::fmt;
 
 use crate::atrule::AtRuleKind;
 use crate::common::{Keyword, Op, Pos, Symbol, Whitespace};
+use crate::error::SassError;
 use crate::utils::{IsComment, IsWhitespace};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -82,6 +83,7 @@ pub(crate) enum TokenKind {
     Op(Op),
     MultilineComment(String),
     Interpolation,
+    Error(SassError),
 }
 
 impl TokenKind {
@@ -102,7 +104,7 @@ impl fmt::Display for TokenKind {
             TokenKind::Keyword(kw) => write!(f, "{}", kw),
             TokenKind::MultilineComment(s) => write!(f, "/*{}*/", s),
             TokenKind::Variable(s) => write!(f, "{}", s),
-            TokenKind::Interpolation => {
+            TokenKind::Interpolation | TokenKind::Error(..) => {
                 panic!("we don't want to format TokenKind::Interpolation using Display")
             }
         }

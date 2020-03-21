@@ -7,7 +7,7 @@ use crate::common::Pos;
 
 pub type SassResult<T> = Result<T, SassError>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct SassError {
     message: String,
     pos: Pos,
