@@ -191,6 +191,10 @@ impl Value {
             }
             TokenKind::Symbol(Symbol::OpenParen) => {
                 devour_whitespace_or_comment(toks);
+                if toks.peek().unwrap().is_symbol(Symbol::CloseParen) {
+                    toks.next();
+                    return Ok(Value::List(Vec::new(), ListSeparator::Space));
+                }
                 let val = Self::from_tokens(toks, scope, super_selector)?;
                 assert_eq!(
                     toks.next().unwrap().kind,

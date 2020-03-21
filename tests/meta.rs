@@ -130,6 +130,11 @@ test!(
     "a {\n  color: color;\n}\n"
 );
 test!(
+    type_of_empty_list,
+    "a {\n  color: type-of(())\n}\n",
+    "a {\n  color: list;\n}\n"
+);
+test!(
     type_of_spaced_list,
     "a {\n  color: type-of(1 2 3)\n}\n",
     "a {\n  color: list;\n}\n"

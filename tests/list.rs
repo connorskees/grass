@@ -105,3 +105,13 @@ test!(
     "a {\n  color: append((a, b), c, space);\n}\n",
     "a {\n  color: a b c;\n}\n"
 );
+test!(
+    list_separator_empty,
+    "a {\n  color: list-separator(());\n}\n",
+    "a {\n  color: space;\n}\n"
+);
+test!(
+    append_empty,
+    "a {\n  color: append((), a);\n}\n",
+    "a {\n  color: a;\n}\n"
+);
