@@ -1,4 +1,4 @@
-use std::ops::{Add, Div, Mul, Rem, Sub};
+use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
 
 use crate::common::QuoteKind;
 use crate::error::SassResult;
@@ -70,7 +70,7 @@ impl Add for Value {
                 Self::List(..) => Value::Ident(format!("{}{}", c, other), QuoteKind::None),
                 _ => return Err(format!("Undefined operation \"{} + {}\".", c, other).into()),
             },
-            Self::BinaryOp(..) | Self::Paren(..) => (self.eval()? + other)?,
+            Self::UnaryOp(..) | Self::BinaryOp(..) | Self::Paren(..) => (self.eval()? + other)?,
             Self::Ident(s1, quotes1) => match other {
                 Self::Ident(s2, quotes2) => {
                     let quotes = match (quotes1, quotes2) {
@@ -104,7 +104,7 @@ impl Add for Value {
                     Value::Ident(format!("{}{}", s1, c), quotes)
                 }
                 Self::List(..) => Value::Ident(format!("{}{}", s1, other), quotes1),
-                Self::BinaryOp(..) | Self::Paren(..) => todo!(),
+                Self::UnaryOp(..) | Self::BinaryOp(..) | Self::Paren(..) => todo!(),
             },
             Self::List(..) => match other {
                 Self::Ident(s, q) => {
@@ -414,6 +414,17 @@ impl Rem for Value {
                 }
             },
             _ => return Err(format!("Undefined operation \"{} % {}\".", self, other).into()),
+        })
+    }
+}
+
+impl Neg for Value {
+    type Output = SassResult<Self>;
+
+    fn neg(self) -> Self::Output {
+        Ok(match self.eval()? {
+            Value::Dimension(n, u) => Value::Dimension(-n, u),
+            v => Value::Ident(format!("-{}", v), QuoteKind::None),
         })
     }
 }

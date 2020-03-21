@@ -292,7 +292,17 @@ impl Value {
             TokenKind::Keyword(Keyword::From(s)) => Ok(Value::Ident(s, QuoteKind::None)),
             TokenKind::Keyword(Keyword::Through(s)) => Ok(Value::Ident(s, QuoteKind::None)),
             TokenKind::Keyword(Keyword::To(s)) => Ok(Value::Ident(s, QuoteKind::None)),
-            TokenKind::AtRule(_) => return Err("expected \";\".".into()),
+            TokenKind::AtRule(_) => Err("expected \";\".".into()),
+            TokenKind::Op(Op::Plus) | TokenKind::Symbol(Symbol::Plus) => {
+                devour_whitespace_or_comment(toks);
+                let v = Self::_from_tokens(toks, scope, super_selector)?;
+                Ok(Value::UnaryOp(Op::Plus, Box::new(v)))
+            }
+            TokenKind::Op(Op::Minus) | TokenKind::Symbol(Symbol::Minus) => {
+                devour_whitespace_or_comment(toks);
+                let v = Self::_from_tokens(toks, scope, super_selector)?;
+                Ok(Value::UnaryOp(Op::Minus, Box::new(v)))
+            }
             v => {
                 dbg!(v);
                 panic!("Unexpected token in value parsing")

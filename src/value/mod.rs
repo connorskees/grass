@@ -20,6 +20,7 @@ pub(crate) enum Value {
     Dimension(Number, Unit),
     List(Vec<Value>, ListSeparator),
     Color(Color),
+    UnaryOp(Op, Box<Value>),
     BinaryOp(Box<Value>, Op, Box<Value>),
     Paren(Box<Value>),
     Ident(String, QuoteKind),
@@ -45,7 +46,7 @@ impl Display for Value {
                     .join(sep.as_str())
             ),
             Self::Color(c) => write!(f, "{}", c),
-            Self::BinaryOp(..) => write!(
+            Self::UnaryOp(..) | Self::BinaryOp(..) => write!(
                 f,
                 "{}",
                 match self.clone().eval() {
@@ -148,6 +149,13 @@ impl Value {
         })
     }
 
+    pub fn unary_op_plus(self) -> SassResult<Self> {
+        Ok(match self.eval()? {
+            v @ Value::Dimension(..) => v,
+            v => Value::Ident(format!("+{}", v), QuoteKind::None),
+        })
+    }
+
     pub fn eval(self) -> SassResult<Self> {
         match self {
             Self::BinaryOp(lhs, op, rhs) => match op {
@@ -161,6 +169,11 @@ impl Value {
                 _ => Ok(Self::BinaryOp(lhs, op, rhs)),
             },
             Self::Paren(v) => v.eval(),
+            Self::UnaryOp(op, val) => match op {
+                Op::Plus => val.unary_op_plus(),
+                Op::Minus => -*val,
+                _ => unreachable!(),
+            },
             _ => Ok(self),
         }
     }
