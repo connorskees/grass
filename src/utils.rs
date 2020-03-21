@@ -136,7 +136,7 @@ pub(crate) fn eat_variable_value<I: Iterator<Item = Token>>(
         }
     }
     devour_whitespace(toks);
-    let val = Value::from_tokens(&mut raw.into_iter().peekable(), scope, super_selector).unwrap();
+    let val = Value::from_tokens(&mut raw.into_iter().peekable(), scope, super_selector)?;
     Ok(VariableDecl::new(val, default, global))
 }
 

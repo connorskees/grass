@@ -88,10 +88,7 @@ impl Value {
             TokenKind::Symbol(Symbol::Comma) => {
                 toks.next();
                 devour_whitespace_or_comment(toks);
-                let right = match Self::from_tokens(toks, scope, super_selector) {
-                    Ok(x) => x,
-                    Err(_) => return Ok(left),
-                };
+                let right = Self::from_tokens(toks, scope, super_selector)?;
                 if let Value::List(v, ListSeparator::Comma) = right {
                     let mut v2 = vec![left];
                     v2.extend(v);
@@ -117,18 +114,12 @@ impl Value {
                 };
                 toks.next();
                 devour_whitespace_or_comment(toks);
-                let right = match Self::from_tokens(toks, scope, super_selector) {
-                    Ok(x) => x,
-                    Err(_) => return Ok(left),
-                };
+                let right = Self::from_tokens(toks, scope, super_selector)?;
                 Ok(Value::BinaryOp(Box::new(left), op, Box::new(right)))
             }
             _ => {
                 devour_whitespace_or_comment(toks);
-                let right = match Self::from_tokens(toks, scope, super_selector) {
-                    Ok(x) => x,
-                    Err(_) => return Ok(left),
-                };
+                let right = Self::from_tokens(toks, scope, super_selector)?;
                 if let Value::List(v, ListSeparator::Space) = right {
                     let mut v2 = vec![left];
                     v2.extend(v);
@@ -302,6 +293,7 @@ impl Value {
             TokenKind::Keyword(Keyword::Through(s)) => Ok(Value::Ident(s, QuoteKind::None)),
             TokenKind::Keyword(Keyword::To(s)) => Ok(Value::Ident(s, QuoteKind::None)),
             TokenKind::Unknown(c) => Ok(Value::Ident(c.to_string(), QuoteKind::None)),
+            TokenKind::AtRule(_) => return Err("expected \";\".".into()),
             v => {
                 dbg!(v);
                 panic!("Unexpected token in value parsing")
