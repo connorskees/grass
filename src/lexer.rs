@@ -250,20 +250,38 @@ impl<'a> Lexer<'a> {
     }
 
     fn lex_num(&mut self) -> TokenKind {
-        let mut string = String::with_capacity(99);
+        let mut whole = String::new();
         while let Some(c) = self.buf.peek() {
-            if !c.is_numeric() && c != &'.' {
+            if !c.is_numeric() {
                 break;
             }
-            let tok = self
-                .buf
-                .next()
-                .expect("this is impossible because we have already peeked");
+            let tok = self.buf.next().unwrap();
             self.pos.next_char();
-            string.push(tok);
+            whole.push(tok);
         }
 
-        TokenKind::Number(string)
+        let mut dec = String::new();
+
+        if self.buf.peek() == Some(&'.') {
+            self.buf.next();
+            dec.push('.');
+            while let Some(c) = self.buf.peek() {
+                if !c.is_numeric() {
+                    break;
+                }
+                let tok = self.buf.next().unwrap();
+                self.pos.next_char();
+                dec.push(tok);
+            }
+        }
+
+        if dec.len() == 1 {
+            return TokenKind::Error("Expected digit.".into());
+        }
+
+        whole.push_str(&dec);
+
+        TokenKind::Number(whole)
     }
 
     fn lex_hash(&mut self) -> TokenKind {

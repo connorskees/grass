@@ -33,3 +33,17 @@ macro_rules! test {
         }
     };
 }
+
+#[macro_export]
+macro_rules! error {
+    ($func:ident, $input:expr, $err:expr) => {
+        #[test]
+        #[allow(non_snake_case)]
+        fn $func() {
+            match grass::StyleSheet::new($input) {
+                Ok(..) => panic!("did not fail"),
+                Err(e) => assert_eq!($err, e.to_string().as_str()),
+            }
+        }
+    };
+}
