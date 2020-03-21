@@ -3,11 +3,11 @@
 //!
 //! All functionality is currently exposed through [`StyleSheet`].
 //!
-//! Spec progress as of 2020-03-01:
+//! Spec progress as of 2020-03-20:
 //!
 //! | Passing | Failing | Total |
 //! |---------|---------|-------|
-//! | 1236    | 3857    | 5093  |
+//! | 1394    | 3699    | 5093  |
 //!
 //! ## Use as library
 //! ```
