@@ -1,6 +1,6 @@
 use std::iter::{Iterator, Peekable};
 
-use crate::common::{Keyword, QuoteKind, Symbol};
+use crate::common::{Keyword, QuoteKind, Symbol, Whitespace};
 use crate::error::SassResult;
 use crate::lexer::Lexer;
 use crate::selector::Selector;
@@ -214,6 +214,7 @@ pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
                 is_escaped = false;
                 continue;
             }
+            TokenKind::Whitespace(Whitespace::Newline) => return Err("Expected \".".into()),
             _ => {}
         }
         if is_escaped && tok.kind != TokenKind::Symbol(Symbol::BackSlash) {
