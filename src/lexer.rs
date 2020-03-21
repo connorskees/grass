@@ -133,7 +133,12 @@ impl<'a> Iterator for Lexer<'a> {
             '<' => symbol!(self, Lt),
             '>' => symbol!(self, Gt),
             '^' => symbol!(self, Xor),
+            '`' => symbol!(self, BackTick),
             '\0' => return None,
+            c if c.is_control() => {
+                self.buf.next();
+                TokenKind::Error("Expected expression.".into())
+            },
             _ => self.lex_ident(),
         };
         self.pos.next_char();

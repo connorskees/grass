@@ -61,6 +61,8 @@ pub enum Symbol {
     QuestionMark,
     /// \
     BackSlash,
+    /// `
+    BackTick
 }
 
 impl Display for Symbol {
@@ -95,6 +97,7 @@ impl Display for Symbol {
             Self::SingleQuote => write!(f, "'"),
             Self::QuestionMark => write!(f, "?"),
             Self::BackSlash => write!(f, "\\"),
+            Self::BackTick => write!(f, "`"),
         }
     }
 }
@@ -133,6 +136,7 @@ impl TryFrom<char> for Symbol {
             '\'' => Ok(Self::SingleQuote),
             '?' => Ok(Self::QuestionMark),
             '\\' => Ok(Self::BackSlash),
+            '`' => Ok(Self::BackTick),
             _ => Err("invalid symbol"),
         }
     }

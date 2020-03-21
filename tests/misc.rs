@@ -47,12 +47,22 @@ test!(
     "a {\n  color: red;\n}\n"
 );
 test!(
-    utf8_ident_before,
+    utf8_ident_before_len,
     "a {\n  color: length(😀red);\n}\n",
     "@charset \"UTF-8\";\na {\n  color: 1;\n}\n"
 );
 test!(
-    utf8_ident_after,
+    utf8_ident_before,
+    "a {\n  color: 😀red;\n}\n",
+    "@charset \"UTF-8\";\na {\n  color: 😀red;\n}\n"
+);
+test!(
+    utf8_ident_after_len,
     "a {\n  color: length(red😁)\n}\n",
     "@charset \"UTF-8\";\na {\n  color: 1;\n}\n"
+);
+test!(
+    utf8_ident_after,
+    "a {\n  color: red😁\n}\n",
+    "@charset \"UTF-8\";\na {\n  color: red😁;\n}\n"
 );
