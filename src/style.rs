@@ -203,7 +203,11 @@ impl<'a> StyleParser<'a> {
                 }
                 _ => {
                     let val = self.parse_style_value(toks, scope)?;
-                    match toks.peek().unwrap().kind {
+                    let t = match toks.peek() {
+                        Some(tok) => tok,
+                        None => return Err("expected more input.".into()),
+                    };
+                    match t.kind {
                         TokenKind::Symbol(Symbol::CloseCurlyBrace) => {}
                         TokenKind::Symbol(Symbol::SemiColon) => {
                             toks.next();
