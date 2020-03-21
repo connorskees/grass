@@ -136,6 +136,9 @@ impl AtRule {
                             break;
                         }
                         TokenKind::Keyword(Keyword::To(..)) => break,
+                        TokenKind::Symbol(Symbol::OpenCurlyBrace) => {
+                            return Err("Expected \"to\" or \"through\".".into());
+                        }
                         _ => from_toks.push(tok),
                     }
                 }
