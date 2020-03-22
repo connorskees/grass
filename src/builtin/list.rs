@@ -140,4 +140,43 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             Ok(Value::List(list, sep))
         }),
     );
+    f.insert(
+        "join".to_owned(),
+        Box::new(|args, _| {
+            max_args!(args, 3);
+            let (mut list1, sep1) = match arg!(args, 0, "list") {
+                Value::List(v, sep) => (v, sep),
+                v => (vec![v], ListSeparator::Space),
+            };
+            let list2 = match arg!(args, 1, "list") {
+                Value::List(v, ..) => v,
+                v => vec![v],
+            };
+            let sep = match arg!(
+                args,
+                2,
+                "separator" = Value::Ident("auto".to_owned(), QuoteKind::None)
+            ) {
+                Value::Ident(s, ..) => match s.as_str() {
+                    "auto" => {
+                        if list1.len() < 2 && list2.len() < 2 {
+                            ListSeparator::Space
+                        } else {
+                            sep1
+                        }
+                    },
+                    "comma" => ListSeparator::Comma,
+                    "space" => ListSeparator::Space,
+                    _ => {
+                        return Err("$separator: Must be \"space\", \"comma\", or \"auto\".".into())
+                    }
+                },
+                _ => return Err("$separator: Must be \"space\", \"comma\", or \"auto\".".into()),
+            };
+
+            list1.extend(list2);
+
+            Ok(Value::List(list1, sep))
+        }),
+    );
 }

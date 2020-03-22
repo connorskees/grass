@@ -115,3 +115,33 @@ test!(
     "a {\n  color: append((), a);\n}\n",
     "a {\n  color: a;\n}\n"
 );
+test!(
+    join_space_separated,
+    "a {\n  color: join(a b, c d);\n}\n",
+    "a {\n  color: a b c d;\n}\n"
+);
+test!(
+    join_comma_separated,
+    "a {\n  color: join((a, b), (c, d));\n}\n",
+    "a {\n  color: a, b, c, d;\n}\n"
+);
+test!(
+    join_non_list,
+    "a {\n  color: join(a, b);\n}\n",
+    "a {\n  color: a b;\n}\n"
+);
+test!(
+    join_separator_comma,
+    "a {\n  color: join(a, b, comma);\n}\n",
+    "a {\n  color: a, b;\n}\n"
+);
+test!(
+    join_separator_space,
+    "a {\n  color: join((a, b), (c, d), space);\n}\n",
+    "a {\n  color: a b c d;\n}\n"
+);
+// test!(
+//     join_bracketed,
+//     "a {\n  color: join([a], b);\n}\n",
+//     "a {\n  color: [a b];\n}\n"
+// );
