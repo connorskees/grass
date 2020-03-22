@@ -186,10 +186,16 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             } else if index == Number::from(0) {
                 string.insert_str(0, &substr);
             } else {
-                string.insert_str(
-                    len - index.abs().to_integer().to_usize().unwrap().min(len),
-                    &substr,
-                );
+                let idx = index.abs().to_integer().to_usize().unwrap();
+                if idx > len {
+                    string.insert_str(0, &substr)
+                } else {
+                    string.insert_str(
+                        len - idx + 1,
+                        &substr,
+                    );
+
+                }
             }
 
             Ok(Value::Ident(string, quotes))

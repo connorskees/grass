@@ -150,9 +150,19 @@ test!(
     "a {\n  color: Xabcd;\n}\n"
 );
 test!(
-    str_insert_negative_idx,
-    "a {\n  color: str-insert(abcd, \"X\", -2);\n}\n",
-    "a {\n  color: abXcd;\n}\n"
+    str_insert_negative_1,
+    "a {\n  color: str-insert(abc, \"X\", -1);\n}\n",
+    "a {\n  color: abcX;\n}\n"
+);
+test!(
+    str_insert_negative_2,
+    "a {\n  color: str-insert(abc, \"X\", -2);\n}\n",
+    "a {\n  color: abXc;\n}\n"
+);
+test!(
+    str_insert_negative_3,
+    "a {\n  color: str-insert(abc, \"X\", -3);\n}\n",
+    "a {\n  color: aXbc;\n}\n"
 );
 error!(
     float_idx,
