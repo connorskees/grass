@@ -13,12 +13,32 @@ cargo b --release
 ./sass-spec/sass-spec.rb -c './target/release/grass'
 ```
 
-The focus right now is just getting the most basic tests to pass.
+The large features remaining are
+```
+@while
+maps
+order of operations
+@each
+special case certain functions (min, max, calc, element, expression, progid, url)
+variadic arguments
+many builtin list functions
+many builtin string functions
+all builtin selector functions
+all builtin map functions
+@extend
+indented syntax
+dedicated global scope
+a special parser for plain css
+@use and module system
+@forward
+```
+in addition to some smaller features like `\` in selectors
+
 
 ```
-2020-03-20
-PASSING: 1394
-FAILING: 3699
+2020-03-22
+PASSING: 1442
+FAILING: 3651
 TOTAL: 5093
 ```
 
