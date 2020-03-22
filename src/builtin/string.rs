@@ -35,7 +35,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         Box::new(|args, _| {
             max_args!(args, 1);
             match arg!(args, 0, "string") {
-                Value::Ident(i, _) => Ok(Value::Dimension(Number::from(i.len()), Unit::None)),
+                Value::Ident(i, _) => Ok(Value::Dimension(Number::from(i.chars().count()), Unit::None)),
                 v => Err(format!("$string: {} is not a string.", v).into()),
             }
         }),

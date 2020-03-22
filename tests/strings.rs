@@ -104,6 +104,16 @@ test!(
     "a {\n  color: 7;\n}\n"
 );
 test!(
+    str_len_double_wide,
+    "a {\n  color: str-length(\"👭\");\n}\n",
+    "@charset \"UTF-8\";\na {\n  color: 1;\n}\n"
+);
+test!(
+    str_len_combining,
+    "a {\n  color: str-length(\"c\\0308\");\n}\n",
+    "a {\n  color: 2;\n}\n"
+);
+test!(
     str_index_char,
     "a {\n  color: str-index(abcd, a);\n}\n",
     "a {\n  color: 1;\n}\n"
