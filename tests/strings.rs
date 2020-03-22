@@ -144,3 +144,32 @@ test!(
     "a {\n  color: str-insert(abcd, \"\", 4);\n}\n",
     "a {\n  color: abcd;\n}\n"
 );
+test!(
+    str_insert_idx_0,
+    "a {\n  color: str-insert(abcd, \"X\", 0);\n}\n",
+    "a {\n  color: Xabcd;\n}\n"
+);
+test!(
+    str_insert_negative_idx,
+    "a {\n  color: str-insert(abcd, \"X\", -2);\n}\n",
+    "a {\n  color: abXcd;\n}\n"
+);
+error!(
+    float_idx,
+    "a {\n  color: str-insert(abcd, \"X\", .5);\n}\n", "Error: $index: 0.5 is not an int."
+);
+error!(
+    idx_with_units,
+    "a {\n  color: str-insert(abcd, \"X\", 5px);\n}\n",
+    "Error: $index: Expected 5px to have no units."
+);
+test!(
+    idx_larger_than_string,
+    "a {\n  color: str-insert(abcd, \"X\", 20);\n}\n",
+    "a {\n  color: abcdX;\n}\n"
+);
+test!(
+    idx_larger_than_string_negative,
+    "a {\n  color: str-insert(abcd, \"X\", -20);\n}\n",
+    "a {\n  color: Xabcd;\n}\n"
+);

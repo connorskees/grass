@@ -161,7 +161,13 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             };
 
             let index = match arg!(args, 2, "index") {
-                Value::Dimension(n, _) => n.to_integer().to_usize().unwrap(),
+                Value::Dimension(n, Unit::None) if n.is_decimal() => {
+                    return Err(format!("$index: {} is not an int.", n).into())
+                }
+                Value::Dimension(n, Unit::None) => n,
+                v @ Value::Dimension(..) => {
+                    return Err(format!("$index: Expected {} to have no units.", v).into())
+                }
                 v => return Err(format!("$index: {} is not a number.", v).into()),
             };
 
@@ -170,7 +176,21 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 QuoteKind::None => QuoteKind::None,
             };
 
-            string.insert_str(index - 1, &substr);
+            let len = string.len();
+
+            if index > Number::from(0) {
+                string.insert_str(
+                    index.to_integer().to_usize().unwrap().min(len + 1) - 1,
+                    &substr,
+                );
+            } else if index == Number::from(0) {
+                string.insert_str(0, &substr);
+            } else {
+                string.insert_str(
+                    len - index.abs().to_integer().to_usize().unwrap().min(len),
+                    &substr,
+                );
+            }
 
             Ok(Value::Ident(string, quotes))
         }),
