@@ -1,8 +1,8 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
 
-use crate::error::SassResult;
 use crate::atrule::{Function, Mixin};
+use crate::error::SassResult;
 use crate::value::Value;
 
 thread_local!(pub(crate) static GLOBAL_SCOPE: RefCell<Scope> = RefCell::new(Scope::new()));

@@ -174,3 +174,13 @@ test!(
     "@mixin foo($x) {\n  color: $x;\n}\na {\n  @include foo(0px 0px 0px 0px #ef8086 inset !important);\n}\n",
     "a {\n  color: 0px 0px 0px 0px #ef8086 inset !important;\n}\n"
 );
+test!(
+    content_without_variable,
+    "@mixin foo {\n  @content;\n}\n\na {\n  @include foo {\n    color: red;\n  }\n}\n",
+    "a {\n  color: red;\n}\n"
+);
+test!(
+    content_with_variable,
+    "@mixin foo($a) {\n  @content;\n}\n\na {\n  @include foo(red) {\n    color: red;\n  }\n}\n",
+    "a {\n  color: red;\n}\n"
+);

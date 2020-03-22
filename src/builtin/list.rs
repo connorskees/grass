@@ -164,7 +164,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                         } else {
                             sep1
                         }
-                    },
+                    }
                     "comma" => ListSeparator::Comma,
                     "space" => ListSeparator::Space,
                     _ => {

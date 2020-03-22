@@ -84,7 +84,7 @@ use std::io::Write;
 use std::iter::{Iterator, Peekable};
 use std::path::Path;
 
-use crate::atrule::{AtRule, AtRuleKind, eat_include, Mixin, Function};
+use crate::atrule::{eat_include, AtRule, AtRuleKind, Function, Mixin};
 use crate::common::{Pos, Symbol, Whitespace};
 use crate::css::Css;
 use crate::error::SassError;
@@ -637,9 +637,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                         AtRule::Warn(a, b) => Ok(Some(Expr::Warn(a, b))),
                         AtRule::Error(pos, err) => Err(SassError::new(err, pos)),
                         AtRule::Return(_) => Err("This at-rule is not allowed here.".into()),
-                        AtRule::Content => {
-                            return Err("@content is only allowed within mixin declarations.".into())
-                        }
+                        c @ AtRule::Content => Ok(Some(Expr::AtRule(c))),
                         f @ AtRule::If(..) => Ok(Some(Expr::AtRule(f))),
                         f @ AtRule::For(..) => Ok(Some(Expr::AtRule(f))),
                         u @ AtRule::Unknown(..) => Ok(Some(Expr::AtRule(u))),

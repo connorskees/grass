@@ -1,6 +1,8 @@
 use std::iter::Peekable;
 use std::vec::IntoIter;
 
+use super::eat_stmts;
+
 use crate::args::{eat_call_args, eat_func_args, CallArgs, FuncArgs};
 use crate::atrule::AtRule;
 use crate::common::Symbol;
@@ -15,12 +17,18 @@ pub(crate) struct Mixin {
     scope: Scope,
     args: FuncArgs,
     body: Peekable<IntoIter<Token>>,
+    content: Vec<Stmt>,
 }
 
 impl Mixin {
-    pub fn new(scope: Scope, args: FuncArgs, body: Vec<Token>) -> Self {
+    pub fn new(scope: Scope, args: FuncArgs, body: Vec<Token>, content: Vec<Stmt>) -> Self {
         let body = body.into_iter().peekable();
-        Mixin { scope, args, body }
+        Mixin {
+            scope,
+            args,
+            body,
+            content,
+        }
     }
 
     pub fn decl_from_tokens<I: Iterator<Item = Token>>(
@@ -69,7 +77,12 @@ impl Mixin {
             }
         }
 
-        Ok((name, Mixin::new(scope.clone(), args, body)))
+        Ok((name, Mixin::new(scope.clone(), args, body, Vec::new())))
+    }
+
+    pub fn content(mut self, content: Vec<Stmt>) -> Mixin {
+        self.content = content;
+        self
     }
 
     pub fn args(mut self, args: &mut CallArgs) -> SassResult<Mixin> {
@@ -98,7 +111,7 @@ impl Mixin {
         while let Some(expr) = eat_expr(&mut self.body, &mut self.scope, super_selector)? {
             match expr {
                 Expr::AtRule(a) => match a {
-                    AtRule::Content => todo!("@content in mixin"),
+                    AtRule::Content => stmts.extend(self.content.clone()),
                     _ => stmts.push(Stmt::AtRule(a)),
                 },
                 Expr::Style(s) => stmts.push(Stmt::Style(s)),
@@ -146,6 +159,8 @@ pub(crate) fn eat_include<I: Iterator<Item = Token>>(
 
     devour_whitespace(toks);
 
+    let mut has_include = false;
+
     let mut args = if let Some(tok) = toks.next() {
         match tok.kind {
             TokenKind::Symbol(Symbol::SemiColon) => CallArgs::new(),
@@ -153,9 +168,17 @@ pub(crate) fn eat_include<I: Iterator<Item = Token>>(
                 let tmp = eat_call_args(toks, scope, super_selector)?;
                 devour_whitespace(toks);
                 if let Some(tok) = toks.next() {
-                    assert_eq!(tok.kind, TokenKind::Symbol(Symbol::SemiColon));
+                    match tok.kind {
+                        TokenKind::Symbol(Symbol::SemiColon) => {}
+                        TokenKind::Symbol(Symbol::OpenCurlyBrace) => has_include = true,
+                        _ => todo!(),
+                    }
                 }
                 tmp
+            }
+            TokenKind::Symbol(Symbol::OpenCurlyBrace) => {
+                has_include = true;
+                CallArgs::new()
             }
             _ => return Err("expected \"{\".".into()),
         }
@@ -165,8 +188,24 @@ pub(crate) fn eat_include<I: Iterator<Item = Token>>(
 
     devour_whitespace(toks);
 
+    let content = if let Some(tok) = toks.peek() {
+        if tok.is_symbol(Symbol::OpenCurlyBrace) {
+            toks.next();
+            eat_stmts(toks, &mut scope.clone(), super_selector)?
+        } else if has_include {
+            eat_stmts(toks, &mut scope.clone(), super_selector)?
+        } else {
+            Vec::new()
+        }
+    } else {
+        Vec::new()
+    };
+
     let mixin = scope.get_mixin(&name)?.clone();
 
-    let rules = mixin.args(&mut args)?.call(super_selector)?;
+    let rules = mixin
+        .args(&mut args)?
+        .content(content)
+        .call(super_selector)?;
     Ok(rules)
 }
