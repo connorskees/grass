@@ -99,7 +99,11 @@ impl Display for Value {
 
 impl Value {
     pub fn is_null(&self) -> bool {
-        self == &Value::Null
+        match self {
+            &Value::Null => true,
+            Value::Ident(i, QuoteKind::None) if i.is_empty()  => true,
+            _ => false
+        }
     }
 
     pub fn is_true(&self) -> SassResult<bool> {
