@@ -114,3 +114,33 @@ test!(
     "a {\n  color: 1;\n}\n"
 );
 test!(str_index_null, "a {\n  color: str-index(abcd, X);\n}\n", "");
+test!(
+    str_insert_start,
+    "a {\n  color: str-insert(\"abcd\", \"X\", 1);\n}\n",
+    "a {\n  color: \"Xabcd\";\n}\n"
+);
+test!(
+    str_insert_middle,
+    "a {\n  color: str-insert(\"abcd\", \"X\", 4);\n}\n",
+    "a {\n  color: \"abcXd\";\n}\n"
+);
+test!(
+    str_insert_end,
+    "a {\n  color: str-insert(\"abcd\", \"X\", 5);\n}\n",
+    "a {\n  color: \"abcdX\";\n}\n"
+);
+test!(
+    str_insert_sgl_quotes,
+    "a {\n  color: str-insert('abcd', \"X\", 4);\n}\n",
+    "a {\n  color: \"abcXd\";\n}\n"
+);
+test!(
+    str_insert_no_quotes,
+    "a {\n  color: str-insert(abcd, \"X\", 4);\n}\n",
+    "a {\n  color: abcXd;\n}\n"
+);
+test!(
+    str_insert_empty_string,
+    "a {\n  color: str-insert(abcd, \"\", 4);\n}\n",
+    "a {\n  color: abcd;\n}\n"
+);

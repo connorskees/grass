@@ -146,4 +146,33 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             })
         }),
     );
+    f.insert(
+        "str-insert".to_owned(),
+        Box::new(|args, _| {
+            max_args!(args, 3);
+            let (mut string, q) = match arg!(args, 0, "string") {
+                Value::Ident(i, q) => (i, q),
+                v => return Err(format!("$string: {} is not a string.", v).into()),
+            };
+
+            let substr = match arg!(args, 1, "insert") {
+                Value::Ident(i, _) => i,
+                v => return Err(format!("$insert: {} is not a string.", v).into()),
+            };
+
+            let index = match arg!(args, 2, "index") {
+                Value::Dimension(n, _) => n.to_integer().to_usize().unwrap(),
+                v => return Err(format!("$index: {} is not a number.", v).into()),
+            };
+
+            let quotes = match q {
+                QuoteKind::Double | QuoteKind::Single => QuoteKind::Double,
+                QuoteKind::None => QuoteKind::None,
+            };
+
+            string.insert_str(index - 1, &substr);
+
+            Ok(Value::Ident(string, quotes))
+        }),
+    );
 }
