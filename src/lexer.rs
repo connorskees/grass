@@ -195,20 +195,15 @@ impl<'a> Lexer<'a> {
     fn lex_at_rule(&mut self) -> TokenKind {
         self.buf.next();
         self.pos.next_char();
-        let mut string = String::with_capacity(99);
-        while let Some(c) = self.buf.peek() {
-            if !c.is_alphabetic() && c != &'-' && c != &'_' {
-                break;
+        if let TokenKind::Ident(s) = self.lex_ident() {
+            if !s.is_empty() {
+                TokenKind::AtRule(AtRuleKind::from(s.as_ref()))
+            } else {
+                TokenKind::Error("Expected identifier.".into())
             }
-            let tok = self
-                .buf
-                .next()
-                .expect("this is impossible because we have already peeked");
-            self.pos.next_char();
-            string.push(tok);
+        } else {
+            TokenKind::Error("Expected identifier.".into())
         }
-
-        TokenKind::AtRule(AtRuleKind::from(string.as_ref()))
     }
 
     fn lex_forward_slash(&mut self) -> TokenKind {
