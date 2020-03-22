@@ -3,10 +3,10 @@ use std::iter::Peekable;
 
 use num_traits::cast::ToPrimitive;
 
+pub(crate) use function::Function;
+pub(crate) use mixin::{eat_include, Mixin};
 use crate::common::{Keyword, Pos, Symbol};
 use crate::error::SassResult;
-use crate::function::Function;
-use crate::mixin::Mixin;
 use crate::scope::Scope;
 use crate::selector::Selector;
 use crate::unit::Unit;
@@ -17,7 +17,9 @@ use crate::{Stmt, Token, TokenKind};
 use parse::eat_stmts;
 use unknown::UnknownAtRule;
 
+mod function;
 mod parse;
+mod mixin;
 mod unknown;
 
 #[derive(Debug, Clone)]

@@ -2,8 +2,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 
 use crate::error::SassResult;
-use crate::function::Function;
-use crate::mixin::Mixin;
+use crate::atrule::{Function, Mixin};
 use crate::value::Value;
 
 thread_local!(pub(crate) static GLOBAL_SCOPE: RefCell<Scope> = RefCell::new(Scope::new()));
