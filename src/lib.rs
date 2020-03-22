@@ -417,6 +417,17 @@ impl<'a> StyleSheetParser<'a> {
                             }
                             AtRule::For(s) => rules.extend(s),
                             AtRule::Content => return Err("@content is only allowed within mixin declarations.".into()),
+                            AtRule::If(cond, yes, no) => {
+                                if Value::from_tokens(
+                                    &mut cond.into_iter().peekable(),
+                                    &mut GLOBAL_SCOPE.with(|s| s.borrow().clone()),
+                                    &Selector::new(),
+                                )?.is_true()? {
+                                    rules.extend(yes);
+                                } else {
+                                    rules.extend(no);
+                                }
+                            }
                             u @ AtRule::Unknown(..) => rules.push(Stmt::AtRule(u)),
                         }
                     }
@@ -443,6 +454,19 @@ impl<'a> StyleSheetParser<'a> {
                 Expr::Style(s) => stmts.push(Stmt::Style(s)),
                 Expr::AtRule(a) => match a {
                     AtRule::For(s) => stmts.extend(s),
+                    AtRule::If(cond, yes, no) => {
+                        if Value::from_tokens(
+                            &mut cond.into_iter().peekable(),
+                            &mut GLOBAL_SCOPE.with(|s| s.borrow().clone()),
+                            &Selector::new(),
+                        )?
+                        .is_true()?
+                        {
+                            stmts.extend(yes);
+                        } else {
+                            stmts.extend(no);
+                        }
+                    }
                     AtRule::Content => {
                         return Err("@content is only allowed within mixin declarations.".into())
                     }
@@ -620,6 +644,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                         AtRule::Content => {
                             return Err("@content is only allowed within mixin declarations.".into())
                         }
+                        f @ AtRule::If(..) => Ok(Some(Expr::AtRule(f))),
                         f @ AtRule::For(..) => Ok(Some(Expr::AtRule(f))),
                         u @ AtRule::Unknown(..) => Ok(Some(Expr::AtRule(u))),
                     };

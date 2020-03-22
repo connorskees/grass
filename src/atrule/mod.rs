@@ -32,6 +32,7 @@ pub(crate) enum AtRule {
     Content,
     Unknown(UnknownAtRule),
     For(Vec<Stmt>),
+    If(Vec<Token>, Vec<Stmt>, Vec<Stmt>),
 }
 
 impl AtRule {
@@ -104,7 +105,46 @@ impl AtRule {
             }
             AtRuleKind::Each => todo!("@each not yet implemented"),
             AtRuleKind::Extend => todo!("@extend not yet implemented"),
-            AtRuleKind::If => todo!("@if not yet implemented"),
+            AtRuleKind::If => {
+                let mut cond = Vec::new();
+                let mut n = 0;
+                while let Some(tok) = toks.peek() {
+                    match tok.kind {
+                        TokenKind::Symbol(Symbol::OpenCurlyBrace) => n += 1,
+                        TokenKind::Symbol(Symbol::CloseCurlyBrace) => n -= 1,
+                        TokenKind::Interpolation => n += 1,
+                        _ => {}
+                    }
+                    if n == 1 {
+                        break;
+                    }
+                    cond.push(toks.next().unwrap());
+                }
+                toks.next();
+                devour_whitespace_or_comment(toks);
+                let mut yes = Vec::new();
+                yes.extend(eat_stmts(toks, scope, super_selector)?);
+
+                devour_whitespace_or_comment(toks);
+
+                let mut no = Vec::new();
+                if let Some(tok) = toks.peek() {
+                    if tok.kind == TokenKind::AtRule(AtRuleKind::Else) {
+                        toks.next();
+                        devour_whitespace_or_comment(toks);
+                        if let Some(tok) = toks.next() {
+                            if !tok.is_symbol(Symbol::OpenCurlyBrace) {
+                                return Err("expected \"{\".".into());
+                            }
+                        }
+                        devour_whitespace_or_comment(toks);
+                        no.extend(eat_stmts(toks, scope, super_selector)?);
+                    }
+                }
+                devour_whitespace_or_comment(toks);
+
+                AtRule::If(cond, yes, no)
+            }
             AtRuleKind::Else => todo!("@else not yet implemented"),
             AtRuleKind::For => {
                 let mut stmts = Vec::new();

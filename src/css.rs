@@ -153,7 +153,7 @@ impl Css {
                             .pretty_print(buf, nesting + 1)?;
                         writeln!(buf, "{}}}", padding)?;
                     }
-                    _ => todo!(),
+                    _ => todo!("at-rule other than unknown at toplevel"),
                 },
                 Toplevel::Newline => {
                     if has_written {
