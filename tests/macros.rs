@@ -2,7 +2,8 @@
 
 #[macro_export]
 macro_rules! test {
-    ($func:ident, $input:expr) => {
+    ($( #[$attr:meta] ),*$func:ident, $input:expr) => {
+        $(#[$attr])*
         #[test]
         #[allow(non_snake_case)]
         fn $func() {
@@ -17,7 +18,8 @@ macro_rules! test {
             );
         }
     };
-    ($func:ident, $input:expr, $output:expr) => {
+    ($( #[$attr:meta] ),*$func:ident, $input:expr, $output:expr) => {
+        $(#[$attr])*
         #[test]
         #[allow(non_snake_case)]
         fn $func() {
@@ -36,7 +38,8 @@ macro_rules! test {
 
 #[macro_export]
 macro_rules! error {
-    ($func:ident, $input:expr, $err:expr) => {
+    ($( #[$attr:meta] ),*$func:ident, $input:expr, $err:expr) => {
+        $(#[$attr])*
         #[test]
         #[allow(non_snake_case)]
         fn $func() {

@@ -184,6 +184,7 @@ test!(
     "a {\n  color: Xabcd;\n}\n"
 );
 test!(
+    #[ignore]
     str_insert_double_width_char,
     "a {\n  color: str-insert(\"👭\", \"c\", 2);\n}\n",
     "@charset \"UTF-8\";\na {\n  color: \"👭c\";\n}\n"
