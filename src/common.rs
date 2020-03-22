@@ -62,7 +62,7 @@ pub enum Symbol {
     /// \
     BackSlash,
     /// `
-    BackTick
+    BackTick,
 }
 
 impl Display for Symbol {

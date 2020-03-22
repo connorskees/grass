@@ -141,7 +141,7 @@ impl<'a> Iterator for Lexer<'a> {
             c if c.is_control() => {
                 self.buf.next();
                 TokenKind::Error("Expected expression.".into())
-            },
+            }
             _ => self.lex_ident(),
         };
         self.pos.next_char();
