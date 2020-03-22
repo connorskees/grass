@@ -48,6 +48,7 @@ impl<'a> Iterator for Lexer<'a> {
                             s.push_str(&n);
                             TokenKind::Number(s)
                         }
+                        e @ TokenKind::Error(..) => e,
                         _ => unsafe { std::hint::unreachable_unchecked() },
                     },
                     'a'..='z' | 'A'..='Z' | '_' | '-' => match self.lex_ident() {
@@ -62,6 +63,7 @@ impl<'a> Iterator for Lexer<'a> {
                             TokenKind::Ident(s)
                         }
                         TokenKind::Symbol(Symbol::Minus) => TokenKind::Ident(String::from("--")),
+                        e @ TokenKind::Error(..) => e,
                         _ => unsafe { std::hint::unreachable_unchecked() },
                     },
                     _ => TokenKind::Symbol(Symbol::Minus),
@@ -79,6 +81,7 @@ impl<'a> Iterator for Lexer<'a> {
                             s.push_str(&n);
                             TokenKind::Number(s)
                         }
+                        e @ TokenKind::Error(..) => e,
                         _ => unsafe { std::hint::unreachable_unchecked() },
                     },
                     _ => TokenKind::Symbol(Symbol::Period),
