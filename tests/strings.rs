@@ -165,21 +165,26 @@ test!(
     "a {\n  color: aXbc;\n}\n"
 );
 error!(
-    float_idx,
+    str_insert_float_idx,
     "a {\n  color: str-insert(abcd, \"X\", .5);\n}\n", "Error: $index: 0.5 is not an int."
 );
 error!(
-    idx_with_units,
+    str_insert_idx_with_units,
     "a {\n  color: str-insert(abcd, \"X\", 5px);\n}\n",
     "Error: $index: Expected 5px to have no units."
 );
 test!(
-    idx_larger_than_string,
+    str_insert_idx_larger_than_string,
     "a {\n  color: str-insert(abcd, \"X\", 20);\n}\n",
     "a {\n  color: abcdX;\n}\n"
 );
 test!(
-    idx_larger_than_string_negative,
+    str_insert_idx_larger_than_string_negative,
     "a {\n  color: str-insert(abcd, \"X\", -20);\n}\n",
     "a {\n  color: Xabcd;\n}\n"
+);
+test!(
+    str_insert_double_width_char,
+    "a {\n  color: str-insert(\"👭\", \"c\", 2);\n}\n",
+    "@charset \"UTF-8\";\na {\n  color: \"👭c\";\n}\n"
 );

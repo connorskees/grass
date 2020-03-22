@@ -150,7 +150,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         "str-insert".to_owned(),
         Box::new(|args, _| {
             max_args!(args, 3);
-            let (mut string, q) = match arg!(args, 0, "string") {
+            let (s1, q) = match arg!(args, 0, "string") {
                 Value::Ident(i, q) => (i, q),
                 v => return Err(format!("$string: {} is not a string.", v).into()),
             };
@@ -176,27 +176,40 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 QuoteKind::None => QuoteKind::None,
             };
 
-            let len = string.len();
+            let len = s1.len();
 
-            if index > Number::from(0) {
-                string.insert_str(
+            // Insert substring at char position, rather than byte position
+            let insert = |idx, s1: String, s2| {
+                s1.chars()
+                    .enumerate()
+                    .map(|(i, c)| {
+                        if i + 1 == idx {
+                            c.to_string() + s2
+                        } else if idx == 0 && i == 0 {
+                            s2.to_string() + &c.to_string()
+                        } else {
+                            c.to_string()
+                        }
+                    })
+                    .collect::<String>()
+            };
+
+            let string = if index > Number::from(0) {
+                insert(
                     index.to_integer().to_usize().unwrap().min(len + 1) - 1,
+                    s1,
                     &substr,
-                );
+                )
             } else if index == Number::from(0) {
-                string.insert_str(0, &substr);
+                insert(0, s1, &substr)
             } else {
                 let idx = index.abs().to_integer().to_usize().unwrap();
                 if idx > len {
-                    string.insert_str(0, &substr)
+                    insert(0, s1, &substr)
                 } else {
-                    string.insert_str(
-                        len - idx + 1,
-                        &substr,
-                    );
-
+                    insert(len - idx + 1, s1, &substr)
                 }
-            }
+            };
 
             Ok(Value::Ident(string, quotes))
         }),
