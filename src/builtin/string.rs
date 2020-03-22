@@ -176,6 +176,10 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 QuoteKind::None => QuoteKind::None,
             };
 
+            if s1.is_empty() {
+                return Ok(Value::Ident(substr, quotes));
+            }
+
             let len = s1.len();
 
             // Insert substring at char position, rather than byte position

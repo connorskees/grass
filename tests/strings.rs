@@ -141,6 +141,11 @@ test!(
 );
 test!(
     str_insert_empty_string,
+    "a {\n  color: str-insert(\"\", \"abcd\", 4);\n}\n",
+    "a {\n  color: \"abcd\";\n}\n"
+);
+test!(
+    str_insert_empty_substring,
     "a {\n  color: str-insert(abcd, \"\", 4);\n}\n",
     "a {\n  color: abcd;\n}\n"
 );
