@@ -37,6 +37,7 @@ impl UnknownAtRule {
                     params.push(' ');
                     continue;
                 }
+                TokenKind::Error(e) => return Err(e),
                 _ => {}
             }
             params.push_str(&tok.kind.to_string());
