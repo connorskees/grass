@@ -103,3 +103,14 @@ test!(
     "a {\n  color: str-length(\"foo bar\");\n}\n",
     "a {\n  color: 7;\n}\n"
 );
+test!(
+    str_index_char,
+    "a {\n  color: str-index(abcd, a);\n}\n",
+    "a {\n  color: 1;\n}\n"
+);
+test!(
+    str_index_str,
+    "a {\n  color: str-index(abcd, ab);\n}\n",
+    "a {\n  color: 1;\n}\n"
+);
+test!(str_index_null, "a {\n  color: str-index(abcd, X);\n}\n", "");

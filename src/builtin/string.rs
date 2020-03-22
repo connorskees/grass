@@ -126,4 +126,24 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             }
         }),
     );
+    f.insert(
+        "str-index".to_owned(),
+        Box::new(|args, _| {
+            max_args!(args, 2);
+            let s1 = match arg!(args, 0, "string") {
+                Value::Ident(i, _) => i,
+                v => return Err(format!("$string: {} is not a string.", v).into()),
+            };
+
+            let substr = match arg!(args, 1, "substring") {
+                Value::Ident(i, _) => i,
+                v => return Err(format!("$substring: {} is not a string.", v).into()),
+            };
+
+            Ok(match s1.find(&substr) {
+                Some(v) => Value::Dimension(Number::from(v + 1), Unit::None),
+                None => Value::Null,
+            })
+        }),
+    );
 }
