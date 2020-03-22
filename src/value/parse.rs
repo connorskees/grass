@@ -294,6 +294,23 @@ impl Value {
             TokenKind::Keyword(Keyword::To(s)) => Ok(Value::Ident(s, QuoteKind::None)),
             TokenKind::AtRule(_) => Err("expected \";\".".into()),
             TokenKind::Error(e) => return Err(e),
+            TokenKind::Symbol(Symbol::BackSlash) => {
+                if let Some(tok) = toks.next() {
+                    match tok.kind {
+                        TokenKind::Symbol(Symbol::Plus) => Ok(Value::Ident(
+                            "\\+".to_string() + &flatten_ident(toks, scope, super_selector)?,
+                            QuoteKind::None,
+                        )),
+                        TokenKind::Symbol(Symbol::BackSlash) => Ok(Value::Ident(
+                            "\\\\".to_string() + &flatten_ident(toks, scope, super_selector)?,
+                            QuoteKind::None,
+                        )),
+                        _ => todo!("value after \\"),
+                    }
+                } else {
+                    todo!()
+                }
+            }
             TokenKind::Op(Op::Plus) | TokenKind::Symbol(Symbol::Plus) => {
                 devour_whitespace_or_comment(toks);
                 let v = Self::_from_tokens(toks, scope, super_selector)?;

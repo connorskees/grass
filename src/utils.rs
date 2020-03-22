@@ -160,6 +160,19 @@ pub(crate) fn flatten_ident<I: Iterator<Item = Token>>(
                 toks.next();
                 s.push_str(n)
             }
+            TokenKind::Symbol(Symbol::BackSlash) => {
+                s.push('\\');
+                toks.next();
+                if let Some(tok) = toks.next() {
+                    match tok.kind {
+                        TokenKind::Symbol(Symbol::Plus) => s.push('+'),
+                        TokenKind::Symbol(Symbol::BackSlash) => s.push('\\'),
+                        _ => todo!("value after \\"),
+                    }
+                } else {
+                    todo!()
+                }
+            }
             _ => break,
         }
     }

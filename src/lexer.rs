@@ -17,6 +17,7 @@ pub(crate) struct Lexer<'a> {
     tokens: Vec<Token>,
     buf: Peekable<Chars<'a>>,
     pos: Pos,
+    should_emit_backslash: usize,
 }
 
 impl<'a> Iterator for Lexer<'a> {
@@ -35,6 +36,13 @@ impl<'a> Iterator for Lexer<'a> {
                 $self.pos.next_char();
                 TokenKind::Whitespace(Whitespace::$whitespace)
             }};
+        }
+        if self.should_emit_backslash > 0 {
+            self.should_emit_backslash -= 1;
+            return Some(Token {
+                kind: TokenKind::Symbol(Symbol::BackSlash),
+                pos: self.pos,
+            });
         }
         let kind: TokenKind = match self.buf.peek().unwrap_or(&'\0') {
             'a'..='z' | 'A'..='Z' | '_' => self.lex_ident(),
@@ -107,7 +115,7 @@ impl<'a> Iterator for Lexer<'a> {
                 }
             }
             '?' => symbol!(self, QuestionMark),
-            '\\' => symbol!(self, BackSlash),
+            '\\' => self.lex_back_slash().0,
             '~' => symbol!(self, Tilde),
             '\'' => symbol!(self, SingleQuote),
             '"' => symbol!(self, DoubleQuote),
@@ -158,6 +166,7 @@ impl<'a> Lexer<'a> {
             tokens: Vec::with_capacity(buf.len()),
             buf: buf.chars().peekable(),
             pos: Pos::new(),
+            should_emit_backslash: 0,
         }
     }
 
@@ -206,6 +215,51 @@ impl<'a> Lexer<'a> {
             }
         } else {
             TokenKind::Error("Expected identifier.".into())
+        }
+    }
+
+    fn lex_back_slash(&mut self) -> (TokenKind, bool) {
+        self.buf.next();
+        self.pos.next_char();
+        if self.buf.peek() == Some(&'\\') {
+            self.buf.next();
+            self.pos.next_char();
+            self.should_emit_backslash = 1;
+            (TokenKind::Symbol(Symbol::BackSlash), true)
+        } else {
+            let mut n = String::new();
+            while let Some(c) = self.buf.peek() {
+                if !c.is_ascii_hexdigit() || n.len() > 6 {
+                    break;
+                }
+                n.push(*c);
+                self.buf.next();
+                self.pos.next_char();
+            }
+
+            if n.is_empty() {
+                return (TokenKind::Symbol(Symbol::BackSlash), false);
+            }
+
+            let mut string = std::char::from_u32(u32::from_str_radix(&n, 16).unwrap())
+                .unwrap()
+                .to_string();
+            self.devour_whitespace();
+            if let TokenKind::Ident(s) = self.lex_ident() {
+                string.push_str(&s);
+            }
+            (TokenKind::Ident(string), false)
+        }
+    }
+
+    fn devour_whitespace(&mut self) {
+        while let Some(c) = self.buf.peek() {
+            if c.is_ascii_whitespace() {
+                self.buf.next();
+                self.pos.next_char();
+                continue;
+            }
+            break;
         }
     }
 
@@ -331,17 +385,29 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    // TODO: handle weird characters that *are* ascii
-    // e.g. how do we handle `color: ;`
     fn lex_ident(&mut self) -> TokenKind {
         let mut string = String::with_capacity(99);
         while let Some(c) = self.buf.peek() {
-            // we know that the first char is alphabetic from peeking
-            if !c.is_alphanumeric() && c != &'-' && c != &'_' && c.is_ascii() {
+            if !c.is_alphanumeric() && c != &'-' && c != &'_' && c != &'\\' && c.is_ascii() {
                 break;
             }
             if !c.is_ascii() {
                 IS_UTF8.store(true, Ordering::Relaxed);
+            }
+            if c == &'\\' {
+                match self.lex_back_slash() {
+                    (TokenKind::Ident(s), _) => string.push_str(&s),
+                    (TokenKind::Symbol(..), true) => {
+                        self.should_emit_backslash = 2;
+                        break;
+                    }
+                    (TokenKind::Symbol(..), false) => {
+                        self.should_emit_backslash = 1;
+                        break;
+                    }
+                    _ => unreachable!(),
+                }
+                continue;
             }
             let tok = self
                 .buf

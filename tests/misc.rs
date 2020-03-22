@@ -66,3 +66,19 @@ test!(
     "a {\n  color: red😁\n}\n",
     "@charset \"UTF-8\";\na {\n  color: red😁;\n}\n"
 );
+test!(
+    escape_recognized_as_at_rule,
+    "@\\69 f true {\n  a {\n    b: c;\n  }\n}\n",
+    "a {\n  b: c;\n}\n"
+);
+test!(
+    escape_in_middle,
+    "a {\n  color: b\\6cue;\n}\n",
+    "a {\n  color: blue;\n}\n"
+);
+test!(
+    escape_at_end,
+    "a {\n  color: blu\\65;\n}\n",
+    "a {\n  color: blue;\n}\n"
+);
+test!(double_escape_is_preserved, "a {\n  color: r\\\\65;\n}\n");
