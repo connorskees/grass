@@ -616,7 +616,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                         AtRule::Debug(a, b) => Ok(Some(Expr::Debug(a, b))),
                         AtRule::Warn(a, b) => Ok(Some(Expr::Warn(a, b))),
                         AtRule::Error(pos, err) => Err(SassError::new(err, pos)),
-                        AtRule::Return(_) => todo!("@return in unexpected location!"),
+                        AtRule::Return(_) => Err("This at-rule is not allowed here.".into()),
                         AtRule::Content => {
                             return Err("@content is only allowed within mixin declarations.".into())
                         }
