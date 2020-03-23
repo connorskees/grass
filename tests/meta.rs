@@ -140,6 +140,11 @@ test!(
     "a {\n  color: list;\n}\n"
 );
 test!(
+    type_of_important,
+    "a {\n  color: type-of(!important)\n}\n",
+    "a {\n  color: string;\n}\n"
+);
+test!(
     type_of_true,
     "a {\n  color: type-of(true)\n}\n",
     "a {\n  color: bool;\n}\n"

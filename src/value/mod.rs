@@ -24,6 +24,8 @@ pub(crate) enum Value {
     BinaryOp(Box<Value>, Op, Box<Value>),
     Paren(Box<Value>),
     Ident(String, QuoteKind),
+    // Returned by `get-function()`
+    // Function(String),
 }
 
 impl Display for Value {
@@ -109,7 +111,7 @@ impl Value {
     pub fn is_true(&self) -> SassResult<bool> {
         match self {
             Value::Null | Value::False => Ok(false),
-            Self::BinaryOp(..) => self.clone().eval()?.is_true(),
+            Self::BinaryOp(..) | Self::Paren(..) | Self::UnaryOp(..) => self.clone().eval()?.is_true(),
             _ => Ok(true),
         }
     }
@@ -123,15 +125,14 @@ impl Value {
 
     pub fn kind(&self) -> SassResult<&'static str> {
         match self {
-            Value::Color(..) => Ok("color"),
-            Value::Ident(..) => Ok("string"),
-            Value::Dimension(..) => Ok("number"),
-            Value::List(..) => Ok("list"),
-            // Value::Function(..) => Ok("function"),
-            Value::True | Value::False => Ok("bool"),
-            Value::Null => Ok("null"),
-            Value::BinaryOp(..) => self.clone().eval()?.kind(),
-            _ => Ok("unknown"),
+            Self::Color(..) => Ok("color"),
+            Self::Ident(..) | Self::Important => Ok("string"),
+            Self::Dimension(..) => Ok("number"),
+            Self::List(..) => Ok("list"),
+            // Self::Function(..) => Ok("function"),
+            Self::True | Self::False => Ok("bool"),
+            Self::Null => Ok("null"),
+            Self::BinaryOp(..) | Self::Paren(..) | Self::UnaryOp(..) => self.clone().eval()?.kind(),
         }
     }
 
