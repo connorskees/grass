@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use num_traits::{One, Signed, Zero};
+
 use super::Builtin;
 use crate::color::Color;
 use crate::common::QuoteKind;
@@ -84,10 +86,10 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
 
             if red.is_some() || green.is_some() || blue.is_some() {
                 return Ok(Value::Color(Color::from_rgba(
-                    color.red() + red.unwrap_or(Number::from(0)),
-                    color.green() + green.unwrap_or(Number::from(0)),
-                    color.blue() + blue.unwrap_or(Number::from(0)),
-                    color.alpha() + alpha.unwrap_or(Number::from(0)),
+                    color.red() + red.unwrap_or(Number::zero()),
+                    color.green() + green.unwrap_or(Number::zero()),
+                    color.blue() + blue.unwrap_or(Number::zero()),
+                    color.alpha() + alpha.unwrap_or(Number::zero()),
                 )));
             }
 
@@ -104,10 +106,10 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 // Color::as_hsla() returns more exact values than Color::hue(), etc.
                 let (this_hue, this_saturation, this_luminance, this_alpha) = color.as_hsla();
                 return Ok(Value::Color(Color::from_hsla(
-                    this_hue + hue.unwrap_or(Number::from(0)),
-                    this_saturation + saturation.unwrap_or(Number::from(0)),
-                    this_luminance + luminance.unwrap_or(Number::from(0)),
-                    this_alpha + alpha.unwrap_or(Number::from(0)),
+                    this_hue + hue.unwrap_or(Number::zero()),
+                    this_saturation + saturation.unwrap_or(Number::zero()),
+                    this_luminance + luminance.unwrap_or(Number::zero()),
+                    this_alpha + alpha.unwrap_or(Number::zero()),
                 )));
             }
 
@@ -154,23 +156,23 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 return Ok(Value::Color(Color::from_rgba(
                     scale(
                         color.red(),
-                        red.unwrap_or(Number::from(0)),
+                        red.unwrap_or(Number::zero()),
                         Number::from(255),
                     ),
                     scale(
                         color.green(),
-                        green.unwrap_or(Number::from(0)),
+                        green.unwrap_or(Number::zero()),
                         Number::from(255),
                     ),
                     scale(
                         color.blue(),
-                        blue.unwrap_or(Number::from(0)),
+                        blue.unwrap_or(Number::zero()),
                         Number::from(255),
                     ),
                     scale(
                         color.alpha(),
-                        alpha.unwrap_or(Number::from(0)),
-                        Number::from(1),
+                        alpha.unwrap_or(Number::zero()),
+                        Number::one(),
                     ),
                 )));
             }
@@ -182,28 +184,24 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 // Color::as_hsla() returns more exact values than Color::hue(), etc.
                 let (this_hue, this_saturation, this_luminance, this_alpha) = color.as_hsla();
                 return Ok(Value::Color(Color::from_hsla(
-                    scale(this_hue, Number::from(0), Number::from(360)),
+                    scale(this_hue, Number::zero(), Number::from(360)),
                     scale(
                         this_saturation,
-                        saturation.unwrap_or(Number::from(0)),
-                        Number::from(1),
+                        saturation.unwrap_or(Number::zero()),
+                        Number::one(),
                     ),
                     scale(
                         this_luminance,
-                        luminance.unwrap_or(Number::from(0)),
-                        Number::from(1),
+                        luminance.unwrap_or(Number::zero()),
+                        Number::one(),
                     ),
-                    scale(
-                        this_alpha,
-                        alpha.unwrap_or(Number::from(0)),
-                        Number::from(1),
-                    ),
+                    scale(this_alpha, alpha.unwrap_or(Number::zero()), Number::one()),
                 )));
             }
 
             Ok(Value::Color(if let Some(a) = alpha {
                 let temp_alpha = color.alpha();
-                color.with_alpha(scale(temp_alpha, a, Number::from(1)))
+                color.with_alpha(scale(temp_alpha, a, Number::one()))
             } else {
                 color
             }))
@@ -223,8 +221,8 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
 }
 
 fn scale(val: Number, by: Number, max: Number) -> Number {
-    if by == Number::from(0) {
+    if by.is_zero() {
         return val;
     }
-    val.clone() + (if by > Number::from(0) { max - val } else { val }) * by
+    val.clone() + (if by.is_positive() { max - val } else { val }) * by
 }

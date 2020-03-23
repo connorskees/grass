@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use num_traits::One;
+
 use super::Builtin;
 use crate::color::Color;
 use crate::common::QuoteKind;
@@ -46,7 +48,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     hue,
                     saturation,
                     luminance,
-                    Number::from(1),
+                    Number::one(),
                 )))
             } else {
                 let hue = match arg!(args, 0, "hue") {
@@ -64,7 +66,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 let alpha = match arg!(
                     args,
                     3,
-                    "alpha" = Value::Dimension(Number::from(1), Unit::None)
+                    "alpha" = Value::Dimension(Number::one(), Unit::None)
                 ) {
                     Value::Dimension(n, Unit::None) => n,
                     Value::Dimension(n, Unit::Percent) => n / Number::from(100),
@@ -120,7 +122,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     hue,
                     saturation,
                     luminance,
-                    Number::from(1),
+                    Number::one(),
                 )))
             } else {
                 let hue = match arg!(args, 0, "hue") {
@@ -138,7 +140,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 let alpha = match arg!(
                     args,
                     3,
-                    "alpha" = Value::Dimension(Number::from(1), Unit::None)
+                    "alpha" = Value::Dimension(Number::one(), Unit::None)
                 ) {
                     Value::Dimension(n, Unit::None) => n,
                     Value::Dimension(n, Unit::Percent) => n / Number::from(100),
@@ -280,7 +282,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 }
                 v => return Err(format!("$color: {} is not a color.", v).into()),
             };
-            Ok(Value::Color(color.desaturate(Number::from(1))))
+            Ok(Value::Color(color.desaturate(Number::one())))
         }),
     );
     f.insert(

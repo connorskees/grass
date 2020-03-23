@@ -20,7 +20,7 @@ use std::fmt::{self, Display};
 use crate::value::Number;
 pub(crate) use name::ColorName;
 
-use num_traits::cast::ToPrimitive;
+use num_traits::{One, Signed, ToPrimitive, Zero};
 
 mod name;
 
@@ -149,8 +149,8 @@ impl Color {
             ($channel:ident) => {
                 let $channel = if $channel > Number::from(255) {
                     Number::from(255)
-                } else if $channel < Number::from(0) {
-                    Number::from(0)
+                } else if $channel.is_negative() {
+                    Number::zero()
                 } else {
                     $channel
                 };
@@ -161,10 +161,10 @@ impl Color {
         clamp!(green);
         clamp!(blue);
 
-        let alpha = if alpha > Number::from(1) {
-            Number::from(1)
-        } else if alpha < Number::from(0) {
-            Number::from(0)
+        let alpha = if alpha > Number::one() {
+            Number::one()
+        } else if alpha.is_negative() {
+            Number::zero()
         } else {
             alpha
         };
@@ -190,7 +190,7 @@ impl Color {
     /// <https://github.com/sass/dart-sass/blob/0d0270cb12a9ac5cce73a4d0785fecb00735feee/lib/src/functions/color.dart#L718>
     pub fn mix(self, other: &Color, weight: Number) -> Self {
         let weight = clamp!(weight, 0, 100);
-        let normalized_weight = weight.clone() * Number::from(2) - Number::from(1);
+        let normalized_weight = weight.clone() * Number::from(2) - Number::one();
         let alpha_distance = self.alpha() - other.alpha();
 
         let combined_weight1 =
@@ -198,16 +198,16 @@ impl Color {
                 normalized_weight
             } else {
                 (normalized_weight.clone() + alpha_distance.clone())
-                    / (Number::from(1) + normalized_weight * alpha_distance)
+                    / (Number::one() + normalized_weight * alpha_distance)
             };
-        let weight1 = (combined_weight1 + Number::from(1)) / Number::from(2);
-        let weight2 = Number::from(1) - weight1.clone();
+        let weight1 = (combined_weight1 + Number::one()) / Number::from(2);
+        let weight2 = Number::one() - weight1.clone();
 
         Color::from_rgba(
             self.red() * weight1.clone() + other.red() * weight2.clone(),
             self.green() * weight1.clone() + other.green() * weight2.clone(),
             self.blue() * weight1 + other.blue() * weight2,
-            self.alpha() * weight.clone() + other.alpha() * (Number::from(1) - weight),
+            self.alpha() * weight.clone() + other.alpha() * (Number::one() - weight),
         )
     }
 }
@@ -227,7 +227,7 @@ impl Color {
         let min = red.clone().min(green.clone().min(blue.clone()));
         let max = red.clone().max(green.clone().max(blue.clone()));
         if min == max {
-            return Number::from(0);
+            return Number::zero();
         }
 
         let mut hue = if blue == max {
@@ -238,7 +238,7 @@ impl Color {
             (green - blue) / (max - min)
         };
 
-        if hue < Number::from(0) {
+        if hue.is_negative() {
             hue += Number::from(360);
         }
 
@@ -259,12 +259,12 @@ impl Color {
         let max = red.max(green.max(blue));
 
         if min == max {
-            return Number::from(0);
+            return Number::zero();
         }
 
         let d = max.clone() - min.clone();
         let mm = max + min;
-        let s = d / if mm > Number::from(1) {
+        let s = d / if mm > Number::one() {
             Number::from(2) - mm
         } else {
             mm
@@ -300,11 +300,11 @@ impl Color {
         let lightness = (min.clone() + max.clone()) / Number::from(2);
 
         let saturation = if min == max {
-            Number::from(0)
+            Number::zero()
         } else {
             let d = max.clone() - min.clone();
             let mm = max.clone() + min.clone();
-            d / if mm > Number::from(1) {
+            d / if mm > Number::one() {
                 Number::from(2) - mm
             } else {
                 mm
@@ -312,7 +312,7 @@ impl Color {
         };
 
         let mut hue = if min == max {
-            Number::from(0)
+            Number::zero()
         } else if blue == max {
             Number::from(4) + (red - green) / (max - min)
         } else if green == max {
@@ -321,7 +321,7 @@ impl Color {
             (green - blue) / (max - min)
         };
 
-        if hue < Number::from(0) {
+        if hue.is_negative() {
             hue += Number::from(360);
         }
 
@@ -361,7 +361,7 @@ impl Color {
             hue % Number::from(360)
         } else if hue < Number::from(-360) {
             Number::from(360) + hue % Number::from(360)
-        } else if hue < Number::from(0) {
+        } else if hue.is_negative() {
             Number::from(360) + clamp!(hue, -360, 360)
         } else {
             hue
@@ -378,7 +378,7 @@ impl Color {
             alpha.clone(),
         );
 
-        if saturation.clone() == Number::from(0) {
+        if saturation.is_zero() {
             let luminance = if luminance > Number::from(100) {
                 Number::from(100)
             } else {
@@ -388,8 +388,8 @@ impl Color {
             let repr = repr(&val, &val, &val, &alpha);
             return Color::new_hsla(val.clone(), val.clone(), val, alpha, hsla, repr);
         }
-        let temporary_1 = if luminance.clone() < Number::ratio(1, 2) {
-            luminance.clone() * (Number::from(1) + saturation)
+        let temporary_1 = if luminance < Number::ratio(1, 2) {
+            luminance.clone() * (Number::one() + saturation)
         } else {
             luminance.clone() + saturation.clone() - luminance.clone() * saturation
         };
@@ -401,10 +401,10 @@ impl Color {
 
         macro_rules! clamp_temp {
             ($temp:ident) => {
-                if $temp > Number::from(1) {
-                    $temp -= Number::from(1);
-                } else if $temp < Number::from(0) {
-                    $temp += Number::from(1);
+                if $temp > Number::one() {
+                    $temp -= Number::one();
+                } else if $temp.is_negative() {
+                    $temp += Number::one();
                 }
             };
         }
@@ -415,10 +415,10 @@ impl Color {
 
         macro_rules! channel {
             ($name:ident, $temp:ident, $temp1:ident, $temp2:ident) => {
-                let $name = if Number::from(6) * $temp.clone() < Number::from(1) {
+                let $name = if Number::from(6) * $temp.clone() < Number::one() {
                     $temp2.clone()
                         + ($temp1.clone() - $temp2.clone()) * Number::from(6) * $temp.clone()
-                } else if Number::from(2) * $temp.clone() < Number::from(1) {
+                } else if Number::from(2) * $temp.clone() < Number::one() {
                     $temp1.clone()
                 } else if Number::from(3) * $temp.clone() < Number::from(2) {
                     $temp2.clone()
@@ -440,7 +440,7 @@ impl Color {
     }
 
     pub fn invert(&self, weight: Number) -> Self {
-        if weight == Number::from(0) {
+        if weight.is_zero() {
             return self.clone();
         }
         let red = Number::from(u8::max_value()) - self.red();
@@ -466,7 +466,7 @@ impl Color {
 impl Color {
     pub fn alpha(&self) -> Number {
         let a = self.rgba.alpha();
-        if a > Number::from(1) {
+        if a > Number::one() {
             a / Number::from(255)
         } else {
             a
@@ -512,7 +512,7 @@ fn repr(red: &Number, green: &Number, blue: &Number, alpha: &Number) -> String {
         ($channel:ident) => {
             let $channel = if $channel > &Number::from(255) {
                 255_u8
-            } else if $channel < &Number::from(0) {
+            } else if $channel.is_negative() {
                 0_u8
             } else {
                 $channel.clone().round().to_integer().to_u8().unwrap()
@@ -524,7 +524,7 @@ fn repr(red: &Number, green: &Number, blue: &Number, alpha: &Number) -> String {
     into_u8!(green);
     into_u8!(blue);
 
-    if alpha < &Number::from(1) {
+    if alpha < &Number::one() {
         format!("rgba({}, {}, {}, {})", red, green, blue, alpha)
     } else if let Ok(c) = ColorName::try_from([red, green, blue]) {
         format!("{}", c)

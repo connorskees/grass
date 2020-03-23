@@ -293,7 +293,7 @@ impl Value {
             TokenKind::Keyword(Keyword::Through(s)) => Ok(Value::Ident(s, QuoteKind::None)),
             TokenKind::Keyword(Keyword::To(s)) => Ok(Value::Ident(s, QuoteKind::None)),
             TokenKind::AtRule(_) => Err("expected \";\".".into()),
-            TokenKind::Error(e) => return Err(e),
+            TokenKind::Error(e) => Err(e),
             TokenKind::Symbol(Symbol::BackSlash) => {
                 if let Some(tok) = toks.next() {
                     match tok.kind {

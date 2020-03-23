@@ -208,10 +208,10 @@ impl<'a> Lexer<'a> {
         self.buf.next();
         self.pos.next_char();
         if let TokenKind::Ident(s) = self.lex_ident() {
-            if !s.is_empty() {
-                TokenKind::AtRule(AtRuleKind::from(s.as_ref()))
-            } else {
+            if s.is_empty() {
                 TokenKind::Error("Expected identifier.".into())
+            } else {
+                TokenKind::AtRule(AtRuleKind::from(s.as_ref()))
             }
         } else {
             TokenKind::Error("Expected identifier.".into())

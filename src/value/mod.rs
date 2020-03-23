@@ -101,8 +101,8 @@ impl Value {
     pub fn is_null(&self) -> bool {
         match self {
             &Value::Null => true,
-            Value::Ident(i, QuoteKind::None) if i.is_empty()  => true,
-            _ => false
+            Value::Ident(i, QuoteKind::None) if i.is_empty() => true,
+            _ => false,
         }
     }
 

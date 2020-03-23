@@ -416,7 +416,7 @@ impl<'a> StyleSheetParser<'a> {
                             AtRule::If(cond, yes, no) => {
                                 if Value::from_tokens(
                                     &mut cond.into_iter().peekable(),
-                                    &mut GLOBAL_SCOPE.with(|s| s.borrow().clone()),
+                                    &GLOBAL_SCOPE.with(|s| s.borrow().clone()),
                                     &Selector::new(),
                                 )?.is_true()? {
                                     rules.extend(yes);
@@ -453,7 +453,7 @@ impl<'a> StyleSheetParser<'a> {
                     AtRule::If(cond, yes, no) => {
                         if Value::from_tokens(
                             &mut cond.into_iter().peekable(),
-                            &mut GLOBAL_SCOPE.with(|s| s.borrow().clone()),
+                            &GLOBAL_SCOPE.with(|s| s.borrow().clone()),
                             &Selector::new(),
                         )?
                         .is_true()?

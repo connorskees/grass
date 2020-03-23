@@ -1,8 +1,7 @@
 use std::collections::HashMap;
 
 use num_bigint::BigInt;
-use num_traits::cast::ToPrimitive;
-use num_traits::sign::Signed;
+use num_traits::{Signed, ToPrimitive, Zero};
 
 use super::Builtin;
 use crate::common::QuoteKind;
@@ -35,7 +34,10 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         Box::new(|args, _| {
             max_args!(args, 1);
             match arg!(args, 0, "string") {
-                Value::Ident(i, _) => Ok(Value::Dimension(Number::from(i.chars().count()), Unit::None)),
+                Value::Ident(i, _) => Ok(Value::Dimension(
+                    Number::from(i.chars().count()),
+                    Unit::None,
+                )),
                 v => Err(format!("$string: {} is not a string.", v).into()),
             }
         }),
@@ -73,10 +75,10 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 Value::Dimension(n, Unit::None) if n.is_decimal() => {
                     return Err(format!("{} is not an int.", n).into())
                 }
-                Value::Dimension(n, Unit::None) if n.to_integer().is_positive() => {
+                Value::Dimension(n, Unit::None) if n.is_positive() => {
                     n.to_integer().to_usize().unwrap()
                 }
-                Value::Dimension(n, Unit::None) if n == Number::from(0) => 1_usize,
+                Value::Dimension(n, Unit::None) if n.is_zero() => 1_usize,
                 Value::Dimension(n, Unit::None) if n < -Number::from(str_len) => 1_usize,
                 Value::Dimension(n, Unit::None) => (BigInt::from(str_len + 1) + n.to_integer())
                     .to_usize()
@@ -90,10 +92,10 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 Value::Dimension(n, Unit::None) if n.is_decimal() => {
                     return Err(format!("{} is not an int.", n).into())
                 }
-                Value::Dimension(n, Unit::None) if n.to_integer().is_positive() => {
+                Value::Dimension(n, Unit::None) if n.is_positive() => {
                     n.to_integer().to_usize().unwrap()
                 }
-                Value::Dimension(n, Unit::None) if n == Number::from(0) => 0_usize,
+                Value::Dimension(n, Unit::None) if n.is_zero() => 0_usize,
                 Value::Dimension(n, Unit::None) if n < -Number::from(str_len) => 0_usize,
                 Value::Dimension(n, Unit::None) => (BigInt::from(str_len + 1) + n.to_integer())
                     .to_usize()
@@ -197,13 +199,13 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     .collect::<String>()
             };
 
-            let string = if index > Number::from(0) {
+            let string = if index.is_positive() {
                 insert(
                     index.to_integer().to_usize().unwrap().min(len + 1) - 1,
                     s1,
                     &substr,
                 )
-            } else if index == Number::from(0) {
+            } else if index.is_zero() {
                 insert(0, s1, &substr)
             } else {
                 let idx = index.abs().to_integer().to_usize().unwrap();

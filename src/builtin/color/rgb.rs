@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use num_traits::One;
+
 use super::Builtin;
 use crate::color::Color;
 use crate::unit::Unit;
@@ -50,7 +52,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     None => return Err("Missing element $red.".into()),
                 };
 
-                let color = Color::from_rgba(red, green, blue, Number::from(1));
+                let color = Color::from_rgba(red, green, blue, Number::one());
 
                 Ok(Value::Color(color))
             } else if args.len() == 2 {
@@ -109,7 +111,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 let alpha = match arg!(
                     args,
                     3,
-                    "alpha" = Value::Dimension(Number::from(1), Unit::None)
+                    "alpha" = Value::Dimension(Number::one(), Unit::None)
                 ) {
                     Value::Dimension(n, Unit::None) => n,
                     Value::Dimension(n, Unit::Percent) => n / Number::from(100),
@@ -168,7 +170,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     None => return Err("Missing element $red.".into()),
                 };
 
-                let color = Color::from_rgba(red, green, blue, Number::from(1));
+                let color = Color::from_rgba(red, green, blue, Number::one());
 
                 Ok(Value::Color(color))
             } else if args.len() == 2 {
@@ -227,7 +229,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 let alpha = match arg!(
                     args,
                     3,
-                    "alpha" = Value::Dimension(Number::from(1), Unit::None)
+                    "alpha" = Value::Dimension(Number::one(), Unit::None)
                 ) {
                     Value::Dimension(n, Unit::None) => n,
                     Value::Dimension(n, Unit::Percent) => n / Number::from(100),

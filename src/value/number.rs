@@ -6,7 +6,9 @@ use std::ops::{
 
 use num_bigint::BigInt;
 use num_rational::BigRational;
-use num_traits::sign::Signed;
+use num_traits::{Num, One, Signed, Zero};
+
+use crate::error::SassError;
 
 const PRECISION: usize = 10;
 
@@ -54,6 +56,63 @@ impl Number {
 
     pub fn is_decimal(&self) -> bool {
         self.val.denom() != &BigInt::from(1)
+    }
+}
+
+impl Zero for Number {
+    fn zero() -> Self {
+        Number::from(0)
+    }
+
+    fn is_zero(&self) -> bool {
+        self.val.is_zero()
+    }
+}
+
+impl One for Number {
+    fn one() -> Self {
+        Number::from(1)
+    }
+
+    fn is_one(&self) -> bool {
+        self.val.is_one()
+    }
+}
+
+impl Num for Number {
+    type FromStrRadixErr = SassError;
+    fn from_str_radix(_str: &str, _radix: u32) -> Result<Self, Self::FromStrRadixErr> {
+        todo!()
+    }
+}
+
+impl Signed for Number {
+    fn abs(&self) -> Self {
+        self.abs()
+    }
+
+    fn abs_sub(&self, other: &Self) -> Self {
+        Number {
+            val: self.val.abs_sub(&other.val),
+        }
+    }
+
+    fn signum(&self) -> Self {
+        if self.is_zero() {
+            Self::zero()
+        } else if self.is_positive() {
+            Self::one()
+        } else {
+            -Self::one()
+        }
+    }
+
+    fn is_positive(&self) -> bool {
+        self.val.is_positive()
+    }
+
+    fn is_negative(&self) -> bool {
+        self.val.is_negative()
     }
 }
 

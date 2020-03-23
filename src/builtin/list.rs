@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use num_traits::cast::ToPrimitive;
+use num_traits::{One, Signed, ToPrimitive, Zero};
 
 use super::Builtin;
 use crate::common::{ListSeparator, QuoteKind};
@@ -14,7 +14,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             max_args!(args, 1);
             let len = match arg!(args, 0, "list") {
                 Value::List(v, _) => Number::from(v.len()),
-                _ => Number::from(1),
+                _ => Number::one(),
             };
             Ok(Value::Dimension(len, Unit::None))
         }),
@@ -32,7 +32,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 v => return Err(format!("$n: {} is not a number.", v).into()),
             };
 
-            if n == Number::from(0) {
+            if n.is_zero() {
                 return Err("$n: List index may not be 0.".into());
             }
 
@@ -49,7 +49,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 return Err(format!("$n: {} is not an int.", n).into());
             }
 
-            if n > Number::from(0) {
+            if n.is_positive() {
                 Ok(list[n.to_integer().to_usize().unwrap() - 1].clone())
             } else {
                 Ok(list[list.len() - n.abs().to_integer().to_usize().unwrap()].clone())
@@ -83,7 +83,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 v => return Err(format!("$n: {} is not a number.", v).into()),
             };
 
-            if n == Number::from(0) {
+            if n.is_zero() {
                 return Err("$n: List index may not be 0.".into());
             }
 
@@ -101,7 +101,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
 
             let val = arg!(args, 2, "value");
 
-            if n > Number::from(0) {
+            if n.is_positive() {
                 list[n.to_integer().to_usize().unwrap() - 1] = val;
             } else {
                 list[len - n.abs().to_integer().to_usize().unwrap()] = val;
