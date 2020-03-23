@@ -116,7 +116,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "function-exists".to_owned(),
         Box::new(|args, scope| {
-            max_args!(args, 1);
+            max_args!(args, 2);
             match arg!(args, 0, "name") {
                 Value::Ident(s, _) => Ok(Value::bool(
                     scope.fn_exists(&s) || GLOBAL_FUNCTIONS.contains_key(&s),
