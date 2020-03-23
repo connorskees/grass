@@ -8,7 +8,7 @@ use num_traits::pow;
 use crate::args::eat_call_args;
 use crate::builtin::GLOBAL_FUNCTIONS;
 use crate::color::Color;
-use crate::common::{Keyword, ListSeparator, Op, QuoteKind, Symbol};
+use crate::common::{Brackets, Keyword, ListSeparator, Op, QuoteKind, Symbol};
 use crate::error::SassResult;
 use crate::scope::Scope;
 use crate::selector::Selector;
@@ -82,19 +82,23 @@ impl Value {
             None => return Ok(left),
         };
         match next.kind {
-            TokenKind::Symbol(Symbol::SemiColon) | TokenKind::Symbol(Symbol::CloseParen) => {
-                Ok(left)
-            }
+            TokenKind::Symbol(Symbol::SemiColon)
+            | TokenKind::Symbol(Symbol::CloseParen)
+            | TokenKind::Symbol(Symbol::CloseSquareBrace) => Ok(left),
             TokenKind::Symbol(Symbol::Comma) => {
                 toks.next();
                 devour_whitespace_or_comment(toks);
                 let right = Self::from_tokens(toks, scope, super_selector)?;
-                if let Value::List(v, ListSeparator::Comma) = right {
+                if let Value::List(v, ListSeparator::Comma, Brackets::None) = right {
                     let mut v2 = vec![left];
                     v2.extend(v);
-                    Ok(Value::List(v2, ListSeparator::Comma))
+                    Ok(Value::List(v2, ListSeparator::Comma, Brackets::None))
                 } else {
-                    Ok(Value::List(vec![left, right], ListSeparator::Comma))
+                    Ok(Value::List(
+                        vec![left, right],
+                        ListSeparator::Comma,
+                        Brackets::None,
+                    ))
                 }
             }
             TokenKind::Symbol(Symbol::Plus)
@@ -120,12 +124,16 @@ impl Value {
             _ => {
                 devour_whitespace_or_comment(toks);
                 let right = Self::from_tokens(toks, scope, super_selector)?;
-                if let Value::List(v, ListSeparator::Space) = right {
+                if let Value::List(v, ListSeparator::Space, Brackets::None) = right {
                     let mut v2 = vec![left];
                     v2.extend(v);
-                    Ok(Value::List(v2, ListSeparator::Space))
+                    Ok(Value::List(v2, ListSeparator::Space, Brackets::None))
                 } else {
-                    Ok(Value::List(vec![left, right], ListSeparator::Space))
+                    Ok(Value::List(
+                        vec![left, right],
+                        ListSeparator::Space,
+                        Brackets::None,
+                    ))
                 }
             }
         }
@@ -184,7 +192,11 @@ impl Value {
                 devour_whitespace_or_comment(toks);
                 if toks.peek().unwrap().is_symbol(Symbol::CloseParen) {
                     toks.next();
-                    return Ok(Value::List(Vec::new(), ListSeparator::Space));
+                    return Ok(Value::List(
+                        Vec::new(),
+                        ListSeparator::Space,
+                        Brackets::None,
+                    ));
                 }
                 let val = Self::from_tokens(toks, scope, super_selector)?;
                 let next = toks.next();
@@ -264,6 +276,15 @@ impl Value {
             q @ TokenKind::Symbol(Symbol::DoubleQuote)
             | q @ TokenKind::Symbol(Symbol::SingleQuote) => {
                 parse_quoted_string(toks, scope, &q, super_selector)
+            }
+            TokenKind::Symbol(Symbol::OpenSquareBrace) => {
+                let inner = Self::from_tokens(toks, scope, super_selector)?;
+                devour_whitespace_or_comment(toks);
+                toks.next();
+                Ok(match inner {
+                    Value::List(v, sep, ..) => Value::List(v, sep, Brackets::Bracketed),
+                    v => Value::List(vec![v], ListSeparator::Space, Brackets::Bracketed),
+                })
             }
             TokenKind::Variable(ref v) => Ok(scope.get_var(v)?),
             TokenKind::Interpolation => {

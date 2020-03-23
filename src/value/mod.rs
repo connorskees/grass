@@ -2,7 +2,7 @@ use std::fmt::{self, Display, Write};
 use std::iter::Iterator;
 
 use crate::color::Color;
-use crate::common::{ListSeparator, Op, QuoteKind};
+use crate::common::{Brackets, ListSeparator, Op, QuoteKind};
 use crate::error::SassResult;
 use crate::unit::Unit;
 pub(crate) use number::Number;
@@ -18,7 +18,7 @@ pub(crate) enum Value {
     False,
     Null,
     Dimension(Number, Unit),
-    List(Vec<Value>, ListSeparator),
+    List(Vec<Value>, ListSeparator, Brackets),
     Color(Color),
     UnaryOp(Op, Box<Value>),
     BinaryOp(Box<Value>, Op, Box<Value>),
@@ -39,14 +39,24 @@ impl Display for Value {
                 }
                 _ => write!(f, "{}{}", num, unit),
             },
-            Self::List(vals, sep) => write!(
-                f,
-                "{}",
-                vals.iter()
-                    .map(std::string::ToString::to_string)
-                    .collect::<Vec<String>>()
-                    .join(sep.as_str())
-            ),
+            Self::List(vals, sep, brackets) => match brackets {
+                Brackets::None => write!(
+                    f,
+                    "{}",
+                    vals.iter()
+                        .map(std::string::ToString::to_string)
+                        .collect::<Vec<String>>()
+                        .join(sep.as_str()),
+                ),
+                Brackets::Bracketed => write!(
+                    f,
+                    "[{}]",
+                    vals.iter()
+                        .map(std::string::ToString::to_string)
+                        .collect::<Vec<String>>()
+                        .join(sep.as_str()),
+                ),
+            },
             Self::Color(c) => write!(f, "{}", c),
             Self::UnaryOp(..) | Self::BinaryOp(..) => write!(
                 f,

@@ -140,8 +140,12 @@ test!(
     "a {\n  color: join((a, b), (c, d), space);\n}\n",
     "a {\n  color: a b c d;\n}\n"
 );
-// test!(
-//     join_bracketed,
-//     "a {\n  color: join([a], b);\n}\n",
-//     "a {\n  color: [a b];\n}\n"
-// );
+test!(
+    join_bracketed,
+    "a {\n  color: join([a], b);\n}\n",
+    "a {\n  color: [a b];\n}\n"
+);
+test!(bracketed_ident, "a {\n  color: [a];\n}\n");
+test!(bracketed_space_list, "a {\n  color: [a b];\n}\n");
+test!(bracketed_comma_list, "a {\n  color: [a, b];\n}\n");
+test!(bracketed_as_space_list, "a {\n  color: [a b] c;\n}\n");

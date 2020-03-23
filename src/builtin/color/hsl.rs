@@ -18,7 +18,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
 
             if args.len() == 1 {
                 let mut channels = match arg!(args, 0, "channels") {
-                    Value::List(v, _) => v,
+                    Value::List(v, ..) => v,
                     _ => return Err("Missing argument $channels.".into()),
                 };
 
@@ -96,7 +96,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
 
             if args.len() == 1 {
                 let mut channels = match arg!(args, 0, "channels") {
-                    Value::List(v, _) => v,
+                    Value::List(v, ..) => v,
                     _ => return Err("Missing argument $channels.".into()),
                 };
 

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use num_traits::{One, Signed, ToPrimitive, Zero};
 
 use super::Builtin;
-use crate::common::{ListSeparator, QuoteKind};
+use crate::common::{Brackets, ListSeparator, QuoteKind};
 use crate::unit::Unit;
 use crate::value::{Number, Value};
 
@@ -13,7 +13,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         Box::new(|args, _| {
             max_args!(args, 1);
             let len = match arg!(args, 0, "list") {
-                Value::List(v, _) => Number::from(v.len()),
+                Value::List(v, ..) => Number::from(v.len()),
                 _ => Number::one(),
             };
             Ok(Value::Dimension(len, Unit::None))
@@ -24,7 +24,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         Box::new(|args, _| {
             max_args!(args, 2);
             let list = match arg!(args, 0, "list") {
-                Value::List(v, _) => v,
+                Value::List(v, ..) => v,
                 v => vec![v],
             };
             let n = match arg!(args, 1, "n") {
@@ -62,7 +62,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             max_args!(args, 1);
             Ok(Value::Ident(
                 match arg!(args, 0, "list") {
-                    Value::List(_, sep) => sep.name(),
+                    Value::List(_, sep, ..) => sep.name(),
                     _ => ListSeparator::Space.name(),
                 }
                 .to_owned(),
@@ -75,7 +75,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         Box::new(|args, _| {
             max_args!(args, 3);
             let (mut list, sep) = match arg!(args, 0, "list") {
-                Value::List(v, sep) => (v, sep),
+                Value::List(v, sep, ..) => (v, sep),
                 v => (vec![v], ListSeparator::Space),
             };
             let n = match arg!(args, 1, "n") {
@@ -107,7 +107,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 list[len - n.abs().to_integer().to_usize().unwrap()] = val;
             }
 
-            Ok(Value::List(list, sep))
+            Ok(Value::List(list, sep, Brackets::None))
         }),
     );
     f.insert(
@@ -115,7 +115,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         Box::new(|args, _| {
             max_args!(args, 3);
             let (mut list, sep) = match arg!(args, 0, "list") {
-                Value::List(v, sep) => (v, sep),
+                Value::List(v, sep, ..) => (v, sep),
                 v => (vec![v], ListSeparator::Space),
             };
             let val = arg!(args, 1, "val");
@@ -137,16 +137,16 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
 
             list.push(val);
 
-            Ok(Value::List(list, sep))
+            Ok(Value::List(list, sep, Brackets::None))
         }),
     );
     f.insert(
         "join".to_owned(),
         Box::new(|args, _| {
             max_args!(args, 3);
-            let (mut list1, sep1) = match arg!(args, 0, "list") {
-                Value::List(v, sep) => (v, sep),
-                v => (vec![v], ListSeparator::Space),
+            let (mut list1, sep1, brackets) = match arg!(args, 0, "list") {
+                Value::List(v, sep, brackets) => (v, sep, brackets),
+                v => (vec![v], ListSeparator::Space, Brackets::None),
             };
             let list2 = match arg!(args, 1, "list") {
                 Value::List(v, ..) => v,
@@ -176,7 +176,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
 
             list1.extend(list2);
 
-            Ok(Value::List(list1, sep))
+            Ok(Value::List(list1, sep, brackets))
         }),
     );
 }

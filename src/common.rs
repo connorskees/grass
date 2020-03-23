@@ -384,6 +384,12 @@ impl Display for QuoteKind {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Brackets {
+    None,
+    Bracketed,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum ListSeparator {
     Space,
     Comma,
