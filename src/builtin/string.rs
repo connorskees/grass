@@ -76,7 +76,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     return Err(format!("{} is not an int.", n).into())
                 }
                 Value::Dimension(n, Unit::None) if n.is_positive() => {
-                    n.to_integer().to_usize().unwrap_or(str_len+1)
+                    n.to_integer().to_usize().unwrap_or(str_len + 1)
                 }
                 Value::Dimension(n, Unit::None) if n.is_zero() => 1_usize,
                 Value::Dimension(n, Unit::None) if n < -Number::from(str_len) => 1_usize,
@@ -93,13 +93,13 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     return Err(format!("{} is not an int.", n).into())
                 }
                 Value::Dimension(n, Unit::None) if n.is_positive() => {
-                    n.to_integer().to_usize().unwrap_or(str_len+1)
+                    n.to_integer().to_usize().unwrap_or(str_len + 1)
                 }
                 Value::Dimension(n, Unit::None) if n.is_zero() => 0_usize,
                 Value::Dimension(n, Unit::None) if n < -Number::from(str_len) => 0_usize,
                 Value::Dimension(n, Unit::None) => (BigInt::from(str_len + 1) + n.to_integer())
                     .to_usize()
-                    .unwrap_or(str_len+1),
+                    .unwrap_or(str_len + 1),
                 v @ Value::Dimension(..) => {
                     return Err(format!("$end: Expected {} to have no units.", v).into())
                 }
