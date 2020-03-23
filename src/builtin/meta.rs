@@ -26,7 +26,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 Value::Ident(s, _) => match s.as_str() {
                     // A local variable will shadow a global variable unless
                     // `!global` is used.
-                    "global-variable-shadowing" => Ok(Value::False),
+                    "global-variable-shadowing" => Ok(Value::True),
                     // the @extend rule will affect selectors nested in pseudo-classes
                     // like :not()
                     "extend-selector-pseudoclass" => Ok(Value::False),

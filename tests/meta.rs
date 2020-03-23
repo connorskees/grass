@@ -44,11 +44,11 @@ test!(
     "a {\n  color: true;\n}\n"
 );
 // Uncomment as more features are added
-// test!(
-//     feature_exists_global_variable_shadowing,
-//     "a {\n  color: feature-exists(global-variable-shadowing)\n}\n",
-//     "a {\n  color: true;\n}\n"
-// );
+test!(
+    feature_exists_global_variable_shadowing,
+    "a {\n  color: feature-exists(global-variable-shadowing)\n}\n",
+    "a {\n  color: true;\n}\n"
+);
 // test!(
 //     feature_exists_extend_selector_pseudoclass,
 //     "a {\n  color: feature-exists(extend-selector-pseudoclass)\n}\n",
