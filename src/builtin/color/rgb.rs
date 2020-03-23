@@ -34,7 +34,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     Some(Value::Dimension(n, Unit::Percent)) => {
                         (n / Number::from(100)) * Number::from(255)
                     }
-                    Some(v) => return Err(format!("$blue: {} is not a number", v).into()),
+                    Some(v) => return Err(format!("$blue: {} is not a number.", v).into()),
                     None => return Err("Missing element $blue.".into()),
                 };
 
@@ -43,7 +43,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     Some(Value::Dimension(n, Unit::Percent)) => {
                         (n / Number::from(100)) * Number::from(255)
                     }
-                    Some(v) => return Err(format!("$green: {} is not a number", v).into()),
+                    Some(v) => return Err(format!("$green: {} is not a number.", v).into()),
                     None => return Err("Missing element $green.".into()),
                 };
 
@@ -52,7 +52,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     Some(Value::Dimension(n, Unit::Percent)) => {
                         (n / Number::from(100)) * Number::from(255)
                     }
-                    Some(v) => return Err(format!("$red: {} is not a number", v).into()),
+                    Some(v) => return Err(format!("$red: {} is not a number.", v).into()),
                     None => return Err("Missing element $red.".into()),
                 };
 
@@ -156,7 +156,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     Some(Value::Dimension(n, Unit::Percent)) => {
                         (n / Number::from(100)) * Number::from(255)
                     }
-                    Some(v) => return Err(format!("$blue: {} is not a number", v).into()),
+                    Some(v) => return Err(format!("$blue: {} is not a number.", v).into()),
                     None => return Err("Missing element $blue.".into()),
                 };
 
@@ -165,7 +165,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     Some(Value::Dimension(n, Unit::Percent)) => {
                         (n / Number::from(100)) * Number::from(255)
                     }
-                    Some(v) => return Err(format!("$green: {} is not a number", v).into()),
+                    Some(v) => return Err(format!("$green: {} is not a number.", v).into()),
                     None => return Err("Missing element $green.".into()),
                 };
 
@@ -174,7 +174,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     Some(Value::Dimension(n, Unit::Percent)) => {
                         (n / Number::from(100)) * Number::from(255)
                     }
-                    Some(v) => return Err(format!("$red: {} is not a number", v).into()),
+                    Some(v) => return Err(format!("$red: {} is not a number.", v).into()),
                     None => return Err("Missing element $red.".into()),
                 };
 

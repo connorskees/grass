@@ -32,19 +32,19 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
 
                 let lightness = match channels.pop() {
                     Some(Value::Dimension(n, _)) => n / Number::from(100),
-                    Some(v) => return Err(format!("$lightness: {} is not a number", v).into()),
+                    Some(v) => return Err(format!("$lightness: {} is not a number.", v).into()),
                     None => return Err("Missing element $lightness.".into()),
                 };
 
                 let saturation = match channels.pop() {
                     Some(Value::Dimension(n, _)) => n / Number::from(100),
-                    Some(v) => return Err(format!("$saturation: {} is not a number", v).into()),
+                    Some(v) => return Err(format!("$saturation: {} is not a number.", v).into()),
                     None => return Err("Missing element $saturation.".into()),
                 };
 
                 let hue = match channels.pop() {
                     Some(Value::Dimension(n, _)) => n,
-                    Some(v) => return Err(format!("$hue: {} is not a number", v).into()),
+                    Some(v) => return Err(format!("$hue: {} is not a number.", v).into()),
                     None => return Err("Missing element $hue.".into()),
                 };
 
@@ -110,19 +110,19 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
 
                 let lightness = match channels.pop() {
                     Some(Value::Dimension(n, _)) => n / Number::from(100),
-                    Some(v) => return Err(format!("$lightness: {} is not a number", v).into()),
+                    Some(v) => return Err(format!("$lightness: {} is not a number.", v).into()),
                     None => return Err("Missing element $lightness.".into()),
                 };
 
                 let saturation = match channels.pop() {
                     Some(Value::Dimension(n, _)) => n / Number::from(100),
-                    Some(v) => return Err(format!("$saturation: {} is not a number", v).into()),
+                    Some(v) => return Err(format!("$saturation: {} is not a number.", v).into()),
                     None => return Err("Missing element $saturation.".into()),
                 };
 
                 let hue = match channels.pop() {
                     Some(Value::Dimension(n, _)) => n,
-                    Some(v) => return Err(format!("$hue: {} is not a number", v).into()),
+                    Some(v) => return Err(format!("$hue: {} is not a number.", v).into()),
                     None => return Err("Missing element $hue.".into()),
                 };
 
