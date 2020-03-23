@@ -126,6 +126,16 @@ test!(
     "a {\n  color: rgba(7.1%, 20.4%, 33.9%);\n}\n",
     "a {\n  color: #123456;\n}\n"
 );
+error!(
+    rgb_no_args,
+    "a {\n  color: rgb();\n}\n",
+    "Error: Missing argument $channels."
+);
+error!(
+    rgba_no_args,
+    "a {\n  color: rgba();\n}\n",
+    "Error: Missing argument $channels."
+);
 test!(
     hsl_basic,
     "a {\n  color: hsl(193, 67%, 99);\n}\n",
@@ -339,6 +349,11 @@ test!(
     saturate_named_args,
     "a {\n  color: saturate($color: hsl(25, 100%, 80%), $amount: 30%);\n}\n",
     "a {\n  color: #ffc499;\n}\n"
+);
+test!(
+    saturate_one_arg,
+    "a {\n  color: saturate($amount: 50%);\n}\n",
+    "a {\n  color: saturate(50%);\n}\n"
 );
 test!(
     saturate_basic,

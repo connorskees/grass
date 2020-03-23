@@ -40,6 +40,10 @@ impl CallArgs {
         self.0.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.0.len() == 0
+    }
+
     pub fn remove(&mut self, s: &str) -> Option<Value> {
         self.0.remove(s)
     }

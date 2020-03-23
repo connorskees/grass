@@ -11,6 +11,10 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "rgb".to_owned(),
         Box::new(|args, _| {
+            if args.is_empty() {
+                return Err("Missing argument $channels.".into());
+            }
+
             if args.len() == 1 {
                 let mut channels = match arg!(args, 0, "channels") {
                     Value::List(v, _) => v,
@@ -129,6 +133,10 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "rgba".to_owned(),
         Box::new(|args, _| {
+            if args.is_empty() {
+                return Err("Missing argument $channels.".into());
+            }
+
             if args.len() == 1 {
                 let mut channels = match arg!(args, 0, "channels") {
                     Value::List(v, _) => v,

@@ -236,6 +236,10 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         "saturate".to_owned(),
         Box::new(|args, _| {
             max_args!(args, 2);
+            if args.len() == 1 {
+                return Ok(Value::Ident(format!("saturate({})", arg!(args, 0, "amount")), QuoteKind::None));
+            }
+
             let amount = match arg!(args, 1, "amount") {
                 Value::Dimension(n, u) => bound!("amount", n, u, 0, 100) / Number::from(100),
                 v => return Err(format!("$amount: {} is not a number.", v).into()),
