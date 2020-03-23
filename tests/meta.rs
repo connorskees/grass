@@ -245,6 +245,15 @@ test!(
     "a {\n  color: true;\n}\n"
 );
 test!(
+    variable_exists_quoted,
+    "$a: red; a {\n  color: variable-exists('a')\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+error!(
+    variable_exists_not_string,
+    "a {\n  color: variable-exists(12px)\n}\n", "Error: $name: 12px is not a string."
+);
+test!(
     mixin_does_exist,
     "@mixin a{} a {\n  color: mixin-exists(a)\n}\n",
     "a {\n  color: true;\n}\n"
