@@ -14,6 +14,13 @@ pub(crate) fn get_global_var(s: &str) -> SassResult<Value> {
     })
 }
 
+pub(crate) fn get_global_fn(s: &str) -> SassResult<Function> {
+    GLOBAL_SCOPE.with(|scope| match scope.borrow().functions().get(s) {
+        Some(v) => Ok(v.clone()),
+        None => Err("Undefined function.".into()),
+    })
+}
+
 pub(crate) fn insert_global_var(s: &str, v: Value) -> SassResult<Option<Value>> {
     GLOBAL_SCOPE.with(|scope| scope.borrow_mut().insert_var(s, v))
 }
@@ -37,6 +44,10 @@ impl Scope {
 
     pub const fn vars(&self) -> &HashMap<String, Value> {
         &self.vars
+    }
+
+    pub const fn functions(&self) -> &HashMap<String, Function> {
+        &self.functions
     }
 
     pub fn get_var(&self, v: &str) -> SassResult<Value> {
@@ -70,10 +81,11 @@ impl Scope {
         self.mixins.contains_key(&v.replace('_', "-"))
     }
 
-    pub fn get_fn(&self, v: &str) -> SassResult<&Function> {
-        match self.functions.get(&v.replace('_', "-")) {
-            Some(v) => Ok(v),
-            None => Err("Undefined function.".into()),
+    pub fn get_fn(&self, v: &str) -> SassResult<Function> {
+        let name = &v.replace('_', "-");
+        match self.functions.get(name) {
+            Some(v) => Ok(v.clone()),
+            None => get_global_fn(name),
         }
     }
 

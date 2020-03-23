@@ -63,3 +63,8 @@ test!(
     "a {\n  @function foo() {\n    @return 3;\n  }\n}\nb {\n  color: foo();\n}\n",
     "b {\n  color: foo();\n}\n"
 );
+test!(
+    global_function_in_scope,
+    "@function f() {\n  @return g();\n}\n@function g() {\n  @return false;\n}\na {\n  color: f();\n  color: g();\n}\n",
+    "a {\n  color: false;\n  color: false;\n}\n"
+);
