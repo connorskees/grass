@@ -96,6 +96,83 @@ impl VariableDecl {
     }
 }
 
+pub(crate) fn read_until_closing_quote<I: Iterator<Item = Token>>(
+    toks: &mut Peekable<I>,
+    q: &TokenKind,
+) -> Vec<Token> {
+    let mut is_escaped = false;
+    let mut t = Vec::new();
+    for tok in toks {
+        match tok.kind {
+            TokenKind::Symbol(Symbol::DoubleQuote)
+                if !is_escaped && q == &TokenKind::Symbol(Symbol::DoubleQuote) =>
+            {
+                t.push(tok);
+                break;
+            }
+            TokenKind::Symbol(Symbol::DoubleQuote) if is_escaped => {
+                t.push(tok);
+                is_escaped = false;
+                continue;
+            }
+            TokenKind::Symbol(Symbol::SingleQuote)
+                if !is_escaped && q == &TokenKind::Symbol(Symbol::SingleQuote) =>
+            {
+                t.push(tok);
+                break;
+            }
+            TokenKind::Symbol(Symbol::SingleQuote) if is_escaped => {
+                t.push(tok);
+                is_escaped = false;
+                continue;
+            }
+            TokenKind::Symbol(Symbol::BackSlash) if !is_escaped => is_escaped = true,
+            TokenKind::Symbol(Symbol::BackSlash) => {
+                is_escaped = false;
+                t.push(tok);
+                continue;
+            }
+            _ => t.push(tok),
+        }
+    }
+    t
+}
+
+pub(crate) fn read_until_semicolon_or_curly_brace<I: Iterator<Item = Token>>(
+    toks: &mut Peekable<I>,
+) -> Vec<Token> {
+    let mut t = Vec::new();
+    let mut nesting = 0;
+    while let Some(tok) = toks.peek() {
+        match tok.kind {
+            TokenKind::Symbol(Symbol::SemiColon) => {
+                toks.next();
+                break;
+            }
+            TokenKind::Symbol(Symbol::DoubleQuote) | TokenKind::Symbol(Symbol::SingleQuote) => {
+                let quote = toks.next().unwrap();
+                t.push(quote.clone());
+                t.extend(read_until_closing_quote(toks, &quote.kind));
+            }
+            TokenKind::Interpolation | TokenKind::Symbol(Symbol::OpenCurlyBrace) => {
+                nesting += 1;
+                t.push(toks.next().unwrap());
+            }
+            TokenKind::Symbol(Symbol::CloseCurlyBrace) => {
+                if nesting == 0 {
+                    break;
+                } else {
+                    nesting -= 1;
+                    t.push(toks.next().unwrap());
+                }
+            }
+            _ => t.push(toks.next().unwrap()),
+        }
+    }
+    devour_whitespace(toks);
+    t
+}
+
 pub(crate) fn eat_variable_value<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
     scope: &Scope,
@@ -104,39 +181,21 @@ pub(crate) fn eat_variable_value<I: Iterator<Item = Token>>(
     devour_whitespace(toks);
     let mut default = false;
     let mut global = false;
-    let mut raw: Vec<Token> = Vec::new();
-    let mut nesting = 0;
-    while let Some(tok) = toks.peek() {
-        match tok.kind {
-            TokenKind::Symbol(Symbol::SemiColon) => {
-                toks.next();
-                break;
-            }
+    let mut raw = read_until_semicolon_or_curly_brace(toks)
+        .into_iter()
+        .filter(|t| match t.kind {
             TokenKind::Keyword(Keyword::Default) => {
-                toks.next();
-                default = true
+                default = true;
+                false
             }
             TokenKind::Keyword(Keyword::Global) => {
-                toks.next();
-                global = true
+                global = true;
+                false
             }
-            TokenKind::Interpolation | TokenKind::Symbol(Symbol::OpenCurlyBrace) => {
-                nesting += 1;
-                raw.push(toks.next().unwrap());
-            }
-            TokenKind::Symbol(Symbol::CloseCurlyBrace) => {
-                if nesting == 0 {
-                    break;
-                } else {
-                    nesting -= 1;
-                    raw.push(toks.next().unwrap());
-                }
-            }
-            _ => raw.push(toks.next().unwrap()),
-        }
-    }
-    devour_whitespace(toks);
-    let val = Value::from_tokens(&mut raw.into_iter().peekable(), scope, super_selector)?;
+            _ => true,
+        })
+        .peekable();
+    let val = Value::from_tokens(&mut raw, scope, super_selector)?;
     Ok(VariableDecl::new(val, default, global))
 }
 

@@ -82,3 +82,4 @@ test!(
     "a {\n  color: blue;\n}\n"
 );
 test!(double_escape_is_preserved, "a {\n  color: r\\\\65;\n}\n");
+test!(semicolon_in_string, "a {\n  color: \";\";\n}\n");
