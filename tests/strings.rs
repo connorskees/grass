@@ -94,6 +94,11 @@ test!(
     "a {\n  color: \"\";\n}\n"
 );
 test!(
+    str_slice_start_end_equal,
+    "a {\n  color: str-slice(\"cde\", 1, 1);\n}\n",
+    "a {\n  color: \"c\";\n}\n"
+);
+test!(
     str_len_dbl_quotes,
     "a {\n  color: str-length(\"cde\");\n}\n",
     "a {\n  color: 3;\n}\n"
