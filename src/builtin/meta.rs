@@ -22,23 +22,26 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         "feature-exists".to_owned(),
         Box::new(|args, _| {
             max_args!(args, 1);
-            match arg!(args, 0, "feature").unquote().to_string().as_str() {
-                // A local variable will shadow a global variable unless
-                // `!global` is used.
-                "global-variable-shadowing" => Ok(Value::False),
-                // the @extend rule will affect selectors nested in pseudo-classes
-                // like :not()
-                "extend-selector-pseudoclass" => Ok(Value::False),
-                // Full support for unit arithmetic using units defined in the
-                // [Values and Units Level 3][] spec.
-                "units-level-3" => Ok(Value::True),
-                // The Sass `@error` directive is supported.
-                "at-error" => Ok(Value::True),
-                // The "Custom Properties Level 1" spec is supported. This means
-                // that custom properties are parsed statically, with only
-                // interpolation treated as SassScript.
-                "custom-property" => Ok(Value::False),
-                _ => Ok(Value::False),
+            match arg!(args, 0, "feature") {
+                Value::Ident(s, _) => match s.as_str() {
+                    // A local variable will shadow a global variable unless
+                    // `!global` is used.
+                    "global-variable-shadowing" => Ok(Value::False),
+                    // the @extend rule will affect selectors nested in pseudo-classes
+                    // like :not()
+                    "extend-selector-pseudoclass" => Ok(Value::False),
+                    // Full support for unit arithmetic using units defined in the
+                    // [Values and Units Level 3][] spec.
+                    "units-level-3" => Ok(Value::True),
+                    // The Sass `@error` directive is supported.
+                    "at-error" => Ok(Value::True),
+                    // The "Custom Properties Level 1" spec is supported. This means
+                    // that custom properties are parsed statically, with only
+                    // interpolation treated as SassScript.
+                    "custom-property" => Ok(Value::False),
+                    _ => Ok(Value::False),
+                },
+                v => Err(format!("$feature: {} is not a string.", v).into()),
             }
         }),
     );
