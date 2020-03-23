@@ -128,13 +128,19 @@ test!(
 );
 error!(
     rgb_no_args,
-    "a {\n  color: rgb();\n}\n",
-    "Error: Missing argument $channels."
+    "a {\n  color: rgb();\n}\n", "Error: Missing argument $channels."
 );
 error!(
     rgba_no_args,
-    "a {\n  color: rgba();\n}\n",
-    "Error: Missing argument $channels."
+    "a {\n  color: rgba();\n}\n", "Error: Missing argument $channels."
+);
+error!(
+    hsl_no_args,
+    "a {\n  color: hsl();\n}\n", "Error: Missing argument $channels."
+);
+error!(
+    hsla_no_args,
+    "a {\n  color: hsla();\n}\n", "Error: Missing argument $channels."
 );
 test!(
     hsl_basic,

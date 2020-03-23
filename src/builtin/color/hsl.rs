@@ -12,6 +12,10 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "hsl".to_owned(),
         Box::new(|args, _| {
+            if args.is_empty() {
+                return Err("Missing argument $channels.".into());
+            }
+
             if args.len() == 1 {
                 let mut channels = match arg!(args, 0, "channels") {
                     Value::List(v, _) => v,
@@ -86,6 +90,10 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "hsla".to_owned(),
         Box::new(|args, _| {
+            if args.is_empty() {
+                return Err("Missing argument $channels.".into());
+            }
+
             if args.len() == 1 {
                 let mut channels = match arg!(args, 0, "channels") {
                     Value::List(v, _) => v,
@@ -237,7 +245,10 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         Box::new(|args, _| {
             max_args!(args, 2);
             if args.len() == 1 {
-                return Ok(Value::Ident(format!("saturate({})", arg!(args, 0, "amount")), QuoteKind::None));
+                return Ok(Value::Ident(
+                    format!("saturate({})", arg!(args, 0, "amount")),
+                    QuoteKind::None,
+                ));
             }
 
             let amount = match arg!(args, 1, "amount") {
