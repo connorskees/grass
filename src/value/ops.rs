@@ -133,50 +133,49 @@ impl Sub for Value {
             },
             Self::BinaryOp(..) | Self::Paren(..) => (self.eval()? - other)?,
             Self::Ident(s1, q1) => match other {
-                Self::Ident(s2, q2) => {
-                    Value::Ident(
-                        format!("{}{}{}-{}{}{}", q1.normalize(), s1, q1.normalize(), q2.normalize(), s2, q2.normalize()),
-                        QuoteKind::None,
-                    )
-                }
+                Self::Ident(s2, q2) => Value::Ident(
+                    format!(
+                        "{}{}{}-{}{}{}",
+                        q1.normalize(),
+                        s1,
+                        q1.normalize(),
+                        q2.normalize(),
+                        s2,
+                        q2.normalize()
+                    ),
+                    QuoteKind::None,
+                ),
                 Self::Important
                 | Self::True
                 | Self::False
                 | Self::Dimension(..)
-                | Self::Color(..) => {
-                    Value::Ident(
-                        format!("{}{}{}-{}", q1.normalize(), s1, q1.normalize(), other),
-                        QuoteKind::None,
-                    )
-                }
-                Self::Null => {
-                    Value::Ident(format!("{}{}{}-", q1.normalize(), s1, q1.normalize()), QuoteKind::None)
-                }
-                Self::List(..) => {
-                    Value::Ident(
-                        format!("{}{}{}-{}", q1.normalize(), s1, q1.normalize(), other),
-                        QuoteKind::None,
-                    )
-                }
+                | Self::Color(..) => Value::Ident(
+                    format!("{}{}{}-{}", q1.normalize(), s1, q1.normalize(), other),
+                    QuoteKind::None,
+                ),
+                Self::Null => Value::Ident(
+                    format!("{}{}{}-", q1.normalize(), s1, q1.normalize()),
+                    QuoteKind::None,
+                ),
+                Self::List(..) => Value::Ident(
+                    format!("{}{}{}-{}", q1.normalize(), s1, q1.normalize(), other),
+                    QuoteKind::None,
+                ),
                 _ => todo!(),
             },
             Self::List(..) => match other {
-                Self::Ident(s, q) => {
-                    Value::Ident(
-                        format!("{}-{}{}{}", self, q.normalize(), s, q.normalize()),
-                        QuoteKind::None,
-                    )
-                }
+                Self::Ident(s, q) => Value::Ident(
+                    format!("{}-{}{}{}", self, q.normalize(), s, q.normalize()),
+                    QuoteKind::None,
+                ),
                 Self::Paren(..) => (self + other.eval()?)?,
                 _ => Value::Ident(format!("{}-{}", self, other), QuoteKind::None),
             },
             _ => match other {
-                Self::Ident(s, q) => {
-                    Value::Ident(
-                        format!("{}-{}{}{}", self, q.normalize(), s, q.normalize()),
-                        QuoteKind::None,
-                    )
-                }
+                Self::Ident(s, q) => Value::Ident(
+                    format!("{}-{}{}{}", self, q.normalize(), s, q.normalize()),
+                    QuoteKind::None,
+                ),
                 Self::Null => Value::Ident(format!("{}-", self), QuoteKind::None),
                 _ => Value::Ident(format!("{}-{}", self, other), QuoteKind::None),
             },
@@ -234,21 +233,20 @@ impl Div for Value {
                         todo!("unit conversions")
                     }
                 }
-                Self::Ident(s, q) => {
-                    Value::Ident(
-                        format!("{}{}/{}{}{}", num, unit, q.normalize(), s, q.normalize()),
-                        QuoteKind::None,
-                    )
-                }
+                Self::Ident(s, q) => Value::Ident(
+                    format!("{}{}/{}{}{}", num, unit, q.normalize(), s, q.normalize()),
+                    QuoteKind::None,
+                ),
                 Self::BinaryOp(..) | Self::Paren(..) => {
                     (Self::Dimension(num, unit) / other.eval()?)?
                 }
                 _ => todo!(),
             },
             Self::Color(c) => match other {
-                Self::Ident(s, q) => {
-                    Value::Ident(format!("{}/{}{}{}", c, q.normalize(), s, q.normalize()), QuoteKind::None)
-                }
+                Self::Ident(s, q) => Value::Ident(
+                    format!("{}/{}{}{}", c, q.normalize(), s, q.normalize()),
+                    QuoteKind::None,
+                ),
                 Self::Null => Value::Ident(format!("{}/", c), QuoteKind::None),
                 Self::Dimension(..) | Self::Color(..) => {
                     return Err(format!("Undefined operation \"{} / {}\".", c, other).into())
@@ -257,34 +255,37 @@ impl Div for Value {
             },
             Self::BinaryOp(..) | Self::Paren(..) => self.eval()?,
             Self::Ident(s1, q1) => match other {
-                Self::Ident(s2, q2) => {
-                    Value::Ident(
-                        format!("{}{}{}/{}{}{}", q1.normalize(), s1, q1.normalize(), q2.normalize(), s2, q2.normalize()),
-                        QuoteKind::None,
-                    )
-                }
+                Self::Ident(s2, q2) => Value::Ident(
+                    format!(
+                        "{}{}{}/{}{}{}",
+                        q1.normalize(),
+                        s1,
+                        q1.normalize(),
+                        q2.normalize(),
+                        s2,
+                        q2.normalize()
+                    ),
+                    QuoteKind::None,
+                ),
                 Self::Important
                 | Self::True
                 | Self::False
                 | Self::Dimension(..)
-                | Self::Color(..) => {
-                    Value::Ident(
-                        format!("{}{}{}/{}", q1.normalize(), s1, q1.normalize(), other),
-                        QuoteKind::None,
-                    )
-                }
-                Self::Null => {
-                    Value::Ident(format!("{}{}{}/", q1.normalize(), s1, q1.normalize()), QuoteKind::None)
-                }
+                | Self::Color(..) => Value::Ident(
+                    format!("{}{}{}/{}", q1.normalize(), s1, q1.normalize(), other),
+                    QuoteKind::None,
+                ),
+                Self::Null => Value::Ident(
+                    format!("{}{}{}/", q1.normalize(), s1, q1.normalize()),
+                    QuoteKind::None,
+                ),
                 _ => todo!(),
             },
             _ => match other {
-                Self::Ident(s, q) => {
-                    Value::Ident(
-                        format!("{}/{}{}{}", self, q.normalize(), s, q.normalize()),
-                        QuoteKind::None,
-                    )
-                }
+                Self::Ident(s, q) => Value::Ident(
+                    format!("{}/{}{}{}", self, q.normalize(), s, q.normalize()),
+                    QuoteKind::None,
+                ),
                 Self::Null => Value::Ident(format!("{}/", self), QuoteKind::None),
                 _ => Value::Ident(format!("{}/{}", self, other), QuoteKind::None),
             },

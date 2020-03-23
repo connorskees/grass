@@ -84,6 +84,16 @@ test!(
     "a {\n  color: \"\";\n}\n"
 );
 test!(
+    str_slice_bigger_than_usize_max,
+    "a {\n  color: str-slice($string: \"foo\", $start-at: -99999999999999999999, $end-at: 99999999999999999999);\n}\n",
+    "a {\n  color: \"foo\";\n}\n"
+);
+test!(
+    str_slice_positive_index_bigger_than_usize_max,
+    "a {\n  color: str-slice($string: \"foo\", $start-at: 99999999999999999999, $end-at: -99999999999999999999);\n}\n",
+    "a {\n  color: \"\";\n}\n"
+);
+test!(
     str_len_dbl_quotes,
     "a {\n  color: str-length(\"cde\");\n}\n",
     "a {\n  color: 3;\n}\n"
@@ -104,6 +114,7 @@ test!(
     "a {\n  color: 7;\n}\n"
 );
 test!(
+    #[ignore]
     str_len_double_wide,
     "a {\n  color: str-length(\"👭\");\n}\n",
     "@charset \"UTF-8\";\na {\n  color: 1;\n}\n"
@@ -203,4 +214,14 @@ test!(
     str_insert_double_width_char,
     "a {\n  color: str-insert(\"👭\", \"c\", 2);\n}\n",
     "@charset \"UTF-8\";\na {\n  color: \"👭c\";\n}\n"
+);
+test!(
+    str_insert_positive_index_bigger_than_usize_max,
+    "a {\n  color: str-insert($string: \"foo\", $insert: \"X\", $index: 99999999999999999999);\n}\n",
+    "a {\n  color: \"fooX\";\n}\n"
+);
+test!(
+    str_insert_negative_index_bigger_than_usize_max,
+    "a {\n  color: str-insert($string: \"foo\", $insert: \"X\", $index: -99999999999999999999);\n}\n",
+    "a {\n  color: \"Xfoo\";\n}\n"
 );

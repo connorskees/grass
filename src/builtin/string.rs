@@ -76,7 +76,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     return Err(format!("{} is not an int.", n).into())
                 }
                 Value::Dimension(n, Unit::None) if n.is_positive() => {
-                    n.to_integer().to_usize().unwrap()
+                    n.to_integer().to_usize().unwrap_or(str_len+1)
                 }
                 Value::Dimension(n, Unit::None) if n.is_zero() => 1_usize,
                 Value::Dimension(n, Unit::None) if n < -Number::from(str_len) => 1_usize,
@@ -93,13 +93,13 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     return Err(format!("{} is not an int.", n).into())
                 }
                 Value::Dimension(n, Unit::None) if n.is_positive() => {
-                    n.to_integer().to_usize().unwrap()
+                    n.to_integer().to_usize().unwrap_or(str_len+1)
                 }
                 Value::Dimension(n, Unit::None) if n.is_zero() => 0_usize,
                 Value::Dimension(n, Unit::None) if n < -Number::from(str_len) => 0_usize,
                 Value::Dimension(n, Unit::None) => (BigInt::from(str_len + 1) + n.to_integer())
                     .to_usize()
-                    .unwrap(),
+                    .unwrap_or(str_len+1),
                 v @ Value::Dimension(..) => {
                     return Err(format!("$end: Expected {} to have no units.", v).into())
                 }
@@ -111,13 +111,8 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 end = str_len;
             }
 
-            if start > end || start > str_len {
-                match quotes {
-                    QuoteKind::Double | QuoteKind::Single => {
-                        Ok(Value::Ident(String::new(), QuoteKind::Double))
-                    }
-                    QuoteKind::None => Ok(Value::Null),
-                }
+            if start >= end || start > str_len {
+                Ok(Value::Ident(String::new(), quotes.normalize()))
             } else {
                 let s = string[start - 1..end].to_string();
                 match quotes {
@@ -151,8 +146,8 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         "str-insert".to_owned(),
         Box::new(|args, _| {
             max_args!(args, 3);
-            let (s1, q) = match arg!(args, 0, "string") {
-                Value::Ident(i, q) => (i, q),
+            let (s1, quotes) = match arg!(args, 0, "string") {
+                Value::Ident(i, q) => (i, q.normalize()),
                 v => return Err(format!("$string: {} is not a string.", v).into()),
             };
 
@@ -170,11 +165,6 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     return Err(format!("$index: Expected {} to have no units.", v).into())
                 }
                 v => return Err(format!("$index: {} is not a number.", v).into()),
-            };
-
-            let quotes = match q {
-                QuoteKind::Double | QuoteKind::Single => QuoteKind::Double,
-                QuoteKind::None => QuoteKind::None,
             };
 
             if s1.is_empty() {
@@ -201,14 +191,19 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
 
             let string = if index.is_positive() {
                 insert(
-                    index.to_integer().to_usize().unwrap().min(len + 1) - 1,
+                    index
+                        .to_integer()
+                        .to_usize()
+                        .unwrap_or(len + 1)
+                        .min(len + 1)
+                        - 1,
                     s1,
                     &substr,
                 )
             } else if index.is_zero() {
                 insert(0, s1, &substr)
             } else {
-                let idx = index.abs().to_integer().to_usize().unwrap();
+                let idx = index.abs().to_integer().to_usize().unwrap_or(len + 1);
                 if idx > len {
                     insert(0, s1, &substr)
                 } else {
