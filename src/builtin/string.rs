@@ -70,7 +70,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 Value::Ident(s, q) => (s, q),
                 v => return Err(format!("$string: {} is not a string.", v).into()),
             };
-            let str_len = string.len();
+            let str_len = string.chars().count();
             let start = match arg!(args, 1, "start-at") {
                 Value::Dimension(n, Unit::None) if n.is_decimal() => {
                     return Err(format!("{} is not an int.", n).into())
@@ -171,7 +171,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 return Ok(Value::Ident(substr, quotes));
             }
 
-            let len = s1.len();
+            let len = s1.chars().count();
 
             // Insert substring at char position, rather than byte position
             let insert = |idx, s1: String, s2| {
