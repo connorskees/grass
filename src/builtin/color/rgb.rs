@@ -18,7 +18,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             if args.len() == 1 {
                 let mut channels = match arg!(args, 0, "channels") {
                     Value::List(v, _) => v,
-                    _ => return Err("Missing element $green.".into()),
+                    _ => return Err("Missing argument $channels.".into()),
                 };
 
                 if channels.len() > 3 {
@@ -34,7 +34,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     Some(Value::Dimension(n, Unit::Percent)) => {
                         (n / Number::from(100)) * Number::from(255)
                     }
-                    Some(v) => return Err(format!("$blue: {} is not a color", v).into()),
+                    Some(v) => return Err(format!("$blue: {} is not a number", v).into()),
                     None => return Err("Missing element $blue.".into()),
                 };
 
@@ -43,7 +43,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     Some(Value::Dimension(n, Unit::Percent)) => {
                         (n / Number::from(100)) * Number::from(255)
                     }
-                    Some(v) => return Err(format!("$green: {} is not a color", v).into()),
+                    Some(v) => return Err(format!("$green: {} is not a number", v).into()),
                     None => return Err("Missing element $green.".into()),
                 };
 
@@ -52,7 +52,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     Some(Value::Dimension(n, Unit::Percent)) => {
                         (n / Number::from(100)) * Number::from(255)
                     }
-                    Some(v) => return Err(format!("$red: {} is not a color", v).into()),
+                    Some(v) => return Err(format!("$red: {} is not a number", v).into()),
                     None => return Err("Missing element $red.".into()),
                 };
 
@@ -140,7 +140,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             if args.len() == 1 {
                 let mut channels = match arg!(args, 0, "channels") {
                     Value::List(v, _) => v,
-                    _ => return Err("Missing element $green.".into()),
+                    _ => return Err("Missing argument $channels.".into()),
                 };
 
                 if channels.len() > 3 {
@@ -156,7 +156,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     Some(Value::Dimension(n, Unit::Percent)) => {
                         (n / Number::from(100)) * Number::from(255)
                     }
-                    Some(v) => return Err(format!("$blue: {} is not a color", v).into()),
+                    Some(v) => return Err(format!("$blue: {} is not a number", v).into()),
                     None => return Err("Missing element $blue.".into()),
                 };
 
@@ -165,7 +165,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     Some(Value::Dimension(n, Unit::Percent)) => {
                         (n / Number::from(100)) * Number::from(255)
                     }
-                    Some(v) => return Err(format!("$green: {} is not a color", v).into()),
+                    Some(v) => return Err(format!("$green: {} is not a number", v).into()),
                     None => return Err("Missing element $green.".into()),
                 };
 
@@ -174,7 +174,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     Some(Value::Dimension(n, Unit::Percent)) => {
                         (n / Number::from(100)) * Number::from(255)
                     }
-                    Some(v) => return Err(format!("$red: {} is not a color", v).into()),
+                    Some(v) => return Err(format!("$red: {} is not a number", v).into()),
                     None => return Err("Missing element $red.".into()),
                 };
 

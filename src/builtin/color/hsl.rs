@@ -19,7 +19,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             if args.len() == 1 {
                 let mut channels = match arg!(args, 0, "channels") {
                     Value::List(v, _) => v,
-                    _ => return Err("Missing element $green.".into()),
+                    _ => return Err("Missing argument $channels.".into()),
                 };
 
                 if channels.len() > 3 {
@@ -32,19 +32,19 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
 
                 let luminance = match channels.pop() {
                     Some(Value::Dimension(n, _)) => n / Number::from(100),
-                    Some(v) => return Err(format!("$luminance: {} is not a color", v).into()),
+                    Some(v) => return Err(format!("$luminance: {} is not a number", v).into()),
                     None => return Err("Missing element $luminance.".into()),
                 };
 
                 let saturation = match channels.pop() {
                     Some(Value::Dimension(n, _)) => n / Number::from(100),
-                    Some(v) => return Err(format!("$saturation: {} is not a color", v).into()),
+                    Some(v) => return Err(format!("$saturation: {} is not a number", v).into()),
                     None => return Err("Missing element $saturation.".into()),
                 };
 
                 let hue = match channels.pop() {
                     Some(Value::Dimension(n, _)) => n,
-                    Some(v) => return Err(format!("$hue: {} is not a color", v).into()),
+                    Some(v) => return Err(format!("$hue: {} is not a number", v).into()),
                     None => return Err("Missing element $hue.".into()),
                 };
 
@@ -97,7 +97,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             if args.len() == 1 {
                 let mut channels = match arg!(args, 0, "channels") {
                     Value::List(v, _) => v,
-                    _ => return Err("Missing element $green.".into()),
+                    _ => return Err("Missing argument $channels.".into()),
                 };
 
                 if channels.len() > 3 {
@@ -110,19 +110,19 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
 
                 let luminance = match channels.pop() {
                     Some(Value::Dimension(n, _)) => n / Number::from(100),
-                    Some(v) => return Err(format!("$luminance: {} is not a color", v).into()),
+                    Some(v) => return Err(format!("$luminance: {} is not a number", v).into()),
                     None => return Err("Missing element $luminance.".into()),
                 };
 
                 let saturation = match channels.pop() {
                     Some(Value::Dimension(n, _)) => n / Number::from(100),
-                    Some(v) => return Err(format!("$saturation: {} is not a color", v).into()),
+                    Some(v) => return Err(format!("$saturation: {} is not a number", v).into()),
                     None => return Err("Missing element $saturation.".into()),
                 };
 
                 let hue = match channels.pop() {
                     Some(Value::Dimension(n, _)) => n,
-                    Some(v) => return Err(format!("$hue: {} is not a color", v).into()),
+                    Some(v) => return Err(format!("$hue: {} is not a number", v).into()),
                     None => return Err("Missing element $hue.".into()),
                 };
 
