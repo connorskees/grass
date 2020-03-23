@@ -106,7 +106,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "mixin-exists".to_owned(),
         Box::new(|args, scope| {
-            max_args!(args, 1);
+            max_args!(args, 2);
             match arg!(args, 0, "name") {
                 Value::Ident(s, _) => Ok(Value::bool(scope.mixin_exists(&s))),
                 v => Err(format!("$name: {} is not a string.", v).into()),
