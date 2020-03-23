@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use super::{Builtin, GLOBAL_FUNCTIONS};
 use crate::common::QuoteKind;
+use crate::scope::global_var_exists;
 use crate::unit::Unit;
 use crate::value::Value;
 
@@ -85,6 +86,16 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             max_args!(args, 1);
             match arg!(args, 0, "name") {
                 Value::Ident(s, _) => Ok(Value::bool(scope.var_exists(&s))),
+                v => Err(format!("$name: {} is not a string.", v).into()),
+            }
+        }),
+    );
+    f.insert(
+        "global-variable-exists".to_owned(),
+        Box::new(|args, _| {
+            max_args!(args, 1);
+            match arg!(args, 0, "name") {
+                Value::Ident(s, _) => Ok(Value::bool(global_var_exists(&s))),
                 v => Err(format!("$name: {} is not a string.", v).into()),
             }
         }),

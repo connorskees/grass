@@ -14,6 +14,10 @@ pub(crate) fn get_global_var(s: &str) -> SassResult<Value> {
     })
 }
 
+pub fn global_var_exists(v: &str) -> bool {
+    GLOBAL_SCOPE.with(|scope| scope.borrow().var_exists(v))
+}
+
 pub(crate) fn get_global_fn(s: &str) -> SassResult<Function> {
     GLOBAL_SCOPE.with(|scope| match scope.borrow().functions().get(s) {
         Some(v) => Ok(v.clone()),
