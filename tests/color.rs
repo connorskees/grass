@@ -159,7 +159,7 @@ test!(
 );
 test!(
     hsl_named,
-    "a {\n  color: hsl($hue: 193, $saturation: 67%, $luminance: 99);\n}\n",
+    "a {\n  color: hsl($hue: 193, $saturation: 67%, $lightness: 99);\n}\n",
     "a {\n  color: #fbfdfe;\n}\n"
 );
 test!(
@@ -184,7 +184,7 @@ test!(
 );
 test!(
     hsla_named,
-    "a {\n  color: hsla($hue: 193, $saturation: 67%, $luminance: 99, $alpha: .6);\n}\n",
+    "a {\n  color: hsla($hue: 193, $saturation: 67%, $lightness: 99, $alpha: .6);\n}\n",
     "a {\n  color: rgba(251, 253, 254, 0.6);\n}\n"
 );
 test!(

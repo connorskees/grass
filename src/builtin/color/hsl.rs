@@ -30,10 +30,10 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     .into());
                 }
 
-                let luminance = match channels.pop() {
+                let lightness = match channels.pop() {
                     Some(Value::Dimension(n, _)) => n / Number::from(100),
-                    Some(v) => return Err(format!("$luminance: {} is not a number", v).into()),
-                    None => return Err("Missing element $luminance.".into()),
+                    Some(v) => return Err(format!("$lightness: {} is not a number", v).into()),
+                    None => return Err("Missing element $lightness.".into()),
                 };
 
                 let saturation = match channels.pop() {
@@ -51,7 +51,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 Ok(Value::Color(Color::from_hsla(
                     hue,
                     saturation,
-                    luminance,
+                    lightness,
                     Number::one(),
                 )))
             } else {
@@ -63,9 +63,9 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     Value::Dimension(n, _) => n / Number::from(100),
                     v => return Err(format!("$saturation: {} is not a number.", v).into()),
                 };
-                let luminance = match arg!(args, 2, "luminance") {
+                let lightness = match arg!(args, 2, "lightness") {
                     Value::Dimension(n, _) => n / Number::from(100),
-                    v => return Err(format!("$luminance: {} is not a number.", v).into()),
+                    v => return Err(format!("$lightness: {} is not a number.", v).into()),
                 };
                 let alpha = match arg!(
                     args,
@@ -82,7 +82,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     v => return Err(format!("$alpha: {} is not a number.", v).into()),
                 };
                 Ok(Value::Color(Color::from_hsla(
-                    hue, saturation, luminance, alpha,
+                    hue, saturation, lightness, alpha,
                 )))
             }
         }),
@@ -108,10 +108,10 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     .into());
                 }
 
-                let luminance = match channels.pop() {
+                let lightness = match channels.pop() {
                     Some(Value::Dimension(n, _)) => n / Number::from(100),
-                    Some(v) => return Err(format!("$luminance: {} is not a number", v).into()),
-                    None => return Err("Missing element $luminance.".into()),
+                    Some(v) => return Err(format!("$lightness: {} is not a number", v).into()),
+                    None => return Err("Missing element $lightness.".into()),
                 };
 
                 let saturation = match channels.pop() {
@@ -129,7 +129,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 Ok(Value::Color(Color::from_hsla(
                     hue,
                     saturation,
-                    luminance,
+                    lightness,
                     Number::one(),
                 )))
             } else {
@@ -141,9 +141,9 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     Value::Dimension(n, _) => n / Number::from(100),
                     v => return Err(format!("$saturation: {} is not a number.", v).into()),
                 };
-                let luminance = match arg!(args, 2, "luminance") {
+                let lightness = match arg!(args, 2, "lightness") {
                     Value::Dimension(n, _) => n / Number::from(100),
-                    v => return Err(format!("$luminance: {} is not a number.", v).into()),
+                    v => return Err(format!("$lightness: {} is not a number.", v).into()),
                 };
                 let alpha = match arg!(
                     args,
@@ -160,7 +160,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     v => return Err(format!("$alpha: {} is not a number.", v).into()),
                 };
                 Ok(Value::Color(Color::from_hsla(
-                    hue, saturation, luminance, alpha,
+                    hue, saturation, lightness, alpha,
                 )))
             }
         }),
