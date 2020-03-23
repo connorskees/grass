@@ -111,7 +111,9 @@ impl Value {
     pub fn is_true(&self) -> SassResult<bool> {
         match self {
             Value::Null | Value::False => Ok(false),
-            Self::BinaryOp(..) | Self::Paren(..) | Self::UnaryOp(..) => self.clone().eval()?.is_true(),
+            Self::BinaryOp(..) | Self::Paren(..) | Self::UnaryOp(..) => {
+                self.clone().eval()?.is_true()
+            }
             _ => Ok(true),
         }
     }

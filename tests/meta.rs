@@ -279,6 +279,11 @@ test!(
     "a {\n  color: true;\n}\n"
 );
 test!(
+    builtin_function_does_exist,
+    "a {\n  color: function-exists(function-exists)\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
     function_does_not_exist,
     "a {\n  color: function-exists(a)\n}\n",
     "a {\n  color: false;\n}\n"
@@ -287,6 +292,14 @@ test!(
     function_exists_named,
     "@function a(){} a {\n  color: function-exists($name: a)\n}\n",
     "a {\n  color: true;\n}\n"
+);
+error!(
+    function_exists_non_string,
+    "a {color:function-exists(12px)}", "Error: $name: 12px is not a string."
+);
+error!(
+    mixin_exists_non_string,
+    "a {color:mixin-exists(12px)}", "Error: $name: 12px is not a string."
 );
 // test!(
 //     inspect_empty_list,

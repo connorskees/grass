@@ -107,19 +107,22 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         "mixin-exists".to_owned(),
         Box::new(|args, scope| {
             max_args!(args, 1);
-            let value = arg!(args, 0, "name");
-            Ok(Value::bool(scope.mixin_exists(&value.to_string())))
+            match arg!(args, 0, "name") {
+                Value::Ident(s, _) => Ok(Value::bool(scope.mixin_exists(&s))),
+                v => Err(format!("$name: {} is not a string.", v).into()),
+            }
         }),
     );
     f.insert(
         "function-exists".to_owned(),
         Box::new(|args, scope| {
             max_args!(args, 1);
-            let value = arg!(args, 0, "name");
-            let s = value.unquote().to_string();
-            Ok(Value::bool(
-                scope.fn_exists(&s) || GLOBAL_FUNCTIONS.contains_key(&s),
-            ))
+            match arg!(args, 0, "name") {
+                Value::Ident(s, _) => Ok(Value::bool(
+                    scope.fn_exists(&s) || GLOBAL_FUNCTIONS.contains_key(&s),
+                )),
+                v => Err(format!("$name: {} is not a string.", v).into()),
+            }
         }),
     );
     f.insert("call".to_owned(), Box::new(|_args, _scope| {
