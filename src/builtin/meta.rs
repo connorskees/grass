@@ -79,8 +79,10 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         "inspect".to_owned(),
         Box::new(|args, _| {
             max_args!(args, 1);
-            let value = arg!(args, 0, "value");
-            Ok(Value::Ident(value.to_string(), QuoteKind::None))
+            Ok(Value::Ident(match arg!(args, 0, "value") {
+                Value::List(v, ..) if v.is_empty() => "()".to_string(),
+                v => v.to_string(),
+            }, QuoteKind::None))
         }),
     );
     f.insert(
