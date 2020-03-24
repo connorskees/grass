@@ -1,5 +1,7 @@
 use std::iter::Peekable;
 
+use super::eat_stmts;
+
 use crate::args::{eat_func_args, CallArgs, FuncArgs};
 use crate::atrule::AtRule;
 use crate::common::Symbol;
@@ -8,23 +10,23 @@ use crate::scope::Scope;
 use crate::selector::Selector;
 use crate::utils::devour_whitespace;
 use crate::value::Value;
-use crate::{Token, TokenKind};
+use crate::{Stmt, Token, TokenKind};
 
 #[derive(Debug, Clone)]
 pub(crate) struct Function {
     scope: Scope,
     args: FuncArgs,
-    body: Vec<AtRule>,
+    body: Vec<Stmt>,
 }
 
 impl Function {
-    pub fn new(scope: Scope, args: FuncArgs, body: Vec<AtRule>) -> Self {
+    pub fn new(scope: Scope, args: FuncArgs, body: Vec<Stmt>) -> Self {
         Function { scope, args, body }
     }
 
     pub fn decl_from_tokens<I: Iterator<Item = Token>>(
         toks: &mut Peekable<I>,
-        mut scope: Scope,
+        scope: Scope,
         super_selector: &Selector,
     ) -> SassResult<(String, Function)> {
         let Token { kind, .. } = toks
@@ -44,27 +46,9 @@ impl Function {
             _ => return Err("expected \"(\".".into()),
         };
 
-        let mut nesting = 1;
-        let mut body: Vec<AtRule> = Vec::new();
-
-        while nesting > 0 {
-            if let Some(tok) = toks.next() {
-                match &tok.kind {
-                    TokenKind::AtRule(rule) => body.push(AtRule::from_tokens(
-                        rule,
-                        tok.pos(),
-                        toks,
-                        &mut scope,
-                        &Selector::new(),
-                    )?),
-                    TokenKind::Symbol(Symbol::CloseCurlyBrace) => nesting -= 1,
-                    _ => {}
-                }
-            } else {
-                return Err("unexpected EOF (TODO: better error message)".into());
-            }
-        }
+        let body = eat_stmts(toks, &mut scope.clone(), super_selector)?;
         devour_whitespace(toks);
+
         Ok((name, Function::new(scope, args, body)))
     }
 
@@ -86,16 +70,16 @@ impl Function {
     }
 
     pub fn call(&self, super_selector: &Selector) -> SassResult<Value> {
-        for rule in &self.body {
-            match rule {
-                AtRule::Return(toks) => {
+        for stmt in &self.body {
+            match stmt {
+                Stmt::AtRule(AtRule::Return(toks)) => {
                     return Value::from_tokens(
                         &mut toks.clone().into_iter().peekable(),
                         &self.scope,
                         super_selector,
                     )
                 }
-                AtRule::For(..) => todo!("@for in function"),
+                Stmt::AtRule(AtRule::For(..)) => todo!("@for in function"),
                 _ => return Err("This at-rule is not allowed here.".into()),
             }
         }
