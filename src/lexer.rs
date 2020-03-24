@@ -239,6 +239,8 @@ impl<'a> Lexer<'a> {
 
             if n.is_empty() {
                 return (TokenKind::Symbol(Symbol::BackSlash), false);
+            } else if n.len() == 1 {
+                return (TokenKind::Ident(format!("\\{} ", n)), false);
             }
 
             let mut string = std::char::from_u32(u32::from_str_radix(&n, 16).unwrap())

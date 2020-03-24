@@ -326,6 +326,7 @@ impl Value {
                             "\\\\".to_string() + &flatten_ident(toks, scope, super_selector)?,
                             QuoteKind::None,
                         )),
+                        TokenKind::Ident(s) => Ok(Value::Ident(s, QuoteKind::None)),
                         _ => todo!("value after \\"),
                     }
                 } else {
