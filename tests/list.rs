@@ -149,3 +149,18 @@ test!(bracketed_ident, "a {\n  color: [a];\n}\n");
 test!(bracketed_space_list, "a {\n  color: [a b];\n}\n");
 test!(bracketed_comma_list, "a {\n  color: [a, b];\n}\n");
 test!(bracketed_as_space_list, "a {\n  color: [a b] c;\n}\n");
+test!(
+    trailing_comma_bare,
+    "a {\n  color: 1,;\n}\n",
+    "a {\n  color: 1;\n}\n"
+);
+test!(
+    trailing_comma_paren,
+    "a {\n  color: (1,);\n}\n",
+    "a {\n  color: 1;\n}\n"
+);
+test!(
+    trailing_comma_bracket,
+    "a {\n  color: [1,];\n}\n",
+    "a {\n  color: [1];\n}\n"
+);

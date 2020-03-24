@@ -88,6 +88,27 @@ impl Value {
             TokenKind::Symbol(Symbol::Comma) => {
                 toks.next();
                 devour_whitespace_or_comment(toks);
+                if toks.peek() == None {
+                    return Ok(Value::List(
+                        vec![left],
+                        ListSeparator::Comma,
+                        Brackets::None,
+                    ));
+                } else if let Some(tok) = toks.peek() {
+                    if tok.is_symbol(Symbol::CloseParen) {
+                        return Ok(Value::List(
+                            vec![left],
+                            ListSeparator::Comma,
+                            Brackets::None,
+                        ));
+                    } else if tok.is_symbol(Symbol::CloseSquareBrace) {
+                        return Ok(Value::List(
+                            vec![left],
+                            ListSeparator::Comma,
+                            Brackets::Bracketed,
+                        ));
+                    }
+                }
                 let right = Self::from_tokens(toks, scope, super_selector)?;
                 if let Value::List(v, ListSeparator::Comma, Brackets::None) = right {
                     let mut v2 = vec![left];
@@ -124,7 +145,7 @@ impl Value {
             _ => {
                 devour_whitespace_or_comment(toks);
                 let right = Self::from_tokens(toks, scope, super_selector)?;
-                if let Value::List(v, ListSeparator::Space, Brackets::None) = right {
+                if let Value::List(v, ListSeparator::Space, ..) = right {
                     let mut v2 = vec![left];
                     v2.extend(v);
                     Ok(Value::List(v2, ListSeparator::Space, Brackets::None))
