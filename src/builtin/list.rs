@@ -179,4 +179,17 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             Ok(Value::List(list1, sep, brackets))
         }),
     );
+    f.insert(
+        "is-bracketed".to_owned(),
+        Box::new(|args, _| {
+            max_args!(args, 1);
+            Ok(Value::bool(match arg!(args, 0, "list") {
+                Value::List(.., brackets) => match brackets {
+                    Brackets::Bracketed => true,
+                    Brackets::None => false,
+                },
+                _ => false,
+            }))
+        }),
+    );
 }
