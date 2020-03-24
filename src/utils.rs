@@ -129,7 +129,7 @@ pub(crate) fn read_until_closing_quote<I: Iterator<Item = Token>>(
             TokenKind::Symbol(Symbol::BackSlash) if !is_escaped => {
                 t.push(tok);
                 is_escaped = true
-            },
+            }
             TokenKind::Symbol(Symbol::BackSlash) => {
                 is_escaped = false;
                 t.push(tok);
