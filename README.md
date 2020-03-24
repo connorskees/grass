@@ -22,7 +22,6 @@ order of operations
 special case certain functions (min, max, calc, element, expression, progid, url)
 variadic arguments
 many builtin list functions
-many builtin string functions
 all builtin selector functions
 all builtin map functions
 @extend
@@ -34,6 +33,13 @@ a special parser for plain css
 ```
 in addition to some smaller features like `\` in selectors
 
+
+```
+2020-03-23
+PASSING: 1547
+FAILING: 3546
+TOTAL: 5093
+```
 
 ```
 2020-03-22
