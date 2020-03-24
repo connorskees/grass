@@ -349,14 +349,11 @@ impl Value {
             TokenKind::Symbol(Symbol::BackSlash) => {
                 if let Some(tok) = toks.next() {
                     match tok.kind {
-                        TokenKind::Symbol(Symbol::Plus) => Ok(Value::Ident(
-                            "\\+".to_string() + &flatten_ident(toks, scope, super_selector)?,
+                        TokenKind::Symbol(s) => Ok(Value::Ident(
+                            format!("\\{}{}", s, flatten_ident(toks, scope, super_selector)?),
                             QuoteKind::None,
                         )),
-                        TokenKind::Symbol(Symbol::BackSlash) => Ok(Value::Ident(
-                            "\\\\".to_string() + &flatten_ident(toks, scope, super_selector)?,
-                            QuoteKind::None,
-                        )),
+                        TokenKind::Whitespace(w) => Ok(Value::Ident(format!("\\{}", w), QuoteKind::None)),
                         TokenKind::Ident(s) => Ok(Value::Ident(s, QuoteKind::None)),
                         _ => todo!("value after \\"),
                     }
