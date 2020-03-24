@@ -56,12 +56,9 @@ impl Scope {
 
     pub fn get_var(&self, v: &str) -> SassResult<Value> {
         let name = &v.replace('_', "-");
-        match get_global_var(name) {
-            Ok(v) => Ok(v),
-            Err(e) => match self.vars.get(name) {
-                Some(v) => Ok(v.clone()),
-                None => Err(e)
-            }
+        match self.vars.get(name) {
+            Some(v) => Ok(v.clone()),
+            None => get_global_var(name),
         }
     }
 
