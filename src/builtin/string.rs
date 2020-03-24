@@ -114,11 +114,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             if start > end || start > str_len {
                 Ok(Value::Ident(String::new(), quotes.normalize()))
             } else {
-                let s = string[start - 1..end].to_string();
-                match quotes {
-                    QuoteKind::Double | QuoteKind::Single => Ok(Value::Ident(s, QuoteKind::Double)),
-                    QuoteKind::None => Ok(Value::Ident(s, QuoteKind::None)),
-                }
+                Ok(Value::Ident(string.chars().skip(start - 1).take(end - start + 1).collect(), quotes.normalize()))
             }
         }),
     );
