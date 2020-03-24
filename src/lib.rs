@@ -590,8 +590,9 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                         global,
                     } = eat_variable_value(toks, scope, super_selector)?;
                     if global {
-                        insert_global_var(&name, val)?;
-                    } else if !default || scope.get_var(&name).is_err() {
+                        insert_global_var(&name, val.clone())?;
+                    }
+                    if !default || scope.get_var(&name).is_err() {
                         return Ok(Some(Expr::VariableDecl(name, Box::new(val))));
                     }
                 } else {
