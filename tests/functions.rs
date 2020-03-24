@@ -68,3 +68,8 @@ test!(
     "@function f() {\n  @return g();\n}\n@function g() {\n  @return false;\n}\na {\n  color: f();\n  color: g();\n}\n",
     "a {\n  color: false;\n  color: false;\n}\n"
 );
+test!(
+    square_bracket_comma_separated,
+    "@function foo($a) {\n  @return $a;\n}\n\na {\n  color: foo([a, b]);\n}\n",
+    "a {\n  color: [a, b];\n}\n"
+);

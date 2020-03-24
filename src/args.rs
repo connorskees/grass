@@ -180,6 +180,10 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
                     return Ok(CallArgs(args));
                 }
                 TokenKind::Symbol(Symbol::Comma) => break,
+                TokenKind::Symbol(Symbol::OpenSquareBrace) => {
+                    val.push(tok);
+                    val.extend(read_until_close_square_brace(toks));
+                }
                 TokenKind::Symbol(Symbol::OpenParen) => {
                     val.push(tok);
                     val.extend(read_until_close_paren(toks));
@@ -219,6 +223,27 @@ fn read_until_close_paren<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -> 
                 }
             }
             TokenKind::Symbol(Symbol::OpenParen) => scope += 1,
+            _ => {}
+        }
+        v.push(tok)
+    }
+    v
+}
+
+fn read_until_close_square_brace<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -> Vec<Token> {
+    let mut v = Vec::new();
+    let mut scope = 0;
+    for tok in toks {
+        match tok.kind {
+            TokenKind::Symbol(Symbol::CloseSquareBrace) => {
+                if scope <= 1 {
+                    v.push(tok);
+                    return v;
+                } else {
+                    scope -= 1;
+                }
+            }
+            TokenKind::Symbol(Symbol::OpenSquareBrace) => scope += 1,
             _ => {}
         }
         v.push(tok)

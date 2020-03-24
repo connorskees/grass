@@ -281,7 +281,11 @@ impl Value {
                 if let Some(tok) = toks.peek() {
                     if tok.is_symbol(Symbol::CloseSquareBrace) {
                         toks.next();
-                        return Ok(Value::List(Vec::new(), ListSeparator::Space, Brackets::Bracketed));
+                        return Ok(Value::List(
+                            Vec::new(),
+                            ListSeparator::Space,
+                            Brackets::Bracketed,
+                        ));
                     }
                 }
                 let inner = Self::from_tokens(toks, scope, super_selector)?;
