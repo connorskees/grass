@@ -278,6 +278,12 @@ impl Value {
                 parse_quoted_string(toks, scope, &q, super_selector)
             }
             TokenKind::Symbol(Symbol::OpenSquareBrace) => {
+                if let Some(tok) = toks.peek() {
+                    if tok.is_symbol(Symbol::CloseSquareBrace) {
+                        toks.next();
+                        return Ok(Value::List(Vec::new(), ListSeparator::Space, Brackets::Bracketed));
+                    }
+                }
                 let inner = Self::from_tokens(toks, scope, super_selector)?;
                 devour_whitespace_or_comment(toks);
                 toks.next();
