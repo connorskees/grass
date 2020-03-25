@@ -69,8 +69,12 @@ impl Function {
         Ok(self)
     }
 
-    pub fn call(&self, super_selector: &Selector) -> SassResult<Value> {
-        for stmt in &self.body {
+    pub fn body(&self) -> Vec<Stmt> {
+        self.body.clone()
+    }
+
+    pub fn call(&self, super_selector: &Selector, stmts: Vec<Stmt>) -> SassResult<Value> {
+        for stmt in stmts {
             match stmt {
                 Stmt::AtRule(AtRule::Return(toks)) => {
                     return Value::from_tokens(
@@ -80,9 +84,18 @@ impl Function {
                     )
                 }
                 Stmt::AtRule(AtRule::For(..)) => todo!("@for in function"),
+                Stmt::AtRule(AtRule::If(i)) => {
+                    match self.call(
+                        super_selector,
+                        i.eval(&mut self.scope.clone(), super_selector)?,
+                    ) {
+                        Ok(v) => return Ok(v),
+                        Err(..) => {}
+                    }
+                }
                 _ => return Err("This at-rule is not allowed here.".into()),
             }
         }
-        todo!()
+        Err("Function finished without @return.".into())
     }
 }

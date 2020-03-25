@@ -96,6 +96,60 @@ impl VariableDecl {
     }
 }
 
+// Eat tokens until an open curly brace
+//
+// Does not consume the open curly brace
+pub(crate) fn read_until_open_curly_brace<I: Iterator<Item = Token>>(
+    toks: &mut Peekable<I>,
+) -> Vec<Token> {
+    let mut val = Vec::new();
+    let mut n = 0;
+    while let Some(tok) = toks.peek() {
+        match tok.kind {
+            TokenKind::Symbol(Symbol::OpenCurlyBrace) => n += 1,
+            TokenKind::Symbol(Symbol::CloseCurlyBrace) => n -= 1,
+            TokenKind::Interpolation => n += 1,
+            _ => {}
+        }
+        if n == 1 {
+            break;
+        }
+        val.push(toks.next().unwrap());
+    }
+    val
+}
+
+pub(crate) fn read_until_closing_curly_brace<I: Iterator<Item = Token>>(
+    toks: &mut Peekable<I>,
+) -> Vec<Token> {
+    let mut t = Vec::new();
+    let mut nesting = 0;
+    while let Some(tok) = toks.peek() {
+        match tok.kind {
+            TokenKind::Symbol(Symbol::DoubleQuote) | TokenKind::Symbol(Symbol::SingleQuote) => {
+                let quote = toks.next().unwrap();
+                t.push(quote.clone());
+                t.extend(read_until_closing_quote(toks, &quote.kind));
+            }
+            TokenKind::Interpolation | TokenKind::Symbol(Symbol::OpenCurlyBrace) => {
+                nesting += 1;
+                t.push(toks.next().unwrap());
+            }
+            TokenKind::Symbol(Symbol::CloseCurlyBrace) => {
+                if nesting == 0 {
+                    break;
+                } else {
+                    nesting -= 1;
+                    t.push(toks.next().unwrap());
+                }
+            }
+            _ => t.push(toks.next().unwrap()),
+        }
+    }
+    devour_whitespace(toks);
+    t
+}
+
 pub(crate) fn read_until_closing_quote<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
     q: &TokenKind,

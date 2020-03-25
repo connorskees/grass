@@ -413,16 +413,8 @@ impl<'a> StyleSheetParser<'a> {
                             }
                             AtRule::For(s) => rules.extend(s),
                             AtRule::Content => return Err("@content is only allowed within mixin declarations.".into()),
-                            AtRule::If(cond, yes, no) => {
-                                if Value::from_tokens(
-                                    &mut cond.into_iter().peekable(),
-                                    &GLOBAL_SCOPE.with(|s| s.borrow().clone()),
-                                    &Selector::new(),
-                                )?.is_true()? {
-                                    rules.extend(yes);
-                                } else {
-                                    rules.extend(no);
-                                }
+                            AtRule::If(i) => {
+                                rules.extend(i.eval(&mut Scope::new(), &Selector::new())?);
                             }
                             u @ AtRule::Unknown(..) => rules.push(Stmt::AtRule(u)),
                         }
@@ -450,19 +442,7 @@ impl<'a> StyleSheetParser<'a> {
                 Expr::Style(s) => stmts.push(Stmt::Style(s)),
                 Expr::AtRule(a) => match a {
                     AtRule::For(s) => stmts.extend(s),
-                    AtRule::If(cond, yes, no) => {
-                        if Value::from_tokens(
-                            &mut cond.into_iter().peekable(),
-                            &GLOBAL_SCOPE.with(|s| s.borrow().clone()),
-                            &Selector::new(),
-                        )?
-                        .is_true()?
-                        {
-                            stmts.extend(yes);
-                        } else {
-                            stmts.extend(no);
-                        }
-                    }
+                    AtRule::If(i) => stmts.extend(i.eval(scope, super_selector)?),
                     AtRule::Content => {
                         return Err("@content is only allowed within mixin declarations.".into())
                     }

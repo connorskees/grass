@@ -283,7 +283,7 @@ impl Value {
                         Ok(func
                             .clone()
                             .args(&mut eat_call_args(toks, scope, super_selector)?)?
-                            .call(super_selector)?)
+                            .call(super_selector, func.body())?)
                     }
                     _ => {
                         if let Ok(c) = crate::color::ColorName::try_from(s.as_ref()) {
@@ -353,7 +353,9 @@ impl Value {
                             format!("\\{}{}", s, flatten_ident(toks, scope, super_selector)?),
                             QuoteKind::None,
                         )),
-                        TokenKind::Whitespace(w) => Ok(Value::Ident(format!("\\{}", w), QuoteKind::None)),
+                        TokenKind::Whitespace(w) => {
+                            Ok(Value::Ident(format!("\\{}", w), QuoteKind::None))
+                        }
                         TokenKind::Ident(s) => Ok(Value::Ident(s, QuoteKind::None)),
                         _ => todo!("value after \\"),
                     }
