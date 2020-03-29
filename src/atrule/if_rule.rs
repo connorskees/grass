@@ -68,7 +68,6 @@ impl If {
                             }
                             '{' => {
                                 else_ = read_until_closing_curly_brace(toks);
-                                dbg!(&else_);
                                 toks.next();
                                 break;
                             }
@@ -87,8 +86,6 @@ impl If {
             }
         }
         devour_whitespace(toks);
-
-        dbg!(&branches);
 
         Ok(If { branches, else_ })
     }

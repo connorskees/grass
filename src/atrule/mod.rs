@@ -212,9 +212,7 @@ impl AtRule {
                     v => return Err(format!("{} is not an integer.", v).into()),
                 };
                 let body = read_until_closing_curly_brace(toks);
-                // body.push(toks.next().unwrap());
                 toks.next();
-                // dbg!(&body);
 
                 devour_whitespace(toks);
 

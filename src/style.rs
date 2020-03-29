@@ -115,7 +115,6 @@ impl<'a> StyleParser<'a> {
                             }
                         }
                         let value = self.parse_style_value(toks, scope)?;
-                        dbg!(&value);
                         match toks.peek().unwrap().kind {
                             '}' => {
                                 styles.push(Style { property, value });
