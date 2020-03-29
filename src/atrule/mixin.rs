@@ -5,12 +5,13 @@ use super::eat_stmts;
 
 use crate::args::{eat_call_args, eat_func_args, CallArgs, FuncArgs};
 use crate::atrule::AtRule;
-use crate::common::Symbol;
-use crate::error::{SassError, SassResult};
+use crate::error::SassResult;
 use crate::scope::Scope;
 use crate::selector::Selector;
-use crate::utils::devour_whitespace;
-use crate::{eat_expr, Expr, RuleSet, Stmt, Token, TokenKind};
+use crate::utils::{
+    devour_whitespace, devour_whitespace_or_comment, eat_ident, read_until_closing_curly_brace,
+};
+use crate::{eat_expr, Expr, RuleSet, Stmt, Token};
 
 #[derive(Debug, Clone)]
 pub(crate) struct Mixin {
@@ -36,46 +37,19 @@ impl Mixin {
         scope: &Scope,
         super_selector: &Selector,
     ) -> SassResult<(String, Mixin)> {
-        let Token { kind, .. } = toks
-            .next()
-            .expect("this must exist because we have already peeked");
         devour_whitespace(toks);
-        let name = match kind {
-            TokenKind::Ident(s) => s,
-            _ => return Err("Expected identifier.".into()),
-        };
+        let name = eat_ident(toks, scope, super_selector)?;
         devour_whitespace(toks);
         let args = match toks.next() {
-            Some(Token {
-                kind: TokenKind::Symbol(Symbol::OpenParen),
-                ..
-            }) => eat_func_args(toks, scope, super_selector)?,
-            Some(Token {
-                kind: TokenKind::Symbol(Symbol::OpenCurlyBrace),
-                ..
-            }) => FuncArgs::new(),
+            Some(Token { kind: '(', .. }) => eat_func_args(toks, scope, super_selector)?,
+            Some(Token { kind: '{', .. }) => FuncArgs::new(),
             _ => return Err("expected \"{\".".into()),
         };
 
         devour_whitespace(toks);
 
-        let mut nesting = 1;
-        let mut body = Vec::new();
-
-        while nesting > 0 {
-            if let Some(tok) = toks.next() {
-                match &tok.kind {
-                    TokenKind::Symbol(Symbol::OpenCurlyBrace)
-                    // interpolation token eats the opening brace but not the closing
-                    | TokenKind::Interpolation => nesting += 1,
-                    TokenKind::Symbol(Symbol::CloseCurlyBrace) => nesting -= 1,
-                    _ => {}
-                }
-                body.push(tok)
-            } else {
-                return Err("unexpected EOF (TODO: better message)".into());
-            }
-        }
+        let mut body = read_until_closing_curly_brace(toks);
+        body.push(toks.next().unwrap());
 
         Ok((name, Mixin::new(scope.clone(), args, body, Vec::new())))
     }
@@ -147,49 +121,42 @@ pub(crate) fn eat_include<I: Iterator<Item = Token>>(
     scope: &Scope,
     super_selector: &Selector,
 ) -> SassResult<Vec<Stmt>> {
-    toks.next();
-    devour_whitespace(toks);
-    let Token { kind, pos } = toks
-        .next()
-        .expect("this must exist because we have already peeked");
-    let name = match kind {
-        TokenKind::Ident(s) => s,
-        _ => return Err("Expected identifier.".into()),
-    };
+    devour_whitespace_or_comment(toks)?;
+    let name = eat_ident(toks, scope, super_selector)?;
 
-    devour_whitespace(toks);
+    devour_whitespace_or_comment(toks)?;
 
     let mut has_include = false;
 
     let mut args = if let Some(tok) = toks.next() {
         match tok.kind {
-            TokenKind::Symbol(Symbol::SemiColon) => CallArgs::new(),
-            TokenKind::Symbol(Symbol::OpenParen) => {
+            ';' => CallArgs::new(),
+            '(' => {
                 let tmp = eat_call_args(toks, scope, super_selector)?;
-                devour_whitespace(toks);
+                devour_whitespace_or_comment(toks)?;
                 if let Some(tok) = toks.next() {
                     match tok.kind {
-                        TokenKind::Symbol(Symbol::SemiColon) => {}
-                        TokenKind::Symbol(Symbol::OpenCurlyBrace) => has_include = true,
+                        ';' => {}
+                        '{' => has_include = true,
                         _ => todo!(),
                     }
                 }
                 tmp
             }
-            TokenKind::Symbol(Symbol::OpenCurlyBrace) => {
+            '{' => {
                 has_include = true;
                 CallArgs::new()
             }
             _ => return Err("expected \"{\".".into()),
         }
     } else {
-        return Err(SassError::new("unexpected EOF", pos));
+        return Err("unexpected EOF".into());
     };
 
     devour_whitespace(toks);
 
     let content = if let Some(tok) = toks.peek() {
-        if tok.is_symbol(Symbol::OpenCurlyBrace) {
+        if tok.kind == '{' {
             toks.next();
             eat_stmts(toks, &mut scope.clone(), super_selector)?
         } else if has_include {

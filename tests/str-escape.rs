@@ -14,6 +14,7 @@ test!(
     "a {\n  color: xx;\n}\n"
 );
 test!(
+    #[ignore]
     escape_start_non_ascii,
     "a {\n  color: ☃x \\☃x \\2603x;\n}\n",
     "@charset \"UTF-8\";\na {\n  color: ☃x ☃x ☃x;\n}\n"
@@ -99,4 +100,9 @@ test!(
     single_character_escape_sequence_has_space_after,
     "a {\n  color: \\0;\n}\n",
     "a {\n  color: \\0 ;\n}\n"
+);
+test!(
+    escapes_non_hex_in_string,
+    "a {\n  color: \"\\g\";\n}\n",
+    "a {\n  color: \"g\";\n}\n"
 );

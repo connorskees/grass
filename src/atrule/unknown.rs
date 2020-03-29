@@ -1,12 +1,11 @@
 use std::iter::Peekable;
 
 use super::parse::eat_stmts;
-use crate::common::Symbol;
 use crate::error::SassResult;
 use crate::scope::Scope;
 use crate::selector::Selector;
 use crate::utils::{devour_whitespace, parse_interpolation};
-use crate::{RuleSet, Stmt, Token, TokenKind};
+use crate::{RuleSet, Stmt, Token};
 
 #[derive(Debug, Clone)]
 pub(crate) struct UnknownAtRule {
@@ -26,21 +25,26 @@ impl UnknownAtRule {
         let mut params = String::new();
         while let Some(tok) = toks.next() {
             match tok.kind {
-                TokenKind::Symbol(Symbol::OpenCurlyBrace) => break,
-                TokenKind::Interpolation => {
-                    params.push_str(&parse_interpolation(toks, scope, super_selector)?.to_string());
-                    continue;
+                '{' => break,
+                '#' => {
+                    if toks.peek().unwrap().kind == '{' {
+                        toks.next();
+                        params.push_str(
+                            &parse_interpolation(toks, scope, super_selector)?.to_string(),
+                        );
+                        continue;
+                    } else {
+                        params.push(tok.kind);
+                    }
                 }
-                TokenKind::Variable(..) => params.push('$'),
-                TokenKind::Whitespace(..) => {
+                '\n' | ' ' | '\t' => {
                     devour_whitespace(toks);
                     params.push(' ');
                     continue;
                 }
-                TokenKind::Error(e) => return Err(e),
                 _ => {}
             }
-            params.push_str(&tok.kind.to_string());
+            params.push(tok.kind);
         }
 
         let raw_body = eat_stmts(toks, scope, super_selector)?;

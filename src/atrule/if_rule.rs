@@ -1,16 +1,15 @@
 use std::iter::Peekable;
 
-use super::{eat_stmts, AtRule, AtRuleKind};
+use super::{eat_stmts, AtRule};
 
-use crate::common::Symbol;
 use crate::error::SassResult;
 use crate::scope::Scope;
 use crate::selector::Selector;
 use crate::utils::{
-    devour_whitespace_or_comment, read_until_closing_curly_brace, read_until_open_curly_brace,
+    devour_whitespace, eat_ident, read_until_closing_curly_brace, read_until_open_curly_brace,
 };
 use crate::value::Value;
-use crate::{Stmt, Token, TokenKind};
+use crate::{Stmt, Token};
 
 #[derive(Debug, Clone)]
 pub(crate) struct If {
@@ -35,37 +34,50 @@ impl If {
         let mut branches = Vec::new();
         let init_cond = read_until_open_curly_brace(toks);
         toks.next();
-        devour_whitespace_or_comment(toks);
+        devour_whitespace(toks);
         let mut init_toks = read_until_closing_curly_brace(toks);
         init_toks.push(toks.next().unwrap());
-        devour_whitespace_or_comment(toks);
+        devour_whitespace(toks);
 
         branches.push(Branch::new(init_cond, init_toks));
 
         let mut else_ = Vec::new();
 
         loop {
-            if let Some(tok) = toks.peek() {
-                if tok.kind == TokenKind::AtRule(AtRuleKind::Else) {
+            if toks.peek().is_some() {
+                if toks.peek().unwrap().kind == '@' {
                     toks.next();
-                    devour_whitespace_or_comment(toks);
+                } else {
+                    break;
+                }
+                if eat_ident(toks, &Scope::new(), &Selector::new())?.to_ascii_lowercase() == "else"
+                {
+                    devour_whitespace(toks);
                     if let Some(tok) = toks.next() {
-                        devour_whitespace_or_comment(toks);
-                        if tok.kind.to_string().to_ascii_lowercase() == "if" {
-                            let cond = read_until_open_curly_brace(toks);
-                            toks.next();
-                            devour_whitespace_or_comment(toks);
-                            let mut toks_ = read_until_closing_curly_brace(toks);
-                            toks_.push(toks.next().unwrap());
-                            devour_whitespace_or_comment(toks);
-                            branches.push(Branch::new(cond, toks_))
-                        } else if tok.is_symbol(Symbol::OpenCurlyBrace) {
-                            else_ = read_until_closing_curly_brace(toks);
-                            toks.next();
-                            break;
-                        } else {
-                            return Err("expected \"{\".".into());
+                        devour_whitespace(toks);
+                        match tok.kind.to_ascii_lowercase() {
+                            'i' if toks.next().unwrap().kind.to_ascii_lowercase() == 'f' => {
+                                toks.next();
+                                let cond = read_until_open_curly_brace(toks);
+                                toks.next();
+                                devour_whitespace(toks);
+                                let toks_ = read_until_closing_curly_brace(toks);
+                                toks.next();
+                                devour_whitespace(toks);
+                                branches.push(Branch::new(cond, toks_))
+                            }
+                            '{' => {
+                                else_ = read_until_closing_curly_brace(toks);
+                                dbg!(&else_);
+                                toks.next();
+                                break;
+                            }
+                            _ => {
+                                return Err("expected \"{\".".into());
+                            }
                         }
+                    } else {
+                        break;
                     }
                 } else {
                     break;
@@ -74,7 +86,9 @@ impl If {
                 break;
             }
         }
-        devour_whitespace_or_comment(toks);
+        devour_whitespace(toks);
+
+        dbg!(&branches);
 
         Ok(If { branches, else_ })
     }

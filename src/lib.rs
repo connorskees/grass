@@ -85,18 +85,20 @@ use std::iter::{Iterator, Peekable};
 use std::path::Path;
 
 use crate::atrule::{eat_include, AtRule, AtRuleKind, Function, Mixin};
-use crate::common::{Pos, Symbol, Whitespace};
+use crate::common::Pos;
 use crate::css::Css;
-use crate::error::SassError;
-pub use crate::error::SassResult;
+pub use crate::error::{SassError, SassResult};
 use crate::format::PrettyPrinter;
 use crate::imports::import;
 use crate::lexer::Lexer;
 use crate::scope::{insert_global_var, Scope, GLOBAL_SCOPE};
 use crate::selector::Selector;
 use crate::style::Style;
-pub(crate) use crate::token::{Token, TokenKind};
-use crate::utils::{devour_whitespace, eat_variable_value, VariableDecl};
+pub(crate) use crate::token::Token;
+use crate::utils::{
+    devour_whitespace, eat_comment, eat_ident, eat_variable_value, parse_quoted_string,
+    read_until_newline, VariableDecl,
+};
 use crate::value::Value;
 
 mod args;
@@ -280,37 +282,25 @@ impl<'a> StyleSheetParser<'a> {
         let mut rules: Vec<Stmt> = Vec::new();
         while let Some(Token { kind, .. }) = self.lexer.peek() {
             match kind {
-                TokenKind::Ident(_)
-                | TokenKind::Interpolation
-                | TokenKind::Symbol(Symbol::OpenSquareBrace)
-                | TokenKind::Symbol(Symbol::Hash)
-                | TokenKind::Symbol(Symbol::Colon)
-                | TokenKind::Symbol(Symbol::Mul)
-                | TokenKind::Symbol(Symbol::Percent)
-                | TokenKind::Symbol(Symbol::Period) => rules
+                'a'..='z' | 'A'..='Z' | '_' | '-'
+                | '[' | '#' | ':' | '*' | '%' | '.' => rules
                     .extend(self.eat_rules(&Selector::new(), &mut GLOBAL_SCOPE.with(|s| s.borrow().clone()))?),
-                TokenKind::Whitespace(_) => {
+                &'\t' | &'\n' | ' ' => {
                     self.lexer.next();
                     continue;
                 }
-                TokenKind::Variable(_) => {
-                    let Token { pos, kind } = self
-                        .lexer
-                        .next()
-                        .expect("this must exist because we have already peeked");
-                    let name = match kind {
-                        TokenKind::Variable(n) => n,
-                        _ => unsafe { std::hint::unreachable_unchecked() },
-                    };
+                '$' => {
+                    self.lexer.next();
+                    let name = eat_ident(&mut self.lexer, &Scope::new(), &Selector::new())?;
                     devour_whitespace(&mut self.lexer);
                     if self
                         .lexer
                         .next()
-                        .unwrap_or_else(|| self.error(pos, "expected value after variable"))
+                        .unwrap()
                         .kind
-                        != TokenKind::Symbol(Symbol::Colon)
+                        != ':'
                     {
-                        self.error(pos, "unexpected variable use at toplevel");
+                        return Err("expected \":\".".into());
                     }
                     let VariableDecl { val, default, .. } =
                         eat_variable_value(&mut self.lexer, &GLOBAL_SCOPE.with(|s| s.borrow().clone()), &Selector::new())?;
@@ -325,111 +315,92 @@ impl<'a> StyleSheetParser<'a> {
                         }
                     })?
                 }
-                TokenKind::MultilineComment(_) => {
-                    let comment = match self
-                        .lexer
-                        .next()
-                        .expect("this must exist because we have already peeked")
-                        .kind
-                    {
-                        TokenKind::MultilineComment(c) => c,
-                        _ => unsafe { std::hint::unreachable_unchecked() },
-                    };
-                    rules.push(Stmt::MultilineComment(comment));
+                '/' => {
+                    self.lexer.next();
+                    if '*' == self.lexer.peek().unwrap().kind {
+                        self.lexer.next();
+                        rules.push(Stmt::MultilineComment(eat_comment(&mut self.lexer, &Scope::new(), &Selector::new())?));
+                    } else if '/' == self.lexer.peek().unwrap().kind {
+                        read_until_newline(&mut self.lexer);
+                        devour_whitespace(&mut self.lexer);
+                    } else {
+                        todo!()
+                    }
                 }
-                TokenKind::AtRule(AtRuleKind::Include) => rules.extend(eat_include(
-                    &mut self.lexer,
-                    &GLOBAL_SCOPE.with(|s| s.borrow().clone()),
-                    &Selector::new(),
-                )?),
-                TokenKind::AtRule(AtRuleKind::Import) => {
-                    let Token { pos, .. } = self
-                        .lexer
-                        .next()
-                        .expect("this must exist because we have already peeked");
-                    devour_whitespace(&mut self.lexer);
-                    let mut file_name = String::new();
-                    match self
-                        .lexer
-                        .next()
-                        .unwrap_or_else(|| self.error(pos, "expected value after @import"))
-                        .kind
-                    {
-                        TokenKind::Symbol(Symbol::DoubleQuote) => {
-                            while let Some(tok) = self.lexer.next() {
-                                if tok.kind == TokenKind::Symbol(Symbol::DoubleQuote) {
-                                    break;
-                                }
-                                file_name.push_str(&tok.kind.to_string());
-                            }
-                        }
-                        TokenKind::Symbol(Symbol::SingleQuote) => {
-                            while let Some(tok) = self.lexer.next() {
-                                if tok.kind == TokenKind::Symbol(Symbol::SingleQuote) {
-                                    break;
-                                }
-                                file_name.push_str(&tok.kind.to_string());
-                            }
-                        }
-                        _ => todo!("expected ' or \" after @import"),
+                '@' => {
+                    self.lexer.next();
+                    let at_rule_kind = eat_ident(&mut self.lexer, &Scope::new(), &Selector::new())?;
+                    if at_rule_kind.is_empty() {
+                        return Err("Expected identifier.".into());
                     }
-                    let Token { kind, pos } = self
-                        .lexer
-                        .next()
-                        .expect("this must exist because we have already peeked");
-                    if kind != TokenKind::Symbol(Symbol::SemiColon) {
-                        self.error(pos, "expected `;` after @import declaration");
-                    }
+                    match AtRuleKind::from(at_rule_kind.as_str()) {
+                        AtRuleKind::Include => rules.extend(eat_include(
+                            &mut self.lexer,
+                            &GLOBAL_SCOPE.with(|s| s.borrow().clone()),
+                            &Selector::new(),
+                        )?),
+                        AtRuleKind::Import => {
+                            devour_whitespace(&mut self.lexer);
+                            let mut file_name = String::new();
+                            match self
+                                .lexer
+                                .next()
+                                .unwrap()
+                                .kind
+                            {
+                                q @ '"' | q @ '\'' => {
+                                    file_name.push_str(&parse_quoted_string(&mut self.lexer, &Scope::new(), q, &Selector::new())?.unquote().to_string());
+                                }
+                                _ => todo!("expected ' or \" after @import"),
+                            }
+                            if self.lexer.next().unwrap().kind != ';' {
+                                todo!("no semicolon after @import");
+                            }
 
-                    let (new_rules, new_scope) = import(file_name)?;
-                    rules.extend(new_rules);
-                    GLOBAL_SCOPE.with(|s| {
-                        s.borrow_mut().extend(new_scope);
-                    });
-                }
-                TokenKind::AtRule(_) => {
-                    if let Some(Token {
-                        kind: TokenKind::AtRule(ref rule),
-                        pos,
-                    }) = self.lexer.next()
-                    {
-                        match AtRule::from_tokens(rule, pos, &mut self.lexer, &mut GLOBAL_SCOPE.with(|s| s.borrow().clone()), &Selector::new())? {
-                            AtRule::Mixin(name, mixin) => {
-                                GLOBAL_SCOPE.with(|s| {
-                                    s.borrow_mut().insert_mixin(&name, *mixin);
-                                });
-                            }
-                            AtRule::Function(name, func) => {
-                                GLOBAL_SCOPE.with(|s| {
-                                    s.borrow_mut().insert_fn(&name, *func);
-                                });
-                            }
-                            AtRule::Charset => continue,
-                            AtRule::Error(pos, message) => self.error(pos, &message),
-                            AtRule::Warn(pos, message) => self.warn(pos, &message),
-                            AtRule::Debug(pos, message) => self.debug(pos, &message),
-                            AtRule::Return(_) => {
-                                return Err("This at-rule is not allowed here.".into())
-                            }
-                            AtRule::For(s) => rules.extend(s),
-                            AtRule::Content => return Err("@content is only allowed within mixin declarations.".into()),
-                            AtRule::If(i) => {
-                                rules.extend(i.eval(&mut Scope::new(), &Selector::new())?);
-                            }
-                            u @ AtRule::Unknown(..) => rules.push(Stmt::AtRule(u)),
+                            let (new_rules, new_scope) = import(file_name)?;
+                            rules.extend(new_rules);
+                            GLOBAL_SCOPE.with(|s| {
+                                s.borrow_mut().extend(new_scope);
+                            });
                         }
+                        v => {
+                                match AtRule::from_tokens(&v, Pos::new(), &mut self.lexer, &mut GLOBAL_SCOPE.with(|s| s.borrow().clone()), &Selector::new())? {
+                                    AtRule::Mixin(name, mixin) => {
+                                        GLOBAL_SCOPE.with(|s| {
+                                            s.borrow_mut().insert_mixin(&name, *mixin);
+                                        });
+                                    }
+                                    AtRule::Function(name, func) => {
+                                        GLOBAL_SCOPE.with(|s| {
+                                            s.borrow_mut().insert_fn(&name, *func);
+                                        });
+                                    }
+                                    AtRule::Charset => continue,
+                                    AtRule::Error(pos, message) => self.error(pos, &message),
+                                    AtRule::Warn(pos, message) => self.warn(pos, &message),
+                                    AtRule::Debug(pos, message) => self.debug(pos, &message),
+                                    AtRule::Return(_) => {
+                                        return Err("This at-rule is not allowed here.".into())
+                                    }
+                                    AtRule::For(s) => rules.extend(s),
+                                    AtRule::Content => return Err("@content is only allowed within mixin declarations.".into()),
+                                    AtRule::If(i) => {
+                                        rules.extend(i.eval(&mut Scope::new(), &Selector::new())?);
+                                    }
+                                    u @ AtRule::Unknown(..) => rules.push(Stmt::AtRule(u)),
+                                }
+                            }
                     }
-                }
-                TokenKind::Symbol(Symbol::BitAnd) => {
+                },
+                '&' => {
                     return Err(
                         "Base-level rules cannot contain the parent-selector-referencing character '&'.".into(),
                     )
                 }
-                TokenKind::Error(e) => return Err(e.clone()),
                 _ => match dbg!(self.lexer.next()) {
                     Some(Token { pos, .. }) => self.error(pos, "unexpected toplevel token"),
                     _ => unsafe { std::hint::unreachable_unchecked() },
-                },
+                }
             };
         }
         Ok((rules, GLOBAL_SCOPE.with(|s| s.borrow().clone())))
@@ -495,7 +466,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
     let mut values = Vec::with_capacity(5);
     while let Some(tok) = toks.peek() {
         match &tok.kind {
-            TokenKind::Symbol(Symbol::Colon) => {
+            ':' => {
                 let tok = toks.next();
                 if devour_whitespace(toks) {
                     let prop = Style::parse_property(
@@ -509,7 +480,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                     values.push(tok.unwrap());
                 }
             }
-            TokenKind::Symbol(Symbol::SemiColon) => {
+            ';' => {
                 toks.next();
                 devour_whitespace(toks);
                 // special edge case where there was no space between the colon
@@ -517,6 +488,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                 let mut v = values.into_iter().peekable();
                 devour_whitespace(&mut v);
                 if v.peek().is_none() {
+                    devour_whitespace(toks);
                     return Ok(Some(Expr::Style(Box::new(Style {
                         property: String::new(),
                         value: Value::Null,
@@ -526,7 +498,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                 let value = Style::parse_value(&mut v, scope, super_selector)?;
                 return Ok(Some(Expr::Style(Box::new(Style { property, value }))));
             }
-            TokenKind::Symbol(Symbol::CloseCurlyBrace) => {
+            '}' => {
                 if values.is_empty() {
                     toks.next();
                     devour_whitespace(toks);
@@ -542,7 +514,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                     return Ok(Some(Expr::Style(Box::new(Style { property, value }))));
                 }
             }
-            TokenKind::Symbol(Symbol::OpenCurlyBrace) => {
+            '{' => {
                 toks.next();
                 devour_whitespace(toks);
                 return Ok(Some(Expr::Selector(Selector::from_tokens(
@@ -551,18 +523,15 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                     super_selector,
                 )?)));
             }
-            TokenKind::Variable(_) => {
-                let tok = toks
-                    .next()
-                    .expect("this must exist because we have already peeked");
-                let pos = tok.pos();
-                let name = match tok.kind {
-                    TokenKind::Variable(n) => n,
-                    _ => unsafe { std::hint::unreachable_unchecked() },
-                };
-                if let TokenKind::Symbol(Symbol::Colon) =
-                    toks.peek().expect("expected something after variable").kind
-                {
+            '$' => {
+                let tok = toks.next().unwrap();
+                if toks.peek().unwrap().kind == '=' {
+                    values.push(tok);
+                    values.push(toks.next().unwrap());
+                    continue;
+                }
+                let name = eat_ident(toks, scope, super_selector)?;
+                if toks.peek().unwrap().kind == ':' {
                     toks.next();
                     devour_whitespace(toks);
                     let VariableDecl {
@@ -577,60 +546,67 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                         return Ok(Some(Expr::VariableDecl(name, Box::new(val))));
                     }
                 } else {
-                    values.push(Token {
-                        kind: TokenKind::Variable(name),
-                        pos,
-                    });
+                    todo!()
                 }
             }
-            TokenKind::MultilineComment(_) => {
-                let tok = toks
-                    .next()
-                    .expect("this must exist because we have already peeked");
-                devour_whitespace(toks);
-                if values.is_empty() {
-                    let s = match tok.kind {
-                        TokenKind::MultilineComment(s) => s,
-                        _ => unsafe { std::hint::unreachable_unchecked() },
-                    };
-                    return Ok(Some(Expr::MultilineComment(s)));
+            '/' => {
+                let tok = toks.next().unwrap();
+                let peeked = toks.peek().ok_or("expected more input.")?;
+                if peeked.kind == '/' {
+                    read_until_newline(toks);
+                    devour_whitespace(toks);
+                    continue;
+                } else if values.is_empty() && peeked.kind == '*' {
+                    toks.next();
+                    return Ok(Some(Expr::MultilineComment(eat_comment(
+                        toks,
+                        scope,
+                        super_selector,
+                    )?)));
                 } else {
                     values.push(tok);
                 }
             }
-            TokenKind::AtRule(AtRuleKind::Include) => {
-                return Ok(Some(Expr::Include(eat_include(
-                    toks,
-                    scope,
-                    super_selector,
-                )?)));
-            }
-            TokenKind::AtRule(_) => {
-                if let Some(Token {
-                    kind: TokenKind::AtRule(ref rule),
-                    pos,
-                }) = toks.next()
-                {
-                    return match AtRule::from_tokens(rule, pos, toks, scope, super_selector)? {
-                        AtRule::Mixin(name, mixin) => Ok(Some(Expr::MixinDecl(name, mixin))),
-                        AtRule::Function(name, func) => Ok(Some(Expr::FunctionDecl(name, func))),
-                        AtRule::Charset => todo!("@charset as expr"),
-                        AtRule::Debug(a, b) => Ok(Some(Expr::Debug(a, b))),
-                        AtRule::Warn(a, b) => Ok(Some(Expr::Warn(a, b))),
-                        AtRule::Error(pos, err) => Err(SassError::new(err, pos)),
-                        a @ AtRule::Return(_) => Ok(Some(Expr::AtRule(a))),
-                        c @ AtRule::Content => Ok(Some(Expr::AtRule(c))),
-                        f @ AtRule::If(..) => Ok(Some(Expr::AtRule(f))),
-                        f @ AtRule::For(..) => Ok(Some(Expr::AtRule(f))),
-                        u @ AtRule::Unknown(..) => Ok(Some(Expr::AtRule(u))),
-                    };
+            '@' => {
+                let pos = toks.next().unwrap().pos();
+                match AtRuleKind::from(eat_ident(toks, scope, super_selector)?.as_str()) {
+                    AtRuleKind::Include => {
+                        devour_whitespace(toks);
+                        return Ok(Some(Expr::Include(eat_include(
+                            toks,
+                            scope,
+                            super_selector,
+                        )?)));
+                    }
+                    v => {
+                        devour_whitespace(toks);
+                        return match AtRule::from_tokens(&v, pos, toks, scope, super_selector)? {
+                            AtRule::Mixin(name, mixin) => Ok(Some(Expr::MixinDecl(name, mixin))),
+                            AtRule::Function(name, func) => {
+                                Ok(Some(Expr::FunctionDecl(name, func)))
+                            }
+                            AtRule::Charset => todo!("@charset as expr"),
+                            AtRule::Debug(a, b) => Ok(Some(Expr::Debug(a, b))),
+                            AtRule::Warn(a, b) => Ok(Some(Expr::Warn(a, b))),
+                            AtRule::Error(pos, err) => Err(SassError::new(err, pos)),
+                            a @ AtRule::Return(_) => Ok(Some(Expr::AtRule(a))),
+                            c @ AtRule::Content => Ok(Some(Expr::AtRule(c))),
+                            f @ AtRule::If(..) => Ok(Some(Expr::AtRule(f))),
+                            f @ AtRule::For(..) => Ok(Some(Expr::AtRule(f))),
+                            u @ AtRule::Unknown(..) => Ok(Some(Expr::AtRule(u))),
+                        };
+                    }
                 }
             }
-            TokenKind::Interpolation => values.extend(eat_interpolation(toks)),
-            _ => match toks.next() {
-                Some(tok) => values.push(tok),
-                _ => unsafe { std::hint::unreachable_unchecked() },
-            },
+            '#' => {
+                values.push(toks.next().unwrap());
+                let next = toks.next().unwrap();
+                values.push(next);
+                if next.kind == '{' {
+                    values.extend(eat_interpolation(toks));
+                }
+            }
+            _ => values.push(toks.next().unwrap()),
         };
     }
     Ok(None)
@@ -638,12 +614,11 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
 
 fn eat_interpolation<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -> Vec<Token> {
     let mut vals = Vec::new();
-    let mut n = 0;
+    let mut n = 1;
     for tok in toks {
         match tok.kind {
-            TokenKind::Symbol(Symbol::OpenCurlyBrace) => n += 1,
-            TokenKind::Symbol(Symbol::CloseCurlyBrace) => n -= 1,
-            TokenKind::Interpolation => n += 1,
+            '{' => n += 1,
+            '}' => n -= 1,
             _ => {}
         }
         vals.push(tok);

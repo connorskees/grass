@@ -184,3 +184,8 @@ test!(
     "@mixin foo($a) {\n  @content;\n}\n\na {\n  @include foo(red) {\n    color: red;\n  }\n}\n",
     "a {\n  color: red;\n}\n"
 );
+test!(
+    mixin_style_does_not_end_with_semicolon,
+    "@mixin foo {\n  color: red\n}\n\na {\n  @include foo;\n}\n",
+    "a {\n  color: red;\n}\n"
+);

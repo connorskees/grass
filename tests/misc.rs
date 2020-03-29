@@ -70,3 +70,9 @@ test!(
     "a {\n  color: red😁\n}\n",
     "@charset \"UTF-8\";\na {\n  color: red😁;\n}\n"
 );
+test!(
+    #[ignore]
+    no_space_before_style,
+    "a {\n  color:red\n}\n",
+    "a {\n  color: red;\n}\n"
+);

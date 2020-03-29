@@ -1,13 +1,14 @@
 use std::fmt::{self, Display};
 use std::iter::Peekable;
 
-use crate::common::{Pos, QuoteKind, Symbol};
 use crate::error::SassResult;
 use crate::scope::Scope;
 use crate::selector::Selector;
-use crate::utils::{devour_whitespace, parse_interpolation, parse_quoted_string};
+use crate::utils::{
+    devour_whitespace, eat_ident, read_until_semicolon_or_open_or_closing_curly_brace,
+};
 use crate::value::Value;
-use crate::{Expr, Token, TokenKind};
+use crate::{Expr, Token};
 
 /// A style: `color: red`
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -68,62 +69,12 @@ impl<'a> StyleParser<'a> {
         toks: &mut Peekable<I>,
         scope: &Scope,
     ) -> SassResult<Value> {
-        let mut style = Vec::new();
-        let mut n = 0;
         devour_whitespace(toks);
-        while let Some(tok) = toks.peek() {
-            match tok.kind {
-                TokenKind::MultilineComment(_) => {
-                    toks.next();
-                    continue;
-                }
-                TokenKind::Interpolation => n += 1,
-                TokenKind::Symbol(Symbol::CloseCurlyBrace) => {
-                    if n == 0 {
-                        break;
-                    } else {
-                        // todo: toks.next() and push
-                        n -= 1;
-                    }
-                }
-                ref q @ TokenKind::Symbol(Symbol::DoubleQuote)
-                | ref q @ TokenKind::Symbol(Symbol::SingleQuote) => {
-                    let q = q.clone();
-                    toks.next();
-                    let (s, q) = if let Value::Ident(s, q) =
-                        parse_quoted_string(toks, scope, &q, self.super_selector)?
-                    {
-                        (s, q)
-                    } else {
-                        unreachable!()
-                    };
-                    let quote_kind = Token::from_symbol(match q {
-                        QuoteKind::Single => Symbol::SingleQuote,
-                        QuoteKind::Double => Symbol::DoubleQuote,
-                        _ => unreachable!(),
-                    });
-                    style.push(quote_kind.clone());
-                    style.push(Token::from_string(s));
-                    style.push(quote_kind);
-                    continue;
-                }
-                TokenKind::Symbol(Symbol::OpenCurlyBrace)
-                | TokenKind::Symbol(Symbol::SemiColon) => break,
-                TokenKind::Symbol(Symbol::BitAnd) => {
-                    style.push(Token {
-                        kind: TokenKind::Symbol(Symbol::BitAnd),
-                        pos: Pos::new(),
-                    });
-                    toks.next();
-                    continue;
-                }
-                _ => {}
-            };
-            style.push(toks.next().unwrap());
-        }
         Value::from_tokens(
-            &mut style.into_iter().peekable(),
-            self.scope,
+            &mut read_until_semicolon_or_open_or_closing_curly_brace(toks)
+                .into_iter()
+                .peekable(),
+            scope,
             self.super_selector,
         )
     }
@@ -138,13 +89,13 @@ impl<'a> StyleParser<'a> {
         devour_whitespace(toks);
         while let Some(tok) = toks.peek() {
             match tok.kind {
-                TokenKind::Symbol(Symbol::OpenCurlyBrace) => {
+                '{' => {
                     toks.next();
                     devour_whitespace(toks);
                     loop {
                         let property = self.parse_property(toks, super_property.clone())?;
                         if let Some(tok) = toks.peek() {
-                            if tok.is_symbol(Symbol::OpenCurlyBrace) {
+                            if tok.kind == '{' {
                                 match self.eat_style_group(toks, property, scope)? {
                                     Expr::Styles(s) => styles.extend(s),
                                     Expr::Style(s) => styles.push(*s),
@@ -152,7 +103,7 @@ impl<'a> StyleParser<'a> {
                                 }
                                 devour_whitespace(toks);
                                 if let Some(tok) = toks.peek() {
-                                    if tok.is_symbol(Symbol::CloseCurlyBrace) {
+                                    if tok.kind == '}' {
                                         toks.next();
                                         devour_whitespace(toks);
                                         return Ok(Expr::Styles(styles));
@@ -164,16 +115,17 @@ impl<'a> StyleParser<'a> {
                             }
                         }
                         let value = self.parse_style_value(toks, scope)?;
+                        dbg!(&value);
                         match toks.peek().unwrap().kind {
-                            TokenKind::Symbol(Symbol::CloseCurlyBrace) => {
+                            '}' => {
                                 styles.push(Style { property, value });
                             }
-                            TokenKind::Symbol(Symbol::SemiColon) => {
+                            ';' => {
                                 toks.next();
                                 devour_whitespace(toks);
                                 styles.push(Style { property, value });
                             }
-                            TokenKind::Symbol(Symbol::OpenCurlyBrace) => {
+                            '{' => {
                                 styles.push(Style {
                                     property: property.clone(),
                                     value,
@@ -191,7 +143,7 @@ impl<'a> StyleParser<'a> {
                         }
                         if let Some(tok) = toks.peek() {
                             match tok.kind {
-                                TokenKind::Symbol(Symbol::CloseCurlyBrace) => {
+                                '}' => {
                                     toks.next();
                                     devour_whitespace(toks);
                                     return Ok(Expr::Styles(styles));
@@ -203,17 +155,14 @@ impl<'a> StyleParser<'a> {
                 }
                 _ => {
                     let val = self.parse_style_value(toks, scope)?;
-                    let t = match toks.peek() {
-                        Some(tok) => tok,
-                        None => return Err("expected more input.".into()),
-                    };
+                    let t = toks.peek().ok_or("expected more input.")?;
                     match t.kind {
-                        TokenKind::Symbol(Symbol::CloseCurlyBrace) => {}
-                        TokenKind::Symbol(Symbol::SemiColon) => {
+                        '}' => {}
+                        ';' => {
                             toks.next();
                             devour_whitespace(toks);
                         }
-                        TokenKind::Symbol(Symbol::OpenCurlyBrace) => {
+                        '{' => {
                             let mut v = vec![Style {
                                 property: super_property.clone(),
                                 value: val,
@@ -242,22 +191,14 @@ impl<'a> StyleParser<'a> {
         toks: &mut Peekable<I>,
         mut super_property: String,
     ) -> SassResult<String> {
-        let mut property = String::new();
-        while let Some(Token { kind, .. }) = toks.next() {
-            match kind {
-                TokenKind::Whitespace(_) | TokenKind::MultilineComment(_) => continue,
-                TokenKind::Ident(ref s) => property.push_str(s),
-                TokenKind::Interpolation => property.push_str(
-                    &parse_interpolation(toks, self.scope, self.super_selector)?.to_string(),
-                ),
-                TokenKind::Symbol(Symbol::Colon) => break,
-                TokenKind::Symbol(Symbol::BitAnd) => {
-                    property.push_str(&self.super_selector.to_string())
-                }
-                _ => property.push_str(&kind.to_string()),
-            };
-        }
         devour_whitespace(toks);
+        let property = eat_ident(toks, &self.scope, &self.super_selector)?;
+        devour_whitespace(toks);
+        if toks.peek().is_some() && toks.peek().unwrap().kind == ':' {
+            toks.next();
+            devour_whitespace(toks);
+        }
+
         if super_property.is_empty() {
             Ok(property)
         } else {

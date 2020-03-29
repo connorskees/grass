@@ -2,15 +2,14 @@ use std::fmt::{self, Display, Write};
 use std::iter::Peekable;
 use std::string::ToString;
 
-use crate::common::{Symbol, Whitespace};
 use crate::error::SassResult;
 use crate::lexer::Lexer;
 use crate::scope::Scope;
 use crate::utils::{
-    devour_whitespace, devour_whitespace_or_comment, flatten_ident, parse_interpolation,
-    parse_quoted_string, IsWhitespace,
+    devour_whitespace, devour_whitespace_or_comment, eat_ident, eat_ident_no_interpolation,
+    parse_interpolation, parse_quoted_string, IsWhitespace,
 };
-use crate::{Token, TokenKind};
+use crate::Token;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Selector(pub Vec<SelectorKind>);
@@ -198,17 +197,18 @@ impl<'a> SelectorParser<'a> {
     ) -> SassResult<()> {
         if let Some(tok) = tokens.next() {
             match tok.kind {
-                TokenKind::Ident(s) => {
-                    if let Some(Token {
-                        kind: TokenKind::Symbol(Symbol::OpenParen),
-                        ..
-                    }) = tokens.peek()
-                    {
+                v @ 'a'..='z' | v @ 'A'..='Z' | v @ '-' | v @ '_' => {
+                    let s = format!(
+                        "{}{}",
+                        v,
+                        eat_ident(tokens, &self.scope, &self.super_selector)?
+                    );
+                    if let Some(Token { kind: '(', .. }) = tokens.peek() {
                         tokens.next();
-                        devour_whitespace_or_comment(tokens);
+                        devour_whitespace(tokens);
                         let mut toks = String::new();
                         while let Some(Token { kind, .. }) = tokens.peek() {
-                            if kind == &TokenKind::Symbol(Symbol::CloseParen) {
+                            if kind == &')' {
                                 tokens.next();
                                 break;
                             }
@@ -224,14 +224,9 @@ impl<'a> SelectorParser<'a> {
                         self.selectors.push(SelectorKind::Pseudo(s))
                     }
                 }
-                TokenKind::Symbol(Symbol::Colon) => {
-                    if let Some(Token {
-                        kind: TokenKind::Ident(s),
-                        ..
-                    }) = tokens.next()
-                    {
-                        self.selectors.push(SelectorKind::PseudoElement(s))
-                    }
+                ':' => {
+                    let s = eat_ident(tokens, &self.scope, &self.super_selector)?;
+                    self.selectors.push(SelectorKind::PseudoElement(s))
                 }
                 _ => return Err("Expected identifier.".into()),
             }
@@ -253,12 +248,8 @@ impl<'a> SelectorParser<'a> {
         &mut self,
         tokens: &'_ mut Peekable<I>,
     ) -> SassResult<()> {
-        if devour_whitespace_or_comment(tokens) {
-            if let Some(Token {
-                kind: TokenKind::Symbol(Symbol::Comma),
-                ..
-            }) = tokens.peek()
-            {
+        if devour_whitespace_or_comment(tokens)? {
+            if let Some(Token { kind: ',', .. }) = tokens.peek() {
                 tokens.next();
                 self.selectors.push(SelectorKind::Multiple);
                 return Ok(());
@@ -268,49 +259,50 @@ impl<'a> SelectorParser<'a> {
         }
         if let Some(Token { kind, .. }) = tokens.next() {
             match kind {
-                TokenKind::Ident(v) | TokenKind::Number(v) => {
-                    self.selectors.push(SelectorKind::Element(v))
+                v @ 'a'..='z' | v @ 'A'..='Z' | v @ '-' | v @ '_' => {
+                    let s = format!("{}{}", v, eat_ident_no_interpolation(tokens)?);
+                    self.selectors.push(SelectorKind::Element(s))
                 }
-                TokenKind::Symbol(Symbol::Period) => self.selectors.push(SelectorKind::Class),
-                TokenKind::Symbol(Symbol::Hash) => self.selectors.push(SelectorKind::Id),
-                TokenKind::Symbol(Symbol::Colon) => self.consume_pseudo_selector(tokens)?,
-                TokenKind::Symbol(Symbol::Comma) => {
+                '.' => self.selectors.push(SelectorKind::Class),
+                '#' => {
+                    if tokens.peek().unwrap().kind == '{' {
+                        tokens.next();
+                        self.is_interpolated = true;
+                        self.tokens_to_selectors(
+                            &mut Lexer::new(
+                                &parse_interpolation(tokens, self.scope, self.super_selector)?
+                                    .to_string(),
+                            )
+                            .peekable(),
+                        )?;
+                        self.is_interpolated = false;
+                    } else {
+                        self.selectors.push(SelectorKind::Id)
+                    }
+                }
+                ':' => self.consume_pseudo_selector(tokens)?,
+                ',' => {
                     self.selectors.push(SelectorKind::Multiple);
-                    if tokens.peek().unwrap().kind == TokenKind::Whitespace(Whitespace::Newline) {
+                    if tokens.peek().unwrap().kind == '\n' {
                         self.selectors.push(SelectorKind::Newline);
                         devour_whitespace(tokens);
                     }
                 }
-                TokenKind::Symbol(Symbol::Gt) => self.selectors.push(SelectorKind::ImmediateChild),
-                TokenKind::Symbol(Symbol::Plus) => self.selectors.push(SelectorKind::Following),
-                TokenKind::Symbol(Symbol::Tilde) => self.selectors.push(SelectorKind::Preceding),
-                TokenKind::Symbol(Symbol::Mul) => self.selectors.push(SelectorKind::Universal),
-                TokenKind::Symbol(Symbol::Percent) => {
-                    self.selectors.push(SelectorKind::Placeholder)
-                }
-                TokenKind::Symbol(Symbol::BitAnd) => self.selectors.push(if self.is_interpolated {
+                '>' => self.selectors.push(SelectorKind::ImmediateChild),
+                '+' => self.selectors.push(SelectorKind::Following),
+                '~' => self.selectors.push(SelectorKind::Preceding),
+                '*' => self.selectors.push(SelectorKind::Universal),
+                '%' => self.selectors.push(SelectorKind::Placeholder),
+                '&' => self.selectors.push(if self.is_interpolated {
                     SelectorKind::InterpolatedSuper
                 } else {
                     SelectorKind::Super
                 }),
-                TokenKind::Interpolation => {
-                    self.is_interpolated = true;
-                    self.tokens_to_selectors(
-                        &mut Lexer::new(
-                            &parse_interpolation(
-                                tokens,
-                                self.scope,
-                                &Selector(vec![SelectorKind::Element(String::from("&"))]),
-                            )?
-                            .to_string(),
-                        )
-                        .peekable(),
-                    )?;
-                    self.is_interpolated = false;
-                }
-                TokenKind::Symbol(Symbol::OpenSquareBrace) => self.selectors.push(
-                    Attribute::from_tokens(tokens, self.scope, self.super_selector)?,
-                ),
+                '[' => self.selectors.push(Attribute::from_tokens(
+                    tokens,
+                    self.scope,
+                    self.super_selector,
+                )?),
                 _ => todo!("unimplemented selector"),
             };
         }
@@ -418,16 +410,14 @@ impl Attribute {
         devour_whitespace(toks);
         let attr = if let Some(t) = toks.next() {
             match t.kind {
-                TokenKind::Ident(mut s) => {
-                    s.push_str(&flatten_ident(toks, scope, super_selector)?);
-                    s
+                v @ 'a'..='z' | v @ 'A'..='Z' | v @ '-' | v @ '_' => {
+                    format!("{}{}", v, eat_ident(toks, scope, super_selector)?)
                 }
-                TokenKind::Interpolation => {
+                '#' if toks.next().unwrap().kind == '{' => {
                     parse_interpolation(toks, scope, super_selector)?.to_string()
                 }
-                q @ TokenKind::Symbol(Symbol::DoubleQuote)
-                | q @ TokenKind::Symbol(Symbol::SingleQuote) => {
-                    parse_quoted_string(toks, scope, &q, super_selector)?.to_string()
+                q @ '"' | q @ '\'' => {
+                    parse_quoted_string(toks, scope, q, super_selector)?.to_string()
                 }
                 _ => return Err("Expected identifier.".into()),
             }
@@ -439,20 +429,19 @@ impl Attribute {
 
         let kind = if let Some(t) = toks.next() {
             match t.kind {
-                TokenKind::Ident(s) if s.len() == 1 => {
-                    devour_whitespace(toks);
+                v @ 'a'..='z' | v @ 'A'..='Z' => {
                     match toks.next().unwrap().kind {
-                        TokenKind::Symbol(Symbol::CloseSquareBrace) => {}
+                        ']' => {}
                         _ => return Err("expected \"]\".".into()),
                     }
                     return Ok(SelectorKind::Attribute(Attribute {
                         kind: AttributeKind::Any,
                         attr,
                         value: String::new(),
-                        modifier: s,
+                        modifier: v.to_string(),
                     }));
                 }
-                TokenKind::Symbol(Symbol::CloseSquareBrace) => {
+                ']' => {
                     return Ok(SelectorKind::Attribute(Attribute {
                         kind: AttributeKind::Any,
                         attr,
@@ -460,12 +449,12 @@ impl Attribute {
                         modifier: String::new(),
                     }));
                 }
-                TokenKind::Symbol(Symbol::Equal) => AttributeKind::Equals,
-                TokenKind::Symbol(Symbol::Tilde) => AttributeKind::InList,
-                TokenKind::Symbol(Symbol::BitOr) => AttributeKind::BeginsWithHyphenOrExact,
-                TokenKind::Symbol(Symbol::Xor) => AttributeKind::StartsWith,
-                TokenKind::Symbol(Symbol::Dollar) => AttributeKind::EndsWith,
-                TokenKind::Symbol(Symbol::Mul) => AttributeKind::Contains,
+                '=' => AttributeKind::Equals,
+                '~' => AttributeKind::InList,
+                '|' => AttributeKind::BeginsWithHyphenOrExact,
+                '^' => AttributeKind::StartsWith,
+                '$' => AttributeKind::EndsWith,
+                '*' => AttributeKind::Contains,
                 _ => return Err("Expected \"]\".".into()),
             }
         } else {
@@ -474,7 +463,7 @@ impl Attribute {
 
         if kind != AttributeKind::Equals {
             match toks.next().unwrap().kind {
-                TokenKind::Symbol(Symbol::Equal) => {}
+                '=' => {}
                 _ => return Err("expected \"=\".".into()),
             }
         }
@@ -483,13 +472,11 @@ impl Attribute {
 
         let value = if let Some(t) = toks.next() {
             match t.kind {
-                TokenKind::Ident(mut s) => {
-                    s.push_str(&flatten_ident(toks, scope, super_selector)?);
-                    s
+                v @ 'a'..='z' | v @ 'A'..='Z' | v @ '-' | v @ '_' => {
+                    format!("{}{}", v, eat_ident(toks, scope, super_selector)?)
                 }
-                q @ TokenKind::Symbol(Symbol::DoubleQuote)
-                | q @ TokenKind::Symbol(Symbol::SingleQuote) => {
-                    parse_quoted_string(toks, scope, &q, super_selector)?.to_string()
+                q @ '"' | q @ '\'' => {
+                    parse_quoted_string(toks, scope, q, super_selector)?.to_string()
                 }
                 _ => return Err("Expected identifier.".into()),
             }
@@ -501,7 +488,7 @@ impl Attribute {
 
         let modifier = if let Some(t) = toks.next() {
             match t.kind {
-                TokenKind::Symbol(Symbol::CloseSquareBrace) => {
+                ']' => {
                     return Ok(SelectorKind::Attribute(Attribute {
                         kind,
                         attr,
@@ -509,12 +496,12 @@ impl Attribute {
                         modifier: String::new(),
                     }))
                 }
-                TokenKind::Ident(s) if s.len() == 1 => {
+                v @ 'a'..='z' | v @ 'A'..='Z' => {
                     match toks.next().unwrap().kind {
-                        TokenKind::Symbol(Symbol::CloseSquareBrace) => {}
+                        ']' => {}
                         _ => return Err("expected \"]\".".into()),
                     }
-                    format!(" {}", s)
+                    format!(" {}", v)
                 }
                 _ => return Err("Expected \"]\".".into()),
             }

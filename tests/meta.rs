@@ -295,11 +295,11 @@ test!(
 );
 error!(
     function_exists_non_string,
-    "a {color:function-exists(12px)}", "Error: $name: 12px is not a string."
+    "a {color: function-exists(12px)}", "Error: $name: 12px is not a string."
 );
 error!(
     mixin_exists_non_string,
-    "a {color:mixin-exists(12px)}", "Error: $name: 12px is not a string."
+    "a {color: mixin-exists(12px)}", "Error: $name: 12px is not a string."
 );
 // test!(
 //     inspect_empty_list,

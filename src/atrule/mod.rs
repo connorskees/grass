@@ -3,14 +3,17 @@ use std::iter::Peekable;
 
 use num_traits::cast::ToPrimitive;
 
-use crate::common::{Keyword, Pos, Symbol};
+use crate::common::Pos;
 use crate::error::SassResult;
 use crate::scope::Scope;
 use crate::selector::Selector;
 use crate::unit::Unit;
-use crate::utils::{devour_whitespace, devour_whitespace_or_comment};
+use crate::utils::{
+    devour_whitespace, eat_ident, read_until_closing_curly_brace, read_until_open_curly_brace,
+    read_until_semicolon_or_closing_curly_brace,
+};
 use crate::value::{Number, Value};
-use crate::{Stmt, Token, TokenKind};
+use crate::{Stmt, Token};
 
 pub(crate) use function::Function;
 pub(crate) use if_rule::If;
@@ -51,14 +54,14 @@ impl AtRule {
         Ok(match rule {
             AtRuleKind::Error => {
                 let message = toks
-                    .take_while(|x| x.kind != TokenKind::Symbol(Symbol::SemiColon))
+                    .take_while(|x| x.kind != ';')
                     .map(|x| x.kind.to_string())
                     .collect::<String>();
                 AtRule::Error(pos, message)
             }
             AtRuleKind::Warn => {
                 let message = toks
-                    .take_while(|x| x.kind != TokenKind::Symbol(Symbol::SemiColon))
+                    .take_while(|x| x.kind != ';')
                     .map(|x| x.kind.to_string())
                     .collect::<String>();
                 devour_whitespace(toks);
@@ -67,7 +70,7 @@ impl AtRule {
             AtRuleKind::Debug => {
                 let message = toks
                     .by_ref()
-                    .take_while(|x| x.kind != TokenKind::Symbol(Symbol::SemiColon))
+                    .take_while(|x| x.kind != ';')
                     .map(|x| x.kind.to_string())
                     .collect::<String>();
                 devour_whitespace(toks);
@@ -82,29 +85,22 @@ impl AtRule {
                 AtRule::Function(name, Box::new(func))
             }
             AtRuleKind::Return => {
-                let mut t = Vec::new();
-                let mut n = 0;
-                while let Some(tok) = toks.peek() {
-                    match tok.kind {
-                        TokenKind::Symbol(Symbol::OpenCurlyBrace) => n += 1,
-                        TokenKind::Symbol(Symbol::CloseCurlyBrace) => n -= 1,
-                        TokenKind::Interpolation => n += 1,
-                        TokenKind::Symbol(Symbol::SemiColon) => break,
-                        _ => {}
-                    }
-                    if n < 0 {
-                        break;
-                    }
-                    t.push(toks.next().unwrap());
+                let v = read_until_semicolon_or_closing_curly_brace(toks);
+                if toks.peek().unwrap().kind == ';' {
+                    toks.next();
                 }
-                AtRule::Return(t)
+                devour_whitespace(toks);
+                AtRule::Return(v)
             }
             AtRuleKind::Use => todo!("@use not yet implemented"),
             AtRuleKind::Annotation => todo!("@annotation not yet implemented"),
             AtRuleKind::AtRoot => todo!("@at-root not yet implemented"),
             AtRuleKind::Charset => {
-                toks.take_while(|t| t.kind != TokenKind::Symbol(Symbol::SemiColon))
-                    .for_each(drop);
+                read_until_semicolon_or_closing_curly_brace(toks);
+                if toks.peek().unwrap().kind == ';' {
+                    toks.next();
+                }
+                devour_whitespace(toks);
                 AtRule::Charset
             }
             AtRuleKind::Each => todo!("@each not yet implemented"),
@@ -113,38 +109,81 @@ impl AtRule {
             AtRuleKind::Else => todo!("@else not yet implemented"),
             AtRuleKind::For => {
                 let mut stmts = Vec::new();
-                devour_whitespace_or_comment(toks);
-                let var = if let Some(tok) = toks.next() {
-                    match tok.kind {
-                        TokenKind::Variable(s) => s,
-                        _ => return Err("expected \"$\".".into()),
-                    }
-                } else {
-                    return Err("expected \"$\".".into());
+                devour_whitespace(toks);
+                let var = match toks.next().ok_or("expected \"$\".")?.kind {
+                    '$' => eat_ident(toks, scope, super_selector)?,
+                    _ => return Err("expected \"$\".".into()),
                 };
-                devour_whitespace_or_comment(toks);
-                if let Some(tok) = toks.next() {
-                    match tok.kind {
-                        TokenKind::Keyword(Keyword::From(..)) => {}
-                        _ => return Err("Expected \"from\".".into()),
-                    }
-                } else {
+                devour_whitespace(toks);
+                if toks.peek().is_none()
+                    || eat_ident(toks, scope, super_selector)?.to_ascii_lowercase() != "from"
+                {
                     return Err("Expected \"from\".".into());
-                };
-                devour_whitespace_or_comment(toks);
+                }
+                devour_whitespace(toks);
                 let mut from_toks = Vec::new();
                 let mut through = 0;
                 while let Some(tok) = toks.next() {
-                    match tok.kind {
-                        TokenKind::Keyword(Keyword::Through(..)) => {
-                            through = 1;
-                            break;
+                    let mut these_toks = vec![tok];
+                    match these_toks[0].kind.to_ascii_lowercase() {
+                        't' => {
+                            these_toks.push(toks.next().unwrap());
+                            match these_toks[1].kind.to_ascii_lowercase() {
+                                'h' => {
+                                    let r = toks.next().unwrap();
+                                    these_toks.push(r);
+                                    if &r.kind != &'r' {
+                                        from_toks.extend(these_toks);
+                                        continue;
+                                    }
+                                    let o = toks.next().unwrap();
+                                    these_toks.push(o);
+                                    if o.kind != 'o' {
+                                        from_toks.extend(these_toks);
+                                        continue;
+                                    }
+                                    let u = toks.next().unwrap();
+                                    these_toks.push(u);
+                                    if u.kind != 'u' {
+                                        from_toks.extend(these_toks);
+                                        continue;
+                                    }
+                                    let g = toks.next().unwrap();
+                                    these_toks.push(g);
+                                    if g.kind != 'g' {
+                                        from_toks.extend(these_toks);
+                                        continue;
+                                    }
+                                    let h = toks.next().unwrap();
+                                    these_toks.push(h);
+                                    if h.kind != 'h' {
+                                        from_toks.extend(these_toks);
+                                        continue;
+                                    }
+                                    let peek = toks.peek().unwrap().kind;
+                                    if peek.is_alphanumeric() || peek == '\\' {
+                                        from_toks.extend(these_toks);
+                                        continue;
+                                    }
+                                    through = 1;
+                                    break;
+                                }
+                                'o' => {
+                                    if toks.peek().unwrap().kind.is_whitespace() {
+                                        break;
+                                    } else {
+                                        from_toks.extend(these_toks);
+                                    }
+                                }
+                                _ => {
+                                    from_toks.extend(these_toks);
+                                }
+                            }
                         }
-                        TokenKind::Keyword(Keyword::To(..)) => break,
-                        TokenKind::Symbol(Symbol::OpenCurlyBrace) => {
+                        '{' => {
                             return Err("Expected \"to\" or \"through\".".into());
                         }
-                        _ => from_toks.push(tok),
+                        _ => from_toks.extend(these_toks),
                     }
                 }
                 let from = match Value::from_tokens(
@@ -158,14 +197,9 @@ impl AtRule {
                     },
                     v => return Err(format!("{} is not an integer.", v).into()),
                 };
-                devour_whitespace_or_comment(toks);
-                let mut to_toks = Vec::new();
-                while let Some(tok) = toks.next() {
-                    match tok.kind {
-                        TokenKind::Symbol(Symbol::OpenCurlyBrace) => break,
-                        _ => to_toks.push(tok),
-                    }
-                }
+                devour_whitespace(toks);
+                let to_toks = read_until_open_curly_brace(toks);
+                toks.next();
                 let to = match Value::from_tokens(
                     &mut to_toks.into_iter().peekable(),
                     scope,
@@ -177,22 +211,12 @@ impl AtRule {
                     },
                     v => return Err(format!("{} is not an integer.", v).into()),
                 };
-                let mut body = Vec::new();
-                let mut n = 1;
-                while let Some(tok) = toks.next() {
-                    match tok.kind {
-                        TokenKind::Symbol(Symbol::OpenCurlyBrace) => n += 1,
-                        TokenKind::Symbol(Symbol::CloseCurlyBrace) => n -= 1,
-                        TokenKind::Interpolation => n += 1,
-                        _ => {}
-                    }
-                    if n == 0 {
-                        break;
-                    }
-                    body.push(tok);
-                }
+                let body = read_until_closing_curly_brace(toks);
+                // body.push(toks.next().unwrap());
+                toks.next();
+                // dbg!(&body);
 
-                devour_whitespace_or_comment(toks);
+                devour_whitespace(toks);
 
                 let (mut x, mut y);
                 let iter: &mut dyn std::iter::Iterator<Item = usize> = if from < to {

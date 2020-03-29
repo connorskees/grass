@@ -4,13 +4,12 @@ use super::eat_stmts;
 
 use crate::args::{eat_func_args, CallArgs, FuncArgs};
 use crate::atrule::AtRule;
-use crate::common::Symbol;
 use crate::error::SassResult;
 use crate::scope::Scope;
 use crate::selector::Selector;
-use crate::utils::devour_whitespace;
+use crate::utils::{devour_whitespace, eat_ident};
 use crate::value::Value;
-use crate::{Stmt, Token, TokenKind};
+use crate::{Stmt, Token};
 
 #[derive(Debug, Clone)]
 pub(crate) struct Function {
@@ -29,22 +28,14 @@ impl Function {
         scope: Scope,
         super_selector: &Selector,
     ) -> SassResult<(String, Function)> {
-        let Token { kind, .. } = toks
-            .next()
-            .expect("this must exist because we have already peeked");
-        devour_whitespace(toks);
-        let name = match kind {
-            TokenKind::Ident(s) => s,
-            _ => return Err("Expected identifier.".into()),
-        };
+        let name = eat_ident(toks, &scope, super_selector)?;
         devour_whitespace(toks);
         let args = match toks.next() {
-            Some(Token {
-                kind: TokenKind::Symbol(Symbol::OpenParen),
-                ..
-            }) => eat_func_args(toks, &scope, super_selector)?,
+            Some(Token { kind: '(', .. }) => eat_func_args(toks, &scope, super_selector)?,
             _ => return Err("expected \"(\".".into()),
         };
+
+        devour_whitespace(toks);
 
         let body = eat_stmts(toks, &mut scope.clone(), super_selector)?;
         devour_whitespace(toks);

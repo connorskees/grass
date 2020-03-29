@@ -12,6 +12,7 @@ pub(crate) fn eat_stmts<I: Iterator<Item = Token>>(
 ) -> SassResult<Vec<Stmt>> {
     let mut stmts = Vec::new();
     while let Some(expr) = eat_expr(toks, scope, super_selector)? {
+        // dbg!(&expr);
         match expr {
             Expr::AtRule(a) => stmts.push(Stmt::AtRule(a)),
             Expr::Style(s) => stmts.push(Stmt::Style(s)),
