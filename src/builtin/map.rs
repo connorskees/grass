@@ -15,7 +15,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 Value::List(v, ..) if v.is_empty() => SassMap::new(),
                 v => return Err(format!("$map: {} is not a map.", v).into()),
             };
-            Ok(map.get(key)?.unwrap_or(Value::Null).clone())
+            Ok(map.get(&key)?.unwrap_or(Value::Null))
         }),
     );
     f.insert(
@@ -28,7 +28,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 Value::List(v, ..) if v.is_empty() => SassMap::new(),
                 v => return Err(format!("$map: {} is not a map.", v).into()),
             };
-            Ok(Value::bool(map.get(key)?.is_some()))
+            Ok(Value::bool(map.get(&key)?.is_some()))
         }),
     );
     f.insert(

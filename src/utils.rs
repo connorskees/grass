@@ -515,7 +515,7 @@ pub(crate) fn eat_number<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -> S
 ///
 /// The newline is consumed
 pub(crate) fn read_until_newline<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) {
-    while let Some(tok) = toks.next() {
+    for tok in toks {
         if tok.kind == '\n' {
             break;
         }
@@ -534,11 +534,9 @@ pub(crate) fn eat_comment<I: Iterator<Item = Token>>(
 ) -> SassResult<String> {
     let mut comment = String::new();
     while let Some(tok) = toks.next() {
-        if tok.kind == '*' {
-            if toks.peek().unwrap().kind == '/' {
-                toks.next();
-                break;
-            }
+        if tok.kind == '*' && toks.peek().unwrap().kind == '/' {
+            toks.next();
+            break;
         }
         comment.push(tok.kind);
     }

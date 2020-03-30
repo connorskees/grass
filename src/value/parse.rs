@@ -186,7 +186,7 @@ impl Value {
                     let right = Self::from_tokens(toks, scope, super_selector)?;
                     Ok(Value::BinaryOp(Box::new(left), Op::Equal, Box::new(right)))
                 } else {
-                    return Err("expected \"=\".".into());
+                    Err("expected \"=\".".into())
                 }
             }
             q @ '>' | q @ '<' => {
@@ -231,7 +231,7 @@ impl Value {
                         Brackets::None,
                     ))
                 } else {
-                    return Err("Expected \"important\".".into());
+                    Err("Expected \"important\".".into())
                 }
             }
             '-' => {

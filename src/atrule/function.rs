@@ -69,19 +69,18 @@ impl Function {
             match stmt {
                 Stmt::AtRule(AtRule::Return(toks)) => {
                     return Value::from_tokens(
-                        &mut toks.clone().into_iter().peekable(),
+                        &mut toks.into_iter().peekable(),
                         &self.scope,
                         super_selector,
                     )
                 }
                 Stmt::AtRule(AtRule::For(..)) => todo!("@for in function"),
                 Stmt::AtRule(AtRule::If(i)) => {
-                    match self.call(
+                    if let Ok(v) = self.call(
                         super_selector,
                         i.eval(&mut self.scope.clone(), super_selector)?,
                     ) {
-                        Ok(v) => return Ok(v),
-                        Err(..) => {}
+                        return Ok(v);
                     }
                 }
                 _ => return Err("This at-rule is not allowed here.".into()),

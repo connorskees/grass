@@ -201,7 +201,7 @@ impl<'a> SelectorParser<'a> {
                     let s = format!(
                         "{}{}",
                         v,
-                        eat_ident(tokens, &self.scope, &self.super_selector)?
+                        eat_ident(tokens, self.scope, self.super_selector)?
                     );
                     if let Some(Token { kind: '(', .. }) = tokens.peek() {
                         tokens.next();
@@ -225,7 +225,7 @@ impl<'a> SelectorParser<'a> {
                     }
                 }
                 ':' => {
-                    let s = eat_ident(tokens, &self.scope, &self.super_selector)?;
+                    let s = eat_ident(tokens, self.scope, self.super_selector)?;
                     self.selectors.push(SelectorKind::PseudoElement(s))
                 }
                 _ => return Err("Expected identifier.".into()),

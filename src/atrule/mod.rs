@@ -132,7 +132,7 @@ impl AtRule {
                                 'h' => {
                                     let r = toks.next().unwrap();
                                     these_toks.push(r);
-                                    if &r.kind != &'r' {
+                                    if r.kind != 'r' {
                                         from_toks.extend(these_toks);
                                         continue;
                                     }

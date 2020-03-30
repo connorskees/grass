@@ -8,11 +8,11 @@ use crate::error::SassResult;
 pub(crate) struct SassMap(Vec<(Value, Value)>);
 
 impl SassMap {
-    pub fn new() -> SassMap {
+    pub const fn new() -> SassMap {
         SassMap(Vec::new())
     }
 
-    pub fn get(self, key: Value) -> SassResult<Option<Value>> {
+    pub fn get(self, key: &Value) -> SassResult<Option<Value>> {
         for (k, v) in self.0 {
             if k.equals(key.clone())? {
                 return Ok(Some(v));
@@ -31,7 +31,7 @@ impl SassMap {
     }
 
     pub fn merge(&mut self, other: SassMap) {
-        for (key, value) in other.into_iter() {
+        for (key, value) in other {
             self.insert(key, value);
         }
     }

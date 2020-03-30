@@ -228,7 +228,7 @@ impl Value {
         Ok(match self {
             Self::Dimension(num, ref unit) => match other {
                 Self::Dimension(num2, unit2) => {
-                    if !unit.comparable(&unit2) {
+                    if !unit.comparable(unit2) {
                         return Err(format!("Incompatible units {} and {}.", unit2, unit).into());
                     }
                     if unit == unit2 {

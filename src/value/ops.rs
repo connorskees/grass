@@ -170,7 +170,7 @@ impl Sub for Value {
                     format!("{}-{}{}{}", self, q.normalize(), s, q.normalize()),
                     QuoteKind::None,
                 ),
-                Self::Paren(..) => (self + other.eval()?)?,
+                Self::Paren(..) => (self - other.eval()?)?,
                 _ => Value::Ident(format!("{}-{}", self, other), QuoteKind::None),
             },
             _ => match other {

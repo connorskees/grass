@@ -113,11 +113,9 @@ test!(
 );
 error!(
     map_get_one_arg,
-    "a {\n  color: map-get(1);\n}\n",
-    "Error: Missing argument $key."
+    "a {\n  color: map-get(1);\n}\n", "Error: Missing argument $key."
 );
 error!(
     map_has_key_one_arg,
-    "a {\n  color: map-has-key(1);\n}\n",
-    "Error: Missing argument $key."
+    "a {\n  color: map-has-key(1);\n}\n", "Error: Missing argument $key."
 );

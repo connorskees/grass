@@ -192,7 +192,7 @@ impl<'a> StyleParser<'a> {
         mut super_property: String,
     ) -> SassResult<String> {
         devour_whitespace(toks);
-        let property = eat_ident(toks, &self.scope, &self.super_selector)?;
+        let property = eat_ident(toks, self.scope, self.super_selector)?;
         devour_whitespace_or_comment(toks)?;
         if toks.peek().is_some() && toks.peek().unwrap().kind == ':' {
             toks.next();
