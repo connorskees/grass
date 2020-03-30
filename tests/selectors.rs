@@ -305,3 +305,8 @@ test!(
 // );
 test!(allows_id_start_with_number, "#2foo {\n  color: red;\n}\n");
 test!(allows_id_only_number, "#2 {\n  color: red;\n}\n");
+test!(
+    id_interpolation,
+    "$zzz: zzz;\n##{$zzz} {\n  a: b;\n}\n",
+    "#zzz {\n  a: b;\n}\n"
+);

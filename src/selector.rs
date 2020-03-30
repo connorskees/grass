@@ -269,7 +269,7 @@ impl<'a> SelectorParser<'a> {
                 }
                 '#' => {
                     tokens.next();
-                    if tokens.peek().unwrap().kind == '{' {
+                    if tokens.peek().is_some() && tokens.peek().unwrap().kind == '{' {
                         tokens.next();
                         self.is_interpolated = true;
                         self.tokens_to_selectors(

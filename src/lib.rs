@@ -600,9 +600,8 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
             }
             '#' => {
                 values.push(toks.next().unwrap());
-                let next = toks.next().unwrap();
-                values.push(next);
-                if next.kind == '{' {
+                if toks.peek().unwrap().kind == '{' {
+                    values.push(toks.next().unwrap());
                     values.extend(eat_interpolation(toks));
                 }
             }
