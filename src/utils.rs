@@ -375,7 +375,13 @@ pub(crate) fn eat_ident<I: Iterator<Item = Token>>(
                     return Err("Expected identifier.".into());
                 }
             }
-            'a'..='z' | 'A'..='Z' | '0'..='9' | '-' | '_' => s.push(toks.next().unwrap().kind),
+            _ if tok.kind.is_ascii_alphanumeric()
+                || tok.kind == '-'
+                || tok.kind == '_'
+                || (!tok.kind.is_ascii() && !tok.kind.is_control()) =>
+            {
+                s.push(toks.next().unwrap().kind)
+            }
             '\\' => {
                 toks.next();
                 let mut n = String::new();
@@ -422,7 +428,13 @@ pub(crate) fn eat_ident_no_interpolation<I: Iterator<Item = Token>>(
             '#' => {
                 break;
             }
-            'a'..='z' | 'A'..='Z' | '0'..='9' | '-' | '_' => s.push(toks.next().unwrap().kind),
+            _ if tok.kind.is_ascii_alphanumeric()
+                || tok.kind == '-'
+                || tok.kind == '_'
+                || (!tok.kind.is_ascii() && !tok.kind.is_control()) =>
+            {
+                s.push(toks.next().unwrap().kind)
+            }
             '\\' => {
                 s.push('\\');
                 toks.next();
