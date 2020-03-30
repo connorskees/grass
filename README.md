@@ -16,14 +16,14 @@ cargo b --release
 The large features remaining are
 ```
 @while
-maps
 order of operations
+keyword operators (and, or, not)
 @each
 special case certain functions (min, max, calc, element, expression, progid, url)
 variadic arguments
-many builtin list functions
+many builtin list functions (zip, index)
 all builtin selector functions
-all builtin map functions
+map-remove, content-exists, call, get-function, unique-id, random, min, min
 @extend
 indented syntax
 dedicated global scope
@@ -36,8 +36,8 @@ a special parser for plain css
 
 ```
 2020-03-30
-PASSING: 1608
-FAILING: 3485
+PASSING: 1685
+FAILING: 3408
 TOTAL: 5093
 ```
 
