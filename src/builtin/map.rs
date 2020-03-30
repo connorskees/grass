@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use super::Builtin;
 use crate::common::{Brackets, ListSeparator};
-use crate::value::{Value, SassMap};
+use crate::value::{SassMap, Value};
 
 pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
@@ -42,7 +42,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             };
             Ok(Value::List(
                 map.keys(),
-                ListSeparator::Space,
+                ListSeparator::Comma,
                 Brackets::None,
             ))
         }),
