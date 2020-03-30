@@ -20,6 +20,7 @@ use crate::utils::{
 use crate::value::Value;
 use crate::Token;
 
+use super::map::SassMap;
 use super::number::Number;
 
 fn parse_hex<I: Iterator<Item = Token>>(
@@ -127,7 +128,7 @@ impl Value {
             None => return Ok(left),
         };
         match next.kind {
-            ';' | ')' | ']' => Ok(left),
+            ';' | ')' | ']' | ':' => Ok(left),
             ',' => {
                 toks.next();
                 devour_whitespace(toks);
@@ -195,16 +196,16 @@ impl Value {
                     match q {
                         '>' => Op::GreaterThanEqual,
                         '<' => Op::LessThanEqual,
-                        _ => unreachable!()
+                        _ => unreachable!(),
                     }
                 } else {
                     match q {
                         '>' => Op::GreaterThan,
                         '<' => Op::LessThan,
-                        _ => unreachable!()
+                        _ => unreachable!(),
                     }
                 };
-                devour_whitespace(toks);                
+                devour_whitespace(toks);
                 let right = Self::from_tokens(toks, scope, super_selector)?;
                 Ok(Value::BinaryOp(Box::new(left), op, Box::new(right)))
             }
@@ -359,20 +360,62 @@ impl Value {
             '(' => {
                 toks.next();
                 devour_whitespace(toks);
-                if toks.peek().unwrap().kind == ')' {
+                if toks.peek().ok_or("expected \")\".")?.kind == ')' {
                     toks.next();
+                    devour_whitespace(toks);
                     return Ok(Value::List(
                         Vec::new(),
                         ListSeparator::Space,
                         Brackets::None,
                     ));
                 }
-                let val = Self::from_tokens(toks, scope, super_selector)?;
-                let next = toks.next();
-                if next.is_none() || next.unwrap().kind != ')' {
-                    return Err("expected \")\".".into());
+                let mut map = SassMap::new();
+                let mut key = Self::from_tokens(toks, scope, super_selector)?;
+                match toks.next().ok_or("expected \")\".")?.kind {
+                    ')' => return Ok(Value::Paren(Box::new(key))),
+                    ':' => {}
+                    _ => unreachable!(),
+                };
+                loop {
+                    devour_whitespace(toks);
+                    match Self::from_tokens(toks, scope, super_selector)? {
+                        Value::List(mut v, ListSeparator::Comma, Brackets::None) => {
+                            devour_whitespace(toks);
+                            match v.len() {
+                                1 => {
+                                    map.insert(key, v.pop().unwrap());
+                                    if toks.peek().is_some() && toks.peek().unwrap().kind == ')' {
+                                        toks.next();
+                                    } else {
+                                        todo!()
+                                    }
+                                    break;
+                                }
+                                2 => {
+                                    let next_key = v.pop().unwrap();
+                                    map.insert(key, v.pop().unwrap());
+                                    key = next_key;
+                                    if toks.next().ok_or("expected \")\".")?.kind == ':' {
+                                        continue;
+                                    } else {
+                                        todo!()
+                                    }
+                                }
+                                _ => todo!(),
+                            }
+                        }
+                        v => {
+                            map.insert(key, v);
+                            if toks.peek().is_some() && toks.peek().unwrap().kind == ')' {
+                                toks.next();
+                                break;
+                            } else {
+                                todo!()
+                            }
+                        }
+                    }
                 }
-                Ok(Value::Paren(Box::new(val)))
+                Ok(Value::Map(map))
             }
             '&' => {
                 toks.next();

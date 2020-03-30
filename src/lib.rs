@@ -60,7 +60,7 @@
     clippy::module_name_repetitions,
     // this is too pedantic -- it is sometimes useful to break up `impl`s
     clippy::multiple_inherent_impl,
-    
+
     // temporarily allowed while under heavy development.
     // eventually these allows should be refactored away
     // to no longer be necessary

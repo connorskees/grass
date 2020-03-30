@@ -23,6 +23,7 @@ pub(crate) static GLOBAL_FUNCTIONS: Lazy<HashMap<String, Builtin>> = Lazy::new(|
     let mut m = HashMap::new();
     color::register(&mut m);
     list::register(&mut m);
+    map::register(&mut m);
     math::register(&mut m);
     meta::register(&mut m);
     string::register(&mut m);

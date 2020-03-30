@@ -1,18 +1,21 @@
+use std::cmp::Ordering;
 use std::fmt::{self, Display, Write};
 use std::iter::Iterator;
-use std::cmp::Ordering;
 
 use crate::color::Color;
 use crate::common::{Brackets, ListSeparator, Op, QuoteKind};
 use crate::error::SassResult;
 use crate::unit::{Unit, UNIT_CONVERSION_TABLE};
+
+pub(crate) use map::SassMap;
 pub(crate) use number::Number;
 
+mod map;
 mod number;
 mod ops;
 mod parse;
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Value {
     Important,
     True,
@@ -25,8 +28,9 @@ pub(crate) enum Value {
     BinaryOp(Box<Value>, Op, Box<Value>),
     Paren(Box<Value>),
     Ident(String, QuoteKind),
+    Map(SassMap),
     // Returned by `get-function()`
-    // Function(String),
+    // Function(String)
 }
 
 impl Display for Value {
@@ -40,6 +44,14 @@ impl Display for Value {
                 }
                 _ => write!(f, "{}{}", num, unit),
             },
+            Self::Map(map) => write!(
+                f,
+                "({})",
+                map.iter()
+                    .map(|(k, v)| format!("{}: {}", k, v))
+                    .collect::<Vec<String>>()
+                    .join(", ")
+            ),
             Self::List(vals, sep, brackets) => match brackets {
                 Brackets::None => write!(
                     f,
@@ -145,6 +157,7 @@ impl Value {
             // Self::Function(..) => Ok("function"),
             Self::True | Self::False => Ok("bool"),
             Self::Null => Ok("null"),
+            Self::Map(..) => Ok("map"),
             Self::BinaryOp(..) | Self::Paren(..) | Self::UnaryOp(..) => self.clone().eval()?.kind(),
         }
     }
@@ -185,16 +198,16 @@ impl Value {
                 Op::Div => *lhs / *rhs,
                 Op::Rem => *lhs % *rhs,
                 Op::GreaterThan => match lhs.cmp(&rhs, op)? {
-                    Ordering::Greater  => Ok(Self::True),
-                    Ordering::Less | Ordering::Equal=> Ok(Self::False),
+                    Ordering::Greater => Ok(Self::True),
+                    Ordering::Less | Ordering::Equal => Ok(Self::False),
                 },
                 Op::GreaterThanEqual => match lhs.cmp(&rhs, op)? {
                     Ordering::Greater | Ordering::Equal => Ok(Self::True),
                     Ordering::Less => Ok(Self::False),
                 },
                 Op::LessThan => match lhs.cmp(&rhs, op)? {
-                    Ordering::Less  => Ok(Self::True),
-                    Ordering::Greater | Ordering::Equal=> Ok(Self::False),
+                    Ordering::Less => Ok(Self::True),
+                    Ordering::Greater | Ordering::Equal => Ok(Self::False),
                 },
                 Op::LessThanEqual => match lhs.cmp(&rhs, op)? {
                     Ordering::Less | Ordering::Equal => Ok(Self::True),
@@ -225,12 +238,20 @@ impl Value {
                     } else if unit2 == &Unit::None {
                         num.cmp(num2)
                     } else {
-                        num.cmp(&(num2.clone() * UNIT_CONVERSION_TABLE[&unit.to_string()][&unit2.to_string()].clone()))
+                        num.cmp(
+                            &(num2.clone()
+                                * UNIT_CONVERSION_TABLE[&unit.to_string()][&unit2.to_string()]
+                                    .clone()),
+                        )
                     }
                 }
-                _ => return Err(format!("Undefined operation \"{} {} {}\".", self, op, other).into()),
+                _ => {
+                    return Err(
+                        format!("Undefined operation \"{} {} {}\".", self, op, other).into(),
+                    )
+                }
             },
-            _ => return Err(format!("Undefined operation \"{} {} {}\".", self, op, other).into())
+            _ => return Err(format!("Undefined operation \"{} {} {}\".", self, op, other).into()),
         })
     }
 }

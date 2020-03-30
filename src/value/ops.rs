@@ -11,6 +11,7 @@ impl Add for Value {
     fn add(self, mut other: Self) -> Self::Output {
         other = other.eval()?;
         Ok(match self {
+            Self::Map(..) => todo!(),
             Self::Important | Self::True | Self::False => match other {
                 Self::Ident(s, QuoteKind::Double) | Self::Ident(s, QuoteKind::Single) => {
                     Value::Ident(format!("{}{}", self, s), QuoteKind::Double)
@@ -78,6 +79,7 @@ impl Add for Value {
                 Self::Color(c) => Value::Ident(format!("{}{}", s1, c), quotes1.normalize()),
                 Self::List(..) => Value::Ident(format!("{}{}", s1, other), quotes1),
                 Self::UnaryOp(..) | Self::BinaryOp(..) | Self::Paren(..) => todo!(),
+                Self::Map(..) => todo!(),
             },
             Self::List(..) => match other {
                 Self::Ident(s, q) => Value::Ident(format!("{}{}", self, s), q.normalize()),

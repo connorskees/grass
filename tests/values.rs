@@ -53,16 +53,6 @@ test!(
     "a {\n  color: foo;\n}\n"
 );
 test!(
-    subs_dbl_quoted_ident_dimension,
-    "a {\n  color: \"foo\" - 1px;\n}\n",
-    "a {\n  color: \"foo\"-1px;\n}\n"
-);
-test!(
-    subs_sgl_quoted_ident_dimension,
-    "a {\n  color: 'foo' - 1px;\n}\n",
-    "a {\n  color: \"foo\"-1px;\n}\n"
-);
-test!(
     undefined_function_call_is_ident,
     "a {\n  color: foo();\n}\n"
 );
@@ -121,4 +111,8 @@ test!(
     negative_number_times_number,
     "a {\n  color: -1 * 2;\n}\n",
     "a {\n  color: -2;\n}\n"
+);
+error!(
+    value_missing_closing_paren,
+    "a {\n  color: (red;\n}\n", "Error: expected \")\"."
 );
