@@ -54,6 +54,16 @@ test!(
     "a {\n  color: map-values((a: b));\n}\n",
     "a {\n  color: b;\n}\n"
 );
+test!(
+    map_values_empty,
+    "a {\n  color: inspect(map-values(()));\n}\n",
+    "a {\n  color: ();\n}\n"
+);
+test!(
+    map_values_are_comma_separated,
+    "a {\n  color: map-values((a: b, c: d));\n}\n",
+    "a {\n  color: b, d;\n}\n"
+);
 error!(
     map_values_non_map,
     "a {\n  color: map-values(foo);\n}\n", "Error: $map: foo is not a map."

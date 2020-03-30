@@ -58,7 +58,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             };
             Ok(Value::List(
                 map.values(),
-                ListSeparator::Space,
+                ListSeparator::Comma,
                 Brackets::None,
             ))
         }),
