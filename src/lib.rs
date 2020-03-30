@@ -58,10 +58,9 @@
     // this is too pedantic -- it results in some names being less explicit
     // than they should
     clippy::module_name_repetitions,
-    clippy::option_unwrap_used,
     // this is too pedantic -- it is sometimes useful to break up `impl`s
     clippy::multiple_inherent_impl,
-
+    
     // temporarily allowed while under heavy development.
     // eventually these allows should be refactored away
     // to no longer be necessary
@@ -69,6 +68,7 @@
     clippy::todo,
     clippy::too_many_lines,
     clippy::panic,
+    clippy::option_unwrap_used,
     clippy::result_unwrap_used,
     clippy::result_expect_used,
     clippy::cast_possible_truncation,
