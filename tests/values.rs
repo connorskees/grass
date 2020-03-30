@@ -463,3 +463,8 @@ test!(
     "a {\n  color: (a b) - (1 2);\n}\n",
     "a {\n  color: a b-1 2;\n}\n"
 );
+test!(
+    negative_number_times_number,
+    "a {\n  color: -1 * 2;\n}\n",
+    "a {\n  color: -2;\n}\n"
+);

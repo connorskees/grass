@@ -214,6 +214,7 @@ impl Mul for Value {
                 }
             },
             Self::BinaryOp(..) | Self::Paren(..) => self.eval()?,
+            Self::UnaryOp(..) => (self.eval()? * other)?,
             _ => return Err(format!("Undefined operation \"{} * {}\".", self, other).into()),
         })
     }
