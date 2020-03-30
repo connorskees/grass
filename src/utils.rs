@@ -56,49 +56,17 @@ pub(crate) fn devour_whitespace_or_comment<I: Iterator<Item = Token>>(
 }
 
 pub(crate) fn parse_interpolation<I: Iterator<Item = Token>>(
-    tokens: &mut Peekable<I>,
+    toks: &mut Peekable<I>,
     scope: &Scope,
     super_selector: &Selector,
 ) -> SassResult<Value> {
-    let mut val = String::new();
-    while let Some(tok) = tokens.next() {
-        match tok.kind {
-            '}' => break,
-            '{' => todo!("invalid character in interpolation"),
-            q @ '"' | q @ '\'' => {
-                val.push_str(&parse_quoted_string(tokens, scope, q, super_selector)?.to_string())
-            }
-            '$' => val.push_str(
-                &scope
-                    .get_var(&eat_ident(tokens, scope, super_selector)?)?
-                    .clone()
-                    .unquote()
-                    .to_string(),
-            ),
-            '#' => {
-                if tokens.next().unwrap().kind == '{' {
-                    val.push_str(
-                        &Lexer::new(
-                            &parse_interpolation(tokens, scope, super_selector)?.to_string(),
-                        )
-                        .map(|x| x.kind.to_string())
-                        .collect::<String>(),
-                    )
-                } else {
-                    return Err("Expected identifier.".into());
-                }
-            }
-            _ => val.push_str(&tok.kind.to_string()),
-        }
-    }
-    if val.trim().is_empty() {
-        return Ok(Value::Ident(String::new(), QuoteKind::None));
-    }
-    Ok(
-        Value::from_tokens(&mut Lexer::new(&val).peekable(), scope, super_selector)?
-            .eval()?
-            .unquote(),
-    )
+    let val = Value::from_tokens(
+        &mut read_until_closing_curly_brace(toks).into_iter().peekable(),
+        scope,
+        super_selector,
+    )?;
+    toks.next();
+    Ok(val.eval()?.unquote())
 }
 
 pub(crate) struct VariableDecl {
@@ -598,6 +566,7 @@ pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
                     continue;
                 } else {
                     s.push('#');
+                    continue;
                 }
             }
             '\n' => return Err("Expected \".".into()),

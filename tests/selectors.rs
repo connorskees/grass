@@ -310,3 +310,8 @@ test!(
     "$zzz: zzz;\n##{$zzz} {\n  a: b;\n}\n",
     "#zzz {\n  a: b;\n}\n"
 );
+test!(
+    interpolate_id_selector,
+    "$bar: \"#foo\";\nul li#{$bar} {\n  foo: bar;\n}\n",
+    "ul li#foo {\n  foo: bar;\n}\n"
+);
