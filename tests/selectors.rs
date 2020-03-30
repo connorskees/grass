@@ -303,3 +303,5 @@ test!(
 //     "#{&} a {\n  color: red;\n}\n",
 //     "a {\n  color: red;\n}\n"
 // );
+test!(allows_id_start_with_number, "#2foo {\n  color: red;\n}\n");
+test!(allows_id_only_number, "#2 {\n  color: red;\n}\n");

@@ -257,14 +257,18 @@ impl<'a> SelectorParser<'a> {
             self.selectors.push(SelectorKind::Whitespace);
             return Ok(());
         }
-        if let Some(Token { kind, .. }) = tokens.next() {
+        if let Some(Token { kind, .. }) = tokens.peek() {
             match kind {
-                v @ 'a'..='z' | v @ 'A'..='Z' | v @ '-' | v @ '_' => {
-                    let s = format!("{}{}", v, eat_ident_no_interpolation(tokens)?);
+                'a'..='z' | 'A'..='Z' | '-' | '_' | '0'..='9' | '\\' => {
+                    let s = eat_ident_no_interpolation(tokens)?;
                     self.selectors.push(SelectorKind::Element(s))
                 }
-                '.' => self.selectors.push(SelectorKind::Class),
+                '.' => {
+                    tokens.next();
+                    self.selectors.push(SelectorKind::Class)
+                }
                 '#' => {
+                    tokens.next();
                     if tokens.peek().unwrap().kind == '{' {
                         tokens.next();
                         self.is_interpolated = true;
@@ -280,29 +284,53 @@ impl<'a> SelectorParser<'a> {
                         self.selectors.push(SelectorKind::Id)
                     }
                 }
-                ':' => self.consume_pseudo_selector(tokens)?,
+                ':' => {
+                    tokens.next();
+                    self.consume_pseudo_selector(tokens)?
+                }
                 ',' => {
+                    tokens.next();
                     self.selectors.push(SelectorKind::Multiple);
                     if tokens.peek().unwrap().kind == '\n' {
                         self.selectors.push(SelectorKind::Newline);
                         devour_whitespace(tokens);
                     }
                 }
-                '>' => self.selectors.push(SelectorKind::ImmediateChild),
-                '+' => self.selectors.push(SelectorKind::Following),
-                '~' => self.selectors.push(SelectorKind::Preceding),
-                '*' => self.selectors.push(SelectorKind::Universal),
-                '%' => self.selectors.push(SelectorKind::Placeholder),
+                '>' => {
+                    tokens.next();
+                    self.selectors.push(SelectorKind::ImmediateChild)
+                }
+                '+' => {
+                    tokens.next();
+                    self.selectors.push(SelectorKind::Following)
+                }
+                '~' => {
+                    tokens.next();
+                    self.selectors.push(SelectorKind::Preceding)
+                }
+                '*' => {
+                    tokens.next();
+                    self.selectors.push(SelectorKind::Universal)
+                }
+                '%' => {
+                    tokens.next();
+                    self.selectors.push(SelectorKind::Placeholder)
+                }
                 '&' => self.selectors.push(if self.is_interpolated {
+                    tokens.next();
                     SelectorKind::InterpolatedSuper
                 } else {
+                    tokens.next();
                     SelectorKind::Super
                 }),
-                '[' => self.selectors.push(Attribute::from_tokens(
-                    tokens,
-                    self.scope,
-                    self.super_selector,
-                )?),
+                '[' => {
+                    tokens.next();
+                    self.selectors.push(Attribute::from_tokens(
+                        tokens,
+                        self.scope,
+                        self.super_selector,
+                    )?)
+                }
                 _ => todo!("unimplemented selector"),
             };
         }
