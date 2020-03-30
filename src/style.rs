@@ -5,7 +5,8 @@ use crate::error::SassResult;
 use crate::scope::Scope;
 use crate::selector::Selector;
 use crate::utils::{
-    devour_whitespace, eat_ident, read_until_semicolon_or_open_or_closing_curly_brace,
+    devour_whitespace, devour_whitespace_or_comment, eat_ident,
+    read_until_semicolon_or_open_or_closing_curly_brace,
 };
 use crate::value::Value;
 use crate::{Expr, Token};
@@ -192,10 +193,10 @@ impl<'a> StyleParser<'a> {
     ) -> SassResult<String> {
         devour_whitespace(toks);
         let property = eat_ident(toks, &self.scope, &self.super_selector)?;
-        devour_whitespace(toks);
+        devour_whitespace_or_comment(toks)?;
         if toks.peek().is_some() && toks.peek().unwrap().kind == ':' {
             toks.next();
-            devour_whitespace(toks);
+            devour_whitespace_or_comment(toks)?;
         }
 
         if super_property.is_empty() {

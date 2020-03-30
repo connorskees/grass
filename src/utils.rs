@@ -129,11 +129,20 @@ pub(crate) fn read_until_open_curly_brace<I: Iterator<Item = Token>>(
         match tok.kind {
             '{' => n += 1,
             '}' => n -= 1,
+            '/' => {
+                let next = toks.next().unwrap();
+                match toks.peek().unwrap().kind {
+                    '/' => read_until_newline(toks),
+                    _ => val.push(next),
+                };
+                continue;
+            }
             _ => {}
         }
         if n == 1 {
             break;
         }
+
         val.push(toks.next().unwrap());
     }
     val
@@ -161,6 +170,14 @@ pub(crate) fn read_until_closing_curly_brace<I: Iterator<Item = Token>>(
                     nesting -= 1;
                     t.push(toks.next().unwrap());
                 }
+            }
+            '/' => {
+                let next = toks.next().unwrap();
+                match toks.peek().unwrap().kind {
+                    '/' => read_until_newline(toks),
+                    _ => t.push(next),
+                };
+                continue;
             }
             _ => t.push(toks.next().unwrap()),
         }
@@ -245,6 +262,14 @@ pub(crate) fn read_until_semicolon_or_closing_curly_brace<I: Iterator<Item = Tok
                     t.push(toks.next().unwrap());
                 }
             }
+            '/' => {
+                let next = toks.next().unwrap();
+                match toks.peek().unwrap().kind {
+                    '/' => read_until_newline(toks),
+                    _ => t.push(next),
+                };
+                continue;
+            }
             _ => t.push(toks.next().unwrap()),
         }
     }
@@ -295,6 +320,14 @@ pub(crate) fn read_until_semicolon_or_open_or_closing_curly_brace<I: Iterator<It
                     nesting -= 1;
                     t.push(toks.next().unwrap());
                 }
+            }
+            '/' => {
+                let next = toks.next().unwrap();
+                match toks.peek().unwrap().kind {
+                    '/' => read_until_newline(toks),
+                    _ => t.push(next),
+                };
+                continue;
             }
             _ => t.push(toks.next().unwrap()),
         }

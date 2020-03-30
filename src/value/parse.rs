@@ -14,8 +14,8 @@ use crate::scope::Scope;
 use crate::selector::Selector;
 use crate::unit::Unit;
 use crate::utils::{
-    devour_whitespace, eat_comment, eat_ident, eat_number, parse_interpolation,
-    parse_quoted_string, read_until_newline, eat_ident_no_interpolation
+    devour_whitespace, eat_comment, eat_ident, eat_ident_no_interpolation, eat_number,
+    parse_interpolation, parse_quoted_string, read_until_newline,
 };
 use crate::value::Value;
 use crate::Token;

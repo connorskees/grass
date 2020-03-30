@@ -50,6 +50,6 @@ test!(
 );
 test!(
     converts_cr_in_comment,
-    "a {\n  /*  \r*/ color: red;\n}\n",
-    "a {\n  /*  \n*/\n  color: red;\n}\n"
+    "a {\n  color: 1 + // flang }\n  blang }",
+    "a {\n  color: 1blang;\n}\n"
 );
