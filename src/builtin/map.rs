@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use super::Builtin;
 use crate::common::{Brackets, ListSeparator};
-use crate::value::Value;
+use crate::value::{Value, SassMap};
 
 pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
@@ -11,6 +11,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             max_args!(args, 2);
             let map = match arg!(args, 0, "map") {
                 Value::Map(m) => m,
+                Value::List(v, ..) if v.is_empty() => SassMap::new(),
                 v => return Err(format!("$map: {} is not a map.", v).into()),
             };
             let key = arg!(args, 1, "key");
@@ -23,6 +24,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             max_args!(args, 2);
             let map = match arg!(args, 0, "map") {
                 Value::Map(m) => m,
+                Value::List(v, ..) if v.is_empty() => SassMap::new(),
                 v => return Err(format!("$map: {} is not a map.", v).into()),
             };
             let key = arg!(args, 1, "key");
@@ -35,6 +37,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             max_args!(args, 1);
             let map = match arg!(args, 0, "map") {
                 Value::Map(m) => m,
+                Value::List(v, ..) if v.is_empty() => SassMap::new(),
                 v => return Err(format!("$map: {} is not a map.", v).into()),
             };
             Ok(Value::List(
@@ -50,6 +53,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             max_args!(args, 1);
             let map = match arg!(args, 0, "map") {
                 Value::Map(m) => m,
+                Value::List(v, ..) if v.is_empty() => SassMap::new(),
                 v => return Err(format!("$map: {} is not a map.", v).into()),
             };
             Ok(Value::List(
@@ -65,10 +69,12 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             max_args!(args, 2);
             let mut map1 = match arg!(args, 0, "map1") {
                 Value::Map(m) => m,
+                Value::List(v, ..) if v.is_empty() => SassMap::new(),
                 v => return Err(format!("$map1: {} is not a map.", v).into()),
             };
             let map2 = match arg!(args, 1, "map2") {
                 Value::Map(m) => m,
+                Value::List(v, ..) if v.is_empty() => SassMap::new(),
                 v => return Err(format!("$map2: {} is not a map.", v).into()),
             };
             map1.merge(map2);
