@@ -26,7 +26,6 @@ all builtin selector functions
 map-remove, content-exists, call, get-function, unique-id, random, min, min
 @extend
 indented syntax
-dedicated global scope
 a special parser for plain css
 @at-root
 @use and module system
