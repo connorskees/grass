@@ -224,6 +224,10 @@ pub(crate) fn read_until_semicolon_or_closing_curly_brace<I: Iterator<Item = Tok
             ';' => {
                 break;
             }
+            '\\' => {
+                t.push(toks.next().unwrap());
+                t.push(toks.next().unwrap());
+            }
             '"' | '\'' => {
                 let quote = toks.next().unwrap();
                 t.push(quote.clone());
@@ -257,6 +261,10 @@ pub(crate) fn read_until_semicolon_or_open_or_closing_curly_brace<I: Iterator<It
         match tok.kind {
             ';' => {
                 break;
+            }
+            '\\' => {
+                t.push(toks.next().unwrap());
+                t.push(toks.next().unwrap());
             }
             '"' | '\'' => {
                 let quote = toks.next().unwrap();
@@ -306,7 +314,7 @@ pub(crate) fn eat_variable_value<I: Iterator<Item = Token>>(
     let mut raw = read_until_semicolon_or_closing_curly_brace(toks)
         .into_iter()
         .peekable();
-    if toks.peek().unwrap().kind == ';' {
+    if toks.peek().is_some() && toks.peek().unwrap().kind == ';' {
         toks.next();
     }
     let mut x = Vec::new();

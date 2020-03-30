@@ -87,3 +87,7 @@ test!(
     does_not_combine_idents_with_leading_hyphen_all,
     "a {\n  color: -a -b -c;\n}\n"
 );
+test!(
+    alllows_escaped_quote_at_start_of_ident,
+    "a {\n  color: \\\"c\\\";\n}\n"
+);
