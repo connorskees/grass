@@ -14,6 +14,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             max_args!(args, 1);
             let len = match arg!(args, 0, "list") {
                 Value::List(v, ..) => Number::from(v.len()),
+                Value::Map(m) => Number::from(m.len()),
                 _ => Number::one(),
             };
             Ok(Value::Dimension(len, Unit::None))

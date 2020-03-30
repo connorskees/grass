@@ -76,3 +76,8 @@ test!(
     "a {\n  color: inspect((a: b, c: d, e: f, g: h, i: j, h: k, l: m, n: o));\n}\n",
     "a {\n  color: (a: b, c: d, e: f, g: h, i: j, h: k, l: m, n: o);\n}\n"
 );
+test!(
+    map_length,
+    "a {\n  color: length((a: b, c: d, e: f));\n}\n",
+    "a {\n  color: 3;\n}\n"
+);

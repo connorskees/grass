@@ -20,6 +20,10 @@ impl SassMap {
         Ok(None)
     }
 
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
     #[allow(dead_code)]
     pub fn remove(&mut self, key: &Value) {
         self.0.retain(|(ref k, ..)| k != key);
