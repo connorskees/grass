@@ -365,7 +365,7 @@ impl Value {
                     Ok(parse_hex(toks, scope, super_selector)?)
                 }
             }
-            '_' | '\\' | _ if kind.is_alphabetic() || (!kind.is_ascii() && !kind.is_control()) => {
+            'a'..='z' | 'A'..='Z' | '_' | '\\' => {
                 let mut s = eat_ident(toks, scope, super_selector)?;
                 match toks.peek() {
                     Some(Token { kind: '(', .. }) => {

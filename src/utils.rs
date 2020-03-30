@@ -375,7 +375,7 @@ pub(crate) fn eat_ident<I: Iterator<Item = Token>>(
                     return Err("Expected identifier.".into());
                 }
             }
-            '-' | '_' | _ if tok.kind.is_alphanumeric() => s.push(toks.next().unwrap().kind),
+            'a'..='z' | 'A'..='Z' | '0'..='9' | '-' | '_' => s.push(toks.next().unwrap().kind),
             '\\' => {
                 toks.next();
                 let mut n = String::new();
@@ -407,9 +407,6 @@ pub(crate) fn eat_ident<I: Iterator<Item = Token>>(
                     s.push(c);
                 };
             }
-            _ if !tok.kind.is_ascii() && !tok.kind.is_control() => {
-                s.push(toks.next().unwrap().kind)
-            }
             _ => break,
         }
     }
@@ -425,7 +422,7 @@ pub(crate) fn eat_ident_no_interpolation<I: Iterator<Item = Token>>(
             '#' => {
                 break;
             }
-            '-' | '_' | _ if tok.kind.is_alphanumeric() => s.push(toks.next().unwrap().kind),
+            'a'..='z' | 'A'..='Z' | '0'..='9' | '-' | '_' => s.push(toks.next().unwrap().kind),
             '\\' => {
                 s.push('\\');
                 toks.next();
@@ -438,9 +435,6 @@ pub(crate) fn eat_ident_no_interpolation<I: Iterator<Item = Token>>(
                 } else {
                     todo!()
                 }
-            }
-            _ if !tok.kind.is_ascii() && !tok.kind.is_control() => {
-                s.push(toks.next().unwrap().kind)
             }
             _ => break,
         }
