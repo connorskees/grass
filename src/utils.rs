@@ -2,7 +2,6 @@ use std::iter::{Iterator, Peekable};
 
 use crate::common::QuoteKind;
 use crate::error::SassResult;
-use crate::lexer::Lexer;
 use crate::selector::Selector;
 use crate::value::Value;
 use crate::{Scope, Token};
@@ -437,17 +436,35 @@ pub(crate) fn eat_ident_no_interpolation<I: Iterator<Item = Token>>(
                 s.push(toks.next().unwrap().kind)
             }
             '\\' => {
-                s.push('\\');
                 toks.next();
-                if let Some(tok) = toks.next() {
-                    match tok.kind {
-                        '+' => s.push('+'),
-                        '\\' => s.push('\\'),
-                        _ => todo!("value after \\"),
+                let mut n = String::new();
+                while let Some(c) = toks.peek() {
+                    if !c.kind.is_ascii_hexdigit() || n.len() > 6 {
+                        break;
                     }
-                } else {
-                    todo!()
+                    n.push(c.kind);
+                    toks.next();
                 }
+                if n.is_empty() {
+                    let c = toks.next().unwrap().kind;
+                    if (c == '-' && !s.is_empty()) || c.is_ascii_alphabetic() {
+                        s.push(c);
+                    } else {
+                        s.push_str(&format!("\\{}", c));
+                    }
+                    continue;
+                }
+                devour_whitespace(toks);
+                let c = std::char::from_u32(u32::from_str_radix(&n, 16).unwrap()).unwrap();
+                if c.is_control() && c != '\t' {
+                    s.push_str(&format!("\\{} ", n.to_ascii_lowercase()));
+                } else if !c.is_ascii_alphanumeric() && s.is_empty() && c.is_ascii() {
+                    s.push_str(&format!("\\{}", c));
+                } else if c.is_numeric() && s.is_empty() {
+                    s.push_str(&format!("\\{} ", n))
+                } else {
+                    s.push(c);
+                };
             }
             _ => break,
         }

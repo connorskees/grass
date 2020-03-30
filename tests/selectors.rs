@@ -315,3 +315,4 @@ test!(
     "$bar: \"#foo\";\nul li#{$bar} {\n  foo: bar;\n}\n",
     "ul li#foo {\n  foo: bar;\n}\n"
 );
+test!(escaped_space, "a\\ b {\n  color: foo;\n}\n");
