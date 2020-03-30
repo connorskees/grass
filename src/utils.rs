@@ -518,7 +518,6 @@ pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
     let mut is_escaped = false;
     let mut found_interpolation = false;
     while let Some(tok) = toks.next() {
-        // dbg!(&tok);
         match tok.kind {
             '"' if !is_escaped && q == '"' => break,
             '"' if is_escaped => {
