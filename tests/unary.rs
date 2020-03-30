@@ -45,3 +45,8 @@ test!(
     "a {\n  color: type-of(- 1px);\n}\n",
     "a {\n  color: number;\n}\n"
 );
+test!(
+    unary_neg_variable,
+    "$a: 1;\n\na {\n  color: -$a;\n}\n",
+    "a {\n  color: -1;\n}\n"
+);
