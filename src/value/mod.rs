@@ -1,10 +1,11 @@
 use std::fmt::{self, Display, Write};
 use std::iter::Iterator;
+use std::cmp::Ordering;
 
 use crate::color::Color;
 use crate::common::{Brackets, ListSeparator, Op, QuoteKind};
 use crate::error::SassResult;
-use crate::unit::Unit;
+use crate::unit::{Unit, UNIT_CONVERSION_TABLE};
 pub(crate) use number::Number;
 
 mod number;
@@ -183,7 +184,22 @@ impl Value {
                 Op::Mul => *lhs * *rhs,
                 Op::Div => *lhs / *rhs,
                 Op::Rem => *lhs % *rhs,
-                _ => Ok(Self::BinaryOp(lhs, op, rhs)),
+                Op::GreaterThan => match lhs.cmp(&rhs, op)? {
+                    Ordering::Greater  => Ok(Self::True),
+                    Ordering::Less | Ordering::Equal=> Ok(Self::False),
+                },
+                Op::GreaterThanEqual => match lhs.cmp(&rhs, op)? {
+                    Ordering::Greater | Ordering::Equal => Ok(Self::True),
+                    Ordering::Less => Ok(Self::False),
+                },
+                Op::LessThan => match lhs.cmp(&rhs, op)? {
+                    Ordering::Less  => Ok(Self::True),
+                    Ordering::Greater | Ordering::Equal=> Ok(Self::False),
+                },
+                Op::LessThanEqual => match lhs.cmp(&rhs, op)? {
+                    Ordering::Less | Ordering::Equal => Ok(Self::True),
+                    Ordering::Greater => Ok(Self::False),
+                },
             },
             Self::Paren(v) => v.eval(),
             Self::UnaryOp(op, val) => match op {
@@ -193,5 +209,28 @@ impl Value {
             },
             _ => Ok(self),
         }
+    }
+
+    pub fn cmp(&self, other: &Self, op: Op) -> SassResult<Ordering> {
+        Ok(match self {
+            Self::Dimension(num, ref unit) => match other {
+                Self::Dimension(num2, unit2) => {
+                    if !unit.comparable(&unit2) {
+                        return Err(format!("Incompatible units {} and {}.", unit2, unit).into());
+                    }
+                    if unit == unit2 {
+                        num.cmp(num2)
+                    } else if unit == &Unit::None {
+                        num.cmp(num2)
+                    } else if unit2 == &Unit::None {
+                        num.cmp(num2)
+                    } else {
+                        num.cmp(&(num2.clone() * UNIT_CONVERSION_TABLE[&unit.to_string()][&unit2.to_string()].clone()))
+                    }
+                }
+                _ => return Err(format!("Undefined operation \"{} {} {}\".", self, op, other).into()),
+            },
+            _ => return Err(format!("Undefined operation \"{} {} {}\".", self, op, other).into())
+        })
     }
 }

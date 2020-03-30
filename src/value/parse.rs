@@ -188,6 +188,26 @@ impl Value {
                     return Err("expected \"=\".".into());
                 }
             }
+            q @ '>' | q @ '<' => {
+                toks.next();
+                let op = if toks.peek().unwrap().kind == '=' {
+                    toks.next();
+                    match q {
+                        '>' => Op::GreaterThanEqual,
+                        '<' => Op::LessThanEqual,
+                        _ => unreachable!()
+                    }
+                } else {
+                    match q {
+                        '>' => Op::GreaterThan,
+                        '<' => Op::LessThan,
+                        _ => unreachable!()
+                    }
+                };
+                devour_whitespace(toks);                
+                let right = Self::from_tokens(toks, scope, super_selector)?;
+                Ok(Value::BinaryOp(Box::new(left), op, Box::new(right)))
+            }
             '!' => {
                 toks.next();
                 if toks.peek().unwrap().kind == '=' {
