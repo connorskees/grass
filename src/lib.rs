@@ -97,7 +97,7 @@ use crate::style::Style;
 pub(crate) use crate::token::Token;
 use crate::utils::{
     devour_whitespace, eat_comment, eat_ident, eat_variable_value, parse_quoted_string,
-    read_until_newline, VariableDecl,
+    read_until_newline, VariableDecl, eat_ident_no_interpolation
 };
 use crate::value::Value;
 
@@ -530,7 +530,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                     values.push(toks.next().unwrap());
                     continue;
                 }
-                let name = eat_ident(toks, scope, super_selector)?;
+                let name = eat_ident_no_interpolation(toks)?;
                 if toks.peek().unwrap().kind == ':' {
                     toks.next();
                     devour_whitespace(toks);

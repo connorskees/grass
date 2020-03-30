@@ -15,7 +15,7 @@ use crate::selector::Selector;
 use crate::unit::Unit;
 use crate::utils::{
     devour_whitespace, eat_comment, eat_ident, eat_number, parse_interpolation,
-    parse_quoted_string, read_until_newline,
+    parse_quoted_string, read_until_newline, eat_ident_no_interpolation
 };
 use crate::value::Value;
 use crate::Token;
@@ -465,7 +465,7 @@ impl Value {
             }
             '$' => {
                 toks.next();
-                Ok(scope.get_var(&eat_ident(toks, scope, super_selector)?)?)
+                Ok(scope.get_var(&eat_ident_no_interpolation(toks)?)?)
             }
             '@' => Err("expected \";\".".into()),
             '+' => {

@@ -103,3 +103,8 @@ test!(
 //     "$vär: foo;\na {\n  color: $vär;\n}\n",
 //     "a {\n  color: foo;\n}\n"
 // );
+test!(
+    variable_does_not_include_interpolation,
+    "$input: foo;\na {\n  color: $input#{\"literal\"};\n}\n",
+    "a {\n  color: foo literal;\n}\n"
+);
