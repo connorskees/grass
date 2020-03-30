@@ -9,12 +9,12 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         "map-get".to_owned(),
         Box::new(|args, _| {
             max_args!(args, 2);
+            let key = arg!(args, 1, "key");
             let map = match arg!(args, 0, "map") {
                 Value::Map(m) => m,
                 Value::List(v, ..) if v.is_empty() => SassMap::new(),
                 v => return Err(format!("$map: {} is not a map.", v).into()),
             };
-            let key = arg!(args, 1, "key");
             Ok(map.get(key)?.unwrap_or(Value::Null).clone())
         }),
     );
@@ -22,12 +22,12 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         "map-has-key".to_owned(),
         Box::new(|args, _| {
             max_args!(args, 2);
+            let key = arg!(args, 1, "key");
             let map = match arg!(args, 0, "map") {
                 Value::Map(m) => m,
                 Value::List(v, ..) if v.is_empty() => SassMap::new(),
                 v => return Err(format!("$map: {} is not a map.", v).into()),
             };
-            let key = arg!(args, 1, "key");
             Ok(Value::bool(map.get(key)?.is_some()))
         }),
     );
