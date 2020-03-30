@@ -78,6 +78,11 @@ test!(
     "a {\n  color: inspect(map-merge((), ()));\n}\n",
     "a {\n  color: ();\n}\n"
 );
+test!(
+    map_merge_same_keys,
+    "a {\n  color: inspect(map-merge((c: d, e: f), (c: 1, e: 2)));\n}\n",
+    "a {\n  color: (c: 1, e: 2);\n}\n"
+);
 error!(
     map_merge_map1_non_map,
     "a {\n  color: map-merge(foo, (a: b));\n}\n", "Error: $map1: foo is not a map."

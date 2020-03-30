@@ -1,4 +1,5 @@
 use std::slice::Iter;
+use std::vec::IntoIter;
 
 use super::Value;
 use crate::error::SassResult;
@@ -30,7 +31,9 @@ impl SassMap {
     }
 
     pub fn merge(&mut self, other: SassMap) {
-        self.0.extend(other.0);
+        for (key, value) in other.into_iter() {
+            self.insert(key, value);
+        }
     }
 
     pub fn iter(&self) -> Iter<(Value, Value)> {
@@ -53,5 +56,14 @@ impl SassMap {
             }
         }
         self.0.push((key, value));
+    }
+}
+
+impl IntoIterator for SassMap {
+    type Item = (Value, Value);
+    type IntoIter = IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
     }
 }
