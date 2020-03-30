@@ -213,7 +213,7 @@ fn read_until_close_paren<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -> 
     for tok in toks {
         match tok.kind {
             ')' => {
-                if scope <= 1 {
+                if scope < 1 {
                     v.push(tok);
                     return v;
                 } else {
