@@ -165,12 +165,10 @@ impl Value {
                     ))
                 }
             }
-            '+' | '-' | '*' | '%' => {
+            '+' | '*' | '%' => {
                 let op = match next.kind {
                     '+' => Op::Plus,
-                    '-' => Op::Minus,
                     '*' => Op::Mul,
-                    '/' => Op::Div,
                     '%' => Op::Rem,
                     _ => unsafe { std::hint::unreachable_unchecked() },
                 };
@@ -213,6 +211,28 @@ impl Value {
                     ))
                 } else {
                     return Err("Expected \"important\".".into());
+                }
+            }
+            '-' => {
+                toks.next();
+                if devour_whitespace(toks) {
+                    let right = Self::from_tokens(toks, scope, super_selector)?;
+                    Ok(Value::BinaryOp(Box::new(left), Op::Minus, Box::new(right)))
+                } else {
+                    let right = Self::from_tokens(toks, scope, super_selector)?;
+                    if let Value::List(mut v, ListSeparator::Space, ..) = right {
+                        let mut v2 = vec![left];
+                        let val = v.remove(0);
+                        v2.push((-val)?);
+                        v2.extend(v);
+                        Ok(Value::List(v2, ListSeparator::Space, Brackets::None))
+                    } else {
+                        Ok(Value::List(
+                            vec![left, (-right)?],
+                            ListSeparator::Space,
+                            Brackets::None,
+                        ))
+                    }
                 }
             }
             '/' => {

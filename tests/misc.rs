@@ -71,8 +71,19 @@ test!(
     "@charset \"UTF-8\";\na {\n  color: red😁;\n}\n"
 );
 test!(
-    #[ignore]
     no_space_before_style,
     "a {\n  color:red\n}\n",
     "a {\n  color: red;\n}\n"
+);
+test!(
+    does_not_combine_idents_with_leading_hyphen,
+    "a {\n  color: a -b;\n}\n"
+);
+test!(
+    does_not_combine_idents_with_leading_hyphen_list,
+    "a {\n  color: a -b c;\n}\n"
+);
+test!(
+    does_not_combine_idents_with_leading_hyphen_all,
+    "a {\n  color: -a -b -c;\n}\n"
 );
