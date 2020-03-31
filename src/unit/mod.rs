@@ -114,10 +114,13 @@ pub(crate) enum UnitKind {
 
 impl Unit {
     pub fn comparable(&self, other: &Unit) -> bool {
+        if other == &Unit::None {
+            return true;
+        }
         match self.kind() {
             UnitKind::FontRelative | UnitKind::ViewportRelative | UnitKind::Other => self == other,
             UnitKind::None => true,
-            u => other.kind() == u || other.kind() == UnitKind::None,
+            u => other.kind() == u,
         }
     }
 

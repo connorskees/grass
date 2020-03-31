@@ -64,6 +64,11 @@ test!(
     "a {\n  color: 10 - 10px;\n}\n",
     "a {\n  color: 0px;\n}\n"
 );
+test!(
+    percent_plus_none,
+    "a {\n  color: 10% + 10;\n}\n",
+    "a {\n  color: 20%;\n}\n"
+);
 
 macro_rules! test_unit_addition {
     ($u1:ident, $u2:ident, $out:literal) => {
