@@ -3,7 +3,7 @@ use std::iter::Peekable;
 
 use num_traits::cast::ToPrimitive;
 
-use crate::common::Pos;
+use crate::common::{Brackets, ListSeparator, Pos};
 use crate::error::SassResult;
 use crate::scope::Scope;
 use crate::selector::Selector;
@@ -39,6 +39,7 @@ pub(crate) enum AtRule {
     Content,
     Unknown(UnknownAtRule),
     For(Vec<Stmt>),
+    Each(Vec<Stmt>),
     If(If),
 }
 
@@ -103,7 +104,82 @@ impl AtRule {
                 devour_whitespace(toks);
                 AtRule::Charset
             }
-            AtRuleKind::Each => todo!("@each not yet implemented"),
+            AtRuleKind::Each => {
+                let mut stmts = Vec::new();
+                devour_whitespace(toks);
+                let mut vars = Vec::new();
+                loop {
+                    match toks.next().ok_or("expected \"$\".")?.kind {
+                        '$' => vars.push(eat_ident(toks, scope, super_selector)?),
+                        _ => return Err("expected \"$\".".into()),
+                    }
+                    devour_whitespace(toks);
+                    if toks.peek().ok_or("expected \"$\".")?.kind == ',' {
+                        toks.next();
+                        devour_whitespace(toks);
+                    } else {
+                        break;
+                    }
+                }
+                if toks.peek().is_none()
+                    || eat_ident(toks, scope, super_selector)?.to_ascii_lowercase() != "in"
+                {
+                    return Err("Expected \"in\".".into());
+                }
+                devour_whitespace(toks);
+                let iterator = match Value::from_tokens(
+                    &mut read_until_open_curly_brace(toks).into_iter().peekable(),
+                    scope,
+                    super_selector,
+                )? {
+                    Value::List(v, ..) => v,
+                    Value::Map(m) => m
+                        .into_iter()
+                        .map(|(k, v)| Value::List(vec![k, v], ListSeparator::Space, Brackets::None))
+                        .collect(),
+                    v => vec![v],
+                };
+                toks.next();
+                devour_whitespace(toks);
+                let mut body = read_until_closing_curly_brace(toks);
+                body.push(toks.next().unwrap());
+                devour_whitespace(toks);
+
+                for row in iterator {
+                    let this_iterator = match row {
+                        Value::List(v, ..) => v,
+                        Value::Map(m) => m
+                            .into_iter()
+                            .map(|(k, v)| {
+                                Value::List(vec![k, v], ListSeparator::Space, Brackets::None)
+                            })
+                            .collect(),
+                        v => vec![v],
+                    };
+
+                    if vars.len() == 1 {
+                        scope.insert_var(
+                            &vars[0],
+                            Value::List(this_iterator, ListSeparator::Space, Brackets::None),
+                        )?;
+                    } else {
+                        for (var, val) in vars.clone().into_iter().zip(
+                            this_iterator
+                                .into_iter()
+                                .chain(std::iter::once(Value::Null).cycle()),
+                        ) {
+                            scope.insert_var(&var, val)?;
+                        }
+                    }
+
+                    stmts.extend(eat_stmts(
+                        &mut body.clone().into_iter().peekable(),
+                        scope,
+                        super_selector,
+                    )?);
+                }
+                AtRule::Each(stmts)
+            }
             AtRuleKind::Extend => todo!("@extend not yet implemented"),
             AtRuleKind::If => AtRule::If(If::from_tokens(toks)?),
             AtRuleKind::Else => todo!("@else not yet implemented"),
