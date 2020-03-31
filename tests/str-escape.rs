@@ -106,3 +106,8 @@ test!(
     "a {\n  color: \"\\g\";\n}\n",
     "a {\n  color: \"g\";\n}\n"
 );
+test!(
+    escapes_hex_in_string_no_trailing_space,
+    "a {\n  color: \"\\b\\c\\d\\e\\f\\g\\h\\i\\j\\k\\l\\m\\n\\o\\p\\q\\r\\s\\t\\u\\v\\w\\x\\y\\z\";\n}\n",
+    "a {\n  color: \"\\b\\c\\d\\e\\fghijklmnopqrstuvwxyz\";\n}\n"
+);
