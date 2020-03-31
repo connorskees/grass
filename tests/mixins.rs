@@ -190,7 +190,12 @@ test!(
     "a {\n  color: red;\n}\n"
 );
 test!(
-    args_interchangable_hypen_underscore,
+    args_hyphen_arg_allows_underscore,
     "@mixin foo($a-b) {\n  color: $a-b;\n  color: $a_b;\n}\na {\n  @include foo($a_b: a);\n  @include foo($a-b: a);\n}\n",
+    "a {\n  color: a;\n  color: a;\n  color: a;\n  color: a;\n}\n"
+);
+test!(
+    args_underscore_arg_allows_hyphen,
+    "@mixin foo($a_b) {\n  color: $a-b;\n  color: $a_b;\n}\na {\n  @include foo($a_b: a);\n  @include foo($a-b: a);\n}\n",
     "a {\n  color: a;\n  color: a;\n  color: a;\n  color: a;\n}\n"
 );

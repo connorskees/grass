@@ -77,7 +77,7 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
                         ',' => {
                             toks.next();
                             args.push(FuncArg {
-                                name,
+                                name: name.replace('_', "-"),
                                 default: Some(Value::from_tokens(
                                     &mut default.into_iter().peekable(),
                                     scope,
@@ -88,7 +88,7 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
                         }
                         ')' => {
                             args.push(FuncArg {
-                                name,
+                                name: name.replace('_', "-"),
                                 default: Some(Value::from_tokens(
                                     &mut default.into_iter().peekable(),
                                     scope,
@@ -107,7 +107,7 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
             '.' => todo!("handle varargs"),
             ')' => {
                 args.push(FuncArg {
-                    name,
+                    name: name.replace('_', "-"),
                     default: if default.is_empty() {
                         None
                     } else {
@@ -121,7 +121,7 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
                 break;
             }
             ',' => args.push(FuncArg {
-                name,
+                name: name.replace('_', "-"),
                 default: None,
             }),
             _ => {}
