@@ -208,3 +208,13 @@ test!(
     "a {\n  color: foo + 1 + bar + 2;\n}\n",
     "a {\n  color: foo1bar2;\n}\n"
 );
+test!(
+    unquoted_plus_dbl_quoted,
+    "a {\n  color: foo + \"foo\";\n}\n",
+    "a {\n  color: foofoo;\n}\n"
+);
+test!(
+    unquoted_plus_sgl_quoted,
+    "a {\n  color: foo + 'foo';\n}\n",
+    "a {\n  color: foofoo;\n}\n"
+);

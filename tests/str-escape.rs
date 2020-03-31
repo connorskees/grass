@@ -111,3 +111,13 @@ test!(
     "a {\n  color: \"\\b\\c\\d\\e\\f\\g\\h\\i\\j\\k\\l\\m\\n\\o\\p\\q\\r\\s\\t\\u\\v\\w\\x\\y\\z\";\n}\n",
     "a {\n  color: \"\\b\\c\\d\\e\\fghijklmnopqrstuvwxyz\";\n}\n"
 );
+test!(
+    interpolated_inside_string_does_not_produce_unquoted_output,
+    "a {\n  color: \"#{\"\\b\"}\";\n}\n",
+    "a {\n  color: \"\\b\";\n}\n"
+);
+test!(
+    unquote_quoted_backslash_single_lowercase_hex_char,
+    "a {\n  color: #{\"\\b\"};\n}\n",
+    "a {\n  color: \x0b;\n}\n"
+);
