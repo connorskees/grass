@@ -233,10 +233,22 @@ impl Div for Value {
             Self::Null => todo!(),
             Self::Dimension(num, unit) => match other {
                 Self::Dimension(num2, unit2) => {
+                    if !unit.comparable(&unit2) {
+                        return Err(format!("Incompatible units {} and {}.", unit2, unit).into());
+                    }
                     if unit == unit2 {
                         Value::Dimension(num / num2, Unit::None)
+                    } else if unit == Unit::None {
+                        todo!("inverse units")
+                    } else if unit2 == Unit::None {
+                        Value::Dimension(num / num2, unit)
                     } else {
-                        todo!("unit conversions")
+                        Value::Dimension(
+                            num / (num2
+                                * UNIT_CONVERSION_TABLE[&unit.to_string()][&unit2.to_string()]
+                                    .clone()),
+                            Unit::None,
+                        )
                     }
                 }
                 Self::Ident(s, q) => Value::Ident(
