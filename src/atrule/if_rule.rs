@@ -61,10 +61,9 @@ impl If {
                                 let cond = read_until_open_curly_brace(toks);
                                 toks.next();
                                 devour_whitespace(toks);
-                                let toks_ = read_until_closing_curly_brace(toks);
+                                branches.push(Branch::new(cond, read_until_closing_curly_brace(toks)));
                                 toks.next();
                                 devour_whitespace(toks);
-                                branches.push(Branch::new(cond, toks_))
                             }
                             '{' => {
                                 else_ = read_until_closing_curly_brace(toks);
