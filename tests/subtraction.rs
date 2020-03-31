@@ -153,3 +153,18 @@ test!(
     "a {\n  color: 'foo' - 1px;\n}\n",
     "a {\n  color: \"foo\"-1px;\n}\n"
 );
+test!(
+    number_minus_unquoted_ident,
+    "a {\n  color: 1 - foo;\n}\n",
+    "a {\n  color: 1-foo;\n}\n"
+);
+test!(
+    number_minus_sglquoted_ident,
+    "a {\n  color: 1 - 'foo';\n}\n",
+    "a {\n  color: 1-\"foo\";\n}\n"
+);
+test!(
+    number_minus_dblquoted_ident,
+    "a {\n  color: 1 - \"foo\";\n}\n",
+    "a {\n  color: 1-\"foo\";\n}\n"
+);

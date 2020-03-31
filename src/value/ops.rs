@@ -120,6 +120,9 @@ impl Sub for Value {
                 Self::List(..) => {
                     Value::Ident(format!("{}{}-{}", num, unit, other), QuoteKind::None)
                 }
+                Self::Ident(..) => {
+                    Value::Ident(format!("{}{}-{}", num, unit, other), QuoteKind::None)
+                }
                 _ => todo!(),
             },
             Self::Color(c) => match other {
