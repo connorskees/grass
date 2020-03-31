@@ -57,6 +57,7 @@ impl Display for Value {
                     f,
                     "{}",
                     vals.iter()
+                        .filter(|x| !x.is_null())
                         .map(std::string::ToString::to_string)
                         .collect::<Vec<String>>()
                         .join(sep.as_str()),
@@ -65,6 +66,7 @@ impl Display for Value {
                     f,
                     "[{}]",
                     vals.iter()
+                        .filter(|x| !x.is_null())
                         .map(std::string::ToString::to_string)
                         .collect::<Vec<String>>()
                         .join(sep.as_str()),
