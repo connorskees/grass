@@ -169,3 +169,13 @@ test!(
     "a {\n  color: 1, null, null;;\n}\n",
     "a {\n  color: 1;\n}\n"
 );
+test!(
+    removes_paren_around_space_list,
+    "a {\n  color: (foo bar);\n}\n",
+    "a {\n  color: foo bar;\n}\n"
+);
+test!(
+    removes_paren_around_item_in_list,
+    "a {\n  color: 1 (foo bar);\n}\n",
+    "a {\n  color: 1 foo bar;\n}\n"
+);

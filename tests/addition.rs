@@ -29,144 +29,159 @@ test!(
     "a {\n  color: abcdef;\n}\n"
 );
 test!(
-    removes_paren_around_space_list,
-    "a {\n  color: (foo bar);\n}\n",
-    "a {\n  color: foo bar;\n}\n"
-);
-test!(
-    removes_paren_around_item_in_list,
-    "a {\n  color: 1 (foo bar);\n}\n",
-    "a {\n  color: 1 foo bar;\n}\n"
-);
-test!(
-    adds_idents,
+    unquoted_plus_unquoted,
     "a {\n  color: foo + bar;\n}\n",
     "a {\n  color: foobar;\n}\n"
 );
 test!(
-    adds_dbl_quoted_idents,
+    dblquoted_plus_dblquoted,
     "a {\n  color: \"foo\" + \"bar\";\n}\n",
     "a {\n  color: \"foobar\";\n}\n"
 );
 test!(
-    adds_sgl_quoted_idents,
+    sglquoted_plus_sglquoted,
     "a {\n  color: 'foo' + 'bar';\n}\n",
     "a {\n  color: \"foobar\";\n}\n"
 );
 test!(
-    adds_dbl_and_un_quoted_idents,
+    dblquoted_plus_unquoted,
     "a {\n  color: \"foo\" + bar;\n}\n",
     "a {\n  color: \"foobar\";\n}\n"
 );
 test!(
-    adds_sgl_and_un_quoted_idents,
+    sglquoted_plus_unquoted,
     "a {\n  color: 'foo' + bar;\n}\n",
     "a {\n  color: \"foobar\";\n}\n"
 );
 test!(
-    adds_un_and_dbl_quoted_idents,
+    unquoted_plus_dblquoted,
     "a {\n  color: foo + \"bar\";\n}\n",
-    "a {\n  color: \"foobar\";\n}\n"
+    "a {\n  color: foobar;\n}\n"
 );
 test!(
-    adds_un_and_sgl_quoted_idents,
+    unquoted_plus_sglquoted,
     "a {\n  color: foo + 'bar';\n}\n",
-    "a {\n  color: \"foobar\";\n}\n"
+    "a {\n  color: foobar;\n}\n"
 );
 test!(
-    adds_sgl_and_dbl_quoted_idents,
+    sglquoted_plus_dblquoted,
     "a {\n  color: 'foo' + \"bar\";\n}\n",
     "a {\n  color: \"foobar\";\n}\n"
 );
 test!(
-    adds_dbl_and_sgl_quoted_idents,
+    dblquoted_plus_sglquoted,
     "a {\n  color: \"foo\" + 'bar';\n}\n",
     "a {\n  color: \"foobar\";\n}\n"
 );
 test!(
-    adds_ident_true,
+    unquoted_plus_true,
     "a {\n  color: foo + true;\n}\n",
     "a {\n  color: footrue;\n}\n"
 );
 test!(
-    adds_dbl_quoted_ident_true,
+    dblquoted_plus_true,
     "a {\n  color: \"foo\" + true;\n}\n",
     "a {\n  color: \"footrue\";\n}\n"
 );
 test!(
-    adds_ident_false,
+    sglquoted_plus_true,
+    "a {\n  color: 'foo' + true;\n}\n",
+    "a {\n  color: \"footrue\";\n}\n"
+);
+test!(
+    unquoted_plus_false,
     "a {\n  color: foo + false;\n}\n",
     "a {\n  color: foofalse;\n}\n"
 );
 test!(
-    adds_dbl_quoted_ident_false,
+    dblquoted_plus_false,
     "a {\n  color: \"foo\" + false;\n}\n",
     "a {\n  color: \"foofalse\";\n}\n"
 );
 test!(
-    adds_ident_important,
+    sglquoted_plus_false,
+    "a {\n  color: 'foo' + false;\n}\n",
+    "a {\n  color: \"foofalse\";\n}\n"
+);
+test!(
+    unquoted_plus_important,
     "a {\n  color: foo + !important;\n}\n",
     "a {\n  color: foo!important;\n}\n"
 );
 test!(
-    adds_ident_null,
+    unquoted_plus_important_uppercase,
+    "a {\n  color: foo + !IMPORTANT;\n}\n",
+    "a {\n  color: foo!important;\n}\n"
+);
+test!(
+    unquoted_plus_null,
     "a {\n  color: foo + null;\n}\n",
     "a {\n  color: foo;\n}\n"
 );
 test!(
-    adds_dbl_quoted_ident_null,
+    dblquoted_plus_null,
     "a {\n  color: \"foo\" + null;\n}\n",
     "a {\n  color: \"foo\";\n}\n"
 );
 test!(
-    adds_sgl_quoted_ident_null,
+    sglquoted_plus_null,
     "a {\n  color: 'foo' + null;\n}\n",
     "a {\n  color: \"foo\";\n}\n"
 );
 test!(
-    adds_ident_number,
+    unquoted_plus_number_unitless,
     "a {\n  color: foo + 1;\n}\n",
     "a {\n  color: foo1;\n}\n"
 );
 test!(
-    adds_dbl_quoted_ident_number,
+    dblquoted_plus_number_unitless,
     "a {\n  color: \"foo\" + 1;\n}\n",
     "a {\n  color: \"foo1\";\n}\n"
 );
 test!(
-    adds_sgl_quoted_ident_number,
+    sglquoted_plus_number_unitless,
     "a {\n  color: 'foo' + 1;\n}\n",
     "a {\n  color: \"foo1\";\n}\n"
 );
 test!(
-    adds_ident_dimension,
+    unquoted_plus_number_unit,
     "a {\n  color: foo + 1px;\n}\n",
     "a {\n  color: foo1px;\n}\n"
 );
 test!(
-    adds_dbl_quoted_ident_dimension,
+    dblquoted_plus_number_unit,
     "a {\n  color: \"foo\" + 1px;\n}\n",
     "a {\n  color: \"foo1px\";\n}\n"
 );
 test!(
-    adds_sgl_quoted_ident_dimension,
+    sglquoted_plus_number_unit,
     "a {\n  color: 'foo' + 1px;\n}\n",
     "a {\n  color: \"foo1px\";\n}\n"
 );
 test!(
-    adds_true_false,
+    true_plus_false,
     "a {\n  color: true + false;\n}\n",
     "a {\n  color: truefalse;\n}\n"
 );
 test!(
-    adds_false_null_is_string,
-    "a {\n  color: if(false+null, 1, 2);\n}\n",
+    false_plus_null,
+    "a {\n  color: false + null;\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    false_plus_null_is_string,
+    "a {\n  color: type-of(false + null);\n}\n",
+    "a {\n  color: string;\n}\n"
+);
+test!(
+    null_plus_num,
+    "a {\n  color: null + 1;\n}\n",
     "a {\n  color: 1;\n}\n"
 );
 test!(
-    adds_null_num_is_string,
-    "a {\n  color: null + 1;\n}\n",
-    "a {\n  color: 1;\n}\n"
+    null_plus_num_is_string,
+    "a {\n  color: type-of(null + 1);\n}\n",
+    "a {\n  color: string;\n}\n"
 );
 test!(
     num_plus_list,
@@ -209,12 +224,32 @@ test!(
     "a {\n  color: foo1bar2;\n}\n"
 );
 test!(
-    unquoted_plus_dbl_quoted,
-    "a {\n  color: foo + \"foo\";\n}\n",
-    "a {\n  color: foofoo;\n}\n"
+    dblquoted_plus_named_color,
+    "a {\n  color: \"foo\" + red;\n}\n",
+    "a {\n  color: \"foored\";\n}\n"
 );
 test!(
-    unquoted_plus_sgl_quoted,
-    "a {\n  color: foo + 'foo';\n}\n",
-    "a {\n  color: foofoo;\n}\n"
+    sglquoted_plus_named_color,
+    "a {\n  color: 'foo' + red;\n}\n",
+    "a {\n  color: \"foored\";\n}\n"
+);
+test!(
+    unquoted_plus_named_color,
+    "a {\n  color: foo + red;\n}\n",
+    "a {\n  color: foored;\n}\n"
+);
+test!(
+    dblquoted_plus_hex_color,
+    "a {\n  color: \"foo\" + #fff;\n}\n",
+    "a {\n  color: \"foo#fff\";\n}\n"
+);
+test!(
+    sglquoted_plus_hex_color,
+    "a {\n  color: 'foo' + #fff;\n}\n",
+    "a {\n  color: \"foo#fff\";\n}\n"
+);
+test!(
+    unquoted_plus_hex_color,
+    "a {\n  color: foo + #fff;\n}\n",
+    "a {\n  color: foo#fff;\n}\n"
 );
