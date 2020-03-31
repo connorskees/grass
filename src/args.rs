@@ -172,7 +172,7 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
             match tok.kind {
                 ')' => {
                     args.insert(
-                        name,
+                        name.replace('_', "-"),
                         Value::from_tokens(&mut val.into_iter().peekable(), scope, super_selector)?,
                     );
                     return Ok(CallArgs(args));
@@ -191,7 +191,7 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
         }
 
         args.insert(
-            name,
+            name.replace('_', "-"),
             Value::from_tokens(
                 &mut val.clone().into_iter().peekable(),
                 scope,
