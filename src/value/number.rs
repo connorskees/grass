@@ -165,10 +165,6 @@ from_integer!(u8);
 
 impl Display for Number {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.val.is_negative() {
-            f.write_char('-')?;
-        }
-
         let mut whole = self.val.to_integer().abs();
         let mut dec = String::new();
 
@@ -217,6 +213,10 @@ impl Display for Number {
                     write!(dec, "{}", end)?;
                 }
             }
+        }
+
+        if self.val.is_negative() && (!whole.is_zero() || !dec.is_empty()) {
+            f.write_char('-')?;
         }
         write!(f, "{}", whole)?;
         write!(f, "{}", dec)?;

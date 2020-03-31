@@ -81,3 +81,8 @@ test!(
     "a {\n  color: 1 + 3/4;\n}\n",
     "a {\n  color: 1.75;\n}\n"
 );
+test!(
+    negative_near_zero_no_sign,
+    "a {\n  color: -0.000000000001;\n}\n",
+    "a {\n  color: 0;\n}\n"
+);
