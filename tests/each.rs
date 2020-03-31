@@ -9,6 +9,11 @@ test!(
     "a {\n  color: 1;\n  color: 2;\n  color: 3;\n}\n"
 );
 test!(
+    each_comma_separated_inner,
+    "a {\n  @each $i in 1, 2, 3 {\n    color: $i;\n  }\n}\n",
+    "a {\n  color: 1;\n  color: 2;\n  color: 3;\n}\n"
+);
+test!(
     each_space_separated_outer,
     "@each $i in 1 2 3 {\n  a {\n    color: $i;\n  }\n}\n",
     "a {\n  color: 1;\n}\n\na {\n  color: 2;\n}\n\na {\n  color: 3;\n}\n"
