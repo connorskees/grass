@@ -105,3 +105,8 @@ test!(
     values_after_important,
     "a {\n  color: foo bar !important hux baz;\n}\n"
 );
+test!(
+    no_space_between_colon_and_style_variable,
+    "$base-color: #036;\na {\n  color:lighten($base-color, 5%);\n}",
+    "a {\n  color: #004080;\n}\n"
+);

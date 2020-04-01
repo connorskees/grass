@@ -546,7 +546,11 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                         return Ok(Some(Expr::VariableDecl(name, Box::new(val))));
                     }
                 } else {
-                    todo!()
+                    values.push(tok);
+                    // HACK: we add the name back in, but lose the position information
+                    // potentially requires refactoring heuristics for
+                    // no space between colon and style value
+                    values.extend(name.chars().map(|c| Token::new(Pos::new(), c)));
                 }
             }
             '/' => {
