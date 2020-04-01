@@ -101,3 +101,7 @@ test!(
     "a {\n  color: foo ! important;\n}\n",
     "a {\n  color: foo !important;\n}\n"
 );
+test!(
+    values_after_important,
+    "a {\n  color: foo bar !important hux baz;\n}\n"
+);
