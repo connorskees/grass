@@ -24,7 +24,10 @@ test!(
 test!(preserves_keyword_auto, "a {\n  color: auto;\n}\n");
 test!(preserves_keyword_initial, "a {\n  color: initial;\n}\n");
 test!(preserves_keyword_infinity, "a {\n  color: infinity;\n}\n");
-test!(preserves_keyword_not, "a {\n  color: not;\n}\n");
+error!(
+    keyword_not_expects_expression,
+    "a {\n  color: not;\n}\n", "Error: Expected expression."
+);
 test!(preserves_keyword_and, "a {\n  color: and;\n}\n");
 test!(preserves_keyword_or, "a {\n  color: or;\n}\n");
 test!(preserves_keyword_unset, "a {\n  color: unset;\n}\n");

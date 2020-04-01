@@ -264,7 +264,7 @@ impl StyleSheet {
     /// ```
     #[inline]
     pub fn print_as_css<W: Write>(self, buf: &mut W) -> SassResult<()> {
-        Css::from_stylesheet(self).pretty_print(buf, 0)
+        Css::from_stylesheet(self)?.pretty_print(buf, 0)
     }
 }
 

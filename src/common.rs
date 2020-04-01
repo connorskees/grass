@@ -13,6 +13,9 @@ pub enum Op {
     Mul,
     Div,
     Rem,
+    And,
+    Or,
+    Not,
 }
 
 impl Display for Op {
@@ -29,6 +32,9 @@ impl Display for Op {
             Self::Mul => write!(f, "*"),
             Self::Div => write!(f, "/"),
             Self::Rem => write!(f, "%"),
+            Self::And => write!(f, "and"),
+            Self::Or => write!(f, "or"),
+            Self::Not => write!(f, "not"),
         }
     }
 }
@@ -42,14 +48,15 @@ impl Op {
     /// If precedence is equal, the leftmost operation is evaluated first
     pub fn precedence(&self) -> usize {
         match self {
+            Self::And | Self::Or | Self::Not => 0,
             Self::Equal
             | Self::NotEqual
             | Self::GreaterThan
             | Self::GreaterThanEqual
             | Self::LessThan
-            | Self::LessThanEqual => 0,
-            Self::Plus | Self::Minus => 1,
-            Self::Mul | Self::Div | Self::Rem => 2,
+            | Self::LessThanEqual => 1,
+            Self::Plus | Self::Minus => 2,
+            Self::Mul | Self::Div | Self::Rem => 3,
         }
     }
 }

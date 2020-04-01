@@ -144,6 +144,11 @@ fn eat_op<I: Iterator<Item = IntermediateValue>>(
     space_separated: &mut Vec<Value>,
 ) -> SassResult<()> {
     match op {
+        Op::Not => {
+            devour_whitespace(iter);
+            let right = single_value(iter, scope, super_selector)?;
+            space_separated.push(Value::UnaryOp(op, Box::new(right)));
+        }
         Op::Plus => {
             if let Some(left) = space_separated.pop() {
                 devour_whitespace(iter);
@@ -168,6 +173,18 @@ fn eat_op<I: Iterator<Item = IntermediateValue>>(
                 space_separated.push(Value::UnaryOp(op, Box::new(right)));
             }
         }
+        Op::And | Op::Or => {
+            devour_whitespace(iter);
+            if iter.peek().is_none() {
+                space_separated.push(Value::Ident(op.to_string(), QuoteKind::None));
+            } else if let Some(left) = space_separated.pop() {
+                devour_whitespace(iter);
+                let right = single_value(iter, scope, super_selector)?;
+                space_separated.push(Value::BinaryOp(Box::new(left), op, Box::new(right)));
+            } else {
+                return Err("Expected expression.".into());
+            }
+        }
         _ => {
             if let Some(left) = space_separated.pop() {
                 devour_whitespace(iter);
@@ -186,12 +203,16 @@ fn single_value<I: Iterator<Item = IntermediateValue>>(
     scope: &Scope,
     super_selector: &Selector,
 ) -> SassResult<Value> {
-    Ok(match iter.next().unwrap() {
+    Ok(match iter.next().ok_or("Expected expression.")? {
         IntermediateValue::Value(v) => v,
         IntermediateValue::Op(op) => match op {
             Op::Minus => {
                 devour_whitespace(iter);
                 (-single_value(iter, scope, super_selector)?)?
+            }
+            Op::Not => {
+                devour_whitespace(iter);
+                Value::UnaryOp(op, Box::new(single_value(iter, scope, super_selector)?))
             }
             _ => todo!(),
         },
@@ -484,9 +505,9 @@ impl Value {
                                 "true" => Ok(IntermediateValue::Value(Value::True)),
                                 "false" => Ok(IntermediateValue::Value(Value::False)),
                                 "null" => Ok(IntermediateValue::Value(Value::Null)),
-                                // "not" => Ok(IntermediateValue::Op(Op::Not)),
-                                // "and" => Ok(IntermediateValue::Op(Op::And)),
-                                // "or" => Ok(IntermediateValue::Op(Op::Or)),
+                                "not" => Ok(IntermediateValue::Op(Op::Not)),
+                                "and" => Ok(IntermediateValue::Op(Op::And)),
+                                "or" => Ok(IntermediateValue::Op(Op::Or)),
                                 _ => Ok(IntermediateValue::Value(Value::Ident(s, QuoteKind::None))),
                             }
                         }

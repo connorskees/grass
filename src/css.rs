@@ -36,13 +36,15 @@ impl Toplevel {
         Toplevel::RuleSet(selector, Vec::new())
     }
 
-    fn push_style(&mut self, s: Style) {
+    fn push_style(&mut self, mut s: Style) -> SassResult<()> {
+        s.value = s.value.eval()?;
         if s.value.is_null() {
-            return;
+            return Ok(());
         }
         if let Toplevel::RuleSet(_, entries) = self {
             entries.push(BlockEntry::Style(Box::new(s)));
         }
+        Ok(())
     }
 
     fn push_comment(&mut self, s: String) {
@@ -62,12 +64,12 @@ impl Css {
         Css { blocks: Vec::new() }
     }
 
-    pub fn from_stylesheet(s: StyleSheet) -> Self {
+    pub fn from_stylesheet(s: StyleSheet) -> SassResult<Self> {
         Css::new().parse_stylesheet(s)
     }
 
-    fn parse_stmt(&mut self, stmt: Stmt) -> Vec<Toplevel> {
-        match stmt {
+    fn parse_stmt(&mut self, stmt: Stmt) -> SassResult<Vec<Toplevel>> {
+        Ok(match stmt {
             Stmt::RuleSet(RuleSet {
                 selector,
                 super_selector,
@@ -75,16 +77,16 @@ impl Css {
             }) => {
                 let selector = super_selector.zip(&selector).remove_placeholders();
                 if selector.is_empty() {
-                    return Vec::new();
+                    return Ok(Vec::new());
                 }
                 let mut vals = vec![Toplevel::new_rule(selector)];
                 for rule in rules {
                     match rule {
-                        Stmt::RuleSet(_) => vals.extend(self.parse_stmt(rule)),
+                        Stmt::RuleSet(_) => vals.extend(self.parse_stmt(rule)?),
                         Stmt::Style(s) => vals
                             .get_mut(0)
                             .expect("expected block to exist")
-                            .push_style(*s),
+                            .push_style(*s)?,
                         Stmt::MultilineComment(s) => vals
                             .get_mut(0)
                             .expect("expected block to exist")
@@ -97,13 +99,13 @@ impl Css {
             Stmt::MultilineComment(s) => vec![Toplevel::MultilineComment(s)],
             Stmt::Style(_) => panic!("expected toplevel element, found style"),
             Stmt::AtRule(r) => vec![Toplevel::AtRule(r)],
-        }
+        })
     }
 
-    fn parse_stylesheet(mut self, s: StyleSheet) -> Css {
+    fn parse_stylesheet(mut self, s: StyleSheet) -> SassResult<Css> {
         let mut is_first = true;
         for stmt in s.0 {
-            let v = self.parse_stmt(stmt);
+            let v = self.parse_stmt(stmt)?;
             // this is how we print newlines between unrelated styles
             // it could probably be refactored
             if !v.is_empty() {
@@ -116,7 +118,7 @@ impl Css {
                 self.blocks.extend(v);
             }
         }
-        self
+        Ok(self)
     }
 
     pub fn pretty_print<W: Write>(self, buf: &mut W, nesting: usize) -> SassResult<()> {
@@ -149,7 +151,7 @@ impl Css {
                         } else {
                             writeln!(buf, "{}@{} {} {{", padding, u.name, u.params)?;
                         }
-                        Css::from_stylesheet(StyleSheet::from_stmts(u.body))
+                        Css::from_stylesheet(StyleSheet::from_stmts(u.body))?
                             .pretty_print(buf, nesting + 1)?;
                         writeln!(buf, "{}}}", padding)?;
                     }

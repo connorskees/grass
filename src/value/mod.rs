@@ -215,11 +215,23 @@ impl Value {
                     Ordering::Less | Ordering::Equal => Ok(Self::True),
                     Ordering::Greater => Ok(Self::False),
                 },
+                Op::Not => unreachable!(),
+                Op::And => Ok(if lhs.is_true()? {
+                    rhs.eval()?
+                } else {
+                    lhs.eval()?
+                }),
+                Op::Or => Ok(if lhs.is_true()? {
+                    lhs.eval()?
+                } else {
+                    rhs.eval()?
+                }),
             },
             Self::Paren(v) => v.eval(),
             Self::UnaryOp(op, val) => match op {
                 Op::Plus => val.unary_op_plus(),
                 Op::Minus => -*val,
+                Op::Not => Ok(Self::bool(!val.eval()?.is_true()?)),
                 _ => unreachable!(),
             },
             _ => Ok(self),
