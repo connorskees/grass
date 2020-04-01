@@ -73,3 +73,8 @@ test!(
     "@function foo($a) {\n  @return $a;\n}\n\na {\n  color: foo([a, b]);\n}\n",
     "a {\n  color: [a, b];\n}\n"
 );
+test!(
+    eats_quoted_content,
+    "a {\n  color: unquote(\"a, b, c, d\");\n}\n",
+    "a {\n  color: a, b, c, d;\n}\n"
+);

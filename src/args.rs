@@ -5,7 +5,9 @@ use crate::common::Pos;
 use crate::error::SassResult;
 use crate::scope::Scope;
 use crate::selector::Selector;
-use crate::utils::{devour_whitespace, devour_whitespace_or_comment, eat_ident};
+use crate::utils::{
+    devour_whitespace, devour_whitespace_or_comment, eat_ident, read_until_closing_quote,
+};
 use crate::value::Value;
 use crate::Token;
 
@@ -185,6 +187,10 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
                 '(' => {
                     val.push(tok);
                     val.extend(read_until_close_paren(toks));
+                }
+                '"' | '\'' => {
+                    val.push(tok);
+                    val.extend(read_until_closing_quote(toks, tok.kind));
                 }
                 _ => val.push(tok),
             }
