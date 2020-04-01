@@ -246,7 +246,6 @@ impl Div for Value {
 
     fn div(self, other: Self) -> Self::Output {
         let precedence = Op::Div.precedence();
-        dbg!(&self, &other);
         Ok(match self {
             Self::Null => todo!(),
             Self::Dimension(num, unit) => match other {
