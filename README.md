@@ -17,8 +17,6 @@ The large features remaining are
 ```
 @while
 order of operations
-keyword operators (and, or, not)
-@each
 special case certain functions (min, max, calc, element, expression, progid, url)
 variadic arguments
 many builtin list functions (zip, index)
@@ -32,6 +30,12 @@ a special parser for plain css
 @forward
 ```
 
+```
+2020-04-01
+PASSING: 1711
+FAILING: 3382
+TOTAL: 5093
+```
 
 ```
 2020-03-30
