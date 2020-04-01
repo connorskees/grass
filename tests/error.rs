@@ -27,3 +27,12 @@ error!(
     question_mark_inside_value,
     "a {foo: bar?}", "Error: expected \";\"."
 );
+// TODO: special parsing rules for variable names
+// error!(
+//     interpolation_in_variable_declaration,
+//     "$base-#{lor}: #036;", "Error: expected \":\"."
+// );
+error!(
+    backslash_as_last_character,
+    "a {colo\\: red;}", "Error: expected \"{\"."
+);

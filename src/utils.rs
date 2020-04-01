@@ -393,7 +393,7 @@ pub(crate) fn eat_ident<I: Iterator<Item = Token>>(
                     toks.next();
                 }
                 if n.is_empty() {
-                    let c = toks.next().unwrap().kind;
+                    let c = toks.next().ok_or("expected \"{\".")?.kind;
                     if (c == '-' && !s.is_empty()) || c.is_ascii_alphabetic() {
                         s.push(c);
                     } else {
