@@ -301,11 +301,11 @@ error!(
     mixin_exists_non_string,
     "a {color: mixin-exists(12px)}", "Error: $name: 12px is not a string."
 );
-// test!(
-//     inspect_empty_list,
-//     "a {\n  color: inspect(())\n}\n",
-//     "a {\n  color: ();\n}\n"
-// );
+test!(
+    inspect_empty_list,
+    "a {\n  color: inspect(())\n}\n",
+    "a {\n  color: ();\n}\n"
+);
 test!(
     inspect_spaced_list,
     "a {\n  color: inspect(1 2 3)\n}\n",

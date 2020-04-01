@@ -298,11 +298,11 @@ test!(
     "a, %b, c {\n  color: red;\n}\n",
     "a, c {\n  color: red;\n}\n"
 );
-// test!(
-//     removes_leading_space,
-//     "#{&} a {\n  color: red;\n}\n",
-//     "a {\n  color: red;\n}\n"
-// );
+test!(
+    removes_leading_space,
+    "#{&} a {\n  color: red;\n}\n",
+    "a {\n  color: red;\n}\n"
+);
 test!(allows_id_start_with_number, "#2foo {\n  color: red;\n}\n");
 test!(allows_id_only_number, "#2 {\n  color: red;\n}\n");
 test!(

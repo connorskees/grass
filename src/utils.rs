@@ -626,3 +626,79 @@ pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
     };
     Ok(Value::Ident(s, quotes))
 }
+
+pub(crate) fn read_until_closing_paren<I: Iterator<Item = Token>>(
+    toks: &mut Peekable<I>,
+) -> Vec<Token> {
+    let mut v = Vec::new();
+    let mut scope = 0;
+    while let Some(tok) = toks.next() {
+        match tok.kind {
+            ')' => {
+                if scope < 1 {
+                    v.push(tok);
+                    return v;
+                } else {
+                    scope -= 1;
+                }
+            }
+            '(' => scope += 1,
+            '"' | '\'' => {
+                v.push(tok.clone());
+                v.extend(read_until_closing_quote(toks, tok.kind));
+                continue;
+            }
+            _ => {}
+        }
+        v.push(tok)
+    }
+    v
+}
+
+pub(crate) fn read_until_closing_square_brace<I: Iterator<Item = Token>>(
+    toks: &mut Peekable<I>,
+) -> Vec<Token> {
+    let mut v = Vec::new();
+    let mut scope = 0;
+    while let Some(tok) = toks.next() {
+        match tok.kind {
+            ']' => {
+                if scope < 1 {
+                    v.push(tok);
+                    return v;
+                } else {
+                    scope -= 1;
+                }
+            }
+            '[' => scope += 1,
+            '"' | '\'' => {
+                v.push(tok.clone());
+                v.extend(read_until_closing_quote(toks, tok.kind));
+                continue;
+            }
+            _ => {}
+        }
+        v.push(tok)
+    }
+    v
+}
+
+pub(crate) fn read_until_char<I: Iterator<Item = Token>>(
+    toks: &mut Peekable<I>,
+    c: char,
+) -> Vec<Token> {
+    let mut v = Vec::new();
+    while let Some(tok) = toks.next() {
+        match tok.kind {
+            '"' | '\'' => {
+                v.push(tok.clone());
+                v.extend(read_until_closing_quote(toks, tok.kind));
+                continue;
+            }
+            t if t == c => break,
+            _ => {}
+        }
+        v.push(tok)
+    }
+    v
+}

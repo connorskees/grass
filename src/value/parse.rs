@@ -1,5 +1,6 @@
 use std::convert::TryFrom;
 use std::iter::{Iterator, Peekable};
+use std::mem;
 
 use num_bigint::BigInt;
 use num_rational::BigRational;
@@ -15,7 +16,8 @@ use crate::selector::Selector;
 use crate::unit::Unit;
 use crate::utils::{
     devour_whitespace, eat_comment, eat_ident, eat_ident_no_interpolation, eat_number,
-    parse_interpolation, parse_quoted_string, read_until_newline,
+    parse_interpolation, parse_quoted_string, read_until_char, read_until_closing_paren,
+    read_until_closing_square_brace, read_until_newline, IsWhitespace,
 };
 use crate::value::Value;
 use crate::Token;
@@ -115,211 +117,233 @@ fn parse_hex<I: Iterator<Item = Token>>(
     }
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum IntermediateValue {
+    Value(Value),
+    Op(Op),
+    Bracketed(Vec<Token>),
+    Paren(Vec<Token>),
+    Comma,
+    Whitespace,
+}
+
+impl IsWhitespace for IntermediateValue {
+    fn is_whitespace(&self) -> bool {
+        if self == &IntermediateValue::Whitespace {
+            return true;
+        }
+        false
+    }
+}
+
+fn eat_op<I: Iterator<Item = IntermediateValue>>(
+    iter: &mut Peekable<I>,
+    scope: &Scope,
+    super_selector: &Selector,
+    op: Op,
+    space_separated: &mut Vec<Value>,
+) -> SassResult<()> {
+    match op {
+        Op::Plus => {
+            if let Some(left) = space_separated.pop() {
+                devour_whitespace(iter);
+                let right = single_value(iter, scope, super_selector)?;
+                space_separated.push(Value::BinaryOp(Box::new(left), op, Box::new(right)));
+            } else {
+                devour_whitespace(iter);
+                let right = single_value(iter, scope, super_selector)?;
+                space_separated.push(Value::UnaryOp(op, Box::new(right)));
+            }
+        }
+        Op::Minus => {
+            if devour_whitespace(iter) {
+                let right = single_value(iter, scope, super_selector)?;
+                if let Some(left) = space_separated.pop() {
+                    space_separated.push(Value::BinaryOp(Box::new(left), op, Box::new(right)));
+                } else {
+                    space_separated.push(Value::UnaryOp(op, Box::new(right)));
+                }
+            } else {
+                let right = single_value(iter, scope, super_selector)?;
+                space_separated.push(Value::UnaryOp(op, Box::new(right)));
+            }
+        }
+        _ => {
+            if let Some(left) = space_separated.pop() {
+                devour_whitespace(iter);
+                let right = single_value(iter, scope, super_selector)?;
+                space_separated.push(Value::BinaryOp(Box::new(left), op, Box::new(right)));
+            } else {
+                return Err("Expected expression.".into());
+            }
+        }
+    }
+    Ok(())
+}
+
+fn single_value<I: Iterator<Item = IntermediateValue>>(
+    iter: &mut Peekable<I>,
+    scope: &Scope,
+    super_selector: &Selector,
+) -> SassResult<Value> {
+    Ok(match iter.next().unwrap() {
+        IntermediateValue::Value(v) => v,
+        IntermediateValue::Op(op) => match op {
+            Op::Minus => {
+                devour_whitespace(iter);
+                (-single_value(iter, scope, super_selector)?)?
+            }
+            _ => todo!(),
+        },
+        IntermediateValue::Whitespace => unreachable!(),
+        IntermediateValue::Comma => return Err("Expected expression.".into()),
+        IntermediateValue::Bracketed(t) => {
+            match Value::from_tokens(&mut t.into_iter().peekable(), scope, super_selector)? {
+                Value::List(v, sep, Brackets::None) => Value::List(v, sep, Brackets::Bracketed),
+                v => Value::List(vec![v], ListSeparator::Space, Brackets::Bracketed),
+            }
+        }
+        IntermediateValue::Paren(t) => {
+            let inner = Value::from_tokens(&mut t.into_iter().peekable(), scope, super_selector)?;
+            Value::Paren(Box::new(inner))
+        }
+    })
+}
+
 impl Value {
     pub fn from_tokens<I: Iterator<Item = Token>>(
         toks: &mut Peekable<I>,
         scope: &Scope,
         super_selector: &Selector,
     ) -> SassResult<Self> {
-        let left = Self::_from_tokens(toks, scope, super_selector)?;
-        devour_whitespace(toks);
-        let next = match toks.peek() {
-            Some(x) => x,
-            None => return Ok(left),
-        };
-        match next.kind {
-            ';' | ')' | ']' | ':' => Ok(left),
-            ',' => {
-                toks.next();
-                devour_whitespace(toks);
-                if toks.peek() == None {
-                    return Ok(Value::List(
-                        vec![left],
-                        ListSeparator::Comma,
-                        Brackets::None,
-                    ));
-                } else if let Some(tok) = toks.peek() {
-                    if tok.kind == ')' {
-                        return Ok(Value::List(
-                            vec![left],
-                            ListSeparator::Comma,
-                            Brackets::None,
-                        ));
-                    } else if tok.kind == ']' {
-                        return Ok(Value::List(
-                            vec![left],
-                            ListSeparator::Comma,
-                            Brackets::Bracketed,
-                        ));
-                    }
+        let mut intermediate_values = Vec::new();
+        while toks.peek().is_some() {
+            intermediate_values.push(Self::parse_intermediate_value(toks, scope, super_selector)?);
+        }
+        let mut space_separated = Vec::new();
+        let mut comma_separated = Vec::new();
+        let mut iter = intermediate_values.into_iter().peekable();
+        while let Some(val) = iter.next() {
+            match val {
+                IntermediateValue::Value(v) => space_separated.push(v),
+                IntermediateValue::Op(op) => {
+                    eat_op(&mut iter, scope, super_selector, op, &mut space_separated)?;
                 }
-                let right = Self::from_tokens(toks, scope, super_selector)?;
-                if let Value::List(v, ListSeparator::Comma, Brackets::None) = right {
-                    let mut v2 = vec![left];
-                    v2.extend(v);
-                    Ok(Value::List(v2, ListSeparator::Comma, Brackets::None))
-                } else {
-                    Ok(Value::List(
-                        vec![left, right],
-                        ListSeparator::Comma,
-                        Brackets::None,
-                    ))
-                }
-            }
-            '+' | '*' | '%' => {
-                let op = match next.kind {
-                    '+' => Op::Plus,
-                    '*' => Op::Mul,
-                    '%' => Op::Rem,
-                    _ => unsafe { std::hint::unreachable_unchecked() },
-                };
-                toks.next();
-                devour_whitespace(toks);
-                let right = Self::from_tokens(toks, scope, super_selector)?;
-                Ok(Value::BinaryOp(Box::new(left), op, Box::new(right)))
-            }
-            '=' => {
-                toks.next();
-                if toks.peek().unwrap().kind == '=' {
-                    toks.next();
-                    devour_whitespace(toks);
-                    let right = Self::from_tokens(toks, scope, super_selector)?;
-                    Ok(Value::BinaryOp(Box::new(left), Op::Equal, Box::new(right)))
-                } else {
-                    Err("expected \"=\".".into())
-                }
-            }
-            q @ '>' | q @ '<' => {
-                toks.next();
-                let op = if toks.peek().unwrap().kind == '=' {
-                    toks.next();
-                    match q {
-                        '>' => Op::GreaterThanEqual,
-                        '<' => Op::LessThanEqual,
-                        _ => unreachable!(),
-                    }
-                } else {
-                    match q {
-                        '>' => Op::GreaterThan,
-                        '<' => Op::LessThan,
-                        _ => unreachable!(),
-                    }
-                };
-                devour_whitespace(toks);
-                let right = Self::from_tokens(toks, scope, super_selector)?;
-                Ok(Value::BinaryOp(Box::new(left), op, Box::new(right)))
-            }
-            '!' => {
-                toks.next();
-                devour_whitespace(toks);
-                if toks.peek().unwrap().kind == '=' {
-                    toks.next();
-                    devour_whitespace(toks);
-                    let right = Self::from_tokens(toks, scope, super_selector)?;
-                    Ok(Value::BinaryOp(
-                        Box::new(left),
-                        Op::NotEqual,
-                        Box::new(right),
-                    ))
-                } else if eat_ident(toks, scope, super_selector)?
-                    .to_ascii_lowercase()
-                    .as_str()
-                    == "important"
-                {
-                    Ok(Value::List(
-                        vec![left, Value::Important],
-                        ListSeparator::Space,
-                        Brackets::None,
-                    ))
-                } else {
-                    Err("Expected \"important\".".into())
-                }
-            }
-            '-' => {
-                toks.next();
-                if devour_whitespace(toks) {
-                    let right = Self::from_tokens(toks, scope, super_selector)?;
-                    Ok(Value::BinaryOp(Box::new(left), Op::Minus, Box::new(right)))
-                } else {
-                    let right = Self::from_tokens(toks, scope, super_selector)?;
-                    if let Value::List(mut v, ListSeparator::Space, ..) = right {
-                        let mut v2 = vec![left];
-                        let val = v.remove(0);
-                        v2.push((-val)?);
-                        v2.extend(v);
-                        Ok(Value::List(v2, ListSeparator::Space, Brackets::None))
+                IntermediateValue::Whitespace => continue,
+                IntermediateValue::Comma => {
+                    if space_separated.len() == 1 {
+                        comma_separated.push(space_separated.pop().unwrap());
                     } else {
-                        Ok(Value::List(
-                            vec![left, (-right)?],
+                        comma_separated.push(Value::List(
+                            mem::take(&mut space_separated),
                             ListSeparator::Space,
                             Brackets::None,
-                        ))
+                        ));
                     }
                 }
-            }
-            '/' => {
-                toks.next();
-                match toks.peek().unwrap().kind {
-                    v @ '*' | v @ '/' => {
-                        toks.next();
-                        if v == '*' {
-                            eat_comment(toks, &Scope::new(), &Selector::new())?;
-                        } else {
-                            read_until_newline(toks);
-                        }
-                        devour_whitespace(toks);
-                        if toks.peek().is_none() {
-                            return Ok(left);
-                        }
-                        let right = Self::from_tokens(toks, scope, super_selector)?;
-                        if let Value::List(v, ListSeparator::Space, ..) = right {
-                            let mut v2 = vec![left];
-                            v2.extend(v);
-                            Ok(Value::List(v2, ListSeparator::Space, Brackets::None))
-                        } else {
-                            Ok(Value::List(
-                                vec![left, right],
-                                ListSeparator::Space,
-                                Brackets::None,
-                            ))
+                IntermediateValue::Bracketed(t) => space_separated.push(match Value::from_tokens(
+                    &mut t.into_iter().peekable(),
+                    scope,
+                    super_selector,
+                )? {
+                    Value::List(v, sep, Brackets::None) => Value::List(v, sep, Brackets::Bracketed),
+                    v => Value::List(vec![v], ListSeparator::Space, Brackets::Bracketed),
+                }),
+                IntermediateValue::Paren(t) => {
+                    if t.is_empty() {
+                        space_separated.push(Value::List(
+                            Vec::new(),
+                            ListSeparator::Space,
+                            Brackets::None,
+                        ));
+                        continue;
+                    }
+
+                    let paren_toks = &mut t.into_iter().peekable();
+
+                    let mut map = SassMap::new();
+                    let key = Value::from_tokens(
+                        &mut read_until_char(paren_toks, ':').into_iter().peekable(),
+                        scope,
+                        super_selector,
+                    )?;
+
+                    if paren_toks.peek().is_none() {
+                        space_separated.push(Value::Paren(Box::new(key)));
+                        continue;
+                    }
+
+                    let val = Self::from_tokens(
+                        &mut read_until_char(paren_toks, ',').into_iter().peekable(),
+                        scope,
+                        super_selector,
+                    )?;
+
+                    map.insert(key, val);
+
+                    if paren_toks.peek().is_none() {
+                        space_separated.push(Value::Map(map));
+                        continue;
+                    }
+
+                    loop {
+                        let key = Value::from_tokens(
+                            &mut read_until_char(paren_toks, ':').into_iter().peekable(),
+                            scope,
+                            super_selector,
+                        )?;
+                        devour_whitespace(paren_toks);
+                        let val = Self::from_tokens(
+                            &mut read_until_char(paren_toks, ',').into_iter().peekable(),
+                            scope,
+                            super_selector,
+                        )?;
+                        devour_whitespace(paren_toks);
+                        map.insert(key, val);
+                        if paren_toks.peek().is_none() {
+                            break;
                         }
                     }
-                    _ => {
-                        devour_whitespace(toks);
-                        let right = Self::from_tokens(toks, scope, super_selector)?;
-                        Ok(Value::BinaryOp(Box::new(left), Op::Div, Box::new(right)))
-                    }
-                }
-            }
-            _ => {
-                devour_whitespace(toks);
-                let right = Self::from_tokens(toks, scope, super_selector)?;
-                if let Value::List(v, ListSeparator::Space, ..) = right {
-                    let mut v2 = vec![left];
-                    v2.extend(v);
-                    Ok(Value::List(v2, ListSeparator::Space, Brackets::None))
-                } else {
-                    Ok(Value::List(
-                        vec![left, right],
-                        ListSeparator::Space,
-                        Brackets::None,
-                    ))
+                    space_separated.push(Value::Map(map))
                 }
             }
         }
+
+        Ok(if comma_separated.len() > 0 {
+            if space_separated.len() == 1 {
+                comma_separated.push(space_separated.pop().unwrap());
+            } else if !space_separated.is_empty() {
+                comma_separated.push(Value::List(
+                    space_separated,
+                    ListSeparator::Space,
+                    Brackets::None,
+                ));
+            }
+            Value::List(comma_separated, ListSeparator::Comma, Brackets::None)
+        } else if space_separated.len() == 1 {
+            space_separated.pop().unwrap()
+        } else {
+            Value::List(space_separated, ListSeparator::Space, Brackets::None)
+        })
     }
 
-    fn _from_tokens<I: Iterator<Item = Token>>(
+    fn parse_intermediate_value<I: Iterator<Item = Token>>(
         toks: &mut Peekable<I>,
         scope: &Scope,
         super_selector: &Selector,
-    ) -> SassResult<Self> {
-        let kind = if let Some(tok) = toks.peek() {
-            tok.kind
-        } else {
-            panic!("Unexpected EOF");
+    ) -> SassResult<IntermediateValue> {
+        if devour_whitespace(toks) {
+            return Ok(IntermediateValue::Whitespace);
+        }
+        let kind = match toks.peek() {
+            Some(v) => v.kind,
+            None => panic!("unexpected eof"),
         };
         match kind {
+            ',' => {
+                toks.next();
+                Ok(IntermediateValue::Comma)
+            }
             '0'..='9' | '.' => {
                 let val = eat_number(toks)?;
                 let unit = if let Some(tok) = toks.peek() {
@@ -356,77 +380,36 @@ impl Value {
                     }
                     BigRational::new(num.parse().unwrap(), pow(BigInt::from(10), num_dec))
                 };
-                Ok(Value::Dimension(Number::new(n), unit))
+                Ok(IntermediateValue::Value(Value::Dimension(
+                    Number::new(n),
+                    unit,
+                )))
             }
             '(' => {
                 toks.next();
-                devour_whitespace(toks);
-                if toks.peek().ok_or("expected \")\".")?.kind == ')' {
-                    toks.next();
-                    devour_whitespace(toks);
-                    return Ok(Value::List(
-                        Vec::new(),
-                        ListSeparator::Space,
-                        Brackets::None,
-                    ));
+                let mut inner = read_until_closing_paren(toks);
+                // todo: the above shouldn't eat the closing paren
+                if inner.len() > 0 && inner.pop().unwrap().kind != ')' {
+                    return Err("expected \")\".".into());
                 }
-                let mut map = SassMap::new();
-                let mut key = Self::from_tokens(toks, scope, super_selector)?;
-                match toks.next().ok_or("expected \")\".")?.kind {
-                    ')' => return Ok(Value::Paren(Box::new(key))),
-                    ':' => {}
-                    _ => unreachable!(),
-                };
-                loop {
-                    devour_whitespace(toks);
-                    match Self::from_tokens(toks, scope, super_selector)? {
-                        Value::List(mut v, ListSeparator::Comma, Brackets::None) => {
-                            devour_whitespace(toks);
-                            match v.len() {
-                                1 => {
-                                    map.insert(key, v.pop().unwrap());
-                                    if toks.peek().is_some() && toks.peek().unwrap().kind == ')' {
-                                        toks.next();
-                                    } else {
-                                        todo!()
-                                    }
-                                    break;
-                                }
-                                2 => {
-                                    let next_key = v.pop().unwrap();
-                                    map.insert(key, v.pop().unwrap());
-                                    key = next_key;
-                                    if toks.next().ok_or("expected \")\".")?.kind == ':' {
-                                        continue;
-                                    } else {
-                                        todo!()
-                                    }
-                                }
-                                _ => todo!(),
-                            }
-                        }
-                        v => {
-                            map.insert(key, v);
-                            if toks.peek().is_some() && toks.peek().unwrap().kind == ')' {
-                                toks.next();
-                                break;
-                            } else {
-                                todo!()
-                            }
-                        }
-                    }
-                }
-                Ok(Value::Map(map))
+                Ok(IntermediateValue::Paren(inner))
             }
             '&' => {
                 toks.next();
-                Ok(Value::Ident(super_selector.to_string(), QuoteKind::None))
+                Ok(IntermediateValue::Value(Value::Ident(
+                    super_selector.to_string(),
+                    QuoteKind::None,
+                )))
             }
             '#' => {
                 if let Ok(s) = eat_ident(toks, scope, super_selector) {
-                    Ok(Value::Ident(s, QuoteKind::None))
+                    Ok(IntermediateValue::Value(Value::Ident(s, QuoteKind::None)))
                 } else {
-                    Ok(parse_hex(toks, scope, super_selector)?)
+                    Ok(IntermediateValue::Value(parse_hex(
+                        toks,
+                        scope,
+                        super_selector,
+                    )?))
                 }
             }
             _ if kind.is_ascii_alphabetic()
@@ -442,10 +425,10 @@ impl Value {
                             Ok(f) => f,
                             Err(_) => match GLOBAL_FUNCTIONS.get(&s) {
                                 Some(f) => {
-                                    return f(
+                                    return Ok(IntermediateValue::Value(f(
                                         &mut eat_call_args(toks, scope, super_selector)?,
                                         scope,
-                                    )
+                                    )?))
                                 }
                                 None => {
                                     s.push('(');
@@ -480,24 +463,31 @@ impl Value {
                                         }
                                         s.push_str(&t.kind.to_string());
                                     }
-                                    return Ok(Value::Ident(s, QuoteKind::None));
+                                    return Ok(IntermediateValue::Value(Value::Ident(
+                                        s,
+                                        QuoteKind::None,
+                                    )));
                                 }
                             },
                         };
-                        Ok(func
-                            .clone()
-                            .args(&mut eat_call_args(toks, scope, super_selector)?)?
-                            .call(super_selector, func.body())?)
+                        Ok(IntermediateValue::Value(
+                            func.clone()
+                                .args(&mut eat_call_args(toks, scope, super_selector)?)?
+                                .call(super_selector, func.body())?,
+                        ))
                     }
                     _ => {
                         if let Ok(c) = crate::color::ColorName::try_from(s.as_ref()) {
-                            Ok(Value::Color(c.into_color(s)))
+                            Ok(IntermediateValue::Value(Value::Color(c.into_color(s))))
                         } else {
                             match s.to_ascii_lowercase().as_str() {
-                                "true" => Ok(Value::True),
-                                "false" => Ok(Value::False),
-                                "null" => Ok(Value::Null),
-                                _ => Ok(Value::Ident(s, QuoteKind::None)),
+                                "true" => Ok(IntermediateValue::Value(Value::True)),
+                                "false" => Ok(IntermediateValue::Value(Value::False)),
+                                "null" => Ok(IntermediateValue::Value(Value::Null)),
+                                // "not" => Ok(IntermediateValue::Op(Op::Not)),
+                                // "and" => Ok(IntermediateValue::Op(Op::And)),
+                                // "or" => Ok(IntermediateValue::Op(Op::Or)),
+                                _ => Ok(IntermediateValue::Value(Value::Ident(s, QuoteKind::None))),
                             }
                         }
                     }
@@ -505,51 +495,77 @@ impl Value {
             }
             q @ '"' | q @ '\'' => {
                 toks.next();
-                parse_quoted_string(toks, scope, q, super_selector)
+                Ok(IntermediateValue::Value(parse_quoted_string(
+                    toks,
+                    scope,
+                    q,
+                    super_selector,
+                )?))
             }
             '[' => {
                 toks.next();
-                if let Some(tok) = toks.peek() {
-                    if tok.kind == ']' {
-                        toks.next();
-                        return Ok(Value::List(
-                            Vec::new(),
-                            ListSeparator::Space,
-                            Brackets::Bracketed,
-                        ));
-                    }
-                }
-                let inner = Self::from_tokens(toks, scope, super_selector)?;
-                devour_whitespace(toks);
-                toks.next();
-                Ok(match inner {
-                    Value::List(v, sep, ..) => Value::List(v, sep, Brackets::Bracketed),
-                    v => Value::List(vec![v], ListSeparator::Space, Brackets::Bracketed),
-                })
+                let mut inner = read_until_closing_square_brace(toks);
+                inner.pop();
+                Ok(IntermediateValue::Bracketed(inner))
             }
             '$' => {
                 toks.next();
-                Ok(scope.get_var(&eat_ident_no_interpolation(toks)?)?)
+                Ok(IntermediateValue::Value(
+                    scope.get_var(&eat_ident_no_interpolation(toks)?)?,
+                ))
             }
             '@' => Err("expected \";\".".into()),
             '+' => {
                 toks.next();
-                devour_whitespace(toks);
-                let v = Self::_from_tokens(toks, scope, super_selector)?;
-                Ok(Value::UnaryOp(Op::Plus, Box::new(v)))
+                Ok(IntermediateValue::Op(Op::Plus))
             }
             '-' => {
                 toks.next();
-                devour_whitespace(toks);
-                let v = Self::_from_tokens(toks, scope, super_selector)?;
-                Ok(Value::UnaryOp(Op::Minus, Box::new(v)))
+                Ok(IntermediateValue::Op(Op::Minus))
+            }
+            '*' => {
+                toks.next();
+                Ok(IntermediateValue::Op(Op::Mul))
+            }
+            '%' => {
+                toks.next();
+                Ok(IntermediateValue::Op(Op::Rem))
+            }
+            q @ '>' | q @ '<' => {
+                toks.next();
+                Ok(IntermediateValue::Op(if toks.peek().unwrap().kind == '=' {
+                    toks.next();
+                    match q {
+                        '>' => Op::GreaterThanEqual,
+                        '<' => Op::LessThanEqual,
+                        _ => unreachable!(),
+                    }
+                } else {
+                    match q {
+                        '>' => Op::GreaterThan,
+                        '<' => Op::LessThan,
+                        _ => unreachable!(),
+                    }
+                }))
+            }
+            '=' => {
+                toks.next();
+                if toks.next().unwrap().kind == '=' {
+                    Ok(IntermediateValue::Op(Op::Equal))
+                } else {
+                    Err("expected \"=\".".into())
+                }
             }
             '!' => {
                 toks.next();
+                if toks.peek().is_some() && toks.peek().unwrap().kind == '=' {
+                    toks.next();
+                    return Ok(IntermediateValue::Op(Op::NotEqual));
+                }
                 devour_whitespace(toks);
                 let v = eat_ident(toks, scope, super_selector)?;
                 if v.to_ascii_lowercase().as_str() == "important" {
-                    Ok(Value::Important)
+                    Ok(IntermediateValue::Value(Value::Important))
                 } else {
                     Err("Expected \"important\".".into())
                 }
@@ -559,13 +575,13 @@ impl Value {
                 if '*' == toks.peek().unwrap().kind {
                     toks.next();
                     eat_comment(toks, &Scope::new(), &Selector::new())?;
-                    Self::_from_tokens(toks, scope, super_selector)
+                    Ok(IntermediateValue::Whitespace)
                 } else if '/' == toks.peek().unwrap().kind {
                     read_until_newline(toks);
                     devour_whitespace(toks);
-                    Self::_from_tokens(toks, scope, super_selector)
+                    Ok(IntermediateValue::Whitespace)
                 } else {
-                    todo!()
+                    Ok(IntermediateValue::Op(Op::Div))
                 }
             }
             v if v.is_control() => Err("Expected expression.".into()),

@@ -1,6 +1,6 @@
 use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
 
-use crate::common::QuoteKind;
+use crate::common::{Op, QuoteKind};
 use crate::error::SassResult;
 use crate::unit::{Unit, UNIT_CONVERSION_TABLE};
 use crate::value::Value;
@@ -9,7 +9,10 @@ impl Add for Value {
     type Output = SassResult<Self>;
 
     fn add(self, mut other: Self) -> Self::Output {
-        other = other.eval()?;
+        if let Self::Paren(..) = other {
+            other = other.eval()?
+        }
+        let precedence = Op::Plus.precedence();
         Ok(match self {
             Self::Map(..) => todo!(),
             Self::Important | Self::True | Self::False => match other {
@@ -60,7 +63,19 @@ impl Add for Value {
                 Self::List(..) => Value::Ident(format!("{}{}", c, other), QuoteKind::None),
                 _ => return Err(format!("Undefined operation \"{} + {}\".", c, other).into()),
             },
-            Self::UnaryOp(..) | Self::BinaryOp(..) | Self::Paren(..) => (self.eval()? + other)?,
+            Self::BinaryOp(left, op, right) => {
+                if op.precedence() >= precedence {
+                    (Self::BinaryOp(left, op, right).eval()? + other)?
+                } else {
+                    Self::BinaryOp(
+                        left,
+                        op,
+                        Box::new(Self::BinaryOp(right, Op::Plus, Box::new(other)).eval()?),
+                    )
+                    .eval()?
+                }
+            }
+            Self::UnaryOp(..) | Self::Paren(..) => (self.eval()? + other)?,
             Self::Ident(s1, quotes1) => match other {
                 Self::Ident(s2, quotes2) => {
                     let quotes = match (quotes1, quotes2) {
@@ -78,7 +93,8 @@ impl Add for Value {
                 Self::Null => Value::Ident(s1, quotes1.normalize()),
                 Self::Color(c) => Value::Ident(format!("{}{}", s1, c), quotes1.normalize()),
                 Self::List(..) => Value::Ident(format!("{}{}", s1, other), quotes1),
-                Self::UnaryOp(..) | Self::BinaryOp(..) | Self::Paren(..) => todo!(),
+                Self::UnaryOp(..) | Self::BinaryOp(..) => todo!(),
+                Self::Paren(..) => (Self::Ident(s1, quotes1) + other.eval()?)?,
                 Self::Map(..) => todo!(),
             },
             Self::List(..) => match other {
@@ -218,7 +234,7 @@ impl Mul for Value {
                     )
                 }
             },
-            Self::BinaryOp(..) | Self::Paren(..) => self.eval()?,
+            Self::BinaryOp(..) | Self::Paren(..) => (self.eval()? * other)?,
             Self::UnaryOp(..) => (self.eval()? * other)?,
             _ => return Err(format!("Undefined operation \"{} * {}\".", self, other).into()),
         })
@@ -229,6 +245,8 @@ impl Div for Value {
     type Output = SassResult<Self>;
 
     fn div(self, other: Self) -> Self::Output {
+        let precedence = Op::Div.precedence();
+        dbg!(&self, &other);
         Ok(match self {
             Self::Null => todo!(),
             Self::Dimension(num, unit) => match other {
@@ -271,7 +289,19 @@ impl Div for Value {
                 }
                 _ => Value::Ident(format!("{}/{}", c, other), QuoteKind::None),
             },
-            Self::BinaryOp(..) | Self::Paren(..) => self.eval()?,
+            Self::BinaryOp(left, op, right) => {
+                if op.precedence() >= precedence {
+                    (Self::BinaryOp(left, op, right).eval()? / other)?
+                } else {
+                    Self::BinaryOp(
+                        left,
+                        op,
+                        Box::new(Self::BinaryOp(right, Op::Div, Box::new(other)).eval()?),
+                    )
+                    .eval()?
+                }
+            }
+            Self::Paren(..) => (self.eval()? / other)?,
             Self::Ident(s1, q1) => match other {
                 Self::Ident(s2, q2) => Value::Ident(
                     format!(

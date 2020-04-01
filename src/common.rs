@@ -33,6 +33,27 @@ impl Display for Op {
     }
 }
 
+impl Op {
+    /// Get order of precedence for an operator
+    ///
+    /// Higher numbers are evaluated first.
+    /// Do not rely on the number itself, but rather the size relative to other numbers
+    ///
+    /// If precedence is equal, the leftmost operation is evaluated first
+    pub fn precedence(&self) -> usize {
+        match self {
+            Self::Equal
+            | Self::NotEqual
+            | Self::GreaterThan
+            | Self::GreaterThanEqual
+            | Self::LessThan
+            | Self::LessThanEqual => 0,
+            Self::Plus | Self::Minus => 1,
+            Self::Mul | Self::Div | Self::Rem => 2,
+        }
+    }
+}
+
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct Pos {
     line: u32,

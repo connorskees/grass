@@ -6,7 +6,8 @@ use crate::error::SassResult;
 use crate::scope::Scope;
 use crate::selector::Selector;
 use crate::utils::{
-    devour_whitespace, devour_whitespace_or_comment, eat_ident, read_until_closing_quote,
+    devour_whitespace, devour_whitespace_or_comment, eat_ident, read_until_closing_paren,
+    read_until_closing_quote, read_until_closing_square_brace,
 };
 use crate::value::Value;
 use crate::Token;
@@ -182,11 +183,11 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
                 ',' => break,
                 '[' => {
                     val.push(tok);
-                    val.extend(read_until_close_square_brace(toks));
+                    val.extend(read_until_closing_square_brace(toks));
                 }
                 '(' => {
                     val.push(tok);
-                    val.extend(read_until_close_paren(toks));
+                    val.extend(read_until_closing_paren(toks));
                 }
                 '"' | '\'' => {
                     val.push(tok);
@@ -211,46 +212,4 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
             return Ok(CallArgs(args));
         }
     }
-}
-
-fn read_until_close_paren<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -> Vec<Token> {
-    let mut v = Vec::new();
-    let mut scope = 0;
-    for tok in toks {
-        match tok.kind {
-            ')' => {
-                if scope < 1 {
-                    v.push(tok);
-                    return v;
-                } else {
-                    scope -= 1;
-                }
-            }
-            '(' => scope += 1,
-            _ => {}
-        }
-        v.push(tok)
-    }
-    v
-}
-
-fn read_until_close_square_brace<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -> Vec<Token> {
-    let mut v = Vec::new();
-    let mut scope = 0;
-    for tok in toks {
-        match tok.kind {
-            ']' => {
-                if scope <= 1 {
-                    v.push(tok);
-                    return v;
-                } else {
-                    scope -= 1;
-                }
-            }
-            '[' => scope += 1,
-            _ => {}
-        }
-        v.push(tok)
-    }
-    v
 }

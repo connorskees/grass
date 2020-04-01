@@ -53,13 +53,11 @@ test!(
     "a {\n  color: list-separator((a, b, c));\n}\n",
     "a {\n  color: comma;\n}\n"
 );
-// blocked on better parsing of comma separated lists with
-// space separated lists inside
-// test!(
-//     list_separator_comma_separated_with_space,
-//     "a {\n  color: list-separator(((a b, c d)));\n}\n",
-//     "a {\n  color: comma;\n}\n"
-// );
+test!(
+    list_separator_comma_separated_with_space,
+    "a {\n  color: list-separator(((a b, c d)));\n}\n",
+    "a {\n  color: comma;\n}\n"
+);
 test!(
     set_nth_named_args,
     "a {\n  color: set-nth($list: 1 2 3, $n: 2, $value: foo);\n}\n",
@@ -178,4 +176,16 @@ test!(
     removes_paren_around_item_in_list,
     "a {\n  color: 1 (foo bar);\n}\n",
     "a {\n  color: 1 foo bar;\n}\n"
+);
+test!(
+    long_space_separated_list,
+    "a {\n  color: a b c d e f g h i j k l m n o p q r s t u v w x y z;\n}\n"
+);
+test!(
+    long_comma_separated_list,
+    "a {\n  color: a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z;\n}\n"
+);
+test!(
+    deeply_nested_square_braces,
+    "a {\n  color: [[[[[[a]]]]]];\n}\n"
 );

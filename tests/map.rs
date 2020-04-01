@@ -93,12 +93,12 @@ error!(
 );
 test!(
     map_dbl_quoted_key,
-    "a {\n  color: map-get((\"a\": b), \"a\"));\n}\n",
+    "a {\n  color: map-get((\"a\": b), \"a\");\n}\n",
     "a {\n  color: b;\n}\n"
 );
 test!(
     map_key_quoting_ignored,
-    "a {\n  color: map-get((\"a\": b), 'a'));\n}\n",
+    "a {\n  color: map-get((\"a\": b), 'a');\n}\n",
     "a {\n  color: b;\n}\n"
 );
 test!(

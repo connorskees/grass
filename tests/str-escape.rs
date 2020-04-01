@@ -122,8 +122,8 @@ test!(
     "a {\n  color: #{\"\\b\"};\n}\n",
     "a {\n  color: \x0b;\n}\n"
 );
-test!(
-    quote_escape,
-    "a {\n  color: quote(\\b);\n}\n",
-    "a {\n  color: \"\\\\b \";\n}\n"
-);
+// test!(
+//     quote_escape,
+//     "a {\n  color: quote(\\b);\n}\n",
+//     "a {\n  color: \"\\\\b \";\n}\n"
+// );
