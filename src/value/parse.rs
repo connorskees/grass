@@ -606,7 +606,7 @@ impl Value {
                     Ok(IntermediateValue::Op(Op::Div))
                 }
             }
-            ':' => Err("expected \";\".".into()),
+            ':' | '?' => Err("expected \";\".".into()),
             v if v.is_control() => Err("Expected expression.".into()),
             v => {
                 dbg!(v);

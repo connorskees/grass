@@ -20,6 +20,10 @@ error!(
     "a {@return foo;}", "Error: This at-rule is not allowed here."
 );
 error!(
-    colon_inside_style,
+    colon_inside_value,
     "a {foo: bar: baz;}", "Error: expected \";\"."
+);
+error!(
+    question_mark_inside_value,
+    "a {foo: bar?}", "Error: expected \";\"."
 );
