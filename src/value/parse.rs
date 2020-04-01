@@ -348,6 +348,81 @@ impl Value {
         })
     }
 
+    fn ident<I: Iterator<Item = Token>>(
+        toks: &mut Peekable<I>,
+        scope: &Scope,
+        super_selector: &Selector,
+    ) -> SassResult<IntermediateValue> {
+        let mut s = eat_ident(toks, scope, super_selector)?;
+        match toks.peek() {
+            Some(Token { kind: '(', .. }) => {
+                toks.next();
+                let func = match scope.get_fn(&s) {
+                    Ok(f) => f,
+                    Err(_) => match GLOBAL_FUNCTIONS.get(&s) {
+                        Some(f) => {
+                            return Ok(IntermediateValue::Value(f(
+                                &mut eat_call_args(toks, scope, super_selector)?,
+                                scope,
+                            )?))
+                        }
+                        None => {
+                            s.push('(');
+                            let mut unclosed_parens = 0;
+                            while let Some(t) = toks.next() {
+                                match &t.kind {
+                                    '(' => {
+                                        unclosed_parens += 1;
+                                    }
+                                    '#' if toks.next().unwrap().kind == '{' => s.push_str(
+                                        &parse_interpolation(toks, scope, super_selector)?
+                                            .to_string(),
+                                    ),
+                                    '$' => s.push_str(
+                                        &scope
+                                            .get_var(&eat_ident(toks, scope, super_selector)?)?
+                                            .to_string(),
+                                    ),
+                                    ')' => {
+                                        if unclosed_parens <= 1 {
+                                            s.push(')');
+                                            break;
+                                        } else {
+                                            unclosed_parens -= 1;
+                                        }
+                                    }
+                                    _ => {}
+                                }
+                                s.push_str(&t.kind.to_string());
+                            }
+                            return Ok(IntermediateValue::Value(Value::Ident(s, QuoteKind::None)));
+                        }
+                    },
+                };
+                Ok(IntermediateValue::Value(
+                    func.clone()
+                        .args(&mut eat_call_args(toks, scope, super_selector)?)?
+                        .call(super_selector, func.body())?,
+                ))
+            }
+            _ => {
+                if let Ok(c) = crate::color::ColorName::try_from(s.as_ref()) {
+                    Ok(IntermediateValue::Value(Value::Color(c.into_color(s))))
+                } else {
+                    match s.to_ascii_lowercase().as_str() {
+                        "true" => Ok(IntermediateValue::Value(Value::True)),
+                        "false" => Ok(IntermediateValue::Value(Value::False)),
+                        "null" => Ok(IntermediateValue::Value(Value::Null)),
+                        "not" => Ok(IntermediateValue::Op(Op::Not)),
+                        "and" => Ok(IntermediateValue::Op(Op::And)),
+                        "or" => Ok(IntermediateValue::Op(Op::Or)),
+                        _ => Ok(IntermediateValue::Value(Value::Ident(s, QuoteKind::None))),
+                    }
+                }
+            }
+        }
+    }
+
     fn parse_intermediate_value<I: Iterator<Item = Token>>(
         toks: &mut Peekable<I>,
         scope: &Scope,
@@ -438,81 +513,7 @@ impl Value {
                 || kind == '\\'
                 || (!kind.is_ascii() && !kind.is_control()) =>
             {
-                let mut s = eat_ident(toks, scope, super_selector)?;
-                match toks.peek() {
-                    Some(Token { kind: '(', .. }) => {
-                        toks.next();
-                        let func = match scope.get_fn(&s) {
-                            Ok(f) => f,
-                            Err(_) => match GLOBAL_FUNCTIONS.get(&s) {
-                                Some(f) => {
-                                    return Ok(IntermediateValue::Value(f(
-                                        &mut eat_call_args(toks, scope, super_selector)?,
-                                        scope,
-                                    )?))
-                                }
-                                None => {
-                                    s.push('(');
-                                    let mut unclosed_parens = 0;
-                                    while let Some(t) = toks.next() {
-                                        match &t.kind {
-                                            '(' => {
-                                                unclosed_parens += 1;
-                                            }
-                                            '#' if toks.next().unwrap().kind == '{' => s.push_str(
-                                                &parse_interpolation(toks, scope, super_selector)?
-                                                    .to_string(),
-                                            ),
-                                            '$' => s.push_str(
-                                                &scope
-                                                    .get_var(&eat_ident(
-                                                        toks,
-                                                        scope,
-                                                        super_selector,
-                                                    )?)?
-                                                    .to_string(),
-                                            ),
-                                            ')' => {
-                                                if unclosed_parens <= 1 {
-                                                    s.push(')');
-                                                    break;
-                                                } else {
-                                                    unclosed_parens -= 1;
-                                                }
-                                            }
-                                            _ => {}
-                                        }
-                                        s.push_str(&t.kind.to_string());
-                                    }
-                                    return Ok(IntermediateValue::Value(Value::Ident(
-                                        s,
-                                        QuoteKind::None,
-                                    )));
-                                }
-                            },
-                        };
-                        Ok(IntermediateValue::Value(
-                            func.clone()
-                                .args(&mut eat_call_args(toks, scope, super_selector)?)?
-                                .call(super_selector, func.body())?,
-                        ))
-                    }
-                    _ => {
-                        if let Ok(c) = crate::color::ColorName::try_from(s.as_ref()) {
-                            Ok(IntermediateValue::Value(Value::Color(c.into_color(s))))
-                        } else {
-                            match s.to_ascii_lowercase().as_str() {
-                                "true" => Ok(IntermediateValue::Value(Value::True)),
-                                "false" => Ok(IntermediateValue::Value(Value::False)),
-                                "null" => Ok(IntermediateValue::Value(Value::Null)),
-                                "not" => Ok(IntermediateValue::Op(Op::Not)),
-                                "and" => Ok(IntermediateValue::Op(Op::And)),
-                                "or" => Ok(IntermediateValue::Op(Op::Or)),
-                                _ => Ok(IntermediateValue::Value(Value::Ident(s, QuoteKind::None))),
-                            }
-                        }
-                    }
-                }
+                Self::ident(toks, scope, super_selector)
             }
             q @ '"' | q @ '\'' => {
                 toks.next();
