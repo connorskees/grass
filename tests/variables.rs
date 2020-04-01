@@ -98,8 +98,12 @@ test!(
     "a {\n  $a: red\n}\n\nb {\n  color: blue;\n}\n",
     "b {\n  color: blue;\n}\n"
 );
+// TODO: blocked on properly emitting @charset
+// right now, we emit @charset if a utf-8 character
+// is found *anywhere*, but ideally we would only emit
+// it if a utf-8 character is actually in the output
 // test!(
-//     properly_escapes_backslash,
+//     unicode_in_variables,
 //     "$vär: foo;\na {\n  color: $vär;\n}\n",
 //     "a {\n  color: foo;\n}\n"
 // );
