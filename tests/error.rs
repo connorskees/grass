@@ -19,3 +19,7 @@ error!(
     return_as_style,
     "a {@return foo;}", "Error: This at-rule is not allowed here."
 );
+error!(
+    colon_inside_style,
+    "a {foo: bar: baz;}", "Error: expected \";\"."
+);
