@@ -46,7 +46,7 @@ impl Op {
     /// Do not rely on the number itself, but rather the size relative to other numbers
     ///
     /// If precedence is equal, the leftmost operation is evaluated first
-    pub fn precedence(&self) -> usize {
+    pub fn precedence(self) -> usize {
         match self {
             Self::And | Self::Or | Self::Not => 0,
             Self::Equal

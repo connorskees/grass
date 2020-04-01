@@ -330,7 +330,7 @@ impl Value {
             }
         }
 
-        Ok(if comma_separated.len() > 0 {
+        Ok(if !comma_separated.is_empty() {
             if space_separated.len() == 1 {
                 comma_separated.push(space_separated.pop().unwrap());
             } else if !space_separated.is_empty() {
@@ -410,7 +410,7 @@ impl Value {
                 toks.next();
                 let mut inner = read_until_closing_paren(toks);
                 // todo: the above shouldn't eat the closing paren
-                if inner.len() > 0 && inner.pop().unwrap().kind != ')' {
+                if !inner.is_empty() && inner.pop().unwrap().kind != ')' {
                     return Err("expected \")\".".into());
                 }
                 Ok(IntermediateValue::Paren(inner))
