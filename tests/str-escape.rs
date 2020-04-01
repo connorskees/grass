@@ -117,6 +117,7 @@ test!(
     "a {\n  color: \"\\b\";\n}\n"
 );
 test!(
+    #[ignore]
     unquote_quoted_backslash_single_lowercase_hex_char,
     "a {\n  color: #{\"\\b\"};\n}\n",
     "a {\n  color: \x0b;\n}\n"
