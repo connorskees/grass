@@ -96,3 +96,8 @@ test!(
     "a {\n  color: inspect((((((a))))));\n}\n",
     "a {\n  color: a;\n}\n"
 );
+test!(
+    allow_spaces_after_exclamation_point,
+    "a {\n  color: foo ! important;\n}\n",
+    "a {\n  color: foo !important;\n}\n"
+);

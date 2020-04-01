@@ -211,6 +211,7 @@ impl Value {
             }
             '!' => {
                 toks.next();
+                devour_whitespace(toks);
                 if toks.peek().unwrap().kind == '=' {
                     toks.next();
                     devour_whitespace(toks);
@@ -545,6 +546,7 @@ impl Value {
             }
             '!' => {
                 toks.next();
+                devour_whitespace(toks);
                 let v = eat_ident(toks, scope, super_selector)?;
                 if v.to_ascii_lowercase().as_str() == "important" {
                     Ok(Value::Important)
