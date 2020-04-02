@@ -40,3 +40,7 @@ error!(
     close_paren_without_opening,
     "a {color: foo);}", "Error: expected \";\"."
 );
+error!(
+    symbol_after_hash,
+    "a {color: bar + #}ar;}", "Error: Expected identifier."
+);

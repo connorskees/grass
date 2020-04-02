@@ -368,7 +368,7 @@ pub(crate) fn eat_ident<I: Iterator<Item = Token>>(
         match tok.kind {
             '#' => {
                 toks.next();
-                if toks.peek().unwrap().kind == '{' {
+                if toks.peek().ok_or("Expected identifier.")?.kind == '{' {
                     toks.next();
                     s.push_str(&parse_interpolation(toks, scope, super_selector)?.to_string());
                 } else {

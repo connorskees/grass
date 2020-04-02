@@ -31,7 +31,12 @@ fn parse_hex<I: Iterator<Item = Token>>(
     super_selector: &Selector,
 ) -> SassResult<Value> {
     let mut s = String::with_capacity(8);
-    if toks.peek().unwrap().kind.is_ascii_digit() {
+    if toks
+        .peek()
+        .ok_or("Expected identifier.")?
+        .kind
+        .is_ascii_digit()
+    {
         while let Some(c) = toks.peek() {
             if !c.kind.is_ascii_hexdigit() || s.len() == 8 {
                 break;
