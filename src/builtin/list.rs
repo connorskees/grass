@@ -115,9 +115,9 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         "append".to_owned(),
         Box::new(|mut args, _| {
             max_args!(args, 3);
-            let (mut list, sep) = match arg!(args, 0, "list") {
-                Value::List(v, sep, ..) => (v, sep),
-                v => (vec![v], ListSeparator::Space),
+            let (mut list, sep, brackets) = match arg!(args, 0, "list") {
+                Value::List(v, sep, b) => (v, sep, b),
+                v => (vec![v], ListSeparator::Space, Brackets::None),
             };
             let val = arg!(args, 1, "val");
             let sep = match arg!(
@@ -133,12 +133,12 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                         return Err("$separator: Must be \"space\", \"comma\", or \"auto\".".into())
                     }
                 },
-                _ => return Err("$separator: Must be \"space\", \"comma\", or \"auto\".".into()),
+                v => return Err(format!("$separator: {} is not a string.", v).into()),
             };
 
             list.push(val);
 
-            Ok(Value::List(list, sep, Brackets::None))
+            Ok(Value::List(list, sep, brackets))
         }),
     );
     f.insert(

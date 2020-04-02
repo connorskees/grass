@@ -114,6 +114,15 @@ test!(
     "a {\n  color: a;\n}\n"
 );
 test!(
+    append_bracketed,
+    "a {\n  color: append([], 1);\n}\n",
+    "a {\n  color: [1];\n}\n"
+);
+error!(
+    append_non_string_separator,
+    "a {b: append(c, d, $separator: 1);}", "Error: $separator: 1 is not a string."
+);
+test!(
     join_space_separated,
     "a {\n  color: join(a b, c d);\n}\n",
     "a {\n  color: a b c d;\n}\n"
