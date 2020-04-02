@@ -10,7 +10,7 @@ use crate::value::{Number, Value};
 pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "length".to_owned(),
-        Box::new(|args, _| {
+        Box::new(|mut args, _| {
             max_args!(args, 1);
             let len = match arg!(args, 0, "list") {
                 Value::List(v, ..) => Number::from(v.len()),
@@ -22,7 +22,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "nth".to_owned(),
-        Box::new(|args, _| {
+        Box::new(|mut args, _| {
             max_args!(args, 2);
             let list = match arg!(args, 0, "list") {
                 Value::List(v, ..) => v,
@@ -59,7 +59,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "list-separator".to_owned(),
-        Box::new(|args, _| {
+        Box::new(|mut args, _| {
             max_args!(args, 1);
             Ok(Value::Ident(
                 match arg!(args, 0, "list") {
@@ -73,7 +73,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "set-nth".to_owned(),
-        Box::new(|args, _| {
+        Box::new(|mut args, _| {
             max_args!(args, 3);
             let (mut list, sep) = match arg!(args, 0, "list") {
                 Value::List(v, sep, ..) => (v, sep),
@@ -113,7 +113,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "append".to_owned(),
-        Box::new(|args, _| {
+        Box::new(|mut args, _| {
             max_args!(args, 3);
             let (mut list, sep) = match arg!(args, 0, "list") {
                 Value::List(v, sep, ..) => (v, sep),
@@ -143,7 +143,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "join".to_owned(),
-        Box::new(|args, _| {
+        Box::new(|mut args, _| {
             max_args!(args, 3);
             let (mut list1, sep1, brackets) = match arg!(args, 0, "list") {
                 Value::List(v, sep, brackets) => (v, sep, brackets),
@@ -182,7 +182,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "is-bracketed".to_owned(),
-        Box::new(|args, _| {
+        Box::new(|mut args, _| {
             max_args!(args, 1);
             Ok(Value::bool(match arg!(args, 0, "list") {
                 Value::List(.., brackets) => match brackets {

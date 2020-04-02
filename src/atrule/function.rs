@@ -46,7 +46,8 @@ impl Function {
     pub fn args(mut self, mut args: CallArgs) -> SassResult<Function> {
         for (idx, arg) in self.args.0.iter().enumerate() {
             if arg.is_variadic {
-                self.scope.insert_var(&arg.name, args.get_variadic()?)?;
+                self.scope
+                    .insert_var(&arg.name, Value::ArgList(args.get_variadic()?))?;
                 break;
             }
             let val = match args.remove_positional(idx) {

@@ -17,7 +17,7 @@ mod meta;
 mod selector;
 mod string;
 
-pub(crate) type Builtin = Box<dyn Fn(&mut CallArgs, &Scope) -> SassResult<Value> + Send + Sync>;
+pub(crate) type Builtin = Box<dyn Fn(CallArgs, &Scope) -> SassResult<Value> + Send + Sync>;
 
 pub(crate) static GLOBAL_FUNCTIONS: Lazy<HashMap<String, Builtin>> = Lazy::new(|| {
     let mut m = HashMap::new();

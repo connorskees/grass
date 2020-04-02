@@ -9,7 +9,7 @@ use crate::value::Value;
 pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "if".to_owned(),
-        Box::new(|args, _| {
+        Box::new(|mut args, _| {
             max_args!(args, 3);
             if arg!(args, 0, "condition").is_true()? {
                 Ok(arg!(args, 1, "if-true"))
@@ -20,7 +20,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "feature-exists".to_owned(),
-        Box::new(|args, _| {
+        Box::new(|mut args, _| {
             max_args!(args, 1);
             match arg!(args, 0, "feature") {
                 Value::Ident(s, _) => match s.as_str() {
@@ -47,7 +47,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "unit".to_owned(),
-        Box::new(|args, _| {
+        Box::new(|mut args, _| {
             max_args!(args, 1);
             let unit = match arg!(args, 0, "number") {
                 Value::Dimension(_, u) => u.to_string(),
@@ -58,7 +58,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "type-of".to_owned(),
-        Box::new(|args, _| {
+        Box::new(|mut args, _| {
             max_args!(args, 1);
             let value = arg!(args, 0, "value");
             Ok(Value::Ident(value.kind()?.to_owned(), QuoteKind::None))
@@ -66,7 +66,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "unitless".to_owned(),
-        Box::new(|args, _| {
+        Box::new(|mut args, _| {
             max_args!(args, 1);
             match arg!(args, 0, "number") {
                 Value::Dimension(_, Unit::None) => Ok(Value::True),
@@ -77,7 +77,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "inspect".to_owned(),
-        Box::new(|args, _| {
+        Box::new(|mut args, _| {
             max_args!(args, 1);
             Ok(Value::Ident(
                 match arg!(args, 0, "value") {
@@ -90,7 +90,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "variable-exists".to_owned(),
-        Box::new(|args, scope| {
+        Box::new(|mut args, scope| {
             max_args!(args, 1);
             match arg!(args, 0, "name") {
                 Value::Ident(s, _) => Ok(Value::bool(scope.var_exists(&s))),
@@ -100,7 +100,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "global-variable-exists".to_owned(),
-        Box::new(|args, _| {
+        Box::new(|mut args, _| {
             max_args!(args, 1);
             match arg!(args, 0, "name") {
                 Value::Ident(s, _) => Ok(Value::bool(global_var_exists(&s))),
@@ -110,7 +110,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "mixin-exists".to_owned(),
-        Box::new(|args, scope| {
+        Box::new(|mut args, scope| {
             max_args!(args, 2);
             match arg!(args, 0, "name") {
                 Value::Ident(s, _) => Ok(Value::bool(scope.mixin_exists(&s))),
@@ -120,7 +120,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "function-exists".to_owned(),
-        Box::new(|args, scope| {
+        Box::new(|mut args, scope| {
             max_args!(args, 2);
             match arg!(args, 0, "name") {
                 Value::Ident(s, _) => Ok(Value::bool(

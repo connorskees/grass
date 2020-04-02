@@ -7,7 +7,7 @@ use crate::value::{Number, Value};
 pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "percentage".to_owned(),
-        Box::new(|args, _| {
+        Box::new(|mut args, _| {
             max_args!(args, 1);
             let num = match arg!(args, 0, "number") {
                 Value::Dimension(n, Unit::None) => n * Number::from(100),
@@ -21,7 +21,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "round".to_owned(),
-        Box::new(|args, _| {
+        Box::new(|mut args, _| {
             max_args!(args, 1);
             match arg!(args, 0, "number") {
                 Value::Dimension(n, u) => Ok(Value::Dimension(n.round(), u)),
@@ -31,7 +31,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "ceil".to_owned(),
-        Box::new(|args, _| {
+        Box::new(|mut args, _| {
             max_args!(args, 1);
             match arg!(args, 0, "number") {
                 Value::Dimension(n, u) => Ok(Value::Dimension(n.ceil(), u)),
@@ -41,7 +41,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "floor".to_owned(),
-        Box::new(|args, _| {
+        Box::new(|mut args, _| {
             max_args!(args, 1);
             match arg!(args, 0, "number") {
                 Value::Dimension(n, u) => Ok(Value::Dimension(n.floor(), u)),
@@ -51,7 +51,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "abs".to_owned(),
-        Box::new(|args, _| {
+        Box::new(|mut args, _| {
             max_args!(args, 1);
             match arg!(args, 0, "number") {
                 Value::Dimension(n, u) => Ok(Value::Dimension(n.abs(), u)),
@@ -61,7 +61,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "comparable".to_owned(),
-        Box::new(|args, _| {
+        Box::new(|mut args, _| {
             max_args!(args, 2);
             let unit1 = match arg!(args, 0, "number1") {
                 Value::Dimension(_, u) => u,

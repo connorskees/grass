@@ -60,7 +60,7 @@ impl CallArgs {
         self.0.get(&CallArg::Positional(val))
     }
 
-    pub fn get_variadic(self) -> SassResult<Value> {
+    pub fn get_variadic(self) -> SassResult<Vec<Value>> {
         let mut vals = Vec::new();
         let mut args = self
             .0
@@ -71,7 +71,7 @@ impl CallArgs {
         for arg in args {
             vals.push(arg.1);
         }
-        Ok(Value::ArgList(vals))
+        Ok(vals)
     }
 
     pub fn len(&self) -> usize {

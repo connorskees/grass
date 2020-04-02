@@ -31,7 +31,7 @@ macro_rules! opt_hsl {
 }
 
 pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
-    f.insert("change-color".to_owned(), Box::new(|args, _| {
+    f.insert("change-color".to_owned(), Box::new(|mut args, _| {
         if args.get_positional(1).is_some() {
             return Err("Only one positional argument is allowed. All other arguments must be passed by name.".into());
         }
@@ -73,7 +73,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     }));
     f.insert(
         "adjust-color".to_owned(),
-        Box::new(|args, _| {
+        Box::new(|mut args, _| {
             let color = match arg!(args, 0, "color") {
                 Value::Color(c) => c,
                 v => return Err(format!("$color: {} is not a color.", v).into()),
@@ -123,7 +123,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "scale-color".to_owned(),
-        Box::new(|args, _| {
+        Box::new(|mut args, _| {
             let color = match arg!(args, 0, "color") {
                 Value::Color(c) => c,
                 v => return Err(format!("$color: {} is not a color.", v).into()),
@@ -209,7 +209,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "ie-hex-str".to_owned(),
-        Box::new(|args, _| {
+        Box::new(|mut args, _| {
             max_args!(args, 1);
             let color = match arg!(args, 0, "color") {
                 Value::Color(c) => c,

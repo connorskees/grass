@@ -11,6 +11,7 @@ use crate::selector::Selector;
 use crate::utils::{
     devour_whitespace, devour_whitespace_or_comment, eat_ident, read_until_closing_curly_brace,
 };
+use crate::value::Value;
 use crate::{eat_expr, Expr, RuleSet, Stmt, Token};
 
 #[derive(Debug, Clone)]
@@ -62,7 +63,8 @@ impl Mixin {
     pub fn args(mut self, mut args: CallArgs) -> SassResult<Mixin> {
         for (idx, arg) in self.args.0.iter().enumerate() {
             if arg.is_variadic {
-                self.scope.insert_var(&arg.name, args.get_variadic()?)?;
+                self.scope
+                    .insert_var(&arg.name, Value::ArgList(args.get_variadic()?))?;
                 break;
             }
             let val = match args.remove_positional(idx) {
