@@ -11,7 +11,7 @@ use crate::value::{Number, Value};
 macro_rules! opt_rgba {
     ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal) => {
         let x = $low;
-        let $name = match arg!($args, -1, $arg = Value::Null) {
+        let $name = match named_arg!($args, $arg = Value::Null) {
             Value::Dimension(n, u) => Some(bound!($arg, n, u, x, $high)),
             Value::Null => None,
             v => return Err(format!("${}: {} is not a number.", $arg, v).into()),
@@ -22,7 +22,7 @@ macro_rules! opt_rgba {
 macro_rules! opt_hsl {
     ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal) => {
         let x = $low;
-        let $name = match arg!($args, -1, $arg = Value::Null) {
+        let $name = match named_arg!($args, $arg = Value::Null) {
             Value::Dimension(n, u) => Some(bound!($arg, n, u, x, $high) / Number::from(100)),
             Value::Null => None,
             v => return Err(format!("${}: {} is not a number.", $arg, v).into()),
@@ -32,7 +32,7 @@ macro_rules! opt_hsl {
 
 pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert("change-color".to_owned(), Box::new(|args, _| {
-        if args.get("1").is_some() {
+        if args.get_positional(1).is_some() {
             return Err("Only one positional argument is allowed. All other arguments must be passed by name.".into());
         }
 
@@ -50,7 +50,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             return Ok(Value::Color(Color::from_rgba(red.unwrap_or(color.red()), green.unwrap_or(color.green()), blue.unwrap_or(color.blue()), alpha.unwrap_or(color.alpha()))))
         }
 
-        let hue = match arg!(args, -1, "hue"=Value::Null) {
+        let hue = match named_arg!(args, "hue"=Value::Null) {
             Value::Dimension(n, _) => Some(n),
             Value::Null => None,
             v => return Err(format!("$hue: {} is not a number.", v).into()),
@@ -93,7 +93,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 )));
             }
 
-            let hue = match arg!(args, -1, "hue" = Value::Null) {
+            let hue = match named_arg!(args, "hue" = Value::Null) {
                 Value::Dimension(n, _) => Some(n),
                 Value::Null => None,
                 v => return Err(format!("$hue: {} is not a number.", v).into()),
@@ -132,7 +132,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             macro_rules! opt_scale_arg {
                 ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal) => {
                     let x = $low;
-                    let $name = match arg!($args, -1, $arg = Value::Null) {
+                    let $name = match named_arg!($args, $arg = Value::Null) {
                         Value::Dimension(n, Unit::Percent) => {
                             Some(bound!($arg, n, Unit::Percent, x, $high) / Number::from(100))
                         }

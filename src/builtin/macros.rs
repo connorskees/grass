@@ -1,20 +1,35 @@
 macro_rules! arg {
     ($args:ident, $idx:literal, $name:literal) => {
-        match $args.remove(stringify!($idx)) {
+        match $args.remove_positional($idx) {
             Some(v) => v.eval()?,
-            None => match $args.remove($name) {
+            None => match $args.remove_named($name.to_owned()) {
                 Some(v) => v.eval()?,
                 None => return Err(concat!("Missing argument $", $name, ".").into()),
             },
         };
     };
     ($args:ident, $idx:literal, $name:literal=$default:expr) => {
-        match $args.remove(stringify!($idx)) {
+        match $args.remove_positional($idx) {
             Some(v) => v.eval()?,
-            None => match $args.remove($name) {
+            None => match $args.remove_named($name.to_owned()) {
                 Some(v) => v.eval()?,
                 None => $default,
             },
+        };
+    };
+}
+
+macro_rules! named_arg {
+    ($args:ident, $name:literal) => {
+        match $args.remove_named($name.to_owned()) {
+            Some(v) => v.eval()?,
+            None => return Err(concat!("Missing argument $", $name, ".").into()),
+        };
+    };
+    ($args:ident, $name:literal=$default:expr) => {
+        match $args.remove_named($name.to_owned()) {
+            Some(v) => v.eval()?,
+            None => $default,
         };
     };
 }

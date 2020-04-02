@@ -28,16 +28,26 @@ impl FuncArgs {
     }
 }
 
-#[derive(Debug, Clone, std::default::Default)]
-pub(crate) struct CallArgs(pub HashMap<String, Value>);
+#[derive(Debug, Clone)]
+pub(crate) struct CallArgs(HashMap<CallArg, Value>);
+
+#[derive(Debug, Clone, Hash, Eq, PartialEq)]
+enum CallArg {
+    Named(String),
+    Positional(usize),
+}
 
 impl CallArgs {
     pub fn new() -> Self {
         CallArgs(HashMap::new())
     }
 
-    pub fn get(&self, val: &str) -> Option<&Value> {
-        self.0.get(val)
+    pub fn get_named(&self, val: String) -> Option<&Value> {
+        self.0.get(&CallArg::Named(val))
+    }
+
+    pub fn get_positional(&self, val: usize) -> Option<&Value> {
+        self.0.get(&CallArg::Positional(val))
     }
 
     pub fn len(&self) -> usize {
@@ -48,8 +58,12 @@ impl CallArgs {
         self.0.len() == 0
     }
 
-    pub fn remove(&mut self, s: &str) -> Option<Value> {
-        self.0.remove(s)
+    pub fn remove_named(&mut self, s: String) -> Option<Value> {
+        self.0.remove(&CallArg::Named(s))
+    }
+
+    pub fn remove_positional(&mut self, s: usize) -> Option<Value> {
+        self.0.remove(&CallArg::Positional(s))
     }
 }
 
@@ -174,9 +188,9 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
     scope: &Scope,
     super_selector: &Selector,
 ) -> SassResult<CallArgs> {
-    let mut args: HashMap<String, Value> = HashMap::new();
+    let mut args: HashMap<CallArg, Value> = HashMap::new();
     devour_whitespace_or_comment(toks)?;
-    let mut name: String;
+    let mut name = String::new();
     let mut val: Vec<Token> = Vec::new();
     loop {
         match toks.peek().unwrap().kind {
@@ -190,14 +204,14 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
                 } else {
                     val.push(Token::new(Pos::new(), '$'));
                     val.extend(v.chars().map(|x| Token::new(Pos::new(), x)));
-                    name = args.len().to_string();
+                    name.clear();
                 }
             }
             ')' => {
                 toks.next();
                 return Ok(CallArgs(args));
             }
-            _ => name = args.len().to_string(),
+            _ => name.clear(),
         }
         devour_whitespace_or_comment(toks)?;
 
@@ -205,7 +219,11 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
             match tok.kind {
                 ')' => {
                     args.insert(
-                        name.replace('_', "-"),
+                        if name.is_empty() {
+                            CallArg::Positional(args.len())
+                        } else {
+                            CallArg::Named(name.replace('_', "-"))
+                        },
                         Value::from_tokens(&mut val.into_iter().peekable(), scope, super_selector)?,
                     );
                     return Ok(CallArgs(args));
@@ -228,7 +246,11 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
         }
 
         args.insert(
-            name.replace('_', "-"),
+            if name.is_empty() {
+                CallArg::Positional(args.len())
+            } else {
+                CallArg::Named(name.replace('_', "-"))
+            },
             Value::from_tokens(
                 &mut val.clone().into_iter().peekable(),
                 scope,

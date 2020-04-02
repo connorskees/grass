@@ -61,9 +61,9 @@ impl Mixin {
 
     pub fn args(mut self, args: &mut CallArgs) -> SassResult<Mixin> {
         for (idx, arg) in self.args.0.iter().enumerate() {
-            let val = match args.remove(&format!("{}", idx)) {
+            let val = match args.remove_positional(idx) {
                 Some(v) => v,
-                None => match args.remove(&arg.name) {
+                None => match args.remove_named(arg.name.clone()) {
                     Some(v) => v,
                     None => match &arg.default {
                         Some(v) => v.clone(),
