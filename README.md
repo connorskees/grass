@@ -17,10 +17,9 @@ The large features remaining are
 ```
 order of operations
 special case certain functions (min, max, calc, element, expression, progid, url)
-variadic arguments
 many builtin list functions (zip, index)
 all builtin selector functions
-map-remove, content-exists, call, get-function, unique-id, random, min, min
+content-exists, call, get-function, unique-id, random, min, min
 @extend
 indented syntax
 a special parser for plain css
