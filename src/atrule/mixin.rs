@@ -59,8 +59,12 @@ impl Mixin {
         self
     }
 
-    pub fn args(mut self, args: &mut CallArgs) -> SassResult<Mixin> {
+    pub fn args(mut self, mut args: CallArgs) -> SassResult<Mixin> {
         for (idx, arg) in self.args.0.iter().enumerate() {
+            if arg.is_variadic {
+                self.scope.insert_var(&arg.name, args.get_variadic()?)?;
+                break;
+            }
             let val = match args.remove_positional(idx) {
                 Some(v) => v,
                 None => match args.remove_named(arg.name.clone()) {
@@ -128,7 +132,7 @@ pub(crate) fn eat_include<I: Iterator<Item = Token>>(
 
     let mut has_include = false;
 
-    let mut args = if let Some(tok) = toks.next() {
+    let args = if let Some(tok) = toks.next() {
         match tok.kind {
             ';' => CallArgs::new(),
             '(' => {
@@ -170,9 +174,6 @@ pub(crate) fn eat_include<I: Iterator<Item = Token>>(
 
     let mixin = scope.get_mixin(&name)?.clone();
 
-    let rules = mixin
-        .args(&mut args)?
-        .content(content)
-        .call(super_selector)?;
+    let rules = mixin.args(args)?.content(content).call(super_selector)?;
     Ok(rules)
 }

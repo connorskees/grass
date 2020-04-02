@@ -406,7 +406,7 @@ impl Value {
                 };
                 Ok(IntermediateValue::Value(
                     func.clone()
-                        .args(&mut eat_call_args(toks, scope, super_selector)?)?
+                        .args(eat_call_args(toks, scope, super_selector)?)?
                         .call(super_selector, func.body())?,
                 ))
             }

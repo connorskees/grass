@@ -37,17 +37,41 @@ enum CallArg {
     Positional(usize),
 }
 
+impl CallArg {
+    pub fn position(&self) -> SassResult<usize> {
+        match self {
+            Self::Named(..) => todo!(),
+            Self::Positional(p) => Ok(*p),
+        }
+    }
+}
+
 impl CallArgs {
     pub fn new() -> Self {
         CallArgs(HashMap::new())
     }
 
+    #[allow(dead_code)]
     pub fn get_named(&self, val: String) -> Option<&Value> {
         self.0.get(&CallArg::Named(val))
     }
 
     pub fn get_positional(&self, val: usize) -> Option<&Value> {
         self.0.get(&CallArg::Positional(val))
+    }
+
+    pub fn get_variadic(self) -> SassResult<Value> {
+        let mut vals = Vec::new();
+        let mut args = self
+            .0
+            .into_iter()
+            .map(|(a, v)| Ok((a.position()?, v)))
+            .collect::<SassResult<Vec<(usize, Value)>>>()?;
+        args.sort_by(|(a1, _), (a2, _)| a1.cmp(a2));
+        for arg in args {
+            vals.push(arg.1);
+        }
+        Ok(Value::ArgList(vals))
     }
 
     pub fn len(&self) -> usize {

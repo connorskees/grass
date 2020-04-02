@@ -165,6 +165,11 @@ test!(
     "a {\n  color: string;\n}\n"
 );
 test!(
+    type_of_arglist,
+    "@mixin foo($a...) {color: type-of($a);}\na {@include foo(1, 2, 3, 4, 5);}",
+    "a {\n  color: arglist;\n}\n"
+);
+test!(
     unitless_px,
     "a {\n  color: unitless(1px)\n}\n",
     "a {\n  color: false;\n}\n"

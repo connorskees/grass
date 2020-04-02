@@ -15,3 +15,13 @@ error!(
     varargs_two_periods,
     "@function foo($a..) {\n  @return $a;\n}\n", "Error: expected \".\"."
 );
+test!(
+    mixin_varargs_are_comma_separated,
+    "@mixin foo($a...) {\n  color: $a;\n}\n\na {\n  @include foo(1, 2, 3, 4, 5);\n}\n",
+    "a {\n  color: 1, 2, 3, 4, 5;\n}\n"
+);
+test!(
+    function_varargs_are_comma_separated,
+    "@function foo($a...) {\n  @return $a;\n}\n\na {\n  color: foo(1, 2, 3, 4, 5);\n}\n",
+    "a {\n  color: 1, 2, 3, 4, 5;\n}\n"
+);

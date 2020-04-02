@@ -29,6 +29,7 @@ pub(crate) enum Value {
     Paren(Box<Value>),
     Ident(String, QuoteKind),
     Map(SassMap),
+    ArgList(Vec<Value>),
     // Returned by `get-function()`
     // Function(String)
 }
@@ -120,6 +121,15 @@ impl Display for Value {
             Self::True => write!(f, "true"),
             Self::False => write!(f, "false"),
             Self::Null => write!(f, "null"),
+            Self::ArgList(args) => write!(
+                f,
+                "{}",
+                args.iter()
+                    .filter(|x| !x.is_null())
+                    .map(std::string::ToString::to_string)
+                    .collect::<Vec<String>>()
+                    .join(", "),
+            ),
         }
     }
 }
@@ -157,6 +167,7 @@ impl Value {
             Self::Dimension(..) => Ok("number"),
             Self::List(..) => Ok("list"),
             // Self::Function(..) => Ok("function"),
+            Self::ArgList(..) => Ok("arglist"),
             Self::True | Self::False => Ok("bool"),
             Self::Null => Ok("null"),
             Self::Map(..) => Ok("map"),

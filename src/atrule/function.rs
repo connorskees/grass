@@ -43,8 +43,12 @@ impl Function {
         Ok((name, Function::new(scope, args, body)))
     }
 
-    pub fn args(mut self, args: &mut CallArgs) -> SassResult<Function> {
+    pub fn args(mut self, mut args: CallArgs) -> SassResult<Function> {
         for (idx, arg) in self.args.0.iter().enumerate() {
+            if arg.is_variadic {
+                self.scope.insert_var(&arg.name, args.get_variadic()?)?;
+                break;
+            }
             let val = match args.remove_positional(idx) {
                 Some(v) => v,
                 None => match args.remove_named(arg.name.clone()) {
