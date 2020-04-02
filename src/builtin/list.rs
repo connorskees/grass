@@ -78,6 +78,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             max_args!(args, 3);
             let (mut list, sep) = match arg!(args, 0, "list") {
                 Value::List(v, sep, ..) => (v, sep),
+                Value::Map(m) => (m.entries(), ListSeparator::Comma),
                 v => (vec![v], ListSeparator::Space),
             };
             let n = match arg!(args, 1, "n") {

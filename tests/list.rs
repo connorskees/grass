@@ -84,6 +84,11 @@ test!(
     "a {\n  color: e, b, c;\n}\n"
 );
 test!(
+    set_nth_map,
+    "a {\n  color: set-nth((c: d, e: f, g: h), 2, i);\n}\n",
+    "a {\n  color: c d, i, g h;\n}\n"
+);
+test!(
     append_space_separated,
     "a {\n  color: append(a b, c);\n}\n",
     "a {\n  color: a b c;\n}\n"
