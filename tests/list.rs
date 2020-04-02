@@ -217,6 +217,11 @@ test!(
     "a {\n  color: join((a,), (b,));\n}\n",
     "a {\n  color: a, b;\n}\n"
 );
+test!(
+    join_two_maps,
+    "a {\n  color: join((c: d, e: f), (g: h, i: j));\n}\n",
+    "a {\n  color: c d, e f, g h, i j;\n}\n"
+);
 test!(bracketed_ident, "a {\n  color: [a];\n}\n");
 test!(bracketed_space_list, "a {\n  color: [a b];\n}\n");
 test!(bracketed_comma_list, "a {\n  color: [a, b];\n}\n");

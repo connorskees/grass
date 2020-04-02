@@ -149,10 +149,12 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             max_args!(args, 4);
             let (mut list1, sep1, brackets) = match arg!(args, 0, "list1") {
                 Value::List(v, sep, brackets) => (v, sep, brackets),
+                Value::Map(m) => (m.entries(), ListSeparator::Comma, Brackets::None),
                 v => (vec![v], ListSeparator::Space, Brackets::None),
             };
             let (list2, sep2) = match arg!(args, 1, "list2") {
                 Value::List(v, sep, ..) => (v, sep),
+                Value::Map(m) => (m.entries(), ListSeparator::Comma),
                 v => (vec![v], ListSeparator::Space),
             };
             let sep = match arg!(
