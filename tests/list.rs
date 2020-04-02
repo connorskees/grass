@@ -182,6 +182,31 @@ test!(
     "a {\n  color: join((a, b), (c));\n}\n",
     "a {\n  color: a, b, c;\n}\n"
 );
+test!(
+    join_bracketed_null,
+    "a {\n  color: join([a b], c, $bracketed: null);\n}\n",
+    "a {\n  color: a b c;\n}\n"
+);
+test!(
+    join_bracketed_false,
+    "a {\n  color: join([a b], c, $bracketed: false);\n}\n",
+    "a {\n  color: a b c;\n}\n"
+);
+test!(
+    join_bracketed_auto_brackets,
+    "a {\n  color: join([a b], c, $bracketed: auto);\n}\n",
+    "a {\n  color: [a b c];\n}\n"
+);
+test!(
+    join_bracketed_auto_none,
+    "a {\n  color: join(a b, c, $bracketed: auto);\n}\n",
+    "a {\n  color: a b c;\n}\n"
+);
+test!(
+    join_bracketed_random_string,
+    "a {\n  color: join(a b, c, $bracketed: afhsihsdhsdkhsd);\n}\n",
+    "a {\n  color: [a b c];\n}\n"
+);
 test!(bracketed_ident, "a {\n  color: [a];\n}\n");
 test!(bracketed_space_list, "a {\n  color: [a b];\n}\n");
 test!(bracketed_comma_list, "a {\n  color: [a, b];\n}\n");

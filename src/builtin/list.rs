@@ -146,14 +146,14 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "join".to_owned(),
         Box::new(|mut args, _| {
-            max_args!(args, 3);
+            max_args!(args, 4);
             let (mut list1, sep1, brackets) = match arg!(args, 0, "list1") {
                 Value::List(v, sep, brackets) => (v, sep, brackets),
                 v => (vec![v], ListSeparator::Space, Brackets::None),
             };
-            let (list2, sep2) = match arg!(args, 1, "list2") {
-                Value::List(v, sep, ..) => (v, sep),
-                v => (vec![v], ListSeparator::Space),
+            let list2 = match arg!(args, 1, "list2") {
+                Value::List(v, ..) => v,
+                v => vec![v],
             };
             let sep = match arg!(
                 args,
@@ -175,6 +175,24 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     }
                 },
                 _ => return Err("$separator: Must be \"space\", \"comma\", or \"auto\".".into()),
+            };
+
+            let brackets = match arg!(
+                args,
+                3,
+                "bracketed" = Value::Ident("auto".to_owned(), QuoteKind::None)
+            ) {
+                Value::Ident(s, ..) => match s.as_str() {
+                    "auto" => brackets,
+                    _ => Brackets::Bracketed,
+                },
+                v => {
+                    if v.is_true()? {
+                        Brackets::Bracketed
+                    } else {
+                        Brackets::None
+                    }
+                }
             };
 
             list1.extend(list2);
