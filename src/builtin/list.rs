@@ -76,10 +76,10 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         "set-nth".to_owned(),
         Box::new(|mut args, _| {
             max_args!(args, 3);
-            let (mut list, sep) = match arg!(args, 0, "list") {
-                Value::List(v, sep, ..) => (v, sep),
-                Value::Map(m) => (m.entries(), ListSeparator::Comma),
-                v => (vec![v], ListSeparator::Space),
+            let (mut list, sep, brackets) = match arg!(args, 0, "list") {
+                Value::List(v, sep, b) => (v, sep, b),
+                Value::Map(m) => (m.entries(), ListSeparator::Comma, Brackets::None),
+                v => (vec![v], ListSeparator::Space, Brackets::None),
             };
             let n = match arg!(args, 1, "n") {
                 Value::Dimension(num, _) => num,
@@ -110,7 +110,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 list[len - n.abs().to_integer().to_usize().unwrap()] = val;
             }
 
-            Ok(Value::List(list, sep, Brackets::None))
+            Ok(Value::List(list, sep, brackets))
         }),
     );
     f.insert(
