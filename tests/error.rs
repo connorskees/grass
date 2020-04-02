@@ -53,3 +53,7 @@ error!(
     "a{l {color: foo;}}", "Error: expected selector."
 );
 error!(backtick_in_selector, "a`{}", "Error: expected selector.");
+error!(
+    no_value_after_forward_slash,
+    "a {color: 303/;}", "Error: Expected expression."
+);

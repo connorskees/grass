@@ -599,6 +599,9 @@ impl Value {
             }
             '/' => {
                 toks.next();
+                if toks.peek().is_none() {
+                    return Err("Expected expression.".into());
+                }
                 if '*' == toks.peek().unwrap().kind {
                     toks.next();
                     eat_comment(toks, &Scope::new(), &Selector::new())?;
