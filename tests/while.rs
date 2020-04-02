@@ -23,3 +23,7 @@ test!(
     "@while false {\na {\n    color: $b;\n  }\n  $b: $b + 1;\n}",
     ""
 );
+error!(
+    while_empty_condition,
+    "@while {}", "Error: Expected expression."
+);

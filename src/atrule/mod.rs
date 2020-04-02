@@ -317,6 +317,11 @@ impl AtRule {
                 let mut stmts = Vec::new();
                 devour_whitespace(toks);
                 let cond = read_until_open_curly_brace(toks);
+
+                if cond.is_empty() {
+                    return Err("Expected expression.".into());
+                }
+
                 toks.next();
                 let scope = &mut scope.clone();
                 let body = read_until_closing_curly_brace(toks);
