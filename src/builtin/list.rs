@@ -147,13 +147,13 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         "join".to_owned(),
         Box::new(|mut args, _| {
             max_args!(args, 3);
-            let (mut list1, sep1, brackets) = match arg!(args, 0, "list") {
+            let (mut list1, sep1, brackets) = match arg!(args, 0, "list1") {
                 Value::List(v, sep, brackets) => (v, sep, brackets),
                 v => (vec![v], ListSeparator::Space, Brackets::None),
             };
-            let list2 = match arg!(args, 1, "list") {
-                Value::List(v, ..) => v,
-                v => vec![v],
+            let (list2, sep2) = match arg!(args, 1, "list2") {
+                Value::List(v, sep, ..) => (v, sep),
+                v => (vec![v], ListSeparator::Space),
             };
             let sep = match arg!(
                 args,

@@ -163,9 +163,24 @@ test!(
     "a {\n  color: a b c d;\n}\n"
 );
 test!(
-    join_bracketed,
+    join_first_bracketed,
     "a {\n  color: join([a], b);\n}\n",
     "a {\n  color: [a b];\n}\n"
+);
+test!(
+    join_second_bracketed,
+    "a {\n  color: join(a, [b]);\n}\n",
+    "a {\n  color: a b;\n}\n"
+);
+test!(
+    join_space_comma,
+    "a {\n  color: join(a b, (c,));\n}\n",
+    "a {\n  color: a b c;\n}\n"
+);
+test!(
+    join_comma_space,
+    "a {\n  color: join((a, b), (c));\n}\n",
+    "a {\n  color: a, b, c;\n}\n"
 );
 test!(bracketed_ident, "a {\n  color: [a];\n}\n");
 test!(bracketed_space_list, "a {\n  color: [a b];\n}\n");
