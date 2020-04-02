@@ -2,6 +2,7 @@ use std::slice::Iter;
 use std::vec::IntoIter;
 
 use super::Value;
+use crate::common::{Brackets, ListSeparator};
 use crate::error::SassResult;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -46,6 +47,13 @@ impl SassMap {
 
     pub fn values(self) -> Vec<Value> {
         self.0.into_iter().map(|(.., v)| v).collect()
+    }
+
+    pub fn entries(self) -> Vec<Value> {
+        self.0
+            .into_iter()
+            .map(|(k, v)| Value::List(vec![k, v], ListSeparator::Space, Brackets::None))
+            .collect()
     }
 
     pub fn insert(&mut self, key: Value, value: Value) {
