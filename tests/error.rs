@@ -52,3 +52,4 @@ error!(
     control_character_starts_selector_inner,
     "a{l {color: foo;}}", "Error: expected selector."
 );
+error!(backtick_in_selector, "a`{}", "Error: expected selector.");

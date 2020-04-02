@@ -334,6 +334,7 @@ impl<'a> SelectorParser<'a> {
                 c if c.is_control() => {
                     return Err("expected selector.".into());
                 }
+                '`' => return Err("expected selector.".into()),
                 _ => todo!("unimplemented selector"),
             };
         }
