@@ -222,6 +222,11 @@ test!(
     "a {\n  color: join((c: d, e: f), (g: h, i: j));\n}\n",
     "a {\n  color: c d, e f, g h, i j;\n}\n"
 );
+test!(
+    join_non_list_first_takes_separator_of_second,
+    "a {\n  color: join(c, (d, e));\n}\n",
+    "a {\n  color: c, d, e;\n}\n"
+);
 test!(bracketed_ident, "a {\n  color: [a];\n}\n");
 test!(bracketed_space_list, "a {\n  color: [a b];\n}\n");
 test!(bracketed_comma_list, "a {\n  color: [a, b];\n}\n");
