@@ -397,6 +397,9 @@ impl<'a> StyleSheetParser<'a> {
                         "Base-level rules cannot contain the parent-selector-referencing character '&'.".into(),
                     )
                 }
+                c if c.is_control() => {
+                    return Err("expected selector.".into());
+                }
                 _ => match dbg!(self.lexer.next()) {
                     Some(Token { pos, .. }) => self.error(pos, "unexpected toplevel token"),
                     _ => unsafe { std::hint::unreachable_unchecked() },

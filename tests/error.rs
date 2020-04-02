@@ -44,3 +44,11 @@ error!(
     symbol_after_hash,
     "a {color: bar + #}ar;}", "Error: Expected identifier."
 );
+error!(
+    control_character_starts_selector_toplevel,
+    "l {color: foo;}", "Error: expected selector."
+);
+error!(
+    control_character_starts_selector_inner,
+    "a{l {color: foo;}}", "Error: expected selector."
+);

@@ -331,6 +331,9 @@ impl<'a> SelectorParser<'a> {
                         self.super_selector,
                     )?)
                 }
+                c if c.is_control() => {
+                    return Err("expected selector.".into());
+                }
                 _ => todo!("unimplemented selector"),
             };
         }
