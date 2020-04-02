@@ -382,7 +382,7 @@ impl<'a> StyleSheetParser<'a> {
                                     AtRule::Return(_) => {
                                         return Err("This at-rule is not allowed here.".into())
                                     }
-                                    AtRule::Each(s) | AtRule::For(s) => rules.extend(s),
+                                    AtRule::While(s) | AtRule::Each(s) | AtRule::For(s) => rules.extend(s),
                                     AtRule::Content => return Err("@content is only allowed within mixin declarations.".into()),
                                     AtRule::If(i) => {
                                         rules.extend(i.eval(&mut Scope::new(), &Selector::new())?);
@@ -412,7 +412,7 @@ impl<'a> StyleSheetParser<'a> {
             match expr {
                 Expr::Style(s) => stmts.push(Stmt::Style(s)),
                 Expr::AtRule(a) => match a {
-                    AtRule::Each(s) | AtRule::For(s) => stmts.extend(s),
+                    AtRule::While(s) | AtRule::Each(s) | AtRule::For(s) => stmts.extend(s),
                     AtRule::If(i) => stmts.extend(i.eval(scope, super_selector)?),
                     AtRule::Content => {
                         return Err("@content is only allowed within mixin declarations.".into())
@@ -595,6 +595,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                             c @ AtRule::Content => Ok(Some(Expr::AtRule(c))),
                             f @ AtRule::If(..) => Ok(Some(Expr::AtRule(f))),
                             f @ AtRule::For(..) => Ok(Some(Expr::AtRule(f))),
+                            f @ AtRule::While(..) => Ok(Some(Expr::AtRule(f))),
                             f @ AtRule::Each(..) => Ok(Some(Expr::AtRule(f))),
                             u @ AtRule::Unknown(..) => Ok(Some(Expr::AtRule(u))),
                         };

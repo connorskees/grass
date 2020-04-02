@@ -40,6 +40,7 @@ pub(crate) enum AtRule {
     Unknown(UnknownAtRule),
     For(Vec<Stmt>),
     Each(Vec<Stmt>),
+    While(Vec<Stmt>),
     If(If),
 }
 
@@ -312,7 +313,32 @@ impl AtRule {
 
                 AtRule::For(stmts)
             }
-            AtRuleKind::While => todo!("@while not yet implemented"),
+            AtRuleKind::While => {
+                let mut stmts = Vec::new();
+                devour_whitespace(toks);
+                let cond = read_until_open_curly_brace(toks);
+                toks.next();
+                let scope = &mut scope.clone();
+                let body = read_until_closing_curly_brace(toks);
+                toks.next();
+
+                devour_whitespace(toks);
+
+                while Value::from_tokens(
+                    &mut cond.clone().into_iter().peekable(),
+                    scope,
+                    super_selector,
+                )?
+                .is_true()?
+                {
+                    stmts.extend(eat_stmts(
+                        &mut body.clone().into_iter().peekable(),
+                        scope,
+                        super_selector,
+                    )?);
+                }
+                AtRule::While(stmts)
+            }
             AtRuleKind::Keyframes => todo!("@keyframes not yet implemented"),
             AtRuleKind::Unknown(name) => AtRule::Unknown(UnknownAtRule::from_tokens(
                 toks,
