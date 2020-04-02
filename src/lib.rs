@@ -283,7 +283,7 @@ impl<'a> StyleSheetParser<'a> {
         while let Some(Token { kind, .. }) = self.lexer.peek() {
             match kind {
                 'a'..='z' | 'A'..='Z' | '_' | '-'
-                | '[' | '#' | ':' | '*' | '%' | '.' => rules
+                | '[' | '#' | ':' | '*' | '%' | '.' | '>' => rules
                     .extend(self.eat_rules(&Selector::new(), &mut GLOBAL_SCOPE.with(|s| s.borrow().clone()))?),
                 &'\t' | &'\n' | ' ' => {
                     self.lexer.next();
