@@ -189,3 +189,18 @@ test!(
     deeply_nested_square_braces,
     "a {\n  color: [[[[[[a]]]]]];\n}\n"
 );
+test!(
+    index_found_space_separated,
+    "a {\n  color: index(1px solid red, solid);\n}\n",
+    "a {\n  color: 2;\n}\n"
+);
+test!(
+    index_not_found_space_separated,
+    "a {\n  color: index(1px solid red, dashed);\n}\n",
+    ""
+);
+// test!(
+//     index_found_map,
+//     "a {\n  color: index((width: 10px, height: 20px), (height 20px));\n}\n",
+//     "a {\n  color: 2;\n}\n"
+// );

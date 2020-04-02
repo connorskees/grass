@@ -193,4 +193,20 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             }))
         }),
     );
+    f.insert(
+        "index".to_owned(),
+        Box::new(|mut args, _| {
+            max_args!(args, 2);
+            let list = match arg!(args, 0, "list") {
+                Value::List(v, ..) => v,
+                v => vec![v],
+            };
+            let value = arg!(args, 1, "value");
+            let index = match list.into_iter().position(|v| v == value) {
+                Some(v) => Number::from(v + 1),
+                None => return Ok(Value::Null),
+            };
+            Ok(Value::Dimension(index, Unit::None))
+        }),
+    );
 }
