@@ -151,9 +151,9 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 Value::List(v, sep, brackets) => (v, sep, brackets),
                 v => (vec![v], ListSeparator::Space, Brackets::None),
             };
-            let list2 = match arg!(args, 1, "list2") {
-                Value::List(v, ..) => v,
-                v => vec![v],
+            let (list2, sep2) = match arg!(args, 1, "list2") {
+                Value::List(v, sep, ..) => (v, sep),
+                v => (vec![v], ListSeparator::Space),
             };
             let sep = match arg!(
                 args,
@@ -164,6 +164,8 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     "auto" => {
                         if list1.len() < 2 && list2.len() < 2 {
                             ListSeparator::Space
+                        } else if list1.is_empty() {
+                            sep2
                         } else {
                             sep1
                         }
@@ -174,7 +176,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                         return Err("$separator: Must be \"space\", \"comma\", or \"auto\".".into())
                     }
                 },
-                _ => return Err("$separator: Must be \"space\", \"comma\", or \"auto\".".into()),
+                v => return Err(format!("$separator: {} is not a string.", v).into()),
             };
 
             let brackets = match arg!(

@@ -207,6 +207,11 @@ test!(
     "a {\n  color: join(a b, c, $bracketed: afhsihsdhsdkhsd);\n}\n",
     "a {\n  color: [a b c];\n}\n"
 );
+test!(
+    join_empty_first_takes_second_list_separator,
+    "a {\n  color: join((), (a, b, c));\n}\n",
+    "a {\n  color: a, b, c;\n}\n"
+);
 test!(bracketed_ident, "a {\n  color: [a];\n}\n");
 test!(bracketed_space_list, "a {\n  color: [a b];\n}\n");
 test!(bracketed_comma_list, "a {\n  color: [a, b];\n}\n");
