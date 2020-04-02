@@ -77,16 +77,7 @@ impl Add for Value {
             }
             Self::UnaryOp(..) | Self::Paren(..) => (self.eval()? + other)?,
             Self::Ident(s1, quotes1) => match other {
-                Self::Ident(s2, quotes2) => {
-                    let quotes = match (quotes1, quotes2) {
-                        (QuoteKind::Double, _)
-                        | (QuoteKind::Single, _)
-                        | (_, QuoteKind::Double)
-                        | (_, QuoteKind::Single) => QuoteKind::Double,
-                        _ => QuoteKind::None,
-                    };
-                    Value::Ident(format!("{}{}", s1, s2), quotes)
-                }
+                Self::Ident(s2, _) => Value::Ident(format!("{}{}", s1, s2), quotes1.normalize()),
                 Self::Important | Self::True | Self::False | Self::Dimension(..) => {
                     Value::Ident(format!("{}{}", s1, other), quotes1.normalize())
                 }

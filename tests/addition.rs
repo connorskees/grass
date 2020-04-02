@@ -54,13 +54,11 @@ test!(
     "a {\n  color: \"foobar\";\n}\n"
 );
 test!(
-    #[ignore]
     unquoted_plus_dblquoted,
     "a {\n  color: foo + \"bar\";\n}\n",
     "a {\n  color: foobar;\n}\n"
 );
 test!(
-    #[ignore]
     unquoted_plus_sglquoted,
     "a {\n  color: foo + 'bar';\n}\n",
     "a {\n  color: foobar;\n}\n"
