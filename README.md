@@ -15,7 +15,6 @@ cargo b --release
 
 The large features remaining are
 ```
-@while
 order of operations
 special case certain functions (min, max, calc, element, expression, progid, url)
 variadic arguments
