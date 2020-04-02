@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::iter::Peekable;
 
 use crate::common::Pos;
@@ -19,6 +19,7 @@ pub(crate) struct FuncArgs(pub Vec<FuncArg>);
 pub(crate) struct FuncArg {
     pub name: String,
     pub default: Option<Value>,
+    pub is_variadic: bool,
 }
 
 impl FuncArgs {
@@ -28,11 +29,11 @@ impl FuncArgs {
 }
 
 #[derive(Debug, Clone, std::default::Default)]
-pub(crate) struct CallArgs(pub BTreeMap<String, Value>);
+pub(crate) struct CallArgs(pub HashMap<String, Value>);
 
 impl CallArgs {
     pub fn new() -> Self {
-        CallArgs(BTreeMap::new())
+        CallArgs(HashMap::new())
     }
 
     pub fn get(&self, val: &str) -> Option<&Value> {
@@ -67,6 +68,7 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
             _ => todo!(),
         };
         let mut default: Vec<Token> = Vec::new();
+        let mut is_variadic = false;
         devour_whitespace(toks);
         let kind = match toks.next() {
             Some(Token { kind, .. }) => kind,
@@ -86,6 +88,7 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
                                     scope,
                                     super_selector,
                                 )?),
+                                is_variadic,
                             });
                             break;
                         }
@@ -97,6 +100,7 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
                                     scope,
                                     super_selector,
                                 )?),
+                                is_variadic,
                             });
                             break;
                         }
@@ -107,7 +111,31 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
                     }
                 }
             }
-            '.' => todo!("handle varargs"),
+            '.' => {
+                if toks.next().ok_or("expected \".\".")?.kind != '.' {
+                    return Err("expected \".\".".into());
+                }
+                if toks.next().ok_or("expected \".\".")?.kind != '.' {
+                    return Err("expected \".\".".into());
+                }
+                devour_whitespace(toks);
+                if toks.next().ok_or("expected \")\".")?.kind != ')' {
+                    return Err("expected \")\".".into());
+                }
+
+                is_variadic = true;
+
+                args.push(FuncArg {
+                    name: name.replace('_', "-"),
+                    default: Some(Value::from_tokens(
+                        &mut default.into_iter().peekable(),
+                        scope,
+                        super_selector,
+                    )?),
+                    is_variadic,
+                });
+                break;
+            }
             ')' => {
                 args.push(FuncArg {
                     name: name.replace('_', "-"),
@@ -120,12 +148,14 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
                             super_selector,
                         )?)
                     },
+                    is_variadic,
                 });
                 break;
             }
             ',' => args.push(FuncArg {
                 name: name.replace('_', "-"),
                 default: None,
+                is_variadic,
             }),
             _ => {}
         }
@@ -144,7 +174,7 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
     scope: &Scope,
     super_selector: &Selector,
 ) -> SassResult<CallArgs> {
-    let mut args: BTreeMap<String, Value> = BTreeMap::new();
+    let mut args: HashMap<String, Value> = HashMap::new();
     devour_whitespace_or_comment(toks)?;
     let mut name: String;
     let mut val: Vec<Token> = Vec::new();
