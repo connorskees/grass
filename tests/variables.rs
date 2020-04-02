@@ -112,3 +112,8 @@ test!(
     "$input: foo;\na {\n  color: $input#{\"literal\"};\n}\n",
     "a {\n  color: foo literal;\n}\n"
 );
+test!(
+    whitespace_after_variable_name_in_declaration,
+    "a {\n  $x : true;\n  color: $x;\n}\n",
+    "a {\n  color: true;\n}\n"
+);
