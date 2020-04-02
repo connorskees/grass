@@ -81,4 +81,19 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             Ok(Value::Map(map1))
         }),
     );
+    f.insert(
+        "map-remove".to_owned(),
+        Box::new(|mut args, _| {
+            let mut map = match arg!(args, 0, "map") {
+                Value::Map(m) => m,
+                Value::List(v, ..) if v.is_empty() => SassMap::new(),
+                v => return Err(format!("$map: {} is not a map.", v).into()),
+            };
+            let keys = args.get_variadic()?;
+            for key in keys {
+                map.remove(&key);
+            }
+            Ok(Value::Map(map))
+        }),
+    );
 }

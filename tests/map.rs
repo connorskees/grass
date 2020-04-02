@@ -119,3 +119,13 @@ error!(
     map_has_key_one_arg,
     "a {\n  color: map-has-key(1);\n}\n", "Error: Missing argument $key."
 );
+test!(
+    map_remove_one,
+    "a {\n  color: inspect(map-remove((\"foo\": 1, \"bar\": 2), \"bar\"));\n}\n",
+    "a {\n  color: (\"foo\": 1);\n}\n"
+);
+test!(
+    map_remove_two,
+    "a {\n  color: inspect(map-remove((\"foo\": 1, \"bar\": 2, \"baz\": 3), \"bar\", \"baz\"));\n}\n",
+    "a {\n  color: (\"foo\": 1);\n}\n"
+);
