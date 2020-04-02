@@ -162,9 +162,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             ) {
                 Value::Ident(s, ..) => match s.as_str() {
                     "auto" => {
-                        if list1.len() < 2 && list2.len() < 2 {
-                            ListSeparator::Space
-                        } else if list1.is_empty() {
+                        if list1.is_empty() {
                             sep2
                         } else {
                             sep1
