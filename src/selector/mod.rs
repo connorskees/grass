@@ -316,7 +316,7 @@ impl Selector {
                     }
                     continue;
                 }
-                _ => todo!(),
+                _ => return Err("expected selector.".into()),
             });
             iter.next();
         }
