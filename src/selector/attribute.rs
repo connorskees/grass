@@ -5,19 +5,15 @@ use std::string::ToString;
 use super::{Selector, SelectorKind};
 use crate::error::SassResult;
 use crate::scope::Scope;
-use crate::utils::{
-    devour_whitespace, eat_ident,
-    parse_interpolation, parse_quoted_string,
-};
+use crate::utils::{devour_whitespace, eat_ident, parse_interpolation, parse_quoted_string};
 use crate::Token;
-
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Attribute {
-    pub attr: String,
-    pub value: String,
-    pub modifier: String,
-    pub kind: AttributeKind,
+    attr: String,
+    value: String,
+    modifier: Option<char>,
+    kind: AttributeKind,
 }
 
 impl Attribute {
@@ -57,7 +53,7 @@ impl Attribute {
                         kind: AttributeKind::Any,
                         attr,
                         value: String::new(),
-                        modifier: v.to_string(),
+                        modifier: Some(v),
                     }));
                 }
                 ']' => {
@@ -65,14 +61,14 @@ impl Attribute {
                         kind: AttributeKind::Any,
                         attr,
                         value: String::new(),
-                        modifier: String::new(),
+                        modifier: None,
                     }));
                 }
                 '=' => AttributeKind::Equals,
-                '~' => AttributeKind::InList,
-                '|' => AttributeKind::BeginsWithHyphenOrExact,
-                '^' => AttributeKind::StartsWith,
-                '$' => AttributeKind::EndsWith,
+                '~' => AttributeKind::Include,
+                '|' => AttributeKind::Dash,
+                '^' => AttributeKind::Prefix,
+                '$' => AttributeKind::Suffix,
                 '*' => AttributeKind::Contains,
                 _ => return Err("Expected \"]\".".into()),
             }
@@ -112,7 +108,7 @@ impl Attribute {
                         kind,
                         attr,
                         value,
-                        modifier: String::new(),
+                        modifier: None,
                     }))
                 }
                 v @ 'a'..='z' | v @ 'A'..='Z' => {
@@ -120,12 +116,12 @@ impl Attribute {
                         ']' => {}
                         _ => return Err("expected \"]\".".into()),
                     }
-                    format!(" {}", v)
+                    Some(v)
                 }
                 _ => return Err("Expected \"]\".".into()),
             }
         } else {
-            todo!()
+            return Err("expected \"]\".".into());
         };
 
         Ok(SelectorKind::Attribute(Attribute {
@@ -139,45 +135,60 @@ impl Attribute {
 
 impl Display for Attribute {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let modifier = if let Some(c) = self.modifier {
+            format!(" {}", c)
+        } else {
+            String::new()
+        };
         match self.kind {
-            AttributeKind::Any => write!(f, "[{}{}]", self.attr, self.modifier),
-            AttributeKind::Equals => write!(f, "[{}={}{}]", self.attr, self.value, self.modifier),
-            AttributeKind::InList => write!(f, "[{}~={}{}]", self.attr, self.value, self.modifier),
-            AttributeKind::BeginsWithHyphenOrExact => {
-                write!(f, "[{}|={}{}]", self.attr, self.value, self.modifier)
-            }
-            AttributeKind::StartsWith => {
-                write!(f, "[{}^={}{}]", self.attr, self.value, self.modifier)
-            }
-            AttributeKind::EndsWith => {
-                write!(f, "[{}$={}{}]", self.attr, self.value, self.modifier)
-            }
-            AttributeKind::Contains => {
-                write!(f, "[{}*={}{}]", self.attr, self.value, self.modifier)
-            }
+            AttributeKind::Any => write!(f, "[{}{}]", self.attr, modifier),
+            AttributeKind::Equals => write!(f, "[{}={}{}]", self.attr, self.value, modifier),
+            AttributeKind::Include => write!(f, "[{}~={}{}]", self.attr, self.value, modifier),
+            AttributeKind::Dash => write!(f, "[{}|={}{}]", self.attr, self.value, modifier),
+            AttributeKind::Prefix => write!(f, "[{}^={}{}]", self.attr, self.value, modifier),
+            AttributeKind::Suffix => write!(f, "[{}$={}{}]", self.attr, self.value, modifier),
+            AttributeKind::Contains => write!(f, "[{}*={}{}]", self.attr, self.value, modifier),
         }
     }
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum AttributeKind {
+enum AttributeKind {
     /// [attr]
+    ///
     /// Represents elements with an attribute name of `attr`
     Any,
+
     /// [attr=value]
-    /// Represents elements with an attribute name of `attr` whose value is exactly `value`
+    ///
+    /// Represents elements with an attribute name of `attr`
+    /// whose value is exactly `value`
     Equals,
+
     /// [attr~=value]
-    /// Represents elements with an attribute name of `attr` whose value is a whitespace-separated list of words, one of which is exactly `value`
-    InList,
+    ///
+    /// Represents elements with an attribute name of `attr`
+    /// whose value is a whitespace-separated list of words,
+    /// one of which is exactly `value`
+    Include,
+
     /// [attr|=value]
-    /// Represents elements with an attribute name of `attr` whose value can be exactly value or can begin with `value` immediately followed by a hyphen (`-`)
-    BeginsWithHyphenOrExact,
+    ///
+    /// Represents elements with an attribute name of `attr`
+    /// whose value can be exactly value or can begin with
+    /// `value` immediately followed by a hyphen (`-`)
+    Dash,
+
     /// [attr^=value]
-    StartsWith,
+    Prefix,
+
     /// [attr$=value]
-    EndsWith,
+    Suffix,
+
     /// [attr*=value]
-    /// Represents elements with an attribute name of `attr` whose value contains at least one occurrence of `value` within the string
+    ///
+    /// Represents elements with an attribute name of `attr`
+    /// whose value contains at least one occurrence of
+    /// `value` within the string
     Contains,
 }
