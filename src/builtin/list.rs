@@ -225,6 +225,11 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 v => vec![v],
             };
             let value = arg!(args, 1, "value");
+            // TODO: find a way around this unwrap.
+            // It should be impossible to hit as the arg is
+            // evaluated prior to checking equality, but
+            // it is still dirty. 
+            // Potential input to fuzz: index(1px 1in 1cm, 96px + 1rem)
             let index = match list
                 .into_iter()
                 .position(|v| v.equals(value.clone()).unwrap())
