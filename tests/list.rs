@@ -288,8 +288,8 @@ test!(
     "a {\n  color: index(1px solid red, dashed);\n}\n",
     ""
 );
-// test!(
-//     index_found_map,
-//     "a {\n  color: index((width: 10px, height: 20px), (height 20px));\n}\n",
-//     "a {\n  color: 2;\n}\n"
-// );
+test!(
+    index_found_map,
+    "a {\n  color: index((width: 10px, height: 20px), (height 20px));\n}\n",
+    "a {\n  color: 2;\n}\n"
+);
