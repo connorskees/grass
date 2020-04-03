@@ -225,7 +225,10 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 v => vec![v],
             };
             let value = arg!(args, 1, "value");
-            let index = match list.into_iter().position(|v| v == value) {
+            let index = match list
+                .into_iter()
+                .position(|v| v.equals(value.clone()).unwrap())
+            {
                 Some(v) => Number::from(v + 1),
                 None => return Ok(Value::Null),
             };

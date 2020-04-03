@@ -293,3 +293,8 @@ test!(
     "a {\n  color: index((width: 10px, height: 20px), (height 20px));\n}\n",
     "a {\n  color: 2;\n}\n"
 );
+test!(
+    index_unit_conversions,
+    "a {\n  color: index(1px 1in 1cm, 96px);\n}\n",
+    "a {\n  color: 2;\n}\n"
+);

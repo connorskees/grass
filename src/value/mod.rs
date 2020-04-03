@@ -189,6 +189,21 @@ impl Value {
                 Self::Ident(s2, ..) => s1 == s2,
                 _ => false,
             },
+            Self::Dimension(n, unit) => match other {
+                Self::Dimension(n2, unit2) => {
+                    if !unit.comparable(&unit2) {
+                        false
+                    } else if unit == unit2 {
+                        n == n2
+                    } else if unit == Unit::None || unit2 == Unit::None {
+                        false
+                    } else {
+                        n == (n2
+                            * UNIT_CONVERSION_TABLE[&unit.to_string()][&unit2.to_string()].clone())
+                    }
+                }
+                _ => false,
+            },
             s => s == other.eval()?,
         })
     }

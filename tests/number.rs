@@ -86,3 +86,8 @@ test!(
     "a {\n  color: -0.000000000001;\n}\n",
     "a {\n  color: 0;\n}\n"
 );
+test!(
+    equality_unit_conversions,
+    "a {\n  color: 1in == 96px;\n}\n",
+    "a {\n  color: true;\n}\n"
+);
