@@ -80,8 +80,7 @@ test!(
 );
 error!(
     attribute_attr_quoted,
-    "[\"attr\"=val] {\n  color: red;\n}\n",
-    "Error: Expected identifier."
+    "[\"attr\"=val] {\n  color: red;\n}\n", "Error: Expected identifier."
 );
 test!(selector_attribute_in, "[attr~=val] {\n  color: red;\n}\n");
 test!(
@@ -287,11 +286,11 @@ test!(
     "#foo #bar,,\n,#baz #boom, {a: b}",
     "#foo #bar,\n#baz #boom {\n  a: b;\n}\n"
 );
-// test!(
-//     trailing_comma_children,
-//     "a,, {\n  b {\n    color: /**/red;\n  }\n}\n",
-//     "a b {\n  color: red;\n}\n"
-// );
+test!(
+    trailing_comma_children,
+    "a,, {\n  b {\n    color: /**/red;\n  }\n}\n",
+    "a b {\n  color: red;\n}\n"
+);
 test!(simple_placeholder, "%a {\n  color: red;\n}\n", "");
 test!(
     placeholder_first,
@@ -326,10 +325,11 @@ test!(
     "ul li#foo {\n  foo: bar;\n}\n"
 );
 test!(escaped_space, "a\\ b {\n  color: foo;\n}\n");
-// blocked on whitespace
-// test!(multiple_consecutive_immediate_child,"> > foo {\n  color: foo;\n}\n",);
+test!(
+    multiple_consecutive_immediate_child,
+    "> > foo {\n  color: foo;\n}\n"
+);
 error!(
     modifier_on_any_attr,
-    "[attr i] {color: foo;}",
-    "Error: Expected \"]\"."
+    "[attr i] {color: foo;}", "Error: Expected \"]\"."
 );

@@ -5,7 +5,9 @@ use std::string::ToString;
 use super::{Selector, SelectorKind};
 use crate::error::SassResult;
 use crate::scope::Scope;
-use crate::utils::{devour_whitespace, eat_ident, parse_interpolation, parse_quoted_string, is_ident_char};
+use crate::utils::{
+    devour_whitespace, eat_ident, is_ident_char, parse_interpolation, parse_quoted_string,
+};
 use crate::Token;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -24,9 +26,7 @@ impl Attribute {
     ) -> SassResult<SelectorKind> {
         devour_whitespace(toks);
         let attr = match toks.peek().ok_or("Expected identifier.")?.kind {
-            c if is_ident_char(c) => {
-                eat_ident(toks, scope, super_selector)?
-            }
+            c if is_ident_char(c) => eat_ident(toks, scope, super_selector)?,
             '#' => {
                 toks.next();
                 if toks.next().ok_or("Expected expression.")?.kind == '{' {

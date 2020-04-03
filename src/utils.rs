@@ -10,6 +10,12 @@ pub(crate) trait IsWhitespace {
     fn is_whitespace(&self) -> bool;
 }
 
+impl IsWhitespace for char {
+    fn is_whitespace(&self) -> bool {
+        self.is_ascii_whitespace()
+    }
+}
+
 pub(crate) fn devour_whitespace<I: Iterator<Item = W>, W: IsWhitespace>(
     s: &mut Peekable<I>,
 ) -> bool {

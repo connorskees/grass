@@ -6,8 +6,8 @@ use crate::error::SassResult;
 use crate::lexer::Lexer;
 use crate::scope::Scope;
 use crate::utils::{
-    devour_whitespace, devour_whitespace_or_comment, eat_ident, eat_ident_no_interpolation,
-    parse_interpolation, IsWhitespace,
+    devour_whitespace, eat_comment, eat_ident_no_interpolation, parse_interpolation,
+    read_until_closing_paren, read_until_newline, IsWhitespace,
 };
 use crate::Token;
 
@@ -16,7 +16,7 @@ use attribute::Attribute;
 mod attribute;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub(crate) struct Selector(pub Vec<SelectorKind>);
+pub(crate) struct Selector(Vec<SelectorPart>);
 
 impl Selector {
     pub const fn new() -> Selector {
@@ -24,114 +24,127 @@ impl Selector {
     }
 }
 
-impl Display for Selector {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut iter = self.0.iter().peekable();
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct SelectorPart {
+    pub inner: Vec<SelectorKind>,
+    pub is_invisible: bool,
+    pub has_newline: bool,
+}
 
+impl Display for SelectorPart {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        dbg!(&self);
+        let mut iter = self.inner.iter().peekable();
+        devour_whitespace(&mut iter);
         while let Some(s) = iter.next() {
-            match s {
-                SelectorKind::Whitespace => continue,
-                SelectorKind::Attribute(_)
-                | SelectorKind::Pseudo(_)
-                | SelectorKind::PseudoElement(_)
-                | SelectorKind::PseudoParen(..)
-                | SelectorKind::Class
-                | SelectorKind::Id
-                | SelectorKind::Universal
-                | SelectorKind::InterpolatedSuper
-                | SelectorKind::Element(_) => {
-                    write!(f, "{}", s)?;
-                    if devour_whitespace(&mut iter) {
-                        match iter.peek() {
-                            Some(SelectorKind::Attribute(_))
-                            | Some(SelectorKind::Pseudo(_))
-                            | Some(SelectorKind::PseudoElement(_))
-                            | Some(SelectorKind::PseudoParen(..))
-                            | Some(SelectorKind::Class)
-                            | Some(SelectorKind::Id)
-                            | Some(SelectorKind::Universal)
-                            | Some(SelectorKind::InterpolatedSuper)
-                            | Some(SelectorKind::Element(_)) => {
-                                write!(f, " ")?;
-                            }
-                            _ => {}
-                        }
-                    }
-                }
-                SelectorKind::Multiple => {
-                    devour_whitespace(&mut iter);
-                    while let Some(sel) = iter.peek() {
-                        if sel != &&SelectorKind::Multiple {
-                            write!(f, ",")?;
-                            if sel == &&SelectorKind::Newline {
-                                iter.next();
-                                f.write_char('\n')?;
-                            } else {
-                                f.write_char(' ')?;
-                            }
-                            break;
-                        }
-                        iter.next();
+            write!(f, "{}", s)?;
+            if devour_whitespace(&mut iter) {
+                match iter.peek() {
+                    Some(SelectorKind::Universal)
+                    | Some(SelectorKind::Following)
+                    | Some(SelectorKind::ImmediateChild)
+                    | Some(SelectorKind::Preceding) => {
+                        f.write_char(' ')?;
+                        write!(f, "{}", iter.next().unwrap())?;
                         devour_whitespace(&mut iter);
-                    }
-                    while let Some(sel) = iter.peek() {
-                        if sel != &&SelectorKind::Multiple
-                            && sel != &&SelectorKind::Newline
-                            && !sel.is_whitespace()
-                        {
-                            break;
+                        if iter.peek().is_some() {
+                            f.write_char(' ')?;
                         }
-                        iter.next();
                     }
+                    Some(..) => {
+                        f.write_char(' ')?;
+                    }
+                    None => break,
                 }
-                _ => write!(f, "{}", s)?,
             }
         }
-        write!(f, "")
+        Ok(())
+    }
+}
+
+impl Display for Selector {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for (idx, part) in self.0.iter().enumerate() {
+            write!(f, "{}", part)?;
+            if idx + 1 < self.0.len() {
+                f.write_char(',')?;
+                if part.has_newline {
+                    f.write_char('\n')?;
+                } else {
+                    f.write_char(' ')?;
+                }
+            }
+        }
+        Ok(())
     }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) enum SelectorKind {
-    /// An element selector: `button`
+    /// Any string
+    ///
+    ///  `button`
     Element(String),
-    /// An id selector: `#footer`
-    Id,
-    /// A single class selector: `.button-active`
-    Class,
-    /// A universal selector: `*`
-    Universal,
-    /// Multiple unrelated selectors: `button, .active`
-    Multiple,
-    /// Newline (significant if after `SelectorKind::Multiple`)
-    Newline,
-    /// Select all immediate children: `ul > li`
-    ImmediateChild,
-    /// Select all elements immediately following: `div + p`
-    Following,
-    /// Select elements preceeded by: `p ~ ul`
-    Preceding,
-    /// Select elements with attribute: `html[lang|=en]`
-    Attribute(Attribute),
-    /// Pseudo selector: `:hover`
-    Pseudo(String),
-    /// Pseudo element selector: `::before`
-    PseudoElement(String),
-    /// Pseudo selector with additional parens: `:any(h1, h2, h3, h4, h5, h6)`
-    PseudoParen(String, String),
-    /// Use the super selector: `&.red`
-    Super,
-    /// Super selector in an interpolated context: `a #{&}`
-    InterpolatedSuper,
-    /// Placeholder selector: `%alert`
-    Placeholder,
-    Whitespace,
-}
 
-impl IsWhitespace for SelectorKind {
-    fn is_whitespace(&self) -> bool {
-        self == &Self::Whitespace
-    }
+    /// An id selector
+    ///
+    /// `#`
+    Id(String),
+
+    /// A class selector
+    ///
+    /// `.`
+    Class(String),
+
+    /// A universal selector
+    ///
+    /// `*`
+    Universal,
+
+    /// Select all immediate children
+    ///
+    /// `>`
+    ImmediateChild,
+
+    /// Select all elements immediately following
+    ///
+    /// `+`
+    Following,
+
+    /// Select elements preceeded by
+    ///
+    /// `~`
+    Preceding,
+
+    /// Select elements with attribute
+    ///
+    /// `[lang|=en]`
+    Attribute(Attribute),
+
+    Super,
+
+    /// Pseudo selector
+    ///
+    /// `:hover`
+    Pseudo(String),
+
+    /// Pseudo element selector
+    ///
+    /// `::before`
+    PseudoElement(String),
+
+    /// Pseudo selector with additional parens
+    ///
+    /// `:any(h1, h2, h3, h4, h5, h6)`
+    PseudoParen(String, Selector),
+
+    /// Placeholder selector
+    ///
+    /// `%`
+    Placeholder(String),
+
+    /// Denotes whitespace between two selectors
+    Whitespace,
 }
 
 impl IsWhitespace for &SelectorKind {
@@ -144,215 +157,217 @@ impl Display for SelectorKind {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             SelectorKind::Element(s) => write!(f, "{}", s),
-            SelectorKind::Id => write!(f, "#"),
-            SelectorKind::Class => write!(f, "."),
+            SelectorKind::Id(s) => write!(f, "#{}", s),
+            SelectorKind::Class(s) => write!(f, ".{}", s),
             SelectorKind::Universal => write!(f, "*"),
-            SelectorKind::Whitespace => write!(f, " "),
-            SelectorKind::Multiple => write!(f, ", "),
-            SelectorKind::Newline => writeln!(f),
-            SelectorKind::ImmediateChild => write!(f, " > "),
-            SelectorKind::Following => write!(f, " + "),
-            SelectorKind::Preceding => write!(f, " ~ "),
+            SelectorKind::ImmediateChild => write!(f, ">"),
+            SelectorKind::Following => write!(f, "+"),
+            SelectorKind::Preceding => write!(f, "~"),
             SelectorKind::Attribute(attr) => write!(f, "{}", attr),
             SelectorKind::Pseudo(s) => write!(f, ":{}", s),
             SelectorKind::PseudoElement(s) => write!(f, "::{}", s),
             SelectorKind::PseudoParen(s, val) => write!(f, ":{}({})", s, val),
-            SelectorKind::Super | SelectorKind::InterpolatedSuper => write!(f, ""),
-            SelectorKind::Placeholder => write!(f, "%"),
+            SelectorKind::Placeholder(s) => write!(f, "%{}", s),
+            SelectorKind::Super => todo!(),
+            SelectorKind::Whitespace => f.write_char(' '),
         }
     }
 }
 
-struct SelectorParser<'a> {
-    scope: &'a Scope,
-    super_selector: &'a Selector,
-    selectors: Vec<SelectorKind>,
-    is_interpolated: bool,
-}
-
-impl<'a> SelectorParser<'a> {
-    const fn new(scope: &'a Scope, super_selector: &'a Selector) -> SelectorParser<'a> {
-        SelectorParser {
-            scope,
-            super_selector,
-            selectors: Vec::new(),
-            is_interpolated: false,
-        }
-    }
-
-    fn all_selectors<I: Iterator<Item = Token>>(
-        mut self,
-        tokens: &'a mut Peekable<I>,
-    ) -> SassResult<Selector> {
-        self.tokens_to_selectors(tokens)?;
-        // remove trailing whitespace
-        while let Some(x) = self.selectors.pop() {
-            if x != SelectorKind::Whitespace {
-                self.selectors.push(x);
-                break;
-            }
-        }
-        Ok(Selector(self.selectors))
-    }
-
-    fn consume_pseudo_selector<I: Iterator<Item = Token>>(
-        &mut self,
-        tokens: &'_ mut Peekable<I>,
-    ) -> SassResult<()> {
-        if let Some(tok) = tokens.next() {
-            match tok.kind {
-                v @ 'a'..='z' | v @ 'A'..='Z' | v @ '-' | v @ '_' => {
-                    let s = format!(
-                        "{}{}",
-                        v,
-                        eat_ident(tokens, self.scope, self.super_selector)?
-                    );
-                    if let Some(Token { kind: '(', .. }) = tokens.peek() {
-                        tokens.next();
-                        devour_whitespace(tokens);
-                        let mut toks = String::new();
-                        while let Some(Token { kind, .. }) = tokens.peek() {
-                            if kind == &')' {
-                                tokens.next();
-                                break;
-                            }
-                            let tok = tokens.next().unwrap();
-                            toks.push_str(&tok.kind.to_string());
-                            if devour_whitespace(tokens) {
-                                toks.push(' ');
-                            }
-                        }
-                        self.selectors
-                            .push(SelectorKind::PseudoParen(s, toks.trim_end().to_owned()))
-                    } else {
-                        self.selectors.push(SelectorKind::Pseudo(s))
-                    }
-                }
-                ':' => {
-                    let s = eat_ident(tokens, self.scope, self.super_selector)?;
-                    self.selectors.push(SelectorKind::PseudoElement(s))
-                }
-                _ => return Err("Expected identifier.".into()),
-            }
-        }
-        Ok(())
-    }
-
-    fn tokens_to_selectors<I: Iterator<Item = Token>>(
-        &mut self,
-        tokens: &'_ mut Peekable<I>,
-    ) -> SassResult<()> {
-        while tokens.peek().is_some() {
-            self.consume_selector(tokens)?;
-        }
-        Ok(())
-    }
-
-    fn consume_selector<I: Iterator<Item = Token>>(
-        &mut self,
-        tokens: &'_ mut Peekable<I>,
-    ) -> SassResult<()> {
-        if devour_whitespace_or_comment(tokens)? {
-            if let Some(Token { kind: ',', .. }) = tokens.peek() {
-                tokens.next();
-                self.selectors.push(SelectorKind::Multiple);
-                return Ok(());
-            }
-            self.selectors.push(SelectorKind::Whitespace);
-            return Ok(());
-        }
-        if let Some(Token { kind, .. }) = tokens.peek() {
-            match kind {
-                'a'..='z' | 'A'..='Z' | '-' | '_' | '0'..='9' | '\\' => {
-                    let s = eat_ident_no_interpolation(tokens)?;
-                    self.selectors.push(SelectorKind::Element(s))
-                }
-                '.' => {
-                    tokens.next();
-                    self.selectors.push(SelectorKind::Class)
-                }
-                '#' => {
-                    tokens.next();
-                    if tokens.peek().is_some() && tokens.peek().unwrap().kind == '{' {
-                        tokens.next();
-                        self.is_interpolated = true;
-                        self.tokens_to_selectors(
-                            &mut Lexer::new(
-                                &parse_interpolation(tokens, self.scope, self.super_selector)?
-                                    .to_string(),
-                            )
-                            .peekable(),
-                        )?;
-                        self.is_interpolated = false;
-                    } else {
-                        self.selectors.push(SelectorKind::Id)
-                    }
-                }
-                ':' => {
-                    tokens.next();
-                    self.consume_pseudo_selector(tokens)?
-                }
-                ',' => {
-                    tokens.next();
-                    self.selectors.push(SelectorKind::Multiple);
-                    if tokens.peek().unwrap().kind == '\n' {
-                        self.selectors.push(SelectorKind::Newline);
-                        devour_whitespace(tokens);
-                    }
-                }
-                '>' => {
-                    tokens.next();
-                    self.selectors.push(SelectorKind::ImmediateChild)
-                }
-                '+' => {
-                    tokens.next();
-                    self.selectors.push(SelectorKind::Following)
-                }
-                '~' => {
-                    tokens.next();
-                    self.selectors.push(SelectorKind::Preceding)
-                }
-                '*' => {
-                    tokens.next();
-                    self.selectors.push(SelectorKind::Universal)
-                }
-                '%' => {
-                    tokens.next();
-                    self.selectors.push(SelectorKind::Placeholder)
-                }
-                '&' => self.selectors.push(if self.is_interpolated {
-                    tokens.next();
-                    SelectorKind::InterpolatedSuper
-                } else {
-                    tokens.next();
-                    SelectorKind::Super
-                }),
-                '[' => {
-                    tokens.next();
-                    self.selectors.push(Attribute::from_tokens(
-                        tokens,
-                        self.scope,
-                        self.super_selector,
-                    )?)
-                }
-                c if c.is_control() => {
-                    return Err("expected selector.".into());
-                }
-                '`' => return Err("expected selector.".into()),
-                _ => todo!("unimplemented selector"),
-            };
-        }
-        Ok(())
-    }
+fn is_selector_name_char(c: char) -> bool {
+    c.is_ascii_alphanumeric()
+        || c == '_'
+        || c == '\\'
+        || (!c.is_ascii() && !c.is_control())
+        || c == '-'
 }
 
 impl Selector {
-    pub fn from_tokens<'a, I: Iterator<Item = Token>>(
-        tokens: &'a mut Peekable<I>,
-        scope: &'a Scope,
-        super_selector: &'a Selector,
+    pub fn from_tokens<I: Iterator<Item = Token>>(
+        toks: &mut Peekable<I>,
+        scope: &Scope,
+        super_selector: &Selector,
     ) -> SassResult<Selector> {
-        SelectorParser::new(scope, super_selector).all_selectors(tokens)
+        let mut string = String::new();
+        while let Some(tok) = toks.next() {
+            match tok.kind {
+                '#' => {
+                    if toks.peek().is_some() && toks.peek().unwrap().kind == '{' {
+                        toks.next();
+                        string.push_str(
+                            &parse_interpolation(toks, scope, super_selector)?.to_string(),
+                        );
+                    } else {
+                        string.push('#');
+                    }
+                }
+                ',' => {
+                    while let Some(c) = string.pop() {
+                        if c == ' ' || c == ',' {
+                            continue;
+                        } else {
+                            string.push(c);
+                            string.push(',');
+                            break;
+                        }
+                    }
+                }
+                '/' => {
+                    if toks.peek().is_none() {
+                        return Err("Expected selector.".into());
+                    } else if '*' == toks.peek().unwrap().kind {
+                        toks.next();
+                        eat_comment(toks, &Scope::new(), &Selector::new())?;
+                    } else if '/' == toks.peek().unwrap().kind {
+                        read_until_newline(toks);
+                        devour_whitespace(toks);
+                    } else {
+                        return Err("Expected selector.".into());
+                    }
+                    string.push(' ');
+                }
+                c => string.push(c),
+            }
+        }
+
+        while let Some(c) = string.pop() {
+            if c == ' ' || c == ',' || c == '\t' {
+                continue;
+            } else {
+                string.push(c);
+                string.push(',');
+                break;
+            }
+        }
+
+        let mut inner = Vec::new();
+        let mut is_invisible = false;
+        let mut has_newline = false;
+        let mut parts = Vec::new();
+
+        // HACK: we re-lex here to get access to generic helper functions that
+        // operate on `Token`s. Ideally, we would in the future not have
+        // to do this, or at the very least retain the span information.
+        let mut iter = Lexer::new(&string).peekable();
+
+        while let Some(tok) = iter.peek() {
+            inner.push(match tok.kind {
+                _ if is_selector_name_char(tok.kind) => {
+                    inner.push(SelectorKind::Element(eat_ident_no_interpolation(
+                        &mut iter,
+                    )?));
+                    continue;
+                }
+                '&' => SelectorKind::Super,
+                '.' => {
+                    iter.next();
+                    inner.push(SelectorKind::Class(eat_ident_no_interpolation(&mut iter)?));
+                    continue;
+                }
+                '#' => {
+                    iter.next();
+                    inner.push(SelectorKind::Id(eat_ident_no_interpolation(&mut iter)?));
+                    continue;
+                }
+                '%' => {
+                    iter.next();
+                    is_invisible = true;
+                    inner.push(SelectorKind::Placeholder(eat_ident_no_interpolation(
+                        &mut iter,
+                    )?));
+                    continue;
+                }
+                '>' => SelectorKind::ImmediateChild,
+                '+' => SelectorKind::Following,
+                '~' => SelectorKind::Preceding,
+                '*' => SelectorKind::Universal,
+                ',' => {
+                    iter.next();
+                    if iter.peek().is_some() && iter.peek().unwrap().kind == '\n' {
+                        has_newline = true;
+                    }
+                    if !inner.is_empty() {
+                        parts.push(SelectorPart {
+                            inner: inner.clone(),
+                            is_invisible,
+                            has_newline,
+                        });
+                        inner.clear();
+                    }
+                    is_invisible = false;
+                    has_newline = false;
+                    devour_whitespace(&mut iter);
+                    continue;
+                }
+                '[' => {
+                    iter.next();
+                    inner.push(Attribute::from_tokens(&mut iter, scope, super_selector)?);
+                    continue;
+                }
+                ':' => {
+                    iter.next();
+                    inner.push(Self::consume_pseudo_selector(
+                        &mut iter,
+                        scope,
+                        super_selector,
+                    )?);
+                    continue;
+                }
+                c if c.is_whitespace() => {
+                    if devour_whitespace(&mut iter) {
+                        inner.push(SelectorKind::Whitespace);
+                    }
+                    continue;
+                }
+                _ => todo!(),
+            });
+            iter.next();
+        }
+
+        if !inner.is_empty() {
+            parts.push(SelectorPart {
+                inner,
+                is_invisible,
+                has_newline,
+            });
+        }
+
+        Ok(Selector(parts))
+    }
+
+    fn consume_pseudo_selector<I: Iterator<Item = Token>>(
+        toks: &mut Peekable<I>,
+        scope: &Scope,
+        super_selector: &Selector,
+    ) -> SassResult<SelectorKind> {
+        let is_pseudo_element = if toks.peek().unwrap().kind == ':' {
+            toks.next();
+            true
+        } else {
+            false
+        };
+        if is_selector_name_char(toks.peek().unwrap().kind) {
+            let name = eat_ident_no_interpolation(toks)?;
+            Ok(
+                if toks.peek().is_some() && toks.peek().unwrap().kind == '(' {
+                    toks.next();
+                    let mut inner_toks = read_until_closing_paren(toks);
+                    inner_toks.pop();
+                    let inner = Selector::from_tokens(
+                        &mut inner_toks.into_iter().peekable(),
+                        scope,
+                        super_selector,
+                    )?;
+                    SelectorKind::PseudoParen(name, inner)
+                } else if is_pseudo_element {
+                    SelectorKind::PseudoElement(name)
+                } else {
+                    SelectorKind::Pseudo(name)
+                },
+            )
+        } else {
+            todo!()
+        }
     }
 
     pub fn zip(&self, other: &Selector) -> Selector {
@@ -361,67 +376,40 @@ impl Selector {
         } else if other.0.is_empty() {
             return self.clone();
         }
-        let mut rules: Vec<SelectorKind> = Vec::with_capacity(self.0.len() + other.0.len());
-        let sel1_split: Vec<&[SelectorKind]> =
-            self.0.split(|sel| sel == &SelectorKind::Multiple).collect();
-        let sel2_split: Vec<&[SelectorKind]> = other
-            .0
-            .split(|sel| sel == &SelectorKind::Multiple)
-            .collect();
-        let len1 = sel1_split.len();
-        let len2 = sel2_split.len();
-        for (idx, sel1) in sel1_split.into_iter().enumerate() {
-            for (idx2, sel2) in sel2_split.iter().enumerate() {
+        let mut rules = Vec::with_capacity(self.0.len());
+        for sel1 in self.clone().0 {
+            for sel2 in other.clone().0 {
                 let mut this_selector: Vec<SelectorKind> = Vec::with_capacity(other.0.len());
                 let mut found_super = false;
 
-                for sel in *sel2 {
-                    if sel == &SelectorKind::Super {
-                        this_selector.extend(sel1.to_vec());
+                for sel in sel2.inner {
+                    if sel == SelectorKind::Super {
+                        this_selector.extend(sel1.clone().inner);
                         found_super = true;
-                    } else if sel == &SelectorKind::InterpolatedSuper {
-                        this_selector.extend(sel1.to_vec());
                     } else {
                         this_selector.push(sel.clone());
                     }
                 }
 
                 if !found_super {
-                    rules.extend(sel1.to_vec());
-                    rules.push(SelectorKind::Whitespace);
+                    let mut x = std::mem::take(&mut this_selector);
+                    let mut y = sel1.clone().inner;
+                    y.push(SelectorKind::Whitespace);
+                    y.append(&mut x);
+                    this_selector = y;
                 }
-                rules.extend(this_selector);
-
-                if !(idx + 1 == len1 && idx2 + 1 == len2) {
-                    rules.push(SelectorKind::Multiple);
-                }
+                rules.push(SelectorPart {
+                    inner: this_selector,
+                    is_invisible: sel1.is_invisible || sel2.is_invisible,
+                    has_newline: sel1.has_newline || sel2.has_newline,
+                });
             }
         }
         Selector(rules)
     }
 
     pub fn remove_placeholders(self) -> Selector {
-        let mut selectors = Vec::with_capacity(self.0.len());
-        let mut temp_sels = Vec::new();
-        let mut found_placeholder = false;
-        for sel in self.0 {
-            match sel {
-                SelectorKind::Placeholder => found_placeholder = true,
-                SelectorKind::Multiple => {
-                    temp_sels.push(SelectorKind::Multiple);
-                    if !found_placeholder {
-                        selectors.extend(temp_sels.clone());
-                    }
-                    temp_sels.clear();
-                    found_placeholder = false;
-                }
-                _ => temp_sels.push(sel),
-            }
-        }
-        if !found_placeholder {
-            selectors.extend(temp_sels);
-        }
-        Selector(selectors)
+        Selector(self.0.into_iter().filter(|s| !s.is_invisible).collect())
     }
 
     pub fn is_empty(&self) -> bool {
