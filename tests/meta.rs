@@ -240,6 +240,11 @@ test!(
     "a {\n  color: null;\n}\n"
 );
 test!(
+    inspect_empty_brackets,
+    "a {\n  color: inspect([]);\n}\n",
+    "a {\n  color: [];\n}\n"
+);
+test!(
     variable_does_exist,
     "$a: red; a {\n  color: variable-exists(a)\n}\n",
     "a {\n  color: true;\n}\n"
