@@ -129,3 +129,7 @@ test!(
     "a {\n  color: inspect(map-remove((\"foo\": 1, \"bar\": 2, \"baz\": 3), \"bar\", \"baz\"));\n}\n",
     "a {\n  color: (\"foo\": 1);\n}\n"
 );
+error!(
+    duplicate_key_in_declaration,
+    "a {\n  $a: (foo: a, foo: b);;\n}\n", "Error: Duplicate key."
+);

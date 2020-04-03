@@ -56,14 +56,16 @@ impl SassMap {
             .collect()
     }
 
-    pub fn insert(&mut self, key: Value, value: Value) {
-        for &mut (ref k, ref mut v) in &mut self.0 {
+    /// Returns true if the key already exists
+    pub fn insert(&mut self, key: Value, value: Value) -> bool {
+        for (ref k, ref mut v) in &mut self.0 {
             if k == &key {
                 *v = value;
-                return;
+                return true;
             }
         }
         self.0.push((key, value));
+        false
     }
 }
 

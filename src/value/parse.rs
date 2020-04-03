@@ -325,7 +325,9 @@ impl Value {
                             super_selector,
                         )?;
                         devour_whitespace(paren_toks);
-                        map.insert(key, val);
+                        if map.insert(key, val) {
+                            return Err("Duplicate key.".into());
+                        }
                         if paren_toks.peek().is_none() {
                             break;
                         }
