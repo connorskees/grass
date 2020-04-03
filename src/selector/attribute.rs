@@ -5,7 +5,7 @@ use std::string::ToString;
 use super::{Selector, SelectorKind};
 use crate::error::SassResult;
 use crate::scope::Scope;
-use crate::utils::{devour_whitespace, eat_ident, parse_interpolation, parse_quoted_string};
+use crate::utils::{devour_whitespace, eat_ident, parse_interpolation, parse_quoted_string, is_ident_char};
 use crate::Token;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -23,12 +23,17 @@ impl Attribute {
         super_selector: &Selector,
     ) -> SassResult<SelectorKind> {
         devour_whitespace(toks);
-        let attr = match toks.next().ok_or("Expected identifier.")?.kind {
-            v @ 'a'..='z' | v @ 'A'..='Z' | v @ '-' | v @ '_' => {
-                format!("{}{}", v, eat_ident(toks, scope, super_selector)?)
+        let attr = match toks.peek().ok_or("Expected identifier.")?.kind {
+            c if is_ident_char(c) => {
+                eat_ident(toks, scope, super_selector)?
             }
-            '#' if toks.next().ok_or("Expected expression.")?.kind == '{' => {
-                parse_interpolation(toks, scope, super_selector)?.to_string()
+            '#' => {
+                toks.next();
+                if toks.next().ok_or("Expected expression.")?.kind == '{' {
+                    parse_interpolation(toks, scope, super_selector)?.to_string()
+                } else {
+                    return Err("Expected expression.".into());
+                }
             }
             q @ '"' | q @ '\'' => parse_quoted_string(toks, scope, q, super_selector)?.to_string(),
             _ => return Err("Expected identifier.".into()),
@@ -37,18 +42,7 @@ impl Attribute {
         devour_whitespace(toks);
 
         let kind = match toks.next().ok_or("expected \"{\".")?.kind {
-            v @ 'a'..='z' | v @ 'A'..='Z' => {
-                match toks.next().ok_or("expected \"]\".")?.kind {
-                    ']' => {}
-                    _ => return Err("expected \"]\".".into()),
-                }
-                return Ok(SelectorKind::Attribute(Attribute {
-                    kind: AttributeKind::Any,
-                    attr,
-                    value: String::new(),
-                    modifier: Some(v),
-                }));
-            }
+            c if is_ident_char(c) => return Err("expected \"]\".".into()),
             ']' => {
                 return Ok(SelectorKind::Attribute(Attribute {
                     kind: AttributeKind::Any,
@@ -63,7 +57,7 @@ impl Attribute {
             '^' => AttributeKind::Prefix,
             '$' => AttributeKind::Suffix,
             '*' => AttributeKind::Contains,
-            _ => return Err("Expected \"]\".".into()),
+            _ => return Err("expected \"]\".".into()),
         };
 
         if kind != AttributeKind::Equals {
@@ -101,7 +95,7 @@ impl Attribute {
                 }
                 Some(v)
             }
-            _ => return Err("Expected \"]\".".into()),
+            _ => return Err("expected \"]\".".into()),
         };
 
         Ok(SelectorKind::Attribute(Attribute {

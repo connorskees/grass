@@ -318,3 +318,8 @@ test!(
 test!(escaped_space, "a\\ b {\n  color: foo;\n}\n");
 // blocked on whitespace
 // test!(multiple_consecutive_immediate_child,"> > foo {\n  color: foo;\n}\n",);
+error!(
+    modifier_on_any_attr,
+    "[attr i] {color: foo;}",
+    "Error: expected \"]\"."
+);
