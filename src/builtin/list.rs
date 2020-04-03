@@ -228,7 +228,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             // TODO: find a way around this unwrap.
             // It should be impossible to hit as the arg is
             // evaluated prior to checking equality, but
-            // it is still dirty. 
+            // it is still dirty.
             // Potential input to fuzz: index(1px 1in 1cm, 96px + 1rem)
             let index = match list
                 .into_iter()
@@ -238,6 +238,39 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 None => return Ok(Value::Null),
             };
             Ok(Value::Dimension(index, Unit::None))
+        }),
+    );
+    f.insert(
+        "zip".to_owned(),
+        Box::new(|mut args, _| {
+            let lists = args
+                .get_variadic()?
+                .into_iter()
+                .map(|x| match x {
+                    Value::List(v, ..) => v,
+                    Value::Map(m) => m.entries(),
+                    v => vec![v],
+                })
+                .collect::<Vec<Vec<Value>>>();
+
+            let len = lists.iter().map(|l| l.len()).min().unwrap_or(0);
+
+            if len == 0 {
+                return Ok(Value::List(
+                    Vec::new(),
+                    ListSeparator::Comma,
+                    Brackets::None,
+                ));
+            }
+
+            let result = (0..len)
+                .map(|i| {
+                    let items = lists.iter().map(|v| v[i].clone()).collect();
+                    Value::List(items, ListSeparator::Space, Brackets::None)
+                })
+                .collect();
+
+            Ok(Value::List(result, ListSeparator::Comma, Brackets::None))
         }),
     );
 }

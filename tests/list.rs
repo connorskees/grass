@@ -298,3 +298,8 @@ test!(
     "a {\n  color: index(1px 1in 1cm, 96px);\n}\n",
     "a {\n  color: 2;\n}\n"
 );
+test!(
+    zip_three,
+    "a {\n  color: zip(1px 1px 3px, solid dashed solid, red green blue);\n}\n",
+    "a {\n  color: 1px solid red, 1px dashed green, 3px solid blue;\n}\n"
+);
