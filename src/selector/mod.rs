@@ -33,7 +33,6 @@ struct SelectorPart {
 
 impl Display for SelectorPart {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        dbg!(&self);
         let mut iter = self.inner.iter().peekable();
         devour_whitespace(&mut iter);
         while let Some(s) = iter.next() {
@@ -205,11 +204,10 @@ impl Selector {
                     while let Some(c) = string.pop() {
                         if c == ' ' || c == ',' {
                             continue;
-                        } else {
-                            string.push(c);
-                            string.push(',');
-                            break;
                         }
+                        string.push(c);
+                        string.push(',');
+                        break;
                     }
                 }
                 '/' => {
@@ -233,11 +231,10 @@ impl Selector {
         while let Some(c) = string.pop() {
             if c == ' ' || c == ',' || c == '\t' {
                 continue;
-            } else {
-                string.push(c);
-                string.push(',');
-                break;
             }
+            string.push(c);
+            string.push(',');
+            break;
         }
 
         let mut inner = Vec::new();
