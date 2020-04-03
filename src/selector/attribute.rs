@@ -23,61 +23,51 @@ impl Attribute {
         super_selector: &Selector,
     ) -> SassResult<SelectorKind> {
         devour_whitespace(toks);
-        let attr = if let Some(t) = toks.next() {
-            match t.kind {
-                v @ 'a'..='z' | v @ 'A'..='Z' | v @ '-' | v @ '_' => {
-                    format!("{}{}", v, eat_ident(toks, scope, super_selector)?)
-                }
-                '#' if toks.next().unwrap().kind == '{' => {
-                    parse_interpolation(toks, scope, super_selector)?.to_string()
-                }
-                q @ '"' | q @ '\'' => {
-                    parse_quoted_string(toks, scope, q, super_selector)?.to_string()
-                }
-                _ => return Err("Expected identifier.".into()),
+        let attr = match toks.next().ok_or("Expected identifier.")?.kind {
+            v @ 'a'..='z' | v @ 'A'..='Z' | v @ '-' | v @ '_' => {
+                format!("{}{}", v, eat_ident(toks, scope, super_selector)?)
             }
-        } else {
-            todo!()
+            '#' if toks.next().ok_or("Expected expression.")?.kind == '{' => {
+                parse_interpolation(toks, scope, super_selector)?.to_string()
+            }
+            q @ '"' | q @ '\'' => parse_quoted_string(toks, scope, q, super_selector)?.to_string(),
+            _ => return Err("Expected identifier.".into()),
         };
 
         devour_whitespace(toks);
 
-        let kind = if let Some(t) = toks.next() {
-            match t.kind {
-                v @ 'a'..='z' | v @ 'A'..='Z' => {
-                    match toks.next().unwrap().kind {
-                        ']' => {}
-                        _ => return Err("expected \"]\".".into()),
-                    }
-                    return Ok(SelectorKind::Attribute(Attribute {
-                        kind: AttributeKind::Any,
-                        attr,
-                        value: String::new(),
-                        modifier: Some(v),
-                    }));
+        let kind = match toks.next().ok_or("expected \"{\".")?.kind {
+            v @ 'a'..='z' | v @ 'A'..='Z' => {
+                match toks.next().ok_or("expected \"]\".")?.kind {
+                    ']' => {}
+                    _ => return Err("expected \"]\".".into()),
                 }
-                ']' => {
-                    return Ok(SelectorKind::Attribute(Attribute {
-                        kind: AttributeKind::Any,
-                        attr,
-                        value: String::new(),
-                        modifier: None,
-                    }));
-                }
-                '=' => AttributeKind::Equals,
-                '~' => AttributeKind::Include,
-                '|' => AttributeKind::Dash,
-                '^' => AttributeKind::Prefix,
-                '$' => AttributeKind::Suffix,
-                '*' => AttributeKind::Contains,
-                _ => return Err("Expected \"]\".".into()),
+                return Ok(SelectorKind::Attribute(Attribute {
+                    kind: AttributeKind::Any,
+                    attr,
+                    value: String::new(),
+                    modifier: Some(v),
+                }));
             }
-        } else {
-            todo!()
+            ']' => {
+                return Ok(SelectorKind::Attribute(Attribute {
+                    kind: AttributeKind::Any,
+                    attr,
+                    value: String::new(),
+                    modifier: None,
+                }));
+            }
+            '=' => AttributeKind::Equals,
+            '~' => AttributeKind::Include,
+            '|' => AttributeKind::Dash,
+            '^' => AttributeKind::Prefix,
+            '$' => AttributeKind::Suffix,
+            '*' => AttributeKind::Contains,
+            _ => return Err("Expected \"]\".".into()),
         };
 
         if kind != AttributeKind::Equals {
-            match toks.next().unwrap().kind {
+            match toks.next().ok_or("expected \"=\".")?.kind {
                 '=' => {}
                 _ => return Err("expected \"=\".".into()),
             }
@@ -85,43 +75,33 @@ impl Attribute {
 
         devour_whitespace(toks);
 
-        let value = if let Some(t) = toks.next() {
-            match t.kind {
-                v @ 'a'..='z' | v @ 'A'..='Z' | v @ '-' | v @ '_' => {
-                    format!("{}{}", v, eat_ident(toks, scope, super_selector)?)
-                }
-                q @ '"' | q @ '\'' => {
-                    parse_quoted_string(toks, scope, q, super_selector)?.to_string()
-                }
-                _ => return Err("Expected identifier.".into()),
+        let value = match toks.next().ok_or("Expected identifier.")?.kind {
+            v @ 'a'..='z' | v @ 'A'..='Z' | v @ '-' | v @ '_' => {
+                format!("{}{}", v, eat_ident(toks, scope, super_selector)?)
             }
-        } else {
-            todo!()
+            q @ '"' | q @ '\'' => parse_quoted_string(toks, scope, q, super_selector)?.to_string(),
+            _ => return Err("Expected identifier.".into()),
         };
 
         devour_whitespace(toks);
 
-        let modifier = if let Some(t) = toks.next() {
-            match t.kind {
-                ']' => {
-                    return Ok(SelectorKind::Attribute(Attribute {
-                        kind,
-                        attr,
-                        value,
-                        modifier: None,
-                    }))
-                }
-                v @ 'a'..='z' | v @ 'A'..='Z' => {
-                    match toks.next().unwrap().kind {
-                        ']' => {}
-                        _ => return Err("expected \"]\".".into()),
-                    }
-                    Some(v)
-                }
-                _ => return Err("Expected \"]\".".into()),
+        let modifier = match toks.next().ok_or("expected \"]\".")?.kind {
+            ']' => {
+                return Ok(SelectorKind::Attribute(Attribute {
+                    kind,
+                    attr,
+                    value,
+                    modifier: None,
+                }))
             }
-        } else {
-            return Err("expected \"]\".".into());
+            v @ 'a'..='z' | v @ 'A'..='Z' => {
+                match toks.next().ok_or("expected \"]\".")?.kind {
+                    ']' => {}
+                    _ => return Err("expected \"]\".".into()),
+                }
+                Some(v)
+            }
+            _ => return Err("Expected \"]\".".into()),
         };
 
         Ok(SelectorKind::Attribute(Attribute {
