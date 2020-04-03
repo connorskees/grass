@@ -64,15 +64,19 @@ test!(
     selector_attribute_equals,
     "[attr=val] {\n  color: red;\n}\n"
 );
+// test!(
+//     selector_attribute_removes_single_quotes,
+//     "[attr='val'] {\n  color: red;\n}\n",
+//     "[attr=val] {\n  color: red;\n}\n"
+// );
+// test!(
+//     selector_attribute_removes_double_quotes,
+//     "[attr=\"val\"] {\n  color: red;\n}\n",
+//     "[attr=val] {\n  color: red;\n}\n"
+// );
 test!(
-    selector_attribute_single_quotes,
-    "[attr='val'] {\n  color: red;\n}\n",
-    "[attr=val] {\n  color: red;\n}\n"
-);
-test!(
-    selector_attribute_double_quotes,
-    "[attr=\"val\"] {\n  color: red;\n}\n",
-    "[attr=val] {\n  color: red;\n}\n"
+    selector_attribute_maintains_quotes_around_invalid_identifier,
+    "[attr=\"val.\"] {\n  color: red;\n}\n"
 );
 error!(
     attribute_attr_quoted,

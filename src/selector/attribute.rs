@@ -72,7 +72,7 @@ impl Attribute {
             v @ 'a'..='z' | v @ 'A'..='Z' | v @ '-' | v @ '_' => {
                 format!("{}{}", v, eat_ident(toks, scope, super_selector)?)
             }
-            q @ '"' | q @ '\'' => parse_quoted_string(toks, scope, q, super_selector)?.unquote().to_string(),
+            q @ '"' | q @ '\'' => parse_quoted_string(toks, scope, q, super_selector)?.to_string(),
             _ => return Err("Expected identifier.".into()),
         };
 
