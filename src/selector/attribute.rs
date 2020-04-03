@@ -42,7 +42,7 @@ impl Attribute {
         devour_whitespace(toks);
 
         let kind = match toks.next().ok_or("expected \"{\".")?.kind {
-            c if is_ident_char(c) => return Err("expected \"]\".".into()),
+            c if is_ident_char(c) => return Err("Expected \"]\".".into()),
             ']' => {
                 return Ok(SelectorKind::Attribute(Attribute {
                     kind: AttributeKind::Any,

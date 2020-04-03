@@ -321,5 +321,5 @@ test!(escaped_space, "a\\ b {\n  color: foo;\n}\n");
 error!(
     modifier_on_any_attr,
     "[attr i] {color: foo;}",
-    "Error: expected \"]\"."
+    "Error: Expected \"]\"."
 );
