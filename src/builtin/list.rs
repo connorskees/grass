@@ -242,7 +242,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "zip".to_owned(),
-        Box::new(|mut args, _| {
+        Box::new(|args, _| {
             let lists = args
                 .get_variadic()?
                 .into_iter()
