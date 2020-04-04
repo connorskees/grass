@@ -137,7 +137,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "get-function".to_owned(),
         Builtin::new(|mut args, scope| {
-            max_args!(args, 2);
+            max_args!(args, 3);
             let name = match arg!(args, 0, "name") {
                 Value::Ident(s, _) => s,
                 v => return Err(format!("$name: {} is not a string.", v).into()),

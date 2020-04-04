@@ -505,6 +505,10 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                 if values.is_empty() {
                     toks.next();
                     devour_whitespace(toks);
+                    if toks.peek().is_some() && toks.peek().unwrap().kind == ';' {
+                        toks.next();
+                    }
+                    devour_whitespace(toks);
                     return Ok(None);
                 } else {
                     // special edge case where there was no space between the colon

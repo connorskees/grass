@@ -110,3 +110,8 @@ test!(
     "$base-color: #036;\na {\n  color:lighten($base-color, 5%);\n}",
     "a {\n  color: #004080;\n}\n"
 );
+test!(
+    semicolon_after_closing_brace,
+    "a {\n  color: foo;\n};",
+    "a {\n  color: foo;\n}\n"
+);
