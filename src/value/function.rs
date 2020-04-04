@@ -24,9 +24,9 @@ impl SassFunction {
 
     fn kind(&self) -> &'static str {
         match &self {
-             Self::Builtin(..) => "Builtin",
-             Self::UserDefined(..) => "UserDefined",
-         }
+            Self::Builtin(..) => "Builtin",
+            Self::UserDefined(..) => "UserDefined",
+        }
     }
 
     pub fn call(self, args: CallArgs, scope: &Scope) -> SassResult<Value> {
@@ -41,10 +41,9 @@ impl SassFunction {
 impl fmt::Debug for SassFunction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("SassFunction")
-         .field("name", &self.name())
-         .field("kind", &self.kind())
-         .finish()
-
+            .field("name", &self.name())
+            .field("kind", &self.kind())
+            .finish()
     }
 }
 

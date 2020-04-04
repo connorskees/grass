@@ -146,7 +146,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             let module = match arg!(args, 2, "module" = Value::Null) {
                 Value::Ident(s, ..) => Some(s),
                 Value::Null => None,
-                v => return Err(format!("$module: {} is not a string.", v).into())
+                v => return Err(format!("$module: {} is not a string.", v).into()),
             };
 
             if module.is_some() && css {
