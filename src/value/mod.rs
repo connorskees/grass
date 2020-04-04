@@ -55,7 +55,7 @@ impl Display for Value {
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
-            Self::Function(..) => todo!("invalid CSS"),
+            Self::Function(func) => write!(f, "get-function(\"{}\")", func.name()),
             Self::List(vals, sep, brackets) => match brackets {
                 Brackets::None => write!(
                     f,

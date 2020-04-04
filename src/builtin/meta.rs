@@ -143,9 +143,13 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 v => return Err(format!("$name: {} is not a string.", v).into()),
             };
             let css = arg!(args, 1, "css" = Value::False).is_true()?;
-            let module = arg!(args, 2, "module" = Value::Null);
+            let module = match arg!(args, 2, "module" = Value::Null) {
+                Value::Ident(s, ..) => Some(s),
+                Value::Null => None,
+                v => return Err(format!("$module: {} is not a string.", v).into())
+            };
 
-            if !module.is_null() && css {
+            if module.is_some() && css {
                 return Err("$css and $module may not both be passed at once.".into());
             }
 
