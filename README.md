@@ -18,13 +18,20 @@ The large features remaining are
 order of operations
 special case certain functions (min, max, calc, element, expression, progid, url)
 all builtin selector functions
-content-exists, call, get-function, unique-id, random, min, min
+content-exists, unique-id, random, min, min
 @extend
 indented syntax
 a special parser for plain css
 @at-root
 @use and module system
 @forward
+```
+
+```
+2020-04-04
+PASSING: 1825
+FAILING: 3268
+TOTAL: 5093
 ```
 
 ```
