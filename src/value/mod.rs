@@ -2,6 +2,7 @@ use std::cmp::Ordering;
 use std::fmt::{self, Display, Write};
 use std::iter::Iterator;
 
+use crate::atrule::Function;
 use crate::color::Color;
 use crate::common::{Brackets, ListSeparator, Op, QuoteKind};
 use crate::error::SassResult;
@@ -30,8 +31,8 @@ pub(crate) enum Value {
     Ident(String, QuoteKind),
     Map(SassMap),
     ArgList(Vec<Value>),
-    // Returned by `get-function()`
-    // Function(String)
+    /// Returned by `get-function()`
+    Function(Box<Function>, bool),
 }
 
 impl Display for Value {
@@ -53,6 +54,7 @@ impl Display for Value {
                     .collect::<Vec<String>>()
                     .join(", ")
             ),
+            Self::Function(..) => todo!("invalid CSS"),
             Self::List(vals, sep, brackets) => match brackets {
                 Brackets::None => write!(
                     f,
@@ -166,7 +168,7 @@ impl Value {
             Self::Ident(..) | Self::Important => Ok("string"),
             Self::Dimension(..) => Ok("number"),
             Self::List(..) => Ok("list"),
-            // Self::Function(..) => Ok("function"),
+            Self::Function(..) => Ok("function"),
             Self::ArgList(..) => Ok("arglist"),
             Self::True | Self::False => Ok("bool"),
             Self::Null => Ok("null"),

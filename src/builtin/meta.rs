@@ -133,6 +133,19 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             }
         }),
     );
+    f.insert(
+        "get-function".to_owned(),
+        Box::new(|mut args, scope| {
+            max_args!(args, 2);
+            let name = match arg!(args, 0, "name") {
+                Value::Ident(s, _) => s,
+                v => return Err(format!("$name: {} is not a string.", v).into()),
+            };
+            let css = arg!(args, 1, "css" = Value::False).is_true()?;
+
+            Ok(Value::Function(Box::new(scope.get_fn(&name)?), css))
+        }),
+    );
     f.insert("call".to_owned(), Box::new(|_args, _scope| {
         todo!("builtin function `call()` is blocked on refactoring how call args are stored and parsed")
         // let func = arg!(args, 0, "function").to_string();

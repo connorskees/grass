@@ -4,6 +4,7 @@ use super::eat_stmts;
 
 use crate::args::{eat_func_args, CallArgs, FuncArgs};
 use crate::atrule::AtRule;
+use crate::common::Pos;
 use crate::error::SassResult;
 use crate::scope::Scope;
 use crate::selector::Selector;
@@ -16,11 +17,25 @@ pub(crate) struct Function {
     scope: Scope,
     args: FuncArgs,
     body: Vec<Stmt>,
+    pos: Pos,
 }
 
+impl PartialEq for Function {
+    fn eq(&self, other: &Self) -> bool {
+        self.pos == other.pos
+    }
+}
+
+impl Eq for Function {}
+
 impl Function {
-    pub fn new(scope: Scope, args: FuncArgs, body: Vec<Stmt>) -> Self {
-        Function { scope, args, body }
+    pub fn new(scope: Scope, args: FuncArgs, body: Vec<Stmt>, pos: Pos) -> Self {
+        Function {
+            scope,
+            args,
+            body,
+            pos,
+        }
     }
 
     pub fn decl_from_tokens<I: Iterator<Item = Token>>(
@@ -28,6 +43,7 @@ impl Function {
         scope: Scope,
         super_selector: &Selector,
     ) -> SassResult<(String, Function)> {
+        let pos = toks.peek().unwrap().pos;
         let name = eat_ident(toks, &scope, super_selector)?;
         devour_whitespace(toks);
         let args = match toks.next() {
@@ -40,7 +56,7 @@ impl Function {
         let body = eat_stmts(toks, &mut scope.clone(), super_selector)?;
         devour_whitespace(toks);
 
-        Ok((name, Function::new(scope, args, body)))
+        Ok((name, Function::new(scope, args, body, pos)))
     }
 
     pub fn args(mut self, mut args: CallArgs) -> SassResult<Function> {

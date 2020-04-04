@@ -14,7 +14,7 @@ impl Add for Value {
         }
         let precedence = Op::Plus.precedence();
         Ok(match self {
-            Self::ArgList(..) | Self::Map(..) => todo!(),
+            Self::Function(..) | Self::ArgList(..) | Self::Map(..) => todo!(),
             Self::Important | Self::True | Self::False => match other {
                 Self::Ident(s, QuoteKind::Double) | Self::Ident(s, QuoteKind::Single) => {
                     Value::Ident(format!("{}{}", self, s), QuoteKind::Double)
@@ -86,7 +86,7 @@ impl Add for Value {
                 Self::List(..) => Value::Ident(format!("{}{}", s1, other), quotes1),
                 Self::UnaryOp(..) | Self::BinaryOp(..) => todo!(),
                 Self::Paren(..) => (Self::Ident(s1, quotes1) + other.eval()?)?,
-                Self::ArgList(..) | Self::Map(..) => todo!(),
+                Self::Function(..) | Self::ArgList(..) | Self::Map(..) => todo!(),
             },
             Self::List(..) => match other {
                 Self::Ident(s, q) => Value::Ident(format!("{}{}", self, s), q.normalize()),
