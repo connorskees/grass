@@ -14,8 +14,12 @@ pub(crate) fn get_global_var(s: &str) -> SassResult<Value> {
     })
 }
 
-pub fn global_var_exists(v: &str) -> bool {
-    GLOBAL_SCOPE.with(|scope| scope.borrow().var_exists(v))
+pub(crate) fn global_var_exists(v: &str) -> bool {
+    GLOBAL_SCOPE.with(|scope| scope.borrow().vars().contains_key(v))
+}
+
+pub(crate) fn insert_global_var(s: &str, v: Value) -> SassResult<Option<Value>> {
+    GLOBAL_SCOPE.with(|scope| scope.borrow_mut().insert_var(s, v))
 }
 
 pub(crate) fn get_global_fn(s: &str) -> SassResult<Function> {
@@ -25,8 +29,27 @@ pub(crate) fn get_global_fn(s: &str) -> SassResult<Function> {
     })
 }
 
-pub(crate) fn insert_global_var(s: &str, v: Value) -> SassResult<Option<Value>> {
-    GLOBAL_SCOPE.with(|scope| scope.borrow_mut().insert_var(s, v))
+pub(crate) fn global_fn_exists(v: &str) -> bool {
+    GLOBAL_SCOPE.with(|scope| scope.borrow().functions().contains_key(v))
+}
+
+pub(crate) fn insert_global_fn(s: &str, v: Function) -> Option<Function> {
+    GLOBAL_SCOPE.with(|scope| scope.borrow_mut().insert_fn(s, v))
+}
+
+pub(crate) fn get_global_mixin(s: &str) -> SassResult<Mixin> {
+    GLOBAL_SCOPE.with(|scope| match scope.borrow().mixins().get(s) {
+        Some(v) => Ok(v.clone()),
+        None => Err("Undefined mixin.".into()),
+    })
+}
+
+pub(crate) fn global_mixin_exists(v: &str) -> bool {
+    GLOBAL_SCOPE.with(|scope| scope.borrow().mixins().contains_key(v))
+}
+
+pub(crate) fn insert_global_mixin(s: &str, v: Mixin) -> Option<Mixin> {
+    GLOBAL_SCOPE.with(|scope| scope.borrow_mut().insert_mixin(s, v))
 }
 
 #[derive(Debug, Clone)]
@@ -54,6 +77,10 @@ impl Scope {
         &self.functions
     }
 
+    pub const fn mixins(&self) -> &HashMap<String, Mixin> {
+        &self.mixins
+    }
+
     pub fn get_var(&self, v: &str) -> SassResult<Value> {
         let name = &v.replace('_', "-");
         match self.vars.get(name) {
@@ -67,13 +94,15 @@ impl Scope {
     }
 
     pub fn var_exists(&self, v: &str) -> bool {
-        self.vars.contains_key(&v.replace('_', "-"))
+        let name = &v.replace('_', "-");
+        self.vars.contains_key(name) || global_var_exists(name)
     }
 
-    pub fn get_mixin(&self, v: &str) -> SassResult<&Mixin> {
-        match self.mixins.get(&v.replace('_', "-")) {
-            Some(v) => Ok(v),
-            None => Err("Undefined mixin.".into()),
+    pub fn get_mixin(&self, v: &str) -> SassResult<Mixin> {
+        let name = &v.replace('_', "-");
+        match self.mixins.get(name) {
+            Some(v) => Ok(v.clone()),
+            None => get_global_mixin(name),
         }
     }
 
@@ -82,7 +111,8 @@ impl Scope {
     }
 
     pub fn mixin_exists(&self, v: &str) -> bool {
-        self.mixins.contains_key(&v.replace('_', "-"))
+        let name = &v.replace('_', "-");
+        self.mixins.contains_key(name) || global_mixin_exists(name)
     }
 
     pub fn get_fn(&self, v: &str) -> SassResult<Function> {
@@ -98,7 +128,8 @@ impl Scope {
     }
 
     pub fn fn_exists(&self, v: &str) -> bool {
-        self.functions.contains_key(&v.replace('_', "-"))
+        let name = &v.replace('_', "-");
+        self.functions.contains_key(name) || global_fn_exists(name)
     }
 
     pub fn extend(&mut self, other: Scope) {

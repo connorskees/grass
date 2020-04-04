@@ -91,7 +91,7 @@ pub use crate::error::{SassError, SassResult};
 use crate::format::PrettyPrinter;
 use crate::imports::import;
 use crate::lexer::Lexer;
-use crate::scope::{insert_global_var, Scope, GLOBAL_SCOPE};
+use crate::scope::{insert_global_fn, insert_global_mixin, insert_global_var, Scope, GLOBAL_SCOPE};
 use crate::selector::Selector;
 use crate::style::Style;
 pub(crate) use crate::token::Token;
@@ -284,7 +284,7 @@ impl<'a> StyleSheetParser<'a> {
             match kind {
                 'a'..='z' | 'A'..='Z' | '_' | '-'
                 | '[' | '#' | ':' | '*' | '%' | '.' | '>' => rules
-                    .extend(self.eat_rules(&Selector::new(), &mut GLOBAL_SCOPE.with(|s| s.borrow().clone()))?),
+                    .extend(self.eat_rules(&Selector::new(), &mut Scope::new())?),
                 &'\t' | &'\n' | ' ' => {
                     self.lexer.next();
                     continue;
@@ -303,7 +303,7 @@ impl<'a> StyleSheetParser<'a> {
                         return Err("expected \":\".".into());
                     }
                     let VariableDecl { val, default, .. } =
-                        eat_variable_value(&mut self.lexer, &GLOBAL_SCOPE.with(|s| s.borrow().clone()), &Selector::new())?;
+                        eat_variable_value(&mut self.lexer, &Scope::new(), &Selector::new())?;
                     GLOBAL_SCOPE.with(|s| {
                         if !default || s.borrow().get_var(&name).is_err() {
                             match s.borrow_mut().insert_var(&name, val) {
@@ -336,7 +336,7 @@ impl<'a> StyleSheetParser<'a> {
                     match AtRuleKind::from(at_rule_kind.as_str()) {
                         AtRuleKind::Include => rules.extend(eat_include(
                             &mut self.lexer,
-                            &GLOBAL_SCOPE.with(|s| s.borrow().clone()),
+                            &Scope::new(),
                             &Selector::new(),
                         )?),
                         AtRuleKind::Import => {
@@ -364,16 +364,12 @@ impl<'a> StyleSheetParser<'a> {
                             });
                         }
                         v => {
-                                match AtRule::from_tokens(&v, Pos::new(), &mut self.lexer, &mut GLOBAL_SCOPE.with(|s| s.borrow().clone()), &Selector::new())? {
+                                match AtRule::from_tokens(&v, Pos::new(), &mut self.lexer, &mut Scope::new(), &Selector::new())? {
                                     AtRule::Mixin(name, mixin) => {
-                                        GLOBAL_SCOPE.with(|s| {
-                                            s.borrow_mut().insert_mixin(&name, *mixin);
-                                        });
+                                        insert_global_mixin(&name, *mixin);
                                     }
                                     AtRule::Function(name, func) => {
-                                        GLOBAL_SCOPE.with(|s| {
-                                            s.borrow_mut().insert_fn(&name, *func);
-                                        });
+                                        insert_global_fn(&name, *func);
                                     }
                                     AtRule::Charset => continue,
                                     AtRule::Error(pos, message) => self.error(pos, &message),

@@ -18,3 +18,8 @@ test!(
     "$foo: 42;\n\n.foo {\n  content: $foo;\n  $foo: 1337 !global;\n  content: $foo;\n}\n\n.bar {\n  content: $foo;\n}\n",
     ".foo {\n  content: 42;\n  content: 1337;\n}\n\n.bar {\n  content: 1337;\n}\n"
 );
+test!(
+    global_in_mixin,
+    "$y: a;\n@mixin foo {\n  $y: b !global;\n}\na {\n  @include foo;\n  color: $y;\n}\n",
+    "a {\n  color: b;\n}\n"
+);
