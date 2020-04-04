@@ -127,7 +127,7 @@ impl Display for Attribute {
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 enum AttributeKind {
-    /// [attr]
+    /// \[attr\]
     ///
     /// Represents elements with an attribute name of `attr`
     Any,
