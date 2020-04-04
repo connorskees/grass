@@ -44,6 +44,13 @@ impl CallArg {
             Self::Positional(p) => Ok(*p),
         }
     }
+
+    pub fn decrement(self) -> CallArg {
+        match self {
+            Self::Named(..) => self,
+            Self::Positional(p) => Self::Positional(p - 1),
+        }
+    }
 }
 
 impl CallArgs {
@@ -72,6 +79,15 @@ impl CallArgs {
             vals.push(arg.1);
         }
         Ok(vals)
+    }
+
+    pub fn decrement(self) -> Self {
+        CallArgs(
+            self.0
+                .into_iter()
+                .map(|(k, v)| (k.decrement(), v))
+                .collect(),
+        )
     }
 
     pub fn len(&self) -> usize {

@@ -52,3 +52,45 @@ test!(
     "a {b: inspect(get-function(lighten));}",
     "a {\n  b: get-function(\"lighten\");\n}\n"
 );
+test!(
+    call_user_defined_no_args,
+    "@function user-defined() {\n  @return foo;\n}\n
+     a {b: call(get-function(user-defined));}",
+    "a {\n  b: foo;\n}\n"
+);
+test!(
+    call_user_defined_positional_args,
+    "@function user-defined($a, $b) {\n  @return $a, $b;\n}\n
+     a {b: call(get-function(user-defined), a, b);}",
+    "a {\n  b: a, b;\n}\n"
+);
+test!(
+    call_user_defined_keyword_args,
+    "@function user-defined($a, $b) {\n  @return $a, $b;\n}\n
+     a {b: call(get-function(user-defined), $a: a, $b: b);}",
+    "a {\n  b: a, b;\n}\n"
+);
+test!(
+    call_builtin_positional_args,
+    "a {b: call(get-function(lighten), red, 5);}",
+    "a {\n  b: #ff1a1a;\n}\n"
+);
+test!(
+    call_builtin_keyword_args,
+    "a {b: call(get-function(lighten), $color: red, $amount: 5);}",
+    "a {\n  b: #ff1a1a;\n}\n"
+);
+// test!(
+//     call_user_defined_super_selector,
+//     "@function user-defined() {\n  @return &;\n}\n
+//      a {b: call(get-function(user-defined));}",
+//     "a {\n  b: a;\n}\n"
+// );
+error!(
+    undefined_function,
+    "a {color: get-function(foo);}", "Error: Function not found: foo"
+);
+error!(
+    non_function_call,
+    "a {color: call(4);}", "Error: $function: 4 is not a function reference."
+);

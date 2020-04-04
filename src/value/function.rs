@@ -1,7 +1,12 @@
 use std::fmt;
 
+use crate::args::CallArgs;
 use crate::atrule::Function;
 use crate::builtin::Builtin;
+use crate::error::SassResult;
+use crate::scope::Scope;
+use crate::selector::Selector;
+use crate::value::Value;
 
 #[derive(Clone)]
 pub(crate) enum SassFunction {
@@ -14,6 +19,14 @@ impl SassFunction {
         match self {
             Self::Builtin(_, name) => name,
             Self::UserDefined(_, name) => name,
+        }
+    }
+
+    pub fn call(self, args: CallArgs, scope: &Scope) -> SassResult<Value> {
+        match self {
+            Self::Builtin(f, ..) => f.0(args, scope),
+            // todo: superselector
+            Self::UserDefined(f, ..) => f.clone().args(args)?.call(&Selector::new(), f.body()),
         }
     }
 }

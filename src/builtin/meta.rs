@@ -142,29 +142,28 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 Value::Ident(s, _) => s,
                 v => return Err(format!("$name: {} is not a string.", v).into()),
             };
-            let css = arg!(args, 1, "css" = Value::False).is_true()?;
+            // let css = arg!(args, 1, "css" = Value::False).is_true()?;
+            // let module = arg!(args, 2, "module" = Value::Null);
 
             let func = match scope.get_fn(&name) {
                 Ok(f) => SassFunction::UserDefined(Box::new(f), name),
-                Err(e) => match GLOBAL_FUNCTIONS.get(&name) {
+                Err(..) => match GLOBAL_FUNCTIONS.get(&name) {
                     Some(f) => SassFunction::Builtin(f.clone(), name),
-                    None => return Err(e),
+                    None => return Err(format!("Function not found: {}", name).into()),
                 },
             };
 
             Ok(Value::Function(func))
         }),
     );
-    f.insert("call".to_owned(), Builtin::new(|_args, _scope| {
-        todo!("builtin function `call()` is blocked on refactoring how call args are stored and parsed")
-        // let func = arg!(args, 0, "function").to_string();
-        // let func = match scope.get_fn(&func) {
-        //     Ok(f) => f,
-        //     Err(_) => match GLOBAL_FUNCTIONS.get(&func) {
-        //         Some(f) => return f(&args, scope),
-        //         None => todo!("called undefined function"),
-        //     },
-        // };
-        // Some(func.clone().args(&args).call())
-    }));
+    f.insert(
+        "call".to_owned(),
+        Builtin::new(|mut args, scope| {
+            let func = match arg!(args, 0, "function") {
+                Value::Function(f) => f,
+                v => return Err(format!("$function: {} is not a function reference.", v).into()),
+            };
+            func.call(args.decrement(), scope)
+        }),
+    );
 }
