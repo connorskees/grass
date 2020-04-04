@@ -142,8 +142,12 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 Value::Ident(s, _) => s,
                 v => return Err(format!("$name: {} is not a string.", v).into()),
             };
-            // let css = arg!(args, 1, "css" = Value::False).is_true()?;
-            // let module = arg!(args, 2, "module" = Value::Null);
+            let css = arg!(args, 1, "css" = Value::False).is_true()?;
+            let module = arg!(args, 2, "module" = Value::Null);
+
+            if !module.is_null() && css {
+                return Err("$css and $module may not both be passed at once.".into());
+            }
 
             let func = match scope.get_fn(&name) {
                 Ok(f) => SassFunction::UserDefined(Box::new(f), name),
