@@ -32,3 +32,23 @@ test!(
      a {b: type-of(get-function(user-defined));}",
     "a {\n  b: function;\n}\n"
 );
+test!(
+    type_of_builtin_function,
+    "a {b: type-of(get-function(lighten));}",
+    "a {\n  b: function;\n}\n"
+);
+test!(
+    same_builtin_function_is_equal,
+    "a {b: get-function(lighten) == get-function(lighten);}",
+    "a {\n  b: true;\n}\n"
+);
+test!(
+    different_builtin_function_not_equal,
+    "a {b: get-function(lighten) == get-function(darken);}",
+    "a {\n  b: false;\n}\n"
+);
+test!(
+    inspect_builtin_function,
+    "a {b: inspect(get-function(lighten));}",
+    "a {\n  b: get-function(\"lighten\");\n}\n"
+);

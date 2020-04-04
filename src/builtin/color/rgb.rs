@@ -10,7 +10,7 @@ use crate::value::{Number, Value};
 pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "rgb".to_owned(),
-        Box::new(|mut args, _| {
+        Builtin::new(|mut args, _| {
             if args.is_empty() {
                 return Err("Missing argument $channels.".into());
             }
@@ -132,7 +132,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "rgba".to_owned(),
-        Box::new(|mut args, _| {
+        Builtin::new(|mut args, _| {
             if args.is_empty() {
                 return Err("Missing argument $channels.".into());
             }
@@ -254,7 +254,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "red".to_owned(),
-        Box::new(|mut args, _| {
+        Builtin::new(|mut args, _| {
             max_args!(args, 1);
             match arg!(args, 0, "color") {
                 Value::Color(c) => Ok(Value::Dimension(c.red(), Unit::None)),
@@ -264,7 +264,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "green".to_owned(),
-        Box::new(|mut args, _| {
+        Builtin::new(|mut args, _| {
             max_args!(args, 1);
             match arg!(args, 0, "color") {
                 Value::Color(c) => Ok(Value::Dimension(c.green(), Unit::None)),
@@ -274,7 +274,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "blue".to_owned(),
-        Box::new(|mut args, _| {
+        Builtin::new(|mut args, _| {
             max_args!(args, 1);
             match arg!(args, 0, "color") {
                 Value::Color(c) => Ok(Value::Dimension(c.blue(), Unit::None)),
@@ -284,7 +284,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "mix".to_owned(),
-        Box::new(|mut args, _| {
+        Builtin::new(|mut args, _| {
             max_args!(args, 3);
             let color1 = match arg!(args, 0, "color1") {
                 Value::Color(c) => c,

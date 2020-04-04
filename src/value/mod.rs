@@ -2,15 +2,16 @@ use std::cmp::Ordering;
 use std::fmt::{self, Display, Write};
 use std::iter::Iterator;
 
-use crate::atrule::Function;
 use crate::color::Color;
 use crate::common::{Brackets, ListSeparator, Op, QuoteKind};
 use crate::error::SassResult;
 use crate::unit::{Unit, UNIT_CONVERSION_TABLE};
 
+pub(crate) use function::SassFunction;
 pub(crate) use map::SassMap;
 pub(crate) use number::Number;
 
+mod function;
 mod map;
 mod number;
 mod ops;
@@ -32,7 +33,7 @@ pub(crate) enum Value {
     Map(SassMap),
     ArgList(Vec<Value>),
     /// Returned by `get-function()`
-    Function(Box<Function>, bool),
+    Function(SassFunction),
 }
 
 impl Display for Value {

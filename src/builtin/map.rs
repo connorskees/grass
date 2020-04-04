@@ -7,7 +7,7 @@ use crate::value::{SassMap, Value};
 pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "map-get".to_owned(),
-        Box::new(|mut args, _| {
+        Builtin::new(|mut args, _| {
             max_args!(args, 2);
             let key = arg!(args, 1, "key");
             let map = match arg!(args, 0, "map") {
@@ -20,7 +20,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "map-has-key".to_owned(),
-        Box::new(|mut args, _| {
+        Builtin::new(|mut args, _| {
             max_args!(args, 2);
             let key = arg!(args, 1, "key");
             let map = match arg!(args, 0, "map") {
@@ -33,7 +33,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "map-keys".to_owned(),
-        Box::new(|mut args, _| {
+        Builtin::new(|mut args, _| {
             max_args!(args, 1);
             let map = match arg!(args, 0, "map") {
                 Value::Map(m) => m,
@@ -49,7 +49,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "map-values".to_owned(),
-        Box::new(|mut args, _| {
+        Builtin::new(|mut args, _| {
             max_args!(args, 1);
             let map = match arg!(args, 0, "map") {
                 Value::Map(m) => m,
@@ -65,7 +65,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "map-merge".to_owned(),
-        Box::new(|mut args, _| {
+        Builtin::new(|mut args, _| {
             max_args!(args, 2);
             let mut map1 = match arg!(args, 0, "map1") {
                 Value::Map(m) => m,
@@ -83,7 +83,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "map-remove".to_owned(),
-        Box::new(|mut args, _| {
+        Builtin::new(|mut args, _| {
             let mut map = match arg!(args, 0, "map") {
                 Value::Map(m) => m,
                 Value::List(v, ..) if v.is_empty() => SassMap::new(),

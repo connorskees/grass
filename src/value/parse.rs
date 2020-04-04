@@ -368,7 +368,7 @@ impl Value {
                     Ok(f) => f,
                     Err(_) => match GLOBAL_FUNCTIONS.get(&s) {
                         Some(f) => {
-                            return Ok(IntermediateValue::Value(f(
+                            return Ok(IntermediateValue::Value(f.0(
                                 eat_call_args(toks, scope, super_selector)?,
                                 scope,
                             )?))

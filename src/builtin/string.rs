@@ -11,7 +11,7 @@ use crate::value::{Number, Value};
 pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "to-upper-case".to_owned(),
-        Box::new(|mut args, _| {
+        Builtin::new(|mut args, _| {
             max_args!(args, 1);
             match arg!(args, 0, "string") {
                 Value::Ident(i, q) => Ok(Value::Ident(i.to_ascii_uppercase(), q)),
@@ -21,7 +21,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "to-lower-case".to_owned(),
-        Box::new(|mut args, _| {
+        Builtin::new(|mut args, _| {
             max_args!(args, 1);
             match arg!(args, 0, "string") {
                 Value::Ident(i, q) => Ok(Value::Ident(i.to_ascii_lowercase(), q)),
@@ -31,7 +31,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "str-length".to_owned(),
-        Box::new(|mut args, _| {
+        Builtin::new(|mut args, _| {
             max_args!(args, 1);
             match arg!(args, 0, "string") {
                 Value::Ident(i, _) => Ok(Value::Dimension(
@@ -44,7 +44,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "quote".to_owned(),
-        Box::new(|mut args, _| {
+        Builtin::new(|mut args, _| {
             max_args!(args, 1);
             match arg!(args, 0, "string") {
                 Value::Ident(i, _) => Ok(Value::Ident(i, QuoteKind::Double)),
@@ -54,7 +54,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "unquote".to_owned(),
-        Box::new(|mut args, _| {
+        Builtin::new(|mut args, _| {
             max_args!(args, 1);
             match arg!(args, 0, "string") {
                 i @ Value::Ident(..) => Ok(i.unquote()),
@@ -64,7 +64,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "str-slice".to_owned(),
-        Box::new(|mut args, _| {
+        Builtin::new(|mut args, _| {
             max_args!(args, 3);
             let (string, quotes) = match arg!(args, 0, "string") {
                 Value::Ident(s, q) => (s, q),
@@ -127,7 +127,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "str-index".to_owned(),
-        Box::new(|mut args, _| {
+        Builtin::new(|mut args, _| {
             max_args!(args, 2);
             let s1 = match arg!(args, 0, "string") {
                 Value::Ident(i, _) => i,
@@ -147,7 +147,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "str-insert".to_owned(),
-        Box::new(|mut args, _| {
+        Builtin::new(|mut args, _| {
             max_args!(args, 3);
             let (s1, quotes) = match arg!(args, 0, "string") {
                 Value::Ident(i, q) => (i, q.normalize()),
