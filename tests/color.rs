@@ -537,3 +537,27 @@ test!(
     "a {\n  color: hsla(60foo 60foo 50foo);\n}\n",
     "a {\n  color: #cccc33;\n}\n"
 );
+test!(
+    sass_spec__spec_colors_basic,
+    "p {
+  color: rgb(255, 128, 0);
+  color: red green blue;
+  color: (red) (green) (blue);
+  color: red + hux;
+  color: unquote(\"red\") + green;
+  foo: rgb(200, 150%, 170%);
+}
+",
+    "p {\n  color: #ff8000;\n  color: red green blue;\n  color: red green blue;\n  color: redhux;\n  color: redgreen;\n  foo: #c8ffff;\n}\n"
+);
+test!(
+    sass_spec__spec_colors_change_color,
+    "p {
+  color: change-color(#102030, $blue: 5);
+  color: change-color(#102030, $alpha: .325);
+  color: change-color(#102030, $red: 120, $blue: 5);
+  color: change-color(hsl(25, 100%, 80%), $lightness: 40%, $alpha: 0.8);
+}
+",
+    "p {\n  color: #102005;\n  color: rgba(16, 32, 48, 0.325);\n  color: #782005;\n  color: rgba(204, 85, 0, 0.8);\n}\n"
+);
