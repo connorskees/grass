@@ -371,6 +371,7 @@ impl Value {
                             return Ok(IntermediateValue::Value(f.0(
                                 eat_call_args(toks, scope, super_selector)?,
                                 scope,
+                                super_selector,
                             )?))
                         }
                         None => {
@@ -408,7 +409,11 @@ impl Value {
                 };
                 Ok(IntermediateValue::Value(
                     func.clone()
-                        .args(eat_call_args(toks, scope, super_selector)?)?
+                        .args(
+                            eat_call_args(toks, scope, super_selector)?,
+                            scope,
+                            super_selector,
+                        )?
                         .call(super_selector, func.body())?,
                 ))
             }

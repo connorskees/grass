@@ -18,7 +18,7 @@ pub(crate) struct FuncArgs(pub Vec<FuncArg>);
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub(crate) struct FuncArg {
     pub name: String,
-    pub default: Option<Value>,
+    pub default: Option<Vec<Token>>,
     pub is_variadic: bool,
 }
 
@@ -29,7 +29,7 @@ impl FuncArgs {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct CallArgs(HashMap<CallArg, Value>);
+pub(crate) struct CallArgs(HashMap<CallArg, Vec<Token>>);
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 enum CallArg {
@@ -58,25 +58,58 @@ impl CallArgs {
         CallArgs(HashMap::new())
     }
 
-    #[allow(dead_code)]
-    pub fn get_named(&self, val: String) -> Option<&Value> {
-        self.0.get(&CallArg::Named(val))
+    /// Get argument by name
+    ///
+    /// Removes the argument
+    pub fn get_named(
+        &mut self,
+        val: String,
+        scope: &Scope,
+        super_selector: &Selector,
+    ) -> Option<SassResult<Value>> {
+        match self.0.remove(&CallArg::Named(val)) {
+            Some(v) => Some(Value::from_tokens(
+                &mut v.into_iter().peekable(),
+                scope,
+                super_selector,
+            )),
+            None => None,
+        }
     }
 
-    pub fn get_positional(&self, val: usize) -> Option<&Value> {
-        self.0.get(&CallArg::Positional(val))
+    /// Get a positional argument by 0-indexed position
+    ///
+    /// Removes the argument
+    pub fn get_positional(
+        &mut self,
+        val: usize,
+        scope: &Scope,
+        super_selector: &Selector,
+    ) -> Option<SassResult<Value>> {
+        match self.0.remove(&CallArg::Positional(val)) {
+            Some(v) => Some(Value::from_tokens(
+                &mut v.into_iter().peekable(),
+                scope,
+                super_selector,
+            )),
+            None => None,
+        }
     }
 
-    pub fn get_variadic(self) -> SassResult<Vec<Value>> {
+    pub fn get_variadic(self, scope: &Scope, super_selector: &Selector) -> SassResult<Vec<Value>> {
         let mut vals = Vec::new();
         let mut args = self
             .0
             .into_iter()
             .map(|(a, v)| Ok((a.position()?, v)))
-            .collect::<SassResult<Vec<(usize, Value)>>>()?;
+            .collect::<SassResult<Vec<(usize, Vec<Token>)>>>()?;
         args.sort_by(|(a1, _), (a2, _)| a1.cmp(a2));
         for arg in args {
-            vals.push(arg.1);
+            vals.push(Value::from_tokens(
+                &mut arg.1.into_iter().peekable(),
+                scope,
+                super_selector,
+            )?);
         }
         Ok(vals)
     }
@@ -96,14 +129,6 @@ impl CallArgs {
 
     pub fn is_empty(&self) -> bool {
         self.0.len() == 0
-    }
-
-    pub fn remove_named(&mut self, s: String) -> Option<Value> {
-        self.0.remove(&CallArg::Named(s))
-    }
-
-    pub fn remove_positional(&mut self, s: usize) -> Option<Value> {
-        self.0.remove(&CallArg::Positional(s))
     }
 }
 
@@ -137,11 +162,7 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
                             toks.next();
                             args.push(FuncArg {
                                 name: name.replace('_', "-"),
-                                default: Some(Value::from_tokens(
-                                    &mut default.into_iter().peekable(),
-                                    scope,
-                                    super_selector,
-                                )?),
+                                default: Some(default),
                                 is_variadic,
                             });
                             break;
@@ -149,11 +170,7 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
                         ')' => {
                             args.push(FuncArg {
                                 name: name.replace('_', "-"),
-                                default: Some(Value::from_tokens(
-                                    &mut default.into_iter().peekable(),
-                                    scope,
-                                    super_selector,
-                                )?),
+                                default: Some(default),
                                 is_variadic,
                             });
                             break;
@@ -181,11 +198,7 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
 
                 args.push(FuncArg {
                     name: name.replace('_', "-"),
-                    default: Some(Value::from_tokens(
-                        &mut default.into_iter().peekable(),
-                        scope,
-                        super_selector,
-                    )?),
+                    default: Some(default),
                     is_variadic,
                 });
                 break;
@@ -196,11 +209,7 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
                     default: if default.is_empty() {
                         None
                     } else {
-                        Some(Value::from_tokens(
-                            &mut default.into_iter().peekable(),
-                            scope,
-                            super_selector,
-                        )?)
+                        Some(default)
                     },
                     is_variadic,
                 });
@@ -228,7 +237,7 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
     scope: &Scope,
     super_selector: &Selector,
 ) -> SassResult<CallArgs> {
-    let mut args: HashMap<CallArg, Value> = HashMap::new();
+    let mut args: HashMap<CallArg, Vec<Token>> = HashMap::new();
     devour_whitespace_or_comment(toks)?;
     let mut name = String::new();
     let mut val: Vec<Token> = Vec::new();
@@ -264,7 +273,7 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
                         } else {
                             CallArg::Named(name.replace('_', "-"))
                         },
-                        Value::from_tokens(&mut val.into_iter().peekable(), scope, super_selector)?,
+                        val,
                     );
                     return Ok(CallArgs(args));
                 }
@@ -291,11 +300,7 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
             } else {
                 CallArg::Named(name.replace('_', "-"))
             },
-            Value::from_tokens(
-                &mut val.clone().into_iter().peekable(),
-                scope,
-                super_selector,
-            )?,
+            val.clone(),
         );
         val.clear();
         devour_whitespace(toks);

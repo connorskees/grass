@@ -59,19 +59,30 @@ impl Function {
         Ok((name, Function::new(scope, args, body, pos)))
     }
 
-    pub fn args(mut self, mut args: CallArgs) -> SassResult<Function> {
+    pub fn args(
+        mut self,
+        mut args: CallArgs,
+        scope: &Scope,
+        super_selector: &Selector,
+    ) -> SassResult<Function> {
         for (idx, arg) in self.args.0.iter().enumerate() {
             if arg.is_variadic {
-                self.scope
-                    .insert_var(&arg.name, Value::ArgList(args.get_variadic()?))?;
+                self.scope.insert_var(
+                    &arg.name,
+                    Value::ArgList(args.get_variadic(scope, super_selector)?),
+                )?;
                 break;
             }
-            let val = match args.remove_positional(idx) {
-                Some(v) => v,
-                None => match args.remove_named(arg.name.clone()) {
-                    Some(v) => v,
+            let val = match args.get_positional(idx, scope, super_selector) {
+                Some(v) => v?,
+                None => match args.get_named(arg.name.clone(), scope, super_selector) {
+                    Some(v) => v?,
                     None => match &arg.default {
-                        Some(v) => v.clone(),
+                        Some(v) => Value::from_tokens(
+                            &mut v.iter().cloned().peekable(),
+                            scope,
+                            super_selector,
+                        )?,
                         None => return Err(format!("Missing argument ${}.", &arg.name).into()),
                     },
                 },

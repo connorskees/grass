@@ -29,11 +29,19 @@ impl SassFunction {
         }
     }
 
-    pub fn call(self, args: CallArgs, scope: &Scope) -> SassResult<Value> {
+    pub fn call(
+        self,
+        args: CallArgs,
+        scope: &Scope,
+        super_selector: &Selector,
+    ) -> SassResult<Value> {
         match self {
-            Self::Builtin(f, ..) => f.0(args, scope),
+            Self::Builtin(f, ..) => f.0(args, scope, super_selector),
             // todo: superselector
-            Self::UserDefined(f, ..) => f.clone().args(args)?.call(&Selector::new(), f.body()),
+            Self::UserDefined(f, ..) => f
+                .clone()
+                .args(args, scope, super_selector)?
+                .call(&Selector::new(), f.body()),
         }
     }
 }

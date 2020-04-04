@@ -25,3 +25,8 @@ test!(
     "@function foo($a...) {\n  @return $a;\n}\n\na {\n  color: foo(1, 2, 3, 4, 5);\n}\n",
     "a {\n  color: 1, 2, 3, 4, 5;\n}\n"
 );
+test!(
+    default_args_are_lazily_evaluated,
+    "$da: a;\n\n@mixin foo($x: $da) {\n  color: $x;\n}\n$da: b;\n\na {\n  @include foo();\n}\n",
+    "a {\n  color: b;\n}\n"
+);

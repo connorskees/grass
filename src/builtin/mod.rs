@@ -5,6 +5,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use crate::args::CallArgs;
 use crate::error::SassResult;
 use crate::scope::Scope;
+use crate::selector::Selector;
 use crate::value::Value;
 
 #[macro_use]
@@ -22,9 +23,12 @@ static FUNCTION_COUNT: AtomicUsize = AtomicUsize::new(0);
 
 // TODO: impl Fn
 #[derive(Clone)]
-pub(crate) struct Builtin(pub fn(CallArgs, &Scope) -> SassResult<Value>, usize);
+pub(crate) struct Builtin(
+    pub fn(CallArgs, &Scope, &Selector) -> SassResult<Value>,
+    usize,
+);
 impl Builtin {
-    pub fn new(body: fn(CallArgs, &Scope) -> SassResult<Value>) -> Builtin {
+    pub fn new(body: fn(CallArgs, &Scope, &Selector) -> SassResult<Value>) -> Builtin {
         let count = FUNCTION_COUNT.fetch_add(1, Ordering::Relaxed);
         Self(body, count)
     }

@@ -11,9 +11,9 @@ use crate::value::{Number, Value};
 pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "to-upper-case".to_owned(),
-        Builtin::new(|mut args, _| {
+        Builtin::new(|mut args, scope, super_selector| {
             max_args!(args, 1);
-            match arg!(args, 0, "string") {
+            match arg!(args, scope, super_selector, 0, "string") {
                 Value::Ident(i, q) => Ok(Value::Ident(i.to_ascii_uppercase(), q)),
                 v => Err(format!("$string: {} is not a string.", v).into()),
             }
@@ -21,9 +21,9 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "to-lower-case".to_owned(),
-        Builtin::new(|mut args, _| {
+        Builtin::new(|mut args, scope, super_selector| {
             max_args!(args, 1);
-            match arg!(args, 0, "string") {
+            match arg!(args, scope, super_selector, 0, "string") {
                 Value::Ident(i, q) => Ok(Value::Ident(i.to_ascii_lowercase(), q)),
                 v => Err(format!("$string: {} is not a string.", v).into()),
             }
@@ -31,9 +31,9 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "str-length".to_owned(),
-        Builtin::new(|mut args, _| {
+        Builtin::new(|mut args, scope, super_selector| {
             max_args!(args, 1);
-            match arg!(args, 0, "string") {
+            match arg!(args, scope, super_selector, 0, "string") {
                 Value::Ident(i, _) => Ok(Value::Dimension(
                     Number::from(i.chars().count()),
                     Unit::None,
@@ -44,9 +44,9 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "quote".to_owned(),
-        Builtin::new(|mut args, _| {
+        Builtin::new(|mut args, scope, super_selector| {
             max_args!(args, 1);
-            match arg!(args, 0, "string") {
+            match arg!(args, scope, super_selector, 0, "string") {
                 Value::Ident(i, _) => Ok(Value::Ident(i, QuoteKind::Double)),
                 v => Err(format!("$string: {} is not a string.", v).into()),
             }
@@ -54,9 +54,9 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "unquote".to_owned(),
-        Builtin::new(|mut args, _| {
+        Builtin::new(|mut args, scope, super_selector| {
             max_args!(args, 1);
-            match arg!(args, 0, "string") {
+            match arg!(args, scope, super_selector, 0, "string") {
                 i @ Value::Ident(..) => Ok(i.unquote()),
                 v => Err(format!("$string: {} is not a string.", v).into()),
             }
@@ -64,14 +64,14 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "str-slice".to_owned(),
-        Builtin::new(|mut args, _| {
+        Builtin::new(|mut args, scope, super_selector| {
             max_args!(args, 3);
-            let (string, quotes) = match arg!(args, 0, "string") {
+            let (string, quotes) = match arg!(args, scope, super_selector, 0, "string") {
                 Value::Ident(s, q) => (s, q),
                 v => return Err(format!("$string: {} is not a string.", v).into()),
             };
             let str_len = string.chars().count();
-            let start = match arg!(args, 1, "start-at") {
+            let start = match arg!(args, scope, super_selector, 1, "start-at") {
                 Value::Dimension(n, Unit::None) if n.is_decimal() => {
                     return Err(format!("{} is not an int.", n).into())
                 }
@@ -88,7 +88,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 }
                 v => return Err(format!("$start-at: {} is not a number.", v).into()),
             };
-            let mut end = match arg!(args, 2, "end-at" = Value::Null) {
+            let mut end = match arg!(args, scope, super_selector, 2, "end-at" = Value::Null) {
                 Value::Dimension(n, Unit::None) if n.is_decimal() => {
                     return Err(format!("{} is not an int.", n).into())
                 }
@@ -127,14 +127,14 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "str-index".to_owned(),
-        Builtin::new(|mut args, _| {
+        Builtin::new(|mut args, scope, super_selector| {
             max_args!(args, 2);
-            let s1 = match arg!(args, 0, "string") {
+            let s1 = match arg!(args, scope, super_selector, 0, "string") {
                 Value::Ident(i, _) => i,
                 v => return Err(format!("$string: {} is not a string.", v).into()),
             };
 
-            let substr = match arg!(args, 1, "substring") {
+            let substr = match arg!(args, scope, super_selector, 1, "substring") {
                 Value::Ident(i, _) => i,
                 v => return Err(format!("$substring: {} is not a string.", v).into()),
             };
@@ -147,19 +147,19 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "str-insert".to_owned(),
-        Builtin::new(|mut args, _| {
+        Builtin::new(|mut args, scope, super_selector| {
             max_args!(args, 3);
-            let (s1, quotes) = match arg!(args, 0, "string") {
+            let (s1, quotes) = match arg!(args, scope, super_selector, 0, "string") {
                 Value::Ident(i, q) => (i, q.normalize()),
                 v => return Err(format!("$string: {} is not a string.", v).into()),
             };
 
-            let substr = match arg!(args, 1, "insert") {
+            let substr = match arg!(args, scope, super_selector, 1, "insert") {
                 Value::Ident(i, _) => i,
                 v => return Err(format!("$insert: {} is not a string.", v).into()),
             };
 
-            let index = match arg!(args, 2, "index") {
+            let index = match arg!(args, scope, super_selector, 2, "index") {
                 Value::Dimension(n, Unit::None) if n.is_decimal() => {
                     return Err(format!("$index: {} is not an int.", n).into())
                 }

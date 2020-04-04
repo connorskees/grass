@@ -9,9 +9,9 @@ use crate::unit::Unit;
 use crate::value::{Number, Value};
 
 macro_rules! opt_rgba {
-    ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal) => {
+    ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal, $scope:ident, $super_selector:ident) => {
         let x = $low;
-        let $name = match named_arg!($args, $arg = Value::Null) {
+        let $name = match named_arg!($args, $scope, $super_selector, $arg = Value::Null) {
             Value::Dimension(n, u) => Some(bound!($arg, n, u, x, $high)),
             Value::Null => None,
             v => return Err(format!("${}: {} is not a number.", $arg, v).into()),
@@ -20,9 +20,9 @@ macro_rules! opt_rgba {
 }
 
 macro_rules! opt_hsl {
-    ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal) => {
+    ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal, $scope:ident, $super_selector:ident) => {
         let x = $low;
-        let $name = match named_arg!($args, $arg = Value::Null) {
+        let $name = match named_arg!($args, $scope, $super_selector, $arg = Value::Null) {
             Value::Dimension(n, u) => Some(bound!($arg, n, u, x, $high) / Number::from(100)),
             Value::Null => None,
             v => return Err(format!("${}: {} is not a number.", $arg, v).into()),
@@ -31,33 +31,33 @@ macro_rules! opt_hsl {
 }
 
 pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
-    f.insert("change-color".to_owned(), Builtin::new(|mut args, _| {
-        if args.get_positional(1).is_some() {
+    f.insert("change-color".to_owned(), Builtin::new(|mut args, scope, super_selector| {
+        if args.get_positional(1, scope, super_selector).is_some() {
             return Err("Only one positional argument is allowed. All other arguments must be passed by name.".into());
         }
 
-        let color = match arg!(args, 0, "color") {
+        let color = match arg!(args, scope, super_selector, 0, "color") {
             Value::Color(c) => c,
             v => return Err(format!("$color: {} is not a color.", v).into()),
         };
 
-        opt_rgba!(args, alpha, "alpha", 0, 1);
-        opt_rgba!(args, red, "red", 0, 255);
-        opt_rgba!(args, green, "green", 0, 255);
-        opt_rgba!(args, blue, "blue", 0, 255);
+        opt_rgba!(args, alpha, "alpha", 0, 1, scope, super_selector);
+        opt_rgba!(args, red, "red", 0, 255, scope, super_selector);
+        opt_rgba!(args, green, "green", 0, 255, scope, super_selector);
+        opt_rgba!(args, blue, "blue", 0, 255, scope, super_selector);
 
         if red.is_some() || green.is_some() || blue.is_some() {
             return Ok(Value::Color(Color::from_rgba(red.unwrap_or(color.red()), green.unwrap_or(color.green()), blue.unwrap_or(color.blue()), alpha.unwrap_or(color.alpha()))))
         }
 
-        let hue = match named_arg!(args, "hue"=Value::Null) {
+        let hue = match named_arg!(args, scope, super_selector, "hue"=Value::Null) {
             Value::Dimension(n, _) => Some(n),
             Value::Null => None,
             v => return Err(format!("$hue: {} is not a number.", v).into()),
         };
 
-        opt_hsl!(args, saturation, "saturation", 0, 100);
-        opt_hsl!(args, luminance, "lightness", 0, 100);
+        opt_hsl!(args, saturation, "saturation", 0, 100, scope, super_selector);
+        opt_hsl!(args, luminance, "lightness", 0, 100, scope, super_selector);
 
         if hue.is_some() || saturation.is_some() || luminance.is_some() {
             // Color::as_hsla() returns more exact values than Color::hue(), etc.
@@ -73,16 +73,16 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     }));
     f.insert(
         "adjust-color".to_owned(),
-        Builtin::new(|mut args, _| {
-            let color = match arg!(args, 0, "color") {
+        Builtin::new(|mut args, scope, super_selector| {
+            let color = match arg!(args, scope, super_selector, 0, "color") {
                 Value::Color(c) => c,
                 v => return Err(format!("$color: {} is not a color.", v).into()),
             };
 
-            opt_rgba!(args, alpha, "alpha", -1, 1);
-            opt_rgba!(args, red, "red", -255, 255);
-            opt_rgba!(args, green, "green", -255, 255);
-            opt_rgba!(args, blue, "blue", -255, 255);
+            opt_rgba!(args, alpha, "alpha", -1, 1, scope, super_selector);
+            opt_rgba!(args, red, "red", -255, 255, scope, super_selector);
+            opt_rgba!(args, green, "green", -255, 255, scope, super_selector);
+            opt_rgba!(args, blue, "blue", -255, 255, scope, super_selector);
 
             if red.is_some() || green.is_some() || blue.is_some() {
                 return Ok(Value::Color(Color::from_rgba(
@@ -93,14 +93,30 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 )));
             }
 
-            let hue = match named_arg!(args, "hue" = Value::Null) {
+            let hue = match named_arg!(args, scope, super_selector, "hue" = Value::Null) {
                 Value::Dimension(n, _) => Some(n),
                 Value::Null => None,
                 v => return Err(format!("$hue: {} is not a number.", v).into()),
             };
 
-            opt_hsl!(args, saturation, "saturation", -100, 100);
-            opt_hsl!(args, luminance, "lightness", -100, 100);
+            opt_hsl!(
+                args,
+                saturation,
+                "saturation",
+                -100,
+                100,
+                scope,
+                super_selector
+            );
+            opt_hsl!(
+                args,
+                luminance,
+                "lightness",
+                -100,
+                100,
+                scope,
+                super_selector
+            );
 
             if hue.is_some() || saturation.is_some() || luminance.is_some() {
                 // Color::as_hsla() returns more exact values than Color::hue(), etc.
@@ -123,16 +139,16 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "scale-color".to_owned(),
-        Builtin::new(|mut args, _| {
-            let color = match arg!(args, 0, "color") {
+        Builtin::new(|mut args, scope, super_selector| {
+            let color = match arg!(args, scope, super_selector, 0, "color") {
                 Value::Color(c) => c,
                 v => return Err(format!("$color: {} is not a color.", v).into()),
             };
 
             macro_rules! opt_scale_arg {
-                ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal) => {
+                ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal, $scope:ident, $super_selector:ident) => {
                     let x = $low;
-                    let $name = match named_arg!($args, $arg = Value::Null) {
+                    let $name = match named_arg!($args, $scope, $super_selector, $arg = Value::Null) {
                         Value::Dimension(n, Unit::Percent) => {
                             Some(bound!($arg, n, Unit::Percent, x, $high) / Number::from(100))
                         }
@@ -147,10 +163,10 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 };
             }
 
-            opt_scale_arg!(args, alpha, "alpha", -100, 100);
-            opt_scale_arg!(args, red, "red", -100, 100);
-            opt_scale_arg!(args, green, "green", -100, 100);
-            opt_scale_arg!(args, blue, "blue", -100, 100);
+            opt_scale_arg!(args, alpha, "alpha", -100, 100, scope, super_selector);
+            opt_scale_arg!(args, red, "red", -100, 100, scope, super_selector);
+            opt_scale_arg!(args, green, "green", -100, 100, scope, super_selector);
+            opt_scale_arg!(args, blue, "blue", -100, 100, scope, super_selector);
 
             if red.is_some() || green.is_some() || blue.is_some() {
                 return Ok(Value::Color(Color::from_rgba(
@@ -177,8 +193,8 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 )));
             }
 
-            opt_scale_arg!(args, saturation, "saturation", -100, 100);
-            opt_scale_arg!(args, luminance, "lightness", -100, 100);
+            opt_scale_arg!(args, saturation, "saturation", -100, 100, scope, super_selector);
+            opt_scale_arg!(args, luminance, "lightness", -100, 100, scope, super_selector);
 
             if saturation.is_some() || luminance.is_some() {
                 // Color::as_hsla() returns more exact values than Color::hue(), etc.
@@ -209,9 +225,9 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "ie-hex-str".to_owned(),
-        Builtin::new(|mut args, _| {
+        Builtin::new(|mut args, scope, super_selector| {
             max_args!(args, 1);
-            let color = match arg!(args, 0, "color") {
+            let color = match arg!(args, scope, super_selector, 0, "color") {
                 Value::Color(c) => c,
                 v => return Err(format!("$color: {} is not a color.", v).into()),
             };

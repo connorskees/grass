@@ -10,9 +10,9 @@ use crate::value::{Number, Value};
 pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "length".to_owned(),
-        Builtin::new(|mut args, _| {
+        Builtin::new(|mut args, scope, super_selector| {
             max_args!(args, 1);
-            let len = match arg!(args, 0, "list") {
+            let len = match arg!(args, scope, super_selector, 0, "list") {
                 Value::List(v, ..) => Number::from(v.len()),
                 Value::Map(m) => Number::from(m.len()),
                 _ => Number::one(),
@@ -22,14 +22,14 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "nth".to_owned(),
-        Builtin::new(|mut args, _| {
+        Builtin::new(|mut args, scope, super_selector| {
             max_args!(args, 2);
-            let list = match arg!(args, 0, "list") {
+            let list = match arg!(args, scope, super_selector, 0, "list") {
                 Value::List(v, ..) => v,
                 Value::Map(m) => m.entries(),
                 v => vec![v],
             };
-            let n = match arg!(args, 1, "n") {
+            let n = match arg!(args, scope, super_selector, 1, "n") {
                 Value::Dimension(num, _) => num,
                 v => return Err(format!("$n: {} is not a number.", v).into()),
             };
@@ -60,10 +60,10 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "list-separator".to_owned(),
-        Builtin::new(|mut args, _| {
+        Builtin::new(|mut args, scope, super_selector| {
             max_args!(args, 1);
             Ok(Value::Ident(
-                match arg!(args, 0, "list") {
+                match arg!(args, scope, super_selector, 0, "list") {
                     Value::List(_, sep, ..) => sep.name(),
                     _ => ListSeparator::Space.name(),
                 }
@@ -74,14 +74,14 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "set-nth".to_owned(),
-        Builtin::new(|mut args, _| {
+        Builtin::new(|mut args, scope, super_selector| {
             max_args!(args, 3);
-            let (mut list, sep, brackets) = match arg!(args, 0, "list") {
+            let (mut list, sep, brackets) = match arg!(args, scope, super_selector, 0, "list") {
                 Value::List(v, sep, b) => (v, sep, b),
                 Value::Map(m) => (m.entries(), ListSeparator::Comma, Brackets::None),
                 v => (vec![v], ListSeparator::Space, Brackets::None),
             };
-            let n = match arg!(args, 1, "n") {
+            let n = match arg!(args, scope, super_selector, 1, "n") {
                 Value::Dimension(num, _) => num,
                 v => return Err(format!("$n: {} is not a number.", v).into()),
             };
@@ -102,7 +102,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 return Err(format!("$n: {} is not an int.", n).into());
             }
 
-            let val = arg!(args, 2, "value");
+            let val = arg!(args, scope, super_selector, 2, "value");
 
             if n.is_positive() {
                 list[n.to_integer().to_usize().unwrap() - 1] = val;
@@ -115,15 +115,17 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "append".to_owned(),
-        Builtin::new(|mut args, _| {
+        Builtin::new(|mut args, scope, super_selector| {
             max_args!(args, 3);
-            let (mut list, sep, brackets) = match arg!(args, 0, "list") {
+            let (mut list, sep, brackets) = match arg!(args, scope, super_selector, 0, "list") {
                 Value::List(v, sep, b) => (v, sep, b),
                 v => (vec![v], ListSeparator::Space, Brackets::None),
             };
-            let val = arg!(args, 1, "val");
+            let val = arg!(args, scope, super_selector, 1, "val");
             let sep = match arg!(
                 args,
+                scope,
+                super_selector,
                 2,
                 "separator" = Value::Ident("auto".to_owned(), QuoteKind::None)
             ) {
@@ -145,20 +147,22 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "join".to_owned(),
-        Builtin::new(|mut args, _| {
+        Builtin::new(|mut args, scope, super_selector| {
             max_args!(args, 4);
-            let (mut list1, sep1, brackets) = match arg!(args, 0, "list1") {
+            let (mut list1, sep1, brackets) = match arg!(args, scope, super_selector, 0, "list1") {
                 Value::List(v, sep, brackets) => (v, sep, brackets),
                 Value::Map(m) => (m.entries(), ListSeparator::Comma, Brackets::None),
                 v => (vec![v], ListSeparator::Space, Brackets::None),
             };
-            let (list2, sep2) = match arg!(args, 1, "list2") {
+            let (list2, sep2) = match arg!(args, scope, super_selector, 1, "list2") {
                 Value::List(v, sep, ..) => (v, sep),
                 Value::Map(m) => (m.entries(), ListSeparator::Comma),
                 v => (vec![v], ListSeparator::Space),
             };
             let sep = match arg!(
                 args,
+                scope,
+                super_selector,
                 2,
                 "separator" = Value::Ident("auto".to_owned(), QuoteKind::None)
             ) {
@@ -181,6 +185,8 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
 
             let brackets = match arg!(
                 args,
+                scope,
+                super_selector,
                 3,
                 "bracketed" = Value::Ident("auto".to_owned(), QuoteKind::None)
             ) {
@@ -204,27 +210,29 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "is-bracketed".to_owned(),
-        Builtin::new(|mut args, _| {
+        Builtin::new(|mut args, scope, super_selector| {
             max_args!(args, 1);
-            Ok(Value::bool(match arg!(args, 0, "list") {
-                Value::List(.., brackets) => match brackets {
-                    Brackets::Bracketed => true,
-                    Brackets::None => false,
+            Ok(Value::bool(
+                match arg!(args, scope, super_selector, 0, "list") {
+                    Value::List(.., brackets) => match brackets {
+                        Brackets::Bracketed => true,
+                        Brackets::None => false,
+                    },
+                    _ => false,
                 },
-                _ => false,
-            }))
+            ))
         }),
     );
     f.insert(
         "index".to_owned(),
-        Builtin::new(|mut args, _| {
+        Builtin::new(|mut args, scope, super_selector| {
             max_args!(args, 2);
-            let list = match arg!(args, 0, "list") {
+            let list = match arg!(args, scope, super_selector, 0, "list") {
                 Value::List(v, ..) => v,
                 Value::Map(m) => m.entries(),
                 v => vec![v],
             };
-            let value = arg!(args, 1, "value");
+            let value = arg!(args, scope, super_selector, 1, "value");
             // TODO: find a way around this unwrap.
             // It should be impossible to hit as the arg is
             // evaluated prior to checking equality, but
@@ -242,9 +250,9 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     f.insert(
         "zip".to_owned(),
-        Builtin::new(|args, _| {
+        Builtin::new(|args, scope, super_selector| {
             let lists = args
-                .get_variadic()?
+                .get_variadic(scope, super_selector)?
                 .into_iter()
                 .map(|x| match x {
                     Value::List(v, ..) => v,
