@@ -7,11 +7,11 @@ use crate::common::{Brackets, ListSeparator, Op, QuoteKind};
 use crate::error::SassResult;
 use crate::unit::{Unit, UNIT_CONVERSION_TABLE};
 
-pub(crate) use function::SassFunction;
+pub(crate) use sass_function::SassFunction;
 pub(crate) use map::SassMap;
 pub(crate) use number::Number;
 
-mod function;
+mod sass_function;
 mod map;
 mod number;
 mod ops;

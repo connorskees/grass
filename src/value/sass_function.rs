@@ -1,3 +1,14 @@
+//! SASS functions are those that are evaluated and return a value
+//! 
+//! SASS functions can be either user-defined or builtin.
+//! 
+//! User-defined functions are those that have been implemented in SASS
+//! using the @function rule. See the documentation of `crate::atrule::Function` 
+//! for more information.
+//! 
+//! Builtin functions are those that have been implemented in rust and are 
+//! in the global scope. 
+
 use std::fmt;
 
 use crate::args::CallArgs;
@@ -8,6 +19,11 @@ use crate::scope::Scope;
 use crate::selector::Selector;
 use crate::value::Value;
 
+/// A SASS function
+/// See toplevel documentation for more information
+/// 
+/// The function name is stored in addition to the body
+/// for use in the builtin function `inspect()`
 #[derive(Clone)]
 pub(crate) enum SassFunction {
     Builtin(Builtin, String),
@@ -15,6 +31,9 @@ pub(crate) enum SassFunction {
 }
 
 impl SassFunction {
+    /// Get the name of the function referenced
+    /// 
+    /// Used mainly in debugging and `inspect()`
     pub fn name(&self) -> &str {
         match self {
             Self::Builtin(_, name) => name,
@@ -22,6 +41,9 @@ impl SassFunction {
         }
     }
 
+    /// Whether the function is builtin or user-defined
+    /// 
+    /// Used only in `std::fmt::Debug` for `SassFunction` 
     fn kind(&self) -> &'static str {
         match &self {
             Self::Builtin(..) => "Builtin",
