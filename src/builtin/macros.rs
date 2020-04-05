@@ -37,7 +37,7 @@ macro_rules! named_arg {
 macro_rules! max_args {
     ($args:ident, $count:literal) => {
         if $args.len() > $count {
-            if $count > 1 {
+            if $count != 1 {
                 return Err(format!(
                     "Only {} arguments allowed, but {} were passed.",
                     $count,
