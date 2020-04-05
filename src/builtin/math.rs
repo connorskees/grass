@@ -121,7 +121,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
 
             let mut rng = rand::thread_rng();
             Ok(Value::Dimension(
-                Number::from(rng.gen_range(0, limit)),
+                Number::from(rng.gen_range(0, limit) + 1),
                 Unit::None,
             ))
         }),
