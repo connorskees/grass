@@ -15,7 +15,6 @@ cargo b --release
 
 The large features remaining are
 ```
-order of operations
 special case certain functions (min, max, calc, element, expression, progid, url)
 all builtin selector functions (274 tests)
 content-exists, unique-id, min, min
@@ -25,7 +24,9 @@ a special parser for plain css
 @at-root (~150 tests)
 @use and module system (~1200 tests)
 @forward (~400 tests)
-@keyframes (~30 test)
+@keyframes (~30 tests)
+@font-face (~11 tests)
+string parsing/quoting/escaping (~200 tests)
 ```
 
 ```
