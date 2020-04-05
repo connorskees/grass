@@ -17,7 +17,7 @@ The large features remaining are
 ```
 special case certain functions (min, max, calc, element, expression, progid, url)
 all builtin selector functions (274 tests)
-content-exists, unique-id, min, min
+content-exists, min, min
 @extend (~600 tests)
 indented syntax (27 tests)
 a special parser for plain css

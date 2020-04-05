@@ -3,6 +3,9 @@ use std::collections::HashMap;
 use num_bigint::BigInt;
 use num_traits::{Signed, ToPrimitive, Zero};
 
+#[cfg(feature = "random")]
+use rand::{distributions::Alphanumeric, thread_rng, Rng};
+
 use super::Builtin;
 use crate::common::QuoteKind;
 use crate::unit::Unit;
@@ -215,6 +218,19 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             };
 
             Ok(Value::Ident(string, quotes))
+        }),
+    );
+    #[cfg(feature = "random")]
+    f.insert(
+        "unique-id".to_owned(),
+        Builtin::new(|args, _, _| {
+            max_args!(args, 0);
+            let mut rng = thread_rng();
+            let string = std::iter::repeat(())
+                .map(|()| rng.sample(Alphanumeric))
+                .take(7)
+                .collect();
+            Ok(Value::Ident(string, QuoteKind::None))
         }),
     );
 }

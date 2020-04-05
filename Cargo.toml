@@ -34,7 +34,7 @@ default = ["commandline", "random"]
 commandline = ["clap"]
 # Option: enable nightly-only features (for right now, only the `track_caller` attribute) 
 nightly = []
-# Option (enabled by default): enable the builtin function `random([$limit])`
+# Option (enabled by default): enable the builtin functions `random([$limit])` and `unique-id()`
 random = ["rand"]
 
 [dev-dependencies]
