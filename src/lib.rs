@@ -282,7 +282,7 @@ impl<'a> StyleSheetParser<'a> {
         let mut rules: Vec<Stmt> = Vec::new();
         while let Some(Token { kind, .. }) = self.lexer.peek() {
             match kind {
-                'a'..='z' | 'A'..='Z' | '_' | '-'
+                'a'..='z' | 'A'..='Z' | '_' | '-' | '0'..='9'
                 | '[' | '#' | ':' | '*' | '%' | '.' | '>' => rules
                     .extend(self.eat_rules(&Selector::new(), &mut Scope::new())?),
                 &'\t' | &'\n' | ' ' => {
@@ -397,7 +397,7 @@ impl<'a> StyleSheetParser<'a> {
                     return Err("expected selector.".into());
                 }
                 _ => match dbg!(self.lexer.next()) {
-                    Some(Token { pos, .. }) => self.error(pos, "unexpected toplevel token"),
+                    Some(..) => todo!("unexpected toplevel token"),
                     _ => unsafe { std::hint::unreachable_unchecked() },
                 }
             };
