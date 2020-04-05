@@ -17,14 +17,15 @@ The large features remaining are
 ```
 order of operations
 special case certain functions (min, max, calc, element, expression, progid, url)
-all builtin selector functions
+all builtin selector functions (274 tests)
 content-exists, unique-id, random, min, min
-@extend
-indented syntax
+@extend (~600 tests)
+indented syntax (27 tests)
 a special parser for plain css
-@at-root
-@use and module system
-@forward
+@at-root (~150 tests)
+@use and module system (~1200 tests)
+@forward (~400 tests)
+@keyframes (~30 test)
 ```
 
 ```
