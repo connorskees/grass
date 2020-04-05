@@ -161,6 +161,7 @@ impl From<f64> for Number {
 from_integer!(u16);
 from_integer!(usize);
 from_integer!(i32);
+from_integer!(u32);
 from_integer!(u8);
 
 impl Display for Number {
