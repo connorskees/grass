@@ -22,6 +22,10 @@ impl Selector {
     pub const fn new() -> Selector {
         Selector(Vec::new())
     }
+
+    pub fn contains_super_selector(&self) -> bool {
+        self.0.iter().any(|s| s.contains_super_selector)
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -29,6 +33,7 @@ struct SelectorPart {
     pub inner: Vec<SelectorKind>,
     pub is_invisible: bool,
     pub has_newline: bool,
+    pub contains_super_selector: bool,
 }
 
 impl Display for SelectorPart {
@@ -167,7 +172,7 @@ impl Display for SelectorKind {
             SelectorKind::PseudoElement(s) => write!(f, "::{}", s),
             SelectorKind::PseudoParen(s, val) => write!(f, ":{}({})", s, val),
             SelectorKind::Placeholder(s) => write!(f, "%{}", s),
-            SelectorKind::Super => todo!(),
+            SelectorKind::Super => unreachable!("& selector should not be emitted"),
             SelectorKind::Whitespace => f.write_char(' '),
         }
     }
@@ -240,6 +245,7 @@ impl Selector {
         let mut inner = Vec::new();
         let mut is_invisible = false;
         let mut has_newline = false;
+        let mut contains_super_selector = false;
         let mut parts = Vec::new();
 
         // HACK: we re-lex here to get access to generic helper functions that
@@ -255,7 +261,10 @@ impl Selector {
                     )?));
                     continue;
                 }
-                '&' => SelectorKind::Super,
+                '&' => {
+                    contains_super_selector = true;
+                    SelectorKind::Super
+                }
                 '.' => {
                     iter.next();
                     inner.push(SelectorKind::Class(eat_ident_no_interpolation(&mut iter)?));
@@ -288,11 +297,13 @@ impl Selector {
                             inner: inner.clone(),
                             is_invisible,
                             has_newline,
+                            contains_super_selector,
                         });
                         inner.clear();
                     }
                     is_invisible = false;
                     has_newline = false;
+                    contains_super_selector = false;
                     devour_whitespace(&mut iter);
                     continue;
                 }
@@ -303,11 +314,16 @@ impl Selector {
                 }
                 ':' => {
                     iter.next();
-                    inner.push(Self::consume_pseudo_selector(
-                        &mut iter,
-                        scope,
-                        super_selector,
-                    )?);
+                    let sel = Self::consume_pseudo_selector(&mut iter, scope, super_selector)?;
+                    match &sel {
+                        SelectorKind::PseudoParen(_, s) => {
+                            if s.contains_super_selector() {
+                                contains_super_selector = true;
+                            }
+                        }
+                        _ => {}
+                    }
+                    inner.push(sel);
                     continue;
                 }
                 c if c.is_whitespace() => {
@@ -326,6 +342,7 @@ impl Selector {
                 inner,
                 is_invisible,
                 has_newline,
+                contains_super_selector,
             });
         }
 
@@ -367,6 +384,55 @@ impl Selector {
         }
     }
 
+    fn replace(super_selector: Selector, this: Selector) -> Selector {
+        if super_selector.0.is_empty() {
+            return this;
+        }
+        if this.0.is_empty() {
+            return super_selector;
+        }
+        let mut parts = Vec::with_capacity(super_selector.0.len());
+        for (idx, part) in super_selector.clone().0.into_iter().enumerate() {
+            let mut found_inner = false;
+            for part2 in this.clone().0 {
+                if !part2.contains_super_selector {
+                    if idx == 0 {
+                        parts.push(part2);
+                    }
+                    continue;
+                }
+                let mut kinds = Vec::new();
+                for kind in part2.clone().inner {
+                    match kind {
+                        SelectorKind::Super => kinds.extend(part.inner.clone()),
+                        SelectorKind::PseudoParen(name, inner) => {
+                            if inner.contains_super_selector() {
+                                found_inner = true;
+                                kinds.push(SelectorKind::PseudoParen(
+                                    name,
+                                    Selector::replace(super_selector.clone(), inner),
+                                ))
+                            } else {
+                                kinds.push(SelectorKind::PseudoParen(name, inner));
+                            }
+                        }
+                        _ => kinds.push(kind),
+                    }
+                }
+                parts.push(SelectorPart {
+                    inner: kinds,
+                    is_invisible: part2.is_invisible,
+                    has_newline: part2.has_newline,
+                    contains_super_selector: false,
+                });
+            }
+            if found_inner {
+                break;
+            }
+        }
+        Selector(parts)
+    }
+
     pub fn zip(&self, other: &Selector) -> Selector {
         if self.0.is_empty() {
             return Selector(other.0.clone());
@@ -375,16 +441,30 @@ impl Selector {
         }
         let mut rules = Vec::with_capacity(self.0.len());
         for sel1 in self.clone().0 {
+            let mut found_inner = false;
             for sel2 in other.clone().0 {
                 let mut this_selector: Vec<SelectorKind> = Vec::with_capacity(other.0.len());
                 let mut found_super = false;
 
                 for sel in sel2.inner {
-                    if sel == SelectorKind::Super {
-                        this_selector.extend(sel1.clone().inner);
-                        found_super = true;
-                    } else {
-                        this_selector.push(sel.clone());
+                    match sel {
+                        SelectorKind::Super => {
+                            this_selector.extend(sel1.inner.clone());
+                            found_super = true;
+                        }
+                        SelectorKind::PseudoParen(s, inner_selector) => {
+                            if inner_selector.contains_super_selector() {
+                                found_super = true;
+                                found_inner = true;
+                                this_selector.push(SelectorKind::PseudoParen(
+                                    s,
+                                    Selector::replace(self.clone(), inner_selector),
+                                ))
+                            } else {
+                                this_selector.push(SelectorKind::PseudoParen(s, inner_selector));
+                            }
+                        }
+                        _ => this_selector.push(sel),
                     }
                 }
 
@@ -398,8 +478,12 @@ impl Selector {
                 rules.push(SelectorPart {
                     inner: this_selector,
                     is_invisible: sel1.is_invisible || sel2.is_invisible,
-                    has_newline: sel1.has_newline || sel2.has_newline,
+                    has_newline: (sel1.has_newline || sel2.has_newline) && !found_inner,
+                    contains_super_selector: false,
                 });
+            }
+            if found_inner {
+                break;
             }
         }
         Selector(rules)

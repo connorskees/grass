@@ -333,3 +333,33 @@ error!(
     modifier_on_any_attr,
     "[attr i] {color: foo;}", "Error: Expected \"]\"."
 );
+test!(
+    psuedo_paren_child_contains_ampersand,
+    ".a, .b {\n  :not(&-c) {\n    d: e\n  }\n}\n",
+    ":not(.a-c, .b-c) {\n  d: e;\n}\n"
+);
+test!(
+    psuedo_paren_child_no_ampersand_two_newlines__this_test_confounds_me,
+    ".a, .b {\n  :not(-c),\n  :not(-c) {\n    d: e\n  }\n}\n",
+    ".a :not(-c),\n.a :not(-c), .b :not(-c),\n.b :not(-c) {\n  d: e;\n}\n"
+);
+test!(
+    psuedo_paren_child_ampersand_two_newlines__this_test_confounds_me,
+    ".a, .b {\n  :not(&-c, &-d),\n  :not(&-c) {\n    d: e\n  }\n}\n",
+    ":not(.a-c, .a-d, .b-c, .b-d), :not(.a-c, .b-c) {\n  d: e;\n}\n"
+);
+test!(
+    psuedo_paren_child_ampersand_inner_psuedo_paren,
+    ".a, .b {\n  :not(:not(&-c)) {\n    d: e\n  }\n}\n",
+    ":not(:not(.a-c, .b-c)) {\n  d: e;\n}\n"
+);
+test!(
+    psuedo_paren_child_psuedo_paren_ampersand_inner_psuedo_paren,
+    ".a, .b {\n  :not(:not(c), &-d) {\n    d: e\n  }\n}\n",
+    ":not(:not(c), .a-d, .b-d) {\n  d: e;\n}\n"
+);
+test!(
+    psuedo_paren_child_ampersand_psuedo_paren__inner_psuedo_paren,
+    ".a, .b {\n  :not(&-d, :not(c)) {\n    d: e\n  }\n}\n",
+    ":not(.a-d, :not(c), .b-d) {\n  d: e;\n}\n"
+);
