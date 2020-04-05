@@ -368,3 +368,37 @@ test!(
     ".foo,\n.bar {\n  .baz & {\n    color: red;\n  }\n}\n",
     ".baz .foo,\n.baz .bar {\n  color: red;\n}\n"
 );
+test!(
+    not_only_placeholder_is_universal,
+    "a :not(%b) {x: y}",
+    "a * {\n  x: y;\n}\n"
+);
+test!(
+    not_placeholder_is_removed,
+    "a:not(%b, c) {x: y}",
+    "a:not(c) {\n  x: y;\n}\n"
+);
+test!(
+    psuedo_paren_removes_inner_placeholder,
+    "a:matches(%b, c) {x: y}",
+    "a:matches(c) {\n  x: y;\n}\n"
+);
+test!(
+    matches_placeholder_removes_everything,
+    "a:matches(%b) {x: y}",
+    ""
+);
+test!(
+    touching_universal_stays_the_same,
+    "a* {\n  color: red;\n}\n"
+);
+test!(
+    adjacent_not_placeholder_is_ignored,
+    "a:not(%b) {x: y}",
+    "a {\n  x: y;\n}\n"
+);
+test!(
+    pseudo_paren_placeholder_alone,
+    ":not(%b) {x: y}",
+    "* {\n  x: y;\n}\n"
+);

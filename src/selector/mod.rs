@@ -490,7 +490,57 @@ impl Selector {
     }
 
     pub fn remove_placeholders(self) -> Selector {
-        Selector(self.0.into_iter().filter(|s| !s.is_invisible).collect())
+        Selector(
+            self.0
+                .into_iter()
+                .filter_map(|s| {
+                    if s.is_invisible {
+                        None
+                    } else {
+                        let mut inner = Vec::new();
+                        let mut last_was_whitespace = false;
+                        let len = s.inner.len();
+                        for kind in s.inner {
+                            match kind {
+                                SelectorKind::PseudoParen(name, inner_selector) => {
+                                    let inner_empty = inner_selector.is_empty();
+                                    let removed_placeholders = inner_selector.remove_placeholders();
+                                    if removed_placeholders.is_empty() && !inner_empty {
+                                        if name.to_ascii_lowercase().as_str() == "not" {
+                                            if last_was_whitespace || len == 1 {
+                                                inner.push(SelectorKind::Universal);
+                                            } else {
+                                                continue;
+                                            }
+                                        } else {
+                                            return None;
+                                        }
+                                    } else {
+                                        inner.push(SelectorKind::PseudoParen(
+                                            name,
+                                            removed_placeholders,
+                                        ));
+                                    }
+                                }
+                                SelectorKind::Whitespace => {
+                                    last_was_whitespace = true;
+                                    inner.push(kind);
+                                    continue;
+                                }
+                                _ => inner.push(kind),
+                            }
+                            last_was_whitespace = false;
+                        }
+                        Some(SelectorPart {
+                            inner,
+                            is_invisible: false,
+                            has_newline: s.has_newline,
+                            contains_super_selector: s.contains_super_selector,
+                        })
+                    }
+                })
+                .collect(),
+        )
     }
 
     pub fn is_empty(&self) -> bool {
