@@ -7,15 +7,15 @@ use crate::common::{Brackets, ListSeparator, Op, QuoteKind};
 use crate::error::SassResult;
 use crate::unit::{Unit, UNIT_CONVERSION_TABLE};
 
-pub(crate) use sass_function::SassFunction;
 pub(crate) use map::SassMap;
 pub(crate) use number::Number;
+pub(crate) use sass_function::SassFunction;
 
-mod sass_function;
 mod map;
 mod number;
 mod ops;
 mod parse;
+mod sass_function;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Value {
