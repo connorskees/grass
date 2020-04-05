@@ -102,8 +102,11 @@ impl Mixin {
         while let Some(expr) = eat_expr(&mut self.body, &mut self.scope, super_selector)? {
             match expr {
                 Expr::AtRule(a) => match a {
+                    AtRule::While(s) | AtRule::Each(s) | AtRule::For(s) => stmts.extend(s),
+                    AtRule::If(i) => stmts.extend(i.eval(&mut self.scope.clone(), super_selector)?),
                     AtRule::Content => stmts.extend(self.content.clone()),
-                    _ => stmts.push(Stmt::AtRule(a)),
+                    AtRule::Return(..) => return Err("This at-rule is not allowed here.".into()),
+                    r => stmts.push(Stmt::AtRule(r)),
                 },
                 Expr::Style(s) => stmts.push(Stmt::Style(s)),
                 Expr::Styles(s) => stmts.extend(s.into_iter().map(Box::new).map(Stmt::Style)),

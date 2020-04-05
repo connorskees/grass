@@ -228,24 +228,12 @@ impl Value {
                 Op::Mul => *lhs * *rhs,
                 Op::Div => *lhs / *rhs,
                 Op::Rem => *lhs % *rhs,
-                Op::GreaterThan => match lhs.cmp(&rhs, op)? {
-                    Ordering::Greater => Ok(Self::True),
-                    Ordering::Less | Ordering::Equal => Ok(Self::False),
-                },
-                Op::GreaterThanEqual => match lhs.cmp(&rhs, op)? {
-                    Ordering::Greater | Ordering::Equal => Ok(Self::True),
-                    Ordering::Less => Ok(Self::False),
-                },
-                Op::LessThan => match lhs.cmp(&rhs, op)? {
-                    Ordering::Less => Ok(Self::True),
-                    Ordering::Greater | Ordering::Equal => Ok(Self::False),
-                },
-                Op::LessThanEqual => match lhs.cmp(&rhs, op)? {
-                    Ordering::Less | Ordering::Equal => Ok(Self::True),
-                    Ordering::Greater => Ok(Self::False),
-                },
+                Op::GreaterThan => lhs.cmp(*rhs, op),
+                Op::GreaterThanEqual => lhs.cmp(*rhs, op),
+                Op::LessThan => lhs.cmp(*rhs, op),
+                Op::LessThanEqual => lhs.cmp(*rhs, op),
                 Op::Not => unreachable!(),
-                Op::And => Ok(if lhs.is_true()? {
+                Op::And => Ok(if lhs.clone().is_true()? {
                     rhs.eval()?
                 } else {
                     lhs.eval()?
@@ -267,16 +255,20 @@ impl Value {
         }
     }
 
-    pub fn cmp(&self, other: &Self, op: Op) -> SassResult<Ordering> {
-        Ok(match self {
-            Self::Dimension(num, ref unit) => match other {
+    pub fn cmp(self, mut other: Self, op: Op) -> SassResult<Value> {
+        if let Self::Paren(..) = other {
+            other = other.eval()?
+        }
+        let precedence = op.precedence();
+        let ordering = match self {
+            Self::Dimension(num, unit) => match &other {
                 Self::Dimension(num2, unit2) => {
-                    if !unit.comparable(unit2) {
+                    if !unit.comparable(&unit2) {
                         return Err(format!("Incompatible units {} and {}.", unit2, unit).into());
                     }
-                    if unit == unit2 {
+                    if &unit == unit2 {
                         num.cmp(num2)
-                    } else if unit == &Unit::None {
+                    } else if unit == Unit::None {
                         num.cmp(num2)
                     } else if unit2 == &Unit::None {
                         num.cmp(num2)
@@ -288,13 +280,42 @@ impl Value {
                         )
                     }
                 }
-                _ => {
-                    return Err(
-                        format!("Undefined operation \"{} {} {}\".", self, op, other).into(),
-                    )
-                }
+                Self::BinaryOp(..) => todo!(),
+                v => return Err(format!("Undefined operation \"{} {} {}\".", v, op, other).into()),
             },
+            Self::BinaryOp(left, op2, right) => {
+                return if op2.precedence() >= precedence {
+                    Self::BinaryOp(left, op2, right).eval()?.cmp(other, op)
+                } else {
+                    Self::BinaryOp(
+                        left,
+                        op2,
+                        Box::new(Self::BinaryOp(right, op, Box::new(other)).eval()?),
+                    )
+                    .eval()
+                }
+            }
+            Self::UnaryOp(..) | Self::Paren(..) => return self.eval()?.cmp(other, op),
             _ => return Err(format!("Undefined operation \"{} {} {}\".", self, op, other).into()),
-        })
+        };
+        match op {
+            Op::GreaterThan => match ordering {
+                Ordering::Greater => Ok(Self::True),
+                Ordering::Less | Ordering::Equal => Ok(Self::False),
+            },
+            Op::GreaterThanEqual => match ordering {
+                Ordering::Greater | Ordering::Equal => Ok(Self::True),
+                Ordering::Less => Ok(Self::False),
+            },
+            Op::LessThan => match ordering {
+                Ordering::Less => Ok(Self::True),
+                Ordering::Greater | Ordering::Equal => Ok(Self::False),
+            },
+            Op::LessThanEqual => match ordering {
+                Ordering::Less | Ordering::Equal => Ok(Self::True),
+                Ordering::Greater => Ok(Self::False),
+            },
+            _ => unreachable!(),
+        }
     }
 }

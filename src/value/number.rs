@@ -12,7 +12,7 @@ use crate::error::SassError;
 
 const PRECISION: usize = 10;
 
-#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub(crate) struct Number {
     val: BigRational,
 }
@@ -163,6 +163,12 @@ from_integer!(usize);
 from_integer!(i32);
 from_integer!(u32);
 from_integer!(u8);
+
+impl fmt::Debug for Number {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Number {{ {} }}", self)
+    }
+}
 
 impl Display for Number {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

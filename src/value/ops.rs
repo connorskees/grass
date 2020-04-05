@@ -101,7 +101,10 @@ impl Sub for Value {
     type Output = SassResult<Self>;
 
     fn sub(self, mut other: Self) -> Self::Output {
-        other = other.eval()?;
+        if let Self::Paren(..) = other {
+            other = other.eval()?
+        }
+        let precedence = Op::Mul.precedence();
         Ok(match self {
             Self::Null => todo!(),
             Self::Dimension(num, unit) => match other {
@@ -143,7 +146,19 @@ impl Sub for Value {
                 }
                 _ => Value::Ident(format!("{}-{}", c, other), QuoteKind::None),
             },
-            Self::BinaryOp(..) | Self::Paren(..) => (self.eval()? - other)?,
+            Self::BinaryOp(left, op, right) => {
+                if op.precedence() >= precedence {
+                    (Self::BinaryOp(left, op, right).eval()? - other)?
+                } else {
+                    Self::BinaryOp(
+                        left,
+                        op,
+                        Box::new(Self::BinaryOp(right, Op::Minus, Box::new(other)).eval()?),
+                    )
+                    .eval()?
+                }
+            }
+            Self::Paren(..) => (self.eval()? - other)?,
             Self::Ident(s1, q1) => match other {
                 Self::Ident(s2, q2) => Value::Ident(
                     format!(
@@ -199,7 +214,10 @@ impl Mul for Value {
     type Output = SassResult<Self>;
 
     fn mul(self, mut other: Self) -> Self::Output {
-        other = other.eval()?;
+        if let Self::Paren(..) = other {
+            other = other.eval()?
+        }
+        let precedence = Op::Mul.precedence();
         Ok(match self {
             Self::Null => todo!(),
             Self::Dimension(num, unit) => match other {
@@ -225,8 +243,19 @@ impl Mul for Value {
                     )
                 }
             },
-            Self::BinaryOp(..) | Self::Paren(..) => (self.eval()? * other)?,
-            Self::UnaryOp(..) => (self.eval()? * other)?,
+            Self::BinaryOp(left, op, right) => {
+                if op.precedence() >= precedence {
+                    (Self::BinaryOp(left, op, right).eval()? * other)?
+                } else {
+                    Self::BinaryOp(
+                        left,
+                        op,
+                        Box::new(Self::BinaryOp(right, Op::Mul, Box::new(other)).eval()?),
+                    )
+                    .eval()?
+                }
+            }
+            Self::UnaryOp(..) | Self::Paren(..) => (self.eval()? * other)?,
             _ => return Err(format!("Undefined operation \"{} * {}\".", self, other).into()),
         })
     }
