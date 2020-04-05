@@ -141,6 +141,72 @@ impl IsWhitespace for IntermediateValue {
     }
 }
 
+fn parse_paren(
+    t: Vec<Token>,
+    scope: &Scope,
+    super_selector: &Selector,
+    space_separated: &mut Vec<Value>,
+) -> SassResult<()> {
+    if t.is_empty() {
+        space_separated.push(Value::List(
+            Vec::new(),
+            ListSeparator::Space,
+            Brackets::None,
+        ));
+        return Ok(());
+    }
+
+    let paren_toks = &mut t.into_iter().peekable();
+
+    let mut map = SassMap::new();
+    let key = Value::from_tokens(
+        &mut read_until_char(paren_toks, ':').into_iter().peekable(),
+        scope,
+        super_selector,
+    )?;
+
+    if paren_toks.peek().is_none() {
+        space_separated.push(Value::Paren(Box::new(key)));
+        return Ok(());
+    }
+
+    let val = Value::from_tokens(
+        &mut read_until_char(paren_toks, ',').into_iter().peekable(),
+        scope,
+        super_selector,
+    )?;
+
+    map.insert(key, val);
+
+    if paren_toks.peek().is_none() {
+        space_separated.push(Value::Map(map));
+        return Ok(());
+    }
+
+    loop {
+        let key = Value::from_tokens(
+            &mut read_until_char(paren_toks, ':').into_iter().peekable(),
+            scope,
+            super_selector,
+        )?;
+        devour_whitespace(paren_toks);
+        let val = Value::from_tokens(
+            &mut read_until_char(paren_toks, ',').into_iter().peekable(),
+            scope,
+            super_selector,
+        )?;
+        devour_whitespace(paren_toks);
+        if map.insert(key, val) {
+            return Err("Duplicate key.".into());
+        }
+        if paren_toks.peek().is_none() {
+            break;
+        }
+    }
+    space_separated.push(Value::Map(map));
+    Ok(())
+}
+
 fn eat_op<I: Iterator<Item = IntermediateValue>>(
     iter: &mut Peekable<I>,
     scope: &Scope,
@@ -229,10 +295,11 @@ fn single_value<I: Iterator<Item = IntermediateValue>>(
                 v => Value::List(vec![v], ListSeparator::Space, Brackets::Bracketed),
             }
         }
-        IntermediateValue::Paren(t) => {
-            let inner = Value::from_tokens(&mut t.into_iter().peekable(), scope, super_selector)?;
-            Value::Paren(Box::new(inner))
-        }
+        IntermediateValue::Paren(t) => Value::Paren(Box::new(Value::from_tokens(
+            &mut t.into_iter().peekable(),
+            scope,
+            super_selector,
+        )?)),
     })
 }
 
@@ -276,63 +343,7 @@ impl Value {
                     v => Value::List(vec![v], ListSeparator::Space, Brackets::Bracketed),
                 }),
                 IntermediateValue::Paren(t) => {
-                    if t.is_empty() {
-                        space_separated.push(Value::List(
-                            Vec::new(),
-                            ListSeparator::Space,
-                            Brackets::None,
-                        ));
-                        continue;
-                    }
-
-                    let paren_toks = &mut t.into_iter().peekable();
-
-                    let mut map = SassMap::new();
-                    let key = Value::from_tokens(
-                        &mut read_until_char(paren_toks, ':').into_iter().peekable(),
-                        scope,
-                        super_selector,
-                    )?;
-
-                    if paren_toks.peek().is_none() {
-                        space_separated.push(Value::Paren(Box::new(key)));
-                        continue;
-                    }
-
-                    let val = Self::from_tokens(
-                        &mut read_until_char(paren_toks, ',').into_iter().peekable(),
-                        scope,
-                        super_selector,
-                    )?;
-
-                    map.insert(key, val);
-
-                    if paren_toks.peek().is_none() {
-                        space_separated.push(Value::Map(map));
-                        continue;
-                    }
-
-                    loop {
-                        let key = Value::from_tokens(
-                            &mut read_until_char(paren_toks, ':').into_iter().peekable(),
-                            scope,
-                            super_selector,
-                        )?;
-                        devour_whitespace(paren_toks);
-                        let val = Self::from_tokens(
-                            &mut read_until_char(paren_toks, ',').into_iter().peekable(),
-                            scope,
-                            super_selector,
-                        )?;
-                        devour_whitespace(paren_toks);
-                        if map.insert(key, val) {
-                            return Err("Duplicate key.".into());
-                        }
-                        if paren_toks.peek().is_none() {
-                            break;
-                        }
-                    }
-                    space_separated.push(Value::Map(map))
+                    parse_paren(t, scope, super_selector, &mut space_separated)?;
                 }
             }
         }
