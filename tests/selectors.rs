@@ -363,3 +363,8 @@ test!(
     ".a, .b {\n  :not(&-d, :not(c)) {\n    d: e\n  }\n}\n",
     ":not(.a-d, :not(c), .b-d) {\n  d: e;\n}\n"
 );
+test!(
+    sass_spec__nesting_parent_with_newline,
+    ".foo,\n.bar {\n  .baz & {\n    color: red;\n  }\n}\n",
+    ".baz .foo,\n.baz .bar {\n  color: red;\n}\n"
+);
