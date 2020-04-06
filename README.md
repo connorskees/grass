@@ -21,7 +21,6 @@ content-exists, min, min
 @extend (~600 tests)
 indented syntax (27 tests)
 a special parser for plain css
-@at-root (~150 tests)
 @use and module system (~1200 tests)
 @forward (~400 tests)
 @keyframes (~30 tests)
