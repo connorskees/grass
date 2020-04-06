@@ -37,21 +37,18 @@ macro_rules! named_arg {
 macro_rules! max_args {
     ($args:ident, $count:literal) => {
         if $args.len() > $count {
+            let mut err = String::with_capacity(50);
+            err.push_str(&format!("Only {} argument", $count));
             if $count != 1 {
-                return Err(format!(
-                    "Only {} arguments allowed, but {} were passed.",
-                    $count,
-                    $args.len()
-                )
-                .into());
-            } else {
-                return Err(format!(
-                    "Only {} argument allowed, but {} were passed.",
-                    $count,
-                    $args.len()
-                )
-                .into());
+                err.push('s');
             }
+            err.push_str(&format!(" allowed, but {} ", $args.len()));
+            if $args.len() == 1 {
+                err.push_str("was passed.")
+            } else {
+                err.push_str("were passed.")
+            }
+            return Err(err.into());
         }
     };
 }
