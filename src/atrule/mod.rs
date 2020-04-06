@@ -126,6 +126,20 @@ impl AtRule {
                             styles.push(s);
                             None
                         }
+                        Stmt::RuleSet(RuleSet {
+                            selector: mut selector2,
+                            rules,
+                            super_selector: super_selector2,
+                        }) => {
+                            if selector.is_empty() {
+                                selector2 = Selector::replace(super_selector.clone(), selector2);
+                            }
+                            Some(Stmt::RuleSet(RuleSet {
+                                selector: selector2,
+                                rules,
+                                super_selector: super_selector2,
+                            }))
+                        }
                         _ => Some(s),
                     })
                     .collect::<Vec<Stmt>>();

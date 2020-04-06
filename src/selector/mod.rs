@@ -18,16 +18,6 @@ mod attribute;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Selector(Vec<SelectorPart>);
 
-impl Selector {
-    pub const fn new() -> Selector {
-        Selector(Vec::new())
-    }
-
-    pub fn contains_super_selector(&self) -> bool {
-        self.0.iter().any(|s| s.contains_super_selector)
-    }
-}
-
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct SelectorPart {
     pub inner: Vec<SelectorKind>,
@@ -542,5 +532,13 @@ impl Selector {
 
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
+    }
+
+    pub const fn new() -> Selector {
+        Selector(Vec::new())
+    }
+
+    pub fn contains_super_selector(&self) -> bool {
+        self.0.iter().any(|s| s.contains_super_selector)
     }
 }
