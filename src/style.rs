@@ -71,10 +71,8 @@ impl<'a> StyleParser<'a> {
         scope: &Scope,
     ) -> SassResult<Value> {
         devour_whitespace(toks);
-        Value::from_tokens(
-            &mut read_until_semicolon_or_open_or_closing_curly_brace(toks)
-                .into_iter()
-                .peekable(),
+        Value::from_vec(
+            read_until_semicolon_or_open_or_closing_curly_brace(toks),
             scope,
             self.super_selector,
         )

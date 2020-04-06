@@ -95,13 +95,7 @@ impl If {
         let mut toks = Vec::new();
         let mut found_true = false;
         for branch in self.branches {
-            if Value::from_tokens(
-                &mut branch.cond.into_iter().peekable(),
-                scope,
-                super_selector,
-            )?
-            .is_true()?
-            {
+            if Value::from_vec(branch.cond, scope, super_selector)?.is_true()? {
                 toks = branch.toks;
                 found_true = true;
                 break;

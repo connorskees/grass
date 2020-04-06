@@ -68,11 +68,7 @@ impl CallArgs {
         super_selector: &Selector,
     ) -> Option<SassResult<Value>> {
         match self.0.remove(&CallArg::Named(val)) {
-            Some(v) => Some(Value::from_tokens(
-                &mut v.into_iter().peekable(),
-                scope,
-                super_selector,
-            )),
+            Some(v) => Some(Value::from_vec(v, scope, super_selector)),
             None => None,
         }
     }
@@ -87,11 +83,7 @@ impl CallArgs {
         super_selector: &Selector,
     ) -> Option<SassResult<Value>> {
         match self.0.remove(&CallArg::Positional(val)) {
-            Some(v) => Some(Value::from_tokens(
-                &mut v.into_iter().peekable(),
-                scope,
-                super_selector,
-            )),
+            Some(v) => Some(Value::from_vec(v, scope, super_selector)),
             None => None,
         }
     }
@@ -105,11 +97,7 @@ impl CallArgs {
             .collect::<SassResult<Vec<(usize, Vec<Token>)>>>()?;
         args.sort_by(|(a1, _), (a2, _)| a1.cmp(a2));
         for arg in args {
-            vals.push(Value::from_tokens(
-                &mut arg.1.into_iter().peekable(),
-                scope,
-                super_selector,
-            )?);
+            vals.push(Value::from_vec(arg.1, scope, super_selector)?);
         }
         Ok(vals)
     }

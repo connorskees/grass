@@ -98,18 +98,17 @@ pub(crate) fn parse_for<I: Iterator<Item = Token>>(
             _ => from_toks.extend(these_toks),
         }
     }
-    let from =
-        match Value::from_tokens(&mut from_toks.into_iter().peekable(), scope, super_selector)? {
-            Value::Dimension(n, _) => match n.to_integer().to_usize() {
-                Some(v) => v,
-                None => return Err(format!("{} is not a int.", n).into()),
-            },
-            v => return Err(format!("{} is not an integer.", v).into()),
-        };
+    let from = match Value::from_vec(from_toks, scope, super_selector)? {
+        Value::Dimension(n, _) => match n.to_integer().to_usize() {
+            Some(v) => v,
+            None => return Err(format!("{} is not a int.", n).into()),
+        },
+        v => return Err(format!("{} is not an integer.", v).into()),
+    };
     devour_whitespace(toks);
     let to_toks = read_until_open_curly_brace(toks);
     toks.next();
-    let to = match Value::from_tokens(&mut to_toks.into_iter().peekable(), scope, super_selector)? {
+    let to = match Value::from_vec(to_toks, scope, super_selector)? {
         Value::Dimension(n, _) => match n.to_integer().to_usize() {
             Some(v) => v,
             None => return Err(format!("{} is not a int.", n).into()),

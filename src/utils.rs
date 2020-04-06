@@ -65,11 +65,7 @@ pub(crate) fn parse_interpolation<I: Iterator<Item = Token>>(
     scope: &Scope,
     super_selector: &Selector,
 ) -> SassResult<Value> {
-    let val = Value::from_tokens(
-        &mut read_until_closing_curly_brace(toks).into_iter().peekable(),
-        scope,
-        super_selector,
-    )?;
+    let val = Value::from_vec(read_until_closing_curly_brace(toks), scope, super_selector)?;
     toks.next();
     Ok(val.eval()?.unquote())
 }
@@ -323,7 +319,7 @@ pub(crate) fn eat_variable_value<I: Iterator<Item = Token>>(
     if toks.peek().is_some() && toks.peek().unwrap().kind == ';' {
         toks.next();
     }
-    let mut x = Vec::new();
+    let mut val_toks = Vec::new();
     while let Some(tok) = raw.next() {
         match tok.kind {
             '!' => {
@@ -355,12 +351,12 @@ pub(crate) fn eat_variable_value<I: Iterator<Item = Token>>(
                     _ => return Err("Invalid flag name.".into()),
                 }
             }
-            _ => x.push(tok),
+            _ => val_toks.push(tok),
         }
     }
     devour_whitespace(toks);
 
-    let val = Value::from_tokens(&mut x.into_iter().peekable(), scope, super_selector)?;
+    let val = Value::from_vec(val_toks, scope, super_selector)?;
     Ok(VariableDecl::new(val, default, global))
 }
 

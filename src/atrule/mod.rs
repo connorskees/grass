@@ -128,8 +128,8 @@ impl AtRule {
                     return Err("Expected \"in\".".into());
                 }
                 devour_whitespace(toks);
-                let iterator = match Value::from_tokens(
-                    &mut read_until_open_curly_brace(toks).into_iter().peekable(),
+                let iterator = match Value::from_vec(
+                    read_until_open_curly_brace(toks),
                     scope,
                     super_selector,
                 )? {
@@ -201,13 +201,7 @@ impl AtRule {
 
                 devour_whitespace(toks);
 
-                while Value::from_tokens(
-                    &mut cond.clone().into_iter().peekable(),
-                    scope,
-                    super_selector,
-                )?
-                .is_true()?
-                {
+                while Value::from_vec(cond.clone(), scope, super_selector)?.is_true()? {
                     stmts.extend(eat_stmts(
                         &mut body.clone().into_iter().peekable(),
                         scope,
