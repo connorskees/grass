@@ -86,7 +86,7 @@ use std::path::Path;
 
 use crate::atrule::{eat_include, AtRule, AtRuleKind, Function, Mixin};
 use crate::common::Pos;
-use crate::css::Css;
+use crate::output::Css;
 pub use crate::error::{SassError, SassResult};
 use crate::format::PrettyPrinter;
 use crate::imports::import;
@@ -106,7 +106,7 @@ mod atrule;
 mod builtin;
 mod color;
 mod common;
-mod css;
+mod output;
 mod error;
 mod format;
 mod imports;
