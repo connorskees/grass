@@ -38,3 +38,28 @@ test!(
     "foo {\n  @at-root {\n    & {\n      color: bar;\n    }\n  }\n}\n",
     "foo {\n  color: bar;\n}\n"
 );
+test!(
+    interpolated_super_selector_with_nothing,
+    "test {\n  @at-root {\n    #{&}post {\n      foo {\n        bar: baz;\n      }\n    }\n  }\n}\n",
+    "testpost foo {\n  bar: baz;\n}\n"
+);
+test!(
+    with_ampersand_single,
+    "test {\n  @at-root {\n    #{&}post {\n      foo {\n        bar: baz;\n      }\n    }\n  }\n}\n",
+    "testpost foo {\n  bar: baz;\n}\n"
+);
+test!(
+    root_interpolated_ampersand,
+    "@at-root {\n  #{&}post {\n    foo {\n      bar: baz;\n    }\n  }\n}\n",
+    "post foo {\n  bar: baz;\n}\n"
+);
+test!(
+    nested_prefix_interpolated_ampersand,
+    "test {\n  @at-root {\n    pre#{&} {\n      foo {\n        bar: baz;\n      }\n    }\n  }\n}\n",
+    "pretest foo {\n  bar: baz;\n}\n"
+);
+test!(
+    nested_alone_interpolated_ampersand,
+    "test {\n  @at-root {\n    #{&} {\n      foo {\n        bar: baz;\n      }\n    }\n  }\n}\n",
+    "test foo {\n  bar: baz;\n}\n"
+);

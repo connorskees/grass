@@ -15,7 +15,7 @@ pub(crate) use function::Function;
 pub(crate) use if_rule::If;
 pub(crate) use kind::AtRuleKind;
 pub(crate) use mixin::{eat_include, Mixin};
-use parse::eat_stmts;
+use parse::{eat_stmts, eat_stmts_at_root};
 use unknown::UnknownAtRule;
 
 mod for_rule;
@@ -105,7 +105,7 @@ impl AtRule {
             AtRuleKind::Use => todo!("@use not yet implemented"),
             AtRuleKind::Annotation => todo!("@annotation not yet implemented"),
             AtRuleKind::AtRoot => {
-                let selector = &Selector::replace(
+                let mut selector = &Selector::replace(
                     super_selector.clone(),
                     Selector::from_tokens(
                         &mut read_until_open_curly_brace(toks).into_iter().peekable(),
@@ -113,36 +113,33 @@ impl AtRule {
                         super_selector,
                     )?,
                 );
+                let mut is_some = true;
+                if selector.is_empty() {
+                    is_some = false;
+                    selector = super_selector;
+                }
                 toks.next();
                 devour_whitespace(toks);
                 let mut body = read_until_closing_curly_brace(toks);
                 body.push(toks.next().unwrap());
                 devour_whitespace(toks);
                 let mut styles = Vec::new();
-                let raw_stmts = eat_stmts(&mut body.into_iter().peekable(), scope, &selector)?
-                    .into_iter()
-                    .filter_map(|s| match s {
-                        Stmt::Style(..) => {
-                            styles.push(s);
-                            None
-                        }
-                        Stmt::RuleSet(RuleSet {
-                            selector: mut selector2,
-                            rules,
-                            super_selector: super_selector2,
-                        }) => {
-                            if selector.is_empty() {
-                                selector2 = Selector::replace(super_selector.clone(), selector2);
-                            }
-                            Some(Stmt::RuleSet(RuleSet {
-                                selector: selector2,
-                                rules,
-                                super_selector: super_selector2,
-                            }))
-                        }
-                        _ => Some(s),
-                    })
-                    .collect::<Vec<Stmt>>();
+                let raw_stmts = eat_stmts_at_root(
+                    &mut body.into_iter().peekable(),
+                    scope,
+                    &selector,
+                    0,
+                    is_some,
+                )?
+                .into_iter()
+                .filter_map(|s| match s {
+                    Stmt::Style(..) => {
+                        styles.push(s);
+                        None
+                    }
+                    _ => Some(s),
+                })
+                .collect::<Vec<Stmt>>();
                 let mut stmts = vec![Stmt::RuleSet(RuleSet {
                     selector: selector.clone(),
                     rules: styles,
