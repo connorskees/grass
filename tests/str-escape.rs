@@ -122,6 +122,11 @@ test!(
     "a {\n  color: #{\"\\b\"};\n}\n",
     "a {\n  color: \x0b;\n}\n"
 );
+test!(
+    unquoted_escape_equality,
+    "a {\n  color: foo == f\\6F\\6F;\n}\n",
+    "a {\n  color: true;\n}\n"
+);
 // test!(
 //     quote_escape,
 //     "a {\n  color: quote(\\b);\n}\n",
