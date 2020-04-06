@@ -83,7 +83,17 @@ impl AtRule {
                     toks.next();
                 }
                 devour_whitespace(toks);
-                AtRule::Debug(pos, message.to_string())
+                AtRule::Debug(
+                    pos,
+                    match message {
+                        Value::List(v, _, brackets) if v.is_empty() => match brackets {
+                            Brackets::None => "()".to_string(),
+                            Brackets::Bracketed => "[]".to_string(),
+                        },
+                        Value::Function(f) => format!("get-function(\"{}\")", f.name()),
+                        v => v.to_string(),
+                    },
+                )
             }
             AtRuleKind::Mixin => {
                 let (name, mixin) = Mixin::decl_from_tokens(toks, scope, super_selector)?;
