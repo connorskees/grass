@@ -384,12 +384,9 @@ impl Selector {
         }
     }
 
-    fn replace(super_selector: Selector, this: Selector) -> Selector {
-        if super_selector.0.is_empty() {
+    pub fn replace(super_selector: Selector, this: Selector) -> Selector {
+        if super_selector.0.is_empty() || this.0.is_empty() {
             return this;
-        }
-        if this.0.is_empty() {
-            return super_selector;
         }
         let mut parts = Vec::with_capacity(super_selector.0.len());
         for (idx, part) in super_selector.clone().0.into_iter().enumerate() {

@@ -9,7 +9,7 @@ use crate::utils::{
     read_until_semicolon_or_closing_curly_brace,
 };
 use crate::value::Value;
-use crate::{Stmt, Token};
+use crate::{RuleSet, Stmt, Token};
 
 pub(crate) use function::Function;
 pub(crate) use if_rule::If;
@@ -40,6 +40,7 @@ pub(crate) enum AtRule {
     Each(Vec<Stmt>),
     While(Vec<Stmt>),
     If(If),
+    AtRoot(Vec<Stmt>),
 }
 
 impl AtRule {
@@ -103,7 +104,39 @@ impl AtRule {
             }
             AtRuleKind::Use => todo!("@use not yet implemented"),
             AtRuleKind::Annotation => todo!("@annotation not yet implemented"),
-            AtRuleKind::AtRoot => todo!("@at-root not yet implemented"),
+            AtRuleKind::AtRoot => {
+                let selector = &Selector::replace(
+                    super_selector.clone(),
+                    Selector::from_tokens(
+                        &mut read_until_open_curly_brace(toks).into_iter().peekable(),
+                        scope,
+                        super_selector,
+                    )?,
+                );
+                toks.next();
+                devour_whitespace(toks);
+                let mut body = read_until_closing_curly_brace(toks);
+                body.push(toks.next().unwrap());
+                devour_whitespace(toks);
+                let mut styles = Vec::new();
+                let raw_stmts = eat_stmts(&mut body.into_iter().peekable(), scope, &selector)?
+                    .into_iter()
+                    .filter_map(|s| match s {
+                        Stmt::Style(..) => {
+                            styles.push(s);
+                            None
+                        }
+                        _ => Some(s),
+                    })
+                    .collect::<Vec<Stmt>>();
+                let mut stmts = vec![Stmt::RuleSet(RuleSet {
+                    selector: selector.clone(),
+                    rules: styles,
+                    super_selector: Selector::new(),
+                })];
+                stmts.extend(raw_stmts);
+                AtRule::AtRoot(stmts)
+            }
             AtRuleKind::Charset => {
                 read_until_semicolon_or_closing_curly_brace(toks);
                 if toks.peek().unwrap().kind == ';' {

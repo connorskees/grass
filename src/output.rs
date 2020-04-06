@@ -89,6 +89,10 @@ impl Css {
                             .get_mut(0)
                             .expect("expected block to exist")
                             .push_comment(s),
+                        Stmt::AtRule(AtRule::AtRoot(stmts)) => stmts
+                            .into_iter()
+                            .map(|r| Ok(vals.extend(self.parse_stmt(r)?)))
+                            .collect::<SassResult<()>>()?,
                         Stmt::AtRule(r) => vals.push(Toplevel::AtRule(r)),
                     };
                 }

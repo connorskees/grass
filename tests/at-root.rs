@@ -28,3 +28,8 @@ test!(
     ".foo {\n  @at-root & {\n    .bar {\n      @at-root & {\n        a: b;\n      }\n    }\n  }\n}\n",
     ".foo .bar {\n  a: b;\n}\n"
 );
+test!(
+    deeply_nested_with_rulesets_and_styles,
+    ".foo {\n  @at-root .bar {\n    a: b;\n    c {\n      d: e;\n      foo {\n        bar: baz;\n      }\n      h: j;\n    }\n    f: g;\n  }\n}\n",
+    ".bar {\n  a: b;\n  f: g;\n}\n.bar c {\n  d: e;\n  h: j;\n}\n.bar c foo {\n  bar: baz;\n}\n"
+);

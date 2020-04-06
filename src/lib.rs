@@ -382,6 +382,7 @@ impl<'a> StyleSheetParser<'a> {
                                     AtRule::If(i) => {
                                         rules.extend(i.eval(&mut Scope::new(), &Selector::new())?);
                                     }
+                                    AtRule::AtRoot(root_rules) => rules.extend(root_rules),
                                     u @ AtRule::Unknown(..) => rules.push(Stmt::AtRule(u)),
                                 }
                             }
@@ -416,6 +417,7 @@ impl<'a> StyleSheetParser<'a> {
                         return Err("@content is only allowed within mixin declarations.".into())
                     }
                     AtRule::Return(..) => return Err("This at-rule is not allowed here.".into()),
+                    AtRule::AtRoot(root_stmts) => stmts.extend(root_stmts),
                     r => stmts.push(Stmt::AtRule(r)),
                 },
                 Expr::Styles(s) => stmts.extend(s.into_iter().map(Box::new).map(Stmt::Style)),
@@ -463,7 +465,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
 ) -> SassResult<Option<Expr>> {
     let mut values = Vec::with_capacity(5);
     while let Some(tok) = toks.peek() {
-        match &tok.kind {
+        match tok.kind {
             ':' => {
                 let tok = toks.next();
                 if devour_whitespace(toks) {
@@ -600,6 +602,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                             f @ AtRule::While(..) => Ok(Some(Expr::AtRule(f))),
                             f @ AtRule::Each(..) => Ok(Some(Expr::AtRule(f))),
                             u @ AtRule::Unknown(..) => Ok(Some(Expr::AtRule(u))),
+                            u @ AtRule::AtRoot(..) => Ok(Some(Expr::AtRule(u))),
                         };
                     }
                 }
