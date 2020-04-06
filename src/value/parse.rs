@@ -366,6 +366,14 @@ impl Value {
         })
     }
 
+    pub fn from_vec(
+        toks: Vec<Token>,
+        scope: &Scope,
+        super_selector: &Selector,
+    ) -> SassResult<Value> {
+        Self::from_tokens(&mut toks.into_iter().peekable(), scope, super_selector)
+    }
+
     fn ident<I: Iterator<Item = Token>>(
         toks: &mut Peekable<I>,
         scope: &Scope,

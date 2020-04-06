@@ -372,7 +372,6 @@ impl<'a> StyleSheetParser<'a> {
                                         insert_global_fn(&name, *func);
                                     }
                                     AtRule::Charset => continue,
-                                    AtRule::Error(pos, message) => self.error(pos, &message),
                                     AtRule::Warn(pos, message) => self.warn(pos, &message),
                                     AtRule::Debug(pos, message) => self.debug(pos, &message),
                                     AtRule::Return(_) => {
@@ -594,7 +593,6 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                             AtRule::Charset => todo!("@charset as expr"),
                             AtRule::Debug(a, b) => Ok(Some(Expr::Debug(a, b))),
                             AtRule::Warn(a, b) => Ok(Some(Expr::Warn(a, b))),
-                            AtRule::Error(pos, err) => Err(SassError::new(err, pos)),
                             a @ AtRule::Return(_) => Ok(Some(Expr::AtRule(a))),
                             c @ AtRule::Content => Ok(Some(Expr::AtRule(c))),
                             f @ AtRule::If(..) => Ok(Some(Expr::AtRule(f))),
@@ -650,30 +648,5 @@ impl<'a> StyleSheetParser<'a> {
             pos.line(),
             pos.column()
         );
-    }
-
-    fn error(&self, pos: Pos, message: &str) -> ! {
-        eprintln!("Error: {}", message);
-        eprintln!(
-            "{} {}:{} todo!(scope) on line {} at column {}",
-            self.file,
-            pos.line(),
-            pos.column(),
-            pos.line(),
-            pos.column()
-        );
-        let padding = vec![' '; format!("{}", pos.line()).len() + 1]
-            .iter()
-            .collect::<String>();
-        eprintln!("{}|", padding);
-        eprint!("{} | ", pos.line());
-        eprintln!("todo! get line to print as error");
-        eprintln!(
-            "{}| {}^",
-            padding,
-            vec![' '; pos.column() as usize].iter().collect::<String>()
-        );
-        eprintln!("{}|", padding);
-        std::process::exit(1);
     }
 }

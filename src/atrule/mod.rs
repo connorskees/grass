@@ -13,8 +13,8 @@ use crate::{Stmt, Token};
 
 pub(crate) use function::Function;
 pub(crate) use if_rule::If;
-pub(crate) use mixin::{eat_include, Mixin};
 pub(crate) use kind::AtRuleKind;
+pub(crate) use mixin::{eat_include, Mixin};
 use parse::eat_stmts;
 use unknown::UnknownAtRule;
 
@@ -28,7 +28,6 @@ mod unknown;
 
 #[derive(Debug, Clone)]
 pub(crate) enum AtRule {
-    Error(Pos, String),
     Warn(Pos, String),
     Debug(Pos, String),
     Mixin(String, Box<Mixin>),
@@ -54,11 +53,13 @@ impl AtRule {
         devour_whitespace(toks);
         Ok(match rule {
             AtRuleKind::Error => {
-                let message = toks
-                    .take_while(|x| x.kind != ';')
-                    .map(|x| x.kind.to_string())
-                    .collect::<String>();
-                AtRule::Error(pos, message)
+                let message = Value::from_vec(
+                    read_until_semicolon_or_closing_curly_brace(toks),
+                    scope,
+                    super_selector,
+                )?;
+
+                return Err(message.to_string().into());
             }
             AtRuleKind::Warn => {
                 let message = toks
