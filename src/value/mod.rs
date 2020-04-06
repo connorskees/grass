@@ -186,6 +186,17 @@ impl Value {
         }
     }
 
+    pub fn inspect(&self) -> String {
+        match self {
+            Value::List(v, _, brackets) if v.is_empty() => match brackets {
+                Brackets::None => "()".to_string(),
+                Brackets::Bracketed => "[]".to_string(),
+            },
+            Value::Function(f) => format!("get-function(\"{}\")", f.name()),
+            v => v.to_string(),
+        }
+    }
+
     pub fn equals(self, other: Value) -> SassResult<bool> {
         Ok(match self.eval()? {
             Self::Ident(s1, ..) => match other {

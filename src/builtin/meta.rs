@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use super::{Builtin, GLOBAL_FUNCTIONS};
-use crate::common::{Brackets, QuoteKind};
+use crate::common::QuoteKind;
 use crate::scope::global_var_exists;
 use crate::unit::Unit;
 use crate::value::{SassFunction, Value};
@@ -80,14 +80,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         Builtin::new(|mut args, scope, super_selector| {
             max_args!(args, 1);
             Ok(Value::Ident(
-                match arg!(args, scope, super_selector, 0, "value") {
-                    Value::List(v, _, brackets) if v.is_empty() => match brackets {
-                        Brackets::None => "()".to_string(),
-                        Brackets::Bracketed => "[]".to_string(),
-                    },
-                    Value::Function(f) => format!("get-function(\"{}\")", f.name()),
-                    v => v.to_string(),
-                },
+                arg!(args, scope, super_selector, 0, "value").inspect(),
                 QuoteKind::None,
             ))
         }),
