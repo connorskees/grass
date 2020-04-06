@@ -16,7 +16,7 @@ use crate::selector::Selector;
 use crate::unit::Unit;
 use crate::utils::{
     devour_whitespace, eat_comment, eat_ident, eat_ident_no_interpolation, eat_number,
-    parse_interpolation, parse_quoted_string, read_until_char, read_until_closing_paren,
+    parse_quoted_string, read_until_char, read_until_closing_paren,
     read_until_closing_square_brace, read_until_newline, IsWhitespace,
 };
 use crate::value::Value;
@@ -374,34 +374,10 @@ impl Value {
                             )?))
                         }
                         None => {
-                            s.push('(');
-                            let mut unclosed_parens = 0;
-                            while let Some(t) = toks.next() {
-                                match &t.kind {
-                                    '(' => {
-                                        unclosed_parens += 1;
-                                    }
-                                    '#' if toks.next().unwrap().kind == '{' => s.push_str(
-                                        &parse_interpolation(toks, scope, super_selector)?
-                                            .to_string(),
-                                    ),
-                                    '$' => s.push_str(
-                                        &scope
-                                            .get_var(&eat_ident(toks, scope, super_selector)?)?
-                                            .to_string(),
-                                    ),
-                                    ')' => {
-                                        if unclosed_parens <= 1 {
-                                            s.push(')');
-                                            break;
-                                        } else {
-                                            unclosed_parens -= 1;
-                                        }
-                                    }
-                                    _ => {}
-                                }
-                                s.push_str(&t.kind.to_string());
-                            }
+                            s.push_str(
+                                &eat_call_args(toks, scope, super_selector)?
+                                    .to_css_string(scope, super_selector)?,
+                            );
                             return Ok(IntermediateValue::Value(Value::Ident(s, QuoteKind::None)));
                         }
                     },

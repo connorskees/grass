@@ -40,7 +40,7 @@ enum CallArg {
 impl CallArg {
     pub fn position(&self) -> SassResult<usize> {
         match self {
-            Self::Named(..) => todo!(),
+            Self::Named(..) => Err("found named".into()),
             Self::Positional(p) => Ok(*p),
         }
     }
@@ -56,6 +56,24 @@ impl CallArg {
 impl CallArgs {
     pub fn new() -> Self {
         CallArgs(HashMap::new())
+    }
+
+    pub fn to_css_string(self, scope: &Scope, super_selector: &Selector) -> SassResult<String> {
+        let mut string = String::with_capacity(2 + self.len() * 10);
+        string.push('(');
+        let args = match self.get_variadic(scope, super_selector) {
+            Ok(v) => v,
+            Err(..) => return Err("Plain CSS functions don't support keyword arguments.".into()),
+        };
+        string.push_str(
+            &args
+                .iter()
+                .map(std::string::ToString::to_string)
+                .collect::<Vec<String>>()
+                .join(", "),
+        );
+        string.push(')');
+        Ok(string)
     }
 
     /// Get argument by name
