@@ -11,6 +11,7 @@ pub(crate) use map::SassMap;
 pub(crate) use number::Number;
 pub(crate) use sass_function::SassFunction;
 
+mod css_function;
 mod map;
 mod number;
 mod ops;

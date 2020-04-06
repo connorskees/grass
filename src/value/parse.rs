@@ -6,6 +6,8 @@ use num_bigint::BigInt;
 use num_rational::BigRational;
 use num_traits::pow;
 
+use super::css_function::{eat_calc_args, eat_progid};
+
 use crate::args::eat_call_args;
 use crate::builtin::GLOBAL_FUNCTIONS;
 use crate::color::Color;
@@ -360,6 +362,12 @@ impl Value {
         super_selector: &Selector,
     ) -> SassResult<IntermediateValue> {
         let mut s = eat_ident(toks, scope, super_selector)?;
+        if s == "progid" && toks.peek().is_some() && toks.peek().unwrap().kind == ':' {
+            toks.next();
+            s.push(':');
+            s.push_str(&eat_progid(toks, scope, super_selector)?);
+            return Ok(IntermediateValue::Value(Value::Ident(s, QuoteKind::None)));
+        }
         match toks.peek() {
             Some(Token { kind: '(', .. }) => {
                 toks.next();
@@ -374,10 +382,18 @@ impl Value {
                             )?))
                         }
                         None => {
-                            s.push_str(
-                                &eat_call_args(toks, scope, super_selector)?
-                                    .to_css_string(scope, super_selector)?,
-                            );
+                            match s.as_str() {
+                                "calc" | "element" | "expression" => {
+                                    s.push_str(&eat_calc_args(toks, scope, super_selector)?)
+                                }
+                                // "min" => {}
+                                // "max" => {}
+                                // "url" => {}
+                                _ => s.push_str(
+                                    &eat_call_args(toks, scope, super_selector)?
+                                        .to_css_string(scope, super_selector)?,
+                                ),
+                            }
                             return Ok(IntermediateValue::Value(Value::Ident(s, QuoteKind::None)));
                         }
                     },
