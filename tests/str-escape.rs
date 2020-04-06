@@ -98,8 +98,8 @@ test!(
 );
 test!(
     single_character_escape_sequence_has_space_after,
-    "a {\n  color: \\0;\n}\n",
-    "a {\n  color: \\0 ;\n}\n"
+    "a {\n  color: \\a;\n}\n",
+    "a {\n  color: \\a ;\n}\n"
 );
 test!(
     escapes_non_hex_in_string,
@@ -126,6 +126,16 @@ test!(
     unquoted_escape_equality,
     "a {\n  color: foo == f\\6F\\6F;\n}\n",
     "a {\n  color: true;\n}\n"
+);
+test!(
+    quoted_escape_zero,
+    "a {\n  color: \"\\0\";\n}\n",
+    "@charset \"UTF-8\";\na {\n  color: \"�\";\n}\n"
+);
+test!(
+    unquoted_escape_zero,
+    "a {\n  color: \\0;\n}\n",
+    "a {\n  color: \\0 ;\n}\n"
 );
 // test!(
 //     quote_escape,

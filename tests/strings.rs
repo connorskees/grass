@@ -119,10 +119,9 @@ test!(
     "a {\n  color: 7;\n}\n"
 );
 test!(
-    #[ignore]
     str_len_double_wide,
     "a {\n  color: str-length(\"👭\");\n}\n",
-    "@charset \"UTF-8\";\na {\n  color: 1;\n}\n"
+    "a {\n  color: 1;\n}\n"
 );
 test!(
     str_len_combining,
@@ -215,7 +214,6 @@ test!(
     "a {\n  color: Xabcd;\n}\n"
 );
 test!(
-    #[ignore]
     str_insert_double_width_char,
     "a {\n  color: str-insert(\"👭\", \"c\", 2);\n}\n",
     "@charset \"UTF-8\";\na {\n  color: \"👭c\";\n}\n"

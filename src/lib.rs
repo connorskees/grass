@@ -86,11 +86,11 @@ use std::path::Path;
 
 use crate::atrule::{eat_include, AtRule, AtRuleKind, Function, Mixin};
 use crate::common::Pos;
-use crate::output::Css;
 pub use crate::error::{SassError, SassResult};
 use crate::format::PrettyPrinter;
 use crate::imports::import;
 use crate::lexer::Lexer;
+use crate::output::Css;
 use crate::scope::{insert_global_fn, insert_global_mixin, insert_global_var, Scope, GLOBAL_SCOPE};
 use crate::selector::Selector;
 use crate::style::Style;
@@ -106,11 +106,11 @@ mod atrule;
 mod builtin;
 mod color;
 mod common;
-mod output;
 mod error;
 mod format;
 mod imports;
 mod lexer;
+mod output;
 mod scope;
 mod selector;
 mod style;
@@ -264,7 +264,7 @@ impl StyleSheet {
     /// ```
     #[inline]
     pub fn print_as_css<W: Write>(self, buf: &mut W) -> SassResult<()> {
-        Css::from_stylesheet(self)?.pretty_print(buf, 0)
+        Css::from_stylesheet(self)?.pretty_print(buf)
     }
 }
 

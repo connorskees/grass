@@ -1,11 +1,9 @@
 use std::iter::Peekable;
 use std::str::Chars;
-use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::common::Pos;
 use crate::Token;
 
-pub static IS_UTF8: AtomicBool = AtomicBool::new(false);
 pub const FORM_FEED: char = '\x0C';
 
 #[derive(Debug, Clone)]
@@ -31,10 +29,6 @@ impl<'a> Iterator for Lexer<'a> {
                 }
             }
             '\0' => return None,
-            c if !c.is_ascii() => {
-                IS_UTF8.store(true, Ordering::Relaxed);
-                c
-            }
             c => c,
         };
         self.pos.next_char();

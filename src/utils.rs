@@ -603,6 +603,8 @@ pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
                 let c = std::char::from_u32(u32::from_str_radix(&n, 16).unwrap()).unwrap();
                 if c.is_control() && c != '\t' && c != '\0' {
                     s.push_str(&format!("\\{}", n.to_ascii_lowercase()));
+                } else if c == '\0' {
+                    s.push('\u{FFFD}');
                 } else {
                     s.push(c);
                 }

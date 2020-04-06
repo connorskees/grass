@@ -1,11 +1,9 @@
 //! # Convert from SCSS AST to CSS
 use std::fmt;
 use std::io::Write;
-use std::sync::atomic::Ordering;
 
 use crate::atrule::AtRule;
 use crate::error::SassResult;
-use crate::lexer::IS_UTF8;
 use crate::{RuleSet, Selector, Stmt, Style, StyleSheet};
 
 #[derive(Debug, Clone)]
@@ -121,12 +119,19 @@ impl Css {
         Ok(self)
     }
 
-    pub fn pretty_print<W: Write>(self, buf: &mut W, nesting: usize) -> SassResult<()> {
-        let mut has_written = false;
-        let padding = vec![' '; nesting * 2].iter().collect::<String>();
-        if IS_UTF8.swap(false, Ordering::Relaxed) {
+    pub fn pretty_print<W: Write>(self, buf: &mut W) -> SassResult<()> {
+        let mut string = Vec::new();
+        self._inner_pretty_print(&mut string, 0)?;
+        if string.iter().any(|s| !s.is_ascii()) {
             writeln!(buf, "@charset \"UTF-8\";")?;
         }
+        write!(buf, "{}", String::from_utf8(string).unwrap())?;
+        Ok(())
+    }
+
+    fn _inner_pretty_print(self, buf: &mut Vec<u8>, nesting: usize) -> SassResult<()> {
+        let mut has_written = false;
+        let padding = vec![' '; nesting * 2].iter().collect::<String>();
         for block in self.blocks {
             match block {
                 Toplevel::RuleSet(selector, styles) => {
@@ -152,7 +157,7 @@ impl Css {
                             writeln!(buf, "{}@{} {} {{", padding, u.name, u.params)?;
                         }
                         Css::from_stylesheet(StyleSheet::from_stmts(u.body))?
-                            .pretty_print(buf, nesting + 1)?;
+                            ._inner_pretty_print(buf, nesting + 1)?;
                         writeln!(buf, "{}}}", padding)?;
                     }
                     _ => todo!("at-rule other than unknown at toplevel"),
