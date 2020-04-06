@@ -374,7 +374,7 @@ impl Selector {
         }
     }
 
-    pub fn replace(super_selector: Selector, this: Selector) -> Selector {
+    pub fn replace(super_selector: &Selector, this: Selector) -> Selector {
         if super_selector.0.is_empty() || this.0.is_empty() {
             return this;
         }
@@ -397,7 +397,7 @@ impl Selector {
                                 found_inner = true;
                                 kinds.push(SelectorKind::PseudoParen(
                                     name,
-                                    Selector::replace(super_selector.clone(), inner),
+                                    Selector::replace(super_selector, inner),
                                 ))
                             } else {
                                 kinds.push(SelectorKind::PseudoParen(name, inner));
@@ -445,7 +445,7 @@ impl Selector {
                                 found_inner = true;
                                 this_selector.push(SelectorKind::PseudoParen(
                                     s,
-                                    Selector::replace(self.clone(), inner_selector),
+                                    Selector::replace(self, inner_selector),
                                 ))
                             } else {
                                 this_selector.push(SelectorKind::PseudoParen(s, inner_selector));

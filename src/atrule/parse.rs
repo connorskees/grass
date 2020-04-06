@@ -58,7 +58,7 @@ pub(crate) fn eat_stmts_at_root<I: Iterator<Item = Token>>(
                 if nesting > 1 || is_some {
                     selector = super_selector.zip(&selector);
                 } else {
-                    selector = Selector::replace(super_selector.clone(), selector);
+                    selector = Selector::replace(super_selector, selector);
                 }
                 nesting += 1;
                 let rules = eat_stmts_at_root(toks, scope, &selector, nesting, true)?;

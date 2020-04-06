@@ -106,7 +106,7 @@ impl AtRule {
             AtRuleKind::Annotation => todo!("@annotation not yet implemented"),
             AtRuleKind::AtRoot => {
                 let mut selector = &Selector::replace(
-                    super_selector.clone(),
+                    super_selector,
                     Selector::from_tokens(
                         &mut read_until_open_curly_brace(toks).into_iter().peekable(),
                         scope,
@@ -127,7 +127,7 @@ impl AtRule {
                 let raw_stmts = eat_stmts_at_root(
                     &mut body.into_iter().peekable(),
                     scope,
-                    &selector,
+                    selector,
                     0,
                     is_some,
                 )?
