@@ -62,21 +62,28 @@ impl AtRule {
                 return Err(message.to_string().into());
             }
             AtRuleKind::Warn => {
-                let message = toks
-                    .take_while(|x| x.kind != ';')
-                    .map(|x| x.kind.to_string())
-                    .collect::<String>();
+                let message = Value::from_vec(
+                    read_until_semicolon_or_closing_curly_brace(toks),
+                    scope,
+                    super_selector,
+                )?;
+                if toks.peek().unwrap().kind == ';' {
+                    toks.next();
+                }
                 devour_whitespace(toks);
-                AtRule::Warn(pos, message)
+                AtRule::Warn(pos, message.to_string())
             }
             AtRuleKind::Debug => {
-                let message = toks
-                    .by_ref()
-                    .take_while(|x| x.kind != ';')
-                    .map(|x| x.kind.to_string())
-                    .collect::<String>();
+                let message = Value::from_vec(
+                    read_until_semicolon_or_closing_curly_brace(toks),
+                    scope,
+                    super_selector,
+                )?;
+                if toks.peek().unwrap().kind == ';' {
+                    toks.next();
+                }
                 devour_whitespace(toks);
-                AtRule::Debug(pos, message)
+                AtRule::Debug(pos, message.to_string())
             }
             AtRuleKind::Mixin => {
                 let (name, mixin) = Mixin::decl_from_tokens(toks, scope, super_selector)?;
