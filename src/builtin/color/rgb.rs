@@ -57,10 +57,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                             Some(red) => format!("rgb({}, {}, {})", red, v, blue),
                             None => format!("rgb({}, {})", v, blue),
                         };
-                        return Ok(Value::Ident(
-                            string,
-                            QuoteKind::None,
-                        ));
+                        return Ok(Value::Ident(string, QuoteKind::None));
                     }
                     Some(v) => return Err(format!("$green: {} is not a number.", v).into()),
                     None => return Err("Missing element $green.".into()),
@@ -87,6 +84,13 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             } else if args.len() == 2 {
                 let color = match arg!(args, scope, super_selector, 0, "color") {
                     Value::Color(c) => c,
+                    v if v.is_special_function() => {
+                        let alpha = arg!(args, scope, super_selector, 1, "alpha");
+                        return Ok(Value::Ident(
+                            format!("rgb({}, {})", v, alpha),
+                            QuoteKind::None,
+                        ));
+                    }
                     v => return Err(format!("$color: {} is not a color.", v).into()),
                 };
                 let alpha = match arg!(args, scope, super_selector, 1, "alpha") {
@@ -96,6 +100,18 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                         return Err(
                             format!("$alpha: Expected {} to have no units or \"%\".", v).into()
                         )
+                    }
+                    v if v.is_special_function() => {
+                        return Ok(Value::Ident(
+                            format!(
+                                "rgb({}, {}, {}, {})",
+                                color.red(),
+                                color.green(),
+                                color.blue(),
+                                v
+                            ),
+                            QuoteKind::None,
+                        ));
                     }
                     v => return Err(format!("$alpha: {} is not a number.", v).into()),
                 };
@@ -245,10 +261,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                             Some(red) => format!("rgba({}, {}, {})", red, v, blue),
                             None => format!("rgba({}, {})", v, blue),
                         };
-                        return Ok(Value::Ident(
-                            string,
-                            QuoteKind::None,
-                        ));
+                        return Ok(Value::Ident(string, QuoteKind::None));
                     }
                     Some(v) => return Err(format!("$green: {} is not a number.", v).into()),
                     None => return Err("Missing element $green.".into()),
@@ -275,6 +288,13 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             } else if args.len() == 2 {
                 let color = match arg!(args, scope, super_selector, 0, "color") {
                     Value::Color(c) => c,
+                    v if v.is_special_function() => {
+                        let alpha = arg!(args, scope, super_selector, 1, "alpha");
+                        return Ok(Value::Ident(
+                            format!("rgb({}, {})", v, alpha),
+                            QuoteKind::None,
+                        ));
+                    }
                     v => return Err(format!("$color: {} is not a color.", v).into()),
                 };
                 let alpha = match arg!(args, scope, super_selector, 1, "alpha") {
@@ -284,6 +304,18 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                         return Err(
                             format!("$alpha: Expected {} to have no units or \"%\".", v).into()
                         )
+                    }
+                    v if v.is_special_function() => {
+                        return Ok(Value::Ident(
+                            format!(
+                                "rgb({}, {}, {}, {})",
+                                color.red(),
+                                color.green(),
+                                color.blue(),
+                                v
+                            ),
+                            QuoteKind::None,
+                        ));
                     }
                     v => return Err(format!("$alpha: {} is not a number.", v).into()),
                 };
