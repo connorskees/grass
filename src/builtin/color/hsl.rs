@@ -117,6 +117,12 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                             format!("$alpha: Expected {} to have no units or \"%\".", v).into()
                         )
                     }
+                    v if v.is_special_function() => {
+                        return Ok(Value::Ident(
+                            format!("hsl({}, {}, {}, {})", hue, saturation, lightness, v),
+                            QuoteKind::None,
+                        ));
+                    }
                     v => return Err(format!("$alpha: {} is not a number.", v).into()),
                 };
                 Ok(Value::Color(Color::from_hsla(
@@ -232,6 +238,12 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                         return Err(
                             format!("$alpha: Expected {} to have no units or \"%\".", v).into()
                         )
+                    }
+                    v if v.is_special_function() => {
+                        return Ok(Value::Ident(
+                            format!("hsl({}, {}, {}, {})", hue, saturation, lightness, v),
+                            QuoteKind::None,
+                        ));
                     }
                     v => return Err(format!("$alpha: {} is not a number.", v).into()),
                 };
