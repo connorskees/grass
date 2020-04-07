@@ -53,9 +53,12 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                         (n / Number::from(100)) * Number::from(255)
                     }
                     Some(v) if v.is_special_function() => {
-                        let red = channels.pop().unwrap();
+                        let string = match channels.pop() {
+                            Some(red) => format!("rgb({}, {}, {})", red, v, blue),
+                            None => format!("rgb({}, {})", v, blue),
+                        };
                         return Ok(Value::Ident(
-                            format!("rgb({}, {}, {})", red, v, blue),
+                            string,
                             QuoteKind::None,
                         ));
                     }
@@ -238,9 +241,12 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                         (n / Number::from(100)) * Number::from(255)
                     }
                     Some(v) if v.is_special_function() => {
-                        let red = channels.pop().unwrap();
+                        let string = match channels.pop() {
+                            Some(red) => format!("rgba({}, {}, {})", red, v, blue),
+                            None => format!("rgba({}, {})", v, blue),
+                        };
                         return Ok(Value::Ident(
-                            format!("rgba({}, {}, {})", red, v, blue),
+                            string,
                             QuoteKind::None,
                         ));
                     }
