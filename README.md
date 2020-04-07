@@ -15,9 +15,8 @@ cargo b --release
 
 The large features remaining are
 ```
-special case certain functions (min, max, calc, element, expression, progid, url)
 all builtin selector functions (274 tests)
-content-exists, min, min
+content-exists, min, min, url
 @extend (~600 tests)
 indented syntax (27 tests)
 a special parser for plain css
@@ -29,9 +28,9 @@ string parsing/quoting/escaping (~200 tests)
 ```
 
 ```
-2020-04-04
-PASSING: 1825
-FAILING: 3268
+2020-04-07
+PASSING: 2031
+FAILING: 3062
 TOTAL: 5093
 ```
 
