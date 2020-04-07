@@ -57,14 +57,50 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             } else {
                 let hue = match arg!(args, scope, super_selector, 0, "hue") {
                     Value::Dimension(n, _) => n,
+                    v if v.is_special_function() => {
+                        let saturation = arg!(args, scope, super_selector, 1, "saturation");
+                        let lightness = arg!(args, scope, super_selector, 2, "lightness");
+                        let mut string = format!("hsl({}, {}, {}", v, saturation, lightness);
+                        if !args.is_empty() {
+                            string.push_str(", ");
+                            string.push_str(
+                                &arg!(args, scope, super_selector, 3, "alpha").to_string(),
+                            );
+                        }
+                        string.push(')');
+                        return Ok(Value::Ident(string, QuoteKind::None));
+                    }
                     v => return Err(format!("$hue: {} is not a number.", v).into()),
                 };
                 let saturation = match arg!(args, scope, super_selector, 1, "saturation") {
                     Value::Dimension(n, _) => n / Number::from(100),
+                    v if v.is_special_function() => {
+                        let lightness = arg!(args, scope, super_selector, 2, "lightness");
+                        let mut string = format!("hsl({}, {}, {}", hue, v, lightness);
+                        if !args.is_empty() {
+                            string.push_str(", ");
+                            string.push_str(
+                                &arg!(args, scope, super_selector, 3, "alpha").to_string(),
+                            );
+                        }
+                        string.push(')');
+                        return Ok(Value::Ident(string, QuoteKind::None));
+                    }
                     v => return Err(format!("$saturation: {} is not a number.", v).into()),
                 };
                 let lightness = match arg!(args, scope, super_selector, 2, "lightness") {
                     Value::Dimension(n, _) => n / Number::from(100),
+                    v if v.is_special_function() => {
+                        let mut string = format!("hsl({}, {}, {}", hue, saturation, v);
+                        if !args.is_empty() {
+                            string.push_str(", ");
+                            string.push_str(
+                                &arg!(args, scope, super_selector, 3, "alpha").to_string(),
+                            );
+                        }
+                        string.push(')');
+                        return Ok(Value::Ident(string, QuoteKind::None));
+                    }
                     v => return Err(format!("$lightness: {} is not a number.", v).into()),
                 };
                 let alpha = match arg!(
@@ -137,14 +173,50 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             } else {
                 let hue = match arg!(args, scope, super_selector, 0, "hue") {
                     Value::Dimension(n, _) => n,
+                    v if v.is_special_function() => {
+                        let saturation = arg!(args, scope, super_selector, 1, "saturation");
+                        let lightness = arg!(args, scope, super_selector, 2, "lightness");
+                        let mut string = format!("hsla({}, {}, {}", v, saturation, lightness);
+                        if !args.is_empty() {
+                            string.push_str(", ");
+                            string.push_str(
+                                &arg!(args, scope, super_selector, 3, "alpha").to_string(),
+                            );
+                        }
+                        string.push(')');
+                        return Ok(Value::Ident(string, QuoteKind::None));
+                    }
                     v => return Err(format!("$hue: {} is not a number.", v).into()),
                 };
                 let saturation = match arg!(args, scope, super_selector, 1, "saturation") {
                     Value::Dimension(n, _) => n / Number::from(100),
+                    v if v.is_special_function() => {
+                        let lightness = arg!(args, scope, super_selector, 2, "lightness");
+                        let mut string = format!("hsla({}, {}, {}", hue, v, lightness);
+                        if !args.is_empty() {
+                            string.push_str(", ");
+                            string.push_str(
+                                &arg!(args, scope, super_selector, 3, "alpha").to_string(),
+                            );
+                        }
+                        string.push(')');
+                        return Ok(Value::Ident(string, QuoteKind::None));
+                    }
                     v => return Err(format!("$saturation: {} is not a number.", v).into()),
                 };
                 let lightness = match arg!(args, scope, super_selector, 2, "lightness") {
                     Value::Dimension(n, _) => n / Number::from(100),
+                    v if v.is_special_function() => {
+                        let mut string = format!("hsla({}, {}, {}", hue, saturation, v);
+                        if !args.is_empty() {
+                            string.push_str(", ");
+                            string.push_str(
+                                &arg!(args, scope, super_selector, 3, "alpha").to_string(),
+                            );
+                        }
+                        string.push(')');
+                        return Ok(Value::Ident(string, QuoteKind::None));
+                    }
                     v => return Err(format!("$lightness: {} is not a number.", v).into()),
                 };
                 let alpha = match arg!(
