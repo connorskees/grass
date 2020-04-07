@@ -291,7 +291,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     v if v.is_special_function() => {
                         let alpha = arg!(args, scope, super_selector, 1, "alpha");
                         return Ok(Value::Ident(
-                            format!("rgb({}, {})", v, alpha),
+                            format!("rgba({}, {})", v, alpha),
                             QuoteKind::None,
                         ));
                     }
@@ -308,7 +308,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     v if v.is_special_function() => {
                         return Ok(Value::Ident(
                             format!(
-                                "rgb({}, {}, {}, {})",
+                                "rgba({}, {}, {}, {})",
                                 color.red(),
                                 color.green(),
                                 color.blue(),
