@@ -35,6 +35,14 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     Some(Value::Dimension(n, Unit::Percent)) => {
                         (n / Number::from(100)) * Number::from(255)
                     }
+                    Some(v) if v.is_special_function() => {
+                        let green = channels.pop().unwrap();
+                        let red = channels.pop().unwrap();
+                        return Ok(Value::Ident(
+                            format!("rgb({}, {}, {})", red, green, v),
+                            QuoteKind::None,
+                        ));
+                    }
                     Some(v) => return Err(format!("$blue: {} is not a number.", v).into()),
                     None => return Err("Missing element $blue.".into()),
                 };
@@ -44,6 +52,13 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     Some(Value::Dimension(n, Unit::Percent)) => {
                         (n / Number::from(100)) * Number::from(255)
                     }
+                    Some(v) if v.is_special_function() => {
+                        let red = channels.pop().unwrap();
+                        return Ok(Value::Ident(
+                            format!("rgb({}, {}, {})", red, v, blue),
+                            QuoteKind::None,
+                        ));
+                    }
                     Some(v) => return Err(format!("$green: {} is not a number.", v).into()),
                     None => return Err("Missing element $green.".into()),
                 };
@@ -52,6 +67,12 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     Some(Value::Dimension(n, Unit::None)) => n,
                     Some(Value::Dimension(n, Unit::Percent)) => {
                         (n / Number::from(100)) * Number::from(255)
+                    }
+                    Some(v) if v.is_special_function() => {
+                        return Ok(Value::Ident(
+                            format!("rgb({}, {}, {})", v, green, blue),
+                            QuoteKind::None,
+                        ));
                     }
                     Some(v) => return Err(format!("$red: {} is not a number.", v).into()),
                     None => return Err("Missing element $red.".into()),
@@ -199,6 +220,14 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     Some(Value::Dimension(n, Unit::Percent)) => {
                         (n / Number::from(100)) * Number::from(255)
                     }
+                    Some(v) if v.is_special_function() => {
+                        let green = channels.pop().unwrap();
+                        let red = channels.pop().unwrap();
+                        return Ok(Value::Ident(
+                            format!("rgba({}, {}, {})", red, green, v),
+                            QuoteKind::None,
+                        ));
+                    }
                     Some(v) => return Err(format!("$blue: {} is not a number.", v).into()),
                     None => return Err("Missing element $blue.".into()),
                 };
@@ -208,6 +237,13 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     Some(Value::Dimension(n, Unit::Percent)) => {
                         (n / Number::from(100)) * Number::from(255)
                     }
+                    Some(v) if v.is_special_function() => {
+                        let red = channels.pop().unwrap();
+                        return Ok(Value::Ident(
+                            format!("rgba({}, {}, {})", red, v, blue),
+                            QuoteKind::None,
+                        ));
+                    }
                     Some(v) => return Err(format!("$green: {} is not a number.", v).into()),
                     None => return Err("Missing element $green.".into()),
                 };
@@ -216,6 +252,12 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     Some(Value::Dimension(n, Unit::None)) => n,
                     Some(Value::Dimension(n, Unit::Percent)) => {
                         (n / Number::from(100)) * Number::from(255)
+                    }
+                    Some(v) if v.is_special_function() => {
+                        return Ok(Value::Ident(
+                            format!("rgba({}, {}, {})", v, green, blue),
+                            QuoteKind::None,
+                        ));
                     }
                     Some(v) => return Err(format!("$red: {} is not a number.", v).into()),
                     None => return Err("Missing element $red.".into()),
