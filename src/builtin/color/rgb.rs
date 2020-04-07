@@ -4,258 +4,152 @@ use num_traits::One;
 
 use super::Builtin;
 use crate::color::Color;
+use crate::common::QuoteKind;
 use crate::unit::Unit;
 use crate::value::{Number, Value};
 
 pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
-    f.insert(
-        "rgb".to_owned(),
-        Builtin::new(|mut args, scope, super_selector| {
-            if args.is_empty() {
-                return Err("Missing argument $channels.".into());
+    let rgb = Builtin::new(|mut args, scope, super_selector| {
+        if args.is_empty() {
+            return Err("Missing argument $channels.".into());
+        }
+
+        if args.len() == 1 {
+            let mut channels = match arg!(args, scope, super_selector, 0, "channels") {
+                Value::List(v, ..) => v,
+                _ => return Err("Missing argument $channels.".into()),
+            };
+
+            if channels.len() > 3 {
+                return Err(format!(
+                    "Only 3 elements allowed, but {} were passed.",
+                    channels.len()
+                )
+                .into());
             }
 
-            if args.len() == 1 {
-                let mut channels = match arg!(args, scope, super_selector, 0, "channels") {
-                    Value::List(v, ..) => v,
-                    _ => return Err("Missing argument $channels.".into()),
-                };
-
-                if channels.len() > 3 {
-                    return Err(format!(
-                        "Only 3 elements allowed, but {} were passed.",
-                        channels.len()
-                    )
-                    .into());
+            let blue = match channels.pop() {
+                Some(Value::Dimension(n, Unit::None)) => n,
+                Some(Value::Dimension(n, Unit::Percent)) => {
+                    (n / Number::from(100)) * Number::from(255)
                 }
+                Some(v) => return Err(format!("$blue: {} is not a number.", v).into()),
+                None => return Err("Missing element $blue.".into()),
+            };
 
-                let blue = match channels.pop() {
-                    Some(Value::Dimension(n, Unit::None)) => n,
-                    Some(Value::Dimension(n, Unit::Percent)) => {
-                        (n / Number::from(100)) * Number::from(255)
-                    }
-                    Some(v) => return Err(format!("$blue: {} is not a number.", v).into()),
-                    None => return Err("Missing element $blue.".into()),
-                };
-
-                let green = match channels.pop() {
-                    Some(Value::Dimension(n, Unit::None)) => n,
-                    Some(Value::Dimension(n, Unit::Percent)) => {
-                        (n / Number::from(100)) * Number::from(255)
-                    }
-                    Some(v) => return Err(format!("$green: {} is not a number.", v).into()),
-                    None => return Err("Missing element $green.".into()),
-                };
-
-                let red = match channels.pop() {
-                    Some(Value::Dimension(n, Unit::None)) => n,
-                    Some(Value::Dimension(n, Unit::Percent)) => {
-                        (n / Number::from(100)) * Number::from(255)
-                    }
-                    Some(v) => return Err(format!("$red: {} is not a number.", v).into()),
-                    None => return Err("Missing element $red.".into()),
-                };
-
-                let color = Color::from_rgba(red, green, blue, Number::one());
-
-                Ok(Value::Color(color))
-            } else if args.len() == 2 {
-                let color = match arg!(args, scope, super_selector, 0, "color") {
-                    Value::Color(c) => c,
-                    v => return Err(format!("$color: {} is not a color.", v).into()),
-                };
-                let alpha = match arg!(args, scope, super_selector, 1, "alpha") {
-                    Value::Dimension(n, Unit::None) => n,
-                    Value::Dimension(n, Unit::Percent) => n / Number::from(100),
-                    v @ Value::Dimension(..) => {
-                        return Err(
-                            format!("$alpha: Expected {} to have no units or \"%\".", v).into()
-                        )
-                    }
-                    v => return Err(format!("$alpha: {} is not a number.", v).into()),
-                };
-                Ok(Value::Color(color.with_alpha(alpha)))
-            } else {
-                let red = match arg!(args, scope, super_selector, 0, "red") {
-                    Value::Dimension(n, Unit::None) => n,
-                    Value::Dimension(n, Unit::Percent) => {
-                        (n / Number::from(100)) * Number::from(255)
-                    }
-                    v @ Value::Dimension(..) => {
-                        return Err(
-                            format!("$red: Expected {} to have no units or \"%\".", v).into()
-                        )
-                    }
-                    v => return Err(format!("$red: {} is not a number.", v).into()),
-                };
-                let green = match arg!(args, scope, super_selector, 1, "green") {
-                    Value::Dimension(n, Unit::None) => n,
-                    Value::Dimension(n, Unit::Percent) => {
-                        (n / Number::from(100)) * Number::from(255)
-                    }
-                    v @ Value::Dimension(..) => {
-                        return Err(
-                            format!("$green: Expected {} to have no units or \"%\".", v).into()
-                        )
-                    }
-                    v => return Err(format!("$green: {} is not a number.", v).into()),
-                };
-                let blue = match arg!(args, scope, super_selector, 2, "blue") {
-                    Value::Dimension(n, Unit::None) => n,
-                    Value::Dimension(n, Unit::Percent) => {
-                        (n / Number::from(100)) * Number::from(255)
-                    }
-                    v @ Value::Dimension(..) => {
-                        return Err(
-                            format!("$blue: Expected {} to have no units or \"%\".", v).into()
-                        )
-                    }
-                    v => return Err(format!("$blue: {} is not a number.", v).into()),
-                };
-                let alpha = match arg!(
-                    args,
-                    scope,
-                    super_selector,
-                    3,
-                    "alpha" = Value::Dimension(Number::one(), Unit::None)
-                ) {
-                    Value::Dimension(n, Unit::None) => n,
-                    Value::Dimension(n, Unit::Percent) => n / Number::from(100),
-                    v @ Value::Dimension(..) => {
-                        return Err(
-                            format!("$alpha: Expected {} to have no units or \"%\".", v).into()
-                        )
-                    }
-                    v => return Err(format!("$alpha: {} is not a number.", v).into()),
-                };
-                Ok(Value::Color(Color::from_rgba(red, green, blue, alpha)))
-            }
-        }),
-    );
-    f.insert(
-        "rgba".to_owned(),
-        Builtin::new(|mut args, scope, super_selector| {
-            if args.is_empty() {
-                return Err("Missing argument $channels.".into());
-            }
-
-            if args.len() == 1 {
-                let mut channels = match arg!(args, scope, super_selector, 0, "channels") {
-                    Value::List(v, ..) => v,
-                    _ => return Err("Missing argument $channels.".into()),
-                };
-
-                if channels.len() > 3 {
-                    return Err(format!(
-                        "Only 3 elements allowed, but {} were passed.",
-                        channels.len()
-                    )
-                    .into());
+            let green = match channels.pop() {
+                Some(Value::Dimension(n, Unit::None)) => n,
+                Some(Value::Dimension(n, Unit::Percent)) => {
+                    (n / Number::from(100)) * Number::from(255)
                 }
+                Some(v) => return Err(format!("$green: {} is not a number.", v).into()),
+                None => return Err("Missing element $green.".into()),
+            };
 
-                let blue = match channels.pop() {
-                    Some(Value::Dimension(n, Unit::None)) => n,
-                    Some(Value::Dimension(n, Unit::Percent)) => {
-                        (n / Number::from(100)) * Number::from(255)
-                    }
-                    Some(v) => return Err(format!("$blue: {} is not a number.", v).into()),
-                    None => return Err("Missing element $blue.".into()),
-                };
+            let red = match channels.pop() {
+                Some(Value::Dimension(n, Unit::None)) => n,
+                Some(Value::Dimension(n, Unit::Percent)) => {
+                    (n / Number::from(100)) * Number::from(255)
+                }
+                Some(v) => return Err(format!("$red: {} is not a number.", v).into()),
+                None => return Err("Missing element $red.".into()),
+            };
 
-                let green = match channels.pop() {
-                    Some(Value::Dimension(n, Unit::None)) => n,
-                    Some(Value::Dimension(n, Unit::Percent)) => {
-                        (n / Number::from(100)) * Number::from(255)
-                    }
-                    Some(v) => return Err(format!("$green: {} is not a number.", v).into()),
-                    None => return Err("Missing element $green.".into()),
-                };
+            let color = Color::from_rgba(red, green, blue, Number::one());
 
-                let red = match channels.pop() {
-                    Some(Value::Dimension(n, Unit::None)) => n,
-                    Some(Value::Dimension(n, Unit::Percent)) => {
-                        (n / Number::from(100)) * Number::from(255)
+            Ok(Value::Color(color))
+        } else if args.len() == 2 {
+            let color = match arg!(args, scope, super_selector, 0, "color") {
+                Value::Color(c) => c,
+                v => return Err(format!("$color: {} is not a color.", v).into()),
+            };
+            let alpha = match arg!(args, scope, super_selector, 1, "alpha") {
+                Value::Dimension(n, Unit::None) => n,
+                Value::Dimension(n, Unit::Percent) => n / Number::from(100),
+                v @ Value::Dimension(..) => {
+                    return Err(format!("$alpha: Expected {} to have no units or \"%\".", v).into())
+                }
+                v => return Err(format!("$alpha: {} is not a number.", v).into()),
+            };
+            Ok(Value::Color(color.with_alpha(alpha)))
+        } else {
+            let red = match arg!(args, scope, super_selector, 0, "red") {
+                Value::Dimension(n, Unit::None) => n,
+                Value::Dimension(n, Unit::Percent) => (n / Number::from(100)) * Number::from(255),
+                v @ Value::Dimension(..) => {
+                    return Err(format!("$red: Expected {} to have no units or \"%\".", v).into())
+                }
+                v if v.is_special_function() => {
+                    let green = arg!(args, scope, super_selector, 1, "green");
+                    let blue = arg!(args, scope, super_selector, 2, "blue");
+                    let mut string = format!("rgb({}, {}, {}", v, green, blue);
+                    if !args.is_empty() {
+                        string.push_str(", ");
+                        string.push_str(&arg!(args, scope, super_selector, 3, "alpha").to_string());
                     }
-                    Some(v) => return Err(format!("$red: {} is not a number.", v).into()),
-                    None => return Err("Missing element $red.".into()),
-                };
-
-                let color = Color::from_rgba(red, green, blue, Number::one());
-
-                Ok(Value::Color(color))
-            } else if args.len() == 2 {
-                let color = match arg!(args, scope, super_selector, 0, "color") {
-                    Value::Color(c) => c,
-                    v => return Err(format!("$color: {} is not a color.", v).into()),
-                };
-                let alpha = match arg!(args, scope, super_selector, 1, "alpha") {
-                    Value::Dimension(n, Unit::None) => n,
-                    Value::Dimension(n, Unit::Percent) => n / Number::from(100),
-                    v @ Value::Dimension(..) => {
-                        return Err(
-                            format!("$alpha: Expected {} to have no units or \"%\".", v).into()
-                        )
+                    string.push(')');
+                    return Ok(Value::Ident(string, QuoteKind::None));
+                }
+                v => return Err(format!("$red: {} is not a number.", v).into()),
+            };
+            let green = match arg!(args, scope, super_selector, 1, "green") {
+                Value::Dimension(n, Unit::None) => n,
+                Value::Dimension(n, Unit::Percent) => (n / Number::from(100)) * Number::from(255),
+                v @ Value::Dimension(..) => {
+                    return Err(format!("$green: Expected {} to have no units or \"%\".", v).into())
+                }
+                v if v.is_special_function() => {
+                    let blue = arg!(args, scope, super_selector, 2, "blue");
+                    let mut string = format!("rgb({}, {}, {}", red, v, blue);
+                    if !args.is_empty() {
+                        string.push_str(", ");
+                        string.push_str(&arg!(args, scope, super_selector, 3, "alpha").to_string());
                     }
-                    v => return Err(format!("$alpha: {} is not a number.", v).into()),
-                };
-                Ok(Value::Color(color.with_alpha(alpha)))
-            } else {
-                let red = match arg!(args, scope, super_selector, 0, "red") {
-                    Value::Dimension(n, Unit::None) => n,
-                    Value::Dimension(n, Unit::Percent) => {
-                        (n / Number::from(100)) * Number::from(255)
+                    string.push(')');
+                    return Ok(Value::Ident(string, QuoteKind::None));
+                }
+                v => return Err(format!("$green: {} is not a number.", v).into()),
+            };
+            let blue = match arg!(args, scope, super_selector, 2, "blue") {
+                Value::Dimension(n, Unit::None) => n,
+                Value::Dimension(n, Unit::Percent) => (n / Number::from(100)) * Number::from(255),
+                v @ Value::Dimension(..) => {
+                    return Err(format!("$blue: Expected {} to have no units or \"%\".", v).into())
+                }
+                v if v.is_special_function() => {
+                    let mut string = format!("rgb({}, {}, {}", red, green, v);
+                    if !args.is_empty() {
+                        string.push_str(", ");
+                        string.push_str(&arg!(args, scope, super_selector, 3, "alpha").to_string());
                     }
-                    v @ Value::Dimension(..) => {
-                        return Err(
-                            format!("$red: Expected {} to have no units or \"%\".", v).into()
-                        )
-                    }
-                    v => return Err(format!("$red: {} is not a number.", v).into()),
-                };
-                let green = match arg!(args, scope, super_selector, 1, "green") {
-                    Value::Dimension(n, Unit::None) => n,
-                    Value::Dimension(n, Unit::Percent) => {
-                        (n / Number::from(100)) * Number::from(255)
-                    }
-                    v @ Value::Dimension(..) => {
-                        return Err(
-                            format!("$green: Expected {} to have no units or \"%\".", v).into()
-                        )
-                    }
-                    v => return Err(format!("$green: {} is not a number.", v).into()),
-                };
-                let blue = match arg!(args, scope, super_selector, 2, "blue") {
-                    Value::Dimension(n, Unit::None) => n,
-                    Value::Dimension(n, Unit::Percent) => {
-                        (n / Number::from(100)) * Number::from(255)
-                    }
-                    v @ Value::Dimension(..) => {
-                        return Err(
-                            format!("$blue: Expected {} to have no units or \"%\".", v).into()
-                        )
-                    }
-                    v => return Err(format!("$blue: {} is not a number.", v).into()),
-                };
-                let alpha = match arg!(
-                    args,
-                    scope,
-                    super_selector,
-                    3,
-                    "alpha" = Value::Dimension(Number::one(), Unit::None)
-                ) {
-                    Value::Dimension(n, Unit::None) => n,
-                    Value::Dimension(n, Unit::Percent) => n / Number::from(100),
-                    v @ Value::Dimension(..) => {
-                        return Err(
-                            format!("$alpha: Expected {} to have no units or \"%\".", v).into()
-                        )
-                    }
-                    v => return Err(format!("$alpha: {} is not a number.", v).into()),
-                };
-                Ok(Value::Color(Color::from_rgba(red, green, blue, alpha)))
-            }
-        }),
-    );
+                    string.push(')');
+                    return Ok(Value::Ident(string, QuoteKind::None));
+                }
+                v => return Err(format!("$blue: {} is not a number.", v).into()),
+            };
+            let alpha = match arg!(
+                args,
+                scope,
+                super_selector,
+                3,
+                "alpha" = Value::Dimension(Number::one(), Unit::None)
+            ) {
+                Value::Dimension(n, Unit::None) => n,
+                Value::Dimension(n, Unit::Percent) => n / Number::from(100),
+                v @ Value::Dimension(..) => {
+                    return Err(format!("$alpha: Expected {} to have no units or \"%\".", v).into())
+                }
+                v if v.is_special_function() => {
+                    let string = format!("rgb({}, {}, {}, {})", red, green, blue, v);
+                    return Ok(Value::Ident(string, QuoteKind::None));
+                }
+                v => return Err(format!("$alpha: {} is not a number.", v).into()),
+            };
+            Ok(Value::Color(Color::from_rgba(red, green, blue, alpha)))
+        }
+    });
+    f.insert("rgb".to_owned(), rgb.clone());
+    f.insert("rgba".to_owned(), rgb);
     f.insert(
         "red".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {

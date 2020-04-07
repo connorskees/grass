@@ -46,7 +46,6 @@ pub(crate) fn eat_calc_args<I: Iterator<Item = Token>>(
     Ok(string)
 }
 
-#[allow(dead_code)]
 pub(crate) fn is_special_function(s: &str) -> bool {
     s.starts_with("calc(")
         || s.starts_with("var(")

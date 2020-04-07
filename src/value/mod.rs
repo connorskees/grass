@@ -7,6 +7,7 @@ use crate::common::{Brackets, ListSeparator, Op, QuoteKind};
 use crate::error::SassResult;
 use crate::unit::{Unit, UNIT_CONVERSION_TABLE};
 
+use css_function::is_special_function;
 pub(crate) use map::SassMap;
 pub(crate) use number::Number;
 pub(crate) use sass_function::SassFunction;
@@ -176,6 +177,13 @@ impl Value {
             Self::Null => Ok("null"),
             Self::Map(..) => Ok("map"),
             Self::BinaryOp(..) | Self::Paren(..) | Self::UnaryOp(..) => self.clone().eval()?.kind(),
+        }
+    }
+
+    pub fn is_special_function(&self) -> bool {
+        match self {
+            Self::Ident(s, QuoteKind::None) => is_special_function(s),
+            _ => false,
         }
     }
 
