@@ -1,12 +1,14 @@
 use std::ffi::OsStr;
 use std::path::Path;
 
+use codemap::Spanned;
+
 use crate::error::SassResult;
 use crate::scope::Scope;
 use crate::{Stmt, StyleSheet};
 
-pub(crate) fn import<P: AsRef<Path>>(path: P) -> SassResult<(Vec<Stmt>, Scope)> {
-    let mut rules: Vec<Stmt> = Vec::new();
+pub(crate) fn import<P: AsRef<Path>>(path: P) -> SassResult<(Vec<Spanned<Stmt>>, Scope)> {
+    let mut rules = Vec::new();
     let mut scope = Scope::new();
     let path_buf = path.as_ref().to_path_buf();
     let name = path_buf.file_name().expect("todo! path ended in `..`");

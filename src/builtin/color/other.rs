@@ -12,9 +12,19 @@ macro_rules! opt_rgba {
     ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal, $scope:ident, $super_selector:ident) => {
         let x = $low;
         let $name = match named_arg!($args, $scope, $super_selector, $arg = Value::Null) {
-            Value::Dimension(n, u) => Some(bound!($arg, n, u, x, $high)),
+            Value::Dimension(n, u) => Some(bound!($args, $arg, n, u, x, $high)),
             Value::Null => None,
-            v => return Err(format!("${}: {} is not a number.", $arg, v).into()),
+            v => {
+                return Err((
+                    format!(
+                        "${}: {} is not a number.",
+                        $arg,
+                        v.to_css_string($args.span())?
+                    ),
+                    $args.span(),
+                )
+                    .into())
+            }
         };
     };
 }
@@ -23,9 +33,19 @@ macro_rules! opt_hsl {
     ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal, $scope:ident, $super_selector:ident) => {
         let x = $low;
         let $name = match named_arg!($args, $scope, $super_selector, $arg = Value::Null) {
-            Value::Dimension(n, u) => Some(bound!($arg, n, u, x, $high) / Number::from(100)),
+            Value::Dimension(n, u) => Some(bound!($args, $arg, n, u, x, $high) / Number::from(100)),
             Value::Null => None,
-            v => return Err(format!("${}: {} is not a number.", $arg, v).into()),
+            v => {
+                return Err((
+                    format!(
+                        "${}: {} is not a number.",
+                        $arg,
+                        v.to_css_string($args.span())?
+                    ),
+                    $args.span(),
+                )
+                    .into())
+            }
         };
     };
 }
@@ -33,12 +53,12 @@ macro_rules! opt_hsl {
 pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert("change-color".to_owned(), Builtin::new(|mut args, scope, super_selector| {
         if args.get_positional(1, scope, super_selector).is_some() {
-            return Err("Only one positional argument is allowed. All other arguments must be passed by name.".into());
+            return Err(("Only one positional argument is allowed. All other arguments must be passed by name.", args.span()).into());
         }
 
         let color = match arg!(args, scope, super_selector, 0, "color") {
             Value::Color(c) => c,
-            v => return Err(format!("$color: {} is not a color.", v).into()),
+            v => return Err((format!("$color: {} is not a color.", v.to_css_string(args.span())?), args.span()).into()),
         };
 
         opt_rgba!(args, alpha, "alpha", 0, 1, scope, super_selector);
@@ -53,7 +73,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         let hue = match named_arg!(args, scope, super_selector, "hue"=Value::Null) {
             Value::Dimension(n, _) => Some(n),
             Value::Null => None,
-            v => return Err(format!("$hue: {} is not a number.", v).into()),
+            v => return Err((format!("$hue: {} is not a number.", v.to_css_string(args.span())?), args.span()).into()),
         };
 
         opt_hsl!(args, saturation, "saturation", 0, 100, scope, super_selector);
@@ -76,7 +96,13 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         Builtin::new(|mut args, scope, super_selector| {
             let color = match arg!(args, scope, super_selector, 0, "color") {
                 Value::Color(c) => c,
-                v => return Err(format!("$color: {} is not a color.", v).into()),
+                v => {
+                    return Err((
+                        format!("$color: {} is not a color.", v.to_css_string(args.span())?),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
 
             opt_rgba!(args, alpha, "alpha", -1, 1, scope, super_selector);
@@ -96,7 +122,13 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             let hue = match named_arg!(args, scope, super_selector, "hue" = Value::Null) {
                 Value::Dimension(n, _) => Some(n),
                 Value::Null => None,
-                v => return Err(format!("$hue: {} is not a number.", v).into()),
+                v => {
+                    return Err((
+                        format!("$hue: {} is not a number.", v.to_css_string(args.span())?),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
 
             opt_hsl!(
@@ -142,7 +174,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         Builtin::new(|mut args, scope, super_selector| {
             let color = match arg!(args, scope, super_selector, 0, "color") {
                 Value::Color(c) => c,
-                v => return Err(format!("$color: {} is not a color.", v).into()),
+                v => return Err((format!("$color: {} is not a color.", v.to_css_string(args.span())?), args.span()).into()),
             };
 
             macro_rules! opt_scale_arg {
@@ -150,15 +182,15 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     let x = $low;
                     let $name = match named_arg!($args, $scope, $super_selector, $arg = Value::Null) {
                         Value::Dimension(n, Unit::Percent) => {
-                            Some(bound!($arg, n, Unit::Percent, x, $high) / Number::from(100))
+                            Some(bound!($args, $arg, n, Unit::Percent, x, $high) / Number::from(100))
                         }
                         v @ Value::Dimension(..) => {
                             return Err(
-                                format!("${}: Expected {} to have unit \"%\".", $arg, v).into()
+                                (format!("${}: Expected {} to have unit \"%\".", $arg, v.to_css_string($args.span())?), $args.span()).into()
                             )
                         }
                         Value::Null => None,
-                        v => return Err(format!("${}: {} is not a number.", $arg, v).into()),
+                        v => return Err((format!("${}: {} is not a number.", $arg, v.to_css_string($args.span())?), $args.span()).into()),
                     };
                 };
             }
@@ -229,7 +261,13 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             max_args!(args, 1);
             let color = match arg!(args, scope, super_selector, 0, "color") {
                 Value::Color(c) => c,
-                v => return Err(format!("$color: {} is not a color.", v).into()),
+                v => {
+                    return Err((
+                        format!("$color: {} is not a color.", v.to_css_string(args.span())?),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
             Ok(Value::Ident(color.to_ie_hex_str(), QuoteKind::None))
         }),

@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 use std::iter::Peekable;
 
-use crate::common::Pos;
+use codemap::{Span, Spanned};
+
 use crate::error::SassResult;
 use crate::scope::Scope;
 use crate::selector::Selector;
@@ -29,7 +30,7 @@ impl FuncArgs {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct CallArgs(HashMap<CallArg, Vec<Token>>);
+pub(crate) struct CallArgs(HashMap<CallArg, Vec<Token>>, Span);
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 enum CallArg {
@@ -38,9 +39,9 @@ enum CallArg {
 }
 
 impl CallArg {
-    pub fn position(&self) -> SassResult<usize> {
+    pub fn position(&self) -> Result<usize, String> {
         match self {
-            Self::Named(..) => Err("found named".into()),
+            Self::Named(ref name) => Err(name.clone()),
             Self::Positional(p) => Ok(*p),
         }
     }
@@ -54,26 +55,45 @@ impl CallArg {
 }
 
 impl CallArgs {
-    pub fn new() -> Self {
-        CallArgs(HashMap::new())
+    pub fn new(span: Span) -> Self {
+        CallArgs(HashMap::new(), span)
     }
 
-    pub fn to_css_string(self, scope: &Scope, super_selector: &Selector) -> SassResult<String> {
+    pub fn to_css_string(
+        self,
+        scope: &Scope,
+        super_selector: &Selector,
+    ) -> SassResult<Spanned<String>> {
         let mut string = String::with_capacity(2 + self.len() * 10);
         string.push('(');
+        let mut span = self.1;
+
+        if self.is_empty() {
+            return Ok(Spanned {
+                node: "()".to_string(),
+                span,
+            });
+        }
+
         let args = match self.get_variadic(scope, super_selector) {
             Ok(v) => v,
-            Err(..) => return Err("Plain CSS functions don't support keyword arguments.".into()),
+            Err(..) => {
+                return Err(("Plain CSS functions don't support keyword arguments.", span).into())
+            }
         };
+
         string.push_str(
             &args
                 .iter()
-                .map(std::string::ToString::to_string)
-                .collect::<Vec<String>>()
+                .map(|a| {
+                    span = span.merge(a.span);
+                    Ok(a.node.to_css_string(a.span)?)
+                })
+                .collect::<SassResult<Vec<String>>>()?
                 .join(", "),
         );
         string.push(')');
-        Ok(string)
+        Ok(Spanned { node: string, span })
     }
 
     /// Get argument by name
@@ -84,7 +104,7 @@ impl CallArgs {
         val: String,
         scope: &Scope,
         super_selector: &Selector,
-    ) -> Option<SassResult<Value>> {
+    ) -> Option<SassResult<Spanned<Value>>> {
         match self.0.remove(&CallArg::Named(val)) {
             Some(v) => Some(Value::from_vec(v, scope, super_selector)),
             None => None,
@@ -99,20 +119,28 @@ impl CallArgs {
         val: usize,
         scope: &Scope,
         super_selector: &Selector,
-    ) -> Option<SassResult<Value>> {
+    ) -> Option<SassResult<Spanned<Value>>> {
         match self.0.remove(&CallArg::Positional(val)) {
             Some(v) => Some(Value::from_vec(v, scope, super_selector)),
             None => None,
         }
     }
 
-    pub fn get_variadic(self, scope: &Scope, super_selector: &Selector) -> SassResult<Vec<Value>> {
+    pub fn get_variadic(
+        self,
+        scope: &Scope,
+        super_selector: &Selector,
+    ) -> SassResult<Vec<Spanned<Value>>> {
         let mut vals = Vec::new();
-        let mut args = self
+        let mut args = match self
             .0
             .into_iter()
             .map(|(a, v)| Ok((a.position()?, v)))
-            .collect::<SassResult<Vec<(usize, Vec<Token>)>>>()?;
+            .collect::<Result<Vec<(usize, Vec<Token>)>, String>>()
+        {
+            Ok(v) => v,
+            Err(e) => return Err((format!("No argument named ${}.", e), self.1).into()),
+        };
         args.sort_by(|(a1, _), (a2, _)| a1.cmp(a2));
         for arg in args {
             vals.push(Value::from_vec(arg.1, scope, super_selector)?);
@@ -126,7 +154,12 @@ impl CallArgs {
                 .into_iter()
                 .map(|(k, v)| (k.decrement(), v))
                 .collect(),
+            self.1,
         )
+    }
+
+    pub fn span(&self) -> Span {
+        self.1
     }
 
     pub fn len(&self) -> usize {
@@ -134,7 +167,7 @@ impl CallArgs {
     }
 
     pub fn is_empty(&self) -> bool {
-        self.0.len() == 0
+        self.0.is_empty()
     }
 }
 
@@ -155,8 +188,8 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
         let mut default: Vec<Token> = Vec::new();
         let mut is_variadic = false;
         devour_whitespace(toks);
-        let kind = match toks.next() {
-            Some(Token { kind, .. }) => kind,
+        let (kind, span) = match toks.next() {
+            Some(Token { kind, pos }) => (kind, pos),
             _ => todo!("unexpected eof"),
         };
         match kind {
@@ -189,15 +222,18 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
                 }
             }
             '.' => {
-                if toks.next().ok_or("expected \".\".")?.kind != '.' {
-                    return Err("expected \".\".".into());
+                let next = toks.next().ok_or(("expected \".\".", span))?;
+                if next.kind != '.' {
+                    return Err(("expected \".\".", next.pos()).into());
                 }
-                if toks.next().ok_or("expected \".\".")?.kind != '.' {
-                    return Err("expected \".\".".into());
+                let next = toks.next().ok_or(("expected \".\".", next.pos()))?;
+                if next.kind != '.' {
+                    return Err(("expected \".\".", next.pos()).into());
                 }
                 devour_whitespace(toks);
-                if toks.next().ok_or("expected \")\".")?.kind != ')' {
-                    return Err("expected \")\".".into());
+                let next = toks.next().ok_or(("expected \")\".", next.pos()))?;
+                if next.kind != ')' {
+                    return Err(("expected \")\".", next.pos()).into());
                 }
 
                 is_variadic = true;
@@ -247,24 +283,31 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
     devour_whitespace_or_comment(toks)?;
     let mut name = String::new();
     let mut val: Vec<Token> = Vec::new();
+    let span = toks.peek().unwrap().pos();
     loop {
         match toks.peek().unwrap().kind {
             '$' => {
-                toks.next();
+                let Token { pos, .. } = toks.next().unwrap();
                 let v = eat_ident(toks, scope, super_selector)?;
                 devour_whitespace_or_comment(toks)?;
                 if toks.peek().unwrap().kind == ':' {
                     toks.next();
-                    name = v;
+                    name = v.node;
                 } else {
-                    val.push(Token::new(Pos::new(), '$'));
-                    val.extend(v.chars().map(|x| Token::new(Pos::new(), x)));
+                    val.push(Token::new(pos, '$'));
+                    let mut current_pos = 0;
+                    val.extend(v.chars().map(|x| {
+                        let len = x.len_utf8() as u64;
+                        let tok = Token::new(v.span.subspan(current_pos, current_pos + len), x);
+                        current_pos += len;
+                        tok
+                    }));
                     name.clear();
                 }
             }
             ')' => {
                 toks.next();
-                return Ok(CallArgs(args));
+                return Ok(CallArgs(args, span));
             }
             _ => name.clear(),
         }
@@ -281,7 +324,7 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
                         },
                         val,
                     );
-                    return Ok(CallArgs(args));
+                    return Ok(CallArgs(args, span));
                 }
                 ',' => break,
                 '[' => {
@@ -312,7 +355,7 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
         devour_whitespace(toks);
 
         if toks.peek().is_none() {
-            return Ok(CallArgs(args));
+            return Ok(CallArgs(args, span));
         }
     }
 }

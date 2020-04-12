@@ -2,9 +2,10 @@ use std::iter::Peekable;
 
 use super::eat_stmts;
 
+use codemap::{Span, Spanned};
+
 use crate::args::{eat_func_args, CallArgs, FuncArgs};
 use crate::atrule::AtRule;
-use crate::common::Pos;
 use crate::error::SassResult;
 use crate::scope::Scope;
 use crate::selector::Selector;
@@ -16,8 +17,8 @@ use crate::{Stmt, Token};
 pub(crate) struct Function {
     scope: Scope,
     args: FuncArgs,
-    body: Vec<Stmt>,
-    pos: Pos,
+    body: Vec<Spanned<Stmt>>,
+    pos: Span,
 }
 
 impl PartialEq for Function {
@@ -29,7 +30,7 @@ impl PartialEq for Function {
 impl Eq for Function {}
 
 impl Function {
-    pub fn new(scope: Scope, args: FuncArgs, body: Vec<Stmt>, pos: Pos) -> Self {
+    pub fn new(scope: Scope, args: FuncArgs, body: Vec<Spanned<Stmt>>, pos: Span) -> Self {
         Function {
             scope,
             args,
@@ -43,12 +44,12 @@ impl Function {
         scope: Scope,
         super_selector: &Selector,
     ) -> SassResult<(String, Function)> {
-        let pos = toks.peek().unwrap().pos;
-        let name = eat_ident(toks, &scope, super_selector)?;
+        let Spanned { node: name, span } = eat_ident(toks, &scope, super_selector)?;
         devour_whitespace(toks);
         let args = match toks.next() {
             Some(Token { kind: '(', .. }) => eat_func_args(toks, &scope, super_selector)?,
-            _ => return Err("expected \"(\".".into()),
+            Some(Token { pos, .. }) => return Err(("expected \"(\".", pos).into()),
+            None => return Err(("expected \"(\".", span).into()),
         };
 
         devour_whitespace(toks);
@@ -56,7 +57,7 @@ impl Function {
         let body = eat_stmts(toks, &mut scope.clone(), super_selector)?;
         devour_whitespace(toks);
 
-        Ok((name, Function::new(scope, args, body, pos)))
+        Ok((name, Function::new(scope, args, body, span)))
     }
 
     pub fn args(
@@ -67,9 +68,13 @@ impl Function {
     ) -> SassResult<Function> {
         for (idx, arg) in self.args.0.iter().enumerate() {
             if arg.is_variadic {
+                let span = args.span();
                 self.scope.insert_var(
                     &arg.name,
-                    Value::ArgList(args.get_variadic(scope, super_selector)?),
+                    Spanned {
+                        node: Value::ArgList(args.get_variadic(scope, super_selector)?),
+                        span,
+                    },
                 )?;
                 break;
             }
@@ -83,7 +88,11 @@ impl Function {
                             scope,
                             super_selector,
                         )?,
-                        None => return Err(format!("Missing argument ${}.", &arg.name).into()),
+                        None => {
+                            return Err(
+                                (format!("Missing argument ${}.", &arg.name), args.span()).into()
+                            )
+                        }
                     },
                 },
             };
@@ -92,19 +101,20 @@ impl Function {
         Ok(self)
     }
 
-    pub fn body(&self) -> Vec<Stmt> {
+    pub fn body(&self) -> Vec<Spanned<Stmt>> {
         self.body.clone()
     }
 
-    pub fn call(&self, super_selector: &Selector, stmts: Vec<Stmt>) -> SassResult<Value> {
+    pub fn call(&self, super_selector: &Selector, stmts: Vec<Spanned<Stmt>>) -> SassResult<Value> {
         for stmt in stmts {
-            match stmt {
+            match stmt.node {
                 Stmt::AtRule(AtRule::Return(toks)) => {
-                    return Value::from_tokens(
+                    return Ok(Value::from_tokens(
                         &mut toks.into_iter().peekable(),
                         &self.scope,
                         super_selector,
-                    )
+                    )?
+                    .node)
                 }
                 Stmt::AtRule(AtRule::For(..)) => todo!("@for in function"),
                 Stmt::AtRule(AtRule::If(i)) => {
@@ -115,9 +125,9 @@ impl Function {
                         return Ok(v);
                     }
                 }
-                _ => return Err("This at-rule is not allowed here.".into()),
+                _ => return Err(("This at-rule is not allowed here.", stmt.span).into()),
             }
         }
-        Err("Function finished without @return.".into())
+        Err(("Function finished without @return.", self.pos).into())
     }
 }

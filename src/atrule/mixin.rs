@@ -1,6 +1,8 @@
 use std::iter::Peekable;
 use std::vec::IntoIter;
 
+use codemap::Spanned;
+
 use super::eat_stmts;
 
 use crate::args::{eat_call_args, eat_func_args, CallArgs, FuncArgs};
@@ -19,11 +21,16 @@ pub(crate) struct Mixin {
     scope: Scope,
     args: FuncArgs,
     body: Peekable<IntoIter<Token>>,
-    content: Vec<Stmt>,
+    content: Vec<Spanned<Stmt>>,
 }
 
 impl Mixin {
-    pub fn new(scope: Scope, args: FuncArgs, body: Vec<Token>, content: Vec<Stmt>) -> Self {
+    pub fn new(
+        scope: Scope,
+        args: FuncArgs,
+        body: Vec<Token>,
+        content: Vec<Spanned<Stmt>>,
+    ) -> Self {
         let body = body.into_iter().peekable();
         Mixin {
             scope,
@@ -37,14 +44,15 @@ impl Mixin {
         toks: &mut Peekable<I>,
         scope: &Scope,
         super_selector: &Selector,
-    ) -> SassResult<(String, Mixin)> {
+    ) -> SassResult<Spanned<(String, Mixin)>> {
         devour_whitespace(toks);
-        let name = eat_ident(toks, scope, super_selector)?;
+        let Spanned { node: name, span } = eat_ident(toks, scope, super_selector)?;
         devour_whitespace(toks);
         let args = match toks.next() {
             Some(Token { kind: '(', .. }) => eat_func_args(toks, scope, super_selector)?,
             Some(Token { kind: '{', .. }) => FuncArgs::new(),
-            _ => return Err("expected \"{\".".into()),
+            Some(t) => return Err(("expected \"{\".", t.pos()).into()),
+            None => return Err(("expected \"{\".", span).into()),
         };
 
         devour_whitespace(toks);
@@ -52,10 +60,13 @@ impl Mixin {
         let mut body = read_until_closing_curly_brace(toks);
         body.push(toks.next().unwrap());
 
-        Ok((name, Mixin::new(scope.clone(), args, body, Vec::new())))
+        Ok(Spanned {
+            node: (name, Mixin::new(scope.clone(), args, body, Vec::new())),
+            span,
+        })
     }
 
-    pub fn content(mut self, content: Vec<Stmt>) -> Mixin {
+    pub fn content(mut self, content: Vec<Spanned<Stmt>>) -> Mixin {
         self.content = content;
         self
     }
@@ -68,9 +79,13 @@ impl Mixin {
     ) -> SassResult<Mixin> {
         for (idx, arg) in self.args.0.iter().enumerate() {
             if arg.is_variadic {
+                let span = args.span();
                 self.scope.insert_var(
                     &arg.name,
-                    Value::ArgList(args.get_variadic(scope, super_selector)?),
+                    Spanned {
+                        node: Value::ArgList(args.get_variadic(scope, super_selector)?),
+                        span,
+                    },
                 )?;
                 break;
             }
@@ -84,7 +99,11 @@ impl Mixin {
                             scope,
                             super_selector,
                         )?,
-                        None => return Err(format!("Missing argument ${}.", &arg.name).into()),
+                        None => {
+                            return Err(
+                                (format!("Missing argument ${}.", &arg.name), args.span()).into()
+                            )
+                        }
                     },
                 },
             };
@@ -93,43 +112,64 @@ impl Mixin {
         Ok(self)
     }
 
-    pub fn call(mut self, super_selector: &Selector) -> SassResult<Vec<Stmt>> {
+    pub fn call(mut self, super_selector: &Selector) -> SassResult<Vec<Spanned<Stmt>>> {
         self.eval(super_selector)
     }
 
-    fn eval(&mut self, super_selector: &Selector) -> SassResult<Vec<Stmt>> {
+    fn eval(&mut self, super_selector: &Selector) -> SassResult<Vec<Spanned<Stmt>>> {
         let mut stmts = Vec::new();
         while let Some(expr) = eat_expr(&mut self.body, &mut self.scope, super_selector)? {
-            match expr {
+            let span = expr.span;
+            match expr.node {
                 Expr::AtRule(a) => match a {
-                    AtRule::While(s) | AtRule::Each(s) | AtRule::For(s) => stmts.extend(s),
+                    AtRule::Include(s) | AtRule::While(s) | AtRule::Each(s) | AtRule::For(s) => {
+                        stmts.extend(s)
+                    }
                     AtRule::If(i) => stmts.extend(i.eval(&mut self.scope.clone(), super_selector)?),
                     AtRule::Content => stmts.extend(self.content.clone()),
-                    AtRule::Return(..) => return Err("This at-rule is not allowed here.".into()),
-                    r => stmts.push(Stmt::AtRule(r)),
+                    AtRule::Return(..) => {
+                        return Err(("This at-rule is not allowed here.", span).into())
+                    }
+                    AtRule::Debug(..) | AtRule::Warn(..) => todo!(),
+                    r => stmts.push(Spanned {
+                        node: Stmt::AtRule(r),
+                        span,
+                    }),
                 },
-                Expr::Style(s) => stmts.push(Stmt::Style(s)),
-                Expr::Styles(s) => stmts.extend(s.into_iter().map(Box::new).map(Stmt::Style)),
-                Expr::Include(s) => stmts.extend(s),
+                Expr::Style(s) => stmts.push(Spanned {
+                    node: Stmt::Style(s),
+                    span,
+                }),
+                Expr::Styles(s) => stmts.extend(
+                    s.into_iter()
+                        .map(Box::new)
+                        .map(Stmt::Style)
+                        .map(|style| Spanned { node: style, span }),
+                ),
                 Expr::FunctionDecl(..) => {
-                    return Err("Mixins may not contain function declarations.".into())
+                    return Err(("Mixins may not contain function declarations.", span).into())
                 }
                 Expr::MixinDecl(..) => {
-                    return Err("Mixins may not contain mixin declarations.".into())
+                    return Err(("Mixins may not contain mixin declarations.", span).into())
                 }
-                Expr::Debug(..) | Expr::Warn(..) => todo!(),
                 Expr::Selector(selector) => {
                     let rules = self.eval(&super_selector.zip(&selector))?;
-                    stmts.push(Stmt::RuleSet(RuleSet {
-                        super_selector: super_selector.clone(),
-                        selector,
-                        rules,
-                    }));
+                    stmts.push(Spanned {
+                        node: Stmt::RuleSet(RuleSet {
+                            super_selector: super_selector.clone(),
+                            selector,
+                            rules,
+                        }),
+                        span,
+                    });
                 }
                 Expr::VariableDecl(name, val) => {
                     self.scope.insert_var(&name, *val)?;
                 }
-                Expr::MultilineComment(s) => stmts.push(Stmt::MultilineComment(s)),
+                Expr::MultilineComment(s) => stmts.push(Spanned {
+                    node: Stmt::MultilineComment(s),
+                    span,
+                }),
             }
         }
         Ok(stmts)
@@ -140,37 +180,37 @@ pub(crate) fn eat_include<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
     scope: &Scope,
     super_selector: &Selector,
-) -> SassResult<Vec<Stmt>> {
+) -> SassResult<Vec<Spanned<Stmt>>> {
     devour_whitespace_or_comment(toks)?;
     let name = eat_ident(toks, scope, super_selector)?;
 
     devour_whitespace_or_comment(toks)?;
 
-    let mut has_include = false;
+    let mut has_content = false;
 
     let args = if let Some(tok) = toks.next() {
         match tok.kind {
-            ';' => CallArgs::new(),
+            ';' => CallArgs::new(name.span),
             '(' => {
                 let tmp = eat_call_args(toks, scope, super_selector)?;
                 devour_whitespace_or_comment(toks)?;
                 if let Some(tok) = toks.next() {
                     match tok.kind {
                         ';' => {}
-                        '{' => has_include = true,
+                        '{' => has_content = true,
                         _ => todo!(),
                     }
                 }
                 tmp
             }
             '{' => {
-                has_include = true;
-                CallArgs::new()
+                has_content = true;
+                CallArgs::new(name.span)
             }
-            _ => return Err("expected \"{\".".into()),
+            _ => return Err(("expected \"{\".", tok.pos()).into()),
         }
     } else {
-        return Err("unexpected EOF".into());
+        return Err(("unexpected EOF", name.span).into());
     };
 
     devour_whitespace(toks);
@@ -179,7 +219,7 @@ pub(crate) fn eat_include<I: Iterator<Item = Token>>(
         if tok.kind == '{' {
             toks.next();
             eat_stmts(toks, &mut scope.clone(), super_selector)?
-        } else if has_include {
+        } else if has_content {
             eat_stmts(toks, &mut scope.clone(), super_selector)?
         } else {
             Vec::new()
@@ -188,7 +228,7 @@ pub(crate) fn eat_include<I: Iterator<Item = Token>>(
         Vec::new()
     };
 
-    let mixin = scope.get_mixin(&name)?.clone();
+    let mixin = scope.get_mixin(name)?.clone();
 
     let rules = mixin
         .args(args, scope, super_selector)?

@@ -1,5 +1,6 @@
-use std::fmt::{self, Display};
 use std::iter::Peekable;
+
+use codemap::Spanned;
 
 use crate::error::SassResult;
 use crate::scope::Scope;
@@ -15,13 +16,7 @@ use crate::{Expr, Token};
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Style {
     pub property: String,
-    pub value: Value,
-}
-
-impl Display for Style {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}: {};", self.property, self.value)
-    }
+    pub value: Spanned<Value>,
 }
 
 impl Style {
@@ -34,11 +29,29 @@ impl Style {
         StyleParser::new(scope, super_selector).parse_property(toks, super_property)
     }
 
+    pub fn to_string(&self) -> SassResult<String> {
+        Ok(format!(
+            "{}: {};",
+            self.property,
+            self.value.node.to_css_string(self.value.span)?
+        ))
+    }
+
+    pub(crate) fn eval(self) -> SassResult<Self> {
+        Ok(Style {
+            property: self.property,
+            value: Spanned {
+                span: self.value.span,
+                node: self.value.node.eval(self.value.span)?.node,
+            },
+        })
+    }
+
     pub fn parse_value<I: Iterator<Item = Token>>(
         toks: &mut Peekable<I>,
         scope: &Scope,
         super_selector: &Selector,
-    ) -> SassResult<Value> {
+    ) -> SassResult<Spanned<Value>> {
         StyleParser::new(scope, super_selector).parse_style_value(toks, scope)
     }
 
@@ -69,7 +82,7 @@ impl<'a> StyleParser<'a> {
         &self,
         toks: &mut Peekable<I>,
         scope: &Scope,
-    ) -> SassResult<Value> {
+    ) -> SassResult<Spanned<Value>> {
         devour_whitespace(toks);
         Value::from_vec(
             read_until_semicolon_or_open_or_closing_curly_brace(toks),
@@ -152,8 +165,8 @@ impl<'a> StyleParser<'a> {
                     }
                 }
                 _ => {
-                    let val = self.parse_style_value(toks, scope)?;
-                    let t = toks.peek().ok_or("expected more input.")?;
+                    let value = self.parse_style_value(toks, scope)?;
+                    let t = toks.peek().ok_or(("expected more input.", value.span))?;
                     match t.kind {
                         '}' => {}
                         ';' => {
@@ -163,7 +176,7 @@ impl<'a> StyleParser<'a> {
                         '{' => {
                             let mut v = vec![Style {
                                 property: super_property.clone(),
-                                value: val,
+                                value,
                             }];
                             match self.eat_style_group(toks, super_property, scope)? {
                                 Expr::Style(s) => v.push(*s),
@@ -176,7 +189,7 @@ impl<'a> StyleParser<'a> {
                     }
                     return Ok(Expr::Style(Box::new(Style {
                         property: super_property,
-                        value: val,
+                        value,
                     })));
                 }
             }
@@ -190,7 +203,7 @@ impl<'a> StyleParser<'a> {
         mut super_property: String,
     ) -> SassResult<String> {
         devour_whitespace(toks);
-        let property = eat_ident(toks, self.scope, self.super_selector)?;
+        let property = eat_ident(toks, self.scope, self.super_selector)?.node;
         devour_whitespace_or_comment(toks)?;
         if toks.peek().is_some() && toks.peek().unwrap().kind == ':' {
             toks.next();

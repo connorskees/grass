@@ -84,8 +84,9 @@ use std::io::Write;
 use std::iter::{Iterator, Peekable};
 use std::path::Path;
 
+use codemap::{CodeMap, Span, Spanned};
+
 use crate::atrule::{eat_include, AtRule, AtRuleKind, Function, Mixin};
-use crate::common::Pos;
 pub use crate::error::{SassError, SassResult};
 use crate::format::PrettyPrinter;
 use crate::imports::import;
@@ -121,7 +122,7 @@ mod value;
 
 /// Represents a parsed SASS stylesheet with nesting
 #[derive(Debug, Clone)]
-pub struct StyleSheet(Vec<Stmt>);
+pub struct StyleSheet(Vec<Spanned<Stmt>>);
 
 #[derive(Clone, Debug)]
 pub(crate) enum Stmt {
@@ -133,6 +134,12 @@ pub(crate) enum Stmt {
     MultilineComment(String),
     /// A CSS rule: `@charset "UTF-8";`
     AtRule(AtRule),
+}
+
+impl Stmt {
+    fn span(self, span: Span) -> Spanned<Self> {
+        Spanned { node: self, span }
+    }
 }
 
 /// Represents a single rule set. Rule sets can contain other rule sets
@@ -148,7 +155,7 @@ pub(crate) enum Stmt {
 #[derive(Clone, Debug)]
 pub(crate) struct RuleSet {
     selector: Selector,
-    rules: Vec<Stmt>,
+    rules: Vec<Spanned<Stmt>>,
     // potential optimization: we don't *need* to own the selector
     super_selector: Selector,
 }
@@ -174,19 +181,13 @@ enum Expr {
     /// A full selector `a > h1`
     Selector(Selector),
     /// A variable declaration `$var: 1px`
-    VariableDecl(String, Box<Value>),
+    VariableDecl(String, Box<Spanned<Value>>),
     /// A mixin declaration `@mixin foo {}`
     MixinDecl(String, Box<Mixin>),
     FunctionDecl(String, Box<Function>),
-    /// An include statement `@include foo;`
-    Include(Vec<Stmt>),
     /// A multiline comment: `/* foobar */`
     MultilineComment(String),
-    Debug(Pos, String),
-    Warn(Pos, String),
     AtRule(AtRule),
-    // /// Function call: `calc(10vw - 1px)`
-    // FuncCall(String, Vec<Token>),
 }
 
 /// Print the internal representation of a parsed stylesheet
@@ -203,51 +204,70 @@ impl Display for StyleSheet {
     }
 }
 
+fn raw_to_parse_error(map: &CodeMap, err: SassError) -> SassError {
+    let (message, span) = err.raw();
+    SassError::from_loc(message, map.look_up_span(span))
+}
+
 impl StyleSheet {
     #[inline]
-    pub fn new(input: &str) -> SassResult<StyleSheet> {
+    pub fn new(input: String) -> SassResult<StyleSheet> {
+        let mut map = CodeMap::new();
+        let file = map.add_file("stdin".into(), input);
         Ok(StyleSheet(
-            StyleSheetParser {
-                global_scope: Scope::new(),
-                lexer: Lexer::new(input).peekable(),
-                rules: Vec::new(),
-                scope: 0,
-                file: String::from("stdin"),
+            match (StyleSheetParser {
+                lexer: Lexer::new(&file).peekable(),
+                nesting: 0,
+                map: &map,
             }
-            .parse_toplevel()?
+            .parse_toplevel())
+            {
+                Ok(v) => v,
+                Err(e) => return Err(raw_to_parse_error(&map, e)),
+            }
             .0,
         ))
     }
 
     #[inline]
-    pub fn from_path<P: AsRef<Path> + Into<String>>(p: P) -> SassResult<StyleSheet> {
+    pub fn from_path<P: AsRef<Path> + Into<String> + Clone>(p: P) -> SassResult<StyleSheet> {
+        let mut map = CodeMap::new();
+        let file = map.add_file(p.clone().into(), String::from_utf8(fs::read(p.as_ref())?)?);
         Ok(StyleSheet(
-            StyleSheetParser {
-                global_scope: Scope::new(),
-                lexer: Lexer::new(&String::from_utf8(fs::read(p.as_ref())?)?).peekable(),
-                rules: Vec::new(),
-                scope: 0,
-                file: p.into(),
+            match (StyleSheetParser {
+                lexer: Lexer::new(&file).peekable(),
+                nesting: 0,
+                map: &map,
             }
-            .parse_toplevel()?
+            .parse_toplevel())
+            {
+                Ok(v) => v,
+                Err(e) => return Err(raw_to_parse_error(&map, e)),
+            }
             .0,
         ))
     }
 
-    pub(crate) fn export_from_path<P: AsRef<Path> + Into<String>>(
+    pub(crate) fn export_from_path<P: AsRef<Path> + Into<String> + Clone>(
         p: P,
-    ) -> SassResult<(Vec<Stmt>, Scope)> {
-        Ok(StyleSheetParser {
-            global_scope: Scope::new(),
-            lexer: Lexer::new(&String::from_utf8(fs::read(p.as_ref())?)?).peekable(),
-            rules: Vec::new(),
-            scope: 0,
-            file: p.into(),
-        }
-        .parse_toplevel()?)
+    ) -> SassResult<(Vec<Spanned<Stmt>>, Scope)> {
+        let mut map = CodeMap::new();
+        let file = map.add_file(p.clone().into(), String::from_utf8(fs::read(p.as_ref())?)?);
+        Ok(
+            match (StyleSheetParser {
+                lexer: Lexer::new(&file).peekable(),
+                nesting: 0,
+                map: &map,
+            }
+            .parse_toplevel())
+            {
+                Ok(v) => v,
+                Err(e) => return Err(raw_to_parse_error(&map, e)),
+            },
+        )
     }
 
-    pub(crate) fn from_stmts(s: Vec<Stmt>) -> StyleSheet {
+    pub(crate) fn from_stmts(s: Vec<Spanned<Stmt>>) -> StyleSheet {
         StyleSheet(s)
     }
 
@@ -268,18 +288,15 @@ impl StyleSheet {
     }
 }
 
-#[derive(Debug, Clone)]
 struct StyleSheetParser<'a> {
-    global_scope: Scope,
     lexer: Peekable<Lexer<'a>>,
-    rules: Vec<Stmt>,
-    scope: u32,
-    file: String,
+    nesting: u32,
+    map: &'a CodeMap,
 }
 
 impl<'a> StyleSheetParser<'a> {
-    fn parse_toplevel(mut self) -> SassResult<(Vec<Stmt>, Scope)> {
-        let mut rules: Vec<Stmt> = Vec::new();
+    fn parse_toplevel(mut self) -> SassResult<(Vec<Spanned<Stmt>>, Scope)> {
+        let mut rules: Vec<Spanned<Stmt>> = Vec::new();
         while let Some(Token { kind, .. }) = self.lexer.peek() {
             match kind {
                 'a'..='z' | 'A'..='Z' | '_' | '-' | '0'..='9'
@@ -293,20 +310,18 @@ impl<'a> StyleSheetParser<'a> {
                     self.lexer.next();
                     let name = eat_ident(&mut self.lexer, &Scope::new(), &Selector::new())?;
                     devour_whitespace(&mut self.lexer);
-                    if self
+                    let Token { kind, pos } = self
                         .lexer
                         .next()
-                        .unwrap()
-                        .kind
-                        != ':'
-                    {
-                        return Err("expected \":\".".into());
+                        .unwrap();
+                    if kind != ':' {
+                        return Err(("expected \":\".", pos).into());
                     }
                     let VariableDecl { val, default, .. } =
                         eat_variable_value(&mut self.lexer, &Scope::new(), &Selector::new())?;
                     GLOBAL_SCOPE.with(|s| {
-                        if !default || s.borrow().get_var(&name).is_err() {
-                            match s.borrow_mut().insert_var(&name, val) {
+                        if !default || s.borrow().get_var(name.clone()).is_err() {
+                            match s.borrow_mut().insert_var(&name.node, val) {
                                 Ok(..) => Ok(()),
                                 Err(e) => Err(e),
                             }
@@ -319,7 +334,8 @@ impl<'a> StyleSheetParser<'a> {
                     self.lexer.next();
                     if '*' == self.lexer.peek().unwrap().kind {
                         self.lexer.next();
-                        rules.push(Stmt::MultilineComment(eat_comment(&mut self.lexer, &Scope::new(), &Selector::new())?));
+                        let comment = eat_comment(&mut self.lexer, &Scope::new(), &Selector::new())?;
+                        rules.push(Spanned { node: Stmt::MultilineComment(comment.node), span: comment.span });
                     } else if '/' == self.lexer.peek().unwrap().kind {
                         read_until_newline(&mut self.lexer);
                         devour_whitespace(&mut self.lexer);
@@ -329,9 +345,9 @@ impl<'a> StyleSheetParser<'a> {
                 }
                 '@' => {
                     self.lexer.next();
-                    let at_rule_kind = eat_ident(&mut self.lexer, &Scope::new(), &Selector::new())?;
+                    let Spanned { node: at_rule_kind, span } = eat_ident(&mut self.lexer, &Scope::new(), &Selector::new())?;
                     if at_rule_kind.is_empty() {
-                        return Err("Expected identifier.".into());
+                        return Err(("Expected identifier.", span).into());
                     }
                     match AtRuleKind::from(at_rule_kind.as_str()) {
                         AtRuleKind::Include => rules.extend(eat_include(
@@ -349,7 +365,7 @@ impl<'a> StyleSheetParser<'a> {
                                 .kind
                             {
                                 q @ '"' | q @ '\'' => {
-                                    file_name.push_str(&parse_quoted_string(&mut self.lexer, &Scope::new(), q, &Selector::new())?.unquote().to_string());
+                                    file_name.push_str(&parse_quoted_string(&mut self.lexer, &Scope::new(), q, &Selector::new())?.node.unquote().to_css_string(span)?);
                                 }
                                 _ => todo!("expected ' or \" after @import"),
                             }
@@ -364,37 +380,39 @@ impl<'a> StyleSheetParser<'a> {
                             });
                         }
                         v => {
-                                match AtRule::from_tokens(&v, Pos::new(), &mut self.lexer, &mut Scope::new(), &Selector::new())? {
-                                    AtRule::Mixin(name, mixin) => {
-                                        insert_global_mixin(&name, *mixin);
-                                    }
-                                    AtRule::Function(name, func) => {
-                                        insert_global_fn(&name, *func);
-                                    }
-                                    AtRule::Charset => continue,
-                                    AtRule::Warn(pos, message) => self.warn(pos, &message),
-                                    AtRule::Debug(pos, message) => self.debug(pos, &message),
-                                    AtRule::Return(_) => {
-                                        return Err("This at-rule is not allowed here.".into())
-                                    }
-                                    AtRule::While(s) | AtRule::Each(s) | AtRule::For(s) => rules.extend(s),
-                                    AtRule::Content => return Err("@content is only allowed within mixin declarations.".into()),
-                                    AtRule::If(i) => {
-                                        rules.extend(i.eval(&mut Scope::new(), &Selector::new())?);
-                                    }
-                                    AtRule::AtRoot(root_rules) => rules.extend(root_rules),
-                                    u @ AtRule::Unknown(..) => rules.push(Stmt::AtRule(u)),
+                            let pos = self.lexer.next().unwrap().pos();
+                            let rule = AtRule::from_tokens(&v, pos, &mut self.lexer, &mut Scope::new(), &Selector::new())?;
+                            match rule.node {
+                                AtRule::Mixin(name, mixin) => {
+                                    insert_global_mixin(&name, *mixin);
                                 }
+                                AtRule::Function(name, func) => {
+                                    insert_global_fn(&name, *func);
+                                }
+                                AtRule::Charset => continue,
+                                AtRule::Warn(message) => self.warn(rule.span, &message),
+                                AtRule::Debug(message) => self.debug(rule.span, &message),
+                                AtRule::Return(_) => {
+                                    return Err(("This at-rule is not allowed here.", rule.span).into())
+                                }
+                                AtRule::Include(s) | AtRule::While(s) | AtRule::Each(s) | AtRule::For(s) => rules.extend(s),
+                                AtRule::Content => return Err(("@content is only allowed within mixin declarations.", rule.span).into()),
+                                AtRule::If(i) => {
+                                    rules.extend(i.eval(&mut Scope::new(), &Selector::new())?);
+                                }
+                                AtRule::AtRoot(root_rules) => rules.extend(root_rules),
+                                u @ AtRule::Unknown(..) => rules.push(Spanned { node: Stmt::AtRule(u), span: rule.span }),
                             }
+                        }
                     }
                 },
                 '&' => {
                     return Err(
-                        "Base-level rules cannot contain the parent-selector-referencing character '&'.".into(),
+                        ("Base-level rules cannot contain the parent-selector-referencing character '&'.", self.lexer.next().unwrap().pos()).into(),
                     )
                 }
                 c if c.is_control() => {
-                    return Err("expected selector.".into());
+                    return Err(("expected selector.", self.lexer.next().unwrap().pos()).into());
                 }
                 _ => match dbg!(self.lexer.next()) {
                     Some(..) => todo!("unexpected toplevel token"),
@@ -405,22 +423,48 @@ impl<'a> StyleSheetParser<'a> {
         Ok((rules, GLOBAL_SCOPE.with(|s| s.borrow().clone())))
     }
 
-    fn eat_rules(&mut self, super_selector: &Selector, scope: &mut Scope) -> SassResult<Vec<Stmt>> {
+    fn eat_rules(
+        &mut self,
+        super_selector: &Selector,
+        scope: &mut Scope,
+    ) -> SassResult<Vec<Spanned<Stmt>>> {
         let mut stmts = Vec::new();
         while let Some(expr) = eat_expr(&mut self.lexer, scope, super_selector)? {
-            match expr {
-                Expr::Style(s) => stmts.push(Stmt::Style(s)),
+            let span = expr.span;
+            match expr.node {
+                Expr::Style(s) => stmts.push(Spanned {
+                    node: Stmt::Style(s),
+                    span,
+                }),
                 Expr::AtRule(a) => match a {
-                    AtRule::While(s) | AtRule::Each(s) | AtRule::For(s) => stmts.extend(s),
+                    AtRule::Include(s) | AtRule::While(s) | AtRule::Each(s) | AtRule::For(s) => {
+                        stmts.extend(s)
+                    }
                     AtRule::If(i) => stmts.extend(i.eval(scope, super_selector)?),
                     AtRule::Content => {
-                        return Err("@content is only allowed within mixin declarations.".into())
+                        return Err((
+                            "@content is only allowed within mixin declarations.",
+                            expr.span,
+                        )
+                            .into())
                     }
-                    AtRule::Return(..) => return Err("This at-rule is not allowed here.".into()),
+                    AtRule::Return(..) => {
+                        return Err(("This at-rule is not allowed here.", expr.span).into())
+                    }
                     AtRule::AtRoot(root_stmts) => stmts.extend(root_stmts),
-                    r => stmts.push(Stmt::AtRule(r)),
+                    AtRule::Debug(ref message) => self.debug(expr.span, message),
+                    AtRule::Warn(ref message) => self.warn(expr.span, message),
+                    r => stmts.push(Spanned {
+                        node: Stmt::AtRule(r),
+                        span,
+                    }),
                 },
-                Expr::Styles(s) => stmts.extend(s.into_iter().map(Box::new).map(Stmt::Style)),
+                Expr::Styles(s) => stmts.extend(
+                    s.into_iter()
+                        .map(Box::new)
+                        .map(Stmt::Style)
+                        .map(|style| Spanned { node: style, span }),
+                ),
                 Expr::MixinDecl(name, mixin) => {
                     scope.insert_mixin(&name, *mixin);
                 }
@@ -428,30 +472,33 @@ impl<'a> StyleSheetParser<'a> {
                     scope.insert_fn(&name, *func);
                 }
                 Expr::Selector(s) => {
-                    self.scope += 1;
+                    self.nesting += 1;
                     let rules = self.eat_rules(&super_selector.zip(&s), scope)?;
-                    stmts.push(Stmt::RuleSet(RuleSet {
-                        super_selector: super_selector.clone(),
-                        selector: s,
-                        rules,
-                    }));
-                    self.scope -= 1;
-                    if self.scope == 0 {
+                    stmts.push(Spanned {
+                        node: Stmt::RuleSet(RuleSet {
+                            super_selector: super_selector.clone(),
+                            selector: s,
+                            rules,
+                        }),
+                        span,
+                    });
+                    self.nesting -= 1;
+                    if self.nesting == 0 {
                         return Ok(stmts);
                     }
                 }
                 Expr::VariableDecl(name, val) => {
-                    if self.scope == 0 {
+                    if self.nesting == 0 {
                         scope.insert_var(&name, *val.clone())?;
                         insert_global_var(&name, *val)?;
                     } else {
                         scope.insert_var(&name, *val)?;
                     }
                 }
-                Expr::Include(rules) => stmts.extend(rules),
-                Expr::Debug(pos, ref message) => self.debug(pos, message),
-                Expr::Warn(pos, ref message) => self.warn(pos, message),
-                Expr::MultilineComment(s) => stmts.push(Stmt::MultilineComment(s)),
+                Expr::MultilineComment(s) => stmts.push(Spanned {
+                    node: Stmt::MultilineComment(s),
+                    span,
+                }),
             }
         }
         Ok(stmts)
@@ -462,9 +509,15 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
     scope: &mut Scope,
     super_selector: &Selector,
-) -> SassResult<Option<Expr>> {
+) -> SassResult<Option<Spanned<Expr>>> {
     let mut values = Vec::with_capacity(5);
+    let mut span = if let Some(tok) = toks.peek() {
+        tok.pos()
+    } else {
+        return Ok(None);
+    };
     while let Some(tok) = toks.peek() {
+        span = span.merge(tok.pos());
         match tok.kind {
             ':' => {
                 let tok = toks.next();
@@ -475,7 +528,10 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                         super_selector,
                         String::new(),
                     )?;
-                    return Ok(Some(Style::from_tokens(toks, scope, super_selector, prop)?));
+                    return Ok(Some(Spanned {
+                        node: Style::from_tokens(toks, scope, super_selector, prop)?,
+                        span,
+                    }));
                 } else {
                     values.push(tok.unwrap());
                 }
@@ -489,14 +545,20 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                 devour_whitespace(&mut v);
                 if v.peek().is_none() {
                     devour_whitespace(toks);
-                    return Ok(Some(Expr::Style(Box::new(Style {
-                        property: String::new(),
-                        value: Value::Null,
-                    }))));
+                    return Ok(Some(Spanned {
+                        node: Expr::Style(Box::new(Style {
+                            property: String::new(),
+                            value: Value::Null.span(span),
+                        })),
+                        span,
+                    }));
                 }
                 let property = Style::parse_property(&mut v, scope, super_selector, String::new())?;
                 let value = Style::parse_value(&mut v, scope, super_selector)?;
-                return Ok(Some(Expr::Style(Box::new(Style { property, value }))));
+                return Ok(Some(Spanned {
+                    node: Expr::Style(Box::new(Style { property, value })),
+                    span,
+                }));
             }
             '}' => {
                 if values.is_empty() {
@@ -515,17 +577,23 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                     let property =
                         Style::parse_property(&mut v, scope, super_selector, String::new())?;
                     let value = Style::parse_value(&mut v, scope, super_selector)?;
-                    return Ok(Some(Expr::Style(Box::new(Style { property, value }))));
+                    return Ok(Some(Spanned {
+                        node: Expr::Style(Box::new(Style { property, value })),
+                        span,
+                    }));
                 }
             }
             '{' => {
                 toks.next();
                 devour_whitespace(toks);
-                return Ok(Some(Expr::Selector(Selector::from_tokens(
-                    &mut values.into_iter().peekable(),
-                    scope,
-                    super_selector,
-                )?)));
+                return Ok(Some(Spanned {
+                    node: Expr::Selector(Selector::from_tokens(
+                        &mut values.into_iter().peekable(),
+                        scope,
+                        super_selector,
+                    )?),
+                    span,
+                }));
             }
             '$' => {
                 let tok = toks.next().unwrap();
@@ -545,22 +613,28 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                         global,
                     } = eat_variable_value(toks, scope, super_selector)?;
                     if global {
-                        insert_global_var(&name, val.clone())?;
+                        insert_global_var(&name.node, val.clone())?;
                     }
-                    if !default || scope.get_var(&name).is_err() {
-                        return Ok(Some(Expr::VariableDecl(name, Box::new(val))));
+                    if !default || scope.get_var(name.clone()).is_err() {
+                        return Ok(Some(Spanned {
+                            node: Expr::VariableDecl(name.node, Box::new(val)),
+                            span,
+                        }));
                     }
                 } else {
                     values.push(tok);
-                    // HACK: we add the name back in, but lose the position information
-                    // potentially requires refactoring heuristics for
-                    // no space between colon and style value
-                    values.extend(name.chars().map(|c| Token::new(Pos::new(), c)));
+                    let mut current_pos = 0;
+                    values.extend(name.chars().map(|x| {
+                        let len = x.len_utf8() as u64;
+                        let tok = Token::new(span.subspan(current_pos, current_pos + len), x);
+                        current_pos += len;
+                        tok
+                    }));
                 }
             }
             '/' => {
                 let tok = toks.next().unwrap();
-                let peeked = toks.peek().ok_or("expected more input.")?;
+                let peeked = toks.peek().ok_or(("expected more input.", tok.pos()))?;
                 if peeked.kind == '/' {
                     read_until_newline(toks);
                     devour_whitespace(toks);
@@ -569,43 +643,44 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                     toks.next();
                     let comment = eat_comment(toks, scope, super_selector)?;
                     devour_whitespace(toks);
-                    return Ok(Some(Expr::MultilineComment(comment)));
+                    return Ok(Some(Spanned {
+                        node: Expr::MultilineComment(comment.node),
+                        span: comment.span,
+                    }));
                 } else {
                     values.push(tok);
                 }
             }
             '@' => {
-                let pos = toks.next().unwrap().pos();
-                match AtRuleKind::from(eat_ident(toks, scope, super_selector)?.as_str()) {
-                    AtRuleKind::Include => {
-                        devour_whitespace(toks);
-                        return Ok(Some(Expr::Include(eat_include(
-                            toks,
-                            scope,
-                            super_selector,
-                        )?)));
-                    }
-                    v => {
-                        devour_whitespace(toks);
-                        return match AtRule::from_tokens(&v, pos, toks, scope, super_selector)? {
-                            AtRule::Mixin(name, mixin) => Ok(Some(Expr::MixinDecl(name, mixin))),
-                            AtRule::Function(name, func) => {
-                                Ok(Some(Expr::FunctionDecl(name, func)))
-                            }
-                            AtRule::Charset => todo!("@charset as expr"),
-                            AtRule::Debug(a, b) => Ok(Some(Expr::Debug(a, b))),
-                            AtRule::Warn(a, b) => Ok(Some(Expr::Warn(a, b))),
-                            a @ AtRule::Return(_) => Ok(Some(Expr::AtRule(a))),
-                            c @ AtRule::Content => Ok(Some(Expr::AtRule(c))),
-                            f @ AtRule::If(..) => Ok(Some(Expr::AtRule(f))),
-                            f @ AtRule::For(..) => Ok(Some(Expr::AtRule(f))),
-                            f @ AtRule::While(..) => Ok(Some(Expr::AtRule(f))),
-                            f @ AtRule::Each(..) => Ok(Some(Expr::AtRule(f))),
-                            u @ AtRule::Unknown(..) => Ok(Some(Expr::AtRule(u))),
-                            u @ AtRule::AtRoot(..) => Ok(Some(Expr::AtRule(u))),
-                        };
-                    }
-                }
+                toks.next();
+                let Spanned { node: ident, span } = eat_ident(toks, scope, super_selector)?;
+                devour_whitespace(toks);
+                let rule = AtRule::from_tokens(
+                    &AtRuleKind::from(ident.as_str()),
+                    span,
+                    toks,
+                    scope,
+                    super_selector,
+                )?;
+                return Ok(Some(Spanned {
+                    node: match rule.node {
+                        AtRule::Mixin(name, mixin) => Expr::MixinDecl(name, mixin),
+                        AtRule::Function(name, func) => Expr::FunctionDecl(name, func),
+                        AtRule::Charset => todo!("@charset as expr"),
+                        d @ AtRule::Debug(..) => Expr::AtRule(d),
+                        w @ AtRule::Warn(..) => Expr::AtRule(w),
+                        a @ AtRule::Return(_) => Expr::AtRule(a),
+                        c @ AtRule::Content => Expr::AtRule(c),
+                        f @ AtRule::If(..) => Expr::AtRule(f),
+                        f @ AtRule::For(..) => Expr::AtRule(f),
+                        f @ AtRule::While(..) => Expr::AtRule(f),
+                        f @ AtRule::Each(..) => Expr::AtRule(f),
+                        u @ AtRule::Unknown(..) => Expr::AtRule(u),
+                        u @ AtRule::AtRoot(..) => Expr::AtRule(u),
+                        u @ AtRule::Include(..) => Expr::AtRule(u),
+                    },
+                    span,
+                }));
             }
             '#' => {
                 values.push(toks.next().unwrap());
@@ -639,17 +714,24 @@ fn eat_interpolation<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -> Vec<T
 
 /// Functions that print to stdout or stderr
 impl<'a> StyleSheetParser<'a> {
-    fn debug(&self, pos: Pos, message: &str) {
-        eprintln!("{}:{} Debug: {}", self.file, pos.line(), message);
+    fn debug(&self, span: Span, message: &str) {
+        let loc = self.map.look_up_span(span);
+        eprintln!(
+            "{}:{} Debug: {}",
+            loc.file.name(),
+            loc.begin.line + 1,
+            message
+        );
     }
 
-    fn warn(&self, pos: Pos, message: &str) {
+    fn warn(&self, span: Span, message: &str) {
+        let loc = self.map.look_up_span(span);
         eprintln!(
-            "Warning: {}\n\t{} {}:{} todo!(scope)",
+            "Warning: {}\n    {} {}:{}  root stylesheet",
             message,
-            self.file,
-            pos.line(),
-            pos.column()
+            loc.file.name(),
+            loc.begin.line + 1,
+            loc.begin.column + 1
         );
     }
 }

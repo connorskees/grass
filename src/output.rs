@@ -1,5 +1,4 @@
 //! # Convert from SCSS AST to CSS
-use std::fmt;
 use std::io::Write;
 
 use crate::atrule::AtRule;
@@ -20,11 +19,11 @@ enum BlockEntry {
     MultilineComment(String),
 }
 
-impl fmt::Display for BlockEntry {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl BlockEntry {
+    pub fn to_string(&self) -> SassResult<String> {
         match self {
-            BlockEntry::Style(s) => writeln!(f, "{}", s),
-            BlockEntry::MultilineComment(s) => writeln!(f, "/*{}*/", s),
+            BlockEntry::Style(s) => s.to_string(),
+            BlockEntry::MultilineComment(s) => Ok(format!("/*{}*/", s)),
         }
     }
 }
@@ -35,7 +34,7 @@ impl Toplevel {
     }
 
     fn push_style(&mut self, mut s: Style) -> SassResult<()> {
-        s.value = s.value.eval()?;
+        s = s.eval()?;
         if s.value.is_null() {
             return Ok(());
         }
@@ -79,8 +78,8 @@ impl Css {
                 }
                 let mut vals = vec![Toplevel::new_rule(selector)];
                 for rule in rules {
-                    match rule {
-                        Stmt::RuleSet(_) => vals.extend(self.parse_stmt(rule)?),
+                    match rule.node {
+                        Stmt::RuleSet(_) => vals.extend(self.parse_stmt(rule.node)?),
                         Stmt::Style(s) => vals
                             .get_mut(0)
                             .expect("expected block to exist")
@@ -91,7 +90,7 @@ impl Css {
                             .push_comment(s),
                         Stmt::AtRule(AtRule::AtRoot(stmts)) => stmts
                             .into_iter()
-                            .map(|r| Ok(vals.extend(self.parse_stmt(r)?)))
+                            .map(|r| Ok(vals.extend(self.parse_stmt(r.node)?)))
                             .collect::<SassResult<()>>()?,
                         Stmt::AtRule(r) => vals.push(Toplevel::AtRule(r)),
                     };
@@ -107,7 +106,7 @@ impl Css {
     fn parse_stylesheet(mut self, s: StyleSheet) -> SassResult<Css> {
         let mut is_first = true;
         for stmt in s.0 {
-            let v = self.parse_stmt(stmt)?;
+            let v = self.parse_stmt(stmt.node)?;
             // this is how we print newlines between unrelated styles
             // it could probably be refactored
             if !v.is_empty() {
@@ -145,7 +144,7 @@ impl Css {
                     has_written = true;
                     writeln!(buf, "{}{} {{", padding, selector)?;
                     for style in styles {
-                        write!(buf, "{}  {}", padding, style)?;
+                        writeln!(buf, "{}  {}", padding, style.to_string()?)?;
                     }
                     writeln!(buf, "{}}}", padding)?;
                 }

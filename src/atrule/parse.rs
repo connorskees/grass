@@ -1,5 +1,7 @@
 use std::iter::Peekable;
 
+use codemap::Spanned;
+
 use crate::error::SassResult;
 use crate::scope::Scope;
 use crate::selector::Selector;
@@ -9,29 +11,35 @@ pub(crate) fn eat_stmts<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
     scope: &mut Scope,
     super_selector: &Selector,
-) -> SassResult<Vec<Stmt>> {
+) -> SassResult<Vec<Spanned<Stmt>>> {
     let mut stmts = Vec::new();
     while let Some(expr) = eat_expr(toks, scope, super_selector)? {
-        match expr {
-            Expr::AtRule(a) => stmts.push(Stmt::AtRule(a)),
-            Expr::Style(s) => stmts.push(Stmt::Style(s)),
-            Expr::Styles(s) => stmts.extend(s.into_iter().map(Box::new).map(Stmt::Style)),
-            Expr::Include(s) => stmts.extend(s),
-            Expr::MixinDecl(..) | Expr::FunctionDecl(..) | Expr::Debug(..) | Expr::Warn(..) => {
-                todo!()
-            }
+        let span = expr.span;
+        match expr.node {
+            Expr::AtRule(a) => stmts.push(Stmt::AtRule(a).span(span)),
+            Expr::Style(s) => stmts.push(Stmt::Style(s).span(span)),
+            Expr::Styles(s) => stmts.extend(
+                s.into_iter()
+                    .map(Box::new)
+                    .map(Stmt::Style)
+                    .map(|style| Spanned { node: style, span }),
+            ),
+            Expr::MixinDecl(..) | Expr::FunctionDecl(..) => todo!(),
             Expr::Selector(selector) => {
                 let rules = eat_stmts(toks, scope, &super_selector.zip(&selector))?;
-                stmts.push(Stmt::RuleSet(RuleSet {
-                    super_selector: super_selector.clone(),
-                    selector,
-                    rules,
-                }));
+                stmts.push(
+                    Stmt::RuleSet(RuleSet {
+                        super_selector: super_selector.clone(),
+                        selector,
+                        rules,
+                    })
+                    .span(span),
+                );
             }
             Expr::VariableDecl(name, val) => {
                 scope.insert_var(&name, *val)?;
             }
-            Expr::MultilineComment(s) => stmts.push(Stmt::MultilineComment(s)),
+            Expr::MultilineComment(s) => stmts.push(Stmt::MultilineComment(s).span(span)),
         }
     }
     Ok(stmts)
@@ -43,17 +51,20 @@ pub(crate) fn eat_stmts_at_root<I: Iterator<Item = Token>>(
     super_selector: &Selector,
     mut nesting: usize,
     is_some: bool,
-) -> SassResult<Vec<Stmt>> {
+) -> SassResult<Vec<Spanned<Stmt>>> {
     let mut stmts = Vec::new();
     while let Some(expr) = eat_expr(toks, scope, super_selector)? {
-        match expr {
-            Expr::AtRule(a) => stmts.push(Stmt::AtRule(a)),
-            Expr::Style(s) => stmts.push(Stmt::Style(s)),
-            Expr::Styles(s) => stmts.extend(s.into_iter().map(Box::new).map(Stmt::Style)),
-            Expr::Include(s) => stmts.extend(s),
-            Expr::MixinDecl(..) | Expr::FunctionDecl(..) | Expr::Debug(..) | Expr::Warn(..) => {
-                todo!()
-            }
+        let span = expr.span;
+        match expr.node {
+            Expr::AtRule(a) => stmts.push(Stmt::AtRule(a).span(span)),
+            Expr::Style(s) => stmts.push(Stmt::Style(s).span(span)),
+            Expr::Styles(s) => stmts.extend(
+                s.into_iter()
+                    .map(Box::new)
+                    .map(Stmt::Style)
+                    .map(|style| Spanned { node: style, span }),
+            ),
+            Expr::MixinDecl(..) | Expr::FunctionDecl(..) => todo!(),
             Expr::Selector(mut selector) => {
                 if nesting > 1 || is_some {
                     selector = super_selector.zip(&selector);
@@ -63,20 +74,23 @@ pub(crate) fn eat_stmts_at_root<I: Iterator<Item = Token>>(
                 nesting += 1;
                 let rules = eat_stmts_at_root(toks, scope, &selector, nesting, true)?;
                 nesting -= 1;
-                stmts.push(Stmt::RuleSet(RuleSet {
-                    super_selector: if nesting > 1 {
-                        super_selector.clone()
-                    } else {
-                        Selector::new()
-                    },
-                    selector,
-                    rules,
-                }));
+                stmts.push(
+                    Stmt::RuleSet(RuleSet {
+                        super_selector: if nesting > 1 {
+                            super_selector.clone()
+                        } else {
+                            Selector::new()
+                        },
+                        selector,
+                        rules,
+                    })
+                    .span(span),
+                );
             }
             Expr::VariableDecl(name, val) => {
                 scope.insert_var(&name, *val)?;
             }
-            Expr::MultilineComment(s) => stmts.push(Stmt::MultilineComment(s)),
+            Expr::MultilineComment(s) => stmts.push(Stmt::MultilineComment(s).span(span)),
         }
     }
     Ok(stmts)

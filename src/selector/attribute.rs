@@ -1,6 +1,7 @@
 use std::fmt::{self, Display};
 use std::iter::Peekable;
-use std::string::ToString;
+
+use codemap::Span;
 
 use super::{Selector, SelectorKind};
 use crate::error::SassResult;
@@ -23,25 +24,34 @@ impl Attribute {
         toks: &mut Peekable<I>,
         scope: &Scope,
         super_selector: &Selector,
+        mut start: Span,
     ) -> SassResult<SelectorKind> {
         devour_whitespace(toks);
-        let attr = match toks.peek().ok_or("Expected identifier.")?.kind {
-            c if is_ident_char(c) => eat_ident(toks, scope, super_selector)?,
+        let next_tok = toks.peek().ok_or(("Expected identifier.", start))?;
+        let attr = match next_tok.kind {
+            c if is_ident_char(c) => {
+                let i = eat_ident(toks, scope, super_selector)?;
+                start = i.span;
+                i.node
+            }
             '#' => {
-                toks.next();
-                if toks.next().ok_or("Expected expression.")?.kind == '{' {
-                    parse_interpolation(toks, scope, super_selector)?.to_string()
+                start.merge(toks.next().unwrap().pos());
+                if toks.next().ok_or(("Expected expression.", start))?.kind == '{' {
+                    let interpolation = parse_interpolation(toks, scope, super_selector)?;
+                    interpolation.node.to_css_string(interpolation.span)?
                 } else {
-                    return Err("Expected expression.".into());
+                    return Err(("Expected expression.", start).into());
                 }
             }
-            _ => return Err("Expected identifier.".into()),
+            _ => return Err(("Expected identifier.", start).into()),
         };
 
         devour_whitespace(toks);
 
-        let kind = match toks.next().ok_or("expected \"{\".")?.kind {
-            c if is_ident_char(c) => return Err("Expected \"]\".".into()),
+        let next = toks.next().ok_or(("expected \"]\".", start))?;
+
+        let kind = match next.kind {
+            c if is_ident_char(c) => return Err(("Expected \"]\".", next.pos()).into()),
             ']' => {
                 return Ok(SelectorKind::Attribute(Attribute {
                     kind: AttributeKind::Any,
@@ -56,29 +66,36 @@ impl Attribute {
             '^' => AttributeKind::Prefix,
             '$' => AttributeKind::Suffix,
             '*' => AttributeKind::Contains,
-            _ => return Err("expected \"]\".".into()),
+            _ => return Err(("expected \"]\".", next.pos()).into()),
         };
 
         if kind != AttributeKind::Equals {
-            match toks.next().ok_or("expected \"=\".")?.kind {
+            let next = toks.next().ok_or(("expected \"=\".", next.pos()))?;
+            match next.kind {
                 '=' => {}
-                _ => return Err("expected \"=\".".into()),
+                _ => return Err(("expected \"=\".", next.pos()).into()),
             }
         }
 
         devour_whitespace(toks);
 
-        let value = match toks.next().ok_or("Expected identifier.")?.kind {
+        let next = toks.next().ok_or(("Expected identifier.", next.pos()))?;
+
+        let value = match next.kind {
             v @ 'a'..='z' | v @ 'A'..='Z' | v @ '-' | v @ '_' => {
-                format!("{}{}", v, eat_ident(toks, scope, super_selector)?)
+                format!("{}{}", v, eat_ident(toks, scope, super_selector)?.node)
             }
-            q @ '"' | q @ '\'' => parse_quoted_string(toks, scope, q, super_selector)?.to_string(),
-            _ => return Err("Expected identifier.".into()),
+            q @ '"' | q @ '\'' => {
+                parse_quoted_string(toks, scope, q, super_selector)?.to_css_string(next.pos())?
+            }
+            _ => return Err(("Expected identifier.", next.pos()).into()),
         };
 
         devour_whitespace(toks);
 
-        let modifier = match toks.next().ok_or("expected \"]\".")?.kind {
+        let next = toks.next().ok_or(("expected \"]\".", next.pos()))?;
+
+        let modifier = match next.kind {
             ']' => {
                 return Ok(SelectorKind::Attribute(Attribute {
                     kind,
@@ -88,13 +105,14 @@ impl Attribute {
                 }))
             }
             v @ 'a'..='z' | v @ 'A'..='Z' => {
-                match toks.next().ok_or("expected \"]\".")?.kind {
+                let next = toks.next().ok_or(("expected \"]\".", next.pos()))?;
+                match next.kind {
                     ']' => {}
-                    _ => return Err("expected \"]\".".into()),
+                    _ => return Err(("expected \"]\".", next.pos()).into()),
                 }
                 Some(v)
             }
-            _ => return Err("expected \"]\".".into()),
+            _ => return Err(("expected \"]\".", next.pos()).into()),
         };
 
         Ok(SelectorKind::Attribute(Attribute {

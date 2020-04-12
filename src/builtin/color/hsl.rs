@@ -13,39 +13,66 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         "hsl".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
             if args.is_empty() {
-                return Err("Missing argument $channels.".into());
+                return Err(("Missing argument $channels.", args.span()).into());
             }
 
             if args.len() == 1 {
                 let mut channels = match arg!(args, scope, super_selector, 0, "channels") {
                     Value::List(v, ..) => v,
-                    _ => return Err("Missing argument $channels.".into()),
+                    _ => return Err(("Missing argument $channels.", args.span()).into()),
                 };
 
                 if channels.len() > 3 {
-                    return Err(format!(
-                        "Only 3 elements allowed, but {} were passed.",
-                        channels.len()
+                    return Err((
+                        format!(
+                            "Only 3 elements allowed, but {} were passed.",
+                            channels.len()
+                        ),
+                        args.span(),
                     )
-                    .into());
+                        .into());
                 }
 
                 let lightness = match channels.pop() {
                     Some(Value::Dimension(n, _)) => n / Number::from(100),
-                    Some(v) => return Err(format!("$lightness: {} is not a number.", v).into()),
-                    None => return Err("Missing element $lightness.".into()),
+                    Some(v) => {
+                        return Err((
+                            format!(
+                                "$lightness: {} is not a number.",
+                                v.to_css_string(args.span())?
+                            ),
+                            args.span(),
+                        )
+                            .into())
+                    }
+                    None => return Err(("Missing element $lightness.", args.span()).into()),
                 };
 
                 let saturation = match channels.pop() {
                     Some(Value::Dimension(n, _)) => n / Number::from(100),
-                    Some(v) => return Err(format!("$saturation: {} is not a number.", v).into()),
-                    None => return Err("Missing element $saturation.".into()),
+                    Some(v) => {
+                        return Err((
+                            format!(
+                                "$saturation: {} is not a number.",
+                                v.to_css_string(args.span())?
+                            ),
+                            args.span(),
+                        )
+                            .into())
+                    }
+                    None => return Err(("Missing element $saturation.", args.span()).into()),
                 };
 
                 let hue = match channels.pop() {
                     Some(Value::Dimension(n, _)) => n,
-                    Some(v) => return Err(format!("$hue: {} is not a number.", v).into()),
-                    None => return Err("Missing element $hue.".into()),
+                    Some(v) => {
+                        return Err((
+                            format!("$hue: {} is not a number.", v.to_css_string(args.span())?),
+                            args.span(),
+                        )
+                            .into())
+                    }
+                    None => return Err(("Missing element $hue.", args.span()).into()),
                 };
 
                 Ok(Value::Color(Color::from_hsla(
@@ -60,48 +87,90 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     v if v.is_special_function() => {
                         let saturation = arg!(args, scope, super_selector, 1, "saturation");
                         let lightness = arg!(args, scope, super_selector, 2, "lightness");
-                        let mut string = format!("hsl({}, {}, {}", v, saturation, lightness);
+                        let mut string = format!(
+                            "hsl({}, {}, {}",
+                            v.to_css_string(args.span())?,
+                            saturation.to_css_string(args.span())?,
+                            lightness.to_css_string(args.span())?
+                        );
                         if !args.is_empty() {
                             string.push_str(", ");
                             string.push_str(
-                                &arg!(args, scope, super_selector, 3, "alpha").to_string(),
+                                &arg!(args, scope, super_selector, 3, "alpha")
+                                    .to_css_string(args.span())?,
                             );
                         }
                         string.push(')');
                         return Ok(Value::Ident(string, QuoteKind::None));
                     }
-                    v => return Err(format!("$hue: {} is not a number.", v).into()),
+                    v => {
+                        return Err((
+                            format!("$hue: {} is not a number.", v.to_css_string(args.span())?),
+                            args.span(),
+                        )
+                            .into())
+                    }
                 };
                 let saturation = match arg!(args, scope, super_selector, 1, "saturation") {
                     Value::Dimension(n, _) => n / Number::from(100),
                     v if v.is_special_function() => {
                         let lightness = arg!(args, scope, super_selector, 2, "lightness");
-                        let mut string = format!("hsl({}, {}, {}", hue, v, lightness);
+                        let mut string = format!(
+                            "hsl({}, {}, {}",
+                            hue,
+                            v.to_css_string(args.span())?,
+                            lightness.to_css_string(args.span())?
+                        );
                         if !args.is_empty() {
                             string.push_str(", ");
                             string.push_str(
-                                &arg!(args, scope, super_selector, 3, "alpha").to_string(),
+                                &arg!(args, scope, super_selector, 3, "alpha")
+                                    .to_css_string(args.span())?,
                             );
                         }
                         string.push(')');
                         return Ok(Value::Ident(string, QuoteKind::None));
                     }
-                    v => return Err(format!("$saturation: {} is not a number.", v).into()),
+                    v => {
+                        return Err((
+                            format!(
+                                "$saturation: {} is not a number.",
+                                v.to_css_string(args.span())?
+                            ),
+                            args.span(),
+                        )
+                            .into())
+                    }
                 };
                 let lightness = match arg!(args, scope, super_selector, 2, "lightness") {
                     Value::Dimension(n, _) => n / Number::from(100),
                     v if v.is_special_function() => {
-                        let mut string = format!("hsl({}, {}, {}", hue, saturation, v);
+                        let mut string = format!(
+                            "hsl({}, {}, {}",
+                            hue,
+                            saturation,
+                            v.to_css_string(args.span())?
+                        );
                         if !args.is_empty() {
                             string.push_str(", ");
                             string.push_str(
-                                &arg!(args, scope, super_selector, 3, "alpha").to_string(),
+                                &arg!(args, scope, super_selector, 3, "alpha")
+                                    .to_css_string(args.span())?,
                             );
                         }
                         string.push(')');
                         return Ok(Value::Ident(string, QuoteKind::None));
                     }
-                    v => return Err(format!("$lightness: {} is not a number.", v).into()),
+                    v => {
+                        return Err((
+                            format!(
+                                "$lightness: {} is not a number.",
+                                v.to_css_string(args.span())?
+                            ),
+                            args.span(),
+                        )
+                            .into())
+                    }
                 };
                 let alpha = match arg!(
                     args,
@@ -113,17 +182,34 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     Value::Dimension(n, Unit::None) => n,
                     Value::Dimension(n, Unit::Percent) => n / Number::from(100),
                     v @ Value::Dimension(..) => {
-                        return Err(
-                            format!("$alpha: Expected {} to have no units or \"%\".", v).into()
+                        return Err((
+                            format!(
+                                "$alpha: Expected {} to have no units or \"%\".",
+                                v.to_css_string(args.span())?
+                            ),
+                            args.span(),
                         )
+                            .into())
                     }
                     v if v.is_special_function() => {
                         return Ok(Value::Ident(
-                            format!("hsl({}, {}, {}, {})", hue, saturation, lightness, v),
+                            format!(
+                                "hsl({}, {}, {}, {})",
+                                hue,
+                                saturation,
+                                lightness,
+                                v.to_css_string(args.span())?
+                            ),
                             QuoteKind::None,
                         ));
                     }
-                    v => return Err(format!("$alpha: {} is not a number.", v).into()),
+                    v => {
+                        return Err((
+                            format!("$alpha: {} is not a number.", v.to_css_string(args.span())?),
+                            args.span(),
+                        )
+                            .into())
+                    }
                 };
                 Ok(Value::Color(Color::from_hsla(
                     hue, saturation, lightness, alpha,
@@ -135,39 +221,66 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         "hsla".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
             if args.is_empty() {
-                return Err("Missing argument $channels.".into());
+                return Err(("Missing argument $channels.", args.span()).into());
             }
 
             if args.len() == 1 {
                 let mut channels = match arg!(args, scope, super_selector, 0, "channels") {
                     Value::List(v, ..) => v,
-                    _ => return Err("Missing argument $channels.".into()),
+                    _ => return Err(("Missing argument $channels.", args.span()).into()),
                 };
 
                 if channels.len() > 3 {
-                    return Err(format!(
-                        "Only 3 elements allowed, but {} were passed.",
-                        channels.len()
+                    return Err((
+                        format!(
+                            "Only 3 elements allowed, but {} were passed.",
+                            channels.len()
+                        ),
+                        args.span(),
                     )
-                    .into());
+                        .into());
                 }
 
                 let lightness = match channels.pop() {
                     Some(Value::Dimension(n, _)) => n / Number::from(100),
-                    Some(v) => return Err(format!("$lightness: {} is not a number.", v).into()),
-                    None => return Err("Missing element $lightness.".into()),
+                    Some(v) => {
+                        return Err((
+                            format!(
+                                "$lightness: {} is not a number.",
+                                v.to_css_string(args.span())?
+                            ),
+                            args.span(),
+                        )
+                            .into())
+                    }
+                    None => return Err(("Missing element $lightness.", args.span()).into()),
                 };
 
                 let saturation = match channels.pop() {
                     Some(Value::Dimension(n, _)) => n / Number::from(100),
-                    Some(v) => return Err(format!("$saturation: {} is not a number.", v).into()),
-                    None => return Err("Missing element $saturation.".into()),
+                    Some(v) => {
+                        return Err((
+                            format!(
+                                "$saturation: {} is not a number.",
+                                v.to_css_string(args.span())?
+                            ),
+                            args.span(),
+                        )
+                            .into())
+                    }
+                    None => return Err(("Missing element $saturation.", args.span()).into()),
                 };
 
                 let hue = match channels.pop() {
                     Some(Value::Dimension(n, _)) => n,
-                    Some(v) => return Err(format!("$hue: {} is not a number.", v).into()),
-                    None => return Err("Missing element $hue.".into()),
+                    Some(v) => {
+                        return Err((
+                            format!("$hue: {} is not a number.", v.to_css_string(args.span())?),
+                            args.span(),
+                        )
+                            .into())
+                    }
+                    None => return Err(("Missing element $hue.", args.span()).into()),
                 };
 
                 Ok(Value::Color(Color::from_hsla(
@@ -182,48 +295,90 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     v if v.is_special_function() => {
                         let saturation = arg!(args, scope, super_selector, 1, "saturation");
                         let lightness = arg!(args, scope, super_selector, 2, "lightness");
-                        let mut string = format!("hsla({}, {}, {}", v, saturation, lightness);
+                        let mut string = format!(
+                            "hsla({}, {}, {}",
+                            v.to_css_string(args.span())?,
+                            saturation.to_css_string(args.span())?,
+                            lightness.to_css_string(args.span())?
+                        );
                         if !args.is_empty() {
                             string.push_str(", ");
                             string.push_str(
-                                &arg!(args, scope, super_selector, 3, "alpha").to_string(),
+                                &arg!(args, scope, super_selector, 3, "alpha")
+                                    .to_css_string(args.span())?,
                             );
                         }
                         string.push(')');
                         return Ok(Value::Ident(string, QuoteKind::None));
                     }
-                    v => return Err(format!("$hue: {} is not a number.", v).into()),
+                    v => {
+                        return Err((
+                            format!("$hue: {} is not a number.", v.to_css_string(args.span())?),
+                            args.span(),
+                        )
+                            .into())
+                    }
                 };
                 let saturation = match arg!(args, scope, super_selector, 1, "saturation") {
                     Value::Dimension(n, _) => n / Number::from(100),
                     v if v.is_special_function() => {
                         let lightness = arg!(args, scope, super_selector, 2, "lightness");
-                        let mut string = format!("hsla({}, {}, {}", hue, v, lightness);
+                        let mut string = format!(
+                            "hsla({}, {}, {}",
+                            hue,
+                            v.to_css_string(args.span())?,
+                            lightness.to_css_string(args.span())?
+                        );
                         if !args.is_empty() {
                             string.push_str(", ");
                             string.push_str(
-                                &arg!(args, scope, super_selector, 3, "alpha").to_string(),
+                                &arg!(args, scope, super_selector, 3, "alpha")
+                                    .to_css_string(args.span())?,
                             );
                         }
                         string.push(')');
                         return Ok(Value::Ident(string, QuoteKind::None));
                     }
-                    v => return Err(format!("$saturation: {} is not a number.", v).into()),
+                    v => {
+                        return Err((
+                            format!(
+                                "$saturation: {} is not a number.",
+                                v.to_css_string(args.span())?
+                            ),
+                            args.span(),
+                        )
+                            .into())
+                    }
                 };
                 let lightness = match arg!(args, scope, super_selector, 2, "lightness") {
                     Value::Dimension(n, _) => n / Number::from(100),
                     v if v.is_special_function() => {
-                        let mut string = format!("hsla({}, {}, {}", hue, saturation, v);
+                        let mut string = format!(
+                            "hsla({}, {}, {}",
+                            hue,
+                            saturation,
+                            v.to_css_string(args.span())?
+                        );
                         if !args.is_empty() {
                             string.push_str(", ");
                             string.push_str(
-                                &arg!(args, scope, super_selector, 3, "alpha").to_string(),
+                                &arg!(args, scope, super_selector, 3, "alpha")
+                                    .to_css_string(args.span())?,
                             );
                         }
                         string.push(')');
                         return Ok(Value::Ident(string, QuoteKind::None));
                     }
-                    v => return Err(format!("$lightness: {} is not a number.", v).into()),
+                    v => {
+                        return Err((
+                            format!(
+                                "$lightness: {} is not a number.",
+                                v.to_css_string(args.span())?
+                            ),
+                            args.span(),
+                        )
+                            .into())
+                    }
                 };
                 let alpha = match arg!(
                     args,
@@ -235,17 +390,34 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     Value::Dimension(n, Unit::None) => n,
                     Value::Dimension(n, Unit::Percent) => n / Number::from(100),
                     v @ Value::Dimension(..) => {
-                        return Err(
-                            format!("$alpha: Expected {} to have no units or \"%\".", v).into()
+                        return Err((
+                            format!(
+                                "$alpha: Expected {} to have no units or \"%\".",
+                                v.to_css_string(args.span())?
+                            ),
+                            args.span(),
                         )
+                            .into())
                     }
                     v if v.is_special_function() => {
                         return Ok(Value::Ident(
-                            format!("hsl({}, {}, {}, {})", hue, saturation, lightness, v),
+                            format!(
+                                "hsl({}, {}, {}, {})",
+                                hue,
+                                saturation,
+                                lightness,
+                                v.to_css_string(args.span())?
+                            ),
                             QuoteKind::None,
                         ));
                     }
-                    v => return Err(format!("$alpha: {} is not a number.", v).into()),
+                    v => {
+                        return Err((
+                            format!("$alpha: {} is not a number.", v.to_css_string(args.span())?),
+                            args.span(),
+                        )
+                            .into())
+                    }
                 };
                 Ok(Value::Color(Color::from_hsla(
                     hue, saturation, lightness, alpha,
@@ -259,7 +431,11 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             max_args!(args, 1);
             match arg!(args, scope, super_selector, 0, "color") {
                 Value::Color(c) => Ok(Value::Dimension(c.hue(), Unit::Deg)),
-                v => Err(format!("$color: {} is not a color.", v).into()),
+                v => Err((
+                    format!("$color: {} is not a color.", v.to_css_string(args.span())?),
+                    args.span(),
+                )
+                    .into()),
             }
         }),
     );
@@ -269,7 +445,11 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             max_args!(args, 1);
             match arg!(args, scope, super_selector, 0, "color") {
                 Value::Color(c) => Ok(Value::Dimension(c.saturation(), Unit::Percent)),
-                v => Err(format!("$color: {} is not a color.", v).into()),
+                v => Err((
+                    format!("$color: {} is not a color.", v.to_css_string(args.span())?),
+                    args.span(),
+                )
+                    .into()),
             }
         }),
     );
@@ -279,7 +459,11 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             max_args!(args, 1);
             match arg!(args, scope, super_selector, 0, "color") {
                 Value::Color(c) => Ok(Value::Dimension(c.lightness(), Unit::Percent)),
-                v => Err(format!("$color: {} is not a color.", v).into()),
+                v => Err((
+                    format!("$color: {} is not a color.", v.to_css_string(args.span())?),
+                    args.span(),
+                )
+                    .into()),
             }
         }),
     );
@@ -289,11 +473,26 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             max_args!(args, 2);
             let color = match arg!(args, scope, super_selector, 0, "color") {
                 Value::Color(c) => c,
-                v => return Err(format!("$color: {} is not a color.", v).into()),
+                v => {
+                    return Err((
+                        format!("$color: {} is not a color.", v.to_css_string(args.span())?),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
             let degrees = match arg!(args, scope, super_selector, 1, "degrees") {
                 Value::Dimension(n, _) => n,
-                v => return Err(format!("$degrees: {} is not a number.", v).into()),
+                v => {
+                    return Err((
+                        format!(
+                            "$degrees: {} is not a number.",
+                            v.to_css_string(args.span())?
+                        ),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
             Ok(Value::Color(color.adjust_hue(degrees)))
         }),
@@ -304,11 +503,26 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             max_args!(args, 2);
             let color = match arg!(args, scope, super_selector, 0, "color") {
                 Value::Color(c) => c,
-                v => return Err(format!("$color: {} is not a color.", v).into()),
+                v => {
+                    return Err((
+                        format!("$color: {} is not a color.", v.to_css_string(args.span())?),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
             let amount = match arg!(args, scope, super_selector, 1, "amount") {
-                Value::Dimension(n, u) => bound!("amount", n, u, 0, 100) / Number::from(100),
-                v => return Err(format!("$amount: {} is not a number.", v).into()),
+                Value::Dimension(n, u) => bound!(args, "amount", n, u, 0, 100) / Number::from(100),
+                v => {
+                    return Err((
+                        format!(
+                            "$amount: {} is not a number.",
+                            v.to_css_string(args.span())?
+                        ),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
             Ok(Value::Color(color.lighten(amount)))
         }),
@@ -319,11 +533,26 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             max_args!(args, 2);
             let color = match arg!(args, scope, super_selector, 0, "color") {
                 Value::Color(c) => c,
-                v => return Err(format!("$color: {} is not a color.", v).into()),
+                v => {
+                    return Err((
+                        format!("$color: {} is not a color.", v.to_css_string(args.span())?),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
             let amount = match arg!(args, scope, super_selector, 1, "amount") {
-                Value::Dimension(n, u) => bound!("amount", n, u, 0, 100) / Number::from(100),
-                v => return Err(format!("$amount: {} is not a number.", v).into()),
+                Value::Dimension(n, u) => bound!(args, "amount", n, u, 0, 100) / Number::from(100),
+                v => {
+                    return Err((
+                        format!(
+                            "$amount: {} is not a number.",
+                            v.to_css_string(args.span())?
+                        ),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
             Ok(Value::Color(color.darken(amount)))
         }),
@@ -337,14 +566,24 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     format!(
                         "saturate({})",
                         arg!(args, scope, super_selector, 0, "amount")
+                            .to_css_string(args.span())?
                     ),
                     QuoteKind::None,
                 ));
             }
 
             let amount = match arg!(args, scope, super_selector, 1, "amount") {
-                Value::Dimension(n, u) => bound!("amount", n, u, 0, 100) / Number::from(100),
-                v => return Err(format!("$amount: {} is not a number.", v).into()),
+                Value::Dimension(n, u) => bound!(args, "amount", n, u, 0, 100) / Number::from(100),
+                v => {
+                    return Err((
+                        format!(
+                            "$amount: {} is not a number.",
+                            v.to_css_string(args.span())?
+                        ),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
             let color = match arg!(args, scope, super_selector, 0, "color") {
                 Value::Color(c) => c,
@@ -354,7 +593,13 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                         QuoteKind::None,
                     ))
                 }
-                v => return Err(format!("$color: {} is not a color.", v).into()),
+                v => {
+                    return Err((
+                        format!("$color: {} is not a color.", v.to_css_string(args.span())?),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
             Ok(Value::Color(color.saturate(amount)))
         }),
@@ -365,11 +610,26 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             max_args!(args, 2);
             let color = match arg!(args, scope, super_selector, 0, "color") {
                 Value::Color(c) => c,
-                v => return Err(format!("$color: {} is not a color.", v).into()),
+                v => {
+                    return Err((
+                        format!("$color: {} is not a color.", v.to_css_string(args.span())?),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
             let amount = match arg!(args, scope, super_selector, 1, "amount") {
-                Value::Dimension(n, u) => bound!("amount", n, u, 0, 100) / Number::from(100),
-                v => return Err(format!("$amount: {} is not a number.", v).into()),
+                Value::Dimension(n, u) => bound!(args, "amount", n, u, 0, 100) / Number::from(100),
+                v => {
+                    return Err((
+                        format!(
+                            "$amount: {} is not a number.",
+                            v.to_css_string(args.span())?
+                        ),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
             Ok(Value::Color(color.desaturate(amount)))
         }),
@@ -386,7 +646,13 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                         QuoteKind::None,
                     ))
                 }
-                v => return Err(format!("$color: {} is not a color.", v).into()),
+                v => {
+                    return Err((
+                        format!("$color: {} is not a color.", v.to_css_string(args.span())?),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
             Ok(Value::Color(color.desaturate(Number::one())))
         }),
@@ -397,7 +663,13 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             max_args!(args, 1);
             let color = match arg!(args, scope, super_selector, 0, "color") {
                 Value::Color(c) => c,
-                v => return Err(format!("$color: {} is not a color.", v).into()),
+                v => {
+                    return Err((
+                        format!("$color: {} is not a color.", v.to_css_string(args.span())?),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
             Ok(Value::Color(color.complement()))
         }),
@@ -413,18 +685,33 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 1,
                 "weight" = Value::Dimension(Number::from(100), Unit::Percent)
             ) {
-                Value::Dimension(n, u) => bound!("weight", n, u, 0, 100) / Number::from(100),
-                v => return Err(format!("$weight: {} is not a number.", v).into()),
+                Value::Dimension(n, u) => bound!(args, "weight", n, u, 0, 100) / Number::from(100),
+                v => {
+                    return Err((
+                        format!(
+                            "$weight: {} is not a number.",
+                            v.to_css_string(args.span())?
+                        ),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
             match arg!(args, scope, super_selector, 0, "color") {
                 Value::Color(c) => Ok(Value::Color(c.invert(weight))),
                 Value::Dimension(n, Unit::Percent) => {
                     Ok(Value::Ident(format!("invert({}%)", n), QuoteKind::None))
                 }
-                Value::Dimension(..) => Err(
-                    "Only one argument may be passed to the plain-CSS invert() function.".into(),
-                ),
-                v => Err(format!("$color: {} is not a color.", v).into()),
+                Value::Dimension(..) => Err((
+                    "Only one argument may be passed to the plain-CSS invert() function.",
+                    args.span(),
+                )
+                    .into()),
+                v => Err((
+                    format!("$color: {} is not a color.", v.to_css_string(args.span())?),
+                    args.span(),
+                )
+                    .into()),
             }
         }),
     );

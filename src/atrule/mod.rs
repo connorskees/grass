@@ -1,6 +1,8 @@
 use std::iter::Peekable;
 
-use crate::common::{Brackets, ListSeparator, Pos};
+use codemap::{Span, Spanned};
+
+use crate::common::{Brackets, ListSeparator};
 use crate::error::SassResult;
 use crate::scope::Scope;
 use crate::selector::Selector;
@@ -28,71 +30,98 @@ mod unknown;
 
 #[derive(Debug, Clone)]
 pub(crate) enum AtRule {
-    Warn(Pos, String),
-    Debug(Pos, String),
+    Warn(String),
+    Debug(String),
     Mixin(String, Box<Mixin>),
     Function(String, Box<Function>),
     Return(Vec<Token>),
     Charset,
     Content,
     Unknown(UnknownAtRule),
-    For(Vec<Stmt>),
-    Each(Vec<Stmt>),
-    While(Vec<Stmt>),
+    For(Vec<Spanned<Stmt>>),
+    Each(Vec<Spanned<Stmt>>),
+    While(Vec<Spanned<Stmt>>),
+    Include(Vec<Spanned<Stmt>>),
     If(If),
-    AtRoot(Vec<Stmt>),
+    AtRoot(Vec<Spanned<Stmt>>),
 }
 
 impl AtRule {
     pub fn from_tokens<I: Iterator<Item = Token>>(
         rule: &AtRuleKind,
-        pos: Pos,
+        kind_span: Span,
         toks: &mut Peekable<I>,
         scope: &mut Scope,
         super_selector: &Selector,
-    ) -> SassResult<AtRule> {
+    ) -> SassResult<Spanned<AtRule>> {
         devour_whitespace(toks);
         Ok(match rule {
             AtRuleKind::Error => {
-                let message = Value::from_vec(
+                let Spanned {
+                    node: message,
+                    span,
+                } = Value::from_vec(
                     read_until_semicolon_or_closing_curly_brace(toks),
                     scope,
                     super_selector,
                 )?;
 
-                return Err(message.to_string().into());
+                return Err((message.to_css_string(span)?, span.merge(kind_span)).into());
             }
             AtRuleKind::Warn => {
-                let message = Value::from_vec(
+                let Spanned {
+                    node: message,
+                    span,
+                } = Value::from_vec(
                     read_until_semicolon_or_closing_curly_brace(toks),
                     scope,
                     super_selector,
                 )?;
+                span.merge(kind_span);
                 if toks.peek().unwrap().kind == ';' {
-                    toks.next();
+                    kind_span.merge(toks.next().unwrap().pos());
                 }
                 devour_whitespace(toks);
-                AtRule::Warn(pos, message.to_string())
+                Spanned {
+                    node: AtRule::Warn(message.to_css_string(span)?),
+                    span,
+                }
             }
             AtRuleKind::Debug => {
-                let message = Value::from_vec(
+                let Spanned {
+                    node: message,
+                    span,
+                } = Value::from_vec(
                     read_until_semicolon_or_closing_curly_brace(toks),
                     scope,
                     super_selector,
                 )?;
+                span.merge(kind_span);
                 if toks.peek().unwrap().kind == ';' {
-                    toks.next();
+                    kind_span.merge(toks.next().unwrap().pos());
                 }
                 devour_whitespace(toks);
-                AtRule::Debug(pos, message.inspect())
+                Spanned {
+                    node: AtRule::Debug(message.inspect(span)?),
+                    span,
+                }
             }
             AtRuleKind::Mixin => {
-                let (name, mixin) = Mixin::decl_from_tokens(toks, scope, super_selector)?;
-                AtRule::Mixin(name, Box::new(mixin))
+                let Spanned {
+                    node: (name, mixin),
+                    span,
+                } = Mixin::decl_from_tokens(toks, scope, super_selector)?;
+                Spanned {
+                    node: AtRule::Mixin(name, Box::new(mixin)),
+                    span,
+                }
             }
             AtRuleKind::Function => {
                 let (name, func) = Function::decl_from_tokens(toks, scope.clone(), super_selector)?;
-                AtRule::Function(name, Box::new(func))
+                Spanned {
+                    node: AtRule::Function(name, Box::new(func)),
+                    span: kind_span,
+                }
             }
             AtRuleKind::Return => {
                 let v = read_until_semicolon_or_closing_curly_brace(toks);
@@ -100,7 +129,10 @@ impl AtRule {
                     toks.next();
                 }
                 devour_whitespace(toks);
-                AtRule::Return(v)
+                Spanned {
+                    node: AtRule::Return(v),
+                    span: kind_span,
+                }
             }
             AtRuleKind::Use => todo!("@use not yet implemented"),
             AtRuleKind::Annotation => todo!("@annotation not yet implemented"),
@@ -132,21 +164,27 @@ impl AtRule {
                     is_some,
                 )?
                 .into_iter()
-                .filter_map(|s| match s {
+                .filter_map(|s| match s.node {
                     Stmt::Style(..) => {
                         styles.push(s);
                         None
                     }
                     _ => Some(s),
                 })
-                .collect::<Vec<Stmt>>();
-                let mut stmts = vec![Stmt::RuleSet(RuleSet {
-                    selector: selector.clone(),
-                    rules: styles,
-                    super_selector: Selector::new(),
-                })];
+                .collect::<Vec<Spanned<Stmt>>>();
+                let mut stmts = vec![Spanned {
+                    node: Stmt::RuleSet(RuleSet {
+                        selector: selector.clone(),
+                        rules: styles,
+                        super_selector: Selector::new(),
+                    }),
+                    span: kind_span,
+                }];
                 stmts.extend(raw_stmts);
-                AtRule::AtRoot(stmts)
+                Spanned {
+                    node: AtRule::AtRoot(stmts),
+                    span: kind_span,
+                }
             }
             AtRuleKind::Charset => {
                 read_until_semicolon_or_closing_curly_brace(toks);
@@ -154,36 +192,51 @@ impl AtRule {
                     toks.next();
                 }
                 devour_whitespace(toks);
-                AtRule::Charset
+                Spanned {
+                    node: AtRule::Charset,
+                    span: kind_span,
+                }
             }
             AtRuleKind::Each => {
                 let mut stmts = Vec::new();
                 devour_whitespace(toks);
                 let mut vars = Vec::new();
+                let mut span = kind_span;
                 loop {
-                    match toks.next().ok_or("expected \"$\".")?.kind {
+                    let next = toks.next().ok_or(("expected \"$\".", span))?;
+                    span = next.pos();
+                    match next.kind {
                         '$' => vars.push(eat_ident(toks, scope, super_selector)?),
-                        _ => return Err("expected \"$\".".into()),
+                        _ => return Err(("expected \"$\".", next.pos()).into()),
                     }
                     devour_whitespace(toks);
-                    if toks.peek().ok_or("expected \"$\".")?.kind == ',' {
+                    if toks
+                        .peek()
+                        .ok_or(("expected \"$\".", vars[vars.len() - 1].span))?
+                        .kind
+                        == ','
+                    {
                         toks.next();
                         devour_whitespace(toks);
                     } else {
                         break;
                     }
                 }
-                if toks.peek().is_none()
-                    || eat_ident(toks, scope, super_selector)?.to_ascii_lowercase() != "in"
-                {
-                    return Err("Expected \"in\".".into());
+                if toks.peek().is_none() {
+                    todo!()
+                }
+                let i = eat_ident(toks, scope, super_selector)?;
+                if i.node.to_ascii_lowercase() != "in" {
+                    return Err(("Expected \"in\".", i.span).into());
                 }
                 devour_whitespace(toks);
                 let iterator = match Value::from_vec(
                     read_until_open_curly_brace(toks),
                     scope,
                     super_selector,
-                )? {
+                )?
+                .node
+                {
                     Value::List(v, ..) => v,
                     Value::Map(m) => m
                         .into_iter()
@@ -212,7 +265,14 @@ impl AtRule {
                     if vars.len() == 1 {
                         scope.insert_var(
                             &vars[0],
-                            Value::List(this_iterator, ListSeparator::Space, Brackets::None),
+                            Spanned {
+                                node: Value::List(
+                                    this_iterator,
+                                    ListSeparator::Space,
+                                    Brackets::None,
+                                ),
+                                span: vars[0].span,
+                            },
                         )?;
                     } else {
                         for (var, val) in vars.clone().into_iter().zip(
@@ -220,7 +280,7 @@ impl AtRule {
                                 .into_iter()
                                 .chain(std::iter::once(Value::Null).cycle()),
                         ) {
-                            scope.insert_var(&var, val)?;
+                            scope.insert_var(&var, Spanned { node: val, span })?;
                         }
                     }
 
@@ -230,19 +290,28 @@ impl AtRule {
                         super_selector,
                     )?);
                 }
-                AtRule::Each(stmts)
+                Spanned {
+                    node: AtRule::Each(stmts),
+                    span: kind_span,
+                }
             }
             AtRuleKind::Extend => todo!("@extend not yet implemented"),
-            AtRuleKind::If => AtRule::If(If::from_tokens(toks)?),
+            AtRuleKind::If => Spanned {
+                node: AtRule::If(If::from_tokens(toks)?),
+                span: kind_span,
+            },
             AtRuleKind::Else => todo!("@else not yet implemented"),
-            AtRuleKind::For => for_rule::parse_for(toks, scope, super_selector)?,
+            AtRuleKind::For => Spanned {
+                node: for_rule::parse_for(toks, scope, super_selector, kind_span)?,
+                span: kind_span,
+            },
             AtRuleKind::While => {
                 let mut stmts = Vec::new();
                 devour_whitespace(toks);
                 let cond = read_until_open_curly_brace(toks);
 
                 if cond.is_empty() {
-                    return Err("Expected expression.".into());
+                    return Err(("Expected expression.", kind_span).into());
                 }
 
                 toks.next();
@@ -252,23 +321,39 @@ impl AtRule {
 
                 devour_whitespace(toks);
 
-                while Value::from_vec(cond.clone(), scope, super_selector)?.is_true()? {
+                let mut val = Value::from_vec(cond.clone(), scope, super_selector)?;
+                while val.node.is_true(val.span)? {
                     stmts.extend(eat_stmts(
                         &mut body.clone().into_iter().peekable(),
                         scope,
                         super_selector,
                     )?);
+                    val = Value::from_vec(cond.clone(), scope, super_selector)?;
                 }
-                AtRule::While(stmts)
+                Spanned {
+                    node: AtRule::While(stmts),
+                    span: kind_span,
+                }
             }
             AtRuleKind::Keyframes => todo!("@keyframes not yet implemented"),
-            AtRuleKind::Unknown(name) => AtRule::Unknown(UnknownAtRule::from_tokens(
-                toks,
-                name,
-                scope,
-                super_selector,
-            )?),
-            AtRuleKind::Content => AtRule::Content,
+            AtRuleKind::Unknown(name) => Spanned {
+                node: AtRule::Unknown(UnknownAtRule::from_tokens(
+                    toks,
+                    name,
+                    scope,
+                    super_selector,
+                    kind_span,
+                )?),
+                span: kind_span,
+            },
+            AtRuleKind::Content => Spanned {
+                node: AtRule::Content,
+                span: kind_span,
+            },
+            AtRuleKind::Include => Spanned {
+                node: AtRule::Include(eat_include(toks, scope, super_selector)?),
+                span: kind_span,
+            },
             _ => todo!("encountered unimplemented at rule"),
         })
     }

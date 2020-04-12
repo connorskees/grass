@@ -1,5 +1,7 @@
 use std::iter::Peekable;
 
+use codemap::{Span, Spanned};
+
 use super::parse::eat_stmts;
 use crate::error::SassResult;
 use crate::scope::Scope;
@@ -12,7 +14,7 @@ pub(crate) struct UnknownAtRule {
     pub name: String,
     pub super_selector: Selector,
     pub params: String,
-    pub body: Vec<Stmt>,
+    pub body: Vec<Spanned<Stmt>>,
 }
 
 impl UnknownAtRule {
@@ -21,6 +23,7 @@ impl UnknownAtRule {
         name: &str,
         scope: &mut Scope,
         super_selector: &Selector,
+        kind_span: Span,
     ) -> SassResult<UnknownAtRule> {
         let mut params = String::new();
         while let Some(tok) = toks.next() {
@@ -29,9 +32,8 @@ impl UnknownAtRule {
                 '#' => {
                     if toks.peek().unwrap().kind == '{' {
                         toks.next();
-                        params.push_str(
-                            &parse_interpolation(toks, scope, super_selector)?.to_string(),
-                        );
+                        let interpolation = parse_interpolation(toks, scope, super_selector)?;
+                        params.push_str(&interpolation.node.to_css_string(interpolation.span)?);
                         continue;
                     } else {
                         params.push(tok.kind);
@@ -49,20 +51,26 @@ impl UnknownAtRule {
 
         let raw_body = eat_stmts(toks, scope, super_selector)?;
         let mut body = Vec::with_capacity(raw_body.len());
-        body.push(Stmt::RuleSet(RuleSet::new()));
+        body.push(Spanned {
+            node: Stmt::RuleSet(RuleSet::new()),
+            span: kind_span,
+        });
         let mut rules = Vec::new();
         for stmt in raw_body {
-            match stmt {
-                s @ Stmt::Style(..) => rules.push(s),
-                s => body.push(s),
+            match stmt.node {
+                Stmt::Style(..) => rules.push(stmt),
+                _ => body.push(stmt),
             }
         }
 
-        body[0] = Stmt::RuleSet(RuleSet {
-            selector: super_selector.clone(),
-            rules,
-            super_selector: Selector::new(),
-        });
+        body[0] = Spanned {
+            node: Stmt::RuleSet(RuleSet {
+                selector: super_selector.clone(),
+                rules,
+                super_selector: Selector::new(),
+            }),
+            span: kind_span,
+        };
 
         Ok(UnknownAtRule {
             name: name.to_owned(),

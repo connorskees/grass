@@ -1,5 +1,7 @@
 use std::iter::Peekable;
 
+use codemap::Spanned;
+
 use super::{eat_stmts, AtRule};
 
 use crate::error::SassResult;
@@ -72,7 +74,7 @@ impl If {
                                 break;
                             }
                             _ => {
-                                return Err("expected \"{\".".into());
+                                return Err(("expected \"{\".", tok.pos()).into());
                             }
                         }
                     } else {
@@ -90,12 +92,17 @@ impl If {
         Ok(If { branches, else_ })
     }
 
-    pub fn eval(self, scope: &mut Scope, super_selector: &Selector) -> SassResult<Vec<Stmt>> {
+    pub fn eval(
+        self,
+        scope: &mut Scope,
+        super_selector: &Selector,
+    ) -> SassResult<Vec<Spanned<Stmt>>> {
         let mut stmts = Vec::new();
         let mut toks = Vec::new();
         let mut found_true = false;
         for branch in self.branches {
-            if Value::from_vec(branch.cond, scope, super_selector)?.is_true()? {
+            let val = Value::from_vec(branch.cond, scope, super_selector)?;
+            if val.node.is_true(val.span)? {
                 toks = branch.toks;
                 found_true = true;
                 break;
@@ -105,10 +112,10 @@ impl If {
             toks = self.else_;
         }
         for stmt in eat_stmts(&mut toks.into_iter().peekable(), scope, super_selector)? {
-            match stmt {
+            match stmt.node {
                 Stmt::AtRule(AtRule::If(i)) => stmts.extend(i.eval(scope, super_selector)?),
                 Stmt::RuleSet(r) if r.selector.is_empty() => stmts.extend(r.rules),
-                v => stmts.push(v),
+                _ => stmts.push(stmt),
             }
         }
         Ok(stmts)

@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use codemap::Spanned;
+
 use super::{Builtin, GLOBAL_FUNCTIONS};
 use crate::common::QuoteKind;
 use crate::scope::global_var_exists;
@@ -11,7 +13,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         "if".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
             max_args!(args, 3);
-            if arg!(args, scope, super_selector, 0, "condition").is_true()? {
+            if arg!(args, scope, super_selector, 0, "condition").is_true(args.span())? {
                 Ok(arg!(args, scope, super_selector, 1, "if-true"))
             } else {
                 Ok(arg!(args, scope, super_selector, 2, "if-false"))
@@ -41,7 +43,14 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     "custom-property" => Ok(Value::False),
                     _ => Ok(Value::False),
                 },
-                v => Err(format!("$feature: {} is not a string.", v).into()),
+                v => Err((
+                    format!(
+                        "$feature: {} is not a string.",
+                        v.to_css_string(args.span())?
+                    ),
+                    args.span(),
+                )
+                    .into()),
             }
         }),
     );
@@ -51,7 +60,16 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             max_args!(args, 1);
             let unit = match arg!(args, scope, super_selector, 0, "number") {
                 Value::Dimension(_, u) => u.to_string(),
-                v => return Err(format!("$number: {} is not a number.", v).into()),
+                v => {
+                    return Err((
+                        format!(
+                            "$number: {} is not a number.",
+                            v.to_css_string(args.span())?
+                        ),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
             Ok(Value::Ident(unit, QuoteKind::Double))
         }),
@@ -61,7 +79,10 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         Builtin::new(|mut args, scope, super_selector| {
             max_args!(args, 1);
             let value = arg!(args, scope, super_selector, 0, "value");
-            Ok(Value::Ident(value.kind()?.to_owned(), QuoteKind::None))
+            Ok(Value::Ident(
+                value.kind(args.span())?.to_owned(),
+                QuoteKind::None,
+            ))
         }),
     );
     f.insert(
@@ -80,7 +101,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         Builtin::new(|mut args, scope, super_selector| {
             max_args!(args, 1);
             Ok(Value::Ident(
-                arg!(args, scope, super_selector, 0, "value").inspect(),
+                arg!(args, scope, super_selector, 0, "value").inspect(args.span())?,
                 QuoteKind::None,
             ))
         }),
@@ -91,7 +112,11 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             max_args!(args, 1);
             match arg!(args, scope, super_selector, 0, "name") {
                 Value::Ident(s, _) => Ok(Value::bool(scope.var_exists(&s))),
-                v => Err(format!("$name: {} is not a string.", v).into()),
+                v => Err((
+                    format!("$name: {} is not a string.", v.to_css_string(args.span())?),
+                    args.span(),
+                )
+                    .into()),
             }
         }),
     );
@@ -101,7 +126,11 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             max_args!(args, 1);
             match arg!(args, scope, super_selector, 0, "name") {
                 Value::Ident(s, _) => Ok(Value::bool(global_var_exists(&s))),
-                v => Err(format!("$name: {} is not a string.", v).into()),
+                v => Err((
+                    format!("$name: {} is not a string.", v.to_css_string(args.span())?),
+                    args.span(),
+                )
+                    .into()),
             }
         }),
     );
@@ -111,7 +140,11 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             max_args!(args, 2);
             match arg!(args, scope, super_selector, 0, "name") {
                 Value::Ident(s, _) => Ok(Value::bool(scope.mixin_exists(&s))),
-                v => Err(format!("$name: {} is not a string.", v).into()),
+                v => Err((
+                    format!("$name: {} is not a string.", v.to_css_string(args.span())?),
+                    args.span(),
+                )
+                    .into()),
             }
         }),
     );
@@ -123,7 +156,11 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 Value::Ident(s, _) => Ok(Value::bool(
                     scope.fn_exists(&s) || GLOBAL_FUNCTIONS.contains_key(&s),
                 )),
-                v => Err(format!("$name: {} is not a string.", v).into()),
+                v => Err((
+                    format!("$name: {} is not a string.", v.to_css_string(args.span())?),
+                    args.span(),
+                )
+                    .into()),
             }
         }),
     );
@@ -133,24 +170,49 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             max_args!(args, 3);
             let name = match arg!(args, scope, super_selector, 0, "name") {
                 Value::Ident(s, _) => s,
-                v => return Err(format!("$name: {} is not a string.", v).into()),
+                v => {
+                    return Err((
+                        format!("$name: {} is not a string.", v.to_css_string(args.span())?),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
-            let css = arg!(args, scope, super_selector, 1, "css" = Value::False).is_true()?;
+            let css =
+                arg!(args, scope, super_selector, 1, "css" = Value::False).is_true(args.span())?;
             let module = match arg!(args, scope, super_selector, 2, "module" = Value::Null) {
                 Value::Ident(s, ..) => Some(s),
                 Value::Null => None,
-                v => return Err(format!("$module: {} is not a string.", v).into()),
+                v => {
+                    return Err((
+                        format!(
+                            "$module: {} is not a string.",
+                            v.to_css_string(args.span())?
+                        ),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
 
             if module.is_some() && css {
-                return Err("$css and $module may not both be passed at once.".into());
+                return Err((
+                    "$css and $module may not both be passed at once.",
+                    args.span(),
+                )
+                    .into());
             }
 
-            let func = match scope.get_fn(&name) {
+            let func = match scope.get_fn(Spanned {
+                node: name.clone(),
+                span: args.span(),
+            }) {
                 Ok(f) => SassFunction::UserDefined(Box::new(f), name),
                 Err(..) => match GLOBAL_FUNCTIONS.get(&name) {
                     Some(f) => SassFunction::Builtin(f.clone(), name),
-                    None => return Err(format!("Function not found: {}", name).into()),
+                    None => {
+                        return Err((format!("Function not found: {}", name), args.span()).into())
+                    }
                 },
             };
 
@@ -162,7 +224,16 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         Builtin::new(|mut args, scope, super_selector| {
             let func = match arg!(args, scope, super_selector, 0, "function") {
                 Value::Function(f) => f,
-                v => return Err(format!("$function: {} is not a function reference.", v).into()),
+                v => {
+                    return Err((
+                        format!(
+                            "$function: {} is not a function reference.",
+                            v.to_css_string(args.span())?
+                        ),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
             func.call(args.decrement(), scope, super_selector)
         }),

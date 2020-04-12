@@ -1,9 +1,7 @@
 use std::fmt::{self, Display, Write};
 use std::iter::Peekable;
-use std::string::ToString;
 
 use crate::error::SassResult;
-use crate::lexer::Lexer;
 use crate::scope::Scope;
 use crate::utils::{
     devour_whitespace, eat_comment, eat_ident_no_interpolation, parse_interpolation,
@@ -183,13 +181,20 @@ impl Selector {
         super_selector: &Selector,
     ) -> SassResult<Selector> {
         let mut string = String::new();
+        let mut span = if let Some(tok) = toks.peek() {
+            tok.pos()
+        } else {
+            return Ok(Selector::new());
+        };
         while let Some(tok) = toks.next() {
+            span = span.merge(tok.pos());
             match tok.kind {
                 '#' => {
                     if toks.peek().is_some() && toks.peek().unwrap().kind == '{' {
                         toks.next();
                         string.push_str(
-                            &parse_interpolation(toks, scope, super_selector)?.to_string(),
+                            &parse_interpolation(toks, scope, super_selector)?
+                                .to_css_string(span)?,
                         );
                     } else {
                         string.push('#');
@@ -207,7 +212,7 @@ impl Selector {
                 }
                 '/' => {
                     if toks.peek().is_none() {
-                        return Err("Expected selector.".into());
+                        return Err(("Expected selector.", tok.pos()).into());
                     } else if '*' == toks.peek().unwrap().kind {
                         toks.next();
                         eat_comment(toks, &Scope::new(), &Selector::new())?;
@@ -215,7 +220,7 @@ impl Selector {
                         read_until_newline(toks);
                         devour_whitespace(toks);
                     } else {
-                        return Err("Expected selector.".into());
+                        return Err(("Expected selector.", tok.pos()).into());
                     }
                     string.push(' ');
                 }
@@ -228,7 +233,6 @@ impl Selector {
                 continue;
             }
             string.push(c);
-            string.push(',');
             break;
         }
 
@@ -238,17 +242,24 @@ impl Selector {
         let mut contains_super_selector = false;
         let mut parts = Vec::new();
 
-        // HACK: we re-lex here to get access to generic helper functions that
-        // operate on `Token`s. Ideally, we would in the future not have
-        // to do this, or at the very least retain the span information.
-        let mut iter = Lexer::new(&string).peekable();
+        let mut sel_toks = Vec::new();
+
+        let mut current_pos = 0;
+        sel_toks.extend(string.chars().map(|x| {
+            let len = x.len_utf8() as u64;
+            let tok = Token::new(span.subspan(current_pos, current_pos + len), x);
+            current_pos += len;
+            tok
+        }));
+
+        let mut iter = sel_toks.into_iter().peekable();
 
         while let Some(tok) = iter.peek() {
             inner.push(match tok.kind {
                 _ if is_selector_name_char(tok.kind) => {
-                    inner.push(SelectorKind::Element(eat_ident_no_interpolation(
-                        &mut iter,
-                    )?));
+                    inner.push(SelectorKind::Element(
+                        eat_ident_no_interpolation(&mut iter)?.node,
+                    ));
                     continue;
                 }
                 '&' => {
@@ -257,20 +268,24 @@ impl Selector {
                 }
                 '.' => {
                     iter.next();
-                    inner.push(SelectorKind::Class(eat_ident_no_interpolation(&mut iter)?));
+                    inner.push(SelectorKind::Class(
+                        eat_ident_no_interpolation(&mut iter)?.node,
+                    ));
                     continue;
                 }
                 '#' => {
                     iter.next();
-                    inner.push(SelectorKind::Id(eat_ident_no_interpolation(&mut iter)?));
+                    inner.push(SelectorKind::Id(
+                        eat_ident_no_interpolation(&mut iter)?.node,
+                    ));
                     continue;
                 }
                 '%' => {
                     iter.next();
                     is_invisible = true;
-                    inner.push(SelectorKind::Placeholder(eat_ident_no_interpolation(
-                        &mut iter,
-                    )?));
+                    inner.push(SelectorKind::Placeholder(
+                        eat_ident_no_interpolation(&mut iter)?.node,
+                    ));
                     continue;
                 }
                 '>' => SelectorKind::ImmediateChild,
@@ -298,8 +313,13 @@ impl Selector {
                     continue;
                 }
                 '[' => {
-                    iter.next();
-                    inner.push(Attribute::from_tokens(&mut iter, scope, super_selector)?);
+                    let span = iter.next().unwrap().pos();
+                    inner.push(Attribute::from_tokens(
+                        &mut iter,
+                        scope,
+                        super_selector,
+                        span,
+                    )?);
                     continue;
                 }
                 ':' => {
@@ -322,7 +342,7 @@ impl Selector {
                     }
                     continue;
                 }
-                _ => return Err("expected selector.".into()),
+                _ => return Err(("expected selector.", tok.pos()).into()),
             });
             iter.next();
         }
@@ -351,7 +371,7 @@ impl Selector {
             false
         };
         if is_selector_name_char(toks.peek().unwrap().kind) {
-            let name = eat_ident_no_interpolation(toks)?;
+            let name = eat_ident_no_interpolation(toks)?.node;
             Ok(
                 if toks.peek().is_some() && toks.peek().unwrap().kind == '(' {
                     toks.next();

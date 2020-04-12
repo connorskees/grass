@@ -21,8 +21,10 @@ pub(crate) fn eat_calc_args<I: Iterator<Item = Token>>(
             }
             '#' => {
                 if toks.peek().is_some() && toks.peek().unwrap().kind == '{' {
-                    toks.next();
-                    string.push_str(&parse_interpolation(toks, scope, super_selector)?.to_string());
+                    let span = toks.next().unwrap().pos();
+                    string.push_str(
+                        &parse_interpolation(toks, scope, super_selector)?.to_css_string(span)?,
+                    );
                 } else {
                     string.push('#');
                 }
@@ -60,7 +62,9 @@ pub(crate) fn eat_progid<I: Iterator<Item = Token>>(
     super_selector: &Selector,
 ) -> SassResult<String> {
     let mut string = String::new();
+    let mut span = toks.peek().unwrap().pos();
     while let Some(tok) = toks.next() {
+        span = span.merge(tok.pos());
         match tok.kind {
             'a'..='z' | 'A'..='Z' | '.' => {
                 string.push(tok.kind);
@@ -69,7 +73,7 @@ pub(crate) fn eat_progid<I: Iterator<Item = Token>>(
                 string.push_str(&eat_calc_args(toks, scope, super_selector)?);
                 break;
             }
-            _ => return Err("expected \"(\".".into()),
+            _ => return Err(("expected \"(\".", span).into()),
         }
     }
     Ok(string)

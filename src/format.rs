@@ -32,7 +32,7 @@ impl<W: Write> PrettyPrinter<W> {
                 self.scope -= 1;
             }
             Stmt::Style(s) => {
-                writeln!(self.buf, "{}{}", padding, s)?;
+                writeln!(self.buf, "{}{}", padding, s.to_string()?)?;
             }
             Stmt::AtRule(r) => match r {
                 AtRule::Unknown(..) => todo!("Display @rules properly"),
@@ -63,7 +63,7 @@ mod test_scss {
             fn $func() {
                 assert_eq!(
                     String::from($input),
-                    StyleSheet::new($input)
+                    StyleSheet::new($input.to_string())
                         .expect(concat!("failed to parse on ", $input))
                         .to_string()
                 );
@@ -74,7 +74,7 @@ mod test_scss {
             fn $func() {
                 assert_eq!(
                     String::from($output),
-                    StyleSheet::new($input)
+                    StyleSheet::new($input.to_string())
                         .expect(concat!("failed to parse on ", $input))
                         .to_string()
                 );

@@ -61,45 +61,6 @@ impl Op {
     }
 }
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub struct Pos {
-    line: u32,
-    column: u32,
-}
-
-impl Pos {
-    pub const fn new() -> Self {
-        Pos { line: 1, column: 1 }
-    }
-
-    pub const fn line(self) -> u32 {
-        self.line
-    }
-
-    pub const fn column(self) -> u32 {
-        self.column
-    }
-
-    pub fn newline(&mut self) {
-        self.line += 1;
-        self.column = 0;
-    }
-
-    pub fn next_char(&mut self) {
-        self.column += 1;
-    }
-
-    pub fn chars(&mut self, num: u32) {
-        self.column += num;
-    }
-}
-
-impl Display for Pos {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "line:{} col:{}", self.line, self.column)
-    }
-}
-
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub(crate) enum QuoteKind {
     Single,

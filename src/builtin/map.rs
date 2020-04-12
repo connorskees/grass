@@ -13,9 +13,15 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             let map = match arg!(args, scope, super_selector, 0, "map") {
                 Value::Map(m) => m,
                 Value::List(v, ..) if v.is_empty() => SassMap::new(),
-                v => return Err(format!("$map: {} is not a map.", v).into()),
+                v => {
+                    return Err((
+                        format!("$map: {} is not a map.", v.to_css_string(args.span())?),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
-            Ok(map.get(&key)?.unwrap_or(Value::Null))
+            Ok(map.get(&key, args.span())?.unwrap_or(Value::Null))
         }),
     );
     f.insert(
@@ -26,9 +32,15 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             let map = match arg!(args, scope, super_selector, 0, "map") {
                 Value::Map(m) => m,
                 Value::List(v, ..) if v.is_empty() => SassMap::new(),
-                v => return Err(format!("$map: {} is not a map.", v).into()),
+                v => {
+                    return Err((
+                        format!("$map: {} is not a map.", v.to_css_string(args.span())?),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
-            Ok(Value::bool(map.get(&key)?.is_some()))
+            Ok(Value::bool(map.get(&key, args.span())?.is_some()))
         }),
     );
     f.insert(
@@ -38,7 +50,13 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             let map = match arg!(args, scope, super_selector, 0, "map") {
                 Value::Map(m) => m,
                 Value::List(v, ..) if v.is_empty() => SassMap::new(),
-                v => return Err(format!("$map: {} is not a map.", v).into()),
+                v => {
+                    return Err((
+                        format!("$map: {} is not a map.", v.to_css_string(args.span())?),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
             Ok(Value::List(
                 map.keys(),
@@ -54,7 +72,13 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             let map = match arg!(args, scope, super_selector, 0, "map") {
                 Value::Map(m) => m,
                 Value::List(v, ..) if v.is_empty() => SassMap::new(),
-                v => return Err(format!("$map: {} is not a map.", v).into()),
+                v => {
+                    return Err((
+                        format!("$map: {} is not a map.", v.to_css_string(args.span())?),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
             Ok(Value::List(
                 map.values(),
@@ -70,12 +94,24 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             let mut map1 = match arg!(args, scope, super_selector, 0, "map1") {
                 Value::Map(m) => m,
                 Value::List(v, ..) if v.is_empty() => SassMap::new(),
-                v => return Err(format!("$map1: {} is not a map.", v).into()),
+                v => {
+                    return Err((
+                        format!("$map1: {} is not a map.", v.to_css_string(args.span())?),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
             let map2 = match arg!(args, scope, super_selector, 1, "map2") {
                 Value::Map(m) => m,
                 Value::List(v, ..) if v.is_empty() => SassMap::new(),
-                v => return Err(format!("$map2: {} is not a map.", v).into()),
+                v => {
+                    return Err((
+                        format!("$map2: {} is not a map.", v.to_css_string(args.span())?),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
             map1.merge(map2);
             Ok(Value::Map(map1))
@@ -87,7 +123,13 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             let mut map = match arg!(args, scope, super_selector, 0, "map") {
                 Value::Map(m) => m,
                 Value::List(v, ..) if v.is_empty() => SassMap::new(),
-                v => return Err(format!("$map: {} is not a map.", v).into()),
+                v => {
+                    return Err((
+                        format!("$map: {} is not a map.", v.to_css_string(args.span())?),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
             let keys = args.get_variadic(scope, super_selector)?;
             for key in keys {

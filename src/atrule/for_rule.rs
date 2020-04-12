@@ -1,5 +1,7 @@
 use std::iter::Peekable;
 
+use codemap::{Span, Spanned};
+
 use num_traits::cast::ToPrimitive;
 
 use super::parse::eat_stmts;
@@ -19,18 +21,19 @@ pub(crate) fn parse_for<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
     scope: &mut Scope,
     super_selector: &Selector,
+    span: Span,
 ) -> SassResult<AtRule> {
     let mut stmts = Vec::new();
     devour_whitespace(toks);
-    let var = match toks.next().ok_or("expected \"$\".")?.kind {
+    let var = match toks.next().ok_or(("expected \"$\".", span))?.kind {
         '$' => eat_ident(toks, scope, super_selector)?,
-        _ => return Err("expected \"$\".".into()),
+        _ => return Err(("expected \"$\".", span).into()),
     };
     devour_whitespace(toks);
     if toks.peek().is_none()
         || eat_ident(toks, scope, super_selector)?.to_ascii_lowercase() != "from"
     {
-        return Err("Expected \"from\".".into());
+        return Err(("Expected \"from\".", var.span).into());
     }
     devour_whitespace(toks);
     let mut from_toks = Vec::new();
@@ -93,27 +96,41 @@ pub(crate) fn parse_for<I: Iterator<Item = Token>>(
                 }
             }
             '{' => {
-                return Err("Expected \"to\" or \"through\".".into());
+                return Err(("Expected \"to\" or \"through\".", tok.pos()).into());
             }
             _ => from_toks.extend(these_toks),
         }
     }
-    let from = match Value::from_vec(from_toks, scope, super_selector)? {
+    let from_val = Value::from_vec(from_toks, scope, super_selector)?;
+    let from = match from_val.node {
         Value::Dimension(n, _) => match n.to_integer().to_usize() {
             Some(v) => v,
-            None => return Err(format!("{} is not a int.", n).into()),
+            None => return Err((format!("{} is not a int.", n), from_val.span).into()),
         },
-        v => return Err(format!("{} is not an integer.", v).into()),
+        v => {
+            return Err((
+                format!("{} is not an integer.", v.to_css_string(from_val.span)?),
+                from_val.span,
+            )
+                .into())
+        }
     };
     devour_whitespace(toks);
     let to_toks = read_until_open_curly_brace(toks);
     toks.next();
-    let to = match Value::from_vec(to_toks, scope, super_selector)? {
+    let to_val = Value::from_vec(to_toks, scope, super_selector)?;
+    let to = match to_val.node {
         Value::Dimension(n, _) => match n.to_integer().to_usize() {
             Some(v) => v,
-            None => return Err(format!("{} is not a int.", n).into()),
+            None => return Err((format!("{} is not a int.", n), to_val.span).into()),
         },
-        v => return Err(format!("{} is not an integer.", v).into()),
+        v => {
+            return Err((
+                format!("{} is not an integer.", v.to_css_string(to_val.span)?),
+                to_val.span,
+            )
+                .into())
+        }
     };
     let body = read_until_closing_curly_brace(toks);
     toks.next();
@@ -130,7 +147,13 @@ pub(crate) fn parse_for<I: Iterator<Item = Token>>(
     };
 
     for i in iter {
-        scope.insert_var(&var, Value::Dimension(Number::from(i), Unit::None))?;
+        scope.insert_var(
+            &var,
+            Spanned {
+                node: Value::Dimension(Number::from(i), Unit::None),
+                span: var.span,
+            },
+        )?;
         stmts.extend(eat_stmts(
             &mut body.clone().into_iter().peekable(),
             scope,

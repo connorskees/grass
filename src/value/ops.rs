@@ -1,35 +1,45 @@
-use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
+use codemap::Span;
 
 use crate::common::{Op, QuoteKind};
 use crate::error::SassResult;
 use crate::unit::{Unit, UNIT_CONVERSION_TABLE};
 use crate::value::Value;
 
-impl Add for Value {
-    type Output = SassResult<Self>;
-
-    fn add(self, mut other: Self) -> Self::Output {
+impl Value {
+    pub fn add(self, mut other: Self, span: Span) -> SassResult<Self> {
         if let Self::Paren(..) = other {
-            other = other.eval()?
+            other = other.eval(span)?.node
         }
         let precedence = Op::Plus.precedence();
         Ok(match self {
             Self::Function(..) | Self::ArgList(..) | Self::Map(..) => todo!(),
             Self::Important | Self::True | Self::False => match other {
                 Self::Ident(s, QuoteKind::Double) | Self::Ident(s, QuoteKind::Single) => {
-                    Value::Ident(format!("{}{}", self, s), QuoteKind::Double)
+                    Value::Ident(
+                        format!("{}{}", self.to_css_string(span)?, s),
+                        QuoteKind::Double,
+                    )
                 }
-                Self::Null => Value::Ident(self.to_string(), QuoteKind::None),
-                _ => Value::Ident(format!("{}{}", self, other), QuoteKind::None),
+                Self::Null => Value::Ident(self.to_css_string(span)?, QuoteKind::None),
+                _ => Value::Ident(
+                    format!(
+                        "{}{}",
+                        self.to_css_string(span)?,
+                        other.to_css_string(span)?
+                    ),
+                    QuoteKind::None,
+                ),
             },
             Self::Null => match other {
                 Self::Null => Self::Null,
-                _ => Value::Ident(format!("{}", other), QuoteKind::None),
+                _ => Value::Ident(format!("{}", other.to_css_string(span)?), QuoteKind::None),
             },
             Self::Dimension(num, unit) => match other {
                 Self::Dimension(num2, unit2) => {
                     if !unit.comparable(&unit2) {
-                        return Err(format!("Incompatible units {} and {}.", unit2, unit).into());
+                        return Err(
+                            (format!("Incompatible units {} and {}.", unit2, unit), span).into(),
+                        );
                     }
                     if unit == unit2 {
                         Value::Dimension(num + num2, unit)
@@ -48,61 +58,98 @@ impl Add for Value {
                 }
                 Self::Ident(s, q) => Value::Ident(format!("{}{}{}", num, unit, s), q.normalize()),
                 Self::Null => Value::Ident(format!("{}{}", num, unit), QuoteKind::None),
-                Self::List(..) => {
-                    Value::Ident(format!("{}{}{}", num, unit, other), QuoteKind::None)
-                }
+                Self::List(..) => Value::Ident(
+                    format!("{}{}{}", num, unit, other.to_css_string(span)?),
+                    QuoteKind::None,
+                ),
                 _ => {
-                    return Err(
-                        format!("Undefined operation \"{}{} + {}\".", num, unit, other).into(),
+                    return Err((
+                        format!(
+                            "Undefined operation \"{}{} + {}\".",
+                            num,
+                            unit,
+                            other.to_css_string(span)?
+                        ),
+                        span,
                     )
+                        .into())
                 }
             },
             Self::Color(c) => match other {
                 Self::Ident(s, q) => Value::Ident(format!("{}{}", c, s), q.normalize()),
                 Self::Null => Value::Ident(c.to_string(), QuoteKind::None),
-                Self::List(..) => Value::Ident(format!("{}{}", c, other), QuoteKind::None),
-                _ => return Err(format!("Undefined operation \"{} + {}\".", c, other).into()),
+                Self::List(..) => Value::Ident(
+                    format!("{}{}", c, other.to_css_string(span)?),
+                    QuoteKind::None,
+                ),
+                _ => {
+                    return Err((
+                        format!(
+                            "Undefined operation \"{} + {}\".",
+                            c,
+                            other.to_css_string(span)?
+                        ),
+                        span,
+                    )
+                        .into())
+                }
             },
             Self::BinaryOp(left, op, right) => {
                 if op.precedence() >= precedence {
-                    (Self::BinaryOp(left, op, right).eval()? + other)?
+                    Self::BinaryOp(left, op, right)
+                        .eval(span)?
+                        .node
+                        .add(other, span)?
                 } else {
                     Self::BinaryOp(
                         left,
                         op,
-                        Box::new(Self::BinaryOp(right, Op::Plus, Box::new(other)).eval()?),
+                        Box::new(
+                            Self::BinaryOp(right, Op::Plus, Box::new(other))
+                                .eval(span)?
+                                .node,
+                        ),
                     )
-                    .eval()?
+                    .eval(span)?
+                    .node
                 }
             }
-            Self::UnaryOp(..) | Self::Paren(..) => (self.eval()? + other)?,
+            Self::UnaryOp(..) | Self::Paren(..) => self.eval(span)?.node.add(other, span)?,
             Self::Ident(s1, quotes1) => match other {
                 Self::Ident(s2, _) => Value::Ident(format!("{}{}", s1, s2), quotes1.normalize()),
-                Self::Important | Self::True | Self::False | Self::Dimension(..) => {
-                    Value::Ident(format!("{}{}", s1, other), quotes1.normalize())
-                }
+                Self::Important | Self::True | Self::False | Self::Dimension(..) => Value::Ident(
+                    format!("{}{}", s1, other.to_css_string(span)?),
+                    quotes1.normalize(),
+                ),
                 Self::Null => Value::Ident(s1, quotes1.normalize()),
                 Self::Color(c) => Value::Ident(format!("{}{}", s1, c), quotes1.normalize()),
-                Self::List(..) => Value::Ident(format!("{}{}", s1, other), quotes1),
+                Self::List(..) => {
+                    Value::Ident(format!("{}{}", s1, other.to_css_string(span)?), quotes1)
+                }
                 Self::UnaryOp(..) | Self::BinaryOp(..) => todo!(),
-                Self::Paren(..) => (Self::Ident(s1, quotes1) + other.eval()?)?,
+                Self::Paren(..) => Self::Ident(s1, quotes1).add(other.eval(span)?.node, span)?,
                 Self::Function(..) | Self::ArgList(..) | Self::Map(..) => todo!(),
             },
             Self::List(..) => match other {
-                Self::Ident(s, q) => Value::Ident(format!("{}{}", self, s), q.normalize()),
-                Self::Paren(..) => (self + other.eval()?)?,
-                _ => Value::Ident(format!("{}{}", self, other), QuoteKind::None),
+                Self::Ident(s, q) => {
+                    Value::Ident(format!("{}{}", self.to_css_string(span)?, s), q.normalize())
+                }
+                Self::Paren(..) => (self.add(other.eval(span)?.node, span))?,
+                _ => Value::Ident(
+                    format!(
+                        "{}{}",
+                        self.to_css_string(span)?,
+                        other.to_css_string(span)?
+                    ),
+                    QuoteKind::None,
+                ),
             },
         })
     }
-}
 
-impl Sub for Value {
-    type Output = SassResult<Self>;
-
-    fn sub(self, mut other: Self) -> Self::Output {
+    pub fn sub(self, mut other: Self, span: Span) -> SassResult<Self> {
         if let Self::Paren(..) = other {
-            other = other.eval()?
+            other = other.eval(span)?.node
         }
         let precedence = Op::Mul.precedence();
         Ok(match self {
@@ -110,7 +157,9 @@ impl Sub for Value {
             Self::Dimension(num, unit) => match other {
                 Self::Dimension(num2, unit2) => {
                     if !unit.comparable(&unit2) {
-                        return Err(format!("Incompatible units {} and {}.", unit2, unit).into());
+                        return Err(
+                            (format!("Incompatible units {} and {}.", unit2, unit), span).into(),
+                        );
                     }
                     if unit == unit2 {
                         Value::Dimension(num - num2, unit)
@@ -127,12 +176,14 @@ impl Sub for Value {
                         )
                     }
                 }
-                Self::List(..) => {
-                    Value::Ident(format!("{}{}-{}", num, unit, other), QuoteKind::None)
-                }
-                Self::Ident(..) => {
-                    Value::Ident(format!("{}{}-{}", num, unit, other), QuoteKind::None)
-                }
+                Self::List(..) => Value::Ident(
+                    format!("{}{}-{}", num, unit, other.to_css_string(span)?),
+                    QuoteKind::None,
+                ),
+                Self::Ident(..) => Value::Ident(
+                    format!("{}{}-{}", num, unit, other.to_css_string(span)?),
+                    QuoteKind::None,
+                ),
                 _ => todo!(),
             },
             Self::Color(c) => match other {
@@ -142,23 +193,42 @@ impl Sub for Value {
                 ),
                 Self::Null => Value::Ident(format!("{}-", c), QuoteKind::None),
                 Self::Dimension(..) | Self::Color(..) => {
-                    return Err(format!("Undefined operation \"{} - {}\".", c, other).into())
+                    return Err((
+                        format!(
+                            "Undefined operation \"{} - {}\".",
+                            c,
+                            other.to_css_string(span)?
+                        ),
+                        span,
+                    )
+                        .into())
                 }
-                _ => Value::Ident(format!("{}-{}", c, other), QuoteKind::None),
+                _ => Value::Ident(
+                    format!("{}-{}", c, other.to_css_string(span)?),
+                    QuoteKind::None,
+                ),
             },
             Self::BinaryOp(left, op, right) => {
                 if op.precedence() >= precedence {
-                    (Self::BinaryOp(left, op, right).eval()? - other)?
+                    Self::BinaryOp(left, op, right)
+                        .eval(span)?
+                        .node
+                        .sub(other, span)?
                 } else {
                     Self::BinaryOp(
                         left,
                         op,
-                        Box::new(Self::BinaryOp(right, Op::Minus, Box::new(other)).eval()?),
+                        Box::new(
+                            Self::BinaryOp(right, Op::Minus, Box::new(other))
+                                .eval(span)?
+                                .node,
+                        ),
                     )
-                    .eval()?
+                    .eval(span)?
+                    .node
                 }
             }
-            Self::Paren(..) => (self.eval()? - other)?,
+            Self::Paren(..) => self.eval(span)?.node.sub(other, span)?,
             Self::Ident(s1, q1) => match other {
                 Self::Ident(s2, q2) => Value::Ident(
                     format!(
@@ -177,7 +247,13 @@ impl Sub for Value {
                 | Self::False
                 | Self::Dimension(..)
                 | Self::Color(..) => Value::Ident(
-                    format!("{}{}{}-{}", q1.normalize(), s1, q1.normalize(), other),
+                    format!(
+                        "{}{}{}-{}",
+                        q1.normalize(),
+                        s1,
+                        q1.normalize(),
+                        other.to_css_string(span)?
+                    ),
                     QuoteKind::None,
                 ),
                 Self::Null => Value::Ident(
@@ -185,37 +261,66 @@ impl Sub for Value {
                     QuoteKind::None,
                 ),
                 Self::List(..) => Value::Ident(
-                    format!("{}{}{}-{}", q1.normalize(), s1, q1.normalize(), other),
+                    format!(
+                        "{}{}{}-{}",
+                        q1.normalize(),
+                        s1,
+                        q1.normalize(),
+                        other.to_css_string(span)?
+                    ),
                     QuoteKind::None,
                 ),
                 _ => todo!(),
             },
             Self::List(..) => match other {
                 Self::Ident(s, q) => Value::Ident(
-                    format!("{}-{}{}{}", self, q.normalize(), s, q.normalize()),
+                    format!(
+                        "{}-{}{}{}",
+                        self.to_css_string(span)?,
+                        q.normalize(),
+                        s,
+                        q.normalize()
+                    ),
                     QuoteKind::None,
                 ),
-                Self::Paren(..) => (self - other.eval()?)?,
-                _ => Value::Ident(format!("{}-{}", self, other), QuoteKind::None),
+                _ => Value::Ident(
+                    format!(
+                        "{}-{}",
+                        self.to_css_string(span)?,
+                        other.to_css_string(span)?
+                    ),
+                    QuoteKind::None,
+                ),
             },
             _ => match other {
                 Self::Ident(s, q) => Value::Ident(
-                    format!("{}-{}{}{}", self, q.normalize(), s, q.normalize()),
+                    format!(
+                        "{}-{}{}{}",
+                        self.to_css_string(span)?,
+                        q.normalize(),
+                        s,
+                        q.normalize()
+                    ),
                     QuoteKind::None,
                 ),
-                Self::Null => Value::Ident(format!("{}-", self), QuoteKind::None),
-                _ => Value::Ident(format!("{}-{}", self, other), QuoteKind::None),
+                Self::Null => {
+                    Value::Ident(format!("{}-", self.to_css_string(span)?), QuoteKind::None)
+                }
+                _ => Value::Ident(
+                    format!(
+                        "{}-{}",
+                        self.to_css_string(span)?,
+                        other.to_css_string(span)?
+                    ),
+                    QuoteKind::None,
+                ),
             },
         })
     }
-}
 
-impl Mul for Value {
-    type Output = SassResult<Self>;
-
-    fn mul(self, mut other: Self) -> Self::Output {
+    pub fn mul(self, mut other: Self, span: Span) -> SassResult<Self> {
         if let Self::Paren(..) = other {
-            other = other.eval()?
+            other = other.eval(span)?.node
         }
         let precedence = Op::Mul.precedence();
         Ok(match self {
@@ -238,40 +343,63 @@ impl Mul for Value {
                     }
                 }
                 _ => {
-                    return Err(
-                        format!("Undefined operation \"{}{} * {}\".", num, unit, other).into(),
+                    return Err((
+                        format!(
+                            "Undefined operation \"{}{} * {}\".",
+                            num,
+                            unit,
+                            other.to_css_string(span)?
+                        ),
+                        span,
                     )
+                        .into())
                 }
             },
             Self::BinaryOp(left, op, right) => {
                 if op.precedence() >= precedence {
-                    (Self::BinaryOp(left, op, right).eval()? * other)?
+                    Self::BinaryOp(left, op, right)
+                        .eval(span)?
+                        .node
+                        .mul(other, span)?
                 } else {
                     Self::BinaryOp(
                         left,
                         op,
-                        Box::new(Self::BinaryOp(right, Op::Mul, Box::new(other)).eval()?),
+                        Box::new(
+                            Self::BinaryOp(right, Op::Mul, Box::new(other))
+                                .eval(span)?
+                                .node,
+                        ),
                     )
-                    .eval()?
+                    .eval(span)?
+                    .node
                 }
             }
-            Self::UnaryOp(..) | Self::Paren(..) => (self.eval()? * other)?,
-            _ => return Err(format!("Undefined operation \"{} * {}\".", self, other).into()),
+            Self::UnaryOp(..) | Self::Paren(..) => self.eval(span)?.node.mul(other, span)?,
+            _ => {
+                return Err((
+                    format!(
+                        "Undefined operation \"{} * {}\".",
+                        self.to_css_string(span)?,
+                        other.to_css_string(span)?
+                    ),
+                    span,
+                )
+                    .into())
+            }
         })
     }
-}
 
-impl Div for Value {
-    type Output = SassResult<Self>;
-
-    fn div(self, other: Self) -> Self::Output {
+    pub fn div(self, other: Self, span: Span) -> SassResult<Self> {
         let precedence = Op::Div.precedence();
         Ok(match self {
             Self::Null => todo!(),
             Self::Dimension(num, unit) => match other {
                 Self::Dimension(num2, unit2) => {
                     if !unit.comparable(&unit2) {
-                        return Err(format!("Incompatible units {} and {}.", unit2, unit).into());
+                        return Err(
+                            (format!("Incompatible units {} and {}.", unit2, unit), span).into(),
+                        );
                     }
                     if unit == unit2 {
                         Value::Dimension(num / num2, Unit::None)
@@ -293,7 +421,7 @@ impl Div for Value {
                     QuoteKind::None,
                 ),
                 Self::BinaryOp(..) | Self::Paren(..) => {
-                    (Self::Dimension(num, unit) / other.eval()?)?
+                    Self::Dimension(num, unit).div(other.eval(span)?.node, span)?
                 }
                 _ => todo!(),
             },
@@ -304,23 +432,42 @@ impl Div for Value {
                 ),
                 Self::Null => Value::Ident(format!("{}/", c), QuoteKind::None),
                 Self::Dimension(..) | Self::Color(..) => {
-                    return Err(format!("Undefined operation \"{} / {}\".", c, other).into())
+                    return Err((
+                        format!(
+                            "Undefined operation \"{} / {}\".",
+                            c,
+                            other.to_css_string(span)?
+                        ),
+                        span,
+                    )
+                        .into())
                 }
-                _ => Value::Ident(format!("{}/{}", c, other), QuoteKind::None),
+                _ => Value::Ident(
+                    format!("{}/{}", c, other.to_css_string(span)?),
+                    QuoteKind::None,
+                ),
             },
             Self::BinaryOp(left, op, right) => {
                 if op.precedence() >= precedence {
-                    (Self::BinaryOp(left, op, right).eval()? / other)?
+                    Self::BinaryOp(left, op, right)
+                        .eval(span)?
+                        .node
+                        .div(other, span)?
                 } else {
                     Self::BinaryOp(
                         left,
                         op,
-                        Box::new(Self::BinaryOp(right, Op::Div, Box::new(other)).eval()?),
+                        Box::new(
+                            Self::BinaryOp(right, Op::Div, Box::new(other))
+                                .eval(span)?
+                                .node,
+                        ),
                     )
-                    .eval()?
+                    .eval(span)?
+                    .node
                 }
             }
-            Self::Paren(..) => (self.eval()? / other)?,
+            Self::Paren(..) => self.eval(span)?.node.div(other, span)?,
             Self::Ident(s1, q1) => match other {
                 Self::Ident(s2, q2) => Value::Ident(
                     format!(
@@ -339,7 +486,13 @@ impl Div for Value {
                 | Self::False
                 | Self::Dimension(..)
                 | Self::Color(..) => Value::Ident(
-                    format!("{}{}{}/{}", q1.normalize(), s1, q1.normalize(), other),
+                    format!(
+                        "{}{}{}/{}",
+                        q1.normalize(),
+                        s1,
+                        q1.normalize(),
+                        other.to_css_string(span)?
+                    ),
                     QuoteKind::None,
                 ),
                 Self::Null => Value::Ident(
@@ -350,25 +503,36 @@ impl Div for Value {
             },
             _ => match other {
                 Self::Ident(s, q) => Value::Ident(
-                    format!("{}/{}{}{}", self, q.normalize(), s, q.normalize()),
+                    format!(
+                        "{}/{}{}{}",
+                        self.to_css_string(span)?,
+                        q.normalize(),
+                        s,
+                        q.normalize()
+                    ),
                     QuoteKind::None,
                 ),
-                Self::Null => Value::Ident(format!("{}/", self), QuoteKind::None),
-                _ => Value::Ident(format!("{}/{}", self, other), QuoteKind::None),
+                Self::Null => {
+                    Value::Ident(format!("{}/", self.to_css_string(span)?), QuoteKind::None)
+                }
+                _ => Value::Ident(
+                    format!(
+                        "{}/{}",
+                        self.to_css_string(span)?,
+                        other.to_css_string(span)?
+                    ),
+                    QuoteKind::None,
+                ),
             },
         })
     }
-}
 
-impl Rem for Value {
-    type Output = SassResult<Self>;
-
-    fn rem(self, other: Self) -> Self::Output {
+    pub fn rem(self, other: Self, span: Span) -> SassResult<Self> {
         Ok(match self {
             Value::Dimension(n, u) => match other {
                 Value::Dimension(n2, u2) => {
                     if !u.comparable(&u2) {
-                        return Err(format!("Incompatible units {} and {}.", u2, u).into());
+                        return Err((format!("Incompatible units {} and {}.", u2, u), span).into());
                     }
                     if u == u2 {
                         Value::Dimension(n % n2, u)
@@ -381,26 +545,35 @@ impl Rem for Value {
                     }
                 }
                 _ => {
-                    return Err(format!(
-                        "Undefined operation \"{} % {}\".",
-                        Value::Dimension(n, u),
-                        other
+                    return Err((
+                        format!(
+                            "Undefined operation \"{} % {}\".",
+                            Value::Dimension(n, u).to_css_string(span)?,
+                            other.to_css_string(span)?
+                        ),
+                        span,
                     )
-                    .into())
+                        .into())
                 }
             },
-            _ => return Err(format!("Undefined operation \"{} % {}\".", self, other).into()),
+            _ => {
+                return Err((
+                    format!(
+                        "Undefined operation \"{} % {}\".",
+                        self.to_css_string(span)?,
+                        other.to_css_string(span)?
+                    ),
+                    span,
+                )
+                    .into())
+            }
         })
     }
-}
 
-impl Neg for Value {
-    type Output = SassResult<Self>;
-
-    fn neg(self) -> Self::Output {
-        Ok(match self.eval()? {
+    pub fn neg(self, span: Span) -> SassResult<Self> {
+        Ok(match self.eval(span)?.node {
             Value::Dimension(n, u) => Value::Dimension(-n, u),
-            v => Value::Ident(format!("-{}", v), QuoteKind::None),
+            v => Value::Ident(format!("-{}", v.to_css_string(span)?), QuoteKind::None),
         })
     }
 }

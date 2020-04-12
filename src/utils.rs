@@ -1,5 +1,7 @@
 use std::iter::{Iterator, Peekable};
 
+use codemap::Spanned;
+
 use crate::common::QuoteKind;
 use crate::error::SassResult;
 use crate::selector::Selector;
@@ -35,27 +37,27 @@ pub(crate) trait IsComment {
 }
 
 pub(crate) fn devour_whitespace_or_comment<I: Iterator<Item = Token>>(
-    s: &mut Peekable<I>,
+    toks: &mut Peekable<I>,
 ) -> SassResult<bool> {
     let mut found_whitespace = false;
-    while let Some(w) = s.peek() {
-        if w.kind == '/' {
-            s.next();
-            match s.peek().unwrap().kind {
+    while let Some(tok) = toks.peek() {
+        if tok.kind == '/' {
+            let pos = toks.next().unwrap().pos();
+            match toks.peek().unwrap().kind {
                 '*' => {
-                    eat_comment(s, &Scope::new(), &Selector::new())?;
+                    eat_comment(toks, &Scope::new(), &Selector::new())?;
                 }
-                '/' => read_until_newline(s),
-                _ => return Err("Expected expression.".into()),
+                '/' => read_until_newline(toks),
+                _ => return Err(("Expected expression.", pos).into()),
             };
             found_whitespace = true;
             continue;
         }
-        if !w.is_whitespace() {
+        if !tok.is_whitespace() {
             break;
         }
         found_whitespace = true;
-        s.next();
+        toks.next();
     }
     Ok(found_whitespace)
 }
@@ -64,20 +66,23 @@ pub(crate) fn parse_interpolation<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
     scope: &Scope,
     super_selector: &Selector,
-) -> SassResult<Value> {
+) -> SassResult<Spanned<Value>> {
     let val = Value::from_vec(read_until_closing_curly_brace(toks), scope, super_selector)?;
     toks.next();
-    Ok(val.eval()?.unquote())
+    Ok(Spanned {
+        node: val.node.eval(val.span)?.node.unquote(),
+        span: val.span,
+    })
 }
 
 pub(crate) struct VariableDecl {
-    pub val: Value,
+    pub val: Spanned<Value>,
     pub default: bool,
     pub global: bool,
 }
 
 impl VariableDecl {
-    pub const fn new(val: Value, default: bool, global: bool) -> VariableDecl {
+    pub const fn new(val: Spanned<Value>, default: bool, global: bool) -> VariableDecl {
         VariableDecl {
             val,
             default,
@@ -327,28 +332,22 @@ pub(crate) fn eat_variable_value<I: Iterator<Item = Token>>(
                 match next.kind {
                     'i' => todo!("!important"),
                     'g' => {
-                        if eat_ident(&mut raw, scope, super_selector)?
-                            .to_ascii_lowercase()
-                            .as_str()
-                            == "lobal"
-                        {
+                        let s = eat_ident(&mut raw, scope, super_selector)?;
+                        if s.node.to_ascii_lowercase().as_str() == "lobal" {
                             global = true;
                         } else {
-                            return Err("Invalid flag name.".into());
+                            return Err(("Invalid flag name.", s.span).into());
                         }
                     }
                     'd' => {
-                        if eat_ident(&mut raw, scope, super_selector)?
-                            .to_ascii_lowercase()
-                            .as_str()
-                            == "efault"
-                        {
+                        let s = eat_ident(&mut raw, scope, super_selector)?;
+                        if s.to_ascii_lowercase().as_str() == "efault" {
                             default = true;
                         } else {
-                            return Err("Invalid flag name.".into());
+                            return Err(("Invalid flag name.", s.span).into());
                         }
                     }
-                    _ => return Err("Invalid flag name.".into()),
+                    _ => return Err(("Invalid flag name.", next.pos()).into()),
                 }
             }
             _ => val_toks.push(tok),
@@ -364,17 +363,21 @@ pub(crate) fn eat_ident<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
     scope: &Scope,
     super_selector: &Selector,
-) -> SassResult<String> {
+) -> SassResult<Spanned<String>> {
     let mut s = String::new();
+    let mut span = toks.peek().unwrap().pos();
     while let Some(tok) = toks.peek() {
+        span = span.merge(tok.pos());
         match tok.kind {
             '#' => {
-                toks.next();
-                if toks.peek().ok_or("Expected identifier.")?.kind == '{' {
+                let tok = toks.next().unwrap();
+                if toks.peek().ok_or(("Expected identifier.", tok.pos()))?.kind == '{' {
                     toks.next();
-                    s.push_str(&parse_interpolation(toks, scope, super_selector)?.to_string());
+                    let interpolation = parse_interpolation(toks, scope, super_selector)?;
+                    span = span.merge(interpolation.span);
+                    s.push_str(&interpolation.node.to_css_string(interpolation.span)?);
                 } else {
-                    return Err("Expected identifier.".into());
+                    return Err(("Expected identifier.", tok.pos()).into());
                 }
             }
             _ if tok.kind.is_ascii_alphanumeric()
@@ -385,7 +388,7 @@ pub(crate) fn eat_ident<I: Iterator<Item = Token>>(
                 s.push(toks.next().unwrap().kind)
             }
             '\\' => {
-                toks.next();
+                let span_start = toks.next().unwrap().pos();
                 let mut n = String::new();
                 while let Some(c) = toks.peek() {
                     if !c.kind.is_ascii_hexdigit() || n.len() > 6 {
@@ -395,7 +398,7 @@ pub(crate) fn eat_ident<I: Iterator<Item = Token>>(
                     toks.next();
                 }
                 if n.is_empty() {
-                    let c = toks.next().ok_or("expected \"{\".")?.kind;
+                    let c = toks.next().ok_or(("expected \"{\".", span_start))?.kind;
                     if (c == '-' && !s.is_empty()) || c.is_ascii_alphabetic() {
                         s.push(c);
                     } else {
@@ -418,14 +421,20 @@ pub(crate) fn eat_ident<I: Iterator<Item = Token>>(
             _ => break,
         }
     }
-    Ok(s)
+    Ok(Spanned { node: s, span })
 }
 
 pub(crate) fn eat_ident_no_interpolation<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
-) -> SassResult<String> {
+) -> SassResult<Spanned<String>> {
     let mut s = String::new();
+    let mut span = if let Some(tok) = toks.peek() {
+        tok.pos()
+    } else {
+        todo!()
+    };
     while let Some(tok) = toks.peek() {
+        span = span.merge(tok.pos());
         match tok.kind {
             '#' => {
                 break;
@@ -471,26 +480,36 @@ pub(crate) fn eat_ident_no_interpolation<I: Iterator<Item = Token>>(
             _ => break,
         }
     }
-    Ok(s)
+    Ok(Spanned { node: s, span })
 }
 
-pub(crate) fn eat_number<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -> SassResult<String> {
+pub(crate) fn eat_number<I: Iterator<Item = Token>>(
+    toks: &mut Peekable<I>,
+) -> SassResult<Spanned<String>> {
     let mut whole = String::new();
+    let mut span = if let Some(tok) = toks.peek() {
+        tok.pos()
+    } else {
+        todo!()
+    };
     while let Some(c) = toks.peek() {
         if !c.kind.is_numeric() {
             break;
         }
         let tok = toks.next().unwrap();
+        span = span.merge(tok.pos());
         whole.push(tok.kind);
     }
 
     if toks.peek().is_none() {
-        return Ok(whole);
+        return Ok(Spanned { node: whole, span });
     }
 
     let mut dec = String::new();
 
-    if toks.peek().unwrap().kind == '.' {
+    let next_tok = toks.peek().unwrap().clone();
+
+    if next_tok.kind == '.' {
         toks.next();
         dec.push('.');
         while let Some(c) = toks.peek() {
@@ -498,16 +517,17 @@ pub(crate) fn eat_number<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -> S
                 break;
             }
             let tok = toks.next().unwrap();
+            span = span.merge(tok.pos());
             dec.push(tok.kind);
         }
     }
 
     if dec.len() == 1 {
-        return Err("Expected digit.".into());
+        return Err(("Expected digit.", next_tok.pos()).into());
     }
 
     whole.push_str(&dec);
-    Ok(whole)
+    Ok(Spanned { node: whole, span })
 }
 
 /// Eat tokens until a newline
@@ -529,13 +549,21 @@ pub(crate) fn read_until_newline<I: Iterator<Item = Token>>(toks: &mut Peekable<
 /// This function assumes that the starting "/*" has already been consumed
 /// The entirety of the comment, including the ending "*/" is consumed.
 /// Note that the ending "*/" is not included in the output.
+///
+/// TODO: support interpolation within multiline comments
 pub(crate) fn eat_comment<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
     _scope: &Scope,
     _super_selector: &Selector,
-) -> SassResult<String> {
+) -> SassResult<Spanned<String>> {
     let mut comment = String::new();
+    let mut span = if let Some(tok) = toks.peek() {
+        tok.pos()
+    } else {
+        todo!()
+    };
     while let Some(tok) = toks.next() {
+        span = span.merge(tok.pos());
         if tok.kind == '*' && toks.peek().unwrap().kind == '/' {
             toks.next();
             break;
@@ -543,7 +571,10 @@ pub(crate) fn eat_comment<I: Iterator<Item = Token>>(
         comment.push(tok.kind);
     }
     devour_whitespace(toks);
-    Ok(comment)
+    Ok(Spanned {
+        node: comment,
+        span,
+    })
 }
 
 pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
@@ -551,11 +582,17 @@ pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
     scope: &Scope,
     q: char,
     super_selector: &Selector,
-) -> SassResult<Value> {
+) -> SassResult<Spanned<Value>> {
     let mut s = String::new();
     let mut is_escaped = false;
     let mut found_interpolation = false;
+    let mut span = if let Some(tok) = toks.peek() {
+        tok.pos()
+    } else {
+        todo!()
+    };
     while let Some(tok) = toks.next() {
+        span = span.merge(tok.pos());
         match tok.kind {
             '"' if !is_escaped && q == '"' => break,
             '"' if is_escaped => {
@@ -579,14 +616,15 @@ pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
                 if toks.peek().unwrap().kind == '{' {
                     toks.next();
                     found_interpolation = true;
-                    s.push_str(&parse_interpolation(toks, scope, super_selector)?.to_string());
+                    let interpolation = parse_interpolation(toks, scope, super_selector)?;
+                    s.push_str(&interpolation.node.to_css_string(interpolation.span)?);
                     continue;
                 } else {
                     s.push('#');
                     continue;
                 }
             }
-            '\n' => return Err("Expected \".".into()),
+            '\n' => return Err(("Expected \".", tok.pos()).into()),
             v if v.is_ascii_hexdigit() && is_escaped => {
                 let mut n = v.to_string();
                 while let Some(c) = toks.peek() {
@@ -628,7 +666,10 @@ pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
             _ => unreachable!(),
         }
     };
-    Ok(Value::Ident(s, quotes))
+    Ok(Spanned {
+        node: Value::Ident(s, quotes),
+        span,
+    })
 }
 
 pub(crate) fn read_until_closing_paren<I: Iterator<Item = Token>>(

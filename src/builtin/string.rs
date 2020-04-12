@@ -18,7 +18,14 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             max_args!(args, 1);
             match arg!(args, scope, super_selector, 0, "string") {
                 Value::Ident(i, q) => Ok(Value::Ident(i.to_ascii_uppercase(), q)),
-                v => Err(format!("$string: {} is not a string.", v).into()),
+                v => Err((
+                    format!(
+                        "$string: {} is not a string.",
+                        v.to_css_string(args.span())?
+                    ),
+                    args.span(),
+                )
+                    .into()),
             }
         }),
     );
@@ -28,7 +35,14 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             max_args!(args, 1);
             match arg!(args, scope, super_selector, 0, "string") {
                 Value::Ident(i, q) => Ok(Value::Ident(i.to_ascii_lowercase(), q)),
-                v => Err(format!("$string: {} is not a string.", v).into()),
+                v => Err((
+                    format!(
+                        "$string: {} is not a string.",
+                        v.to_css_string(args.span())?
+                    ),
+                    args.span(),
+                )
+                    .into()),
             }
         }),
     );
@@ -41,7 +55,14 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     Number::from(i.chars().count()),
                     Unit::None,
                 )),
-                v => Err(format!("$string: {} is not a string.", v).into()),
+                v => Err((
+                    format!(
+                        "$string: {} is not a string.",
+                        v.to_css_string(args.span())?
+                    ),
+                    args.span(),
+                )
+                    .into()),
             }
         }),
     );
@@ -51,7 +72,14 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             max_args!(args, 1);
             match arg!(args, scope, super_selector, 0, "string") {
                 Value::Ident(i, _) => Ok(Value::Ident(i, QuoteKind::Double)),
-                v => Err(format!("$string: {} is not a string.", v).into()),
+                v => Err((
+                    format!(
+                        "$string: {} is not a string.",
+                        v.to_css_string(args.span())?
+                    ),
+                    args.span(),
+                )
+                    .into()),
             }
         }),
     );
@@ -61,7 +89,14 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             max_args!(args, 1);
             match arg!(args, scope, super_selector, 0, "string") {
                 i @ Value::Ident(..) => Ok(i.unquote()),
-                v => Err(format!("$string: {} is not a string.", v).into()),
+                v => Err((
+                    format!(
+                        "$string: {} is not a string.",
+                        v.to_css_string(args.span())?
+                    ),
+                    args.span(),
+                )
+                    .into()),
             }
         }),
     );
@@ -71,12 +106,21 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             max_args!(args, 3);
             let (string, quotes) = match arg!(args, scope, super_selector, 0, "string") {
                 Value::Ident(s, q) => (s, q),
-                v => return Err(format!("$string: {} is not a string.", v).into()),
+                v => {
+                    return Err((
+                        format!(
+                            "$string: {} is not a string.",
+                            v.to_css_string(args.span())?
+                        ),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
             let str_len = string.chars().count();
             let start = match arg!(args, scope, super_selector, 1, "start-at") {
                 Value::Dimension(n, Unit::None) if n.is_decimal() => {
-                    return Err(format!("{} is not an int.", n).into())
+                    return Err((format!("{} is not an int.", n), args.span()).into())
                 }
                 Value::Dimension(n, Unit::None) if n.is_positive() => {
                     n.to_integer().to_usize().unwrap_or(str_len + 1)
@@ -87,13 +131,29 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     .to_usize()
                     .unwrap(),
                 v @ Value::Dimension(..) => {
-                    return Err(format!("$start: Expected {} to have no units.", v).into())
+                    return Err((
+                        format!(
+                            "$start: Expected {} to have no units.",
+                            v.to_css_string(args.span())?
+                        ),
+                        args.span(),
+                    )
+                        .into())
                 }
-                v => return Err(format!("$start-at: {} is not a number.", v).into()),
+                v => {
+                    return Err((
+                        format!(
+                            "$start-at: {} is not a number.",
+                            v.to_css_string(args.span())?
+                        ),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
             let mut end = match arg!(args, scope, super_selector, 2, "end-at" = Value::Null) {
                 Value::Dimension(n, Unit::None) if n.is_decimal() => {
-                    return Err(format!("{} is not an int.", n).into())
+                    return Err((format!("{} is not an int.", n), args.span()).into())
                 }
                 Value::Dimension(n, Unit::None) if n.is_positive() => {
                     n.to_integer().to_usize().unwrap_or(str_len + 1)
@@ -104,10 +164,26 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     .to_usize()
                     .unwrap_or(str_len + 1),
                 v @ Value::Dimension(..) => {
-                    return Err(format!("$end: Expected {} to have no units.", v).into())
+                    return Err((
+                        format!(
+                            "$end: Expected {} to have no units.",
+                            v.to_css_string(args.span())?
+                        ),
+                        args.span(),
+                    )
+                        .into())
                 }
                 Value::Null => str_len,
-                v => return Err(format!("$end-at: {} is not a number.", v).into()),
+                v => {
+                    return Err((
+                        format!(
+                            "$end-at: {} is not a number.",
+                            v.to_css_string(args.span())?
+                        ),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
 
             if end > str_len {
@@ -134,12 +210,30 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             max_args!(args, 2);
             let s1 = match arg!(args, scope, super_selector, 0, "string") {
                 Value::Ident(i, _) => i,
-                v => return Err(format!("$string: {} is not a string.", v).into()),
+                v => {
+                    return Err((
+                        format!(
+                            "$string: {} is not a string.",
+                            v.to_css_string(args.span())?
+                        ),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
 
             let substr = match arg!(args, scope, super_selector, 1, "substring") {
                 Value::Ident(i, _) => i,
-                v => return Err(format!("$substring: {} is not a string.", v).into()),
+                v => {
+                    return Err((
+                        format!(
+                            "$substring: {} is not a string.",
+                            v.to_css_string(args.span())?
+                        ),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
 
             Ok(match s1.find(&substr) {
@@ -154,23 +248,54 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             max_args!(args, 3);
             let (s1, quotes) = match arg!(args, scope, super_selector, 0, "string") {
                 Value::Ident(i, q) => (i, q.normalize()),
-                v => return Err(format!("$string: {} is not a string.", v).into()),
+                v => {
+                    return Err((
+                        format!(
+                            "$string: {} is not a string.",
+                            v.to_css_string(args.span())?
+                        ),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
 
             let substr = match arg!(args, scope, super_selector, 1, "insert") {
                 Value::Ident(i, _) => i,
-                v => return Err(format!("$insert: {} is not a string.", v).into()),
+                v => {
+                    return Err((
+                        format!(
+                            "$insert: {} is not a string.",
+                            v.to_css_string(args.span())?
+                        ),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
 
             let index = match arg!(args, scope, super_selector, 2, "index") {
                 Value::Dimension(n, Unit::None) if n.is_decimal() => {
-                    return Err(format!("$index: {} is not an int.", n).into())
+                    return Err((format!("$index: {} is not an int.", n), args.span()).into())
                 }
                 Value::Dimension(n, Unit::None) => n,
                 v @ Value::Dimension(..) => {
-                    return Err(format!("$index: Expected {} to have no units.", v).into())
+                    return Err((
+                        format!(
+                            "$index: Expected {} to have no units.",
+                            v.to_css_string(args.span())?
+                        ),
+                        args.span(),
+                    )
+                        .into())
                 }
-                v => return Err(format!("$index: {} is not a number.", v).into()),
+                v => {
+                    return Err((
+                        format!("$index: {} is not a number.", v.to_css_string(args.span())?),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
 
             if s1.is_empty() {

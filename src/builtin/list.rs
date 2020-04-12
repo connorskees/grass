@@ -31,24 +31,33 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             };
             let n = match arg!(args, scope, super_selector, 1, "n") {
                 Value::Dimension(num, _) => num,
-                v => return Err(format!("$n: {} is not a number.", v).into()),
+                v => {
+                    return Err((
+                        format!("$n: {} is not a number.", v.to_css_string(args.span())?),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
 
             if n.is_zero() {
-                return Err("$n: List index may not be 0.".into());
+                return Err(("$n: List index may not be 0.", args.span()).into());
             }
 
             if n.abs() > Number::from(list.len()) {
-                return Err(format!(
-                    "$n: Invalid index {} for a list with {} elements.",
-                    n,
-                    list.len()
+                return Err((
+                    format!(
+                        "$n: Invalid index {} for a list with {} elements.",
+                        n,
+                        list.len()
+                    ),
+                    args.span(),
                 )
-                .into());
+                    .into());
             }
 
             if n.is_decimal() {
-                return Err(format!("$n: {} is not an int.", n).into());
+                return Err((format!("$n: {} is not an int.", n), args.span()).into());
             }
 
             if n.is_positive() {
@@ -83,23 +92,31 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             };
             let n = match arg!(args, scope, super_selector, 1, "n") {
                 Value::Dimension(num, _) => num,
-                v => return Err(format!("$n: {} is not a number.", v).into()),
+                v => {
+                    return Err((
+                        format!("$n: {} is not a number.", v.to_css_string(args.span())?),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
 
             if n.is_zero() {
-                return Err("$n: List index may not be 0.".into());
+                return Err(("$n: List index may not be 0.", args.span()).into());
             }
 
             let len = list.len();
 
             if n.abs() > Number::from(len) {
-                return Err(
-                    format!("$n: Invalid index {} for a list with {} elements.", n, len).into(),
-                );
+                return Err((
+                    format!("$n: Invalid index {} for a list with {} elements.", n, len),
+                    args.span(),
+                )
+                    .into());
             }
 
             if n.is_decimal() {
-                return Err(format!("$n: {} is not an int.", n).into());
+                return Err((format!("$n: {} is not an int.", n), args.span()).into());
             }
 
             let val = arg!(args, scope, super_selector, 2, "value");
@@ -134,10 +151,23 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     "comma" => ListSeparator::Comma,
                     "space" => ListSeparator::Space,
                     _ => {
-                        return Err("$separator: Must be \"space\", \"comma\", or \"auto\".".into())
+                        return Err((
+                            "$separator: Must be \"space\", \"comma\", or \"auto\".",
+                            args.span(),
+                        )
+                            .into())
                     }
                 },
-                v => return Err(format!("$separator: {} is not a string.", v).into()),
+                v => {
+                    return Err((
+                        format!(
+                            "$separator: {} is not a string.",
+                            v.to_css_string(args.span())?
+                        ),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
 
             list.push(val);
@@ -177,10 +207,23 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     "comma" => ListSeparator::Comma,
                     "space" => ListSeparator::Space,
                     _ => {
-                        return Err("$separator: Must be \"space\", \"comma\", or \"auto\".".into())
+                        return Err((
+                            "$separator: Must be \"space\", \"comma\", or \"auto\".",
+                            args.span(),
+                        )
+                            .into())
                     }
                 },
-                v => return Err(format!("$separator: {} is not a string.", v).into()),
+                v => {
+                    return Err((
+                        format!(
+                            "$separator: {} is not a string.",
+                            v.to_css_string(args.span())?
+                        ),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
 
             let brackets = match arg!(
@@ -195,7 +238,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     _ => Brackets::Bracketed,
                 },
                 v => {
-                    if v.is_true()? {
+                    if v.is_true(args.span())? {
                         Brackets::Bracketed
                     } else {
                         Brackets::None
@@ -240,7 +283,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             // Potential input to fuzz: index(1px 1in 1cm, 96px + 1rem)
             let index = match list
                 .into_iter()
-                .position(|v| v.equals(value.clone()).unwrap())
+                .position(|v| v.equals(value.clone(), args.span()).unwrap())
             {
                 Some(v) => Number::from(v + 1),
                 None => return Ok(Value::Null),
@@ -254,7 +297,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             let lists = args
                 .get_variadic(scope, super_selector)?
                 .into_iter()
-                .map(|x| match x {
+                .map(|x| match x.node {
                     Value::List(v, ..) => v,
                     Value::Map(m) => m.entries(),
                     v => vec![v],

@@ -1,18 +1,19 @@
-use crate::common::Pos;
 use crate::utils::IsWhitespace;
+
+use codemap::Span;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Token {
-    pub pos: Pos,
+    pub pos: Span,
     pub kind: char,
 }
 
 impl Token {
-    pub const fn new(pos: Pos, kind: char) -> Self {
+    pub const fn new(pos: Span, kind: char) -> Self {
         Self { pos, kind }
     }
 
-    pub const fn pos(&self) -> Pos {
+    pub const fn pos(&self) -> Span {
         self.pos
     }
 }

@@ -1,6 +1,7 @@
 use std::cmp::Ordering;
-use std::fmt::{self, Display, Write};
 use std::iter::Iterator;
+
+use codemap::{Span, Spanned};
 
 use crate::color::Color;
 use crate::common::{Brackets, ListSeparator, Op, QuoteKind};
@@ -33,110 +34,9 @@ pub(crate) enum Value {
     Paren(Box<Value>),
     Ident(String, QuoteKind),
     Map(SassMap),
-    ArgList(Vec<Value>),
+    ArgList(Vec<Spanned<Value>>),
     /// Returned by `get-function()`
     Function(SassFunction),
-}
-
-impl Display for Value {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Important => write!(f, "!important"),
-            Self::Dimension(num, unit) => match unit {
-                Unit::Mul(..) => {
-                    eprintln!("Error: {}{} isn't a valid CSS value.", num, unit);
-                    std::process::exit(1);
-                }
-                _ => write!(f, "{}{}", num, unit),
-            },
-            Self::Map(map) => write!(
-                f,
-                "({})",
-                map.iter()
-                    .map(|(k, v)| format!("{}: {}", k, v))
-                    .collect::<Vec<String>>()
-                    .join(", ")
-            ),
-            Self::Function(func) => write!(f, "get-function(\"{}\")", func.name()),
-            Self::List(vals, sep, brackets) => match brackets {
-                Brackets::None => write!(
-                    f,
-                    "{}",
-                    vals.iter()
-                        .filter(|x| !x.is_null())
-                        .map(std::string::ToString::to_string)
-                        .collect::<Vec<String>>()
-                        .join(sep.as_str()),
-                ),
-                Brackets::Bracketed => write!(
-                    f,
-                    "[{}]",
-                    vals.iter()
-                        .filter(|x| !x.is_null())
-                        .map(std::string::ToString::to_string)
-                        .collect::<Vec<String>>()
-                        .join(sep.as_str()),
-                ),
-            },
-            Self::Color(c) => write!(f, "{}", c),
-            Self::UnaryOp(..) | Self::BinaryOp(..) => write!(
-                f,
-                "{}",
-                match self.clone().eval() {
-                    Ok(v) => v,
-                    Err(e) => {
-                        eprintln!("{}", e);
-                        std::process::exit(1);
-                    }
-                }
-            ),
-            Self::Paren(val) => write!(f, "{}", val),
-            Self::Ident(val, kind) => {
-                if kind == &QuoteKind::None {
-                    return write!(f, "{}", val);
-                }
-                let has_single_quotes = val.contains(|x| x == '\'');
-                let has_double_quotes = val.contains(|x| x == '"');
-                if has_single_quotes && !has_double_quotes {
-                    write!(f, "\"{}\"", val)
-                } else if !has_single_quotes && has_double_quotes {
-                    write!(f, "'{}'", val)
-                } else if !has_single_quotes && !has_double_quotes {
-                    write!(f, "\"{}\"", val)
-                } else {
-                    let quote_char = match kind {
-                        QuoteKind::Double => '"',
-                        QuoteKind::Single => '\'',
-                        _ => unreachable!(),
-                    };
-                    f.write_char(quote_char)?;
-                    for c in val.chars() {
-                        match c {
-                            '"' | '\'' if c == quote_char => {
-                                f.write_char('\\')?;
-                                f.write_char(quote_char)?;
-                            }
-                            v => f.write_char(v)?,
-                        }
-                    }
-                    f.write_char(quote_char)?;
-                    Ok(())
-                }
-            }
-            Self::True => write!(f, "true"),
-            Self::False => write!(f, "false"),
-            Self::Null => write!(f, "null"),
-            Self::ArgList(args) => write!(
-                f,
-                "{}",
-                args.iter()
-                    .filter(|x| !x.is_null())
-                    .map(std::string::ToString::to_string)
-                    .collect::<Vec<String>>()
-                    .join(", "),
-            ),
-        }
-    }
 }
 
 impl Value {
@@ -147,12 +47,106 @@ impl Value {
             _ => false,
         }
     }
+    pub fn to_css_string(&self, span: Span) -> SassResult<String> {
+        Ok(match self {
+            Self::Important => format!("!important"),
+            Self::Dimension(num, unit) => match unit {
+                Unit::Mul(..) => {
+                    return Err((
+                        format!("Error: {}{} isn't a valid CSS value.", num, unit),
+                        span,
+                    )
+                        .into());
+                }
+                _ => format!("{}{}", num, unit),
+            },
+            Self::Map(map) => format!(
+                "({})",
+                map.iter()
+                    .map(|(k, v)| Ok(format!(
+                        "{}: {}",
+                        k.to_css_string(span)?,
+                        v.to_css_string(span)?
+                    )))
+                    .collect::<SassResult<Vec<String>>>()?
+                    .join(", ")
+            ),
+            Self::Function(func) => format!("get-function(\"{}\")", func.name()),
+            Self::List(vals, sep, brackets) => match brackets {
+                Brackets::None => format!(
+                    "{}",
+                    vals.iter()
+                        .filter(|x| !x.is_null())
+                        .map(|x| x.to_css_string(span))
+                        .collect::<SassResult<Vec<String>>>()?
+                        .join(sep.as_str()),
+                ),
+                Brackets::Bracketed => format!(
+                    "[{}]",
+                    vals.iter()
+                        .filter(|x| !x.is_null())
+                        .map(|x| x.to_css_string(span))
+                        .collect::<SassResult<Vec<String>>>()?
+                        .join(sep.as_str()),
+                ),
+            },
+            Self::Color(c) => format!("{}", c),
+            Self::UnaryOp(..) | Self::BinaryOp(..) => {
+                format!("{}", self.clone().eval(span)?.to_css_string(span)?)
+            }
+            Self::Paren(val) => format!("{}", val.to_css_string(span)?),
+            Self::Ident(val, kind) => {
+                if kind == &QuoteKind::None {
+                    return Ok(val.clone());
+                }
+                let has_single_quotes = val.contains(|x| x == '\'');
+                let has_double_quotes = val.contains(|x| x == '"');
+                if has_single_quotes && !has_double_quotes {
+                    format!("\"{}\"", val)
+                } else if !has_single_quotes && has_double_quotes {
+                    format!("'{}'", val)
+                } else if !has_single_quotes && !has_double_quotes {
+                    format!("\"{}\"", val)
+                } else {
+                    let quote_char = match kind {
+                        QuoteKind::Double => '"',
+                        QuoteKind::Single => '\'',
+                        _ => unreachable!(),
+                    };
+                    let mut buf = String::with_capacity(val.len() + 2);
+                    buf.push(quote_char);
+                    for c in val.chars() {
+                        match c {
+                            '"' | '\'' if c == quote_char => {
+                                buf.push('\\');
+                                buf.push(quote_char);
+                            }
+                            v => buf.push(v),
+                        }
+                    }
+                    buf.push(quote_char);
+                    buf
+                }
+            }
+            Self::True => "true".to_string(),
+            Self::False => "false".to_string(),
+            Self::Null => "null".to_string(),
+            Self::ArgList(args) => format!(
+                "{}",
+                args.iter()
+                    .filter(|x| !x.is_null())
+                    .map(|a| Ok(a.node.to_css_string(span)?))
+                    .collect::<SassResult<Vec<String>>>()?
+                    .join(", "),
+            ),
+        })
+    }
 
-    pub fn is_true(&self) -> SassResult<bool> {
+    pub fn is_true(&self, span: Span) -> SassResult<bool> {
         match self {
             Value::Null | Value::False => Ok(false),
             Self::BinaryOp(..) | Self::Paren(..) | Self::UnaryOp(..) => {
-                self.clone().eval()?.is_true()
+                self.clone().eval(span)?.is_true(span)
             }
             _ => Ok(true),
         }
@@ -165,7 +159,11 @@ impl Value {
         }
     }
 
-    pub fn kind(&self) -> SassResult<&'static str> {
+    pub fn span(self, span: Span) -> Spanned<Self> {
+        Spanned { node: self, span }
+    }
+
+    pub fn kind(&self, span: Span) -> SassResult<&'static str> {
         match self {
             Self::Color(..) => Ok("color"),
             Self::Ident(..) | Self::Important => Ok("string"),
@@ -176,7 +174,9 @@ impl Value {
             Self::True | Self::False => Ok("bool"),
             Self::Null => Ok("null"),
             Self::Map(..) => Ok("map"),
-            Self::BinaryOp(..) | Self::Paren(..) | Self::UnaryOp(..) => self.clone().eval()?.kind(),
+            Self::BinaryOp(..) | Self::Paren(..) | Self::UnaryOp(..) => {
+                self.clone().eval(span)?.kind(span)
+            }
         }
     }
 
@@ -195,19 +195,19 @@ impl Value {
         }
     }
 
-    pub fn inspect(&self) -> String {
-        match self {
+    pub fn inspect(&self, span: Span) -> SassResult<String> {
+        Ok(match self {
             Value::List(v, _, brackets) if v.is_empty() => match brackets {
                 Brackets::None => "()".to_string(),
                 Brackets::Bracketed => "[]".to_string(),
             },
             Value::Function(f) => format!("get-function(\"{}\")", f.name()),
-            v => v.to_string(),
-        }
+            v => v.to_css_string(span)?,
+        })
     }
 
-    pub fn equals(self, other: Value) -> SassResult<bool> {
-        Ok(match self.eval()? {
+    pub fn equals(self, other: Value, span: Span) -> SassResult<bool> {
+        Ok(match self.eval(span)?.node {
             Self::Ident(s1, ..) => match other {
                 Self::Ident(s2, ..) => s1 == s2,
                 _ => false,
@@ -227,64 +227,71 @@ impl Value {
                 }
                 _ => false,
             },
-            s => s == other.eval()?,
+            s => s == other.eval(span)?.node,
         })
     }
 
-    pub fn unary_op_plus(self) -> SassResult<Self> {
-        Ok(match self.eval()? {
+    pub fn unary_op_plus(self, span: Span) -> SassResult<Self> {
+        Ok(match self.eval(span)?.node {
             v @ Value::Dimension(..) => v,
-            v => Value::Ident(format!("+{}", v), QuoteKind::None),
+            v => Value::Ident(format!("+{}", v.to_css_string(span)?), QuoteKind::None),
         })
     }
 
-    pub fn eval(self) -> SassResult<Self> {
-        match self {
+    pub fn eval(self, span: Span) -> SassResult<Spanned<Self>> {
+        Ok(match self {
             Self::BinaryOp(lhs, op, rhs) => match op {
-                Op::Plus => *lhs + *rhs,
-                Op::Minus => *lhs - *rhs,
-                Op::Equal => Ok(Self::bool(lhs.equals(*rhs)?)),
-                Op::NotEqual => Ok(Self::bool(!lhs.equals(*rhs)?)),
-                Op::Mul => *lhs * *rhs,
-                Op::Div => *lhs / *rhs,
-                Op::Rem => *lhs % *rhs,
-                Op::GreaterThan => lhs.cmp(*rhs, op),
-                Op::GreaterThanEqual => lhs.cmp(*rhs, op),
-                Op::LessThan => lhs.cmp(*rhs, op),
-                Op::LessThanEqual => lhs.cmp(*rhs, op),
+                Op::Plus => lhs.add(*rhs, span)?,
+                Op::Minus => lhs.sub(*rhs, span)?,
+                Op::Equal => Self::bool(lhs.equals(*rhs, span)?),
+                Op::NotEqual => Self::bool(!lhs.equals(*rhs, span)?),
+                Op::Mul => lhs.mul(*rhs, span)?,
+                Op::Div => lhs.div(*rhs, span)?,
+                Op::Rem => lhs.rem(*rhs, span)?,
+                Op::GreaterThan => return lhs.cmp(*rhs, op, span),
+                Op::GreaterThanEqual => return lhs.cmp(*rhs, op, span),
+                Op::LessThan => return lhs.cmp(*rhs, op, span),
+                Op::LessThanEqual => return lhs.cmp(*rhs, op, span),
                 Op::Not => unreachable!(),
-                Op::And => Ok(if lhs.clone().is_true()? {
-                    rhs.eval()?
-                } else {
-                    lhs.eval()?
-                }),
-                Op::Or => Ok(if lhs.is_true()? {
-                    lhs.eval()?
-                } else {
-                    rhs.eval()?
-                }),
+                Op::And => {
+                    if lhs.clone().is_true(span)? {
+                        rhs.eval(span)?.node
+                    } else {
+                        lhs.eval(span)?.node
+                    }
+                }
+                Op::Or => {
+                    if lhs.is_true(span)? {
+                        lhs.eval(span)?.node
+                    } else {
+                        rhs.eval(span)?.node
+                    }
+                }
             },
-            Self::Paren(v) => v.eval(),
+            Self::Paren(v) => v.eval(span)?.node,
             Self::UnaryOp(op, val) => match op {
-                Op::Plus => val.unary_op_plus(),
-                Op::Minus => -*val,
-                Op::Not => Ok(Self::bool(!val.eval()?.is_true()?)),
+                Op::Plus => val.unary_op_plus(span)?,
+                Op::Minus => val.neg(span)?,
+                Op::Not => Self::bool(!val.eval(span)?.is_true(span)?),
                 _ => unreachable!(),
             },
-            _ => Ok(self),
+            _ => self,
         }
+        .span(span))
     }
 
-    pub fn cmp(self, mut other: Self, op: Op) -> SassResult<Value> {
+    pub fn cmp(self, mut other: Self, op: Op, span: Span) -> SassResult<Spanned<Value>> {
         if let Self::Paren(..) = other {
-            other = other.eval()?
+            other = other.eval(span)?.node
         }
         let precedence = op.precedence();
         let ordering = match self {
             Self::Dimension(num, unit) => match &other {
                 Self::Dimension(num2, unit2) => {
                     if !unit.comparable(&unit2) {
-                        return Err(format!("Incompatible units {} and {}.", unit2, unit).into());
+                        return Err(
+                            (format!("Incompatible units {} and {}.", unit2, unit), span).into(),
+                        );
                     }
                     if &unit == unit2 {
                         num.cmp(num2)
@@ -301,41 +308,69 @@ impl Value {
                     }
                 }
                 Self::BinaryOp(..) => todo!(),
-                v => return Err(format!("Undefined operation \"{} {} {}\".", v, op, other).into()),
+                v => {
+                    return Err((
+                        format!(
+                            "Undefined operation \"{} {} {}\".",
+                            v.to_css_string(span)?,
+                            op,
+                            other.to_css_string(span)?
+                        ),
+                        span,
+                    )
+                        .into())
+                }
             },
             Self::BinaryOp(left, op2, right) => {
                 return if op2.precedence() >= precedence {
-                    Self::BinaryOp(left, op2, right).eval()?.cmp(other, op)
+                    Self::BinaryOp(left, op2, right)
+                        .eval(span)?
+                        .node
+                        .cmp(other, op, span)
                 } else {
                     Self::BinaryOp(
                         left,
                         op2,
-                        Box::new(Self::BinaryOp(right, op, Box::new(other)).eval()?),
+                        Box::new(Self::BinaryOp(right, op, Box::new(other)).eval(span)?.node),
                     )
-                    .eval()
+                    .eval(span)
                 }
             }
-            Self::UnaryOp(..) | Self::Paren(..) => return self.eval()?.cmp(other, op),
-            _ => return Err(format!("Undefined operation \"{} {} {}\".", self, op, other).into()),
+            Self::UnaryOp(..) | Self::Paren(..) => {
+                return self.eval(span)?.node.cmp(other, op, span)
+            }
+            _ => {
+                return Err((
+                    format!(
+                        "Undefined operation \"{} {} {}\".",
+                        self.to_css_string(span)?,
+                        op,
+                        other.to_css_string(span)?
+                    ),
+                    span,
+                )
+                    .into())
+            }
         };
-        match op {
+        Ok(match op {
             Op::GreaterThan => match ordering {
-                Ordering::Greater => Ok(Self::True),
-                Ordering::Less | Ordering::Equal => Ok(Self::False),
+                Ordering::Greater => Self::True,
+                Ordering::Less | Ordering::Equal => Self::False,
             },
             Op::GreaterThanEqual => match ordering {
-                Ordering::Greater | Ordering::Equal => Ok(Self::True),
-                Ordering::Less => Ok(Self::False),
+                Ordering::Greater | Ordering::Equal => Self::True,
+                Ordering::Less => Self::False,
             },
             Op::LessThan => match ordering {
-                Ordering::Less => Ok(Self::True),
-                Ordering::Greater | Ordering::Equal => Ok(Self::False),
+                Ordering::Less => Self::True,
+                Ordering::Greater | Ordering::Equal => Self::False,
             },
             Op::LessThanEqual => match ordering {
-                Ordering::Less | Ordering::Equal => Ok(Self::True),
-                Ordering::Greater => Ok(Self::False),
+                Ordering::Less | Ordering::Equal => Self::True,
+                Ordering::Greater => Self::False,
             },
             _ => unreachable!(),
         }
+        .span(span))
     }
 }

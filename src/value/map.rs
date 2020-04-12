@@ -1,6 +1,8 @@
 use std::slice::Iter;
 use std::vec::IntoIter;
 
+use codemap::Span;
+
 use super::Value;
 use crate::common::{Brackets, ListSeparator};
 use crate::error::SassResult;
@@ -13,9 +15,9 @@ impl SassMap {
         SassMap(Vec::new())
     }
 
-    pub fn get(self, key: &Value) -> SassResult<Option<Value>> {
+    pub fn get(self, key: &Value, span: Span) -> SassResult<Option<Value>> {
         for (k, v) in self.0 {
-            if k.equals(key.clone())? {
+            if k.equals(key.clone(), span)? {
                 return Ok(Some(v));
             }
         }

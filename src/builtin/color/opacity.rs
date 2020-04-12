@@ -13,7 +13,11 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             max_args!(args, 1);
             match arg!(args, scope, super_selector, 0, "color") {
                 Value::Color(c) => Ok(Value::Dimension(c.alpha(), Unit::None)),
-                v => Err(format!("$color: {} is not a color.", v).into()),
+                v => Err((
+                    format!("$color: {} is not a color.", v.to_css_string(args.span())?),
+                    args.span(),
+                )
+                    .into()),
             }
         }),
     );
@@ -27,7 +31,11 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     format!("opacity({}{})", num, unit),
                     QuoteKind::None,
                 )),
-                v => Err(format!("$color: {} is not a color.", v).into()),
+                v => Err((
+                    format!("$color: {} is not a color.", v.to_css_string(args.span())?),
+                    args.span(),
+                )
+                    .into()),
             }
         }),
     );
@@ -37,11 +45,26 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             max_args!(args, 2);
             let color = match arg!(args, scope, super_selector, 0, "color") {
                 Value::Color(c) => c,
-                v => return Err(format!("$color: {} is not a color.", v).into()),
+                v => {
+                    return Err((
+                        format!("$color: {} is not a color.", v.to_css_string(args.span())?),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
             let amount = match arg!(args, scope, super_selector, 1, "amount") {
-                Value::Dimension(n, u) => bound!("amount", n, u, 0, 1),
-                v => return Err(format!("$amount: {} is not a number.", v).into()),
+                Value::Dimension(n, u) => bound!(args, "amount", n, u, 0, 1),
+                v => {
+                    return Err((
+                        format!(
+                            "$amount: {} is not a number.",
+                            v.to_css_string(args.span())?
+                        ),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
             Ok(Value::Color(color.fade_in(amount)))
         }),
@@ -52,11 +75,26 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             max_args!(args, 2);
             let color = match arg!(args, scope, super_selector, 0, "color") {
                 Value::Color(c) => c,
-                v => return Err(format!("$color: {} is not a color.", v).into()),
+                v => {
+                    return Err((
+                        format!("$color: {} is not a color.", v.to_css_string(args.span())?),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
             let amount = match arg!(args, scope, super_selector, 1, "amount") {
-                Value::Dimension(n, u) => bound!("amount", n, u, 0, 1),
-                v => return Err(format!("$amount: {} is not a number.", v).into()),
+                Value::Dimension(n, u) => bound!(args, "amount", n, u, 0, 1),
+                v => {
+                    return Err((
+                        format!(
+                            "$amount: {} is not a number.",
+                            v.to_css_string(args.span())?
+                        ),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
             Ok(Value::Color(color.fade_in(amount)))
         }),
@@ -67,11 +105,26 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             max_args!(args, 2);
             let color = match arg!(args, scope, super_selector, 0, "color") {
                 Value::Color(c) => c,
-                v => return Err(format!("$color: {} is not a color.", v).into()),
+                v => {
+                    return Err((
+                        format!("$color: {} is not a color.", v.to_css_string(args.span())?),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
             let amount = match arg!(args, scope, super_selector, 1, "amount") {
-                Value::Dimension(n, u) => bound!("amount", n, u, 0, 1),
-                v => return Err(format!("$amount: {} is not a number.", v).into()),
+                Value::Dimension(n, u) => bound!(args, "amount", n, u, 0, 1),
+                v => {
+                    return Err((
+                        format!(
+                            "$amount: {} is not a number.",
+                            v.to_css_string(args.span())?
+                        ),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
             Ok(Value::Color(color.fade_out(amount)))
         }),
@@ -82,11 +135,26 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             max_args!(args, 2);
             let color = match arg!(args, scope, super_selector, 0, "color") {
                 Value::Color(c) => c,
-                v => return Err(format!("$color: {} is not a color.", v).into()),
+                v => {
+                    return Err((
+                        format!("$color: {} is not a color.", v.to_css_string(args.span())?),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
             let amount = match arg!(args, scope, super_selector, 1, "amount") {
-                Value::Dimension(n, u) => bound!("amount", n, u, 0, 1),
-                v => return Err(format!("$amount: {} is not a number.", v).into()),
+                Value::Dimension(n, u) => bound!(args, "amount", n, u, 0, 1),
+                v => {
+                    return Err((
+                        format!(
+                            "$amount: {} is not a number.",
+                            v.to_css_string(args.span())?
+                        ),
+                        args.span(),
+                    )
+                        .into())
+                }
             };
             Ok(Value::Color(color.fade_out(amount)))
         }),

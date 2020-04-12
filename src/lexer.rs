@@ -1,7 +1,9 @@
 use std::iter::Peekable;
 use std::str::Chars;
+use std::sync::Arc;
 
-use crate::common::Pos;
+use codemap::File;
+
 use crate::Token;
 
 pub const FORM_FEED: char = '\x0C';
@@ -9,41 +11,42 @@ pub const FORM_FEED: char = '\x0C';
 #[derive(Debug, Clone)]
 pub(crate) struct Lexer<'a> {
     buf: Peekable<Chars<'a>>,
-    pos: Pos,
+    pos: usize,
+    file: &'a Arc<File>,
 }
 
 impl<'a> Iterator for Lexer<'a> {
     type Item = Token;
     fn next(&mut self) -> Option<Self::Item> {
         let kind = match self.buf.next()? {
-            '\n' | FORM_FEED => {
-                self.pos.newline();
-                '\n'
-            }
+            '\n' | FORM_FEED => '\n',
             '\r' => {
                 if self.buf.peek() == Some(&'\n') {
+                    self.pos += 1;
                     self.buf.next();
                     '\n'
                 } else {
                     '\n'
                 }
             }
-            '\0' => return None,
             c => c,
         };
-        self.pos.next_char();
-        Some(Token {
-            kind,
-            pos: self.pos,
-        })
+        let len = kind.len_utf8();
+        let pos = self
+            .file
+            .span
+            .subspan(self.pos as u64, (self.pos + len) as u64);
+        self.pos += len;
+        Some(Token { kind, pos })
     }
 }
 
 impl<'a> Lexer<'a> {
-    pub fn new(buf: &'a str) -> Lexer<'a> {
+    pub fn new(file: &'a Arc<File>) -> Lexer<'a> {
         Lexer {
-            buf: buf.chars().peekable(),
-            pos: Pos::new(),
+            buf: file.source().clone().chars().peekable(),
+            pos: 0,
+            file,
         }
     }
 }
