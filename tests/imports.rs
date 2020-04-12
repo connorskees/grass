@@ -12,7 +12,7 @@ macro_rules! test_import {
                 write!(f, $content).unwrap();
             )*
             let mut buf = Vec::new();
-            StyleSheet::new($input)
+            StyleSheet::new($input.to_string())
             .expect(concat!("failed to parse in "))
             .print_as_css(&mut buf)
             .expect(concat!("failed to pretty print on ", $input));
