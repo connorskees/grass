@@ -23,7 +23,7 @@ a special parser for plain css
 @use and module system (~1200 tests)
 @forward (~400 tests)
 @keyframes (~30 tests)
-@font-face (~11 tests)
+@supports (~128 tests)
 string parsing/quoting/escaping (~200 tests)
 ```
 
