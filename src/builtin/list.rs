@@ -4,6 +4,7 @@ use num_traits::{One, Signed, ToPrimitive, Zero};
 
 use super::Builtin;
 use crate::common::{Brackets, ListSeparator, QuoteKind};
+use crate::error::SassResult;
 use crate::unit::Unit;
 use crate::value::{Number, Value};
 
@@ -294,15 +295,18 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "zip".to_owned(),
         Builtin::new(|args, scope, super_selector| {
+            let span = args.span();
             let lists = args
                 .get_variadic(scope, super_selector)?
                 .into_iter()
-                .map(|x| match x.node {
-                    Value::List(v, ..) => v,
-                    Value::Map(m) => m.entries(),
-                    v => vec![v],
+                .map(|x| {
+                    Ok(match x.node.eval(span)?.node {
+                        Value::List(v, ..) => v,
+                        Value::Map(m) => m.entries(),
+                        v => vec![v],
+                    })
                 })
-                .collect::<Vec<Vec<Value>>>();
+                .collect::<SassResult<Vec<Vec<Value>>>>()?;
 
             let len = lists.iter().map(|l| l.len()).min().unwrap_or(0);
 

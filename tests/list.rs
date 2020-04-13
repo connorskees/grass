@@ -303,3 +303,13 @@ test!(
     "a {\n  color: zip(1px 1px 3px, solid dashed solid, red green blue);\n}\n",
     "a {\n  color: 1px solid red, 1px dashed green, 3px solid blue;\n}\n"
 );
+test!(
+    zip_parens,
+    "a {\n  color: zip((a, b, c));\n}\n",
+    "a {\n  color: a, b, c;\n}\n"
+);
+test!(
+    zip_parens_length,
+    "a {\n  color: length(zip((a, b, c)));\n}\n",
+    "a {\n  color: 3;\n}\n"
+);
