@@ -160,16 +160,6 @@ pub(crate) struct RuleSet {
     super_selector: Selector,
 }
 
-impl RuleSet {
-    pub(crate) const fn new() -> RuleSet {
-        RuleSet {
-            selector: Selector::new(),
-            rules: Vec::new(),
-            super_selector: Selector::new(),
-        }
-    }
-}
-
 /// An intermediate representation of what are essentially single lines
 /// todo! rename this
 #[derive(Clone, Debug)]

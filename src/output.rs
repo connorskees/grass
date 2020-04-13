@@ -11,6 +11,7 @@ enum Toplevel {
     MultilineComment(String),
     AtRule(AtRule),
     Newline,
+    Style(Box<Style>),
 }
 
 #[derive(Debug, Clone)]
@@ -98,7 +99,7 @@ impl Css {
                 vals
             }
             Stmt::MultilineComment(s) => vec![Toplevel::MultilineComment(s)],
-            Stmt::Style(_) => panic!("expected toplevel element, found style"),
+            Stmt::Style(s) => vec![Toplevel::Style(s)],
             Stmt::AtRule(r) => vec![Toplevel::AtRule(r)],
         })
     }
@@ -165,6 +166,9 @@ impl Css {
                     }
                     _ => todo!("at-rule other than unknown at toplevel"),
                 },
+                Toplevel::Style(s) => {
+                    writeln!(buf, "{}{}", padding, s.to_string()?)?;
+                }
                 Toplevel::Newline => {
                     if has_written {
                         writeln!(buf)?

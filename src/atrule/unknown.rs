@@ -50,27 +50,29 @@ impl UnknownAtRule {
         }
 
         let raw_body = eat_stmts(toks, scope, super_selector)?;
-        let mut body = Vec::with_capacity(raw_body.len());
-        body.push(Spanned {
-            node: Stmt::RuleSet(RuleSet::new()),
-            span: kind_span,
-        });
-        let mut rules = Vec::new();
+        let mut rules = Vec::with_capacity(raw_body.len());
+        let mut body = Vec::new();
+
         for stmt in raw_body {
             match stmt.node {
-                Stmt::Style(..) => rules.push(stmt),
-                _ => body.push(stmt),
+                Stmt::Style(..) => body.push(stmt),
+                _ => rules.push(stmt),
             }
         }
 
-        body[0] = Spanned {
-            node: Stmt::RuleSet(RuleSet {
-                selector: super_selector.clone(),
-                rules,
-                super_selector: Selector::new(),
-            }),
-            span: kind_span,
-        };
+        if super_selector.is_empty() {
+            body.append(&mut rules);
+        } else {
+            body = vec![Spanned {
+                node: Stmt::RuleSet(RuleSet {
+                    selector: super_selector.clone(),
+                    rules: body,
+                    super_selector: Selector::new(),
+                }),
+                span: kind_span,
+            }];
+            body.append(&mut rules);
+        }
 
         Ok(UnknownAtRule {
             name: name.to_owned(),

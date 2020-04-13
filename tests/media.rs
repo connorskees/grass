@@ -20,3 +20,4 @@ test!(
     basic_unknown_at_rule,
     "@foo {\n  a {\n    color: red;\n  }\n}\n"
 );
+test!(unknown_at_rule_no_selector, "@foo {\n  color: red;\n}\n");
