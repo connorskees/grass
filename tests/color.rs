@@ -517,11 +517,6 @@ test!(
     "a {\n  color: ie-hex-str(rgba(0, 255, 0, 0.5));\n}\n",
     "a {\n  color: #8000FF00;\n}\n"
 );
-// test!(
-//     builtin_functions_interchangable_underscore_hyphen,
-//     "a {\n  color: ie_hex-str(rgba(0, 255, 0, 0.5));\n}\n",
-//     "a {\n  color: #8000FF00;\n}\n"
-// );
 test!(
     rgba_1_arg,
     "a {\n  color: rgba(74.7% 173 93%);\n}\n",

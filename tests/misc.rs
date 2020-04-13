@@ -111,3 +111,8 @@ test!(
     "a {\n  color: foo;\n};",
     "a {\n  color: foo;\n}\n"
 );
+test!(
+    builtin_functions_interchangeable_underscore_hyphen,
+    "a {\n  color: ie_hex-str(rgba(0, 255, 0, 0.5));\n}\n",
+    "a {\n  color: #8000FF00;\n}\n"
+);

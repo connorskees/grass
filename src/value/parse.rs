@@ -451,7 +451,7 @@ impl Value {
                     span,
                 }) {
                     Ok(f) => f,
-                    Err(_) => match GLOBAL_FUNCTIONS.get(&s) {
+                    Err(_) => match GLOBAL_FUNCTIONS.get(&s.replace('_', "-")) {
                         Some(f) => {
                             return Ok(IntermediateValue::Value(Spanned {
                                 node: f.0(
