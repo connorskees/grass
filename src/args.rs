@@ -283,7 +283,7 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
     devour_whitespace_or_comment(toks)?;
     let mut name = String::new();
     let mut val: Vec<Token> = Vec::new();
-    let span = toks.peek().unwrap().pos();
+    let mut span = toks.peek().unwrap().pos();
     loop {
         match toks.peek().unwrap().kind {
             '$' => {
@@ -324,6 +324,7 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
                         },
                         val,
                     );
+                    span = span.merge(tok.pos());
                     return Ok(CallArgs(args, span));
                 }
                 ',' => break,
