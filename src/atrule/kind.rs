@@ -39,43 +39,11 @@ pub enum AtRuleKind {
     // CSS @rules
     /// Defines the character set used by the style sheet
     Charset,
-    /// Tells the CSS engine that all its content must be considered
-    /// prefixed with an XML namespace
-    Namespace,
     /// A conditional group rule that will apply its content if the
     /// browser meets the criteria of the given condition
     Supports,
-    /// Describes the aspect of layout changes that will be
-    /// applied when printing the document
-    Page,
-    /// Describes the aspect of an external font to be downloaded
-    FontFace,
     /// Describes the aspect of intermediate steps in a CSS animation sequence
     Keyframes,
-
-    // @rules related to @font-feature-values
-    FontFeatureValues,
-    Swash,
-    Ornaments,
-    Annotation,
-    Stylistic,
-    Styleset,
-    CharacterVariant,
-
-    // Experimental CSS @rules
-    /// Describes the aspects of the viewport for small screen devices
-    ///
-    /// Currently at the Working Draft stage
-    Viewport,
-    /// A conditional group rule that will apply its content if the document in
-    /// which the style sheet is applied meets the criteria of the given condition
-    ///
-    /// Deferred to Level 4 of CSS Spec
-    Document,
-    /// Defines specific counter styles that are not part of the predefined set of styles
-    ///
-    /// At the Candidate Recommendation stage
-    CounterStyle,
 
     /// An unknown at rule.
     /// For forward compatibility, they are parsed the same as @media
@@ -103,21 +71,8 @@ impl From<&str> for AtRuleKind {
             "for" => Self::For,
             "while" => Self::While,
             "charset" => Self::Charset,
-            "namespace" => Self::Namespace,
             "supports" => Self::Supports,
-            "page" => Self::Page,
-            "fontface" => Self::FontFace,
             "keyframes" => Self::Keyframes,
-            "fontfeaturevalues" => Self::FontFeatureValues,
-            "swash" => Self::Swash,
-            "ornaments" => Self::Ornaments,
-            "annotation" => Self::Annotation,
-            "stylistic" => Self::Stylistic,
-            "styleset" => Self::Styleset,
-            "charactervariant" => Self::CharacterVariant,
-            "viewport" => Self::Viewport,
-            "document" => Self::Document,
-            "counterstyle" => Self::CounterStyle,
             "content" => Self::Content,
             s => Self::Unknown(s.to_owned()),
         }
@@ -145,21 +100,8 @@ impl Display for AtRuleKind {
             Self::For => write!(f, "@for"),
             Self::While => write!(f, "@while"),
             Self::Charset => write!(f, "@charset"),
-            Self::Namespace => write!(f, "@namespace"),
             Self::Supports => write!(f, "@supports"),
-            Self::Page => write!(f, "@page"),
-            Self::FontFace => write!(f, "@fontface"),
             Self::Keyframes => write!(f, "@keyframes"),
-            Self::FontFeatureValues => write!(f, "@fontfeaturevalues"),
-            Self::Swash => write!(f, "@swash"),
-            Self::Ornaments => write!(f, "@ornaments"),
-            Self::Annotation => write!(f, "@annotation"),
-            Self::Stylistic => write!(f, "@stylistic"),
-            Self::Styleset => write!(f, "@styleset"),
-            Self::CharacterVariant => write!(f, "@charactervariant"),
-            Self::Viewport => write!(f, "@viewport"),
-            Self::Document => write!(f, "@document"),
-            Self::CounterStyle => write!(f, "@counterstyle"),
             Self::Content => write!(f, "@content"),
             Self::Unknown(s) => write!(f, "@{}", s),
         }

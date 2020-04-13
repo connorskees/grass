@@ -135,7 +135,6 @@ impl AtRule {
                 }
             }
             AtRuleKind::Use => todo!("@use not yet implemented"),
-            AtRuleKind::Annotation => todo!("@annotation not yet implemented"),
             AtRuleKind::AtRoot => {
                 let mut selector = &Selector::replace(
                     super_selector,
