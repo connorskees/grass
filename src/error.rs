@@ -43,7 +43,7 @@ enum SassErrorKind {
 }
 
 impl Display for SassError {
-    // TODO: trim whitespace
+    // TODO: trim whitespace from start of line shown in error
     // TODO: color errors
     // TODO: integrate with codemap-diagnostics
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
