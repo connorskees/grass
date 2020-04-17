@@ -128,7 +128,8 @@ impl Unit {
         }
     }
 
-    pub fn kind(&self) -> UnitKind {
+    /// Used internally to determine if two units are comparable or not
+    fn kind(&self) -> UnitKind {
         match self {
             Unit::Px | Unit::Mm | Unit::In | Unit::Cm | Unit::Q | Unit::Pt | Unit::Pc => {
                 UnitKind::Absolute
@@ -149,7 +150,7 @@ impl Unit {
             Unit::Hz | Unit::Khz => UnitKind::Frequency,
             Unit::Dpi | Unit::Dpcm | Unit::Dppx | Unit::X => UnitKind::Resolution,
             Unit::None => UnitKind::None,
-            _ => UnitKind::Other,
+            Unit::Fr | Unit::Percent | Unit::Unknown(..) | Unit::Mul(..) => UnitKind::Other,
         }
     }
 }
