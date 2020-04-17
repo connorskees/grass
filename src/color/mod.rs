@@ -5,13 +5,13 @@
 //!
 //! It is necessary to retain the original values with which the
 //! color was constructed.
-//! E.g. `hsla(.999999999999, 100, 100, 1)` should retain its full
+//! E.g. `hsla(.999999999999, 100, 100, 1)` should retain its full HSLA
 //! values to an arbitrary precision.
 //!
-//! Named colors are created using RGB values
-//! E.g. `red` = `rgba(255, 0, 0, 1)`
+//! Color values matching named colors are implicitly converted to named colors
+//! E.g. `rgba(255, 0, 0, 1)` => `red`
 //!
-//! In addition, named colors retain their original casing,
+//! Named colors retain their original casing,
 //! so `rEd` should be emitted as `rEd`.
 
 use std::convert::TryFrom;
