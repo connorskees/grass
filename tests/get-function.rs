@@ -7,7 +7,6 @@ test!(
     different_function_same_body_not_equal,
     "@function user-defined() {@return null}
     $first-reference: get-function(user-defined);
-    
     @function user-defined() {@return null}
     $second-reference: get-function(user-defined);
     a {b: $first-reference == $second-reference}",

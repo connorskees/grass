@@ -355,7 +355,13 @@ impl<'a> StyleSheetParser<'a> {
                                 .kind
                             {
                                 q @ '"' | q @ '\'' => {
-                                    file_name.push_str(&parse_quoted_string(&mut self.lexer, &Scope::new(), q, &Selector::new())?.node.unquote().to_css_string(span)?);
+                                    file_name.push_str(
+                                        &parse_quoted_string(
+                                            &mut self.lexer,
+                                            &Scope::new(),
+                                            q,
+                                            &Selector::new())?
+                                            .node.unquote().to_css_string(span)?);
                                 }
                                 _ => todo!("expected ' or \" after @import"),
                             }
@@ -383,10 +389,17 @@ impl<'a> StyleSheetParser<'a> {
                                 AtRule::Warn(message) => self.warn(rule.span, &message),
                                 AtRule::Debug(message) => self.debug(rule.span, &message),
                                 AtRule::Return(_) => {
-                                    return Err(("This at-rule is not allowed here.", rule.span).into())
+                                    return Err(
+                                        ("This at-rule is not allowed here.", rule.span).into()
+                                    )
                                 }
-                                AtRule::Include(s) | AtRule::While(s) | AtRule::Each(s) | AtRule::For(s) => rules.extend(s),
-                                AtRule::Content => return Err(("@content is only allowed within mixin declarations.", rule.span).into()),
+                                AtRule::Include(s)
+                                | AtRule::While(s)
+                                | AtRule::Each(s)
+                                | AtRule::For(s) => rules.extend(s),
+                                AtRule::Content => return Err(
+                                    ("@content is only allowed within mixin declarations.", rule.span
+                                ).into()),
                                 AtRule::If(i) => {
                                     rules.extend(i.eval(&mut Scope::new(), &Selector::new())?);
                                 }

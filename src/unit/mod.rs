@@ -33,11 +33,13 @@ pub(crate) enum Unit {
     Ex,
     /// The advance measure (width) of the glyph "0" of the element's font
     Ch,
-    /// Represents the "cap height" (nominal height of capital letters) of the element’s font
+    /// Represents the "cap height" (nominal height of capital letters) of the element's font
     Cap,
-    /// Equal to the used advance measure of the "水" (CJK water ideograph, U+6C34) glyph found in the font used to render it
+    /// Equal to the used advance measure of the "水" (CJK water ideograph, U+6C34) glyph
+    /// found in the font used to render it
     Ic,
-    /// Equal to the computed value of the line-height property on the root element (typically <html>), converted to an absolute length
+    /// Equal to the computed value of the line-height property on the root element
+    /// (typically <html>), converted to an absolute length
     Rlh,
 
     // Viewport relative units
@@ -49,9 +51,11 @@ pub(crate) enum Unit {
     Vmin,
     /// 1% of the viewport's larger dimension
     Vmax,
-    /// Equal to 1% of the size of the initial containing block, in the direction of the root element’s inline axis
+    /// Equal to 1% of the size of the initial containing block, in the direction of the root
+    /// element's inline axis
     Vi,
-    /// Equal to 1% of the size of the initial containing block, in the direction of the root element’s block axis
+    /// Equal to 1% of the size of the initial containing block, in the direction of the root
+    /// element's block axis
     Vb,
 
     // Angle units
@@ -59,7 +63,7 @@ pub(crate) enum Unit {
     Deg,
     /// Represents an angle in gradians. One full circle is 400grad
     Grad,
-    /// Represents an angle in radians. One full circle is 2π radians which approximates to 6.2832rad
+    /// Represents an angle in radians. One full circle is 2π radians which approximates to 6.283rad
     Rad,
     /// Represents an angle in a number of turns. One full circle is 1turn
     Turn,

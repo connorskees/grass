@@ -53,12 +53,16 @@ macro_rules! opt_hsl {
 pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert("change-color".to_owned(), Builtin::new(|mut args, scope, super_selector| {
         if args.get_positional(1, scope, super_selector).is_some() {
-            return Err(("Only one positional argument is allowed. All other arguments must be passed by name.", args.span()).into());
+            return Err(
+                ("Only one positional argument is allowed. All other arguments must be passed by name.", args.span()
+            ).into());
         }
 
         let color = match arg!(args, scope, super_selector, 0, "color") {
             Value::Color(c) => c,
-            v => return Err((format!("$color: {} is not a color.", v.to_css_string(args.span())?), args.span()).into()),
+            v => return Err(
+                (format!("$color: {} is not a color.", v.to_css_string(args.span())?), args.span()
+            ).into()),
         };
 
         opt_rgba!(args, alpha, "alpha", 0, 1, scope, super_selector);
@@ -73,7 +77,9 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         let hue = match named_arg!(args, scope, super_selector, "hue"=Value::Null) {
             Value::Dimension(n, _) => Some(n),
             Value::Null => None,
-            v => return Err((format!("$hue: {} is not a number.", v.to_css_string(args.span())?), args.span()).into()),
+            v => return Err(
+                (format!("$hue: {} is not a number.", v.to_css_string(args.span())?), args.span()
+            ).into()),
         };
 
         opt_hsl!(args, saturation, "saturation", 0, 100, scope, super_selector);
@@ -172,9 +178,12 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "scale-color".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
+            let span = args.span();
             let color = match arg!(args, scope, super_selector, 0, "color") {
                 Value::Color(c) => c,
-                v => return Err((format!("$color: {} is not a color.", v.to_css_string(args.span())?), args.span()).into()),
+                v => return Err(
+                    (format!("$color: {} is not a color.", v.to_css_string(span)?), span
+                ).into()),
             };
 
             macro_rules! opt_scale_arg {
@@ -190,7 +199,9 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                             )
                         }
                         Value::Null => None,
-                        v => return Err((format!("${}: {} is not a number.", $arg, v.to_css_string($args.span())?), $args.span()).into()),
+                        v => return Err(
+                            (format!("${}: {} is not a number.", $arg, v.to_css_string($args.span())?), $args.span()
+                        ).into()),
                     };
                 };
             }

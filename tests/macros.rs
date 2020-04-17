@@ -47,7 +47,12 @@ macro_rules! error {
         fn $func() {
             match grass::StyleSheet::new($input.to_string()) {
                 Ok(..) => panic!("did not fail"),
-                Err(e) => assert_eq!($err, e.to_string().chars().take_while(|c| *c != '\n').collect::<String>().as_str()),
+                Err(e) => assert_eq!($err, e.to_string()
+                                                .chars()
+                                                .take_while(|c| *c != '\n')
+                                                .collect::<String>()
+                                                .as_str()
+                ),
             }
         }
     };
