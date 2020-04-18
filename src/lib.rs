@@ -1,30 +1,32 @@
-//! # grass
-//! An implementation of the sass specification in pure rust.
-//!
-//! All functionality is currently exposed through [`StyleSheet`].
-//!
-//! Spec progress as of 2020-04-12:
-//!
-//! | Passing | Failing | Total |
-//! |---------|---------|-------|
-//! | 2023    | 3070    | 5093  |
-//!
-//! ## Use as library
-//! ```
-//! use std::io::{BufWriter, stdout};
-//! use grass::{SassResult, StyleSheet};
-//!
-//! fn main() -> SassResult<()> {
-//!     let mut buf = BufWriter::new(stdout());
-//!     StyleSheet::from_path("input.scss")?.print_as_css(&mut buf)
-//! }
-//! ```
-//!
-//! ## Use as binary
-//! ```bash
-//! cargo install grass
-//! grass input.scss
-//! ```
+/*! # grass
+An implementation of the sass specification in pure rust.
+
+All functionality is currently exposed through [`StyleSheet`].
+
+Spec progress as of 2020-04-12:
+
+| Passing | Failing | Total |
+|---------|---------|-------|
+| 2023    | 3070    | 5093  |
+
+## Use as library
+```
+use std::io::{BufWriter, stdout};
+use grass::{SassResult, StyleSheet};
+
+fn main() -> SassResult<()> {
+    let mut buf = BufWriter::new(stdout());
+    StyleSheet::new("a { color: red; }".to_string(), &mut buf)?;
+    Ok(())
+}
+```
+
+## Use as binary
+```bash
+cargo install grass
+grass input.scss
+```
+*/
 
 #![warn(
     clippy::all,
@@ -200,68 +202,7 @@ fn raw_to_parse_error(map: &CodeMap, err: SassError) -> SassError {
 }
 
 impl StyleSheet {
-    #[inline]
-    pub fn new(input: String) -> SassResult<StyleSheet> {
-        let mut map = CodeMap::new();
-        let file = map.add_file("stdin".into(), input);
-        Ok(StyleSheet(
-            match (StyleSheetParser {
-                lexer: Lexer::new(&file).peekable(),
-                nesting: 0,
-                map: &map,
-            }
-            .parse_toplevel())
-            {
-                Ok(v) => v,
-                Err(e) => return Err(raw_to_parse_error(&map, e)),
-            }
-            .0,
-        ))
-    }
-
-    #[inline]
-    pub fn from_path<P: AsRef<Path> + Into<String> + Clone>(p: P) -> SassResult<StyleSheet> {
-        let mut map = CodeMap::new();
-        let file = map.add_file(p.clone().into(), String::from_utf8(fs::read(p.as_ref())?)?);
-        Ok(StyleSheet(
-            match (StyleSheetParser {
-                lexer: Lexer::new(&file).peekable(),
-                nesting: 0,
-                map: &map,
-            }
-            .parse_toplevel())
-            {
-                Ok(v) => v,
-                Err(e) => return Err(raw_to_parse_error(&map, e)),
-            }
-            .0,
-        ))
-    }
-
-    pub(crate) fn export_from_path<P: AsRef<Path> + Into<String> + Clone>(
-        p: P,
-    ) -> SassResult<(Vec<Spanned<Stmt>>, Scope)> {
-        let mut map = CodeMap::new();
-        let file = map.add_file(p.clone().into(), String::from_utf8(fs::read(p.as_ref())?)?);
-        Ok(
-            match (StyleSheetParser {
-                lexer: Lexer::new(&file).peekable(),
-                nesting: 0,
-                map: &map,
-            }
-            .parse_toplevel())
-            {
-                Ok(v) => v,
-                Err(e) => return Err(raw_to_parse_error(&map, e)),
-            },
-        )
-    }
-
-    pub(crate) fn from_stmts(s: Vec<Spanned<Stmt>>) -> StyleSheet {
-        StyleSheet(s)
-    }
-
-    /// Write the internal representation as CSS to `buf`
+    /// Write CSS to `buf`, constructed from a string
     ///
     /// ```
     /// use std::io::{BufWriter, stdout};
@@ -269,12 +210,80 @@ impl StyleSheet {
     ///
     /// fn main() -> SassResult<()> {
     ///     let mut buf = BufWriter::new(stdout());
-    ///     StyleSheet::from_path("input.scss")?.print_as_css(&mut buf)
+    ///     StyleSheet::new("a { color: red; }".to_string(), &mut buf)?;
+    ///     Ok(())
     /// }
     /// ```
     #[inline]
-    pub fn print_as_css<W: Write>(self, buf: &mut W) -> SassResult<()> {
-        Css::from_stylesheet(self)?.pretty_print(buf)
+    pub fn new<W: Write>(input: String, buf: &mut W) -> SassResult<()> {
+        let mut map = CodeMap::new();
+        let file = map.add_file("stdin".into(), input);
+        Css::from_stylesheet(StyleSheet(
+            StyleSheetParser {
+                lexer: Lexer::new(&file).peekable(),
+                nesting: 0,
+                map: &map,
+            }
+            .parse_toplevel()
+            .map_err(|e| raw_to_parse_error(&map, e))?
+            .0,
+        ))
+        .map_err(|e| raw_to_parse_error(&map, e))?
+        .pretty_print(buf)
+        .map_err(|e| raw_to_parse_error(&map, e))?;
+        Ok(())
+    }
+
+    /// Write CSS to `buf`, constructed from a path
+    ///
+    /// ```
+    /// use std::io::{BufWriter, stdout};
+    /// use grass::{SassResult, StyleSheet};
+    ///
+    /// fn main() -> SassResult<()> {
+    ///     let mut buf = BufWriter::new(stdout());
+    ///     StyleSheet::from_path("input.scss", &mut buf)?;
+    ///     Ok(())
+    /// }
+    /// ```
+    #[inline]
+    pub fn from_path<P: AsRef<Path> + Into<String> + Clone, W: Write>(
+        p: P,
+        buf: &mut W,
+    ) -> SassResult<()> {
+        let mut map = CodeMap::new();
+        let file = map.add_file(p.clone().into(), String::from_utf8(fs::read(p.as_ref())?)?);
+        Css::from_stylesheet(StyleSheet(
+            StyleSheetParser {
+                lexer: Lexer::new(&file).peekable(),
+                nesting: 0,
+                map: &map,
+            }
+            .parse_toplevel()
+            .map_err(|e| raw_to_parse_error(&map, e))?
+            .0,
+        ))
+        .map_err(|e| raw_to_parse_error(&map, e))?
+        .pretty_print(buf)
+        .map_err(|e| raw_to_parse_error(&map, e))?;
+        Ok(())
+    }
+
+    pub(crate) fn export_from_path<P: AsRef<Path> + Into<String> + Clone>(
+        p: P,
+    ) -> SassResult<(Vec<Spanned<Stmt>>, Scope)> {
+        let mut map = CodeMap::new();
+        let file = map.add_file(p.clone().into(), String::from_utf8(fs::read(p.as_ref())?)?);
+        Ok(StyleSheetParser {
+            lexer: Lexer::new(&file).peekable(),
+            nesting: 0,
+            map: &map,
+        }
+        .parse_toplevel()?)
+    }
+
+    pub(crate) fn from_stmts(s: Vec<Spanned<Stmt>>) -> StyleSheet {
+        StyleSheet(s)
     }
 }
 
@@ -459,7 +468,7 @@ impl<'a> StyleSheetParser<'a> {
                     AtRule::Warn(ref message) => self.warn(expr.span, message),
                     AtRule::Mixin(..) | AtRule::Function(..) => todo!(),
                     AtRule::Charset => todo!(),
-                    r @ AtRule::Unknown(..)=> stmts.push(Spanned {
+                    r @ AtRule::Unknown(..) => stmts.push(Spanned {
                         node: Stmt::AtRule(r),
                         span,
                     }),
