@@ -325,7 +325,7 @@ impl<'a> StyleSheetParser<'a> {
                     if '*' == self.lexer.peek().unwrap().kind {
                         self.lexer.next();
                         let comment = eat_comment(&mut self.lexer, &Scope::new(), &Selector::new())?;
-                        rules.push(Spanned { node: Stmt::MultilineComment(comment.node), span: comment.span });
+                        rules.push(comment.map_node(Stmt::MultilineComment));
                     } else if '/' == self.lexer.peek().unwrap().kind {
                         read_until_newline(&mut self.lexer);
                         devour_whitespace(&mut self.lexer);
@@ -404,7 +404,7 @@ impl<'a> StyleSheetParser<'a> {
                                     rules.extend(i.eval(&mut Scope::new(), &Selector::new())?);
                                 }
                                 AtRule::AtRoot(root_rules) => rules.extend(root_rules),
-                                u @ AtRule::Unknown(..) => rules.push(Spanned { node: Stmt::AtRule(u), span: rule.span }),
+                                AtRule::Unknown(..) => rules.push(rule.map_node(Stmt::AtRule)),
                             }
                         }
                     }
@@ -457,7 +457,9 @@ impl<'a> StyleSheetParser<'a> {
                     AtRule::AtRoot(root_stmts) => stmts.extend(root_stmts),
                     AtRule::Debug(ref message) => self.debug(expr.span, message),
                     AtRule::Warn(ref message) => self.warn(expr.span, message),
-                    r => stmts.push(Spanned {
+                    AtRule::Mixin(..) | AtRule::Function(..) => todo!(),
+                    AtRule::Charset => todo!(),
+                    r @ AtRule::Unknown(..)=> stmts.push(Spanned {
                         node: Stmt::AtRule(r),
                         span,
                     }),
