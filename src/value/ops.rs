@@ -14,12 +14,10 @@ impl Value {
         Ok(match self {
             Self::Function(..) | Self::ArgList(..) | Self::Map(..) => todo!(),
             Self::Important | Self::True | Self::False => match other {
-                Self::Ident(s, QuoteKind::Double) | Self::Ident(s, QuoteKind::Single) => {
-                    Value::Ident(
-                        format!("{}{}", self.to_css_string(span)?, s),
-                        QuoteKind::Double,
-                    )
-                }
+                Self::Ident(s, QuoteKind::Quoted) => Value::Ident(
+                    format!("{}{}", self.to_css_string(span)?, s),
+                    QuoteKind::Quoted,
+                ),
                 Self::Null => Value::Ident(self.to_css_string(span)?, QuoteKind::None),
                 _ => Value::Ident(
                     format!(
@@ -56,7 +54,7 @@ impl Value {
                         )
                     }
                 }
-                Self::Ident(s, q) => Value::Ident(format!("{}{}{}", num, unit, s), q.normalize()),
+                Self::Ident(s, q) => Value::Ident(format!("{}{}{}", num, unit, s), q),
                 Self::Null => Value::Ident(format!("{}{}", num, unit), QuoteKind::None),
                 Self::List(..) => Value::Ident(
                     format!("{}{}{}", num, unit, other.to_css_string(span)?),
@@ -76,7 +74,7 @@ impl Value {
                 }
             },
             Self::Color(c) => match other {
-                Self::Ident(s, q) => Value::Ident(format!("{}{}", c, s), q.normalize()),
+                Self::Ident(s, q) => Value::Ident(format!("{}{}", c, s), q),
                 Self::Null => Value::Ident(c.to_string(), QuoteKind::None),
                 Self::List(..) => Value::Ident(
                     format!("{}{}", c, other.to_css_string(span)?),
@@ -116,13 +114,12 @@ impl Value {
             }
             Self::UnaryOp(..) | Self::Paren(..) => self.eval(span)?.node.add(other, span)?,
             Self::Ident(s1, quotes1) => match other {
-                Self::Ident(s2, _) => Value::Ident(format!("{}{}", s1, s2), quotes1.normalize()),
-                Self::Important | Self::True | Self::False | Self::Dimension(..) => Value::Ident(
-                    format!("{}{}", s1, other.to_css_string(span)?),
-                    quotes1.normalize(),
-                ),
-                Self::Null => Value::Ident(s1, quotes1.normalize()),
-                Self::Color(c) => Value::Ident(format!("{}{}", s1, c), quotes1.normalize()),
+                Self::Ident(s2, _) => Value::Ident(format!("{}{}", s1, s2), quotes1),
+                Self::Important | Self::True | Self::False | Self::Dimension(..) => {
+                    Value::Ident(format!("{}{}", s1, other.to_css_string(span)?), quotes1)
+                }
+                Self::Null => Value::Ident(s1, quotes1),
+                Self::Color(c) => Value::Ident(format!("{}{}", s1, c), quotes1),
                 Self::List(..) => {
                     Value::Ident(format!("{}{}", s1, other.to_css_string(span)?), quotes1)
                 }
@@ -131,9 +128,7 @@ impl Value {
                 Self::Function(..) | Self::ArgList(..) | Self::Map(..) => todo!(),
             },
             Self::List(..) => match other {
-                Self::Ident(s, q) => {
-                    Value::Ident(format!("{}{}", self.to_css_string(span)?, s), q.normalize())
-                }
+                Self::Ident(s, q) => Value::Ident(format!("{}{}", self.to_css_string(span)?, s), q),
                 Self::Paren(..) => (self.add(other.eval(span)?.node, span))?,
                 _ => Value::Ident(
                     format!(
@@ -187,10 +182,9 @@ impl Value {
                 _ => todo!(),
             },
             Self::Color(c) => match other {
-                Self::Ident(s, q) => Value::Ident(
-                    format!("{}-{}{}{}", c, q.normalize(), s, q.normalize()),
-                    QuoteKind::None,
-                ),
+                Self::Ident(s, q) => {
+                    Value::Ident(format!("{}-{}{}{}", c, q, s, q), QuoteKind::None)
+                }
                 Self::Null => Value::Ident(format!("{}-", c), QuoteKind::None),
                 Self::Dimension(..) | Self::Color(..) => {
                     return Err((
@@ -231,15 +225,7 @@ impl Value {
             Self::Paren(..) => self.eval(span)?.node.sub(other, span)?,
             Self::Ident(s1, q1) => match other {
                 Self::Ident(s2, q2) => Value::Ident(
-                    format!(
-                        "{}{}{}-{}{}{}",
-                        q1.normalize(),
-                        s1,
-                        q1.normalize(),
-                        q2.normalize(),
-                        s2,
-                        q2.normalize()
-                    ),
+                    format!("{}{}{}-{}{}{}", q1, s1, q1, q2, s2, q2),
                     QuoteKind::None,
                 ),
                 Self::Important
@@ -247,40 +233,19 @@ impl Value {
                 | Self::False
                 | Self::Dimension(..)
                 | Self::Color(..) => Value::Ident(
-                    format!(
-                        "{}{}{}-{}",
-                        q1.normalize(),
-                        s1,
-                        q1.normalize(),
-                        other.to_css_string(span)?
-                    ),
+                    format!("{}{}{}-{}", q1, s1, q1, other.to_css_string(span)?),
                     QuoteKind::None,
                 ),
-                Self::Null => Value::Ident(
-                    format!("{}{}{}-", q1.normalize(), s1, q1.normalize()),
-                    QuoteKind::None,
-                ),
+                Self::Null => Value::Ident(format!("{}{}{}-", q1, s1, q1), QuoteKind::None),
                 Self::List(..) => Value::Ident(
-                    format!(
-                        "{}{}{}-{}",
-                        q1.normalize(),
-                        s1,
-                        q1.normalize(),
-                        other.to_css_string(span)?
-                    ),
+                    format!("{}{}{}-{}", q1, s1, q1, other.to_css_string(span)?),
                     QuoteKind::None,
                 ),
                 _ => todo!(),
             },
             Self::List(..) => match other {
                 Self::Ident(s, q) => Value::Ident(
-                    format!(
-                        "{}-{}{}{}",
-                        self.to_css_string(span)?,
-                        q.normalize(),
-                        s,
-                        q.normalize()
-                    ),
+                    format!("{}-{}{}{}", self.to_css_string(span)?, q, s, q),
                     QuoteKind::None,
                 ),
                 _ => Value::Ident(
@@ -294,13 +259,7 @@ impl Value {
             },
             _ => match other {
                 Self::Ident(s, q) => Value::Ident(
-                    format!(
-                        "{}-{}{}{}",
-                        self.to_css_string(span)?,
-                        q.normalize(),
-                        s,
-                        q.normalize()
-                    ),
+                    format!("{}-{}{}{}", self.to_css_string(span)?, q, s, q),
                     QuoteKind::None,
                 ),
                 Self::Null => {
@@ -416,20 +375,18 @@ impl Value {
                         )
                     }
                 }
-                Self::Ident(s, q) => Value::Ident(
-                    format!("{}{}/{}{}{}", num, unit, q.normalize(), s, q.normalize()),
-                    QuoteKind::None,
-                ),
+                Self::Ident(s, q) => {
+                    Value::Ident(format!("{}{}/{}{}{}", num, unit, q, s, q), QuoteKind::None)
+                }
                 Self::BinaryOp(..) | Self::Paren(..) => {
                     Self::Dimension(num, unit).div(other.eval(span)?.node, span)?
                 }
                 _ => todo!(),
             },
             Self::Color(c) => match other {
-                Self::Ident(s, q) => Value::Ident(
-                    format!("{}/{}{}{}", c, q.normalize(), s, q.normalize()),
-                    QuoteKind::None,
-                ),
+                Self::Ident(s, q) => {
+                    Value::Ident(format!("{}/{}{}{}", c, q, s, q), QuoteKind::None)
+                }
                 Self::Null => Value::Ident(format!("{}/", c), QuoteKind::None),
                 Self::Dimension(..) | Self::Color(..) => {
                     return Err((
@@ -470,15 +427,7 @@ impl Value {
             Self::Paren(..) => self.eval(span)?.node.div(other, span)?,
             Self::Ident(s1, q1) => match other {
                 Self::Ident(s2, q2) => Value::Ident(
-                    format!(
-                        "{}{}{}/{}{}{}",
-                        q1.normalize(),
-                        s1,
-                        q1.normalize(),
-                        q2.normalize(),
-                        s2,
-                        q2.normalize()
-                    ),
+                    format!("{}{}{}/{}{}{}", q1, s1, q1, q2, s2, q2),
                     QuoteKind::None,
                 ),
                 Self::Important
@@ -486,30 +435,15 @@ impl Value {
                 | Self::False
                 | Self::Dimension(..)
                 | Self::Color(..) => Value::Ident(
-                    format!(
-                        "{}{}{}/{}",
-                        q1.normalize(),
-                        s1,
-                        q1.normalize(),
-                        other.to_css_string(span)?
-                    ),
+                    format!("{}{}{}/{}", q1, s1, q1, other.to_css_string(span)?),
                     QuoteKind::None,
                 ),
-                Self::Null => Value::Ident(
-                    format!("{}{}{}/", q1.normalize(), s1, q1.normalize()),
-                    QuoteKind::None,
-                ),
+                Self::Null => Value::Ident(format!("{}{}{}/", q1, s1, q1), QuoteKind::None),
                 _ => todo!(),
             },
             _ => match other {
                 Self::Ident(s, q) => Value::Ident(
-                    format!(
-                        "{}/{}{}{}",
-                        self.to_css_string(span)?,
-                        q.normalize(),
-                        s,
-                        q.normalize()
-                    ),
+                    format!("{}/{}{}{}", self.to_css_string(span)?, q, s, q),
                     QuoteKind::None,
                 ),
                 Self::Null => {

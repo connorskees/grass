@@ -63,28 +63,15 @@ impl Op {
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub(crate) enum QuoteKind {
-    Single,
-    Double,
+    Quoted,
     None,
-}
-
-impl QuoteKind {
-    /// SASS will prefer double quotes over single quotes after
-    /// operations, e.g. `'foo' + red` => `"foored"`
-    pub fn normalize(self) -> QuoteKind {
-        match self {
-            QuoteKind::Double | QuoteKind::Single => QuoteKind::Double,
-            QuoteKind::None => QuoteKind::None,
-        }
-    }
 }
 
 impl Display for QuoteKind {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Single => write!(f, "'"),
-            Self::Double => write!(f, "\""),
+            Self::Quoted => write!(f, "\""),
             Self::None => write!(f, ""),
         }
     }

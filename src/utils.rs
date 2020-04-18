@@ -585,7 +585,6 @@ pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
 ) -> SassResult<Spanned<Value>> {
     let mut s = String::new();
     let mut is_escaped = false;
-    let mut found_interpolation = false;
     let mut span = if let Some(tok) = toks.peek() {
         tok.pos()
     } else {
@@ -615,7 +614,6 @@ pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
             '#' if !is_escaped => {
                 if toks.peek().unwrap().kind == '{' {
                     toks.next();
-                    found_interpolation = true;
                     let interpolation = parse_interpolation(toks, scope, super_selector)?;
                     s.push_str(&interpolation.node.to_css_string(interpolation.span)?);
                     continue;
@@ -657,17 +655,8 @@ pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
             s.push_str(&tok.kind.to_string());
         }
     }
-    let quotes = if found_interpolation {
-        QuoteKind::Double
-    } else {
-        match q {
-            '"' => QuoteKind::Double,
-            '\'' => QuoteKind::Single,
-            _ => unreachable!(),
-        }
-    };
     Ok(Spanned {
-        node: Value::Ident(s, quotes),
+        node: Value::Ident(s, QuoteKind::Quoted),
         span,
     })
 }

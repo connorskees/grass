@@ -95,10 +95,8 @@ impl Value {
                 format!("{}", self.clone().eval(span)?.to_css_string(span)?)
             }
             Self::Paren(val) => format!("{}", val.to_css_string(span)?),
-            Self::Ident(val, kind) => {
-                if kind == &QuoteKind::None {
-                    return Ok(val.clone());
-                }
+            Self::Ident(val, QuoteKind::None) => return Ok(val.clone()),
+            Self::Ident(val, QuoteKind::Quoted) => {
                 let has_single_quotes = val.contains(|x| x == '\'');
                 let has_double_quotes = val.contains(|x| x == '"');
                 if has_single_quotes && !has_double_quotes {
@@ -108,23 +106,18 @@ impl Value {
                 } else if !has_single_quotes && !has_double_quotes {
                     format!("\"{}\"", val)
                 } else {
-                    let quote_char = match kind {
-                        QuoteKind::Double => '"',
-                        QuoteKind::Single => '\'',
-                        _ => unreachable!(),
-                    };
                     let mut buf = String::with_capacity(val.len() + 2);
-                    buf.push(quote_char);
+                    buf.push('"');
                     for c in val.chars() {
                         match c {
-                            '"' | '\'' if c == quote_char => {
+                            '"' => {
                                 buf.push('\\');
-                                buf.push(quote_char);
+                                buf.push('"');
                             }
                             v => buf.push(v),
                         }
                     }
-                    buf.push(quote_char);
+                    buf.push('"');
                     buf
                 }
             }

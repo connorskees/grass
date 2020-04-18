@@ -71,7 +71,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                         .into())
                 }
             };
-            Ok(Value::Ident(unit, QuoteKind::Double))
+            Ok(Value::Ident(unit, QuoteKind::Quoted))
         }),
     );
     f.insert(

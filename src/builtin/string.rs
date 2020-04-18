@@ -71,7 +71,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         Builtin::new(|mut args, scope, super_selector| {
             max_args!(args, 1);
             match arg!(args, scope, super_selector, 0, "string") {
-                Value::Ident(i, _) => Ok(Value::Ident(i, QuoteKind::Double)),
+                Value::Ident(i, _) => Ok(Value::Ident(i, QuoteKind::Quoted)),
                 v => Err((
                     format!(
                         "$string: {} is not a string.",
@@ -191,7 +191,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
             }
 
             if start > end || start > str_len {
-                Ok(Value::Ident(String::new(), quotes.normalize()))
+                Ok(Value::Ident(String::new(), quotes))
             } else {
                 Ok(Value::Ident(
                     string
@@ -199,7 +199,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                         .skip(start - 1)
                         .take(end - start + 1)
                         .collect(),
-                    quotes.normalize(),
+                    quotes,
                 ))
             }
         }),
@@ -247,7 +247,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         Builtin::new(|mut args, scope, super_selector| {
             max_args!(args, 3);
             let (s1, quotes) = match arg!(args, scope, super_selector, 0, "string") {
-                Value::Ident(i, q) => (i, q.normalize()),
+                Value::Ident(i, q) => (i, q),
                 v => {
                     return Err((
                         format!(
