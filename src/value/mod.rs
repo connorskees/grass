@@ -122,7 +122,7 @@ impl Value {
             }
             Self::True => "true".to_string(),
             Self::False => "false".to_string(),
-            Self::Null => "null".to_string(),
+            Self::Null => String::new(),
             Self::ArgList(args) => format!(
                 "{}",
                 args.iter()
@@ -194,6 +194,7 @@ impl Value {
                 Brackets::Bracketed => "[]".to_string(),
             },
             Value::Function(f) => format!("get-function(\"{}\")", f.name()),
+            Value::Null => "null".to_string(),
             v => v.to_css_string(span)?,
         })
     }

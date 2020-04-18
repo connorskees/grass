@@ -113,19 +113,9 @@ impl Value {
                 }
             }
             Self::UnaryOp(..) | Self::Paren(..) => self.eval(span)?.node.add(other, span)?,
-            Self::Ident(s1, quotes1) => match other {
-                Self::Ident(s2, _) => Value::Ident(format!("{}{}", s1, s2), quotes1),
-                Self::Important | Self::True | Self::False | Self::Dimension(..) => {
-                    Value::Ident(format!("{}{}", s1, other.to_css_string(span)?), quotes1)
-                }
-                Self::Null => Value::Ident(s1, quotes1),
-                Self::Color(c) => Value::Ident(format!("{}{}", s1, c), quotes1),
-                Self::List(..) => {
-                    Value::Ident(format!("{}{}", s1, other.to_css_string(span)?), quotes1)
-                }
-                Self::UnaryOp(..) | Self::BinaryOp(..) => todo!(),
-                Self::Paren(..) => Self::Ident(s1, quotes1).add(other.eval(span)?.node, span)?,
-                Self::Function(..) | Self::ArgList(..) | Self::Map(..) => todo!(),
+            Self::Ident(text, quotes) => match other {
+                Self::Ident(text2, ..) => Self::Ident(text + &text2, quotes),
+                _ => Value::Ident(text + &other.to_css_string(span)?, quotes),
             },
             Self::List(..) => match other {
                 Self::Ident(s, q) => Value::Ident(format!("{}{}", self.to_css_string(span)?, s), q),
@@ -223,26 +213,14 @@ impl Value {
                 }
             }
             Self::Paren(..) => self.eval(span)?.node.sub(other, span)?,
-            Self::Ident(s1, q1) => match other {
-                Self::Ident(s2, q2) => Value::Ident(
-                    format!("{}{}{}-{}{}{}", q1, s1, q1, q2, s2, q2),
-                    QuoteKind::None,
+            Self::Ident(..) => Self::Ident(
+                format!(
+                    "{}-{}",
+                    self.to_css_string(span)?,
+                    other.to_css_string(span)?
                 ),
-                Self::Important
-                | Self::True
-                | Self::False
-                | Self::Dimension(..)
-                | Self::Color(..) => Value::Ident(
-                    format!("{}{}{}-{}", q1, s1, q1, other.to_css_string(span)?),
-                    QuoteKind::None,
-                ),
-                Self::Null => Value::Ident(format!("{}{}{}-", q1, s1, q1), QuoteKind::None),
-                Self::List(..) => Value::Ident(
-                    format!("{}{}{}-{}", q1, s1, q1, other.to_css_string(span)?),
-                    QuoteKind::None,
-                ),
-                _ => todo!(),
-            },
+                QuoteKind::None,
+            ),
             Self::List(..) => match other {
                 Self::Ident(s, q) => Value::Ident(
                     format!("{}-{}{}{}", self.to_css_string(span)?, q, s, q),
