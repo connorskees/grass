@@ -99,26 +99,25 @@ impl Value {
             Self::Ident(val, QuoteKind::Quoted) => {
                 let has_single_quotes = val.contains(|x| x == '\'');
                 let has_double_quotes = val.contains(|x| x == '"');
-                if has_single_quotes && !has_double_quotes {
-                    format!("\"{}\"", val)
-                } else if !has_single_quotes && has_double_quotes {
-                    format!("'{}'", val)
-                } else if !has_single_quotes && !has_double_quotes {
-                    format!("\"{}\"", val)
-                } else {
-                    let mut buf = String::with_capacity(val.len() + 2);
-                    buf.push('"');
-                    for c in val.chars() {
-                        match c {
-                            '"' => {
-                                buf.push('\\');
-                                buf.push('"');
+                match (has_single_quotes, has_double_quotes) {
+                    (true, false) => format!("\"{}\"", val),
+                    (false, true) => format!("'{}'", val),
+                    (false, false) => format!("\"{}\"", val),
+                    (true, true) => {
+                        let mut buf = String::with_capacity(val.len() + 2);
+                        buf.push('"');
+                        for c in val.chars() {
+                            match c {
+                                '"' => {
+                                    buf.push('\\');
+                                    buf.push('"');
+                                }
+                                v => buf.push(v),
                             }
-                            v => buf.push(v),
                         }
+                        buf.push('"');
+                        buf
                     }
-                    buf.push('"');
-                    buf
                 }
             }
             Self::True => "true".to_string(),
