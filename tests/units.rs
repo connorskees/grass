@@ -69,6 +69,15 @@ test!(
     "a {\n  color: 10% + 10;\n}\n",
     "a {\n  color: 20%;\n}\n"
 );
+error!(
+    display_single_mul,
+    "a {\n  color: 1rem * 1px;\n}\n", "Error: 1rem*px isn't a valid CSS value."
+);
+error!(
+    display_arbitrary_mul,
+    "a {\n  color: 1rem * 1px * 1rad * 1foo;\n}\n",
+    "Error: 1rem*px*rad*foo isn't a valid CSS value."
+);
 
 macro_rules! test_unit_addition {
     ($u1:ident, $u2:ident, $out:literal) => {
