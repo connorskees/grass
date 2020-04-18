@@ -64,15 +64,10 @@ fn main() {
     let mut stdout = BufWriter::new(stdout());
     if let Some(inputs) = matches.values_of("INPUT") {
         for name in inputs {
-            match StyleSheet::from_path(name) {
-                Ok(a) => a,
-                Err(b) => {
-                    eprintln!("{}", b);
-                    std::process::exit(1)
-                }
-            }
-            .print_as_css(&mut stdout)
-            .unwrap();
+            StyleSheet::from_path(name, &mut stdout).unwrap_or_else(|e| {
+                eprintln!("{}", e);
+                std::process::exit(1)
+            });
         }
     }
 }
