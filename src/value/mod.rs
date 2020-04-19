@@ -40,11 +40,15 @@ pub(crate) enum Value {
 }
 
 impl Value {
-    pub fn is_null(&self) -> bool {
+    pub fn is_null(&self, span: Span) -> SassResult<bool> {
         match self {
-            &Value::Null => true,
-            Value::Ident(i, QuoteKind::None) if i.is_empty() => true,
-            _ => false,
+            &Value::Null => Ok(true),
+            Value::Ident(i, QuoteKind::None) if i.is_empty() => Ok(true),
+            Self::BinaryOp(..) | Self::Paren(..) | Self::UnaryOp(..) => {
+                self.clone().eval(span)?.is_null(span)
+            }
+            Self::List(v, ..) => Ok(v.into_iter().all(|f| f.is_null(span).unwrap())),
+            _ => Ok(false),
         }
     }
 
@@ -59,7 +63,7 @@ impl Value {
             },
             Self::Map(..) => {
                 return Err((
-                    format!("{} isn't a valid CSS value.", dbg!(self.inspect(span)?)),
+                    format!("{} isn't a valid CSS value.", self.inspect(span)?),
                     span,
                 )
                     .into())
@@ -69,7 +73,7 @@ impl Value {
                 Brackets::None => format!(
                     "{}",
                     vals.iter()
-                        .filter(|x| !x.is_null())
+                        .filter(|x| !x.is_null(span).unwrap())
                         .map(|x| x.to_css_string(span))
                         .collect::<SassResult<Vec<String>>>()?
                         .join(sep.as_str()),
@@ -77,7 +81,7 @@ impl Value {
                 Brackets::Bracketed => format!(
                     "[{}]",
                     vals.iter()
-                        .filter(|x| !x.is_null())
+                        .filter(|x| !x.is_null(span).unwrap())
                         .map(|x| x.to_css_string(span))
                         .collect::<SassResult<Vec<String>>>()?
                         .join(sep.as_str()),
@@ -119,7 +123,7 @@ impl Value {
             Self::ArgList(args) => format!(
                 "{}",
                 args.iter()
-                    .filter(|x| !x.is_null())
+                    .filter(|x| !x.is_null(span).unwrap())
                     .map(|a| Ok(a.node.to_css_string(span)?))
                     .collect::<SassResult<Vec<String>>>()?
                     .join(", "),

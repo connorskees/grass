@@ -36,7 +36,7 @@ impl Toplevel {
 
     fn push_style(&mut self, mut s: Style) -> SassResult<()> {
         s = s.eval()?;
-        if s.value.is_null() {
+        if s.value.is_null(s.value.span)? {
             return Ok(());
         }
         if let Toplevel::RuleSet(_, entries) = self {
