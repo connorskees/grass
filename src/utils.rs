@@ -549,8 +549,6 @@ pub(crate) fn read_until_newline<I: Iterator<Item = Token>>(toks: &mut Peekable<
 /// This function assumes that the starting "/*" has already been consumed
 /// The entirety of the comment, including the ending "*/" is consumed.
 /// Note that the ending "*/" is not included in the output.
-///
-/// TODO: support interpolation within multiline comments
 pub(crate) fn eat_comment<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
     scope: &Scope,
