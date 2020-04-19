@@ -133,3 +133,7 @@ error!(
     duplicate_key_in_declaration,
     "a {\n  $a: (foo: a, foo: b);;\n}\n", "Error: Duplicate key."
 );
+error!(
+    display_map,
+    "a {\n  color: (a: b, c: d);\n}\n", "Error: (a: b, c: d) isn't a valid CSS value."
+);

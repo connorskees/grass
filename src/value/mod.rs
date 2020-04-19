@@ -47,30 +47,23 @@ impl Value {
             _ => false,
         }
     }
+
     pub fn to_css_string(&self, span: Span) -> SassResult<String> {
         Ok(match self {
             Self::Important => format!("!important"),
             Self::Dimension(num, unit) => match unit {
                 Unit::Mul(..) => {
-                    return Err((
-                        format!("Error: {}{} isn't a valid CSS value.", num, unit),
-                        span,
-                    )
-                        .into());
+                    return Err((format!("{}{} isn't a valid CSS value.", num, unit), span).into());
                 }
                 _ => format!("{}{}", num, unit),
             },
-            Self::Map(map) => format!(
-                "({})",
-                map.iter()
-                    .map(|(k, v)| Ok(format!(
-                        "{}: {}",
-                        k.to_css_string(span)?,
-                        v.to_css_string(span)?
-                    )))
-                    .collect::<SassResult<Vec<String>>>()?
-                    .join(", ")
-            ),
+            Self::Map(..) => {
+                return Err((
+                    format!("{} isn't a valid CSS value.", dbg!(self.inspect(span)?)),
+                    span,
+                )
+                    .into())
+            }
             Self::Function(func) => format!("get-function(\"{}\")", func.name()),
             Self::List(vals, sep, brackets) => match brackets {
                 Brackets::None => format!(
@@ -195,6 +188,17 @@ impl Value {
             },
             Value::Function(f) => format!("get-function(\"{}\")", f.name()),
             Value::Null => "null".to_string(),
+            Value::Map(map) => format!(
+                "({})",
+                map.iter()
+                    .map(|(k, v)| Ok(format!(
+                        "{}: {}",
+                        k.to_css_string(span)?,
+                        v.to_css_string(span)?
+                    )))
+                    .collect::<SassResult<Vec<String>>>()?
+                    .join(", ")
+            ),
             v => v.to_css_string(span)?,
         })
     }
