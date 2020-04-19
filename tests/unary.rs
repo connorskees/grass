@@ -50,3 +50,9 @@ test!(
     "$a: 1;\n\na {\n  color: -$a;\n}\n",
     "a {\n  color: -1;\n}\n"
 );
+test!(
+    unary_neg_null_paren,
+    "a {\n  color: -(null);\n}\n",
+    "a {\n  color: -;\n}\n"
+);
+test!(negative_null_as_ident, "a {\n  color: -null;\n}\n");

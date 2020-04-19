@@ -229,17 +229,17 @@ fn eat_op<I: Iterator<Item = IntermediateValue>>(
                         span: left.span.merge(right.span),
                     });
                 } else {
-                    space_separated.push(Spanned {
-                        node: Value::UnaryOp(op.node, Box::new(right.node)),
-                        span: right.span,
-                    });
+                    space_separated.push(right.map_node(|n| Value::UnaryOp(op.node, Box::new(n))));
                 }
             } else {
                 let right = single_value(iter, scope, super_selector, op.span)?;
-                space_separated.push(Spanned {
-                    node: Value::UnaryOp(op.node, Box::new(right.node)),
-                    span: right.span,
-                });
+                if right.node == Value::Null {
+                    space_separated.push(
+                        right.map_node(|_| Value::Ident("-null".to_string(), QuoteKind::None)),
+                    );
+                    return Ok(());
+                }
+                space_separated.push(right.map_node(|n| Value::UnaryOp(op.node, Box::new(n))));
             }
         }
         Op::And | Op::Or => {
