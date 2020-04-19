@@ -553,8 +553,8 @@ pub(crate) fn read_until_newline<I: Iterator<Item = Token>>(toks: &mut Peekable<
 /// TODO: support interpolation within multiline comments
 pub(crate) fn eat_comment<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
-    _scope: &Scope,
-    _super_selector: &Selector,
+    scope: &Scope,
+    super_selector: &Selector,
 ) -> SassResult<Spanned<String>> {
     let mut comment = String::new();
     let mut span = if let Some(tok) = toks.peek() {
@@ -567,6 +567,11 @@ pub(crate) fn eat_comment<I: Iterator<Item = Token>>(
         if tok.kind == '*' && toks.peek().unwrap().kind == '/' {
             toks.next();
             break;
+        } else if tok.kind == '#' && toks.peek().unwrap().kind == '{' {
+            toks.next();
+            comment
+                .push_str(&parse_interpolation(toks, scope, super_selector)?.to_css_string(span)?);
+            continue;
         }
         comment.push(tok.kind);
     }

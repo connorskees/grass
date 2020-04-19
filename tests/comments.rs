@@ -49,7 +49,17 @@ test!(
     "a {\n  /*  \n*/\n  color: red;\n}\n"
 );
 test!(
-    converts_cr_in_comment,
+    closing_curly_brace_in_comment,
     "a {\n  color: 1 + // flang }\n  blang }",
     "a {\n  color: 1blang;\n}\n"
+);
+test!(
+    converts_cr_in_comment,
+    "a {\n  /*  \r*/ color: red;\n}\n",
+    "a {\n  /*  \n*/\n  color: red;\n}\n"
+);
+test!(
+    interpolation_in_multiline_comment,
+    "$a: foo;/* interpolation #{1 + 1} in #{$a} comments */",
+    "/* interpolation 2 in foo comments */\n"
 );
