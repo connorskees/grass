@@ -71,16 +71,6 @@ test!(
     "a {\n  color: \"f\" foo;\n}\n"
 );
 test!(
-    escaped_backslash,
-    "a {\n  color: \"\\\\\";\n}\n",
-    "a {\n  color: \"\\\";\n}\n"
-);
-test!(
-    double_quotes_when_containing_single_quote,
-    "a {\n  color: '\\\'';\n}\n",
-    "a {\n  color: \"'\";\n}\n"
-);
-test!(
     color_equals_color,
     "a {\n  color: red == red;\n}\n",
     "a {\n  color: true;\n}\n"

@@ -580,6 +580,16 @@ pub(crate) fn eat_comment<I: Iterator<Item = Token>>(
     })
 }
 
+fn as_hex(c: u32) -> u32 {
+    if c <= '9' as u32 {
+        c - '0' as u32
+    } else if c <= 'F' as u32 {
+        10 + c - 'A' as u32
+    } else {
+        10 + c - 'a' as u32
+    }
+}
+
 pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
     scope: &Scope,
@@ -587,7 +597,6 @@ pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
     super_selector: &Selector,
 ) -> SassResult<Spanned<Value>> {
     let mut s = String::new();
-    let mut is_escaped = false;
     let mut span = if let Some(tok) = toks.peek() {
         tok.pos()
     } else {
@@ -596,25 +605,9 @@ pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
     while let Some(tok) = toks.next() {
         span = span.merge(tok.pos());
         match tok.kind {
-            '"' if !is_escaped && q == '"' => break,
-            '"' if is_escaped => {
-                s.push('"');
-                is_escaped = false;
-                continue;
-            }
-            '\'' if !is_escaped && q == '\'' => break,
-            '\'' if is_escaped => {
-                s.push('\'');
-                is_escaped = false;
-                continue;
-            }
-            '\\' if !is_escaped => is_escaped = true,
-            '\\' => {
-                is_escaped = false;
-                s.push('\\');
-                continue;
-            }
-            '#' if !is_escaped => {
+            '"' if q == '"' => break,
+            '\'' if q == '\'' => break,
+            '#' => {
                 if toks.peek().unwrap().kind == '{' {
                     toks.next();
                     let interpolation = parse_interpolation(toks, scope, super_selector)?;
@@ -626,36 +619,46 @@ pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
                 }
             }
             '\n' => return Err(("Expected \".", tok.pos()).into()),
-            v if v.is_ascii_hexdigit() && is_escaped => {
-                let mut n = v.to_string();
-                while let Some(c) = toks.peek() {
-                    if !c.kind.is_ascii_hexdigit() || n.len() > 6 {
-                        break;
+            '\\' => {
+                let first = match toks.peek() {
+                    Some(c) => c,
+                    None => {
+                        s.push('\u{FFFD}');
+                        continue;
                     }
-                    n.push(c.kind);
-                    toks.next();
+                };
+
+                if first.kind == '\n' {
+                    return Err(("Expected escape sequence.", first.pos()).into());
                 }
-                let c = std::char::from_u32(u32::from_str_radix(&n, 16).unwrap()).unwrap();
-                if c.is_control() && c != '\t' && c != '\0' {
-                    s.push_str(&format!("\\{}", n.to_ascii_lowercase()));
-                } else if c == '\0' {
-                    s.push('\u{FFFD}');
+
+                if first.kind.is_ascii_hexdigit() {
+                    let mut value = 0;
+                    for _ in 0..6 {
+                        let next = match toks.peek() {
+                            Some(c) => c,
+                            None => break,
+                        };
+                        if !next.kind.is_ascii_hexdigit() {
+                            break;
+                        }
+                        value = (value << 4) + as_hex(toks.next().unwrap().kind as u32);
+                    }
+
+                    if toks.peek().is_some() && toks.peek().unwrap().kind.is_ascii_whitespace() {
+                        toks.next();
+                    }
+
+                    if value == 0 || (value >= 0xD800 && value <= 0xDFFF) || value >= 0x10FFFF {
+                        s.push('\u{FFFD}');
+                    } else {
+                        s.push(dbg!(std::char::from_u32(value).unwrap()));
+                    }
                 } else {
-                    s.push(c);
+                    s.push(toks.next().unwrap().kind);
                 }
-                is_escaped = false;
-                continue;
             }
-            _ if is_escaped => {
-                is_escaped = false;
-            }
-            _ => {}
-        }
-        if is_escaped && tok.kind != '\\' {
-            is_escaped = false;
-        }
-        if tok.kind != '\\' {
-            s.push_str(&tok.kind.to_string());
+            _ => s.push(tok.kind),
         }
     }
     Ok(Spanned {

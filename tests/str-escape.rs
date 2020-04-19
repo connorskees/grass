@@ -142,3 +142,9 @@ test!(
 //     "a {\n  color: quote(\\b);\n}\n",
 //     "a {\n  color: \"\\\\b \";\n}\n"
 // );
+test!(escaped_backslash, "a {\n  color: \"\\\\\";\n}\n");
+test!(
+    double_quotes_when_containing_single_quote,
+    "a {\n  color: '\\\'';\n}\n",
+    "a {\n  color: \"'\";\n}\n"
+);

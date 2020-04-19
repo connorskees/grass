@@ -39,6 +39,83 @@ pub(crate) enum Value {
     Function(SassFunction),
 }
 
+fn hex_char_for(number: u32) -> char {
+    assert!(number < 0x10);
+    std::char::from_u32(if number < 0xA {
+        0x30 + number
+    } else {
+        0x61 - 0xA + number
+    })
+    .unwrap()
+}
+
+fn visit_quoted_string(buf: &mut String, force_double_quote: bool, string: &str) -> SassResult<()> {
+    let mut has_single_quote = false;
+    let mut has_double_quote = false;
+
+    let mut buffer = String::new();
+
+    if force_double_quote {
+        buffer.push('"');
+    }
+    let mut iter = string.chars().peekable();
+    while let Some(c) = iter.next() {
+        match c {
+            '\'' => {
+                if force_double_quote {
+                    buffer.push('\'');
+                } else if has_double_quote {
+                    return visit_quoted_string(buf, true, string);
+                } else {
+                    has_single_quote = true;
+                    buffer.push('\'');
+                }
+            }
+            '"' => {
+                if force_double_quote {
+                    buffer.push('\\');
+                    buffer.push('"');
+                } else if has_single_quote {
+                    return visit_quoted_string(buf, true, string);
+                } else {
+                    has_double_quote = true;
+                    buffer.push('"');
+                }
+            }
+            '\x00'..='\x08' | '\x0A'..='\x1F' => {
+                buffer.push('\\');
+                if c as u32 > 0xF {
+                    buffer.push(hex_char_for(c as u32 >> 4))
+                }
+                buffer.push(hex_char_for(c as u32 & 0xF));
+                if iter.peek().is_none() {
+                    break;
+                }
+
+                let next = iter.peek().unwrap();
+
+                if next.is_ascii_hexdigit() || next == &' ' || next == &'\t' {
+                    buffer.push(' ');
+                }
+            }
+            '\\' => {
+                buffer.push('\\');
+                buffer.push('\\');
+            }
+            _ => buffer.push(c),
+        }
+    }
+
+    if force_double_quote {
+        buffer.push('"');
+    } else {
+        let quote = if has_double_quote { '\'' } else { '"' };
+        buffer = format!("{}{}{}", quote, buffer, quote);
+    }
+    buf.push_str(&buffer);
+    Ok(())
+}
+
 impl Value {
     pub fn is_null(&self, span: Span) -> SassResult<bool> {
         match self {
@@ -92,30 +169,32 @@ impl Value {
                 format!("{}", self.clone().eval(span)?.to_css_string(span)?)
             }
             Self::Paren(val) => format!("{}", val.to_css_string(span)?),
-            Self::Ident(val, QuoteKind::None) => return Ok(val.clone()),
-            Self::Ident(val, QuoteKind::Quoted) => {
-                let has_single_quotes = val.contains(|x| x == '\'');
-                let has_double_quotes = val.contains(|x| x == '"');
-                match (has_single_quotes, has_double_quotes) {
-                    (true, false) => format!("\"{}\"", val),
-                    (false, true) => format!("'{}'", val),
-                    (false, false) => format!("\"{}\"", val),
-                    (true, true) => {
-                        let mut buf = String::with_capacity(val.len() + 2);
-                        buf.push('"');
-                        for c in val.chars() {
-                            match c {
-                                '"' => {
-                                    buf.push('\\');
-                                    buf.push('"');
-                                }
-                                v => buf.push(v),
+            Self::Ident(string, QuoteKind::None) => {
+                let mut after_newline = false;
+                let mut buf = String::with_capacity(string.len());
+                for c in string.chars() {
+                    match c {
+                        '\n' => {
+                            buf.push(' ');
+                            after_newline = true;
+                        }
+                        ' ' => {
+                            if !after_newline {
+                                buf.push(' ');
                             }
                         }
-                        buf.push('"');
-                        buf
+                        _ => {
+                            buf.push(c);
+                            after_newline = false;
+                        }
                     }
                 }
+                buf
+            }
+            Self::Ident(string, QuoteKind::Quoted) => {
+                let mut buf = String::with_capacity(string.len());
+                visit_quoted_string(&mut buf, false, string)?;
+                buf
             }
             Self::True => "true".to_string(),
             Self::False => "false".to_string(),
