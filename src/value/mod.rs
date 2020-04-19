@@ -7,6 +7,7 @@ use crate::color::Color;
 use crate::common::{Brackets, ListSeparator, Op, QuoteKind};
 use crate::error::SassResult;
 use crate::unit::{Unit, UNIT_CONVERSION_TABLE};
+use crate::utils::hex_char_for;
 
 use css_function::is_special_function;
 pub(crate) use map::SassMap;
@@ -37,16 +38,6 @@ pub(crate) enum Value {
     ArgList(Vec<Spanned<Value>>),
     /// Returned by `get-function()`
     Function(SassFunction),
-}
-
-fn hex_char_for(number: u32) -> char {
-    assert!(number < 0x10);
-    std::char::from_u32(if number < 0xA {
-        0x30 + number
-    } else {
-        0x61 - 0xA + number
-    })
-    .unwrap()
 }
 
 fn visit_quoted_string(buf: &mut String, force_double_quote: bool, string: &str) -> SassResult<()> {
