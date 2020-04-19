@@ -2,16 +2,22 @@
 
 An implementation of the SASS spec in pure Rust
 
-To run the official test suite,
+This crate aims to provide a high level interface for compiling SASS into
+plain CSS. It offers a very limited API, currently exposing only 2 structs.
 
-```bash
-git clone https://github.com/connorskees/grass
-cd grass
-git submodule init
-git submodule update
-cargo b --release
-./sass-spec/sass-spec.rb -c './target/release/grass'
-```
+This crate also comes with a binary that is intended to act as an invisible
+replacement to the sass commandline executable.
+
+This crate aims to achieve complete feature parity with the dart-sass reference
+implementation. A deviation from the dart-sass implementation can be considered
+a bug except for in the following situations:
+ - Error messages
+ - Error spans
+ - Certain aspects of the indented syntax
+ - Potentially others in the future
+
+[Documentation](https://docs.rs/grass/)
+[crates.io](https://crates.io/crates/grass)
 
 The large features remaining are
 ```
@@ -25,6 +31,17 @@ a special parser for plain css
 @keyframes (~30 tests)
 @supports (~128 tests)
 string parsing/quoting/escaping (~200 tests)
+```
+
+To run the official test suite,
+
+```bash
+git clone https://github.com/connorskees/grass
+cd grass
+git submodule init
+git submodule update
+cargo b --release
+./sass-spec/sass-spec.rb -c './target/release/grass'
 ```
 
 ```
