@@ -263,3 +263,8 @@ test!(
     "a {\n  color: 1 + false;\n}\n",
     "a {\n  color: 1false;\n}\n"
 );
+test!(
+    num_plus_unary_not,
+    "a {\n  color: 1 + not 2;\n}\n",
+    "a {\n  color: 1false;\n}\n"
+);

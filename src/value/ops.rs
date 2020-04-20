@@ -9,6 +9,8 @@ impl Value {
     pub fn add(self, mut other: Self, span: Span) -> SassResult<Self> {
         if let Self::Paren(..) = other {
             other = other.eval(span)?.node
+        } else if let Self::UnaryOp(..) = other {
+            other = other.eval(span)?.node
         }
         let precedence = Op::Plus.precedence();
         Ok(match self {
