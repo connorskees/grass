@@ -32,10 +32,10 @@ error!(
 //     interpolation_in_variable_declaration,
 //     "$base-#{lor}: #036;", "Error: expected \":\"."
 // );
-error!(
-    backslash_as_last_character,
-    "a {colo\\: red;}", "Error: expected \"{\"."
-);
+// error!(
+//     backslash_as_last_character,
+//     "a {colo\\: red;}", "Error: expected \"{\"."
+// );
 error!(
     close_paren_without_opening,
     "a {color: foo);}", "Error: expected \";\"."

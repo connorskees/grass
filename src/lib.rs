@@ -703,6 +703,10 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                     values.extend(eat_interpolation(toks));
                 }
             }
+            '\\' => {
+                values.push(toks.next().unwrap());
+                values.push(toks.next().unwrap());
+            }
             _ => values.push(toks.next().unwrap()),
         };
     }

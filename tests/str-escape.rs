@@ -14,7 +14,6 @@ test!(
     "a {\n  color: xx;\n}\n"
 );
 test!(
-    #[ignore]
     escape_start_non_ascii,
     "a {\n  color: ☃x \\☃x \\2603x;\n}\n",
     "@charset \"UTF-8\";\na {\n  color: ☃x ☃x ☃x;\n}\n"
@@ -117,7 +116,6 @@ test!(
     "a {\n  color: \"\\b\";\n}\n"
 );
 test!(
-    #[ignore]
     unquote_quoted_backslash_single_lowercase_hex_char,
     "a {\n  color: #{\"\\b\"};\n}\n",
     "a {\n  color: \x0b;\n}\n"
@@ -137,14 +135,18 @@ test!(
     "a {\n  color: \\0;\n}\n",
     "a {\n  color: \\0 ;\n}\n"
 );
-// test!(
-//     quote_escape,
-//     "a {\n  color: quote(\\b);\n}\n",
-//     "a {\n  color: \"\\\\b \";\n}\n"
-// );
+test!(
+    quote_escape,
+    "a {\n  color: quote(\\b);\n}\n",
+    "a {\n  color: \"\\\\b \";\n}\n"
+);
 test!(escaped_backslash, "a {\n  color: \"\\\\\";\n}\n");
 test!(
     double_quotes_when_containing_single_quote,
     "a {\n  color: '\\\'';\n}\n",
     "a {\n  color: \"'\";\n}\n"
+);
+test!(
+    allows_escaped_quote_at_start_of_ident,
+    "a {\n  color: \\\"c\\\";\n}\n"
 );

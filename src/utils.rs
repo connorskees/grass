@@ -1,6 +1,6 @@
 use std::iter::{Iterator, Peekable};
 
-use codemap::Spanned;
+use codemap::{Span, Spanned};
 
 use crate::common::QuoteKind;
 use crate::error::SassResult;
@@ -359,128 +359,224 @@ pub(crate) fn eat_variable_value<I: Iterator<Item = Token>>(
     Ok(VariableDecl::new(val, default, global))
 }
 
+fn ident_body<I: Iterator<Item = Token>>(
+    toks: &mut Peekable<I>,
+    unit: bool,
+    mut span: Span,
+) -> SassResult<Spanned<String>> {
+    let mut text = String::new();
+    while let Some(tok) = toks.peek() {
+        span = span.merge(tok.pos());
+        if unit && tok.kind == '-' {
+            todo!()
+        // Disallow `-` followed by a dot or a digit digit in units.
+        // var second = scanner.peekChar(1);
+        // if (second != null && (second == $dot || isDigit(second))) break;
+        // text.writeCharCode(scanner.readChar());
+        } else if is_name(tok.kind) {
+            text.push(toks.next().unwrap().kind);
+        } else if tok.kind == '\\' {
+            toks.next();
+            text.push_str(&escape(toks, false)?);
+        } else {
+            break;
+        }
+    }
+    Ok(Spanned { node: text, span })
+}
+
+fn interpolated_ident_body<I: Iterator<Item = Token>>(
+    toks: &mut Peekable<I>,
+    scope: &Scope,
+    super_selector: &Selector,
+    mut span: Span,
+) -> SassResult<Spanned<String>> {
+    let mut buf = String::new();
+    while let Some(tok) = toks.peek() {
+        if tok.kind == '_'
+            || tok.kind.is_alphanumeric()
+            || tok.kind == '-'
+            || tok.kind as u32 >= 0x0080
+        {
+            span = span.merge(tok.pos());
+            buf.push(toks.next().unwrap().kind);
+        } else if tok.kind == '\\' {
+            toks.next();
+            buf.push_str(&escape(toks, false)?);
+        } else if tok.kind == '#' {
+            toks.next();
+            let next = toks.next().unwrap();
+            if next.kind == '{' {
+                let interpolation = parse_interpolation(toks, scope, super_selector)?;
+                buf.push_str(&interpolation.node.to_css_string(interpolation.span)?);
+            }
+        } else {
+            break;
+        }
+    }
+    Ok(Spanned { node: buf, span })
+}
+
+fn is_name(c: char) -> bool {
+    is_name_start(c) || c.is_digit(10) || c == '-'
+}
+
+fn is_name_start(c: char) -> bool {
+    // NOTE: in the dart-sass implementation, identifiers cannot start
+    // with numbers. We explicitly differentiate from the reference
+    // implementation here in order to support selectors beginning with numbers.
+    // This can be considered a hack and in the future it would be nice to refactor
+    // how this is handled.
+    c == '_' || c.is_alphanumeric() || c as u32 >= 0x0080
+}
+
+fn escape<I: Iterator<Item = Token>>(
+    toks: &mut Peekable<I>,
+    identifier_start: bool,
+) -> SassResult<String> {
+    let mut value = 0;
+    let first = match toks.peek() {
+        Some(t) => t,
+        None => return Ok(String::new()),
+    };
+    if first.kind == '\n' {
+        return Err(("Expected escape sequence.", first.pos()).into());
+    } else if first.kind.is_ascii_hexdigit() {
+        for _ in 0..6 {
+            let next = match toks.peek() {
+                Some(t) => t,
+                None => break,
+            };
+            if !next.kind.is_ascii_hexdigit() {
+                break;
+            }
+            value *= 16;
+            value += as_hex(toks.next().unwrap().kind as u32)
+        }
+        if toks.peek().is_some() && toks.peek().unwrap().kind.is_whitespace() {
+            toks.next();
+        }
+    } else {
+        value = toks.next().unwrap().kind as u32;
+    }
+
+    // tabs are emitted literally
+    // TODO: figure out where this check is done
+    // in the source dart
+    if value == 0x9 {
+        return Ok("\\\t".to_string());
+    }
+
+    let c = std::char::from_u32(value).unwrap();
+    if (identifier_start && is_name_start(c) && !c.is_digit(10))
+        || (!identifier_start && is_name(c))
+    {
+        Ok(c.to_string())
+    } else if value <= 0x1F || value == 0x7F || (identifier_start && c.is_digit(10)) {
+        let mut buf = String::with_capacity(4);
+        buf.push('\\');
+        if value > 0xF {
+            buf.push(hex_char_for(value >> 4));
+        }
+        buf.push(hex_char_for(value & 0xF));
+        buf.push(' ');
+        Ok(buf)
+    } else {
+        Ok(format!("\\{}", c))
+    }
+}
+
 pub(crate) fn eat_ident<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
     scope: &Scope,
     super_selector: &Selector,
 ) -> SassResult<Spanned<String>> {
-    let mut s = String::new();
+    // TODO: take span as param because we use unwrap here
     let mut span = toks.peek().unwrap().pos();
-    while let Some(tok) = toks.peek() {
-        span = span.merge(tok.pos());
-        match tok.kind {
-            '#' => {
-                let tok = toks.next().unwrap();
-                if toks.peek().ok_or(("Expected identifier.", tok.pos()))?.kind == '{' {
-                    toks.next();
-                    let interpolation = parse_interpolation(toks, scope, super_selector)?;
-                    span = span.merge(interpolation.span);
-                    s.push_str(&interpolation.node.to_css_string(interpolation.span)?);
-                } else {
-                    return Err(("Expected identifier.", tok.pos()).into());
-                }
-            }
-            _ if tok.kind.is_ascii_alphanumeric()
-                || tok.kind == '-'
-                || tok.kind == '_'
-                || (!tok.kind.is_ascii() && !tok.kind.is_control()) =>
-            {
-                s.push(toks.next().unwrap().kind)
-            }
-            '\\' => {
-                let span_start = toks.next().unwrap().pos();
-                let mut n = String::new();
-                while let Some(c) = toks.peek() {
-                    if !c.kind.is_ascii_hexdigit() || n.len() > 6 {
-                        break;
-                    }
-                    n.push(c.kind);
-                    toks.next();
-                }
-                if n.is_empty() {
-                    let c = toks.next().ok_or(("expected \"{\".", span_start))?.kind;
-                    if (c == '-' && !s.is_empty()) || c.is_ascii_alphabetic() {
-                        s.push(c);
-                    } else {
-                        s.push_str(&format!("\\{}", c));
-                    }
-                    continue;
-                }
-                devour_whitespace(toks);
-                let c = std::char::from_u32(u32::from_str_radix(&n, 16).unwrap()).unwrap();
-                if c.is_control() && c != '\t' {
-                    s.push_str(&format!("\\{} ", n.to_ascii_lowercase()));
-                } else if !c.is_ascii_alphanumeric() && s.is_empty() && c.is_ascii() {
-                    s.push_str(&format!("\\{}", c));
-                } else if c.is_numeric() && s.is_empty() {
-                    s.push_str(&format!("\\{} ", n))
-                } else {
-                    s.push(c);
-                };
-            }
-            _ => break,
+    let mut text = String::new();
+    if toks.peek().unwrap().kind == '-' {
+        toks.next();
+        text.push('-');
+        if toks.peek().unwrap().kind == '-' {
+            toks.next();
+            text.push('-');
+            text.push_str(&interpolated_ident_body(toks, scope, super_selector, span)?.node);
+            return Ok(Spanned { node: text, span });
         }
     }
-    Ok(Spanned { node: s, span })
+
+    let Token { kind: first, pos } = match toks.peek() {
+        Some(v) => *v,
+        None => return Err(("Expected identifier.", span).into()),
+    };
+
+    if is_name_start(first) {
+        text.push(toks.next().unwrap().kind);
+    } else if first == '\\' {
+        toks.next();
+        text.push_str(&escape(toks, true)?);
+    // TODO: peekmore
+    // (first == '#' && scanner.peekChar(1) == $lbrace)
+    } else if first == '#' {
+        toks.next();
+        if toks.peek().is_none() {
+            return Err(("Expected identifier.", pos).into());
+        }
+        let Token { kind, pos } = toks.peek().unwrap();
+        if kind == &'{' {
+            toks.next();
+            text.push_str(
+                &parse_interpolation(toks, scope, super_selector)?
+                    .node
+                    .to_css_string(span)?,
+            );
+        } else {
+            return Err(("Expected identifier.", *pos).into());
+        }
+    } else {
+        return Err(("Expected identifier.", pos).into());
+    }
+
+    let body = interpolated_ident_body(toks, scope, super_selector, pos)?;
+    span = span.merge(body.span);
+    text.push_str(&body.node);
+    Ok(Spanned { node: text, span })
 }
 
 pub(crate) fn eat_ident_no_interpolation<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
 ) -> SassResult<Spanned<String>> {
-    let mut s = String::new();
-    let mut span = if let Some(tok) = toks.peek() {
-        tok.pos()
-    } else {
-        todo!()
-    };
-    while let Some(tok) = toks.peek() {
-        span = span.merge(tok.pos());
-        match tok.kind {
-            '#' => {
-                break;
-            }
-            _ if tok.kind.is_ascii_alphanumeric()
-                || tok.kind == '-'
-                || tok.kind == '_'
-                || (!tok.kind.is_ascii() && !tok.kind.is_control()) =>
-            {
-                s.push(toks.next().unwrap().kind)
-            }
-            '\\' => {
-                toks.next();
-                let mut n = String::new();
-                while let Some(c) = toks.peek() {
-                    if !c.kind.is_ascii_hexdigit() || n.len() > 6 {
-                        break;
-                    }
-                    n.push(c.kind);
-                    toks.next();
-                }
-                if n.is_empty() {
-                    let c = toks.next().unwrap().kind;
-                    if (c == '-' && !s.is_empty()) || c.is_ascii_alphabetic() {
-                        s.push(c);
-                    } else {
-                        s.push_str(&format!("\\{}", c));
-                    }
-                    continue;
-                }
-                devour_whitespace(toks);
-                let c = std::char::from_u32(u32::from_str_radix(&n, 16).unwrap()).unwrap();
-                if c.is_control() && c != '\t' {
-                    s.push_str(&format!("\\{} ", n.to_ascii_lowercase()));
-                } else if !c.is_ascii_alphanumeric() && s.is_empty() && c.is_ascii() {
-                    s.push_str(&format!("\\{}", c));
-                } else if c.is_numeric() && s.is_empty() {
-                    s.push_str(&format!("\\{} ", n))
-                } else {
-                    s.push(c);
-                };
-            }
-            _ => break,
+    let mut span = toks.peek().unwrap().pos();
+    let mut text = String::new();
+    if toks.peek().unwrap().kind == '-' {
+        toks.next();
+        text.push('-');
+        if toks.peek().unwrap().kind == '-' {
+            toks.next();
+            text.push('-');
+            text.push_str(&ident_body(toks, false, span)?.node);
+            return Ok(Spanned { node: text, span });
         }
     }
-    Ok(Spanned { node: s, span })
+
+    let first = match toks.peek() {
+        Some(v) => v,
+        None => return Err(("Expected identifier.", span).into()),
+    };
+
+    if is_name_start(first.kind) {
+        text.push(toks.next().unwrap().kind);
+    } else if first.kind == '\\' {
+        toks.next();
+        text.push_str(&escape(toks, true)?);
+    } else {
+        return Err(("Expected identifier.", first.pos()).into());
+    }
+
+    let body = ident_body(toks, false, span)?;
+    span = span.merge(body.span);
+    text.push_str(&body.node);
+    Ok(Spanned { node: text, span })
 }
 
 pub(crate) fn eat_number<I: Iterator<Item = Token>>(
@@ -652,7 +748,7 @@ pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
                     if value == 0 || (value >= 0xD800 && value <= 0xDFFF) || value >= 0x10FFFF {
                         s.push('\u{FFFD}');
                     } else {
-                        s.push(dbg!(std::char::from_u32(value).unwrap()));
+                        s.push(std::char::from_u32(value).unwrap());
                     }
                 } else {
                     s.push(toks.next().unwrap().kind);

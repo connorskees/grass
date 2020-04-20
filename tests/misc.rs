@@ -84,10 +84,6 @@ test!(
     "a {\n  color: -a -b -c;\n}\n"
 );
 test!(
-    allows_escaped_quote_at_start_of_ident,
-    "a {\n  color: \\\"c\\\";\n}\n"
-);
-test!(
     args_handles_arbitrary_number_of_parens,
     "a {\n  color: inspect((((((a))))));\n}\n",
     "a {\n  color: a;\n}\n"
