@@ -1,5 +1,6 @@
 use std::fmt::{self, Display, Write};
-use std::iter::Peekable;
+
+use peekmore::{PeekMore, PeekMoreIterator};
 
 use crate::error::SassResult;
 use crate::scope::Scope;
@@ -26,7 +27,7 @@ struct SelectorPart {
 
 impl Display for SelectorPart {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut iter = self.inner.iter().peekable();
+        let mut iter = self.inner.iter().peekmore();
         devour_whitespace(&mut iter);
         while let Some(s) = iter.next() {
             write!(f, "{}", s)?;
@@ -176,7 +177,7 @@ fn is_selector_name_char(c: char) -> bool {
 
 impl Selector {
     pub fn from_tokens<I: Iterator<Item = Token>>(
-        toks: &mut Peekable<I>,
+        toks: &mut PeekMoreIterator<I>,
         scope: &Scope,
         super_selector: &Selector,
     ) -> SassResult<Selector> {
@@ -252,7 +253,7 @@ impl Selector {
             tok
         }));
 
-        let mut iter = sel_toks.into_iter().peekable();
+        let mut iter = sel_toks.into_iter().peekmore();
 
         while let Some(tok) = iter.peek() {
             inner.push(match tok.kind {
@@ -360,7 +361,7 @@ impl Selector {
     }
 
     fn consume_pseudo_selector<I: Iterator<Item = Token>>(
-        toks: &mut Peekable<I>,
+        toks: &mut PeekMoreIterator<I>,
         scope: &Scope,
         super_selector: &Selector,
     ) -> SassResult<SelectorKind> {
@@ -378,7 +379,7 @@ impl Selector {
                     let mut inner_toks = read_until_closing_paren(toks);
                     inner_toks.pop();
                     let inner = Selector::from_tokens(
-                        &mut inner_toks.into_iter().peekable(),
+                        &mut inner_toks.into_iter().peekmore(),
                         scope,
                         super_selector,
                     )?;

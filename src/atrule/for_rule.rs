@@ -1,6 +1,6 @@
-use std::iter::Peekable;
-
 use codemap::{Span, Spanned};
+
+use peekmore::{PeekMore, PeekMoreIterator};
 
 use num_traits::cast::ToPrimitive;
 
@@ -18,7 +18,7 @@ use crate::value::{Number, Value};
 use crate::Token;
 
 pub(crate) fn parse_for<I: Iterator<Item = Token>>(
-    toks: &mut Peekable<I>,
+    toks: &mut PeekMoreIterator<I>,
     scope: &mut Scope,
     super_selector: &Selector,
     span: Span,
@@ -155,7 +155,7 @@ pub(crate) fn parse_for<I: Iterator<Item = Token>>(
             },
         )?;
         stmts.extend(eat_stmts(
-            &mut body.clone().into_iter().peekable(),
+            &mut body.clone().into_iter().peekmore(),
             scope,
             super_selector,
         )?);

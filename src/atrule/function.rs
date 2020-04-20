@@ -1,8 +1,8 @@
-use std::iter::Peekable;
-
 use super::eat_stmts;
 
 use codemap::{Span, Spanned};
+
+use peekmore::{PeekMore, PeekMoreIterator};
 
 use crate::args::{eat_func_args, CallArgs, FuncArgs};
 use crate::atrule::AtRule;
@@ -40,7 +40,7 @@ impl Function {
     }
 
     pub fn decl_from_tokens<I: Iterator<Item = Token>>(
-        toks: &mut Peekable<I>,
+        toks: &mut PeekMoreIterator<I>,
         scope: Scope,
         super_selector: &Selector,
     ) -> SassResult<(String, Function)> {
@@ -84,7 +84,7 @@ impl Function {
                     Some(v) => v?,
                     None => match &arg.default {
                         Some(v) => Value::from_tokens(
-                            &mut v.iter().cloned().peekable(),
+                            &mut v.iter().cloned().peekmore(),
                             scope,
                             super_selector,
                         )?,
@@ -110,7 +110,7 @@ impl Function {
             match stmt.node {
                 Stmt::AtRule(AtRule::Return(toks)) => {
                     return Ok(Value::from_tokens(
-                        &mut toks.into_iter().peekable(),
+                        &mut toks.into_iter().peekmore(),
                         &self.scope,
                         super_selector,
                     )?

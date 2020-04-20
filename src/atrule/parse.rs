@@ -1,6 +1,6 @@
-use std::iter::Peekable;
-
 use codemap::Spanned;
+
+use peekmore::PeekMoreIterator;
 
 use crate::error::SassResult;
 use crate::scope::Scope;
@@ -8,7 +8,7 @@ use crate::selector::Selector;
 use crate::{eat_expr, Expr, RuleSet, Stmt, Token};
 
 pub(crate) fn eat_stmts<I: Iterator<Item = Token>>(
-    toks: &mut Peekable<I>,
+    toks: &mut PeekMoreIterator<I>,
     scope: &mut Scope,
     super_selector: &Selector,
 ) -> SassResult<Vec<Spanned<Stmt>>> {
@@ -46,7 +46,7 @@ pub(crate) fn eat_stmts<I: Iterator<Item = Token>>(
 }
 
 pub(crate) fn eat_stmts_at_root<I: Iterator<Item = Token>>(
-    toks: &mut Peekable<I>,
+    toks: &mut PeekMoreIterator<I>,
     scope: &mut Scope,
     super_selector: &Selector,
     mut nesting: usize,

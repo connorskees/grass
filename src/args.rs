@@ -1,7 +1,8 @@
 use std::collections::HashMap;
-use std::iter::Peekable;
 
 use codemap::{Span, Spanned};
+
+use peekmore::PeekMoreIterator;
 
 use crate::error::SassResult;
 use crate::scope::Scope;
@@ -172,7 +173,7 @@ impl CallArgs {
 }
 
 pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
-    toks: &mut Peekable<I>,
+    toks: &mut PeekMoreIterator<I>,
     scope: &Scope,
     super_selector: &Selector,
 ) -> SassResult<FuncArgs> {
@@ -275,7 +276,7 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
 }
 
 pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
-    toks: &mut Peekable<I>,
+    toks: &mut PeekMoreIterator<I>,
     scope: &Scope,
     super_selector: &Selector,
 ) -> SassResult<CallArgs> {

@@ -1,6 +1,6 @@
-use std::iter::Peekable;
-
 use codemap::{Span, Spanned};
+
+use peekmore::{PeekMore, PeekMoreIterator};
 
 use crate::common::{Brackets, ListSeparator};
 use crate::error::SassResult;
@@ -50,7 +50,7 @@ impl AtRule {
     pub fn from_tokens<I: Iterator<Item = Token>>(
         rule: &AtRuleKind,
         kind_span: Span,
-        toks: &mut Peekable<I>,
+        toks: &mut PeekMoreIterator<I>,
         scope: &mut Scope,
         super_selector: &Selector,
     ) -> SassResult<Spanned<AtRule>> {
@@ -139,7 +139,7 @@ impl AtRule {
                 let mut selector = &Selector::replace(
                     super_selector,
                     Selector::from_tokens(
-                        &mut read_until_open_curly_brace(toks).into_iter().peekable(),
+                        &mut read_until_open_curly_brace(toks).into_iter().peekmore(),
                         scope,
                         super_selector,
                     )?,
@@ -156,7 +156,7 @@ impl AtRule {
                 devour_whitespace(toks);
                 let mut styles = Vec::new();
                 let raw_stmts = eat_stmts_at_root(
-                    &mut body.into_iter().peekable(),
+                    &mut body.into_iter().peekmore(),
                     scope,
                     selector,
                     0,
@@ -284,7 +284,7 @@ impl AtRule {
                     }
 
                     stmts.extend(eat_stmts(
-                        &mut body.clone().into_iter().peekable(),
+                        &mut body.clone().into_iter().peekmore(),
                         scope,
                         super_selector,
                     )?);
@@ -323,7 +323,7 @@ impl AtRule {
                 let mut val = Value::from_vec(cond.clone(), scope, super_selector)?;
                 while val.node.is_true(val.span)? {
                     stmts.extend(eat_stmts(
-                        &mut body.clone().into_iter().peekable(),
+                        &mut body.clone().into_iter().peekmore(),
                         scope,
                         super_selector,
                     )?);

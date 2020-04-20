@@ -83,10 +83,12 @@ grass input.scss
 use std::fmt::{self, Display};
 use std::fs;
 use std::io::Write;
-use std::iter::{Iterator, Peekable};
+use std::iter::Iterator;
 use std::path::Path;
 
 use codemap::{CodeMap, Span, Spanned};
+
+use peekmore::{PeekMore, PeekMoreIterator};
 
 use crate::atrule::{eat_include, AtRule, AtRuleKind, Function, Mixin};
 pub use crate::error::{SassError, SassResult};
@@ -220,7 +222,7 @@ impl StyleSheet {
         let file = map.add_file("stdin".into(), input);
         Css::from_stylesheet(StyleSheet(
             StyleSheetParser {
-                lexer: Lexer::new(&file).peekable(),
+                lexer: Lexer::new(&file).peekmore(),
                 nesting: 0,
                 map: &map,
             }
@@ -255,7 +257,7 @@ impl StyleSheet {
         let file = map.add_file(p.clone().into(), String::from_utf8(fs::read(p.as_ref())?)?);
         Css::from_stylesheet(StyleSheet(
             StyleSheetParser {
-                lexer: Lexer::new(&file).peekable(),
+                lexer: Lexer::new(&file).peekmore(),
                 nesting: 0,
                 map: &map,
             }
@@ -275,7 +277,7 @@ impl StyleSheet {
         let mut map = CodeMap::new();
         let file = map.add_file(p.clone().into(), String::from_utf8(fs::read(p.as_ref())?)?);
         Ok(StyleSheetParser {
-            lexer: Lexer::new(&file).peekable(),
+            lexer: Lexer::new(&file).peekmore(),
             nesting: 0,
             map: &map,
         }
@@ -288,7 +290,7 @@ impl StyleSheet {
 }
 
 struct StyleSheetParser<'a> {
-    lexer: Peekable<Lexer<'a>>,
+    lexer: PeekMoreIterator<Lexer<'a>>,
     nesting: u32,
     map: &'a CodeMap,
 }
@@ -520,7 +522,7 @@ impl<'a> StyleSheetParser<'a> {
 }
 
 pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
-    toks: &mut Peekable<I>,
+    toks: &mut PeekMoreIterator<I>,
     scope: &mut Scope,
     super_selector: &Selector,
 ) -> SassResult<Option<Spanned<Expr>>> {
@@ -537,7 +539,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                 let tok = toks.next();
                 if devour_whitespace(toks) {
                     let prop = Style::parse_property(
-                        &mut values.into_iter().peekable(),
+                        &mut values.into_iter().peekmore(),
                         scope,
                         super_selector,
                         String::new(),
@@ -555,7 +557,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                 devour_whitespace(toks);
                 // special edge case where there was no space between the colon
                 // in a style, e.g. `color:red`. todo: refactor
-                let mut v = values.into_iter().peekable();
+                let mut v = values.into_iter().peekmore();
                 devour_whitespace(&mut v);
                 if v.peek().is_none() {
                     devour_whitespace(toks);
@@ -587,7 +589,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                     // special edge case where there was no space between the colon
                     // and no semicolon following the style
                     // in a style `color:red`. todo: refactor
-                    let mut v = values.into_iter().peekable();
+                    let mut v = values.into_iter().peekmore();
                     let property =
                         Style::parse_property(&mut v, scope, super_selector, String::new())?;
                     let value = Style::parse_value(&mut v, scope, super_selector)?;
@@ -602,7 +604,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                 devour_whitespace(toks);
                 return Ok(Some(Spanned {
                     node: Expr::Selector(Selector::from_tokens(
-                        &mut values.into_iter().peekable(),
+                        &mut values.into_iter().peekmore(),
                         scope,
                         super_selector,
                     )?),
@@ -713,7 +715,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
     Ok(None)
 }
 
-fn eat_interpolation<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -> Vec<Token> {
+fn eat_interpolation<I: Iterator<Item = Token>>(toks: &mut PeekMoreIterator<I>) -> Vec<Token> {
     let mut vals = Vec::new();
     let mut n = 1;
     for tok in toks {

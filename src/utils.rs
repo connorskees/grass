@@ -1,6 +1,8 @@
-use std::iter::{Iterator, Peekable};
+use std::iter::Iterator;
 
 use codemap::{Span, Spanned};
+
+use peekmore::{PeekMore, PeekMoreIterator};
 
 use crate::common::QuoteKind;
 use crate::error::SassResult;
@@ -19,7 +21,7 @@ impl IsWhitespace for char {
 }
 
 pub(crate) fn devour_whitespace<I: Iterator<Item = W>, W: IsWhitespace>(
-    s: &mut Peekable<I>,
+    s: &mut PeekMoreIterator<I>,
 ) -> bool {
     let mut found_whitespace = false;
     while let Some(w) = s.peek() {
@@ -37,7 +39,7 @@ pub(crate) trait IsComment {
 }
 
 pub(crate) fn devour_whitespace_or_comment<I: Iterator<Item = Token>>(
-    toks: &mut Peekable<I>,
+    toks: &mut PeekMoreIterator<I>,
 ) -> SassResult<bool> {
     let mut found_whitespace = false;
     while let Some(tok) = toks.peek() {
@@ -63,7 +65,7 @@ pub(crate) fn devour_whitespace_or_comment<I: Iterator<Item = Token>>(
 }
 
 pub(crate) fn parse_interpolation<I: Iterator<Item = Token>>(
-    toks: &mut Peekable<I>,
+    toks: &mut PeekMoreIterator<I>,
     scope: &Scope,
     super_selector: &Selector,
 ) -> SassResult<Spanned<Value>> {
@@ -95,7 +97,7 @@ impl VariableDecl {
 //
 // Does not consume the open curly brace
 pub(crate) fn read_until_open_curly_brace<I: Iterator<Item = Token>>(
-    toks: &mut Peekable<I>,
+    toks: &mut PeekMoreIterator<I>,
 ) -> Vec<Token> {
     let mut val = Vec::new();
     let mut n = 0;
@@ -123,7 +125,7 @@ pub(crate) fn read_until_open_curly_brace<I: Iterator<Item = Token>>(
 }
 
 pub(crate) fn read_until_closing_curly_brace<I: Iterator<Item = Token>>(
-    toks: &mut Peekable<I>,
+    toks: &mut PeekMoreIterator<I>,
 ) -> Vec<Token> {
     let mut t = Vec::new();
     let mut nesting = 0;
@@ -161,7 +163,7 @@ pub(crate) fn read_until_closing_curly_brace<I: Iterator<Item = Token>>(
 }
 
 pub(crate) fn read_until_closing_quote<I: Iterator<Item = Token>>(
-    toks: &mut Peekable<I>,
+    toks: &mut PeekMoreIterator<I>,
     q: char,
 ) -> Vec<Token> {
     let mut t = Vec::new();
@@ -194,7 +196,7 @@ pub(crate) fn read_until_closing_quote<I: Iterator<Item = Token>>(
 }
 
 pub(crate) fn read_until_semicolon_or_closing_curly_brace<I: Iterator<Item = Token>>(
-    toks: &mut Peekable<I>,
+    toks: &mut PeekMoreIterator<I>,
 ) -> Vec<Token> {
     let mut t = Vec::new();
     let mut nesting = 0;
@@ -240,7 +242,7 @@ pub(crate) fn read_until_semicolon_or_closing_curly_brace<I: Iterator<Item = Tok
 }
 
 pub(crate) fn read_until_semicolon_or_open_or_closing_curly_brace<I: Iterator<Item = Token>>(
-    toks: &mut Peekable<I>,
+    toks: &mut PeekMoreIterator<I>,
 ) -> Vec<Token> {
     let mut t = Vec::new();
     let mut nesting = 0;
@@ -299,7 +301,7 @@ pub(crate) fn read_until_semicolon_or_open_or_closing_curly_brace<I: Iterator<It
 }
 
 pub(crate) fn eat_variable_value<I: Iterator<Item = Token>>(
-    toks: &mut Peekable<I>,
+    toks: &mut PeekMoreIterator<I>,
     scope: &Scope,
     super_selector: &Selector,
 ) -> SassResult<VariableDecl> {
@@ -308,7 +310,7 @@ pub(crate) fn eat_variable_value<I: Iterator<Item = Token>>(
     let mut global = false;
     let mut raw = read_until_semicolon_or_closing_curly_brace(toks)
         .into_iter()
-        .peekable();
+        .peekmore();
     if toks.peek().is_some() && toks.peek().unwrap().kind == ';' {
         toks.next();
     }
@@ -348,7 +350,7 @@ pub(crate) fn eat_variable_value<I: Iterator<Item = Token>>(
 }
 
 fn ident_body<I: Iterator<Item = Token>>(
-    toks: &mut Peekable<I>,
+    toks: &mut PeekMoreIterator<I>,
     unit: bool,
     mut span: Span,
 ) -> SassResult<Spanned<String>> {
@@ -356,8 +358,8 @@ fn ident_body<I: Iterator<Item = Token>>(
     while let Some(tok) = toks.peek() {
         span = span.merge(tok.pos());
         if unit && tok.kind == '-' {
-            todo!()
-        // Disallow `-` followed by a dot or a digit digit in units.
+            // Disallow `-` followed by a dot or a digit digit in units.
+            toks.next();
         // var second = scanner.peekChar(1);
         // if (second != null && (second == $dot || isDigit(second))) break;
         // text.writeCharCode(scanner.readChar());
@@ -374,7 +376,7 @@ fn ident_body<I: Iterator<Item = Token>>(
 }
 
 fn interpolated_ident_body<I: Iterator<Item = Token>>(
-    toks: &mut Peekable<I>,
+    toks: &mut PeekMoreIterator<I>,
     scope: &Scope,
     super_selector: &Selector,
     mut span: Span,
@@ -419,7 +421,7 @@ fn is_name_start(c: char) -> bool {
 }
 
 fn escape<I: Iterator<Item = Token>>(
-    toks: &mut Peekable<I>,
+    toks: &mut PeekMoreIterator<I>,
     identifier_start: bool,
 ) -> SassResult<String> {
     let mut value = 0;
@@ -475,7 +477,7 @@ fn escape<I: Iterator<Item = Token>>(
 }
 
 pub(crate) fn eat_ident<I: Iterator<Item = Token>>(
-    toks: &mut Peekable<I>,
+    toks: &mut PeekMoreIterator<I>,
     scope: &Scope,
     super_selector: &Selector,
 ) -> SassResult<Spanned<String>> {
@@ -532,7 +534,7 @@ pub(crate) fn eat_ident<I: Iterator<Item = Token>>(
 }
 
 pub(crate) fn eat_ident_no_interpolation<I: Iterator<Item = Token>>(
-    toks: &mut Peekable<I>,
+    toks: &mut PeekMoreIterator<I>,
     unit: bool,
 ) -> SassResult<Spanned<String>> {
     let mut span = toks.peek().unwrap().pos();
@@ -569,7 +571,7 @@ pub(crate) fn eat_ident_no_interpolation<I: Iterator<Item = Token>>(
 }
 
 pub(crate) fn eat_number<I: Iterator<Item = Token>>(
-    toks: &mut Peekable<I>,
+    toks: &mut PeekMoreIterator<I>,
 ) -> SassResult<Spanned<String>> {
     let mut whole = String::new();
     let mut span = if let Some(tok) = toks.peek() {
@@ -621,7 +623,7 @@ pub(crate) fn eat_number<I: Iterator<Item = Token>>(
 /// We only have to check for \n as the lexing step normalizes all newline characters
 ///
 /// The newline is consumed
-pub(crate) fn read_until_newline<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) {
+pub(crate) fn read_until_newline<I: Iterator<Item = Token>>(toks: &mut PeekMoreIterator<I>) {
     for tok in toks {
         if tok.kind == '\n' {
             break;
@@ -635,7 +637,7 @@ pub(crate) fn read_until_newline<I: Iterator<Item = Token>>(toks: &mut Peekable<
 /// The entirety of the comment, including the ending "*/" is consumed.
 /// Note that the ending "*/" is not included in the output.
 pub(crate) fn eat_comment<I: Iterator<Item = Token>>(
-    toks: &mut Peekable<I>,
+    toks: &mut PeekMoreIterator<I>,
     scope: &Scope,
     super_selector: &Selector,
 ) -> SassResult<Spanned<String>> {
@@ -676,7 +678,7 @@ fn as_hex(c: u32) -> u32 {
 }
 
 pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
-    toks: &mut Peekable<I>,
+    toks: &mut PeekMoreIterator<I>,
     scope: &Scope,
     q: char,
     super_selector: &Selector,
@@ -753,7 +755,7 @@ pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
 }
 
 pub(crate) fn read_until_closing_paren<I: Iterator<Item = Token>>(
-    toks: &mut Peekable<I>,
+    toks: &mut PeekMoreIterator<I>,
 ) -> Vec<Token> {
     let mut v = Vec::new();
     let mut scope = 0;
@@ -781,7 +783,7 @@ pub(crate) fn read_until_closing_paren<I: Iterator<Item = Token>>(
 }
 
 pub(crate) fn read_until_closing_square_brace<I: Iterator<Item = Token>>(
-    toks: &mut Peekable<I>,
+    toks: &mut PeekMoreIterator<I>,
 ) -> Vec<Token> {
     let mut v = Vec::new();
     let mut scope = 0;
@@ -809,7 +811,7 @@ pub(crate) fn read_until_closing_square_brace<I: Iterator<Item = Token>>(
 }
 
 pub(crate) fn read_until_char<I: Iterator<Item = Token>>(
-    toks: &mut Peekable<I>,
+    toks: &mut PeekMoreIterator<I>,
     c: char,
 ) -> Vec<Token> {
     let mut v = Vec::new();

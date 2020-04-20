@@ -1,5 +1,5 @@
 use std::convert::TryFrom;
-use std::iter::{Iterator, Peekable};
+use std::iter::Iterator;
 use std::mem;
 
 use num_bigint::BigInt;
@@ -7,6 +7,8 @@ use num_rational::BigRational;
 use num_traits::pow;
 
 use codemap::{Span, Spanned};
+
+use peekmore::{PeekMore, PeekMoreIterator};
 
 use super::css_function::{eat_calc_args, eat_progid};
 
@@ -30,7 +32,7 @@ use super::map::SassMap;
 use super::number::Number;
 
 fn parse_hex<I: Iterator<Item = Token>>(
-    toks: &mut Peekable<I>,
+    toks: &mut PeekMoreIterator<I>,
     scope: &Scope,
     super_selector: &Selector,
     mut span: Span,
@@ -140,7 +142,7 @@ fn parse_paren(
         return Ok(());
     }
 
-    let paren_toks = &mut t.node.into_iter().peekable();
+    let paren_toks = &mut t.node.into_iter().peekmore();
 
     let mut map = SassMap::new();
     let key = Value::from_vec(read_until_char(paren_toks, ':'), scope, super_selector)?;
@@ -188,7 +190,7 @@ fn parse_paren(
 }
 
 fn eat_op<I: Iterator<Item = IntermediateValue>>(
-    iter: &mut Peekable<I>,
+    iter: &mut PeekMoreIterator<I>,
     scope: &Scope,
     super_selector: &Selector,
     op: Spanned<Op>,
@@ -300,7 +302,7 @@ fn eat_op<I: Iterator<Item = IntermediateValue>>(
 }
 
 fn single_value<I: Iterator<Item = IntermediateValue>>(
-    iter: &mut Peekable<I>,
+    iter: &mut PeekMoreIterator<I>,
     scope: &Scope,
     super_selector: &Selector,
     span: Span,
@@ -363,7 +365,7 @@ fn single_value<I: Iterator<Item = IntermediateValue>>(
 
 impl Value {
     pub fn from_tokens<I: Iterator<Item = Token>>(
-        toks: &mut Peekable<I>,
+        toks: &mut PeekMoreIterator<I>,
         scope: &Scope,
         super_selector: &Selector,
     ) -> SassResult<Spanned<Self>> {
@@ -379,7 +381,7 @@ impl Value {
         let mut last_was_whitespace = false;
         let mut space_separated = Vec::new();
         let mut comma_separated = Vec::new();
-        let mut iter = intermediate_values.into_iter().peekable();
+        let mut iter = intermediate_values.into_iter().peekmore();
         while let Some(val) = iter.next() {
             match val {
                 IntermediateValue::Value(v) => {
@@ -484,11 +486,11 @@ impl Value {
         scope: &Scope,
         super_selector: &Selector,
     ) -> SassResult<Spanned<Value>> {
-        Self::from_tokens(&mut toks.into_iter().peekable(), scope, super_selector)
+        Self::from_tokens(&mut toks.into_iter().peekmore(), scope, super_selector)
     }
 
     fn ident<I: Iterator<Item = Token>>(
-        toks: &mut Peekable<I>,
+        toks: &mut PeekMoreIterator<I>,
         scope: &Scope,
         super_selector: &Selector,
     ) -> SassResult<IntermediateValue> {
@@ -583,7 +585,7 @@ impl Value {
     }
 
     fn parse_intermediate_value<I: Iterator<Item = Token>>(
-        toks: &mut Peekable<I>,
+        toks: &mut PeekMoreIterator<I>,
         scope: &Scope,
         super_selector: &Selector,
     ) -> SassResult<IntermediateValue> {

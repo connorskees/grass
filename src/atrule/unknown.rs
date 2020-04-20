@@ -1,6 +1,6 @@
-use std::iter::Peekable;
-
 use codemap::{Span, Spanned};
+
+use peekmore::PeekMoreIterator;
 
 use super::parse::eat_stmts;
 use crate::error::SassResult;
@@ -19,7 +19,7 @@ pub(crate) struct UnknownAtRule {
 
 impl UnknownAtRule {
     pub fn from_tokens<I: Iterator<Item = Token>>(
-        toks: &mut Peekable<I>,
+        toks: &mut PeekMoreIterator<I>,
         name: &str,
         scope: &mut Scope,
         super_selector: &Selector,

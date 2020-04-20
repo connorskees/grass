@@ -1,6 +1,6 @@
-use std::iter::Peekable;
-
 use codemap::Spanned;
+
+use peekmore::{PeekMore, PeekMoreIterator};
 
 use super::{eat_stmts, AtRule};
 
@@ -32,7 +32,9 @@ impl Branch {
 }
 
 impl If {
-    pub fn from_tokens<I: Iterator<Item = Token>>(toks: &mut Peekable<I>) -> SassResult<If> {
+    pub fn from_tokens<I: Iterator<Item = Token>>(
+        toks: &mut PeekMoreIterator<I>,
+    ) -> SassResult<If> {
         let mut branches = Vec::new();
         let init_cond = read_until_open_curly_brace(toks);
         toks.next();
@@ -111,7 +113,7 @@ impl If {
         if !found_true {
             toks = self.else_;
         }
-        for stmt in eat_stmts(&mut toks.into_iter().peekable(), scope, super_selector)? {
+        for stmt in eat_stmts(&mut toks.into_iter().peekmore(), scope, super_selector)? {
             match stmt.node {
                 Stmt::AtRule(AtRule::If(i)) => stmts.extend(i.eval(scope, super_selector)?),
                 Stmt::RuleSet(r) if r.selector.is_empty() => stmts.extend(r.rules),

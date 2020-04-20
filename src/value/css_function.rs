@@ -1,4 +1,4 @@
-use std::iter::Peekable;
+use peekmore::PeekMoreIterator;
 
 use crate::error::SassResult;
 use crate::scope::Scope;
@@ -7,7 +7,7 @@ use crate::utils::{devour_whitespace, parse_interpolation};
 use crate::Token;
 
 pub(crate) fn eat_calc_args<I: Iterator<Item = Token>>(
-    toks: &mut Peekable<I>,
+    toks: &mut PeekMoreIterator<I>,
     scope: &Scope,
     super_selector: &Selector,
 ) -> SassResult<String> {
@@ -57,7 +57,7 @@ pub(crate) fn is_special_function(s: &str) -> bool {
 }
 
 pub(crate) fn eat_progid<I: Iterator<Item = Token>>(
-    toks: &mut Peekable<I>,
+    toks: &mut PeekMoreIterator<I>,
     scope: &Scope,
     super_selector: &Selector,
 ) -> SassResult<String> {

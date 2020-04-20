@@ -1,7 +1,8 @@
-use std::iter::Peekable;
 use std::vec::IntoIter;
 
 use codemap::Spanned;
+
+use peekmore::{PeekMore, PeekMoreIterator};
 
 use super::eat_stmts;
 
@@ -20,7 +21,7 @@ use crate::{eat_expr, Expr, RuleSet, Stmt, Token};
 pub(crate) struct Mixin {
     scope: Scope,
     args: FuncArgs,
-    body: Peekable<IntoIter<Token>>,
+    body: PeekMoreIterator<IntoIter<Token>>,
     content: Vec<Spanned<Stmt>>,
 }
 
@@ -31,7 +32,7 @@ impl Mixin {
         body: Vec<Token>,
         content: Vec<Spanned<Stmt>>,
     ) -> Self {
-        let body = body.into_iter().peekable();
+        let body = body.into_iter().peekmore();
         Mixin {
             scope,
             args,
@@ -41,7 +42,7 @@ impl Mixin {
     }
 
     pub fn decl_from_tokens<I: Iterator<Item = Token>>(
-        toks: &mut Peekable<I>,
+        toks: &mut PeekMoreIterator<I>,
         scope: &Scope,
         super_selector: &Selector,
     ) -> SassResult<Spanned<(String, Mixin)>> {
@@ -95,7 +96,7 @@ impl Mixin {
                     Some(v) => v?,
                     None => match &arg.default {
                         Some(v) => Value::from_tokens(
-                            &mut v.iter().cloned().peekable(),
+                            &mut v.iter().cloned().peekmore(),
                             scope,
                             super_selector,
                         )?,
@@ -177,7 +178,7 @@ impl Mixin {
 }
 
 pub(crate) fn eat_include<I: Iterator<Item = Token>>(
-    toks: &mut Peekable<I>,
+    toks: &mut PeekMoreIterator<I>,
     scope: &Scope,
     super_selector: &Selector,
 ) -> SassResult<Vec<Spanned<Stmt>>> {

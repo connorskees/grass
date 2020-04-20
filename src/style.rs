@@ -1,4 +1,4 @@
-use std::iter::Peekable;
+use peekmore::PeekMoreIterator;
 
 use codemap::Spanned;
 
@@ -21,7 +21,7 @@ pub(crate) struct Style {
 
 impl Style {
     pub fn parse_property<I: Iterator<Item = Token>>(
-        toks: &mut Peekable<I>,
+        toks: &mut PeekMoreIterator<I>,
         scope: &Scope,
         super_selector: &Selector,
         super_property: String,
@@ -48,7 +48,7 @@ impl Style {
     }
 
     pub fn parse_value<I: Iterator<Item = Token>>(
-        toks: &mut Peekable<I>,
+        toks: &mut PeekMoreIterator<I>,
         scope: &Scope,
         super_selector: &Selector,
     ) -> SassResult<Spanned<Value>> {
@@ -56,7 +56,7 @@ impl Style {
     }
 
     pub fn from_tokens<I: Iterator<Item = Token>>(
-        toks: &mut Peekable<I>,
+        toks: &mut PeekMoreIterator<I>,
         scope: &Scope,
         super_selector: &Selector,
         super_property: String,
@@ -80,7 +80,7 @@ impl<'a> StyleParser<'a> {
 
     pub(crate) fn parse_style_value<I: Iterator<Item = Token>>(
         &self,
-        toks: &mut Peekable<I>,
+        toks: &mut PeekMoreIterator<I>,
         scope: &Scope,
     ) -> SassResult<Spanned<Value>> {
         devour_whitespace(toks);
@@ -93,7 +93,7 @@ impl<'a> StyleParser<'a> {
 
     pub(crate) fn eat_style_group<I: Iterator<Item = Token>>(
         &self,
-        toks: &mut Peekable<I>,
+        toks: &mut PeekMoreIterator<I>,
         super_property: String,
         scope: &Scope,
     ) -> SassResult<Expr> {
@@ -199,7 +199,7 @@ impl<'a> StyleParser<'a> {
 
     pub(crate) fn parse_property<I: Iterator<Item = Token>>(
         &self,
-        toks: &mut Peekable<I>,
+        toks: &mut PeekMoreIterator<I>,
         mut super_property: String,
     ) -> SassResult<String> {
         devour_whitespace(toks);

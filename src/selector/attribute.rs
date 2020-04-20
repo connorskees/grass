@@ -1,5 +1,6 @@
 use std::fmt::{self, Display};
-use std::iter::Peekable;
+
+use peekmore::PeekMoreIterator;
 
 use codemap::Span;
 
@@ -21,7 +22,7 @@ pub(crate) struct Attribute {
 
 impl Attribute {
     pub fn from_tokens<I: Iterator<Item = Token>>(
-        toks: &mut Peekable<I>,
+        toks: &mut PeekMoreIterator<I>,
         scope: &Scope,
         super_selector: &Selector,
         mut start: Span,
