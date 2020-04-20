@@ -707,7 +707,10 @@ pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
                 if toks.peek().unwrap().kind == '{' {
                     toks.next();
                     let interpolation = parse_interpolation(toks, scope, super_selector)?;
-                    s.push_str(&interpolation.node.to_css_string(interpolation.span)?);
+                    s.push_str(&match interpolation.node {
+                        Value::Ident(s, ..) => s,
+                        v => v.to_css_string(interpolation.span)?,
+                    });
                     continue;
                 } else {
                     s.push('#');

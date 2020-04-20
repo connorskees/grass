@@ -43,3 +43,8 @@ test!(
     "a {\n  color: #{\"a\" 'b'};\n}\n",
     "a {\n  color: a b;\n}\n"
 );
+test!(
+    interpolated_string_literally_inserted,
+    "a {\n  color: \"#{\"\\a\"}\";\n}\n",
+    "a {\n  color: \"\\a\";\n}\n"
+);

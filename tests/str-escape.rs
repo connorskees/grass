@@ -150,3 +150,7 @@ test!(
     allows_escaped_quote_at_start_of_ident,
     "a {\n  color: \\\"c\\\";\n}\n"
 );
+test!(
+    quoted_escaped_newline_unchanged,
+    "a {\n  color: \"\\a\";\n}\n"
+);
