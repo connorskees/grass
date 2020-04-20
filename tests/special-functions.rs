@@ -9,6 +9,11 @@ test!(
     "a {\n  color: calc( 1 );\n}\n"
 );
 test!(
+    calc_newline,
+    "a {\n  color: calc(\n);\n}\n",
+    "a {\n  color: calc( );\n}\n"
+);
+test!(
     calc_multiple_args,
     "a {\n  color: calc(1, 2, a, b, c);\n}\n"
 );
@@ -31,6 +36,11 @@ test!(
     element_whitespace,
     "a {\n  color: element(       1      );\n}\n",
     "a {\n  color: element( 1 );\n}\n"
+);
+test!(
+    element_newline,
+    "a {\n  color: element(\n);\n}\n",
+    "a {\n  color: element( );\n}\n"
 );
 test!(
     element_multiple_args,
@@ -63,6 +73,11 @@ test!(
     "a {\n  color: expression( 1 );\n}\n"
 );
 test!(
+    expression_newline,
+    "a {\n  color: expression(\n);\n}\n",
+    "a {\n  color: expression( );\n}\n"
+);
+test!(
     expression_multiple_args,
     "a {\n  color: expression(1, 2, a, b, c);\n}\n"
 );
@@ -91,6 +106,11 @@ test!(
     progid_whitespace,
     "a {\n  color: progid:(       1      );\n}\n",
     "a {\n  color: progid:( 1 );\n}\n"
+);
+test!(
+    progid_newline,
+    "a {\n  color: progid:(\n);\n}\n",
+    "a {\n  color: progid:( );\n}\n"
 );
 test!(
     progid_multiple_args,
