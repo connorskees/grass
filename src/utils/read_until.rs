@@ -206,6 +206,10 @@ pub(crate) fn read_until_semicolon_or_open_or_closing_curly_brace<I: Iterator<It
                 };
                 continue;
             }
+            '(' => {
+                t.push(toks.next().unwrap());
+                t.extend(read_until_closing_paren(toks));
+            }
             _ => t.push(toks.next().unwrap()),
         }
     }

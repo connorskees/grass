@@ -21,11 +21,7 @@ test!(
     "a {\n  color: calc(#{1 + 2});\n}\n",
     "a {\n  color: calc(3);\n}\n"
 );
-test!(
-    #[ignore]
-    calc_retains_silent_comment,
-    "a {\n  color: calc(//);\n}\n"
-);
+test!(calc_retains_silent_comment, "a {\n  color: calc(//);\n}\n");
 test!(
     calc_retains_multiline_comment,
     "a {\n  color: calc(/**/);\n}\n"
@@ -50,7 +46,6 @@ test!(
     "a {\n  color: element(3);\n}\n"
 );
 test!(
-    #[ignore]
     element_retains_silent_comment,
     "a {\n  color: element(//);\n}\n"
 );
@@ -81,7 +76,6 @@ test!(
     "a {\n  color: expression(3);\n}\n"
 );
 test!(
-    #[ignore]
     expression_retains_silent_comment,
     "a {\n  color: expression(//);\n}\n"
 );
@@ -112,7 +106,6 @@ test!(
     "a {\n  color: progid:(3);\n}\n"
 );
 test!(
-    #[ignore]
     progid_retains_silent_comment,
     "a {\n  color: progid:(//);\n}\n"
 );
