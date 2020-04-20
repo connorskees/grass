@@ -33,3 +33,8 @@ test!(
     "a {\n  color: '#{foo}';\n}\n",
     "a {\n  color: \"foo\";\n}\n"
 );
+test!(
+    double_quotes_inside_double_quoted_string,
+    "a {\n  color: #{\"#{'\"'}\"};\n}\n",
+    "a {\n  color: \";\n}\n"
+);

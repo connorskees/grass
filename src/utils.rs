@@ -164,40 +164,28 @@ pub(crate) fn read_until_closing_quote<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
     q: char,
 ) -> Vec<Token> {
-    let mut is_escaped = false;
     let mut t = Vec::new();
-    for tok in toks {
+    while let Some(tok) = toks.next() {
         match tok.kind {
-            '"' if !is_escaped && q == '"' => {
+            '"' if q == '"' => {
                 t.push(tok);
                 break;
             }
-            '"' if is_escaped => {
-                t.push(tok);
-                is_escaped = false;
-                continue;
-            }
-            '\'' if !is_escaped && q == '\'' => {
+            '\'' if q == '\'' => {
                 t.push(tok);
                 break;
-            }
-            '\'' if is_escaped => {
-                t.push(tok);
-                is_escaped = false;
-                continue;
-            }
-            '\\' if !is_escaped => {
-                t.push(tok);
-                is_escaped = true
             }
             '\\' => {
-                is_escaped = false;
                 t.push(tok);
-                continue;
+                t.push(toks.next().unwrap());
             }
-            _ if is_escaped => {
-                is_escaped = false;
+            '#' => {
                 t.push(tok);
+                let next = toks.peek().unwrap();
+                if next.kind == '{' {
+                    t.push(toks.next().unwrap());
+                    t.append(&mut read_until_closing_curly_brace(toks));
+                }
             }
             _ => t.push(tok),
         }
