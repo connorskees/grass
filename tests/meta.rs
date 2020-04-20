@@ -245,6 +245,21 @@ test!(
     "a {\n  color: [];\n}\n"
 );
 test!(
+    inspect_comma_separated_one_val,
+    "a {\n  color: inspect((1, ));\n}\n",
+    "a {\n  color: (1,);\n}\n"
+);
+test!(
+    inspect_comma_separated_one_val_bracketed,
+    "a {\n  color: inspect([1, ]);\n}\n",
+    "a {\n  color: [1,];\n}\n"
+);
+test!(
+    inspect_space_separated_one_val_bracketed,
+    "a {\n  color: inspect(append((), 1, space));\n}\n",
+    "a {\n  color: 1;\n}\n"
+);
+test!(
     variable_does_exist,
     "$a: red; a {\n  color: variable-exists(a)\n}\n",
     "a {\n  color: true;\n}\n"

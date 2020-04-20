@@ -263,6 +263,16 @@ impl Value {
                 Brackets::None => "()".to_string(),
                 Brackets::Bracketed => "[]".to_string(),
             },
+            Value::List(v, sep, brackets) if v.len() == 1 => match brackets {
+                Brackets::None => match sep {
+                    ListSeparator::Space => format!("{}", v[0].inspect(span)?),
+                    ListSeparator::Comma => format!("({},)", v[0].inspect(span)?),
+                },
+                Brackets::Bracketed => match sep {
+                    ListSeparator::Space => format!("[{}]", v[0].inspect(span)?),
+                    ListSeparator::Comma => format!("[{},]", v[0].inspect(span)?),
+                },
+            },
             Value::Function(f) => format!("get-function(\"{}\")", f.name()),
             Value::Null => "null".to_string(),
             Value::Map(map) => format!(
