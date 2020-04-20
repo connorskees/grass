@@ -525,9 +525,10 @@ pub(crate) fn eat_ident<I: Iterator<Item = Token>>(
         if kind == &'{' {
             toks.next();
             text.push_str(
-                &parse_interpolation(toks, scope, super_selector)?
-                    .node
-                    .to_css_string(span)?,
+                &match parse_interpolation(toks, scope, super_selector)?.node {
+                    Value::Ident(s, ..) => s,
+                    v => v.to_css_string(span)?,
+                },
             );
         } else {
             return Err(("Expected identifier.", *pos).into());

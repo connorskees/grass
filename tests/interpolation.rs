@@ -53,3 +53,8 @@ test!(
     "a {\n  color: \"#{#{\"\\a\"}}\";\n}\n",
     "a {\n  color: \"\\a\";\n}\n"
 );
+test!(
+    interpolated_quoted_newline,
+    "a {\n  color: #{\"\\a\"};\n}\n",
+    "a {\n  color:  ;\n}\n"
+);
