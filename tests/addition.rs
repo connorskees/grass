@@ -253,3 +253,13 @@ test!(
     "a {\n  color: foo + #fff;\n}\n",
     "a {\n  color: foo#fff;\n}\n"
 );
+test!(
+    num_plus_true,
+    "a {\n  color: 1 + true;\n}\n",
+    "a {\n  color: 1true;\n}\n"
+);
+test!(
+    num_plus_false,
+    "a {\n  color: 1 + false;\n}\n",
+    "a {\n  color: 1false;\n}\n"
+);

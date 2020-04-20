@@ -60,6 +60,10 @@ impl Value {
                     format!("{}{}{}", num, unit, other.to_css_string(span)?),
                     QuoteKind::None,
                 ),
+                Self::True | Self::False => Self::Ident(
+                    format!("{}{}{}", num, unit, other.to_css_string(span)?),
+                    QuoteKind::None,
+                ),
                 _ => {
                     return Err((
                         format!(
