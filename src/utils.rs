@@ -359,10 +359,19 @@ fn ident_body<I: Iterator<Item = Token>>(
         span = span.merge(tok.pos());
         if unit && tok.kind == '-' {
             // Disallow `-` followed by a dot or a digit digit in units.
+            let second = match toks.peek_forward(1) {
+                Some(v) => v.clone(),
+                None => break,
+            };
+
+            toks.peek_backward(1).unwrap();
+
+            if second.kind == '.' || second.kind.is_ascii_digit() {
+                break;
+            }
             toks.next();
-        // var second = scanner.peekChar(1);
-        // if (second != null && (second == $dot || isDigit(second))) break;
-        // text.writeCharCode(scanner.readChar());
+            text.push('-');
+            text.push(toks.next().unwrap().kind);
         } else if is_name(tok.kind) {
             text.push(toks.next().unwrap().kind);
         } else if tok.kind == '\\' {
