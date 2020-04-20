@@ -8,7 +8,7 @@ use crate::error::SassResult;
 use crate::selector::Selector;
 use crate::{Scope, Token};
 
-use super::*;
+use super::parse_interpolation;
 
 pub(crate) trait IsWhitespace {
     fn is_whitespace(&self) -> bool;

@@ -10,7 +10,7 @@ use crate::selector::Selector;
 use crate::value::Value;
 use crate::{Scope, Token};
 
-use super::*;
+use super::{as_hex, hex_char_for, is_name, is_name_start, parse_interpolation};
 
 fn ident_body<I: Iterator<Item = Token>>(
     toks: &mut PeekMoreIterator<I>,

@@ -4,7 +4,7 @@ use peekmore::PeekMoreIterator;
 
 use crate::Token;
 
-use super::*;
+use super::{devour_whitespace, read_until_newline};
 
 // Eat tokens until an open curly brace
 //

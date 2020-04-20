@@ -9,7 +9,7 @@ use crate::selector::Selector;
 use crate::value::Value;
 use crate::{Scope, Token};
 
-use super::*;
+use super::{devour_whitespace, eat_ident, read_until_semicolon_or_closing_curly_brace};
 
 pub(crate) struct VariableDecl {
     pub val: Spanned<Value>,
