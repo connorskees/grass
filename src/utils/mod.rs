@@ -10,66 +10,14 @@ use crate::value::Value;
 use crate::{Scope, Token};
 
 pub(crate) use chars::*;
+pub(crate) use comment_whitespace::*;
 pub(crate) use strings::*;
 pub(crate) use variables::*;
 
 mod chars;
+mod comment_whitespace;
 mod strings;
 mod variables;
-
-pub(crate) trait IsWhitespace {
-    fn is_whitespace(&self) -> bool;
-}
-
-impl IsWhitespace for char {
-    fn is_whitespace(&self) -> bool {
-        self.is_ascii_whitespace()
-    }
-}
-
-pub(crate) fn devour_whitespace<I: Iterator<Item = W>, W: IsWhitespace>(
-    s: &mut PeekMoreIterator<I>,
-) -> bool {
-    let mut found_whitespace = false;
-    while let Some(w) = s.peek() {
-        if !w.is_whitespace() {
-            break;
-        }
-        found_whitespace = true;
-        s.next();
-    }
-    found_whitespace
-}
-
-pub(crate) trait IsComment {
-    fn is_comment(&self) -> bool;
-}
-
-pub(crate) fn devour_whitespace_or_comment<I: Iterator<Item = Token>>(
-    toks: &mut PeekMoreIterator<I>,
-) -> SassResult<bool> {
-    let mut found_whitespace = false;
-    while let Some(tok) = toks.peek() {
-        if tok.kind == '/' {
-            let pos = toks.next().unwrap().pos();
-            match toks.peek().unwrap().kind {
-                '*' => {
-                    eat_comment(toks, &Scope::new(), &Selector::new())?;
-                }
-                '/' => read_until_newline(toks),
-                _ => return Err(("Expected expression.", pos).into()),
-            };
-            found_whitespace = true;
-            continue;
-        }
-        if !tok.is_whitespace() {
-            break;
-        }
-        found_whitespace = true;
-        toks.next();
-    }
-    Ok(found_whitespace)
-}
 
 pub(crate) fn parse_interpolation<I: Iterator<Item = Token>>(
     toks: &mut PeekMoreIterator<I>,
@@ -336,56 +284,6 @@ pub(crate) fn eat_number<I: Iterator<Item = Token>>(
 
     whole.push_str(&dec);
     Ok(Spanned { node: whole, span })
-}
-
-/// Eat tokens until a newline
-///
-/// This exists largely to eat silent comments, "//"
-/// We only have to check for \n as the lexing step normalizes all newline characters
-///
-/// The newline is consumed
-pub(crate) fn read_until_newline<I: Iterator<Item = Token>>(toks: &mut PeekMoreIterator<I>) {
-    for tok in toks {
-        if tok.kind == '\n' {
-            break;
-        }
-    }
-}
-
-/// Eat and return the contents of a comment.
-///
-/// This function assumes that the starting "/*" has already been consumed
-/// The entirety of the comment, including the ending "*/" is consumed.
-/// Note that the ending "*/" is not included in the output.
-pub(crate) fn eat_comment<I: Iterator<Item = Token>>(
-    toks: &mut PeekMoreIterator<I>,
-    scope: &Scope,
-    super_selector: &Selector,
-) -> SassResult<Spanned<String>> {
-    let mut comment = String::new();
-    let mut span = if let Some(tok) = toks.peek() {
-        tok.pos()
-    } else {
-        todo!()
-    };
-    while let Some(tok) = toks.next() {
-        span = span.merge(tok.pos());
-        if tok.kind == '*' && toks.peek().unwrap().kind == '/' {
-            toks.next();
-            break;
-        } else if tok.kind == '#' && toks.peek().unwrap().kind == '{' {
-            toks.next();
-            comment
-                .push_str(&parse_interpolation(toks, scope, super_selector)?.to_css_string(span)?);
-            continue;
-        }
-        comment.push(tok.kind);
-    }
-    devour_whitespace(toks);
-    Ok(Spanned {
-        node: comment,
-        span,
-    })
 }
 
 pub(crate) fn read_until_closing_paren<I: Iterator<Item = Token>>(
