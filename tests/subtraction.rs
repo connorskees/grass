@@ -170,6 +170,26 @@ test!(
 );
 test!(
     number_minus_minus_number,
-    "a {\n  color: 1 - - 2;;\n}\n",
+    "a {\n  color: 1 - - 2;\n}\n",
     "a {\n  color: 3;\n}\n"
+);
+test!(
+    sub_no_space,
+    "a {\n  color: 10-10;\n}\n",
+    "a {\n  color: 0;\n}\n"
+);
+test!(
+    sub_space_on_left,
+    "a {\n  color: 10 -10;\n}\n",
+    "a {\n  color: 10 -10;\n}\n"
+);
+test!(
+    sub_space_on_right,
+    "a {\n  color: 10- 10;\n}\n",
+    "a {\n  color: 0;\n}\n"
+);
+test!(
+    sub_space_on_both,
+    "a {\n  color: 10 - 10;\n}\n",
+    "a {\n  color: 0;\n}\n"
 );

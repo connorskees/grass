@@ -193,6 +193,7 @@ fn eat_op<I: Iterator<Item = IntermediateValue>>(
     super_selector: &Selector,
     op: Spanned<Op>,
     space_separated: &mut Vec<Spanned<Value>>,
+    last_was_whitespace: bool,
 ) -> SassResult<()> {
     match op.node {
         Op::Not => {
@@ -221,8 +222,14 @@ fn eat_op<I: Iterator<Item = IntermediateValue>>(
             }
         }
         Op::Minus => {
-            if devour_whitespace(iter) {
+            if devour_whitespace(iter) || !last_was_whitespace {
                 let right = single_value(iter, scope, super_selector, op.span)?;
+                if !last_was_whitespace && right.node == Value::Null {
+                    space_separated.push(
+                        right.map_node(|_| Value::Ident("-null".to_string(), QuoteKind::None)),
+                    );
+                    return Ok(());
+                }
                 if let Some(left) = space_separated.pop() {
                     space_separated.push(Spanned {
                         node: Value::BinaryOp(Box::new(left.node), op.node, Box::new(right.node)),
@@ -331,20 +338,36 @@ impl Value {
             Some(Token { pos, .. }) => *pos,
             None => todo!("Expected expression."),
         };
+        devour_whitespace(toks);
         while toks.peek().is_some() {
             intermediate_values.push(Self::parse_intermediate_value(toks, scope, super_selector)?);
         }
+        let mut last_was_whitespace = false;
         let mut space_separated = Vec::new();
         let mut comma_separated = Vec::new();
         let mut iter = intermediate_values.into_iter().peekable();
         while let Some(val) = iter.next() {
             match val {
-                IntermediateValue::Value(v) => space_separated.push(v),
-                IntermediateValue::Op(op) => {
-                    eat_op(&mut iter, scope, super_selector, op, &mut space_separated)?;
+                IntermediateValue::Value(v) => {
+                    last_was_whitespace = false;
+                    space_separated.push(v)
                 }
-                IntermediateValue::Whitespace => continue,
+                IntermediateValue::Op(op) => {
+                    eat_op(
+                        &mut iter,
+                        scope,
+                        super_selector,
+                        op,
+                        &mut space_separated,
+                        last_was_whitespace,
+                    )?;
+                }
+                IntermediateValue::Whitespace => {
+                    last_was_whitespace = true;
+                    continue;
+                }
                 IntermediateValue::Comma => {
+                    last_was_whitespace = false;
                     if space_separated.len() == 1 {
                         comma_separated.push(space_separated.pop().unwrap());
                     } else {
@@ -366,6 +389,7 @@ impl Value {
                     }
                 }
                 IntermediateValue::Bracketed(t) => {
+                    last_was_whitespace = false;
                     if t.node.is_empty() {
                         space_separated.push(
                             Value::List(Vec::new(), ListSeparator::Space, Brackets::Bracketed)
@@ -384,6 +408,7 @@ impl Value {
                     )
                 }
                 IntermediateValue::Paren(t) => {
+                    last_was_whitespace = false;
                     parse_paren(t, scope, super_selector, &mut space_separated)?;
                 }
             }
