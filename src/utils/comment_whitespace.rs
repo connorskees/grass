@@ -34,10 +34,6 @@ pub(crate) fn devour_whitespace<I: Iterator<Item = W>, W: IsWhitespace>(
     found_whitespace
 }
 
-pub(crate) trait IsComment {
-    fn is_comment(&self) -> bool;
-}
-
 pub(crate) fn devour_whitespace_or_comment<I: Iterator<Item = Token>>(
     toks: &mut PeekMoreIterator<I>,
 ) -> SassResult<bool> {
