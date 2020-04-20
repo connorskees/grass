@@ -38,3 +38,8 @@ test!(
     "a {\n  color: #{\"#{'\"'}\"};\n}\n",
     "a {\n  color: \";\n}\n"
 );
+test!(
+    unquotes_space_separated_list,
+    "a {\n  color: #{\"a\" 'b'};\n}\n",
+    "a {\n  color: a b;\n}\n"
+);

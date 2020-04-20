@@ -214,6 +214,9 @@ impl Value {
     pub fn unquote(self) -> Self {
         match self {
             Self::Ident(s1, _) => Self::Ident(s1, QuoteKind::None),
+            Self::List(v, sep, bracket) => {
+                Self::List(v.into_iter().map(|x| x.unquote()).collect(), sep, bracket)
+            }
             v => v,
         }
     }
