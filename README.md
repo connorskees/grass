@@ -16,7 +16,7 @@ a bug except for in the following situations:
  - Certain aspects of the indented syntax
  - Potentially others in the future
 
-[Documentation](https://docs.rs/grass/)
+[Documentation](https://docs.rs/grass/)  
 [crates.io](https://crates.io/crates/grass)
 
 The large features remaining are
@@ -30,7 +30,6 @@ a special parser for plain css
 @forward (~400 tests)
 @keyframes (~30 tests)
 @supports (~128 tests)
-string parsing/quoting/escaping (~200 tests)
 ```
 
 To run the official test suite,
