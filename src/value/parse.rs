@@ -305,6 +305,10 @@ fn single_value<I: Iterator<Item = IntermediateValue>>(
                     span: op.span.merge(val.span),
                 }
             }
+            Op::Plus => {
+                devour_whitespace(iter);
+                single_value(iter, scope, super_selector, span)?
+            }
             _ => todo!(),
         },
         IntermediateValue::Whitespace => unreachable!(),

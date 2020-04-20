@@ -199,3 +199,8 @@ test!(
     "a {\n  color: 10-#{10};\n}\n",
     "a {\n  color: 10 -10;\n}\n"
 );
+test!(
+    plus_after_minus,
+    "a {\n  plus-after-minus: 1 - + 2;\n}\n",
+    "a {\n  plus-after-minus: -1;\n}\n"
+);
