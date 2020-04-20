@@ -12,7 +12,7 @@ use crate::{Scope, Token};
 
 use super::{as_hex, hex_char_for, is_name, is_name_start, parse_interpolation};
 
-fn ident_body<I: Iterator<Item = Token>>(
+fn ident_body_no_interpolation<I: Iterator<Item = Token>>(
     toks: &mut PeekMoreIterator<I>,
     unit: bool,
     mut span: Span,
@@ -205,7 +205,7 @@ pub(crate) fn eat_ident_no_interpolation<I: Iterator<Item = Token>>(
         if toks.peek().unwrap().kind == '-' {
             toks.next();
             text.push('-');
-            text.push_str(&ident_body(toks, unit, span)?.node);
+            text.push_str(&ident_body_no_interpolation(toks, unit, span)?.node);
             return Ok(Spanned { node: text, span });
         }
     }
@@ -224,7 +224,7 @@ pub(crate) fn eat_ident_no_interpolation<I: Iterator<Item = Token>>(
         return Err(("Expected identifier.", first.pos()).into());
     }
 
-    let body = ident_body(toks, unit, span)?;
+    let body = ident_body_no_interpolation(toks, unit, span)?;
     span = span.merge(body.span);
     text.push_str(&body.node);
     Ok(Spanned { node: text, span })
