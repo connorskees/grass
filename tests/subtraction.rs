@@ -193,3 +193,9 @@ test!(
     "a {\n  color: 10 - 10;\n}\n",
     "a {\n  color: 0;\n}\n"
 );
+test!(
+    #[ignore]
+    sub_no_space_interpolation,
+    "a {\n  color: 10-#{10};\n}\n",
+    "a {\n  color: 10 -10;\n}\n"
+);
