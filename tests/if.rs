@@ -67,3 +67,8 @@ test!(
     "a {\n  @if true {\n    color: red\n  }\n}\n",
     "a {\n  color: red;\n}\n"
 );
+test!(
+    atrule_other_than_else_immediately_following,
+    "a {\n  @if true {\n    b {\n      background: gray;\n    }\n  }\n\n  @if true {\n    b {\n      background: gray;\n    }\n  }\n}\n",
+    "a b {\n  background: gray;\n}\na b {\n  background: gray;\n}\n"
+);

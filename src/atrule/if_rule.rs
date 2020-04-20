@@ -50,6 +50,11 @@ impl If {
         loop {
             if toks.peek().is_some() {
                 if toks.peek().unwrap().kind == '@' {
+                    let first_char = toks.peek_forward(1).unwrap().kind;
+                    toks.peek_backward(1).unwrap();
+                    if first_char != 'e' && first_char != 'E' {
+                        break;
+                    }
                     toks.next();
                 } else {
                     break;
