@@ -260,6 +260,16 @@ test!(
     "a {\n  color: 1;\n}\n"
 );
 test!(
+    inspect_list_of_empty_list,
+    "a {\n  color: inspect(((), ()));\n}\n",
+    "a {\n  color: (), ();\n}\n"
+);
+test!(
+    inspect_comma_separated_list_of_comma_separated_lists,
+    "a {\n  color: inspect([(1, 2), (3, 4)]);\n}\n",
+    "a {\n  color: [(1, 2), (3, 4)];\n}\n"
+);
+test!(
     variable_does_exist,
     "$a: red; a {\n  color: variable-exists(a)\n}\n",
     "a {\n  color: true;\n}\n"

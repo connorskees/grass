@@ -273,6 +273,22 @@ impl Value {
                     ListSeparator::Comma => format!("[{},]", v[0].inspect(span)?),
                 },
             },
+            Self::List(vals, sep, brackets) => match brackets {
+                Brackets::None => format!(
+                    "{}",
+                    vals.iter()
+                        .map(|x| x.inspect(span))
+                        .collect::<SassResult<Vec<String>>>()?
+                        .join(sep.as_str()),
+                ),
+                Brackets::Bracketed => format!(
+                    "[{}]",
+                    vals.iter()
+                        .map(|x| x.inspect(span))
+                        .collect::<SassResult<Vec<String>>>()?
+                        .join(sep.as_str()),
+                ),
+            },
             Value::Function(f) => format!("get-function(\"{}\")", f.name()),
             Value::Null => "null".to_string(),
             Value::Map(map) => format!(
@@ -286,6 +302,7 @@ impl Value {
                     .collect::<SassResult<Vec<String>>>()?
                     .join(", ")
             ),
+            Value::Paren(v) => format!("({})", v.inspect(span)?),
             v => v.to_css_string(span)?,
         })
     }
