@@ -204,6 +204,25 @@ fn eat_op<I: Iterator<Item = IntermediateValue>>(
                 span: right.span,
             });
         }
+        Op::Div => {
+            devour_whitespace(iter);
+            let right = single_value(iter, scope, super_selector, op.span)?;
+            if let Some(left) = space_separated.pop() {
+                space_separated.push(Spanned {
+                    node: Value::BinaryOp(Box::new(left.node), op.node, Box::new(right.node)),
+                    span: left.span.merge(right.span),
+                });
+            } else {
+                devour_whitespace(iter);
+                space_separated.push(Spanned {
+                    node: Value::Ident(
+                        format!("/{}", right.node.to_css_string(right.span)?),
+                        QuoteKind::None,
+                    ),
+                    span: op.span.merge(right.span),
+                });
+            }
+        }
         Op::Plus => {
             if let Some(left) = space_separated.pop() {
                 devour_whitespace(iter);
@@ -308,6 +327,17 @@ fn single_value<I: Iterator<Item = IntermediateValue>>(
             Op::Plus => {
                 devour_whitespace(iter);
                 single_value(iter, scope, super_selector, span)?
+            }
+            Op::Div => {
+                devour_whitespace(iter);
+                let val = single_value(iter, scope, super_selector, span)?;
+                Spanned {
+                    node: Value::Ident(
+                        format!("/{}", val.node.to_css_string(val.span)?),
+                        QuoteKind::None,
+                    ),
+                    span: op.span.merge(val.span),
+                }
             }
             _ => todo!(),
         },
