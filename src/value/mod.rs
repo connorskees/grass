@@ -165,10 +165,14 @@ impl Value {
                 let mut buf = String::with_capacity(string.len());
                 for c in string.chars() {
                     match c {
-                        '\n' => {
-                            buf.push(' ');
-                            after_newline = true;
-                        }
+                        // TODO: figure out what is going on here
+                        // This is adapted from the original dart-sass
+                        // code, but in the spec tests it seems that
+                        // newlines are not actually treated like this.
+                        // '\n' => {
+                        //     buf.push(' ');
+                        //     after_newline = true;
+                        // }
                         ' ' => {
                             if !after_newline {
                                 buf.push(' ');

@@ -44,7 +44,12 @@ test!(
     "a {\n  color: a b;\n}\n"
 );
 test!(
-    interpolated_string_literally_inserted,
+    interpolated_newline,
     "a {\n  color: \"#{\"\\a\"}\";\n}\n",
+    "a {\n  color: \"\\a\";\n}\n"
+);
+test!(
+    double_interpolated_newline,
+    "a {\n  color: \"#{#{\"\\a\"}}\";\n}\n",
     "a {\n  color: \"\\a\";\n}\n"
 );
