@@ -616,7 +616,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                     values.push(toks.next().unwrap());
                     continue;
                 }
-                let name = eat_ident_no_interpolation(toks)?;
+                let name = eat_ident_no_interpolation(toks, false)?;
                 devour_whitespace(toks);
                 if toks.peek().unwrap().kind == ':' {
                     toks.next();

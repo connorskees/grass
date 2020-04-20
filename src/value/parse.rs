@@ -607,7 +607,7 @@ impl Value {
                 let unit = if let Some(tok) = toks.peek() {
                     match tok.kind {
                         'a'..='z' | 'A'..='Z' | '_' => {
-                            let u = eat_ident(toks, scope, super_selector)?;
+                            let u = eat_ident_no_interpolation(toks, true)?;
                             span = span.merge(u.span);
                             Unit::from(&u.node)
                         }
@@ -708,7 +708,7 @@ impl Value {
             }
             '$' => {
                 toks.next();
-                let val = eat_ident_no_interpolation(toks)?;
+                let val = eat_ident_no_interpolation(toks, false)?;
                 Ok(IntermediateValue::Value(Spanned {
                     node: scope.get_var(val.clone())?.node,
                     span: val.span,

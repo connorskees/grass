@@ -258,7 +258,7 @@ impl Selector {
             inner.push(match tok.kind {
                 _ if is_selector_name_char(tok.kind) => {
                     inner.push(SelectorKind::Element(
-                        eat_ident_no_interpolation(&mut iter)?.node,
+                        eat_ident_no_interpolation(&mut iter, false)?.node,
                     ));
                     continue;
                 }
@@ -269,14 +269,14 @@ impl Selector {
                 '.' => {
                     iter.next();
                     inner.push(SelectorKind::Class(
-                        eat_ident_no_interpolation(&mut iter)?.node,
+                        eat_ident_no_interpolation(&mut iter, false)?.node,
                     ));
                     continue;
                 }
                 '#' => {
                     iter.next();
                     inner.push(SelectorKind::Id(
-                        eat_ident_no_interpolation(&mut iter)?.node,
+                        eat_ident_no_interpolation(&mut iter, false)?.node,
                     ));
                     continue;
                 }
@@ -284,7 +284,7 @@ impl Selector {
                     iter.next();
                     is_invisible = true;
                     inner.push(SelectorKind::Placeholder(
-                        eat_ident_no_interpolation(&mut iter)?.node,
+                        eat_ident_no_interpolation(&mut iter, false)?.node,
                     ));
                     continue;
                 }
@@ -371,7 +371,7 @@ impl Selector {
             false
         };
         if is_selector_name_char(toks.peek().unwrap().kind) {
-            let name = eat_ident_no_interpolation(toks)?.node;
+            let name = eat_ident_no_interpolation(toks, false)?.node;
             Ok(
                 if toks.peek().is_some() && toks.peek().unwrap().kind == '(' {
                     toks.next();

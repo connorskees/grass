@@ -533,6 +533,7 @@ pub(crate) fn eat_ident<I: Iterator<Item = Token>>(
 
 pub(crate) fn eat_ident_no_interpolation<I: Iterator<Item = Token>>(
     toks: &mut Peekable<I>,
+    unit: bool,
 ) -> SassResult<Spanned<String>> {
     let mut span = toks.peek().unwrap().pos();
     let mut text = String::new();
@@ -542,7 +543,7 @@ pub(crate) fn eat_ident_no_interpolation<I: Iterator<Item = Token>>(
         if toks.peek().unwrap().kind == '-' {
             toks.next();
             text.push('-');
-            text.push_str(&ident_body(toks, false, span)?.node);
+            text.push_str(&ident_body(toks, unit, span)?.node);
             return Ok(Spanned { node: text, span });
         }
     }
@@ -561,7 +562,7 @@ pub(crate) fn eat_ident_no_interpolation<I: Iterator<Item = Token>>(
         return Err(("Expected identifier.", first.pos()).into());
     }
 
-    let body = ident_body(toks, false, span)?;
+    let body = ident_body(toks, unit, span)?;
     span = span.merge(body.span);
     text.push_str(&body.node);
     Ok(Spanned { node: text, span })
