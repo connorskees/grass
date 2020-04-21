@@ -33,6 +33,10 @@ test!(
 );
 test!(calc_nested_parens, "a {\n  color: calc((((()))));\n}\n");
 test!(
+    calc_invalid_arithmetic,
+    "a {\n  color: calc(2px + 2px + 5%);\n}\n"
+);
+test!(
     element_whitespace,
     "a {\n  color: element(       1      );\n}\n",
     "a {\n  color: element( 1 );\n}\n"
