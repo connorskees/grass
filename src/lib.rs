@@ -229,7 +229,7 @@ impl StyleSheet {
     #[inline]
     pub fn from_path<P: AsRef<Path> + Into<String> + Clone>(p: P) -> SassResult<String> {
         let mut map = CodeMap::new();
-        let file = map.add_file(p.clone().into(), String::from_utf8(fs::read(p.as_ref())?)?);
+        let file = map.add_file(p.clone().into(), String::from_utf8(fs::read(p)?)?);
         Css::from_stylesheet(StyleSheet(
             StyleSheetParser {
                 lexer: Lexer::new(&file).peekmore(),
@@ -246,10 +246,10 @@ impl StyleSheet {
     }
 
     pub(crate) fn export_from_path<P: AsRef<Path> + Into<String> + Clone>(
-        p: P,
+        p: &P,
     ) -> SassResult<(Vec<Spanned<Stmt>>, Scope)> {
         let mut map = CodeMap::new();
-        let file = map.add_file(p.clone().into(), String::from_utf8(fs::read(p.as_ref())?)?);
+        let file = map.add_file(p.clone().into(), String::from_utf8(fs::read(p)?)?);
         Ok(StyleSheetParser {
             lexer: Lexer::new(&file).peekmore(),
             nesting: 0,

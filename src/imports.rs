@@ -36,7 +36,7 @@ pub(crate) fn import<P: AsRef<Path>>(path: P) -> SassResult<(Vec<Spanned<Stmt>>,
     for name in &paths {
         if name.is_file() {
             let (rules2, scope2) =
-                StyleSheet::export_from_path(name.to_str().expect("path should be UTF-8"))?;
+                StyleSheet::export_from_path(&name.to_str().expect("path should be UTF-8"))?;
             rules.extend(rules2);
             scope.extend(scope2);
         }
