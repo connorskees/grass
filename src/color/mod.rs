@@ -24,18 +24,6 @@ use num_traits::{One, Signed, ToPrimitive, Zero};
 
 mod name;
 
-macro_rules! clamp {
-    ($c:expr, $min:literal, $max:literal) => {
-        if $c > Number::from($max) {
-            Number::from($max)
-        } else if $c < Number::from($min) {
-            Number::from($min)
-        } else {
-            $c
-        }
-    };
-}
-
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub(crate) struct Color {
     rgba: Rgba,
@@ -189,7 +177,7 @@ impl Color {
     /// Algorithm adapted from
     /// <https://github.com/sass/dart-sass/blob/0d0270cb12a9ac5cce73a4d0785fecb00735feee/lib/src/functions/color.dart#L718>
     pub fn mix(self, other: &Color, weight: Number) -> Self {
-        let weight = clamp!(weight, 0, 100);
+        let weight = weight.clamp(0, 100);
         let normalized_weight = weight.clone() * Number::from(2) - Number::one();
         let alpha_distance = self.alpha() - other.alpha();
 
@@ -362,14 +350,14 @@ impl Color {
         } else if hue < Number::from(-360) {
             Number::from(360) + hue % Number::from(360)
         } else if hue.is_negative() {
-            Number::from(360) + clamp!(hue, -360, 360)
+            Number::from(360) + hue.clamp(-360, 360)
         } else {
             hue
         };
 
-        let saturation = clamp!(saturation, 0, 1);
-        let luminance = clamp!(luminance, 0, 1);
-        let alpha = clamp!(alpha, 0, 1);
+        let saturation = saturation.clamp(0, 1);
+        let luminance = luminance.clamp(0, 1);
+        let alpha = alpha.clamp(0, 1);
 
         let hsla = Hsla::new(
             hue.clone(),

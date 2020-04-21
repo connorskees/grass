@@ -57,6 +57,20 @@ impl Number {
     pub fn is_decimal(&self) -> bool {
         self.val.denom() != &BigInt::from(1)
     }
+
+    pub fn clamp<A: Into<Number>, B: Into<Number>>(self, min: A, max: B) -> Self {
+        let max = max.into();
+        if self > max {
+            return max;
+        }
+
+        let min = min.into();
+        if self < min {
+            return min;
+        }
+
+        self
+    }
 }
 
 impl Zero for Number {
