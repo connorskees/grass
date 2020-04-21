@@ -79,7 +79,6 @@ grass input.scss
     clippy::or_fun_call,
 )]
 #![cfg_attr(feature = "nightly", feature(track_caller))]
-use std::fmt::{self, Display};
 use std::fs;
 use std::iter::Iterator;
 use std::path::Path;
@@ -90,7 +89,6 @@ use peekmore::{PeekMore, PeekMoreIterator};
 
 use crate::atrule::{eat_include, AtRule, AtRuleKind, Function, Mixin};
 pub use crate::error::{SassError, SassResult};
-use crate::format::PrettyPrinter;
 use crate::imports::import;
 use crate::lexer::Lexer;
 use crate::output::Css;
@@ -110,7 +108,6 @@ mod builtin;
 mod color;
 mod common;
 mod error;
-mod format;
 mod imports;
 mod lexer;
 mod output;
@@ -180,20 +177,6 @@ enum Expr {
     /// A multiline comment: `/* foobar */`
     MultilineComment(String),
     AtRule(AtRule),
-}
-
-/// Print the internal representation of a parsed stylesheet
-///
-/// Very closely resembles the original SASS, but contains only things translatable
-/// to pure CSS: functions, variables, values, and mixins have all been evaluated.
-///
-/// Use `StyleSheet::print_as_css` to properly convert to CSS.
-impl Display for StyleSheet {
-    #[inline]
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        PrettyPrinter::new(f).pretty_print(self).unwrap();
-        Ok(())
-    }
 }
 
 fn raw_to_parse_error(map: &CodeMap, err: SassError) -> SassError {
