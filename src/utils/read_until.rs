@@ -68,6 +68,10 @@ pub(crate) fn read_until_closing_curly_brace<I: Iterator<Item = Token>>(
                 };
                 continue;
             }
+            '(' => {
+                t.push(toks.next().unwrap());
+                t.extend(read_until_closing_paren(toks));
+            }
             _ => t.push(toks.next().unwrap()),
         }
     }

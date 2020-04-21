@@ -3,7 +3,7 @@ use peekmore::PeekMoreIterator;
 use crate::error::SassResult;
 use crate::scope::Scope;
 use crate::selector::Selector;
-use crate::utils::{devour_whitespace, parse_interpolation};
+use crate::utils::{devour_whitespace, parse_interpolation, peek_until_closing_curly_brace};
 use crate::Token;
 
 pub(crate) fn eat_calc_args<I: Iterator<Item = Token>>(
@@ -77,4 +77,126 @@ pub(crate) fn eat_progid<I: Iterator<Item = Token>>(
         }
     }
     Ok(string)
+}
+
+pub(crate) fn try_eat_url<I: Iterator<Item = Token>>(
+    toks: &mut PeekMoreIterator<I>,
+    scope: &Scope,
+    super_selector: &Selector,
+) -> SassResult<Option<String>> {
+    let mut buf = String::from("url(");
+    let mut peek_counter = 0;
+    while let Some(tok) = toks.peek() {
+        let kind = tok.kind;
+        toks.move_forward(1);
+        peek_counter += 1;
+        if kind == '!'
+            || kind == '%'
+            || kind == '&'
+            || (kind >= '*' && kind <= '~')
+            || kind as u32 >= 0x0080
+        {
+            buf.push(kind);
+        } else if kind == '\\' {
+            buf.push_str(&peek_escape(toks)?);
+        } else if kind == '#' {
+            let next = toks.peek();
+            if next.is_some() && next.unwrap().kind == '{' {
+                toks.move_forward(1);
+                peek_counter += 1;
+                let (interpolation, count) = peek_interpolation(toks, scope, super_selector)?;
+                peek_counter += count;
+                buf.push_str(&match interpolation.node {
+                    Value::Ident(s, ..) => s,
+                    v => v.to_css_string(interpolation.span)?,
+                });
+            } else {
+                buf.push('#');
+            }
+        } else if kind == ')' {
+            buf.push(')');
+            for _ in 0..=peek_counter {
+                toks.next();
+            }
+            return Ok(Some(buf));
+        } else {
+            break;
+        }
+    }
+    toks.reset_view();
+    Ok(None)
+}
+
+use crate::utils::{as_hex, hex_char_for, is_name};
+
+fn peek_escape<I: Iterator<Item = Token>>(toks: &mut PeekMoreIterator<I>) -> SassResult<String> {
+    let mut value = 0;
+    let first = match toks.peek() {
+        Some(t) => t,
+        None => return Ok(String::new()),
+    };
+    if first.kind == '\n' {
+        return Err(("Expected escape sequence.", first.pos()).into());
+    } else if first.kind.is_ascii_hexdigit() {
+        for _ in 0..6 {
+            let next = match toks.peek_forward(1) {
+                Some(t) => t,
+                None => break,
+            };
+            if !next.kind.is_ascii_hexdigit() {
+                break;
+            }
+            value *= 16;
+            value += as_hex(toks.next().unwrap().kind as u32)
+        }
+        if toks.peek().is_some() && toks.peek().unwrap().kind.is_whitespace() {
+            toks.peek_forward(1);
+        }
+    } else {
+        value = toks.peek_forward(1).unwrap().kind as u32;
+    }
+
+    // tabs are emitted literally
+    // TODO: figure out where this check is done
+    // in the source dart
+    if value == 0x9 {
+        return Ok("\\\t".to_string());
+    }
+
+    let c = std::char::from_u32(value).unwrap();
+    if is_name(c) {
+        Ok(c.to_string())
+    } else if value <= 0x1F || value == 0x7F {
+        let mut buf = String::with_capacity(4);
+        buf.push('\\');
+        if value > 0xF {
+            buf.push(hex_char_for(value >> 4));
+        }
+        buf.push(hex_char_for(value & 0xF));
+        buf.push(' ');
+        Ok(buf)
+    } else {
+        Ok(format!("\\{}", c))
+    }
+}
+
+use crate::value::Value;
+use codemap::Spanned;
+
+fn peek_interpolation<I: Iterator<Item = Token>>(
+    toks: &mut PeekMoreIterator<I>,
+    scope: &Scope,
+    super_selector: &Selector,
+) -> SassResult<(Spanned<Value>, usize)> {
+    let vec = peek_until_closing_curly_brace(toks);
+    let peek_counter = vec.len();
+    toks.move_forward(1);
+    let val = Value::from_vec(vec, scope, super_selector)?;
+    Ok((
+        Spanned {
+            node: val.node.eval(val.span)?.node.unquote(),
+            span: val.span,
+        },
+        peek_counter,
+    ))
 }

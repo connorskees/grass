@@ -10,7 +10,7 @@ use codemap::{Span, Spanned};
 
 use peekmore::{PeekMore, PeekMoreIterator};
 
-use super::css_function::{eat_calc_args, eat_progid};
+use super::css_function::{eat_calc_args, eat_progid, try_eat_url};
 
 use crate::args::eat_call_args;
 use crate::builtin::GLOBAL_FUNCTIONS;
@@ -530,7 +530,13 @@ impl Value {
                                 }
                                 // "min" => {}
                                 // "max" => {}
-                                // "url" => {}
+                                "url" => match try_eat_url(toks, scope, super_selector)? {
+                                    Some(val) => s = val,
+                                    None => s.push_str(
+                                        &eat_call_args(toks, scope, super_selector)?
+                                            .to_css_string(scope, super_selector)?,
+                                    ),
+                                },
                                 _ => s.push_str(
                                     &eat_call_args(toks, scope, super_selector)?
                                         .to_css_string(scope, super_selector)?,
