@@ -10,9 +10,8 @@ use crate::value::{Number, Value};
 
 macro_rules! opt_rgba {
     ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal, $scope:ident, $super_selector:ident) => {
-        let x = $low;
         let $name = match named_arg!($args, $scope, $super_selector, $arg = Value::Null) {
-            Value::Dimension(n, u) => Some(bound!($args, $arg, n, u, x, $high)),
+            Value::Dimension(n, u) => Some(bound!($args, $arg, n, u, $low, $high)),
             Value::Null => None,
             v => {
                 return Err((
@@ -31,9 +30,10 @@ macro_rules! opt_rgba {
 
 macro_rules! opt_hsl {
     ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal, $scope:ident, $super_selector:ident) => {
-        let x = $low;
         let $name = match named_arg!($args, $scope, $super_selector, $arg = Value::Null) {
-            Value::Dimension(n, u) => Some(bound!($args, $arg, n, u, x, $high) / Number::from(100)),
+            Value::Dimension(n, u) => {
+                Some(bound!($args, $arg, n, u, $low, $high) / Number::from(100))
+            }
             Value::Null => None,
             v => {
                 return Err((
@@ -188,10 +188,9 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
 
             macro_rules! opt_scale_arg {
                 ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal, $scope:ident, $super_selector:ident) => {
-                    let x = $low;
                     let $name = match named_arg!($args, $scope, $super_selector, $arg = Value::Null) {
                         Value::Dimension(n, Unit::Percent) => {
-                            Some(bound!($args, $arg, n, Unit::Percent, x, $high) / Number::from(100))
+                            Some(bound!($args, $arg, n, Unit::Percent, $low, $high) / Number::from(100))
                         }
                         v @ Value::Dimension(..) => {
                             return Err(
