@@ -3,13 +3,13 @@
 #[macro_use]
 mod macros;
 
-// this is `1` for libsass
+// this is `1` for node-sass, but .999999etc for web compiler
 test!(
     precision_does_not_round_up,
     "a {\n  color: 0.99999999991;\n}\n",
     "a {\n  color: 0.9999999999;\n}\n"
 );
-// this is `1` for libsass
+// this is `1` for node-sass, but .999999etc for web compiler
 test!(
     precision_does_round_up,
     "a {\n  color: 1.00000000009;\n}\n",
