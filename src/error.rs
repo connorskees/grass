@@ -38,7 +38,6 @@ enum SassErrorKind {
         loc: SpanLoc,
     },
     IoError(io::Error),
-    FmtError(fmt::Error),
     FromUtf8Error(String),
 }
 
@@ -80,14 +79,6 @@ impl From<io::Error> for SassError {
     fn from(error: io::Error) -> Self {
         SassError {
             kind: SassErrorKind::IoError(error),
-        }
-    }
-}
-
-impl From<std::fmt::Error> for SassError {
-    fn from(error: std::fmt::Error) -> Self {
-        SassError {
-            kind: SassErrorKind::FmtError(error),
         }
     }
 }
