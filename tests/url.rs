@@ -94,3 +94,8 @@ test!(
     "$roboto-font-path: \"../fonts/roboto\";\n\na {\n  color: url(#{//}\n  $roboto-font-path})\n}\n",
     "a {\n  color: url(../fonts/roboto);\n}\n"
 );
+test!(
+    interpolation_in_nested_url,
+    "a {\n  color: url(url(#{foo}))\n}\n",
+    "a {\n  color: url(url(foo));\n}\n"
+);
