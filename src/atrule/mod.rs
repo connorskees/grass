@@ -229,13 +229,9 @@ impl AtRule {
                     return Err(("Expected \"in\".", i.span).into());
                 }
                 devour_whitespace(toks);
-                let iterator = match Value::from_vec(
-                    read_until_open_curly_brace(toks),
-                    scope,
-                    super_selector,
-                )?
-                .node
-                {
+                let iter_val =
+                    Value::from_vec(read_until_open_curly_brace(toks), scope, super_selector)?;
+                let iterator = match iter_val.node.eval(iter_val.span)?.node {
                     Value::List(v, ..) => v,
                     Value::Map(m) => m
                         .into_iter()
