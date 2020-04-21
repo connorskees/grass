@@ -123,14 +123,16 @@ impl Css {
         Ok(self)
     }
 
-    pub fn pretty_print<W: Write>(self, buf: &mut W) -> SassResult<()> {
+    pub fn pretty_print(self) -> SassResult<String> {
         let mut string = Vec::new();
         self._inner_pretty_print(&mut string, 0)?;
         if string.iter().any(|s| !s.is_ascii()) {
-            writeln!(buf, "@charset \"UTF-8\";")?;
+            return Ok(format!(
+                "@charset \"UTF-8\";\n{}",
+                String::from_utf8(string)?
+            ));
         }
-        write!(buf, "{}", String::from_utf8(string).unwrap())?;
-        Ok(())
+        Ok(String::from_utf8(string)?)
     }
 
     fn _inner_pretty_print(self, buf: &mut Vec<u8>, nesting: usize) -> SassResult<()> {

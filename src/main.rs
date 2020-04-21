@@ -1,4 +1,4 @@
-use std::io::{stdout, BufWriter};
+use std::io::{stdout, BufWriter, Write};
 
 use clap::{App, Arg};
 
@@ -64,10 +64,16 @@ fn main() {
     let mut stdout = BufWriter::new(stdout());
     if let Some(inputs) = matches.values_of("INPUT") {
         for name in inputs {
-            StyleSheet::from_path(name, &mut stdout).unwrap_or_else(|e| {
-                eprintln!("{}", e);
-                std::process::exit(1)
-            });
+            stdout
+                .write_all(
+                    StyleSheet::from_path(name)
+                        .unwrap_or_else(|e| {
+                            eprintln!("{}", e);
+                            std::process::exit(1)
+                        })
+                        .as_bytes(),
+                )
+                .unwrap();
         }
     }
 }

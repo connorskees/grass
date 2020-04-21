@@ -11,12 +11,11 @@ Spec progress as of 2020-04-21:
 
 ## Use as library
 ```
-use std::io::{BufWriter, stdout};
 use grass::{SassResult, StyleSheet};
 
 fn main() -> SassResult<()> {
-    let mut buf = BufWriter::new(stdout());
-    StyleSheet::new("a { color: red; }".to_string(), &mut buf)?;
+    let sass = StyleSheet::new("a { b { color: &; } }".to_string())?;
+    assert_eq!(sass, "a b {\n  color: a b;\n}\n");
     Ok(())
 }
 ```
@@ -82,7 +81,6 @@ grass input.scss
 #![cfg_attr(feature = "nightly", feature(track_caller))]
 use std::fmt::{self, Display};
 use std::fs;
-use std::io::Write;
 use std::iter::Iterator;
 use std::path::Path;
 
@@ -207,17 +205,16 @@ impl StyleSheet {
     /// Write CSS to `buf`, constructed from a string
     ///
     /// ```
-    /// use std::io::{BufWriter, stdout};
     /// use grass::{SassResult, StyleSheet};
     ///
     /// fn main() -> SassResult<()> {
-    ///     let mut buf = BufWriter::new(stdout());
-    ///     StyleSheet::new("a { color: red; }".to_string(), &mut buf)?;
+    ///     let sass = StyleSheet::new("a { b { color: red; } }".to_string())?;
+    ///     assert_eq!(sass, "a b {\n  color: red;\n}\n");
     ///     Ok(())
     /// }
     /// ```
     #[inline]
-    pub fn new<W: Write>(input: String, buf: &mut W) -> SassResult<()> {
+    pub fn new(input: String) -> SassResult<String> {
         let mut map = CodeMap::new();
         let file = map.add_file("stdin".into(), input);
         Css::from_stylesheet(StyleSheet(
@@ -231,28 +228,22 @@ impl StyleSheet {
             .0,
         ))
         .map_err(|e| raw_to_parse_error(&map, e))?
-        .pretty_print(buf)
-        .map_err(|e| raw_to_parse_error(&map, e))?;
-        Ok(())
+        .pretty_print()
+        .map_err(|e| raw_to_parse_error(&map, e))
     }
 
     /// Write CSS to `buf`, constructed from a path
     ///
     /// ```
-    /// use std::io::{BufWriter, stdout};
     /// use grass::{SassResult, StyleSheet};
     ///
     /// fn main() -> SassResult<()> {
-    ///     let mut buf = BufWriter::new(stdout());
-    ///     StyleSheet::from_path("input.scss", &mut buf)?;
+    ///     let sass = StyleSheet::from_path("input.scss")?;
     ///     Ok(())
     /// }
     /// ```
     #[inline]
-    pub fn from_path<P: AsRef<Path> + Into<String> + Clone, W: Write>(
-        p: P,
-        buf: &mut W,
-    ) -> SassResult<()> {
+    pub fn from_path<P: AsRef<Path> + Into<String> + Clone>(p: P) -> SassResult<String> {
         let mut map = CodeMap::new();
         let file = map.add_file(p.clone().into(), String::from_utf8(fs::read(p.as_ref())?)?);
         Css::from_stylesheet(StyleSheet(
@@ -266,9 +257,8 @@ impl StyleSheet {
             .0,
         ))
         .map_err(|e| raw_to_parse_error(&map, e))?
-        .pretty_print(buf)
-        .map_err(|e| raw_to_parse_error(&map, e))?;
-        Ok(())
+        .pretty_print()
+        .map_err(|e| raw_to_parse_error(&map, e))
     }
 
     pub(crate) fn export_from_path<P: AsRef<Path> + Into<String> + Clone>(

@@ -11,12 +11,11 @@ macro_rules! test_import {
                 let mut f = Builder::new().rand_bytes(0).prefix("").suffix($name).tempfile_in("").unwrap();
                 write!(f, $content).unwrap();
             )*
-            let mut buf = Vec::new();
-            StyleSheet::new($input.to_string(), &mut buf)
+            let sass = StyleSheet::new($input.to_string())
             .expect(concat!("failed to parse on ", $input));
             assert_eq!(
                 String::from($output),
-                String::from_utf8(buf).expect("produced invalid utf8")
+                sass
             );
         }
     }
