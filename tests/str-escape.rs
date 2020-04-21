@@ -154,3 +154,7 @@ test!(
     quoted_escaped_newline_unchanged,
     "a {\n  color: \"\\a\";\n}\n"
 );
+test!(
+    unquoted_escape_minus_unquoted,
+    "a {\n  color: \\a - foo;\n}\n"
+);
