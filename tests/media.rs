@@ -21,3 +21,4 @@ test!(
     "@foo {\n  a {\n    color: red;\n  }\n}\n"
 );
 test!(unknown_at_rule_no_selector, "@foo {\n  color: red;\n}\n");
+test!(empty, "@media (min-width: 2px) {}", "");

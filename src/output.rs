@@ -155,6 +155,9 @@ impl Css {
                 }
                 Toplevel::AtRule(r) => match r {
                     AtRule::Unknown(u) => {
+                        if u.body.is_empty() {
+                            continue;
+                        }
                         if u.params.is_empty() {
                             writeln!(buf, "{}@{} {{", padding, u.name)?;
                         } else {
