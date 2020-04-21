@@ -77,6 +77,7 @@ grass input.scss
     clippy::indexing_slicing,
     clippy::match_same_arms,
     clippy::or_fun_call,
+    clippy::redundant_pub_crate,
 )]
 #![cfg_attr(feature = "nightly", feature(track_caller))]
 use std::fs;
@@ -136,7 +137,7 @@ pub(crate) enum Stmt {
 }
 
 impl Stmt {
-    fn span(self, span: Span) -> Spanned<Self> {
+    const fn span(self, span: Span) -> Spanned<Self> {
         Spanned { node: self, span }
     }
 }

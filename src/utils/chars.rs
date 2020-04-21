@@ -14,7 +14,7 @@ pub(crate) fn read_until_char<I: Iterator<Item = Token>>(
     while let Some(tok) = toks.next() {
         match tok.kind {
             '"' | '\'' => {
-                v.push(tok.clone());
+                v.push(tok);
                 v.extend(read_until_closing_quote(toks, tok.kind));
                 continue;
             }

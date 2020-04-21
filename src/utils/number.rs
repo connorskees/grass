@@ -31,7 +31,7 @@ pub(crate) fn eat_number<I: Iterator<Item = Token>>(
 
     let mut dec = String::new();
 
-    let next_tok = toks.peek().unwrap().clone();
+    let next_tok = *toks.peek().unwrap();
 
     if next_tok.kind == '.' {
         toks.next();

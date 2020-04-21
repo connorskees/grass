@@ -308,7 +308,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 })
                 .collect::<SassResult<Vec<Vec<Value>>>>()?;
 
-            let len = lists.iter().map(|l| l.len()).min().unwrap_or(0);
+            let len = lists.iter().map(Vec::len).min().unwrap_or(0);
 
             if len == 0 {
                 return Ok(Value::List(

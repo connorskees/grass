@@ -186,7 +186,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 Some(n) => n,
                 None => {
                     return Err((
-                        format!("max must be in range 0 < max ≤ 2^32, was {}", limit),
+                        format!("max must be in range 0 < max \u{2264} 2^32, was {}", limit),
                         args.span(),
                     )
                         .into())

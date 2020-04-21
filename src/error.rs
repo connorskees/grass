@@ -46,6 +46,7 @@ impl Display for SassError {
     // TODO: trim whitespace from start of line shown in error
     // TODO: color errors
     // TODO: integrate with codemap-diagnostics
+    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let (message, loc) = match &self.kind {
             SassErrorKind::ParseError { message, loc } => (message, loc),
@@ -75,6 +76,7 @@ impl Display for SassError {
 }
 
 impl From<io::Error> for SassError {
+    #[inline]
     fn from(error: io::Error) -> Self {
         SassError {
             kind: SassErrorKind::IoError(error),
@@ -91,6 +93,7 @@ impl From<std::fmt::Error> for SassError {
 }
 
 impl From<FromUtf8Error> for SassError {
+    #[inline]
     fn from(error: FromUtf8Error) -> Self {
         SassError {
             kind: SassErrorKind::FromUtf8Error(format!(
@@ -120,6 +123,7 @@ impl From<(String, Span)> for SassError {
 }
 
 impl Error for SassError {
+    #[inline]
     fn description(&self) -> &'static str {
         "SASS parsing error"
     }

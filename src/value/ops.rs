@@ -32,7 +32,7 @@ impl Value {
             },
             Self::Null => match other {
                 Self::Null => Self::Null,
-                _ => Value::Ident(format!("{}", other.to_css_string(span)?), QuoteKind::None),
+                _ => Value::Ident(other.to_css_string(span)?, QuoteKind::None),
             },
             Self::Dimension(num, unit) => match other {
                 Self::Dimension(num2, unit2) => {

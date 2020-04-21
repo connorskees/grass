@@ -23,7 +23,7 @@ fn ident_body_no_interpolation<I: Iterator<Item = Token>>(
         if unit && tok.kind == '-' {
             // Disallow `-` followed by a dot or a digit digit in units.
             let second = match toks.peek_forward(1) {
-                Some(v) => v.clone(),
+                Some(v) => *v,
                 None => break,
             };
 
@@ -294,7 +294,7 @@ pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
                         toks.next();
                     }
 
-                    if value == 0 || (value >= 0xD800 && value <= 0xDFFF) || value >= 0x10FFFF {
+                    if value == 0 || (value >= 0xD800 && value <= 0xDFFF) || value >= 0x0010_FFFF {
                         s.push('\u{FFFD}');
                     } else {
                         s.push(std::char::from_u32(value).unwrap());

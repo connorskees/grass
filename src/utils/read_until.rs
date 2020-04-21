@@ -128,7 +128,7 @@ pub(crate) fn read_until_semicolon_or_closing_curly_brace<I: Iterator<Item = Tok
             }
             '"' | '\'' => {
                 let quote = toks.next().unwrap();
-                t.push(quote.clone());
+                t.push(quote);
                 t.extend(read_until_closing_quote(toks, quote.kind));
             }
             '{' => {
@@ -174,7 +174,7 @@ pub(crate) fn read_until_semicolon_or_open_or_closing_curly_brace<I: Iterator<It
             }
             '"' | '\'' => {
                 let quote = toks.next().unwrap();
-                t.push(quote.clone());
+                t.push(quote);
                 t.extend(read_until_closing_quote(toks, quote.kind));
             }
             '#' => {
@@ -238,7 +238,7 @@ pub(crate) fn read_until_closing_paren<I: Iterator<Item = Token>>(
             }
             '(' => scope += 1,
             '"' | '\'' => {
-                v.push(tok.clone());
+                v.push(tok);
                 v.extend(read_until_closing_quote(toks, tok.kind));
                 continue;
             }
@@ -266,7 +266,7 @@ pub(crate) fn read_until_closing_square_brace<I: Iterator<Item = Token>>(
             }
             '[' => scope += 1,
             '"' | '\'' => {
-                v.push(tok.clone());
+                v.push(tok);
                 v.extend(read_until_closing_quote(toks, tok.kind));
                 continue;
             }

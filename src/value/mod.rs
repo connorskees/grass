@@ -115,14 +115,14 @@ impl Value {
             Self::BinaryOp(..) | Self::Paren(..) | Self::UnaryOp(..) => {
                 self.clone().eval(span)?.is_null(span)
             }
-            Self::List(v, ..) => Ok(v.into_iter().all(|f| f.is_null(span).unwrap())),
+            Self::List(v, ..) => Ok(v.iter().all(|f| f.is_null(span).unwrap())),
             _ => Ok(false),
         }
     }
 
     pub fn to_css_string(&self, span: Span) -> SassResult<String> {
         Ok(match self {
-            Self::Important => format!("!important"),
+            Self::Important => "!important".to_string(),
             Self::Dimension(num, unit) => match unit {
                 Unit::Mul(..) => {
                     return Err((format!("{}{} isn't a valid CSS value.", num, unit), span).into());
@@ -138,14 +138,12 @@ impl Value {
             }
             Self::Function(func) => format!("get-function(\"{}\")", func.name()),
             Self::List(vals, sep, brackets) => match brackets {
-                Brackets::None => format!(
-                    "{}",
-                    vals.iter()
-                        .filter(|x| !x.is_null(span).unwrap())
-                        .map(|x| x.to_css_string(span))
-                        .collect::<SassResult<Vec<String>>>()?
-                        .join(sep.as_str()),
-                ),
+                Brackets::None => vals
+                    .iter()
+                    .filter(|x| !x.is_null(span).unwrap())
+                    .map(|x| x.to_css_string(span))
+                    .collect::<SassResult<Vec<String>>>()?
+                    .join(sep.as_str()),
                 Brackets::Bracketed => format!(
                     "[{}]",
                     vals.iter()
@@ -157,9 +155,9 @@ impl Value {
             },
             Self::Color(c) => format!("{}", c),
             Self::UnaryOp(..) | Self::BinaryOp(..) => {
-                format!("{}", self.clone().eval(span)?.to_css_string(span)?)
+                self.clone().eval(span)?.to_css_string(span)?
             }
-            Self::Paren(val) => format!("{}", val.to_css_string(span)?),
+            Self::Paren(val) => val.to_css_string(span)?,
             Self::Ident(string, QuoteKind::None) => {
                 let mut after_newline = false;
                 let mut buf = String::with_capacity(string.len());
@@ -190,14 +188,12 @@ impl Value {
             Self::True => "true".to_string(),
             Self::False => "false".to_string(),
             Self::Null => String::new(),
-            Self::ArgList(args) => format!(
-                "{}",
-                args.iter()
-                    .filter(|x| !x.is_null(span).unwrap())
-                    .map(|a| Ok(a.node.to_css_string(span)?))
-                    .collect::<SassResult<Vec<String>>>()?
-                    .join(", "),
-            ),
+            Self::ArgList(args) => args
+                .iter()
+                .filter(|x| !x.is_null(span).unwrap())
+                .map(|a| Ok(a.node.to_css_string(span)?))
+                .collect::<SassResult<Vec<String>>>()?
+                .join(", "),
         })
     }
 
@@ -215,13 +211,13 @@ impl Value {
         match self {
             Self::Ident(s1, _) => Self::Ident(s1, QuoteKind::None),
             Self::List(v, sep, bracket) => {
-                Self::List(v.into_iter().map(|x| x.unquote()).collect(), sep, bracket)
+                Self::List(v.into_iter().map(Value::unquote).collect(), sep, bracket)
             }
             v => v,
         }
     }
 
-    pub fn span(self, span: Span) -> Spanned<Self> {
+    pub const fn span(self, span: Span) -> Spanned<Self> {
         Spanned { node: self, span }
     }
 
@@ -265,7 +261,7 @@ impl Value {
             },
             Value::List(v, sep, brackets) if v.len() == 1 => match brackets {
                 Brackets::None => match sep {
-                    ListSeparator::Space => format!("{}", v[0].inspect(span)?),
+                    ListSeparator::Space => v[0].inspect(span)?,
                     ListSeparator::Comma => format!("({},)", v[0].inspect(span)?),
                 },
                 Brackets::Bracketed => match sep {
@@ -274,13 +270,11 @@ impl Value {
                 },
             },
             Self::List(vals, sep, brackets) => match brackets {
-                Brackets::None => format!(
-                    "{}",
-                    vals.iter()
-                        .map(|x| x.inspect(span))
-                        .collect::<SassResult<Vec<String>>>()?
-                        .join(sep.as_str()),
-                ),
+                Brackets::None => vals
+                    .iter()
+                    .map(|x| x.inspect(span))
+                    .collect::<SassResult<Vec<String>>>()?
+                    .join(sep.as_str()),
                 Brackets::Bracketed => format!(
                     "[{}]",
                     vals.iter()
@@ -355,7 +349,7 @@ impl Value {
                 Op::LessThanEqual => return lhs.cmp(*rhs, op, span),
                 Op::Not => unreachable!(),
                 Op::And => {
-                    if lhs.clone().is_true(span)? {
+                    if lhs.is_true(span)? {
                         rhs.eval(span)?.node
                     } else {
                         lhs.eval(span)?.node
@@ -389,16 +383,12 @@ impl Value {
         let ordering = match self {
             Self::Dimension(num, unit) => match &other {
                 Self::Dimension(num2, unit2) => {
-                    if !unit.comparable(&unit2) {
+                    if !unit.comparable(unit2) {
                         return Err(
                             (format!("Incompatible units {} and {}.", unit2, unit), span).into(),
                         );
                     }
-                    if &unit == unit2 {
-                        num.cmp(num2)
-                    } else if unit == Unit::None {
-                        num.cmp(num2)
-                    } else if unit2 == &Unit::None {
+                    if &unit == unit2 || unit == Unit::None || unit2 == &Unit::None {
                         num.cmp(num2)
                     } else {
                         num.cmp(

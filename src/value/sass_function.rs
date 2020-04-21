@@ -60,7 +60,7 @@ impl SassFunction {
         match self {
             Self::Builtin(f, ..) => f.0(args, scope, super_selector),
             // todo: superselector
-            Self::UserDefined(f, ..) => f.clone().eval(args, scope, super_selector),
+            Self::UserDefined(f, ..) => f.eval(args, scope, super_selector),
         }
     }
 }

@@ -229,7 +229,7 @@ pub(crate) fn eat_include<I: Iterator<Item = Token>>(
         Vec::new()
     };
 
-    let mixin = scope.get_mixin(name)?.clone();
+    let mixin = scope.get_mixin(name)?;
 
     let rules = mixin
         .args(args, scope, super_selector)?

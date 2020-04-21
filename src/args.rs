@@ -159,7 +159,7 @@ impl CallArgs {
         )
     }
 
-    pub fn span(&self) -> Span {
+    pub const fn span(&self) -> Span {
         self.1
     }
 
