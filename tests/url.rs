@@ -89,3 +89,8 @@ test!(
     "a {\n  color: url(http://foo);\n}\n"
 );
 test!(url_dot_dot, "a {\n  color: url(../foo/bar/..baz/);\n}\n");
+test!(
+    silent_comment_in_interpolation,
+    "$roboto-font-path: \"../fonts/roboto\";\n\na {\n  color: url(#{//}\n  $roboto-font-path})\n}\n",
+    "a {\n  color: url(../fonts/roboto);\n}\n"
+);
