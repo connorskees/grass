@@ -5,7 +5,7 @@ An implementation of the SASS spec in pure Rust
 This crate aims to provide a high level interface for compiling SASS into
 plain CSS. It offers a very limited API, currently exposing only 2 structs.
 
-This crate also comes with a binary that is intended to act as an invisible
+In addition to a library, also included is a binary that is intended to act as an invisible
 replacement to the sass commandline executable.
 
 This crate aims to achieve complete feature parity with the dart-sass reference
@@ -22,7 +22,7 @@ a bug except for in the following situations:
 The large features remaining are
 ```
 all builtin selector functions (274 tests)
-content-exists, min, min, url
+builtin functions content-exists, min, max
 @extend (~600 tests)
 indented syntax (27 tests)
 a special parser for plain css
@@ -41,6 +41,13 @@ git submodule init
 git submodule update
 cargo b --release
 ./sass-spec/sass-spec.rb -c './target/release/grass'
+```
+
+```
+2020-04-21
+PASSING: 2150
+FAILING: 2943
+TOTAL: 5093
 ```
 
 ```
