@@ -28,3 +28,8 @@ test!(
     "a {\n  color: [null null null];\n}\n",
     ""
 );
+test!(
+    negative_null_in_var,
+    "a {\n  $x: null;\n  color: -$x;\n}\n",
+    "a {\n  color: -;\n}\n"
+);

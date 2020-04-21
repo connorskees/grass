@@ -245,12 +245,6 @@ fn eat_op<I: Iterator<Item = IntermediateValue>>(
         Op::Minus => {
             if devour_whitespace(iter) || !last_was_whitespace {
                 let right = single_value(iter, scope, super_selector, op.span)?;
-                if !last_was_whitespace && right.node == Value::Null {
-                    space_separated.push(
-                        right.map_node(|_| Value::Ident("-null".to_string(), QuoteKind::None)),
-                    );
-                    return Ok(());
-                }
                 if let Some(left) = space_separated.pop() {
                     space_separated.push(Spanned {
                         node: Value::BinaryOp(Box::new(left.node), op.node, Box::new(right.node)),
@@ -261,12 +255,6 @@ fn eat_op<I: Iterator<Item = IntermediateValue>>(
                 }
             } else {
                 let right = single_value(iter, scope, super_selector, op.span)?;
-                if right.node == Value::Null {
-                    space_separated.push(
-                        right.map_node(|_| Value::Ident("-null".to_string(), QuoteKind::None)),
-                    );
-                    return Ok(());
-                }
                 space_separated.push(right.map_node(|n| Value::UnaryOp(op.node, Box::new(n))));
             }
         }
@@ -601,6 +589,11 @@ impl Value {
             Some(v) => (v.kind, v.pos()),
             None => panic!("unexpected eof"),
         };
+
+        let next_is_hypen = |toks: &mut PeekMoreIterator<I>| {
+            toks.peek_forward(1).is_some()
+                && matches!(toks.peek().unwrap().kind, '-' | '_' | 'a'..='z' | 'A'..='Z')
+        };
         match kind {
             ',' => {
                 toks.next();
@@ -689,7 +682,8 @@ impl Value {
             _ if kind.is_ascii_alphabetic()
                 || kind == '_'
                 || kind == '\\'
-                || (!kind.is_ascii() && !kind.is_control()) =>
+                || (!kind.is_ascii() && !kind.is_control())
+                || (kind == '-' && next_is_hypen(toks)) =>
             {
                 Self::ident(toks, scope, super_selector)
             }
