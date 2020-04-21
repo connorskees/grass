@@ -75,12 +75,12 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     None => return Err(("Missing element $hue.", args.span()).into()),
                 };
 
-                Ok(Value::Color(Color::from_hsla(
+                Ok(Value::Color(Box::new(Color::from_hsla(
                     hue,
                     saturation,
                     lightness,
                     Number::one(),
-                )))
+                ))))
             } else {
                 let hue = match arg!(args, scope, super_selector, 0, "hue") {
                     Value::Dimension(n, _) => n,
@@ -211,9 +211,9 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                             .into())
                     }
                 };
-                Ok(Value::Color(Color::from_hsla(
+                Ok(Value::Color(Box::new(Color::from_hsla(
                     hue, saturation, lightness, alpha,
-                )))
+                ))))
             }
         }),
     );
@@ -283,12 +283,12 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                     None => return Err(("Missing element $hue.", args.span()).into()),
                 };
 
-                Ok(Value::Color(Color::from_hsla(
+                Ok(Value::Color(Box::new(Color::from_hsla(
                     hue,
                     saturation,
                     lightness,
                     Number::one(),
-                )))
+                ))))
             } else {
                 let hue = match arg!(args, scope, super_selector, 0, "hue") {
                     Value::Dimension(n, _) => n,
@@ -419,9 +419,9 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                             .into())
                     }
                 };
-                Ok(Value::Color(Color::from_hsla(
+                Ok(Value::Color(Box::new(Color::from_hsla(
                     hue, saturation, lightness, alpha,
-                )))
+                ))))
             }
         }),
     );
@@ -494,7 +494,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                         .into())
                 }
             };
-            Ok(Value::Color(color.adjust_hue(degrees)))
+            Ok(Value::Color(Box::new(color.adjust_hue(degrees))))
         }),
     );
     f.insert(
@@ -524,7 +524,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                         .into())
                 }
             };
-            Ok(Value::Color(color.lighten(amount)))
+            Ok(Value::Color(Box::new(color.lighten(amount))))
         }),
     );
     f.insert(
@@ -554,7 +554,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                         .into())
                 }
             };
-            Ok(Value::Color(color.darken(amount)))
+            Ok(Value::Color(Box::new(color.darken(amount))))
         }),
     );
     f.insert(
@@ -601,7 +601,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                         .into())
                 }
             };
-            Ok(Value::Color(color.saturate(amount)))
+            Ok(Value::Color(Box::new(color.saturate(amount))))
         }),
     );
     f.insert(
@@ -631,7 +631,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                         .into())
                 }
             };
-            Ok(Value::Color(color.desaturate(amount)))
+            Ok(Value::Color(Box::new(color.desaturate(amount))))
         }),
     );
     f.insert(
@@ -654,7 +654,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                         .into())
                 }
             };
-            Ok(Value::Color(color.desaturate(Number::one())))
+            Ok(Value::Color(Box::new(color.desaturate(Number::one()))))
         }),
     );
     f.insert(
@@ -671,7 +671,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                         .into())
                 }
             };
-            Ok(Value::Color(color.complement()))
+            Ok(Value::Color(Box::new(color.complement())))
         }),
     );
     f.insert(
@@ -698,7 +698,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 }
             };
             match arg!(args, scope, super_selector, 0, "color") {
-                Value::Color(c) => Ok(Value::Color(c.invert(weight))),
+                Value::Color(c) => Ok(Value::Color(Box::new(c.invert(weight)))),
                 Value::Dimension(n, Unit::Percent) => {
                     Ok(Value::Ident(format!("invert({}%)", n), QuoteKind::None))
                 }

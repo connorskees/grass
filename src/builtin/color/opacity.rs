@@ -66,7 +66,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                         .into())
                 }
             };
-            Ok(Value::Color(color.fade_in(amount)))
+            Ok(Value::Color(Box::new(color.fade_in(amount))))
         }),
     );
     f.insert(
@@ -96,7 +96,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                         .into())
                 }
             };
-            Ok(Value::Color(color.fade_in(amount)))
+            Ok(Value::Color(Box::new(color.fade_in(amount))))
         }),
     );
     f.insert(
@@ -126,7 +126,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                         .into())
                 }
             };
-            Ok(Value::Color(color.fade_out(amount)))
+            Ok(Value::Color(Box::new(color.fade_out(amount))))
         }),
     );
     f.insert(
@@ -156,7 +156,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                         .into())
                 }
             };
-            Ok(Value::Color(color.fade_out(amount)))
+            Ok(Value::Color(Box::new(color.fade_out(amount))))
         }),
     );
 }

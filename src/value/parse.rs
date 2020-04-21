@@ -73,7 +73,10 @@ fn parse_hex<I: Iterator<Item = Token>>(
             let red = (((v & 0xf00) >> 8) * 0x11) as u8;
             let green = (((v & 0x0f0) >> 4) * 0x11) as u8;
             let blue = ((v & 0x00f) * 0x11) as u8;
-            Ok(Value::Color(Color::new(red, green, blue, 1, format!("#{}", s))).span(span))
+            Ok(
+                Value::Color(Box::new(Color::new(red, green, blue, 1, format!("#{}", s))))
+                    .span(span),
+            )
         }
         4 => {
             let v = match u16::from_str_radix(&s, 16) {
@@ -84,7 +87,14 @@ fn parse_hex<I: Iterator<Item = Token>>(
             let green = (((v & 0x0f00) >> 8) * 0x11) as u8;
             let blue = (((v & 0x00f0) >> 4) * 0x11) as u8;
             let alpha = ((v & 0x000f) * 0x11) as u8;
-            Ok(Value::Color(Color::new(red, green, blue, alpha, format!("#{}", s))).span(span))
+            Ok(Value::Color(Box::new(Color::new(
+                red,
+                green,
+                blue,
+                alpha,
+                format!("#{}", s),
+            )))
+            .span(span))
         }
         6 => {
             let v = match u32::from_str_radix(&s, 16) {
@@ -94,7 +104,10 @@ fn parse_hex<I: Iterator<Item = Token>>(
             let red = ((v & 0x00ff_0000) >> 16) as u8;
             let green = ((v & 0x0000_ff00) >> 8) as u8;
             let blue = (v & 0x0000_00ff) as u8;
-            Ok(Value::Color(Color::new(red, green, blue, 1, format!("#{}", s))).span(span))
+            Ok(
+                Value::Color(Box::new(Color::new(red, green, blue, 1, format!("#{}", s))))
+                    .span(span),
+            )
         }
         8 => {
             let v = match u32::from_str_radix(&s, 16) {
@@ -105,7 +118,14 @@ fn parse_hex<I: Iterator<Item = Token>>(
             let green = ((v & 0x00ff_0000) >> 16) as u8;
             let blue = ((v & 0x0000_ff00) >> 8) as u8;
             let alpha = (v & 0x0000_00ff) as u8;
-            Ok(Value::Color(Color::new(red, green, blue, alpha, format!("#{}", s))).span(span))
+            Ok(Value::Color(Box::new(Color::new(
+                red,
+                green,
+                blue,
+                alpha,
+                format!("#{}", s),
+            )))
+            .span(span))
         }
         _ => Err(("Expected hex digit.", span).into()),
     }
@@ -549,7 +569,7 @@ impl Value {
             _ => {
                 if let Ok(c) = crate::color::ColorName::try_from(s.as_ref()) {
                     Ok(IntermediateValue::Value(Spanned {
-                        node: Value::Color(c.into_color(s)),
+                        node: Value::Color(Box::new(c.into_color(s))),
                         span,
                     }))
                 } else {

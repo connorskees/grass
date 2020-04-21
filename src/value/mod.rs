@@ -29,7 +29,7 @@ pub(crate) enum Value {
     Null,
     Dimension(Number, Unit),
     List(Vec<Value>, ListSeparator, Brackets),
-    Color(Color),
+    Color(Box<Color>),
     UnaryOp(Op, Box<Value>),
     BinaryOp(Box<Value>, Op, Box<Value>),
     Paren(Box<Value>),

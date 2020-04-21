@@ -116,7 +116,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
 
                 let color = Color::from_rgba(red, green, blue, Number::one());
 
-                Ok(Value::Color(color))
+                Ok(Value::Color(Box::new(color)))
             } else if args.len() == 2 {
                 let color = match arg!(args, scope, super_selector, 0, "color") {
                     Value::Color(c) => c,
@@ -172,7 +172,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                             .into())
                     }
                 };
-                Ok(Value::Color(color.with_alpha(alpha)))
+                Ok(Value::Color(Box::new(color.with_alpha(alpha))))
             } else {
                 let red = match arg!(args, scope, super_selector, 0, "red") {
                     Value::Dimension(n, Unit::None) => n,
@@ -330,7 +330,9 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                             .into())
                     }
                 };
-                Ok(Value::Color(Color::from_rgba(red, green, blue, alpha)))
+                Ok(Value::Color(Box::new(Color::from_rgba(
+                    red, green, blue, alpha,
+                ))))
             }
         }),
     );
@@ -441,7 +443,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
 
                 let color = Color::from_rgba(red, green, blue, Number::one());
 
-                Ok(Value::Color(color))
+                Ok(Value::Color(Box::new(color)))
             } else if args.len() == 2 {
                 let color = match arg!(args, scope, super_selector, 0, "color") {
                     Value::Color(c) => c,
@@ -497,7 +499,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                             .into())
                     }
                 };
-                Ok(Value::Color(color.with_alpha(alpha)))
+                Ok(Value::Color(Box::new(color.with_alpha(alpha))))
             } else {
                 let red = match arg!(args, scope, super_selector, 0, "red") {
                     Value::Dimension(n, Unit::None) => n,
@@ -655,7 +657,9 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                             .into())
                     }
                 };
-                Ok(Value::Color(Color::from_rgba(red, green, blue, alpha)))
+                Ok(Value::Color(Box::new(Color::from_rgba(
+                    red, green, blue, alpha,
+                ))))
             }
         }),
     );
@@ -746,7 +750,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                         .into())
                 }
             };
-            Ok(Value::Color(color1.mix(&color2, weight)))
+            Ok(Value::Color(Box::new(color1.mix(&color2, weight))))
         }),
     );
 }
