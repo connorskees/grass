@@ -78,3 +78,8 @@ test!(
     "a {\n  color: unquote(\"a, b, c, d\");\n}\n",
     "a {\n  color: a, b, c, d;\n}\n"
 );
+test!(
+    variable_declaration,
+    "@function str-replace($string, $search, $replace: \"\") {\n  $index: $string;\n  @return $index;\n}\n\na {\n  color: str-replace(\"a#b#c\", \"#\", \":\");\n}",
+    "a {\n  color: \"a#b#c\";\n}\n"
+);

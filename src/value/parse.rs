@@ -551,12 +551,11 @@ impl Value {
                 };
                 Ok(IntermediateValue::Value(
                     func.clone()
-                        .args(
+                        .eval(
                             eat_call_args(toks, scope, super_selector)?,
                             scope,
                             super_selector,
                         )?
-                        .call(super_selector, func.body())?
                         .span(span),
                 ))
             }

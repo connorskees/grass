@@ -9,7 +9,7 @@ use crate::atrule::AtRule;
 use crate::error::SassResult;
 use crate::scope::Scope;
 use crate::selector::Selector;
-use crate::utils::{devour_whitespace, eat_ident};
+use crate::utils::{devour_whitespace, eat_ident, read_until_closing_curly_brace};
 use crate::value::Value;
 use crate::{Stmt, Token};
 
@@ -17,7 +17,7 @@ use crate::{Stmt, Token};
 pub(crate) struct Function {
     scope: Scope,
     args: FuncArgs,
-    body: Vec<Spanned<Stmt>>,
+    body: Vec<Token>,
     pos: Span,
 }
 
@@ -30,7 +30,7 @@ impl PartialEq for Function {
 impl Eq for Function {}
 
 impl Function {
-    pub fn new(scope: Scope, args: FuncArgs, body: Vec<Spanned<Stmt>>, pos: Span) -> Self {
+    pub fn new(scope: Scope, args: FuncArgs, body: Vec<Token>, pos: Span) -> Self {
         Function {
             scope,
             args,
@@ -54,18 +54,19 @@ impl Function {
 
         devour_whitespace(toks);
 
-        let body = eat_stmts(toks, &mut scope.clone(), super_selector)?;
+        let mut body = read_until_closing_curly_brace(toks); //eat_stmts(toks, &mut scope.clone(), super_selector)?;
+        body.push(toks.next().unwrap());
         devour_whitespace(toks);
 
         Ok((name, Function::new(scope, args, body, span)))
     }
 
     pub fn args(
-        mut self,
+        &mut self,
         mut args: CallArgs,
         scope: &Scope,
         super_selector: &Selector,
-    ) -> SassResult<Function> {
+    ) -> SassResult<()> {
         for (idx, arg) in self.args.0.iter().enumerate() {
             if arg.is_variadic {
                 let span = args.span();
@@ -98,11 +99,26 @@ impl Function {
             };
             self.scope.insert_var(&arg.name, val)?;
         }
-        Ok(self)
+        Ok(())
     }
 
-    pub fn body(&self) -> Vec<Spanned<Stmt>> {
-        self.body.clone()
+    pub fn eval_body(&mut self, super_selector: &Selector) -> SassResult<Vec<Spanned<Stmt>>> {
+        eat_stmts(
+            &mut std::mem::take(&mut self.body).into_iter().peekmore(),
+            &mut self.scope,
+            super_selector,
+        )
+    }
+
+    pub fn eval(
+        mut self,
+        args: CallArgs,
+        scope: &Scope,
+        super_selector: &Selector,
+    ) -> SassResult<Value> {
+        self.args(args, scope, super_selector)?;
+        let stmts = self.eval_body(super_selector)?;
+        self.call(super_selector, stmts)
     }
 
     pub fn call(&self, super_selector: &Selector, stmts: Vec<Spanned<Stmt>>) -> SassResult<Value> {
