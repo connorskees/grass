@@ -58,10 +58,14 @@ impl Number {
         self.val.denom() != &BigInt::from(1)
     }
 
-    pub fn clamp<A: Into<Number>, B: Into<Number>>(self, min: A, max: B) -> Self {
+    pub fn clamp<A: Into<Number> + Zero, B: Into<Number>>(self, min: A, max: B) -> Self {
         let max = max.into();
         if self > max {
             return max;
+        }
+
+        if min.is_zero() && self.is_negative() {
+            return Number::zero();
         }
 
         let min = min.into();

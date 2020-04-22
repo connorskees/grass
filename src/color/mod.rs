@@ -132,30 +132,16 @@ impl Color {
 
     /// Create a new `Color` with just RGBA values.
     /// Color representation is created automatically.
-    pub fn from_rgba(red: Number, green: Number, blue: Number, alpha: Number) -> Self {
-        macro_rules! clamp {
-            ($channel:ident) => {
-                let $channel = if $channel > Number::from(255) {
-                    Number::from(255)
-                } else if $channel.is_negative() {
-                    Number::zero()
-                } else {
-                    $channel
-                };
-            };
-        }
-
-        clamp!(red);
-        clamp!(green);
-        clamp!(blue);
-
-        let alpha = if alpha > Number::one() {
-            Number::one()
-        } else if alpha.is_negative() {
-            Number::zero()
-        } else {
-            alpha
-        };
+    pub fn from_rgba(
+        mut red: Number,
+        mut green: Number,
+        mut blue: Number,
+        mut alpha: Number,
+    ) -> Self {
+        red = red.clamp(0, 255);
+        green = green.clamp(0, 255);
+        blue = blue.clamp(0, 255);
+        alpha = alpha.clamp(0, 1);
 
         let repr = repr(&red, &green, &blue, &alpha);
         Color::new_rgba(red, green, blue, alpha, repr)
