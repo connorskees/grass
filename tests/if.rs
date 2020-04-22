@@ -72,3 +72,9 @@ test!(
     "a {\n  @if true {\n    b {\n      background: gray;\n    }\n  }\n\n  @if true {\n    b {\n      background: gray;\n    }\n  }\n}\n",
     "a b {\n  background: gray;\n}\na b {\n  background: gray;\n}\n"
 );
+test!(
+    nested_if_in_function,
+    "@function foo($value) {\n  @if true {\n    @if false {\n      @error foo;\n    }\n\n    @else {\n      @return $value;\n    }\n  }\n}
+    a { color: foo(bar); }",
+    "a {\n  color: bar;\n}\n"
+);
