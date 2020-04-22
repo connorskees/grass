@@ -13,7 +13,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "percentage".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
-            max_args!(args, 1);
+            args.max_args(1)?;
             let num = match arg!(args, scope, super_selector, 0, "number") {
                 Value::Dimension(n, Unit::None) => n * Number::from(100),
                 v @ Value::Dimension(..) => {
@@ -43,7 +43,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "round".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
-            max_args!(args, 1);
+            args.max_args(1)?;
             match arg!(args, scope, super_selector, 0, "number") {
                 Value::Dimension(n, u) => Ok(Value::Dimension(n.round(), u)),
                 v => Err((
@@ -60,7 +60,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "ceil".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
-            max_args!(args, 1);
+            args.max_args(1)?;
             match arg!(args, scope, super_selector, 0, "number") {
                 Value::Dimension(n, u) => Ok(Value::Dimension(n.ceil(), u)),
                 v => Err((
@@ -77,7 +77,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "floor".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
-            max_args!(args, 1);
+            args.max_args(1)?;
             match arg!(args, scope, super_selector, 0, "number") {
                 Value::Dimension(n, u) => Ok(Value::Dimension(n.floor(), u)),
                 v => Err((
@@ -94,7 +94,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "abs".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
-            max_args!(args, 1);
+            args.max_args(1)?;
             match arg!(args, scope, super_selector, 0, "number") {
                 Value::Dimension(n, u) => Ok(Value::Dimension(n.abs(), u)),
                 v => Err((
@@ -111,7 +111,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "comparable".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
-            max_args!(args, 2);
+            args.max_args(2)?;
             let unit1 = match arg!(args, scope, super_selector, 0, "number1") {
                 Value::Dimension(_, u) => u,
                 v => {
@@ -147,7 +147,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "random".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
-            max_args!(args, 1);
+            args.max_args(1)?;
             let limit = match arg!(args, scope, super_selector, 0, "limit" = Value::Null) {
                 Value::Dimension(n, _) => n,
                 Value::Null => {

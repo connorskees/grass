@@ -666,7 +666,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "red".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
-            max_args!(args, 1);
+            args.max_args(1)?;
             match arg!(args, scope, super_selector, 0, "color") {
                 Value::Color(c) => Ok(Value::Dimension(c.red(), Unit::None)),
                 v => Err((
@@ -680,7 +680,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "green".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
-            max_args!(args, 1);
+            args.max_args(1)?;
             match arg!(args, scope, super_selector, 0, "color") {
                 Value::Color(c) => Ok(Value::Dimension(c.green(), Unit::None)),
                 v => Err((
@@ -694,7 +694,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "blue".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
-            max_args!(args, 1);
+            args.max_args(1)?;
             match arg!(args, scope, super_selector, 0, "color") {
                 Value::Color(c) => Ok(Value::Dimension(c.blue(), Unit::None)),
                 v => Err((
@@ -708,7 +708,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "mix".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
-            max_args!(args, 3);
+            args.max_args(3)?;
             let color1 = match arg!(args, scope, super_selector, 0, "color1") {
                 Value::Color(c) => c,
                 v => {

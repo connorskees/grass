@@ -170,6 +170,27 @@ impl CallArgs {
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
+
+    pub fn max_args(&self, max: usize) -> SassResult<()> {
+        let len = self.len();
+        if len > max {
+            let mut err = String::with_capacity(50);
+            err.push_str(&format!("Only {} argument", max));
+            if max != 1 {
+                err.push('s');
+            }
+            err.push_str(" allowed, but ");
+            err.push_str(&len.to_string());
+            err.push(' ');
+            if len == 1 {
+                err.push_str("was passed.")
+            } else {
+                err.push_str("were passed.")
+            }
+            return Err((err, self.span()).into());
+        }
+        Ok(())
+    }
 }
 
 pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(

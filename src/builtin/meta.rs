@@ -12,7 +12,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "if".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
-            max_args!(args, 3);
+            args.max_args(3)?;
             if arg!(args, scope, super_selector, 0, "condition").is_true(args.span())? {
                 Ok(arg!(args, scope, super_selector, 1, "if-true"))
             } else {
@@ -23,7 +23,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "feature-exists".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
-            max_args!(args, 1);
+            args.max_args(1)?;
             match arg!(args, scope, super_selector, 0, "feature") {
                 Value::Ident(s, _) => match s.as_str() {
                     // A local variable will shadow a global variable unless
@@ -57,7 +57,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "unit".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
-            max_args!(args, 1);
+            args.max_args(1)?;
             let unit = match arg!(args, scope, super_selector, 0, "number") {
                 Value::Dimension(_, u) => u.to_string(),
                 v => {
@@ -77,7 +77,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "type-of".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
-            max_args!(args, 1);
+            args.max_args(1)?;
             let value = arg!(args, scope, super_selector, 0, "value");
             Ok(Value::Ident(
                 value.kind(args.span())?.to_owned(),
@@ -88,7 +88,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "unitless".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
-            max_args!(args, 1);
+            args.max_args(1)?;
             match arg!(args, scope, super_selector, 0, "number") {
                 Value::Dimension(_, Unit::None) => Ok(Value::True),
                 Value::Dimension(_, _) => Ok(Value::False),
@@ -99,7 +99,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "inspect".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
-            max_args!(args, 1);
+            args.max_args(1)?;
             Ok(Value::Ident(
                 arg!(args, scope, super_selector, 0, "value").inspect(args.span())?,
                 QuoteKind::None,
@@ -109,7 +109,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "variable-exists".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
-            max_args!(args, 1);
+            args.max_args(1)?;
             match arg!(args, scope, super_selector, 0, "name") {
                 Value::Ident(s, _) => Ok(Value::bool(scope.var_exists(&s))),
                 v => Err((
@@ -123,7 +123,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "global-variable-exists".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
-            max_args!(args, 1);
+            args.max_args(1)?;
             match arg!(args, scope, super_selector, 0, "name") {
                 Value::Ident(s, _) => Ok(Value::bool(global_var_exists(&s))),
                 v => Err((
@@ -137,7 +137,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "mixin-exists".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
-            max_args!(args, 2);
+            args.max_args(2)?;
             match arg!(args, scope, super_selector, 0, "name") {
                 Value::Ident(s, _) => Ok(Value::bool(scope.mixin_exists(&s))),
                 v => Err((
@@ -151,7 +151,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "function-exists".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
-            max_args!(args, 2);
+            args.max_args(2)?;
             match arg!(args, scope, super_selector, 0, "name") {
                 Value::Ident(s, _) => Ok(Value::bool(
                     scope.fn_exists(&s) || GLOBAL_FUNCTIONS.contains_key(&s),
@@ -167,7 +167,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "get-function".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
-            max_args!(args, 3);
+            args.max_args(3)?;
             let name = match arg!(args, scope, super_selector, 0, "name") {
                 Value::Ident(s, _) => s,
                 v => {

@@ -428,7 +428,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "hue".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
-            max_args!(args, 1);
+            args.max_args(1)?;
             match arg!(args, scope, super_selector, 0, "color") {
                 Value::Color(c) => Ok(Value::Dimension(c.hue(), Unit::Deg)),
                 v => Err((
@@ -442,7 +442,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "saturation".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
-            max_args!(args, 1);
+            args.max_args(1)?;
             match arg!(args, scope, super_selector, 0, "color") {
                 Value::Color(c) => Ok(Value::Dimension(c.saturation(), Unit::Percent)),
                 v => Err((
@@ -456,7 +456,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "lightness".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
-            max_args!(args, 1);
+            args.max_args(1)?;
             match arg!(args, scope, super_selector, 0, "color") {
                 Value::Color(c) => Ok(Value::Dimension(c.lightness(), Unit::Percent)),
                 v => Err((
@@ -470,7 +470,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "adjust-hue".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
-            max_args!(args, 2);
+            args.max_args(2)?;
             let color = match arg!(args, scope, super_selector, 0, "color") {
                 Value::Color(c) => c,
                 v => {
@@ -500,7 +500,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "lighten".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
-            max_args!(args, 2);
+            args.max_args(2)?;
             let color = match arg!(args, scope, super_selector, 0, "color") {
                 Value::Color(c) => c,
                 v => {
@@ -530,7 +530,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "darken".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
-            max_args!(args, 2);
+            args.max_args(2)?;
             let color = match arg!(args, scope, super_selector, 0, "color") {
                 Value::Color(c) => c,
                 v => {
@@ -560,7 +560,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "saturate".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
-            max_args!(args, 2);
+            args.max_args(2)?;
             if args.len() == 1 {
                 return Ok(Value::Ident(
                     format!(
@@ -607,7 +607,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "desaturate".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
-            max_args!(args, 2);
+            args.max_args(2)?;
             let color = match arg!(args, scope, super_selector, 0, "color") {
                 Value::Color(c) => c,
                 v => {
@@ -637,7 +637,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "grayscale".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
-            max_args!(args, 1);
+            args.max_args(1)?;
             let color = match arg!(args, scope, super_selector, 0, "color") {
                 Value::Color(c) => c,
                 Value::Dimension(n, u) => {
@@ -660,7 +660,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "complement".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
-            max_args!(args, 1);
+            args.max_args(1)?;
             let color = match arg!(args, scope, super_selector, 0, "color") {
                 Value::Color(c) => c,
                 v => {
@@ -677,7 +677,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "invert".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
-            max_args!(args, 2);
+            args.max_args(2)?;
             let weight = match arg!(
                 args,
                 scope,

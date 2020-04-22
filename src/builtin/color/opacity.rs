@@ -10,7 +10,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "alpha".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
-            max_args!(args, 1);
+            args.max_args(1)?;
             match arg!(args, scope, super_selector, 0, "color") {
                 Value::Color(c) => Ok(Value::Dimension(c.alpha(), Unit::None)),
                 v => Err((
@@ -24,7 +24,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "opacity".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
-            max_args!(args, 1);
+            args.max_args(1)?;
             match arg!(args, scope, super_selector, 0, "color") {
                 Value::Color(c) => Ok(Value::Dimension(c.alpha(), Unit::None)),
                 Value::Dimension(num, unit) => Ok(Value::Ident(
@@ -42,7 +42,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "opacify".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
-            max_args!(args, 2);
+            args.max_args(2)?;
             let color = match arg!(args, scope, super_selector, 0, "color") {
                 Value::Color(c) => c,
                 v => {
@@ -72,7 +72,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "fade-in".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
-            max_args!(args, 2);
+            args.max_args(2)?;
             let color = match arg!(args, scope, super_selector, 0, "color") {
                 Value::Color(c) => c,
                 v => {
@@ -102,7 +102,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "transparentize".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
-            max_args!(args, 2);
+            args.max_args(2)?;
             let color = match arg!(args, scope, super_selector, 0, "color") {
                 Value::Color(c) => c,
                 v => {
@@ -132,7 +132,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "fade-out".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
-            max_args!(args, 2);
+            args.max_args(2)?;
             let color = match arg!(args, scope, super_selector, 0, "color") {
                 Value::Color(c) => c,
                 v => {

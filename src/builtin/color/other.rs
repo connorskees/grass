@@ -268,7 +268,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     f.insert(
         "ie-hex-str".to_owned(),
         Builtin::new(|mut args, scope, super_selector| {
-            max_args!(args, 1);
+            args.max_args(1)?;
             let color = match arg!(args, scope, super_selector, 0, "color") {
                 Value::Color(c) => c,
                 v => {
