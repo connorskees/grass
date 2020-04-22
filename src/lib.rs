@@ -99,7 +99,7 @@ use crate::style::Style;
 pub(crate) use crate::token::Token;
 use crate::utils::{
     devour_whitespace, eat_comment, eat_ident, eat_ident_no_interpolation, eat_variable_value,
-    parse_quoted_string, read_until_newline, VariableDecl,
+    parse_quoted_string, read_until_closing_curly_brace, read_until_newline, VariableDecl,
 };
 use crate::value::Value;
 
@@ -676,7 +676,8 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                 values.push(toks.next().unwrap());
                 if toks.peek().unwrap().kind == '{' {
                     values.push(toks.next().unwrap());
-                    values.extend(eat_interpolation(toks));
+                    values.extend(read_until_closing_curly_brace(toks));
+                    values.push(toks.next().unwrap());
                 }
             }
             '\\' => {
@@ -687,23 +688,6 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
         };
     }
     Ok(None)
-}
-
-fn eat_interpolation<I: Iterator<Item = Token>>(toks: &mut PeekMoreIterator<I>) -> Vec<Token> {
-    let mut vals = Vec::new();
-    let mut n = 1;
-    for tok in toks {
-        match tok.kind {
-            '{' => n += 1,
-            '}' => n -= 1,
-            _ => {}
-        }
-        vals.push(tok);
-        if n == 0 {
-            break;
-        }
-    }
-    vals
 }
 
 /// Functions that print to stdout or stderr

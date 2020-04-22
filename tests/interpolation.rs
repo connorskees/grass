@@ -58,3 +58,13 @@ test!(
     "a {\n  color: #{\"\\a\"};\n}\n",
     "a {\n  color:  ;\n}\n"
 );
+test!(
+    interpolate_escaped_quotes,
+    "a {\n  color: #{\\\"\\'};\n}\n",
+    "a {\n  color: \\\"\\';\n}\n"
+);
+test!(
+    interpolate_escaped_quotes_in_quotes,
+    "a {\n  color: \"#{\\\"\\'}\";\n}\n",
+    "a {\n  color: \"\\\\\\\"\\\\'\";\n}\n"
+);

@@ -12,7 +12,7 @@ use super::{devour_whitespace, read_until_newline};
 pub(crate) fn read_until_open_curly_brace<I: Iterator<Item = Token>>(
     toks: &mut PeekMoreIterator<I>,
 ) -> Vec<Token> {
-    let mut val = Vec::new();
+    let mut t = Vec::new();
     let mut n = 0;
     while let Some(tok) = toks.peek() {
         match tok.kind {
@@ -22,9 +22,15 @@ pub(crate) fn read_until_open_curly_brace<I: Iterator<Item = Token>>(
                 let next = toks.next().unwrap();
                 match toks.peek().unwrap().kind {
                     '/' => read_until_newline(toks),
-                    _ => val.push(next),
+                    _ => t.push(next),
                 };
                 continue;
+            }
+            '\\' => {
+                t.push(toks.next().unwrap());
+                if toks.peek().is_some() {
+                    t.push(toks.next().unwrap());
+                }
             }
             _ => {}
         }
@@ -32,9 +38,9 @@ pub(crate) fn read_until_open_curly_brace<I: Iterator<Item = Token>>(
             break;
         }
 
-        val.push(toks.next().unwrap());
+        t.push(toks.next().unwrap());
     }
-    val
+    t
 }
 
 pub(crate) fn read_until_closing_curly_brace<I: Iterator<Item = Token>>(
@@ -72,6 +78,12 @@ pub(crate) fn read_until_closing_curly_brace<I: Iterator<Item = Token>>(
                 t.push(toks.next().unwrap());
                 t.extend(read_until_closing_paren(toks));
             }
+            '\\' => {
+                t.push(toks.next().unwrap());
+                if toks.peek().is_some() {
+                    t.push(toks.next().unwrap());
+                }
+            }
             _ => t.push(toks.next().unwrap()),
         }
     }
@@ -96,7 +108,9 @@ pub(crate) fn read_until_closing_quote<I: Iterator<Item = Token>>(
             }
             '\\' => {
                 t.push(tok);
-                t.push(toks.next().unwrap());
+                if toks.peek().is_some() {
+                    t.push(toks.next().unwrap());
+                }
             }
             '#' => {
                 t.push(tok);
@@ -124,7 +138,9 @@ pub(crate) fn read_until_semicolon_or_closing_curly_brace<I: Iterator<Item = Tok
             }
             '\\' => {
                 t.push(toks.next().unwrap());
-                t.push(toks.next().unwrap());
+                if toks.peek().is_some() {
+                    t.push(toks.next().unwrap());
+                }
             }
             '"' | '\'' => {
                 let quote = toks.next().unwrap();
@@ -170,7 +186,9 @@ pub(crate) fn read_until_semicolon_or_open_or_closing_curly_brace<I: Iterator<It
             }
             '\\' => {
                 t.push(toks.next().unwrap());
-                t.push(toks.next().unwrap());
+                if toks.peek().is_some() {
+                    t.push(toks.next().unwrap());
+                }
             }
             '"' | '\'' => {
                 let quote = toks.next().unwrap();
@@ -224,55 +242,68 @@ pub(crate) fn read_until_semicolon_or_open_or_closing_curly_brace<I: Iterator<It
 pub(crate) fn read_until_closing_paren<I: Iterator<Item = Token>>(
     toks: &mut PeekMoreIterator<I>,
 ) -> Vec<Token> {
-    let mut v = Vec::new();
+    let mut t = Vec::new();
     let mut scope = 0;
     while let Some(tok) = toks.next() {
         match tok.kind {
             ')' => {
                 if scope < 1 {
-                    v.push(tok);
-                    return v;
+                    t.push(tok);
+                    return t;
                 } else {
                     scope -= 1;
                 }
             }
             '(' => scope += 1,
             '"' | '\'' => {
-                v.push(tok);
-                v.extend(read_until_closing_quote(toks, tok.kind));
+                t.push(tok);
+                t.extend(read_until_closing_quote(toks, tok.kind));
+                continue;
+            }
+            '\\' => {
+                t.push(tok);
+                if toks.peek().is_some() {
+                    t.push(toks.next().unwrap());
+                }
                 continue;
             }
             _ => {}
         }
-        v.push(tok)
+        t.push(tok)
     }
-    v
+    t
 }
 
 pub(crate) fn read_until_closing_square_brace<I: Iterator<Item = Token>>(
     toks: &mut PeekMoreIterator<I>,
 ) -> Vec<Token> {
-    let mut v = Vec::new();
+    let mut t = Vec::new();
     let mut scope = 0;
     while let Some(tok) = toks.next() {
         match tok.kind {
             ']' => {
                 if scope < 1 {
-                    v.push(tok);
-                    return v;
+                    t.push(tok);
+                    return t;
                 } else {
                     scope -= 1;
                 }
             }
             '[' => scope += 1,
             '"' | '\'' => {
-                v.push(tok);
-                v.extend(read_until_closing_quote(toks, tok.kind));
+                t.push(tok);
+                t.extend(read_until_closing_quote(toks, tok.kind));
                 continue;
+            }
+            '\\' => {
+                t.push(tok);
+                if toks.peek().is_some() {
+                    t.push(toks.next().unwrap());
+                }
             }
             _ => {}
         }
-        v.push(tok)
+        t.push(tok)
     }
-    v
+    t
 }
