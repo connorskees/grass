@@ -286,6 +286,7 @@ impl AtRule {
                         &mut body.clone().into_iter().peekmore(),
                         scope,
                         super_selector,
+                        false,
                     )?);
                 }
                 Spanned {

@@ -93,7 +93,10 @@ pub use crate::error::{SassError, SassResult};
 use crate::imports::import;
 use crate::lexer::Lexer;
 use crate::output::Css;
-use crate::scope::{insert_global_fn, insert_global_mixin, insert_global_var, Scope, GLOBAL_SCOPE};
+use crate::scope::{
+    global_var_exists, insert_global_fn, insert_global_mixin, insert_global_var, Scope,
+    GLOBAL_SCOPE,
+};
 use crate::selector::Selector;
 use crate::style::Style;
 pub(crate) use crate::token::Token;
@@ -294,16 +297,9 @@ impl<'a> StyleSheetParser<'a> {
                     }
                     let VariableDecl { val, default, .. } =
                         eat_variable_value(&mut self.lexer, &Scope::new(), &Selector::new())?;
-                    GLOBAL_SCOPE.with(|s| {
-                        if !default || s.borrow().get_var(name.clone()).is_err() {
-                            match s.borrow_mut().insert_var(&name.node, val) {
-                                Ok(..) => Ok(()),
-                                Err(e) => Err(e),
-                            }
-                        } else {
-                            Ok(())
-                        }
-                    })?
+                    if (default && !global_var_exists(&name)) || !default {
+                        insert_global_var(&name.node, val)?;
+                    }
                 }
                 '/' => {
                     self.lexer.next();
@@ -379,7 +375,7 @@ impl<'a> StyleSheetParser<'a> {
                                     )
                                 }
                                 AtRule::For(f) => rules.extend(f.ruleset_eval(&mut Scope::new(), &Selector::new())?),
-                                AtRule::While(w) => rules.extend(w.ruleset_eval(&mut Scope::new(), &Selector::new())?),
+                                AtRule::While(w) => rules.extend(w.ruleset_eval(&mut Scope::new(), &Selector::new(), true)?),
                                 AtRule::Include(s)
                                 | AtRule::Each(s) => rules.extend(s),
                                 AtRule::Content => return Err(
@@ -426,7 +422,9 @@ impl<'a> StyleSheetParser<'a> {
                 }),
                 Expr::AtRule(a) => match a {
                     AtRule::For(f) => stmts.extend(f.ruleset_eval(scope, super_selector)?),
-                    AtRule::While(w) => stmts.extend(w.ruleset_eval(scope, super_selector)?),
+                    AtRule::While(w) => {
+                        stmts.extend(w.ruleset_eval(scope, super_selector, false)?)
+                    }
                     AtRule::Include(s) | AtRule::Each(s) => stmts.extend(s),
                     AtRule::If(i) => stmts.extend(i.eval(scope, super_selector)?),
                     AtRule::Content => {
@@ -605,11 +603,15 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                     if global {
                         insert_global_var(&name.node, val.clone())?;
                     }
-                    if !default || scope.get_var(name.clone()).is_err() {
+                    let var_exists = scope.var_exists(&name.node);
+                    if (default && !var_exists) || !default {
                         return Ok(Some(Spanned {
                             node: Expr::VariableDecl(name.node, Box::new(val)),
                             span,
                         }));
+                    }
+                    if !values.is_empty() {
+                        todo!()
                     }
                 } else {
                     values.push(tok);

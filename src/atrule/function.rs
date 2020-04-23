@@ -108,6 +108,7 @@ impl Function {
             &mut std::mem::take(&mut self.body).into_iter().peekmore(),
             &mut self.scope,
             super_selector,
+            false,
         )
     }
 
@@ -148,6 +149,7 @@ impl Function {
                             &mut f.body.clone().into_iter().peekmore(),
                             &mut self.scope,
                             super_selector,
+                            false,
                         )?;
                         if let Some(v) = self.call(super_selector, for_stmts)? {
                             return Ok(Some(v));
@@ -161,13 +163,14 @@ impl Function {
                     }
                 }
                 Stmt::AtRule(AtRule::While(w)) => {
-                    let mut val = Value::from_vec(w.cond.clone(), &mut self.scope, super_selector)?;
                     let scope = &mut self.scope.clone();
+                    let mut val = Value::from_vec(w.cond.clone(), scope, super_selector)?;
                     while val.node.is_true(val.span)? {
                         let while_stmts = eat_stmts(
                             &mut w.body.clone().into_iter().peekmore(),
-                            &mut self.scope,
+                            scope,
                             super_selector,
+                            false,
                         )?;
                         if let Some(v) = self.call(super_selector, while_stmts)? {
                             return Ok(Some(v));

@@ -3,7 +3,7 @@ use codemap::Spanned;
 use peekmore::PeekMoreIterator;
 
 use crate::error::SassResult;
-use crate::scope::Scope;
+use crate::scope::{global_var_exists, insert_global_var, Scope};
 use crate::selector::Selector;
 use crate::{eat_expr, Expr, RuleSet, Stmt, Token};
 
@@ -11,6 +11,7 @@ pub(crate) fn eat_stmts<I: Iterator<Item = Token>>(
     toks: &mut PeekMoreIterator<I>,
     scope: &mut Scope,
     super_selector: &Selector,
+    at_root: bool,
 ) -> SassResult<Vec<Spanned<Stmt>>> {
     let mut stmts = Vec::new();
     while let Some(expr) = eat_expr(toks, scope, super_selector)? {
@@ -26,7 +27,7 @@ pub(crate) fn eat_stmts<I: Iterator<Item = Token>>(
             ),
             Expr::MixinDecl(..) | Expr::FunctionDecl(..) => todo!(),
             Expr::Selector(selector) => {
-                let rules = eat_stmts(toks, scope, &super_selector.zip(&selector))?;
+                let rules = eat_stmts(toks, scope, &super_selector.zip(&selector), at_root)?;
                 stmts.push(
                     Stmt::RuleSet(RuleSet {
                         super_selector: super_selector.clone(),
@@ -36,7 +37,11 @@ pub(crate) fn eat_stmts<I: Iterator<Item = Token>>(
                     .span(span),
                 );
             }
+            //TODO: refactor handling of `Expr::VariableDecl`, as most is already handled in `eat_expr`
             Expr::VariableDecl(name, val) => {
+                if at_root && global_var_exists(&name) {
+                    insert_global_var(&name, *val.clone())?;
+                }
                 scope.insert_var(&name, *val)?;
             }
             Expr::MultilineComment(s) => stmts.push(Stmt::MultilineComment(s).span(span)),

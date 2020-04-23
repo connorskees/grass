@@ -49,7 +49,7 @@ impl UnknownAtRule {
             params.push(tok.kind);
         }
 
-        let raw_body = eat_stmts(toks, scope, super_selector)?;
+        let raw_body = eat_stmts(toks, scope, super_selector, false)?;
         let mut rules = Vec::with_capacity(raw_body.len());
         let mut body = Vec::new();
 

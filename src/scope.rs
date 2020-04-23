@@ -17,7 +17,7 @@ pub(crate) fn get_global_var(s: Spanned<String>) -> SassResult<Spanned<Value>> {
 }
 
 pub(crate) fn global_var_exists(v: &str) -> bool {
-    GLOBAL_SCOPE.with(|scope| scope.borrow().vars().contains_key(v))
+    GLOBAL_SCOPE.with(|scope| scope.borrow().vars().contains_key(&v.replace('_', "-")))
 }
 
 pub(crate) fn insert_global_var(s: &str, v: Spanned<Value>) -> SassResult<Option<Spanned<Value>>> {
@@ -32,7 +32,12 @@ pub(crate) fn get_global_fn(s: Spanned<String>) -> SassResult<Function> {
 }
 
 pub(crate) fn global_fn_exists(v: &str) -> bool {
-    GLOBAL_SCOPE.with(|scope| scope.borrow().functions().contains_key(v))
+    GLOBAL_SCOPE.with(|scope| {
+        scope
+            .borrow()
+            .functions()
+            .contains_key(&v.replace('_', "-"))
+    })
 }
 
 pub(crate) fn insert_global_fn(s: &str, v: Function) -> Option<Function> {
@@ -47,7 +52,7 @@ pub(crate) fn get_global_mixin(s: Spanned<String>) -> SassResult<Mixin> {
 }
 
 pub(crate) fn global_mixin_exists(v: &str) -> bool {
-    GLOBAL_SCOPE.with(|scope| scope.borrow().mixins().contains_key(v))
+    GLOBAL_SCOPE.with(|scope| scope.borrow().mixins().contains_key(&v.replace('_', "-")))
 }
 
 pub(crate) fn insert_global_mixin(s: &str, v: Mixin) -> Option<Mixin> {

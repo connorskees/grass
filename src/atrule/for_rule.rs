@@ -46,6 +46,7 @@ impl For {
                 &mut self.body.clone().into_iter().peekmore(),
                 scope,
                 super_selector,
+                false,
             )?);
         }
         Ok(stmts)

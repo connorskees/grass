@@ -24,16 +24,32 @@ impl While {
         self,
         scope: &mut Scope,
         super_selector: &Selector,
+        at_root: bool,
     ) -> SassResult<Vec<Spanned<Stmt>>> {
         let mut stmts = Vec::new();
         let mut val = Value::from_vec(self.cond.clone(), scope, super_selector)?;
         let scope = &mut scope.clone();
         while val.node.is_true(val.span)? {
-            stmts.extend(eat_stmts(
+            for stmt in eat_stmts(
                 &mut self.body.clone().into_iter().peekmore(),
                 scope,
                 super_selector,
-            )?);
+                at_root,
+            )? {
+                match stmt.node {
+                    Stmt::AtRule(AtRule::For(f)) => {
+                        stmts.extend(f.ruleset_eval(scope, super_selector)?)
+                    }
+                    Stmt::AtRule(AtRule::While(w)) => {
+                        stmts.extend(w.ruleset_eval(scope, super_selector, at_root)?)
+                    }
+                    Stmt::AtRule(AtRule::Include(s)) | Stmt::AtRule(AtRule::Each(s)) => {
+                        stmts.extend(s)
+                    }
+                    Stmt::AtRule(AtRule::If(i)) => stmts.extend(i.eval(scope, super_selector)?),
+                    _ => stmts.push(stmt),
+                }
+            }
             val = Value::from_vec(self.cond.clone(), scope, super_selector)?;
         }
         Ok(stmts)
@@ -53,9 +69,9 @@ pub(crate) fn parse_while<I: Iterator<Item = Token>>(
 
     toks.next();
 
-    let body = read_until_closing_curly_brace(toks);
+    let mut body = read_until_closing_curly_brace(toks);
 
-    toks.next();
+    body.push(toks.next().unwrap());
 
     devour_whitespace(toks);
     Ok(Spanned {

@@ -118,7 +118,12 @@ impl If {
         if !found_true {
             toks = self.else_;
         }
-        for stmt in eat_stmts(&mut toks.into_iter().peekmore(), scope, super_selector)? {
+        for stmt in eat_stmts(
+            &mut toks.into_iter().peekmore(),
+            scope,
+            super_selector,
+            false,
+        )? {
             match stmt.node {
                 Stmt::AtRule(AtRule::If(i)) => stmts.extend(i.eval(scope, super_selector)?),
                 Stmt::RuleSet(r) if r.selector.is_empty() => stmts.extend(r.rules),

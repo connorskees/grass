@@ -127,7 +127,7 @@ impl Mixin {
                         stmts.extend(f.ruleset_eval(&mut self.scope, super_selector)?)
                     }
                     AtRule::While(w) => {
-                        stmts.extend(w.ruleset_eval(&mut self.scope, super_selector)?)
+                        stmts.extend(w.ruleset_eval(&mut self.scope, super_selector, false)?)
                     }
                     AtRule::Include(s) | AtRule::Each(s) => stmts.extend(s),
                     AtRule::If(i) => stmts.extend(i.eval(&mut self.scope.clone(), super_selector)?),
@@ -223,9 +223,9 @@ pub(crate) fn eat_include<I: Iterator<Item = Token>>(
     let content = if let Some(tok) = toks.peek() {
         if tok.kind == '{' {
             toks.next();
-            eat_stmts(toks, &mut scope.clone(), super_selector)?
+            eat_stmts(toks, &mut scope.clone(), super_selector, false)?
         } else if has_content {
-            eat_stmts(toks, &mut scope.clone(), super_selector)?
+            eat_stmts(toks, &mut scope.clone(), super_selector, false)?
         } else {
             Vec::new()
         }
