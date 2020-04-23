@@ -191,9 +191,8 @@ impl fmt::Debug for Number {
 impl Display for Number {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut whole = self.val.to_integer().abs();
-        let mut dec = String::new();
-
         let mut frac = self.val.fract();
+        let mut dec = String::with_capacity(if frac.is_zero() { 0 } else { PRECISION + 1 });
         if frac != BigRational::from_integer(BigInt::from(0)) {
             dec.write_char('.')?;
             for _ in 0..(PRECISION - 1) {
