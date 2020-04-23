@@ -8,7 +8,7 @@ use crate::error::SassResult;
 use crate::scope::Scope;
 use crate::selector::Selector;
 use crate::utils::{
-    devour_whitespace, eat_ident, read_until_closing_curly_brace, read_until_open_curly_brace,
+    devour_whitespace, eat_ident, read_until_closing_curly_brace, read_until_open_curly_brace, devour_whitespace_or_comment
 };
 use crate::value::Value;
 use crate::{Stmt, Token};
@@ -35,10 +35,11 @@ impl If {
     pub fn from_tokens<I: Iterator<Item = Token>>(
         toks: &mut PeekMoreIterator<I>,
     ) -> SassResult<If> {
+        devour_whitespace_or_comment(toks)?;
         let mut branches = Vec::new();
         let init_cond = read_until_open_curly_brace(toks);
         toks.next();
-        devour_whitespace(toks);
+        devour_whitespace_or_comment(toks)?;
         let mut init_toks = read_until_closing_curly_brace(toks);
         init_toks.push(toks.next().unwrap());
         devour_whitespace(toks);

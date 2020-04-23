@@ -78,3 +78,13 @@ test!(
     a { color: foo(bar); }",
     "a {\n  color: bar;\n}\n"
 );
+test!(
+    multiline_comments_surrounding_condition_empty,
+    "@if/**/true/**/{ a { color: red; } }",
+    "a {\n  color: red;\n}\n"
+);
+test!(
+    multiline_comments_surrounding_condition,
+    "@if/* pre 1 */true/* post 1 */{ a { color: red; } }",
+    "a {\n  color: red;\n}\n"
+);

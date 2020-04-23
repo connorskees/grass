@@ -357,8 +357,7 @@ impl<'a> StyleSheetParser<'a> {
                             });
                         }
                         v => {
-                            let pos = self.lexer.next().unwrap().pos();
-                            let rule = AtRule::from_tokens(&v, pos, &mut self.lexer, &mut Scope::new(), &Selector::new())?;
+                            let rule = AtRule::from_tokens(&v, span, &mut self.lexer, &mut Scope::new(), &Selector::new())?;
                             match rule.node {
                                 AtRule::Mixin(name, mixin) => {
                                     insert_global_mixin(&name, *mixin);

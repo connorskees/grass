@@ -40,13 +40,20 @@ pub(crate) fn devour_whitespace_or_comment<I: Iterator<Item = Token>>(
     let mut found_whitespace = false;
     while let Some(tok) = toks.peek() {
         if tok.kind == '/' {
-            let pos = toks.next().unwrap().pos();
-            match toks.peek().unwrap().kind {
+            let next = match toks.peek_forward(1) {
+                Some(v) => v,
+                None => return Ok(found_whitespace),
+            };
+            match next.kind {
                 '*' => {
+                    toks.next();
                     eat_comment(toks, &Scope::new(), &Selector::new())?;
                 }
                 '/' => read_until_newline(toks),
-                _ => return Err(("Expected expression.", pos).into()),
+                _ => {
+                    toks.reset_view();
+                    return Ok(found_whitespace)
+                },
             };
             found_whitespace = true;
             continue;
