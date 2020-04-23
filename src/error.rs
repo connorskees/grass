@@ -49,7 +49,9 @@ impl Display for SassError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let (message, loc) = match &self.kind {
             SassErrorKind::ParseError { message, loc } => (message, loc),
-            _ => todo!(),
+            SassErrorKind::FromUtf8Error(s) => return writeln!(f, "Error: {}", s),
+            SassErrorKind::IoError(s) => return writeln!(f, "Error: {}", s),
+            SassErrorKind::Raw(..) => todo!(),
         };
         let line = loc.begin.line + 1;
         let col = loc.begin.column + 1;
