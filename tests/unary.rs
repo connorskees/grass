@@ -17,9 +17,14 @@ test!(
 );
 test!(unary_pos_color, "a {\n  color: +\"foo\";\n}\n");
 test!(
-    unary_pos_number,
+    unary_pos_number_unit,
     "a {\n  color: +1px;\n}\n",
     "a {\n  color: 1px;\n}\n"
+);
+test!(
+    unary_pos_number,
+    "a {\n  color: +10;\n}\n",
+    "a {\n  color: 10;\n}\n"
 );
 test!(
     unary_pos_in_list,

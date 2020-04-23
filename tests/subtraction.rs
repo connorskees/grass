@@ -204,3 +204,8 @@ test!(
     "a {\n  plus-after-minus: 1 - + 2;\n}\n",
     "a {\n  plus-after-minus: -1;\n}\n"
 );
+test!(
+    multiline_comments_between_operands,
+    "a {\n  color: 1/**/-/**/1;\n}\n",
+    "a {\n  color: 0;\n}\n"
+);

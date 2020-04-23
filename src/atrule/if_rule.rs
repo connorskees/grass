@@ -8,7 +8,8 @@ use crate::error::SassResult;
 use crate::scope::Scope;
 use crate::selector::Selector;
 use crate::utils::{
-    devour_whitespace, eat_ident, read_until_closing_curly_brace, read_until_open_curly_brace, devour_whitespace_or_comment
+    devour_whitespace, devour_whitespace_or_comment, eat_ident, read_until_closing_curly_brace,
+    read_until_open_curly_brace,
 };
 use crate::value::Value;
 use crate::{Stmt, Token};

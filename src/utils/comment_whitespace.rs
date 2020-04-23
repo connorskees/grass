@@ -52,8 +52,8 @@ pub(crate) fn devour_whitespace_or_comment<I: Iterator<Item = Token>>(
                 '/' => read_until_newline(toks),
                 _ => {
                     toks.reset_view();
-                    return Ok(found_whitespace)
-                },
+                    return Ok(found_whitespace);
+                }
             };
             found_whitespace = true;
             continue;
