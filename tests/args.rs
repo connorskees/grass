@@ -30,3 +30,8 @@ test!(
     "$da: a;\n\n@mixin foo($x: $da) {\n  color: $x;\n}\n$da: b;\n\na {\n  @include foo();\n}\n",
     "a {\n  color: b;\n}\n"
 );
+test!(
+    variable_being_subtracted,
+    "$index: 1;\n\n@function foo($a) {\n  @return $a;\n}\n\na {\n  color: foo($index - 1);\n}\n",
+    "a {\n  color: 0;\n}\n"
+);

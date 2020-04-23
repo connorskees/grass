@@ -8,8 +8,8 @@ use crate::error::SassResult;
 use crate::scope::Scope;
 use crate::selector::Selector;
 use crate::utils::{
-    devour_whitespace, devour_whitespace_or_comment, eat_ident, read_until_closing_paren,
-    read_until_closing_quote, read_until_closing_square_brace,
+    devour_whitespace, devour_whitespace_or_comment, eat_ident, eat_ident_no_interpolation,
+    read_until_closing_paren, read_until_closing_quote, read_until_closing_square_brace,
 };
 use crate::value::Value;
 use crate::Token;
@@ -298,8 +298,6 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
 
 pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
     toks: &mut PeekMoreIterator<I>,
-    scope: &Scope,
-    super_selector: &Selector,
 ) -> SassResult<CallArgs> {
     let mut args: HashMap<CallArg, Vec<Token>> = HashMap::new();
     devour_whitespace_or_comment(toks)?;
@@ -310,8 +308,8 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
         match toks.peek().unwrap().kind {
             '$' => {
                 let Token { pos, .. } = toks.next().unwrap();
-                let v = eat_ident(toks, scope, super_selector)?;
-                devour_whitespace_or_comment(toks)?;
+                let v = eat_ident_no_interpolation(toks, false)?;
+                let whitespace = devour_whitespace_or_comment(toks)?;
                 if toks.peek().unwrap().kind == ':' {
                     toks.next();
                     name = v.node;
@@ -324,6 +322,9 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
                         current_pos += len;
                         tok
                     }));
+                    if whitespace {
+                        val.push(Token::new(pos, ' '));
+                    }
                     name.clear();
                 }
             }

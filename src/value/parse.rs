@@ -523,11 +523,7 @@ impl Value {
                     Err(_) => match GLOBAL_FUNCTIONS.get(&s.replace('_', "-")) {
                         Some(f) => {
                             return Ok(IntermediateValue::Value(Spanned {
-                                node: f.0(
-                                    eat_call_args(toks, scope, super_selector)?,
-                                    scope,
-                                    super_selector,
-                                )?,
+                                node: f.0(eat_call_args(toks)?, scope, super_selector)?,
                                 span,
                             }))
                         }
@@ -541,13 +537,12 @@ impl Value {
                                 "url" => match try_eat_url(toks, scope, super_selector)? {
                                     Some(val) => s = val,
                                     None => s.push_str(
-                                        &eat_call_args(toks, scope, super_selector)?
+                                        &eat_call_args(toks)?
                                             .to_css_string(scope, super_selector)?,
                                     ),
                                 },
                                 _ => s.push_str(
-                                    &eat_call_args(toks, scope, super_selector)?
-                                        .to_css_string(scope, super_selector)?,
+                                    &eat_call_args(toks)?.to_css_string(scope, super_selector)?,
                                 ),
                             }
                             return Ok(IntermediateValue::Value(Spanned {
@@ -558,12 +553,8 @@ impl Value {
                     },
                 };
                 Ok(IntermediateValue::Value(
-                    func.eval(
-                        eat_call_args(toks, scope, super_selector)?,
-                        scope,
-                        super_selector,
-                    )?
-                    .span(span),
+                    func.eval(eat_call_args(toks)?, scope, super_selector)?
+                        .span(span),
                 ))
             }
             _ => {
