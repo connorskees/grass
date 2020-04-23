@@ -123,9 +123,10 @@ impl Mixin {
             let span = expr.span;
             match expr.node {
                 Expr::AtRule(a) => match a {
-                    AtRule::Include(s) | AtRule::While(s) | AtRule::Each(s) | AtRule::For(s) => {
-                        stmts.extend(s)
+                    AtRule::For(f) => {
+                        stmts.extend(f.ruleset_eval(&mut self.scope, super_selector)?)
                     }
+                    AtRule::Include(s) | AtRule::While(s) | AtRule::Each(s) => stmts.extend(s),
                     AtRule::If(i) => stmts.extend(i.eval(&mut self.scope.clone(), super_selector)?),
                     AtRule::Content => stmts.extend(self.content.clone()),
                     AtRule::Return(..) => {
@@ -193,7 +194,7 @@ pub(crate) fn eat_include<I: Iterator<Item = Token>>(
         match tok.kind {
             ';' => CallArgs::new(name.span),
             '(' => {
-                let tmp = eat_call_args(toks, scope, super_selector)?;
+                let tmp = eat_call_args(toks)?;
                 devour_whitespace_or_comment(toks)?;
                 if let Some(tok) = toks.next() {
                     match tok.kind {

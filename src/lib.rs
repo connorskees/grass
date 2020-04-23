@@ -378,10 +378,10 @@ impl<'a> StyleSheetParser<'a> {
                                         ("This at-rule is not allowed here.", rule.span).into()
                                     )
                                 }
+                                AtRule::For(f) => rules.extend(f.ruleset_eval(&mut Scope::new(), &Selector::new())?),
                                 AtRule::Include(s)
                                 | AtRule::While(s)
-                                | AtRule::Each(s)
-                                | AtRule::For(s) => rules.extend(s),
+                                | AtRule::Each(s) => rules.extend(s),
                                 AtRule::Content => return Err(
                                     ("@content is only allowed within mixin declarations.", rule.span
                                 ).into()),
@@ -425,9 +425,8 @@ impl<'a> StyleSheetParser<'a> {
                     span,
                 }),
                 Expr::AtRule(a) => match a {
-                    AtRule::Include(s) | AtRule::While(s) | AtRule::Each(s) | AtRule::For(s) => {
-                        stmts.extend(s)
-                    }
+                    AtRule::For(f) => stmts.extend(f.ruleset_eval(scope, super_selector)?),
+                    AtRule::Include(s) | AtRule::While(s) | AtRule::Each(s) => stmts.extend(s),
                     AtRule::If(i) => stmts.extend(i.eval(scope, super_selector)?),
                     AtRule::Content => {
                         return Err((

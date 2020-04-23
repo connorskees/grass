@@ -43,3 +43,13 @@ test!(
     "a {\n  $a: red;\n  @for $i from 1 to 3 {\n    $a: blue;\n  }\n  color: $a;\n}\n",
     "a {\n  color: blue;\n}\n"
 );
+test!(
+    simple_return_in_function,
+    "@function foo() {\n  @for $i from 1 to 2 {\n    @return $i;\n  }\n}\na {\n  color: foo();\n}\n",
+    "a {\n  color: 1;\n}\n"
+);
+test!(
+    return_gated_by_if_in_function,
+    "@function foo() {\n  @for $i from 1 through 2 {\n    @if $i==2 {\n      @return $i;\n    }\n  }\n}\na {\n  color: foo();\n}\n",
+    "a {\n  color: 2;\n}\n"
+);

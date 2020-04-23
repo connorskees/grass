@@ -9,8 +9,9 @@ use crate::atrule::AtRule;
 use crate::error::SassResult;
 use crate::scope::Scope;
 use crate::selector::Selector;
+use crate::unit::Unit;
 use crate::utils::{devour_whitespace, eat_ident, read_until_closing_curly_brace};
-use crate::value::Value;
+use crate::value::{Number, Value};
 use crate::{Stmt, Token};
 
 #[derive(Debug, Clone)]
@@ -118,32 +119,50 @@ impl Function {
     ) -> SassResult<Value> {
         self.args(args, scope, super_selector)?;
         let stmts = self.eval_body(super_selector)?;
-        self.call(super_selector, stmts)
+        self.call(super_selector, stmts)?
+            .ok_or(("Function finished without @return.", self.pos).into())
     }
 
-    pub fn call(&self, super_selector: &Selector, stmts: Vec<Spanned<Stmt>>) -> SassResult<Value> {
+    pub fn call(
+        &mut self,
+        super_selector: &Selector,
+        stmts: Vec<Spanned<Stmt>>,
+    ) -> SassResult<Option<Value>> {
         for stmt in stmts {
             match stmt.node {
                 Stmt::AtRule(AtRule::Return(toks)) => {
-                    return Ok(Value::from_tokens(
-                        &mut toks.into_iter().peekmore(),
-                        &self.scope,
-                        super_selector,
-                    )?
-                    .node)
+                    return Ok(Some(
+                        Value::from_vec(toks, &self.scope, super_selector)?.node,
+                    ));
                 }
-                Stmt::AtRule(AtRule::For(..)) => todo!("@for in function"),
-                Stmt::AtRule(AtRule::If(i)) => {
-                    if let Ok(v) = self.call(
+                Stmt::AtRule(AtRule::For(f)) => {
+                    for i in f.iter().cloned() {
+                        self.scope.insert_var(
+                            &f.var.node,
+                            Spanned {
+                                node: Value::Dimension(Number::from(i), Unit::None),
+                                span: f.var.span,
+                            },
+                        )?;
+                    }
+                    let for_stmts = eat_stmts(
+                        &mut f.body.clone().into_iter().peekmore(),
+                        &mut self.scope,
                         super_selector,
-                        i.eval(&mut self.scope.clone(), super_selector)?,
-                    ) {
-                        return Ok(v);
+                    )?;
+                    if let Some(v) = self.call(super_selector, for_stmts)? {
+                        return Ok(Some(v));
+                    }
+                }
+                Stmt::AtRule(AtRule::If(i)) => {
+                    let if_stmts = i.eval(&mut self.scope, super_selector)?;
+                    if let Some(v) = self.call(super_selector, if_stmts)? {
+                        return Ok(Some(v));
                     }
                 }
                 _ => return Err(("This at-rule is not allowed here.", stmt.span).into()),
             }
         }
-        Err(("Function finished without @return.", self.pos).into())
+        Ok(None)
     }
 }

@@ -13,6 +13,7 @@ use crate::utils::{
 use crate::value::Value;
 use crate::{RuleSet, Stmt, Token};
 
+use for_rule::For;
 pub(crate) use function::Function;
 pub(crate) use if_rule::If;
 pub(crate) use kind::AtRuleKind;
@@ -38,7 +39,7 @@ pub(crate) enum AtRule {
     Charset,
     Content,
     Unknown(UnknownAtRule),
-    For(Vec<Spanned<Stmt>>),
+    For(For),
     Each(Vec<Spanned<Stmt>>),
     While(Vec<Spanned<Stmt>>),
     Include(Vec<Spanned<Stmt>>),

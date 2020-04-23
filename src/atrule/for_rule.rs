@@ -1,3 +1,5 @@
+use std::iter::Iterator;
+
 use codemap::{Span, Spanned};
 
 use peekmore::{PeekMore, PeekMoreIterator};
@@ -15,7 +17,44 @@ use crate::utils::{
     devour_whitespace, eat_ident, read_until_closing_curly_brace, read_until_open_curly_brace,
 };
 use crate::value::{Number, Value};
-use crate::Token;
+use crate::{Stmt, Token};
+
+#[derive(Debug, Clone)]
+pub(crate) struct For {
+    pub var: Spanned<String>,
+    // TODO: optimization: this could be a generic or &dyn Iterator maybe?
+    pub iter: Vec<usize>,
+    pub body: Vec<Token>,
+}
+
+impl For {
+    pub fn ruleset_eval(
+        self,
+        scope: &mut Scope,
+        super_selector: &Selector,
+    ) -> SassResult<Vec<Spanned<Stmt>>> {
+        let mut stmts = Vec::new();
+        for i in self.iter {
+            scope.insert_var(
+                &self.var.node,
+                Spanned {
+                    node: Value::Dimension(Number::from(i), Unit::None),
+                    span: self.var.span,
+                },
+            )?;
+            stmts.extend(eat_stmts(
+                &mut self.body.clone().into_iter().peekmore(),
+                scope,
+                super_selector,
+            )?);
+        }
+        Ok(stmts)
+    }
+
+    pub fn iter(&self) -> std::slice::Iter<'_, usize> {
+        self.iter.iter()
+    }
+}
 
 pub(crate) fn parse_for<I: Iterator<Item = Token>>(
     toks: &mut PeekMoreIterator<I>,
@@ -23,7 +62,6 @@ pub(crate) fn parse_for<I: Iterator<Item = Token>>(
     super_selector: &Selector,
     span: Span,
 ) -> SassResult<AtRule> {
-    let mut stmts = Vec::new();
     devour_whitespace(toks);
     let var = match toks.next().ok_or(("expected \"$\".", span))?.kind {
         '$' => eat_ident(toks, scope, super_selector)?,
@@ -137,29 +175,11 @@ pub(crate) fn parse_for<I: Iterator<Item = Token>>(
 
     devour_whitespace(toks);
 
-    let (mut x, mut y);
-    let iter: &mut dyn std::iter::Iterator<Item = usize> = if from < to {
-        x = from..(to + through);
-        &mut x
+    let iter = if from < to {
+        (from..(to + through)).collect()
     } else {
-        y = ((to - through)..(from + 1)).skip(1).rev();
-        &mut y
+        ((to - through)..(from + 1)).skip(1).rev().collect()
     };
 
-    for i in iter {
-        scope.insert_var(
-            &var,
-            Spanned {
-                node: Value::Dimension(Number::from(i), Unit::None),
-                span: var.span,
-            },
-        )?;
-        stmts.extend(eat_stmts(
-            &mut body.clone().into_iter().peekmore(),
-            scope,
-            super_selector,
-        )?);
-    }
-
-    Ok(AtRule::For(stmts))
+    Ok(AtRule::For(For { iter, body, var }))
 }
