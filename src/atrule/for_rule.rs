@@ -42,12 +42,27 @@ impl For {
                     span: self.var.span,
                 },
             )?;
-            stmts.extend(eat_stmts(
+            for stmt in eat_stmts(
                 &mut self.body.clone().into_iter().peekmore(),
                 scope,
                 super_selector,
                 false,
-            )?);
+            )? {
+                match stmt.node {
+                    Stmt::AtRule(AtRule::For(f)) => {
+                        stmts.extend(f.ruleset_eval(scope, super_selector)?)
+                    }
+                    Stmt::AtRule(AtRule::While(w)) => {
+                        // TODO: should at_root be false? scoping
+                        stmts.extend(w.ruleset_eval(scope, super_selector, false)?)
+                    }
+                    Stmt::AtRule(AtRule::Include(s)) | Stmt::AtRule(AtRule::Each(s)) => {
+                        stmts.extend(s)
+                    }
+                    Stmt::AtRule(AtRule::If(i)) => stmts.extend(i.eval(scope, super_selector)?),
+                    _ => stmts.push(stmt),
+                }
+            }
         }
         Ok(stmts)
     }

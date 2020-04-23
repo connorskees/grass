@@ -53,3 +53,8 @@ test!(
     "@function foo() {\n  @for $i from 1 through 2 {\n    @if $i==2 {\n      @return $i;\n    }\n  }\n}\na {\n  color: foo();\n}\n",
     "a {\n  color: 2;\n}\n"
 );
+test!(
+    inner_if,
+    "a {\n  @for $i from 1 to 3 {\n    @if $i==2 {\n      color: red;\n    }\n  }\n}\n",
+    "a {\n  color: red;\n}\n"
+);
