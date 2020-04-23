@@ -144,14 +144,14 @@ impl Function {
                                 span: f.var.span,
                             },
                         )?;
-                    }
-                    let for_stmts = eat_stmts(
-                        &mut f.body.clone().into_iter().peekmore(),
-                        &mut self.scope,
-                        super_selector,
-                    )?;
-                    if let Some(v) = self.call(super_selector, for_stmts)? {
-                        return Ok(Some(v));
+                        let for_stmts = eat_stmts(
+                            &mut f.body.clone().into_iter().peekmore(),
+                            &mut self.scope,
+                            super_selector,
+                        )?;
+                        if let Some(v) = self.call(super_selector, for_stmts)? {
+                            return Ok(Some(v));
+                        }
                     }
                 }
                 Stmt::AtRule(AtRule::If(i)) => {
