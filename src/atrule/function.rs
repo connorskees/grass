@@ -160,6 +160,21 @@ impl Function {
                         return Ok(Some(v));
                     }
                 }
+                Stmt::AtRule(AtRule::While(w)) => {
+                    let mut val = Value::from_vec(w.cond.clone(), &mut self.scope, super_selector)?;
+                    let scope = &mut self.scope.clone();
+                    while val.node.is_true(val.span)? {
+                        let while_stmts = eat_stmts(
+                            &mut w.body.clone().into_iter().peekmore(),
+                            &mut self.scope,
+                            super_selector,
+                        )?;
+                        if let Some(v) = self.call(super_selector, while_stmts)? {
+                            return Ok(Some(v));
+                        }
+                        val = Value::from_vec(w.cond.clone(), scope, super_selector)?;
+                    }
+                }
                 _ => return Err(("This at-rule is not allowed here.", stmt.span).into()),
             }
         }

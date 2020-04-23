@@ -20,6 +20,7 @@ pub(crate) use kind::AtRuleKind;
 pub(crate) use mixin::{eat_include, Mixin};
 use parse::{eat_stmts, eat_stmts_at_root};
 use unknown::UnknownAtRule;
+use while_rule::{parse_while, While};
 
 mod for_rule;
 mod function;
@@ -28,6 +29,7 @@ mod kind;
 mod mixin;
 mod parse;
 mod unknown;
+mod while_rule;
 
 #[derive(Debug, Clone)]
 pub(crate) enum AtRule {
@@ -41,7 +43,7 @@ pub(crate) enum AtRule {
     Unknown(UnknownAtRule),
     For(For),
     Each(Vec<Spanned<Stmt>>),
-    While(Vec<Spanned<Stmt>>),
+    While(While),
     Include(Vec<Spanned<Stmt>>),
     If(If),
     AtRoot(Vec<Spanned<Stmt>>),
@@ -301,36 +303,7 @@ impl AtRule {
                 node: for_rule::parse_for(toks, scope, super_selector, kind_span)?,
                 span: kind_span,
             },
-            AtRuleKind::While => {
-                let mut stmts = Vec::new();
-                devour_whitespace(toks);
-                let cond = read_until_open_curly_brace(toks);
-
-                if cond.is_empty() {
-                    return Err(("Expected expression.", kind_span).into());
-                }
-
-                toks.next();
-                let scope = &mut scope.clone();
-                let body = read_until_closing_curly_brace(toks);
-                toks.next();
-
-                devour_whitespace(toks);
-
-                let mut val = Value::from_vec(cond.clone(), scope, super_selector)?;
-                while val.node.is_true(val.span)? {
-                    stmts.extend(eat_stmts(
-                        &mut body.clone().into_iter().peekmore(),
-                        scope,
-                        super_selector,
-                    )?);
-                    val = Value::from_vec(cond.clone(), scope, super_selector)?;
-                }
-                Spanned {
-                    node: AtRule::While(stmts),
-                    span: kind_span,
-                }
-            }
+            AtRuleKind::While => parse_while(toks, kind_span)?,
             AtRuleKind::Keyframes => todo!("@keyframes not yet implemented"),
             AtRuleKind::Unknown(name) => Spanned {
                 node: AtRule::Unknown(UnknownAtRule::from_tokens(

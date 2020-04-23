@@ -27,3 +27,8 @@ error!(
     while_empty_condition,
     "@while {}", "Error: Expected expression."
 );
+test!(
+    early_return_in_function,
+    "@function bar() {\n  @while (true) {\n    @return true;\n  }\n}\n\na {\n  color: bar();\n}\n",
+    "a {\n  color: true;\n}\n"
+);

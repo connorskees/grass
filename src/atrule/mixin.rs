@@ -126,7 +126,10 @@ impl Mixin {
                     AtRule::For(f) => {
                         stmts.extend(f.ruleset_eval(&mut self.scope, super_selector)?)
                     }
-                    AtRule::Include(s) | AtRule::While(s) | AtRule::Each(s) => stmts.extend(s),
+                    AtRule::While(w) => {
+                        stmts.extend(w.ruleset_eval(&mut self.scope, super_selector)?)
+                    }
+                    AtRule::Include(s) | AtRule::Each(s) => stmts.extend(s),
                     AtRule::If(i) => stmts.extend(i.eval(&mut self.scope.clone(), super_selector)?),
                     AtRule::Content => stmts.extend(self.content.clone()),
                     AtRule::Return(..) => {
