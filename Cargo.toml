@@ -10,6 +10,7 @@ repository = "https://github.com/connorskees/grass"
 authors = ["ConnorSkees <39542938+ConnorSkees@users.noreply.github.com>"]
 edition = "2018"
 exclude = ["*.scss", "sass-spec", "tests", "Cargo.lock"]
+default-run = "grass"
 
 [[bin]]
 name = "grass"
@@ -19,6 +20,7 @@ required-features = ["commandline"]
 [lib]
 name = "grass"
 path = "src/lib.rs"
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 clap = { version = "2.33.0", optional = true }
@@ -29,6 +31,7 @@ once_cell = "1.3.1"
 rand = { version = "0.7.3", optional = true }
 codemap = "0.1.3"
 peekmore = "0.4.0"
+wasm-bindgen = { version = "0.2.60", optional = true }
 
 [features]
 default = ["commandline", "random"]
@@ -38,6 +41,8 @@ commandline = ["clap"]
 nightly = []
 # Option (enabled by default): enable the builtin functions `random([$limit])` and `unique-id()`
 random = ["rand"]
+# Option: compile to web assembly
+wasm = ["wasm-bindgen"]
 
 [dev-dependencies]
 tempfile = "3"

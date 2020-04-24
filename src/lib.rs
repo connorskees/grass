@@ -88,6 +88,9 @@ use codemap::{CodeMap, Span, Spanned};
 
 use peekmore::{PeekMore, PeekMoreIterator};
 
+#[cfg(feature = "wasm")]
+use wasm_bindgen::prelude::*;
+
 use crate::atrule::{eat_include, AtRule, AtRuleKind, Function, Mixin};
 pub use crate::error::{SassError, SassResult};
 use crate::imports::import;
@@ -124,6 +127,7 @@ mod utils;
 mod value;
 
 /// Represents a parsed SASS stylesheet with nesting
+#[cfg_attr(feature = "wasm", wasm_bindgen)]
 #[derive(Debug, Clone)]
 pub struct StyleSheet(Vec<Spanned<Stmt>>);
 
@@ -188,6 +192,28 @@ fn raw_to_parse_error(map: &CodeMap, err: SassError) -> SassError {
     SassError::from_loc(message, map.look_up_span(span))
 }
 
+#[cfg(feature = "wasm")]
+#[wasm_bindgen]
+impl StyleSheet {
+    pub fn new(input: String) -> Result<String, JsValue> {
+        let mut map = CodeMap::new();
+        let file = map.add_file("stdin".into(), input);
+        Ok(Css::from_stylesheet(StyleSheet(
+            StyleSheetParser {
+                lexer: Lexer::new(&file).peekmore(),
+                nesting: 0,
+                map: &map,
+            }
+            .parse_toplevel()
+            .map_err(|e| raw_to_parse_error(&map, e).to_string())?
+            .0,
+        ))
+        .map_err(|e| raw_to_parse_error(&map, e).to_string())?
+        .pretty_print()
+        .map_err(|e| raw_to_parse_error(&map, e).to_string())?)
+    }
+}
+
 impl StyleSheet {
     /// Write CSS to `buf`, constructed from a string
     ///
@@ -201,6 +227,7 @@ impl StyleSheet {
     /// }
     /// ```
     #[inline]
+    #[cfg(not(feature = "wasm"))]
     pub fn new(input: String) -> SassResult<String> {
         let mut map = CodeMap::new();
         let file = map.add_file("stdin".into(), input);
@@ -230,6 +257,7 @@ impl StyleSheet {
     /// }
     /// ```
     #[inline]
+    #[cfg(not(feature = "wasm"))]
     pub fn from_path<P: AsRef<Path> + Into<String> + Clone>(p: P) -> SassResult<String> {
         let mut map = CodeMap::new();
         let file = map.add_file(p.clone().into(), String::from_utf8(fs::read(p)?)?);
