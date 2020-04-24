@@ -113,3 +113,25 @@ test!(
     "a {\n  $x : true;\n  color: $x;\n}\n",
     "a {\n  color: true;\n}\n"
 );
+test!(
+    important_in_variable,
+    "$a: !important;\n\na {\n  color: $a;\n}\n",
+    "a {\n  color: !important;\n}\n"
+);
+test!(
+    important_in_variable_casing,
+    "$a: !ImPoRtAnT;\n\na {\n  color: $a;\n}\n",
+    "a {\n  color: !important;\n}\n"
+);
+test!(
+    exclamation_in_quoted_string,
+    "$a: \"big bang!\";\n\na {\n  color: $a;\n}\n",
+    "a {\n  color: \"big bang!\";\n}\n"
+);
+test!(
+    flag_uses_escape_sequence,
+    "$a: red;\n\na {\n  $a: green !\\67 lobal;\n}\n\na {\n  color: $a;\n}\n",
+    "a {\n  color: green;\n}\n"
+);
+error!(ends_with_bang, "$a: red !;", "Error: Expected identifier.");
+error!(unknown_flag, "$a: red !foo;", "Error: Invalid flag name.");

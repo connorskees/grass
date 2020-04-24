@@ -53,12 +53,11 @@ pub(crate) fn is_name_start(c: char) -> bool {
     c == '_' || c.is_alphanumeric() || c as u32 >= 0x0080
 }
 
-pub(crate) fn as_hex(c: u32) -> u32 {
-    if c <= '9' as u32 {
-        c - '0' as u32
-    } else if c <= 'F' as u32 {
-        10 + c - 'A' as u32
-    } else {
-        10 + c - 'a' as u32
+pub(crate) fn as_hex(c: char) -> u32 {
+    match c {
+        '0'..='9' => c as u32 - '0' as u32,
+        'A'..='F' => 10 + c as u32 - 'A' as u32,
+        'a'..='f' => 10 + c as u32 - 'a' as u32,
+        _ => panic!(),
     }
 }

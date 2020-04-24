@@ -102,7 +102,7 @@ fn escape<I: Iterator<Item = Token>>(
                 break;
             }
             value *= 16;
-            value += as_hex(toks.next().unwrap().kind as u32)
+            value += as_hex(toks.next().unwrap().kind)
         }
         if toks.peek().is_some() && toks.peek().unwrap().kind.is_whitespace() {
             toks.next();
@@ -287,7 +287,7 @@ pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
                         if !next.kind.is_ascii_hexdigit() {
                             break;
                         }
-                        value = (value << 4) + as_hex(toks.next().unwrap().kind as u32);
+                        value = (value << 4) + as_hex(toks.next().unwrap().kind);
                     }
 
                     if toks.peek().is_some() && toks.peek().unwrap().kind.is_ascii_whitespace() {
