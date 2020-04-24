@@ -20,7 +20,7 @@ a bug except for in the following situations:
 [Documentation](https://docs.rs/grass/)  
 [crates.io](https://crates.io/crates/grass)
 
-## WASM Support
+## Web Assembly
 
 `grass` experimentally releases a
 [WASM version of the library to npm](https://www.npmjs.com/package/@connorskees/grass),
