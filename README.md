@@ -11,15 +11,27 @@ replacement to the sass commandline executable.
 This crate aims to achieve complete feature parity with the dart-sass reference
 implementation. A deviation from the dart-sass implementation can be considered
 a bug except for in the following situations:
- - Error messages
- - Error spans
- - Certain aspects of the indented syntax
- - Potentially others in the future
+
+- Error messages
+- Error spans
+- Certain aspects of the indented syntax
+- Potentially others in the future
 
 [Documentation](https://docs.rs/grass/)  
 [crates.io](https://crates.io/crates/grass)
 
+## WASM Support
+
+`grass` experimentally releases a
+[WASM version of the library to npm](https://www.npmjs.com/package/@connorskees/grass),
+compiled using wasm-bindgen. To use `grass` in your JavaScript projects, just add
+`"@connorskees/grass": "^0.8.0"` to your package.json. Better documentation
+for this version will be provided when the library becomes more stable.
+
+## Status
+
 The large features remaining are
+
 ```
 all builtin selector functions (274 tests)
 builtin functions content-exists, min, max
@@ -33,7 +45,17 @@ a special parser for plain css
 aribtrary control flow in @function and @mixin
 ```
 
-To run the official test suite,
+## Testing
+
+As much as possible this library attempts to follow the same [philosophy for testing as
+`rust-analyzer`](https://internals.rust-lang.org/t/experience-report-contributing-to-rust-lang-rust/12012/17).
+Namely, all one should have to do is run `cargo test` to run all its tests.
+This library maintains a test suite distinct from the `sass-spec`, though it
+does include some spec tests verbatim. This has the benefit of allowing tests
+to be run without ruby as well as allowing the tests more granular than they
+are in the official spec.
+
+Having said that, to run the official test suite,
 
 ```bash
 git clone https://github.com/connorskees/grass
@@ -43,6 +65,8 @@ git submodule update
 cargo b --release
 ./sass-spec/sass-spec.rb -c './target/release/grass'
 ```
+
+These numbers come from a default run of the sass specification as shown above.
 
 ```
 2020-04-21
