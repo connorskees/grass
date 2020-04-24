@@ -34,6 +34,20 @@ pub(crate) fn devour_whitespace<I: Iterator<Item = W>, W: IsWhitespace>(
     found_whitespace
 }
 
+pub(crate) fn peek_whitespace<I: Iterator<Item = W>, W: IsWhitespace>(
+    s: &mut PeekMoreIterator<I>,
+) -> usize {
+    let mut peek_counter = 0;
+    while let Some(w) = s.peek() {
+        if !w.is_whitespace() {
+            break;
+        }
+        peek_counter += 1;
+        s.peek_forward(1);
+    }
+    peek_counter
+}
+
 pub(crate) fn devour_whitespace_or_comment<I: Iterator<Item = Token>>(
     toks: &mut PeekMoreIterator<I>,
 ) -> SassResult<bool> {

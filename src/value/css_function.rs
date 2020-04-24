@@ -5,6 +5,7 @@ use crate::scope::Scope;
 use crate::selector::Selector;
 use crate::utils::{
     devour_whitespace, parse_interpolation, peek_escape, peek_until_closing_curly_brace,
+    peek_whitespace,
 };
 use crate::Token;
 
@@ -88,6 +89,7 @@ pub(crate) fn try_eat_url<I: Iterator<Item = Token>>(
 ) -> SassResult<Option<String>> {
     let mut buf = String::from("url(");
     let mut peek_counter = 0;
+    peek_counter += peek_whitespace(toks);
     while let Some(tok) = toks.peek() {
         let kind = tok.kind;
         toks.move_forward(1);
@@ -117,10 +119,21 @@ pub(crate) fn try_eat_url<I: Iterator<Item = Token>>(
             }
         } else if kind == ')' {
             buf.push(')');
-            for _ in 0..=peek_counter {
-                toks.next();
-            }
+            toks.take(peek_counter).for_each(drop);
             return Ok(Some(buf));
+        } else if kind.is_whitespace() {
+            peek_counter += peek_whitespace(toks);
+            let next = match toks.peek() {
+                Some(v) => v,
+                None => break,
+            };
+            if next.kind == ')' {
+                buf.push(')');
+                toks.take(peek_counter + 1).for_each(drop);
+                return Ok(Some(buf));
+            } else {
+                break;
+            }
         } else {
             break;
         }

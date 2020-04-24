@@ -24,6 +24,26 @@ test!(
     "a {\n  color: url(1+2);\n}\n"
 );
 test!(
+    arithmetic_space_start_of_url,
+    "a {\n  color: url( 1+2);\n}\n",
+    "a {\n  color: url(1+2);\n}\n"
+);
+test!(
+    arithmetic_space_end_of_url,
+    "a {\n  color: url(1+2 );\n}\n",
+    "a {\n  color: url(1+2);\n}\n"
+);
+test!(
+    arithmetic_space_start_end_of_url,
+    "a {\n  color: url( 1+2 );\n}\n",
+    "a {\n  color: url(1+2);\n}\n"
+);
+test!(
+    arithmetic_space_start_end_of_url_and_operands,
+    "a {\n  color: url( 1 + 2 );\n}\n",
+    "a {\n  color: url(3);\n}\n"
+);
+test!(
     silent_comment,
     "a {\n  color: url(//some/absolute/path);\n}\n"
 );
