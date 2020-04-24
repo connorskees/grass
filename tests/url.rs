@@ -111,11 +111,16 @@ test!(
 test!(url_dot_dot, "a {\n  color: url(../foo/bar/..baz/);\n}\n");
 test!(
     silent_comment_in_interpolation,
-    "$roboto-font-path: \"../fonts/roboto\";\n\na {\n  color: url(#{//}\n  $roboto-font-path})\n}\n",
+    "$roboto-font-path: \"../fonts/roboto\";\n\na {\n  color: url(#{//}\n  $roboto-font-path});\n}\n",
     "a {\n  color: url(../fonts/roboto);\n}\n"
 );
 test!(
     interpolation_in_nested_url,
-    "a {\n  color: url(url(#{foo}))\n}\n",
+    "a {\n  color: url(url(#{foo}));\n}\n",
     "a {\n  color: url(url(foo));\n}\n"
+);
+test!(
+    no_space_after_colon_and_contains_semicolon,
+    "a {\n  color:url(;);\n}\n",
+    "a {\n  color: url(;);\n}\n"
 );

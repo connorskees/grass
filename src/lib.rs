@@ -106,6 +106,7 @@ pub(crate) use crate::token::Token;
 use crate::utils::{
     devour_whitespace, eat_comment, eat_ident, eat_ident_no_interpolation, eat_variable_value,
     parse_quoted_string, read_until_closing_curly_brace, read_until_newline, VariableDecl,
+    read_until_closing_paren
 };
 use crate::value::Value;
 
@@ -712,6 +713,12 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
             '\\' => {
                 values.push(toks.next().unwrap());
                 values.push(toks.next().unwrap());
+            }
+            // todo: this should only apply to special functions
+            // it is causing us to emit nothing on malformed input
+            '(' => {
+                values.push(toks.next().unwrap());
+                values.extend(read_until_closing_paren(toks));
             }
             _ => values.push(toks.next().unwrap()),
         };
