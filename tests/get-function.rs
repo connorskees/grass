@@ -79,12 +79,12 @@ test!(
     "a {b: call(get-function(lighten), $color: red, $amount: 5);}",
     "a {\n  b: #ff1a1a;\n}\n"
 );
-// test!(
-//     call_user_defined_super_selector,
-//     "@function user-defined() {\n  @return &;\n}\n
-//      a {b: call(get-function(user-defined));}",
-//     "a {\n  b: a;\n}\n"
-// );
+test!(
+    call_user_defined_super_selector,
+    "@function user-defined() {\n  @return &;\n}\n
+     a {b: call(get-function(user-defined));}",
+    "a {\n  b: a;\n}\n"
+);
 error!(
     undefined_function,
     "a {color: get-function(foo);}", "Error: Function not found: foo"
