@@ -7,10 +7,13 @@ use crate::error::SassResult;
 use crate::scope::Scope;
 use crate::{Stmt, StyleSheet};
 
-pub(crate) fn import<P: AsRef<Path>>(path: P) -> SassResult<(Vec<Spanned<Stmt>>, Scope)> {
+pub(crate) fn import(ctx: &Path, path: &Path) -> SassResult<(Vec<Spanned<Stmt>>, Scope)> {
     let mut rules = Vec::new();
     let mut scope = Scope::new();
-    let path_buf = path.as_ref().to_path_buf();
+    if path.is_absolute() {
+        todo!("absolute import")
+    }
+    let path_buf = ctx.parent().unwrap_or(Path::new("")).join(path);
     let name = path_buf.file_name().expect("todo! path ended in `..`");
     if path_buf.extension() == Some(OsStr::new(".css")) {
         // || name.starts_with("http://") || name.starts_with("https://") {

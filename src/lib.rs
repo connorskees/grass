@@ -204,6 +204,7 @@ impl StyleSheet {
                 lexer: Lexer::new(&file).peekmore(),
                 nesting: 0,
                 map: &map,
+                path: Path::new(""),
             }
             .parse_toplevel()
             .map_err(|e| raw_to_parse_error(&map, e).to_string())?
@@ -237,6 +238,7 @@ impl StyleSheet {
                 lexer: Lexer::new(&file).peekmore(),
                 nesting: 0,
                 map: &map,
+                path: Path::new(""),
             }
             .parse_toplevel()
             .map_err(|e| raw_to_parse_error(&map, e))?
@@ -261,12 +263,13 @@ impl StyleSheet {
     #[cfg(not(feature = "wasm"))]
     pub fn from_path<P: AsRef<Path> + Into<String> + Clone>(p: P) -> SassResult<String> {
         let mut map = CodeMap::new();
-        let file = map.add_file(p.clone().into(), String::from_utf8(fs::read(p)?)?);
+        let file = map.add_file(p.clone().into(), String::from_utf8(fs::read(p.clone())?)?);
         Css::from_stylesheet(StyleSheet(
             StyleSheetParser {
                 lexer: Lexer::new(&file).peekmore(),
                 nesting: 0,
                 map: &map,
+                path: p.as_ref(),
             }
             .parse_toplevel()
             .map_err(|e| raw_to_parse_error(&map, e))?
@@ -286,6 +289,7 @@ impl StyleSheet {
             lexer: Lexer::new(&file).peekmore(),
             nesting: 0,
             map: &map,
+            path: p.as_ref(),
         }
         .parse_toplevel()?)
     }
@@ -299,6 +303,7 @@ struct StyleSheetParser<'a> {
     lexer: PeekMoreIterator<Lexer<'a>>,
     nesting: u32,
     map: &'a CodeMap,
+    path: &'a Path,
 }
 
 impl<'a> StyleSheetParser<'a> {
@@ -382,7 +387,7 @@ impl<'a> StyleSheetParser<'a> {
 
                             devour_whitespace(&mut self.lexer);
 
-                            let (new_rules, new_scope) = import(file_name)?;
+                            let (new_rules, new_scope) = import(self.path, file_name.as_ref())?;
                             rules.extend(new_rules);
                             GLOBAL_SCOPE.with(|s| {
                                 s.borrow_mut().extend(new_scope);

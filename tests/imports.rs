@@ -19,6 +19,21 @@ macro_rules! tempfile {
             .unwrap();
         write!(f, "{}", $content).unwrap();
     };
+    ($name:literal, $content:literal, dir=$dir:literal) => {
+        let _d = Builder::new()
+            .rand_bytes(0)
+            .prefix("")
+            .suffix($dir)
+            .tempdir_in("")
+            .unwrap();
+        let mut f = dbg!(Builder::new()
+            .rand_bytes(0)
+            .prefix("")
+            .suffix($name)
+            .tempfile_in($dir)
+            .unwrap());
+        write!(f, "{}", $content).unwrap();
+    };
 }
 
 #[test]
@@ -99,3 +114,24 @@ fn chained_imports() {
         &StyleSheet::new(input.to_string()).expect(input)
     );
 }
+
+#[test]
+fn chained_imports_in_directory() {
+    let input = "@import \"chained_imports_in_directory__a\";\na {\n color: $a;\n}";
+    tempfile!(
+        "chained_imports_in_directory__a.scss",
+        "@import \"chained_imports_in_directory__b\";"
+    );
+    tempfile!(
+        "index.scss",
+        "@import \"../chained_imports_in_directory__c\";",
+        dir = "chained_imports_in_directory__b"
+    );
+    tempfile!("chained_imports_in_directory__c.scss", "$a: red;");
+    assert_eq!(
+        "a {\n  color: red;\n}\n",
+        &StyleSheet::new(input.to_string()).expect(input)
+    );
+}
+
+// todo: test for calling paths, e.g. `grass b\index.scss`
