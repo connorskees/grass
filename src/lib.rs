@@ -237,7 +237,7 @@ impl StyleSheet {
             StyleSheetParser {
                 lexer: Lexer::new(&file).peekmore(),
                 nesting: 0,
-                map: &map,
+                map: &mut map,
                 path: Path::new(""),
             }
             .parse_toplevel()
@@ -245,7 +245,7 @@ impl StyleSheet {
             .0,
         ))
         .map_err(|e| raw_to_parse_error(&map, e))?
-        .pretty_print()
+        .pretty_print(&map)
         .map_err(|e| raw_to_parse_error(&map, e))
     }
 
@@ -268,7 +268,7 @@ impl StyleSheet {
             StyleSheetParser {
                 lexer: Lexer::new(&file).peekmore(),
                 nesting: 0,
-                map: &map,
+                map: &mut map,
                 path: p.as_ref(),
             }
             .parse_toplevel()
@@ -276,19 +276,19 @@ impl StyleSheet {
             .0,
         ))
         .map_err(|e| raw_to_parse_error(&map, e))?
-        .pretty_print()
+        .pretty_print(&map)
         .map_err(|e| raw_to_parse_error(&map, e))
     }
 
     pub(crate) fn export_from_path<P: AsRef<Path> + Into<String> + Clone>(
         p: &P,
+        map: &mut CodeMap,
     ) -> SassResult<(Vec<Spanned<Stmt>>, Scope)> {
-        let mut map = CodeMap::new();
         let file = map.add_file(p.clone().into(), String::from_utf8(fs::read(p)?)?);
         Ok(StyleSheetParser {
             lexer: Lexer::new(&file).peekmore(),
             nesting: 0,
-            map: &map,
+            map,
             path: p.as_ref(),
         }
         .parse_toplevel()?)
@@ -302,7 +302,7 @@ impl StyleSheet {
 struct StyleSheetParser<'a> {
     lexer: PeekMoreIterator<Lexer<'a>>,
     nesting: u32,
-    map: &'a CodeMap,
+    map: &'a mut CodeMap,
     path: &'a Path,
 }
 
@@ -387,7 +387,7 @@ impl<'a> StyleSheetParser<'a> {
 
                             devour_whitespace(&mut self.lexer);
 
-                            let (new_rules, new_scope) = import(self.path, file_name.as_ref())?;
+                            let (new_rules, new_scope) = import(self.path, file_name.as_ref(), &mut self.map)?;
                             rules.extend(new_rules);
                             GLOBAL_SCOPE.with(|s| {
                                 s.borrow_mut().extend(new_scope);
@@ -412,8 +412,10 @@ impl<'a> StyleSheetParser<'a> {
                                 }
                                 AtRule::For(f) => rules.extend(f.ruleset_eval(&mut Scope::new(), &Selector::new())?),
                                 AtRule::While(w) => rules.extend(w.ruleset_eval(&mut Scope::new(), &Selector::new(), true)?),
-                                AtRule::Include(s)
-                                | AtRule::Each(s) => rules.extend(s),
+                                AtRule::Each(e) => {
+                                    rules.extend(e.ruleset_eval(&mut Scope::new(), &Selector::new())?)
+                                }
+                                AtRule::Include(s) => rules.extend(s),
                                 AtRule::Content => return Err(
                                     ("@content is only allowed within mixin declarations.", rule.span
                                 ).into()),
@@ -461,7 +463,8 @@ impl<'a> StyleSheetParser<'a> {
                     AtRule::While(w) => {
                         stmts.extend(w.ruleset_eval(scope, super_selector, false)?)
                     }
-                    AtRule::Include(s) | AtRule::Each(s) => stmts.extend(s),
+                    AtRule::Each(e) => stmts.extend(e.ruleset_eval(scope, super_selector)?),
+                    AtRule::Include(s) => stmts.extend(s),
                     AtRule::If(i) => stmts.extend(i.eval(scope, super_selector)?),
                     AtRule::Content => {
                         return Err((

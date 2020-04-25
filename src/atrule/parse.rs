@@ -2,6 +2,8 @@ use codemap::Spanned;
 
 use peekmore::PeekMoreIterator;
 
+use super::AtRule;
+
 use crate::error::SassResult;
 use crate::scope::{global_var_exists, insert_global_var, Scope};
 use crate::selector::Selector;
@@ -99,4 +101,27 @@ pub(crate) fn eat_stmts_at_root<I: Iterator<Item = Token>>(
         }
     }
     Ok(stmts)
+}
+
+pub(crate) fn ruleset_eval<I: Iterator<Item = Token>>(
+    toks: &mut PeekMoreIterator<I>,
+    scope: &mut Scope,
+    super_selector: &Selector,
+    at_root: bool,
+    stmts: &mut Vec<Spanned<Stmt>>,
+) -> SassResult<()> {
+    for stmt in eat_stmts(toks, scope, super_selector, at_root)? {
+        match stmt.node {
+            Stmt::AtRule(AtRule::For(f)) => stmts.extend(f.ruleset_eval(scope, super_selector)?),
+            Stmt::AtRule(AtRule::Each(e)) => stmts.extend(e.ruleset_eval(scope, super_selector)?),
+            Stmt::AtRule(AtRule::While(w)) => {
+                // TODO: should at_root be false? scoping
+                stmts.extend(w.ruleset_eval(scope, super_selector, at_root)?)
+            }
+            Stmt::AtRule(AtRule::Include(s)) => stmts.extend(s),
+            Stmt::AtRule(AtRule::If(i)) => stmts.extend(i.eval(scope, super_selector)?),
+            _ => stmts.push(stmt),
+        }
+    }
+    Ok(())
 }

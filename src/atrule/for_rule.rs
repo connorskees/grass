@@ -6,7 +6,7 @@ use peekmore::{PeekMore, PeekMoreIterator};
 
 use num_traits::cast::ToPrimitive;
 
-use super::parse::eat_stmts;
+use super::parse::ruleset_eval;
 use super::AtRule;
 
 use crate::error::SassResult;
@@ -42,27 +42,13 @@ impl For {
                     span: self.var.span,
                 },
             )?;
-            for stmt in eat_stmts(
+            ruleset_eval(
                 &mut self.body.clone().into_iter().peekmore(),
                 scope,
                 super_selector,
                 false,
-            )? {
-                match stmt.node {
-                    Stmt::AtRule(AtRule::For(f)) => {
-                        stmts.extend(f.ruleset_eval(scope, super_selector)?)
-                    }
-                    Stmt::AtRule(AtRule::While(w)) => {
-                        // TODO: should at_root be false? scoping
-                        stmts.extend(w.ruleset_eval(scope, super_selector, false)?)
-                    }
-                    Stmt::AtRule(AtRule::Include(s)) | Stmt::AtRule(AtRule::Each(s)) => {
-                        stmts.extend(s)
-                    }
-                    Stmt::AtRule(AtRule::If(i)) => stmts.extend(i.eval(scope, super_selector)?),
-                    _ => stmts.push(stmt),
-                }
-            }
+                &mut stmts,
+            )?;
         }
         Ok(stmts)
     }

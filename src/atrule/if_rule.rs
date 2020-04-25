@@ -2,7 +2,7 @@ use codemap::Spanned;
 
 use peekmore::{PeekMore, PeekMoreIterator};
 
-use super::{eat_stmts, AtRule};
+use super::ruleset_eval;
 
 use crate::error::SassResult;
 use crate::scope::Scope;
@@ -120,18 +120,13 @@ impl If {
         if !found_true {
             toks = self.else_;
         }
-        for stmt in eat_stmts(
+        ruleset_eval(
             &mut toks.into_iter().peekmore(),
             scope,
             super_selector,
             false,
-        )? {
-            match stmt.node {
-                Stmt::AtRule(AtRule::If(i)) => stmts.extend(i.eval(scope, super_selector)?),
-                Stmt::RuleSet(r) if r.selector.is_empty() => stmts.extend(r.rules),
-                _ => stmts.push(stmt),
-            }
-        }
+            &mut stmts,
+        )?;
         Ok(stmts)
     }
 }

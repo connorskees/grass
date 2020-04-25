@@ -2,7 +2,7 @@ use codemap::{Span, Spanned};
 
 use peekmore::{PeekMore, PeekMoreIterator};
 
-use super::{eat_stmts, AtRule};
+use super::{ruleset_eval, AtRule};
 
 use crate::error::SassResult;
 use crate::scope::Scope;
@@ -30,26 +30,13 @@ impl While {
         let mut val = Value::from_vec(self.cond.clone(), scope, super_selector)?;
         let scope = &mut scope.clone();
         while val.node.is_true(val.span)? {
-            for stmt in eat_stmts(
+            ruleset_eval(
                 &mut self.body.clone().into_iter().peekmore(),
                 scope,
                 super_selector,
                 at_root,
-            )? {
-                match stmt.node {
-                    Stmt::AtRule(AtRule::For(f)) => {
-                        stmts.extend(f.ruleset_eval(scope, super_selector)?)
-                    }
-                    Stmt::AtRule(AtRule::While(w)) => {
-                        stmts.extend(w.ruleset_eval(scope, super_selector, at_root)?)
-                    }
-                    Stmt::AtRule(AtRule::Include(s)) | Stmt::AtRule(AtRule::Each(s)) => {
-                        stmts.extend(s)
-                    }
-                    Stmt::AtRule(AtRule::If(i)) => stmts.extend(i.eval(scope, super_selector)?),
-                    _ => stmts.push(stmt),
-                }
-            }
+                &mut stmts,
+            )?;
             val = Value::from_vec(self.cond.clone(), scope, super_selector)?;
         }
         Ok(stmts)

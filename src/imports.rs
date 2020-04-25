@@ -1,13 +1,17 @@
 use std::ffi::OsStr;
 use std::path::Path;
 
-use codemap::Spanned;
+use codemap::{CodeMap, Spanned};
 
 use crate::error::SassResult;
 use crate::scope::Scope;
 use crate::{Stmt, StyleSheet};
 
-pub(crate) fn import(ctx: &Path, path: &Path) -> SassResult<(Vec<Spanned<Stmt>>, Scope)> {
+pub(crate) fn import(
+    ctx: &Path,
+    path: &Path,
+    map: &mut CodeMap,
+) -> SassResult<(Vec<Spanned<Stmt>>, Scope)> {
     let mut rules = Vec::new();
     let mut scope = Scope::new();
     if path.is_absolute() {
@@ -39,7 +43,7 @@ pub(crate) fn import(ctx: &Path, path: &Path) -> SassResult<(Vec<Spanned<Stmt>>,
     for name in &paths {
         if name.is_file() {
             let (rules2, scope2) =
-                StyleSheet::export_from_path(&name.to_str().expect("path should be UTF-8"))?;
+                StyleSheet::export_from_path(&name.to_str().expect("path should be UTF-8"), map)?;
             rules.extend(rules2);
             scope.extend(scope2);
         }

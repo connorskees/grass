@@ -178,6 +178,7 @@ impl Function {
                         val = Value::from_vec(w.cond.clone(), scope, super_selector)?;
                     }
                 }
+                Stmt::AtRule(AtRule::Each(..)) => todo!("@each in @function"),
                 _ => return Err(("This at-rule is not allowed here.", stmt.span).into()),
             }
         }

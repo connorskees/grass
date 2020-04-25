@@ -1,6 +1,8 @@
 //! # Convert from SCSS AST to CSS
 use std::io::Write;
 
+use codemap::{CodeMap, Span};
+
 use crate::atrule::AtRule;
 use crate::error::SassResult;
 use crate::{RuleSet, Selector, Stmt, Style, StyleSheet};
@@ -123,9 +125,9 @@ impl Css {
         Ok(self)
     }
 
-    pub fn pretty_print(self) -> SassResult<String> {
+    pub fn pretty_print(self, map: &CodeMap) -> SassResult<String> {
         let mut string = Vec::new();
-        self._inner_pretty_print(&mut string, 0)?;
+        self._inner_pretty_print(&mut string, map, 0)?;
         if string.iter().any(|s| !s.is_ascii()) {
             return Ok(format!(
                 "@charset \"UTF-8\";\n{}",
@@ -135,7 +137,33 @@ impl Css {
         Ok(String::from_utf8(string)?)
     }
 
-    fn _inner_pretty_print(self, buf: &mut Vec<u8>, nesting: usize) -> SassResult<()> {
+    fn debug(map: &CodeMap, span: Span, message: &str) {
+        let loc = map.look_up_span(span);
+        eprintln!(
+            "{}:{} Debug: {}",
+            loc.file.name(),
+            loc.begin.line + 1,
+            message
+        );
+    }
+
+    fn warn(map: &CodeMap, span: Span, message: &str) {
+        let loc = map.look_up_span(span);
+        eprintln!(
+            "Warning: {}\n    {} {}:{}  root stylesheet",
+            message,
+            loc.file.name(),
+            loc.begin.line + 1,
+            loc.begin.column + 1
+        );
+    }
+
+    fn _inner_pretty_print(
+        self,
+        buf: &mut Vec<u8>,
+        map: &CodeMap,
+        nesting: usize,
+    ) -> SassResult<()> {
         let mut has_written = false;
         let padding = vec![' '; nesting * 2].iter().collect::<String>();
         for block in self.blocks {
@@ -155,22 +183,26 @@ impl Css {
                     has_written = true;
                     writeln!(buf, "{}/*{}*/", padding, s)?;
                 }
-                Toplevel::AtRule(r) => match r {
-                    AtRule::Unknown(u) => {
-                        if u.body.is_empty() {
-                            continue;
+                Toplevel::AtRule(r) => {
+                    match r {
+                        AtRule::Unknown(u) => {
+                            if u.body.is_empty() {
+                                continue;
+                            }
+                            if u.params.is_empty() {
+                                writeln!(buf, "{}@{} {{", padding, u.name)?;
+                            } else {
+                                writeln!(buf, "{}@{} {} {{", padding, u.name, u.params)?;
+                            }
+                            Css::from_stylesheet(StyleSheet::from_stmts(u.body))?
+                                ._inner_pretty_print(buf, map, nesting + 1)?;
+                            writeln!(buf, "{}}}", padding)?;
                         }
-                        if u.params.is_empty() {
-                            writeln!(buf, "{}@{} {{", padding, u.name)?;
-                        } else {
-                            writeln!(buf, "{}@{} {} {{", padding, u.name, u.params)?;
-                        }
-                        Css::from_stylesheet(StyleSheet::from_stmts(u.body))?
-                            ._inner_pretty_print(buf, nesting + 1)?;
-                        writeln!(buf, "{}}}", padding)?;
+                        AtRule::Debug(e) => Self::debug(map, e.span, &e.node),
+                        AtRule::Warn(e) => Self::warn(map, e.span, &e.node),
+                        _ => todo!("at-rule other than unknown at toplevel: {:?}", r),
                     }
-                    _ => todo!("at-rule other than unknown at toplevel: {:?}", r),
-                },
+                }
                 Toplevel::Style(s) => {
                     writeln!(buf, "{}{}", padding, s.to_string()?)?;
                 }

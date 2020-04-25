@@ -2,26 +2,27 @@ use codemap::{Span, Spanned};
 
 use peekmore::{PeekMore, PeekMoreIterator};
 
-use crate::common::{Brackets, ListSeparator};
 use crate::error::SassResult;
 use crate::scope::Scope;
 use crate::selector::Selector;
 use crate::utils::{
-    devour_whitespace, eat_ident, read_until_closing_curly_brace, read_until_open_curly_brace,
+    devour_whitespace, read_until_closing_curly_brace, read_until_open_curly_brace,
     read_until_semicolon_or_closing_curly_brace,
 };
 use crate::value::Value;
 use crate::{RuleSet, Stmt, Token};
 
+use each_rule::{parse_each, Each};
 use for_rule::For;
 pub(crate) use function::Function;
 pub(crate) use if_rule::If;
 pub(crate) use kind::AtRuleKind;
 pub(crate) use mixin::{eat_include, Mixin};
-use parse::{eat_stmts, eat_stmts_at_root};
+use parse::{eat_stmts, eat_stmts_at_root, ruleset_eval};
 use unknown::UnknownAtRule;
 use while_rule::{parse_while, While};
 
+mod each_rule;
 mod for_rule;
 mod function;
 mod if_rule;
@@ -33,8 +34,8 @@ mod while_rule;
 
 #[derive(Debug, Clone)]
 pub(crate) enum AtRule {
-    Warn(String),
-    Debug(String),
+    Warn(Spanned<String>),
+    Debug(Spanned<String>),
     Mixin(String, Box<Mixin>),
     Function(String, Box<Function>),
     Return(Vec<Token>),
@@ -42,7 +43,7 @@ pub(crate) enum AtRule {
     Content,
     Unknown(UnknownAtRule),
     For(For),
-    Each(Vec<Spanned<Stmt>>),
+    Each(Each),
     While(While),
     Include(Vec<Spanned<Stmt>>),
     If(If),
@@ -86,7 +87,10 @@ impl AtRule {
                 }
                 devour_whitespace(toks);
                 Spanned {
-                    node: AtRule::Warn(message.to_css_string(span)?),
+                    node: AtRule::Warn(Spanned {
+                        node: message.to_css_string(span)?,
+                        span,
+                    }),
                     span,
                 }
             }
@@ -105,7 +109,10 @@ impl AtRule {
                 }
                 devour_whitespace(toks);
                 Spanned {
-                    node: AtRule::Debug(message.inspect(span)?),
+                    node: AtRule::Debug(Spanned {
+                        node: message.inspect(span)?,
+                        span,
+                    }),
                     span,
                 }
             }
@@ -199,101 +206,10 @@ impl AtRule {
                     span: kind_span,
                 }
             }
-            AtRuleKind::Each => {
-                let mut stmts = Vec::new();
-                devour_whitespace(toks);
-                let mut vars = Vec::new();
-                let mut span = kind_span;
-                loop {
-                    let next = toks.next().ok_or(("expected \"$\".", span))?;
-                    span = next.pos();
-                    match next.kind {
-                        '$' => vars.push(eat_ident(toks, scope, super_selector)?),
-                        _ => return Err(("expected \"$\".", next.pos()).into()),
-                    }
-                    devour_whitespace(toks);
-                    if toks
-                        .peek()
-                        .ok_or(("expected \"$\".", vars[vars.len() - 1].span))?
-                        .kind
-                        == ','
-                    {
-                        toks.next();
-                        devour_whitespace(toks);
-                    } else {
-                        break;
-                    }
-                }
-                if toks.peek().is_none() {
-                    todo!()
-                }
-                let i = eat_ident(toks, scope, super_selector)?;
-                if i.node.to_ascii_lowercase() != "in" {
-                    return Err(("Expected \"in\".", i.span).into());
-                }
-                devour_whitespace(toks);
-                let iter_val =
-                    Value::from_vec(read_until_open_curly_brace(toks), scope, super_selector)?;
-                let iterator = match iter_val.node.eval(iter_val.span)?.node {
-                    Value::List(v, ..) => v,
-                    Value::Map(m) => m
-                        .into_iter()
-                        .map(|(k, v)| Value::List(vec![k, v], ListSeparator::Space, Brackets::None))
-                        .collect(),
-                    v => vec![v],
-                };
-                toks.next();
-                devour_whitespace(toks);
-                let mut body = read_until_closing_curly_brace(toks);
-                body.push(toks.next().unwrap());
-                devour_whitespace(toks);
-
-                for row in iterator {
-                    let this_iterator = match row {
-                        Value::List(v, ..) => v,
-                        Value::Map(m) => m
-                            .into_iter()
-                            .map(|(k, v)| {
-                                Value::List(vec![k, v], ListSeparator::Space, Brackets::None)
-                            })
-                            .collect(),
-                        v => vec![v],
-                    };
-
-                    if vars.len() == 1 {
-                        scope.insert_var(
-                            &vars[0],
-                            Spanned {
-                                node: Value::List(
-                                    this_iterator,
-                                    ListSeparator::Space,
-                                    Brackets::None,
-                                ),
-                                span: vars[0].span,
-                            },
-                        )?;
-                    } else {
-                        for (var, val) in vars.clone().into_iter().zip(
-                            this_iterator
-                                .into_iter()
-                                .chain(std::iter::once(Value::Null).cycle()),
-                        ) {
-                            scope.insert_var(&var, Spanned { node: val, span })?;
-                        }
-                    }
-
-                    stmts.extend(eat_stmts(
-                        &mut body.clone().into_iter().peekmore(),
-                        scope,
-                        super_selector,
-                        false,
-                    )?);
-                }
-                Spanned {
-                    node: AtRule::Each(stmts),
-                    span: kind_span,
-                }
-            }
+            AtRuleKind::Each => Spanned {
+                node: parse_each(toks, scope, super_selector, kind_span)?,
+                span: kind_span,
+            },
             AtRuleKind::Extend => todo!("@extend not yet implemented"),
             AtRuleKind::If => Spanned {
                 node: AtRule::If(If::from_tokens(toks)?),
