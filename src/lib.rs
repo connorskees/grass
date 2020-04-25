@@ -326,7 +326,7 @@ impl<'a> StyleSheetParser<'a> {
                     }
                     let VariableDecl { val, default, .. } =
                         eat_variable_value(&mut self.lexer, &Scope::new(), &Selector::new())?;
-                    if (default && !global_var_exists(&name)) || !default {
+                    if !(default && global_var_exists(&name)) {
                         insert_global_var(&name.node, val)?;
                     }
                 }
@@ -635,7 +635,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                         insert_global_var(&name.node, val.clone())?;
                     }
                     let var_exists = scope.var_exists(&name.node);
-                    if (default && !var_exists) || !default {
+                    if !(default && var_exists) {
                         return Ok(Some(Spanned {
                             node: Expr::VariableDecl(name.node, Box::new(val)),
                             span,
