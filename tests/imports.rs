@@ -42,6 +42,23 @@ fn import_no_semicolon() {
 }
 
 #[test]
+fn import_no_quotes() {
+    let input = "@import import_no_quotes";
+    tempfile!("import_no_quotes", "$a: red;");
+    match grass::StyleSheet::new(input.to_string()) {
+        Ok(..) => panic!("did not fail"),
+        Err(e) => assert_eq!(
+            "Error: Expected string.",
+            e.to_string()
+                .chars()
+                .take_while(|c| *c != '\n')
+                .collect::<String>()
+                .as_str()
+        ),
+    }
+}
+
+#[test]
 fn single_quotes_import() {
     let input = "@import 'single_quotes_import';\na {\n color: $a;\n}";
     tempfile!("single_quotes_import", "$a: red;");

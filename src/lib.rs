@@ -105,8 +105,8 @@ use crate::style::Style;
 pub(crate) use crate::token::Token;
 use crate::utils::{
     devour_whitespace, eat_comment, eat_ident, eat_ident_no_interpolation, eat_variable_value,
-    parse_quoted_string, read_until_closing_curly_brace, read_until_newline, VariableDecl,
-    read_until_closing_paren
+    parse_quoted_string, read_until_closing_curly_brace, read_until_closing_paren,
+    read_until_newline, VariableDecl,
 };
 use crate::value::Value;
 
@@ -358,12 +358,11 @@ impl<'a> StyleSheetParser<'a> {
                         AtRuleKind::Import => {
                             devour_whitespace(&mut self.lexer);
                             let mut file_name = String::new();
-                            match self
-                                .lexer
-                                .next()
-                                .unwrap()
-                                .kind
-                            {
+                            let next = match self.lexer.next() {
+                                Some(v) => v,
+                                None => todo!("expected input after @import")
+                            };
+                            match next.kind {
                                 q @ '"' | q @ '\'' => {
                                     file_name.push_str(
                                         &parse_quoted_string(
@@ -373,11 +372,15 @@ impl<'a> StyleSheetParser<'a> {
                                             &Selector::new())?
                                             .node.unquote().to_css_string(span)?);
                                 }
-                                _ => todo!("expected ' or \" after @import"),
+                                _ => return Err(("Expected string.", next.pos()).into()),
                             }
-                            if self.lexer.next().unwrap().kind != ';' {
-                                todo!("no semicolon after @import");
+                            if let Some(t) = self.lexer.peek() {
+                                if t.kind == ';' {
+                                    self.lexer.next();
+                                }
                             }
+
+                            devour_whitespace(&mut self.lexer);
 
                             let (new_rules, new_scope) = import(file_name)?;
                             rules.extend(new_rules);
