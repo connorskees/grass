@@ -35,3 +35,8 @@ test!(
     "$index: 1;\n\n@function foo($a) {\n  @return $a;\n}\n\na {\n  color: foo($index - 1);\n}\n",
     "a {\n  color: 0;\n}\n"
 );
+test!(
+    parens_in_default_arg_value,
+    "@function foo($arg1: bar()) {\n    @return true;\n}\n\na {\n    color: foo();\n}\n",
+    "a {\n  color: true;\n}\n"
+);

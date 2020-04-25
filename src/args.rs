@@ -241,10 +241,11 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
                             close_paren_span = tok.pos();
                             break;
                         }
-                        _ => {
-                            let tok = toks.next().expect("we know this exists!");
-                            default.push(tok)
+                        '(' => {
+                            default.push(toks.next().unwrap());
+                            default.extend(read_until_closing_paren(toks));
                         }
+                        _ => default.push(toks.next().unwrap()),
                     }
                 }
             }
