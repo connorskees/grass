@@ -28,8 +28,3 @@ test!(
     "a {\n  slash-after-comma: (1, / 2);\n}\n",
     "a {\n  slash-after-comma: 1, /2;\n}\n"
 );
-// error!(
-//     none_div_unit,
-//     "a {\n  color: (35 / 7%);\n}\n",
-//     "Error: 5%^-1 isn't a valid CSS value."
-// );

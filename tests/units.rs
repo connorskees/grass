@@ -83,6 +83,11 @@ error!(
     "a {\n  color: 1rem * 1px * 1rad * 1foo;\n}\n",
     "Error: 1rem*px*rad*foo isn't a valid CSS value."
 );
+error!(
+    #[ignore]
+    none_div_unit,
+    "a {\n  color: (35 / 7%);\n}\n", "Error: 5%^-1 isn't a valid CSS value."
+);
 
 macro_rules! test_unit_addition {
     ($u1:ident, $u2:ident, $out:literal) => {

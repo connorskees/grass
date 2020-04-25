@@ -43,27 +43,30 @@ test!(
     "a {\n  color: feature-exists(at-error)\n}\n",
     "a {\n  color: true;\n}\n"
 );
-// Uncomment as more features are added
 test!(
     feature_exists_global_variable_shadowing,
     "a {\n  color: feature-exists(global-variable-shadowing)\n}\n",
     "a {\n  color: true;\n}\n"
 );
-// test!(
-//     feature_exists_extend_selector_pseudoclass,
-//     "a {\n  color: feature-exists(extend-selector-pseudoclass)\n}\n",
-//     "a {\n  color: true;\n}\n"
-// );
+// Unignore as more features are added
+test!(
+    #[ignore]
+    feature_exists_extend_selector_pseudoclass,
+    "a {\n  color: feature-exists(extend-selector-pseudoclass)\n}\n",
+    "a {\n  color: true;\n}\n"
+);
 test!(
     feature_exists_units_level_3,
     "a {\n  color: feature-exists(units-level-3)\n}\n",
     "a {\n  color: true;\n}\n"
 );
-// test!(
-//     feature_exists_custom_property,
-//     "a {\n  color: feature-exists(custom-property)\n}\n",
-//     "a {\n  color: true;\n}\n"
-// );
+// Unignore as more features are added
+test!(
+    #[ignore]
+    feature_exists_custom_property,
+    "a {\n  color: feature-exists(custom-property)\n}\n",
+    "a {\n  color: true;\n}\n"
+);
 test!(
     feature_exists_nonsense,
     "a {\n  color: feature-exists(foo)\n}\n",
@@ -346,8 +349,9 @@ test!(
     "a {\n  color: inspect(1 2 3)\n}\n",
     "a {\n  color: 1 2 3;\n}\n"
 );
-// test!(
-//     inspect_comma_list,
-//     "a {\n  color: inspect(1, 2, 3)\n}\n",
-//     "a {\n  color: 1, 2, 3;\n}\n"
-// );
+test!(
+    #[ignore]
+    inspect_comma_list,
+    "a {\n  color: inspect(1, 2, 3)\n}\n",
+    "a {\n  color: 1, 2, 3;\n}\n"
+);

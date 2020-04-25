@@ -278,10 +278,11 @@ test!(
     "a {\n  color: black;\n}\n"
 );
 test!(invert_number, "a {\n  color: invert(10%);\n}\n");
-// test!(
-//     invert_number_casing,
-//     "a {\n  color: iNveRt(10%);\n}\n"
-// );
+test!(
+    #[ignore]
+    invert_number_casing,
+    "a {\n  color: iNveRt(10%);\n}\n"
+);
 test!(
     invert_weight_percent,
     "a {\n  color: invert(white, 20%);\n}\n",
