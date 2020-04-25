@@ -87,3 +87,15 @@ fn finds_underscore_name_scss() {
         &StyleSheet::new(input.to_string()).expect(input)
     );
 }
+
+#[test]
+fn chained_imports() {
+    let input = "@import \"chained_imports__a\";\na {\n color: $a;\n}";
+    tempfile!("chained_imports__a.scss", "@import \"chained_imports__b\";");
+    tempfile!("chained_imports__b.scss", "@import \"chained_imports__c\";");
+    tempfile!("chained_imports__c.scss", "$a: red;");
+    assert_eq!(
+        "a {\n  color: red;\n}\n",
+        &StyleSheet::new(input.to_string()).expect(input)
+    );
+}
