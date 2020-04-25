@@ -169,7 +169,7 @@ impl Css {
                             ._inner_pretty_print(buf, nesting + 1)?;
                         writeln!(buf, "{}}}", padding)?;
                     }
-                    _ => todo!("at-rule other than unknown at toplevel"),
+                    _ => todo!("at-rule other than unknown at toplevel: {:?}", r),
                 },
                 Toplevel::Style(s) => {
                     writeln!(buf, "{}{}", padding, s.to_string()?)?;

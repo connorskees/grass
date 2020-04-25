@@ -199,12 +199,16 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
     super_selector: &Selector,
 ) -> SassResult<FuncArgs> {
     let mut args: Vec<FuncArg> = Vec::new();
+    let mut close_paren_span: Span = toks.peek().unwrap().pos();
 
     devour_whitespace(toks);
-    while let Some(Token { kind, .. }) = toks.next() {
+    while let Some(Token { kind, pos }) = toks.next() {
         let name = match kind {
             '$' => eat_ident(toks, scope, super_selector)?,
-            ')' => break,
+            ')' => {
+                close_paren_span = pos;
+                break;
+            }
             _ => todo!(),
         };
         let mut default: Vec<Token> = Vec::new();
@@ -234,6 +238,7 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
                                 default: Some(default),
                                 is_variadic,
                             });
+                            close_paren_span = tok.pos();
                             break;
                         }
                         _ => {
@@ -268,6 +273,7 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
                 break;
             }
             ')' => {
+                close_paren_span = span;
                 args.push(FuncArg {
                     name: name.replace('_', "-"),
                     default: if default.is_empty() {
@@ -289,10 +295,10 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
         devour_whitespace(toks);
     }
     devour_whitespace(toks);
-    if let Some(Token { kind: '{', .. }) = toks.next() {
-    } else {
-        todo!("expected `{{` after args")
-    }
+    match toks.next() {
+        Some(v) if v.kind == '{' => {}
+        Some(..) | None => return Err(("expected \"{\".", close_paren_span).into()),
+    };
     Ok(FuncArgs(args))
 }
 
