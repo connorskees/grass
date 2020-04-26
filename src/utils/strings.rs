@@ -143,13 +143,6 @@ fn escape<I: Iterator<Item = Token>>(
         value = toks.next().unwrap().kind as u32;
     }
 
-    // tabs are emitted literally
-    // TODO: figure out where this check is done
-    // in the source dart
-    if value == 0x9 {
-        return Ok("\\\t".to_string());
-    }
-
     let c = std::char::from_u32(value).unwrap();
     if (identifier_start && is_name_start(c) && !c.is_digit(10))
         || (!identifier_start && is_name(c))

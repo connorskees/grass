@@ -51,7 +51,7 @@ test!(
 test!(
     escape_tabs,
     "a {\n  color: \\	x \\9x;\n}\n",
-    "a {\n  color: \\\tx \\\tx;\n}\n"
+    "a {\n  color: \\9 x \\9 x;\n}\n"
 );
 test!(
     escape_interpolation_start,
@@ -157,4 +157,14 @@ test!(
 test!(
     unquoted_escape_minus_unquoted,
     "a {\n  color: \\a - foo;\n}\n"
+);
+test!(
+    quoted_escaped_tab,
+    "a {\n  color: \"\\9\";\n}\n",
+    "a {\n  color: \"\t\";\n}\n"
+);
+test!(
+    unquoted_escaped_tab,
+    "a {\n  color: \\9;\n}\n",
+    "a {\n  color: \\9 ;\n}\n"
 );
