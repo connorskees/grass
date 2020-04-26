@@ -48,9 +48,10 @@ fn attribute_name<I: Iterator<Item = Token>>(
         toks.next();
         if toks.peek().ok_or(("expected \"|\".", pos))?.kind != '|' {
             return Err(("expected \"|\".", pos).into());
-        } else {
-            toks.next();
         }
+
+        toks.next();
+
         let ident = eat_ident(toks, scope, super_selector)?.node;
         return Ok(QualifiedName {
             ident,
@@ -161,9 +162,9 @@ impl Attribute {
 
         if toks.peek().ok_or(("expected \"]\".", pos))?.kind != ']' {
             return Err(("expected \"]\".", pos).into());
-        } else {
-            toks.next();
         }
+
+        toks.next();
 
         Ok(SelectorKind::Attribute(Attribute {
             op,

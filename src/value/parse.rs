@@ -829,10 +829,7 @@ impl Value {
             }
             ':' | '?' | ')' => Err(("expected \";\".", span).into()),
             v if v.is_control() => Err(("Expected expression.", span).into()),
-            v => {
-                dbg!(v);
-                panic!("Unexpected token in value parsing")
-            }
+            v => todo!("unexpected token in value parsing: {:?}", v),
         }
     }
 }

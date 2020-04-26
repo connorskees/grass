@@ -66,7 +66,7 @@ fn main() {
         for name in inputs {
             stdout
                 .write_all(
-                    StyleSheet::from_path(name)
+                    StyleSheet::from_path(&name)
                         .unwrap_or_else(|e| {
                             eprintln!("{}", e);
                             std::process::exit(1)

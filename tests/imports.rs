@@ -26,12 +26,12 @@ macro_rules! tempfile {
             .suffix($dir)
             .tempdir_in("")
             .unwrap();
-        let mut f = dbg!(Builder::new()
+        let mut f = Builder::new()
             .rand_bytes(0)
             .prefix("")
             .suffix($name)
             .tempfile_in($dir)
-            .unwrap());
+            .unwrap();
         write!(f, "{}", $content).unwrap();
     };
 }

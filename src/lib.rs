@@ -261,7 +261,7 @@ impl StyleSheet {
     /// ```
     #[inline]
     #[cfg(not(feature = "wasm"))]
-    pub fn from_path<P: AsRef<Path> + Into<String> + Clone>(p: P) -> SassResult<String> {
+    pub fn from_path<P: AsRef<Path> + Into<String> + Clone>(p: &P) -> SassResult<String> {
         let mut map = CodeMap::new();
         let file = map.add_file(p.clone().into(), String::from_utf8(fs::read(p.clone())?)?);
         Css::from_stylesheet(StyleSheet(
@@ -436,10 +436,7 @@ impl<'a> StyleSheetParser<'a> {
                 c if c.is_control() => {
                     return Err(("expected selector.", self.lexer.next().unwrap().pos()).into());
                 }
-                _ => match dbg!(self.lexer.next()) {
-                    Some(..) => todo!("unexpected toplevel token"),
-                    _ => unsafe { std::hint::unreachable_unchecked() },
-                }
+                _ => todo!("unexpected toplevel token: {:?}", kind),
             };
         }
         Ok((rules, GLOBAL_SCOPE.with(|s| s.borrow().clone())))
