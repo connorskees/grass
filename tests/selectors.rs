@@ -65,16 +65,39 @@ test!(
     "[attr=val] {\n  color: red;\n}\n"
 );
 test!(
-    #[ignore]
     selector_attribute_removes_single_quotes,
     "[attr='val'] {\n  color: red;\n}\n",
     "[attr=val] {\n  color: red;\n}\n"
 );
 test!(
-    #[ignore]
     selector_attribute_removes_double_quotes,
     "[attr=\"val\"] {\n  color: red;\n}\n",
     "[attr=val] {\n  color: red;\n}\n"
+);
+test!(
+    selector_attribute_quotes_non_ident,
+    "[attr=\"1\"] {\n  color: red;\n}\n"
+);
+test!(
+    selector_attribute_quotes_custom_property,
+    "[attr=\"--foo\"] {\n  color: red;\n}\n"
+);
+test!(
+    selector_attribute_unquoted_escape,
+    "[attr=v\\al] {\n  color: red;\n}\n",
+    "[attr=v\\a l] {\n  color: red;\n}\n"
+);
+test!(
+    selector_attribute_quoted_escape,
+    "[attr=\"v\\al\"] {\n  color: red;\n}\n"
+);
+test!(
+    selector_attribute_namespace,
+    "[*|foo] {\n  color: red;\n}\n"
+);
+error!(
+    selector_attribute_missing_equal,
+    "[a~b] {\n  color: red;\n}\n", "Error: expected \"=\"."
 );
 test!(
     selector_attribute_maintains_quotes_around_invalid_identifier,

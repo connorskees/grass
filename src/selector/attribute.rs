@@ -1,151 +1,221 @@
-use std::fmt::{self, Display};
+use std::fmt::{self, Display, Write};
 
 use peekmore::PeekMoreIterator;
 
 use codemap::Span;
 
 use super::{Selector, SelectorKind};
+use crate::common::QuoteKind;
 use crate::error::SassResult;
 use crate::scope::Scope;
-use crate::utils::{
-    devour_whitespace, eat_ident, is_ident_char, parse_interpolation, parse_quoted_string,
-};
+use crate::utils::{devour_whitespace, eat_ident, is_ident, parse_quoted_string};
+use crate::value::Value;
 use crate::Token;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Attribute {
-    attr: String,
+    attr: QualifiedName,
     value: String,
     modifier: Option<char>,
-    kind: AttributeKind,
+    op: AttributeOp,
+    span: Span,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct QualifiedName {
+    pub ident: String,
+    pub namespace: Option<String>,
+}
+
+impl Display for QualifiedName {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Some(namespace) = &self.namespace {
+            write!(f, "{}|", namespace)?;
+        }
+        f.write_str(&self.ident)
+    }
+}
+
+fn attribute_name<I: Iterator<Item = Token>>(
+    toks: &mut PeekMoreIterator<I>,
+    scope: &Scope,
+    super_selector: &Selector,
+    start: Span,
+) -> SassResult<QualifiedName> {
+    let next = toks.peek().ok_or(("Expected identifier.", start))?;
+    if next.kind == '*' {
+        let pos = next.pos;
+        toks.next();
+        if toks.peek().ok_or(("expected \"|\".", pos))?.kind != '|' {
+            return Err(("expected \"|\".", pos).into());
+        } else {
+            toks.next();
+        }
+        let ident = eat_ident(toks, scope, super_selector)?.node;
+        return Ok(QualifiedName {
+            ident,
+            namespace: Some('*'.to_string()),
+        });
+    }
+    let name_or_namespace = eat_ident(toks, scope, super_selector)?;
+    match toks.peek() {
+        Some(v) if v.kind != '|' => {
+            return Ok(QualifiedName {
+                ident: name_or_namespace.node,
+                namespace: None,
+            });
+        }
+        Some(..) => {}
+        None => return Err(("expected more input.", name_or_namespace.span).into()),
+    }
+    match toks.peek_forward(1) {
+        Some(v) if v.kind == '=' => {
+            toks.peek_backward(1).unwrap();
+            return Ok(QualifiedName {
+                ident: name_or_namespace.node,
+                namespace: None,
+            });
+        }
+        Some(..) => {
+            toks.peek_backward(1).unwrap();
+        }
+        None => return Err(("expected more input.", name_or_namespace.span).into()),
+    }
+    toks.next();
+    let ident = eat_ident(toks, scope, super_selector)?.node;
+    Ok(QualifiedName {
+        ident,
+        namespace: Some(name_or_namespace.node),
+    })
+}
+
+fn attribute_operator<I: Iterator<Item = Token>>(
+    toks: &mut PeekMoreIterator<I>,
+    start: Span,
+) -> SassResult<AttributeOp> {
+    let op = match toks.next().ok_or(("Expected \"]\".", start))?.kind {
+        '=' => return Ok(AttributeOp::Equals),
+        '~' => AttributeOp::Include,
+        '|' => AttributeOp::Dash,
+        '^' => AttributeOp::Prefix,
+        '$' => AttributeOp::Suffix,
+        '*' => AttributeOp::Contains,
+        _ => return Err(("Expected \"]\".", start).into()),
+    };
+    if toks.next().ok_or(("expected \"=\".", start))?.kind != '=' {
+        return Err(("expected \"=\".", start).into());
+    }
+    Ok(op)
+}
 impl Attribute {
     pub fn from_tokens<I: Iterator<Item = Token>>(
         toks: &mut PeekMoreIterator<I>,
         scope: &Scope,
         super_selector: &Selector,
-        mut start: Span,
+        start: Span,
     ) -> SassResult<SelectorKind> {
         devour_whitespace(toks);
-        let next_tok = toks.peek().ok_or(("Expected identifier.", start))?;
-        let attr = match next_tok.kind {
-            c if is_ident_char(c) => {
-                let i = eat_ident(toks, scope, super_selector)?;
-                start = i.span;
-                i.node
-            }
-            '#' => {
-                start.merge(toks.next().unwrap().pos());
-                if toks.next().ok_or(("Expected expression.", start))?.kind == '{' {
-                    let interpolation = parse_interpolation(toks, scope, super_selector)?;
-                    interpolation.node.to_css_string(interpolation.span)?
-                } else {
-                    return Err(("Expected expression.", start).into());
-                }
-            }
-            _ => return Err(("Expected identifier.", start).into()),
-        };
-
+        let attr = attribute_name(toks, scope, super_selector, start)?;
         devour_whitespace(toks);
-
-        let next = toks.next().ok_or(("expected \"]\".", start))?;
-
-        let kind = match next.kind {
-            c if is_ident_char(c) => return Err(("Expected \"]\".", next.pos()).into()),
-            ']' => {
-                return Ok(SelectorKind::Attribute(Attribute {
-                    kind: AttributeKind::Any,
-                    attr,
-                    value: String::new(),
-                    modifier: None,
-                }));
-            }
-            '=' => AttributeKind::Equals,
-            '~' => AttributeKind::Include,
-            '|' => AttributeKind::Dash,
-            '^' => AttributeKind::Prefix,
-            '$' => AttributeKind::Suffix,
-            '*' => AttributeKind::Contains,
-            _ => return Err(("expected \"]\".", next.pos()).into()),
-        };
-
-        if kind != AttributeKind::Equals {
-            let next = toks.next().ok_or(("expected \"=\".", next.pos()))?;
-            match next.kind {
-                '=' => {}
-                _ => return Err(("expected \"=\".", next.pos()).into()),
-            }
+        if toks.peek().ok_or(("expected more input.", start))?.kind == ']' {
+            toks.next();
+            return Ok(SelectorKind::Attribute(Attribute {
+                attr,
+                value: String::new(),
+                modifier: None,
+                op: AttributeOp::Any,
+                span: start,
+            }));
         }
 
+        let op = attribute_operator(toks, start)?;
         devour_whitespace(toks);
 
-        let next = toks.next().ok_or(("Expected identifier.", next.pos()))?;
+        let peek = toks.peek().ok_or(("expected more input.", start))?;
 
-        let value = match next.kind {
-            v @ 'a'..='z' | v @ 'A'..='Z' | v @ '-' | v @ '_' => {
-                format!("{}{}", v, eat_ident(toks, scope, super_selector)?.node)
-            }
-            q @ '"' | q @ '\'' => {
-                parse_quoted_string(toks, scope, q, super_selector)?.to_css_string(next.pos())?
-            }
-            _ => return Err(("Expected identifier.", next.pos()).into()),
-        };
-
-        devour_whitespace(toks);
-
-        let next = toks.next().ok_or(("expected \"]\".", next.pos()))?;
-
-        let modifier = match next.kind {
-            ']' => {
-                return Ok(SelectorKind::Attribute(Attribute {
-                    kind,
-                    attr,
-                    value,
-                    modifier: None,
-                }))
-            }
-            v @ 'a'..='z' | v @ 'A'..='Z' => {
-                let next = toks.next().ok_or(("expected \"]\".", next.pos()))?;
-                match next.kind {
-                    ']' => {}
-                    _ => return Err(("expected \"]\".", next.pos()).into()),
+        let value = match peek.kind {
+            q @ '\'' | q @ '"' => {
+                toks.next();
+                match parse_quoted_string(toks, scope, q, super_selector)?.node {
+                    Value::Ident(s, ..) => s,
+                    _ => unreachable!(),
                 }
-                Some(v)
             }
-            _ => return Err(("expected \"]\".", next.pos()).into()),
+            _ => eat_ident(toks, scope, super_selector)?.node,
         };
+        devour_whitespace(toks);
+
+        let peek = toks.peek().ok_or(("expected more input.", start))?;
+
+        let modifier = match peek.kind {
+            c if c.is_alphabetic() => Some(c),
+            _ => None,
+        };
+
+        let pos = peek.pos();
+
+        if modifier.is_some() {
+            toks.next();
+            devour_whitespace(toks);
+        }
+
+        if toks.peek().ok_or(("expected \"]\".", pos))?.kind != ']' {
+            return Err(("expected \"]\".", pos).into());
+        } else {
+            toks.next();
+        }
 
         Ok(SelectorKind::Attribute(Attribute {
-            kind,
+            op,
             attr,
             value,
             modifier,
+            span: start,
         }))
     }
 }
 
 impl Display for Attribute {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let modifier = if let Some(c) = self.modifier {
-            format!(" {}", c)
-        } else {
-            String::new()
-        };
-        match self.kind {
-            AttributeKind::Any => write!(f, "[{}{}]", self.attr, modifier),
-            AttributeKind::Equals => write!(f, "[{}={}{}]", self.attr, self.value, modifier),
-            AttributeKind::Include => write!(f, "[{}~={}{}]", self.attr, self.value, modifier),
-            AttributeKind::Dash => write!(f, "[{}|={}{}]", self.attr, self.value, modifier),
-            AttributeKind::Prefix => write!(f, "[{}^={}{}]", self.attr, self.value, modifier),
-            AttributeKind::Suffix => write!(f, "[{}$={}{}]", self.attr, self.value, modifier),
-            AttributeKind::Contains => write!(f, "[{}*={}{}]", self.attr, self.value, modifier),
+        f.write_char('[')?;
+        write!(f, "{}", self.attr)?;
+
+        if self.op != AttributeOp::Any {
+            f.write_str(self.op.into())?;
+            if is_ident(&self.value) && !self.value.starts_with("--") {
+                f.write_str(&self.value)?;
+
+                if self.modifier.is_some() {
+                    f.write_char(' ')?;
+                }
+            } else {
+                // todo: remove unwrap by not doing this in display
+                // or having special emitter for quoted strings?
+                // (also avoids the clone because we can consume/modify self)
+                f.write_str(
+                    &Value::Ident(self.value.clone(), QuoteKind::Quoted)
+                        .to_css_string(self.span)
+                        .unwrap(),
+                )?;
+                // todo: this space is not emitted when `compressed` output
+                if self.modifier.is_some() {
+                    f.write_char(' ')?;
+                }
+            }
+
+            if let Some(c) = self.modifier {
+                f.write_char(c)?;
+            }
         }
+
+        f.write_char(']')?;
+
+        Ok(())
     }
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-enum AttributeKind {
+enum AttributeOp {
     /// \[attr\]
     ///
     /// Represents elements with an attribute name of `attr`
@@ -183,4 +253,18 @@ enum AttributeKind {
     /// whose value contains at least one occurrence of
     /// `value` within the string
     Contains,
+}
+
+impl Into<&'static str> for AttributeOp {
+    fn into(self) -> &'static str {
+        match self {
+            Self::Any => "",
+            Self::Equals => "=",
+            Self::Include => "~=",
+            Self::Dash => "|=",
+            Self::Prefix => "^=",
+            Self::Suffix => "$=",
+            Self::Contains => "*=",
+        }
+    }
 }

@@ -26,10 +26,6 @@ pub(crate) fn read_until_char<I: Iterator<Item = Token>>(
     v
 }
 
-pub(crate) fn is_ident_char(c: char) -> bool {
-    c.is_ascii_alphabetic() || c == '_' || c == '\\' || (!c.is_ascii() && !c.is_control())
-}
-
 pub(crate) fn hex_char_for(number: u32) -> char {
     assert!(number < 0x10);
     std::char::from_u32(if number < 0xA {
