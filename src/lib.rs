@@ -261,7 +261,7 @@ impl StyleSheet {
     /// ```
     #[inline]
     #[cfg(not(feature = "wasm"))]
-    pub fn from_path<P: AsRef<Path> + Into<String> + Clone>(p: &P) -> SassResult<String> {
+    pub fn from_path(p: &str) -> SassResult<String> {
         let mut map = CodeMap::new();
         let file = map.add_file(p.clone().into(), String::from_utf8(fs::read(p.clone())?)?);
         Css::from_stylesheet(StyleSheet(

@@ -68,26 +68,28 @@ impl Function {
         scope: &Scope,
         super_selector: &Selector,
     ) -> SassResult<()> {
+        let mut scope = scope.clone();
         for (idx, arg) in self.args.0.iter().enumerate() {
             if arg.is_variadic {
                 let span = args.span();
-                self.scope.insert_var(
+                let arg_list = Value::ArgList(args.get_variadic(&mut scope, super_selector)?);
+                scope.insert_var(
                     &arg.name,
                     Spanned {
-                        node: Value::ArgList(args.get_variadic(scope, super_selector)?),
+                        node: arg_list,
                         span,
                     },
                 )?;
                 break;
             }
-            let val = match args.get_positional(idx, scope, super_selector) {
+            let val = match args.get_positional(idx, &mut scope, super_selector) {
                 Some(v) => v?,
-                None => match args.get_named(arg.name.clone(), scope, super_selector) {
+                None => match args.get_named(arg.name.clone(), &mut scope, super_selector) {
                     Some(v) => v?,
                     None => match &arg.default {
                         Some(v) => Value::from_tokens(
                             &mut v.iter().cloned().peekmore(),
-                            scope,
+                            &mut scope,
                             super_selector,
                         )?,
                         None => {
@@ -98,8 +100,9 @@ impl Function {
                     },
                 },
             };
-            self.scope.insert_var(&arg.name, val)?;
+            scope.insert_var(&arg.name, val)?;
         }
+        self.scope.extend(scope);
         Ok(())
     }
 

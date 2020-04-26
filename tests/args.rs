@@ -40,3 +40,8 @@ test!(
     "@function foo($arg1: bar()) {\n    @return true;\n}\n\na {\n    color: foo();\n}\n",
     "a {\n  color: true;\n}\n"
 );
+test!(
+    self_referential_default_arg_value,
+    "@function foo($a, $b: $a) {\n    @return $b;\n}\n\na {\n    color: foo(2);\n}\n",
+    "a {\n  color: 2;\n}\n"
+);
