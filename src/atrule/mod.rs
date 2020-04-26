@@ -70,7 +70,7 @@ impl AtRule {
                     super_selector,
                 )?;
 
-                return Err((message.to_css_string(span)?, span.merge(kind_span)).into());
+                return Err((message.inspect(span)?, span.merge(kind_span)).into());
             }
             AtRuleKind::Warn => {
                 let Spanned {
