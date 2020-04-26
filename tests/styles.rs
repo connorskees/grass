@@ -156,26 +156,6 @@ test!(
     "a {\n  color: \"red\";\n  color: blue;\n}\n"
 );
 test!(
-    interpolated_super_selector_in_style,
-    "a {\n  color: #{&};\n}\n",
-    "a {\n  color: a;\n}\n"
-);
-test!(
-    interpolated_super_selector_in_style_symbols,
-    "* .a #b:foo() {\n  color: #{&};\n}\n",
-    "* .a #b:foo() {\n  color: * .a #b:foo();\n}\n"
-);
-test!(
-    uninterpolated_super_selector,
-    "* .a #b:foo() {\n  color: &;\n}\n",
-    "* .a #b:foo() {\n  color: * .a #b:foo();\n}\n"
-);
-test!(
-    interpolated_super_selector_in_selector_and_style,
-    "a {\n  b #{&} {\n    color: &;\n  }\n}\n",
-    "a b a {\n  color: a b a;\n}\n"
-);
-test!(
     emits_leading_whitespace,
     "a {\n  color: unquote(\" foo\");\n}\n",
     "a {\n  color:  foo;\n}\n"

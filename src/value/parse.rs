@@ -670,7 +670,7 @@ impl Value {
             '&' => {
                 let span = toks.next().unwrap().pos();
                 Ok(IntermediateValue::Value(Spanned {
-                    node: Value::Ident(super_selector.to_string(), QuoteKind::None),
+                    node: super_selector.into_value(),
                     span,
                 }))
             }

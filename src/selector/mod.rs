@@ -2,12 +2,14 @@ use std::fmt::{self, Display, Write};
 
 use peekmore::{PeekMore, PeekMoreIterator};
 
+use crate::common::{Brackets, ListSeparator, QuoteKind};
 use crate::error::SassResult;
 use crate::scope::Scope;
 use crate::utils::{
     devour_whitespace, eat_comment, eat_ident_no_interpolation, parse_interpolation,
     read_until_closing_paren, read_until_newline, IsWhitespace,
 };
+use crate::value::Value;
 use crate::Token;
 
 use attribute::Attribute;
@@ -23,6 +25,44 @@ struct SelectorPart {
     pub is_invisible: bool,
     pub has_newline: bool,
     pub contains_super_selector: bool,
+}
+
+impl SelectorPart {
+    pub fn into_value(&self) -> Value {
+        let mut kinds = Vec::new();
+        let mut this_kind = Vec::new();
+        for kind in &self.inner {
+            match kind {
+                SelectorKind::Whitespace => {
+                    if !this_kind.is_empty() {
+                        kinds.push(SelectorPart {
+                            inner: std::mem::take(&mut this_kind),
+                            is_invisible: false,
+                            has_newline: false,
+                            contains_super_selector: false,
+                        });
+                    }
+                }
+                v => this_kind.push(v.clone()),
+            }
+        }
+        if !this_kind.is_empty() {
+            kinds.push(SelectorPart {
+                inner: std::mem::take(&mut this_kind),
+                is_invisible: false,
+                has_newline: false,
+                contains_super_selector: false,
+            });
+        }
+        Value::List(
+            kinds
+                .iter()
+                .map(|s| Value::Ident(s.to_string(), QuoteKind::None))
+                .collect(),
+            ListSeparator::Space,
+            Brackets::None,
+        )
+    }
 }
 
 impl Display for SelectorPart {
@@ -561,5 +601,13 @@ impl Selector {
 
     pub fn contains_super_selector(&self) -> bool {
         self.0.iter().any(|s| s.contains_super_selector)
+    }
+
+    pub fn into_value(&self) -> Value {
+        Value::List(
+            self.0.iter().map(SelectorPart::into_value).collect(),
+            ListSeparator::Comma,
+            Brackets::None,
+        )
     }
 }

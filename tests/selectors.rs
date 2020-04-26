@@ -427,3 +427,83 @@ test!(
     ":not(%b) {x: y}",
     "* {\n  x: y;\n}\n"
 );
+test!(
+    interpolated_super_selector_in_style,
+    "a {\n  color: #{&};\n}\n",
+    "a {\n  color: a;\n}\n"
+);
+test!(
+    interpolated_super_selector_in_style_symbols,
+    "* .a #b:foo() {\n  color: #{&};\n}\n",
+    "* .a #b:foo() {\n  color: * .a #b:foo();\n}\n"
+);
+test!(
+    uninterpolated_super_selector,
+    "* .a #b:foo() {\n  color: &;\n}\n",
+    "* .a #b:foo() {\n  color: * .a #b:foo();\n}\n"
+);
+test!(
+    interpolated_super_selector_in_selector_and_style,
+    "a {\n  b #{&} {\n    color: &;\n  }\n}\n",
+    "a b a {\n  color: a b a;\n}\n"
+);
+test!(
+    super_selector_treated_as_list,
+    "a, b {\n  color: type-of(&);\n}\n",
+    "a, b {\n  color: list;\n}\n"
+);
+test!(
+    length_of_comma_separated_super_selector,
+    "a, b {\n  color: length(&);\n}\n",
+    "a, b {\n  color: 2;\n}\n"
+);
+test!(
+    nth_1_of_comma_separated_super_selector,
+    "a, b {\n  color: nth(&, 1);\n}\n",
+    "a, b {\n  color: a;\n}\n"
+);
+test!(
+    nth_2_of_comma_separated_super_selector,
+    "a, b {\n  color: nth(&, 2);\n}\n",
+    "a, b {\n  color: b;\n}\n"
+);
+test!(
+    length_of_space_separated_super_selector,
+    "a b {\n  color: length(&);\n}\n",
+    "a b {\n  color: 1;\n}\n"
+);
+test!(
+    nth_1_of_space_separated_super_selector,
+    "a b {\n  color: nth(&, 1);\n}\n",
+    "a b {\n  color: a b;\n}\n"
+);
+test!(
+    length_of_comma_separated_super_selector_has_compound,
+    "a:foo, b {\n  color: length(&);\n}\n",
+    "a:foo, b {\n  color: 2;\n}\n"
+);
+test!(
+    nth_1_of_comma_separated_super_selector_has_compound,
+    "a:foo, b {\n  color: nth(&, 1);\n}\n",
+    "a:foo, b {\n  color: a:foo;\n}\n"
+);
+test!(
+    length_of_space_separated_super_selector_has_compound,
+    "a:foo b {\n  color: length(&);\n}\n",
+    "a:foo b {\n  color: 1;\n}\n"
+);
+test!(
+    nth_1_of_space_separated_super_selector_has_compound,
+    "a:foo b {\n  color: nth(&, 1);\n}\n",
+    "a:foo b {\n  color: a:foo b;\n}\n"
+);
+test!(
+    length_super_selector_placeholder,
+    "a, %b {\n  color: length(&);\n}\n",
+    "a {\n  color: 2;\n}\n"
+);
+test!(
+    nth_2_super_selector_placeholder,
+    "a, %b {\n  color: nth(&, 2);\n}\n",
+    "a {\n  color: %b;\n}\n"
+);
