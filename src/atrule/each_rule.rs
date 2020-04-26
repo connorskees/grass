@@ -39,13 +39,23 @@ impl Each {
             };
 
             if self.vars.len() == 1 {
-                scope.insert_var(
-                    &self.vars[0],
-                    Spanned {
-                        node: Value::List(this_iterator, ListSeparator::Space, Brackets::None),
-                        span: self.vars[0].span,
-                    },
-                )?;
+                if this_iterator.len() == 1 {
+                    scope.insert_var(
+                        &self.vars[0],
+                        Spanned {
+                            node: this_iterator[0].clone(),
+                            span: self.vars[0].span,
+                        },
+                    )?;
+                } else {
+                    scope.insert_var(
+                        &self.vars[0],
+                        Spanned {
+                            node: Value::List(this_iterator, ListSeparator::Space, Brackets::None),
+                            span: self.vars[0].span,
+                        },
+                    )?;
+                }
             } else {
                 for (var, val) in self.vars.clone().into_iter().zip(
                     this_iterator

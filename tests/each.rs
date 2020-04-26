@@ -43,3 +43,8 @@ test!(
     "a {\n  @each $i in (1 2 3) {\n    color: $i;\n  }\n}\n",
     "a {\n  color: 1;\n  color: 2;\n  color: 3;\n}\n"
 );
+test!(
+    type_of_each_space_separated_single_var,
+    "a {\n  @each $i in 1 2 3 {\n    color: type-of($i);\n  }\n}\n",
+    "a {\n  color: number;\n  color: number;\n  color: number;\n}\n"
+);
