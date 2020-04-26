@@ -109,15 +109,16 @@ fn visit_quoted_string(buf: &mut String, force_double_quote: bool, string: &str)
 
 impl Value {
     pub fn is_null(&self, span: Span) -> SassResult<bool> {
-        match self {
-            &Value::Null => Ok(true),
-            Value::Ident(i, QuoteKind::None) if i.is_empty() => Ok(true),
+        Ok(match self {
+            &Value::Null => true,
+            Value::Ident(i, QuoteKind::None) if i.is_empty() => true,
             Self::BinaryOp(..) | Self::Paren(..) | Self::UnaryOp(..) => {
-                self.clone().eval(span)?.is_null(span)
+                self.clone().eval(span)?.is_null(span)?
             }
-            Self::List(v, _, Brackets::None) => Ok(v.iter().all(|f| f.is_null(span).unwrap())),
-            _ => Ok(false),
-        }
+            Self::List(v, _, Brackets::Bracketed) if v.is_empty() => false,
+            Self::List(v, ..) => v.iter().all(|f| f.is_null(span).unwrap()),
+            _ => false,
+        })
     }
 
     pub fn to_css_string(&self, span: Span) -> SassResult<String> {
@@ -136,6 +137,7 @@ impl Value {
                 )
                     .into())
             }
+            // TODO: should to_css_string on function fail?
             Self::Function(func) => format!("get-function(\"{}\")", func.name()),
             Self::List(vals, sep, brackets) => match brackets {
                 Brackets::None => vals
@@ -253,6 +255,8 @@ impl Value {
         }
     }
 
+    // TODO:
+    // https://github.com/sass/dart-sass/blob/d4adea7569832f10e3a26d0e420ae51640740cfb/lib/src/ast/sass/expression/list.dart#L39
     pub fn inspect(&self, span: Span) -> SassResult<String> {
         Ok(match self {
             Value::List(v, _, brackets) if v.is_empty() => match brackets {
@@ -296,7 +300,7 @@ impl Value {
                     .collect::<SassResult<Vec<String>>>()?
                     .join(", ")
             ),
-            Value::Paren(v) => format!("({})", v.inspect(span)?),
+            Value::Paren(v) => v.inspect(span)?,
             v => v.to_css_string(span)?,
         })
     }
