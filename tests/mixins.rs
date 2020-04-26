@@ -199,3 +199,8 @@ test!(
     "@mixin foo($a_b) {\n  color: $a-b;\n  color: $a_b;\n}\na {\n  @include foo($a_b: a);\n  @include foo($a-b: a);\n}\n",
     "a {\n  color: a;\n  color: a;\n  color: a;\n  color: a;\n}\n"
 );
+test!(
+    control_flow_in_content,
+    "@mixin foo {\n    @content;\n}\n\na {\n    @include foo {@if true {color: red;}}\n}\n",
+    "a {\n  color: red;\n}\n"
+);

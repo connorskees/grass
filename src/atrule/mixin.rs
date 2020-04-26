@@ -4,7 +4,7 @@ use codemap::Spanned;
 
 use peekmore::{PeekMore, PeekMoreIterator};
 
-use super::eat_stmts;
+use super::ruleset_eval;
 
 use crate::args::{eat_call_args, eat_func_args, CallArgs, FuncArgs};
 use crate::atrule::AtRule;
@@ -223,18 +223,28 @@ pub(crate) fn eat_include<I: Iterator<Item = Token>>(
 
     devour_whitespace(toks);
 
-    let content = if let Some(tok) = toks.peek() {
+    let mut content = Vec::new();
+
+    if let Some(tok) = toks.peek() {
         if tok.kind == '{' {
             toks.next();
-            eat_stmts(toks, &mut scope.clone(), super_selector, false)?
+            ruleset_eval(
+                toks,
+                &mut scope.clone(),
+                super_selector,
+                false,
+                &mut content,
+            )?;
         } else if has_content {
-            eat_stmts(toks, &mut scope.clone(), super_selector, false)?
-        } else {
-            Vec::new()
+            ruleset_eval(
+                toks,
+                &mut scope.clone(),
+                super_selector,
+                false,
+                &mut content,
+            )?;
         }
-    } else {
-        Vec::new()
-    };
+    }
 
     let mixin = scope.get_mixin(name)?;
 
