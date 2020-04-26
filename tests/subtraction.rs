@@ -209,3 +209,8 @@ test!(
     "a {\n  color: 1/**/-/**/1;\n}\n",
     "a {\n  color: 0;\n}\n"
 );
+test!(
+    no_space_after_first_unit_and_second_float,
+    "a {\n  color: 1em- 0.0em;\n}\n",
+    "a {\n  color: 1em- 0em;\n}\n"
+);

@@ -32,9 +32,9 @@ fn ident_body_no_interpolation<I: Iterator<Item = Token>>(
             if second.kind == '.' || second.kind.is_ascii_digit() {
                 break;
             }
+
             toks.next();
             text.push('-');
-            text.push(toks.next().unwrap().kind);
         } else if is_name(tok.kind) {
             text.push(toks.next().unwrap().kind);
         } else if tok.kind == '\\' {
