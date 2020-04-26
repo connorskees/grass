@@ -37,12 +37,12 @@ all builtin selector functions (274 tests)
 builtin functions content-exists, min, max
 @extend (~600 tests)
 indented syntax (27 tests)
-a special parser for plain css
+css imports
 @use and module system (~1200 tests)
 @forward (~400 tests)
 @keyframes (~30 tests)
 @supports (~128 tests)
-aribtrary control flow in @function and @mixin
+@each inside @function
 ```
 
 ## Testing
