@@ -313,3 +313,4 @@ test!(
     "a {\n  color: length(zip((a, b, c)));\n}\n",
     "a {\n  color: 3;\n}\n"
 );
+test!(empty_bracketed_list, "a {\n  empty: [];\n}\n");

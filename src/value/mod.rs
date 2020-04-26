@@ -115,7 +115,7 @@ impl Value {
             Self::BinaryOp(..) | Self::Paren(..) | Self::UnaryOp(..) => {
                 self.clone().eval(span)?.is_null(span)
             }
-            Self::List(v, ..) => Ok(v.iter().all(|f| f.is_null(span).unwrap())),
+            Self::List(v, _, Brackets::None) => Ok(v.iter().all(|f| f.is_null(span).unwrap())),
             _ => Ok(false),
         }
     }
