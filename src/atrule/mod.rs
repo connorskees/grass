@@ -144,7 +144,6 @@ impl AtRule {
                     span: kind_span,
                 }
             }
-            AtRuleKind::Use => todo!("@use not yet implemented"),
             AtRuleKind::AtRoot => {
                 let mut selector = &Selector::replace(
                     super_selector,
@@ -210,18 +209,15 @@ impl AtRule {
                 node: parse_each(toks, scope, super_selector, kind_span)?,
                 span: kind_span,
             },
-            AtRuleKind::Extend => todo!("@extend not yet implemented"),
             AtRuleKind::If => Spanned {
                 node: AtRule::If(If::from_tokens(toks)?),
                 span: kind_span,
             },
-            AtRuleKind::Else => todo!("@else not yet implemented"),
             AtRuleKind::For => Spanned {
                 node: for_rule::parse_for(toks, scope, super_selector, kind_span)?,
                 span: kind_span,
             },
             AtRuleKind::While => parse_while(toks, kind_span)?,
-            AtRuleKind::Keyframes => todo!("@keyframes not yet implemented"),
             AtRuleKind::Unknown(name) => Spanned {
                 node: AtRule::Unknown(UnknownAtRule::from_tokens(
                     toks,
@@ -240,7 +236,12 @@ impl AtRule {
                 node: AtRule::Include(eat_include(toks, scope, super_selector)?),
                 span: kind_span,
             },
-            _ => todo!("encountered unimplemented at rule"),
+            AtRuleKind::Import => todo!("@import not yet implemented"),
+            AtRuleKind::Forward => todo!("@forward not yet implemented"),
+            AtRuleKind::Supports => todo!("@supports not yet implemented"),
+            AtRuleKind::Keyframes => todo!("@keyframes not yet implemented"),
+            AtRuleKind::Extend => todo!("@extend not yet implemented"),
+            AtRuleKind::Use => todo!("@use not yet implemented"),
         })
     }
 }

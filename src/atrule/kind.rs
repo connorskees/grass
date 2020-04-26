@@ -12,6 +12,10 @@ pub enum AtRuleKind {
     Forward,
     /// Extends the CSS at-rule to load styles, mixins, functions,
     /// and variables from other stylesheets
+    ///
+    /// The definition inside `grass` however differs in that
+    /// the @import rule refers to a plain css import
+    /// e.g. `@import url(foo);`
     Import,
     Mixin,
     Content,
@@ -31,7 +35,10 @@ pub enum AtRuleKind {
     /// Prints a message for debugging purposes
     Debug,
     If,
-    Else,
+    // @else is considered a part of @each, and so is not parsed individually
+    // TODO: give proper error message for encountering @else? right now
+    // it is parsed as an unknown at rule
+    // Else,
     Each,
     For,
     While,
@@ -66,7 +73,6 @@ impl From<&str> for AtRuleKind {
             "warn" => Self::Warn,
             "debug" => Self::Debug,
             "if" => Self::If,
-            "else" => Self::Else,
             "each" => Self::Each,
             "for" => Self::For,
             "while" => Self::While,
@@ -95,7 +101,6 @@ impl Display for AtRuleKind {
             Self::Warn => write!(f, "@warn"),
             Self::Debug => write!(f, "@debug"),
             Self::If => write!(f, "@if"),
-            Self::Else => write!(f, "@else"),
             Self::Each => write!(f, "@each"),
             Self::For => write!(f, "@for"),
             Self::While => write!(f, "@while"),
