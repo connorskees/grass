@@ -5,7 +5,7 @@ use peekmore::PeekMoreIterator;
 use codemap::Span;
 
 use super::{Selector, SelectorKind};
-use crate::common::QuoteKind;
+use crate::common::{QualifiedName, QuoteKind};
 use crate::error::SassResult;
 use crate::scope::Scope;
 use crate::utils::{devour_whitespace, eat_ident, is_ident, parse_quoted_string};
@@ -19,21 +19,6 @@ pub(crate) struct Attribute {
     modifier: Option<char>,
     op: AttributeOp,
     span: Span,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-struct QualifiedName {
-    pub ident: String,
-    pub namespace: Option<String>,
-}
-
-impl Display for QualifiedName {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some(namespace) = &self.namespace {
-            write!(f, "{}|", namespace)?;
-        }
-        f.write_str(&self.ident)
-    }
 }
 
 fn attribute_name<I: Iterator<Item = Token>>(
