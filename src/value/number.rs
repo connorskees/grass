@@ -134,27 +134,6 @@ impl Signed for Number {
     }
 }
 
-impl fmt::LowerHex for Number {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:0>2x}", self.val.to_integer())
-    }
-}
-
-impl From<BigInt> for Number {
-    fn from(b: BigInt) -> Self {
-        Number {
-            val: BigRational::from_integer(b),
-        }
-    }
-}
-
-impl From<Number> for BigInt {
-    #[inline]
-    fn from(b: Number) -> Self {
-        b.to_integer()
-    }
-}
-
 macro_rules! from_integer {
     ($ty:ty) => {
         impl From<$ty> for Number {
