@@ -1,4 +1,3 @@
-use std::convert::TryFrom;
 use std::iter::Iterator;
 use std::mem;
 
@@ -14,7 +13,7 @@ use super::css_function::{eat_calc_args, eat_progid, try_eat_url};
 
 use crate::args::eat_call_args;
 use crate::builtin::GLOBAL_FUNCTIONS;
-use crate::color::Color;
+use crate::color::{Color, NAMED_COLORS};
 use crate::common::{Brackets, ListSeparator, Op, QuoteKind};
 use crate::error::SassResult;
 use crate::scope::Scope;
@@ -558,9 +557,9 @@ impl Value {
                 ))
             }
             _ => {
-                if let Ok(c) = crate::color::ColorName::try_from(s.as_ref()) {
+                if let Some(c) = NAMED_COLORS.get_by_left(&s.as_str()) {
                     Ok(IntermediateValue::Value(Spanned {
-                        node: Value::Color(Box::new(c.into_color(s))),
+                        node: Value::Color(Box::new(Color::new(c[0], c[1], c[2], 0xFF, s))),
                         span,
                     }))
                 } else {

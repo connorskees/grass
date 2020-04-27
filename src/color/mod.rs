@@ -14,11 +14,10 @@
 //! Named colors retain their original casing,
 //! so `rEd` should be emitted as `rEd`.
 
-use std::convert::TryFrom;
 use std::fmt::{self, Display};
 
 use crate::value::Number;
-pub(crate) use name::ColorName;
+pub(crate) use name::NAMED_COLORS;
 
 use num_traits::{One, Signed, ToPrimitive, Zero};
 
@@ -500,7 +499,7 @@ fn repr(red: &Number, green: &Number, blue: &Number, alpha: &Number) -> String {
 
     if alpha < &Number::one() {
         format!("rgba({}, {}, {}, {})", red, green, blue, alpha)
-    } else if let Ok(c) = ColorName::try_from([red, green, blue]) {
+    } else if let Some(c) = NAMED_COLORS.get_by_right(&[red, green, blue]) {
         format!("{}", c)
     } else {
         format!("#{:0>2x}{:0>2x}{:0>2x}", red, green, blue)

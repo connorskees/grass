@@ -1,775 +1,149 @@
 //! A big dictionary of named colors and their
 //! corresponding RGBA values
 
-use std::convert::TryFrom;
-use std::fmt::{self, Display};
+use bimap::BiMap;
+use once_cell::sync::Lazy;
 
-use super::Color;
-
-#[derive(Debug, Clone, Copy, Eq, PartialEq)]
-pub(crate) enum ColorName {
-    AliceBlue,            // = 0xF0F8FF,
-    AntiqueWhite,         // = 0xFAEBD7,
-    Aqua,                 // = 0x00FFFF,
-    Aquamarine,           // = 0x7FFFD4,
-    Azure,                // = 0xF0FFFF,
-    Beige,                // = 0xF5F5DC,
-    Bisque,               // = 0xFFE4C4,
-    Black,                // = 0x000000,
-    BlanchedAlmond,       // = 0xFFEBCD,
-    Blue,                 // = 0x0000FF,
-    BlueViolet,           // = 0x8A2BE2,
-    Brown,                // = 0xA52A2A,
-    BurlyWood,            // = 0xDEB887,
-    CadetBlue,            // = 0x5F9EA0,
-    Chartreuse,           // = 0x7FFF00,
-    Chocolate,            // = 0xD2691E,
-    Coral,                // = 0xFF7F50,
-    CornflowerBlue,       // = 0x6495ED,
-    Cornsilk,             // = 0xFFF8DC,
-    Crimson,              // = 0xDC143C,
-    Cyan,                 // = 0x00FFFF
-    DarkBlue,             // = 0x00008B,
-    DarkCyan,             // = 0x008B8B,
-    DarkGoldenRod,        // = 0xB8860B,
-    DarkGray,             // = 0xA9A9A9,
-    DarkGrey,             // = 0xA9A9A9
-    DarkGreen,            // = 0x006400,
-    DarkKhaki,            // = 0xBDB76B,
-    DarkMagenta,          // = 0x8B008B,
-    DarkOliveGreen,       // = 0x556B2F,
-    DarkOrange,           // = 0xFF8C00,
-    DarkOrchid,           // = 0x9932CC,
-    DarkRed,              // = 0x8B0000,
-    DarkSalmon,           // = 0xE9967A,
-    DarkSeaGreen,         // = 0x8FBC8F,
-    DarkSlateBlue,        // = 0x483D8B,
-    DarkSlateGray,        // = 0x2F4F4F,
-    DarkSlateGrey,        // = 0x2F4F4F
-    DarkTurquoise,        // = 0x00CED1,
-    DarkViolet,           // = 0x9400D3,
-    DeepPink,             // = 0xFF1493,
-    DeepSkyBlue,          // = 0x00BFFF,
-    DimGray,              // = 0x696969,
-    DimGrey,              // = 0x696969
-    DodgerBlue,           // = 0x1E90FF,
-    FireBrick,            // = 0xB22222,
-    FloralWhite,          // = 0xFFFAF0,
-    ForestGreen,          // = 0x228B22,
-    Fuchsia,              // = 0xFF00FF,
-    Gainsboro,            // = 0xDCDCDC,
-    GhostWhite,           // = 0xF8F8FF,
-    Gold,                 // = 0xFFD700,
-    GoldenRod,            // = 0xDAA520,
-    Gray,                 // = 0x808080,
-    Grey,                 // = 0x808080
-    Green,                // = 0x008000,
-    GreenYellow,          // = 0xADFF2F,
-    HoneyDew,             // = 0xF0FFF0,
-    HotPink,              // = 0xFF69B4,
-    IndianRed,            // = 0xCD5C5C,
-    Indigo,               // = 0x4B0082,
-    Ivory,                // = 0xFFFFF0,
-    Khaki,                // = 0xF0E68C,
-    Lavender,             // = 0xE6E6FA,
-    LavenderBlush,        // = 0xFFF0F5,
-    LawnGreen,            // = 0x7CFC00,
-    LemonChiffon,         // = 0xFFFACD,
-    LightBlue,            // = 0xADD8E6,
-    LightCoral,           // = 0xF08080,
-    LightCyan,            // = 0xE0FFFF,
-    LightGoldenRodYellow, // = 0xFAFAD2,
-    LightGray,            // = 0xD3D3D3,
-    LightGrey,            // = 0xD3D3D3
-    LightGreen,           // = 0x90EE90,
-    LightPink,            // = 0xFFB6C1,
-    LightSalmon,          // = 0xFFA07A,
-    LightSeaGreen,        // = 0x20B2AA,
-    LightSkyBlue,         // = 0x87CEFA,
-    LightSlateGray,       // = 0x778899,
-    LightSlateGrey,       // = 0x778899
-    LightSteelBlue,       // = 0xB0C4DE,
-    LightYellow,          // = 0xFFFFE0,
-    Lime,                 // = 0x00FF00,
-    LimeGreen,            // = 0x32CD32,
-    Linen,                // = 0xFAF0E6,
-    Magenta,              // = 0xFF00FF
-    Maroon,               // = 0x800000,
-    MediumAquaMarine,     // = 0x66CDAA,
-    MediumBlue,           // = 0x0000CD,
-    MediumOrchid,         // = 0xBA55D3,
-    MediumPurple,         // = 0x9370DB,
-    MediumSeaGreen,       // = 0x3CB371,
-    MediumSlateBlue,      // = 0x7B68EE,
-    MediumSpringGreen,    // = 0x00FA9A,
-    MediumTurquoise,      // = 0x48D1CC,
-    MediumVioletRed,      // = 0xC71585,
-    MidnightBlue,         // = 0x191970,
-    MintCream,            // = 0xF5FFFA,
-    MistyRose,            // = 0xFFE4E1,
-    Moccasin,             // = 0xFFE4B5,
-    NavajoWhite,          // = 0xFFDEAD,
-    Navy,                 // = 0x000080,
-    OldLace,              // = 0xFDF5E6,
-    Olive,                // = 0x808000,
-    OliveDrab,            // = 0x6B8E23,
-    Orange,               // = 0xFFA500,
-    OrangeRed,            // = 0xFF4500,
-    Orchid,               // = 0xDA70D6,
-    PaleGoldenRod,        // = 0xEEE8AA,
-    PaleGreen,            // = 0x98FB98,
-    PaleTurquoise,        // = 0xAFEEEE,
-    PaleVioletRed,        // = 0xDB7093,
-    PapayaWhip,           // = 0xFFEFD5,
-    PeachPuff,            // = 0xFFDAB9,
-    Peru,                 // = 0xCD853F,
-    Pink,                 // = 0xFFC0CB,
-    Plum,                 // = 0xDDA0DD,
-    PowderBlue,           // = 0xB0E0E6,
-    Purple,               // = 0x800080,
-    RebeccaPurple,        // = 0x663399,
-    Red,                  // = 0xFF0000,
-    RosyBrown,            // = 0xBC8F8F,
-    RoyalBlue,            // = 0x4169E1,
-    SaddleBrown,          // = 0x8B4513,
-    Salmon,               // = 0xFA8072,
-    SandyBrown,           // = 0xF4A460,
-    SeaGreen,             // = 0x2E8B57,
-    SeaShell,             // = 0xFFF5EE,
-    Sienna,               // = 0xA0522D,
-    Silver,               // = 0xC0C0C0,
-    SkyBlue,              // = 0x87CEEB,
-    SlateBlue,            // = 0x6A5ACD,
-    SlateGray,            // = 0x708090,
-    SlateGrey,            // = 0x708090
-    Snow,                 // = 0xFFFAFA,
-    SpringGreen,          // = 0x00FF7F,
-    SteelBlue,            // = 0x4682B4,
-    Tan,                  // = 0xD2B48C,
-    Teal,                 // = 0x008080,
-    Thistle,              // = 0xD8BFD8,
-    Tomato,               // = 0xFF6347,
-    Turquoise,            // = 0x40E0D0,
-    Violet,               // = 0xEE82EE,
-    Wheat,                // = 0xF5DEB3,
-    White,                // = 0xFFFFFF,
-    WhiteSmoke,           // = 0xF5F5F5,
-    Yellow,               // = 0xFFFF00,
-    YellowGreen,          // = 0x9ACD32,
-    Transparent,          // = 0x000000,
-}
-
-impl Display for ColorName {
-    #[allow(clippy::match_same_arms, clippy::many_single_char_names)]
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::AliceBlue => write!(f, "aliceblue"),
-            Self::AntiqueWhite => write!(f, "antiquewhite"),
-            Self::Aqua => write!(f, "aqua"),
-            Self::Aquamarine => write!(f, "aquamarine"),
-            Self::Azure => write!(f, "azure"),
-            Self::Beige => write!(f, "beige"),
-            Self::Bisque => write!(f, "bisque"),
-            Self::Black => write!(f, "black"),
-            Self::BlanchedAlmond => write!(f, "blanchedalmond"),
-            Self::Blue => write!(f, "blue"),
-            Self::BlueViolet => write!(f, "blueviolet"),
-            Self::Brown => write!(f, "brown"),
-            Self::BurlyWood => write!(f, "burlywood"),
-            Self::CadetBlue => write!(f, "cadetblue"),
-            Self::Chartreuse => write!(f, "chartreuse"),
-            Self::Chocolate => write!(f, "chocolate"),
-            Self::Coral => write!(f, "coral"),
-            Self::CornflowerBlue => write!(f, "cornflowerblue"),
-            Self::Cornsilk => write!(f, "cornsilk"),
-            Self::Crimson => write!(f, "crimson"),
-            Self::Cyan => write!(f, "cyan"),
-            Self::DarkBlue => write!(f, "darkblue"),
-            Self::DarkCyan => write!(f, "darkcyan"),
-            Self::DarkGoldenRod => write!(f, "darkgoldenrod"),
-            Self::DarkGray => write!(f, "darkgray"),
-            Self::DarkGrey => write!(f, "darkgrey"),
-            Self::DarkGreen => write!(f, "darkgreen"),
-            Self::DarkKhaki => write!(f, "darkkhaki"),
-            Self::DarkMagenta => write!(f, "darkmagenta"),
-            Self::DarkOliveGreen => write!(f, "darkolivegreen"),
-            Self::DarkOrange => write!(f, "darkorange"),
-            Self::DarkOrchid => write!(f, "darkorchid"),
-            Self::DarkRed => write!(f, "darkred"),
-            Self::DarkSalmon => write!(f, "darksalmon"),
-            Self::DarkSeaGreen => write!(f, "darkseagreen"),
-            Self::DarkSlateBlue => write!(f, "darkslateblue"),
-            Self::DarkSlateGray => write!(f, "darkslategray"),
-            Self::DarkSlateGrey => write!(f, "darkslategrey"),
-            Self::DarkTurquoise => write!(f, "darkturquoise"),
-            Self::DarkViolet => write!(f, "darkviolet"),
-            Self::DeepPink => write!(f, "deeppink"),
-            Self::DeepSkyBlue => write!(f, "deepskyblue"),
-            Self::DimGray => write!(f, "dimgray"),
-            Self::DimGrey => write!(f, "dimgrey"),
-            Self::DodgerBlue => write!(f, "dodgerblue"),
-            Self::FireBrick => write!(f, "firebrick"),
-            Self::FloralWhite => write!(f, "floralwhite"),
-            Self::ForestGreen => write!(f, "forestgreen"),
-            Self::Fuchsia => write!(f, "fuchsia"),
-            Self::Gainsboro => write!(f, "gainsboro"),
-            Self::GhostWhite => write!(f, "ghostwhite"),
-            Self::Gold => write!(f, "gold"),
-            Self::GoldenRod => write!(f, "goldenrod"),
-            Self::Gray => write!(f, "gray"),
-            Self::Grey => write!(f, "grey"),
-            Self::Green => write!(f, "green"),
-            Self::GreenYellow => write!(f, "greenyellow"),
-            Self::HoneyDew => write!(f, "honeydew"),
-            Self::HotPink => write!(f, "hotpink"),
-            Self::IndianRed => write!(f, "indianred"),
-            Self::Indigo => write!(f, "indigo"),
-            Self::Ivory => write!(f, "ivory"),
-            Self::Khaki => write!(f, "khaki"),
-            Self::Lavender => write!(f, "lavender"),
-            Self::LavenderBlush => write!(f, "lavenderblush"),
-            Self::LawnGreen => write!(f, "lawngreen"),
-            Self::LemonChiffon => write!(f, "lemonchiffon"),
-            Self::LightBlue => write!(f, "lightblue"),
-            Self::LightCoral => write!(f, "lightcoral"),
-            Self::LightCyan => write!(f, "lightcyan"),
-            Self::LightGoldenRodYellow => write!(f, "lightgoldenrodyellow"),
-            Self::LightGray => write!(f, "lightgray"),
-            Self::LightGrey => write!(f, "lightgrey"),
-            Self::LightGreen => write!(f, "lightgreen"),
-            Self::LightPink => write!(f, "lightpink"),
-            Self::LightSalmon => write!(f, "lightsalmon"),
-            Self::LightSeaGreen => write!(f, "lightseagreen"),
-            Self::LightSkyBlue => write!(f, "lightskyblue"),
-            Self::LightSlateGray => write!(f, "lightslategray"),
-            Self::LightSlateGrey => write!(f, "lightslategrey"),
-            Self::LightSteelBlue => write!(f, "lightsteelblue"),
-            Self::LightYellow => write!(f, "lightyellow"),
-            Self::Lime => write!(f, "lime"),
-            Self::LimeGreen => write!(f, "limegreen"),
-            Self::Linen => write!(f, "linen"),
-            Self::Magenta => write!(f, "magenta"),
-            Self::Maroon => write!(f, "maroon"),
-            Self::MediumAquaMarine => write!(f, "mediumaquamarine"),
-            Self::MediumBlue => write!(f, "mediumblue"),
-            Self::MediumOrchid => write!(f, "mediumorchid"),
-            Self::MediumPurple => write!(f, "mediumpurple"),
-            Self::MediumSeaGreen => write!(f, "mediumseagreen"),
-            Self::MediumSlateBlue => write!(f, "mediumslateblue"),
-            Self::MediumSpringGreen => write!(f, "mediumspringgreen"),
-            Self::MediumTurquoise => write!(f, "mediumturquoise"),
-            Self::MediumVioletRed => write!(f, "mediumvioletred"),
-            Self::MidnightBlue => write!(f, "midnightblue"),
-            Self::MintCream => write!(f, "mintcream"),
-            Self::MistyRose => write!(f, "mistyrose"),
-            Self::Moccasin => write!(f, "moccasin"),
-            Self::NavajoWhite => write!(f, "navajowhite"),
-            Self::Navy => write!(f, "navy"),
-            Self::OldLace => write!(f, "oldlace"),
-            Self::Olive => write!(f, "olive"),
-            Self::OliveDrab => write!(f, "olivedrab"),
-            Self::Orange => write!(f, "orange"),
-            Self::OrangeRed => write!(f, "orangered"),
-            Self::Orchid => write!(f, "orchid"),
-            Self::PaleGoldenRod => write!(f, "palegoldenrod"),
-            Self::PaleGreen => write!(f, "palegreen"),
-            Self::PaleTurquoise => write!(f, "paleturquoise"),
-            Self::PaleVioletRed => write!(f, "palevioletred"),
-            Self::PapayaWhip => write!(f, "papayawhip"),
-            Self::PeachPuff => write!(f, "peachpuff"),
-            Self::Peru => write!(f, "peru"),
-            Self::Pink => write!(f, "pink"),
-            Self::Plum => write!(f, "plum"),
-            Self::PowderBlue => write!(f, "powderblue"),
-            Self::Purple => write!(f, "purple"),
-            Self::RebeccaPurple => write!(f, "rebeccapurple"),
-            Self::Red => write!(f, "red"),
-            Self::RosyBrown => write!(f, "rosybrown"),
-            Self::RoyalBlue => write!(f, "royalblue"),
-            Self::SaddleBrown => write!(f, "saddlebrown"),
-            Self::Salmon => write!(f, "salmon"),
-            Self::SandyBrown => write!(f, "sandybrown"),
-            Self::SeaGreen => write!(f, "seagreen"),
-            Self::SeaShell => write!(f, "seashell"),
-            Self::Sienna => write!(f, "sienna"),
-            Self::Silver => write!(f, "silver"),
-            Self::SkyBlue => write!(f, "skyblue"),
-            Self::SlateBlue => write!(f, "slateblue"),
-            Self::SlateGray => write!(f, "slategray"),
-            Self::SlateGrey => write!(f, "slategrey"),
-            Self::Snow => write!(f, "snow"),
-            Self::SpringGreen => write!(f, "springgreen"),
-            Self::SteelBlue => write!(f, "steelblue"),
-            Self::Tan => write!(f, "tan"),
-            Self::Teal => write!(f, "teal"),
-            Self::Thistle => write!(f, "thistle"),
-            Self::Tomato => write!(f, "tomato"),
-            Self::Turquoise => write!(f, "turquoise"),
-            Self::Violet => write!(f, "violet"),
-            Self::Wheat => write!(f, "wheat"),
-            Self::White => write!(f, "white"),
-            Self::WhiteSmoke => write!(f, "whitesmoke"),
-            Self::Yellow => write!(f, "yellow"),
-            Self::YellowGreen => write!(f, "yellowgreen"),
-            Self::Transparent => write!(f, "transparent"),
-        }
-    }
-}
-
-impl TryFrom<&str> for ColorName {
-    type Error = &'static str;
-
-    fn try_from(string: &str) -> Result<Self, Self::Error> {
-        match string.to_ascii_lowercase().as_str() {
-            "aliceblue" => Ok(Self::AliceBlue),
-            "antiquewhite" => Ok(Self::AntiqueWhite),
-            "aqua" => Ok(Self::Aqua),
-            "aquamarine" => Ok(Self::Aquamarine),
-            "azure" => Ok(Self::Azure),
-            "beige" => Ok(Self::Beige),
-            "bisque" => Ok(Self::Bisque),
-            "black" => Ok(Self::Black),
-            "blanchedalmond" => Ok(Self::BlanchedAlmond),
-            "blue" => Ok(Self::Blue),
-            "blueviolet" => Ok(Self::BlueViolet),
-            "brown" => Ok(Self::Brown),
-            "burlywood" => Ok(Self::BurlyWood),
-            "cadetblue" => Ok(Self::CadetBlue),
-            "chartreuse" => Ok(Self::Chartreuse),
-            "chocolate" => Ok(Self::Chocolate),
-            "coral" => Ok(Self::Coral),
-            "cornflowerblue" => Ok(Self::CornflowerBlue),
-            "cornsilk" => Ok(Self::Cornsilk),
-            "crimson" => Ok(Self::Crimson),
-            "cyan" => Ok(Self::Cyan),
-            "darkblue" => Ok(Self::DarkBlue),
-            "darkcyan" => Ok(Self::DarkCyan),
-            "darkgoldenrod" => Ok(Self::DarkGoldenRod),
-            "darkgray" => Ok(Self::DarkGray),
-            "darkgrey" => Ok(Self::DarkGrey),
-            "darkgreen" => Ok(Self::DarkGreen),
-            "darkkhaki" => Ok(Self::DarkKhaki),
-            "darkmagenta" => Ok(Self::DarkMagenta),
-            "darkolivegreen" => Ok(Self::DarkOliveGreen),
-            "darkorange" => Ok(Self::DarkOrange),
-            "darkorchid" => Ok(Self::DarkOrchid),
-            "darkred" => Ok(Self::DarkRed),
-            "darksalmon" => Ok(Self::DarkSalmon),
-            "darkseagreen" => Ok(Self::DarkSeaGreen),
-            "darkslateblue" => Ok(Self::DarkSlateBlue),
-            "darkslategray" => Ok(Self::DarkSlateGray),
-            "darkslategrey" => Ok(Self::DarkSlateGrey),
-            "darkturquoise" => Ok(Self::DarkTurquoise),
-            "darkviolet" => Ok(Self::DarkViolet),
-            "deeppink" => Ok(Self::DeepPink),
-            "deepskyblue" => Ok(Self::DeepSkyBlue),
-            "dimgray" => Ok(Self::DimGray),
-            "dimgrey" => Ok(Self::DimGrey),
-            "dodgerblue" => Ok(Self::DodgerBlue),
-            "firebrick" => Ok(Self::FireBrick),
-            "floralwhite" => Ok(Self::FloralWhite),
-            "forestgreen" => Ok(Self::ForestGreen),
-            "fuchsia" => Ok(Self::Fuchsia),
-            "gainsboro" => Ok(Self::Gainsboro),
-            "ghostwhite" => Ok(Self::GhostWhite),
-            "gold" => Ok(Self::Gold),
-            "goldenrod" => Ok(Self::GoldenRod),
-            "gray" => Ok(Self::Gray),
-            "grey" => Ok(Self::Grey),
-            "green" => Ok(Self::Green),
-            "greenyellow" => Ok(Self::GreenYellow),
-            "honeydew" => Ok(Self::HoneyDew),
-            "hotpink" => Ok(Self::HotPink),
-            "indianred" => Ok(Self::IndianRed),
-            "indigo" => Ok(Self::Indigo),
-            "ivory" => Ok(Self::Ivory),
-            "khaki" => Ok(Self::Khaki),
-            "lavender" => Ok(Self::Lavender),
-            "lavenderblush" => Ok(Self::LavenderBlush),
-            "lawngreen" => Ok(Self::LawnGreen),
-            "lemonchiffon" => Ok(Self::LemonChiffon),
-            "lightblue" => Ok(Self::LightBlue),
-            "lightcoral" => Ok(Self::LightCoral),
-            "lightcyan" => Ok(Self::LightCyan),
-            "lightgoldenrodyellow" => Ok(Self::LightGoldenRodYellow),
-            "lightgray" => Ok(Self::LightGray),
-            "lightgrey" => Ok(Self::LightGrey),
-            "lightgreen" => Ok(Self::LightGreen),
-            "lightpink" => Ok(Self::LightPink),
-            "lightsalmon" => Ok(Self::LightSalmon),
-            "lightseagreen" => Ok(Self::LightSeaGreen),
-            "lightskyblue" => Ok(Self::LightSkyBlue),
-            "lightslategray" => Ok(Self::LightSlateGray),
-            "lightslategrey" => Ok(Self::LightSlateGrey),
-            "lightsteelblue" => Ok(Self::LightSteelBlue),
-            "lightyellow" => Ok(Self::LightYellow),
-            "lime" => Ok(Self::Lime),
-            "limegreen" => Ok(Self::LimeGreen),
-            "linen" => Ok(Self::Linen),
-            "magenta" => Ok(Self::Magenta),
-            "maroon" => Ok(Self::Maroon),
-            "mediumaquamarine" => Ok(Self::MediumAquaMarine),
-            "mediumblue" => Ok(Self::MediumBlue),
-            "mediumorchid" => Ok(Self::MediumOrchid),
-            "mediumpurple" => Ok(Self::MediumPurple),
-            "mediumseagreen" => Ok(Self::MediumSeaGreen),
-            "mediumslateblue" => Ok(Self::MediumSlateBlue),
-            "mediumspringgreen" => Ok(Self::MediumSpringGreen),
-            "mediumturquoise" => Ok(Self::MediumTurquoise),
-            "mediumvioletred" => Ok(Self::MediumVioletRed),
-            "midnightblue" => Ok(Self::MidnightBlue),
-            "mintcream" => Ok(Self::MintCream),
-            "mistyrose" => Ok(Self::MistyRose),
-            "moccasin" => Ok(Self::Moccasin),
-            "navajowhite" => Ok(Self::NavajoWhite),
-            "navy" => Ok(Self::Navy),
-            "oldlace" => Ok(Self::OldLace),
-            "olive" => Ok(Self::Olive),
-            "olivedrab" => Ok(Self::OliveDrab),
-            "orange" => Ok(Self::Orange),
-            "orangered" => Ok(Self::OrangeRed),
-            "orchid" => Ok(Self::Orchid),
-            "palegoldenrod" => Ok(Self::PaleGoldenRod),
-            "palegreen" => Ok(Self::PaleGreen),
-            "paleturquoise" => Ok(Self::PaleTurquoise),
-            "palevioletred" => Ok(Self::PaleVioletRed),
-            "papayawhip" => Ok(Self::PapayaWhip),
-            "peachpuff" => Ok(Self::PeachPuff),
-            "peru" => Ok(Self::Peru),
-            "pink" => Ok(Self::Pink),
-            "plum" => Ok(Self::Plum),
-            "powderblue" => Ok(Self::PowderBlue),
-            "purple" => Ok(Self::Purple),
-            "rebeccapurple" => Ok(Self::RebeccaPurple),
-            "red" => Ok(Self::Red),
-            "rosybrown" => Ok(Self::RosyBrown),
-            "royalblue" => Ok(Self::RoyalBlue),
-            "saddlebrown" => Ok(Self::SaddleBrown),
-            "salmon" => Ok(Self::Salmon),
-            "sandybrown" => Ok(Self::SandyBrown),
-            "seagreen" => Ok(Self::SeaGreen),
-            "seashell" => Ok(Self::SeaShell),
-            "sienna" => Ok(Self::Sienna),
-            "silver" => Ok(Self::Silver),
-            "skyblue" => Ok(Self::SkyBlue),
-            "slateblue" => Ok(Self::SlateBlue),
-            "slategray" => Ok(Self::SlateGray),
-            "slategrey" => Ok(Self::SlateGrey),
-            "snow" => Ok(Self::Snow),
-            "springgreen" => Ok(Self::SpringGreen),
-            "steelblue" => Ok(Self::SteelBlue),
-            "tan" => Ok(Self::Tan),
-            "teal" => Ok(Self::Teal),
-            "thistle" => Ok(Self::Thistle),
-            "tomato" => Ok(Self::Tomato),
-            "turquoise" => Ok(Self::Turquoise),
-            "violet" => Ok(Self::Violet),
-            "wheat" => Ok(Self::Wheat),
-            "white" => Ok(Self::White),
-            "whitesmoke" => Ok(Self::WhiteSmoke),
-            "yellow" => Ok(Self::Yellow),
-            "yellowgreen" => Ok(Self::YellowGreen),
-            "transparent" => Ok(Self::Transparent),
-            _ => Err("invalid color"),
-        }
-    }
-}
-
-impl TryFrom<[u8; 3]> for ColorName {
-    type Error = &'static str;
-
-    fn try_from(c: [u8; 3]) -> Result<Self, Self::Error> {
-        match c {
-            [0xF0, 0xF8, 0xFF] => Ok(Self::AliceBlue),
-            [0xFA, 0xEB, 0xD7] => Ok(Self::AntiqueWhite),
-            [0x00, 0xFF, 0xFF] => Ok(Self::Aqua),
-            [0x7F, 0xFF, 0xD4] => Ok(Self::Aquamarine),
-            [0xF0, 0xFF, 0xFF] => Ok(Self::Azure),
-            [0xF5, 0xF5, 0xDC] => Ok(Self::Beige),
-            [0xFF, 0xE4, 0xC4] => Ok(Self::Bisque),
-            [0x00, 0x00, 0x00] => Ok(Self::Black),
-            [0xFF, 0xEB, 0xCD] => Ok(Self::BlanchedAlmond),
-            [0x00, 0x00, 0xFF] => Ok(Self::Blue),
-            [0x8A, 0x2B, 0xE2] => Ok(Self::BlueViolet),
-            [0xA5, 0x2A, 0x2A] => Ok(Self::Brown),
-            [0xDE, 0xB8, 0x87] => Ok(Self::BurlyWood),
-            [0x5F, 0x9E, 0xA0] => Ok(Self::CadetBlue),
-            [0x7F, 0xFF, 0x00] => Ok(Self::Chartreuse),
-            [0xD2, 0x69, 0x1E] => Ok(Self::Chocolate),
-            [0xFF, 0x7F, 0x50] => Ok(Self::Coral),
-            [0x64, 0x95, 0xED] => Ok(Self::CornflowerBlue),
-            [0xFF, 0xF8, 0xDC] => Ok(Self::Cornsilk),
-            [0xDC, 0x14, 0x3C] => Ok(Self::Crimson),
-            [0x00, 0x00, 0x8B] => Ok(Self::DarkBlue),
-            [0x00, 0x8B, 0x8B] => Ok(Self::DarkCyan),
-            [0xB8, 0x86, 0x0B] => Ok(Self::DarkGoldenRod),
-            [0xA9, 0xA9, 0xA9] => Ok(Self::DarkGray),
-            [0x00, 0x64, 0x00] => Ok(Self::DarkGreen),
-            [0xBD, 0xB7, 0x6B] => Ok(Self::DarkKhaki),
-            [0x8B, 0x00, 0x8B] => Ok(Self::DarkMagenta),
-            [0x55, 0x6B, 0x2F] => Ok(Self::DarkOliveGreen),
-            [0xFF, 0x8C, 0x00] => Ok(Self::DarkOrange),
-            [0x99, 0x32, 0xCC] => Ok(Self::DarkOrchid),
-            [0x8B, 0x00, 0x00] => Ok(Self::DarkRed),
-            [0xE9, 0x96, 0x7A] => Ok(Self::DarkSalmon),
-            [0x8F, 0xBC, 0x8F] => Ok(Self::DarkSeaGreen),
-            [0x48, 0x3D, 0x8B] => Ok(Self::DarkSlateBlue),
-            [0x2F, 0x4F, 0x4F] => Ok(Self::DarkSlateGray),
-            [0x00, 0xCE, 0xD1] => Ok(Self::DarkTurquoise),
-            [0x94, 0x00, 0xD3] => Ok(Self::DarkViolet),
-            [0xFF, 0x14, 0x93] => Ok(Self::DeepPink),
-            [0x00, 0xBF, 0xFF] => Ok(Self::DeepSkyBlue),
-            [0x69, 0x69, 0x69] => Ok(Self::DimGray),
-            [0x1E, 0x90, 0xFF] => Ok(Self::DodgerBlue),
-            [0xB2, 0x22, 0x22] => Ok(Self::FireBrick),
-            [0xFF, 0xFA, 0xF0] => Ok(Self::FloralWhite),
-            [0x22, 0x8B, 0x22] => Ok(Self::ForestGreen),
-            [0xFF, 0x00, 0xFF] => Ok(Self::Fuchsia),
-            [0xDC, 0xDC, 0xDC] => Ok(Self::Gainsboro),
-            [0xF8, 0xF8, 0xFF] => Ok(Self::GhostWhite),
-            [0xFF, 0xD7, 0x00] => Ok(Self::Gold),
-            [0xDA, 0xA5, 0x20] => Ok(Self::GoldenRod),
-            [0x80, 0x80, 0x80] => Ok(Self::Gray),
-            [0x00, 0x80, 0x00] => Ok(Self::Green),
-            [0xAD, 0xFF, 0x2F] => Ok(Self::GreenYellow),
-            [0xF0, 0xFF, 0xF0] => Ok(Self::HoneyDew),
-            [0xFF, 0x69, 0xB4] => Ok(Self::HotPink),
-            [0xCD, 0x5C, 0x5C] => Ok(Self::IndianRed),
-            [0x4B, 0x00, 0x82] => Ok(Self::Indigo),
-            [0xFF, 0xFF, 0xF0] => Ok(Self::Ivory),
-            [0xF0, 0xE6, 0x8C] => Ok(Self::Khaki),
-            [0xE6, 0xE6, 0xFA] => Ok(Self::Lavender),
-            [0xFF, 0xF0, 0xF5] => Ok(Self::LavenderBlush),
-            [0x7C, 0xFC, 0x00] => Ok(Self::LawnGreen),
-            [0xFF, 0xFA, 0xCD] => Ok(Self::LemonChiffon),
-            [0xAD, 0xD8, 0xE6] => Ok(Self::LightBlue),
-            [0xF0, 0x80, 0x80] => Ok(Self::LightCoral),
-            [0xE0, 0xFF, 0xFF] => Ok(Self::LightCyan),
-            [0xFA, 0xFA, 0xD2] => Ok(Self::LightGoldenRodYellow),
-            [0xD3, 0xD3, 0xD3] => Ok(Self::LightGray),
-            [0x90, 0xEE, 0x90] => Ok(Self::LightGreen),
-            [0xFF, 0xB6, 0xC1] => Ok(Self::LightPink),
-            [0xFF, 0xA0, 0x7A] => Ok(Self::LightSalmon),
-            [0x20, 0xB2, 0xAA] => Ok(Self::LightSeaGreen),
-            [0x87, 0xCE, 0xFA] => Ok(Self::LightSkyBlue),
-            [0x77, 0x88, 0x99] => Ok(Self::LightSlateGray),
-            [0xB0, 0xC4, 0xDE] => Ok(Self::LightSteelBlue),
-            [0xFF, 0xFF, 0xE0] => Ok(Self::LightYellow),
-            [0x00, 0xFF, 0x00] => Ok(Self::Lime),
-            [0x32, 0xCD, 0x32] => Ok(Self::LimeGreen),
-            [0xFA, 0xF0, 0xE6] => Ok(Self::Linen),
-            [0x80, 0x00, 0x00] => Ok(Self::Maroon),
-            [0x66, 0xCD, 0xAA] => Ok(Self::MediumAquaMarine),
-            [0x00, 0x00, 0xCD] => Ok(Self::MediumBlue),
-            [0xBA, 0x55, 0xD3] => Ok(Self::MediumOrchid),
-            [0x93, 0x70, 0xDB] => Ok(Self::MediumPurple),
-            [0x3C, 0xB3, 0x71] => Ok(Self::MediumSeaGreen),
-            [0x7B, 0x68, 0xEE] => Ok(Self::MediumSlateBlue),
-            [0x00, 0xFA, 0x9A] => Ok(Self::MediumSpringGreen),
-            [0x48, 0xD1, 0xCC] => Ok(Self::MediumTurquoise),
-            [0xC7, 0x15, 0x85] => Ok(Self::MediumVioletRed),
-            [0x19, 0x19, 0x70] => Ok(Self::MidnightBlue),
-            [0xF5, 0xFF, 0xFA] => Ok(Self::MintCream),
-            [0xFF, 0xE4, 0xE1] => Ok(Self::MistyRose),
-            [0xFF, 0xE4, 0xB5] => Ok(Self::Moccasin),
-            [0xFF, 0xDE, 0xAD] => Ok(Self::NavajoWhite),
-            [0x00, 0x00, 0x80] => Ok(Self::Navy),
-            [0xFD, 0xF5, 0xE6] => Ok(Self::OldLace),
-            [0x80, 0x80, 0x00] => Ok(Self::Olive),
-            [0x6B, 0x8E, 0x23] => Ok(Self::OliveDrab),
-            [0xFF, 0xA5, 0x00] => Ok(Self::Orange),
-            [0xFF, 0x45, 0x00] => Ok(Self::OrangeRed),
-            [0xDA, 0x70, 0xD6] => Ok(Self::Orchid),
-            [0xEE, 0xE8, 0xAA] => Ok(Self::PaleGoldenRod),
-            [0x98, 0xFB, 0x98] => Ok(Self::PaleGreen),
-            [0xAF, 0xEE, 0xEE] => Ok(Self::PaleTurquoise),
-            [0xDB, 0x70, 0x93] => Ok(Self::PaleVioletRed),
-            [0xFF, 0xEF, 0xD5] => Ok(Self::PapayaWhip),
-            [0xFF, 0xDA, 0xB9] => Ok(Self::PeachPuff),
-            [0xCD, 0x85, 0x3F] => Ok(Self::Peru),
-            [0xFF, 0xC0, 0xCB] => Ok(Self::Pink),
-            [0xDD, 0xA0, 0xDD] => Ok(Self::Plum),
-            [0xB0, 0xE0, 0xE6] => Ok(Self::PowderBlue),
-            [0x80, 0x00, 0x80] => Ok(Self::Purple),
-            [0x66, 0x33, 0x99] => Ok(Self::RebeccaPurple),
-            [0xFF, 0x00, 0x00] => Ok(Self::Red),
-            [0xBC, 0x8F, 0x8F] => Ok(Self::RosyBrown),
-            [0x41, 0x69, 0xE1] => Ok(Self::RoyalBlue),
-            [0x8B, 0x45, 0x13] => Ok(Self::SaddleBrown),
-            [0xFA, 0x80, 0x72] => Ok(Self::Salmon),
-            [0xF4, 0xA4, 0x60] => Ok(Self::SandyBrown),
-            [0x2E, 0x8B, 0x57] => Ok(Self::SeaGreen),
-            [0xFF, 0xF5, 0xEE] => Ok(Self::SeaShell),
-            [0xA0, 0x52, 0x2D] => Ok(Self::Sienna),
-            [0xC0, 0xC0, 0xC0] => Ok(Self::Silver),
-            [0x87, 0xCE, 0xEB] => Ok(Self::SkyBlue),
-            [0x6A, 0x5A, 0xCD] => Ok(Self::SlateBlue),
-            [0x70, 0x80, 0x90] => Ok(Self::SlateGray),
-            [0xFF, 0xFA, 0xFA] => Ok(Self::Snow),
-            [0x00, 0xFF, 0x7F] => Ok(Self::SpringGreen),
-            [0x46, 0x82, 0xB4] => Ok(Self::SteelBlue),
-            [0xD2, 0xB4, 0x8C] => Ok(Self::Tan),
-            [0x00, 0x80, 0x80] => Ok(Self::Teal),
-            [0xD8, 0xBF, 0xD8] => Ok(Self::Thistle),
-            [0xFF, 0x63, 0x47] => Ok(Self::Tomato),
-            [0x40, 0xE0, 0xD0] => Ok(Self::Turquoise),
-            [0xEE, 0x82, 0xEE] => Ok(Self::Violet),
-            [0xF5, 0xDE, 0xB3] => Ok(Self::Wheat),
-            [0xFF, 0xFF, 0xFF] => Ok(Self::White),
-            [0xF5, 0xF5, 0xF5] => Ok(Self::WhiteSmoke),
-            [0xFF, 0xFF, 0x00] => Ok(Self::Yellow),
-            [0x9A, 0xCD, 0x32] => Ok(Self::YellowGreen),
-            _ => Err("invalid color"),
-        }
-    }
-}
-
-impl ColorName {
-    pub fn into_color(self, repr: String) -> Color {
-        match self {
-            Self::AliceBlue => Color::new(0xF0, 0xF8, 0xFF, 0xFF, repr),
-            Self::AntiqueWhite => Color::new(0xFA, 0xEB, 0xD7, 0xFF, repr),
-            Self::Aqua => Color::new(0x00, 0xFF, 0xFF, 0xFF, repr),
-            Self::Aquamarine => Color::new(0x7F, 0xFF, 0xD4, 0xFF, repr),
-            Self::Azure => Color::new(0xF0, 0xFF, 0xFF, 0xFF, repr),
-            Self::Beige => Color::new(0xF5, 0xF5, 0xDC, 0xFF, repr),
-            Self::Bisque => Color::new(0xFF, 0xE4, 0xC4, 0xFF, repr),
-            Self::Black => Color::new(0x00, 0x00, 0x00, 0xFF, repr),
-            Self::BlanchedAlmond => Color::new(0xFF, 0xEB, 0xCD, 0xFF, repr),
-            Self::Blue => Color::new(0x00, 0x00, 0xFF, 0xFF, repr),
-            Self::BlueViolet => Color::new(0x8A, 0x2B, 0xE2, 0xFF, repr),
-            Self::Brown => Color::new(0xA5, 0x2A, 0x2A, 0xFF, repr),
-            Self::BurlyWood => Color::new(0xDE, 0xB8, 0x87, 0xFF, repr),
-            Self::CadetBlue => Color::new(0x5F, 0x9E, 0xA0, 0xFF, repr),
-            Self::Chartreuse => Color::new(0x7F, 0xFF, 0x00, 0xFF, repr),
-            Self::Chocolate => Color::new(0xD2, 0x69, 0x1E, 0xFF, repr),
-            Self::Coral => Color::new(0xFF, 0x7F, 0x50, 0xFF, repr),
-            Self::CornflowerBlue => Color::new(0x64, 0x95, 0xED, 0xFF, repr),
-            Self::Cornsilk => Color::new(0xFF, 0xF8, 0xDC, 0xFF, repr),
-            Self::Crimson => Color::new(0xDC, 0x14, 0x3C, 0xFF, repr),
-            Self::Cyan => Color::new(0x00, 0xFF, 0xFF, 0xFF, repr),
-            Self::DarkBlue => Color::new(0x00, 0x00, 0x8B, 0xFF, repr),
-            Self::DarkCyan => Color::new(0x00, 0x8B, 0x8B, 0xFF, repr),
-            Self::DarkGoldenRod => Color::new(0xB8, 0x86, 0x0B, 0xFF, repr),
-            Self::DarkGray | Self::DarkGrey => Color::new(0xA9, 0xA9, 0xA9, 0xFF, repr),
-            Self::DarkGreen => Color::new(0x00, 0x64, 0x00, 0xFF, repr),
-            Self::DarkKhaki => Color::new(0xBD, 0xB7, 0x6B, 0xFF, repr),
-            Self::DarkMagenta => Color::new(0x8B, 0x00, 0x8B, 0xFF, repr),
-            Self::DarkOliveGreen => Color::new(0x55, 0x6B, 0x2F, 0xFF, repr),
-            Self::DarkOrange => Color::new(0xFF, 0x8C, 0x00, 0xFF, repr),
-            Self::DarkOrchid => Color::new(0x99, 0x32, 0xCC, 0xFF, repr),
-            Self::DarkRed => Color::new(0x8B, 0x00, 0x00, 0xFF, repr),
-            Self::DarkSalmon => Color::new(0xE9, 0x96, 0x7A, 0xFF, repr),
-            Self::DarkSeaGreen => Color::new(0x8F, 0xBC, 0x8F, 0xFF, repr),
-            Self::DarkSlateBlue => Color::new(0x48, 0x3D, 0x8B, 0xFF, repr),
-            Self::DarkSlateGray | Self::DarkSlateGrey => Color::new(0x2F, 0x4F, 0x4F, 0xFF, repr),
-            Self::DarkTurquoise => Color::new(0x00, 0xCE, 0xD1, 0xFF, repr),
-            Self::DarkViolet => Color::new(0x94, 0x00, 0xD3, 0xFF, repr),
-            Self::DeepPink => Color::new(0xFF, 0x14, 0x93, 0xFF, repr),
-            Self::DeepSkyBlue => Color::new(0x00, 0xBF, 0xFF, 0xFF, repr),
-            Self::DimGray | Self::DimGrey => Color::new(0x69, 0x69, 0x69, 0xFF, repr),
-            Self::DodgerBlue => Color::new(0x1E, 0x90, 0xFF, 0xFF, repr),
-            Self::FireBrick => Color::new(0xB2, 0x22, 0x22, 0xFF, repr),
-            Self::FloralWhite => Color::new(0xFF, 0xFA, 0xF0, 0xFF, repr),
-            Self::ForestGreen => Color::new(0x22, 0x8B, 0x22, 0xFF, repr),
-            Self::Fuchsia => Color::new(0xFF, 0x00, 0xFF, 0xFF, repr),
-            Self::Gainsboro => Color::new(0xDC, 0xDC, 0xDC, 0xFF, repr),
-            Self::GhostWhite => Color::new(0xF8, 0xF8, 0xFF, 0xFF, repr),
-            Self::Gold => Color::new(0xFF, 0xD7, 0x00, 0xFF, repr),
-            Self::GoldenRod => Color::new(0xDA, 0xA5, 0x20, 0xFF, repr),
-            Self::Gray | Self::Grey => Color::new(0x80, 0x80, 0x80, 0xFF, repr),
-            Self::Green => Color::new(0x00, 0x80, 0x00, 0xFF, repr),
-            Self::GreenYellow => Color::new(0xAD, 0xFF, 0x2F, 0xFF, repr),
-            Self::HoneyDew => Color::new(0xF0, 0xFF, 0xF0, 0xFF, repr),
-            Self::HotPink => Color::new(0xFF, 0x69, 0xB4, 0xFF, repr),
-            Self::IndianRed => Color::new(0xCD, 0x5C, 0x5C, 0xFF, repr),
-            Self::Indigo => Color::new(0x4B, 0x00, 0x82, 0xFF, repr),
-            Self::Ivory => Color::new(0xFF, 0xFF, 0xF0, 0xFF, repr),
-            Self::Khaki => Color::new(0xF0, 0xE6, 0x8C, 0xFF, repr),
-            Self::Lavender => Color::new(0xE6, 0xE6, 0xFA, 0xFF, repr),
-            Self::LavenderBlush => Color::new(0xFF, 0xF0, 0xF5, 0xFF, repr),
-            Self::LawnGreen => Color::new(0x7C, 0xFC, 0x00, 0xFF, repr),
-            Self::LemonChiffon => Color::new(0xFF, 0xFA, 0xCD, 0xFF, repr),
-            Self::LightBlue => Color::new(0xAD, 0xD8, 0xE6, 0xFF, repr),
-            Self::LightCoral => Color::new(0xF0, 0x80, 0x80, 0xFF, repr),
-            Self::LightCyan => Color::new(0xE0, 0xFF, 0xFF, 0xFF, repr),
-            Self::LightGoldenRodYellow => Color::new(0xFA, 0xFA, 0xD2, 0xFF, repr),
-            Self::LightGray => Color::new(0xD3, 0xD3, 0xD3, 0xFF, repr),
-            Self::LightGrey => Color::new(0xD3, 0xD3, 0xD3, 0xFF, repr),
-            Self::LightGreen => Color::new(0x90, 0xEE, 0x90, 0xFF, repr),
-            Self::LightPink => Color::new(0xFF, 0xB6, 0xC1, 0xFF, repr),
-            Self::LightSalmon => Color::new(0xFF, 0xA0, 0x7A, 0xFF, repr),
-            Self::LightSeaGreen => Color::new(0x20, 0xB2, 0xAA, 0xFF, repr),
-            Self::LightSkyBlue => Color::new(0x87, 0xCE, 0xFA, 0xFF, repr),
-            Self::LightSlateGray | Self::LightSlateGrey => Color::new(0x77, 0x88, 0x99, 0xFF, repr),
-            Self::LightSteelBlue => Color::new(0xB0, 0xC4, 0xDE, 0xFF, repr),
-            Self::LightYellow => Color::new(0xFF, 0xFF, 0xE0, 0xFF, repr),
-            Self::Lime => Color::new(0x00, 0xFF, 0x00, 0xFF, repr),
-            Self::LimeGreen => Color::new(0x32, 0xCD, 0x32, 0xFF, repr),
-            Self::Linen => Color::new(0xFA, 0xF0, 0xE6, 0xFF, repr),
-            Self::Magenta => Color::new(0xFF, 0x00, 0xFF, 0xFF, repr),
-            Self::Maroon => Color::new(0x80, 0x00, 0x00, 0xFF, repr),
-            Self::MediumAquaMarine => Color::new(0x66, 0xCD, 0xAA, 0xFF, repr),
-            Self::MediumBlue => Color::new(0x00, 0x00, 0xCD, 0xFF, repr),
-            Self::MediumOrchid => Color::new(0xBA, 0x55, 0xD3, 0xFF, repr),
-            Self::MediumPurple => Color::new(0x93, 0x70, 0xDB, 0xFF, repr),
-            Self::MediumSeaGreen => Color::new(0x3C, 0xB3, 0x71, 0xFF, repr),
-            Self::MediumSlateBlue => Color::new(0x7B, 0x68, 0xEE, 0xFF, repr),
-            Self::MediumSpringGreen => Color::new(0x00, 0xFA, 0x9A, 0xFF, repr),
-            Self::MediumTurquoise => Color::new(0x48, 0xD1, 0xCC, 0xFF, repr),
-            Self::MediumVioletRed => Color::new(0xC7, 0x15, 0x85, 0xFF, repr),
-            Self::MidnightBlue => Color::new(0x19, 0x19, 0x70, 0xFF, repr),
-            Self::MintCream => Color::new(0xF5, 0xFF, 0xFA, 0xFF, repr),
-            Self::MistyRose => Color::new(0xFF, 0xE4, 0xE1, 0xFF, repr),
-            Self::Moccasin => Color::new(0xFF, 0xE4, 0xB5, 0xFF, repr),
-            Self::NavajoWhite => Color::new(0xFF, 0xDE, 0xAD, 0xFF, repr),
-            Self::Navy => Color::new(0x00, 0x00, 0x80, 0xFF, repr),
-            Self::OldLace => Color::new(0xFD, 0xF5, 0xE6, 0xFF, repr),
-            Self::Olive => Color::new(0x80, 0x80, 0x00, 0xFF, repr),
-            Self::OliveDrab => Color::new(0x6B, 0x8E, 0x23, 0xFF, repr),
-            Self::Orange => Color::new(0xFF, 0xA5, 0x00, 0xFF, repr),
-            Self::OrangeRed => Color::new(0xFF, 0x45, 0x00, 0xFF, repr),
-            Self::Orchid => Color::new(0xDA, 0x70, 0xD6, 0xFF, repr),
-            Self::PaleGoldenRod => Color::new(0xEE, 0xE8, 0xAA, 0xFF, repr),
-            Self::PaleGreen => Color::new(0x98, 0xFB, 0x98, 0xFF, repr),
-            Self::PaleTurquoise => Color::new(0xAF, 0xEE, 0xEE, 0xFF, repr),
-            Self::PaleVioletRed => Color::new(0xDB, 0x70, 0x93, 0xFF, repr),
-            Self::PapayaWhip => Color::new(0xFF, 0xEF, 0xD5, 0xFF, repr),
-            Self::PeachPuff => Color::new(0xFF, 0xDA, 0xB9, 0xFF, repr),
-            Self::Peru => Color::new(0xCD, 0x85, 0x3F, 0xFF, repr),
-            Self::Pink => Color::new(0xFF, 0xC0, 0xCB, 0xFF, repr),
-            Self::Plum => Color::new(0xDD, 0xA0, 0xDD, 0xFF, repr),
-            Self::PowderBlue => Color::new(0xB0, 0xE0, 0xE6, 0xFF, repr),
-            Self::Purple => Color::new(0x80, 0x00, 0x80, 0xFF, repr),
-            Self::RebeccaPurple => Color::new(0x66, 0x33, 0x99, 0xFF, repr),
-            Self::Red => Color::new(0xFF, 0x00, 0x00, 0xFF, repr),
-            Self::RosyBrown => Color::new(0xBC, 0x8F, 0x8F, 0xFF, repr),
-            Self::RoyalBlue => Color::new(0x41, 0x69, 0xE1, 0xFF, repr),
-            Self::SaddleBrown => Color::new(0x8B, 0x45, 0x13, 0xFF, repr),
-            Self::Salmon => Color::new(0xFA, 0x80, 0x72, 0xFF, repr),
-            Self::SandyBrown => Color::new(0xF4, 0xA4, 0x60, 0xFF, repr),
-            Self::SeaGreen => Color::new(0x2E, 0x8B, 0x57, 0xFF, repr),
-            Self::SeaShell => Color::new(0xFF, 0xF5, 0xEE, 0xFF, repr),
-            Self::Sienna => Color::new(0xA0, 0x52, 0x2D, 0xFF, repr),
-            Self::Silver => Color::new(0xC0, 0xC0, 0xC0, 0xFF, repr),
-            Self::SkyBlue => Color::new(0x87, 0xCE, 0xEB, 0xFF, repr),
-            Self::SlateBlue => Color::new(0x6A, 0x5A, 0xCD, 0xFF, repr),
-            Self::SlateGray | Self::SlateGrey => Color::new(0x70, 0x80, 0x90, 0xFF, repr),
-            Self::Snow => Color::new(0xFF, 0xFA, 0xFA, 0xFF, repr),
-            Self::SpringGreen => Color::new(0x00, 0xFF, 0x7F, 0xFF, repr),
-            Self::SteelBlue => Color::new(0x46, 0x82, 0xB4, 0xFF, repr),
-            Self::Tan => Color::new(0xD2, 0xB4, 0x8C, 0xFF, repr),
-            Self::Teal => Color::new(0x00, 0x80, 0x80, 0xFF, repr),
-            Self::Thistle => Color::new(0xD8, 0xBF, 0xD8, 0xFF, repr),
-            Self::Tomato => Color::new(0xFF, 0x63, 0x47, 0xFF, repr),
-            Self::Turquoise => Color::new(0x40, 0xE0, 0xD0, 0xFF, repr),
-            Self::Violet => Color::new(0xEE, 0x82, 0xEE, 0xFF, repr),
-            Self::Wheat => Color::new(0xF5, 0xDE, 0xB3, 0xFF, repr),
-            Self::White => Color::new(0xFF, 0xFF, 0xFF, 0xFF, repr),
-            Self::WhiteSmoke => Color::new(0xF5, 0xF5, 0xF5, 0xFF, repr),
-            Self::Yellow => Color::new(0xFF, 0xFF, 0x00, 0xFF, repr),
-            Self::YellowGreen => Color::new(0x9A, 0xCD, 0x32, 0xFF, repr),
-            Self::Transparent => Color::new(0x00, 0x00, 0x00, 0x00, repr),
-        }
-    }
-}
+pub(crate) static NAMED_COLORS: Lazy<BiMap<&str, [u8; 3]>> = Lazy::new(|| {
+    let mut m = BiMap::with_capacity(148);
+    m.insert("aliceblue", [0xF0, 0xF8, 0xFF]);
+    m.insert("antiquewhite", [0xFA, 0xEB, 0xD7]);
+    m.insert("aqua", [0x00, 0xFF, 0xFF]);
+    m.insert("aquamarine", [0x7F, 0xFF, 0xD4]);
+    m.insert("azure", [0xF0, 0xFF, 0xFF]);
+    m.insert("beige", [0xF5, 0xF5, 0xDC]);
+    m.insert("bisque", [0xFF, 0xE4, 0xC4]);
+    m.insert("black", [0x00, 0x00, 0x00]);
+    m.insert("blanchedalmond", [0xFF, 0xEB, 0xCD]);
+    m.insert("blue", [0x00, 0x00, 0xFF]);
+    m.insert("blueviolet", [0x8A, 0x2B, 0xE2]);
+    m.insert("brown", [0xA5, 0x2A, 0x2A]);
+    m.insert("burlywood", [0xDE, 0xB8, 0x87]);
+    m.insert("cadetblue", [0x5F, 0x9E, 0xA0]);
+    m.insert("chartreuse", [0x7F, 0xFF, 0x00]);
+    m.insert("chocolate", [0xD2, 0x69, 0x1E]);
+    m.insert("coral", [0xFF, 0x7F, 0x50]);
+    m.insert("cornflowerblue", [0x64, 0x95, 0xED]);
+    m.insert("cornsilk", [0xFF, 0xF8, 0xDC]);
+    m.insert("crimson", [0xDC, 0x14, 0x3C]);
+    m.insert("darkblue", [0x00, 0x00, 0x8B]);
+    m.insert("darkcyan", [0x00, 0x8B, 0x8B]);
+    m.insert("darkgoldenrod", [0xB8, 0x86, 0x0B]);
+    m.insert("darkgray", [0xA9, 0xA9, 0xA9]);
+    m.insert("darkgreen", [0x00, 0x64, 0x00]);
+    m.insert("darkkhaki", [0xBD, 0xB7, 0x6B]);
+    m.insert("darkmagenta", [0x8B, 0x00, 0x8B]);
+    m.insert("darkolivegreen", [0x55, 0x6B, 0x2F]);
+    m.insert("darkorange", [0xFF, 0x8C, 0x00]);
+    m.insert("darkorchid", [0x99, 0x32, 0xCC]);
+    m.insert("darkred", [0x8B, 0x00, 0x00]);
+    m.insert("darksalmon", [0xE9, 0x96, 0x7A]);
+    m.insert("darkseagreen", [0x8F, 0xBC, 0x8F]);
+    m.insert("darkslateblue", [0x48, 0x3D, 0x8B]);
+    m.insert("darkslategray", [0x2F, 0x4F, 0x4F]);
+    m.insert("darkturquoise", [0x00, 0xCE, 0xD1]);
+    m.insert("darkviolet", [0x94, 0x00, 0xD3]);
+    m.insert("deeppink", [0xFF, 0x14, 0x93]);
+    m.insert("deepskyblue", [0x00, 0xBF, 0xFF]);
+    m.insert("dimgray", [0x69, 0x69, 0x69]);
+    m.insert("dodgerblue", [0x1E, 0x90, 0xFF]);
+    m.insert("firebrick", [0xB2, 0x22, 0x22]);
+    m.insert("floralwhite", [0xFF, 0xFA, 0xF0]);
+    m.insert("forestgreen", [0x22, 0x8B, 0x22]);
+    m.insert("fuchsia", [0xFF, 0x00, 0xFF]);
+    m.insert("gainsboro", [0xDC, 0xDC, 0xDC]);
+    m.insert("ghostwhite", [0xF8, 0xF8, 0xFF]);
+    m.insert("gold", [0xFF, 0xD7, 0x00]);
+    m.insert("goldenrod", [0xDA, 0xA5, 0x20]);
+    m.insert("gray", [0x80, 0x80, 0x80]);
+    m.insert("green", [0x00, 0x80, 0x00]);
+    m.insert("greenyellow", [0xAD, 0xFF, 0x2F]);
+    m.insert("honeydew", [0xF0, 0xFF, 0xF0]);
+    m.insert("hotpink", [0xFF, 0x69, 0xB4]);
+    m.insert("indianred", [0xCD, 0x5C, 0x5C]);
+    m.insert("indigo", [0x4B, 0x00, 0x82]);
+    m.insert("ivory", [0xFF, 0xFF, 0xF0]);
+    m.insert("khaki", [0xF0, 0xE6, 0x8C]);
+    m.insert("lavender", [0xE6, 0xE6, 0xFA]);
+    m.insert("lavenderblush", [0xFF, 0xF0, 0xF5]);
+    m.insert("lawngreen", [0x7C, 0xFC, 0x00]);
+    m.insert("lemonchiffon", [0xFF, 0xFA, 0xCD]);
+    m.insert("lightblue", [0xAD, 0xD8, 0xE6]);
+    m.insert("lightcoral", [0xF0, 0x80, 0x80]);
+    m.insert("lightcyan", [0xE0, 0xFF, 0xFF]);
+    m.insert("lightgoldenrodyellow", [0xFA, 0xFA, 0xD2]);
+    m.insert("lightgray", [0xD3, 0xD3, 0xD3]);
+    m.insert("lightgreen", [0x90, 0xEE, 0x90]);
+    m.insert("lightpink", [0xFF, 0xB6, 0xC1]);
+    m.insert("lightsalmon", [0xFF, 0xA0, 0x7A]);
+    m.insert("lightseagreen", [0x20, 0xB2, 0xAA]);
+    m.insert("lightskyblue", [0x87, 0xCE, 0xFA]);
+    m.insert("lightslategray", [0x77, 0x88, 0x99]);
+    m.insert("lightsteelblue", [0xB0, 0xC4, 0xDE]);
+    m.insert("lightyellow", [0xFF, 0xFF, 0xE0]);
+    m.insert("lime", [0x00, 0xFF, 0x00]);
+    m.insert("limegreen", [0x32, 0xCD, 0x32]);
+    m.insert("linen", [0xFA, 0xF0, 0xE6]);
+    m.insert("maroon", [0x80, 0x00, 0x00]);
+    m.insert("mediumaquamarine", [0x66, 0xCD, 0xAA]);
+    m.insert("mediumblue", [0x00, 0x00, 0xCD]);
+    m.insert("mediumorchid", [0xBA, 0x55, 0xD3]);
+    m.insert("mediumpurple", [0x93, 0x70, 0xDB]);
+    m.insert("mediumseagreen", [0x3C, 0xB3, 0x71]);
+    m.insert("mediumslateblue", [0x7B, 0x68, 0xEE]);
+    m.insert("mediumspringgreen", [0x00, 0xFA, 0x9A]);
+    m.insert("mediumturquoise", [0x48, 0xD1, 0xCC]);
+    m.insert("mediumvioletred", [0xC7, 0x15, 0x85]);
+    m.insert("midnightblue", [0x19, 0x19, 0x70]);
+    m.insert("mintcream", [0xF5, 0xFF, 0xFA]);
+    m.insert("mistyrose", [0xFF, 0xE4, 0xE1]);
+    m.insert("moccasin", [0xFF, 0xE4, 0xB5]);
+    m.insert("navajowhite", [0xFF, 0xDE, 0xAD]);
+    m.insert("navy", [0x00, 0x00, 0x80]);
+    m.insert("oldlace", [0xFD, 0xF5, 0xE6]);
+    m.insert("olive", [0x80, 0x80, 0x00]);
+    m.insert("olivedrab", [0x6B, 0x8E, 0x23]);
+    m.insert("orange", [0xFF, 0xA5, 0x00]);
+    m.insert("orangered", [0xFF, 0x45, 0x00]);
+    m.insert("orchid", [0xDA, 0x70, 0xD6]);
+    m.insert("palegoldenrod", [0xEE, 0xE8, 0xAA]);
+    m.insert("palegreen", [0x98, 0xFB, 0x98]);
+    m.insert("paleturquoise", [0xAF, 0xEE, 0xEE]);
+    m.insert("palevioletred", [0xDB, 0x70, 0x93]);
+    m.insert("papayawhip", [0xFF, 0xEF, 0xD5]);
+    m.insert("peachpuff", [0xFF, 0xDA, 0xB9]);
+    m.insert("peru", [0xCD, 0x85, 0x3F]);
+    m.insert("pink", [0xFF, 0xC0, 0xCB]);
+    m.insert("plum", [0xDD, 0xA0, 0xDD]);
+    m.insert("powderblue", [0xB0, 0xE0, 0xE6]);
+    m.insert("purple", [0x80, 0x00, 0x80]);
+    m.insert("rebeccapurple", [0x66, 0x33, 0x99]);
+    m.insert("red", [0xFF, 0x00, 0x00]);
+    m.insert("rosybrown", [0xBC, 0x8F, 0x8F]);
+    m.insert("royalblue", [0x41, 0x69, 0xE1]);
+    m.insert("saddlebrown", [0x8B, 0x45, 0x13]);
+    m.insert("salmon", [0xFA, 0x80, 0x72]);
+    m.insert("sandybrown", [0xF4, 0xA4, 0x60]);
+    m.insert("seagreen", [0x2E, 0x8B, 0x57]);
+    m.insert("seashell", [0xFF, 0xF5, 0xEE]);
+    m.insert("sienna", [0xA0, 0x52, 0x2D]);
+    m.insert("silver", [0xC0, 0xC0, 0xC0]);
+    m.insert("skyblue", [0x87, 0xCE, 0xEB]);
+    m.insert("slateblue", [0x6A, 0x5A, 0xCD]);
+    m.insert("slategray", [0x70, 0x80, 0x90]);
+    m.insert("snow", [0xFF, 0xFA, 0xFA]);
+    m.insert("springgreen", [0x00, 0xFF, 0x7F]);
+    m.insert("steelblue", [0x46, 0x82, 0xB4]);
+    m.insert("tan", [0xD2, 0xB4, 0x8C]);
+    m.insert("teal", [0x00, 0x80, 0x80]);
+    m.insert("thistle", [0xD8, 0xBF, 0xD8]);
+    m.insert("tomato", [0xFF, 0x63, 0x47]);
+    m.insert("turquoise", [0x40, 0xE0, 0xD0]);
+    m.insert("violet", [0xEE, 0x82, 0xEE]);
+    m.insert("wheat", [0xF5, 0xDE, 0xB3]);
+    m.insert("white", [0xFF, 0xFF, 0xFF]);
+    m.insert("whitesmoke", [0xF5, 0xF5, 0xF5]);
+    m.insert("yellow", [0xFF, 0xFF, 0x00]);
+    m.insert("yellowgreen", [0x9A, 0xCD, 0x32]);
+    m
+});
