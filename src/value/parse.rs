@@ -559,7 +559,7 @@ impl Value {
             _ => {
                 if let Some(c) = NAMED_COLORS.get_by_left(&s.as_str()) {
                     Ok(IntermediateValue::Value(Spanned {
-                        node: Value::Color(Box::new(Color::new(c[0], c[1], c[2], 0xFF, s))),
+                        node: Value::Color(Box::new(Color::new(c[0], c[1], c[2], c[3], s))),
                         span,
                     }))
                 } else {

@@ -557,3 +557,13 @@ test!(
 ",
     "p {\n  color: #102005;\n  color: rgba(16, 32, 48, 0.325);\n  color: #782005;\n  color: rgba(204, 85, 0, 0.8);\n}\n"
 );
+test!(
+    transparent_from_function,
+    "a {\n  color: rgb(transparent, 0);\n}\n",
+    "a {\n  color: rgba(0, 0, 0, 0);\n}\n"
+);
+test!(
+    named_color_transparent_opacity,
+    "a {\n  color: opacity(transparent);\n}\n",
+    "a {\n  color: 0;\n}\n"
+);
