@@ -22,23 +22,12 @@ pub(crate) struct Mixin {
     scope: Scope,
     args: FuncArgs,
     body: PeekMoreIterator<IntoIter<Token>>,
-    content: Vec<Spanned<Stmt>>,
 }
 
 impl Mixin {
-    pub fn new(
-        scope: Scope,
-        args: FuncArgs,
-        body: Vec<Token>,
-        content: Vec<Spanned<Stmt>>,
-    ) -> Self {
+    pub fn new(scope: Scope, args: FuncArgs, body: Vec<Token>) -> Self {
         let body = body.into_iter().peekmore();
-        Mixin {
-            scope,
-            args,
-            body,
-            content,
-        }
+        Mixin { scope, args, body }
     }
 
     pub fn decl_from_tokens<I: Iterator<Item = Token>>(
@@ -62,14 +51,9 @@ impl Mixin {
         body.push(toks.next().unwrap());
 
         Ok(Spanned {
-            node: (name, Mixin::new(scope.clone(), args, body, Vec::new())),
+            node: (name, Mixin::new(scope.clone(), args, body)),
             span,
         })
-    }
-
-    pub fn content(mut self, content: Vec<Spanned<Stmt>>) -> Mixin {
-        self.content = content;
-        self
     }
 
     pub fn args(
@@ -113,28 +97,43 @@ impl Mixin {
         Ok(self)
     }
 
-    pub fn call(mut self, super_selector: &Selector) -> SassResult<Vec<Spanned<Stmt>>> {
-        self.eval(super_selector)
+    pub fn call(
+        mut self,
+        super_selector: &Selector,
+        content: Option<&[Spanned<Stmt>]>,
+    ) -> SassResult<Vec<Spanned<Stmt>>> {
+        self.eval(super_selector, content)
     }
 
-    fn eval(&mut self, super_selector: &Selector) -> SassResult<Vec<Spanned<Stmt>>> {
+    fn eval(
+        &mut self,
+        super_selector: &Selector,
+        content: Option<&[Spanned<Stmt>]>,
+    ) -> SassResult<Vec<Spanned<Stmt>>> {
         let mut stmts = Vec::new();
-        while let Some(expr) = eat_expr(&mut self.body, &mut self.scope, super_selector)? {
+        while let Some(expr) = eat_expr(&mut self.body, &mut self.scope, super_selector, content)? {
             let span = expr.span;
             match expr.node {
                 Expr::AtRule(a) => match a {
                     AtRule::For(f) => {
-                        stmts.extend(f.ruleset_eval(&mut self.scope, super_selector)?)
+                        stmts.extend(f.ruleset_eval(&mut self.scope, super_selector, content)?)
                     }
                     AtRule::Each(e) => {
-                        stmts.extend(e.ruleset_eval(&mut self.scope, super_selector)?)
+                        stmts.extend(e.ruleset_eval(&mut self.scope, super_selector, content)?)
                     }
-                    AtRule::While(w) => {
-                        stmts.extend(w.ruleset_eval(&mut self.scope, super_selector, false)?)
-                    }
+                    AtRule::While(w) => stmts.extend(w.ruleset_eval(
+                        &mut self.scope,
+                        super_selector,
+                        false,
+                        content,
+                    )?),
                     AtRule::Include(s) => stmts.extend(s),
-                    AtRule::If(i) => stmts.extend(i.eval(&mut self.scope.clone(), super_selector)?),
-                    AtRule::Content => stmts.extend(self.content.clone()),
+                    AtRule::If(i) => {
+                        stmts.extend(i.eval(&mut self.scope.clone(), super_selector, content)?)
+                    }
+                    AtRule::Content => {
+                        stmts.extend(content.unwrap_or_default().into_iter().cloned());
+                    }
                     AtRule::Return(..) => {
                         return Err(("This at-rule is not allowed here.", span).into())
                     }
@@ -161,7 +160,7 @@ impl Mixin {
                     return Err(("Mixins may not contain mixin declarations.", span).into())
                 }
                 Expr::Selector(selector) => {
-                    let rules = self.eval(&super_selector.zip(&selector))?;
+                    let rules = self.eval(&super_selector.zip(&selector), content)?;
                     stmts.push(Spanned {
                         node: Stmt::RuleSet(RuleSet {
                             super_selector: super_selector.clone(),
@@ -188,6 +187,7 @@ pub(crate) fn eat_include<I: Iterator<Item = Token>>(
     toks: &mut PeekMoreIterator<I>,
     scope: &Scope,
     super_selector: &Selector,
+    content: Option<&[Spanned<Stmt>]>,
 ) -> SassResult<Vec<Spanned<Stmt>>> {
     devour_whitespace_or_comment(toks)?;
     let name = eat_ident(toks, scope, super_selector)?;
@@ -223,7 +223,7 @@ pub(crate) fn eat_include<I: Iterator<Item = Token>>(
 
     devour_whitespace(toks);
 
-    let mut content = Vec::new();
+    let mut this_content = Vec::new();
 
     if let Some(tok) = toks.peek() {
         if tok.kind == '{' {
@@ -233,7 +233,8 @@ pub(crate) fn eat_include<I: Iterator<Item = Token>>(
                 &mut scope.clone(),
                 super_selector,
                 false,
-                &mut content,
+                content,
+                &mut this_content,
             )?;
         } else if has_content {
             ruleset_eval(
@@ -241,7 +242,8 @@ pub(crate) fn eat_include<I: Iterator<Item = Token>>(
                 &mut scope.clone(),
                 super_selector,
                 false,
-                &mut content,
+                content,
+                &mut this_content,
             )?;
         }
     }
@@ -250,7 +252,6 @@ pub(crate) fn eat_include<I: Iterator<Item = Token>>(
 
     let rules = mixin
         .args(args, scope, super_selector)?
-        .content(content)
-        .call(super_selector)?;
+        .call(super_selector, Some(&this_content))?;
     Ok(rules)
 }

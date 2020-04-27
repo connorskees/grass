@@ -112,6 +112,7 @@ impl Function {
             &mut self.scope,
             super_selector,
             false,
+            None,
         )
     }
 
@@ -153,6 +154,7 @@ impl Function {
                             &mut self.scope,
                             super_selector,
                             false,
+                            None,
                         )?;
                         if let Some(v) = self.call(super_selector, for_stmts)? {
                             return Ok(Some(v));
@@ -160,7 +162,7 @@ impl Function {
                     }
                 }
                 Stmt::AtRule(AtRule::If(i)) => {
-                    let if_stmts = i.eval(&mut self.scope, super_selector)?;
+                    let if_stmts = i.eval(&mut self.scope, super_selector, None)?;
                     if let Some(v) = self.call(super_selector, if_stmts)? {
                         return Ok(Some(v));
                     }
@@ -174,6 +176,7 @@ impl Function {
                             scope,
                             super_selector,
                             false,
+                            None,
                         )?;
                         if let Some(v) = self.call(super_selector, while_stmts)? {
                             return Ok(Some(v));

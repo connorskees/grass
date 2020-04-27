@@ -105,6 +105,7 @@ impl If {
         self,
         scope: &mut Scope,
         super_selector: &Selector,
+        content: Option<&[Spanned<Stmt>]>,
     ) -> SassResult<Vec<Spanned<Stmt>>> {
         let mut stmts = Vec::new();
         let mut toks = Vec::new();
@@ -125,6 +126,7 @@ impl If {
             scope,
             super_selector,
             false,
+            content,
             &mut stmts,
         )?;
         Ok(stmts)

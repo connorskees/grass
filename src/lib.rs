@@ -359,6 +359,7 @@ impl<'a> StyleSheetParser<'a> {
                             &mut self.lexer,
                             &Scope::new(),
                             &Selector::new(),
+                            None,
                         )?),
                         AtRuleKind::Import => {
                             devour_whitespace(&mut self.lexer);
@@ -394,7 +395,7 @@ impl<'a> StyleSheetParser<'a> {
                             });
                         }
                         v => {
-                            let rule = AtRule::from_tokens(&v, span, &mut self.lexer, &mut Scope::new(), &Selector::new())?;
+                            let rule = AtRule::from_tokens(&v, span, &mut self.lexer, &mut Scope::new(), &Selector::new(), None)?;
                             match rule.node {
                                 AtRule::Mixin(name, mixin) => {
                                     insert_global_mixin(&name, *mixin);
@@ -410,17 +411,17 @@ impl<'a> StyleSheetParser<'a> {
                                         ("This at-rule is not allowed here.", rule.span).into()
                                     )
                                 }
-                                AtRule::For(f) => rules.extend(f.ruleset_eval(&mut Scope::new(), &Selector::new())?),
-                                AtRule::While(w) => rules.extend(w.ruleset_eval(&mut Scope::new(), &Selector::new(), true)?),
+                                AtRule::For(f) => rules.extend(f.ruleset_eval(&mut Scope::new(), &Selector::new(), None)?),
+                                AtRule::While(w) => rules.extend(w.ruleset_eval(&mut Scope::new(), &Selector::new(), true, None)?),
                                 AtRule::Each(e) => {
-                                    rules.extend(e.ruleset_eval(&mut Scope::new(), &Selector::new())?)
+                                    rules.extend(e.ruleset_eval(&mut Scope::new(), &Selector::new(), None)?)
                                 }
                                 AtRule::Include(s) => rules.extend(s),
                                 AtRule::Content => return Err(
                                     ("@content is only allowed within mixin declarations.", rule.span
                                 ).into()),
                                 AtRule::If(i) => {
-                                    rules.extend(i.eval(&mut Scope::new(), &Selector::new())?);
+                                    rules.extend(i.eval(&mut Scope::new(), &Selector::new(), None)?);
                                 }
                                 AtRule::AtRoot(root_rules) => rules.extend(root_rules),
                                 AtRule::Unknown(..) => rules.push(rule.map_node(Stmt::AtRule)),
@@ -448,7 +449,7 @@ impl<'a> StyleSheetParser<'a> {
         scope: &mut Scope,
     ) -> SassResult<Vec<Spanned<Stmt>>> {
         let mut stmts = Vec::new();
-        while let Some(expr) = eat_expr(&mut self.lexer, scope, super_selector)? {
+        while let Some(expr) = eat_expr(&mut self.lexer, scope, super_selector, None)? {
             let span = expr.span;
             match expr.node {
                 Expr::Style(s) => stmts.push(Spanned {
@@ -456,13 +457,13 @@ impl<'a> StyleSheetParser<'a> {
                     span,
                 }),
                 Expr::AtRule(a) => match a {
-                    AtRule::For(f) => stmts.extend(f.ruleset_eval(scope, super_selector)?),
+                    AtRule::For(f) => stmts.extend(f.ruleset_eval(scope, super_selector, None)?),
                     AtRule::While(w) => {
-                        stmts.extend(w.ruleset_eval(scope, super_selector, false)?)
+                        stmts.extend(w.ruleset_eval(scope, super_selector, false, None)?)
                     }
-                    AtRule::Each(e) => stmts.extend(e.ruleset_eval(scope, super_selector)?),
+                    AtRule::Each(e) => stmts.extend(e.ruleset_eval(scope, super_selector, None)?),
                     AtRule::Include(s) => stmts.extend(s),
-                    AtRule::If(i) => stmts.extend(i.eval(scope, super_selector)?),
+                    AtRule::If(i) => stmts.extend(i.eval(scope, super_selector, None)?),
                     AtRule::Content => {
                         return Err((
                             "@content is only allowed within mixin declarations.",
@@ -533,6 +534,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
     toks: &mut PeekMoreIterator<I>,
     scope: &mut Scope,
     super_selector: &Selector,
+    content: Option<&[Spanned<Stmt>]>,
 ) -> SassResult<Option<Spanned<Expr>>> {
     let mut values = Vec::with_capacity(5);
     let mut span = if let Some(tok) = toks.peek() {
@@ -689,6 +691,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                     toks,
                     scope,
                     super_selector,
+                    content,
                 )?;
                 return Ok(Some(Spanned {
                     node: match rule.node {

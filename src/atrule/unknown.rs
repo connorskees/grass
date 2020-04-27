@@ -2,7 +2,7 @@ use codemap::{Span, Spanned};
 
 use peekmore::PeekMoreIterator;
 
-use super::parse::eat_stmts;
+use super::parse::ruleset_eval;
 use crate::error::SassResult;
 use crate::scope::Scope;
 use crate::selector::Selector;
@@ -24,6 +24,7 @@ impl UnknownAtRule {
         scope: &mut Scope,
         super_selector: &Selector,
         kind_span: Span,
+        content: Option<&[Spanned<Stmt>]>,
     ) -> SassResult<UnknownAtRule> {
         let mut params = String::new();
         while let Some(tok) = toks.next() {
@@ -49,7 +50,8 @@ impl UnknownAtRule {
             params.push(tok.kind);
         }
 
-        let raw_body = eat_stmts(toks, scope, super_selector, false)?;
+        let mut raw_body = Vec::new();
+        ruleset_eval(toks, scope, super_selector, false, content, &mut raw_body)?;
         let mut rules = Vec::with_capacity(raw_body.len());
         let mut body = Vec::new();
 

@@ -26,6 +26,7 @@ impl Each {
         self,
         scope: &mut Scope,
         super_selector: &Selector,
+        content: Option<&[Spanned<Stmt>]>,
     ) -> SassResult<Vec<Spanned<Stmt>>> {
         let mut stmts = Vec::new();
         for row in self.iter {
@@ -77,6 +78,7 @@ impl Each {
                 scope,
                 super_selector,
                 false,
+                content,
                 &mut stmts,
             )?;
         }

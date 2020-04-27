@@ -25,6 +25,7 @@ impl While {
         scope: &mut Scope,
         super_selector: &Selector,
         at_root: bool,
+        content: Option<&[Spanned<Stmt>]>,
     ) -> SassResult<Vec<Spanned<Stmt>>> {
         let mut stmts = Vec::new();
         let mut val = Value::from_vec(self.cond.clone(), scope, super_selector)?;
@@ -35,6 +36,7 @@ impl While {
                 scope,
                 super_selector,
                 at_root,
+                content,
                 &mut stmts,
             )?;
             val = Value::from_vec(self.cond.clone(), scope, super_selector)?;

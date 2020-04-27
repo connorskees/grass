@@ -204,3 +204,28 @@ test!(
     "@mixin foo {\n    @content;\n}\n\na {\n    @include foo {@if true {color: red;}}\n}\n",
     "a {\n  color: red;\n}\n"
 );
+test!(
+    content_in_control_flow,
+    "@mixin foo() {\n    @if true {\n        @content;\n    }\n}\n\na {\n    @include foo {\n        color: red;\n    }\n}\n",
+    "a {\n  color: red;\n}\n"
+);
+test!(
+    content_inside_unknown_at_rule,
+    "@mixin foo() {\n    @foo (max-width: max) {\n        @content;\n    }\n}\n\na {\n    @include foo {\n        color: red;\n    }\n}\n",
+    "@foo (max-width: max) {\n  a {\n    color: red;\n  }\n}\n"
+);
+test!(
+    content_inside_media,
+    "@mixin foo() {\n    @media (max-width: max) {\n        @content;\n    }\n}\n\na {\n    @include foo {\n        color: red;\n    }\n}\n",
+    "@media (max-width: max) {\n  a {\n    color: red;\n  }\n}\n"
+);
+error!(
+    function_inside_mixin,
+    "@mixin foo() {\n    @function bar() {\n        @return foo;\n    }\n}\n\na {\n    @include foo {\n        color: red;\n    }\n}\n",
+    "Error: Mixins may not contain function declarations."
+);
+error!(
+    content_inside_control_flow_outside_mixin,
+    "a {\n    @if true {\n        @content;\n    }\n}\n",
+    "Error: @content is only allowed within mixin declarations."
+);

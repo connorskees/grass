@@ -57,6 +57,7 @@ impl AtRule {
         toks: &mut PeekMoreIterator<I>,
         scope: &mut Scope,
         super_selector: &Selector,
+        content: Option<&[Spanned<Stmt>]>,
     ) -> SassResult<Spanned<AtRule>> {
         devour_whitespace(toks);
         Ok(match rule {
@@ -170,6 +171,7 @@ impl AtRule {
                     selector,
                     0,
                     is_some,
+                    content,
                 )?
                 .into_iter()
                 .filter_map(|s| match s.node {
@@ -225,6 +227,7 @@ impl AtRule {
                     scope,
                     super_selector,
                     kind_span,
+                    content,
                 )?),
                 span: kind_span,
             },
@@ -233,7 +236,7 @@ impl AtRule {
                 span: kind_span,
             },
             AtRuleKind::Include => Spanned {
-                node: AtRule::Include(eat_include(toks, scope, super_selector)?),
+                node: AtRule::Include(eat_include(toks, scope, super_selector, content)?),
                 span: kind_span,
             },
             AtRuleKind::Import => todo!("@import not yet implemented"),
