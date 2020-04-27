@@ -168,6 +168,21 @@ test!(
     "a {\n  color: string;\n}\n"
 );
 test!(
+    type_of_map,
+    "a {\n  color: type-of((a: b, c: d))\n}\n",
+    "a {\n  color: map;\n}\n"
+);
+test!(
+    type_of_parens,
+    "a {\n  color: type-of(((a)))\n}\n",
+    "a {\n  color: string;\n}\n"
+);
+test!(
+    type_of_unary_op,
+    "a {\n  color: type-of(- 2)\n}\n",
+    "a {\n  color: number;\n}\n"
+);
+test!(
     type_of_arglist,
     "@mixin foo($a...) {color: type-of($a);}\na {@include foo(1, 2, 3, 4, 5);}",
     "a {\n  color: arglist;\n}\n"
