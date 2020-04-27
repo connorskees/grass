@@ -104,13 +104,3 @@ impl ListSeparator {
         }
     }
 }
-
-impl Display for ListSeparator {
-    #[inline]
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Space => write!(f, " "),
-            Self::Comma => write!(f, ", "),
-        }
-    }
-}
