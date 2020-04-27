@@ -47,6 +47,12 @@ test!(
     "a {\n  b: false;\n}\n"
 );
 test!(
+    builtin_not_equal_to_user_defined,
+    "@function user-defined() {\n  @return foo;\n}\n
+    a {b: get-function(lighten) == get-function(user-defined);}",
+    "a {\n  b: false;\n}\n"
+);
+test!(
     inspect_builtin_function,
     "a {b: inspect(get-function(lighten));}",
     "a {\n  b: get-function(\"lighten\");\n}\n"
