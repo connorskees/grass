@@ -1,5 +1,3 @@
-use std::fmt::{self, Display};
-
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum AtRuleKind {
     // SASS specific @rules
@@ -81,34 +79,6 @@ impl From<&str> for AtRuleKind {
             "keyframes" => Self::Keyframes,
             "content" => Self::Content,
             s => Self::Unknown(s.to_owned()),
-        }
-    }
-}
-
-impl Display for AtRuleKind {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Use => write!(f, "@use"),
-            Self::Forward => write!(f, "@forward"),
-            Self::Import => write!(f, "@import"),
-            Self::Mixin => write!(f, "@mixin"),
-            Self::Include => write!(f, "@include"),
-            Self::Function => write!(f, "@function"),
-            Self::Return => write!(f, "@return"),
-            Self::Extend => write!(f, "@extend"),
-            Self::AtRoot => write!(f, "@at-root"),
-            Self::Error => write!(f, "@error"),
-            Self::Warn => write!(f, "@warn"),
-            Self::Debug => write!(f, "@debug"),
-            Self::If => write!(f, "@if"),
-            Self::Each => write!(f, "@each"),
-            Self::For => write!(f, "@for"),
-            Self::While => write!(f, "@while"),
-            Self::Charset => write!(f, "@charset"),
-            Self::Supports => write!(f, "@supports"),
-            Self::Keyframes => write!(f, "@keyframes"),
-            Self::Content => write!(f, "@content"),
-            Self::Unknown(s) => write!(f, "@{}", s),
         }
     }
 }
