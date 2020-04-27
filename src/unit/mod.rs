@@ -198,58 +198,6 @@ impl From<&String> for Unit {
     }
 }
 
-impl Into<String> for Unit {
-    fn into(self) -> String {
-        match self {
-            Unit::Px => "px",
-            Unit::Mm => "mm",
-            Unit::In => "in",
-            Unit::Cm => "cm",
-            Unit::Q => "q",
-            Unit::Pt => "pt",
-            Unit::Pc => "pc",
-            Unit::Em => "em",
-            Unit::Rem => "rem",
-            Unit::Lh => "lh",
-            Unit::Percent => "%",
-            Unit::Ex => "ex",
-            Unit::Ch => "ch",
-            Unit::Cap => "cap",
-            Unit::Ic => "ic",
-            Unit::Rlh => "rlh",
-            Unit::Vw => "vw",
-            Unit::Vh => "vh",
-            Unit::Vmin => "vmin",
-            Unit::Vmax => "vmax",
-            Unit::Vi => "vi",
-            Unit::Vb => "vb",
-            Unit::Deg => "deg",
-            Unit::Grad => "grad",
-            Unit::Rad => "rad",
-            Unit::Turn => "turn",
-            Unit::S => "s",
-            Unit::Ms => "ms",
-            Unit::Hz => "Hz",
-            Unit::Khz => "kHz",
-            Unit::Dpi => "dpi",
-            Unit::Dpcm => "dpcm",
-            Unit::Dppx => "dppx",
-            Unit::X => "x",
-            Unit::Fr => "fr",
-            Unit::None => "",
-            Unit::Mul(u) => {
-                return u
-                    .iter()
-                    .map(ToString::to_string)
-                    .collect::<Vec<String>>()
-                    .join("*")
-            }
-            Unit::Unknown(ref s) => s,
-        }
-        .into()
-    }
-}
-
 impl fmt::Display for Unit {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
