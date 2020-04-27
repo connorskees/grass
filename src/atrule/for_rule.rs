@@ -14,7 +14,8 @@ use crate::scope::Scope;
 use crate::selector::Selector;
 use crate::unit::Unit;
 use crate::utils::{
-    devour_whitespace, eat_ident, read_until_closing_curly_brace, read_until_open_curly_brace,
+    devour_whitespace, eat_ident, peek_ident_no_interpolation, read_until_closing_curly_brace,
+    read_until_open_curly_brace,
 };
 use crate::value::{Number, Value};
 use crate::{Stmt, Token};
@@ -80,69 +81,34 @@ pub(crate) fn parse_for<I: Iterator<Item = Token>>(
     devour_whitespace(toks);
     let mut from_toks = Vec::new();
     let mut through = 0;
-    while let Some(tok) = toks.next() {
-        let mut these_toks = vec![tok];
-        match these_toks[0].kind.to_ascii_lowercase() {
-            't' => {
-                these_toks.push(toks.next().unwrap());
-                match these_toks[1].kind.to_ascii_lowercase() {
-                    'h' => {
-                        let r = toks.next().unwrap();
-                        these_toks.push(r);
-                        if r.kind != 'r' {
-                            from_toks.extend(these_toks);
-                            continue;
-                        }
-                        let o = toks.next().unwrap();
-                        these_toks.push(o);
-                        if o.kind != 'o' {
-                            from_toks.extend(these_toks);
-                            continue;
-                        }
-                        let u = toks.next().unwrap();
-                        these_toks.push(u);
-                        if u.kind != 'u' {
-                            from_toks.extend(these_toks);
-                            continue;
-                        }
-                        let g = toks.next().unwrap();
-                        these_toks.push(g);
-                        if g.kind != 'g' {
-                            from_toks.extend(these_toks);
-                            continue;
-                        }
-                        let h = toks.next().unwrap();
-                        these_toks.push(h);
-                        if h.kind != 'h' {
-                            from_toks.extend(these_toks);
-                            continue;
-                        }
-                        let peek = toks.peek().unwrap().kind;
-                        if peek.is_alphanumeric() || peek == '\\' {
-                            from_toks.extend(these_toks);
-                            continue;
-                        }
+    while let Some(tok) = toks.peek() {
+        match tok.kind {
+            't' | 'T' | '\\' => {
+                let ident = peek_ident_no_interpolation(toks, false)?;
+                match ident.node.to_ascii_lowercase().as_str() {
+                    "through" => {
                         through = 1;
+                        // todo: it should take more if there were escapes
+                        toks.take(7).for_each(drop);
                         break;
                     }
-                    'o' => {
-                        if toks.peek().unwrap().kind.is_whitespace() {
-                            break;
-                        } else {
-                            from_toks.extend(these_toks);
-                        }
+                    "to" => {
+                        // todo: it should take more if there were escapes
+                        toks.take(2).for_each(drop);
+                        break;
                     }
                     _ => {
-                        from_toks.extend(these_toks);
+                        return Err(("Invalid flag name.", ident.span).into());
                     }
                 }
             }
             '{' => {
                 return Err(("Expected \"to\" or \"through\".", tok.pos()).into());
             }
-            _ => from_toks.extend(these_toks),
+            _ => from_toks.push(toks.next().unwrap()),
         }
     }
+    devour_whitespace(toks);
     let from_val = Value::from_vec(from_toks, scope, super_selector)?;
     let from = match from_val.node {
         Value::Dimension(n, _) => match n.to_integer().to_usize() {
@@ -151,13 +117,13 @@ pub(crate) fn parse_for<I: Iterator<Item = Token>>(
         },
         v => {
             return Err((
-                format!("{} is not an integer.", v.to_css_string(from_val.span)?),
+                format!("{} is not an integer.", v.inspect(from_val.span)?),
                 from_val.span,
             )
                 .into())
         }
     };
-    devour_whitespace(toks);
+
     let to_toks = read_until_open_curly_brace(toks);
     toks.next();
     let to_val = Value::from_vec(to_toks, scope, super_selector)?;
