@@ -137,8 +137,13 @@ impl Value {
                 )
                     .into())
             }
-            // TODO: should to_css_string on function fail?
-            Self::Function(func) => format!("get-function(\"{}\")", func.name()),
+            Self::Function(..) => {
+                return Err((
+                    format!("{} isn't a valid CSS value.", self.inspect(span)?),
+                    span,
+                )
+                    .into())
+            }
             Self::List(vals, sep, brackets) => match brackets {
                 Brackets::None => vals
                     .iter()

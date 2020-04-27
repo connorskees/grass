@@ -99,3 +99,8 @@ error!(
     non_function_call,
     "a {color: call(4);}", "Error: $function: 4 is not a function reference."
 );
+error!(
+    emit_plain_get_function_is_invalid_css,
+    "a {color: get-function(lighten);}",
+    "Error: get-function(\"lighten\") isn't a valid CSS value."
+);
