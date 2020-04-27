@@ -135,3 +135,7 @@ test!(
 );
 error!(ends_with_bang, "$a: red !;", "Error: Expected identifier.");
 error!(unknown_flag, "$a: red !foo;", "Error: Invalid flag name.");
+error!(
+    undefined_variable,
+    "a {color: $a;}", "Error: Undefined variable."
+);

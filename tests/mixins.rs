@@ -229,3 +229,7 @@ error!(
     "a {\n    @if true {\n        @content;\n    }\n}\n",
     "Error: @content is only allowed within mixin declarations."
 );
+error!(
+    undefined_mixin,
+    "a {@include foo;}", "Error: Undefined mixin."
+);
