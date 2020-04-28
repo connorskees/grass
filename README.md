@@ -58,10 +58,8 @@ are in the official spec.
 Having said that, to run the official test suite,
 
 ```bash
-git clone https://github.com/connorskees/grass
+git clone https://github.com/connorskees/grass --recursive
 cd grass
-git submodule init
-git submodule update
 cargo b --release
 ./sass-spec/sass-spec.rb -c './target/release/grass'
 ```
