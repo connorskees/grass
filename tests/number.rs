@@ -91,3 +91,76 @@ test!(
     "a {\n  color: 1in == 96px;\n}\n",
     "a {\n  color: true;\n}\n"
 );
+test!(
+    positive_scientific_notation,
+    "a {\n  color: 1e5;\n}\n",
+    "a {\n  color: 100000;\n}\n"
+);
+test!(
+    positive_scientific_notation_leading_zeroes,
+    "a {\n  color: 1e05;\n}\n",
+    "a {\n  color: 100000;\n}\n"
+);
+test!(
+    positive_scientific_notation_capital,
+    "a {\n  color: 1E5;\n}\n",
+    "a {\n  color: 100000;\n}\n"
+);
+test!(
+    negative_scientific_notation,
+    "a {\n  color: 1e-5;\n}\n",
+    "a {\n  color: 0.00001;\n}\n"
+);
+test!(
+    negative_scientific_notation_leading_zeroes,
+    "a {\n  color: 1e-05;\n}\n",
+    "a {\n  color: 0.00001;\n}\n"
+);
+test!(
+    negative_scientific_notation_capital,
+    "a {\n  color: 1E-5;\n}\n",
+    "a {\n  color: 0.00001;\n}\n"
+);
+test!(
+    positive_scientific_notation_decimal,
+    "a {\n  color: 1.2e5;\n}\n",
+    "a {\n  color: 120000;\n}\n"
+);
+test!(
+    negative_scientific_notation_decimal,
+    "a {\n  color: 1.2e-5;\n}\n",
+    "a {\n  color: 0.000012;\n}\n"
+);
+test!(unit_e, "a {\n  color: 1e;\n}\n");
+test!(
+    positive_scientific_notation_zero,
+    "a {\n  color: 1e0;\n}\n",
+    "a {\n  color: 1;\n}\n"
+);
+test!(
+    negative_scientific_notation_zero,
+    "a {\n  color: 1e-0;\n}\n",
+    "a {\n  color: 1;\n}\n"
+);
+test!(
+    scientific_notation_decimal,
+    "a {\n  color: 1.2e5.5;\n}\n",
+    "a {\n  color: 120000 0.5;\n}\n"
+);
+test!(
+    binary_op_with_e_as_unit,
+    "a {\n  color: 1e - 2;\n}\n",
+    "a {\n  color: -1e;\n}\n"
+);
+error!(
+    scientific_notation_nothing_after_dash,
+    "a {\n  color: 1e-;\n}\n", "Error: Expected digit."
+);
+error!(
+    scientific_notation_whitespace_after_dash,
+    "a {\n  color: 1e- 2;\n}\n", "Error: Expected digit."
+);
+error!(
+    scientific_notation_ident_char_after_dash,
+    "a {\n  color: 1e-a;\n}\n", "Error: Expected digit."
+);

@@ -237,6 +237,16 @@ impl Add for Number {
     }
 }
 
+impl Add<&Self> for Number {
+    type Output = Self;
+
+    fn add(self, other: &Self) -> Self {
+        Number {
+            val: self.val + &other.val,
+        }
+    }
+}
+
 impl AddAssign for Number {
     fn add_assign(&mut self, other: Self) {
         self.val += other.val
