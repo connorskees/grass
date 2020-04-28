@@ -1,4 +1,3 @@
-use std::borrow::Cow;
 use std::iter::Iterator;
 
 use codemap::Spanned;
@@ -9,18 +8,28 @@ use crate::error::SassResult;
 use crate::Token;
 
 pub(crate) struct ParsedNumber {
-    pub v: String,
+    pub num: String,
+    pub dec_len: usize,
     // TODO: maybe we just return a bigint?
-    pub times_ten: Cow<'static, str>,
+    pub times_ten: String,
     pub times_ten_is_postive: bool,
+    pub is_float: bool,
 }
 
 impl ParsedNumber {
-    pub fn new(v: String, times_ten: Cow<'static, str>, times_ten_is_postive: bool) -> Self {
+    pub fn new(
+        num: String,
+        dec_len: usize,
+        times_ten: String,
+        times_ten_is_postive: bool,
+        is_float: bool,
+    ) -> Self {
         Self {
-            v,
+            num,
+            dec_len,
             times_ten,
             times_ten_is_postive,
+            is_float,
         }
     }
 }
@@ -28,7 +37,7 @@ impl ParsedNumber {
 pub(crate) fn eat_number<'a, I: Iterator<Item = Token>>(
     toks: &mut PeekMoreIterator<I>,
 ) -> SassResult<Spanned<ParsedNumber>> {
-    let mut whole = String::new();
+    let mut whole = String::with_capacity(1);
     // TODO: merge this span with chars
     let span = if let Some(tok) = toks.peek() {
         tok.pos()
@@ -39,22 +48,23 @@ pub(crate) fn eat_number<'a, I: Iterator<Item = Token>>(
 
     if toks.peek().is_none() {
         return Ok(Spanned {
-            node: ParsedNumber::new(whole, Cow::from("0"), true),
+            node: ParsedNumber::new(whole, 0, String::new(), true, false),
             span,
         });
     }
 
     let mut dec = String::new();
+    let mut is_float = false;
 
     let next_tok = *toks.peek().unwrap();
 
     if next_tok.kind == '.' {
         toks.next();
-        dec.push('.');
+        is_float = true;
         eat_whole_number(toks, &mut dec);
     }
 
-    if dec.len() == 1 {
+    if dec.is_empty() && is_float {
         return Err(("Expected digit.", next_tok.pos()).into());
     }
 
@@ -101,12 +111,14 @@ pub(crate) fn eat_number<'a, I: Iterator<Item = Token>>(
     Ok(Spanned {
         node: ParsedNumber::new(
             whole,
+            dec.len(),
             if !times_ten.is_empty() {
-                Cow::from(times_ten)
+                times_ten
             } else {
-                Cow::from("0")
+                String::new()
             },
             times_ten_is_postive,
+            is_float,
         ),
         span,
     })

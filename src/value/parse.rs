@@ -3,7 +3,7 @@ use std::mem;
 
 use num_bigint::BigInt;
 use num_rational::BigRational;
-use num_traits::{pow, One, ToPrimitive};
+use num_traits::{pow, One, ToPrimitive, Zero};
 
 use codemap::{Span, Spanned};
 
@@ -630,36 +630,25 @@ impl Value {
                     Unit::None
                 };
 
-                let times_ten = pow(
-                    BigInt::from(10),
-                    val.times_ten
-                        .parse::<BigInt>()
-                        .unwrap()
-                        .to_usize()
-                        .ok_or(("Exponent too large (expected usize).", span))?,
-                );
-
-                let n = if let Ok(v) = val.v.parse::<BigRational>() {
-                    // the number is an integer!
-                    v
-                // the number is floating point
+                let times_ten = if val.times_ten.is_empty() {
+                    BigInt::zero()
                 } else {
-                    let mut num = String::new();
-                    let mut chars = val.v.chars();
-                    let mut num_dec = 0;
-                    while let Some(c) = chars.next() {
-                        if c == '.' {
-                            break;
-                        }
-                        num.push(c);
-                    }
-                    for c in chars {
-                        num_dec += 1;
-                        num.push(c);
-                    }
-                    BigRational::new(num.parse().unwrap(), pow(BigInt::from(10), num_dec))
+                    pow(
+                        BigInt::from(10),
+                        val.times_ten
+                            .parse::<BigInt>()
+                            .unwrap()
+                            .to_usize()
+                            .ok_or(("Exponent too large (expected usize).", span))?,
+                    )
+                };
+
+                let n = if val.is_float {
+                    BigRational::new(val.num.parse().unwrap(), pow(BigInt::from(10), val.dec_len))
+                } else {
+                    BigRational::new_raw(val.num.parse::<BigInt>().unwrap(), BigInt::one())
                 } * if val.times_ten_is_postive {
-                    BigRational::new(times_ten, BigInt::one())
+                    BigRational::new_raw(times_ten, BigInt::one())
                 } else {
                     BigRational::new(BigInt::one(), times_ten)
                 };
