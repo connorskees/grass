@@ -7,6 +7,7 @@ use peekmore::PeekMoreIterator;
 use crate::error::SassResult;
 use crate::Token;
 
+#[derive(Debug)]
 pub(crate) struct ParsedNumber {
     pub num: String,
     pub dec_len: usize,

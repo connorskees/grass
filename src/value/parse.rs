@@ -3,7 +3,7 @@ use std::mem;
 
 use num_bigint::BigInt;
 use num_rational::BigRational;
-use num_traits::{pow, One, ToPrimitive, Zero};
+use num_traits::{pow, One, ToPrimitive};
 
 use codemap::{Span, Spanned};
 
@@ -631,7 +631,7 @@ impl Value {
                 };
 
                 let times_ten = if val.times_ten.is_empty() {
-                    BigInt::zero()
+                    BigInt::one()
                 } else {
                     pow(
                         BigInt::from(10),
