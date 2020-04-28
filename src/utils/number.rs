@@ -69,18 +69,16 @@ pub(crate) fn eat_number<I: Iterator<Item = Token>>(
     }
 
     let mut dec = String::new();
-    let mut is_float = false;
 
     let next_tok = *toks.peek().unwrap();
 
     if next_tok.kind == '.' {
         toks.next();
-        is_float = true;
         eat_whole_number(toks, &mut dec);
-    }
 
-    if dec.is_empty() && is_float {
-        return Err(("Expected digit.", next_tok.pos()).into());
+        if dec.is_empty() {
+            return Err(("Expected digit.", next_tok.pos()).into());
+        }
     }
 
     let mut times_ten = String::new();
