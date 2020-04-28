@@ -643,10 +643,10 @@ impl Value {
                     )
                 };
 
-                let n = if val.is_float {
-                    BigRational::new(val.num.parse().unwrap(), pow(BigInt::from(10), val.dec_len))
-                } else {
+                let n = if val.dec_len == 0 {
                     BigRational::new_raw(val.num.parse::<BigInt>().unwrap(), BigInt::one())
+                } else {
+                    BigRational::new(val.num.parse().unwrap(), pow(BigInt::from(10), val.dec_len))
                 } * if val.times_ten_is_postive {
                     BigRational::new_raw(times_ten, BigInt::one())
                 } else {

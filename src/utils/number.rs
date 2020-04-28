@@ -9,12 +9,28 @@ use crate::Token;
 
 #[derive(Debug)]
 pub(crate) struct ParsedNumber {
+    /// The full number excluding the decimal
+    ///
+    /// E.g. for `1.23`, this would be `"123"`
     pub num: String,
+
+    /// The length of the decimal
+    ///
+    /// E.g. for `1.23`, this would be `2`
     pub dec_len: usize,
+
+    /// The number following e in a scientific notated number
+    ///
+    /// E.g. for `1e23`, this would be `"23"`,
+    /// for `1`, this would be an empty string
     // TODO: maybe we just return a bigint?
     pub times_ten: String,
+
+    /// Whether or not `times_ten` is negative
+    ///
+    /// E.g. for `1e-23` this would be `true`,
+    /// for `1e23` this would be `false`
     pub times_ten_is_postive: bool,
-    pub is_float: bool,
 }
 
 impl ParsedNumber {
@@ -23,14 +39,12 @@ impl ParsedNumber {
         dec_len: usize,
         times_ten: String,
         times_ten_is_postive: bool,
-        is_float: bool,
     ) -> Self {
         Self {
             num,
             dec_len,
             times_ten,
             times_ten_is_postive,
-            is_float,
         }
     }
 }
@@ -49,7 +63,7 @@ pub(crate) fn eat_number<I: Iterator<Item = Token>>(
 
     if toks.peek().is_none() {
         return Ok(Spanned {
-            node: ParsedNumber::new(whole, 0, String::new(), true, false),
+            node: ParsedNumber::new(whole, 0, String::new(), true),
             span,
         });
     }
@@ -110,7 +124,7 @@ pub(crate) fn eat_number<I: Iterator<Item = Token>>(
     whole.push_str(&dec);
 
     Ok(Spanned {
-        node: ParsedNumber::new(whole, dec.len(), times_ten, times_ten_is_postive, is_float),
+        node: ParsedNumber::new(whole, dec.len(), times_ten, times_ten_is_postive),
         span,
     })
 }

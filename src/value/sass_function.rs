@@ -20,6 +20,7 @@ use crate::selector::Selector;
 use crate::value::Value;
 
 /// A SASS function
+///
 /// See toplevel documentation for more information
 ///
 /// The function name is stored in addition to the body

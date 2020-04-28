@@ -1,4 +1,5 @@
 //! A color is internally represented as either RGBA or HSLA.
+//!
 //! Colors can be constructed in SASS through names (e.g. red, blue, aqua)
 //! or the builtin functions `rgb()`, `rgba()`, `hsl()`, and `hsla()`,
 //! all of which can accept 1-4 arguments.
