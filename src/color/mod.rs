@@ -500,7 +500,7 @@ fn repr(red: &Number, green: &Number, blue: &Number, alpha: &Number) -> String {
     if alpha < &Number::one() {
         format!("rgba({}, {}, {}, {})", red, green, blue, alpha)
     } else if let Some(c) = NAMED_COLORS.get_by_right(&[red, green, blue, 0xFF]) {
-        format!("{}", c)
+        c.to_string()
     } else {
         format!("#{:0>2x}{:0>2x}{:0>2x}", red, green, blue)
     }

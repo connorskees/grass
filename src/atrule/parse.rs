@@ -135,7 +135,7 @@ pub(crate) fn ruleset_eval<I: Iterator<Item = Token>>(
             Stmt::AtRule(AtRule::If(i)) => stmts.extend(i.eval(scope, super_selector, content)?),
             Stmt::AtRule(AtRule::Content) => {
                 if let Some(c) = content {
-                    stmts.extend(c.into_iter().cloned());
+                    stmts.extend(c.iter().cloned());
                 } else {
                     return Err((
                         "@content is only allowed within mixin declarations.",

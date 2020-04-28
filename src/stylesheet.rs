@@ -106,7 +106,7 @@ impl StyleSheet {
     #[cfg(not(feature = "wasm"))]
     pub fn from_path(p: &str) -> SassResult<String> {
         let mut map = CodeMap::new();
-        let file = map.add_file(p.clone().into(), String::from_utf8(fs::read(p.clone())?)?);
+        let file = map.add_file(p.into(), String::from_utf8(fs::read(p)?)?);
         Css::from_stylesheet(StyleSheet(
             StyleSheetParser {
                 lexer: Lexer::new(&file).peekmore(),

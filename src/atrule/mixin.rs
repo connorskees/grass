@@ -132,7 +132,7 @@ impl Mixin {
                         stmts.extend(i.eval(&mut self.scope.clone(), super_selector, content)?)
                     }
                     AtRule::Content => {
-                        stmts.extend(content.unwrap_or_default().into_iter().cloned());
+                        stmts.extend(content.unwrap_or_default().iter().cloned());
                     }
                     AtRule::Return(..) => {
                         return Err(("This at-rule is not allowed here.", span).into())
