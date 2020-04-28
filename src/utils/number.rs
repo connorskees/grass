@@ -18,7 +18,7 @@ pub(crate) struct ParsedNumber {
 }
 
 impl ParsedNumber {
-    pub fn new(
+    pub const fn new(
         num: String,
         dec_len: usize,
         times_ten: String,
@@ -35,7 +35,7 @@ impl ParsedNumber {
     }
 }
 
-pub(crate) fn eat_number<'a, I: Iterator<Item = Token>>(
+pub(crate) fn eat_number<I: Iterator<Item = Token>>(
     toks: &mut PeekMoreIterator<I>,
 ) -> SassResult<Spanned<ParsedNumber>> {
     let mut whole = String::with_capacity(1);
@@ -78,7 +78,7 @@ pub(crate) fn eat_number<'a, I: Iterator<Item = Token>>(
                 if toks.peek_forward(1).is_none() {
                     break;
                 } else {
-                    let Token { kind, pos } = toks.peek().unwrap().clone();
+                    let Token { kind, pos } = *toks.peek().unwrap();
                     match kind {
                         '-' => {
                             toks.next();
@@ -110,17 +110,7 @@ pub(crate) fn eat_number<'a, I: Iterator<Item = Token>>(
     whole.push_str(&dec);
 
     Ok(Spanned {
-        node: ParsedNumber::new(
-            whole,
-            dec.len(),
-            if !times_ten.is_empty() {
-                times_ten
-            } else {
-                String::new()
-            },
-            times_ten_is_postive,
-            is_float,
-        ),
+        node: ParsedNumber::new(whole, dec.len(), times_ten, times_ten_is_postive, is_float),
         span,
     })
 }
