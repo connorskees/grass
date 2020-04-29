@@ -630,30 +630,35 @@ impl Value {
                     Unit::None
                 };
 
-                let times_ten = if val.times_ten.is_empty() {
-                    BigInt::one()
-                } else {
-                    pow(
-                        BigInt::from(10),
-                        val.times_ten
-                            .parse::<BigInt>()
-                            .unwrap()
-                            .to_usize()
-                            .ok_or(("Exponent too large (expected usize).", span))?,
-                    )
-                };
-
                 let n = if val.dec_len == 0 {
                     BigRational::new_raw(val.num.parse::<BigInt>().unwrap(), BigInt::one())
                 } else {
                     BigRational::new(val.num.parse().unwrap(), pow(BigInt::from(10), val.dec_len))
-                } * if val.times_ten_is_postive {
+                };
+
+                if val.times_ten.is_empty() {
+                    return Ok(IntermediateValue::Value(
+                        Value::Dimension(Number::new(n), unit).span(span),
+                    ));
+                }
+
+                let times_ten = pow(
+                    BigInt::from(10),
+                    val.times_ten
+                        .parse::<BigInt>()
+                        .unwrap()
+                        .to_usize()
+                        .ok_or(("Exponent too large (expected usize).", span))?,
+                );
+
+                let times_ten = if val.times_ten_is_postive {
                     BigRational::new_raw(times_ten, BigInt::one())
                 } else {
                     BigRational::new(BigInt::one(), times_ten)
                 };
+
                 Ok(IntermediateValue::Value(
-                    Value::Dimension(Number::new(n), unit).span(span),
+                    Value::Dimension(Number::new(n * times_ten), unit).span(span),
                 ))
             }
             '(' => {

@@ -172,44 +172,40 @@ impl Display for Number {
         let mut whole = self.val.to_integer().abs();
         let mut frac = self.val.fract();
         let mut dec = String::with_capacity(if frac.is_zero() { 0 } else { PRECISION + 1 });
-        if frac != BigRational::from_integer(BigInt::from(0)) {
-            dec.write_char('.')?;
+        if !frac.is_zero() {
             for _ in 0..(PRECISION - 1) {
-                frac *= BigRational::from_integer(BigInt::from(10));
+                frac *= BigInt::from(10);
                 write!(dec, "{}", frac.to_integer().abs())?;
                 frac = frac.fract();
-                if frac == BigRational::from_integer(BigInt::from(0)) {
+                if frac.is_zero() {
                     break;
                 }
             }
-            if frac != BigRational::from_integer(BigInt::from(0)) {
-                let end = (frac * BigRational::from_integer(BigInt::from(10)))
-                    .round()
-                    .abs()
-                    .to_integer();
+            if !frac.is_zero() {
+                let end = (frac * BigInt::from(10)).round().abs().to_integer();
                 if end == BigInt::from(10) {
                     loop {
-                        match dec.pop().unwrap() {
-                            '9' => continue,
-                            '.' => {
-                                whole += 1;
+                        match dec.pop() {
+                            Some('9') => continue,
+                            Some(c) => {
+                                dec.push(char::from(c as u8 + 1));
                                 break;
                             }
-                            c => {
-                                dec.push_str(&(c.to_digit(10).unwrap() + 1).to_string());
+                            None => {
+                                whole += 1;
                                 break;
                             }
                         }
                     }
-                } else if end == BigInt::from(0) {
+                } else if end.is_zero() {
                     loop {
-                        match dec.pop().unwrap() {
-                            '0' => continue,
-                            '.' => break,
-                            c => {
+                        match dec.pop() {
+                            Some('0') => continue,
+                            Some(c) => {
                                 dec.push(c);
                                 break;
                             }
+                            None => break,
                         }
                     }
                 } else {
@@ -222,7 +218,10 @@ impl Display for Number {
             f.write_char('-')?;
         }
         write!(f, "{}", whole)?;
-        write!(f, "{}", dec)?;
+        if !dec.is_empty() {
+            f.write_char('.')?;
+            write!(f, "{}", dec)?;
+        }
         Ok(())
     }
 }
