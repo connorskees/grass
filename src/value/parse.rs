@@ -519,7 +519,7 @@ impl Value {
                     span,
                 }) {
                     Ok(f) => f,
-                    Err(_) => match GLOBAL_FUNCTIONS.get(&s.replace('_', "-")) {
+                    Err(_) => match GLOBAL_FUNCTIONS.get(s.replace('_', "-").as_str()) {
                         Some(f) => {
                             return Ok(IntermediateValue::Value(Spanned {
                                 node: f.0(eat_call_args(toks)?, scope, super_selector)?,

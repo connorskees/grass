@@ -1,12 +1,12 @@
-use std::collections::HashMap;
+use super::GlobalFunctionMap;
 
 use super::Builtin;
 use crate::common::{Brackets, ListSeparator};
 use crate::value::{SassMap, Value};
 
-pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
+pub(crate) fn register(f: &mut GlobalFunctionMap) {
     f.insert(
-        "map-get".to_owned(),
+        "map-get",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(2)?;
             let key = arg!(args, scope, super_selector, 1, "key");
@@ -25,7 +25,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "map-has-key".to_owned(),
+        "map-has-key",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(2)?;
             let key = arg!(args, scope, super_selector, 1, "key");
@@ -44,7 +44,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "map-keys".to_owned(),
+        "map-keys",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(1)?;
             let map = match arg!(args, scope, super_selector, 0, "map") {
@@ -66,7 +66,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "map-values".to_owned(),
+        "map-values",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(1)?;
             let map = match arg!(args, scope, super_selector, 0, "map") {
@@ -88,7 +88,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "map-merge".to_owned(),
+        "map-merge",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(2)?;
             let mut map1 = match arg!(args, scope, super_selector, 0, "map1") {
@@ -118,7 +118,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "map-remove".to_owned(),
+        "map-remove",
         Builtin::new(|mut args, scope, super_selector| {
             let mut map = match arg!(args, scope, super_selector, 0, "map") {
                 Value::Map(m) => m,

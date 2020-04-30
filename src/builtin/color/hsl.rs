@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use super::GlobalFunctionMap;
 
 use num_traits::One;
 
@@ -8,9 +8,9 @@ use crate::common::QuoteKind;
 use crate::unit::Unit;
 use crate::value::{Number, Value};
 
-pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
+pub(crate) fn register(f: &mut GlobalFunctionMap) {
     f.insert(
-        "hsl".to_owned(),
+        "hsl",
         Builtin::new(|mut args, scope, super_selector| {
             if args.is_empty() {
                 return Err(("Missing argument $channels.", args.span()).into());
@@ -218,7 +218,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "hsla".to_owned(),
+        "hsla",
         Builtin::new(|mut args, scope, super_selector| {
             if args.is_empty() {
                 return Err(("Missing argument $channels.", args.span()).into());
@@ -426,7 +426,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "hue".to_owned(),
+        "hue",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(1)?;
             match arg!(args, scope, super_selector, 0, "color") {
@@ -440,7 +440,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "saturation".to_owned(),
+        "saturation",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(1)?;
             match arg!(args, scope, super_selector, 0, "color") {
@@ -454,7 +454,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "lightness".to_owned(),
+        "lightness",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(1)?;
             match arg!(args, scope, super_selector, 0, "color") {
@@ -468,7 +468,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "adjust-hue".to_owned(),
+        "adjust-hue",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(2)?;
             let color = match arg!(args, scope, super_selector, 0, "color") {
@@ -498,7 +498,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "lighten".to_owned(),
+        "lighten",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(2)?;
             let color = match arg!(args, scope, super_selector, 0, "color") {
@@ -528,7 +528,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "darken".to_owned(),
+        "darken",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(2)?;
             let color = match arg!(args, scope, super_selector, 0, "color") {
@@ -558,7 +558,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "saturate".to_owned(),
+        "saturate",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(2)?;
             if args.len() == 1 {
@@ -605,7 +605,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "desaturate".to_owned(),
+        "desaturate",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(2)?;
             let color = match arg!(args, scope, super_selector, 0, "color") {
@@ -635,7 +635,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "grayscale".to_owned(),
+        "grayscale",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(1)?;
             let color = match arg!(args, scope, super_selector, 0, "color") {
@@ -658,7 +658,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "complement".to_owned(),
+        "complement",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(1)?;
             let color = match arg!(args, scope, super_selector, 0, "color") {
@@ -675,7 +675,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "invert".to_owned(),
+        "invert",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(2)?;
             let weight = match arg!(

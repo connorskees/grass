@@ -19,6 +19,8 @@ mod meta;
 mod selector;
 mod string;
 
+pub(crate) type GlobalFunctionMap = HashMap<&'static str, Builtin>;
+
 static FUNCTION_COUNT: AtomicUsize = AtomicUsize::new(0);
 
 // TODO: impl Fn
@@ -40,7 +42,7 @@ impl PartialEq for Builtin {
     }
 }
 
-pub(crate) static GLOBAL_FUNCTIONS: Lazy<HashMap<String, Builtin>> = Lazy::new(|| {
+pub(crate) static GLOBAL_FUNCTIONS: Lazy<GlobalFunctionMap> = Lazy::new(|| {
     let mut m = HashMap::new();
     color::register(&mut m);
     list::register(&mut m);

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use super::GlobalFunctionMap;
 
 use super::Builtin;
 use crate::common::QuoteKind;
@@ -6,9 +6,9 @@ use crate::unit::Unit;
 use crate::value::Number;
 use crate::value::Value;
 
-pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
+pub(crate) fn register(f: &mut GlobalFunctionMap) {
     f.insert(
-        "alpha".to_owned(),
+        "alpha",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(1)?;
             match arg!(args, scope, super_selector, 0, "color") {
@@ -22,7 +22,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "opacity".to_owned(),
+        "opacity",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(1)?;
             match arg!(args, scope, super_selector, 0, "color") {
@@ -40,7 +40,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "opacify".to_owned(),
+        "opacify",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(2)?;
             let color = match arg!(args, scope, super_selector, 0, "color") {
@@ -70,7 +70,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "fade-in".to_owned(),
+        "fade-in",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(2)?;
             let color = match arg!(args, scope, super_selector, 0, "color") {
@@ -100,7 +100,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "transparentize".to_owned(),
+        "transparentize",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(2)?;
             let color = match arg!(args, scope, super_selector, 0, "color") {
@@ -130,7 +130,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "fade-out".to_owned(),
+        "fade-out",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(2)?;
             let color = match arg!(args, scope, super_selector, 0, "color") {

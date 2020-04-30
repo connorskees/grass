@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use super::GlobalFunctionMap;
 
 use num_bigint::BigInt;
 use num_traits::{Signed, ToPrimitive, Zero};
@@ -11,9 +11,9 @@ use crate::common::QuoteKind;
 use crate::unit::Unit;
 use crate::value::{Number, Value};
 
-pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
+pub(crate) fn register(f: &mut GlobalFunctionMap) {
     f.insert(
-        "to-upper-case".to_owned(),
+        "to-upper-case",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(1)?;
             match arg!(args, scope, super_selector, 0, "string") {
@@ -30,7 +30,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "to-lower-case".to_owned(),
+        "to-lower-case",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(1)?;
             match arg!(args, scope, super_selector, 0, "string") {
@@ -47,7 +47,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "str-length".to_owned(),
+        "str-length",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(1)?;
             match arg!(args, scope, super_selector, 0, "string") {
@@ -67,7 +67,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "quote".to_owned(),
+        "quote",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(1)?;
             match arg!(args, scope, super_selector, 0, "string") {
@@ -84,7 +84,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "unquote".to_owned(),
+        "unquote",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(1)?;
             match arg!(args, scope, super_selector, 0, "string") {
@@ -101,7 +101,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "str-slice".to_owned(),
+        "str-slice",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(3)?;
             let (string, quotes) = match arg!(args, scope, super_selector, 0, "string") {
@@ -205,7 +205,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "str-index".to_owned(),
+        "str-index",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(2)?;
             let s1 = match arg!(args, scope, super_selector, 0, "string") {
@@ -243,7 +243,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "str-insert".to_owned(),
+        "str-insert",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(3)?;
             let (s1, quotes) = match arg!(args, scope, super_selector, 0, "string") {
@@ -347,7 +347,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     );
     #[cfg(feature = "random")]
     f.insert(
-        "unique-id".to_owned(),
+        "unique-id",
         Builtin::new(|args, _, _| {
             args.max_args(0)?;
             let mut rng = thread_rng();

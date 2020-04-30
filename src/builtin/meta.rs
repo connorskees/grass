@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use super::GlobalFunctionMap;
 
 use codemap::Spanned;
 
@@ -8,9 +8,9 @@ use crate::scope::global_var_exists;
 use crate::unit::Unit;
 use crate::value::{SassFunction, Value};
 
-pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
+pub(crate) fn register(f: &mut GlobalFunctionMap) {
     f.insert(
-        "if".to_owned(),
+        "if",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(3)?;
             if arg!(args, scope, super_selector, 0, "condition").is_true(args.span())? {
@@ -21,7 +21,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "feature-exists".to_owned(),
+        "feature-exists",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(1)?;
             match arg!(args, scope, super_selector, 0, "feature") {
@@ -55,7 +55,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "unit".to_owned(),
+        "unit",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(1)?;
             let unit = match arg!(args, scope, super_selector, 0, "number") {
@@ -75,7 +75,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "type-of".to_owned(),
+        "type-of",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(1)?;
             let value = arg!(args, scope, super_selector, 0, "value");
@@ -86,7 +86,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "unitless".to_owned(),
+        "unitless",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(1)?;
             match arg!(args, scope, super_selector, 0, "number") {
@@ -97,7 +97,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "inspect".to_owned(),
+        "inspect",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(1)?;
             Ok(Value::Ident(
@@ -107,7 +107,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "variable-exists".to_owned(),
+        "variable-exists",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(1)?;
             match arg!(args, scope, super_selector, 0, "name") {
@@ -121,7 +121,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "global-variable-exists".to_owned(),
+        "global-variable-exists",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(1)?;
             match arg!(args, scope, super_selector, 0, "name") {
@@ -135,7 +135,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "mixin-exists".to_owned(),
+        "mixin-exists",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(2)?;
             match arg!(args, scope, super_selector, 0, "name") {
@@ -149,12 +149,12 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "function-exists".to_owned(),
+        "function-exists",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(2)?;
             match arg!(args, scope, super_selector, 0, "name") {
                 Value::Ident(s, _) => Ok(Value::bool(
-                    scope.fn_exists(&s) || GLOBAL_FUNCTIONS.contains_key(&s),
+                    scope.fn_exists(&s) || GLOBAL_FUNCTIONS.contains_key(s.as_str()),
                 )),
                 v => Err((
                     format!("$name: {} is not a string.", v.to_css_string(args.span())?),
@@ -165,7 +165,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "get-function".to_owned(),
+        "get-function",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(3)?;
             let name = match arg!(args, scope, super_selector, 0, "name") {
@@ -208,7 +208,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
                 span: args.span(),
             }) {
                 Ok(f) => SassFunction::UserDefined(Box::new(f), name),
-                Err(..) => match GLOBAL_FUNCTIONS.get(&name) {
+                Err(..) => match GLOBAL_FUNCTIONS.get(name.as_str()) {
                     Some(f) => SassFunction::Builtin(f.clone(), name),
                     None => {
                         return Err((format!("Function not found: {}", name), args.span()).into())
@@ -220,7 +220,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "call".to_owned(),
+        "call",
         Builtin::new(|mut args, scope, super_selector| {
             let func = match arg!(args, scope, super_selector, 0, "function") {
                 Value::Function(f) => f,

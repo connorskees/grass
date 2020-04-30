@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use super::GlobalFunctionMap;
 
 use super::Builtin;
 
@@ -7,7 +7,7 @@ mod opacity;
 mod other;
 mod rgb;
 
-pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
+pub(crate) fn register(f: &mut GlobalFunctionMap) {
     hsl::register(f);
     opacity::register(f);
     other::register(f);

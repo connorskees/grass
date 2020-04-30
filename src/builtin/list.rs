@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use super::GlobalFunctionMap;
 
 use num_traits::{One, Signed, ToPrimitive, Zero};
 
@@ -11,7 +11,7 @@ use crate::selector::Selector;
 use crate::unit::Unit;
 use crate::value::{Number, Value};
 
-pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
+pub(crate) fn register(f: &mut GlobalFunctionMap) {
     fn length(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
         args.max_args(1)?;
         let len = match arg!(args, scope, super_selector, 0, "list") {
@@ -321,13 +321,13 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         Ok(Value::List(result, ListSeparator::Comma, Brackets::None))
     }
 
-    f.insert("length".to_owned(), Builtin::new(length));
-    f.insert("nth".to_owned(), Builtin::new(nth));
-    f.insert("list-separator".to_owned(), Builtin::new(list_separator));
-    f.insert("set-nth".to_owned(), Builtin::new(set_nth));
-    f.insert("append".to_owned(), Builtin::new(append));
-    f.insert("join".to_owned(), Builtin::new(join));
-    f.insert("is-bracketed".to_owned(), Builtin::new(is_bracketed));
-    f.insert("index".to_owned(), Builtin::new(index));
-    f.insert("zip".to_owned(), Builtin::new(zip));
+    f.insert("length", Builtin::new(length));
+    f.insert("nth", Builtin::new(nth));
+    f.insert("list-separator", Builtin::new(list_separator));
+    f.insert("set-nth", Builtin::new(set_nth));
+    f.insert("append", Builtin::new(append));
+    f.insert("join", Builtin::new(join));
+    f.insert("is-bracketed", Builtin::new(is_bracketed));
+    f.insert("index", Builtin::new(index));
+    f.insert("zip", Builtin::new(zip));
 }

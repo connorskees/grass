@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use super::GlobalFunctionMap;
 
 use num_traits::One;
 
@@ -8,9 +8,9 @@ use crate::common::QuoteKind;
 use crate::unit::Unit;
 use crate::value::{Number, Value};
 
-pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
+pub(crate) fn register(f: &mut GlobalFunctionMap) {
     f.insert(
-        "rgb".to_owned(),
+        "rgb",
         Builtin::new(|mut args, scope, super_selector| {
             if args.is_empty() {
                 return Err(("Missing argument $channels.", args.span()).into());
@@ -337,7 +337,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "rgba".to_owned(),
+        "rgba",
         Builtin::new(|mut args, scope, super_selector| {
             if args.is_empty() {
                 return Err(("Missing argument $channels.", args.span()).into());
@@ -664,7 +664,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "red".to_owned(),
+        "red",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(1)?;
             match arg!(args, scope, super_selector, 0, "color") {
@@ -678,7 +678,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "green".to_owned(),
+        "green",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(1)?;
             match arg!(args, scope, super_selector, 0, "color") {
@@ -692,7 +692,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "blue".to_owned(),
+        "blue",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(1)?;
             match arg!(args, scope, super_selector, 0, "color") {
@@ -706,7 +706,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "mix".to_owned(),
+        "mix",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(3)?;
             let color1 = match arg!(args, scope, super_selector, 0, "color1") {

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use super::GlobalFunctionMap;
 
 use num_traits::{One, Signed, Zero};
 
@@ -50,8 +50,8 @@ macro_rules! opt_hsl {
     };
 }
 
-pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
-    f.insert("change-color".to_owned(), Builtin::new(|mut args, scope, super_selector| {
+pub(crate) fn register(f: &mut GlobalFunctionMap) {
+    f.insert("change-color", Builtin::new(|mut args, scope, super_selector| {
         if args.get_positional(1, scope, super_selector).is_some() {
             return Err(
                 ("Only one positional argument is allowed. All other arguments must be passed by name.", args.span()
@@ -98,7 +98,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }))
     }));
     f.insert(
-        "adjust-color".to_owned(),
+        "adjust-color",
         Builtin::new(|mut args, scope, super_selector| {
             let color = match arg!(args, scope, super_selector, 0, "color") {
                 Value::Color(c) => c,
@@ -176,7 +176,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "scale-color".to_owned(),
+        "scale-color",
         Builtin::new(|mut args, scope, super_selector| {
             let span = args.span();
             let color = match arg!(args, scope, super_selector, 0, "color") {
@@ -266,7 +266,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "ie-hex-str".to_owned(),
+        "ie-hex-str",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(1)?;
             let color = match arg!(args, scope, super_selector, 0, "color") {

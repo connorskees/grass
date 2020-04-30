@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use super::GlobalFunctionMap;
 
 #[cfg(feature = "random")]
 use num_traits::{One, Signed, ToPrimitive, Zero};
@@ -9,9 +9,9 @@ use super::Builtin;
 use crate::unit::Unit;
 use crate::value::{Number, Value};
 
-pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
+pub(crate) fn register(f: &mut GlobalFunctionMap) {
     f.insert(
-        "percentage".to_owned(),
+        "percentage",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(1)?;
             let num = match arg!(args, scope, super_selector, 0, "number") {
@@ -41,7 +41,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "round".to_owned(),
+        "round",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(1)?;
             match arg!(args, scope, super_selector, 0, "number") {
@@ -58,7 +58,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "ceil".to_owned(),
+        "ceil",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(1)?;
             match arg!(args, scope, super_selector, 0, "number") {
@@ -75,7 +75,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "floor".to_owned(),
+        "floor",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(1)?;
             match arg!(args, scope, super_selector, 0, "number") {
@@ -92,7 +92,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "abs".to_owned(),
+        "abs",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(1)?;
             match arg!(args, scope, super_selector, 0, "number") {
@@ -109,7 +109,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
         }),
     );
     f.insert(
-        "comparable".to_owned(),
+        "comparable",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(2)?;
             let unit1 = match arg!(args, scope, super_selector, 0, "number1") {
@@ -145,7 +145,7 @@ pub(crate) fn register(f: &mut HashMap<String, Builtin>) {
     // TODO: write tests for this. how?
     #[cfg(feature = "random")]
     f.insert(
-        "random".to_owned(),
+        "random",
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(1)?;
             let limit = match arg!(args, scope, super_selector, 0, "limit" = Value::Null) {
