@@ -17,7 +17,10 @@ pub(crate) fn register(f: &mut GlobalFunctionMap) {
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(1)?;
             match arg!(args, scope, super_selector, 0, "string") {
-                Value::Ident(i, q) => Ok(Value::Ident(i.to_ascii_uppercase(), q)),
+                Value::Ident(mut i, q) => {
+                    i.make_ascii_uppercase();
+                    Ok(Value::Ident(i, q))
+                }
                 v => Err((
                     format!(
                         "$string: {} is not a string.",
@@ -34,7 +37,10 @@ pub(crate) fn register(f: &mut GlobalFunctionMap) {
         Builtin::new(|mut args, scope, super_selector| {
             args.max_args(1)?;
             match arg!(args, scope, super_selector, 0, "string") {
-                Value::Ident(i, q) => Ok(Value::Ident(i.to_ascii_lowercase(), q)),
+                Value::Ident(mut i, q) => {
+                    i.make_ascii_lowercase();
+                    Ok(Value::Ident(i, q))
+                }
                 v => Err((
                     format!(
                         "$string: {} is not a string.",
