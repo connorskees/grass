@@ -414,7 +414,7 @@ impl Value {
                     if space_separated.len() == 1 {
                         comma_separated.push(space_separated.pop().unwrap());
                     } else {
-                        let mut span = space_separated[0].span;
+                        let mut span = space_separated.get(0).unwrap().span;
                         comma_separated.push(
                             Value::List(
                                 mem::take(&mut space_separated)

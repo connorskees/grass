@@ -113,7 +113,7 @@ impl Css {
             // this is how we print newlines between unrelated styles
             // it could probably be refactored
             if !v.is_empty() {
-                if let Toplevel::MultilineComment(..) = v[0] {
+                if let Some(Toplevel::MultilineComment(..)) = v.get(0) {
                 } else if is_first {
                     is_first = false;
                 } else {
