@@ -29,6 +29,7 @@ pub(crate) struct Builtin(
     pub fn(CallArgs, &Scope, &Selector) -> SassResult<Value>,
     usize,
 );
+
 impl Builtin {
     pub fn new(body: fn(CallArgs, &Scope, &Selector) -> SassResult<Value>) -> Builtin {
         let count = FUNCTION_COUNT.fetch_add(1, Ordering::Relaxed);
