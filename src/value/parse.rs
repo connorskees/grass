@@ -502,6 +502,7 @@ impl Value {
         super_selector: &Selector,
     ) -> SassResult<IntermediateValue> {
         let Spanned { node: mut s, span } = eat_ident(toks, scope, super_selector)?;
+
         if s == "progid" && toks.peek().is_some() && toks.peek().unwrap().kind == ':' {
             toks.next();
             s.push(':');
@@ -511,79 +512,76 @@ impl Value {
                 span,
             }));
         }
-        match toks.peek() {
-            Some(Token { kind: '(', .. }) => {
-                toks.next();
-                let func = match scope.get_fn(Spanned {
-                    node: s.clone(),
-                    span,
-                }) {
-                    Ok(f) => f,
-                    Err(_) => match GLOBAL_FUNCTIONS.get(s.replace('_', "-").as_str()) {
-                        Some(f) => {
-                            return Ok(IntermediateValue::Value(Spanned {
-                                node: f.0(eat_call_args(toks)?, scope, super_selector)?,
-                                span,
-                            }))
-                        }
-                        None => {
-                            match s.as_str() {
-                                "calc" | "element" | "expression" => {
-                                    s.push_str(&eat_calc_args(toks, scope, super_selector)?)
-                                }
-                                // "min" => {}
-                                // "max" => {}
-                                "url" => match try_eat_url(toks, scope, super_selector)? {
-                                    Some(val) => s = val,
-                                    None => s.push_str(
-                                        &eat_call_args(toks)?
-                                            .to_css_string(scope, super_selector)?,
-                                    ),
-                                },
-                                _ => s.push_str(
+
+        if let Some(Token { kind: '(', .. }) = toks.peek() {
+            toks.next();
+            let func = match scope.get_fn(Spanned {
+                node: s.clone(),
+                span,
+            }) {
+                Ok(f) => f,
+                Err(_) => match GLOBAL_FUNCTIONS.get(s.replace('_', "-").as_str()) {
+                    Some(f) => {
+                        return Ok(IntermediateValue::Value(Spanned {
+                            node: f.0(eat_call_args(toks)?, scope, super_selector)?,
+                            span,
+                        }))
+                    }
+                    None => {
+                        match s.to_ascii_lowercase().as_str() {
+                            "calc" | "element" | "expression" => {
+                                s.push_str(&eat_calc_args(toks, scope, super_selector)?)
+                            }
+                            // "min" => {}
+                            // "max" => {}
+                            "url" => match try_eat_url(toks, scope, super_selector)? {
+                                Some(val) => s = val,
+                                None => s.push_str(
                                     &eat_call_args(toks)?.to_css_string(scope, super_selector)?,
                                 ),
-                            }
-                            return Ok(IntermediateValue::Value(Spanned {
-                                node: Value::Ident(s, QuoteKind::None),
-                                span,
-                            }));
+                            },
+                            _ => s.push_str(
+                                &eat_call_args(toks)?.to_css_string(scope, super_selector)?,
+                            ),
                         }
-                    },
-                };
-                Ok(IntermediateValue::Value(
-                    func.eval(eat_call_args(toks)?, scope, super_selector)?
-                        .span(span),
-                ))
-            }
-            _ => {
-                if let Some(c) = NAMED_COLORS.get_by_left(&s.as_str()) {
-                    Ok(IntermediateValue::Value(Spanned {
-                        node: Value::Color(Box::new(Color::new(c[0], c[1], c[2], c[3], s))),
-                        span,
-                    }))
-                } else {
-                    Ok(match s.to_ascii_lowercase().as_str() {
-                        "true" => IntermediateValue::Value(Value::True.span(span)),
-                        "false" => IntermediateValue::Value(Value::False.span(span)),
-                        "null" => IntermediateValue::Value(Value::Null.span(span)),
-                        "not" => IntermediateValue::Op(Spanned {
-                            node: Op::Not,
-                            span,
-                        }),
-                        "and" => IntermediateValue::Op(Spanned {
-                            node: Op::And,
-                            span,
-                        }),
-                        "or" => IntermediateValue::Op(Spanned { node: Op::Or, span }),
-                        _ => IntermediateValue::Value(Spanned {
+                        return Ok(IntermediateValue::Value(Spanned {
                             node: Value::Ident(s, QuoteKind::None),
                             span,
-                        }),
-                    })
-                }
-            }
+                        }));
+                    }
+                },
+            };
+            return Ok(IntermediateValue::Value(
+                func.eval(eat_call_args(toks)?, scope, super_selector)?
+                    .span(span),
+            ));
         }
+
+        if let Some(c) = NAMED_COLORS.get_by_left(&s.as_str()) {
+            return Ok(IntermediateValue::Value(Spanned {
+                node: Value::Color(Box::new(Color::new(c[0], c[1], c[2], c[3], s))),
+                span,
+            }));
+        }
+
+        Ok(match s.to_ascii_lowercase().as_str() {
+            "true" => IntermediateValue::Value(Value::True.span(span)),
+            "false" => IntermediateValue::Value(Value::False.span(span)),
+            "null" => IntermediateValue::Value(Value::Null.span(span)),
+            "not" => IntermediateValue::Op(Spanned {
+                node: Op::Not,
+                span,
+            }),
+            "and" => IntermediateValue::Op(Spanned {
+                node: Op::And,
+                span,
+            }),
+            "or" => IntermediateValue::Op(Spanned { node: Op::Or, span }),
+            _ => IntermediateValue::Value(Spanned {
+                node: Value::Ident(s, QuoteKind::None),
+                span,
+            }),
+        })
     }
 
     fn parse_intermediate_value<I: Iterator<Item = Token>>(

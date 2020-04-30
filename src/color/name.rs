@@ -4,7 +4,7 @@
 use bimap::BiMap;
 use once_cell::sync::Lazy;
 
-pub(crate) static NAMED_COLORS: Lazy<BiMap<&str, [u8; 4]>> = Lazy::new(|| {
+pub(crate) static NAMED_COLORS: Lazy<BiMap<&'static str, [u8; 4]>> = Lazy::new(|| {
     let mut m = BiMap::with_capacity(150);
     m.insert("aliceblue", [0xF0, 0xF8, 0xFF, 0xFF]);
     m.insert("antiquewhite", [0xFA, 0xEB, 0xD7, 0xFF]);
