@@ -602,9 +602,13 @@ impl Value {
                 && matches!(toks.peek().unwrap().kind, '-' | '_' | 'a'..='z' | 'A'..='Z')
         };
         match kind {
-            ',' => {
-                toks.next();
-                Ok(IntermediateValue::Comma)
+            _ if kind.is_ascii_alphabetic()
+                || kind == '_'
+                || kind == '\\'
+                || (!kind.is_ascii() && !kind.is_control())
+                || (kind == '-' && next_is_hypen(toks)) =>
+            {
+                Self::ident(toks, scope, super_selector)
             }
             '0'..='9' | '.' => {
                 let Spanned {
@@ -694,14 +698,6 @@ impl Value {
                     )?))
                 }
             }
-            _ if kind.is_ascii_alphabetic()
-                || kind == '_'
-                || kind == '\\'
-                || (!kind.is_ascii() && !kind.is_control())
-                || (kind == '-' && next_is_hypen(toks)) =>
-            {
-                Self::ident(toks, scope, super_selector)
-            }
             q @ '"' | q @ '\'' => {
                 let span_start = toks.next().unwrap().pos();
                 let Spanned { node, span } = parse_quoted_string(toks, scope, q, super_selector)?;
@@ -730,7 +726,6 @@ impl Value {
                     span: val.span,
                 }))
             }
-            '@' => Err(("expected \";\".", span).into()),
             '+' => {
                 let span = toks.next().unwrap().pos();
                 Ok(IntermediateValue::Op(Spanned {
@@ -758,6 +753,10 @@ impl Value {
                     node: Op::Rem,
                     span,
                 }))
+            }
+            ',' => {
+                toks.next();
+                Ok(IntermediateValue::Comma)
             }
             q @ '>' | q @ '<' => {
                 let mut span = toks.next().unwrap().pos();
@@ -832,7 +831,7 @@ impl Value {
                     }))
                 }
             }
-            ':' | '?' | ')' => Err(("expected \";\".", span).into()),
+            ':' | '?' | ')' | '@' => Err(("expected \";\".", span).into()),
             v if v.is_control() => Err(("Expected expression.", span).into()),
             v => todo!("unexpected token in value parsing: {:?}", v),
         }
