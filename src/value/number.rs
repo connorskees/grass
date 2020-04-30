@@ -55,7 +55,7 @@ impl Number {
     }
 
     pub fn is_decimal(&self) -> bool {
-        self.val.denom() != &BigInt::from(1)
+        !self.val.denom().is_one()
     }
 
     pub fn clamp<A: Into<Number> + Zero, B: Into<Number>>(self, min: A, max: B) -> Self {
