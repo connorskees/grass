@@ -503,7 +503,9 @@ impl Value {
     ) -> SassResult<IntermediateValue> {
         let Spanned { node: mut s, span } = eat_ident(toks, scope, super_selector)?;
 
-        if s == "progid" && toks.peek().is_some() && toks.peek().unwrap().kind == ':' {
+        let lower = s.to_ascii_lowercase();
+
+        if lower == "progid" && toks.peek().is_some() && toks.peek().unwrap().kind == ':' {
             toks.next();
             s.push(':');
             s.push_str(&eat_progid(toks, scope, super_selector)?);
@@ -528,7 +530,7 @@ impl Value {
                         }))
                     }
                     None => {
-                        match s.to_ascii_lowercase().as_str() {
+                        match lower.as_str() {
                             "calc" | "element" | "expression" => {
                                 s.push_str(&eat_calc_args(toks, scope, super_selector)?)
                             }
@@ -557,14 +559,14 @@ impl Value {
             ));
         }
 
-        if let Some(c) = NAMED_COLORS.get_by_left(&s.as_str()) {
+        if let Some(c) = NAMED_COLORS.get_by_left(&lower.as_str()) {
             return Ok(IntermediateValue::Value(Spanned {
                 node: Value::Color(Box::new(Color::new(c[0], c[1], c[2], c[3], s))),
                 span,
             }));
         }
 
-        Ok(match s.to_ascii_lowercase().as_str() {
+        Ok(match lower.as_str() {
             "true" => IntermediateValue::Value(Value::True.span(span)),
             "false" => IntermediateValue::Value(Value::False.span(span)),
             "null" => IntermediateValue::Value(Value::Null.span(span)),

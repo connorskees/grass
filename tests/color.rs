@@ -4,6 +4,11 @@
 mod macros;
 
 test!(preserves_named_color_case, "a {\n  color: OrAnGe;\n}\n");
+test!(
+    named_color_casing_is_color,
+    "a {\n  color: hue(RED);\n}\n",
+    "a {\n  color: 0deg;\n}\n"
+);
 test!(preserves_hex_color_case, "a {\n  color: #FfFfFf;\n}\n");
 test!(
     preserves_hex_8_val_10000000,
