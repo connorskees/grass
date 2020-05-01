@@ -19,15 +19,13 @@ impl<'a> Iterator for Lexer<'a> {
     type Item = Token;
     fn next(&mut self) -> Option<Self::Item> {
         let kind = match self.buf.next()? {
-            '\n' | FORM_FEED => '\n',
+            FORM_FEED => '\n',
             '\r' => {
                 if self.buf.peek() == Some(&'\n') {
                     self.pos += 1;
                     self.buf.next();
-                    '\n'
-                } else {
-                    '\n'
                 }
+                '\n'
             }
             c => c,
         };
