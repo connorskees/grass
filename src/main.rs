@@ -48,6 +48,8 @@ fn main() -> std::io::Result<()> {
         .arg(
             Arg::with_name("STYLE")
                 .short("s")
+                // this is required for compatibility with ruby sass
+                .short("t")
                 .long("style")
                 .help("Minified or expanded output")
                 .default_value("expanded")
@@ -147,7 +149,7 @@ fn main() -> std::io::Result<()> {
 
         // Hidden, legacy arguments
         .arg(
-            Arg::with_name("OUTPUT")
+            Arg::with_name("PRECISION")
                 .long("precision")
                 .hidden(true)
         )
