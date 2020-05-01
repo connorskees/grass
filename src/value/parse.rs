@@ -130,6 +130,28 @@ fn parse_hex<I: Iterator<Item = Token>>(
     }
 }
 
+struct IntermediateValueIterator<'a, I: Iterator<Item = Token>> {
+    toks: &'a mut PeekMoreIterator<I>,
+    scope: &'a Scope,
+    super_selector: &'a Selector,
+}
+
+impl<'a, I: Iterator<Item = Token>> Iterator for IntermediateValueIterator<'a, I> {
+    type Item = SassResult<IntermediateValue>;
+    fn next(&mut self) -> Option<Self::Item> {
+        Value::parse_intermediate_value(self.toks, self.scope, self.super_selector)
+    }
+}
+
+impl IsWhitespace for SassResult<IntermediateValue> {
+    fn is_whitespace(&self) -> bool {
+        match self {
+            Ok(v) => v.is_whitespace(),
+            _ => false,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 enum IntermediateValue {
     Value(Spanned<Value>),
@@ -208,8 +230,8 @@ fn parse_paren(
     Ok(())
 }
 
-fn eat_op<I: Iterator<Item = IntermediateValue>>(
-    iter: &mut PeekMoreIterator<I>,
+fn eat_op<I: Iterator<Item = Token>>(
+    iter: &mut PeekMoreIterator<IntermediateValueIterator<I>>,
     scope: &Scope,
     super_selector: &Selector,
     op: Spanned<Op>,
@@ -308,13 +330,13 @@ fn eat_op<I: Iterator<Item = IntermediateValue>>(
     Ok(())
 }
 
-fn single_value<I: Iterator<Item = IntermediateValue>>(
-    iter: &mut PeekMoreIterator<I>,
+fn single_value<I: Iterator<Item = Token>>(
+    iter: &mut PeekMoreIterator<IntermediateValueIterator<I>>,
     scope: &Scope,
     super_selector: &Selector,
     span: Span,
 ) -> SassResult<Spanned<Value>> {
-    Ok(match iter.next().ok_or(("Expected expression.", span))? {
+    Ok(match iter.next().ok_or(("Expected expression.", span))?? {
         IntermediateValue::Value(v) => v,
         IntermediateValue::Op(op) => match op.node {
             Op::Minus => {
@@ -376,21 +398,22 @@ impl Value {
         scope: &Scope,
         super_selector: &Selector,
     ) -> SassResult<Spanned<Self>> {
-        let mut intermediate_values = Vec::new();
         let span = match toks.peek() {
             Some(Token { pos, .. }) => *pos,
             None => todo!("Expected expression."),
         };
         devour_whitespace(toks);
-        while toks.peek().is_some() {
-            intermediate_values.push(Self::parse_intermediate_value(toks, scope, super_selector)?);
-        }
         let mut last_was_whitespace = false;
         let mut space_separated = Vec::new();
         let mut comma_separated = Vec::new();
-        let mut iter = intermediate_values.into_iter().peekmore();
+        let mut iter = IntermediateValueIterator {
+            toks,
+            scope,
+            super_selector,
+        }
+        .peekmore();
         while let Some(val) = iter.next() {
-            match val {
+            match val? {
                 IntermediateValue::Value(v) => {
                     last_was_whitespace = false;
                     space_separated.push(v)
@@ -590,37 +613,43 @@ impl Value {
         toks: &mut PeekMoreIterator<I>,
         scope: &Scope,
         super_selector: &Selector,
-    ) -> SassResult<IntermediateValue> {
+    ) -> Option<SassResult<IntermediateValue>> {
         if devour_whitespace(toks) {
-            return Ok(IntermediateValue::Whitespace);
+            return Some(Ok(IntermediateValue::Whitespace));
         }
         let (kind, span) = match toks.peek() {
             Some(v) => (v.kind, v.pos()),
-            None => panic!("unexpected eof"),
+            None => return None,
         };
 
         let next_is_hypen = |toks: &mut PeekMoreIterator<I>| {
             toks.peek_forward(1).is_some()
                 && matches!(toks.peek().unwrap().kind, '-' | '_' | 'a'..='z' | 'A'..='Z')
         };
-        match kind {
+        Some(Ok(match kind {
             _ if kind.is_ascii_alphabetic()
                 || kind == '_'
                 || kind == '\\'
                 || (!kind.is_ascii() && !kind.is_control())
                 || (kind == '-' && next_is_hypen(toks)) =>
             {
-                Self::ident(toks, scope, super_selector)
+                return Some(Self::ident(toks, scope, super_selector));
             }
             '0'..='9' | '.' => {
                 let Spanned {
                     node: val,
                     mut span,
-                } = eat_number(toks)?;
+                } = match eat_number(toks) {
+                    Ok(v) => v,
+                    Err(e) => return Some(Err(e)),
+                };
                 let unit = if let Some(tok) = toks.peek() {
                     match tok.kind {
                         'a'..='z' | 'A'..='Z' | '_' => {
-                            let u = eat_ident_no_interpolation(toks, true)?;
+                            let u = match eat_ident_no_interpolation(toks, true) {
+                                Ok(v) => v,
+                                Err(e) => return Some(Err(e)),
+                            };
                             span = span.merge(u.span);
                             Unit::from(&u.node)
                         }
@@ -641,18 +670,23 @@ impl Value {
                 };
 
                 if val.times_ten.is_empty() {
-                    return Ok(IntermediateValue::Value(
+                    return Some(Ok(IntermediateValue::Value(
                         Value::Dimension(Number::new(n), unit).span(span),
-                    ));
+                    )));
                 }
 
                 let times_ten = pow(
                     BigInt::from(10),
-                    val.times_ten
+                    match val
+                        .times_ten
                         .parse::<BigInt>()
                         .unwrap()
                         .to_usize()
-                        .ok_or(("Exponent too large (expected usize).", span))?,
+                        .ok_or(("Exponent too large (expected usize).", span))
+                    {
+                        Ok(v) => v,
+                        Err(e) => return Some(Err(e.into())),
+                    },
                 );
 
                 let times_ten = if val.times_ten_is_postive {
@@ -661,9 +695,9 @@ impl Value {
                     BigRational::new(BigInt::one(), times_ten)
                 };
 
-                Ok(IntermediateValue::Value(
+                IntermediateValue::Value(
                     Value::Dimension(Number::new(n * times_ten), unit).span(span),
-                ))
+                )
             }
             '(' => {
                 let mut span = toks.next().unwrap().pos();
@@ -672,41 +706,43 @@ impl Value {
                 if !inner.is_empty() {
                     let last_tok = inner.pop().unwrap();
                     if last_tok.kind != ')' {
-                        return Err(("expected \")\".", span).into());
+                        return Some(Err(("expected \")\".", span).into()));
                     }
                     span = span.merge(last_tok.pos());
                 }
-                Ok(IntermediateValue::Paren(Spanned { node: inner, span }))
+                IntermediateValue::Paren(Spanned { node: inner, span })
             }
             '&' => {
                 let span = toks.next().unwrap().pos();
-                Ok(IntermediateValue::Value(Spanned {
+                IntermediateValue::Value(Spanned {
                     node: super_selector.into_value(),
                     span,
-                }))
+                })
             }
             '#' => {
                 if let Ok(s) = eat_ident(toks, scope, super_selector) {
-                    Ok(IntermediateValue::Value(Spanned {
+                    IntermediateValue::Value(Spanned {
                         node: Value::Ident(s.node, QuoteKind::None),
                         span: s.span,
-                    }))
+                    })
                 } else {
-                    Ok(IntermediateValue::Value(parse_hex(
-                        toks,
-                        scope,
-                        super_selector,
-                        span,
-                    )?))
+                    IntermediateValue::Value(match parse_hex(toks, scope, super_selector, span) {
+                        Ok(v) => v,
+                        Err(e) => return Some(Err(e)),
+                    })
                 }
             }
             q @ '"' | q @ '\'' => {
                 let span_start = toks.next().unwrap().pos();
-                let Spanned { node, span } = parse_quoted_string(toks, scope, q, super_selector)?;
-                Ok(IntermediateValue::Value(Spanned {
+                let Spanned { node, span } =
+                    match parse_quoted_string(toks, scope, q, super_selector) {
+                        Ok(v) => v,
+                        Err(e) => return Some(Err(e)),
+                    };
+                IntermediateValue::Value(Spanned {
                     node,
                     span: span_start.merge(span),
-                }))
+                })
             }
             '[' => {
                 let mut span = toks.next().unwrap().pos();
@@ -714,55 +750,62 @@ impl Value {
                 if !inner.is_empty() {
                     let last_tok = inner.pop().unwrap();
                     if last_tok.kind != ']' {
-                        return Err(("expected \"]\".", span).into());
+                        return Some(Err(("expected \"]\".", span).into()));
                     }
                     span = span.merge(last_tok.pos());
                 }
-                Ok(IntermediateValue::Bracketed(Spanned { node: inner, span }))
+                IntermediateValue::Bracketed(Spanned { node: inner, span })
             }
             '$' => {
                 toks.next();
-                let val = eat_ident_no_interpolation(toks, false)?;
-                Ok(IntermediateValue::Value(Spanned {
-                    node: scope.get_var(val.clone())?.node,
+                let val = match eat_ident_no_interpolation(toks, false) {
+                    Ok(v) => v,
+                    Err(e) => return Some(Err(e)),
+                };
+                IntermediateValue::Value(Spanned {
+                    node: match scope.get_var(val.clone()) {
+                        Ok(v) => v,
+                        Err(e) => return Some(Err(e)),
+                    }
+                    .node,
                     span: val.span,
-                }))
+                })
             }
             '+' => {
                 let span = toks.next().unwrap().pos();
-                Ok(IntermediateValue::Op(Spanned {
+                IntermediateValue::Op(Spanned {
                     node: Op::Plus,
                     span,
-                }))
+                })
             }
             '-' => {
                 let span = toks.next().unwrap().pos();
-                Ok(IntermediateValue::Op(Spanned {
+                IntermediateValue::Op(Spanned {
                     node: Op::Minus,
                     span,
-                }))
+                })
             }
             '*' => {
                 let span = toks.next().unwrap().pos();
-                Ok(IntermediateValue::Op(Spanned {
+                IntermediateValue::Op(Spanned {
                     node: Op::Mul,
                     span,
-                }))
+                })
             }
             '%' => {
                 let span = toks.next().unwrap().pos();
-                Ok(IntermediateValue::Op(Spanned {
+                IntermediateValue::Op(Spanned {
                     node: Op::Rem,
                     span,
-                }))
+                })
             }
             ',' => {
                 toks.next();
-                Ok(IntermediateValue::Comma)
+                IntermediateValue::Comma
             }
             q @ '>' | q @ '<' => {
                 let mut span = toks.next().unwrap().pos();
-                Ok(IntermediateValue::Op(Spanned {
+                IntermediateValue::Op(Spanned {
                     node: if toks.peek().unwrap().kind == '=' {
                         span = span.merge(toks.next().unwrap().pos());
                         match q {
@@ -778,64 +821,71 @@ impl Value {
                         }
                     },
                     span,
-                }))
+                })
             }
             '=' => {
                 let mut span = toks.next().unwrap().pos();
                 if let Token { kind: '=', pos } = toks.next().unwrap() {
                     span = span.merge(pos);
-                    Ok(IntermediateValue::Op(Spanned {
+                    IntermediateValue::Op(Spanned {
                         node: Op::Equal,
                         span,
-                    }))
+                    })
                 } else {
-                    Err(("expected \"=\".", span).into())
+                    return Some(Err(("expected \"=\".", span).into()));
                 }
             }
             '!' => {
                 let mut span = toks.next().unwrap().pos();
                 if toks.peek().is_some() && toks.peek().unwrap().kind == '=' {
                     span = span.merge(toks.next().unwrap().pos());
-                    return Ok(IntermediateValue::Op(Spanned {
+                    return Some(Ok(IntermediateValue::Op(Spanned {
                         node: Op::NotEqual,
                         span,
-                    }));
+                    })));
                 }
                 devour_whitespace(toks);
-                let v = eat_ident(toks, scope, super_selector)?;
+                let v = match eat_ident(toks, scope, super_selector) {
+                    Ok(v) => v,
+                    Err(e) => return Some(Err(e)),
+                };
                 span = span.merge(v.span);
                 if v.node.to_ascii_lowercase().as_str() == "important" {
-                    Ok(IntermediateValue::Value(Spanned {
+                    IntermediateValue::Value(Spanned {
                         node: Value::Important,
                         span,
-                    }))
+                    })
                 } else {
-                    Err(("Expected \"important\".", span).into())
+                    return Some(Err(("Expected \"important\".", span).into()));
                 }
             }
             '/' => {
                 let span = toks.next().unwrap().pos();
                 if toks.peek().is_none() {
-                    return Err(("Expected expression.", span).into());
+                    return Some(Err(("Expected expression.", span).into()));
                 }
                 if '*' == toks.peek().unwrap().kind {
                     toks.next();
-                    eat_comment(toks, &Scope::new(), &Selector::new())?;
-                    Ok(IntermediateValue::Whitespace)
+                    match eat_comment(toks, &Scope::new(), &Selector::new()) {
+                        Ok(..) => {}
+                        Err(e) => return Some(Err(e)),
+                    }
+                    IntermediateValue::Whitespace
                 } else if '/' == toks.peek().unwrap().kind {
                     read_until_newline(toks);
                     devour_whitespace(toks);
-                    Ok(IntermediateValue::Whitespace)
+                    IntermediateValue::Whitespace
                 } else {
-                    Ok(IntermediateValue::Op(Spanned {
+                    IntermediateValue::Op(Spanned {
                         node: Op::Div,
                         span,
-                    }))
+                    })
                 }
             }
-            ':' | '?' | ')' | '@' => Err(("expected \";\".", span).into()),
-            v if v.is_control() => Err(("Expected expression.", span).into()),
+            ';' | '}' | '{' => return None,
+            ':' | '?' | ')' | '@' => return Some(Err(("expected \";\".", span).into())),
+            v if v.is_control() => return Some(Err(("Expected expression.", span).into())),
             v => todo!("unexpected token in value parsing: {:?}", v),
-        }
+        }))
     }
 }
