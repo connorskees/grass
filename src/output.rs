@@ -129,12 +129,11 @@ impl Css {
         let mut string = Vec::new();
         self._inner_pretty_print(&mut string, map, 0)?;
         if string.iter().any(|s| !s.is_ascii()) {
-            return Ok(format!(
-                "@charset \"UTF-8\";\n{}",
-                String::from_utf8(string)?
-            ));
+            return Ok(format!("@charset \"UTF-8\";\n{}", unsafe {
+                String::from_utf8_unchecked(string)
+            }));
         }
-        Ok(String::from_utf8(string)?)
+        Ok(unsafe { String::from_utf8_unchecked(string) })
     }
 
     fn debug(map: &CodeMap, span: Span, message: &str) {
