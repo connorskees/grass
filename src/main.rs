@@ -43,7 +43,8 @@ fn main() -> std::io::Result<()> {
                 .long("load-path")
                 .help("A path to use when resolving imports. May be passed multiple times.")
                 .multiple(true)
-                .takes_value(true),
+                .takes_value(true)
+                .number_of_values(1),
         )
         .arg(
             Arg::with_name("STYLE")
@@ -152,6 +153,7 @@ fn main() -> std::io::Result<()> {
             Arg::with_name("PRECISION")
                 .long("precision")
                 .hidden(true)
+                .takes_value(true)
         )
         .get_matches();
 
