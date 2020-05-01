@@ -144,6 +144,13 @@ fn main() -> std::io::Result<()> {
             Arg::with_name("OUTPUT")
                 .help("Output SCSS file")
         )
+
+        // Hidden, legacy arguments
+        .arg(
+            Arg::with_name("OUTPUT")
+                .long("precision")
+                .hidden(true)
+        )
         .get_matches();
 
     if let Some(name) = matches.value_of("INPUT") {
