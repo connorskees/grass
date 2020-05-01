@@ -80,6 +80,7 @@ grass input.scss
     clippy::redundant_pub_crate,
 )]
 #![cfg_attr(feature = "nightly", feature(track_caller))]
+#![cfg_attr(feature = "profiling", inline(never))]
 
 use std::iter::Iterator;
 

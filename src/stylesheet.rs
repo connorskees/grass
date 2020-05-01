@@ -71,7 +71,8 @@ impl StyleSheet {
     ///     Ok(())
     /// }
     /// ```
-    #[inline]
+    #[cfg_attr(feature = "profiling", inline(never))]
+    #[cfg_attr(not(feature = "profiling"), inline)]
     #[cfg(not(feature = "wasm"))]
     pub fn new(input: String) -> SassResult<String> {
         let mut map = CodeMap::new();
@@ -102,7 +103,8 @@ impl StyleSheet {
     ///     Ok(())
     /// }
     /// ```
-    #[inline]
+    #[cfg_attr(feature = "profiling", inline(never))]
+    #[cfg_attr(not(feature = "profiling"), inline)]
     #[cfg(not(feature = "wasm"))]
     pub fn from_path(p: &str) -> SassResult<String> {
         let mut map = CodeMap::new();
