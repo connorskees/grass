@@ -141,7 +141,7 @@ impl Function {
                     ));
                 }
                 Stmt::AtRule(AtRule::For(f)) => {
-                    for i in f.iter().cloned() {
+                    for i in f.iter() {
                         self.scope.insert_var(
                             &f.var.node,
                             Spanned {

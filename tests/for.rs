@@ -58,3 +58,13 @@ test!(
     "a {\n  @for $i from 1 to 3 {\n    @if $i==2 {\n      color: red;\n    }\n  }\n}\n",
     "a {\n  color: red;\n}\n"
 );
+test!(
+    from_negative_to_positive,
+    "@for $i from -1 to 3 {\n    a {\n        color: red;\n    }\n}\n",
+    "a {\n  color: red;\n}\n\na {\n  color: red;\n}\n\na {\n  color: red;\n}\n\na {\n  color: red;\n}\n"
+);
+test!(
+    from_negative_to_negative,
+    "@for $i from -1 to -3 {\n    a {\n        color: red;\n    }\n}\n",
+    "a {\n  color: red;\n}\n\na {\n  color: red;\n}\n"
+);

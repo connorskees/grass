@@ -1,4 +1,5 @@
-use std::iter::Iterator;
+use std::iter::{Iterator, Rev, Skip};
+use std::ops::Range;
 
 use codemap::{Span, Spanned};
 
@@ -20,11 +21,27 @@ use crate::utils::{
 use crate::value::{Number, Value};
 use crate::{Stmt, Token};
 
+pub(crate) enum ForIterator {
+    Forward(Range<isize>),
+    Backward(Rev<Skip<Range<isize>>>),
+}
+
+impl Iterator for ForIterator {
+    type Item = isize;
+    fn next(&mut self) -> Option<Self::Item> {
+        match self {
+            Self::Forward(i) => i.next(),
+            Self::Backward(i) => i.next(),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct For {
     pub var: Spanned<String>,
-    // TODO: optimization: this could be a generic or &dyn Iterator maybe?
-    pub iter: Vec<usize>,
+    from: isize,
+    to: isize,
+    through: isize,
     pub body: Vec<Token>,
 }
 
@@ -36,7 +53,7 @@ impl For {
         content: Option<&[Spanned<Stmt>]>,
     ) -> SassResult<Vec<Spanned<Stmt>>> {
         let mut stmts = Vec::new();
-        for i in self.iter {
+        for i in self.iter() {
             scope.insert_var(
                 &self.var.node,
                 Spanned {
@@ -45,7 +62,7 @@ impl For {
                 },
             )?;
             ruleset_eval(
-                &mut self.body.clone().into_iter().peekmore(),
+                &mut self.body.iter().cloned().peekmore(),
                 scope,
                 super_selector,
                 false,
@@ -56,8 +73,12 @@ impl For {
         Ok(stmts)
     }
 
-    pub fn iter(&self) -> std::slice::Iter<'_, usize> {
-        self.iter.iter()
+    pub fn iter(&self) -> ForIterator {
+        if self.from < self.to {
+            ForIterator::Forward(self.from..(self.to + self.through))
+        } else {
+            ForIterator::Backward(((self.to - self.through)..(self.from + 1)).skip(1).rev())
+        }
     }
 }
 
@@ -110,8 +131,8 @@ pub(crate) fn parse_for<I: Iterator<Item = Token>>(
     }
     devour_whitespace(toks);
     let from_val = Value::from_vec(from_toks, scope, super_selector)?;
-    let from = match from_val.node {
-        Value::Dimension(n, _) => match n.to_integer().to_usize() {
+    let from = match from_val.node.eval(from_val.span)?.node {
+        Value::Dimension(n, _) => match n.to_integer().to_isize() {
             Some(v) => v,
             None => return Err((format!("{} is not a int.", n), from_val.span).into()),
         },
@@ -127,8 +148,8 @@ pub(crate) fn parse_for<I: Iterator<Item = Token>>(
     let to_toks = read_until_open_curly_brace(toks);
     toks.next();
     let to_val = Value::from_vec(to_toks, scope, super_selector)?;
-    let to = match to_val.node {
-        Value::Dimension(n, _) => match n.to_integer().to_usize() {
+    let to = match to_val.node.eval(to_val.span)?.node {
+        Value::Dimension(n, _) => match n.to_integer().to_isize() {
             Some(v) => v,
             None => return Err((format!("{} is not a int.", n), to_val.span).into()),
         },
@@ -145,11 +166,11 @@ pub(crate) fn parse_for<I: Iterator<Item = Token>>(
 
     devour_whitespace(toks);
 
-    let iter = if from < to {
-        (from..(to + through)).collect()
-    } else {
-        ((to - through)..(from + 1)).skip(1).rev().collect()
-    };
-
-    Ok(AtRule::For(For { iter, body, var }))
+    Ok(AtRule::For(For {
+        from,
+        to,
+        through,
+        body,
+        var,
+    }))
 }
