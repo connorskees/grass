@@ -69,7 +69,10 @@ pub(crate) fn read_until_closing_curly_brace<I: Iterator<Item = Token>>(
             '/' => {
                 let next = toks.next().unwrap();
                 match toks.peek().unwrap().kind {
-                    '/' => read_until_newline(toks),
+                    '/' => {
+                        read_until_newline(toks);
+                        devour_whitespace(toks);
+                    }
                     _ => t.push(next),
                 };
                 continue;
@@ -162,7 +165,10 @@ pub(crate) fn read_until_semicolon_or_closing_curly_brace<I: Iterator<Item = Tok
             '/' => {
                 let next = toks.next().unwrap();
                 match toks.peek().unwrap().kind {
-                    '/' => read_until_newline(toks),
+                    '/' => {
+                        read_until_newline(toks);
+                        devour_whitespace(toks);
+                    }
                     _ => t.push(next),
                 };
                 continue;
@@ -215,6 +221,7 @@ pub(crate) fn read_until_closing_square_brace<I: Iterator<Item = Token>>(
     let mut t = Vec::new();
     let mut scope = 0;
     while let Some(tok) = toks.next() {
+        // TODO: comments
         match tok.kind {
             ']' => {
                 if scope < 1 {
