@@ -172,7 +172,7 @@ impl Display for Number {
         let mut whole = self.val.to_integer().abs();
         let has_decimal = !self.val.denom().is_one();
         let mut frac = self.val.fract().abs();
-        let mut dec = String::with_capacity(if !has_decimal { 0 } else { PRECISION + 1 });
+        let mut dec = String::with_capacity(if has_decimal { PRECISION + 1 } else { 0 });
         if has_decimal {
             for _ in 0..(PRECISION - 1) {
                 frac *= BigInt::from(10);
