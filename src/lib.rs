@@ -185,10 +185,9 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
     content: Option<&[Spanned<Stmt>]>,
 ) -> SassResult<Option<Spanned<Expr>>> {
     let mut values = Vec::with_capacity(5);
-    let mut span = if let Some(tok) = toks.peek() {
-        tok.pos()
-    } else {
-        return Ok(None);
+    let mut span = match toks.peek() {
+        Some(tok) => tok.pos(),
+        None => return Ok(None),
     };
     while let Some(tok) = toks.peek() {
         span = span.merge(tok.pos());
