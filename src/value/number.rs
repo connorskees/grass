@@ -170,19 +170,20 @@ impl fmt::Debug for Number {
 impl Display for Number {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut whole = self.val.to_integer().abs();
-        let mut frac = self.val.fract();
-        let mut dec = String::with_capacity(if frac.is_zero() { 0 } else { PRECISION + 1 });
-        if !frac.is_zero() {
+        let has_decimal = !self.val.denom().is_one();
+        let mut frac = self.val.fract().abs();
+        let mut dec = String::with_capacity(if !has_decimal { 0 } else { PRECISION + 1 });
+        if has_decimal {
             for _ in 0..(PRECISION - 1) {
                 frac *= BigInt::from(10);
-                write!(dec, "{}", frac.to_integer().abs())?;
+                write!(dec, "{}", frac.to_integer())?;
                 frac = frac.fract();
                 if frac.is_zero() {
                     break;
                 }
             }
             if !frac.is_zero() {
-                let end = (frac * BigInt::from(10)).round().abs().to_integer();
+                let end = (frac * BigInt::from(10)).round().to_integer();
                 if end == BigInt::from(10) {
                     loop {
                         match dec.pop() {
