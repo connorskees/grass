@@ -88,9 +88,6 @@ use codemap::{Span, Spanned};
 
 use peekmore::{PeekMore, PeekMoreIterator};
 
-#[cfg(feature = "wasm")]
-use wasm_bindgen::prelude::*;
-
 use crate::atrule::{AtRule, AtRuleKind, Function, Mixin};
 pub use crate::error::{SassError, SassResult};
 use crate::scope::{insert_global_var, Scope};

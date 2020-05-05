@@ -21,6 +21,10 @@ arg_enum! {
     }
 }
 
+#[cfg(feature = "wasm")]
+fn main() {}
+
+#[cfg(not(feature = "wasm"))]
 #[cfg_attr(feature = "profiling", inline(never))]
 fn main() -> std::io::Result<()> {
     let matches = App::new("grass")
