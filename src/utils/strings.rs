@@ -204,7 +204,7 @@ pub(crate) fn eat_ident<I: Iterator<Item = Token>>(
             text.push_str(
                 &match parse_interpolation(toks, scope, super_selector)?.node {
                     Value::Ident(s, ..) => s,
-                    v => v.to_css_string(span)?,
+                    v => v.to_css_string(span)?.into(),
                 },
             );
         } else {
@@ -279,7 +279,7 @@ pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
                     let interpolation = parse_interpolation(toks, scope, super_selector)?;
                     s.push_str(&match interpolation.node {
                         Value::Ident(s, ..) => s,
-                        v => v.to_css_string(interpolation.span)?,
+                        v => v.to_css_string(interpolation.span)?.into(),
                     });
                     continue;
                 } else {

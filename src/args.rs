@@ -88,7 +88,7 @@ impl CallArgs {
                 .iter()
                 .map(|a| {
                     span = span.merge(a.span);
-                    Ok(a.node.to_css_string(a.span)?)
+                    Ok(a.node.to_css_string(a.span)?.into())
                 })
                 .collect::<SassResult<Vec<String>>>()?
                 .join(", "),

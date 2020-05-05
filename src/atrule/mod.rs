@@ -89,7 +89,7 @@ impl AtRule {
                 devour_whitespace(toks);
                 Spanned {
                     node: AtRule::Warn(Spanned {
-                        node: message.to_css_string(span)?,
+                        node: message.to_css_string(span)?.into(),
                         span,
                     }),
                     span,

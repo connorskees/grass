@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::cmp::Ordering;
 use std::iter::Iterator;
 
@@ -121,14 +122,14 @@ impl Value {
         })
     }
 
-    pub fn to_css_string(&self, span: Span) -> SassResult<String> {
+    pub fn to_css_string(&self, span: Span) -> SassResult<Cow<'static, str>> {
         Ok(match self {
-            Self::Important => "!important".to_string(),
+            Self::Important => Cow::Borrowed("!important"),
             Self::Dimension(num, unit) => match unit {
                 Unit::Mul(..) => {
                     return Err((format!("{}{} isn't a valid CSS value.", num, unit), span).into());
                 }
-                _ => format!("{}{}", num, unit),
+                _ => Cow::Owned(format!("{}{}", num, unit)),
             },
             Self::Map(..) => {
                 return Err((
@@ -145,22 +146,23 @@ impl Value {
                     .into())
             }
             Self::List(vals, sep, brackets) => match brackets {
-                Brackets::None => vals
-                    .iter()
-                    .filter(|x| !x.is_null(span).unwrap())
-                    .map(|x| x.to_css_string(span))
-                    .collect::<SassResult<Vec<String>>>()?
-                    .join(sep.as_str()),
-                Brackets::Bracketed => format!(
+                Brackets::None => Cow::Owned(
+                    vals.iter()
+                        .filter(|x| !x.is_null(span).unwrap())
+                        .map(|x| x.to_css_string(span))
+                        .collect::<SassResult<Vec<Cow<'static, str>>>>()?
+                        .join(sep.as_str()),
+                ),
+                Brackets::Bracketed => Cow::Owned(format!(
                     "[{}]",
                     vals.iter()
                         .filter(|x| !x.is_null(span).unwrap())
                         .map(|x| x.to_css_string(span))
-                        .collect::<SassResult<Vec<String>>>()?
+                        .collect::<SassResult<Vec<Cow<'static, str>>>>()?
                         .join(sep.as_str()),
-                ),
+                )),
             },
-            Self::Color(c) => format!("{}", c),
+            Self::Color(c) => Cow::Owned(c.to_string()),
             Self::UnaryOp(..) | Self::BinaryOp(..) => {
                 self.clone().eval(span)?.to_css_string(span)?
             }
@@ -185,22 +187,23 @@ impl Value {
                         }
                     }
                 }
-                buf
+                Cow::Owned(buf)
             }
             Self::Ident(string, QuoteKind::Quoted) => {
                 let mut buf = String::with_capacity(string.len());
                 visit_quoted_string(&mut buf, false, string)?;
-                buf
+                Cow::Owned(buf)
             }
-            Self::True => "true".to_string(),
-            Self::False => "false".to_string(),
-            Self::Null => String::new(),
-            Self::ArgList(args) => args
-                .iter()
-                .filter(|x| !x.is_null(span).unwrap())
-                .map(|a| Ok(a.node.to_css_string(span)?))
-                .collect::<SassResult<Vec<String>>>()?
-                .join(", "),
+            Self::True => Cow::Borrowed("true"),
+            Self::False => Cow::Borrowed("false"),
+            Self::Null => Cow::Borrowed(""),
+            Self::ArgList(args) => Cow::Owned(
+                args.iter()
+                    .filter(|x| !x.is_null(span).unwrap())
+                    .map(|a| Ok(a.node.to_css_string(span)?.into()))
+                    .collect::<SassResult<Vec<String>>>()?
+                    .join(", "),
+            ),
         })
     }
 
@@ -306,7 +309,7 @@ impl Value {
                     .join(", ")
             ),
             Value::Paren(v) => v.inspect(span)?,
-            v => v.to_css_string(span)?,
+            v => v.to_css_string(span)?.into(),
         })
     }
 

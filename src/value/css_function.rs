@@ -112,7 +112,7 @@ pub(crate) fn try_eat_url<I: Iterator<Item = Token>>(
                 peek_counter += count;
                 buf.push_str(&match interpolation.node {
                     Value::Ident(s, ..) => s,
-                    v => v.to_css_string(interpolation.span)?,
+                    v => v.to_css_string(interpolation.span)?.into(),
                 });
             } else {
                 buf.push('#');
