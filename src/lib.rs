@@ -3,11 +3,11 @@ An implementation of the sass specification in pure rust.
 
 All functionality is currently exposed through [`StyleSheet`].
 
-Spec progress as of 2020-04-21:
+Spec progress as of 2020-05-01:
 
 | Passing | Failing | Total |
 |---------|---------|-------|
-| 2150    | 2943    | 5093  |
+| 2193    | 2900    | 5093  |
 
 ## Use as library
 ```

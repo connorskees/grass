@@ -67,6 +67,13 @@ cargo b --release
 These numbers come from a default run of the sass specification as shown above.
 
 ```
+2020-05-01
+PASSING: 2193
+FAILING: 2900
+TOTAL: 5093
+```
+
+```
 2020-04-21
 PASSING: 2150
 FAILING: 2943
