@@ -1,4 +1,4 @@
-use std::fmt::{self, Display};
+use std::fmt::{self, Write, Display};
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Op {
@@ -71,8 +71,8 @@ impl Display for QuoteKind {
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Quoted => write!(f, "\""),
-            Self::None => write!(f, ""),
+            Self::Quoted => f.write_char('"'),
+            Self::None => Ok(()),
         }
     }
 }
