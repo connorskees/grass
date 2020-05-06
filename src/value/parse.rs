@@ -651,7 +651,7 @@ impl Value {
                                 Err(e) => return Some(Err(e)),
                             };
                             span = span.merge(u.span);
-                            Unit::from(&u.node)
+                            Unit::from(u.node)
                         }
                         '%' => {
                             span = span.merge(toks.next().unwrap().pos());
