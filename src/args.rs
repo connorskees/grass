@@ -149,6 +149,10 @@ impl CallArgs {
         Ok(vals)
     }
 
+    /// Decrement all positional arguments by 1
+    ///
+    /// This is used by builtin function `call` to pass
+    /// positional arguments to the other function
     pub fn decrement(self) -> Self {
         CallArgs(
             self.0
