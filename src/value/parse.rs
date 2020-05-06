@@ -555,7 +555,7 @@ impl Value {
                     None => {
                         match lower.as_str() {
                             "calc" | "element" | "expression" => {
-                                s.push_str(&eat_calc_args(toks, scope, super_selector)?)
+                                eat_calc_args(toks, scope, super_selector, &mut s)?;
                             }
                             // "min" => {}
                             // "max" => {}

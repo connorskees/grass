@@ -13,42 +13,44 @@ pub(crate) fn eat_calc_args<I: Iterator<Item = Token>>(
     toks: &mut PeekMoreIterator<I>,
     scope: &Scope,
     super_selector: &Selector,
-) -> SassResult<String> {
-    let mut string = String::from("(");
+    buf: &mut String,
+) -> SassResult<()> {
+    buf.reserve(2);
+    buf.push('(');
     let mut nesting = 0;
     while let Some(tok) = toks.next() {
         match tok.kind {
             ' ' | '\t' | '\n' => {
                 devour_whitespace(toks);
-                string.push(' ');
+                buf.push(' ');
             }
             '#' => {
                 if toks.peek().is_some() && toks.peek().unwrap().kind == '{' {
                     let span = toks.next().unwrap().pos();
-                    string.push_str(
+                    buf.push_str(
                         &parse_interpolation(toks, scope, super_selector)?.to_css_string(span)?,
                     );
                 } else {
-                    string.push('#');
+                    buf.push('#');
                 }
             }
             '(' => {
                 nesting += 1;
-                string.push('(');
+                buf.push('(');
             }
             ')' => {
                 if nesting == 0 {
                     break;
                 } else {
                     nesting -= 1;
-                    string.push(')');
+                    buf.push(')');
                 }
             }
-            c => string.push(c),
+            c => buf.push(c),
         }
     }
-    string.push(')');
-    Ok(string)
+    buf.push(')');
+    Ok(())
 }
 
 pub(crate) fn is_special_function(s: &str) -> bool {
@@ -73,7 +75,7 @@ pub(crate) fn eat_progid<I: Iterator<Item = Token>>(
                 string.push(tok.kind);
             }
             '(' => {
-                string.push_str(&eat_calc_args(toks, scope, super_selector)?);
+                eat_calc_args(toks, scope, super_selector, &mut string)?;
                 break;
             }
             _ => return Err(("expected \"(\".", span).into()),
