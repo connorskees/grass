@@ -329,7 +329,9 @@ impl Value {
                         false
                     } else {
                         n == (n2
-                            * UNIT_CONVERSION_TABLE[&unit.to_string()][&unit2.to_string()].clone())
+                            * UNIT_CONVERSION_TABLE[unit.to_string().as_str()]
+                                [unit2.to_string().as_str()]
+                            .clone())
                     }
                 }
                 _ => false,
@@ -405,8 +407,9 @@ impl Value {
                     } else {
                         num.cmp(
                             &(num2.clone()
-                                * UNIT_CONVERSION_TABLE[&unit.to_string()][&unit2.to_string()]
-                                    .clone()),
+                                * UNIT_CONVERSION_TABLE[unit.to_string().as_str()]
+                                    [unit2.to_string().as_str()]
+                                .clone()),
                         )
                     }
                 }

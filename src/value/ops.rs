@@ -50,8 +50,9 @@ impl Value {
                     } else {
                         Value::Dimension(
                             num + num2
-                                * UNIT_CONVERSION_TABLE[&unit.to_string()][&unit2.to_string()]
-                                    .clone(),
+                                * UNIT_CONVERSION_TABLE[unit.to_string().as_str()]
+                                    [unit2.to_string().as_str()]
+                                .clone(),
                             unit,
                         )
                     }
@@ -161,8 +162,9 @@ impl Value {
                     } else {
                         Value::Dimension(
                             num - num2
-                                * UNIT_CONVERSION_TABLE[&unit.to_string()][&unit2.to_string()]
-                                    .clone(),
+                                * UNIT_CONVERSION_TABLE[unit.to_string().as_str()]
+                                    [unit2.to_string().as_str()]
+                                .clone(),
                             unit,
                         )
                     }
@@ -353,8 +355,9 @@ impl Value {
                     } else {
                         Value::Dimension(
                             num / (num2
-                                * UNIT_CONVERSION_TABLE[&unit.to_string()][&unit2.to_string()]
-                                    .clone()),
+                                * UNIT_CONVERSION_TABLE[unit.to_string().as_str()]
+                                    [unit2.to_string().as_str()]
+                                .clone()),
                             Unit::None,
                         )
                     }
