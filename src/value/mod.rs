@@ -265,39 +265,39 @@ impl Value {
 
     // TODO:
     // https://github.com/sass/dart-sass/blob/d4adea7569832f10e3a26d0e420ae51640740cfb/lib/src/ast/sass/expression/list.dart#L39
-    pub fn inspect(&self, span: Span) -> SassResult<String> {
+    pub fn inspect(&self, span: Span) -> SassResult<Cow<'static, str>> {
         Ok(match self {
             Value::List(v, _, brackets) if v.is_empty() => match brackets {
-                Brackets::None => "()".to_string(),
-                Brackets::Bracketed => "[]".to_string(),
+                Brackets::None => Cow::Borrowed("()"),
+                Brackets::Bracketed => Cow::Borrowed("[]"),
             },
             Value::List(v, sep, brackets) if v.len() == 1 => match brackets {
                 Brackets::None => match sep {
                     ListSeparator::Space => v[0].inspect(span)?,
-                    ListSeparator::Comma => format!("({},)", v[0].inspect(span)?),
+                    ListSeparator::Comma => Cow::Owned(format!("({},)", v[0].inspect(span)?)),
                 },
                 Brackets::Bracketed => match sep {
-                    ListSeparator::Space => format!("[{}]", v[0].inspect(span)?),
-                    ListSeparator::Comma => format!("[{},]", v[0].inspect(span)?),
+                    ListSeparator::Space => Cow::Owned(format!("[{}]", v[0].inspect(span)?)),
+                    ListSeparator::Comma => Cow::Owned(format!("[{},]", v[0].inspect(span)?)),
                 },
             },
-            Self::List(vals, sep, brackets) => match brackets {
+            Self::List(vals, sep, brackets) => Cow::Owned(match brackets {
                 Brackets::None => vals
                     .iter()
                     .map(|x| x.inspect(span))
-                    .collect::<SassResult<Vec<String>>>()?
+                    .collect::<SassResult<Vec<Cow<'static, str>>>>()?
                     .join(sep.as_str()),
                 Brackets::Bracketed => format!(
                     "[{}]",
                     vals.iter()
                         .map(|x| x.inspect(span))
-                        .collect::<SassResult<Vec<String>>>()?
+                        .collect::<SassResult<Vec<Cow<'static, str>>>>()?
                         .join(sep.as_str()),
                 ),
-            },
-            Value::Function(f) => format!("get-function(\"{}\")", f.name()),
-            Value::Null => "null".to_string(),
-            Value::Map(map) => format!(
+            }),
+            Value::Function(f) => Cow::Owned(format!("get-function(\"{}\")", f.name())),
+            Value::Null => Cow::Borrowed("null"),
+            Value::Map(map) => Cow::Owned(format!(
                 "({})",
                 map.iter()
                     .map(|(k, v)| Ok(format!(
@@ -307,9 +307,9 @@ impl Value {
                     )))
                     .collect::<SassResult<Vec<String>>>()?
                     .join(", ")
-            ),
+            )),
             Value::Paren(v) => v.inspect(span)?,
-            v => v.to_css_string(span)?.into(),
+            v => v.to_css_string(span)?,
         })
     }
 

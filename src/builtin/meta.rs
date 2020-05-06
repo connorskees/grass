@@ -96,7 +96,9 @@ fn unitless(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> Sas
 fn inspect(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
     args.max_args(1)?;
     Ok(Value::Ident(
-        arg!(args, scope, super_selector, 0, "value").inspect(args.span())?,
+        arg!(args, scope, super_selector, 0, "value")
+            .inspect(args.span())?
+            .into(),
         QuoteKind::None,
     ))
 }

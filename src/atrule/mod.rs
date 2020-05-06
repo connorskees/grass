@@ -71,7 +71,7 @@ impl AtRule {
                     super_selector,
                 )?;
 
-                return Err((message.inspect(span)?, span.merge(kind_span)).into());
+                return Err((message.inspect(span)?.to_string(), span.merge(kind_span)).into());
             }
             AtRuleKind::Warn => {
                 let Spanned {
@@ -111,7 +111,7 @@ impl AtRule {
                 devour_whitespace(toks);
                 Spanned {
                     node: AtRule::Debug(Spanned {
-                        node: message.inspect(span)?,
+                        node: message.inspect(span)?.into(),
                         span,
                     }),
                     span,
