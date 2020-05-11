@@ -25,7 +25,7 @@ a bug except for in the following situations:
 `grass` experimentally releases a
 [WASM version of the library to npm](https://www.npmjs.com/package/@connorskees/grass),
 compiled using wasm-bindgen. To use `grass` in your JavaScript projects, just add
-`"@connorskees/grass": "^0.8.0"` to your package.json. Better documentation
+`"@connorskees/grass": "^0.8.2"` to your package.json. Better documentation
 for this version will be provided when the library becomes more stable.
 
 ## Status
