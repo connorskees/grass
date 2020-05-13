@@ -529,6 +529,7 @@ impl Value {
         let lower = s.to_ascii_lowercase();
 
         if lower == "progid" && toks.peek().is_some() && toks.peek().unwrap().kind == ':' {
+            s = lower;
             toks.next();
             s.push(':');
             s.push_str(&eat_progid(toks, scope, super_selector)?);
@@ -555,6 +556,7 @@ impl Value {
                     None => {
                         match lower.as_str() {
                             "calc" | "element" | "expression" => {
+                                s = lower;
                                 eat_calc_args(toks, scope, super_selector, &mut s)?;
                             }
                             // "min" => {}

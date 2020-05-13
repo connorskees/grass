@@ -37,6 +37,16 @@ test!(
     "a {\n  color: calc(2px + 2px + 5%);\n}\n"
 );
 test!(
+    calc_uppercase,
+    "a {\n  color: CALC(1 + 1);\n}\n",
+    "a {\n  color: calc(1 + 1);\n}\n"
+);
+test!(
+    calc_mixed_casing,
+    "a {\n  color: cAlC(1 + 1);\n}\n",
+    "a {\n  color: calc(1 + 1);\n}\n"
+);
+test!(
     element_whitespace,
     "a {\n  color: element(       1      );\n}\n",
     "a {\n  color: element( 1 );\n}\n"
@@ -148,4 +158,14 @@ test!(
 error!(
     progid_number_after_colon,
     "a {\n  color: progid:ap1ple.bottoM..jeans.boots();\n}\n", "Error: expected \"(\"."
+);
+test!(
+    progid_uppercase,
+    "a {\n  color: PROGID:foo(fff);\n}\n",
+    "a {\n  color: progid:foo(fff);\n}\n"
+);
+test!(
+    progid_mixed_casing,
+    "a {\n  color: PrOgId:foo(fff);\n}\n",
+    "a {\n  color: progid:foo(fff);\n}\n"
 );

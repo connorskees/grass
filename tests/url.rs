@@ -124,3 +124,13 @@ test!(
     "a {\n  color:url(;);\n}\n",
     "a {\n  color: url(;);\n}\n"
 );
+test!(
+    url_uppercase,
+    "a {\n  color: URL(http://foo);\n}\n",
+    "a {\n  color: url(http://foo);\n}\n"
+);
+test!(
+    url_mixed_casing,
+    "a {\n  color: UrL(http://foo);\n}\n",
+    "a {\n  color: url(http://foo);\n}\n"
+);
