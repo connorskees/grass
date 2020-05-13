@@ -29,19 +29,34 @@ test!(
     "a {\n  color: 2;\n}\n"
 );
 test!(
-    feature_exists_at_error_dbl_quoted,
+    feature_exists_dbl_quoted,
     "a {\n  color: feature-exists(\"at-error\")\n}\n",
     "a {\n  color: true;\n}\n"
 );
 test!(
-    feature_exists_at_error_sgl_quoted,
+    feature_exists_sgl_quoted,
     "a {\n  color: feature-exists('at-error')\n}\n",
     "a {\n  color: true;\n}\n"
 );
 test!(
-    feature_exists_at_error_no_quotes,
+    feature_exists_no_quotes,
     "a {\n  color: feature-exists(at-error)\n}\n",
     "a {\n  color: true;\n}\n"
+);
+test!(
+    feature_exists_at_error,
+    "a {\n  color: feature-exists(at-error)\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    feature_exists_named_arg,
+    "a {\n  color: feature-exists($feature: at-error)\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    feature_exists_case_sensitive,
+    "a {\n  color: feature-exists(at-erroR)\n}\n",
+    "a {\n  color: false;\n}\n"
 );
 test!(
     feature_exists_global_variable_shadowing,
