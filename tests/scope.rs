@@ -23,3 +23,20 @@ test!(
     "$y: a;\n@mixin foo {\n  $y: b !global;\n}\na {\n  @include foo;\n  color: $y;\n}\n",
     "a {\n  color: b;\n}\n"
 );
+test!(
+    local_variable_exists_in_fn_mixin_scope,
+    "@function exists-fn($name) {
+        @return variable-exists($name);
+    }
+
+    @mixin exists-mixin($name) {
+        color: variable-exists($name);
+    }
+
+    a {
+        $x: foo;
+        @include exists-mixin(x);
+        color: exists-fn(x);
+    }",
+    "a {\n  color: false;\n  color: false;\n}\n"
+);

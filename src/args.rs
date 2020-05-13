@@ -127,6 +127,19 @@ impl CallArgs {
         }
     }
 
+    pub fn get(
+        &mut self,
+        position: usize,
+        name: String,
+        scope: &Scope,
+        super_selector: &Selector,
+    ) -> Option<SassResult<Spanned<Value>>> {
+        match self.get_named(name, scope, super_selector) {
+            Some(v) => return Some(v),
+            None => return self.get_positional(position, scope, super_selector),
+        }
+    }
+
     pub fn get_variadic(
         self,
         scope: &Scope,
