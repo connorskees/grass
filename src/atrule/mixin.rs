@@ -62,7 +62,7 @@ impl Mixin {
         scope: &Scope,
         super_selector: &Selector,
     ) -> SassResult<Mixin> {
-        for (idx, arg) in self.args.0.iter().enumerate() {
+        for (idx, arg) in self.args.0.iter_mut().enumerate() {
             if arg.is_variadic {
                 let span = args.span();
                 self.scope.insert_var(
@@ -74,22 +74,19 @@ impl Mixin {
                 )?;
                 break;
             }
-            let val = match args.get_positional(idx, scope, super_selector) {
+            let val = match args.get(idx, arg.name.clone(), &scope, super_selector) {
                 Some(v) => v?,
-                None => match args.get_named(arg.name.clone(), scope, super_selector) {
-                    Some(v) => v?,
-                    None => match &arg.default {
-                        Some(v) => Value::from_tokens(
-                            &mut v.iter().cloned().peekmore(),
-                            scope,
-                            super_selector,
-                        )?,
-                        None => {
-                            return Err(
-                                (format!("Missing argument ${}.", &arg.name), args.span()).into()
-                            )
-                        }
-                    },
+                None => match arg.default.as_mut() {
+                    Some(v) => Value::from_tokens(
+                        &mut std::mem::take(v).into_iter().peekmore(),
+                        &scope,
+                        super_selector,
+                    )?,
+                    None => {
+                        return Err(
+                            (format!("Missing argument ${}.", &arg.name), args.span()).into()
+                        )
+                    }
                 },
             };
             self.scope.insert_var(&arg.name, val)?;
