@@ -68,3 +68,8 @@ test!(
     "a {\n  color: \"#{\\\"\\'}\";\n}\n",
     "a {\n  color: \"\\\\\\\"\\\\'\";\n}\n"
 );
+test!(
+    interpolated_plain_css_fn,
+    "$f: foo;\na {\n  color: #{$f}(a, 1+2, c);\n}\n",
+    "a {\n  color: foo(a, 3, c);\n}\n"
+);

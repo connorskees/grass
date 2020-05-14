@@ -722,11 +722,8 @@ impl Value {
                 })
             }
             '#' => {
-                if let Ok(s) = eat_ident(toks, scope, super_selector) {
-                    IntermediateValue::Value(Spanned {
-                        node: Value::Ident(s.node, QuoteKind::None),
-                        span: s.span,
-                    })
+                if let Ok(s) = Self::ident(toks, scope, super_selector) {
+                    s
                 } else {
                     IntermediateValue::Value(match parse_hex(toks, scope, super_selector, span) {
                         Ok(v) => v,
