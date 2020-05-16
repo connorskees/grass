@@ -1,4 +1,4 @@
-use std::fmt::{self, Write, Display};
+use std::fmt::{self, Display, Write};
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Op {
