@@ -157,7 +157,7 @@ impl<'a> StyleSheetParser<'a> {
         while let Some(Token { kind, .. }) = self.lexer.peek() {
             match kind {
                 'a'..='z' | 'A'..='Z' | '_' | '-' | '0'..='9'
-                | '[' | '#' | ':' | '*' | '%' | '.' | '>' => rules
+                | '[' | '#' | ':' | '*' | '%' | '.' | '>' | '\\' => rules
                     .extend(self.eat_rules(&Selector::new(), &mut Scope::new())?),
                 &'\t' | &'\n' | ' ' => {
                     self.lexer.next();

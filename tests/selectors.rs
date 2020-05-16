@@ -507,3 +507,8 @@ test!(
     "a, %b {\n  color: nth(&, 2);\n}\n",
     "a {\n  color: %b;\n}\n"
 );
+test!(
+    escape_at_start_of_selector,
+    "\\61 {\n    color: red;\n}\n",
+    "a {\n  color: red;\n}\n"
+);
