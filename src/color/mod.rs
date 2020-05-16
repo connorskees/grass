@@ -482,28 +482,26 @@ impl Color {
 
 /// Get the proper representation from RGBA values
 fn repr(red: &Number, green: &Number, blue: &Number, alpha: &Number) -> String {
-    macro_rules! into_u8 {
-        ($channel:ident) => {
-            let $channel = if $channel > &Number::from(255) {
-                255_u8
-            } else if $channel.is_negative() {
-                0_u8
-            } else {
-                $channel.clone().round().to_integer().to_u8().unwrap()
-            };
-        };
+    fn into_u8(channel: &Number) -> u8 {
+        if channel > &Number::from(255) {
+            255_u8
+        } else if channel.is_negative() {
+            0_u8
+        } else {
+            channel.round().to_integer().to_u8().unwrap()
+        }
     }
 
-    into_u8!(red);
-    into_u8!(green);
-    into_u8!(blue);
+    let red_u8 = into_u8(red);
+    let green_u8 = into_u8(green);
+    let blue_u8 = into_u8(blue);
 
     if alpha < &Number::one() {
-        format!("rgba({}, {}, {}, {})", red, green, blue, alpha)
-    } else if let Some(c) = NAMED_COLORS.get_by_right(&[red, green, blue, 0xFF]) {
+        format!("rgba({}, {}, {}, {})", red_u8, green_u8, blue_u8, alpha)
+    } else if let Some(c) = NAMED_COLORS.get_by_right(&[red_u8, green_u8, blue_u8, 0xFF]) {
         (*c).to_string()
     } else {
-        format!("#{:0>2x}{:0>2x}{:0>2x}", red, green, blue)
+        format!("#{:0>2x}{:0>2x}{:0>2x}", red_u8, green_u8, blue_u8)
     }
 }
 

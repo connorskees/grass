@@ -135,8 +135,8 @@ impl CallArgs {
         super_selector: &Selector,
     ) -> Option<SassResult<Spanned<Value>>> {
         match self.get_named(name, scope, super_selector) {
-            Some(v) => return Some(v),
-            None => return self.get_positional(position, scope, super_selector),
+            Some(v) => Some(v),
+            None => self.get_positional(position, scope, super_selector),
         }
     }
 

@@ -74,12 +74,12 @@ impl Mixin {
                 )?;
                 break;
             }
-            let val = match args.get(idx, arg.name.clone(), &scope, super_selector) {
+            let val = match args.get(idx, arg.name.clone(), scope, super_selector) {
                 Some(v) => v?,
                 None => match arg.default.as_mut() {
                     Some(v) => Value::from_tokens(
                         &mut std::mem::take(v).into_iter().peekmore(),
-                        &scope,
+                        scope,
                         super_selector,
                     )?,
                     None => {
