@@ -199,11 +199,16 @@ pub(crate) fn eat_include<I: Iterator<Item = Token>>(
             '(' => {
                 let tmp = eat_call_args(toks)?;
                 devour_whitespace_or_comment(toks)?;
-                if let Some(tok) = toks.next() {
+                if let Some(tok) = toks.peek() {
                     match tok.kind {
-                        ';' => {}
-                        '{' => has_content = true,
-                        _ => todo!(),
+                        ';' => {
+                            toks.next();
+                        }
+                        '{' => {
+                            toks.next();
+                            has_content = true
+                        }
+                        _ => {}
                     }
                 }
                 tmp
