@@ -357,7 +357,7 @@ fn unique_id(args: CallArgs, _: &Scope, _: &Selector) -> SassResult<Value> {
     Ok(Value::Ident(string, QuoteKind::None))
 }
 
-pub(crate) fn register(f: &mut GlobalFunctionMap) {
+pub(crate) fn declare(f: &mut GlobalFunctionMap) {
     f.insert("to-upper-case", Builtin::new(to_upper_case));
     f.insert("to-lower-case", Builtin::new(to_lower_case));
     f.insert("str-length", Builtin::new(str_length));

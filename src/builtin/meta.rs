@@ -232,7 +232,7 @@ fn call(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassRes
     func.call(args.decrement(), scope, super_selector)
 }
 
-pub(crate) fn register(f: &mut GlobalFunctionMap) {
+pub(crate) fn declare(f: &mut GlobalFunctionMap) {
     f.insert("if", Builtin::new(if_));
     f.insert("feature-exists", Builtin::new(feature_exists));
     f.insert("unit", Builtin::new(unit));

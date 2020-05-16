@@ -349,7 +349,7 @@ fn ie_hex_str(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> S
     Ok(Value::Ident(color.to_ie_hex_str(), QuoteKind::None))
 }
 
-pub(crate) fn register(f: &mut GlobalFunctionMap) {
+pub(crate) fn declare(f: &mut GlobalFunctionMap) {
     f.insert("change-color", Builtin::new(change_color));
     f.insert("adjust-color", Builtin::new(adjust_color));
     f.insert("scale-color", Builtin::new(scale_color));

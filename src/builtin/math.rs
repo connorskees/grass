@@ -189,7 +189,7 @@ fn random(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassR
     ))
 }
 
-pub(crate) fn register(f: &mut GlobalFunctionMap) {
+pub(crate) fn declare(f: &mut GlobalFunctionMap) {
     f.insert("percentage", Builtin::new(percentage));
     f.insert("round", Builtin::new(round));
     f.insert("ceil", Builtin::new(ceil));

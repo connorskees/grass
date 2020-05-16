@@ -154,7 +154,7 @@ fn fade_out(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> Sas
     Ok(Value::Color(Box::new(color.fade_out(amount))))
 }
 
-pub(crate) fn register(f: &mut GlobalFunctionMap) {
+pub(crate) fn declare(f: &mut GlobalFunctionMap) {
     f.insert("alpha", Builtin::new(alpha));
     f.insert("opacity", Builtin::new(opacity));
     f.insert("opacify", Builtin::new(opacify));

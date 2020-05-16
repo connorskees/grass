@@ -316,7 +316,7 @@ fn zip(args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<V
     Ok(Value::List(result, ListSeparator::Comma, Brackets::None))
 }
 
-pub(crate) fn register(f: &mut GlobalFunctionMap) {
+pub(crate) fn declare(f: &mut GlobalFunctionMap) {
     f.insert("length", Builtin::new(length));
     f.insert("nth", Builtin::new(nth));
     f.insert("list-separator", Builtin::new(list_separator));

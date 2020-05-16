@@ -7,9 +7,9 @@ mod opacity;
 mod other;
 mod rgb;
 
-pub(crate) fn register(f: &mut GlobalFunctionMap) {
-    hsl::register(f);
-    opacity::register(f);
-    other::register(f);
-    rgb::register(f);
+pub(crate) fn declare(f: &mut GlobalFunctionMap) {
+    hsl::declare(f);
+    opacity::declare(f);
+    other::declare(f);
+    rgb::declare(f);
 }

@@ -434,7 +434,7 @@ fn mix(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResu
     Ok(Value::Color(Box::new(color1.mix(&color2, weight))))
 }
 
-pub(crate) fn register(f: &mut GlobalFunctionMap) {
+pub(crate) fn declare(f: &mut GlobalFunctionMap) {
     f.insert("rgb", Builtin::new(rgb));
     f.insert("rgba", Builtin::new(rgba));
     f.insert("red", Builtin::new(red));

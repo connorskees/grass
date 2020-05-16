@@ -502,7 +502,7 @@ fn invert(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassR
     }
 }
 
-pub(crate) fn register(f: &mut GlobalFunctionMap) {
+pub(crate) fn declare(f: &mut GlobalFunctionMap) {
     f.insert("hsl", Builtin::new(hsl));
     f.insert("hsla", Builtin::new(hsla));
     f.insert("hue", Builtin::new(hue));

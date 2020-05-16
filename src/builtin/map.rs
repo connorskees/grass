@@ -129,7 +129,7 @@ fn map_remove(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> S
     Ok(Value::Map(map))
 }
 
-pub(crate) fn register(f: &mut GlobalFunctionMap) {
+pub(crate) fn declare(f: &mut GlobalFunctionMap) {
     f.insert("map-get", Builtin::new(map_get));
     f.insert("map-has-key", Builtin::new(map_has_key));
     f.insert("map-keys", Builtin::new(map_keys));
