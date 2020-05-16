@@ -121,8 +121,9 @@ fn escape<I: Iterator<Item = Token>>(
         Some(t) => t,
         None => return Ok(String::new()),
     };
+    let mut span = first.pos();
     if first.kind == '\n' {
-        return Err(("Expected escape sequence.", first.pos()).into());
+        return Err(("Expected escape sequence.", span).into());
     } else if first.kind.is_ascii_hexdigit() {
         for _ in 0..6 {
             let next = match toks.peek() {
@@ -133,16 +134,19 @@ fn escape<I: Iterator<Item = Token>>(
                 break;
             }
             value *= 16;
+            span = span.merge(next.pos());
             value += as_hex(toks.next().unwrap().kind)
         }
         if toks.peek().is_some() && toks.peek().unwrap().kind.is_whitespace() {
             toks.next();
         }
     } else {
-        value = toks.next().unwrap().kind as u32;
+        let next = toks.next().unwrap();
+        span = span.merge(next.pos());
+        value = next.kind as u32;
     }
 
-    let c = std::char::from_u32(value).unwrap();
+    let c = std::char::from_u32(value).ok_or(("Invalid escape sequence.", span))?;
     if (identifier_start && is_name_start(c) && !c.is_digit(10))
         || (!identifier_start && is_name(c))
     {

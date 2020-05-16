@@ -168,3 +168,7 @@ test!(
     "a {\n  color: \\9;\n}\n",
     "a {\n  color: \\9 ;\n}\n"
 );
+error!(
+    escape_sequence_does_not_fit_inside_char,
+    "a {\n  color: \\110000;\n}\n", "Error: Invalid escape sequence."
+);
