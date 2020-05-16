@@ -722,14 +722,16 @@ impl Value {
                 })
             }
             '#' => {
-                if let Ok(s) = Self::ident(toks, scope, super_selector) {
-                    s
-                } else {
-                    IntermediateValue::Value(match parse_hex(toks, scope, super_selector, span) {
-                        Ok(v) => v,
-                        Err(e) => return Some(Err(e)),
-                    })
+                if let Some(Token { kind: '{', .. }) = toks.peek_forward(1) {
+                    toks.reset_view();
+                    return Some(Self::ident(toks, scope, super_selector));
                 }
+                toks.reset_view();
+                toks.next();
+                IntermediateValue::Value(match parse_hex(toks, scope, super_selector, span) {
+                    Ok(v) => v,
+                    Err(e) => return Some(Err(e)),
+                })
             }
             q @ '"' | q @ '\'' => {
                 let span_start = toks.next().unwrap().pos();
