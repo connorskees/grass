@@ -74,6 +74,16 @@ test!(
     "a {\n  color: 1px-2px;\n}\n",
     "a {\n  color: -1px;\n}\n"
 );
+test!(
+    unit_starts_with_escape_sequence,
+    "a {\n  color: 1\\9;\n}\n",
+    "a {\n  color: 1\\9 ;\n}\n"
+);
+test!(
+    unit_fn_starts_with_escape_sequence,
+    "a {\n  color: unit(1\\9);\n}\n",
+    "a {\n  color: \"\\\\9 \";\n}\n"
+);
 error!(
     display_single_mul,
     "a {\n  color: 1rem * 1px;\n}\n", "Error: 1rem*px isn't a valid CSS value."

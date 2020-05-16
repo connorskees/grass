@@ -647,7 +647,7 @@ impl Value {
                 };
                 let unit = if let Some(tok) = toks.peek() {
                     match tok.kind {
-                        'a'..='z' | 'A'..='Z' | '_' => {
+                        'a'..='z' | 'A'..='Z' | '_' | '\\' => {
                             let u = match eat_ident_no_interpolation(toks, true) {
                                 Ok(v) => v,
                                 Err(e) => return Some(Err(e)),
