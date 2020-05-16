@@ -12,7 +12,12 @@ use crate::selector::Selector;
 use crate::unit::Unit;
 use crate::value::{Number, Value};
 
-fn hsl(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
+fn inner_hsl(
+    name: &'static str,
+    mut args: CallArgs,
+    scope: &Scope,
+    super_selector: &Selector,
+) -> SassResult<Value> {
     if args.is_empty() {
         return Err(("Missing argument $channels.", args.span()).into());
     }
@@ -89,7 +94,8 @@ fn hsl(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResu
                 let saturation = arg!(args, scope, super_selector, 1, "saturation");
                 let lightness = arg!(args, scope, super_selector, 2, "lightness");
                 let mut string = format!(
-                    "hsl({}, {}, {}",
+                    "{}({}, {}, {}",
+                    name,
                     v.to_css_string(args.span())?,
                     saturation.to_css_string(args.span())?,
                     lightness.to_css_string(args.span())?
@@ -117,7 +123,8 @@ fn hsl(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResu
             v if v.is_special_function() => {
                 let lightness = arg!(args, scope, super_selector, 2, "lightness");
                 let mut string = format!(
-                    "hsl({}, {}, {}",
+                    "{}({}, {}, {}",
+                    name,
                     hue,
                     v.to_css_string(args.span())?,
                     lightness.to_css_string(args.span())?
@@ -147,7 +154,8 @@ fn hsl(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResu
             Value::Dimension(n, _) => n / Number::from(100),
             v if v.is_special_function() => {
                 let mut string = format!(
-                    "hsl({}, {}, {}",
+                    "{}({}, {}, {}",
+                    name,
                     hue,
                     saturation,
                     v.to_css_string(args.span())?
@@ -195,7 +203,8 @@ fn hsl(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResu
             v if v.is_special_function() => {
                 return Ok(Value::Ident(
                     format!(
-                        "hsl({}, {}, {}, {})",
+                        "{}({}, {}, {}, {})",
+                        name,
                         hue,
                         saturation,
                         lightness,
@@ -218,210 +227,12 @@ fn hsl(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResu
     }
 }
 
-fn hsla(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
-    if args.is_empty() {
-        return Err(("Missing argument $channels.", args.span()).into());
-    }
+fn hsl(args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
+    inner_hsl("hsl", args, scope, super_selector)
+}
 
-    if args.len() == 1 {
-        let mut channels = match arg!(args, scope, super_selector, 0, "channels") {
-            Value::List(v, ..) => v,
-            _ => return Err(("Missing argument $channels.", args.span()).into()),
-        };
-
-        if channels.len() > 3 {
-            return Err((
-                format!(
-                    "Only 3 elements allowed, but {} were passed.",
-                    channels.len()
-                ),
-                args.span(),
-            )
-                .into());
-        }
-
-        let lightness = match channels.pop() {
-            Some(Value::Dimension(n, _)) => n / Number::from(100),
-            Some(v) => {
-                return Err((
-                    format!(
-                        "$lightness: {} is not a number.",
-                        v.to_css_string(args.span())?
-                    ),
-                    args.span(),
-                )
-                    .into())
-            }
-            None => return Err(("Missing element $lightness.", args.span()).into()),
-        };
-
-        let saturation = match channels.pop() {
-            Some(Value::Dimension(n, _)) => n / Number::from(100),
-            Some(v) => {
-                return Err((
-                    format!(
-                        "$saturation: {} is not a number.",
-                        v.to_css_string(args.span())?
-                    ),
-                    args.span(),
-                )
-                    .into())
-            }
-            None => return Err(("Missing element $saturation.", args.span()).into()),
-        };
-
-        let hue = match channels.pop() {
-            Some(Value::Dimension(n, _)) => n,
-            Some(v) => {
-                return Err((
-                    format!("$hue: {} is not a number.", v.to_css_string(args.span())?),
-                    args.span(),
-                )
-                    .into())
-            }
-            None => return Err(("Missing element $hue.", args.span()).into()),
-        };
-
-        Ok(Value::Color(Box::new(Color::from_hsla(
-            hue,
-            saturation,
-            lightness,
-            Number::one(),
-        ))))
-    } else {
-        let hue = match arg!(args, scope, super_selector, 0, "hue") {
-            Value::Dimension(n, _) => n,
-            v if v.is_special_function() => {
-                let saturation = arg!(args, scope, super_selector, 1, "saturation");
-                let lightness = arg!(args, scope, super_selector, 2, "lightness");
-                let mut string = format!(
-                    "hsla({}, {}, {}",
-                    v.to_css_string(args.span())?,
-                    saturation.to_css_string(args.span())?,
-                    lightness.to_css_string(args.span())?
-                );
-                if !args.is_empty() {
-                    string.push_str(", ");
-                    string.push_str(
-                        &arg!(args, scope, super_selector, 3, "alpha")
-                            .to_css_string(args.span())?,
-                    );
-                }
-                string.push(')');
-                return Ok(Value::Ident(string, QuoteKind::None));
-            }
-            v => {
-                return Err((
-                    format!("$hue: {} is not a number.", v.to_css_string(args.span())?),
-                    args.span(),
-                )
-                    .into())
-            }
-        };
-        let saturation = match arg!(args, scope, super_selector, 1, "saturation") {
-            Value::Dimension(n, _) => n / Number::from(100),
-            v if v.is_special_function() => {
-                let lightness = arg!(args, scope, super_selector, 2, "lightness");
-                let mut string = format!(
-                    "hsla({}, {}, {}",
-                    hue,
-                    v.to_css_string(args.span())?,
-                    lightness.to_css_string(args.span())?
-                );
-                if !args.is_empty() {
-                    string.push_str(", ");
-                    string.push_str(
-                        &arg!(args, scope, super_selector, 3, "alpha")
-                            .to_css_string(args.span())?,
-                    );
-                }
-                string.push(')');
-                return Ok(Value::Ident(string, QuoteKind::None));
-            }
-            v => {
-                return Err((
-                    format!(
-                        "$saturation: {} is not a number.",
-                        v.to_css_string(args.span())?
-                    ),
-                    args.span(),
-                )
-                    .into())
-            }
-        };
-        let lightness = match arg!(args, scope, super_selector, 2, "lightness") {
-            Value::Dimension(n, _) => n / Number::from(100),
-            v if v.is_special_function() => {
-                let mut string = format!(
-                    "hsla({}, {}, {}",
-                    hue,
-                    saturation,
-                    v.to_css_string(args.span())?
-                );
-                if !args.is_empty() {
-                    string.push_str(", ");
-                    string.push_str(
-                        &arg!(args, scope, super_selector, 3, "alpha")
-                            .to_css_string(args.span())?,
-                    );
-                }
-                string.push(')');
-                return Ok(Value::Ident(string, QuoteKind::None));
-            }
-            v => {
-                return Err((
-                    format!(
-                        "$lightness: {} is not a number.",
-                        v.to_css_string(args.span())?
-                    ),
-                    args.span(),
-                )
-                    .into())
-            }
-        };
-        let alpha = match arg!(
-            args,
-            scope,
-            super_selector,
-            3,
-            "alpha" = Value::Dimension(Number::one(), Unit::None)
-        ) {
-            Value::Dimension(n, Unit::None) => n,
-            Value::Dimension(n, Unit::Percent) => n / Number::from(100),
-            v @ Value::Dimension(..) => {
-                return Err((
-                    format!(
-                        "$alpha: Expected {} to have no units or \"%\".",
-                        v.to_css_string(args.span())?
-                    ),
-                    args.span(),
-                )
-                    .into())
-            }
-            v if v.is_special_function() => {
-                return Ok(Value::Ident(
-                    format!(
-                        "hsl({}, {}, {}, {})",
-                        hue,
-                        saturation,
-                        lightness,
-                        v.to_css_string(args.span())?
-                    ),
-                    QuoteKind::None,
-                ));
-            }
-            v => {
-                return Err((
-                    format!("$alpha: {} is not a number.", v.to_css_string(args.span())?),
-                    args.span(),
-                )
-                    .into())
-            }
-        };
-        Ok(Value::Color(Box::new(Color::from_hsla(
-            hue, saturation, lightness, alpha,
-        ))))
-    }
+fn hsla(args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
+    inner_hsl("hsla", args, scope, super_selector)
 }
 
 fn hue(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
