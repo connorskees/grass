@@ -285,13 +285,7 @@ impl Selector {
 
         let mut sel_toks = Vec::new();
 
-        let mut current_pos = 0;
-        sel_toks.extend(string.chars().map(|x| {
-            let len = x.len_utf8() as u64;
-            let tok = Token::new(span.subspan(current_pos, current_pos + len), x);
-            current_pos += len;
-            tok
-        }));
+        sel_toks.extend(string.chars().map(|x| Token::new(span, x)));
 
         let mut iter = sel_toks.into_iter().peekmore();
 
