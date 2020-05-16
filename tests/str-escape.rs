@@ -172,3 +172,8 @@ error!(
     escape_sequence_does_not_fit_inside_char,
     "a {\n  color: \\110000;\n}\n", "Error: Invalid escape sequence."
 );
+test!(
+    escaped_newline_in_quoted_string,
+    "a {\n  color: \"foo\\\nbar\";\n}\n",
+    "a {\n  color: \"foobar\";\n}\n"
+);

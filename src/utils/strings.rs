@@ -302,7 +302,8 @@ pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
                 };
 
                 if first.kind == '\n' {
-                    return Err(("Expected escape sequence.", first.pos()).into());
+                    toks.next();
+                    continue;
                 }
 
                 if first.kind.is_ascii_hexdigit() {
