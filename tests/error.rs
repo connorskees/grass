@@ -57,3 +57,8 @@ error!(
     no_value_after_forward_slash,
     "a {color: 303/;}", "Error: Expected expression."
 );
+error!(xor_in_value, "a {color: a^;}", "Error: expected \";\".");
+error!(
+    nothing_after_at_sign,
+    "a {color: red; @", "Error: Expected identifier."
+);

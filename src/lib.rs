@@ -326,7 +326,10 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                 }
             }
             '@' => {
-                toks.next();
+                let span = toks.next().unwrap().pos();
+                if toks.peek().is_none() {
+                    return Err(("Expected identifier.", span).into());
+                }
                 let Spanned { node: ident, span } = eat_ident(toks, scope, super_selector)?;
                 devour_whitespace(toks);
                 let rule = AtRule::from_tokens(
