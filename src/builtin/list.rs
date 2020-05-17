@@ -272,10 +272,12 @@ fn index(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassRe
     // evaluated prior to checking equality, but
     // it is still dirty.
     // Potential input to fuzz: index(1px 1in 1cm, 96px + 1rem)
-    let index = match list
-        .into_iter()
-        .position(|v| v.equals(value.clone(), args.span()).unwrap())
-    {
+    let index = match list.into_iter().position(|v| {
+        v.equals(value.clone(), args.span())
+            .unwrap()
+            .is_true(args.span())
+            .unwrap()
+    }) {
         Some(v) => Number::from(v + 1),
         None => return Ok(Value::Null),
     };

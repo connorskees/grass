@@ -17,7 +17,7 @@ impl SassMap {
 
     pub fn get(self, key: &Value, span: Span) -> SassResult<Option<Value>> {
         for (k, v) in self.0 {
-            if k.equals(key.clone(), span)? {
+            if k.equals(key.clone(), span)?.node.is_true(span)? {
                 return Ok(Some(v));
             }
         }

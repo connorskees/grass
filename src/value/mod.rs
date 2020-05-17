@@ -313,8 +313,14 @@ impl Value {
         })
     }
 
-    pub fn equals(self, other: Value, span: Span) -> SassResult<bool> {
-        Ok(match self.eval(span)?.node {
+    pub fn equals(self, mut other: Value, span: Span) -> SassResult<Spanned<Value>> {
+        if let Self::Paren(..) = other {
+            other = other.eval(span)?.node
+        }
+
+        let precedence = Op::Equal.precedence();
+
+        Ok(Value::bool(match self {
             Self::Ident(s1, ..) => match other {
                 Self::Ident(s2, ..) => s1 == s2,
                 _ => false,
@@ -336,8 +342,75 @@ impl Value {
                 }
                 _ => false,
             },
+            Self::BinaryOp(left, op2, right) => {
+                if op2.precedence() >= precedence {
+                    Self::BinaryOp(left, op2, right).eval(span)?.node == other
+                } else {
+                    return Self::BinaryOp(
+                        left,
+                        op2,
+                        Box::new(
+                            Self::BinaryOp(right, Op::Equal, Box::new(other))
+                                .eval(span)?
+                                .node,
+                        ),
+                    )
+                    .eval(span);
+                }
+            }
             s => s == other.eval(span)?.node,
         })
+        .span(span))
+    }
+
+    pub fn not_equals(self, mut other: Value, span: Span) -> SassResult<Spanned<Value>> {
+        if let Self::Paren(..) = other {
+            other = other.eval(span)?.node
+        }
+
+        let precedence = Op::Equal.precedence();
+
+        Ok(Value::bool(match self {
+            Self::Ident(s1, ..) => match other {
+                Self::Ident(s2, ..) => s1 != s2,
+                _ => true,
+            },
+            Self::Dimension(n, unit) => match other {
+                Self::Dimension(n2, unit2) => {
+                    if !unit.comparable(&unit2) {
+                        true
+                    } else if unit == unit2 {
+                        n != n2
+                    } else if unit == Unit::None || unit2 == Unit::None {
+                        true
+                    } else {
+                        n != (n2
+                            * UNIT_CONVERSION_TABLE[unit.to_string().as_str()]
+                                [unit2.to_string().as_str()]
+                            .clone())
+                    }
+                }
+                _ => true,
+            },
+            Self::BinaryOp(left, op2, right) => {
+                if op2.precedence() >= precedence {
+                    Self::BinaryOp(left, op2, right).eval(span)?.node != other
+                } else {
+                    return Self::BinaryOp(
+                        left,
+                        op2,
+                        Box::new(
+                            Self::BinaryOp(right, Op::NotEqual, Box::new(other))
+                                .eval(span)?
+                                .node,
+                        ),
+                    )
+                    .eval(span);
+                }
+            }
+            s => s != other.eval(span)?.node,
+        })
+        .span(span))
     }
 
     pub fn unary_op_plus(self, span: Span) -> SassResult<Self> {
@@ -352,8 +425,8 @@ impl Value {
             Self::BinaryOp(lhs, op, rhs) => match op {
                 Op::Plus => lhs.add(*rhs, span)?,
                 Op::Minus => lhs.sub(*rhs, span)?,
-                Op::Equal => Self::bool(lhs.equals(*rhs, span)?),
-                Op::NotEqual => Self::bool(!lhs.equals(*rhs, span)?),
+                Op::Equal => lhs.equals(*rhs, span)?.node,
+                Op::NotEqual => lhs.not_equals(*rhs, span)?.node,
                 Op::Mul => lhs.mul(*rhs, span)?,
                 Op::Div => lhs.div(*rhs, span)?,
                 Op::Rem => lhs.rem(*rhs, span)?,

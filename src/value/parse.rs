@@ -301,6 +301,7 @@ fn eat_op<I: Iterator<Item = Token>>(
         }
         Op::And | Op::Or => {
             devour_whitespace(iter);
+            // special case when the value is literally "and" or "or"
             if iter.peek().is_none() {
                 space_separated.push(Value::Ident(op.to_string(), QuoteKind::None).span(op.span));
             } else if let Some(left) = space_separated.pop() {

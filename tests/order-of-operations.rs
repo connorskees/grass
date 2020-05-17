@@ -25,6 +25,16 @@ test!(
 );
 test!(
     comparison,
-    "a {\n  color: 1 < 1 and 1 < 1;;\n}\n",
+    "a {\n  color: 1 < 1 and 1 < 1;\n}\n",
     "a {\n  color: false;\n}\n"
+);
+test!(
+    equals_then_or,
+    "a {\n  color: a or b==c;\n}\n",
+    "a {\n  color: a;\n}\n"
+);
+test!(
+    not_equals_then_or,
+    "a {\n  color: a or b !=c;\n}\n",
+    "a {\n  color: a;\n}\n"
 );
