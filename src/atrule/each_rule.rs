@@ -98,7 +98,7 @@ pub(crate) fn parse_each<I: Iterator<Item = Token>>(
         let next = toks.next().ok_or(("expected \"$\".", span))?;
         span = next.pos();
         match next.kind {
-            '$' => vars.push(eat_ident(toks, scope, super_selector)?),
+            '$' => vars.push(eat_ident(toks, scope, super_selector, next.pos)?),
             _ => return Err(("expected \"$\".", next.pos()).into()),
         }
         devour_whitespace(toks);
@@ -114,10 +114,7 @@ pub(crate) fn parse_each<I: Iterator<Item = Token>>(
             break;
         }
     }
-    if toks.peek().is_none() {
-        todo!()
-    }
-    let i = eat_ident(toks, scope, super_selector)?;
+    let i = eat_ident(toks, scope, super_selector, span)?;
     if i.node.to_ascii_lowercase() != "in" {
         return Err(("Expected \"in\".", i.span).into());
     }

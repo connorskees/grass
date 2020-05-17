@@ -1,6 +1,6 @@
 use peekmore::PeekMoreIterator;
 
-use codemap::Spanned;
+use codemap::{Span, Spanned};
 
 use crate::error::SassResult;
 use crate::scope::Scope;
@@ -22,8 +22,9 @@ impl Style {
         scope: &Scope,
         super_selector: &Selector,
         super_property: String,
+        span_before: Span,
     ) -> SassResult<String> {
-        StyleParser::new(scope, super_selector).parse_property(toks, super_property)
+        StyleParser::new(scope, super_selector).parse_property(toks, super_property, span_before)
     }
 
     pub fn to_string(&self) -> SassResult<String> {
@@ -95,10 +96,11 @@ impl<'a> StyleParser<'a> {
         while let Some(tok) = toks.peek() {
             match tok.kind {
                 '{' => {
-                    toks.next();
+                    let span_before = toks.next().unwrap().pos;
                     devour_whitespace(toks);
                     loop {
-                        let property = self.parse_property(toks, super_property.clone())?;
+                        let property =
+                            self.parse_property(toks, super_property.clone(), span_before)?;
                         if let Some(tok) = toks.peek() {
                             if tok.kind == '{' {
                                 match self.eat_style_group(toks, property, scope)? {
@@ -194,9 +196,10 @@ impl<'a> StyleParser<'a> {
         &self,
         toks: &mut PeekMoreIterator<I>,
         mut super_property: String,
+        span_before: Span,
     ) -> SassResult<String> {
         devour_whitespace(toks);
-        let property = eat_ident(toks, self.scope, self.super_selector)?.node;
+        let property = eat_ident(toks, self.scope, self.super_selector, span_before)?.node;
         devour_whitespace_or_comment(toks)?;
         if toks.peek().is_some() && toks.peek().unwrap().kind == ':' {
             toks.next();

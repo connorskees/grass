@@ -164,8 +164,13 @@ impl<'a> StyleSheetParser<'a> {
                     continue;
                 }
                 '$' => {
-                    self.lexer.next();
-                    let name = eat_ident(&mut self.lexer, &Scope::new(), &Selector::new())?;
+                    let span_before = self.lexer.next().unwrap().pos();
+                    let name = eat_ident(
+                        &mut self.lexer,
+                        &Scope::new(),
+                        &Selector::new(),
+                        span_before
+                    )?;
                     devour_whitespace(&mut self.lexer);
                     let Token { kind, pos } = self
                         .lexer
@@ -194,8 +199,13 @@ impl<'a> StyleSheetParser<'a> {
                     }
                 }
                 '@' => {
-                    self.lexer.next();
-                    let Spanned { node: at_rule_kind, span } = eat_ident(&mut self.lexer, &Scope::new(), &Selector::new())?;
+                    let span_before = self.lexer.next().unwrap().pos();
+                    let Spanned { node: at_rule_kind, span } = eat_ident(
+                        &mut self.lexer,
+                        &Scope::new(),
+                        &Selector::new(),
+                        span_before
+                    )?;
                     if at_rule_kind.is_empty() {
                         return Err(("Expected identifier.", span).into());
                     }
@@ -205,6 +215,7 @@ impl<'a> StyleSheetParser<'a> {
                             &Scope::new(),
                             &Selector::new(),
                             None,
+                            span
                         )?),
                         AtRuleKind::Import => {
                             devour_whitespace(&mut self.lexer);

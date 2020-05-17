@@ -57,11 +57,13 @@ impl If {
                     if first_char != 'e' && first_char != 'E' {
                         break;
                     }
-                    toks.next();
                 } else {
                     break;
                 }
-                if eat_ident(toks, &Scope::new(), &Selector::new())?.to_ascii_lowercase() == "else"
+                let span_before = toks.next().unwrap().pos;
+                if eat_ident(toks, &Scope::new(), &Selector::new(), span_before)?
+                    .to_ascii_lowercase()
+                    == "else"
                 {
                     devour_whitespace(toks);
                     if let Some(tok) = toks.next() {

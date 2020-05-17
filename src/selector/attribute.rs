@@ -35,15 +35,16 @@ fn attribute_name<I: Iterator<Item = Token>>(
             return Err(("expected \"|\".", pos).into());
         }
 
-        toks.next();
+        let span_before = toks.next().unwrap().pos();
 
-        let ident = eat_ident(toks, scope, super_selector)?.node;
+        let ident = eat_ident(toks, scope, super_selector, span_before)?.node;
         return Ok(QualifiedName {
             ident,
             namespace: Some('*'.to_string()),
         });
     }
-    let name_or_namespace = eat_ident(toks, scope, super_selector)?;
+    let span_before = next.pos;
+    let name_or_namespace = eat_ident(toks, scope, super_selector, span_before)?;
     match toks.peek() {
         Some(v) if v.kind != '|' => {
             return Ok(QualifiedName {
@@ -67,8 +68,8 @@ fn attribute_name<I: Iterator<Item = Token>>(
         }
         None => return Err(("expected more input.", name_or_namespace.span).into()),
     }
-    toks.next();
-    let ident = eat_ident(toks, scope, super_selector)?.node;
+    let span_before = toks.next().unwrap().pos();
+    let ident = eat_ident(toks, scope, super_selector, span_before)?.node;
     Ok(QualifiedName {
         ident,
         namespace: Some(name_or_namespace.node),
@@ -118,7 +119,7 @@ impl Attribute {
         devour_whitespace(toks);
 
         let peek = toks.peek().ok_or(("expected more input.", start))?;
-
+        let span_before = peek.pos;
         let value = match peek.kind {
             q @ '\'' | q @ '"' => {
                 toks.next();
@@ -127,7 +128,7 @@ impl Attribute {
                     _ => unreachable!(),
                 }
             }
-            _ => eat_ident(toks, scope, super_selector)?.node,
+            _ => eat_ident(toks, scope, super_selector, span_before)?.node,
         };
         devour_whitespace(toks);
 

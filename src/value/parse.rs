@@ -52,7 +52,7 @@ fn parse_hex<I: Iterator<Item = Token>>(
             s.push(tok.kind);
         }
     } else {
-        let i = eat_ident(toks, scope, super_selector)?;
+        let i = eat_ident(toks, scope, super_selector, span)?;
         if i.node.chars().all(|c| c.is_ascii_hexdigit()) {
             s = i.node;
             span = span.merge(i.span);
@@ -524,8 +524,9 @@ impl Value {
         toks: &mut PeekMoreIterator<I>,
         scope: &Scope,
         super_selector: &Selector,
+        span_before: Span,
     ) -> SassResult<IntermediateValue> {
-        let Spanned { node: mut s, span } = eat_ident(toks, scope, super_selector)?;
+        let Spanned { node: mut s, span } = eat_ident(toks, scope, super_selector, span_before)?;
 
         let lower = s.to_ascii_lowercase();
 
@@ -636,7 +637,7 @@ impl Value {
                 || (!kind.is_ascii() && !kind.is_control())
                 || (kind == '-' && next_is_hypen(toks)) =>
             {
-                return Some(Self::ident(toks, scope, super_selector));
+                return Some(Self::ident(toks, scope, super_selector, span));
             }
             '0'..='9' | '.' => {
                 let Spanned {
@@ -723,9 +724,10 @@ impl Value {
                 })
             }
             '#' => {
-                if let Some(Token { kind: '{', .. }) = toks.peek_forward(1) {
+                if let Some(Token { kind: '{', pos }) = toks.peek_forward(1) {
+                    let span_before = *pos;
                     toks.reset_view();
-                    return Some(Self::ident(toks, scope, super_selector));
+                    return Some(Self::ident(toks, scope, super_selector, span_before));
                 }
                 toks.reset_view();
                 toks.next();
@@ -847,7 +849,7 @@ impl Value {
                     })));
                 }
                 devour_whitespace(toks);
-                let v = match eat_ident(toks, scope, super_selector) {
+                let v = match eat_ident(toks, scope, super_selector, span) {
                     Ok(v) => v,
                     Err(e) => return Some(Err(e)),
                 };

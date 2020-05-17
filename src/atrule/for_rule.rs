@@ -89,14 +89,17 @@ pub(crate) fn parse_for<I: Iterator<Item = Token>>(
     span: Span,
 ) -> SassResult<AtRule> {
     devour_whitespace(toks);
-    let var = match toks.next().ok_or(("expected \"$\".", span))?.kind {
-        '$' => eat_ident(toks, scope, super_selector)?,
+    let next = toks.next().ok_or(("expected \"$\".", span))?;
+    let var = match next.kind {
+        '$' => eat_ident(toks, scope, super_selector, next.pos)?,
         _ => return Err(("expected \"$\".", span).into()),
     };
     devour_whitespace(toks);
-    if toks.peek().is_none()
-        || eat_ident(toks, scope, super_selector)?.to_ascii_lowercase() != "from"
-    {
+    if toks.peek().is_none() {
+        return Err(("Expected \"from\".", var.span).into());
+    }
+    let span_before = toks.peek().unwrap().pos;
+    if eat_ident(toks, scope, super_selector, span_before)?.to_ascii_lowercase() != "from" {
         return Err(("Expected \"from\".", var.span).into());
     }
     devour_whitespace(toks);

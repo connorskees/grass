@@ -197,6 +197,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                         scope,
                         super_selector,
                         String::new(),
+                        tok.unwrap().pos,
                     )?;
                     return Ok(Some(Spanned {
                         node: Style::from_tokens(toks, scope, super_selector, prop)?,
@@ -207,7 +208,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                 }
             }
             ';' => {
-                toks.next();
+                let span_before = toks.next().unwrap().pos;
                 devour_whitespace(toks);
                 // special edge case where there was no space between the colon
                 // in a style, e.g. `color:red`. todo: refactor
@@ -223,7 +224,13 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                         span,
                     }));
                 }
-                let property = Style::parse_property(&mut v, scope, super_selector, String::new())?;
+                let property = Style::parse_property(
+                    &mut v,
+                    scope,
+                    super_selector,
+                    String::new(),
+                    span_before,
+                )?;
                 let value = Style::parse_value(&mut v, scope, super_selector)?;
                 return Ok(Some(Spanned {
                     node: Expr::Style(Box::new(Style { property, value })),
@@ -244,8 +251,13 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                     // and no semicolon following the style
                     // in a style `color:red`. todo: refactor
                     let mut v = values.into_iter().peekmore();
-                    let property =
-                        Style::parse_property(&mut v, scope, super_selector, String::new())?;
+                    let property = Style::parse_property(
+                        &mut v,
+                        scope,
+                        super_selector,
+                        String::new(),
+                        tok.pos,
+                    )?;
                     let value = Style::parse_value(&mut v, scope, super_selector)?;
                     return Ok(Some(Spanned {
                         node: Expr::Style(Box::new(Style { property, value })),
@@ -327,10 +339,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
             }
             '@' => {
                 let span = toks.next().unwrap().pos();
-                if toks.peek().is_none() {
-                    return Err(("Expected identifier.", span).into());
-                }
-                let Spanned { node: ident, span } = eat_ident(toks, scope, super_selector)?;
+                let Spanned { node: ident, span } = eat_ident(toks, scope, super_selector, span)?;
                 devour_whitespace(toks);
                 let rule = AtRule::from_tokens(
                     &AtRuleKind::from(ident.as_str()),

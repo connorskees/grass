@@ -121,14 +121,15 @@ impl AtRule {
                 let Spanned {
                     node: (name, mixin),
                     span,
-                } = Mixin::decl_from_tokens(toks, scope, super_selector)?;
+                } = Mixin::decl_from_tokens(toks, scope, super_selector, kind_span)?;
                 Spanned {
                     node: AtRule::Mixin(name, Box::new(mixin)),
                     span,
                 }
             }
             AtRuleKind::Function => {
-                let (name, func) = Function::decl_from_tokens(toks, scope.clone(), super_selector)?;
+                let (name, func) =
+                    Function::decl_from_tokens(toks, scope.clone(), super_selector, kind_span)?;
                 Spanned {
                     node: AtRule::Function(name, Box::new(func)),
                     span: kind_span,
@@ -236,7 +237,13 @@ impl AtRule {
                 span: kind_span,
             },
             AtRuleKind::Include => Spanned {
-                node: AtRule::Include(eat_include(toks, scope, super_selector, content)?),
+                node: AtRule::Include(eat_include(
+                    toks,
+                    scope,
+                    super_selector,
+                    content,
+                    kind_span,
+                )?),
                 span: kind_span,
             },
             AtRuleKind::Import => todo!("@import not yet implemented"),

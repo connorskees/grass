@@ -44,8 +44,9 @@ impl Function {
         toks: &mut PeekMoreIterator<I>,
         scope: Scope,
         super_selector: &Selector,
+        span_before: Span,
     ) -> SassResult<(String, Function)> {
-        let Spanned { node: name, span } = eat_ident(toks, &scope, super_selector)?;
+        let Spanned { node: name, span } = eat_ident(toks, &scope, super_selector, span_before)?;
         devour_whitespace(toks);
         let args = match toks.next() {
             Some(Token { kind: '(', .. }) => eat_func_args(toks, &scope, super_selector)?,

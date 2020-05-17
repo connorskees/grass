@@ -221,7 +221,7 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
     devour_whitespace(toks);
     while let Some(Token { kind, pos }) = toks.next() {
         let name = match kind {
-            '$' => eat_ident(toks, scope, super_selector)?,
+            '$' => eat_ident(toks, scope, super_selector, pos)?,
             ')' => {
                 close_paren_span = pos;
                 break;

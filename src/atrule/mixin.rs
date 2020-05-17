@@ -1,6 +1,6 @@
 use std::vec::IntoIter;
 
-use codemap::Spanned;
+use codemap::{Span, Spanned};
 
 use peekmore::{PeekMore, PeekMoreIterator};
 
@@ -34,9 +34,10 @@ impl Mixin {
         toks: &mut PeekMoreIterator<I>,
         scope: &Scope,
         super_selector: &Selector,
+        span_before: Span,
     ) -> SassResult<Spanned<(String, Mixin)>> {
         devour_whitespace(toks);
-        let Spanned { node: name, span } = eat_ident(toks, scope, super_selector)?;
+        let Spanned { node: name, span } = eat_ident(toks, scope, super_selector, span_before)?;
         devour_whitespace(toks);
         let args = match toks.next() {
             Some(Token { kind: '(', .. }) => eat_func_args(toks, scope, super_selector)?,
@@ -185,9 +186,10 @@ pub(crate) fn eat_include<I: Iterator<Item = Token>>(
     scope: &Scope,
     super_selector: &Selector,
     content: Option<&[Spanned<Stmt>]>,
+    span_before: Span,
 ) -> SassResult<Vec<Spanned<Stmt>>> {
     devour_whitespace_or_comment(toks)?;
-    let name = eat_ident(toks, scope, super_selector)?;
+    let name = eat_ident(toks, scope, super_selector, span_before)?;
 
     devour_whitespace_or_comment(toks)?;
 
