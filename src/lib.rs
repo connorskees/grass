@@ -190,21 +190,20 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
         span = span.merge(tok.pos());
         match tok.kind {
             ':' => {
-                let tok = toks.next();
+                let tok = toks.next().unwrap();
+                values.push(tok);
                 if devour_whitespace(toks) {
                     let prop = Style::parse_property(
                         &mut values.into_iter().peekmore(),
                         scope,
                         super_selector,
                         String::new(),
-                        tok.unwrap().pos,
+                        tok.pos,
                     )?;
                     return Ok(Some(Spanned {
                         node: Style::from_tokens(toks, scope, super_selector, prop)?,
                         span,
                     }));
-                } else {
-                    values.push(tok.unwrap());
                 }
             }
             ';' => {

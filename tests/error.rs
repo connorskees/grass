@@ -62,3 +62,7 @@ error!(
     nothing_after_at_sign,
     "a {color: red; @", "Error: Expected identifier."
 );
+error!(
+    missing_colon_in_style,
+    "a {color, red;}", "Error: Expected \":\"."
+);

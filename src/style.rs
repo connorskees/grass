@@ -199,19 +199,21 @@ impl<'a> StyleParser<'a> {
         span_before: Span,
     ) -> SassResult<String> {
         devour_whitespace(toks);
-        let property = eat_ident(toks, self.scope, self.super_selector, span_before)?.node;
+        let property = eat_ident(toks, self.scope, self.super_selector, span_before)?;
         devour_whitespace_or_comment(toks)?;
         if toks.peek().is_some() && toks.peek().unwrap().kind == ':' {
             toks.next();
             devour_whitespace_or_comment(toks)?;
+        } else {
+            return Err(("Expected \":\".", property.span).into());
         }
 
         if super_property.is_empty() {
-            Ok(property)
+            Ok(property.node)
         } else {
-            super_property.reserve(1 + property.len());
+            super_property.reserve(1 + property.node.len());
             super_property.push('-');
-            super_property.push_str(&property);
+            super_property.push_str(&property.node);
             Ok(super_property)
         }
     }
