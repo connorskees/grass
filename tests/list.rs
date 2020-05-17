@@ -253,7 +253,7 @@ test!(
 );
 test!(
     null_values_in_list_ommitted,
-    "a {\n  color: 1, null, null;;\n}\n",
+    "a {\n  color: 1, null, null;\n}\n",
     "a {\n  color: 1;\n}\n"
 );
 test!(

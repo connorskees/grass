@@ -131,7 +131,7 @@ test!(
 );
 error!(
     duplicate_key_in_declaration,
-    "a {\n  $a: (foo: a, foo: b);;\n}\n", "Error: Duplicate key."
+    "a {\n  $a: (foo: a, foo: b);\n}\n", "Error: Duplicate key."
 );
 error!(
     display_map,
