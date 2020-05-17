@@ -1,4 +1,6 @@
-use codemap::Span;
+use std::cmp::Ordering;
+
+use codemap::{Span, Spanned};
 
 use crate::common::{Op, QuoteKind};
 use crate::error::SassResult;
@@ -6,6 +8,246 @@ use crate::unit::{Unit, UNIT_CONVERSION_TABLE};
 use crate::value::Value;
 
 impl Value {
+    pub fn equals(self, mut other: Value, span: Span) -> SassResult<Spanned<Value>> {
+        if let Self::Paren(..) = other {
+            other = other.eval(span)?.node
+        }
+
+        let precedence = Op::Equal.precedence();
+
+        Ok(Value::bool(match self {
+            Self::Ident(s1, ..) => match other {
+                Self::Ident(s2, ..) => s1 == s2,
+                _ => false,
+            },
+            Self::Dimension(n, unit) => match other {
+                Self::Dimension(n2, unit2) => {
+                    if !unit.comparable(&unit2) {
+                        false
+                    } else if unit == unit2 {
+                        n == n2
+                    } else if unit == Unit::None || unit2 == Unit::None {
+                        false
+                    } else {
+                        n == (n2
+                            * UNIT_CONVERSION_TABLE[unit.to_string().as_str()]
+                                [unit2.to_string().as_str()]
+                            .clone())
+                    }
+                }
+                _ => false,
+            },
+            Self::BinaryOp(left, op2, right) => {
+                if op2.precedence() >= precedence {
+                    Self::BinaryOp(left, op2, right).eval(span)?.node == other
+                } else {
+                    return Self::BinaryOp(
+                        left,
+                        op2,
+                        Box::new(
+                            Self::BinaryOp(right, Op::Equal, Box::new(other))
+                                .eval(span)?
+                                .node,
+                        ),
+                    )
+                    .eval(span);
+                }
+            }
+            s => s == other.eval(span)?.node,
+        })
+        .span(span))
+    }
+
+    pub fn not_equals(self, mut other: Value, span: Span) -> SassResult<Spanned<Value>> {
+        if let Self::Paren(..) = other {
+            other = other.eval(span)?.node
+        }
+
+        let precedence = Op::Equal.precedence();
+
+        Ok(Value::bool(match self {
+            Self::Ident(s1, ..) => match other {
+                Self::Ident(s2, ..) => s1 != s2,
+                _ => true,
+            },
+            Self::Dimension(n, unit) => match other {
+                Self::Dimension(n2, unit2) => {
+                    if !unit.comparable(&unit2) {
+                        true
+                    } else if unit == unit2 {
+                        n != n2
+                    } else if unit == Unit::None || unit2 == Unit::None {
+                        true
+                    } else {
+                        n != (n2
+                            * UNIT_CONVERSION_TABLE[unit.to_string().as_str()]
+                                [unit2.to_string().as_str()]
+                            .clone())
+                    }
+                }
+                _ => true,
+            },
+            Self::BinaryOp(left, op2, right) => {
+                if op2.precedence() >= precedence {
+                    Self::BinaryOp(left, op2, right).eval(span)?.node != other
+                } else {
+                    return Self::BinaryOp(
+                        left,
+                        op2,
+                        Box::new(
+                            Self::BinaryOp(right, Op::NotEqual, Box::new(other))
+                                .eval(span)?
+                                .node,
+                        ),
+                    )
+                    .eval(span);
+                }
+            }
+            s => s != other.eval(span)?.node,
+        })
+        .span(span))
+    }
+
+    pub fn unary_op_plus(self, span: Span) -> SassResult<Self> {
+        Ok(match self.eval(span)?.node {
+            v @ Value::Dimension(..) => v,
+            v => Value::Ident(format!("+{}", v.to_css_string(span)?), QuoteKind::None),
+        })
+    }
+
+    pub fn eval(self, span: Span) -> SassResult<Spanned<Self>> {
+        Ok(match self {
+            Self::BinaryOp(lhs, op, rhs) => match op {
+                Op::Plus => lhs.add(*rhs, span)?,
+                Op::Minus => lhs.sub(*rhs, span)?,
+                Op::Equal => lhs.equals(*rhs, span)?.node,
+                Op::NotEqual => lhs.not_equals(*rhs, span)?.node,
+                Op::Mul => lhs.mul(*rhs, span)?,
+                Op::Div => lhs.div(*rhs, span)?,
+                Op::Rem => lhs.rem(*rhs, span)?,
+                Op::GreaterThan => return lhs.cmp(*rhs, op, span),
+                Op::GreaterThanEqual => return lhs.cmp(*rhs, op, span),
+                Op::LessThan => return lhs.cmp(*rhs, op, span),
+                Op::LessThanEqual => return lhs.cmp(*rhs, op, span),
+                Op::Not => unreachable!(),
+                Op::And => {
+                    if lhs.is_true(span)? {
+                        rhs.eval(span)?.node
+                    } else {
+                        lhs.eval(span)?.node
+                    }
+                }
+                Op::Or => {
+                    if lhs.is_true(span)? {
+                        lhs.eval(span)?.node
+                    } else {
+                        rhs.eval(span)?.node
+                    }
+                }
+            },
+            Self::Paren(v) => v.eval(span)?.node,
+            Self::UnaryOp(op, val) => match op {
+                Op::Plus => val.unary_op_plus(span)?,
+                Op::Minus => val.neg(span)?,
+                Op::Not => Self::bool(!val.eval(span)?.is_true(span)?),
+                _ => unreachable!(),
+            },
+            _ => self,
+        }
+        .span(span))
+    }
+
+    pub fn cmp(self, mut other: Self, op: Op, span: Span) -> SassResult<Spanned<Value>> {
+        if let Self::Paren(..) = other {
+            other = other.eval(span)?.node
+        }
+        let precedence = op.precedence();
+        let ordering = match self {
+            Self::Dimension(num, unit) => match &other {
+                Self::Dimension(num2, unit2) => {
+                    if !unit.comparable(unit2) {
+                        return Err(
+                            (format!("Incompatible units {} and {}.", unit2, unit), span).into(),
+                        );
+                    }
+                    if &unit == unit2 || unit == Unit::None || unit2 == &Unit::None {
+                        num.cmp(num2)
+                    } else {
+                        num.cmp(
+                            &(num2.clone()
+                                * UNIT_CONVERSION_TABLE[unit.to_string().as_str()]
+                                    [unit2.to_string().as_str()]
+                                .clone()),
+                        )
+                    }
+                }
+                Self::BinaryOp(..) => todo!(),
+                v => {
+                    return Err((
+                        format!(
+                            "Undefined operation \"{} {} {}\".",
+                            v.to_css_string(span)?,
+                            op,
+                            other.to_css_string(span)?
+                        ),
+                        span,
+                    )
+                        .into())
+                }
+            },
+            Self::BinaryOp(left, op2, right) => {
+                return if op2.precedence() >= precedence {
+                    Self::BinaryOp(left, op2, right)
+                        .eval(span)?
+                        .node
+                        .cmp(other, op, span)
+                } else {
+                    Self::BinaryOp(
+                        left,
+                        op2,
+                        Box::new(Self::BinaryOp(right, op, Box::new(other)).eval(span)?.node),
+                    )
+                    .eval(span)
+                }
+            }
+            Self::UnaryOp(..) | Self::Paren(..) => {
+                return self.eval(span)?.node.cmp(other, op, span)
+            }
+            _ => {
+                return Err((
+                    format!(
+                        "Undefined operation \"{} {} {}\".",
+                        self.to_css_string(span)?,
+                        op,
+                        other.to_css_string(span)?
+                    ),
+                    span,
+                )
+                    .into())
+            }
+        };
+        Ok(match op {
+            Op::GreaterThan => match ordering {
+                Ordering::Greater => Self::True,
+                Ordering::Less | Ordering::Equal => Self::False,
+            },
+            Op::GreaterThanEqual => match ordering {
+                Ordering::Greater | Ordering::Equal => Self::True,
+                Ordering::Less => Self::False,
+            },
+            Op::LessThan => match ordering {
+                Ordering::Less => Self::True,
+                Ordering::Greater | Ordering::Equal => Self::False,
+            },
+            Op::LessThanEqual => match ordering {
+                Ordering::Less | Ordering::Equal => Self::True,
+                Ordering::Greater => Self::False,
+            },
+            _ => unreachable!(),
+        }
+        .span(span))
+    }
+
     pub fn add(self, mut other: Self, span: Span) -> SassResult<Self> {
         if let Self::Paren(..) = other {
             other = other.eval(span)?.node
