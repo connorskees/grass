@@ -12,9 +12,18 @@ test!(
     "a {\n  color: map-get((a: b), foo);\n}\n",
     ""
 );
+test!(
+    map_get_empty_list,
+    "a {\n  color: map-get((), foo);\n}\n",
+    ""
+);
 error!(
     map_get_non_map,
     "a {\n  color: map-get(foo, foo);\n}\n", "Error: $map: foo is not a map."
+);
+error!(
+    map_get_one_arg,
+    "a {\n  color: map-get(1);\n}\n", "Error: Missing argument $key."
 );
 test!(
     map_has_key_true,
@@ -24,6 +33,11 @@ test!(
 test!(
     map_has_key_false,
     "a {\n  color: map-has-key((a: b), foo);\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    map_has_key_empty_list,
+    "a {\n  color: map-has-key((), foo);\n}\n",
     "a {\n  color: false;\n}\n"
 );
 error!(
@@ -112,10 +126,6 @@ test!(
     "a {\n  color: 3;\n}\n"
 );
 error!(
-    map_get_one_arg,
-    "a {\n  color: map-get(1);\n}\n", "Error: Missing argument $key."
-);
-error!(
     map_has_key_one_arg,
     "a {\n  color: map-has-key(1);\n}\n", "Error: Missing argument $key."
 );
@@ -128,6 +138,11 @@ test!(
     map_remove_two,
     "a {\n  color: inspect(map-remove((\"foo\": 1, \"bar\": 2, \"baz\": 3), \"bar\", \"baz\"));\n}\n",
     "a {\n  color: (\"foo\": 1);\n}\n"
+);
+test!(
+    map_remove_empty_list,
+    "a {\n  color: inspect(map-remove((), foo));\n}\n",
+    "a {\n  color: ();\n}\n"
 );
 error!(
     duplicate_key_in_declaration,
