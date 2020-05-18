@@ -1,11 +1,10 @@
-use super::GlobalFunctionMap;
+use super::{Builtin, GlobalFunctionMap};
 
 #[cfg(feature = "random")]
 use num_traits::{One, Signed, ToPrimitive, Zero};
 #[cfg(feature = "random")]
 use rand::Rng;
 
-use super::Builtin;
 use crate::args::CallArgs;
 use crate::error::SassResult;
 use crate::scope::Scope;

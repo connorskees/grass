@@ -1,6 +1,4 @@
-use super::GlobalFunctionMap;
-
-use super::Builtin;
+use super::{Builtin, GlobalFunctionMap};
 
 mod hsl;
 mod opacity;

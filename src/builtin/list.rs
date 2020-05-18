@@ -1,8 +1,7 @@
-use super::GlobalFunctionMap;
+use super::{Builtin, GlobalFunctionMap};
 
 use num_traits::{One, Signed, ToPrimitive, Zero};
 
-use super::Builtin;
 use crate::args::CallArgs;
 use crate::common::{Brackets, ListSeparator, QuoteKind};
 use crate::error::SassResult;

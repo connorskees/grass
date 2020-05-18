@@ -1,4 +1,4 @@
-use super::GlobalFunctionMap;
+use super::{Builtin, GlobalFunctionMap};
 
 use num_bigint::BigInt;
 use num_traits::{Signed, ToPrimitive, Zero};
@@ -6,7 +6,6 @@ use num_traits::{Signed, ToPrimitive, Zero};
 #[cfg(feature = "random")]
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 
-use super::Builtin;
 use crate::args::CallArgs;
 use crate::common::QuoteKind;
 use crate::error::SassResult;

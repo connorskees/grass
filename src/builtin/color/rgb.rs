@@ -1,8 +1,7 @@
-use super::GlobalFunctionMap;
+use super::{Builtin, GlobalFunctionMap};
 
 use num_traits::One;
 
-use super::Builtin;
 use crate::args::CallArgs;
 use crate::color::Color;
 use crate::common::QuoteKind;

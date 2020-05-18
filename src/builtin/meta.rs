@@ -1,8 +1,7 @@
-use super::GlobalFunctionMap;
+use super::{Builtin, GlobalFunctionMap, GLOBAL_FUNCTIONS};
 
 use codemap::Spanned;
 
-use super::{Builtin, GLOBAL_FUNCTIONS};
 use crate::args::CallArgs;
 use crate::common::QuoteKind;
 use crate::error::SassResult;
