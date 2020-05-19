@@ -586,7 +586,7 @@ impl Value {
             ));
         }
 
-        if let Some(c) = NAMED_COLORS.get_by_left(&lower.as_str()) {
+        if let Some(c) = NAMED_COLORS.get_by_name(&lower.as_str()) {
             return Ok(IntermediateValue::Value(Spanned {
                 node: Value::Color(Box::new(Color::new(c[0], c[1], c[2], c[3], s))),
                 span,

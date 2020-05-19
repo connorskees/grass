@@ -1,11 +1,38 @@
 //! A big dictionary of named colors and their
 //! corresponding RGBA values
 
-use bimap::BiMap;
 use once_cell::sync::Lazy;
+use std::collections::HashMap;
 
-pub(crate) static NAMED_COLORS: Lazy<BiMap<&'static str, [u8; 4]>> = Lazy::new(|| {
-    let mut m = BiMap::with_capacity(150);
+pub(crate) struct NamedColorMap {
+    name_to_rgba: HashMap<&'static str, [u8; 4]>,
+    rgba_to_name: HashMap<[u8; 4], &'static str>,
+}
+
+impl NamedColorMap {
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self {
+            name_to_rgba: HashMap::with_capacity(capacity),
+            rgba_to_name: HashMap::with_capacity(capacity),
+        }
+    }
+
+    pub fn insert(&mut self, name: &'static str, rgba: [u8; 4]) {
+        self.name_to_rgba.insert(name, rgba);
+        self.rgba_to_name.insert(rgba, name);
+    }
+
+    pub fn get_by_name(&self, name: &str) -> Option<&[u8; 4]> {
+        self.name_to_rgba.get(name)
+    }
+
+    pub fn get_by_rgba(&self, rgba: &[u8; 4]) -> Option<&&str> {
+        self.rgba_to_name.get(rgba)
+    }
+}
+
+pub(crate) static NAMED_COLORS: Lazy<NamedColorMap> = Lazy::new(|| {
+    let mut m = NamedColorMap::with_capacity(150);
     m.insert("aliceblue", [0xF0, 0xF8, 0xFF, 0xFF]);
     m.insert("antiquewhite", [0xFA, 0xEB, 0xD7, 0xFF]);
     m.insert("aqua", [0x00, 0xFF, 0xFF, 0xFF]);
