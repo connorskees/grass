@@ -1,7 +1,5 @@
 # grass
 
-An implementation of the SASS spec in pure Rust
-
 This crate aims to provide a high level interface for compiling SASS into
 plain CSS. It offers a very limited API, currently exposing only 2 structs.
 
