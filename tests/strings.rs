@@ -13,6 +13,16 @@ test!(
     "a {\n  color: to-lower-case(AbC123);\n}\n",
     "a {\n  color: abc123;\n}\n"
 );
+error!(
+    uppercase_non_ident,
+    "a {\n  color: to-upper-case(123);\n}\n",
+    "Error: $string: 123 is not a string."
+);
+error!(
+    lowercase_non_ident,
+    "a {\n  color: to-lower-case(123);\n}\n",
+    "Error: $string: 123 is not a string."
+);
 test!(
     uppercase_named_arg,
     "a {\n  color: to-upper-case($string: aBc123);\n}\n",
