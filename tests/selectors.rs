@@ -512,9 +512,9 @@ test!(
     "\\61 {\n    color: red;\n}\n",
     "a {\n  color: red;\n}\n"
 );
-/// this checks for a bug in which the selector
-/// contents get longer as a result of interpolation,
-/// which interferes with span information.
+// this checks for a bug in which the selector
+// contents get longer as a result of interpolation,
+// which interferes with span information.
 test!(
     selector_span_gets_larger,
     "$a: aaaaaaaaaaa;\n\n#{$a} {\n    color: foo;\n}\n",

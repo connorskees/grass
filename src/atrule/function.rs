@@ -183,6 +183,7 @@ impl Function {
                     }
                 }
                 Stmt::AtRule(AtRule::Each(..)) => todo!("@each in @function"),
+                // todo: multiline comments
                 _ => return Err(("This at-rule is not allowed here.", stmt.span).into()),
             }
         }
