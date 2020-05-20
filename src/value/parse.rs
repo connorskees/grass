@@ -669,7 +669,7 @@ impl Value {
 
                 let n = if val.dec_len == 0 {
                     if val.num.len() <= 18 && val.times_ten.is_empty() {
-                        let n = Rational64::new_raw(val.num.parse::<i64>().unwrap(), 1i64);
+                        let n = Rational64::new_raw(val.num.parse::<i64>().unwrap(), 1);
                         return Some(Ok(IntermediateValue::Value(
                             Value::Dimension(Number::new_machine(n), unit).span(span),
                         )));

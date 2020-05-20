@@ -140,6 +140,7 @@ impl One for Number {
 
 impl Num for Number {
     type FromStrRadixErr = SassError;
+    #[cold]
     fn from_str_radix(_str: &str, _radix: u32) -> Result<Self, Self::FromStrRadixErr> {
         todo!()
     }
@@ -150,10 +151,12 @@ impl Signed for Number {
         self.abs()
     }
 
+    #[cold]
     fn abs_sub(&self, _: &Self) -> Self {
         todo!()
     }
 
+    #[cold]
     fn signum(&self) -> Self {
         if self.is_zero() {
             Self::zero()
@@ -236,7 +239,7 @@ impl Display for Number {
         let mut dec = String::with_capacity(if has_decimal { PRECISION + 1 } else { 0 });
         if has_decimal {
             for _ in 0..(PRECISION - 1) {
-                frac = frac * Self::from(10);
+                frac *= Self::from(10);
                 write!(dec, "{}", frac.to_integer())?;
                 frac = frac.fract();
                 if frac.is_zero() {

@@ -26,8 +26,8 @@ impl NamedColorMap {
         self.name_to_rgba.get(name)
     }
 
-    pub fn get_by_rgba(&self, rgba: &[u8; 4]) -> Option<&&str> {
-        self.rgba_to_name.get(rgba)
+    pub fn get_by_rgba(&self, rgba: [u8; 4]) -> Option<&&str> {
+        self.rgba_to_name.get(&rgba)
     }
 }
 
