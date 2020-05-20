@@ -22,6 +22,19 @@ name = "grass"
 path = "src/lib.rs"
 crate-type = ["cdylib", "rlib"]
 
+[[bench]]
+name = "numbers"
+harness = false
+
+[[bench]]
+name = "control_flow"
+harness = false
+
+[[bench]]
+name = "styles"
+harness = false
+
+
 [dependencies]
 clap = { version = "2.33.0", optional = true }
 num-rational = "0.2.3"
@@ -49,6 +62,7 @@ profiling = []
 [dev-dependencies]
 tempfile = "3"
 paste = "0.1"
+criterion = "0.3.2"
 
 [profile.release]
 debug = true
