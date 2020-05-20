@@ -2,7 +2,7 @@ use std::iter::Iterator;
 use std::mem;
 
 use num_bigint::BigInt;
-use num_rational::BigRational;
+use num_rational::{BigRational, Rational64};
 use num_traits::{pow, One, ToPrimitive};
 
 use codemap::{Span, Spanned};
@@ -668,14 +668,27 @@ impl Value {
                 };
 
                 let n = if val.dec_len == 0 {
+                    if val.num.len() <= 18 && val.times_ten.is_empty() {
+                        let n = Rational64::new_raw(val.num.parse::<i64>().unwrap(), 1i64);
+                        return Some(Ok(IntermediateValue::Value(
+                            Value::Dimension(Number::new_machine(n), unit).span(span),
+                        )));
+                    }
                     BigRational::new_raw(val.num.parse::<BigInt>().unwrap(), BigInt::one())
                 } else {
+                    if val.num.len() <= 18 && val.times_ten.is_empty() {
+                        let n =
+                            Rational64::new(val.num.parse::<i64>().unwrap(), pow(10, val.dec_len));
+                        return Some(Ok(IntermediateValue::Value(
+                            Value::Dimension(Number::new_machine(n), unit).span(span),
+                        )));
+                    }
                     BigRational::new(val.num.parse().unwrap(), pow(BigInt::from(10), val.dec_len))
                 };
 
                 if val.times_ten.is_empty() {
                     return Some(Ok(IntermediateValue::Value(
-                        Value::Dimension(Number::new(n), unit).span(span),
+                        Value::Dimension(Number::new_big(n), unit).span(span),
                     )));
                 }
 
@@ -700,7 +713,7 @@ impl Value {
                 };
 
                 IntermediateValue::Value(
-                    Value::Dimension(Number::new(n * times_ten), unit).span(span),
+                    Value::Dimension(Number::new_big(n * times_ten), unit).span(span),
                 )
             }
             '(' => {

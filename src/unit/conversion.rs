@@ -16,18 +16,18 @@ pub(crate) static UNIT_CONVERSION_TABLE: Lazy<
     let mut from_in = HashMap::new();
     from_in.insert("in", Number::one());
     from_in.insert("cm", Number::one() / Number::from(2.54));
-    from_in.insert("pc", Number::ratio(1, 6));
+    from_in.insert("pc", Number::machine_ratio(1, 6));
     from_in.insert("mm", Number::one() / Number::from(25.4));
     from_in.insert("q", Number::one() / Number::from(101.6));
-    from_in.insert("pt", Number::ratio(1, 72));
-    from_in.insert("px", Number::ratio(1, 96));
+    from_in.insert("pt", Number::machine_ratio(1, 72));
+    from_in.insert("px", Number::machine_ratio(1, 96));
 
     let mut from_cm = HashMap::new();
     from_cm.insert("in", Number::from(2.54));
     from_cm.insert("cm", Number::one());
     from_cm.insert("pc", Number::from(2.54) / Number::from(6));
-    from_cm.insert("mm", Number::ratio(1, 10));
-    from_cm.insert("q", Number::ratio(1, 40));
+    from_cm.insert("mm", Number::machine_ratio(1, 10));
+    from_cm.insert("q", Number::machine_ratio(1, 40));
     from_cm.insert("pt", Number::from(2.54) / Number::from(72));
     from_cm.insert("px", Number::from(2.54) / Number::from(96));
 
@@ -37,15 +37,15 @@ pub(crate) static UNIT_CONVERSION_TABLE: Lazy<
     from_pc.insert("pc", Number::one());
     from_pc.insert("mm", Number::from(6) / Number::from(25.4));
     from_pc.insert("q", Number::from(6) / Number::from(101.6));
-    from_pc.insert("pt", Number::ratio(1, 12));
-    from_pc.insert("px", Number::ratio(1, 16));
+    from_pc.insert("pt", Number::machine_ratio(1, 12));
+    from_pc.insert("px", Number::machine_ratio(1, 16));
 
     let mut from_mm = HashMap::new();
     from_mm.insert("in", Number::from(25.4));
     from_mm.insert("cm", Number::from(10));
     from_mm.insert("pc", Number::from(25.4) / Number::from(6));
     from_mm.insert("mm", Number::one());
-    from_mm.insert("q", Number::ratio(1, 4));
+    from_mm.insert("q", Number::machine_ratio(1, 4));
     from_mm.insert("pt", Number::from(25.4) / Number::from(72));
     from_mm.insert("px", Number::from(25.4) / Number::from(96));
 
@@ -65,7 +65,7 @@ pub(crate) static UNIT_CONVERSION_TABLE: Lazy<
     from_pt.insert("mm", Number::from(72) / Number::from(25.4));
     from_pt.insert("q", Number::from(72) / Number::from(101.6));
     from_pt.insert("pt", Number::one());
-    from_pt.insert("px", Number::ratio(3, 4));
+    from_pt.insert("px", Number::machine_ratio(3, 4));
 
     let mut from_px = HashMap::new();
     from_px.insert("in", Number::from(96));
@@ -73,17 +73,17 @@ pub(crate) static UNIT_CONVERSION_TABLE: Lazy<
     from_px.insert("pc", Number::from(16));
     from_px.insert("mm", Number::from(96) / Number::from(25.4));
     from_px.insert("q", Number::from(96) / Number::from(101.6));
-    from_px.insert("pt", Number::ratio(4, 3));
+    from_px.insert("pt", Number::machine_ratio(4, 3));
     from_px.insert("px", Number::one());
 
     let mut from_deg = HashMap::new();
     from_deg.insert("deg", Number::one());
-    from_deg.insert("grad", Number::ratio(9, 10));
+    from_deg.insert("grad", Number::machine_ratio(9, 10));
     from_deg.insert("rad", Number::from(180) / Number::from(PI));
     from_deg.insert("turn", Number::from(360));
 
     let mut from_grad = HashMap::new();
-    from_grad.insert("deg", Number::ratio(10, 9));
+    from_grad.insert("deg", Number::machine_ratio(10, 9));
     from_grad.insert("grad", Number::one());
     from_grad.insert("rad", Number::from(200) / Number::from(PI));
     from_grad.insert("turn", Number::from(400));
@@ -95,14 +95,14 @@ pub(crate) static UNIT_CONVERSION_TABLE: Lazy<
     from_rad.insert("turn", Number::from(2.0 * PI));
 
     let mut from_turn = HashMap::new();
-    from_turn.insert("deg", Number::ratio(1, 360));
-    from_turn.insert("grad", Number::ratio(1, 400));
+    from_turn.insert("deg", Number::machine_ratio(1, 360));
+    from_turn.insert("grad", Number::machine_ratio(1, 400));
     from_turn.insert("rad", Number::one() / Number::from(2.0 * PI));
     from_turn.insert("turn", Number::one());
 
     let mut from_s = HashMap::new();
     from_s.insert("s", Number::one());
-    from_s.insert("ms", Number::ratio(1, 1000));
+    from_s.insert("ms", Number::machine_ratio(1, 1000));
 
     let mut from_ms = HashMap::new();
     from_ms.insert("s", Number::from(1000));
@@ -113,7 +113,7 @@ pub(crate) static UNIT_CONVERSION_TABLE: Lazy<
     from_hz.insert("kHz", Number::from(1000));
 
     let mut from_khz = HashMap::new();
-    from_khz.insert("Hz", Number::ratio(1, 1000));
+    from_khz.insert("Hz", Number::machine_ratio(1, 1000));
     from_khz.insert("kHz", Number::one());
 
     let mut from_dpi = HashMap::new();
@@ -127,7 +127,7 @@ pub(crate) static UNIT_CONVERSION_TABLE: Lazy<
     from_dpcm.insert("dppx", Number::from(96) / Number::from(2.54));
 
     let mut from_dppx = HashMap::new();
-    from_dppx.insert("dpi", Number::ratio(1, 96));
+    from_dppx.insert("dpi", Number::machine_ratio(1, 96));
     from_dppx.insert("dpcm", Number::from(2.54) / Number::from(96));
     from_dppx.insert("dppx", Number::one());
 

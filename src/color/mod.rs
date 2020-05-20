@@ -362,16 +362,16 @@ impl Color {
             let repr = repr(&val, &val, &val, &alpha);
             return Color::new_hsla(val.clone(), val.clone(), val, alpha, hsla, repr);
         }
-        let temporary_1 = if luminance < Number::ratio(1, 2) {
+        let temporary_1 = if luminance < Number::machine_ratio(1, 2) {
             luminance.clone() * (Number::one() + saturation)
         } else {
             luminance.clone() + saturation.clone() - luminance.clone() * saturation
         };
         let temporary_2 = Number::from(2) * luminance - temporary_1.clone();
         hue /= Number::from(360);
-        let mut temporary_r = hue.clone() + Number::ratio(1, 3);
+        let mut temporary_r = hue.clone() + Number::machine_ratio(1, 3);
         let mut temporary_g = hue.clone();
-        let mut temporary_b = hue - Number::ratio(1, 3);
+        let mut temporary_b = hue - Number::machine_ratio(1, 3);
 
         macro_rules! clamp_temp {
             ($temp:ident) => {
@@ -397,7 +397,7 @@ impl Color {
                 } else if Number::from(3) * $temp.clone() < Number::from(2) {
                     $temp2.clone()
                         + ($temp1.clone() - $temp2.clone())
-                            * (Number::ratio(2, 3) - $temp)
+                            * (Number::machine_ratio(2, 3) - $temp)
                             * Number::from(6)
                 } else {
                     $temp2.clone()
