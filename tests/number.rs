@@ -153,8 +153,12 @@ test!(
     "a {\n  color: -1e;\n}\n"
 );
 error!(
-    scientific_notation_nothing_after_dash,
+    scientific_notation_nothing_after_dash_in_style,
     "a {\n  color: 1e-;\n}\n", "Error: Expected digit."
+);
+error!(
+    scientific_notation_nothing_after_dash,
+    "a {\n  color: 1e-", "Error: Expected digit."
 );
 error!(
     scientific_notation_whitespace_after_dash,
