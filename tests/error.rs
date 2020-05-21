@@ -66,3 +66,7 @@ error!(
     missing_colon_in_style,
     "a {color, red;}", "Error: Expected \":\"."
 );
+error!(
+    toplevel_forward_slash,
+    "/a {color, red;}", "Error: expected selector."
+);

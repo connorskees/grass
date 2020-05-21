@@ -159,7 +159,7 @@ impl<'a> StyleSheetParser<'a> {
                 'a'..='z' | 'A'..='Z' | '_' | '-' | '0'..='9'
                 | '[' | '#' | ':' | '*' | '%' | '.' | '>' | '\\' => rules
                     .extend(self.eat_rules(&Selector::new(), &mut Scope::new())?),
-                &'\t' | &'\n' | ' ' => {
+                '\t' | '\n' | ' ' => {
                     self.lexer.next();
                     continue;
                 }
@@ -186,16 +186,18 @@ impl<'a> StyleSheetParser<'a> {
                     }
                 }
                 '/' => {
-                    self.lexer.next();
-                    if '*' == self.lexer.peek().unwrap().kind {
-                        self.lexer.next();
-                        let comment = eat_comment(&mut self.lexer, &Scope::new(), &Selector::new())?;
-                        rules.push(comment.map_node(Stmt::MultilineComment));
-                    } else if '/' == self.lexer.peek().unwrap().kind {
-                        read_until_newline(&mut self.lexer);
-                        devour_whitespace(&mut self.lexer);
-                    } else {
-                        todo!()
+                    let pos = self.lexer.next().unwrap().pos;
+                    match self.lexer.next() {
+                        Some(Token { kind: '/', .. }) => {
+                            read_until_newline(&mut self.lexer);
+                            devour_whitespace(&mut self.lexer);
+                        }
+                        Some(Token { kind: '*', .. }) => {
+                            self.lexer.next();
+                            let comment = eat_comment(&mut self.lexer, &Scope::new(), &Selector::new())?;
+                            rules.push(comment.map_node(Stmt::MultilineComment));
+                        }
+                        _ => return Err(("expected selector.", pos).into())
                     }
                 }
                 '@' => {
