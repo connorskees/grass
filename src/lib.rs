@@ -96,8 +96,9 @@ use crate::style::Style;
 pub use crate::stylesheet::StyleSheet;
 pub(crate) use crate::token::Token;
 use crate::utils::{
-    devour_whitespace, eat_comment, eat_ident, eat_ident_no_interpolation, eat_variable_value,
+    devour_whitespace, eat_comment, eat_ident, eat_variable_value,
     read_until_closing_curly_brace, read_until_closing_paren, read_until_newline, VariableDecl,
+    peek_whitespace, peek_ident_no_interpolation
 };
 use crate::value::Value;
 
@@ -278,15 +279,18 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
             }
             '$' => {
                 let tok = toks.next().unwrap();
-                if toks.peek().unwrap().kind == '=' {
+
+                if toks.peek().ok_or(("Expected identifier.", tok.pos))?.kind == '=' {
                     values.push(tok);
                     values.push(toks.next().unwrap());
                     continue;
                 }
-                let name = eat_ident_no_interpolation(toks, false)?;
-                devour_whitespace(toks);
-                if toks.peek().unwrap().kind == ':' {
-                    toks.next();
+
+                let name = peek_ident_no_interpolation(toks, false)?;
+                let whitespace = peek_whitespace(toks);
+
+                if toks.peek().ok_or(("expected \":\".", name.span))?.kind == ':' {
+                    toks.take(name.node.chars().count() + whitespace + 1).for_each(drop);
                     devour_whitespace(toks);
                     let VariableDecl {
                         val,
@@ -308,13 +312,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                     }
                 } else {
                     values.push(tok);
-                    let mut current_pos = 0;
-                    values.extend(name.chars().map(|x| {
-                        let len = x.len_utf8() as u64;
-                        let tok = Token::new(span.subspan(current_pos, current_pos + len), x);
-                        current_pos += len;
-                        tok
-                    }));
+                    toks.reset_view();
                 }
             }
             '/' => {

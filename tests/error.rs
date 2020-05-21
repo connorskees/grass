@@ -74,3 +74,11 @@ error!(
     close_bracket_in_value,
     "a {color: red]}", "Error: expected \";\"."
 );
+error!(
+    no_ident_after_dollar_in_style,
+    "a {$", "Error: Expected identifier."
+);
+error!(
+    nothing_after_variable_in_style,
+    "a {$a", "Error: expected \":\"."
+);
