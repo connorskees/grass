@@ -341,7 +341,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                 let Spanned { node: ident, span } = eat_ident(toks, scope, super_selector, span)?;
                 devour_whitespace(toks);
                 let rule = AtRule::from_tokens(
-                    &AtRuleKind::from(ident.as_str()),
+                    AtRuleKind::from(ident.as_str()),
                     span,
                     toks,
                     scope,
@@ -364,6 +364,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                         u @ AtRule::Unknown(..) => Expr::AtRule(u),
                         u @ AtRule::AtRoot(..) => Expr::AtRule(u),
                         u @ AtRule::Include(..) => Expr::AtRule(u),
+                        u @ AtRule::Media(..) => Expr::AtRule(u),
                     },
                     span,
                 }));

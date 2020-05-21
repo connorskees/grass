@@ -185,15 +185,29 @@ impl Css {
                 Toplevel::AtRule(r) => {
                     match r {
                         AtRule::Unknown(u) => {
+                            if u.params.is_empty() {
+                                write!(buf, "{}@{}", padding, u.name)?;
+                            } else {
+                                write!(buf, "{}@{} {}", padding, u.name, u.params)?;
+                            }
+
                             if u.body.is_empty() {
+                                writeln!(buf, ";")?;
+                                continue;
+                            } else {
+                                writeln!(buf, " {{")?;
+                            }
+
+                            Css::from_stylesheet(StyleSheet::from_stmts(u.body))?
+                                ._inner_pretty_print(buf, map, nesting + 1)?;
+                            writeln!(buf, "{}}}", padding)?;
+                        }
+                        AtRule::Media(m) => {
+                            if m.body.is_empty() {
                                 continue;
                             }
-                            if u.params.is_empty() {
-                                writeln!(buf, "{}@{} {{", padding, u.name)?;
-                            } else {
-                                writeln!(buf, "{}@{} {} {{", padding, u.name, u.params)?;
-                            }
-                            Css::from_stylesheet(StyleSheet::from_stmts(u.body))?
+                            writeln!(buf, "{}@media {} {{", padding, m.params)?;
+                            Css::from_stylesheet(StyleSheet::from_stmts(m.body))?
                                 ._inner_pretty_print(buf, map, nesting + 1)?;
                             writeln!(buf, "{}}}", padding)?;
                         }

@@ -251,7 +251,7 @@ impl<'a> StyleSheetParser<'a> {
                             });
                         }
                         v => {
-                            let rule = AtRule::from_tokens(&v, span, &mut self.lexer, &mut Scope::new(), &Selector::new(), None)?;
+                            let rule = AtRule::from_tokens(v, span, &mut self.lexer, &mut Scope::new(), &Selector::new(), None)?;
                             match rule.node {
                                 AtRule::Mixin(name, mixin) => {
                                     insert_global_mixin(&name, *mixin);
@@ -281,6 +281,7 @@ impl<'a> StyleSheetParser<'a> {
                                 }
                                 AtRule::AtRoot(root_rules) => rules.extend(root_rules),
                                 AtRule::Unknown(..) => rules.push(rule.map_node(Stmt::AtRule)),
+                                AtRule::Media(..) => rules.push(rule.map_node(Stmt::AtRule)),
                             }
                         }
                     }
@@ -336,6 +337,10 @@ impl<'a> StyleSheetParser<'a> {
                     AtRule::Mixin(..) | AtRule::Function(..) => todo!(),
                     AtRule::Charset => todo!(),
                     r @ AtRule::Unknown(..) => stmts.push(Spanned {
+                        node: Stmt::AtRule(r),
+                        span,
+                    }),
+                    r @ AtRule::Media(..) => stmts.push(Spanned {
                         node: Stmt::AtRule(r),
                         span,
                     }),

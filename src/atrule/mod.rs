@@ -17,6 +17,7 @@ use for_rule::For;
 pub(crate) use function::Function;
 pub(crate) use if_rule::If;
 pub(crate) use kind::AtRuleKind;
+use media::Media;
 pub(crate) use mixin::{eat_include, Mixin};
 use parse::{eat_stmts, eat_stmts_at_root, ruleset_eval};
 use unknown::UnknownAtRule;
@@ -27,6 +28,7 @@ mod for_rule;
 mod function;
 mod if_rule;
 mod kind;
+mod media;
 mod mixin;
 mod parse;
 mod unknown;
@@ -47,12 +49,13 @@ pub(crate) enum AtRule {
     While(While),
     Include(Vec<Spanned<Stmt>>),
     If(If),
+    Media(Media),
     AtRoot(Vec<Spanned<Stmt>>),
 }
 
 impl AtRule {
     pub fn from_tokens<I: Iterator<Item = Token>>(
-        rule: &AtRuleKind,
+        rule: AtRuleKind,
         kind_span: Span,
         toks: &mut PeekMoreIterator<I>,
         scope: &mut Scope,
@@ -243,6 +246,16 @@ impl AtRule {
                     super_selector,
                     content,
                     kind_span,
+                )?),
+                span: kind_span,
+            },
+            AtRuleKind::Media => Spanned {
+                node: AtRule::Media(Media::from_tokens(
+                    toks,
+                    scope,
+                    super_selector,
+                    kind_span,
+                    content,
                 )?),
                 span: kind_span,
             },

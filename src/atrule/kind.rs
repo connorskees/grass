@@ -41,6 +41,8 @@ pub enum AtRuleKind {
     For,
     While,
 
+    Media,
+
     // CSS @rules
     /// Defines the character set used by the style sheet
     Charset,
@@ -78,6 +80,7 @@ impl From<&str> for AtRuleKind {
             "supports" => Self::Supports,
             "keyframes" => Self::Keyframes,
             "content" => Self::Content,
+            "media" => Self::Media,
             s => Self::Unknown(s.to_owned()),
         }
     }

@@ -10,33 +10,21 @@ use crate::utils::{devour_whitespace, parse_interpolation};
 use crate::{RuleSet, Stmt, Token};
 
 #[derive(Debug, Clone)]
-pub(crate) struct UnknownAtRule {
-    pub name: String,
+pub(crate) struct Media {
     pub super_selector: Selector,
     pub params: String,
     pub body: Vec<Spanned<Stmt>>,
 }
 
-impl UnknownAtRule {
+impl Media {
     pub fn from_tokens<I: Iterator<Item = Token>>(
         toks: &mut PeekMoreIterator<I>,
-        name: String,
         scope: &mut Scope,
         super_selector: &Selector,
         kind_span: Span,
         content: Option<&[Spanned<Stmt>]>,
-    ) -> SassResult<UnknownAtRule> {
+    ) -> SassResult<Media> {
         let mut params = String::new();
-        devour_whitespace(toks);
-        if let Some(Token { kind: ';', .. }) | None = toks.peek() {
-            toks.next();
-            return Ok(UnknownAtRule {
-                name,
-                super_selector: Selector::new(),
-                params: String::new(),
-                body: Vec::new(),
-            });
-        }
         while let Some(tok) = toks.next() {
             match tok.kind {
                 '{' => break,
@@ -58,6 +46,10 @@ impl UnknownAtRule {
                 _ => {}
             }
             params.push(tok.kind);
+        }
+
+        if params.is_empty() {
+            return Err(("Expected identifier.", kind_span).into());
         }
 
         let mut raw_body = Vec::new();
@@ -86,8 +78,7 @@ impl UnknownAtRule {
             body.append(&mut rules);
         }
 
-        Ok(UnknownAtRule {
-            name,
+        Ok(Media {
             super_selector: Selector::new(),
             params: params.trim().to_owned(),
             body,
