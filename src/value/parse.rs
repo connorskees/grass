@@ -897,7 +897,7 @@ impl Value {
             ':' | '?' | ')' | '@' | '^' | ']' | '|' => {
                 return Some(Err(("expected \";\".", span).into()))
             }
-            v if v as u32 >= 0x80 || v.is_control() || v == '`' => {
+            v if v as u32 >= 0x80 || v.is_control() || v == '`' || v == '~' => {
                 return Some(Err(("Expected expression.", span).into()))
             }
             v => todo!("unexpected token in value parsing: {:?}", v),
