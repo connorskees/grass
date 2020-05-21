@@ -151,13 +151,20 @@ struct StyleSheetParser<'a> {
     path: &'a Path,
 }
 
+fn is_selector_char(c: char) -> bool {
+    c.is_alphanumeric()
+        || matches!(
+            c,
+            '_' | '-' | '[' | '#' | ':' | '*' | '%' | '.' | '>' | '\\'
+        )
+}
+
 impl<'a> StyleSheetParser<'a> {
     fn parse_toplevel(mut self) -> SassResult<(Vec<Spanned<Stmt>>, Scope)> {
         let mut rules: Vec<Spanned<Stmt>> = Vec::new();
         while let Some(Token { kind, .. }) = self.lexer.peek() {
             match kind {
-                'a'..='z' | 'A'..='Z' | '_' | '-' | '0'..='9'
-                | '[' | '#' | ':' | '*' | '%' | '.' | '>' | '\\' => rules
+                _ if is_selector_char(*kind) => rules
                     .extend(self.eat_rules(&Selector::new(), &mut Scope::new())?),
                 '\t' | '\n' | ' ' => {
                     self.lexer.next();

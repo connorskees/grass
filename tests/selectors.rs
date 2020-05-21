@@ -520,3 +520,8 @@ test!(
     "$a: aaaaaaaaaaa;\n\n#{$a} {\n    color: foo;\n}\n",
     "aaaaaaaaaaa {\n  color: foo;\n}\n"
 );
+test!(
+    toplevel_non_ascii_alphabetic,
+    "ℓ {\n  color: red;\n}\n",
+    "@charset \"UTF-8\";\nℓ {\n  color: red;\n}\n"
+);
