@@ -22,7 +22,7 @@ use crate::selector::Selector;
 use crate::token::Token;
 use crate::utils::{
     devour_whitespace, eat_comment, eat_ident, eat_variable_value, parse_quoted_string,
-    read_until_newline, VariableDecl,
+    peek_ident_no_interpolation, peek_whitespace, read_until_newline, VariableDecl,
 };
 use crate::{eat_expr, Expr, RuleSet, Stmt};
 
@@ -79,7 +79,7 @@ impl StyleSheet {
         let file = map.add_file("stdin".into(), input);
         Css::from_stylesheet(StyleSheet(
             StyleSheetParser {
-                lexer: Lexer::new(&file).peekmore(),
+                lexer: &mut Lexer::new(&file).peekmore(),
                 nesting: 0,
                 map: &mut map,
                 path: Path::new(""),
@@ -111,7 +111,7 @@ impl StyleSheet {
         let file = map.add_file(p.into(), String::from_utf8(fs::read(p)?)?);
         Css::from_stylesheet(StyleSheet(
             StyleSheetParser {
-                lexer: Lexer::new(&file).peekmore(),
+                lexer: &mut Lexer::new(&file).peekmore(),
                 nesting: 0,
                 map: &mut map,
                 path: p.as_ref(),
@@ -131,7 +131,7 @@ impl StyleSheet {
     ) -> SassResult<(Vec<Spanned<Stmt>>, Scope)> {
         let file = map.add_file(p.clone().into(), String::from_utf8(fs::read(p)?)?);
         Ok(StyleSheetParser {
-            lexer: Lexer::new(&file).peekmore(),
+            lexer: &mut Lexer::new(&file).peekmore(),
             nesting: 0,
             map,
             path: p.as_ref(),
@@ -145,7 +145,7 @@ impl StyleSheet {
 }
 
 struct StyleSheetParser<'a> {
-    lexer: PeekMoreIterator<Lexer<'a>>,
+    lexer: &'a mut PeekMoreIterator<Lexer<'a>>,
     nesting: u32,
     map: &'a mut CodeMap,
     path: &'a Path,
@@ -171,36 +171,35 @@ impl<'a> StyleSheetParser<'a> {
                     continue;
                 }
                 '$' => {
-                    let span_before = self.lexer.next().unwrap().pos();
-                    let name = eat_ident(
-                        &mut self.lexer,
-                        &Scope::new(),
-                        &Selector::new(),
-                        span_before
-                    )?;
-                    devour_whitespace(&mut self.lexer);
-                    let Token { kind, pos } = self
-                        .lexer
-                        .next()
-                        .unwrap();
-                    if kind != ':' {
-                        return Err(("expected \":\".", pos).into());
-                    }
-                    let VariableDecl { val, default, .. } =
-                        eat_variable_value(&mut self.lexer, &Scope::new(), &Selector::new())?;
-                    if !(default && global_var_exists(&name)) {
-                        insert_global_var(&name.node, val)?;
+                    self.lexer.next();
+                    let name = peek_ident_no_interpolation(self.lexer, false)?;
+                    let whitespace = peek_whitespace(self.lexer);
+
+                    match self.lexer.peek() {
+                        Some(Token { kind: ':', .. }) => {
+                            self.lexer.take(name.node.chars().count() + whitespace + 1)
+                                .for_each(drop);
+                            devour_whitespace(self.lexer);
+
+                            let VariableDecl { val, default, .. } =
+                            eat_variable_value(self.lexer, &Scope::new(), &Selector::new())?;
+
+                            if !(default && global_var_exists(&name)) {
+                                insert_global_var(&name.node, val)?;
+                            }
+                        }
+                        Some(..) | None => return Err(("expected \":\".", name.span).into()),
                     }
                 }
                 '/' => {
                     let pos = self.lexer.next().unwrap().pos;
                     match self.lexer.next() {
                         Some(Token { kind: '/', .. }) => {
-                            read_until_newline(&mut self.lexer);
-                            devour_whitespace(&mut self.lexer);
+                            read_until_newline(self.lexer);
+                            devour_whitespace(self.lexer);
                         }
                         Some(Token { kind: '*', .. }) => {
-                            let comment = eat_comment(&mut self.lexer, &Scope::new(), &Selector::new())?;
+                            let comment = eat_comment(self.lexer, &Scope::new(), &Selector::new())?;
                             rules.push(comment.map_node(Stmt::MultilineComment));
                         }
                         _ => return Err(("expected selector.", pos).into())
@@ -209,7 +208,7 @@ impl<'a> StyleSheetParser<'a> {
                 '@' => {
                     let span_before = self.lexer.next().unwrap().pos();
                     let Spanned { node: at_rule_kind, span } = eat_ident(
-                        &mut self.lexer,
+                        self.lexer,
                         &Scope::new(),
                         &Selector::new(),
                         span_before
@@ -219,14 +218,14 @@ impl<'a> StyleSheetParser<'a> {
                     }
                     match AtRuleKind::from(at_rule_kind.as_str()) {
                         AtRuleKind::Include => rules.extend(eat_include(
-                            &mut self.lexer,
+                            self.lexer,
                             &Scope::new(),
                             &Selector::new(),
                             None,
                             span
                         )?),
                         AtRuleKind::Import => {
-                            devour_whitespace(&mut self.lexer);
+                            devour_whitespace(self.lexer);
                             let mut file_name = String::new();
                             let next = match self.lexer.next() {
                                 Some(v) => v,
@@ -236,7 +235,7 @@ impl<'a> StyleSheetParser<'a> {
                                 q @ '"' | q @ '\'' => {
                                     file_name.push_str(
                                         &parse_quoted_string(
-                                            &mut self.lexer,
+                                            self.lexer,
                                             &Scope::new(),
                                             q,
                                             &Selector::new())?
@@ -250,7 +249,7 @@ impl<'a> StyleSheetParser<'a> {
                                 }
                             }
 
-                            devour_whitespace(&mut self.lexer);
+                            devour_whitespace(self.lexer);
 
                             let (new_rules, new_scope) = import(self.path, file_name.as_ref(), &mut self.map)?;
                             rules.extend(new_rules);
@@ -259,7 +258,7 @@ impl<'a> StyleSheetParser<'a> {
                             });
                         }
                         v => {
-                            let rule = AtRule::from_tokens(v, span, &mut self.lexer, &mut Scope::new(), &Selector::new(), None)?;
+                            let rule = AtRule::from_tokens(v, span, self.lexer, &mut Scope::new(), &Selector::new(), None)?;
                             match rule.node {
                                 AtRule::Mixin(name, mixin) => {
                                     insert_global_mixin(&name, *mixin);
@@ -320,7 +319,7 @@ impl<'a> StyleSheetParser<'a> {
         scope: &mut Scope,
     ) -> SassResult<Vec<Spanned<Stmt>>> {
         let mut stmts = Vec::new();
-        while let Some(expr) = eat_expr(&mut self.lexer, scope, super_selector, None)? {
+        while let Some(expr) = eat_expr(self.lexer, scope, super_selector, None)? {
             let span = expr.span;
             match expr.node {
                 Expr::Style(s) => stmts.push(Spanned {

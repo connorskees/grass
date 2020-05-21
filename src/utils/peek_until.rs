@@ -161,6 +161,7 @@ pub(crate) fn peek_ident_no_interpolation<I: Iterator<Item = Token>>(
     toks: &mut PeekMoreIterator<I>,
     unit: bool,
 ) -> SassResult<Spanned<String>> {
+    // todo: panics on "$"
     let mut span = toks.peek().unwrap().pos();
     let mut text = String::new();
     if toks.peek().unwrap().kind == '-' {

@@ -123,3 +123,4 @@ error!(
     "#{", "Error: expected \"}\"."
 );
 error!(toplevel_hash, "#", "Error: expected \"{\".");
+error!(toplevel_var_no_colon, "$r", "Error: expected \":\".");
