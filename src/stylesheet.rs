@@ -193,7 +193,6 @@ impl<'a> StyleSheetParser<'a> {
                             devour_whitespace(&mut self.lexer);
                         }
                         Some(Token { kind: '*', .. }) => {
-                            self.lexer.next();
                             let comment = eat_comment(&mut self.lexer, &Scope::new(), &Selector::new())?;
                             rules.push(comment.map_node(Stmt::MultilineComment));
                         }
