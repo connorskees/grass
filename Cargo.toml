@@ -23,6 +23,10 @@ path = "src/lib.rs"
 crate-type = ["cdylib", "rlib"]
 
 [[bench]]
+name = "colors"
+harness = false
+
+[[bench]]
 name = "numbers"
 harness = false
 
