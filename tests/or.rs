@@ -48,3 +48,14 @@ test!(
     "a {\n  color: 1 or 2 or 3;\n}\n",
     "a {\n  color: 1;\n}\n"
 );
+test!(
+    part_of_binop,
+    "a {\n  color: 1 - or;\n}\n",
+    "a {\n  color: 1-or;\n}\n"
+);
+test!(
+    #[ignore = "casing is not preserved for keyword operators"]
+    part_of_binop_casing,
+    "a {\n  color: 1 - OR;\n}\n",
+    "a {\n  color: 1-OR;\n}\n"
+);

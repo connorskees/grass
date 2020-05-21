@@ -130,3 +130,35 @@ error!(
     tilde_in_value,
     "a {color: ~a;}", "Error: Expected expression."
 );
+error!(
+    subtract_rem,
+    "a {color: 5 - %;}", "Error: Expected expression."
+);
+error!(
+    operator_eq,
+    "a {color: 5 - ==;}", "Error: Expected expression."
+);
+error!(
+    operator_ne,
+    "a {color: 5 - !=;}", "Error: Expected expression."
+);
+error!(
+    operator_gt,
+    "a {color: 5 - >;}", "Error: Expected expression."
+);
+error!(
+    operator_lt,
+    "a {color: 5 - <;}", "Error: Expected expression."
+);
+error!(
+    operator_ge,
+    "a {color: 5 - >=;}", "Error: Expected expression."
+);
+error!(
+    operator_le,
+    "a {color: 5 - <=;}", "Error: Expected expression."
+);
+error!(
+    operator_mul,
+    "a {color: 5 - *;}", "Error: Expected expression."
+);

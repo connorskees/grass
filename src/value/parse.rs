@@ -378,7 +378,27 @@ fn single_value<I: Iterator<Item = Token>>(
                     span: next.span.merge(val.span),
                 }
             }
-            _ => todo!(),
+            Op::And => {
+                Spanned {
+                    node: Value::Ident(
+                        "and".into(),
+                        QuoteKind::None,
+                    ),
+                    span: next.span,
+                }
+            }
+            Op::Or => {
+                Spanned {
+                    node: Value::Ident(
+                        "or".into(),
+                        QuoteKind::None,
+                    ),
+                    span: next.span,
+                }
+            }
+            _ => {
+                return Err(("Expected expression.", next.span).into());
+            }
         },
         IntermediateValue::Whitespace => unreachable!(),
         IntermediateValue::Comma => return Err(("Expected expression.", span).into()),
