@@ -82,3 +82,7 @@ error!(
     nothing_after_variable_in_style,
     "a {$a", "Error: expected \":\"."
 );
+error!(
+    toplevel_comma,
+    "a {},", "Error: expected \"{\"."
+);

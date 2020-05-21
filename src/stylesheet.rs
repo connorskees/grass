@@ -295,6 +295,9 @@ impl<'a> StyleSheetParser<'a> {
                 c if c.is_control() => {
                     return Err(("expected selector.", self.lexer.next().unwrap().pos()).into());
                 }
+                ',' => {
+                    return Err(("expected \"{\".", self.lexer.next().unwrap().pos()).into());
+                }
                 _ => todo!("unexpected toplevel token: {:?}", kind),
             };
         }
