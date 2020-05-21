@@ -123,6 +123,8 @@ error!(
     "#{", "Error: expected \"}\"."
 );
 error!(toplevel_hash, "#", "Error: expected \"{\".");
+error!(toplevel_at, "@", "Error: Expected identifier.");
+error!(toplevel_ampersand, "& {}", "Error: Top-level selectors may not contain the parent selector \"&\".");
 error!(toplevel_backslash, "\\", "Error: expected \"}\".");
 error!(toplevel_var_no_colon, "$r", "Error: expected \":\".");
 error!(bar_in_value, "a {color: a|b;}", "Error: expected \";\".");

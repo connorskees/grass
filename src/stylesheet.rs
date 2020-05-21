@@ -295,7 +295,7 @@ impl<'a> StyleSheetParser<'a> {
                 },
                 '&' => {
                     return Err(
-                        ("Base-level rules cannot contain the parent-selector-referencing character '&'.", self.lexer.next().unwrap().pos()).into(),
+                        ("Top-level selectors may not contain the parent selector \"&\".", self.lexer.next().unwrap().pos()).into(),
                     )
                 }
                 c if c.is_control() => {
