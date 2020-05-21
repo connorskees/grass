@@ -95,7 +95,8 @@ pub(crate) fn eat_comment<I: Iterator<Item = Token>>(
     let mut span = if let Some(tok) = toks.peek() {
         tok.pos()
     } else {
-        todo!()
+        // Hit this path: "/*"
+        todo!("")
     };
     while let Some(tok) = toks.next() {
         span = span.merge(tok.pos());

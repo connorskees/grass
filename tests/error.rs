@@ -68,5 +68,9 @@ error!(
 );
 error!(
     toplevel_forward_slash,
-    "/a {color, red;}", "Error: expected selector."
+    "/a {color: red;}", "Error: expected selector."
+);
+error!(
+    close_bracket_in_value,
+    "a {color: red]}", "Error: expected \";\"."
 );

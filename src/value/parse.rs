@@ -900,7 +900,7 @@ impl Value {
                 }
             }
             ';' | '}' | '{' => return None,
-            ':' | '?' | ')' | '@' | '^' => return Some(Err(("expected \";\".", span).into())),
+            ':' | '?' | ')' | '@' | '^' | ']' => return Some(Err(("expected \";\".", span).into())),
             v if v as u32 >= 0x80 || v.is_control() => {
                 return Some(Err(("Expected expression.", span).into()))
             }
