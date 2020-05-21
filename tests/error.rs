@@ -94,3 +94,7 @@ error!(
     toplevel_backtick,
     "` {}", "Error: expected selector."
 );
+error!(
+    backtick_in_value,
+    "a {color:`red;}", "Error: Expected expression."
+);
