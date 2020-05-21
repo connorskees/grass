@@ -179,6 +179,9 @@ pub(crate) fn eat_ident<I: Iterator<Item = Token>>(
     if toks.peek().unwrap().kind == '-' {
         toks.next();
         text.push('-');
+        if toks.peek().is_none() {
+            return Ok(Spanned { node: text, span });
+        }
         if toks.peek().unwrap().kind == '-' {
             toks.next();
             text.push('-');
@@ -235,6 +238,9 @@ pub(crate) fn eat_ident_no_interpolation<I: Iterator<Item = Token>>(
     if toks.peek().unwrap().kind == '-' {
         toks.next();
         text.push('-');
+        if toks.peek().is_none() {
+            return Ok(Spanned { node: text, span });
+        }
         if toks.peek().unwrap().kind == '-' {
             toks.next();
             text.push('-');

@@ -166,6 +166,9 @@ pub(crate) fn peek_ident_no_interpolation<I: Iterator<Item = Token>>(
     if toks.peek().unwrap().kind == '-' {
         toks.peek_forward(1);
         text.push('-');
+        if toks.peek().is_none() {
+            return Ok(Spanned { node: text, span });
+        }
         if toks.peek().unwrap().kind == '-' {
             toks.peek_forward(1);
             text.push('-');

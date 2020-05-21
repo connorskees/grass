@@ -86,10 +86,26 @@ error!(toplevel_comma, "a {},", "Error: expected \"{\".");
 error!(toplevel_exclamation, "! {}", "Error: expected \"{\".");
 error!(toplevel_backtick, "` {}", "Error: expected selector.");
 error!(
+    toplevel_open_curly_brace,
+    "{ {color: red;}", "Error: expected \"{\"."
+);
+error!(
     backtick_in_value,
     "a {color:`red;}", "Error: Expected expression."
 );
 error!(
     comma_begins_value,
     "a {color:,red;}", "Error: Expected expression."
+);
+error!(
+    nothing_after_hyphen,
+    "a {-}", "Error: Expected \":\"."
+);
+error!(
+    nothing_after_hyphen_variable,
+    "a {$-", "Error: expected \":\"."
+);
+error!(
+    closing_brace_after_hyphen_variable,
+    "a {$-}", "Error: Expected identifier."
 );
