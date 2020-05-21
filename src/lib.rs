@@ -96,9 +96,9 @@ use crate::style::Style;
 pub use crate::stylesheet::StyleSheet;
 pub(crate) use crate::token::Token;
 use crate::utils::{
-    devour_whitespace, eat_comment, eat_ident, eat_variable_value,
-    read_until_closing_curly_brace, read_until_closing_paren, read_until_newline, VariableDecl,
-    peek_whitespace, peek_ident_no_interpolation
+    devour_whitespace, eat_comment, eat_ident, eat_variable_value, peek_ident_no_interpolation,
+    peek_whitespace, read_until_closing_curly_brace, read_until_closing_paren, read_until_newline,
+    VariableDecl,
 };
 use crate::value::Value;
 
@@ -290,7 +290,8 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                 let whitespace = peek_whitespace(toks);
 
                 if toks.peek().ok_or(("expected \":\".", name.span))?.kind == ':' {
-                    toks.take(name.node.chars().count() + whitespace + 1).for_each(drop);
+                    toks.take(name.node.chars().count() + whitespace + 1)
+                        .for_each(drop);
                     devour_whitespace(toks);
                     let VariableDecl {
                         val,
