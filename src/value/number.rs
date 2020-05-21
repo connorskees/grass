@@ -10,8 +10,6 @@ use num_bigint::BigInt;
 use num_rational::{BigRational, Rational64};
 use num_traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Num, One, Signed, Zero};
 
-use crate::error::SassError;
-
 const PRECISION: usize = 10;
 
 #[derive(Clone, Eq, PartialEq, Ord)]
@@ -139,10 +137,10 @@ impl One for Number {
 }
 
 impl Num for Number {
-    type FromStrRadixErr = SassError;
+    type FromStrRadixErr = ();
     #[cold]
-    fn from_str_radix(_str: &str, _radix: u32) -> Result<Self, Self::FromStrRadixErr> {
-        todo!()
+    fn from_str_radix(_: &str, _: u32) -> Result<Self, Self::FromStrRadixErr> {
+        unreachable!()
     }
 }
 
@@ -153,7 +151,7 @@ impl Signed for Number {
 
     #[cold]
     fn abs_sub(&self, _: &Self) -> Self {
-        todo!()
+        unreachable!()
     }
 
     #[cold]
