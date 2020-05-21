@@ -131,7 +131,7 @@ fn str_slice(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> Sa
         }
         Value::Dimension(n, Unit::None) if n.is_zero() => 1_usize,
         Value::Dimension(n, Unit::None) if n < -Number::from(str_len) => 1_usize,
-        Value::Dimension(n, Unit::None) => (BigInt::from(str_len + 1) + n.to_integer())
+        Value::Dimension(n, Unit::None) => (n.to_integer() + BigInt::from(str_len + 1))
             .to_usize()
             .unwrap(),
         v @ Value::Dimension(..) => {
@@ -164,7 +164,7 @@ fn str_slice(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> Sa
         }
         Value::Dimension(n, Unit::None) if n.is_zero() => 0_usize,
         Value::Dimension(n, Unit::None) if n < -Number::from(str_len) => 0_usize,
-        Value::Dimension(n, Unit::None) => (BigInt::from(str_len + 1) + n.to_integer())
+        Value::Dimension(n, Unit::None) => (n.to_integer() + BigInt::from(str_len + 1))
             .to_usize()
             .unwrap_or(str_len + 1),
         v @ Value::Dimension(..) => {

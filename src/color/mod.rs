@@ -471,7 +471,7 @@ impl Color {
 impl Color {
     pub fn to_ie_hex_str(&self) -> String {
         format!(
-            "#{:02X}{:02X}{:02X}{:02X}",
+            "#{:X}{:X}{:X}{:X}",
             (self.alpha() * Number::from(255)).round().to_integer(),
             self.red().to_integer(),
             self.green().to_integer(),
