@@ -90,3 +90,7 @@ error!(
     toplevel_exclamation,
     "! {}", "Error: expected \"{\"."
 );
+error!(
+    toplevel_backtick,
+    "` {}", "Error: expected selector."
+);
