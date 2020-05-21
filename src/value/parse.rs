@@ -894,7 +894,7 @@ impl Value {
                 }
             }
             ';' | '}' | '{' => return None,
-            ':' | '?' | ')' | '@' | '^' | ']' => {
+            ':' | '?' | ')' | '@' | '^' | ']' | '|' => {
                 return Some(Err(("expected \";\".", span).into()))
             }
             v if v as u32 >= 0x80 || v.is_control() || v == '`' => {
