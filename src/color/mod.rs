@@ -362,6 +362,7 @@ impl Color {
             let repr = repr(&val, &val, &val, &alpha);
             return Color::new_hsla(val.clone(), val.clone(), val, alpha, hsla, repr);
         }
+
         let temporary_1 = if luminance < Number::machine_ratio(1, 2) {
             luminance.clone() * (Number::one() + saturation)
         } else {
@@ -387,27 +388,25 @@ impl Color {
         clamp_temp!(temporary_g);
         clamp_temp!(temporary_b);
 
-        macro_rules! channel {
-            ($name:ident, $temp:ident, $temp1:ident, $temp2:ident) => {
-                let $name = if Number::from(6) * $temp.clone() < Number::one() {
-                    $temp2.clone()
-                        + ($temp1.clone() - $temp2.clone()) * Number::from(6) * $temp.clone()
-                } else if Number::from(2) * $temp.clone() < Number::one() {
-                    $temp1.clone()
-                } else if Number::from(3) * $temp.clone() < Number::from(2) {
-                    $temp2.clone()
-                        + ($temp1.clone() - $temp2.clone())
-                            * (Number::machine_ratio(2, 3) - $temp)
+        fn channel(temp: Number, temp1: &Number, temp2: &Number) -> Number {
+            Number::from(255)
+                * if Number::from(6) * temp.clone() < Number::one() {
+                    temp2.clone() + (temp1.clone() - temp2.clone()) * Number::from(6) * temp
+                } else if Number::from(2) * temp.clone() < Number::one() {
+                    temp1.clone()
+                } else if Number::from(3) * temp.clone() < Number::from(2) {
+                    temp2.clone()
+                        + (temp1.clone() - temp2.clone())
+                            * (Number::machine_ratio(2, 3) - temp)
                             * Number::from(6)
                 } else {
-                    $temp2.clone()
-                } * Number::from(255);
-            };
+                    temp2.clone()
+                }
         }
 
-        channel!(red, temporary_r, temporary_1, temporary_2);
-        channel!(green, temporary_g, temporary_1, temporary_2);
-        channel!(blue, temporary_b, temporary_1, temporary_2);
+        let red = channel(temporary_r, &temporary_1, &temporary_2);
+        let green = channel(temporary_g, &temporary_1, &temporary_2);
+        let blue = channel(temporary_b, &temporary_1, &temporary_2);
 
         let repr = repr(&red, &green, &blue, &alpha);
         Color::new_hsla(red, green, blue, alpha, hsla, repr)
