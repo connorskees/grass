@@ -387,8 +387,9 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                 }
             }
             '\\' => {
-                values.push(toks.next().unwrap());
-                values.push(toks.next().unwrap());
+                let next = toks.next().unwrap();
+                values.push(next);
+                values.push(toks.next().ok_or(("expected \"}\".", next.pos))?);
             }
             // todo: this should only apply to special functions
             // it is causing us to emit nothing on malformed input
