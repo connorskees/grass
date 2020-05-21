@@ -369,11 +369,21 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                 }));
             }
             '#' => {
-                values.push(toks.next().unwrap());
-                if toks.peek().unwrap().kind == '{' {
-                    values.push(toks.next().unwrap());
-                    values.extend(read_until_closing_curly_brace(toks));
-                    values.push(toks.next().unwrap());
+                let next = toks.next().unwrap();
+                values.push(next);
+                match toks.peek() {
+                    Some(Token { kind: '{', .. }) => {
+                        let next = toks.next().unwrap();
+                        values.push(next);
+                        values.extend(read_until_closing_curly_brace(toks));
+                        if let Some(tok) = toks.next() {
+                            values.push(tok);
+                        } else {
+                            return Err(("expected \"}\".", next.pos).into());
+                        }
+                    }
+                    Some(..) => {}
+                    None => return Err(("expected \"{\".", next.pos).into()),
                 }
             }
             '\\' => {

@@ -97,10 +97,7 @@ error!(
     comma_begins_value,
     "a {color:,red;}", "Error: Expected expression."
 );
-error!(
-    nothing_after_hyphen,
-    "a {-}", "Error: Expected \":\"."
-);
+error!(nothing_after_hyphen, "a {-}", "Error: Expected \":\".");
 error!(
     nothing_after_hyphen_variable,
     "a {$-", "Error: expected \":\"."
@@ -109,3 +106,20 @@ error!(
     closing_brace_after_hyphen_variable,
     "a {$-}", "Error: Expected identifier."
 );
+error!(
+    dbl_quoted_selector,
+    "\"a\" {color: red;}", "Error: expected selector."
+);
+error!(
+    sgl_quoted_selector,
+    "'a' {color: red;}", "Error: expected selector."
+);
+error!(
+    toplevel_hash_no_closing_curly_brace_has_value,
+    "#{f", "Error: expected \"}\"."
+);
+error!(
+    toplevel_hash_no_closing_curly_brace_no_value,
+    "#{", "Error: expected \"}\"."
+);
+error!(toplevel_hash, "#", "Error: expected \"{\".");
