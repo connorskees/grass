@@ -152,3 +152,14 @@ error!(
     display_map,
     "a {\n  color: (a: b, c: d);\n}\n", "Error: (a: b, c: d) isn't a valid CSS value."
 );
+test!(
+    map_comma_separated_list_as_key,
+    "a {\n  color: map-keys(((1, 2): 3));\n}\n",
+    "a {\n  color: 1, 2;\n}\n"
+);
+test!(
+    #[ignore = "blocked on rewriting inspect"]
+    map_inspect_comma_separated_list_as_key,
+    "a {\n  color: inspect(((1, 2): 3));\n}\n",
+    "a {\n  color: ((1, 2): 3);\n}\n"
+);
