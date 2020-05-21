@@ -86,3 +86,7 @@ error!(
     toplevel_comma,
     "a {},", "Error: expected \"{\"."
 );
+error!(
+    toplevel_exclamation,
+    "! {}", "Error: expected \"{\"."
+);
