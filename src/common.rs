@@ -119,3 +119,30 @@ impl Display for QualifiedName {
         f.write_str(&self.ident)
     }
 }
+
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub(crate) struct Identifier(String);
+
+impl From<String> for Identifier {
+    fn from(s: String) -> Identifier {
+        Identifier(s.replace('_', "-"))
+    }
+}
+
+impl From<&String> for Identifier {
+    fn from(s: &String) -> Identifier {
+        Identifier(s.replace('_', "-"))
+    }
+}
+
+impl From<&str> for Identifier {
+    fn from(s: &str) -> Identifier {
+        Identifier(s.replace('_', "-"))
+    }
+}
+
+impl Display for Identifier {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
