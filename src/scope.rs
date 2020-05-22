@@ -4,70 +4,66 @@ use std::collections::HashMap;
 use codemap::Spanned;
 
 use crate::atrule::{Function, Mixin};
-use crate::common::Identifier;
 use crate::error::SassResult;
 use crate::value::Value;
 
 thread_local!(pub(crate) static GLOBAL_SCOPE: RefCell<Scope> = RefCell::new(Scope::new()));
 
-pub(crate) fn get_global_var<T: Into<Identifier>>(s: Spanned<T>) -> SassResult<Spanned<Value>> {
-    GLOBAL_SCOPE.with(|scope| match scope.borrow().vars().get(&s.node.into()) {
+pub(crate) fn get_global_var(s: Spanned<String>) -> SassResult<Spanned<Value>> {
+    GLOBAL_SCOPE.with(|scope| match scope.borrow().vars().get(&s.node) {
         Some(v) => Ok(v.clone()),
         None => Err(("Undefined variable.", s.span).into()),
     })
 }
 
-/// Returns true if a variable exists in the *global* scope
-pub(crate) fn global_var_exists<T: Into<Identifier>>(v: T) -> bool {
-    GLOBAL_SCOPE.with(|scope| scope.borrow().vars().contains_key(&v.into()))
+pub(crate) fn global_var_exists(v: &str) -> bool {
+    GLOBAL_SCOPE.with(|scope| scope.borrow().vars().contains_key(&v.replace('_', "-")))
 }
 
-pub(crate) fn insert_global_var<T: Into<Identifier>>(
-    s: T,
-    v: Spanned<Value>,
-) -> SassResult<Option<Spanned<Value>>> {
-    GLOBAL_SCOPE.with(|scope| scope.borrow_mut().insert_var(s.into(), v))
+pub(crate) fn insert_global_var(s: &str, v: Spanned<Value>) -> SassResult<Option<Spanned<Value>>> {
+    GLOBAL_SCOPE.with(|scope| scope.borrow_mut().insert_var(s, v))
 }
 
-pub(crate) fn get_global_fn<T: Into<Identifier>>(s: Spanned<T>) -> SassResult<Function> {
-    GLOBAL_SCOPE.with(
-        |scope| match scope.borrow().functions().get(&s.node.into()) {
-            Some(v) => Ok(v.clone()),
-            None => Err(("Undefined function.", s.span).into()),
-        },
-    )
+pub(crate) fn get_global_fn(s: Spanned<String>) -> SassResult<Function> {
+    GLOBAL_SCOPE.with(|scope| match scope.borrow().functions().get(&s.node) {
+        Some(v) => Ok(v.clone()),
+        None => Err(("Undefined function.", s.span).into()),
+    })
 }
 
-/// Returns true if a function exists in the *global* scope
-pub(crate) fn global_fn_exists<T: Into<Identifier>>(v: T) -> bool {
-    GLOBAL_SCOPE.with(|scope| scope.borrow().functions().contains_key(&v.into()))
+pub(crate) fn global_fn_exists(v: &str) -> bool {
+    GLOBAL_SCOPE.with(|scope| {
+        scope
+            .borrow()
+            .functions()
+            .contains_key(&v.replace('_', "-"))
+    })
 }
 
-pub(crate) fn insert_global_fn<T: Into<Identifier>>(s: T, v: Function) -> Option<Function> {
-    GLOBAL_SCOPE.with(|scope| scope.borrow_mut().insert_fn(s.into(), v))
+pub(crate) fn insert_global_fn(s: &str, v: Function) -> Option<Function> {
+    GLOBAL_SCOPE.with(|scope| scope.borrow_mut().insert_fn(s, v))
 }
 
-pub(crate) fn get_global_mixin<T: Into<Identifier>>(s: Spanned<T>) -> SassResult<Mixin> {
-    GLOBAL_SCOPE.with(|scope| match scope.borrow().mixins().get(&s.node.into()) {
+pub(crate) fn get_global_mixin(s: Spanned<String>) -> SassResult<Mixin> {
+    GLOBAL_SCOPE.with(|scope| match scope.borrow().mixins().get(&s.node) {
         Some(v) => Ok(v.clone()),
         None => Err(("Undefined mixin.", s.span).into()),
     })
 }
 
-/// Returns true if a mixin exists in the *global* scope
-pub(crate) fn global_mixin_exists<T: Into<Identifier>>(v: T) -> bool {
-    GLOBAL_SCOPE.with(|scope| scope.borrow().mixins().contains_key(&v.into()))
+pub(crate) fn global_mixin_exists(v: &str) -> bool {
+    GLOBAL_SCOPE.with(|scope| scope.borrow().mixins().contains_key(&v.replace('_', "-")))
 }
 
-pub(crate) fn insert_global_mixin<T: Into<Identifier>>(s: T, v: Mixin) -> Option<Mixin> {
-    GLOBAL_SCOPE.with(|scope| scope.borrow_mut().insert_mixin(s.into(), v))
+pub(crate) fn insert_global_mixin(s: &str, v: Mixin) -> Option<Mixin> {
+    GLOBAL_SCOPE.with(|scope| scope.borrow_mut().insert_mixin(s, v))
 }
 
 #[derive(Debug, Clone)]
 pub(crate) struct Scope {
-    vars: HashMap<Identifier, Spanned<Value>>,
-    mixins: HashMap<Identifier, Mixin>,
-    functions: HashMap<Identifier, Function>,
+    vars: HashMap<String, Spanned<Value>>,
+    mixins: HashMap<String, Mixin>,
+    functions: HashMap<String, Function>,
 }
 
 impl Scope {
@@ -80,72 +76,68 @@ impl Scope {
         }
     }
 
-    pub const fn vars(&self) -> &HashMap<Identifier, Spanned<Value>> {
+    pub const fn vars(&self) -> &HashMap<String, Spanned<Value>> {
         &self.vars
     }
 
-    pub const fn functions(&self) -> &HashMap<Identifier, Function> {
+    pub const fn functions(&self) -> &HashMap<String, Function> {
         &self.functions
     }
 
-    pub const fn mixins(&self) -> &HashMap<Identifier, Mixin> {
+    pub const fn mixins(&self) -> &HashMap<String, Mixin> {
         &self.mixins
     }
 
-    pub fn get_var<T: Into<Identifier>>(&self, name: Spanned<T>) -> SassResult<Spanned<Value>> {
-        let name = name.map_node(|n| n.into());
+    pub fn get_var(&self, mut name: Spanned<String>) -> SassResult<Spanned<Value>> {
+        name.node = name.node.replace('_', "-");
         match self.vars.get(&name.node) {
             Some(v) => Ok(v.clone()),
             None => get_global_var(name),
         }
     }
 
-    pub fn insert_var<T: Into<Identifier>>(
-        &mut self,
-        s: T,
-        v: Spanned<Value>,
-    ) -> SassResult<Option<Spanned<Value>>> {
+    pub fn insert_var(&mut self, s: &str, v: Spanned<Value>) -> SassResult<Option<Spanned<Value>>> {
         let Spanned { node, span } = v;
-        Ok(self.vars.insert(s.into(), node.eval(span)?))
+        Ok(self.vars.insert(s.replace('_', "-"), node.eval(span)?))
     }
 
-    pub fn var_exists<T: Into<Identifier>>(&self, v: T) -> bool {
-        let name = v.into();
-        self.vars.contains_key(&name) || global_var_exists(name)
+    pub fn var_exists(&self, v: &str) -> bool {
+        let name = &v.replace('_', "-");
+        self.vars.contains_key(name) || global_var_exists(name)
     }
 
-    pub fn get_mixin<T: Into<Identifier>>(&self, name: Spanned<T>) -> SassResult<Mixin> {
-        let name = name.map_node(|n| n.into());
+    pub fn get_mixin(&self, mut name: Spanned<String>) -> SassResult<Mixin> {
+        name.node = name.node.replace('_', "-");
         match self.mixins.get(&name.node) {
             Some(v) => Ok(v.clone()),
             None => get_global_mixin(name),
         }
     }
 
-    pub fn insert_mixin<T: Into<Identifier>>(&mut self, s: T, v: Mixin) -> Option<Mixin> {
-        self.mixins.insert(s.into(), v)
+    pub fn insert_mixin(&mut self, s: &str, v: Mixin) -> Option<Mixin> {
+        self.mixins.insert(s.replace('_', "-"), v)
     }
 
-    pub fn mixin_exists<T: Into<Identifier>>(&self, v: T) -> bool {
-        let name = v.into();
-        self.mixins.contains_key(&name) || global_mixin_exists(name)
+    pub fn mixin_exists(&self, v: &str) -> bool {
+        let name = &v.replace('_', "-");
+        self.mixins.contains_key(name) || global_mixin_exists(name)
     }
 
-    pub fn get_fn<T: Into<Identifier>>(&self, name: Spanned<T>) -> SassResult<Function> {
-        let name = name.map_node(|n| n.into());
+    pub fn get_fn(&self, mut name: Spanned<String>) -> SassResult<Function> {
+        name.node = name.node.replace('_', "-");
         match self.functions.get(&name.node) {
             Some(v) => Ok(v.clone()),
             None => get_global_fn(name),
         }
     }
 
-    pub fn insert_fn<T: Into<Identifier>>(&mut self, s: T, v: Function) -> Option<Function> {
-        self.functions.insert(s.into(), v)
+    pub fn insert_fn(&mut self, s: &str, v: Function) -> Option<Function> {
+        self.functions.insert(s.replace('_', "-"), v)
     }
 
-    pub fn fn_exists<T: Into<Identifier>>(&self, v: T) -> bool {
-        let name = v.into();
-        self.functions.contains_key(&name) || global_fn_exists(name)
+    pub fn fn_exists(&self, v: &str) -> bool {
+        let name = &v.replace('_', "-");
+        self.functions.contains_key(name) || global_fn_exists(name)
     }
 
     pub fn extend(&mut self, other: Scope) {

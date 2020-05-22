@@ -14,7 +14,6 @@ use std::fmt;
 use crate::args::CallArgs;
 use crate::atrule::Function;
 use crate::builtin::Builtin;
-use crate::common::Identifier;
 use crate::error::SassResult;
 use crate::scope::Scope;
 use crate::selector::Selector;
@@ -28,15 +27,15 @@ use crate::value::Value;
 /// for use in the builtin function `inspect()`
 #[derive(Clone)]
 pub(crate) enum SassFunction {
-    Builtin(Builtin, Identifier),
-    UserDefined(Box<Function>, Identifier),
+    Builtin(Builtin, String),
+    UserDefined(Box<Function>, String),
 }
 
 impl SassFunction {
     /// Get the name of the function referenced
     ///
     /// Used mainly in debugging and `inspect()`
-    pub fn name(&self) -> &Identifier {
+    pub fn name(&self) -> &str {
         match self {
             Self::Builtin(_, name) => name,
             Self::UserDefined(_, name) => name,

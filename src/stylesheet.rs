@@ -10,7 +10,6 @@ use peekmore::{PeekMore, PeekMoreIterator};
 use wasm_bindgen::prelude::*;
 
 use crate::atrule::{eat_include, AtRule, AtRuleKind};
-use crate::common::Identifier;
 use crate::error::{SassError, SassResult};
 use crate::imports::import;
 use crate::lexer::Lexer;
@@ -165,9 +164,8 @@ impl<'a> StyleSheetParser<'a> {
         let mut rules: Vec<Spanned<Stmt>> = Vec::new();
         while let Some(Token { kind, .. }) = self.lexer.peek() {
             match kind {
-                _ if is_selector_char(*kind) => {
-                    rules.extend(self.eat_rules(&Selector::new(), &mut Scope::new())?)
-                }
+                _ if is_selector_char(*kind) => rules
+                    .extend(self.eat_rules(&Selector::new(), &mut Scope::new())?),
                 '\t' | '\n' | ' ' => {
                     self.lexer.next();
                     continue;
@@ -179,18 +177,15 @@ impl<'a> StyleSheetParser<'a> {
 
                     match self.lexer.peek() {
                         Some(Token { kind: ':', .. }) => {
-                            self.lexer
-                                .take(name.node.chars().count() + whitespace + 1)
+                            self.lexer.take(name.node.chars().count() + whitespace + 1)
                                 .for_each(drop);
                             devour_whitespace(self.lexer);
 
-                            let name = name.map_node(|n| Identifier::from(n));
-
                             let VariableDecl { val, default, .. } =
-                                eat_variable_value(self.lexer, &Scope::new(), &Selector::new())?;
+                            eat_variable_value(self.lexer, &Scope::new(), &Selector::new())?;
 
-                            if !(default && global_var_exists(name.node)) {
-                                insert_global_var(name.node, val)?;
+                            if !(default && global_var_exists(&name)) {
+                                insert_global_var(&name.node, val)?;
                             }
                         }
                         Some(..) | None => return Err(("expected \":\".", name.span).into()),
@@ -207,15 +202,17 @@ impl<'a> StyleSheetParser<'a> {
                             let comment = eat_comment(self.lexer, &Scope::new(), &Selector::new())?;
                             rules.push(comment.map_node(Stmt::MultilineComment));
                         }
-                        _ => return Err(("expected selector.", pos).into()),
+                        _ => return Err(("expected selector.", pos).into())
                     }
                 }
                 '@' => {
                     let span_before = self.lexer.next().unwrap().pos();
-                    let Spanned {
-                        node: at_rule_kind,
-                        span,
-                    } = eat_ident(self.lexer, &Scope::new(), &Selector::new(), span_before)?;
+                    let Spanned { node: at_rule_kind, span } = eat_ident(
+                        self.lexer,
+                        &Scope::new(),
+                        &Selector::new(),
+                        span_before
+                    )?;
                     if at_rule_kind.is_empty() {
                         return Err(("Expected identifier.", span).into());
                     }
@@ -225,14 +222,14 @@ impl<'a> StyleSheetParser<'a> {
                             &Scope::new(),
                             &Selector::new(),
                             None,
-                            span,
+                            span
                         )?),
                         AtRuleKind::Import => {
                             devour_whitespace(self.lexer);
                             let mut file_name = String::new();
                             let next = match self.lexer.next() {
                                 Some(v) => v,
-                                None => todo!("expected input after @import"),
+                                None => todo!("expected input after @import")
                             };
                             match next.kind {
                                 q @ '"' | q @ '\'' => {
@@ -241,12 +238,8 @@ impl<'a> StyleSheetParser<'a> {
                                             self.lexer,
                                             &Scope::new(),
                                             q,
-                                            &Selector::new(),
-                                        )?
-                                        .node
-                                        .unquote()
-                                        .to_css_string(span)?,
-                                    );
+                                            &Selector::new())?
+                                            .node.unquote().to_css_string(span)?);
                                 }
                                 _ => return Err(("Expected string.", next.pos()).into()),
                             }
@@ -258,22 +251,14 @@ impl<'a> StyleSheetParser<'a> {
 
                             devour_whitespace(self.lexer);
 
-                            let (new_rules, new_scope) =
-                                import(self.path, file_name.as_ref(), &mut self.map)?;
+                            let (new_rules, new_scope) = import(self.path, file_name.as_ref(), &mut self.map)?;
                             rules.extend(new_rules);
                             GLOBAL_SCOPE.with(|s| {
                                 s.borrow_mut().extend(new_scope);
                             });
                         }
                         v => {
-                            let rule = AtRule::from_tokens(
-                                v,
-                                span,
-                                self.lexer,
-                                &mut Scope::new(),
-                                &Selector::new(),
-                                None,
-                            )?;
+                            let rule = AtRule::from_tokens(v, span, self.lexer, &mut Scope::new(), &Selector::new(), None)?;
                             match rule.node {
                                 AtRule::Mixin(name, mixin) => {
                                     insert_global_mixin(&name, *mixin);
@@ -289,36 +274,17 @@ impl<'a> StyleSheetParser<'a> {
                                         ("This at-rule is not allowed here.", rule.span).into()
                                     )
                                 }
-                                AtRule::For(f) => rules.extend(f.ruleset_eval(
-                                    &mut Scope::new(),
-                                    &Selector::new(),
-                                    None,
-                                )?),
-                                AtRule::While(w) => rules.extend(w.ruleset_eval(
-                                    &mut Scope::new(),
-                                    &Selector::new(),
-                                    true,
-                                    None,
-                                )?),
-                                AtRule::Each(e) => rules.extend(e.ruleset_eval(
-                                    &mut Scope::new(),
-                                    &Selector::new(),
-                                    None,
-                                )?),
-                                AtRule::Include(s) => rules.extend(s),
-                                AtRule::Content => {
-                                    return Err((
-                                        "@content is only allowed within mixin declarations.",
-                                        rule.span,
-                                    )
-                                        .into())
+                                AtRule::For(f) => rules.extend(f.ruleset_eval(&mut Scope::new(), &Selector::new(), None)?),
+                                AtRule::While(w) => rules.extend(w.ruleset_eval(&mut Scope::new(), &Selector::new(), true, None)?),
+                                AtRule::Each(e) => {
+                                    rules.extend(e.ruleset_eval(&mut Scope::new(), &Selector::new(), None)?)
                                 }
+                                AtRule::Include(s) => rules.extend(s),
+                                AtRule::Content => return Err(
+                                    ("@content is only allowed within mixin declarations.", rule.span
+                                ).into()),
                                 AtRule::If(i) => {
-                                    rules.extend(i.eval(
-                                        &mut Scope::new(),
-                                        &Selector::new(),
-                                        None,
-                                    )?);
+                                    rules.extend(i.eval(&mut Scope::new(), &Selector::new(), None)?);
                                 }
                                 AtRule::AtRoot(root_rules) => rules.extend(root_rules),
                                 AtRule::Unknown(..) => rules.push(rule.map_node(Stmt::AtRule)),
@@ -326,13 +292,11 @@ impl<'a> StyleSheetParser<'a> {
                             }
                         }
                     }
-                }
+                },
                 '&' => {
-                    return Err((
-                        "Top-level selectors may not contain the parent selector \"&\".",
-                        self.lexer.next().unwrap().pos(),
+                    return Err(
+                        ("Top-level selectors may not contain the parent selector \"&\".", self.lexer.next().unwrap().pos()).into(),
                     )
-                        .into())
                 }
                 c if c.is_control() => {
                     return Err(("expected selector.", self.lexer.next().unwrap().pos()).into());

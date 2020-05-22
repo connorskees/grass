@@ -16,7 +16,6 @@ use crate::builtin::GLOBAL_FUNCTIONS;
 use crate::color::{Color, NAMED_COLORS};
 use crate::common::{Brackets, ListSeparator, Op, QuoteKind};
 use crate::error::SassResult;
-use crate::interner::InternedString;
 use crate::scope::Scope;
 use crate::selector::Selector;
 use crate::unit::Unit;
@@ -59,10 +58,7 @@ fn parse_hex<I: Iterator<Item = Token>>(
             span = span.merge(i.span);
         } else {
             return Ok(Spanned {
-                node: Value::Ident(
-                    InternedString::get_or_intern(format!("#{}", i.node)),
-                    QuoteKind::None,
-                ),
+                node: Value::Ident(format!("#{}", i.node), QuoteKind::None),
                 span: i.span,
             });
         }
@@ -71,13 +67,7 @@ fn parse_hex<I: Iterator<Item = Token>>(
         3 => {
             let v = match u16::from_str_radix(&s, 16) {
                 Ok(a) => a,
-                Err(_) => {
-                    return Ok(Value::Ident(
-                        InternedString::get_or_intern(format!("#{}", s)),
-                        QuoteKind::None,
-                    )
-                    .span(span))
-                }
+                Err(_) => return Ok(Value::Ident(format!("#{}", s), QuoteKind::None).span(span)),
             };
             let red = (((v & 0xf00) >> 8) * 0x11) as u8;
             let green = (((v & 0x0f0) >> 4) * 0x11) as u8;
@@ -90,13 +80,7 @@ fn parse_hex<I: Iterator<Item = Token>>(
         4 => {
             let v = match u16::from_str_radix(&s, 16) {
                 Ok(a) => a,
-                Err(_) => {
-                    return Ok(Value::Ident(
-                        InternedString::get_or_intern(format!("#{}", s)),
-                        QuoteKind::None,
-                    )
-                    .span(span))
-                }
+                Err(_) => return Ok(Value::Ident(format!("#{}", s), QuoteKind::None).span(span)),
             };
             let red = (((v & 0xf000) >> 12) * 0x11) as u8;
             let green = (((v & 0x0f00) >> 8) * 0x11) as u8;
@@ -114,13 +98,7 @@ fn parse_hex<I: Iterator<Item = Token>>(
         6 => {
             let v = match u32::from_str_radix(&s, 16) {
                 Ok(a) => a,
-                Err(_) => {
-                    return Ok(Value::Ident(
-                        InternedString::get_or_intern(format!("#{}", s)),
-                        QuoteKind::None,
-                    )
-                    .span(span))
-                }
+                Err(_) => return Ok(Value::Ident(format!("#{}", s), QuoteKind::None).span(span)),
             };
             let red = ((v & 0x00ff_0000) >> 16) as u8;
             let green = ((v & 0x0000_ff00) >> 8) as u8;
@@ -133,13 +111,7 @@ fn parse_hex<I: Iterator<Item = Token>>(
         8 => {
             let v = match u32::from_str_radix(&s, 16) {
                 Ok(a) => a,
-                Err(_) => {
-                    return Ok(Value::Ident(
-                        InternedString::get_or_intern(format!("#{}", s)),
-                        QuoteKind::None,
-                    )
-                    .span(span))
-                }
+                Err(_) => return Ok(Value::Ident(format!("#{}", s), QuoteKind::None).span(span)),
             };
             let red = ((v & 0xff00_0000) >> 24) as u8;
             let green = ((v & 0x00ff_0000) >> 16) as u8;
@@ -293,10 +265,7 @@ fn eat_op<I: Iterator<Item = Token>>(
                 devour_whitespace(iter);
                 space_separated.push(Spanned {
                     node: Value::Ident(
-                        InternedString::get_or_intern(format!(
-                            "/{}",
-                            right.node.to_css_string(right.span)?
-                        )),
+                        format!("/{}", right.node.to_css_string(right.span)?),
                         QuoteKind::None,
                     ),
                     span: op.span.merge(right.span),
@@ -340,13 +309,7 @@ fn eat_op<I: Iterator<Item = Token>>(
             devour_whitespace(iter);
             // special case when the value is literally "and" or "or"
             if iter.peek().is_none() {
-                space_separated.push(
-                    Value::Ident(
-                        InternedString::get_or_intern(op.to_string()),
-                        QuoteKind::None,
-                    )
-                    .span(op.span),
-                );
+                space_separated.push(Value::Ident(op.to_string(), QuoteKind::None).span(op.span));
             } else if let Some(left) = space_separated.pop() {
                 devour_whitespace(iter);
                 let right = single_value(iter, scope, super_selector, left.span)?;
@@ -409,23 +372,30 @@ fn single_value<I: Iterator<Item = Token>>(
                 let val = single_value(iter, scope, super_selector, span)?;
                 Spanned {
                     node: Value::Ident(
-                        InternedString::get_or_intern(format!(
-                            "/{}",
-                            val.node.to_css_string(val.span)?
-                        )),
+                        format!("/{}", val.node.to_css_string(val.span)?),
                         QuoteKind::None,
                     ),
                     span: next.span.merge(val.span),
                 }
             }
-            Op::And => Spanned {
-                node: Value::Ident(InternedString::get_or_intern("and"), QuoteKind::None),
-                span: next.span,
-            },
-            Op::Or => Spanned {
-                node: Value::Ident(InternedString::get_or_intern("or"), QuoteKind::None),
-                span: next.span,
-            },
+            Op::And => {
+                Spanned {
+                    node: Value::Ident(
+                        "and".into(),
+                        QuoteKind::None,
+                    ),
+                    span: next.span,
+                }
+            }
+            Op::Or => {
+                Spanned {
+                    node: Value::Ident(
+                        "or".into(),
+                        QuoteKind::None,
+                    ),
+                    span: next.span,
+                }
+            }
             _ => {
                 return Err(("Expected expression.", next.span).into());
             }
@@ -599,20 +569,15 @@ impl Value {
     ) -> SassResult<Spanned<IntermediateValue>> {
         let Spanned { node: mut s, span } = eat_ident(toks, scope, super_selector, span_before)?;
 
-        let lower = dbg!(InternedString::get_or_intern(s.to_ascii_lowercase()));
+        let lower = s.to_ascii_lowercase();
 
-        if lower.resolve_ref() == "progid"
-            && toks.peek().is_some()
-            && toks.peek().unwrap().kind == ':'
-        {
-            s = "progid:".to_string();
+        if lower == "progid" && toks.peek().is_some() && toks.peek().unwrap().kind == ':' {
+            s = lower;
             toks.next();
+            s.push(':');
             s.push_str(&eat_progid(toks, scope, super_selector)?);
             return Ok(Spanned {
-                node: IntermediateValue::Value(Value::Ident(
-                    InternedString::get_or_intern(s),
-                    QuoteKind::None,
-                )),
+                node: IntermediateValue::Value(Value::Ident(s, QuoteKind::None)),
                 span,
             });
         }
@@ -634,9 +599,9 @@ impl Value {
                         .span(span))
                     }
                     None => {
-                        match lower.resolve_ref() {
+                        match lower.as_str() {
                             "calc" | "element" | "expression" => {
-                                s = lower.resolve().to_string();
+                                s = lower;
                                 eat_calc_args(toks, scope, super_selector, &mut s)?;
                             }
                             // "min" => {}
@@ -651,11 +616,9 @@ impl Value {
                                 &eat_call_args(toks)?.to_css_string(scope, super_selector)?,
                             ),
                         }
-                        return Ok(IntermediateValue::Value(Value::Ident(
-                            InternedString::get_or_intern(s),
-                            QuoteKind::None,
-                        ))
-                        .span(span));
+                        return Ok(
+                            IntermediateValue::Value(Value::Ident(s, QuoteKind::None)).span(span)
+                        );
                     }
                 },
             };
@@ -667,24 +630,21 @@ impl Value {
             .span(span));
         }
 
-        if let Some(c) = NAMED_COLORS.get_by_name(lower) {
+        if let Some(c) = NAMED_COLORS.get_by_name(&lower.as_str()) {
             return Ok(IntermediateValue::Value(Value::Color(Box::new(Color::new(
                 c[0], c[1], c[2], c[3], s,
             ))))
             .span(span));
         }
 
-        Ok(match dbg!(lower.resolve_ref()) {
+        Ok(match lower.as_str() {
             "true" => IntermediateValue::Value(Value::True),
             "false" => IntermediateValue::Value(Value::False),
             "null" => IntermediateValue::Value(Value::Null),
             "not" => IntermediateValue::Op(Op::Not),
             "and" => IntermediateValue::Op(Op::And),
             "or" => IntermediateValue::Op(Op::Or),
-            _ => IntermediateValue::Value(Value::Ident(
-                InternedString::get_or_intern(s),
-                QuoteKind::None,
-            )),
+            _ => IntermediateValue::Value(Value::Ident(s, QuoteKind::None)),
         }
         .span(span))
     }

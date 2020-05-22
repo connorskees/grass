@@ -3,7 +3,6 @@ use peekmore::PeekMoreIterator;
 use codemap::{Span, Spanned};
 
 use crate::error::SassResult;
-use crate::interner::InternedString;
 use crate::scope::Scope;
 use crate::selector::Selector;
 use crate::utils::{devour_whitespace, devour_whitespace_or_comment, eat_ident};
@@ -13,7 +12,7 @@ use crate::{Expr, Token};
 /// A style: `color: red`
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Style {
-    pub property: InternedString,
+    pub property: String,
     pub value: Spanned<Value>,
 }
 
@@ -22,9 +21,9 @@ impl Style {
         toks: &mut PeekMoreIterator<I>,
         scope: &Scope,
         super_selector: &Selector,
-        super_property: InternedString,
+        super_property: String,
         span_before: Span,
-    ) -> SassResult<InternedString> {
+    ) -> SassResult<String> {
         StyleParser::new(scope, super_selector).parse_property(toks, super_property, span_before)
     }
 
@@ -58,7 +57,7 @@ impl Style {
         toks: &mut PeekMoreIterator<I>,
         scope: &Scope,
         super_selector: &Selector,
-        super_property: InternedString,
+        super_property: String,
     ) -> SassResult<Expr> {
         StyleParser::new(scope, super_selector).eat_style_group(toks, super_property, scope)
     }
@@ -89,7 +88,7 @@ impl<'a> StyleParser<'a> {
     pub(crate) fn eat_style_group<I: Iterator<Item = Token>>(
         &self,
         toks: &mut PeekMoreIterator<I>,
-        super_property: InternedString,
+        super_property: String,
         scope: &Scope,
     ) -> SassResult<Expr> {
         let mut styles = Vec::new();
@@ -100,7 +99,8 @@ impl<'a> StyleParser<'a> {
                     let span_before = toks.next().unwrap().pos;
                     devour_whitespace(toks);
                     loop {
-                        let property = self.parse_property(toks, super_property, span_before)?;
+                        let property =
+                            self.parse_property(toks, super_property.clone(), span_before)?;
                         if let Some(tok) = toks.peek() {
                             if tok.kind == '{' {
                                 match self.eat_style_group(toks, property, scope)? {
@@ -133,7 +133,7 @@ impl<'a> StyleParser<'a> {
                             }
                             '{' => {
                                 styles.push(Style {
-                                    property: property,
+                                    property: property.clone(),
                                     value,
                                 });
                                 match self.eat_style_group(toks, property, scope)? {
@@ -170,7 +170,7 @@ impl<'a> StyleParser<'a> {
                         }
                         '{' => {
                             let mut v = vec![Style {
-                                property: super_property,
+                                property: super_property.clone(),
                                 value,
                             }];
                             match self.eat_style_group(toks, super_property, scope)? {
@@ -195,9 +195,9 @@ impl<'a> StyleParser<'a> {
     pub(crate) fn parse_property<I: Iterator<Item = Token>>(
         &self,
         toks: &mut PeekMoreIterator<I>,
-        super_property: InternedString,
+        mut super_property: String,
         span_before: Span,
-    ) -> SassResult<InternedString> {
+    ) -> SassResult<String> {
         devour_whitespace(toks);
         let property = eat_ident(toks, self.scope, self.super_selector, span_before)?;
         devour_whitespace_or_comment(toks)?;
@@ -209,13 +209,12 @@ impl<'a> StyleParser<'a> {
         }
 
         if super_property.is_empty() {
-            Ok(InternedString::get_or_intern(property.node))
+            Ok(property.node)
         } else {
-            let mut super_property = super_property.resolve().to_string();
             super_property.reserve(1 + property.node.len());
             super_property.push('-');
             super_property.push_str(&property.node);
-            Ok(InternedString::get_or_intern(super_property))
+            Ok(super_property)
         }
     }
 }

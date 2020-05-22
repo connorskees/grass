@@ -7,7 +7,6 @@ use codemap::Span;
 use super::{Selector, SelectorKind};
 use crate::common::{QualifiedName, QuoteKind};
 use crate::error::SassResult;
-use crate::interner::InternedString;
 use crate::scope::Scope;
 use crate::utils::{devour_whitespace, eat_ident, is_ident, parse_quoted_string};
 use crate::value::Value;
@@ -125,7 +124,7 @@ impl Attribute {
             q @ '\'' | q @ '"' => {
                 toks.next();
                 match parse_quoted_string(toks, scope, q, super_selector)?.node {
-                    Value::Ident(s, ..) => s.resolve().to_string(),
+                    Value::Ident(s, ..) => s,
                     _ => unreachable!(),
                 }
             }
@@ -181,12 +180,9 @@ impl Display for Attribute {
                 // or having special emitter for quoted strings?
                 // (also avoids the clone because we can consume/modify self)
                 f.write_str(
-                    &Value::Ident(
-                        InternedString::get_or_intern(self.value.clone()),
-                        QuoteKind::Quoted,
-                    )
-                    .to_css_string(self.span)
-                    .unwrap(),
+                    &Value::Ident(self.value.clone(), QuoteKind::Quoted)
+                        .to_css_string(self.span)
+                        .unwrap(),
                 )?;
                 // todo: this space is not emitted when `compressed` output
                 if self.modifier.is_some() {

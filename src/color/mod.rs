@@ -17,7 +17,6 @@
 
 use std::fmt::{self, Display};
 
-use crate::interner::InternedString;
 use crate::value::Number;
 pub(crate) use name::NAMED_COLORS;
 
@@ -469,14 +468,14 @@ impl Color {
 
 /// Other color functions
 impl Color {
-    pub fn to_ie_hex_str(&self) -> InternedString {
-        InternedString::get_or_intern(format!(
+    pub fn to_ie_hex_str(&self) -> String {
+        format!(
             "#{:X}{:X}{:X}{:X}",
             (self.alpha() * Number::from(255)).round().to_integer(),
             self.red().to_integer(),
             self.green().to_integer(),
             self.blue().to_integer()
-        ))
+        )
     }
 }
 

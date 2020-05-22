@@ -4,7 +4,6 @@ use peekmore::{PeekMore, PeekMoreIterator};
 
 use crate::common::{Brackets, ListSeparator, QuoteKind};
 use crate::error::SassResult;
-use crate::interner::InternedString;
 use crate::scope::Scope;
 use crate::utils::{
     devour_whitespace, eat_comment, eat_ident_no_interpolation, parse_interpolation,
@@ -58,12 +57,7 @@ impl SelectorPart {
         Value::List(
             kinds
                 .iter()
-                .map(|s| {
-                    Value::Ident(
-                        InternedString::get_or_intern(s.to_string()),
-                        QuoteKind::None,
-                    )
-                })
+                .map(|s| Value::Ident(s.to_string(), QuoteKind::None))
                 .collect(),
             ListSeparator::Space,
             Brackets::None,

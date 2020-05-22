@@ -5,7 +5,6 @@ use codemap::Spanned;
 use crate::args::CallArgs;
 use crate::common::QuoteKind;
 use crate::error::SassResult;
-use crate::interner::InternedString;
 use crate::scope::global_var_exists;
 use crate::scope::Scope;
 use crate::selector::Selector;
@@ -28,7 +27,7 @@ fn feature_exists(
 ) -> SassResult<Value> {
     args.max_args(1)?;
     match arg!(args, scope, super_selector, 0, "feature") {
-        Value::Ident(s, _) => Ok(match s.resolve_ref() {
+        Value::Ident(s, _) => Ok(match s.as_str() {
             // A local variable will shadow a global variable unless
             // `!global` is used.
             "global-variable-shadowing" => Value::True,
@@ -72,17 +71,14 @@ fn unit(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassRes
                 .into())
         }
     };
-    Ok(Value::Ident(
-        InternedString::get_or_intern(unit),
-        QuoteKind::Quoted,
-    ))
+    Ok(Value::Ident(unit, QuoteKind::Quoted))
 }
 
 fn type_of(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
     args.max_args(1)?;
     let value = arg!(args, scope, super_selector, 0, "value");
     Ok(Value::Ident(
-        InternedString::get_or_intern(value.kind(args.span())?),
+        value.kind(args.span())?.to_owned(),
         QuoteKind::None,
     ))
 }
@@ -99,9 +95,9 @@ fn unitless(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> Sas
 fn inspect(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
     args.max_args(1)?;
     Ok(Value::Ident(
-        InternedString::get_or_intern(
-            arg!(args, scope, super_selector, 0, "value").inspect(args.span())?,
-        ),
+        arg!(args, scope, super_selector, 0, "value")
+            .inspect(args.span())?
+            .into(),
         QuoteKind::None,
     ))
 }
@@ -113,7 +109,7 @@ fn variable_exists(
 ) -> SassResult<Value> {
     args.max_args(1)?;
     match arg!(args, scope, super_selector, 0, "name") {
-        Value::Ident(s, _) => Ok(Value::bool(scope.var_exists(s))),
+        Value::Ident(s, _) => Ok(Value::bool(scope.var_exists(&s))),
         v => Err((
             format!("$name: {} is not a string.", v.to_css_string(args.span())?),
             args.span(),
@@ -129,7 +125,7 @@ fn global_variable_exists(
 ) -> SassResult<Value> {
     args.max_args(1)?;
     match arg!(args, scope, super_selector, 0, "name") {
-        Value::Ident(s, _) => Ok(Value::bool(global_var_exists(s))),
+        Value::Ident(s, _) => Ok(Value::bool(global_var_exists(&s))),
         v => Err((
             format!("$name: {} is not a string.", v.to_css_string(args.span())?),
             args.span(),
@@ -141,7 +137,7 @@ fn global_variable_exists(
 fn mixin_exists(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
     args.max_args(2)?;
     match arg!(args, scope, super_selector, 0, "name") {
-        Value::Ident(s, _) => Ok(Value::bool(scope.mixin_exists(s))),
+        Value::Ident(s, _) => Ok(Value::bool(scope.mixin_exists(&s))),
         v => Err((
             format!("$name: {} is not a string.", v.to_css_string(args.span())?),
             args.span(),
@@ -157,7 +153,9 @@ fn function_exists(
 ) -> SassResult<Value> {
     args.max_args(2)?;
     match arg!(args, scope, super_selector, 0, "name") {
-        Value::Ident(s, _) => Ok(Value::bool(scope.fn_exists(s))),
+        Value::Ident(s, _) => Ok(Value::bool(
+            scope.fn_exists(&s) || GLOBAL_FUNCTIONS.contains_key(s.as_str()),
+        )),
         v => Err((
             format!("$name: {} is not a string.", v.to_css_string(args.span())?),
             args.span(),
@@ -203,12 +201,12 @@ fn get_function(mut args: CallArgs, scope: &Scope, super_selector: &Selector) ->
     }
 
     let func = match scope.get_fn(Spanned {
-        node: name,
+        node: name.clone(),
         span: args.span(),
     }) {
-        Ok(f) => SassFunction::UserDefined(Box::new(f), name.into()),
-        Err(..) => match GLOBAL_FUNCTIONS.get(&name.resolve_ref()) {
-            Some(f) => SassFunction::Builtin(f.clone(), name.into()),
+        Ok(f) => SassFunction::UserDefined(Box::new(f), name),
+        Err(..) => match GLOBAL_FUNCTIONS.get(name.as_str()) {
+            Some(f) => SassFunction::Builtin(f.clone(), name),
             None => return Err((format!("Function not found: {}", name), args.span()).into()),
         },
     };

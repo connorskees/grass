@@ -6,7 +6,6 @@ use crate::args::CallArgs;
 use crate::color::Color;
 use crate::common::QuoteKind;
 use crate::error::SassResult;
-use crate::interner::InternedString;
 use crate::scope::Scope;
 use crate::selector::Selector;
 use crate::unit::Unit;
@@ -108,10 +107,7 @@ fn inner_hsl(
                     );
                 }
                 string.push(')');
-                return Ok(Value::Ident(
-                    InternedString::get_or_intern(string),
-                    QuoteKind::None,
-                ));
+                return Ok(Value::Ident(string, QuoteKind::None));
             }
             v => {
                 return Err((
@@ -140,10 +136,7 @@ fn inner_hsl(
                     );
                 }
                 string.push(')');
-                return Ok(Value::Ident(
-                    InternedString::get_or_intern(string),
-                    QuoteKind::None,
-                ));
+                return Ok(Value::Ident(string, QuoteKind::None));
             }
             v => {
                 return Err((
@@ -174,10 +167,7 @@ fn inner_hsl(
                     );
                 }
                 string.push(')');
-                return Ok(Value::Ident(
-                    InternedString::get_or_intern(string),
-                    QuoteKind::None,
-                ));
+                return Ok(Value::Ident(string, QuoteKind::None));
             }
             v => {
                 return Err((
@@ -211,14 +201,14 @@ fn inner_hsl(
             }
             v if v.is_special_function() => {
                 return Ok(Value::Ident(
-                    InternedString::get_or_intern(format!(
+                    format!(
                         "{}({}, {}, {}, {})",
                         name,
                         hue,
                         saturation,
                         lightness,
                         v.to_css_string(args.span())?
-                    )),
+                    ),
                     QuoteKind::None,
                 ));
             }
@@ -368,10 +358,10 @@ fn saturate(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> Sas
     args.max_args(2)?;
     if args.len() == 1 {
         return Ok(Value::Ident(
-            InternedString::get_or_intern(format!(
+            format!(
                 "saturate({})",
                 arg!(args, scope, super_selector, 0, "amount").to_css_string(args.span())?
-            )),
+            ),
             QuoteKind::None,
         ));
     }
@@ -393,7 +383,7 @@ fn saturate(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> Sas
         Value::Color(c) => c,
         Value::Dimension(n, u) => {
             return Ok(Value::Ident(
-                InternedString::get_or_intern(format!("saturate({}{})", n, u)),
+                format!("saturate({}{})", n, u),
                 QuoteKind::None,
             ))
         }
@@ -442,7 +432,7 @@ fn grayscale(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> Sa
         Value::Color(c) => c,
         Value::Dimension(n, u) => {
             return Ok(Value::Ident(
-                InternedString::get_or_intern(format!("grayscale({}{})", n, u)),
+                format!("grayscale({}{})", n, u),
                 QuoteKind::None,
             ))
         }
@@ -495,10 +485,9 @@ fn invert(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassR
     };
     match arg!(args, scope, super_selector, 0, "color") {
         Value::Color(c) => Ok(Value::Color(Box::new(c.invert(weight)))),
-        Value::Dimension(n, Unit::Percent) => Ok(Value::Ident(
-            InternedString::get_or_intern(format!("invert({}%)", n)),
-            QuoteKind::None,
-        )),
+        Value::Dimension(n, Unit::Percent) => {
+            Ok(Value::Ident(format!("invert({}%)", n), QuoteKind::None))
+        }
         Value::Dimension(..) => Err((
             "Only one argument may be passed to the plain-CSS invert() function.",
             args.span(),
