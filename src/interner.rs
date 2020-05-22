@@ -50,6 +50,6 @@ impl InternedString {
 
 impl Display for InternedString {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.resolve())
+        STRINGS.with(|interner| write!(f, "{}", interner.borrow().resolve(&self.0)))
     }
 }
