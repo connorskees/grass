@@ -124,7 +124,7 @@ impl Attribute {
             q @ '\'' | q @ '"' => {
                 toks.next();
                 match parse_quoted_string(toks, scope, q, super_selector)?.node {
-                    Value::Ident(s, ..) => s,
+                    Value::String(s, ..) => s,
                     _ => unreachable!(),
                 }
             }
@@ -180,7 +180,7 @@ impl Display for Attribute {
                 // or having special emitter for quoted strings?
                 // (also avoids the clone because we can consume/modify self)
                 f.write_str(
-                    &Value::Ident(self.value.clone(), QuoteKind::Quoted)
+                    &Value::String(self.value.clone(), QuoteKind::Quoted)
                         .to_css_string(self.span)
                         .unwrap(),
                 )?;

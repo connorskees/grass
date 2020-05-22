@@ -33,7 +33,7 @@ pub(crate) enum Value {
     UnaryOp(Op, Box<Value>),
     BinaryOp(Box<Value>, Op, Box<Value>),
     Paren(Box<Value>),
-    Ident(String, QuoteKind),
+    String(String, QuoteKind),
     Map(SassMap),
     ArgList(Vec<Spanned<Value>>),
     /// Returned by `get-function()`
@@ -111,7 +111,7 @@ impl Value {
     pub fn is_null(&self, span: Span) -> SassResult<bool> {
         Ok(match self {
             &Value::Null => true,
-            Value::Ident(i, QuoteKind::None) if i.is_empty() => true,
+            Value::String(i, QuoteKind::None) if i.is_empty() => true,
             Self::BinaryOp(..) | Self::Paren(..) | Self::UnaryOp(..) => {
                 self.clone().eval(span)?.is_null(span)?
             }
@@ -166,7 +166,7 @@ impl Value {
                 self.clone().eval(span)?.to_css_string(span)?
             }
             Self::Paren(val) => val.to_css_string(span)?,
-            Self::Ident(string, QuoteKind::None) => {
+            Self::String(string, QuoteKind::None) => {
                 let mut after_newline = false;
                 let mut buf = String::with_capacity(string.len());
                 for c in string.chars() {
@@ -188,7 +188,7 @@ impl Value {
                 }
                 Cow::Owned(buf)
             }
-            Self::Ident(string, QuoteKind::Quoted) => {
+            Self::String(string, QuoteKind::Quoted) => {
                 let mut buf = String::with_capacity(string.len());
                 visit_quoted_string(&mut buf, false, string)?;
                 Cow::Owned(buf)
@@ -218,7 +218,7 @@ impl Value {
 
     pub fn unquote(self) -> Self {
         match self {
-            Self::Ident(s1, _) => Self::Ident(s1, QuoteKind::None),
+            Self::String(s1, _) => Self::String(s1, QuoteKind::None),
             Self::List(v, sep, bracket) => {
                 Self::List(v.into_iter().map(Value::unquote).collect(), sep, bracket)
             }
@@ -233,7 +233,7 @@ impl Value {
     pub fn kind(&self, span: Span) -> SassResult<&'static str> {
         match self {
             Self::Color(..) => Ok("color"),
-            Self::Ident(..) | Self::Important => Ok("string"),
+            Self::String(..) | Self::Important => Ok("string"),
             Self::Dimension(..) => Ok("number"),
             Self::List(..) => Ok("list"),
             Self::Function(..) => Ok("function"),
@@ -249,7 +249,7 @@ impl Value {
 
     pub fn is_special_function(&self) -> bool {
         match self {
-            Self::Ident(s, QuoteKind::None) => is_special_function(s),
+            Self::String(s, QuoteKind::None) => is_special_function(s),
             _ => false,
         }
     }

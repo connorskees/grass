@@ -345,7 +345,7 @@ fn ie_hex_str(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> S
                 .into())
         }
     };
-    Ok(Value::Ident(color.to_ie_hex_str(), QuoteKind::None))
+    Ok(Value::String(color.to_ie_hex_str(), QuoteKind::None))
 }
 
 pub(crate) fn declare(f: &mut GlobalFunctionMap) {

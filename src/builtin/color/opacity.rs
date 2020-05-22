@@ -25,7 +25,7 @@ fn opacity(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> Sass
     args.max_args(1)?;
     match arg!(args, scope, super_selector, 0, "color") {
         Value::Color(c) => Ok(Value::Dimension(c.alpha(), Unit::None)),
-        Value::Dimension(num, unit) => Ok(Value::Ident(
+        Value::Dimension(num, unit) => Ok(Value::String(
             format!("opacity({}{})", num, unit),
             QuoteKind::None,
         )),

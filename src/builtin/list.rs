@@ -71,7 +71,7 @@ fn list_separator(
     super_selector: &Selector,
 ) -> SassResult<Value> {
     args.max_args(1)?;
-    Ok(Value::Ident(
+    Ok(Value::String(
         match arg!(args, scope, super_selector, 0, "list") {
             Value::List(_, sep, ..) => sep.name(),
             _ => ListSeparator::Space.name(),
@@ -140,9 +140,9 @@ fn append(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassR
         scope,
         super_selector,
         2,
-        "separator" = Value::Ident("auto".to_owned(), QuoteKind::None)
+        "separator" = Value::String("auto".to_owned(), QuoteKind::None)
     ) {
-        Value::Ident(s, ..) => match s.as_str() {
+        Value::String(s, ..) => match s.as_str() {
             "auto" => sep,
             "comma" => ListSeparator::Comma,
             "space" => ListSeparator::Space,
@@ -188,9 +188,9 @@ fn join(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassRes
         scope,
         super_selector,
         2,
-        "separator" = Value::Ident("auto".to_owned(), QuoteKind::None)
+        "separator" = Value::String("auto".to_owned(), QuoteKind::None)
     ) {
-        Value::Ident(s, ..) => match s.as_str() {
+        Value::String(s, ..) => match s.as_str() {
             "auto" => {
                 if list1.is_empty() || (list1.len() == 1 && sep1 == ListSeparator::Space) {
                     sep2
@@ -225,9 +225,9 @@ fn join(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassRes
         scope,
         super_selector,
         3,
-        "bracketed" = Value::Ident("auto".to_owned(), QuoteKind::None)
+        "bracketed" = Value::String("auto".to_owned(), QuoteKind::None)
     ) {
-        Value::Ident(s, ..) => match s.as_str() {
+        Value::String(s, ..) => match s.as_str() {
             "auto" => brackets,
             _ => Brackets::Bracketed,
         },

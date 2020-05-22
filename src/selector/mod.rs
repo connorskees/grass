@@ -57,7 +57,7 @@ impl SelectorPart {
         Value::List(
             kinds
                 .iter()
-                .map(|s| Value::Ident(s.to_string(), QuoteKind::None))
+                .map(|s| Value::String(s.to_string(), QuoteKind::None))
                 .collect(),
             ListSeparator::Space,
             Brackets::None,

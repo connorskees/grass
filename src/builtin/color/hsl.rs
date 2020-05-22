@@ -107,7 +107,7 @@ fn inner_hsl(
                     );
                 }
                 string.push(')');
-                return Ok(Value::Ident(string, QuoteKind::None));
+                return Ok(Value::String(string, QuoteKind::None));
             }
             v => {
                 return Err((
@@ -136,7 +136,7 @@ fn inner_hsl(
                     );
                 }
                 string.push(')');
-                return Ok(Value::Ident(string, QuoteKind::None));
+                return Ok(Value::String(string, QuoteKind::None));
             }
             v => {
                 return Err((
@@ -167,7 +167,7 @@ fn inner_hsl(
                     );
                 }
                 string.push(')');
-                return Ok(Value::Ident(string, QuoteKind::None));
+                return Ok(Value::String(string, QuoteKind::None));
             }
             v => {
                 return Err((
@@ -200,7 +200,7 @@ fn inner_hsl(
                     .into())
             }
             v if v.is_special_function() => {
-                return Ok(Value::Ident(
+                return Ok(Value::String(
                     format!(
                         "{}({}, {}, {}, {})",
                         name,
@@ -357,7 +357,7 @@ fn darken(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassR
 fn saturate(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
     args.max_args(2)?;
     if args.len() == 1 {
-        return Ok(Value::Ident(
+        return Ok(Value::String(
             format!(
                 "saturate({})",
                 arg!(args, scope, super_selector, 0, "amount").to_css_string(args.span())?
@@ -382,7 +382,7 @@ fn saturate(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> Sas
     let color = match arg!(args, scope, super_selector, 0, "color") {
         Value::Color(c) => c,
         Value::Dimension(n, u) => {
-            return Ok(Value::Ident(
+            return Ok(Value::String(
                 format!("saturate({}{})", n, u),
                 QuoteKind::None,
             ))
@@ -431,7 +431,7 @@ fn grayscale(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> Sa
     let color = match arg!(args, scope, super_selector, 0, "color") {
         Value::Color(c) => c,
         Value::Dimension(n, u) => {
-            return Ok(Value::Ident(
+            return Ok(Value::String(
                 format!("grayscale({}{})", n, u),
                 QuoteKind::None,
             ))
@@ -486,7 +486,7 @@ fn invert(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassR
     match arg!(args, scope, super_selector, 0, "color") {
         Value::Color(c) => Ok(Value::Color(Box::new(c.invert(weight)))),
         Value::Dimension(n, Unit::Percent) => {
-            Ok(Value::Ident(format!("invert({}%)", n), QuoteKind::None))
+            Ok(Value::String(format!("invert({}%)", n), QuoteKind::None))
         }
         Value::Dimension(..) => Err((
             "Only one argument may be passed to the plain-CSS invert() function.",

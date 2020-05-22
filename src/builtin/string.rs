@@ -21,9 +21,9 @@ fn to_upper_case(
 ) -> SassResult<Value> {
     args.max_args(1)?;
     match arg!(args, scope, super_selector, 0, "string") {
-        Value::Ident(mut i, q) => {
+        Value::String(mut i, q) => {
             i.make_ascii_uppercase();
-            Ok(Value::Ident(i, q))
+            Ok(Value::String(i, q))
         }
         v => Err((
             format!(
@@ -43,9 +43,9 @@ fn to_lower_case(
 ) -> SassResult<Value> {
     args.max_args(1)?;
     match arg!(args, scope, super_selector, 0, "string") {
-        Value::Ident(mut i, q) => {
+        Value::String(mut i, q) => {
             i.make_ascii_lowercase();
-            Ok(Value::Ident(i, q))
+            Ok(Value::String(i, q))
         }
         v => Err((
             format!(
@@ -61,7 +61,7 @@ fn to_lower_case(
 fn str_length(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
     args.max_args(1)?;
     match arg!(args, scope, super_selector, 0, "string") {
-        Value::Ident(i, _) => Ok(Value::Dimension(
+        Value::String(i, _) => Ok(Value::Dimension(
             Number::from(i.chars().count()),
             Unit::None,
         )),
@@ -79,7 +79,7 @@ fn str_length(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> S
 fn quote(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
     args.max_args(1)?;
     match arg!(args, scope, super_selector, 0, "string") {
-        Value::Ident(i, _) => Ok(Value::Ident(i, QuoteKind::Quoted)),
+        Value::String(i, _) => Ok(Value::String(i, QuoteKind::Quoted)),
         v => Err((
             format!(
                 "$string: {} is not a string.",
@@ -94,7 +94,7 @@ fn quote(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassRe
 fn unquote(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
     args.max_args(1)?;
     match arg!(args, scope, super_selector, 0, "string") {
-        i @ Value::Ident(..) => Ok(i.unquote()),
+        i @ Value::String(..) => Ok(i.unquote()),
         v => Err((
             format!(
                 "$string: {} is not a string.",
@@ -109,7 +109,7 @@ fn unquote(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> Sass
 fn str_slice(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
     args.max_args(3)?;
     let (string, quotes) = match arg!(args, scope, super_selector, 0, "string") {
-        Value::Ident(s, q) => (s, q),
+        Value::String(s, q) => (s, q),
         v => {
             return Err((
                 format!(
@@ -195,9 +195,9 @@ fn str_slice(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> Sa
     }
 
     if start > end || start > str_len {
-        Ok(Value::Ident(String::new(), quotes))
+        Ok(Value::String(String::new(), quotes))
     } else {
-        Ok(Value::Ident(
+        Ok(Value::String(
             string
                 .chars()
                 .skip(start - 1)
@@ -211,7 +211,7 @@ fn str_slice(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> Sa
 fn str_index(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
     args.max_args(2)?;
     let s1 = match arg!(args, scope, super_selector, 0, "string") {
-        Value::Ident(i, _) => i,
+        Value::String(i, _) => i,
         v => {
             return Err((
                 format!(
@@ -225,7 +225,7 @@ fn str_index(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> Sa
     };
 
     let substr = match arg!(args, scope, super_selector, 1, "substring") {
-        Value::Ident(i, _) => i,
+        Value::String(i, _) => i,
         v => {
             return Err((
                 format!(
@@ -247,7 +247,7 @@ fn str_index(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> Sa
 fn str_insert(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
     args.max_args(3)?;
     let (s1, quotes) = match arg!(args, scope, super_selector, 0, "string") {
-        Value::Ident(i, q) => (i, q),
+        Value::String(i, q) => (i, q),
         v => {
             return Err((
                 format!(
@@ -261,7 +261,7 @@ fn str_insert(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> S
     };
 
     let substr = match arg!(args, scope, super_selector, 1, "insert") {
-        Value::Ident(i, _) => i,
+        Value::String(i, _) => i,
         v => {
             return Err((
                 format!(
@@ -299,7 +299,7 @@ fn str_insert(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> S
     };
 
     if s1.is_empty() {
-        return Ok(Value::Ident(substr, quotes));
+        return Ok(Value::String(substr, quotes));
     }
 
     let len = s1.chars().count();
@@ -342,7 +342,7 @@ fn str_insert(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> S
         }
     };
 
-    Ok(Value::Ident(string, quotes))
+    Ok(Value::String(string, quotes))
 }
 
 #[cfg(feature = "random")]
@@ -353,7 +353,7 @@ fn unique_id(args: CallArgs, _: &Scope, _: &Selector) -> SassResult<Value> {
         .map(|()| rng.sample(Alphanumeric))
         .take(7)
         .collect();
-    Ok(Value::Ident(string, QuoteKind::None))
+    Ok(Value::String(string, QuoteKind::None))
 }
 
 pub(crate) fn declare(f: &mut GlobalFunctionMap) {

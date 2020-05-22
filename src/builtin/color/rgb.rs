@@ -45,7 +45,7 @@ fn inner_rgb(
             Some(v) if v.is_special_function() => {
                 let green = channels.pop().unwrap();
                 let red = channels.pop().unwrap();
-                return Ok(Value::Ident(
+                return Ok(Value::String(
                     format!(
                         "{}({}, {}, {})",
                         name,
@@ -80,7 +80,7 @@ fn inner_rgb(
                     ),
                     None => format!("{}({} {})", name, v.to_css_string(args.span())?, blue),
                 };
-                return Ok(Value::Ident(string, QuoteKind::None));
+                return Ok(Value::String(string, QuoteKind::None));
             }
             Some(v) => {
                 return Err((
@@ -96,7 +96,7 @@ fn inner_rgb(
             Some(Value::Dimension(n, Unit::None)) => n,
             Some(Value::Dimension(n, Unit::Percent)) => (n / Number::from(100)) * Number::from(255),
             Some(v) if v.is_special_function() => {
-                return Ok(Value::Ident(
+                return Ok(Value::String(
                     format!(
                         "{}({}, {}, {})",
                         name,
@@ -125,7 +125,7 @@ fn inner_rgb(
             Value::Color(c) => c,
             v if v.is_special_function() => {
                 let alpha = arg!(args, scope, super_selector, 1, "alpha");
-                return Ok(Value::Ident(
+                return Ok(Value::String(
                     format!(
                         "{}({}, {})",
                         name,
@@ -157,7 +157,7 @@ fn inner_rgb(
                     .into())
             }
             v if v.is_special_function() => {
-                return Ok(Value::Ident(
+                return Ok(Value::String(
                     format!(
                         "{}({}, {}, {}, {})",
                         name,
@@ -210,7 +210,7 @@ fn inner_rgb(
                     );
                 }
                 string.push(')');
-                return Ok(Value::Ident(string, QuoteKind::None));
+                return Ok(Value::String(string, QuoteKind::None));
             }
             v => {
                 return Err((
@@ -250,7 +250,7 @@ fn inner_rgb(
                     );
                 }
                 string.push(')');
-                return Ok(Value::Ident(string, QuoteKind::None));
+                return Ok(Value::String(string, QuoteKind::None));
             }
             v => {
                 return Err((
@@ -289,7 +289,7 @@ fn inner_rgb(
                     );
                 }
                 string.push(')');
-                return Ok(Value::Ident(string, QuoteKind::None));
+                return Ok(Value::String(string, QuoteKind::None));
             }
             v => {
                 return Err((
@@ -327,7 +327,7 @@ fn inner_rgb(
                     blue,
                     v.to_css_string(args.span())?
                 );
-                return Ok(Value::Ident(string, QuoteKind::None));
+                return Ok(Value::String(string, QuoteKind::None));
             }
             v => {
                 return Err((
