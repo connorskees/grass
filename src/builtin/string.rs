@@ -9,7 +9,7 @@ use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use crate::args::CallArgs;
 use crate::common::QuoteKind;
 use crate::error::SassResult;
-use crate::interner::{keywords::EMPTY_STRING, InternedString};
+use crate::interner::InternedString;
 use crate::scope::Scope;
 use crate::selector::Selector;
 use crate::unit::Unit;
@@ -198,7 +198,7 @@ fn str_slice(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> Sa
     }
 
     if start > end || start > str_len {
-        Ok(Value::Ident(EMPTY_STRING.with(|f| **f), quotes))
+        Ok(Value::Ident(InternedString::get_or_intern(""), quotes))
     } else {
         Ok(Value::Ident(
             InternedString::get_or_intern(

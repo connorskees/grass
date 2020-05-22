@@ -5,32 +5,6 @@ use std::fmt::{self, Display};
 
 thread_local!(static STRINGS: RefCell<Rodeo<Spur>> = RefCell::new(Rodeo::default()));
 
-use keywords::EMPTY_STRING;
-
-pub(crate) mod keywords {
-    use super::InternedString;
-    use once_cell::sync::Lazy;
-    macro_rules! keyword {
-        ($ident:ident, $val:literal) => {
-            thread_local!(pub(crate) static $ident: Lazy<InternedString> =
-                Lazy::new(|| InternedString::get_or_intern($val)));
-        };
-    }
-
-    keyword!(EMPTY_STRING, "");
-    keyword!(TRUE, "true");
-    keyword!(FALSE, "false");
-    keyword!(AND, "and");
-    keyword!(OR, "or");
-    keyword!(NOT, "not");
-    keyword!(NULL, "null");
-    keyword!(CALC, "calc");
-    keyword!(URL, "url");
-    keyword!(PROGID, "progid");
-    keyword!(ELEMENT, "element");
-    keyword!(EXPRESSION, "expression");
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub(crate) struct InternedString(Spur);
 
@@ -44,7 +18,7 @@ impl InternedString {
     }
 
     pub fn is_empty(self) -> bool {
-        EMPTY_STRING.with(|f| self == **f)
+        self.resolve_ref() == ""
     }
 
     pub fn resolve_ref<'a>(self) -> &'a str {

@@ -90,7 +90,7 @@ use peekmore::{PeekMore, PeekMoreIterator};
 
 use crate::atrule::{AtRule, AtRuleKind, Function, Mixin};
 pub use crate::error::{SassError, SassResult};
-use crate::interner::keywords::EMPTY_STRING;
+use crate::interner::InternedString;
 use crate::scope::{insert_global_var, Scope};
 use crate::selector::Selector;
 use crate::style::Style;
@@ -200,7 +200,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                         &mut values.into_iter().peekmore(),
                         scope,
                         super_selector,
-                        EMPTY_STRING.with(|f| **f),
+                        InternedString::get_or_intern(""),
                         tok.pos,
                     )?;
                     return Ok(Some(Spanned {
@@ -220,7 +220,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                     devour_whitespace(toks);
                     return Ok(Some(Spanned {
                         node: Expr::Style(Box::new(Style {
-                            property: EMPTY_STRING.with(|f| **f),
+                            property: InternedString::get_or_intern(""),
                             value: Value::Null.span(span),
                         })),
                         span,
@@ -230,7 +230,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                     &mut v,
                     scope,
                     super_selector,
-                    EMPTY_STRING.with(|f| **f),
+                    InternedString::get_or_intern(""),
                     span_before,
                 )?;
                 let value = Style::parse_value(&mut v, scope, super_selector)?;
@@ -257,7 +257,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                         &mut v,
                         scope,
                         super_selector,
-                        EMPTY_STRING.with(|f| **f),
+                        InternedString::get_or_intern(""),
                         tok.pos,
                     )?;
                     let value = Style::parse_value(&mut v, scope, super_selector)?;

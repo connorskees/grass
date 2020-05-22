@@ -16,7 +16,7 @@ use crate::builtin::GLOBAL_FUNCTIONS;
 use crate::color::{Color, NAMED_COLORS};
 use crate::common::{Brackets, ListSeparator, Op, QuoteKind};
 use crate::error::SassResult;
-use crate::interner::{keywords, InternedString};
+use crate::interner::InternedString;
 use crate::scope::Scope;
 use crate::selector::Selector;
 use crate::unit::Unit;
@@ -599,9 +599,9 @@ impl Value {
     ) -> SassResult<Spanned<IntermediateValue>> {
         let Spanned { node: mut s, span } = eat_ident(toks, scope, super_selector, span_before)?;
 
-        let lower = InternedString::get_or_intern(s.to_ascii_lowercase());
+        let lower = dbg!(InternedString::get_or_intern(s.to_ascii_lowercase()));
 
-        if keywords::PROGID.with(|f| lower == **f)
+        if lower.resolve_ref() == "progid"
             && toks.peek().is_some()
             && toks.peek().unwrap().kind == ':'
         {
@@ -634,25 +634,19 @@ impl Value {
                         .span(span))
                     }
                     None => {
-                        match lower {
-                            _ if keywords::CALC.with(|f| lower == **f)
-                                || keywords::ELEMENT.with(|f| lower == **f)
-                                || keywords::EXPRESSION.with(|f| lower == **f) =>
-                            {
+                        match lower.resolve_ref() {
+                            "calc" | "element" | "expression" => {
                                 s = lower.resolve().to_string();
                                 eat_calc_args(toks, scope, super_selector, &mut s)?;
                             }
                             // "min" => {}
                             // "max" => {}
-                            _ if keywords::URL.with(|f| lower == **f) => {
-                                match try_eat_url(toks, scope, super_selector)? {
-                                    Some(val) => s = val,
-                                    None => s.push_str(
-                                        &eat_call_args(toks)?
-                                            .to_css_string(scope, super_selector)?,
-                                    ),
-                                }
-                            }
+                            "url" => match try_eat_url(toks, scope, super_selector)? {
+                                Some(val) => s = val,
+                                None => s.push_str(
+                                    &eat_call_args(toks)?.to_css_string(scope, super_selector)?,
+                                ),
+                            },
                             _ => s.push_str(
                                 &eat_call_args(toks)?.to_css_string(scope, super_selector)?,
                             ),
@@ -680,14 +674,13 @@ impl Value {
             .span(span));
         }
 
-        dbg!(&lower);
-        Ok(match lower {
-            _ if keywords::TRUE.with(|f| lower == **f) => IntermediateValue::Value(Value::True),
-            _ if keywords::FALSE.with(|f| lower == **f) => IntermediateValue::Value(Value::False),
-            _ if keywords::NULL.with(|f| lower == **f) => IntermediateValue::Value(Value::Null),
-            _ if keywords::NOT.with(|f| lower == **f) => IntermediateValue::Op(Op::Not),
-            _ if keywords::AND.with(|f| lower == **f) => IntermediateValue::Op(Op::And),
-            _ if keywords::OR.with(|f| lower == **f) => IntermediateValue::Op(Op::Or),
+        Ok(match dbg!(lower.resolve_ref()) {
+            "true" => IntermediateValue::Value(Value::True),
+            "false" => IntermediateValue::Value(Value::False),
+            "null" => IntermediateValue::Value(Value::Null),
+            "not" => IntermediateValue::Op(Op::Not),
+            "and" => IntermediateValue::Op(Op::And),
+            "or" => IntermediateValue::Op(Op::Or),
             _ => IntermediateValue::Value(Value::Ident(
                 InternedString::get_or_intern(s),
                 QuoteKind::None,
