@@ -6,6 +6,7 @@ use codemap::{Span, Spanned};
 use crate::color::Color;
 use crate::common::{Brackets, ListSeparator, Op, QuoteKind};
 use crate::error::SassResult;
+use crate::interner::InternedString;
 use crate::unit::Unit;
 use crate::utils::hex_char_for;
 
@@ -33,7 +34,7 @@ pub(crate) enum Value {
     UnaryOp(Op, Box<Value>),
     BinaryOp(Box<Value>, Op, Box<Value>),
     Paren(Box<Value>),
-    Ident(String, QuoteKind),
+    Ident(InternedString, QuoteKind),
     Map(SassMap),
     ArgList(Vec<Spanned<Value>>),
     /// Returned by `get-function()`
@@ -167,6 +168,7 @@ impl Value {
             }
             Self::Paren(val) => val.to_css_string(span)?,
             Self::Ident(string, QuoteKind::None) => {
+                let string = string.resolve();
                 let mut after_newline = false;
                 let mut buf = String::with_capacity(string.len());
                 for c in string.chars() {
@@ -189,8 +191,9 @@ impl Value {
                 Cow::Owned(buf)
             }
             Self::Ident(string, QuoteKind::Quoted) => {
+                let string = string.resolve();
                 let mut buf = String::with_capacity(string.len());
-                visit_quoted_string(&mut buf, false, string)?;
+                visit_quoted_string(&mut buf, false, &string)?;
                 Cow::Owned(buf)
             }
             Self::True => Cow::Borrowed("true"),
@@ -249,7 +252,7 @@ impl Value {
 
     pub fn is_special_function(&self) -> bool {
         match self {
-            Self::Ident(s, QuoteKind::None) => is_special_function(s),
+            Self::Ident(s, QuoteKind::None) => is_special_function(&s.resolve()),
             _ => false,
         }
     }

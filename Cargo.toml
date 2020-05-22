@@ -49,6 +49,7 @@ rand = { version = "0.7.3", optional = true }
 codemap = "0.1.3"
 peekmore = "0.4.0"
 wasm-bindgen = { version = "0.2.60", optional = true }
+lasso = "0.2.2"
 
 [features]
 default = ["commandline", "random"]

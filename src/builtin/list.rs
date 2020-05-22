@@ -5,6 +5,7 @@ use num_traits::{One, Signed, ToPrimitive, Zero};
 use crate::args::CallArgs;
 use crate::common::{Brackets, ListSeparator, QuoteKind};
 use crate::error::SassResult;
+use crate::interner::InternedString;
 use crate::scope::Scope;
 use crate::selector::Selector;
 use crate::unit::Unit;
@@ -72,11 +73,10 @@ fn list_separator(
 ) -> SassResult<Value> {
     args.max_args(1)?;
     Ok(Value::Ident(
-        match arg!(args, scope, super_selector, 0, "list") {
+        InternedString::get_or_intern(match arg!(args, scope, super_selector, 0, "list") {
             Value::List(_, sep, ..) => sep.name(),
             _ => ListSeparator::Space.name(),
-        }
-        .to_owned(),
+        }),
         QuoteKind::None,
     ))
 }
@@ -140,9 +140,9 @@ fn append(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassR
         scope,
         super_selector,
         2,
-        "separator" = Value::Ident("auto".to_owned(), QuoteKind::None)
+        "separator" = Value::Ident(InternedString::get_or_intern("auto"), QuoteKind::None)
     ) {
-        Value::Ident(s, ..) => match s.as_str() {
+        Value::Ident(s, ..) => match s.resolve().as_str() {
             "auto" => sep,
             "comma" => ListSeparator::Comma,
             "space" => ListSeparator::Space,
@@ -188,9 +188,9 @@ fn join(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassRes
         scope,
         super_selector,
         2,
-        "separator" = Value::Ident("auto".to_owned(), QuoteKind::None)
+        "separator" = Value::Ident(InternedString::get_or_intern("auto"), QuoteKind::None)
     ) {
-        Value::Ident(s, ..) => match s.as_str() {
+        Value::Ident(s, ..) => match s.resolve().as_str() {
             "auto" => {
                 if list1.is_empty() || (list1.len() == 1 && sep1 == ListSeparator::Space) {
                     sep2
@@ -225,9 +225,9 @@ fn join(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassRes
         scope,
         super_selector,
         3,
-        "bracketed" = Value::Ident("auto".to_owned(), QuoteKind::None)
+        "bracketed" = Value::Ident(InternedString::get_or_intern("auto"), QuoteKind::None)
     ) {
-        Value::Ident(s, ..) => match s.as_str() {
+        Value::Ident(s, ..) => match s.resolve().as_str() {
             "auto" => brackets,
             _ => Brackets::Bracketed,
         },

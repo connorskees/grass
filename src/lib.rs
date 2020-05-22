@@ -90,6 +90,7 @@ use peekmore::{PeekMore, PeekMoreIterator};
 
 use crate::atrule::{AtRule, AtRuleKind, Function, Mixin};
 pub use crate::error::{SassError, SassResult};
+use crate::interner::keywords::EMPTY_STRING;
 use crate::scope::{insert_global_var, Scope};
 use crate::selector::Selector;
 use crate::style::Style;
@@ -109,6 +110,7 @@ mod color;
 mod common;
 mod error;
 mod imports;
+mod interner;
 mod lexer;
 mod output;
 mod scope;
@@ -198,7 +200,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                         &mut values.into_iter().peekmore(),
                         scope,
                         super_selector,
-                        String::new(),
+                        *EMPTY_STRING,
                         tok.pos,
                     )?;
                     return Ok(Some(Spanned {
@@ -218,7 +220,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                     devour_whitespace(toks);
                     return Ok(Some(Spanned {
                         node: Expr::Style(Box::new(Style {
-                            property: String::new(),
+                            property: *EMPTY_STRING,
                             value: Value::Null.span(span),
                         })),
                         span,
@@ -228,7 +230,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                     &mut v,
                     scope,
                     super_selector,
-                    String::new(),
+                    *EMPTY_STRING,
                     span_before,
                 )?;
                 let value = Style::parse_value(&mut v, scope, super_selector)?;
@@ -255,7 +257,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                         &mut v,
                         scope,
                         super_selector,
-                        String::new(),
+                        *EMPTY_STRING,
                         tok.pos,
                     )?;
                     let value = Style::parse_value(&mut v, scope, super_selector)?;

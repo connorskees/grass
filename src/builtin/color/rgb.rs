@@ -6,6 +6,7 @@ use crate::args::CallArgs;
 use crate::color::Color;
 use crate::common::QuoteKind;
 use crate::error::SassResult;
+use crate::interner::InternedString;
 use crate::scope::Scope;
 use crate::selector::Selector;
 use crate::unit::Unit;
@@ -46,13 +47,13 @@ fn inner_rgb(
                 let green = channels.pop().unwrap();
                 let red = channels.pop().unwrap();
                 return Ok(Value::Ident(
-                    format!(
+                    InternedString::get_or_intern(format!(
                         "{}({}, {}, {})",
                         name,
                         red.to_css_string(args.span())?,
                         green.to_css_string(args.span())?,
                         v.to_css_string(args.span())?
-                    ),
+                    )),
                     QuoteKind::None,
                 ));
             }
@@ -80,7 +81,10 @@ fn inner_rgb(
                     ),
                     None => format!("{}({} {})", name, v.to_css_string(args.span())?, blue),
                 };
-                return Ok(Value::Ident(string, QuoteKind::None));
+                return Ok(Value::Ident(
+                    InternedString::get_or_intern(string),
+                    QuoteKind::None,
+                ));
             }
             Some(v) => {
                 return Err((
@@ -97,13 +101,13 @@ fn inner_rgb(
             Some(Value::Dimension(n, Unit::Percent)) => (n / Number::from(100)) * Number::from(255),
             Some(v) if v.is_special_function() => {
                 return Ok(Value::Ident(
-                    format!(
+                    InternedString::get_or_intern(format!(
                         "{}({}, {}, {})",
                         name,
                         v.to_css_string(args.span())?,
                         green,
                         blue
-                    ),
+                    )),
                     QuoteKind::None,
                 ));
             }
@@ -126,12 +130,12 @@ fn inner_rgb(
             v if v.is_special_function() => {
                 let alpha = arg!(args, scope, super_selector, 1, "alpha");
                 return Ok(Value::Ident(
-                    format!(
+                    InternedString::get_or_intern(format!(
                         "{}({}, {})",
                         name,
                         v.to_css_string(args.span())?,
                         alpha.to_css_string(args.span())?
-                    ),
+                    )),
                     QuoteKind::None,
                 ));
             }
@@ -158,14 +162,14 @@ fn inner_rgb(
             }
             v if v.is_special_function() => {
                 return Ok(Value::Ident(
-                    format!(
+                    InternedString::get_or_intern(format!(
                         "{}({}, {}, {}, {})",
                         name,
                         color.red(),
                         color.green(),
                         color.blue(),
                         v.to_css_string(args.span())?
-                    ),
+                    )),
                     QuoteKind::None,
                 ));
             }
@@ -210,7 +214,10 @@ fn inner_rgb(
                     );
                 }
                 string.push(')');
-                return Ok(Value::Ident(string, QuoteKind::None));
+                return Ok(Value::Ident(
+                    InternedString::get_or_intern(string),
+                    QuoteKind::None,
+                ));
             }
             v => {
                 return Err((
@@ -250,7 +257,10 @@ fn inner_rgb(
                     );
                 }
                 string.push(')');
-                return Ok(Value::Ident(string, QuoteKind::None));
+                return Ok(Value::Ident(
+                    InternedString::get_or_intern(string),
+                    QuoteKind::None,
+                ));
             }
             v => {
                 return Err((
@@ -289,7 +299,10 @@ fn inner_rgb(
                     );
                 }
                 string.push(')');
-                return Ok(Value::Ident(string, QuoteKind::None));
+                return Ok(Value::Ident(
+                    InternedString::get_or_intern(string),
+                    QuoteKind::None,
+                ));
             }
             v => {
                 return Err((
@@ -327,7 +340,10 @@ fn inner_rgb(
                     blue,
                     v.to_css_string(args.span())?
                 );
-                return Ok(Value::Ident(string, QuoteKind::None));
+                return Ok(Value::Ident(
+                    InternedString::get_or_intern(string),
+                    QuoteKind::None,
+                ));
             }
             v => {
                 return Err((

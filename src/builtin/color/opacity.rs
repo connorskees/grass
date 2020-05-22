@@ -3,6 +3,7 @@ use super::{Builtin, GlobalFunctionMap};
 use crate::args::CallArgs;
 use crate::common::QuoteKind;
 use crate::error::SassResult;
+use crate::interner::InternedString;
 use crate::scope::Scope;
 use crate::selector::Selector;
 use crate::unit::Unit;
@@ -26,7 +27,7 @@ fn opacity(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> Sass
     match arg!(args, scope, super_selector, 0, "color") {
         Value::Color(c) => Ok(Value::Dimension(c.alpha(), Unit::None)),
         Value::Dimension(num, unit) => Ok(Value::Ident(
-            format!("opacity({}{})", num, unit),
+            InternedString::get_or_intern(format!("opacity({}{})", num, unit)),
             QuoteKind::None,
         )),
         v => Err((

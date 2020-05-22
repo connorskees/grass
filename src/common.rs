@@ -1,3 +1,4 @@
+use crate::interner::InternedString;
 use std::fmt::{self, Display, Write};
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -117,5 +118,40 @@ impl Display for QualifiedName {
             write!(f, "{}|", namespace)?;
         }
         f.write_str(&self.ident)
+    }
+}
+
+#[derive(Debug, Clone, Hash, Eq, PartialEq, Copy)]
+pub(crate) struct Identifier(InternedString);
+
+impl Into<Identifier> for InternedString {
+    fn into(self) -> Identifier {
+        Identifier(InternedString::get_or_intern(
+            self.resolve().replace('_', "-"),
+        ))
+    }
+}
+
+impl From<String> for Identifier {
+    fn from(s: String) -> Identifier {
+        Identifier(InternedString::get_or_intern(s.replace('_', "-")))
+    }
+}
+
+impl Into<Identifier> for &String {
+    fn into(self) -> Identifier {
+        Identifier(InternedString::get_or_intern(self.replace('_', "-")))
+    }
+}
+
+impl Into<Identifier> for &str {
+    fn into(self) -> Identifier {
+        Identifier(InternedString::get_or_intern(self.replace('_', "-")))
+    }
+}
+
+impl Display for Identifier {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
