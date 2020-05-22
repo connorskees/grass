@@ -282,7 +282,7 @@ impl Value {
             Self::Null => match other {
                 Self::Null => Self::Null,
                 _ => Value::Ident(
-                    InternedString::get_or_intern(other.to_css_string(span)?.into_owned()),
+                    InternedString::get_or_intern(dbg!(other.to_css_string(span)?).into_owned()),
                     QuoteKind::None,
                 ),
             },

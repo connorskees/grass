@@ -198,7 +198,7 @@ fn str_slice(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> Sa
     }
 
     if start > end || start > str_len {
-        Ok(Value::Ident(*EMPTY_STRING, quotes))
+        Ok(Value::Ident(EMPTY_STRING.with(|f| **f), quotes))
     } else {
         Ok(Value::Ident(
             InternedString::get_or_intern(

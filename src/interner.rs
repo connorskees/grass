@@ -12,8 +12,8 @@ pub(crate) mod keywords {
     use once_cell::sync::Lazy;
     macro_rules! keyword {
         ($ident:ident, $val:literal) => {
-            pub(crate) static $ident: Lazy<InternedString> =
-                Lazy::new(|| InternedString::get_or_intern($val));
+            thread_local!(pub(crate) static $ident: Lazy<InternedString> =
+                Lazy::new(|| InternedString::get_or_intern($val)));
         };
     }
 
@@ -44,7 +44,7 @@ impl InternedString {
     }
 
     pub fn is_empty(self) -> bool {
-        self == *EMPTY_STRING
+        EMPTY_STRING.with(|f| self == **f)
     }
 }
 

@@ -601,7 +601,10 @@ impl Value {
 
         let lower = InternedString::get_or_intern(s.to_ascii_lowercase());
 
-        if lower == *keywords::PROGID && toks.peek().is_some() && toks.peek().unwrap().kind == ':' {
+        if keywords::PROGID.with(|f| lower == **f)
+            && toks.peek().is_some()
+            && toks.peek().unwrap().kind == ':'
+        {
             s = "progid:".to_string();
             toks.next();
             s.push_str(&eat_progid(toks, scope, super_selector)?);
@@ -632,16 +635,16 @@ impl Value {
                     }
                     None => {
                         match lower {
-                            _ if lower == *keywords::CALC
-                                || lower == *keywords::ELEMENT
-                                || lower == *keywords::EXPRESSION =>
+                            _ if keywords::CALC.with(|f| lower == **f)
+                                || keywords::ELEMENT.with(|f| lower == **f)
+                                || keywords::EXPRESSION.with(|f| lower == **f) =>
                             {
                                 s = lower.resolve().to_string();
                                 eat_calc_args(toks, scope, super_selector, &mut s)?;
                             }
                             // "min" => {}
                             // "max" => {}
-                            _ if lower == *keywords::URL => {
+                            _ if keywords::URL.with(|f| lower == **f) => {
                                 match try_eat_url(toks, scope, super_selector)? {
                                     Some(val) => s = val,
                                     None => s.push_str(
@@ -677,13 +680,14 @@ impl Value {
             .span(span));
         }
 
+        dbg!(&lower);
         Ok(match lower {
-            _ if lower == *keywords::TRUE => IntermediateValue::Value(Value::True),
-            _ if lower == *keywords::FALSE => IntermediateValue::Value(Value::False),
-            _ if lower == *keywords::NULL => IntermediateValue::Value(Value::Null),
-            _ if lower == *keywords::NOT => IntermediateValue::Op(Op::Not),
-            _ if lower == *keywords::AND => IntermediateValue::Op(Op::And),
-            _ if lower == *keywords::OR => IntermediateValue::Op(Op::Or),
+            _ if keywords::TRUE.with(|f| lower == **f) => IntermediateValue::Value(Value::True),
+            _ if keywords::FALSE.with(|f| lower == **f) => IntermediateValue::Value(Value::False),
+            _ if keywords::NULL.with(|f| lower == **f) => IntermediateValue::Value(Value::Null),
+            _ if keywords::NOT.with(|f| lower == **f) => IntermediateValue::Op(Op::Not),
+            _ if keywords::AND.with(|f| lower == **f) => IntermediateValue::Op(Op::And),
+            _ if keywords::OR.with(|f| lower == **f) => IntermediateValue::Op(Op::Or),
             _ => IntermediateValue::Value(Value::Ident(
                 InternedString::get_or_intern(s),
                 QuoteKind::None,

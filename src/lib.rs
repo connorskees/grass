@@ -200,7 +200,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                         &mut values.into_iter().peekmore(),
                         scope,
                         super_selector,
-                        *EMPTY_STRING,
+                        EMPTY_STRING.with(|f| **f),
                         tok.pos,
                     )?;
                     return Ok(Some(Spanned {
@@ -220,7 +220,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                     devour_whitespace(toks);
                     return Ok(Some(Spanned {
                         node: Expr::Style(Box::new(Style {
-                            property: *EMPTY_STRING,
+                            property: EMPTY_STRING.with(|f| **f),
                             value: Value::Null.span(span),
                         })),
                         span,
@@ -230,7 +230,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                     &mut v,
                     scope,
                     super_selector,
-                    *EMPTY_STRING,
+                    EMPTY_STRING.with(|f| **f),
                     span_before,
                 )?;
                 let value = Style::parse_value(&mut v, scope, super_selector)?;
@@ -257,7 +257,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                         &mut v,
                         scope,
                         super_selector,
-                        *EMPTY_STRING,
+                        EMPTY_STRING.with(|f| **f),
                         tok.pos,
                     )?;
                     let value = Style::parse_value(&mut v, scope, super_selector)?;
