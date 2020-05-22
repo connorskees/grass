@@ -395,7 +395,7 @@ impl Value {
             Self::UnaryOp(..) | Self::Paren(..) => self.eval(span)?.node.add(other, span)?,
             Self::Ident(text, quotes) => match other {
                 Self::Ident(text2, ..) => Self::Ident(
-                    InternedString::get_or_intern(text.resolve() + &text2.resolve()),
+                    InternedString::get_or_intern(text.resolve() + text2.resolve_ref()),
                     quotes,
                 ),
                 _ => Value::Ident(

@@ -28,7 +28,7 @@ fn feature_exists(
 ) -> SassResult<Value> {
     args.max_args(1)?;
     match arg!(args, scope, super_selector, 0, "feature") {
-        Value::Ident(s, _) => Ok(match s.resolve().as_str() {
+        Value::Ident(s, _) => Ok(match s.resolve_ref() {
             // A local variable will shadow a global variable unless
             // `!global` is used.
             "global-variable-shadowing" => Value::True,
@@ -207,7 +207,7 @@ fn get_function(mut args: CallArgs, scope: &Scope, super_selector: &Selector) ->
         span: args.span(),
     }) {
         Ok(f) => SassFunction::UserDefined(Box::new(f), name.into()),
-        Err(..) => match GLOBAL_FUNCTIONS.get(&name.resolve().as_str()) {
+        Err(..) => match GLOBAL_FUNCTIONS.get(&name.resolve_ref()) {
             Some(f) => SassFunction::Builtin(f.clone(), name.into()),
             None => return Err((format!("Function not found: {}", name), args.span()).into()),
         },

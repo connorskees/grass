@@ -252,7 +252,7 @@ impl Value {
 
     pub fn is_special_function(&self) -> bool {
         match self {
-            Self::Ident(s, QuoteKind::None) => is_special_function(&s.resolve()),
+            Self::Ident(s, QuoteKind::None) => is_special_function(s.resolve_ref()),
             _ => false,
         }
     }

@@ -142,7 +142,7 @@ fn append(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassR
         2,
         "separator" = Value::Ident(InternedString::get_or_intern("auto"), QuoteKind::None)
     ) {
-        Value::Ident(s, ..) => match s.resolve().as_str() {
+        Value::Ident(s, ..) => match s.resolve_ref() {
             "auto" => sep,
             "comma" => ListSeparator::Comma,
             "space" => ListSeparator::Space,
@@ -190,7 +190,7 @@ fn join(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassRes
         2,
         "separator" = Value::Ident(InternedString::get_or_intern("auto"), QuoteKind::None)
     ) {
-        Value::Ident(s, ..) => match s.resolve().as_str() {
+        Value::Ident(s, ..) => match s.resolve_ref() {
             "auto" => {
                 if list1.is_empty() || (list1.len() == 1 && sep1 == ListSeparator::Space) {
                     sep2
@@ -227,7 +227,7 @@ fn join(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassRes
         3,
         "bracketed" = Value::Ident(InternedString::get_or_intern("auto"), QuoteKind::None)
     ) {
-        Value::Ident(s, ..) => match s.resolve().as_str() {
+        Value::Ident(s, ..) => match s.resolve_ref() {
             "auto" => brackets,
             _ => Brackets::Bracketed,
         },

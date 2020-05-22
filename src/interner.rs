@@ -39,12 +39,18 @@ impl InternedString {
         Self(STRINGS.with(|interner| interner.borrow_mut().get_or_intern(s)))
     }
 
-    pub fn resolve(&self) -> String {
+    pub fn resolve(self) -> String {
         STRINGS.with(|interner| interner.borrow().resolve(&self.0).to_string())
     }
 
     pub fn is_empty(self) -> bool {
         EMPTY_STRING.with(|f| self == **f)
+    }
+
+    pub fn resolve_ref<'a>(self) -> &'a str {
+        unsafe {
+            STRINGS.with(|interner| &(*(interner.as_ptr()).as_ref().unwrap().resolve(&self.0)))
+        }
     }
 }
 

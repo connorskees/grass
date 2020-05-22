@@ -127,7 +127,7 @@ pub(crate) struct Identifier(InternedString);
 impl Into<Identifier> for InternedString {
     fn into(self) -> Identifier {
         Identifier(InternedString::get_or_intern(
-            self.resolve().replace('_', "-"),
+            self.resolve_ref().replace('_', "-"),
         ))
     }
 }
