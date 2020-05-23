@@ -4,6 +4,7 @@ use codemap::{Span, Spanned};
 
 use peekmore::PeekMoreIterator;
 
+use crate::common::Identifier;
 use crate::error::SassResult;
 use crate::scope::Scope;
 use crate::selector::Selector;
@@ -35,14 +36,14 @@ pub(crate) struct CallArgs(HashMap<CallArg, Vec<Token>>, Span);
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 enum CallArg {
-    Named(String),
+    Named(Identifier),
     Positional(usize),
 }
 
 impl CallArg {
     pub fn position(&self) -> Result<usize, String> {
         match self {
-            Self::Named(ref name) => Err(name.clone()),
+            Self::Named(ref name) => Err(name.to_string()),
             Self::Positional(p) => Ok(*p),
         }
     }
@@ -100,13 +101,13 @@ impl CallArgs {
     /// Get argument by name
     ///
     /// Removes the argument
-    pub fn get_named(
+    pub fn get_named<T: Into<Identifier>>(
         &mut self,
-        val: String,
+        val: T,
         scope: &Scope,
         super_selector: &Selector,
     ) -> Option<SassResult<Spanned<Value>>> {
-        match self.0.remove(&CallArg::Named(val)) {
+        match self.0.remove(&CallArg::Named(val.into())) {
             Some(v) => Some(Value::from_vec(v, scope, super_selector)),
             None => None,
         }
@@ -368,7 +369,7 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
                         if name.is_empty() {
                             CallArg::Positional(args.len())
                         } else {
-                            CallArg::Named(name.replace('_', "-"))
+                            CallArg::Named(name.into())
                         },
                         val,
                     );
@@ -396,7 +397,7 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
             if name.is_empty() {
                 CallArg::Positional(args.len())
             } else {
-                CallArg::Named(name.replace('_', "-"))
+                CallArg::Named(name.clone().into())
             },
             val.clone(),
         );
