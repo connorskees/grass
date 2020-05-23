@@ -268,3 +268,13 @@ test!(
     "a {\n  color: 1 + not 2;\n}\n",
     "a {\n  color: 1false;\n}\n"
 );
+test!(
+    double_plus,
+    "a {\n  color: 1 ++ 2;\n}\n",
+    "a {\n  color: 3;\n}\n"
+);
+test!(
+    plus_div,
+    "a {\n  color: 1+/2;\n}\n",
+    "a {\n  color: 1/2;\n}\n"
+);
