@@ -88,3 +88,13 @@ test!(
     "@if/* pre 1 */true/* post 1 */{ a { color: red; } }",
     "a {\n  color: red;\n}\n"
 );
+test!(
+    escaped_if,
+    "@\\69 f true {\n  a {\n    color: red;\n  }\n}\n",
+    "a {\n  color: red;\n}\n"
+);
+test!(
+    escaped_else,
+    "@if false {}\n\n@\\65lse {\n  a {\n    color: red;\n  }\n}\n",
+    "a {\n  color: red;\n}\n"
+);

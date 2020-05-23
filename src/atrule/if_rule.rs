@@ -8,8 +8,8 @@ use crate::error::SassResult;
 use crate::scope::Scope;
 use crate::selector::Selector;
 use crate::utils::{
-    devour_whitespace, devour_whitespace_or_comment, eat_ident, read_until_closing_curly_brace,
-    read_until_open_curly_brace,
+    devour_whitespace, devour_whitespace_or_comment, peek_ident_no_interpolation,
+    read_until_closing_curly_brace, read_until_open_curly_brace,
 };
 use crate::value::Value;
 use crate::{Stmt, Token};
@@ -50,49 +50,40 @@ impl If {
         let mut else_ = Vec::new();
 
         loop {
-            if toks.peek().is_some() {
-                if toks.peek().unwrap().kind == '@' {
-                    let first_char = toks.peek_forward(1).unwrap().kind;
-                    toks.peek_backward(1).unwrap();
-                    if first_char != 'e' && first_char != 'E' {
+            match toks.peek() {
+                Some(Token { kind: '@', .. }) => {
+                    toks.peek_forward(1);
+                    let mut ident = peek_ident_no_interpolation(toks, false)?;
+                    ident.node.make_ascii_lowercase();
+                    if ident.as_str() != "else" {
+                        toks.reset_view();
                         break;
                     }
-                } else {
-                    break;
+                    toks.take(4).for_each(drop);
                 }
-                let span_before = toks.next().unwrap().pos;
-                if eat_ident(toks, &Scope::new(), &Selector::new(), span_before)?
-                    .to_ascii_lowercase()
-                    == "else"
-                {
-                    devour_whitespace(toks);
-                    if let Some(tok) = toks.next() {
+                Some(..) | None => break,
+            }
+            devour_whitespace(toks);
+            if let Some(tok) = toks.next() {
+                devour_whitespace(toks);
+                match tok.kind.to_ascii_lowercase() {
+                    'i' if toks.next().unwrap().kind.to_ascii_lowercase() == 'f' => {
+                        toks.next();
+                        let cond = read_until_open_curly_brace(toks);
+                        toks.next();
                         devour_whitespace(toks);
-                        match tok.kind.to_ascii_lowercase() {
-                            'i' if toks.next().unwrap().kind.to_ascii_lowercase() == 'f' => {
-                                toks.next();
-                                let cond = read_until_open_curly_brace(toks);
-                                toks.next();
-                                devour_whitespace(toks);
-                                branches
-                                    .push(Branch::new(cond, read_until_closing_curly_brace(toks)));
-                                toks.next();
-                                devour_whitespace(toks);
-                            }
-                            '{' => {
-                                else_ = read_until_closing_curly_brace(toks);
-                                toks.next();
-                                break;
-                            }
-                            _ => {
-                                return Err(("expected \"{\".", tok.pos()).into());
-                            }
-                        }
-                    } else {
+                        branches.push(Branch::new(cond, read_until_closing_curly_brace(toks)));
+                        toks.next();
+                        devour_whitespace(toks);
+                    }
+                    '{' => {
+                        else_ = read_until_closing_curly_brace(toks);
+                        toks.next();
                         break;
                     }
-                } else {
-                    break;
+                    _ => {
+                        return Err(("expected \"{\".", tok.pos()).into());
+                    }
                 }
             } else {
                 break;

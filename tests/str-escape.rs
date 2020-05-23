@@ -69,11 +69,6 @@ test!(
     "a {\n  color: foo-;\n}\n"
 );
 test!(
-    escape_recognized_as_at_rule,
-    "@\\69 f true {\n  a {\n    b: c;\n  }\n}\n",
-    "a {\n  b: c;\n}\n"
-);
-test!(
     escape_in_middle,
     "a {\n  color: b\\6cue;\n}\n",
     "a {\n  color: blue;\n}\n"
