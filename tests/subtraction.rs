@@ -214,3 +214,36 @@ test!(
     "a {\n  color: 1em- 0.0em;\n}\n",
     "a {\n  color: 1em- 0em;\n}\n"
 );
+test!(
+    null_minus_number,
+    "a {\n  color: null - 1;\n}\n",
+    "a {\n  color: -1;\n}\n"
+);
+test!(
+    null_minus_unquoted_string,
+    "a {\n  color: null - foo;\n}\n",
+    "a {\n  color: -foo;\n}\n"
+);
+error!(
+    null_minus_function,
+    "a {\n  color: null - get-function(lighten);\n}\n",
+    "Error: get-function(\"lighten\") isn't a valid CSS value."
+);
+error!(
+    map_lhs_sub,
+    "a {color: (a: b) - 1;}", "Error: (a: b) isn't a valid CSS value."
+);
+error!(
+    map_rhs_sub,
+    "a {color: 1 - (a: b);}", "Error: (a: b) isn't a valid CSS value."
+);
+error!(
+    function_lhs_sub,
+    "a {color: get-function(lighten) - 1;}",
+    "Error: get-function(\"lighten\") isn't a valid CSS value."
+);
+error!(
+    function_rhs_sub,
+    "a {color: 1 - get-function(lighten);}",
+    "Error: get-function(\"lighten\") isn't a valid CSS value."
+);

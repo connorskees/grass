@@ -186,9 +186,9 @@ impl Value {
                     return Err((
                         format!(
                             "Undefined operation \"{} {} {}\".",
-                            v.to_css_string(span)?,
+                            v.inspect(span)?,
                             op,
-                            other.to_css_string(span)?
+                            other.inspect(span)?
                         ),
                         span,
                     )
@@ -217,9 +217,9 @@ impl Value {
                 return Err((
                     format!(
                         "Undefined operation \"{} {} {}\".",
-                        self.to_css_string(span)?,
+                        self.inspect(span)?,
                         op,
-                        other.to_css_string(span)?
+                        other.inspect(span)?
                     ),
                     span,
                 )
@@ -256,14 +256,14 @@ impl Value {
         }
         let precedence = Op::Plus.precedence();
         Ok(match self {
-            Self::Map(..) => {
+            Self::Map(..) | Self::Function(..) => {
                 return Err((
                     format!("{} isn't a valid CSS value.", self.inspect(span)?),
                     span,
                 )
                     .into())
             }
-            Self::Function(..) | Self::ArgList(..) => todo!(),
+            Self::ArgList(..) => todo!(),
             Self::Important | Self::True | Self::False => match other {
                 Self::String(s, QuoteKind::Quoted) => Value::String(
                     format!("{}{}", self.to_css_string(span)?, s),
@@ -316,13 +316,20 @@ impl Value {
                     format!("{}{}{}", num, unit, other.to_css_string(span)?),
                     QuoteKind::None,
                 ),
+                Self::Map(..) | Self::Function(..) => {
+                    return Err((
+                        format!("{} isn't a valid CSS value.", other.inspect(span)?),
+                        span,
+                    )
+                        .into())
+                }
                 _ => {
                     return Err((
                         format!(
                             "Undefined operation \"{}{} + {}\".",
                             num,
                             unit,
-                            other.to_css_string(span)?
+                            other.inspect(span)?
                         ),
                         span,
                     )
@@ -338,11 +345,7 @@ impl Value {
                 ),
                 _ => {
                     return Err((
-                        format!(
-                            "Undefined operation \"{} + {}\".",
-                            c,
-                            other.to_css_string(span)?
-                        ),
+                        format!("Undefined operation \"{} + {}\".", c, other.inspect(span)?),
                         span,
                     )
                         .into())
@@ -396,7 +399,9 @@ impl Value {
         }
         let precedence = Op::Mul.precedence();
         Ok(match self {
-            Self::Null => todo!(),
+            Self::Null => {
+                Value::String(format!("-{}", other.to_css_string(span)?), QuoteKind::None)
+            }
             Self::Dimension(num, unit) => match other {
                 Self::Dimension(num2, unit2) => {
                     if !unit.comparable(&unit2) {
@@ -428,6 +433,13 @@ impl Value {
                     format!("{}{}-{}", num, unit, other.to_css_string(span)?),
                     QuoteKind::None,
                 ),
+                Self::Map(..) | Self::Function(..) => {
+                    return Err((
+                        format!("{} isn't a valid CSS value.", other.inspect(span)?),
+                        span,
+                    )
+                        .into())
+                }
                 _ => todo!(),
             },
             Self::Color(c) => match other {
@@ -437,11 +449,7 @@ impl Value {
                 Self::Null => Value::String(format!("{}-", c), QuoteKind::None),
                 Self::Dimension(..) | Self::Color(..) => {
                     return Err((
-                        format!(
-                            "Undefined operation \"{} - {}\".",
-                            c,
-                            other.to_css_string(span)?
-                        ),
+                        format!("Undefined operation \"{} - {}\".", c, other.inspect(span)?),
                         span,
                     )
                         .into())
@@ -544,7 +552,7 @@ impl Value {
                             "Undefined operation \"{}{} * {}\".",
                             num,
                             unit,
-                            other.to_css_string(span)?
+                            other.inspect(span)?
                         ),
                         span,
                     )
@@ -576,8 +584,8 @@ impl Value {
                 return Err((
                     format!(
                         "Undefined operation \"{} * {}\".",
-                        self.to_css_string(span)?,
-                        other.to_css_string(span)?
+                        self.inspect(span)?,
+                        other.inspect(span)?
                     ),
                     span,
                 )
@@ -628,11 +636,7 @@ impl Value {
                 Self::Null => Value::String(format!("{}/", c), QuoteKind::None),
                 Self::Dimension(..) | Self::Color(..) => {
                     return Err((
-                        format!(
-                            "Undefined operation \"{} / {}\".",
-                            c,
-                            other.to_css_string(span)?
-                        ),
+                        format!("Undefined operation \"{} / {}\".", c, other.inspect(span)?),
                         span,
                     )
                         .into())
@@ -720,8 +724,8 @@ impl Value {
                     return Err((
                         format!(
                             "Undefined operation \"{} % {}\".",
-                            Value::Dimension(n, u).to_css_string(span)?,
-                            other.to_css_string(span)?
+                            Value::Dimension(n, u).inspect(span)?,
+                            other.inspect(span)?
                         ),
                         span,
                     )
@@ -732,8 +736,8 @@ impl Value {
                 return Err((
                     format!(
                         "Undefined operation \"{} % {}\".",
-                        self.to_css_string(span)?,
-                        other.to_css_string(span)?
+                        self.inspect(span)?,
+                        other.inspect(span)?
                     ),
                     span,
                 )

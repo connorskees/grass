@@ -278,3 +278,21 @@ test!(
     "a {\n  color: 1+/2;\n}\n",
     "a {\n  color: 1/2;\n}\n"
 );
+error!(
+    map_lhs_add,
+    "a {color: (a: b) + 1;}", "Error: (a: b) isn't a valid CSS value."
+);
+error!(
+    map_rhs_add,
+    "a {color: 1 + (a: b);}", "Error: (a: b) isn't a valid CSS value."
+);
+error!(
+    function_lhs_add,
+    "a {color: get-function(lighten) + 1;}",
+    "Error: get-function(\"lighten\") isn't a valid CSS value."
+);
+error!(
+    function_rhs_add,
+    "a {color: 1 + get-function(lighten);}",
+    "Error: get-function(\"lighten\") isn't a valid CSS value."
+);
