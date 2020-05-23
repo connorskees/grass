@@ -84,35 +84,30 @@ pub(crate) fn eat_number<I: Iterator<Item = Token>>(
     let mut times_ten = String::new();
     let mut times_ten_is_postive = true;
     loop {
-        match toks.peek() {
-            // TODO: https://github.com/rust-lang/rust/issues/54883
-            Some(Token { kind: 'e', .. }) | Some(Token { kind: 'E', .. }) => {
-                if toks.peek_forward(1).is_none() {
-                    break;
-                } else {
-                    let Token { kind, pos } = *toks.peek().unwrap();
-                    match kind {
-                        '-' => {
-                            toks.next();
-                            times_ten_is_postive = false;
-                        }
-                        '0'..='9' => {}
-                        _ => break,
-                    }
+        // TODO: https://github.com/rust-lang/rust/issues/54883
+        if let Some(Token { kind: 'e', .. }) | Some(Token { kind: 'E', .. }) = toks.peek() {
+            let t = if let Some(tok) = toks.peek_forward(1) {
+                *tok
+            } else {
+                break;
+            };
 
+            match t.kind {
+                '-' => {
                     toks.next();
-
-                    eat_whole_number(toks, &mut times_ten);
-
-                    if times_ten.is_empty() && !times_ten_is_postive {
-                        if let Some(t) = toks.peek() {
-                            return Err(("Expected digit.", t.pos()).into());
-                        }
-                        return Err(("Expected digit.", pos).into());
-                    }
+                    times_ten_is_postive = false;
                 }
+                '0'..='9' => {}
+                _ => break,
             }
-            Some(..) | None => break,
+
+            toks.next();
+
+            eat_whole_number(toks, &mut times_ten);
+
+            if times_ten.is_empty() && !times_ten_is_postive {
+                return Err(("Expected digit.", toks.peek().unwrap_or(&t).pos).into());
+            }
         }
         break;
     }
