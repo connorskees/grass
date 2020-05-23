@@ -756,8 +756,7 @@ impl Value {
                 let mut span = toks.next().unwrap().pos();
                 let mut inner = read_until_closing_paren(toks);
                 // todo: the above shouldn't eat the closing paren
-                if !inner.is_empty() {
-                    let last_tok = inner.pop().unwrap();
+                if let Some(last_tok) = inner.pop() {
                     if last_tok.kind != ')' {
                         return Some(Err(("expected \")\".", span).into()));
                     }
@@ -795,8 +794,7 @@ impl Value {
             '[' => {
                 let mut span = toks.next().unwrap().pos();
                 let mut inner = read_until_closing_square_brace(toks);
-                if !inner.is_empty() {
-                    let last_tok = inner.pop().unwrap();
+                if let Some(last_tok) = inner.pop() {
                     if last_tok.kind != ']' {
                         return Some(Err(("expected \"]\".", span).into()));
                     }
