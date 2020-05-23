@@ -256,7 +256,14 @@ impl Value {
         }
         let precedence = Op::Plus.precedence();
         Ok(match self {
-            Self::Function(..) | Self::ArgList(..) | Self::Map(..) => todo!(),
+            Self::Map(..) => {
+                return Err((
+                    format!("{} isn't a valid CSS value.", self.inspect(span)?),
+                    span,
+                )
+                    .into())
+            }
+            Self::Function(..) | Self::ArgList(..) => todo!(),
             Self::Important | Self::True | Self::False => match other {
                 Self::String(s, QuoteKind::Quoted) => Value::String(
                     format!("{}{}", self.to_css_string(span)?, s),

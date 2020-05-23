@@ -124,7 +124,10 @@ error!(
 );
 error!(toplevel_hash, "#", "Error: expected \"{\".");
 error!(toplevel_at, "@", "Error: Expected identifier.");
-error!(toplevel_ampersand, "& {}", "Error: Top-level selectors may not contain the parent selector \"&\".");
+error!(
+    toplevel_ampersand,
+    "& {}", "Error: Top-level selectors may not contain the parent selector \"&\"."
+);
 error!(toplevel_backslash, "\\", "Error: expected \"}\".");
 error!(toplevel_var_no_colon, "$r", "Error: expected \":\".");
 error!(bar_in_value, "a {color: a|b;}", "Error: expected \";\".");
@@ -163,4 +166,8 @@ error!(
 error!(
     operator_mul,
     "a {color: 5 - *;}", "Error: Expected expression."
+);
+error!(
+    map_lhs_add,
+    "a {color: (a: b) + 1;}", "Error: (a: b) isn't a valid CSS value."
 );
