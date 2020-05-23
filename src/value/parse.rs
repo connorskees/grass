@@ -866,7 +866,7 @@ impl Value {
             }
             '!' => {
                 let mut span = toks.next().unwrap().pos();
-                if toks.peek().is_some() && toks.peek().unwrap().kind == '=' {
+                if let Some(Token { kind: '=', .. }) = toks.peek() {
                     span = span.merge(toks.next().unwrap().pos());
                     return Some(Ok(IntermediateValue::Op(Op::NotEqual).span(span)));
                 }
@@ -884,22 +884,22 @@ impl Value {
             }
             '/' => {
                 let span = toks.next().unwrap().pos();
-                if toks.peek().is_none() {
-                    return Some(Err(("Expected expression.", span).into()));
-                }
-                if '*' == toks.peek().unwrap().kind {
-                    toks.next();
-                    match eat_comment(toks, &Scope::new(), &Selector::new()) {
-                        Ok(..) => {}
-                        Err(e) => return Some(Err(e)),
+                match toks.peek() {
+                    Some(Token { kind: '/', .. }) => {
+                        read_until_newline(toks);
+                        devour_whitespace(toks);
+                        IntermediateValue::Whitespace.span(span)
                     }
-                    IntermediateValue::Whitespace.span(span)
-                } else if '/' == toks.peek().unwrap().kind {
-                    read_until_newline(toks);
-                    devour_whitespace(toks);
-                    IntermediateValue::Whitespace.span(span)
-                } else {
-                    IntermediateValue::Op(Op::Div).span(span)
+                    Some(Token { kind: '*', .. }) => {
+                        toks.next();
+                        match eat_comment(toks, &Scope::new(), &Selector::new()) {
+                            Ok(..) => {}
+                            Err(e) => return Some(Err(e)),
+                        }
+                        IntermediateValue::Whitespace.span(span)
+                    }
+                    Some(..) => IntermediateValue::Op(Op::Div).span(span),
+                    None => return Some(Err(("Expected expression.", span).into()))
                 }
             }
             ';' | '}' | '{' => return None,
