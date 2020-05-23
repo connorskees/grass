@@ -94,7 +94,17 @@ test!(
     "a {\n  color: red;\n}\n"
 );
 test!(
+    uppercase_escaped_if,
+    "@\\49 f true {\n  a {\n    color: red;\n  }\n}\n",
+    "a {\n  color: red;\n}\n"
+);
+test!(
     escaped_else,
     "@if false {}\n\n@\\65lse {\n  a {\n    color: red;\n  }\n}\n",
+    "a {\n  color: red;\n}\n"
+);
+test!(
+    uppercase_escaped_else,
+    "@if false {}\n\n@\\45lse {\n  a {\n    color: red;\n  }\n}\n",
     "a {\n  color: red;\n}\n"
 );
