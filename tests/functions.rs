@@ -91,3 +91,7 @@ error!(
     args_do_not_start_with_var,
     "@function foo(FOO) {}", "Error: expected \")\"."
 );
+error!(
+    double_comma_args,
+    "@function foo($a,$b,,) {}", "Error: expected \")\"."
+);
