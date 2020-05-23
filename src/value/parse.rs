@@ -14,7 +14,7 @@ use super::css_function::{eat_calc_args, eat_progid, try_eat_url};
 use crate::args::eat_call_args;
 use crate::builtin::GLOBAL_FUNCTIONS;
 use crate::color::{Color, NAMED_COLORS};
-use crate::common::{Brackets, ListSeparator, Op, QuoteKind};
+use crate::common::{Brackets, ListSeparator, Op, QuoteKind, Identifier};
 use crate::error::SassResult;
 use crate::scope::Scope;
 use crate::selector::Selector;
@@ -573,13 +573,14 @@ impl Value {
         }
 
         if let Some(Token { kind: '(', .. }) = toks.peek() {
+            let as_ident = Identifier::from(&s);
             toks.next();
             let func = match scope.get_fn(Spanned {
-                node: s.clone(),
+                node: as_ident.clone(),
                 span,
             }) {
                 Ok(f) => f,
-                Err(_) => match GLOBAL_FUNCTIONS.get(s.replace('_', "-").as_str()) {
+                Err(_) => match GLOBAL_FUNCTIONS.get(as_ident.into_inner().as_str()) {
                     Some(f) => {
                         return Ok(IntermediateValue::Value(f.0(
                             eat_call_args(toks)?,

@@ -152,3 +152,9 @@ impl Default for Identifier {
         Self(String::new())
     }
 }
+
+impl Identifier {
+    pub fn into_inner(self) -> String {
+        self.0
+    }
+}
