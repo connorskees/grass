@@ -181,12 +181,9 @@ fn parse_paren(
     t: Spanned<Vec<Token>>,
     scope: &Scope,
     super_selector: &Selector,
-    space_separated: &mut Vec<Spanned<Value>>,
-) -> SassResult<()> {
+) -> SassResult<Spanned<Value>> {
     if t.is_empty() {
-        space_separated
-            .push(Value::List(Vec::new(), ListSeparator::Space, Brackets::None).span(t.span));
-        return Ok(());
+        return Ok(Value::List(Vec::new(), ListSeparator::Space, Brackets::None).span(t.span));
     }
 
     let paren_toks = &mut t.node.into_iter().peekmore();
@@ -195,11 +192,10 @@ fn parse_paren(
     let key = Value::from_vec(read_until_char(paren_toks, ':'), scope, super_selector)?;
 
     if paren_toks.peek().is_none() {
-        space_separated.push(Spanned {
+        return Ok(Spanned {
             node: Value::Paren(Box::new(key.node)),
             span: key.span,
         });
-        return Ok(());
     }
 
     let val = Value::from_vec(read_until_char(paren_toks, ','), scope, super_selector)?;
@@ -207,11 +203,10 @@ fn parse_paren(
     map.insert(key.node, val.node);
 
     if paren_toks.peek().is_none() {
-        space_separated.push(Spanned {
+        return Ok(Spanned {
             node: Value::Map(map),
             span: key.span.merge(val.span),
         });
-        return Ok(());
     }
 
     let mut span = key.span;
@@ -229,11 +224,10 @@ fn parse_paren(
             break;
         }
     }
-    space_separated.push(Spanned {
+    Ok(Spanned {
         node: Value::Map(map),
         span,
-    });
-    Ok(())
+    })
 }
 
 fn eat_op<I: Iterator<Item = Token>>(
@@ -401,7 +395,14 @@ fn single_value<I: Iterator<Item = Token>>(
             .span(v.span)
         }
         IntermediateValue::Paren(t) => {
-            let val = Value::from_vec(t, scope, super_selector)?;
+            let val = parse_paren(
+                Spanned {
+                    node: t,
+                    span: next.span,
+                },
+                scope,
+                super_selector,
+            )?;
             Spanned {
                 node: Value::Paren(Box::new(val.node)),
                 span: val.span,
@@ -499,15 +500,14 @@ impl Value {
                 }
                 IntermediateValue::Paren(t) => {
                     last_was_whitespace = false;
-                    parse_paren(
+                    space_separated.push(parse_paren(
                         Spanned {
                             node: t,
                             span: val.span,
                         },
                         scope,
                         super_selector,
-                        &mut space_separated,
-                    )?;
+                    )?);
                 }
             }
         }

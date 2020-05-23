@@ -171,3 +171,7 @@ error!(
     map_lhs_add,
     "a {color: (a: b) + 1;}", "Error: (a: b) isn't a valid CSS value."
 );
+error!(
+    map_rhs_add,
+    "a {color: 1 + (a: b);}", "Error: (a: b) isn't a valid CSS value."
+);

@@ -110,7 +110,7 @@ fn visit_quoted_string(buf: &mut String, force_double_quote: bool, string: &str)
 impl Value {
     pub fn is_null(&self, span: Span) -> SassResult<bool> {
         Ok(match self {
-            &Value::Null => true,
+            Value::Null => true,
             Value::String(i, QuoteKind::None) if i.is_empty() => true,
             Self::BinaryOp(..) | Self::Paren(..) | Self::UnaryOp(..) => {
                 self.clone().eval(span)?.is_null(span)?
