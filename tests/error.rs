@@ -123,6 +123,7 @@ error!(
     "#{", "Error: expected \"}\"."
 );
 error!(toplevel_hash, "#", "Error: expected \"{\".");
+error!(toplevel_closing_brace, "}", "Error: unmatched \"}\".");
 error!(toplevel_at, "@", "Error: Expected identifier.");
 error!(
     toplevel_ampersand,

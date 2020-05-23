@@ -332,14 +332,15 @@ impl<'a> StyleSheetParser<'a> {
                         .into())
                 }
                 c if c.is_control() => {
-                    return Err(("expected selector.", self.lexer.next().unwrap().pos()).into());
+                    return Err(("expected selector.", self.lexer.next().unwrap().pos).into());
                 }
                 ',' | '!' | '{' => {
-                    return Err(("expected \"{\".", self.lexer.next().unwrap().pos()).into());
+                    return Err(("expected \"{\".", self.lexer.next().unwrap().pos).into());
                 }
                 '`' | '\'' | '"' => {
-                    return Err(("expected selector.", self.lexer.next().unwrap().pos()).into());
+                    return Err(("expected selector.", self.lexer.next().unwrap().pos).into());
                 }
+                '}' => return Err(("unmatched \"}\".", self.lexer.next().unwrap().pos).into()),
                 _ => todo!("unexpected toplevel token: {:?}", kind),
             };
         }
