@@ -6,6 +6,8 @@ use super::read_until_closing_quote;
 
 use crate::Token;
 
+/// Reads until the char is found, consuming the char,
+/// or until the end of the iterator is hit
 pub(crate) fn read_until_char<I: Iterator<Item = Token>>(
     toks: &mut PeekMoreIterator<I>,
     c: char,
@@ -27,7 +29,7 @@ pub(crate) fn read_until_char<I: Iterator<Item = Token>>(
 }
 
 pub(crate) fn hex_char_for(number: u32) -> char {
-    assert!(number < 0x10);
+    debug_assert!(number < 0x10);
     std::char::from_u32(if number < 0xA {
         0x30 + number
     } else {
