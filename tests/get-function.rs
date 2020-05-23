@@ -104,3 +104,15 @@ error!(
     "a {color: get-function(lighten);}",
     "Error: get-function(\"lighten\") isn't a valid CSS value."
 );
+test!(
+    hyphen_underscore_normalized,
+    "@function _test() {
+        @return 'hello';
+    }
+
+    a {
+        color: inspect(get-function('_test'));
+        color: inspect(get-function('-test'));
+    }",
+    "a {\n  color: get-function(\"-test\");\n  color: get-function(\"-test\");\n}\n"
+);
