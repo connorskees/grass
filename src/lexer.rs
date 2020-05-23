@@ -6,7 +6,7 @@ use codemap::File;
 
 use crate::Token;
 
-pub const FORM_FEED: char = '\x0C';
+const FORM_FEED: char = '\x0C';
 
 #[derive(Debug, Clone)]
 pub(crate) struct Lexer<'a> {
