@@ -83,3 +83,11 @@ test!(
     "@function str-replace($string, $search, $replace: \"\") {\n  $index: $string;\n  @return $index;\n}\n\na {\n  color: str-replace(\"a#b#c\", \"#\", \":\");\n}",
     "a {\n  color: \"a#b#c\";\n}\n"
 );
+error!(
+    missing_name,
+    "@function() {}", "Error: Expected identifier."
+);
+error!(
+    args_do_not_start_with_var,
+    "@function foo(FOO) {}", "Error: expected \")\"."
+);

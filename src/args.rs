@@ -226,7 +226,7 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
                 close_paren_span = pos;
                 break;
             }
-            _ => todo!(),
+            _ => return Err(("expected \")\".", pos).into()),
         };
         let mut default: Vec<Token> = Vec::new();
         let mut is_variadic = false;
