@@ -397,7 +397,7 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
             if name.is_empty() {
                 CallArg::Positional(args.len())
             } else {
-                CallArg::Named(name.clone().into())
+                CallArg::Named(name.as_str().into())
             },
             val.clone(),
         );
