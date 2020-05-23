@@ -839,7 +839,7 @@ impl Value {
             }
             q @ '>' | q @ '<' => {
                 let mut span = toks.next().unwrap().pos();
-                IntermediateValue::Op(if toks.peek().unwrap().kind == '=' {
+                IntermediateValue::Op(if let Some(Token { kind: '=', ..}) = toks.peek() {
                     span = span.merge(toks.next().unwrap().pos());
                     match q {
                         '>' => Op::GreaterThanEqual,

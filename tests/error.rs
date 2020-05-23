@@ -172,3 +172,7 @@ error!(
     ends_with_single_eq,
     "a {color: 1 =", "Error: expected \"=\"."
 );
+error!(
+    nothing_after_gt,
+    "a {color: 1 >", "Error: Expected expression."
+);
