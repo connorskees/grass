@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::mem;
 
 use codemap::{Span, Spanned};
 
@@ -20,7 +21,7 @@ pub(crate) struct FuncArgs(pub Vec<FuncArg>);
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub(crate) struct FuncArg {
-    pub name: String,
+    pub name: Identifier,
     pub default: Option<Vec<Token>>,
     pub is_variadic: bool,
 }
@@ -128,10 +129,10 @@ impl CallArgs {
         }
     }
 
-    pub fn get(
+    pub fn get<T: Into<Identifier>>(
         &mut self,
         position: usize,
-        name: String,
+        name: T,
         scope: &Scope,
         super_selector: &Selector,
     ) -> Option<SassResult<Spanned<Value>>> {
@@ -244,7 +245,7 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
                         ',' => {
                             toks.next();
                             args.push(FuncArg {
-                                name: name.replace('_', "-"),
+                                name: name.node.into(),
                                 default: Some(default),
                                 is_variadic,
                             });
@@ -252,7 +253,7 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
                         }
                         ')' => {
                             args.push(FuncArg {
-                                name: name.replace('_', "-"),
+                                name: name.node.into(),
                                 default: Some(default),
                                 is_variadic,
                             });
@@ -285,7 +286,7 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
                 is_variadic = true;
 
                 args.push(FuncArg {
-                    name: name.replace('_', "-"),
+                    name: name.node.into(),
                     default: Some(default),
                     is_variadic,
                 });
@@ -294,7 +295,7 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
             ')' => {
                 close_paren_span = span;
                 args.push(FuncArg {
-                    name: name.replace('_', "-"),
+                    name: name.node.into(),
                     default: if default.is_empty() {
                         None
                     } else {
@@ -305,7 +306,7 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
                 break;
             }
             ',' => args.push(FuncArg {
-                name: name.replace('_', "-"),
+                name: name.node.into(),
                 default: None,
                 is_variadic,
             }),
@@ -399,9 +400,8 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
             } else {
                 CallArg::Named(name.as_str().into())
             },
-            val.clone(),
+            mem::take(&mut val),
         );
-        val.clear();
         devour_whitespace(toks);
 
         if toks.peek().is_none() {

@@ -1,3 +1,5 @@
+use std::mem;
+
 use super::eat_stmts;
 
 use codemap::{Span, Spanned};
@@ -75,7 +77,7 @@ impl Function {
                 let span = args.span();
                 let arg_list = Value::ArgList(args.get_variadic(&scope, super_selector)?);
                 self.scope.insert_var(
-                    &arg.name,
+                    arg.name.clone(),
                     Spanned {
                         node: arg_list,
                         span,
@@ -87,7 +89,7 @@ impl Function {
                 Some(v) => v?,
                 None => match arg.default.as_mut() {
                     Some(v) => Value::from_tokens(
-                        &mut std::mem::take(v).into_iter().peekmore(),
+                        &mut mem::take(v).into_iter().peekmore(),
                         &scope,
                         super_selector,
                     )?,
@@ -98,8 +100,8 @@ impl Function {
                     }
                 },
             };
-            scope.insert_var(&arg.name, val.clone())?;
-            self.scope.insert_var(&arg.name, val)?;
+            scope.insert_var(arg.name.clone(), val.clone())?;
+            self.scope.insert_var(mem::take(&mut arg.name), val)?;
         }
         Ok(())
     }

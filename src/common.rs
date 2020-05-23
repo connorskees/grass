@@ -146,3 +146,9 @@ impl Display for Identifier {
         write!(f, "{}", self.0)
     }
 }
+
+impl Default for Identifier {
+    fn default() -> Self {
+        Self(String::new())
+    }
+}

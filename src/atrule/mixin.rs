@@ -1,3 +1,4 @@
+use std::mem;
 use std::vec::IntoIter;
 
 use codemap::{Span, Spanned};
@@ -67,7 +68,7 @@ impl Mixin {
             if arg.is_variadic {
                 let span = args.span();
                 self.scope.insert_var(
-                    &arg.name,
+                    mem::take(&mut arg.name),
                     Spanned {
                         node: Value::ArgList(args.get_variadic(scope, super_selector)?),
                         span,
@@ -90,7 +91,7 @@ impl Mixin {
                     }
                 },
             };
-            self.scope.insert_var(&arg.name, val)?;
+            self.scope.insert_var(mem::take(&mut arg.name), val)?;
         }
         Ok(self)
     }
