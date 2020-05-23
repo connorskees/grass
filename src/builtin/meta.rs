@@ -204,9 +204,9 @@ fn get_function(mut args: CallArgs, scope: &Scope, super_selector: &Selector) ->
         node: name.clone(),
         span: args.span(),
     }) {
-        Ok(f) => SassFunction::UserDefined(Box::new(f), name),
+        Ok(f) => SassFunction::UserDefined(Box::new(f), name.into()),
         Err(..) => match GLOBAL_FUNCTIONS.get(name.as_str()) {
-            Some(f) => SassFunction::Builtin(f.clone(), name),
+            Some(f) => SassFunction::Builtin(f.clone(), name.into()),
             None => return Err((format!("Function not found: {}", name), args.span()).into()),
         },
     };
