@@ -216,7 +216,7 @@ impl AtRule {
                 span: kind_span,
             },
             AtRuleKind::If => Spanned {
-                node: AtRule::If(If::from_tokens(toks)?),
+                node: AtRule::If(If::from_tokens(toks, kind_span)?),
                 span: kind_span,
             },
             AtRuleKind::For => Spanned {

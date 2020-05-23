@@ -1,4 +1,4 @@
-use codemap::Spanned;
+use codemap::{Spanned, Span};
 
 use peekmore::{PeekMore, PeekMoreIterator};
 
@@ -35,14 +35,21 @@ impl Branch {
 impl If {
     pub fn from_tokens<I: Iterator<Item = Token>>(
         toks: &mut PeekMoreIterator<I>,
+        span_before: Span,
     ) -> SassResult<If> {
         devour_whitespace_or_comment(toks)?;
         let mut branches = Vec::new();
         let init_cond = read_until_open_curly_brace(toks);
-        toks.next();
+        if toks.next().is_none() {
+            return Err(("Expected expression.", span_before).into());
+        }
         devour_whitespace_or_comment(toks)?;
         let mut init_toks = read_until_closing_curly_brace(toks);
-        init_toks.push(toks.next().unwrap());
+        if let Some(tok) = toks.next() {
+            init_toks.push(tok);
+        } else {
+            return Err(("expected \"}\".", span_before).into())
+        }
         devour_whitespace(toks);
 
         branches.push(Branch::new(init_cond, init_toks));
