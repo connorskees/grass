@@ -167,3 +167,7 @@ error!(
     operator_mul,
     "a {color: 5 - *;}", "Error: Expected expression."
 );
+error!(
+    ends_with_single_eq,
+    "a {color: 1 =", "Error: expected \"=\"."
+);

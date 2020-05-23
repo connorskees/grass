@@ -858,7 +858,7 @@ impl Value {
             }
             '=' => {
                 let mut span = toks.next().unwrap().pos();
-                if let Token { kind: '=', pos } = toks.next().unwrap() {
+                if let Some(Token { kind: '=', pos }) = toks.next() {
                     span = span.merge(pos);
                     IntermediateValue::Op(Op::Equal).span(span)
                 } else {
