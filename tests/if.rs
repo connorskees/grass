@@ -108,23 +108,13 @@ test!(
     "@if false {}\n\n@\\45lse {\n  a {\n    color: red;\n  }\n}\n",
     "a {\n  color: red;\n}\n"
 );
-error!(
-    nothing_after_if,
-    "@if",
-    "Error: Expected expression."
-);
-error!(
-    no_condition,
-    "@if{}",
-    "Error: Expected expression."
-);
+error!(nothing_after_if, "@if", "Error: Expected expression.");
+error!(no_condition, "@if{}", "Error: Expected expression.");
 error!(
     nothing_after_open_curly,
-    "@if foo {",
-    "Error: expected \"}\"."
+    "@if foo {", "Error: expected \"}\"."
 );
 error!(
     condition_is_evaluated_eagerly,
-    "@if 1 + 1 =s {\n}",
-    "Error: expected \"=\"."
+    "@if 1 + 1 =s {\n}", "Error: expected \"=\"."
 );

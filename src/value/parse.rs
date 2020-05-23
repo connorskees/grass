@@ -14,7 +14,7 @@ use super::css_function::{eat_calc_args, eat_progid, try_eat_url};
 use crate::args::eat_call_args;
 use crate::builtin::GLOBAL_FUNCTIONS;
 use crate::color::{Color, NAMED_COLORS};
-use crate::common::{Brackets, ListSeparator, Op, QuoteKind, Identifier};
+use crate::common::{Brackets, Identifier, ListSeparator, Op, QuoteKind};
 use crate::error::SassResult;
 use crate::scope::Scope;
 use crate::selector::Selector;
@@ -839,7 +839,7 @@ impl Value {
             }
             q @ '>' | q @ '<' => {
                 let mut span = toks.next().unwrap().pos();
-                IntermediateValue::Op(if let Some(Token { kind: '=', ..}) = toks.peek() {
+                IntermediateValue::Op(if let Some(Token { kind: '=', .. }) = toks.peek() {
                     span = span.merge(toks.next().unwrap().pos());
                     match q {
                         '>' => Op::GreaterThanEqual,
@@ -899,7 +899,7 @@ impl Value {
                         IntermediateValue::Whitespace.span(span)
                     }
                     Some(..) => IntermediateValue::Op(Op::Div).span(span),
-                    None => return Some(Err(("Expected expression.", span).into()))
+                    None => return Some(Err(("Expected expression.", span).into())),
                 }
             }
             ';' | '}' | '{' => return None,

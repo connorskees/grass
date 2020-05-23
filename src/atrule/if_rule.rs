@@ -1,4 +1,4 @@
-use codemap::{Spanned, Span};
+use codemap::{Span, Spanned};
 
 use peekmore::{PeekMore, PeekMoreIterator};
 
@@ -51,7 +51,7 @@ impl If {
         if let Some(tok) = toks.next() {
             init_toks.push(tok);
         } else {
-            return Err(("expected \"}\".", span_before).into())
+            return Err(("expected \"}\".", span_before).into());
         }
         devour_whitespace(toks);
 
@@ -79,7 +79,11 @@ impl If {
                 match tok.kind.to_ascii_lowercase() {
                     'i' if toks.next().unwrap().kind.to_ascii_lowercase() == 'f' => {
                         toks.next();
-                        let cond = Value::from_vec(read_until_open_curly_brace(toks), scope, super_selector)?;
+                        let cond = Value::from_vec(
+                            read_until_open_curly_brace(toks),
+                            scope,
+                            super_selector,
+                        )?;
                         toks.next();
                         devour_whitespace(toks);
                         branches.push(Branch::new(cond, read_until_closing_curly_brace(toks)));
