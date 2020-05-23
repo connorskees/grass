@@ -201,7 +201,7 @@ fn get_function(mut args: CallArgs, scope: &Scope, super_selector: &Selector) ->
     }
 
     let func = match scope.get_fn(Spanned {
-        node: name.clone(),
+        node: &name,
         span: args.span(),
     }) {
         Ok(f) => SassFunction::UserDefined(Box::new(f), name.into()),
