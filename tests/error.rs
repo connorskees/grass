@@ -87,7 +87,15 @@ error!(toplevel_exclamation, "! {}", "Error: expected \"{\".");
 error!(toplevel_backtick, "` {}", "Error: expected selector.");
 error!(
     toplevel_open_curly_brace,
-    "{ {color: red;}", "Error: expected \"{\"."
+    "{ {color: red;}", "Error: expected \"}\"."
+);
+error!(
+    toplevel_open_paren,
+    "(", "Error: expected \"{\"."
+);
+error!(
+    toplevel_close_paren,
+    "(", "Error: expected \"{\"."
 );
 error!(
     backtick_in_value,
