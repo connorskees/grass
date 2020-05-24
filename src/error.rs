@@ -66,7 +66,7 @@ impl Display for SassError {
             "{}| {}{}",
             padding,
             vec![' '; loc.begin.column].iter().collect::<String>(),
-            vec!['^'; loc.end.column - loc.begin.column]
+            vec!['^'; loc.end.column.max(loc.begin.column) - loc.begin.column.min(loc.end.column)]
                 .iter()
                 .collect::<String>()
         )?;
