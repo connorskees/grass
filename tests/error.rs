@@ -230,3 +230,7 @@ error!(
     "a {color: \"", "Error: Expected \"."
 );
 error!(nothing_after_sgl_quote, "a {color: '", "Error: Expected '.");
+error!(
+    invalid_binop_in_list,
+    "a {color: foo % bar, baz;}", "Error: Undefined operation \"foo % bar\"."
+);

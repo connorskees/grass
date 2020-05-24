@@ -116,7 +116,12 @@ impl Value {
                 self.clone().eval(span)?.is_null(span)?
             }
             Self::List(v, _, Brackets::Bracketed) if v.is_empty() => false,
-            Self::List(v, ..) => v.iter().all(|f| f.is_null(span).unwrap()),
+            Self::List(v, ..) => v
+                .iter()
+                .map(|f| Ok(f.is_null(span)?))
+                .collect::<SassResult<Vec<bool>>>()?
+                .into_iter()
+                .all(|f| f),
             _ => false,
         })
     }
