@@ -375,7 +375,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                     Some(Token { kind: '{', .. }) => {
                         let next = toks.next().unwrap();
                         values.push(next);
-                        values.extend(read_until_closing_curly_brace(toks));
+                        values.extend(read_until_closing_curly_brace(toks)?);
                         if let Some(tok) = toks.next() {
                             values.push(tok);
                         } else {
@@ -395,7 +395,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
             // it is causing us to emit nothing on malformed input
             '(' => {
                 values.push(toks.next().unwrap());
-                values.extend(read_until_closing_paren(toks));
+                values.extend(read_until_closing_paren(toks)?);
             }
             _ => values.push(toks.next().unwrap()),
         };

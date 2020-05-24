@@ -2,6 +2,7 @@ use std::iter::Iterator;
 
 use peekmore::PeekMoreIterator;
 
+use crate::error::SassResult;
 use crate::Token;
 
 use super::{devour_whitespace, read_until_newline};
@@ -11,7 +12,7 @@ use super::{devour_whitespace, read_until_newline};
 // Does not consume the open curly brace
 pub(crate) fn read_until_open_curly_brace<I: Iterator<Item = Token>>(
     toks: &mut PeekMoreIterator<I>,
-) -> Vec<Token> {
+) -> SassResult<Vec<Token>> {
     let mut t = Vec::new();
     let mut n = 0;
     while let Some(tok) = toks.peek() {
@@ -33,6 +34,11 @@ pub(crate) fn read_until_open_curly_brace<I: Iterator<Item = Token>>(
                 }
                 continue;
             }
+            q @ '"' | q @ '\'' => {
+                t.push(toks.next().unwrap());
+                t.extend(read_until_closing_quote(toks, q)?);
+                continue;
+            }
             _ => {}
         }
         if n == 1 {
@@ -41,19 +47,19 @@ pub(crate) fn read_until_open_curly_brace<I: Iterator<Item = Token>>(
 
         t.push(toks.next().unwrap());
     }
-    t
+    Ok(t)
 }
 
 pub(crate) fn read_until_closing_curly_brace<I: Iterator<Item = Token>>(
     toks: &mut PeekMoreIterator<I>,
-) -> Vec<Token> {
+) -> SassResult<Vec<Token>> {
     let mut t = Vec::new();
     let mut nesting = 0;
     while let Some(tok) = toks.peek() {
         match tok.kind {
             q @ '"' | q @ '\'' => {
                 t.push(toks.next().unwrap());
-                t.extend(read_until_closing_quote(toks, q));
+                t.extend(read_until_closing_quote(toks, q)?);
             }
             '{' => {
                 nesting += 1;
@@ -80,7 +86,7 @@ pub(crate) fn read_until_closing_curly_brace<I: Iterator<Item = Token>>(
             }
             '(' => {
                 t.push(toks.next().unwrap());
-                t.extend(read_until_closing_paren(toks));
+                t.extend(read_until_closing_paren(toks)?);
             }
             '\\' => {
                 t.push(toks.next().unwrap());
@@ -92,13 +98,16 @@ pub(crate) fn read_until_closing_curly_brace<I: Iterator<Item = Token>>(
         }
     }
     devour_whitespace(toks);
-    t
+    Ok(t)
 }
 
+/// Read tokens into a vector until a matching closing quote is found
+///
+/// The closing quote is included in the output
 pub(crate) fn read_until_closing_quote<I: Iterator<Item = Token>>(
     toks: &mut PeekMoreIterator<I>,
     q: char,
-) -> Vec<Token> {
+) -> SassResult<Vec<Token>> {
     let mut t = Vec::new();
     while let Some(tok) = toks.next() {
         match tok.kind {
@@ -121,18 +130,24 @@ pub(crate) fn read_until_closing_quote<I: Iterator<Item = Token>>(
                 let next = toks.peek().unwrap();
                 if next.kind == '{' {
                     t.push(toks.next().unwrap());
-                    t.append(&mut read_until_closing_curly_brace(toks));
+                    t.append(&mut read_until_closing_curly_brace(toks)?);
                 }
             }
             _ => t.push(tok),
         }
     }
-    t
+    if let Some(tok) = t.pop() {
+        if tok.kind != q {
+            return Err((format!("Expected {}.", q), tok.pos).into());
+        }
+        t.push(tok);
+    }
+    Ok(t)
 }
 
 pub(crate) fn read_until_semicolon_or_closing_curly_brace<I: Iterator<Item = Token>>(
     toks: &mut PeekMoreIterator<I>,
-) -> Vec<Token> {
+) -> SassResult<Vec<Token>> {
     let mut t = Vec::new();
     let mut nesting = 0;
     while let Some(tok) = toks.peek() {
@@ -149,7 +164,7 @@ pub(crate) fn read_until_semicolon_or_closing_curly_brace<I: Iterator<Item = Tok
             '"' | '\'' => {
                 let quote = toks.next().unwrap();
                 t.push(quote);
-                t.extend(read_until_closing_quote(toks, quote.kind));
+                t.extend(read_until_closing_quote(toks, quote.kind)?);
             }
             '{' => {
                 nesting += 1;
@@ -178,12 +193,12 @@ pub(crate) fn read_until_semicolon_or_closing_curly_brace<I: Iterator<Item = Tok
         }
     }
     devour_whitespace(toks);
-    t
+    Ok(t)
 }
 
 pub(crate) fn read_until_closing_paren<I: Iterator<Item = Token>>(
     toks: &mut PeekMoreIterator<I>,
-) -> Vec<Token> {
+) -> SassResult<Vec<Token>> {
     let mut t = Vec::new();
     let mut scope = 0;
     while let Some(tok) = toks.next() {
@@ -191,7 +206,7 @@ pub(crate) fn read_until_closing_paren<I: Iterator<Item = Token>>(
             ')' => {
                 if scope < 1 {
                     t.push(tok);
-                    return t;
+                    return Ok(t);
                 } else {
                     scope -= 1;
                 }
@@ -199,7 +214,7 @@ pub(crate) fn read_until_closing_paren<I: Iterator<Item = Token>>(
             '(' => scope += 1,
             '"' | '\'' => {
                 t.push(tok);
-                t.extend(read_until_closing_quote(toks, tok.kind));
+                t.extend(read_until_closing_quote(toks, tok.kind)?);
                 continue;
             }
             '\\' => {
@@ -213,12 +228,12 @@ pub(crate) fn read_until_closing_paren<I: Iterator<Item = Token>>(
         }
         t.push(tok)
     }
-    t
+    Ok(t)
 }
 
 pub(crate) fn read_until_closing_square_brace<I: Iterator<Item = Token>>(
     toks: &mut PeekMoreIterator<I>,
-) -> Vec<Token> {
+) -> SassResult<Vec<Token>> {
     let mut t = Vec::new();
     let mut scope = 0;
     while let Some(tok) = toks.next() {
@@ -227,7 +242,7 @@ pub(crate) fn read_until_closing_square_brace<I: Iterator<Item = Token>>(
             ']' => {
                 if scope < 1 {
                     t.push(tok);
-                    return t;
+                    return Ok(t);
                 } else {
                     scope -= 1;
                 }
@@ -235,7 +250,7 @@ pub(crate) fn read_until_closing_square_brace<I: Iterator<Item = Token>>(
             '[' => scope += 1,
             '"' | '\'' => {
                 t.push(tok);
-                t.extend(read_until_closing_quote(toks, tok.kind));
+                t.extend(read_until_closing_quote(toks, tok.kind)?);
                 continue;
             }
             '\\' => {
@@ -248,5 +263,5 @@ pub(crate) fn read_until_closing_square_brace<I: Iterator<Item = Token>>(
         }
         t.push(tok)
     }
-    t
+    Ok(t)
 }

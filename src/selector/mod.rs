@@ -403,7 +403,12 @@ impl Selector {
         super_selector: &Selector,
         span_before: Span,
     ) -> SassResult<SelectorKind> {
-        let is_pseudo_element = if toks.peek().ok_or(("Expected identifier.", span_before))?.kind == ':' {
+        let is_pseudo_element = if toks
+            .peek()
+            .ok_or(("Expected identifier.", span_before))?
+            .kind
+            == ':'
+        {
             toks.next();
             true
         } else {
@@ -419,7 +424,7 @@ impl Selector {
             Ok(
                 if toks.peek().is_some() && toks.peek().unwrap().kind == '(' {
                     toks.next();
-                    let mut inner_toks = read_until_closing_paren(toks);
+                    let mut inner_toks = read_until_closing_paren(toks)?;
                     inner_toks.pop();
                     let inner = Selector::from_tokens(
                         &mut inner_toks.into_iter().peekmore(),

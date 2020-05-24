@@ -189,7 +189,7 @@ fn parse_paren(
     let paren_toks = &mut t.node.into_iter().peekmore();
 
     let mut map = SassMap::new();
-    let key = Value::from_vec(read_until_char(paren_toks, ':'), scope, super_selector)?;
+    let key = Value::from_vec(read_until_char(paren_toks, ':')?, scope, super_selector)?;
 
     if paren_toks.peek().is_none() {
         return Ok(Spanned {
@@ -198,7 +198,7 @@ fn parse_paren(
         });
     }
 
-    let val = Value::from_vec(read_until_char(paren_toks, ','), scope, super_selector)?;
+    let val = Value::from_vec(read_until_char(paren_toks, ',')?, scope, super_selector)?;
 
     map.insert(key.node, val.node);
 
@@ -212,9 +212,9 @@ fn parse_paren(
     let mut span = key.span;
 
     loop {
-        let key = Value::from_vec(read_until_char(paren_toks, ':'), scope, super_selector)?;
+        let key = Value::from_vec(read_until_char(paren_toks, ':')?, scope, super_selector)?;
         devour_whitespace(paren_toks);
-        let val = Value::from_vec(read_until_char(paren_toks, ','), scope, super_selector)?;
+        let val = Value::from_vec(read_until_char(paren_toks, ',')?, scope, super_selector)?;
         span = span.merge(val.span);
         devour_whitespace(paren_toks);
         if map.insert(key.node, val.node) {
@@ -755,7 +755,10 @@ impl Value {
             }
             '(' => {
                 let mut span = toks.next().unwrap().pos();
-                let mut inner = read_until_closing_paren(toks);
+                let mut inner = match read_until_closing_paren(toks) {
+                    Ok(v) => v,
+                    Err(e) => return Some(Err(e.into())),
+                };
                 // todo: the above shouldn't eat the closing paren
                 if let Some(last_tok) = inner.pop() {
                     if last_tok.kind != ')' {
@@ -794,7 +797,10 @@ impl Value {
             }
             '[' => {
                 let mut span = toks.next().unwrap().pos();
-                let mut inner = read_until_closing_square_brace(toks);
+                let mut inner = match read_until_closing_square_brace(toks) {
+                    Ok(v) => v,
+                    Err(e) => return Some(Err(e.into())),
+                };
                 if let Some(last_tok) = inner.pop() {
                     if last_tok.kind != ']' {
                         return Some(Err(("expected \"]\".", span).into()));

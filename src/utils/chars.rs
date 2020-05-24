@@ -4,6 +4,7 @@ use peekmore::PeekMoreIterator;
 
 use super::read_until_closing_quote;
 
+use crate::error::SassResult;
 use crate::Token;
 
 /// Reads until the char is found, consuming the char,
@@ -11,13 +12,13 @@ use crate::Token;
 pub(crate) fn read_until_char<I: Iterator<Item = Token>>(
     toks: &mut PeekMoreIterator<I>,
     c: char,
-) -> Vec<Token> {
+) -> SassResult<Vec<Token>> {
     let mut v = Vec::new();
     while let Some(tok) = toks.next() {
         match tok.kind {
             '"' | '\'' => {
                 v.push(tok);
-                v.extend(read_until_closing_quote(toks, tok.kind));
+                v.extend(read_until_closing_quote(toks, tok.kind)?);
                 continue;
             }
             t if t == c => break,
@@ -25,7 +26,7 @@ pub(crate) fn read_until_char<I: Iterator<Item = Token>>(
         }
         v.push(tok)
     }
-    v
+    Ok(v)
 }
 
 pub(crate) fn hex_char_for(number: u32) -> char {

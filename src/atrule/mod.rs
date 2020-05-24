@@ -69,7 +69,7 @@ impl AtRule {
                     node: message,
                     span,
                 } = Value::from_vec(
-                    read_until_semicolon_or_closing_curly_brace(toks),
+                    read_until_semicolon_or_closing_curly_brace(toks)?,
                     scope,
                     super_selector,
                 )?;
@@ -81,7 +81,7 @@ impl AtRule {
                     node: message,
                     span,
                 } = Value::from_vec(
-                    read_until_semicolon_or_closing_curly_brace(toks),
+                    read_until_semicolon_or_closing_curly_brace(toks)?,
                     scope,
                     super_selector,
                 )?;
@@ -103,7 +103,7 @@ impl AtRule {
                     node: message,
                     span,
                 } = Value::from_vec(
-                    read_until_semicolon_or_closing_curly_brace(toks),
+                    read_until_semicolon_or_closing_curly_brace(toks)?,
                     scope,
                     super_selector,
                 )?;
@@ -139,7 +139,7 @@ impl AtRule {
                 }
             }
             AtRuleKind::Return => {
-                let v = read_until_semicolon_or_closing_curly_brace(toks);
+                let v = read_until_semicolon_or_closing_curly_brace(toks)?;
                 if toks.peek().unwrap().kind == ';' {
                     toks.next();
                 }
@@ -153,7 +153,7 @@ impl AtRule {
                 let mut selector = &Selector::replace(
                     super_selector,
                     Selector::from_tokens(
-                        &mut read_until_open_curly_brace(toks).into_iter().peekmore(),
+                        &mut read_until_open_curly_brace(toks)?.into_iter().peekmore(),
                         scope,
                         super_selector,
                     )?,
@@ -165,7 +165,7 @@ impl AtRule {
                 }
                 toks.next();
                 devour_whitespace(toks);
-                let mut body = read_until_closing_curly_brace(toks);
+                let mut body = read_until_closing_curly_brace(toks)?;
                 body.push(toks.next().unwrap());
                 devour_whitespace(toks);
                 let mut styles = Vec::new();
@@ -201,7 +201,7 @@ impl AtRule {
                 }
             }
             AtRuleKind::Charset => {
-                read_until_semicolon_or_closing_curly_brace(toks);
+                read_until_semicolon_or_closing_curly_brace(toks)?;
                 if toks.peek().unwrap().kind == ';' {
                     toks.next();
                 }

@@ -56,7 +56,7 @@ pub(crate) fn eat_variable_value<I: Iterator<Item = Token>>(
             '"' | '\'' => {
                 let quote = toks.next().unwrap();
                 val_toks.push(quote);
-                val_toks.extend(read_until_closing_quote(toks, quote.kind));
+                val_toks.extend(read_until_closing_quote(toks, quote.kind)?);
             }
             '#' => {
                 val_toks.push(toks.next().unwrap());
@@ -93,7 +93,7 @@ pub(crate) fn eat_variable_value<I: Iterator<Item = Token>>(
             }
             '(' => {
                 val_toks.push(toks.next().unwrap());
-                val_toks.extend(read_until_closing_paren(toks));
+                val_toks.extend(read_until_closing_paren(toks)?);
             }
             '!' => {
                 let pos = tok.pos();

@@ -58,7 +58,7 @@ impl Function {
 
         devour_whitespace(toks);
 
-        let mut body = read_until_closing_curly_brace(toks); //eat_stmts(toks, &mut scope.clone(), super_selector)?;
+        let mut body = read_until_closing_curly_brace(toks)?; //eat_stmts(toks, &mut scope.clone(), super_selector)?;
         body.push(toks.next().unwrap());
         devour_whitespace(toks);
 

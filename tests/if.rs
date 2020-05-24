@@ -126,3 +126,5 @@ error!(
     nothing_after_escape,
     "@if \\", "Error: Expected expression."
 );
+error!(unclosed_dbl_quote, "@if true \" {}", "Error: Expected \".");
+error!(unclosed_sgl_quote, "@if true ' {}", "Error: Expected '.");

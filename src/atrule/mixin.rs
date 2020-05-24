@@ -49,7 +49,7 @@ impl Mixin {
 
         devour_whitespace(toks);
 
-        let mut body = read_until_closing_curly_brace(toks);
+        let mut body = read_until_closing_curly_brace(toks)?;
         body.push(toks.next().unwrap());
 
         Ok(Spanned {

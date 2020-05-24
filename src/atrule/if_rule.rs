@@ -41,13 +41,13 @@ impl If {
     ) -> SassResult<If> {
         devour_whitespace_or_comment(toks)?;
         let mut branches = Vec::new();
-        let init_toks = read_until_open_curly_brace(toks);
-        if init_toks.is_empty() || toks.next().is_none() {
+        let init_cond_toks = read_until_open_curly_brace(toks)?;
+        if init_cond_toks.is_empty() || toks.next().is_none() {
             return Err(("Expected expression.", span_before).into());
         }
-        let init_cond = Value::from_vec(init_toks, scope, super_selector)?;
+        let init_cond = Value::from_vec(init_cond_toks, scope, super_selector)?;
         devour_whitespace_or_comment(toks)?;
-        let mut init_toks = read_until_closing_curly_brace(toks);
+        let mut init_toks = read_until_closing_curly_brace(toks)?;
         if let Some(tok) = toks.next() {
             init_toks.push(tok);
         } else {
@@ -80,18 +80,18 @@ impl If {
                     'i' if toks.next().unwrap().kind.to_ascii_lowercase() == 'f' => {
                         toks.next();
                         let cond = Value::from_vec(
-                            read_until_open_curly_brace(toks),
+                            read_until_open_curly_brace(toks)?,
                             scope,
                             super_selector,
                         )?;
                         toks.next();
                         devour_whitespace(toks);
-                        branches.push(Branch::new(cond, read_until_closing_curly_brace(toks)));
+                        branches.push(Branch::new(cond, read_until_closing_curly_brace(toks)?));
                         toks.next();
                         devour_whitespace(toks);
                     }
                     '{' => {
-                        else_ = read_until_closing_curly_brace(toks);
+                        else_ = read_until_closing_curly_brace(toks)?;
                         toks.next();
                         break;
                     }

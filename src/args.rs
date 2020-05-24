@@ -262,7 +262,7 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
                         }
                         '(' => {
                             default.push(toks.next().unwrap());
-                            default.extend(read_until_closing_paren(toks));
+                            default.extend(read_until_closing_paren(toks)?);
                         }
                         _ => default.push(toks.next().unwrap()),
                     }
@@ -380,15 +380,15 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
                 ',' => break,
                 '[' => {
                     val.push(tok);
-                    val.extend(read_until_closing_square_brace(toks));
+                    val.extend(read_until_closing_square_brace(toks)?);
                 }
                 '(' => {
                     val.push(tok);
-                    val.extend(read_until_closing_paren(toks));
+                    val.extend(read_until_closing_paren(toks)?);
                 }
                 '"' | '\'' => {
                     val.push(tok);
-                    val.extend(read_until_closing_quote(toks, tok.kind));
+                    val.extend(read_until_closing_quote(toks, tok.kind)?);
                 }
                 _ => val.push(tok),
             }

@@ -148,7 +148,7 @@ pub(crate) fn parse_for<I: Iterator<Item = Token>>(
         }
     };
 
-    let to_toks = read_until_open_curly_brace(toks);
+    let to_toks = read_until_open_curly_brace(toks)?;
     toks.next();
     let to_val = Value::from_vec(to_toks, scope, super_selector)?;
     let to = match to_val.node.eval(to_val.span)?.node {
@@ -164,7 +164,7 @@ pub(crate) fn parse_for<I: Iterator<Item = Token>>(
                 .into())
         }
     };
-    let body = read_until_closing_curly_brace(toks);
+    let body = read_until_closing_curly_brace(toks)?;
     toks.next();
 
     devour_whitespace(toks);

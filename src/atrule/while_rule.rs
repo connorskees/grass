@@ -50,7 +50,7 @@ pub(crate) fn parse_while<I: Iterator<Item = Token>>(
     span: Span,
 ) -> SassResult<Spanned<AtRule>> {
     devour_whitespace(toks);
-    let cond = read_until_open_curly_brace(toks);
+    let cond = read_until_open_curly_brace(toks)?;
 
     if cond.is_empty() {
         return Err(("Expected expression.", span).into());
@@ -58,7 +58,7 @@ pub(crate) fn parse_while<I: Iterator<Item = Token>>(
 
     toks.next();
 
-    let mut body = read_until_closing_curly_brace(toks);
+    let mut body = read_until_closing_curly_brace(toks)?;
 
     body.push(toks.next().unwrap());
 
