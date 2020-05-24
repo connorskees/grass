@@ -1,3 +1,9 @@
+use std::convert::TryFrom;
+
+use codemap::Spanned;
+
+use crate::error::SassError;
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum AtRuleKind {
     // SASS specific @rules
@@ -57,9 +63,10 @@ pub enum AtRuleKind {
     Unknown(String),
 }
 
-impl From<&str> for AtRuleKind {
-    fn from(c: &str) -> Self {
-        match c.to_ascii_lowercase().as_str() {
+impl TryFrom<&Spanned<String>> for AtRuleKind {
+    type Error = SassError;
+    fn try_from(c: &Spanned<String>) -> Result<Self, SassError> {
+        Ok(match c.node.to_ascii_lowercase().as_str() {
             "use" => Self::Use,
             "forward" => Self::Forward,
             "import" => Self::Import,
@@ -81,7 +88,9 @@ impl From<&str> for AtRuleKind {
             "keyframes" => Self::Keyframes,
             "content" => Self::Content,
             "media" => Self::Media,
+            "else" => return Err(("This at-rule is not allowed here.", c.span).into()),
+            "" => return Err(("Expected identifier.", c.span).into()),
             s => Self::Unknown(s.to_owned()),
-        }
+        })
     }
 }

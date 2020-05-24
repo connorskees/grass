@@ -82,6 +82,7 @@ grass input.scss
 #![cfg_attr(feature = "nightly", feature(track_caller))]
 #![cfg_attr(feature = "profiling", inline(never))]
 
+use std::convert::TryFrom;
 use std::iter::Iterator;
 
 use codemap::{Span, Spanned};
@@ -337,10 +338,10 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
             }
             '@' => {
                 let span = toks.next().unwrap().pos();
-                let Spanned { node: ident, span } = eat_ident(toks, scope, super_selector, span)?;
+                let rule = eat_ident(toks, scope, super_selector, span)?;
                 devour_whitespace(toks);
                 let rule = AtRule::from_tokens(
-                    AtRuleKind::from(ident.as_str()),
+                    AtRuleKind::try_from(&rule)?,
                     span,
                     toks,
                     scope,

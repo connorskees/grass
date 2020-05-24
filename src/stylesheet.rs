@@ -1,3 +1,4 @@
+use std::convert::TryFrom;
 use std::fs;
 use std::iter::Iterator;
 use std::path::Path;
@@ -226,20 +227,14 @@ impl<'a> StyleSheetParser<'a> {
                 }
                 '@' => {
                     let span_before = self.lexer.next().unwrap().pos();
-                    let Spanned {
-                        node: at_rule_kind,
-                        span,
-                    } = eat_ident(self.lexer, &Scope::new(), &Selector::new(), span_before)?;
-                    if at_rule_kind.is_empty() {
-                        return Err(("Expected identifier.", span).into());
-                    }
-                    match AtRuleKind::from(at_rule_kind.as_str()) {
+                    let rule = eat_ident(self.lexer, &Scope::new(), &Selector::new(), span_before)?;
+                    match AtRuleKind::try_from(&rule)? {
                         AtRuleKind::Include => rules.extend(eat_include(
                             self.lexer,
                             &Scope::new(),
                             &Selector::new(),
                             None,
-                            span,
+                            rule.span,
                         )?),
                         AtRuleKind::Import => {
                             devour_whitespace(self.lexer);
@@ -259,7 +254,7 @@ impl<'a> StyleSheetParser<'a> {
                                         )?
                                         .node
                                         .unquote()
-                                        .to_css_string(span)?,
+                                        .to_css_string(rule.span)?,
                                     );
                                 }
                                 _ => return Err(("Expected string.", next.pos()).into()),
@@ -282,7 +277,7 @@ impl<'a> StyleSheetParser<'a> {
                         v => {
                             let rule = AtRule::from_tokens(
                                 v,
-                                span,
+                                rule.span,
                                 self.lexer,
                                 &mut Scope::new(),
                                 &Selector::new(),
