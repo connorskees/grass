@@ -541,3 +541,11 @@ test!(
     "|f {\n  color: &;\n}\n",
     "|f {\n  color: |f;\n}\n"
 );
+error!(nothing_after_period, ". {}", "Error: Expected identifier.");
+error!(nothing_after_hash, "# {}", "Error: Expected identifier.");
+error!(nothing_after_percent, "% {}", "Error: Expected identifier.");
+error!(nothing_after_colon, ": {}", "Error: Expected identifier.");
+error!(
+    non_ident_after_colon,
+    ":#ab {}", "Error: Expected identifier."
+);

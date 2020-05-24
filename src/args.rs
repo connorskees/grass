@@ -335,7 +335,7 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
         match toks.peek().unwrap().kind {
             '$' => {
                 let Token { pos, .. } = toks.next().unwrap();
-                let v = eat_ident_no_interpolation(toks, false)?;
+                let v = eat_ident_no_interpolation(toks, false, pos)?;
                 let whitespace = devour_whitespace_or_comment(toks)?;
                 if toks.peek().unwrap().kind == ':' {
                     toks.next();

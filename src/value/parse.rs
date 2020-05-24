@@ -679,9 +679,10 @@ impl Value {
                     Err(e) => return Some(Err(e)),
                 };
                 let unit = if let Some(tok) = toks.peek() {
-                    match tok.kind {
+                    let Token { kind, pos } = *tok;
+                    match kind {
                         'a'..='z' | 'A'..='Z' | '_' | '\\' => {
-                            let u = match eat_ident_no_interpolation(toks, true) {
+                            let u = match eat_ident_no_interpolation(toks, true, pos) {
                                 Ok(v) => v,
                                 Err(e) => return Some(Err(e)),
                             };
@@ -804,7 +805,7 @@ impl Value {
             }
             '$' => {
                 toks.next();
-                let val = match eat_ident_no_interpolation(toks, false) {
+                let val = match eat_ident_no_interpolation(toks, false, span) {
                     Ok(v) => v,
                     Err(e) => return Some(Err(e)),
                 };

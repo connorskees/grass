@@ -232,8 +232,12 @@ pub(crate) fn eat_ident<I: Iterator<Item = Token>>(
 pub(crate) fn eat_ident_no_interpolation<I: Iterator<Item = Token>>(
     toks: &mut PeekMoreIterator<I>,
     unit: bool,
+    span_before: Span,
 ) -> SassResult<Spanned<String>> {
-    let mut span = toks.peek().unwrap().pos();
+    let mut span = toks
+        .peek()
+        .ok_or(("Expected identifier.", span_before))?
+        .pos();
     let mut text = String::new();
     if toks.peek().unwrap().kind == '-' {
         toks.next();

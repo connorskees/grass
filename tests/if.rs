@@ -109,6 +109,10 @@ test!(
     "a {\n  color: red;\n}\n"
 );
 error!(nothing_after_if, "@if", "Error: Expected expression.");
+error!(
+    nothing_after_dollar,
+    "@if ${}", "Error: Expected identifier."
+);
 error!(no_condition, "@if{}", "Error: Expected expression.");
 error!(
     nothing_after_open_curly,

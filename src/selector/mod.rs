@@ -290,10 +290,11 @@ impl Selector {
         let mut iter = sel_toks.into_iter().peekmore();
 
         while let Some(tok) = iter.peek() {
-            inner.push(match tok.kind {
-                _ if is_selector_name_char(tok.kind) => {
+            let Token { kind, pos } = *tok;
+            inner.push(match kind {
+                _ if is_selector_name_char(kind) => {
                     inner.push(SelectorKind::Element(
-                        eat_ident_no_interpolation(&mut iter, false)?.node,
+                        eat_ident_no_interpolation(&mut iter, false, pos)?.node,
                     ));
                     continue;
                 }
@@ -304,14 +305,14 @@ impl Selector {
                 '.' => {
                     iter.next();
                     inner.push(SelectorKind::Class(
-                        eat_ident_no_interpolation(&mut iter, false)?.node,
+                        eat_ident_no_interpolation(&mut iter, false, pos)?.node,
                     ));
                     continue;
                 }
                 '#' => {
                     iter.next();
                     inner.push(SelectorKind::Id(
-                        eat_ident_no_interpolation(&mut iter, false)?.node,
+                        eat_ident_no_interpolation(&mut iter, false, pos)?.node,
                     ));
                     continue;
                 }
@@ -319,7 +320,7 @@ impl Selector {
                     iter.next();
                     is_invisible = true;
                     inner.push(SelectorKind::Placeholder(
-                        eat_ident_no_interpolation(&mut iter, false)?.node,
+                        eat_ident_no_interpolation(&mut iter, false, pos)?.node,
                     ));
                     continue;
                 }
@@ -405,8 +406,13 @@ impl Selector {
         } else {
             false
         };
-        if is_selector_name_char(toks.peek().unwrap().kind) {
-            let name = eat_ident_no_interpolation(toks, false)?.node;
+        let t = if let Some(tok) = toks.peek() {
+            *tok
+        } else {
+            todo!()
+        };
+        if is_selector_name_char(t.kind) {
+            let name = eat_ident_no_interpolation(toks, false, t.pos)?.node;
             Ok(
                 if toks.peek().is_some() && toks.peek().unwrap().kind == '(' {
                     toks.next();
@@ -425,7 +431,7 @@ impl Selector {
                 },
             )
         } else {
-            todo!()
+            return Err(("Expected identifier.", t.pos).into());
         }
     }
 
