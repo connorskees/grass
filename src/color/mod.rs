@@ -15,6 +15,7 @@
 //! Named colors retain their original casing,
 //! so `rEd` should be emitted as `rEd`.
 
+use std::cmp::{max, min};
 use std::fmt::{self, Display};
 
 use crate::value::Number;
@@ -198,8 +199,8 @@ impl Color {
         let red = self.red() / Number::from(255);
         let green = self.green() / Number::from(255);
         let blue = self.blue() / Number::from(255);
-        let min = red.clone().min(green.clone().min(blue.clone()));
-        let max = red.clone().max(green.clone().max(blue.clone()));
+        let min = min(&red, min(&green, &blue)).clone();
+        let max = max(&red, max(&green, &blue)).clone();
         if min == max {
             return Number::zero();
         }
@@ -229,7 +230,7 @@ impl Color {
         let green = self.green() / Number::from(255);
         let blue = self.blue() / Number::from(255);
 
-        let min = red.clone().min(green.clone().min(blue.clone()));
+        let min = min(&red, min(&green, &blue)).clone();
         let max = red.max(green.max(blue));
 
         if min == max {
@@ -255,7 +256,7 @@ impl Color {
         let red = self.red() / Number::from(255);
         let green = self.green() / Number::from(255);
         let blue = self.blue() / Number::from(255);
-        let min = red.clone().min(green.clone().min(blue.clone()));
+        let min = min(&red, min(&green, &blue)).clone();
         let max = red.max(green.max(blue));
         (((min + max) / Number::from(2)) * Number::from(100)).round()
     }
@@ -268,8 +269,8 @@ impl Color {
         let red = self.red() / Number::from(255);
         let green = self.green() / Number::from(255);
         let blue = self.blue() / Number::from(255);
-        let min = red.clone().min(green.clone().min(blue.clone()));
-        let max = red.clone().max(green.clone().max(blue.clone()));
+        let min = min(&red, min(&green, &blue)).clone();
+        let max = max(&red, max(&green, &blue)).clone();
 
         let lightness = (min.clone() + max.clone()) / Number::from(2);
 
