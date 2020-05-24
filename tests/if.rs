@@ -129,3 +129,4 @@ error!(
 error!(unclosed_dbl_quote, "@if true \" {}", "Error: Expected \".");
 error!(unclosed_sgl_quote, "@if true ' {}", "Error: Expected '.");
 error!(unclosed_call_args, "@if a({}", "Error: expected \")\".");
+error!(nothing_after_div, "@if a/", "Error: Expected expression.");

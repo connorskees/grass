@@ -21,8 +21,8 @@ pub(crate) fn read_until_open_curly_brace<I: Iterator<Item = Token>>(
             '}' => n -= 1,
             '/' => {
                 let next = toks.next().unwrap();
-                match toks.peek().unwrap().kind {
-                    '/' => read_until_newline(toks),
+                match toks.peek() {
+                    Some(Token { kind: '/', .. }) => read_until_newline(toks),
                     _ => t.push(next),
                 };
                 continue;
