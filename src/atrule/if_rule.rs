@@ -49,12 +49,7 @@ impl If {
             Some(t) => t.pos,
             None => return Err(("Expected expression.", span_before).into()),
         };
-        let init_cond = Value::from_vec(
-            init_cond_toks,
-            scope,
-            super_selector,
-            span_before,
-        )?;
+        let init_cond = Value::from_vec(init_cond_toks, scope, super_selector, span_before)?;
         devour_whitespace_or_comment(toks)?;
         let mut init_toks = read_until_closing_curly_brace(toks)?;
         if let Some(tok) = toks.next() {
@@ -69,10 +64,10 @@ impl If {
         let mut else_ = Vec::new();
 
         loop {
-            match toks.peek() {
-                Some(Token { kind: '@', .. }) => {
+            match toks.peek().cloned() {
+                Some(Token { kind: '@', pos }) => {
                     toks.peek_forward(1);
-                    let mut ident = peek_ident_no_interpolation(toks, false)?;
+                    let mut ident = peek_ident_no_interpolation(toks, false, pos)?;
                     ident.node.make_ascii_lowercase();
                     if ident.as_str() != "else" {
                         toks.reset_view();

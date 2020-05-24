@@ -102,7 +102,7 @@ pub(crate) fn eat_variable_value<I: Iterator<Item = Token>>(
                     return Err(("Expected identifier.", pos).into());
                 }
                 // todo: it should not be possible to declare the same flag more than once
-                let mut ident = peek_ident_no_interpolation(toks, false)?;
+                let mut ident = peek_ident_no_interpolation(toks, false, pos)?;
                 ident.node.make_ascii_lowercase();
                 match ident.node.as_str() {
                     "global" => {

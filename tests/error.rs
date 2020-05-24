@@ -224,3 +224,7 @@ error!(
     ident_colon_closing_brace,
     "r:}", "Error: Expected expression."
 );
+error!(
+    dollar_sign_alone,
+    "$", "Error: Expected identifier."
+);

@@ -105,10 +105,10 @@ pub(crate) fn parse_for<I: Iterator<Item = Token>>(
     devour_whitespace(toks);
     let mut from_toks = Vec::new();
     let mut through = 0;
-    while let Some(tok) = toks.peek() {
+    while let Some(tok) = toks.peek().cloned() {
         match tok.kind {
             't' | 'T' | '\\' => {
-                let ident = peek_ident_no_interpolation(toks, false)?;
+                let ident = peek_ident_no_interpolation(toks, false, tok.pos)?;
                 match ident.node.to_ascii_lowercase().as_str() {
                     "through" => {
                         through = 1;

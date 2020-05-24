@@ -287,7 +287,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                     continue;
                 }
 
-                let name = peek_ident_no_interpolation(toks, false)?;
+                let name = peek_ident_no_interpolation(toks, false, tok.pos)?;
                 let whitespace = peek_whitespace(toks);
 
                 if toks.peek().ok_or(("expected \":\".", name.span))?.kind == ':' {

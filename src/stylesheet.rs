@@ -190,8 +190,8 @@ impl<'a> StyleSheetParser<'a> {
                     continue;
                 }
                 '$' => {
-                    self.lexer.next();
-                    let name = peek_ident_no_interpolation(self.lexer, false)?;
+                    let span_before = self.lexer.next().unwrap().pos;
+                    let name = peek_ident_no_interpolation(self.lexer, false, span_before)?;
                     let whitespace = peek_whitespace(self.lexer);
 
                     match self.lexer.peek() {
@@ -202,8 +202,12 @@ impl<'a> StyleSheetParser<'a> {
                                 .for_each(drop);
                             devour_whitespace(self.lexer);
 
-                            let VariableDecl { val, default, .. } =
-                                eat_variable_value(self.lexer, &Scope::new(), &Selector::new(), pos)?;
+                            let VariableDecl { val, default, .. } = eat_variable_value(
+                                self.lexer,
+                                &Scope::new(),
+                                &Selector::new(),
+                                pos,
+                            )?;
 
                             if !(default && global_var_exists(&name.node)) {
                                 insert_global_var(&name.node, val)?;
