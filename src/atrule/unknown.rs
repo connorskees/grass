@@ -41,14 +41,14 @@ impl UnknownAtRule {
             match tok.kind {
                 '{' => break,
                 '#' => {
-                    if toks.peek().unwrap().kind == '{' {
+                    if let Some(Token { kind: '{', .. }) = toks.peek() {
                         toks.next();
                         let interpolation = parse_interpolation(toks, scope, super_selector)?;
                         params.push_str(&interpolation.node.to_css_string(interpolation.span)?);
-                        continue;
                     } else {
                         params.push(tok.kind);
                     }
+                    continue;
                 }
                 '\n' | ' ' | '\t' => {
                     devour_whitespace(toks);

@@ -15,3 +15,8 @@ test!(
     "@#{()if(0,0<0,0)}",
     "@false;\n"
 );
+test!(
+    nothing_after_hash,
+    "@foo #",
+    "@foo #;\n"
+);
