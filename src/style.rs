@@ -98,11 +98,11 @@ impl<'a> StyleParser<'a> {
         while let Some(tok) = toks.peek().cloned() {
             match tok.kind {
                 '{' => {
-                    let span_before = toks.next().unwrap().pos;
+                    toks.next();
                     devour_whitespace(toks);
                     loop {
                         let property =
-                            self.parse_property(toks, super_property.clone(), span_before)?;
+                            self.parse_property(toks, super_property.clone(), tok.pos)?;
                         if let Some(tok) = toks.peek() {
                             if tok.kind == '{' {
                                 match self.eat_style_group(toks, property, scope)? {
@@ -123,17 +123,17 @@ impl<'a> StyleParser<'a> {
                                 continue;
                             }
                         }
-                        let value = self.parse_style_value(toks, scope, span_before)?;
-                        match toks.peek().unwrap().kind {
-                            '}' => {
+                        let value = self.parse_style_value(toks, scope, tok.pos)?;
+                        match toks.peek() {
+                            Some(Token { kind: '}', .. }) => {
                                 styles.push(Style { property, value });
                             }
-                            ';' => {
+                            Some(Token { kind: ';', .. }) => {
                                 toks.next();
                                 devour_whitespace(toks);
                                 styles.push(Style { property, value });
                             }
-                            '{' => {
+                            Some(Token { kind: '{', .. }) => {
                                 styles.push(Style {
                                     property: property.clone(),
                                     value,
@@ -144,7 +144,7 @@ impl<'a> StyleParser<'a> {
                                     _ => unreachable!(),
                                 }
                             }
-                            _ => {
+                            Some(..) | None => {
                                 devour_whitespace(toks);
                                 styles.push(Style { property, value });
                             }
@@ -203,7 +203,7 @@ impl<'a> StyleParser<'a> {
         devour_whitespace(toks);
         let property = eat_ident(toks, self.scope, self.super_selector, span_before)?;
         devour_whitespace_or_comment(toks)?;
-        if toks.peek().is_some() && toks.peek().unwrap().kind == ':' {
+        if let Some(Token { kind: ':', .. }) = toks.peek() {
             toks.next();
             devour_whitespace_or_comment(toks)?;
         } else {

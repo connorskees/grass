@@ -234,3 +234,7 @@ error!(
     invalid_binop_in_list,
     "a {color: foo % bar, baz;}", "Error: Undefined operation \"foo % bar\"."
 );
+error!(
+    improperly_terminated_nested_style,
+    "a {foo: {bar: red", "Error: Expected identifier."
+);
