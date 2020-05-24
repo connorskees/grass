@@ -189,7 +189,12 @@ fn parse_paren(
     let paren_toks = &mut t.node.into_iter().peekmore();
 
     let mut map = SassMap::new();
-    let key = Value::from_vec(read_until_char(paren_toks, ':')?, scope, super_selector)?;
+    let key = Value::from_vec(
+        read_until_char(paren_toks, ':')?,
+        scope,
+        super_selector,
+        t.span,
+    )?;
 
     if paren_toks.peek().is_none() {
         return Ok(Spanned {
@@ -198,7 +203,12 @@ fn parse_paren(
         });
     }
 
-    let val = Value::from_vec(read_until_char(paren_toks, ',')?, scope, super_selector)?;
+    let val = Value::from_vec(
+        read_until_char(paren_toks, ',')?,
+        scope,
+        super_selector,
+        key.span,
+    )?;
 
     map.insert(key.node, val.node);
 
@@ -212,9 +222,19 @@ fn parse_paren(
     let mut span = key.span;
 
     loop {
-        let key = Value::from_vec(read_until_char(paren_toks, ':')?, scope, super_selector)?;
+        let key = Value::from_vec(
+            read_until_char(paren_toks, ':')?,
+            scope,
+            super_selector,
+            span,
+        )?;
         devour_whitespace(paren_toks);
-        let val = Value::from_vec(read_until_char(paren_toks, ',')?, scope, super_selector)?;
+        let val = Value::from_vec(
+            read_until_char(paren_toks, ',')?,
+            scope,
+            super_selector,
+            key.span,
+        )?;
         span = span.merge(val.span);
         devour_whitespace(paren_toks);
         if map.insert(key.node, val.node) {
@@ -387,7 +407,7 @@ fn single_value<I: Iterator<Item = Token>>(
         IntermediateValue::Whitespace => unreachable!(),
         IntermediateValue::Comma => return Err(("Expected expression.", span).into()),
         IntermediateValue::Bracketed(t) => {
-            let v = Value::from_vec(t, scope, super_selector)?;
+            let v = Value::from_vec(t, scope, super_selector, span)?;
             match v.node {
                 Value::List(v, sep, Brackets::None) => Value::List(v, sep, Brackets::Bracketed),
                 v => Value::List(vec![v], ListSeparator::Space, Brackets::Bracketed),
@@ -416,10 +436,11 @@ impl Value {
         toks: &mut PeekMoreIterator<I>,
         scope: &Scope,
         super_selector: &Selector,
+        span_before: Span,
     ) -> SassResult<Spanned<Self>> {
         let span = match toks.peek() {
             Some(Token { pos, .. }) => *pos,
-            None => todo!("Expected expression."),
+            None => return Err(("Expected expression.", span_before).into()),
         };
         devour_whitespace(toks);
         let mut last_was_whitespace = false;
@@ -490,13 +511,15 @@ impl Value {
                         );
                         continue;
                     }
-                    space_separated.push(match Value::from_vec(t, scope, super_selector)?.node {
-                        Value::List(v, sep, Brackets::None) => {
-                            Value::List(v, sep, Brackets::Bracketed).span(val.span)
-                        }
-                        v => Value::List(vec![v], ListSeparator::Space, Brackets::Bracketed)
-                            .span(val.span),
-                    })
+                    space_separated.push(
+                        match Value::from_vec(t, scope, super_selector, val.span)?.node {
+                            Value::List(v, sep, Brackets::None) => {
+                                Value::List(v, sep, Brackets::Bracketed).span(val.span)
+                            }
+                            v => Value::List(vec![v], ListSeparator::Space, Brackets::Bracketed)
+                                .span(val.span),
+                        },
+                    )
                 }
                 IntermediateValue::Paren(t) => {
                     last_was_whitespace = false;
@@ -547,8 +570,17 @@ impl Value {
         toks: Vec<Token>,
         scope: &Scope,
         super_selector: &Selector,
+        span_before: Span,
     ) -> SassResult<Spanned<Value>> {
-        Self::from_tokens(&mut toks.into_iter().peekmore(), scope, super_selector)
+        if toks.is_empty() {
+            return Err(("Expected expression.", span_before).into());
+        }
+        Self::from_tokens(
+            &mut toks.into_iter().peekmore(),
+            scope,
+            super_selector,
+            span_before,
+        )
     }
 
     fn ident<I: Iterator<Item = Token>>(

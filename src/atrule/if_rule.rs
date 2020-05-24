@@ -42,10 +42,19 @@ impl If {
         devour_whitespace_or_comment(toks)?;
         let mut branches = Vec::new();
         let init_cond_toks = read_until_open_curly_brace(toks)?;
-        if init_cond_toks.is_empty() || toks.next().is_none() {
+        if init_cond_toks.is_empty() {
             return Err(("Expected expression.", span_before).into());
         }
-        let init_cond = Value::from_vec(init_cond_toks, scope, super_selector)?;
+        let span_before = match toks.next() {
+            Some(t) => t.pos,
+            None => return Err(("Expected expression.", span_before).into()),
+        };
+        let init_cond = Value::from_vec(
+            init_cond_toks,
+            scope,
+            super_selector,
+            span_before,
+        )?;
         devour_whitespace_or_comment(toks)?;
         let mut init_toks = read_until_closing_curly_brace(toks)?;
         if let Some(tok) = toks.next() {
@@ -78,11 +87,12 @@ impl If {
                 devour_whitespace(toks);
                 match tok.kind.to_ascii_lowercase() {
                     'i' if toks.next().unwrap().kind.to_ascii_lowercase() == 'f' => {
-                        toks.next();
+                        let pos = toks.next().unwrap().pos;
                         let cond = Value::from_vec(
                             read_until_open_curly_brace(toks)?,
                             scope,
                             super_selector,
+                            pos,
                         )?;
                         toks.next();
                         devour_whitespace(toks);

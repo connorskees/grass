@@ -233,10 +233,10 @@ impl Selector {
             span = span.merge(tok.pos());
             match tok.kind {
                 '#' => {
-                    if toks.peek().is_some() && toks.peek().unwrap().kind == '{' {
+                    if let Some(Token { kind: '{', pos }) = toks.peek().cloned() {
                         toks.next();
                         string.push_str(
-                            &parse_interpolation(toks, scope, super_selector)?
+                            &parse_interpolation(toks, scope, super_selector, pos)?
                                 .to_css_string(span)?,
                         );
                     } else {

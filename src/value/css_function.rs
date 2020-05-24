@@ -1,3 +1,5 @@
+use codemap::{Span, Spanned};
+
 use peekmore::PeekMoreIterator;
 
 use crate::error::SassResult;
@@ -7,6 +9,7 @@ use crate::utils::{
     devour_whitespace, parse_interpolation, peek_escape, peek_until_closing_curly_brace,
     peek_whitespace,
 };
+use crate::value::Value;
 use crate::Token;
 
 pub(crate) fn eat_calc_args<I: Iterator<Item = Token>>(
@@ -26,10 +29,10 @@ pub(crate) fn eat_calc_args<I: Iterator<Item = Token>>(
             }
             '#' => {
                 if toks.peek().is_some() && toks.peek().unwrap().kind == '{' {
-                    let span = toks.next().unwrap().pos();
-                    buf.push_str(
-                        &parse_interpolation(toks, scope, super_selector)?.to_css_string(span)?,
-                    );
+                    let span_before = toks.next().unwrap().pos();
+                    let interpolation =
+                        parse_interpolation(toks, scope, super_selector, span_before)?;
+                    buf.push_str(&interpolation.node.to_css_string(interpolation.span)?);
                 } else {
                     buf.push('#');
                 }
@@ -106,11 +109,11 @@ pub(crate) fn try_eat_url<I: Iterator<Item = Token>>(
         } else if kind == '\\' {
             buf.push_str(&peek_escape(toks)?);
         } else if kind == '#' {
-            let next = toks.peek();
-            if next.is_some() && next.unwrap().kind == '{' {
+            if let Some(Token { kind: '{', pos }) = toks.peek() {
+                let pos = *pos;
                 toks.move_forward(1);
                 peek_counter += 1;
-                let (interpolation, count) = peek_interpolation(toks, scope, super_selector)?;
+                let (interpolation, count) = peek_interpolation(toks, scope, super_selector, pos)?;
                 peek_counter += count;
                 buf.push_str(&match interpolation.node {
                     Value::String(s, ..) => s,
@@ -144,18 +147,16 @@ pub(crate) fn try_eat_url<I: Iterator<Item = Token>>(
     Ok(None)
 }
 
-use crate::value::Value;
-use codemap::Spanned;
-
 fn peek_interpolation<I: Iterator<Item = Token>>(
     toks: &mut PeekMoreIterator<I>,
     scope: &Scope,
     super_selector: &Selector,
+    span_before: Span,
 ) -> SassResult<(Spanned<Value>, usize)> {
     let vec = peek_until_closing_curly_brace(toks);
     let peek_counter = vec.len();
     toks.move_forward(1);
-    let val = Value::from_vec(vec, scope, super_selector)?;
+    let val = Value::from_vec(vec, scope, super_selector, span_before)?;
     Ok((
         Spanned {
             node: val.node.eval(val.span)?.node.unquote(),

@@ -1,6 +1,6 @@
 use std::iter::Iterator;
 
-use codemap::Spanned;
+use codemap::{Span, Spanned};
 
 use peekmore::PeekMoreIterator;
 
@@ -34,6 +34,7 @@ pub(crate) fn eat_variable_value<I: Iterator<Item = Token>>(
     toks: &mut PeekMoreIterator<I>,
     scope: &Scope,
     super_selector: &Selector,
+    span_before: Span,
 ) -> SassResult<VariableDecl> {
     devour_whitespace(toks);
     let mut default = false;
@@ -126,6 +127,6 @@ pub(crate) fn eat_variable_value<I: Iterator<Item = Token>>(
         }
     }
     devour_whitespace(toks);
-    let val = Value::from_vec(val_toks, scope, super_selector)?;
+    let val = Value::from_vec(val_toks, scope, super_selector, span_before)?;
     Ok(VariableDecl::new(val, default, global))
 }

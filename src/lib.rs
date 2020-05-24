@@ -232,7 +232,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                     String::new(),
                     span_before,
                 )?;
-                let value = Style::parse_value(&mut v, scope, super_selector)?;
+                let value = Style::parse_value(&mut v, scope, super_selector, span_before)?;
                 return Ok(Some(Spanned {
                     node: Expr::Style(Box::new(Style { property, value })),
                     span,
@@ -259,7 +259,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                         String::new(),
                         tok.pos,
                     )?;
-                    let value = Style::parse_value(&mut v, scope, super_selector)?;
+                    let value = Style::parse_value(&mut v, scope, super_selector, tok.pos)?;
                     return Ok(Some(Spanned {
                         node: Expr::Style(Box::new(Style { property, value })),
                         span,
@@ -298,7 +298,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                         val,
                         default,
                         global,
-                    } = eat_variable_value(toks, scope, super_selector)?;
+                    } = eat_variable_value(toks, scope, super_selector, name.span)?;
                     if global {
                         insert_global_var(&name.node, val.clone())?;
                     }

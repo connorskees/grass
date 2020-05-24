@@ -87,7 +87,7 @@ test!(
 test!(
     non_ascii_numeric_interpreted_as_unit,
     "a {\n  color: 2߄;\n}\n",
-    "@charset \"UTF-8\";\na {\n  color: 2߄;\n}"
+    "@charset \"UTF-8\";\na {\n  color: 2߄;\n}\n"
 );
 error!(
     display_single_mul,

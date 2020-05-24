@@ -49,8 +49,9 @@ impl Style {
         toks: &mut PeekMoreIterator<I>,
         scope: &Scope,
         super_selector: &Selector,
+        span_before: Span,
     ) -> SassResult<Spanned<Value>> {
-        StyleParser::new(scope, super_selector).parse_style_value(toks, scope)
+        StyleParser::new(scope, super_selector).parse_style_value(toks, scope, span_before)
     }
 
     pub fn from_tokens<I: Iterator<Item = Token>>(
@@ -80,9 +81,10 @@ impl<'a> StyleParser<'a> {
         &self,
         toks: &mut PeekMoreIterator<I>,
         scope: &Scope,
+        span_before: Span,
     ) -> SassResult<Spanned<Value>> {
         devour_whitespace(toks);
-        Value::from_tokens(toks, scope, self.super_selector)
+        Value::from_tokens(toks, scope, self.super_selector, span_before)
     }
 
     pub(crate) fn eat_style_group<I: Iterator<Item = Token>>(
@@ -93,7 +95,7 @@ impl<'a> StyleParser<'a> {
     ) -> SassResult<Expr> {
         let mut styles = Vec::new();
         devour_whitespace(toks);
-        while let Some(tok) = toks.peek() {
+        while let Some(tok) = toks.peek().cloned() {
             match tok.kind {
                 '{' => {
                     let span_before = toks.next().unwrap().pos;
@@ -121,7 +123,7 @@ impl<'a> StyleParser<'a> {
                                 continue;
                             }
                         }
-                        let value = self.parse_style_value(toks, scope)?;
+                        let value = self.parse_style_value(toks, scope, span_before)?;
                         match toks.peek().unwrap().kind {
                             '}' => {
                                 styles.push(Style { property, value });
@@ -160,7 +162,7 @@ impl<'a> StyleParser<'a> {
                     }
                 }
                 _ => {
-                    let value = self.parse_style_value(toks, scope)?;
+                    let value = self.parse_style_value(toks, scope, tok.pos)?;
                     let t = toks.peek().ok_or(("expected more input.", value.span))?;
                     match t.kind {
                         '}' => {}

@@ -208,3 +208,19 @@ error!(
     at_else_alone,
     "@else {}", "Error: This at-rule is not allowed here."
 );
+error!(
+    no_expression_for_variable,
+    "a {$color: {ed;}", "Error: Expected expression."
+);
+error!(
+    empty_style_value_no_semicolon,
+    "a {color:}", "Error: Expected expression."
+);
+error!(
+    empty_style_value_semicolon,
+    "a {color:;}", "Error: Expected expression."
+);
+error!(
+    ident_colon_closing_brace,
+    "r:}", "Error: Expected expression."
+);

@@ -72,6 +72,7 @@ impl AtRule {
                     read_until_semicolon_or_closing_curly_brace(toks)?,
                     scope,
                     super_selector,
+                    kind_span,
                 )?;
 
                 return Err((message.inspect(span)?.to_string(), span.merge(kind_span)).into());
@@ -84,6 +85,7 @@ impl AtRule {
                     read_until_semicolon_or_closing_curly_brace(toks)?,
                     scope,
                     super_selector,
+                    kind_span,
                 )?;
                 span.merge(kind_span);
                 if toks.peek().unwrap().kind == ';' {
@@ -106,6 +108,7 @@ impl AtRule {
                     read_until_semicolon_or_closing_curly_brace(toks)?,
                     scope,
                     super_selector,
+                    kind_span,
                 )?;
                 span.merge(kind_span);
                 if toks.peek().unwrap().kind == ';' {

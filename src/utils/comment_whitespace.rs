@@ -100,16 +100,20 @@ pub(crate) fn eat_comment<I: Iterator<Item = Token>>(
     };
     while let Some(tok) = toks.next() {
         span = span.merge(tok.pos());
-        if tok.kind == '*' && toks.peek().unwrap().kind == '/' {
-            toks.next();
-            break;
-        } else if tok.kind == '#' && toks.peek().unwrap().kind == '{' {
-            toks.next();
-            comment
-                .push_str(&parse_interpolation(toks, scope, super_selector)?.to_css_string(span)?);
-            continue;
+        match (tok.kind, toks.peek()) {
+            ('*', Some(Token { kind: '/', .. })) => {
+                toks.next();
+                break;
+            }
+            ('#', Some(Token { kind: '{', .. })) => {
+                toks.next();
+                comment.push_str(
+                    &parse_interpolation(toks, scope, super_selector, span)?.to_css_string(span)?,
+                );
+                continue;
+            }
+            (..) => comment.push(tok.kind),
         }
-        comment.push(tok.kind);
     }
     devour_whitespace(toks);
     Ok(Spanned {

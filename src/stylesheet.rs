@@ -195,14 +195,15 @@ impl<'a> StyleSheetParser<'a> {
                     let whitespace = peek_whitespace(self.lexer);
 
                     match self.lexer.peek() {
-                        Some(Token { kind: ':', .. }) => {
+                        Some(Token { kind: ':', pos }) => {
+                            let pos = *pos;
                             self.lexer
                                 .take(name.node.chars().count() + whitespace + 1)
                                 .for_each(drop);
                             devour_whitespace(self.lexer);
 
                             let VariableDecl { val, default, .. } =
-                                eat_variable_value(self.lexer, &Scope::new(), &Selector::new())?;
+                                eat_variable_value(self.lexer, &Scope::new(), &Selector::new(), pos)?;
 
                             if !(default && global_var_exists(&name.node)) {
                                 insert_global_var(&name.node, val)?;

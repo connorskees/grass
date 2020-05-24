@@ -133,7 +133,7 @@ pub(crate) fn parse_for<I: Iterator<Item = Token>>(
         }
     }
     devour_whitespace(toks);
-    let from_val = Value::from_vec(from_toks, scope, super_selector)?;
+    let from_val = Value::from_vec(from_toks, scope, super_selector, span_before)?;
     let from = match from_val.node.eval(from_val.span)?.node {
         Value::Dimension(n, _) => match n.to_integer().to_isize() {
             Some(v) => v,
@@ -150,7 +150,7 @@ pub(crate) fn parse_for<I: Iterator<Item = Token>>(
 
     let to_toks = read_until_open_curly_brace(toks)?;
     toks.next();
-    let to_val = Value::from_vec(to_toks, scope, super_selector)?;
+    let to_val = Value::from_vec(to_toks, scope, super_selector, from_val.span)?;
     let to = match to_val.node.eval(to_val.span)?.node {
         Value::Dimension(n, _) => match n.to_integer().to_isize() {
             Some(v) => v,

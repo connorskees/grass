@@ -41,9 +41,9 @@ impl UnknownAtRule {
             match tok.kind {
                 '{' => break,
                 '#' => {
-                    if let Some(Token { kind: '{', .. }) = toks.peek() {
+                    if let Some(Token { kind: '{', pos }) = toks.peek().cloned() {
                         toks.next();
-                        let interpolation = parse_interpolation(toks, scope, super_selector)?;
+                        let interpolation = parse_interpolation(toks, scope, super_selector, pos)?;
                         params.push_str(&interpolation.node.to_css_string(interpolation.span)?);
                     } else {
                         params.push(tok.kind);

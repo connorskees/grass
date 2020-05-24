@@ -109,7 +109,10 @@ impl CallArgs {
         super_selector: &Selector,
     ) -> Option<SassResult<Spanned<Value>>> {
         match self.0.remove(&CallArg::Named(val.into())) {
-            Some(v) => Some(Value::from_vec(v, scope, super_selector)),
+            Some(v) => {
+                let span_before = v[0].pos;
+                Some(Value::from_vec(v, scope, super_selector, span_before))
+            }
             None => None,
         }
     }
@@ -124,7 +127,10 @@ impl CallArgs {
         super_selector: &Selector,
     ) -> Option<SassResult<Spanned<Value>>> {
         match self.0.remove(&CallArg::Positional(val)) {
-            Some(v) => Some(Value::from_vec(v, scope, super_selector)),
+            Some(v) => {
+                let span_before = v[0].pos;
+                Some(Value::from_vec(v, scope, super_selector, span_before))
+            }
             None => None,
         }
     }
@@ -159,7 +165,8 @@ impl CallArgs {
         };
         args.sort_by(|(a1, _), (a2, _)| a1.cmp(a2));
         for arg in args {
-            vals.push(Value::from_vec(arg.1, scope, super_selector)?);
+            let span_before = arg.1[0].pos;
+            vals.push(Value::from_vec(arg.1, scope, super_selector, span_before)?);
         }
         Ok(vals)
     }

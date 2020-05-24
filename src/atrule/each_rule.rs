@@ -119,7 +119,12 @@ pub(crate) fn parse_each<I: Iterator<Item = Token>>(
         return Err(("Expected \"in\".", i.span).into());
     }
     devour_whitespace(toks);
-    let iter_val = Value::from_vec(read_until_open_curly_brace(toks)?, scope, super_selector)?;
+    let iter_val = Value::from_vec(
+        read_until_open_curly_brace(toks)?,
+        scope,
+        super_selector,
+        i.span,
+    )?;
     let iter = match iter_val.node.eval(iter_val.span)?.node {
         Value::List(v, ..) => v,
         Value::Map(m) => m

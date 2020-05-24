@@ -28,7 +28,7 @@ impl While {
         content: Option<&[Spanned<Stmt>]>,
     ) -> SassResult<Vec<Spanned<Stmt>>> {
         let mut stmts = Vec::new();
-        let mut val = Value::from_vec(self.cond.clone(), scope, super_selector)?;
+        let mut val = Value::from_vec(self.cond.clone(), scope, super_selector, self.cond[0].pos)?;
         let scope = &mut scope.clone();
         while val.node.is_true(val.span)? {
             ruleset_eval(
@@ -39,7 +39,7 @@ impl While {
                 content,
                 &mut stmts,
             )?;
-            val = Value::from_vec(self.cond.clone(), scope, super_selector)?;
+            val = Value::from_vec(self.cond.clone(), scope, super_selector, self.cond[0].pos)?;
         }
         Ok(stmts)
     }

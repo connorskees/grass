@@ -88,11 +88,7 @@ impl Function {
             let val = match args.get(idx, arg.name.clone(), &scope, super_selector) {
                 Some(v) => v?,
                 None => match arg.default.as_mut() {
-                    Some(v) => Value::from_tokens(
-                        &mut mem::take(v).into_iter().peekmore(),
-                        &scope,
-                        super_selector,
-                    )?,
+                    Some(v) => Value::from_vec(mem::take(v), &scope, super_selector, args.span())?,
                     None => {
                         return Err(
                             (format!("Missing argument ${}.", &arg.name), args.span()).into()
@@ -137,7 +133,7 @@ impl Function {
             match stmt.node {
                 Stmt::AtRule(AtRule::Return(toks)) => {
                     return Ok(Some(
-                        Value::from_vec(toks, &self.scope, super_selector)?.node,
+                        Value::from_vec(toks, &self.scope, super_selector, stmt.span)?.node,
                     ));
                 }
                 Stmt::AtRule(AtRule::For(f)) => {
@@ -169,7 +165,8 @@ impl Function {
                 }
                 Stmt::AtRule(AtRule::While(w)) => {
                     let scope = &mut self.scope.clone();
-                    let mut val = Value::from_vec(w.cond.clone(), scope, super_selector)?;
+                    let mut val =
+                        Value::from_vec(w.cond.clone(), scope, super_selector, stmt.span)?;
                     while val.node.is_true(val.span)? {
                         let while_stmts = eat_stmts(
                             &mut w.body.clone().into_iter().peekmore(),
@@ -181,7 +178,7 @@ impl Function {
                         if let Some(v) = self.call(super_selector, while_stmts)? {
                             return Ok(Some(v));
                         }
-                        val = Value::from_vec(w.cond.clone(), scope, super_selector)?;
+                        val = Value::from_vec(w.cond.clone(), scope, super_selector, val.span)?;
                     }
                 }
                 Stmt::AtRule(AtRule::Each(..)) => todo!("@each in @function"),

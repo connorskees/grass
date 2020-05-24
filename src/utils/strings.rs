@@ -97,11 +97,11 @@ fn interpolated_ident_body<I: Iterator<Item = Token>>(
                 buf.push_str(&escape(toks, false)?);
             }
             '#' => {
-                if let Some(Token { kind: '{', .. }) = toks.peek_forward(1) {
+                if let Some(Token { kind: '{', pos }) = toks.peek_forward(1).cloned() {
                     toks.next();
                     toks.next();
                     // TODO: if ident, interpolate literally
-                    let interpolation = parse_interpolation(toks, scope, super_selector)?;
+                    let interpolation = parse_interpolation(toks, scope, super_selector, pos)?;
                     buf.push_str(&interpolation.node.to_css_string(interpolation.span)?);
                 } else {
                     toks.reset_view();
@@ -207,20 +207,21 @@ pub(crate) fn eat_ident<I: Iterator<Item = Token>>(
     // (first == '#' && scanner.peekChar(1) == $lbrace)
     } else if first == '#' {
         toks.next();
-        if toks.peek().is_none() {
+        let Token { kind, pos } = if let Some(tok) = toks.peek() {
+            *tok
+        } else {
             return Err(("Expected identifier.", pos).into());
-        }
-        let Token { kind, pos } = toks.peek().unwrap();
-        if kind == &'{' {
+        };
+        if kind == '{' {
             toks.next();
             text.push_str(
-                &match parse_interpolation(toks, scope, super_selector)?.node {
+                &match parse_interpolation(toks, scope, super_selector, pos)?.node {
                     Value::String(s, ..) => s,
                     v => v.to_css_string(span)?.into(),
                 },
             );
         } else {
-            return Err(("Expected identifier.", *pos).into());
+            return Err(("Expected identifier.", pos).into());
         }
     } else {
         return Err(("Expected identifier.", pos).into());
@@ -293,9 +294,9 @@ pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
             '"' if q == '"' => break,
             '\'' if q == '\'' => break,
             '#' => {
-                if toks.peek().unwrap().kind == '{' {
+                if let Some(Token { kind: '{', pos }) = toks.peek().cloned() {
                     toks.next();
-                    let interpolation = parse_interpolation(toks, scope, super_selector)?;
+                    let interpolation = parse_interpolation(toks, scope, super_selector, pos)?;
                     s.push_str(&match interpolation.node {
                         Value::String(s, ..) => s,
                         v => v.to_css_string(interpolation.span)?.into(),

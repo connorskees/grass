@@ -79,11 +79,7 @@ impl Mixin {
             let val = match args.get(idx, arg.name.clone(), scope, super_selector) {
                 Some(v) => v?,
                 None => match arg.default.as_mut() {
-                    Some(v) => Value::from_tokens(
-                        &mut std::mem::take(v).into_iter().peekmore(),
-                        scope,
-                        super_selector,
-                    )?,
+                    Some(v) => Value::from_vec(mem::take(v), scope, super_selector, args.span())?,
                     None => {
                         return Err(
                             (format!("Missing argument ${}.", &arg.name), args.span()).into()
