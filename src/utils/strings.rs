@@ -97,13 +97,15 @@ fn interpolated_ident_body<I: Iterator<Item = Token>>(
                 buf.push_str(&escape(toks, false)?);
             }
             '#' => {
-                toks.next();
-                // TODO: peekmore
-                let next = toks.next().unwrap();
-                if next.kind == '{' {
+                if let Some(Token { kind: '{', .. }) = toks.peek_forward(1) {
+                    toks.next();
+                    toks.next();
                     // TODO: if ident, interpolate literally
                     let interpolation = parse_interpolation(toks, scope, super_selector)?;
                     buf.push_str(&interpolation.node.to_css_string(interpolation.span)?);
+                } else {
+                    toks.reset_view();
+                    break;
                 }
             }
             _ => break,

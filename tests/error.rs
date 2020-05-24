@@ -200,3 +200,4 @@ error!(value_after_style, "a {}a", "Error: expected \"{\".");
 test!(whitespace_after_style, "a {}\t\n ", "");
 test!(toplevel_semicolon, ";", "");
 test!(toplevel_semicolon_after_style, "a {};", "");
+error!(nothing_after_hash_in_interpolated_ident_body, "a {color: foo#", "Error: Expected identifier.");
