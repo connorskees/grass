@@ -906,10 +906,13 @@ impl Value {
             ':' | '?' | ')' | '@' | '^' | ']' | '|' => {
                 return Some(Err(("expected \";\".", span).into()))
             }
-            v if v as u32 >= 0x80 || v.is_control() || v == '`' || v == '~' => {
+            '\u{0}'..='\u{8}' | '\u{b}'..='\u{1f}' | '\u{7f}'..=std::char::MAX | '`' | '~' => {
                 return Some(Err(("Expected expression.", span).into()))
             }
-            v => todo!("unexpected token in value parsing: {:?}", v),
+            ' ' | '\n' | '\t' => unreachable!("whitespace is checked prior to this match"),
+            'A'..='Z' | 'a'..='z' | '_' | '\\' => {
+                unreachable!("these chars are checked in an if stmt")
+            }
         }))
     }
 }
