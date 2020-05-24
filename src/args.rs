@@ -324,13 +324,13 @@ pub(crate) fn eat_func_args<I: Iterator<Item = Token>>(
 
 pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
     toks: &mut PeekMoreIterator<I>,
+    span_before: Span,
 ) -> SassResult<CallArgs> {
     let mut args: HashMap<CallArg, Vec<Token>> = HashMap::new();
     devour_whitespace_or_comment(toks)?;
     let mut name = String::new();
     let mut val: Vec<Token> = Vec::new();
-    // todo: panics on a { color:rgb(; }
-    let mut span = toks.peek().unwrap().pos();
+    let mut span = toks.peek().ok_or(("expected \")\".", span_before))?.pos();
     loop {
         match toks.peek().unwrap().kind {
             '$' => {

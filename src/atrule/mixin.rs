@@ -200,7 +200,7 @@ pub(crate) fn eat_include<I: Iterator<Item = Token>>(
         match tok.kind {
             ';' => CallArgs::new(name.span),
             '(' => {
-                let tmp = eat_call_args(toks)?;
+                let tmp = eat_call_args(toks, tok.pos)?;
                 devour_whitespace_or_comment(toks)?;
                 if let Some(tok) = toks.peek() {
                     match tok.kind {

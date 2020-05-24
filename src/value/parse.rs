@@ -572,7 +572,8 @@ impl Value {
             });
         }
 
-        if let Some(Token { kind: '(', .. }) = toks.peek() {
+        if let Some(Token { kind: '(', pos }) = toks.peek() {
+            let pos = *pos;
             let as_ident = Identifier::from(&s);
             toks.next();
             let func = match scope.get_fn(Spanned {
@@ -583,7 +584,7 @@ impl Value {
                 Err(_) => match GLOBAL_FUNCTIONS.get(as_ident.into_inner().as_str()) {
                     Some(f) => {
                         return Ok(IntermediateValue::Value(f.0(
-                            eat_call_args(toks)?,
+                            eat_call_args(toks, pos)?,
                             scope,
                             super_selector,
                         )?)
@@ -600,11 +601,11 @@ impl Value {
                             "url" => match try_eat_url(toks, scope, super_selector)? {
                                 Some(val) => s = val,
                                 None => s.push_str(
-                                    &eat_call_args(toks)?.to_css_string(scope, super_selector)?,
+                                    &eat_call_args(toks, pos)?.to_css_string(scope, super_selector)?,
                                 ),
                             },
                             _ => s.push_str(
-                                &eat_call_args(toks)?.to_css_string(scope, super_selector)?,
+                                &eat_call_args(toks, pos)?.to_css_string(scope, super_selector)?,
                             ),
                         }
                         return Ok(
@@ -614,7 +615,7 @@ impl Value {
                 },
             };
             return Ok(IntermediateValue::Value(func.eval(
-                eat_call_args(toks)?,
+                eat_call_args(toks, pos)?,
                 scope,
                 super_selector,
             )?)
