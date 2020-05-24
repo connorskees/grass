@@ -31,6 +31,7 @@ pub(crate) fn read_until_open_curly_brace<I: Iterator<Item = Token>>(
                 if toks.peek().is_some() {
                     t.push(toks.next().unwrap());
                 }
+                continue;
             }
             _ => {}
         }

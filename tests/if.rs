@@ -122,3 +122,7 @@ error!(
     condition_is_evaluated_eagerly,
     "@if 1 + 1 =s {\n}", "Error: expected \"=\"."
 );
+error!(
+    nothing_after_escape,
+    "@if \\", "Error: Expected expression."
+);
