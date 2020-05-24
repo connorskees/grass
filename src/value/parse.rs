@@ -682,7 +682,7 @@ impl Value {
                 let unit = if let Some(tok) = toks.peek() {
                     let Token { kind, pos } = *tok;
                     match kind {
-                        'a'..='z' | 'A'..='Z' | '_' | '\\' => {
+                        'a'..='z' | 'A'..='Z' | '_' | '\\' | '\u{7f}'..=std::char::MAX => {
                             let u = match eat_ident_no_interpolation(toks, true, pos) {
                                 Ok(v) => v,
                                 Err(e) => return Some(Err(e)),

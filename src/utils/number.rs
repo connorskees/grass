@@ -124,7 +124,7 @@ pub(crate) fn eat_number<I: Iterator<Item = Token>>(
 
 fn eat_whole_number<I: Iterator<Item = Token>>(toks: &mut PeekMoreIterator<I>, buf: &mut String) {
     while let Some(c) = toks.peek() {
-        if !c.kind.is_numeric() {
+        if !c.kind.is_ascii_digit() {
             break;
         }
         let tok = toks.next().unwrap();

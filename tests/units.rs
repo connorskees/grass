@@ -84,6 +84,11 @@ test!(
     "a {\n  color: unit(1\\9);\n}\n",
     "a {\n  color: \"\\\\9 \";\n}\n"
 );
+test!(
+    non_ascii_numeric_interpreted_as_unit,
+    "a {\n  color: 2߄;\n}\n",
+    "@charset \"UTF-8\";\na {\n  color: 2߄;\n}"
+);
 error!(
     display_single_mul,
     "a {\n  color: 1rem * 1px;\n}\n", "Error: 1rem*px isn't a valid CSS value."
