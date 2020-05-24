@@ -151,23 +151,40 @@ struct StyleSheetParser<'a> {
     path: &'a Path,
 }
 
-fn is_selector_char(c: char) -> bool {
-    c.is_alphanumeric()
-        || matches!(
-            c,
-            '_' | '-' | '[' | '#' | ':' | '*' | '%' | '.' | '>' | '\\' | '+'
-        )
-}
-
 impl<'a> StyleSheetParser<'a> {
     fn parse_toplevel(mut self) -> SassResult<(Vec<Spanned<Stmt>>, Scope)> {
         let mut rules: Vec<Spanned<Stmt>> = Vec::new();
+        devour_whitespace(self.lexer);
         while let Some(Token { kind, .. }) = self.lexer.peek() {
             match kind {
-                _ if is_selector_char(*kind) => {
+                'a'..='z'
+                | 'A'..='Z'
+                | '0'..='9'
+                | '['
+                | '\\'
+                | ']'
+                | '^'
+                | '_'
+                | '-'
+                | '#'
+                | ':'
+                | '*'
+                | '%'
+                | '.'
+                | '>'
+                | '+'
+                | '='
+                | ','
+                | '('
+                | ')'
+                | '<'
+                | '?'
+                | '~'
+                | '|'
+                | '\u{7f}'..=std::char::MAX => {
                     rules.extend(self.eat_rules(&Selector::new(), &mut Scope::new())?)
                 }
-                '\t' | '\n' | ' ' => {
+                '\t' | '\n' | ' ' | ';' => {
                     self.lexer.next();
                     continue;
                 }
@@ -331,20 +348,16 @@ impl<'a> StyleSheetParser<'a> {
                     )
                         .into())
                 }
-                c if c.is_control() => {
+                '\u{0}'..='\u{8}' | '\u{b}'..='\u{1f}' => {
                     return Err(("expected selector.", self.lexer.next().unwrap().pos).into());
                 }
-                ',' | '!' | '(' | ')' => {
-                    return Err(("expected \"{\".", self.lexer.next().unwrap().pos).into());
-                }
-                '{' => {
+                '{' | '!' => {
                     return Err(("expected \"}\".", self.lexer.next().unwrap().pos).into());
                 }
                 '`' | '\'' | '"' => {
                     return Err(("expected selector.", self.lexer.next().unwrap().pos).into());
                 }
                 '}' => return Err(("unmatched \"}\".", self.lexer.next().unwrap().pos).into()),
-                _ => todo!("unexpected toplevel token: {:?}", kind),
             };
         }
         Ok((rules, GLOBAL_SCOPE.with(|s| s.borrow().clone())))

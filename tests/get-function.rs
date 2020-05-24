@@ -15,7 +15,7 @@ test!(
 test!(
     same_function_equal,
     "@function user-defined() {@return null}
-    a {b: get-function(user-defined) == get-function(user-defined)}s",
+    a {b: get-function(user-defined) == get-function(user-defined)}",
     "a {\n  b: true;\n}\n"
 );
 test!(

@@ -400,5 +400,12 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
             _ => values.push(toks.next().unwrap()),
         };
     }
+
+    // if `values` is not empty, there was an unexpected toplevel token
+    // that should be part of a selector
+    if let Some(v) = values.pop() {
+        return Err(("expected \"{\".", v.pos).into());
+    }
+
     Ok(None)
 }

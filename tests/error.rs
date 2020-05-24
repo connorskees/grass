@@ -83,20 +83,15 @@ error!(
     "a {$a", "Error: expected \":\"."
 );
 error!(toplevel_comma, "a {},", "Error: expected \"{\".");
-error!(toplevel_exclamation, "! {}", "Error: expected \"{\".");
+error!(toplevel_exclamation_alone, "!", "Error: expected \"}\".");
+error!(toplevel_exclamation, "! {}", "Error: expected \"}\".");
 error!(toplevel_backtick, "` {}", "Error: expected selector.");
 error!(
     toplevel_open_curly_brace,
     "{ {color: red;}", "Error: expected \"}\"."
 );
-error!(
-    toplevel_open_paren,
-    "(", "Error: expected \"{\"."
-);
-error!(
-    toplevel_close_paren,
-    "(", "Error: expected \"{\"."
-);
+error!(toplevel_open_paren, "(", "Error: expected \"{\".");
+error!(toplevel_close_paren, "(", "Error: expected \"{\".");
 error!(
     backtick_in_value,
     "a {color:`red;}", "Error: Expected expression."
@@ -184,3 +179,24 @@ error!(
     nothing_after_gt,
     "a {color: 1 >", "Error: Expected expression."
 );
+error!(toplevel_eq_alone, "=", "Error: expected \"{\".");
+error!(toplevel_gt_alone, ">", "Error: expected \"{\".");
+error!(toplevel_lt_alone, "<", "Error: expected \"{\".");
+error!(toplevel_question_alone, "?", "Error: expected \"{\".");
+error!(toplevel_caret_alone, "^", "Error: expected \"{\".");
+test!(toplevel_gt_as_selector, "> {}", "");
+test!(toplevel_tilde_as_selector, "~ {}", "");
+error!(toplevel_lt_as_selector, "< {}", "Error: expected selector.");
+error!(
+    toplevel_question_as_selector,
+    "? {}", "Error: expected selector."
+);
+error!(
+    toplevel_caret_as_selector,
+    "^ {}", "Error: expected selector."
+);
+error!(toplevel_eq, "= {}", "Error: expected selector.");
+error!(value_after_style, "a {}a", "Error: expected \"{\".");
+test!(whitespace_after_style, "a {}\t\n ", "");
+test!(toplevel_semicolon, ";", "");
+test!(toplevel_semicolon_after_style, "a {};", "");

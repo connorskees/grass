@@ -530,3 +530,14 @@ test!(
     "+ {\n  color: &;\n}\n",
     "+ {\n  color: +;\n}\n"
 );
+error!(
+    #[ignore = "namespaces are not yet parsed correctly"]
+    empty_namespace,
+    "| {}", "Error: Expected identifier."
+);
+test!(
+    #[ignore = "namespaces are not yet parsed correctly"]
+    simple_namespace,
+    "|f {\n  color: &;\n}\n",
+    "|f {\n  color: |f;\n}\n"
+);
