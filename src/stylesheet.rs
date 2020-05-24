@@ -182,6 +182,9 @@ impl<'a> StyleSheetParser<'a> {
                 | '?'
                 | '~'
                 | '|'
+                | '`'
+                | '\''
+                | '"'
                 | '\u{7f}'..=std::char::MAX => {
                     rules.extend(self.eat_rules(&Selector::new(), &mut Scope::new())?)
                 }
@@ -336,8 +339,9 @@ impl<'a> StyleSheetParser<'a> {
                                     )?);
                                 }
                                 AtRule::AtRoot(root_rules) => rules.extend(root_rules),
-                                AtRule::Unknown(..) => rules.push(rule.map_node(Stmt::AtRule)),
-                                AtRule::Media(..) => rules.push(rule.map_node(Stmt::AtRule)),
+                                AtRule::Unknown(..) | AtRule::Media(..) => {
+                                    rules.push(rule.map_node(Stmt::AtRule))
+                                }
                             }
                         }
                     }
@@ -354,9 +358,6 @@ impl<'a> StyleSheetParser<'a> {
                 }
                 '{' | '!' => {
                     return Err(("expected \"}\".", self.lexer.next().unwrap().pos).into());
-                }
-                '`' | '\'' | '"' => {
-                    return Err(("expected selector.", self.lexer.next().unwrap().pos).into());
                 }
                 '}' => return Err(("unmatched \"}\".", self.lexer.next().unwrap().pos).into()),
             };
@@ -400,11 +401,7 @@ impl<'a> StyleSheetParser<'a> {
                     AtRule::Warn(ref message) => self.warn(expr.span, message),
                     AtRule::Mixin(..) | AtRule::Function(..) => todo!(),
                     AtRule::Charset => todo!(),
-                    r @ AtRule::Unknown(..) => stmts.push(Spanned {
-                        node: Stmt::AtRule(r),
-                        span,
-                    }),
-                    r @ AtRule::Media(..) => stmts.push(Spanned {
+                    r @ AtRule::Unknown(..) | r @ AtRule::Media(..) => stmts.push(Spanned {
                         node: Stmt::AtRule(r),
                         span,
                     }),

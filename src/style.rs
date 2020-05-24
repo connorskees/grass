@@ -165,7 +165,6 @@ impl<'a> StyleParser<'a> {
                     let value = self.parse_style_value(toks, scope, tok.pos)?;
                     let t = toks.peek().ok_or(("expected more input.", value.span))?;
                     match t.kind {
-                        '}' => {}
                         ';' => {
                             toks.next();
                             devour_whitespace(toks);

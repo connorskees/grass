@@ -38,8 +38,7 @@ impl SassFunction {
     /// Used mainly in debugging and `inspect()`
     pub fn name(&self) -> &Identifier {
         match self {
-            Self::Builtin(_, name) => name,
-            Self::UserDefined(_, name) => name,
+            Self::Builtin(_, name) | Self::UserDefined(_, name) => name,
         }
     }
 

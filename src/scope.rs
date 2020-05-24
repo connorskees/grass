@@ -90,7 +90,7 @@ impl Scope {
     }
 
     pub fn get_var<T: Into<Identifier>>(&self, name: Spanned<T>) -> SassResult<Spanned<Value>> {
-        let name = name.map_node(|n| n.into());
+        let name = name.map_node(Into::into);
         match self.vars.get(&name.node) {
             Some(v) => Ok(v.clone()),
             None => get_global_var(name),
@@ -112,7 +112,7 @@ impl Scope {
     }
 
     pub fn get_mixin<T: Into<Identifier>>(&self, name: Spanned<T>) -> SassResult<Mixin> {
-        let name = name.map_node(|n| n.into());
+        let name = name.map_node(Into::into);
         match self.mixins.get(&name.node) {
             Some(v) => Ok(v.clone()),
             None => get_global_mixin(name),
@@ -129,7 +129,7 @@ impl Scope {
     }
 
     pub fn get_fn<T: Into<Identifier>>(&self, name: Spanned<T>) -> SassResult<Function> {
-        let name = name.map_node(|n| n.into());
+        let name = name.map_node(Into::into);
         match self.functions.get(&name.node) {
             Some(v) => Ok(v.clone()),
             None => get_global_fn(name),

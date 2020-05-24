@@ -135,14 +135,7 @@ impl Value {
                 }
                 _ => Cow::Owned(format!("{}{}", num, unit)),
             },
-            Self::Map(..) => {
-                return Err((
-                    format!("{} isn't a valid CSS value.", self.inspect(span)?),
-                    span,
-                )
-                    .into())
-            }
-            Self::Function(..) => {
+            Self::Map(..) | Self::Function(..) => {
                 return Err((
                     format!("{} isn't a valid CSS value.", self.inspect(span)?),
                     span,

@@ -121,7 +121,7 @@ impl Function {
         self.args(args, scope, super_selector)?;
         let stmts = self.eval_body(super_selector)?;
         self.call(super_selector, stmts)?
-            .ok_or(("Function finished without @return.", self.pos).into())
+            .ok_or_else(|| ("Function finished without @return.", self.pos).into())
     }
 
     pub fn call(

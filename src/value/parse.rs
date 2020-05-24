@@ -163,7 +163,7 @@ enum IntermediateValue {
 }
 
 impl IntermediateValue {
-    fn span(self, span: Span) -> Spanned<Self> {
+    const fn span(self, span: Span) -> Spanned<Self> {
         Spanned { node: self, span }
     }
 }
@@ -655,7 +655,7 @@ impl Value {
             .span(span));
         }
 
-        if let Some(c) = NAMED_COLORS.get_by_name(&lower.as_str()) {
+        if let Some(c) = NAMED_COLORS.get_by_name(lower.as_str()) {
             return Ok(IntermediateValue::Value(Value::Color(Box::new(Color::new(
                 c[0], c[1], c[2], c[3], s,
             ))))
@@ -791,7 +791,7 @@ impl Value {
                 let mut span = toks.next().unwrap().pos();
                 let mut inner = match read_until_closing_paren(toks) {
                     Ok(v) => v,
-                    Err(e) => return Some(Err(e.into())),
+                    Err(e) => return Some(Err(e)),
                 };
                 // todo: the above shouldn't eat the closing paren
                 if let Some(last_tok) = inner.pop() {
@@ -833,7 +833,7 @@ impl Value {
                 let mut span = toks.next().unwrap().pos();
                 let mut inner = match read_until_closing_square_brace(toks) {
                     Ok(v) => v,
-                    Err(e) => return Some(Err(e.into())),
+                    Err(e) => return Some(Err(e)),
                 };
                 if let Some(last_tok) = inner.pop() {
                     if last_tok.kind != ']' {

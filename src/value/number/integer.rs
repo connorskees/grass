@@ -76,7 +76,7 @@ impl Add<i32> for Integer {
     type Output = Self;
     fn add(self, rhs: i32) -> Self::Output {
         match self {
-            Self::Machine(v) => match v.checked_add(rhs as i64) {
+            Self::Machine(v) => match v.checked_add(i64::from(rhs)) {
                 Some(v) => Self::Machine(v),
                 None => Self::Big(BigInt::from(v) + rhs),
             },

@@ -80,10 +80,10 @@ fn change_color(mut args: CallArgs, scope: &Scope, super_selector: &Selector) ->
 
     if red.is_some() || green.is_some() || blue.is_some() {
         return Ok(Value::Color(Box::new(Color::from_rgba(
-            red.unwrap_or(color.red()),
-            green.unwrap_or(color.green()),
-            blue.unwrap_or(color.blue()),
-            alpha.unwrap_or(color.alpha()),
+            red.unwrap_or_else(|| color.red()),
+            green.unwrap_or_else(|| color.green()),
+            blue.unwrap_or_else(|| color.blue()),
+            alpha.unwrap_or_else(|| color.alpha()),
         ))));
     }
 
@@ -147,10 +147,10 @@ fn adjust_color(mut args: CallArgs, scope: &Scope, super_selector: &Selector) ->
 
     if red.is_some() || green.is_some() || blue.is_some() {
         return Ok(Value::Color(Box::new(Color::from_rgba(
-            color.red() + red.unwrap_or(Number::zero()),
-            color.green() + green.unwrap_or(Number::zero()),
-            color.blue() + blue.unwrap_or(Number::zero()),
-            color.alpha() + alpha.unwrap_or(Number::zero()),
+            color.red() + red.unwrap_or_else(Number::zero),
+            color.green() + green.unwrap_or_else(Number::zero),
+            color.blue() + blue.unwrap_or_else(Number::zero),
+            color.alpha() + alpha.unwrap_or_else(Number::zero),
         ))));
     }
 
@@ -189,10 +189,10 @@ fn adjust_color(mut args: CallArgs, scope: &Scope, super_selector: &Selector) ->
         // Color::as_hsla() returns more exact values than Color::hue(), etc.
         let (this_hue, this_saturation, this_luminance, this_alpha) = color.as_hsla();
         return Ok(Value::Color(Box::new(Color::from_hsla(
-            this_hue + hue.unwrap_or(Number::zero()),
-            this_saturation + saturation.unwrap_or(Number::zero()),
-            this_luminance + luminance.unwrap_or(Number::zero()),
-            this_alpha + alpha.unwrap_or(Number::zero()),
+            this_hue + hue.unwrap_or_else(Number::zero),
+            this_saturation + saturation.unwrap_or_else(Number::zero),
+            this_luminance + luminance.unwrap_or_else(Number::zero),
+            this_alpha + alpha.unwrap_or_else(Number::zero),
         ))));
     }
 
@@ -266,22 +266,22 @@ fn scale_color(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> 
         return Ok(Value::Color(Box::new(Color::from_rgba(
             scale(
                 color.red(),
-                red.unwrap_or(Number::zero()),
+                red.unwrap_or_else(Number::zero),
                 Number::from(255),
             ),
             scale(
                 color.green(),
-                green.unwrap_or(Number::zero()),
+                green.unwrap_or_else(Number::zero),
                 Number::from(255),
             ),
             scale(
                 color.blue(),
-                blue.unwrap_or(Number::zero()),
+                blue.unwrap_or_else(Number::zero),
                 Number::from(255),
             ),
             scale(
                 color.alpha(),
-                alpha.unwrap_or(Number::zero()),
+                alpha.unwrap_or_else(Number::zero),
                 Number::one(),
             ),
         ))));
@@ -313,15 +313,19 @@ fn scale_color(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> 
             scale(this_hue, Number::zero(), Number::from(360)),
             scale(
                 this_saturation,
-                saturation.unwrap_or(Number::zero()),
+                saturation.unwrap_or_else(Number::zero),
                 Number::one(),
             ),
             scale(
                 this_luminance,
-                luminance.unwrap_or(Number::zero()),
+                luminance.unwrap_or_else(Number::zero),
                 Number::one(),
             ),
-            scale(this_alpha, alpha.unwrap_or(Number::zero()), Number::one()),
+            scale(
+                this_alpha,
+                alpha.unwrap_or_else(Number::zero),
+                Number::one(),
+            ),
         ))));
     }
 

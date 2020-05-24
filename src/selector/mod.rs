@@ -419,28 +419,29 @@ impl Selector {
         } else {
             todo!()
         };
-        if is_selector_name_char(t.kind) {
-            let name = eat_ident_no_interpolation(toks, false, t.pos)?.node;
-            Ok(
-                if toks.peek().is_some() && toks.peek().unwrap().kind == '(' {
-                    toks.next();
-                    let mut inner_toks = read_until_closing_paren(toks)?;
-                    inner_toks.pop();
-                    let inner = Selector::from_tokens(
-                        &mut inner_toks.into_iter().peekmore(),
-                        scope,
-                        super_selector,
-                    )?;
-                    SelectorKind::PseudoParen(name, inner)
-                } else if is_pseudo_element {
-                    SelectorKind::PseudoElement(name)
-                } else {
-                    SelectorKind::Pseudo(name)
-                },
-            )
-        } else {
+
+        if !is_selector_name_char(t.kind) {
             return Err(("Expected identifier.", t.pos).into());
         }
+
+        let name = eat_ident_no_interpolation(toks, false, t.pos)?.node;
+        Ok(
+            if toks.peek().is_some() && toks.peek().unwrap().kind == '(' {
+                toks.next();
+                let mut inner_toks = read_until_closing_paren(toks)?;
+                inner_toks.pop();
+                let inner = Selector::from_tokens(
+                    &mut inner_toks.into_iter().peekmore(),
+                    scope,
+                    super_selector,
+                )?;
+                SelectorKind::PseudoParen(name, inner)
+            } else if is_pseudo_element {
+                SelectorKind::PseudoElement(name)
+            } else {
+                SelectorKind::Pseudo(name)
+            },
+        )
     }
 
     pub fn replace(super_selector: &Selector, this: Selector) -> Selector {

@@ -83,6 +83,7 @@ pub(crate) fn eat_number<I: Iterator<Item = Token>>(
 
     let mut times_ten = String::new();
     let mut times_ten_is_postive = true;
+    #[allow(clippy::never_loop)]
     loop {
         // TODO: https://github.com/rust-lang/rust/issues/54883
         if let Some(Token { kind: 'e', .. }) | Some(Token { kind: 'E', .. }) = toks.peek() {

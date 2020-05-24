@@ -125,10 +125,9 @@ impl Value {
                 Op::Mul => lhs.mul(*rhs, span)?,
                 Op::Div => lhs.div(*rhs, span)?,
                 Op::Rem => lhs.rem(*rhs, span)?,
-                Op::GreaterThan => return lhs.cmp(*rhs, op, span),
-                Op::GreaterThanEqual => return lhs.cmp(*rhs, op, span),
-                Op::LessThan => return lhs.cmp(*rhs, op, span),
-                Op::LessThanEqual => return lhs.cmp(*rhs, op, span),
+                Op::GreaterThan | Op::GreaterThanEqual | Op::LessThan | Op::LessThanEqual => {
+                    return lhs.cmp(*rhs, op, span)
+                }
                 Op::Not => unreachable!(),
                 Op::And => {
                     if lhs.is_true(span)? {

@@ -40,11 +40,10 @@ grass input.scss
     clippy::implicit_return,
     // Self { .. } is less explicit than Foo { .. }
     clippy::use_self,
-    // this is way too pedantic -- some things don't need docs!
+    // this is too pedantic -- some things don't need docs!
     clippy::missing_docs_in_private_items,
-    // unreachable!() has many valid use cases
     clippy::unreachable,
-    // _ => {} has many valid use cases
+    // this disallows binding as well
     clippy::wildcard_enum_match_arm,
     // this is too pedantic -- we are allowed to add numbers!
     clippy::integer_arithmetic,
@@ -53,12 +52,15 @@ grass input.scss
     clippy::missing_errors_doc,
     // this incorrectly results in errors for types that derive `Debug`
     // https://github.com/rust-lang/rust-clippy/issues/4980
-    clippy::let_underscore_must_use,
+    // clippy::let_underscore_must_use,
     // this is too pedantic -- it results in some names being less explicit
     // than they should
     clippy::module_name_repetitions,
     // this is too pedantic -- it is sometimes useful to break up `impl`s
     clippy::multiple_inherent_impl,
+    // filter isn't fallible
+    clippy::filter_map,
+    clippy::else_if_without_else,
 
     // temporarily allowed while under heavy development.
     // eventually these allows should be refactored away
@@ -72,8 +74,8 @@ grass input.scss
     clippy::cast_possible_truncation,
     clippy::single_match_else,
     clippy::indexing_slicing,
-    clippy::match_same_arms,
-    clippy::or_fun_call,
+    // clippy::match_same_arms,
+    // clippy::or_fun_call,
     clippy::redundant_pub_crate,
 )]
 #![cfg_attr(feature = "nightly", feature(track_caller))]
@@ -350,18 +352,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                         AtRule::Mixin(name, mixin) => Expr::MixinDecl(name, mixin),
                         AtRule::Function(name, func) => Expr::FunctionDecl(name, func),
                         AtRule::Charset => todo!("@charset as expr"),
-                        d @ AtRule::Debug(..) => Expr::AtRule(d),
-                        w @ AtRule::Warn(..) => Expr::AtRule(w),
-                        a @ AtRule::Return(_) => Expr::AtRule(a),
-                        c @ AtRule::Content => Expr::AtRule(c),
-                        f @ AtRule::If(..) => Expr::AtRule(f),
-                        f @ AtRule::For(..) => Expr::AtRule(f),
-                        f @ AtRule::While(..) => Expr::AtRule(f),
-                        f @ AtRule::Each(..) => Expr::AtRule(f),
-                        u @ AtRule::Unknown(..) => Expr::AtRule(u),
-                        u @ AtRule::AtRoot(..) => Expr::AtRule(u),
-                        u @ AtRule::Include(..) => Expr::AtRule(u),
-                        u @ AtRule::Media(..) => Expr::AtRule(u),
+                        a => Expr::AtRule(a),
                     },
                     span,
                 }));
