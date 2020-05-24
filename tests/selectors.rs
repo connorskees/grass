@@ -549,7 +549,4 @@ error!(
     non_ident_char_after_colon,
     ":#ab {}", "Error: Expected identifier."
 );
-error!(
-    nothing_after_colon,
-    "a:{}", "Error: Expected identifier."
-);
+error!(nothing_after_colon, "a:{}", "Error: Expected identifier.");

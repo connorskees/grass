@@ -49,6 +49,5 @@ test!(
 // and should be "expected \")\"."
 error!(
     nothing_after_open,
-    "a { color:rgb(; }",
-    "Error: expected \"{\"."
+    "a { color:rgb(; }", "Error: expected \"{\"."
 );

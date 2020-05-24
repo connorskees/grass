@@ -65,8 +65,7 @@ test!(
 );
 error!(
     num_div_map,
-    "a {\n  color: 1 / (a: b);\n}\n",
-    "Error: (a: b) isn't a valid CSS value."
+    "a {\n  color: 1 / (a: b);\n}\n", "Error: (a: b) isn't a valid CSS value."
 );
 error!(
     num_div_function,

@@ -601,7 +601,8 @@ impl Value {
                             "url" => match try_eat_url(toks, scope, super_selector)? {
                                 Some(val) => s = val,
                                 None => s.push_str(
-                                    &eat_call_args(toks, pos)?.to_css_string(scope, super_selector)?,
+                                    &eat_call_args(toks, pos)?
+                                        .to_css_string(scope, super_selector)?,
                                 ),
                             },
                             _ => s.push_str(

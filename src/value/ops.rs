@@ -628,7 +628,10 @@ impl Value {
                     Self::Dimension(num, unit).div(other.eval(span)?.node, span)?
                 }
                 Self::List(..) | Self::True | Self::False | Self::Important | Self::Color(..) => {
-                    Value::String(format!("{}{}/{}", num, unit, other.to_css_string(span)?), QuoteKind::None)
+                    Value::String(
+                        format!("{}{}/{}", num, unit, other.to_css_string(span)?),
+                        QuoteKind::None,
+                    )
                 }
                 Self::Null => Value::String(format!("{}{}/", num, unit), QuoteKind::None),
                 Self::Map(..) | Self::Function(..) => {
