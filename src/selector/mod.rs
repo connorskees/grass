@@ -1,5 +1,7 @@
 use std::fmt::{self, Display, Write};
 
+use codemap::Span;
+
 use peekmore::{PeekMore, PeekMoreIterator};
 
 use crate::common::{Brackets, ListSeparator, QuoteKind};
@@ -360,7 +362,7 @@ impl Selector {
                 }
                 ':' => {
                     iter.next();
-                    let sel = Self::consume_pseudo_selector(&mut iter, scope, super_selector)?;
+                    let sel = Self::consume_pseudo_selector(&mut iter, scope, super_selector, pos)?;
                     match &sel {
                         SelectorKind::PseudoParen(_, s) => {
                             if s.contains_super_selector() {
@@ -399,8 +401,9 @@ impl Selector {
         toks: &mut PeekMoreIterator<I>,
         scope: &Scope,
         super_selector: &Selector,
+        span_before: Span,
     ) -> SassResult<SelectorKind> {
-        let is_pseudo_element = if toks.peek().unwrap().kind == ':' {
+        let is_pseudo_element = if toks.peek().ok_or(("Expected identifier.", span_before))?.kind == ':' {
             toks.next();
             true
         } else {
