@@ -1,4 +1,4 @@
-use std::ffi::OsStr;
+use std::ffi::{OsStr, OsString};
 use std::path::Path;
 
 use codemap::{CodeMap, Spanned};
@@ -18,32 +18,26 @@ pub(crate) fn import(
         todo!("absolute import")
     }
     let path_buf = ctx.parent().unwrap_or(Path::new("")).join(path);
-    let name = path_buf.file_name().expect("todo! path ended in `..`");
+    // "todo: will panic if path ended in `..`"
+    let name = path_buf.file_name().unwrap();
     if path_buf.extension() == Some(OsStr::new(".css")) {
         // || name.starts_with("http://") || name.starts_with("https://") {
         todo!("handle css imports")
     }
     let mut p1 = path_buf.clone();
-    p1.push("index.scss");
+    p1.push(OsString::from("index.scss"));
     let mut p2 = path_buf.clone();
-    p2.push("_index.scss");
+    p2.push(OsString::from("_index.scss"));
     let paths = [
-        path_buf.with_file_name(format!(
-            "{}.scss",
-            name.to_str().expect("path should be UTF-8")
-        )),
-        path_buf.with_file_name(format!(
-            "_{}.scss",
-            name.to_str().expect("path should be UTF-8")
-        )),
+        path_buf.with_file_name(name).with_extension("scss"),
+        path_buf.with_file_name(format!("_{}.scss", name.to_str().unwrap())),
         path_buf,
         p1,
         p2,
     ];
     for name in &paths {
         if name.is_file() {
-            let (rules2, scope2) =
-                StyleSheet::export_from_path(&name.to_str().expect("path should be UTF-8"), map)?;
+            let (rules2, scope2) = StyleSheet::export_from_path(&name.to_str().unwrap(), map)?;
             rules.extend(rules2);
             scope.extend(scope2);
         }

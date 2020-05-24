@@ -83,14 +83,8 @@ impl Css {
                 for rule in rules {
                     match rule.node {
                         Stmt::RuleSet(_) => vals.extend(self.parse_stmt(rule.node)?),
-                        Stmt::Style(s) => vals
-                            .get_mut(0)
-                            .expect("expected block to exist")
-                            .push_style(*s)?,
-                        Stmt::MultilineComment(s) => vals
-                            .get_mut(0)
-                            .expect("expected block to exist")
-                            .push_comment(s),
+                        Stmt::Style(s) => vals.get_mut(0).unwrap().push_style(*s)?,
+                        Stmt::MultilineComment(s) => vals.get_mut(0).unwrap().push_comment(s),
                         Stmt::AtRule(AtRule::AtRoot(stmts)) => stmts
                             .into_iter()
                             .map(|r| Ok(vals.extend(self.parse_stmt(r.node)?)))

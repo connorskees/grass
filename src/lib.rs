@@ -46,8 +46,6 @@ grass input.scss
     clippy::unreachable,
     // _ => {} has many valid use cases
     clippy::wildcard_enum_match_arm,
-    // .expect() has many valid use cases, like when we know a value is `Some(..)`
-    clippy::option_expect_used,
     // this is too pedantic -- we are allowed to add numbers!
     clippy::integer_arithmetic,
     // this is too pedantic for now -- the library is changing too quickly for
@@ -71,7 +69,6 @@ grass input.scss
     clippy::panic,
     clippy::option_unwrap_used,
     clippy::result_unwrap_used,
-    clippy::result_expect_used,
     clippy::cast_possible_truncation,
     clippy::single_match_else,
     clippy::indexing_slicing,
