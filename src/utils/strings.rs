@@ -281,13 +281,13 @@ pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
     scope: &Scope,
     q: char,
     super_selector: &Selector,
+    span_before: Span,
 ) -> SassResult<Spanned<Value>> {
     let mut s = String::new();
-    let mut span = if let Some(tok) = toks.peek() {
-        tok.pos()
-    } else {
-        todo!()
-    };
+    let mut span = toks
+        .peek()
+        .ok_or((format!("Expected {}.", q), span_before))?
+        .pos();
     while let Some(tok) = toks.next() {
         span = span.merge(tok.pos());
         match tok.kind {

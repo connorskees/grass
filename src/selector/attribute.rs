@@ -123,7 +123,7 @@ impl Attribute {
         let value = match peek.kind {
             q @ '\'' | q @ '"' => {
                 toks.next();
-                match parse_quoted_string(toks, scope, q, super_selector)?.node {
+                match parse_quoted_string(toks, scope, q, super_selector, span_before)?.node {
                     Value::String(s, ..) => s,
                     _ => unreachable!(),
                 }

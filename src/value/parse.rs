@@ -823,7 +823,7 @@ impl Value {
             q @ '"' | q @ '\'' => {
                 let span_start = toks.next().unwrap().pos();
                 let Spanned { node, span } =
-                    match parse_quoted_string(toks, scope, q, super_selector) {
+                    match parse_quoted_string(toks, scope, q, super_selector, span_start) {
                         Ok(v) => v,
                         Err(e) => return Some(Err(e)),
                     };

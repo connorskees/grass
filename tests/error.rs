@@ -224,7 +224,9 @@ error!(
     ident_colon_closing_brace,
     "r:}", "Error: Expected expression."
 );
+error!(dollar_sign_alone, "$", "Error: Expected identifier.");
 error!(
-    dollar_sign_alone,
-    "$", "Error: Expected identifier."
+    nothing_after_dbl_quote,
+    "a {color: \"", "Error: Expected \"."
 );
+error!(nothing_after_sgl_quote, "a {color: '", "Error: Expected '.");

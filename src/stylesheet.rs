@@ -256,6 +256,7 @@ impl<'a> StyleSheetParser<'a> {
                                             &Scope::new(),
                                             q,
                                             &Selector::new(),
+                                            next.pos,
                                         )?
                                         .node
                                         .unquote()
