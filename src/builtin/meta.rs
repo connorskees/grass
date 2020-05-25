@@ -98,7 +98,7 @@ fn inspect(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> Sass
     Ok(Value::String(
         arg!(args, scope, super_selector, 0, "value")
             .inspect(args.span())?
-            .into(),
+            .into_owned(),
         QuoteKind::None,
     ))
 }

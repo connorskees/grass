@@ -268,7 +268,7 @@ impl Value {
                     format!("{}{}", self.to_css_string(span)?, s),
                     QuoteKind::Quoted,
                 ),
-                Self::Null => Value::String(self.to_css_string(span)?.into(), QuoteKind::None),
+                Self::Null => Value::String(self.to_css_string(span)?.into_owned(), QuoteKind::None),
                 _ => Value::String(
                     format!(
                         "{}{}",
@@ -280,7 +280,7 @@ impl Value {
             },
             Self::Null => match other {
                 Self::Null => Self::Null,
-                _ => Value::String(other.to_css_string(span)?.into(), QuoteKind::None),
+                _ => Value::String(other.to_css_string(span)?.into_owned(), QuoteKind::None),
             },
             Self::Dimension(num, unit) => match other {
                 Self::Dimension(num2, unit2) => {
