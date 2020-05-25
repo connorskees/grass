@@ -173,23 +173,25 @@ pub(crate) fn eat_ident<I: Iterator<Item = Token>>(
     super_selector: &Selector,
     span_before: Span,
 ) -> SassResult<Spanned<String>> {
-    let mut span = toks
-        .peek()
-        .ok_or(("Expected identifier.", span_before))?
-        .pos();
+    let Token {
+        kind,
+        pos: mut span,
+    } = toks.peek().ok_or(("Expected identifier.", span_before))?;
     let mut text = String::new();
-    if toks.peek().unwrap().kind == '-' {
+    if kind == &'-' {
         toks.next();
         text.push('-');
-        if toks.peek().is_none() {
-            return Ok(Spanned { node: text, span });
-        }
-        if toks.peek().unwrap().kind == '-' {
-            toks.next();
-            text.push('-');
-            let body_span = interpolated_ident_body(toks, scope, super_selector, span, &mut text)?;
-            span = span.merge(body_span);
-            return Ok(Spanned { node: text, span });
+        match toks.peek() {
+            Some(Token { kind: '-', .. }) => {
+                toks.next();
+                text.push('-');
+                let body_span =
+                    interpolated_ident_body(toks, scope, super_selector, span, &mut text)?;
+                span = span.merge(body_span);
+                return Ok(Spanned { node: text, span });
+            }
+            Some(..) => {}
+            None => return Ok(Spanned { node: text, span }),
         }
     }
 
@@ -237,37 +239,38 @@ pub(crate) fn eat_ident_no_interpolation<I: Iterator<Item = Token>>(
     unit: bool,
     span_before: Span,
 ) -> SassResult<Spanned<String>> {
-    let mut span = toks
-        .peek()
-        .ok_or(("Expected identifier.", span_before))?
-        .pos();
+    let Token {
+        kind,
+        pos: mut span,
+    } = toks.peek().ok_or(("Expected identifier.", span_before))?;
     let mut text = String::new();
-    if toks.peek().unwrap().kind == '-' {
+    if kind == &'-' {
         toks.next();
         text.push('-');
-        if toks.peek().is_none() {
-            return Ok(Spanned { node: text, span });
-        }
-        if toks.peek().unwrap().kind == '-' {
-            toks.next();
-            text.push('-');
-            text.push_str(&ident_body_no_interpolation(toks, unit, span)?.node);
-            return Ok(Spanned { node: text, span });
+
+        match toks.peek() {
+            Some(Token { kind: '-', .. }) => {
+                toks.next();
+                text.push('-');
+                text.push_str(&ident_body_no_interpolation(toks, unit, span)?.node);
+                return Ok(Spanned { node: text, span });
+            }
+            Some(..) => {}
+            None => return Ok(Spanned { node: text, span }),
         }
     }
 
-    let first = match toks.peek() {
+    let first = match toks.next() {
         Some(v) => v,
         None => return Err(("Expected identifier.", span).into()),
     };
 
     if is_name_start(first.kind) {
-        text.push(toks.next().unwrap().kind);
+        text.push(first.kind);
     } else if first.kind == '\\' {
-        toks.next();
         text.push_str(&escape(toks, true)?);
     } else {
-        return Err(("Expected identifier.", first.pos()).into());
+        return Err(("Expected identifier.", first.pos).into());
     }
 
     let body = ident_body_no_interpolation(toks, unit, span)?;
@@ -325,6 +328,7 @@ pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
                 if first.kind.is_ascii_hexdigit() {
                     let mut value = 0;
                     for _ in 0..6 {
+                        // todo: or patterns
                         let next = match toks.peek() {
                             Some(c) => c,
                             None => break,

@@ -339,12 +339,12 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
     let mut val: Vec<Token> = Vec::new();
     let mut span = toks.peek().ok_or(("expected \")\".", span_before))?.pos();
     loop {
-        match toks.peek().unwrap().kind {
-            '$' => {
+        match toks.peek() {
+            Some(Token { kind: '$', .. }) => {
                 let Token { pos, .. } = toks.next().unwrap();
                 let v = eat_ident_no_interpolation(toks, false, pos)?;
                 let whitespace = devour_whitespace_or_comment(toks)?;
-                if toks.peek().unwrap().kind == ':' {
+                if let Some(Token { kind: ':', .. }) = toks.peek() {
                     toks.next();
                     name = v.node;
                 } else {
@@ -362,11 +362,11 @@ pub(crate) fn eat_call_args<I: Iterator<Item = Token>>(
                     name.clear();
                 }
             }
-            ')' => {
+            Some(Token { kind: ')', .. }) => {
                 toks.next();
                 return Ok(CallArgs(args, span));
             }
-            _ => name.clear(),
+            Some(..) | None => name.clear(),
         }
         devour_whitespace_or_comment(toks)?;
 

@@ -22,7 +22,7 @@ fn length(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassR
 
 fn nth(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
     args.max_args(2)?;
-    let list = match arg!(args, scope, super_selector, 0, "list") {
+    let mut list = match arg!(args, scope, super_selector, 0, "list") {
         Value::List(v, ..) => v,
         Value::Map(m) => m.entries(),
         v => vec![v],
@@ -58,11 +58,11 @@ fn nth(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResu
         return Err((format!("$n: {} is not an int.", n), args.span()).into());
     }
 
-    if n.is_positive() {
-        Ok(list[n.to_integer().to_usize().unwrap() - 1].clone())
+    Ok(list.remove(if n.is_positive() {
+        n.to_integer().to_usize().unwrap_or(std::usize::MAX) - 1
     } else {
-        Ok(list[list.len() - n.abs().to_integer().to_usize().unwrap()].clone())
-    }
+        list.len() - n.abs().to_integer().to_usize().unwrap_or(std::usize::MAX)
+    }))
 }
 
 fn list_separator(
@@ -120,9 +120,9 @@ fn set_nth(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> Sass
     let val = arg!(args, scope, super_selector, 2, "value");
 
     if n.is_positive() {
-        list[n.to_integer().to_usize().unwrap() - 1] = val;
+        list[n.to_integer().to_usize().unwrap_or(std::usize::MAX) - 1] = val;
     } else {
-        list[len - n.abs().to_integer().to_usize().unwrap()] = val;
+        list[len - n.abs().to_integer().to_usize().unwrap_or(std::usize::MAX)] = val;
     }
 
     Ok(Value::List(list, sep, brackets))

@@ -28,7 +28,7 @@ pub(crate) fn eat_calc_args<I: Iterator<Item = Token>>(
                 buf.push(' ');
             }
             '#' => {
-                if toks.peek().is_some() && toks.peek().unwrap().kind == '{' {
+                if let Some(Token { kind: '{', .. }) = toks.peek() {
                     let span_before = toks.next().unwrap().pos();
                     let interpolation =
                         parse_interpolation(toks, scope, super_selector, span_before)?;

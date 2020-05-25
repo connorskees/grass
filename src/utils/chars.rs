@@ -40,7 +40,7 @@ pub(crate) fn hex_char_for(number: u32) -> char {
 }
 
 pub(crate) fn is_name(c: char) -> bool {
-    is_name_start(c) || c.is_digit(10) || c == '-'
+    is_name_start(c) || c.is_ascii_digit() || c == '-'
 }
 
 pub(crate) fn is_name_start(c: char) -> bool {

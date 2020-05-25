@@ -75,12 +75,12 @@ pub(crate) fn read_until_closing_curly_brace<I: Iterator<Item = Token>>(
             }
             '/' => {
                 let next = toks.next().unwrap();
-                match toks.peek().unwrap().kind {
-                    '/' => {
+                match toks.peek() {
+                    Some(Token { kind: '/', .. }) => {
                         read_until_newline(toks);
                         devour_whitespace(toks);
                     }
-                    _ => t.push(next),
+                    Some(..) | None => t.push(next),
                 };
                 continue;
             }
@@ -180,8 +180,8 @@ pub(crate) fn read_until_semicolon_or_closing_curly_brace<I: Iterator<Item = Tok
             }
             '/' => {
                 let next = toks.next().unwrap();
-                match toks.peek().unwrap().kind {
-                    '/' => {
+                match toks.peek() {
+                    Some(Token { kind: '/', .. }) => {
                         read_until_newline(toks);
                         devour_whitespace(toks);
                     }

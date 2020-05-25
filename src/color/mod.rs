@@ -488,7 +488,7 @@ fn repr(red: &Number, green: &Number, blue: &Number, alpha: &Number) -> String {
         } else if channel.is_negative() {
             0_u8
         } else {
-            channel.round().to_integer().to_u8().unwrap()
+            channel.round().to_integer().to_u8().unwrap_or(255)
         }
     }
 

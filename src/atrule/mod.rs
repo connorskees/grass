@@ -88,7 +88,7 @@ impl AtRule {
                     kind_span,
                 )?;
                 span.merge(kind_span);
-                if toks.peek().unwrap().kind == ';' {
+                if let Some(Token { kind: ';', .. }) = toks.peek() {
                     kind_span.merge(toks.next().unwrap().pos());
                 }
                 devour_whitespace(toks);
@@ -111,7 +111,7 @@ impl AtRule {
                     kind_span,
                 )?;
                 span.merge(kind_span);
-                if toks.peek().unwrap().kind == ';' {
+                if let Some(Token { kind: ';', .. }) = toks.peek() {
                     kind_span.merge(toks.next().unwrap().pos());
                 }
                 devour_whitespace(toks);
@@ -143,7 +143,7 @@ impl AtRule {
             }
             AtRuleKind::Return => {
                 let v = read_until_semicolon_or_closing_curly_brace(toks)?;
-                if toks.peek().unwrap().kind == ';' {
+                if let Some(Token { kind: ';', .. }) = toks.peek() {
                     toks.next();
                 }
                 devour_whitespace(toks);
@@ -205,7 +205,7 @@ impl AtRule {
             }
             AtRuleKind::Charset => {
                 read_until_semicolon_or_closing_curly_brace(toks)?;
-                if toks.peek().unwrap().kind == ';' {
+                if let Some(Token { kind: ';', .. }) = toks.peek() {
                     toks.next();
                 }
                 devour_whitespace(toks);

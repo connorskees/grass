@@ -61,17 +61,17 @@ pub(crate) fn eat_variable_value<I: Iterator<Item = Token>>(
             }
             '#' => {
                 val_toks.push(toks.next().unwrap());
-                match toks.peek().unwrap().kind {
-                    '{' => nesting += 1,
-                    ';' => break,
-                    '}' => {
+                match toks.peek() {
+                    Some(Token { kind: '{', .. }) => nesting += 1,
+                    Some(Token { kind: ';', .. }) => break,
+                    Some(Token { kind: '}', .. }) => {
                         if nesting == 0 {
                             break;
                         } else {
                             nesting -= 1;
                         }
                     }
-                    _ => {}
+                    Some(..) | None => {}
                 }
                 val_toks.push(toks.next().unwrap());
             }
@@ -86,9 +86,9 @@ pub(crate) fn eat_variable_value<I: Iterator<Item = Token>>(
             }
             '/' => {
                 let next = toks.next().unwrap();
-                match toks.peek().unwrap().kind {
-                    '/' => read_until_newline(toks),
-                    _ => val_toks.push(next),
+                match toks.peek() {
+                    Some(Token { kind: '/', .. }) => read_until_newline(toks),
+                    Some(..) | None => val_toks.push(next),
                 };
                 continue;
             }

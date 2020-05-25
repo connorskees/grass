@@ -241,7 +241,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                 if values.is_empty() {
                     toks.next();
                     devour_whitespace(toks);
-                    if toks.peek().is_some() && toks.peek().unwrap().kind == ';' {
+                    if let Some(Token { kind: ';', .. }) = toks.peek() {
                         toks.next();
                     }
                     devour_whitespace(toks);
