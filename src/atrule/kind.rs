@@ -10,10 +10,12 @@ pub enum AtRuleKind {
     /// Loads mixins, functions, and variables from other Sass
     /// stylesheets, and combines CSS from multiple stylesheets together
     Use,
+
     /// Loads a Sass stylesheet and makes its mixins, functions,
     /// and variables available when your stylesheet is loaded
     /// with the `@use` rule
     Forward,
+
     /// Extends the CSS at-rule to load styles, mixins, functions,
     /// and variables from other stylesheets
     ///
@@ -21,45 +23,49 @@ pub enum AtRuleKind {
     /// the @import rule refers to a plain css import
     /// e.g. `@import url(foo);`
     Import,
+
     Mixin,
     Content,
     Include,
+
     /// Defines custom functions that can be used in SassScript
     /// expressions
     Function,
     Return,
+
     /// Allows selectors to inherit styles from one another
     Extend,
+
     /// Puts styles within it at the root of the CSS document
     AtRoot,
+
     /// Causes compilation to fail with an error message
     Error,
+
     /// Prints a warning without stopping compilation entirely
     Warn,
+
     /// Prints a message for debugging purposes
     Debug,
+
     If,
-    // @else is considered a part of @each, and so is not parsed individually
-    // TODO: give proper error message for encountering @else? right now
-    // it is parsed as an unknown at rule
-    // Else,
     Each,
     For,
     While,
 
-    Media,
-
     // CSS @rules
     /// Defines the character set used by the style sheet
     Charset,
+
     /// A conditional group rule that will apply its content if the
     /// browser meets the criteria of the given condition
     Supports,
+
     /// Describes the aspect of intermediate steps in a CSS animation sequence
     Keyframes,
+    Media,
 
-    /// An unknown at rule.
-    /// For forward compatibility, they are parsed the same as @media
+    /// An unknown at-rule
     Unknown(String),
 }
 
