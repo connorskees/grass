@@ -39,6 +39,11 @@ test!(
     "a {\n  color: 10px;\n}\n"
 );
 test!(
+    floor_big_int,
+    "a {\n  color: floor(1.000000000000000001);\n}\n",
+    "a {\n  color: 1;\n}\n"
+);
+test!(
     ceil_below_pt_5,
     "a {\n  color: ceil(10.4px);\n}\n",
     "a {\n  color: 11px;\n}\n"
@@ -47,6 +52,11 @@ test!(
     ceil_above_pt_5,
     "a {\n  color: ceil(10.6px);\n}\n",
     "a {\n  color: 11px;\n}\n"
+);
+test!(
+    ceil_big_int,
+    "a {\n  color: ceil(1.000000000000000001);\n}\n",
+    "a {\n  color: 2;\n}\n"
 );
 test!(
     abs_positive,
@@ -92,4 +102,14 @@ test!(
     comparable_named,
     "a {\n  color: comparable($number1: 1, $number2: 2);\n}\n",
     "a {\n  color: true;\n}\n"
+);
+test!(
+    random_limit_one,
+    "a {\n  color: random(1);\n}\n",
+    "a {\n  color: 1;\n}\n"
+);
+test!(
+    random_limit_big_one,
+    "a {\n  color: random(1000000000000000001 - 1000000000000000000);\n}\n",
+    "a {\n  color: 1;\n}\n"
 );
