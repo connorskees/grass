@@ -21,6 +21,11 @@ required-features = ["commandline"]
 name = "grass"
 path = "src/lib.rs"
 crate-type = ["cdylib", "rlib"]
+bench = false
+
+[[bench]]
+name = "variables"
+harness = false
 
 [[bench]]
 name = "colors"
