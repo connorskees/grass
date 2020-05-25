@@ -40,7 +40,7 @@ impl StyleSheet {
         let file = map.add_file("stdin".into(), input);
         Ok(Css::from_stylesheet(StyleSheet(
             StyleSheetParser {
-                lexer: Lexer::new(&file).peekmore(),
+                lexer: &mut Lexer::new(&file).peekmore(),
                 nesting: 0,
                 map: &mut map,
                 path: Path::new(""),
