@@ -1,4 +1,5 @@
 use std::iter::Iterator;
+use std::borrow::Borrow;
 
 use codemap::{Span, Spanned};
 
@@ -216,12 +217,10 @@ pub(crate) fn eat_ident<I: Iterator<Item = Token>>(
         };
         if kind == '{' {
             toks.next();
-            text.push_str(
-                &match parse_interpolation(toks, scope, super_selector, pos)?.node {
-                    Value::String(s, ..) => s,
-                    v => v.to_css_string(span)?.into(),
-                },
-            );
+            match parse_interpolation(toks, scope, super_selector, pos)?.node {
+                Value::String(ref s, ..) => text.push_str(s),
+                v => text.push_str(v.to_css_string(span)?.borrow()),
+            }
         } else {
             return Err(("Expected identifier.", pos).into());
         }
@@ -300,10 +299,10 @@ pub(crate) fn parse_quoted_string<I: Iterator<Item = Token>>(
                 if let Some(Token { kind: '{', pos }) = toks.peek().cloned() {
                     toks.next();
                     let interpolation = parse_interpolation(toks, scope, super_selector, pos)?;
-                    s.push_str(&match interpolation.node {
-                        Value::String(s, ..) => s,
-                        v => v.to_css_string(interpolation.span)?.into(),
-                    });
+                    match interpolation.node {
+                        Value::String(ref v, ..) => s.push_str(v),
+                        v => s.push_str(v.to_css_string(interpolation.span)?.borrow()),
+                    };
                     continue;
                 } else {
                     s.push('#');
