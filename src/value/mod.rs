@@ -1,4 +1,3 @@
-use std::borrow::Cow;
 use std::iter::Iterator;
 
 use codemap::{Span, Spanned};
@@ -8,6 +7,7 @@ use crate::common::{Brackets, ListSeparator, Op, QuoteKind};
 use crate::error::SassResult;
 use crate::unit::Unit;
 use crate::utils::hex_char_for;
+use crate::Cow;
 
 use css_function::is_special_function;
 pub(crate) use map::SassMap;
@@ -128,12 +128,12 @@ impl Value {
 
     pub fn to_css_string(&self, span: Span) -> SassResult<Cow<'static, str>> {
         Ok(match self {
-            Self::Important => Cow::Borrowed("!important"),
+            Self::Important => Cow::const_str("!important"),
             Self::Dimension(num, unit) => match unit {
                 Unit::Mul(..) => {
                     return Err((format!("{}{} isn't a valid CSS value.", num, unit), span).into());
                 }
-                _ => Cow::Owned(format!("{}{}", num, unit)),
+                _ => Cow::owned(format!("{}{}", num, unit)),
             },
             Self::Map(..) | Self::Function(..) => {
                 return Err((
@@ -143,14 +143,14 @@ impl Value {
                     .into())
             }
             Self::List(vals, sep, brackets) => match brackets {
-                Brackets::None => Cow::Owned(
+                Brackets::None => Cow::owned(
                     vals.iter()
                         .filter(|x| !x.is_null(span).unwrap())
                         .map(|x| x.to_css_string(span))
                         .collect::<SassResult<Vec<Cow<'static, str>>>>()?
                         .join(sep.as_str()),
                 ),
-                Brackets::Bracketed => Cow::Owned(format!(
+                Brackets::Bracketed => Cow::owned(format!(
                     "[{}]",
                     vals.iter()
                         .filter(|x| !x.is_null(span).unwrap())
@@ -159,7 +159,7 @@ impl Value {
                         .join(sep.as_str()),
                 )),
             },
-            Self::Color(c) => Cow::Owned(c.to_string()),
+            Self::Color(c) => Cow::owned(c.to_string()),
             Self::UnaryOp(..) | Self::BinaryOp(..) => {
                 self.clone().eval(span)?.to_css_string(span)?
             }
@@ -184,21 +184,21 @@ impl Value {
                         }
                     }
                 }
-                Cow::Owned(buf)
+                Cow::owned(buf)
             }
             Self::String(string, QuoteKind::Quoted) => {
                 let mut buf = String::with_capacity(string.len());
                 visit_quoted_string(&mut buf, false, string)?;
-                Cow::Owned(buf)
+                Cow::owned(buf)
             }
-            Self::True => Cow::Borrowed("true"),
-            Self::False => Cow::Borrowed("false"),
-            Self::Null => Cow::Borrowed(""),
-            Self::ArgList(args) => Cow::Owned(
+            Self::True => Cow::const_str("true"),
+            Self::False => Cow::const_str("false"),
+            Self::Null => Cow::const_str(""),
+            Self::ArgList(args) => Cow::owned(
                 args.iter()
                     .filter(|x| !x.is_null(span).unwrap())
-                    .map(|a| Ok(a.node.to_css_string(span)?.into()))
-                    .collect::<SassResult<Vec<String>>>()?
+                    .map(|a| Ok(a.node.to_css_string(span)?))
+                    .collect::<SassResult<Vec<Cow<'static, str>>>>()?
                     .join(", "),
             ),
         })
@@ -265,20 +265,20 @@ impl Value {
     pub fn inspect(&self, span: Span) -> SassResult<Cow<'static, str>> {
         Ok(match self {
             Value::List(v, _, brackets) if v.is_empty() => match brackets {
-                Brackets::None => Cow::Borrowed("()"),
-                Brackets::Bracketed => Cow::Borrowed("[]"),
+                Brackets::None => Cow::const_str("()"),
+                Brackets::Bracketed => Cow::const_str("[]"),
             },
             Value::List(v, sep, brackets) if v.len() == 1 => match brackets {
                 Brackets::None => match sep {
                     ListSeparator::Space => v[0].inspect(span)?,
-                    ListSeparator::Comma => Cow::Owned(format!("({},)", v[0].inspect(span)?)),
+                    ListSeparator::Comma => Cow::owned(format!("({},)", v[0].inspect(span)?)),
                 },
                 Brackets::Bracketed => match sep {
-                    ListSeparator::Space => Cow::Owned(format!("[{}]", v[0].inspect(span)?)),
-                    ListSeparator::Comma => Cow::Owned(format!("[{},]", v[0].inspect(span)?)),
+                    ListSeparator::Space => Cow::owned(format!("[{}]", v[0].inspect(span)?)),
+                    ListSeparator::Comma => Cow::owned(format!("[{},]", v[0].inspect(span)?)),
                 },
             },
-            Self::List(vals, sep, brackets) => Cow::Owned(match brackets {
+            Self::List(vals, sep, brackets) => Cow::owned(match brackets {
                 Brackets::None => vals
                     .iter()
                     .map(|x| x.inspect(span))
@@ -292,9 +292,9 @@ impl Value {
                         .join(sep.as_str()),
                 ),
             }),
-            Value::Function(f) => Cow::Owned(format!("get-function(\"{}\")", f.name())),
-            Value::Null => Cow::Borrowed("null"),
-            Value::Map(map) => Cow::Owned(format!(
+            Value::Function(f) => Cow::owned(format!("get-function(\"{}\")", f.name())),
+            Value::Null => Cow::const_str("null"),
+            Value::Map(map) => Cow::owned(format!(
                 "({})",
                 map.iter()
                     .map(|(k, v)| Ok(format!(

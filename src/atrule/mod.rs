@@ -10,7 +10,7 @@ use crate::utils::{
     read_until_semicolon_or_closing_curly_brace,
 };
 use crate::value::Value;
-use crate::{RuleSet, Stmt, Token};
+use crate::{Cow, RuleSet, Stmt, Token};
 
 use each_rule::{parse_each, Each};
 use for_rule::For;
@@ -36,8 +36,8 @@ mod while_rule;
 
 #[derive(Debug, Clone)]
 pub(crate) enum AtRule {
-    Warn(Spanned<String>),
-    Debug(Spanned<String>),
+    Warn(Spanned<Cow<'static, str>>),
+    Debug(Spanned<Cow<'static, str>>),
     Mixin(String, Box<Mixin>),
     Function(String, Box<Function>),
     Return(Vec<Token>),
@@ -94,7 +94,7 @@ impl AtRule {
                 devour_whitespace(toks);
                 Spanned {
                     node: AtRule::Warn(Spanned {
-                        node: message.to_css_string(span)?.into(),
+                        node: message.to_css_string(span)?,
                         span,
                     }),
                     span,
@@ -117,7 +117,7 @@ impl AtRule {
                 devour_whitespace(toks);
                 Spanned {
                     node: AtRule::Debug(Spanned {
-                        node: message.inspect(span)?.into(),
+                        node: message.inspect(span)?,
                         span,
                     }),
                     span,

@@ -84,6 +84,11 @@ grass input.scss
 use std::convert::TryFrom;
 use std::iter::Iterator;
 
+#[cfg(target_pointer_width = "64")]
+pub(crate) use beef::lean::Cow;
+#[cfg(not(target_pointer_width = "64"))]
+pub(crate) use beef::Cow;
+
 use codemap::{Span, Spanned};
 
 use peekmore::{PeekMore, PeekMoreIterator};

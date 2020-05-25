@@ -5,6 +5,7 @@ use codemap::{Span, Spanned};
 
 use peekmore::PeekMoreIterator;
 
+use crate::Cow;
 use crate::common::Identifier;
 use crate::error::SassResult;
 use crate::scope::Scope;
@@ -90,9 +91,9 @@ impl CallArgs {
                 .iter()
                 .map(|a| {
                     span = span.merge(a.span);
-                    Ok(a.node.to_css_string(a.span)?.into())
+                    Ok(a.node.to_css_string(a.span)?)
                 })
-                .collect::<SassResult<Vec<String>>>()?
+                .collect::<SassResult<Vec<Cow<'static, str>>>>()?
                 .join(", "),
         );
         string.push(')');

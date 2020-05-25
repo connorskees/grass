@@ -1,3 +1,5 @@
+use std::borrow::Borrow;
+
 use codemap::{Span, Spanned};
 
 use peekmore::PeekMoreIterator;
@@ -115,10 +117,10 @@ pub(crate) fn try_eat_url<I: Iterator<Item = Token>>(
                 peek_counter += 1;
                 let (interpolation, count) = peek_interpolation(toks, scope, super_selector, pos)?;
                 peek_counter += count;
-                buf.push_str(&match interpolation.node {
-                    Value::String(s, ..) => s,
-                    v => v.to_css_string(interpolation.span)?.into(),
-                });
+                match interpolation.node {
+                    Value::String(ref s, ..) => buf.push_str(s),
+                    v => buf.push_str(v.to_css_string(interpolation.span)?.borrow()),
+                };
             } else {
                 buf.push('#');
             }
