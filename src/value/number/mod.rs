@@ -229,7 +229,10 @@ from_smaller_integer!(u8);
 
 impl fmt::Debug for Number {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Number {{ {} }}", self)
+        match self {
+            Self::Machine(..) => write!(f, "Number::Machine( {} )", self),
+            Self::Big(..) => write!(f, "Number::Big( {} )", self),
+        }
     }
 }
 
