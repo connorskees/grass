@@ -168,3 +168,22 @@ error!(
     scientific_notation_ident_char_after_dash,
     "a {\n  color: 1e-a;\n}\n", "Error: Expected digit."
 );
+test!(
+    number_overflow_from_addition,
+    "a {\n  color: 999999999999999999
+                + 999999999999999999
+                + 999999999999999999
+                + 999999999999999999
+                + 999999999999999999
+                + 999999999999999999
+                + 999999999999999999
+                + 999999999999999999
+                + 999999999999999999
+                + 999999999999999999;\n}\n",
+    "a {\n  color: 9999999999999999990;\n}\n"
+);
+test!(
+    number_overflow_from_multiplication,
+    "a {\n  color: 999999999999999999 * 10;\n}\n",
+    "a {\n  color: 9999999999999999990;\n}\n"
+);
