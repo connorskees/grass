@@ -339,7 +339,7 @@ impl<'a> StyleSheetParser<'a> {
                                     )?);
                                 }
                                 AtRule::AtRoot(root_rules) => rules.extend(root_rules),
-                                AtRule::Unknown(..) | AtRule::Media(..) => {
+                                AtRule::Unknown(..) | AtRule::Media(..) | AtRule::Keyframes(..) => {
                                     rules.push(rule.map_node(Stmt::AtRule))
                                 }
                             }
@@ -401,10 +401,12 @@ impl<'a> StyleSheetParser<'a> {
                     AtRule::Warn(ref message) => self.warn(expr.span, message),
                     AtRule::Mixin(..) | AtRule::Function(..) => todo!(),
                     AtRule::Charset => todo!(),
-                    r @ AtRule::Unknown(..) | r @ AtRule::Media(..) => stmts.push(Spanned {
-                        node: Stmt::AtRule(r),
-                        span,
-                    }),
+                    r @ AtRule::Unknown(..) | r @ AtRule::Media(..) | r @ AtRule::Keyframes(..) => {
+                        stmts.push(Spanned {
+                            node: Stmt::AtRule(r),
+                            span,
+                        })
+                    }
                 },
                 Expr::Styles(s) => stmts.extend(
                     s.into_iter()

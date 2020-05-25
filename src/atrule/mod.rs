@@ -16,6 +16,7 @@ use each_rule::{parse_each, Each};
 use for_rule::For;
 pub(crate) use function::Function;
 pub(crate) use if_rule::If;
+use keyframes::Keyframes;
 pub(crate) use kind::AtRuleKind;
 use media::Media;
 pub(crate) use mixin::{eat_include, Mixin};
@@ -27,6 +28,7 @@ mod each_rule;
 mod for_rule;
 mod function;
 mod if_rule;
+mod keyframes;
 mod kind;
 mod media;
 mod mixin;
@@ -51,6 +53,7 @@ pub(crate) enum AtRule {
     If(If),
     Media(Media),
     AtRoot(Vec<Spanned<Stmt>>),
+    Keyframes(Keyframes),
 }
 
 impl AtRule {
@@ -262,10 +265,19 @@ impl AtRule {
                 )?),
                 span: kind_span,
             },
+            AtRuleKind::Keyframes => Spanned {
+                node: AtRule::Keyframes(Keyframes::from_tokens(
+                    toks,
+                    scope,
+                    super_selector,
+                    kind_span,
+                    content,
+                )?),
+                span: kind_span,
+            },
             AtRuleKind::Import => todo!("@import not yet implemented"),
             AtRuleKind::Forward => todo!("@forward not yet implemented"),
             AtRuleKind::Supports => todo!("@supports not yet implemented"),
-            AtRuleKind::Keyframes => todo!("@keyframes not yet implemented"),
             AtRuleKind::Extend => todo!("@extend not yet implemented"),
             AtRuleKind::Use => todo!("@use not yet implemented"),
         })
