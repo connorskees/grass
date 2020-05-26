@@ -64,9 +64,7 @@ impl Media {
             }
         }
 
-        if super_selector.is_empty() {
-            body.append(&mut rules);
-        } else {
+        if !super_selector.is_empty() {
             body = vec![Spanned {
                 node: Stmt::RuleSet(RuleSet {
                     selector: super_selector.clone(),
@@ -75,8 +73,8 @@ impl Media {
                 }),
                 span: kind_span,
             }];
-            body.append(&mut rules);
         }
+        body.append(&mut rules);
 
         Ok(Media {
             super_selector: Selector::new(),
