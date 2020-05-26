@@ -60,6 +60,7 @@ jobs:
 
 
   sass-spec:
+    continue-on-error: true
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -76,6 +77,15 @@ jobs:
 
       - name: Build binary
         run: cargo b --release
+
+      - name: Get sass-spec
+        run: git submodule init && git submodule update
+
+      - name: Install whatever Ruby needs
+        run: |
+          sudo apt-get install libncurses5-dev libncursesw5-dev
+          sudo gem install bundler
+          cd sass-spec && bundler install
 
       - name: Run Sass spec
         run: ./sass-spec/sass-spec.rb -c './target/release/grass'

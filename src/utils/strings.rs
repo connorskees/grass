@@ -1,5 +1,5 @@
-use std::iter::Iterator;
 use std::borrow::Borrow;
+use std::iter::Iterator;
 
 use codemap::{Span, Spanned};
 

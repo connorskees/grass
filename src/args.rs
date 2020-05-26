@@ -5,7 +5,6 @@ use codemap::{Span, Spanned};
 
 use peekmore::PeekMoreIterator;
 
-use crate::Cow;
 use crate::common::Identifier;
 use crate::error::SassResult;
 use crate::scope::Scope;
@@ -15,6 +14,7 @@ use crate::utils::{
     read_until_closing_paren, read_until_closing_quote, read_until_closing_square_brace,
 };
 use crate::value::Value;
+use crate::Cow;
 use crate::Token;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
