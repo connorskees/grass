@@ -431,6 +431,17 @@ fn single_value<I: Iterator<Item = Token>>(
     })
 }
 
+/// Parse numbers from strings *known* to contain
+/// only the characters 0-9
+fn parse_i64(s: String) -> i64 {
+    let mut output = 0i64;
+    for b in s.as_bytes() {
+        output *= 10;
+        output += i64::from(b - b'0');
+    }
+    output
+}
+
 impl Value {
     pub fn from_tokens<I: Iterator<Item = Token>>(
         toks: &mut PeekMoreIterator<I>,
@@ -735,7 +746,7 @@ impl Value {
 
                 let n = if val.dec_len == 0 {
                     if val.num.len() <= 18 && val.times_ten.is_empty() {
-                        let n = Rational64::new_raw(val.num.parse::<i64>().unwrap(), 1);
+                        let n = Rational64::new_raw(parse_i64(val.num), 1);
                         return Some(Ok(IntermediateValue::Value(Value::Dimension(
                             Number::new_machine(n),
                             unit,
@@ -746,7 +757,7 @@ impl Value {
                 } else {
                     if val.num.len() <= 18 && val.times_ten.is_empty() {
                         let n =
-                            Rational64::new(val.num.parse::<i64>().unwrap(), pow(10, val.dec_len));
+                            Rational64::new(parse_i64(val.num), pow(10, val.dec_len));
                         return Some(Ok(IntermediateValue::Value(Value::Dimension(
                             Number::new_machine(n),
                             unit,
