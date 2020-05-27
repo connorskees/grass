@@ -431,15 +431,10 @@ fn single_value<I: Iterator<Item = Token>>(
     })
 }
 
-/// Parse numbers from strings *known* to contain
-/// only the characters 0-9
 fn parse_i64(s: String) -> i64 {
-    let mut output = 0i64;
-    for b in s.as_bytes() {
-        output *= 10;
-        output += i64::from(b - b'0');
-    }
-    output
+    s.as_bytes()
+        .iter()
+        .fold(0, |total, this| total * 10 + i64::from(this - b'0'))
 }
 
 impl Value {
@@ -756,8 +751,7 @@ impl Value {
                     BigRational::new_raw(val.num.parse::<BigInt>().unwrap(), BigInt::one())
                 } else {
                     if val.num.len() <= 18 && val.times_ten.is_empty() {
-                        let n =
-                            Rational64::new(parse_i64(val.num), pow(10, val.dec_len));
+                        let n = Rational64::new(parse_i64(val.num), pow(10, val.dec_len));
                         return Some(Ok(IntermediateValue::Value(Value::Dimension(
                             Number::new_machine(n),
                             unit,
