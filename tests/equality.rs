@@ -48,3 +48,13 @@ test!(
     "a {\n  color: 1rem==1;\n}\n",
     "a {\n  color: false;\n}\n"
 );
+test!(
+    different_quoting_inside_list_eq,
+    "a {\n  color: ("foo",) == (foo,);\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    different_quoting_inside_list_ne,
+    "a {\n  color: ("foo",) != (foo,);\n}\n",
+    "a {\n  color: false;\n}\n"
+);

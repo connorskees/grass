@@ -8,14 +8,22 @@ use crate::unit::{Unit, UNIT_CONVERSION_TABLE};
 use crate::value::Value;
 
 impl Value {
-    pub fn equals(self, mut other: Value, span: Span) -> SassResult<Spanned<Value>> {
+    pub fn equals(mut self, mut other: Value, span: Span) -> SassResult<Spanned<Value>> {
+        if let Self::Paren(..) = self {
+            self = self.eval(span)?.node
+        } else if let Self::UnaryOp(..) = self {
+            self = self.eval(span)?.node
+        }
         if let Self::Paren(..) = other {
+            other = other.eval(span)?.node
+        } else if let Self::UnaryOp(..) = other {
             other = other.eval(span)?.node
         }
 
         let precedence = Op::Equal.precedence();
 
         Ok(Value::bool(match self {
+            // todo: why don't we eval the other?
             Self::String(s1, ..) => match other {
                 Self::String(s2, ..) => s1 == s2,
                 _ => false,
@@ -53,13 +61,37 @@ impl Value {
                     .eval(span);
                 }
             }
+            Self::List(list1, sep1, brackets1) => match other.eval(span)?.node {
+                Self::List(list2, sep2, brackets2) => {
+                    if sep1 != sep2 || brackets1 != brackets2 || list1.len() != list2.len() {
+                        false
+                    } else {
+                        let mut equals = true;
+                        for (a, b) in list1.into_iter().zip(list2) {
+                            if !a.equals(b, span)?.node.is_true(span)? {
+                                equals = false;
+                                break;
+                            }
+                        }
+                        equals
+                    }
+                }
+                _ => false,
+            }
             s => s == other.eval(span)?.node,
         })
         .span(span))
     }
 
-    pub fn not_equals(self, mut other: Value, span: Span) -> SassResult<Spanned<Value>> {
+    pub fn not_equals(mut self, mut other: Value, span: Span) -> SassResult<Spanned<Value>> {
+        if let Self::Paren(..) = self {
+            self = self.eval(span)?.node
+        } else if let Self::UnaryOp(..) = self {
+            self = self.eval(span)?.node
+        }
         if let Self::Paren(..) = other {
+            other = other.eval(span)?.node
+        } else if let Self::UnaryOp(..) = other {
             other = other.eval(span)?.node
         }
 
@@ -102,6 +134,23 @@ impl Value {
                     )
                     .eval(span);
                 }
+            }
+            Self::List(list1, sep1, brackets1) => match other.eval(span)?.node {
+                Self::List(list2, sep2, brackets2) => {
+                    if sep1 != sep2 || brackets1 != brackets2 || list1.len() != list2.len() {
+                        true
+                    } else {
+                        let mut equals = false;
+                        for (a, b) in list1.into_iter().zip(list2) {
+                            if a.not_equals(b, span)?.node.is_true(span)? {
+                                equals = true;
+                                break;
+                            }
+                        }
+                        equals
+                    }
+                }
+                _ => true,
             }
             s => s != other.eval(span)?.node,
         })
@@ -158,6 +207,8 @@ impl Value {
 
     pub fn cmp(self, mut other: Self, op: Op, span: Span) -> SassResult<Spanned<Value>> {
         if let Self::Paren(..) = other {
+            other = other.eval(span)?.node
+        } else if let Self::UnaryOp(..) = other {
             other = other.eval(span)?.node
         }
         let precedence = op.precedence();
@@ -247,11 +298,16 @@ impl Value {
         .span(span))
     }
 
-    pub fn add(self, mut other: Self, span: Span) -> SassResult<Self> {
+    pub fn add(mut self, mut other: Self, span: Span) -> SassResult<Self> {
         if let Self::Paren(..) = other {
             other = other.eval(span)?.node
         } else if let Self::UnaryOp(..) = other {
             other = other.eval(span)?.node
+        }
+        if let Self::Paren(..) = self {
+            self = self.eval(span)?.node
+        } else if let Self::UnaryOp(..) = self {
+            self = self.eval(span)?.node
         }
         let precedence = Op::Plus.precedence();
         Ok(match self {
@@ -392,9 +448,14 @@ impl Value {
         })
     }
 
-    pub fn sub(self, mut other: Self, span: Span) -> SassResult<Self> {
+    pub fn sub(mut self, mut other: Self, span: Span) -> SassResult<Self> {
         if let Self::Paren(..) = other {
             other = other.eval(span)?.node
+        }
+        if let Self::Paren(..) = self {
+            self = self.eval(span)?.node
+        } else if let Self::UnaryOp(..) = self {
+            self = self.eval(span)?.node
         }
         let precedence = Op::Mul.precedence();
         Ok(match self {
@@ -521,9 +582,14 @@ impl Value {
         })
     }
 
-    pub fn mul(self, mut other: Self, span: Span) -> SassResult<Self> {
+    pub fn mul(mut self, mut other: Self, span: Span) -> SassResult<Self> {
         if let Self::Paren(..) = other {
             other = other.eval(span)?.node
+        }
+        if let Self::Paren(..) = self {
+            self = self.eval(span)?.node
+        } else if let Self::UnaryOp(..) = self {
+            self = self.eval(span)?.node
         }
         let precedence = Op::Mul.precedence();
         Ok(match self {
@@ -593,7 +659,12 @@ impl Value {
         })
     }
 
-    pub fn div(self, other: Self, span: Span) -> SassResult<Self> {
+    pub fn div(mut self, other: Self, span: Span) -> SassResult<Self> {
+        if let Self::Paren(..) = self {
+            self = self.eval(span)?.node
+        } else if let Self::UnaryOp(..) = self {
+            self = self.eval(span)?.node
+        }
         let precedence = Op::Div.precedence();
         Ok(match self {
             Self::Null => todo!(),
