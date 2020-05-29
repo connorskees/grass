@@ -43,6 +43,17 @@ css imports
 @each inside @function
 ```
 
+## Features
+
+### commandline
+(enabled by default): build a binary using clap
+
+### random
+(enabled by default): enable the builtin functions `random([$limit])` and `unique-id()`
+
+In the future this feature will be removed when it is no longer necessary to rely on `rand` for
+random numbers.
+
 ## Testing
 
 As much as possible this library attempts to follow the same [philosophy for testing as
