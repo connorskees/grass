@@ -431,6 +431,12 @@ fn single_value<I: Iterator<Item = Token>>(
     })
 }
 
+fn parse_i64(s: String) -> i64 {
+    s.as_bytes()
+        .iter()
+        .fold(0, |total, this| total * 10 + i64::from(this - b'0'))
+}
+
 impl Value {
     pub fn from_tokens<I: Iterator<Item = Token>>(
         toks: &mut PeekMoreIterator<I>,
@@ -735,7 +741,7 @@ impl Value {
 
                 let n = if val.dec_len == 0 {
                     if val.num.len() <= 18 && val.times_ten.is_empty() {
-                        let n = Rational64::new_raw(val.num.parse::<i64>().unwrap(), 1);
+                        let n = Rational64::new_raw(parse_i64(val.num), 1);
                         return Some(Ok(IntermediateValue::Value(Value::Dimension(
                             Number::new_machine(n),
                             unit,
@@ -745,8 +751,7 @@ impl Value {
                     BigRational::new_raw(val.num.parse::<BigInt>().unwrap(), BigInt::one())
                 } else {
                     if val.num.len() <= 18 && val.times_ten.is_empty() {
-                        let n =
-                            Rational64::new(val.num.parse::<i64>().unwrap(), pow(10, val.dec_len));
+                        let n = Rational64::new(parse_i64(val.num), pow(10, val.dec_len));
                         return Some(Ok(IntermediateValue::Value(Value::Dimension(
                             Number::new_machine(n),
                             unit,
