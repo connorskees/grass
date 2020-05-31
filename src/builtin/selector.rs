@@ -93,7 +93,7 @@ fn selector_append(
                 .node
                 .to_selector(span, scope, super_selector, "selectors", false)?;
             if tmp.contains_parent_selector() {
-                return Err(("Parent selectors aren't allowed here.", span).into());
+                Err(("Parent selectors aren't allowed here.", span).into())
             } else {
                 Ok(tmp)
             }
@@ -128,9 +128,7 @@ fn selector_append(
                                 line_break: false,
                             })
                         } else {
-                            return Err(
-                                (format!("Can't append {} to {}.", complex, parent), span).into()
-                            );
+                            Err((format!("Can't append {} to {}.", complex, parent), span).into())
                         }
                     })
                     .collect::<SassResult<Vec<ComplexSelector>>>()?,
@@ -196,7 +194,7 @@ fn selector_unify(
             .into());
     }
 
-    Ok(match selector1.unify(selector2) {
+    Ok(match selector1.unify(&selector2) {
         Some(sel) => sel.into_value(),
         None => Value::Null,
     })

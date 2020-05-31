@@ -5,7 +5,7 @@ use super::{
     QualifiedName, SelectorList,
 };
 
-const SUBSELECTOR_PSEUDOS: [&'static str; 4] = ["matches", "any", "nth-child", "nth-last-child"];
+const SUBSELECTOR_PSEUDOS: [&str; 4] = ["matches", "any", "nth-child", "nth-last-child"];
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) enum SimpleSelector {
@@ -85,7 +85,7 @@ impl SimpleSelector {
             Self::Universal(..) => 0,
             Self::Type(..) => 1,
             Self::Pseudo { .. } => todo!(),
-            Self::Id(..) => 1000u32.pow(2u32),
+            Self::Id(..) => 1000_u32.pow(2_u32),
             _ => 1000,
         }
     }
@@ -109,7 +109,7 @@ impl SimpleSelector {
             | Self::Class(..)
             | Self::Attribute(..) => false,
             Self::Pseudo(Pseudo { name, selector, .. }) => {
-                name != "not" && selector.as_ref().map_or(false, |s| s.is_invisible())
+                name != "not" && selector.as_ref().map_or(false, SelectorList::is_invisible)
             }
             Self::Placeholder(..) => true,
             Self::Parent(..) => todo!(),
@@ -119,14 +119,16 @@ impl SimpleSelector {
     pub fn add_suffix(&mut self, suffix: &str) {
         match self {
             Self::Type(name) => name.ident.push_str(suffix),
-            Self::Pseudo(Pseudo {
+            Self::Placeholder(name)
+            | Self::Id(name)
+            | Self::Class(name)
+            | Self::Pseudo(Pseudo {
                 name,
                 argument: None,
                 selector: None,
                 ..
             }) => name.push_str(suffix),
-            Self::Placeholder(name) | Self::Id(name) | Self::Class(name) => name.push_str(suffix),
-            Self::Universal(..) | _ => todo!(),
+            _ => todo!(),
         }
     }
 
@@ -196,7 +198,7 @@ impl SimpleSelector {
         }
 
         if !added_this {
-            result.push(self.clone());
+            result.push(self);
         }
 
         Some(result)
@@ -348,13 +350,13 @@ impl SimpleSelector {
                         if complex.components.len() != 1 {
                             return false;
                         };
-                        return complex
+                        complex
                             .components
                             .get(0)
                             .unwrap()
                             .as_compound()
                             .components
-                            .contains(self);
+                            .contains(self)
                     });
                 }
                 false

@@ -38,7 +38,7 @@ impl DevouredWhitespace {
 }
 
 /// Pseudo-class selectors that take unadorned selectors as arguments.
-const SELECTOR_PSEUDO_CLASSES: [&'static str; 7] = [
+const SELECTOR_PSEUDO_CLASSES: [&str; 7] = [
     "not",
     "matches",
     "current",
@@ -49,7 +49,7 @@ const SELECTOR_PSEUDO_CLASSES: [&'static str; 7] = [
 ];
 
 /// Pseudo-element selectors that take unadorned selectors as arguments.
-const SELECTOR_PSEUDO_ELEMENTS: [&'static str; 1] = ["slotted"];
+const SELECTOR_PSEUDO_ELEMENTS: [&str; 1] = ["slotted"];
 
 pub(crate) struct SelectorParser<'a, I: Iterator<Item = Token>> {
     /// Whether this parser allows the parent selector `&`.
@@ -114,7 +114,7 @@ impl<'a, I: Iterator<Item = Token>> SelectorParser<'a, I> {
             line_break = false;
         }
 
-        return Ok(SelectorList { components });
+        Ok(SelectorList { components })
     }
 
     fn eat_whitespace(&mut self) -> DevouredWhitespace {
@@ -344,6 +344,7 @@ impl<'a, I: Iterator<Item = Token>> SelectorParser<'a, I> {
         } else if unvendored == "nth-child" || unvendored == "nth-last-child" {
             let mut this_arg = self.parse_a_n_plus_b()?;
             let found_whitespace = devour_whitespace(self.toks);
+            #[allow(clippy::match_same_arms)]
             match (found_whitespace, self.toks.peek()) {
                 (_, Some(Token { kind: ')', .. })) => {}
                 (true, _) => {
@@ -507,7 +508,9 @@ impl<'a, I: Iterator<Item = Token>> SelectorParser<'a, I> {
 
         devour_whitespace(self.toks);
 
-        if let Some(t @ Token { kind: '+', .. }) | Some(t @ Token { kind: '-', .. }) = self.toks.peek() {
+        if let Some(t @ Token { kind: '+', .. }) | Some(t @ Token { kind: '-', .. }) =
+            self.toks.peek()
+        {
             buf.push(t.kind);
             self.toks.next();
             devour_whitespace(self.toks);
@@ -516,7 +519,7 @@ impl<'a, I: Iterator<Item = Token>> SelectorParser<'a, I> {
                     return Err(("Expected a number.", self.span).into())
                 }
                 None => return Err(("Expected a number.", self.span).into()),
-                _ => {}
+                Some(..) => {}
             }
 
             while let Some(t) = self.toks.peek() {
@@ -575,7 +578,7 @@ fn unvendor(name: &str) -> &str {
         return name;
     }
 
-    if bytes[0usize] != b'-' || bytes[1usize] == b'-' {
+    if bytes[0_usize] != b'-' || bytes[1_usize] == b'-' {
         return name;
     }
 

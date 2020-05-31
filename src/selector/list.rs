@@ -47,14 +47,16 @@ impl fmt::Display for SelectorList {
 
 impl SelectorList {
     pub fn is_invisible(&self) -> bool {
-        self.components.iter().all(|c| c.is_invisible())
+        self.components.iter().all(ComplexSelector::is_invisible)
     }
 
     pub fn contains_parent_selector(&self) -> bool {
-        self.components.iter().any(|c| c.contains_parent_selector())
+        self.components
+            .iter()
+            .any(ComplexSelector::contains_parent_selector)
     }
 
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             components: Vec::new(),
         }
@@ -64,7 +66,7 @@ impl SelectorList {
         self.components.is_empty()
     }
 
-    /// Returns a SassScript list that represents this selector.
+    /// Returns a `SassScript` list that represents this selector.
     ///
     /// This has the same format as a list returned by `selector-parse()`.
     pub fn to_sass_list(self) -> Value {
@@ -94,7 +96,7 @@ impl SelectorList {
     /// both this and `other`.
     ///
     /// If no such list can be produced, returns `None`.
-    pub fn unify(self, other: Self) -> Option<Self> {
+    pub fn unify(self, other: &Self) -> Option<Self> {
         let contents: Vec<ComplexSelector> = self
             .components
             .into_iter()
@@ -181,7 +183,7 @@ impl SelectorList {
                                 {
                                     Some(r) => r,
                                     None => {
-                                        for new_complex in new_complexes.iter_mut() {
+                                        for new_complex in &mut new_complexes {
                                             new_complex.push(component.clone());
                                         }
                                         continue;
@@ -191,10 +193,9 @@ impl SelectorList {
                                 let previous_complexes = mem::take(&mut new_complexes);
                                 let previous_line_breaks = mem::take(&mut line_breaks);
 
-                                let mut i = 0;
-                                for new_complex in previous_complexes {
+                                for (i, new_complex) in previous_complexes.into_iter().enumerate() {
+                                    // todo: use .get(i)
                                     let line_break = previous_line_breaks[i];
-                                    i += 1;
                                     for mut resolved_complex in resolved.clone() {
                                         let mut new_this_complex = new_complex.clone();
                                         new_this_complex.append(&mut resolved_complex.components);
@@ -203,14 +204,14 @@ impl SelectorList {
                                     }
                                 }
                             } else {
-                                for new_complex in new_complexes.iter_mut() {
+                                for new_complex in &mut new_complexes {
                                     new_complex.push(component.clone());
                                 }
                             }
                         }
 
                         let mut i = 0;
-                        return new_complexes
+                        new_complexes
                             .into_iter()
                             .map(|new_complex| {
                                 i += 1;
@@ -219,7 +220,7 @@ impl SelectorList {
                                     line_break: line_breaks[i - 1],
                                 }
                             })
-                            .collect();
+                            .collect()
                     })
                     .collect(),
             ),
@@ -236,15 +237,12 @@ impl SelectorList {
 }
 
 fn flatten_vertically<A: std::fmt::Debug>(iterable: Vec<Vec<A>>) -> Vec<A> {
-    let mut queues: Vec<VecDeque<A>> = iterable
-        .into_iter()
-        .map(|inner| VecDeque::from(inner))
-        .collect();
+    let mut queues: Vec<VecDeque<A>> = iterable.into_iter().map(VecDeque::from).collect();
 
     let mut result = Vec::new();
 
     while !queues.is_empty() {
-        for queue in queues.iter_mut() {
+        for queue in &mut queues {
             if queue.is_empty() {
                 continue;
             }

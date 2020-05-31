@@ -112,6 +112,7 @@ impl Selector {
         ))
     }
 
+    #[allow(clippy::needless_pass_by_value)]
     pub fn replace(super_selector: &Selector, this: Selector) -> Selector {
         todo!()
     }
@@ -153,7 +154,7 @@ impl Selector {
         self.0.is_empty()
     }
 
-    pub fn new() -> Selector {
+    pub const fn new() -> Selector {
         Selector(SelectorList::new())
     }
 
@@ -161,7 +162,7 @@ impl Selector {
         self.0.to_sass_list()
     }
 
-    pub fn unify(self, other: Self) -> Option<Self> {
-        Some(Selector(self.0.unify(other.0)?))
+    pub fn unify(self, other: &Self) -> Option<Self> {
+        Some(Selector(self.0.unify(&other.0)?))
     }
 }

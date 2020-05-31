@@ -156,7 +156,7 @@ impl Mixin {
                 }
                 Expr::Selector(selector) => {
                     let rules = self.eval(
-                        &selector.resolve_parent_selectors(&super_selector, true),
+                        &selector.resolve_parent_selectors(super_selector, true),
                         content,
                     )?;
                     stmts.push(Spanned {

@@ -67,6 +67,7 @@ grass input.scss
     clippy::todo,
     clippy::too_many_lines,
     clippy::panic,
+    clippy::unwrap_used,
     clippy::option_unwrap_used,
     clippy::result_unwrap_used,
     clippy::cast_possible_truncation,

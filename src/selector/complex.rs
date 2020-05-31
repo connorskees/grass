@@ -62,7 +62,7 @@ impl ComplexSelector {
     pub fn is_invisible(&self) -> bool {
         self.components
             .iter()
-            .any(|component| component.is_invisible())
+            .any(ComplexSelectorComponent::is_invisible)
     }
 
     /// Returns whether `self` is a superselector of `other`.
@@ -108,7 +108,7 @@ impl ComplexSelector {
                     .collect();
                 return compound1.is_super_selector(
                     other.components.last().unwrap().as_compound(),
-                    Some(parents),
+                    &Some(parents),
                 );
             }
 
@@ -119,7 +119,7 @@ impl ComplexSelector {
                 {
                     if compound1.is_super_selector(
                         compound2,
-                        Some(
+                        &Some(
                             other
                                 .components
                                 .iter()

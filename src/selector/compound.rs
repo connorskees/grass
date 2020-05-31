@@ -16,14 +16,14 @@ impl fmt::Display for CompoundSelector {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut did_write = false;
         for simple in &self.components {
-            if !did_write {
+            if did_write {
+                write!(f, "{}", simple)?;
+            } else {
                 let s = simple.to_string();
                 if !s.is_empty() {
                     did_write = true;
                 }
                 write!(f, "{}", s)?;
-            } else {
-                write!(f, "{}", simple)?;
             }
         }
 
@@ -43,7 +43,7 @@ impl CompoundSelector {
     pub fn specificity(&self) -> Specificity {
         let mut min = 0;
         let mut max = 0;
-        for simple in self.components.iter() {
+        for simple in &self.components {
             todo!()
             // min += simple.min_specificity;
             // max += simple.max_specificity;
@@ -52,15 +52,13 @@ impl CompoundSelector {
     }
 
     pub fn is_invisible(&self) -> bool {
-        self.components
-            .iter()
-            .any(|component| component.is_invisible())
+        self.components.iter().any(SimpleSelector::is_invisible)
     }
 
     pub fn is_super_selector(
         &self,
         other: &Self,
-        parents: Option<Vec<ComplexSelectorComponent>>,
+        parents: &Option<Vec<ComplexSelectorComponent>>,
     ) -> bool {
         for simple1 in &self.components {
             if let SimpleSelector::Pseudo(
@@ -84,13 +82,13 @@ impl CompoundSelector {
                 ..
             }) = simple2
             {
-                if !simple2.is_super_selector_of_compound(&self) {
+                if !simple2.is_super_selector_of_compound(self) {
                     return false;
                 }
             }
         }
 
-        return true;
+        true
     }
 
     /// Returns a new `CompoundSelector` based on `compound` with all
