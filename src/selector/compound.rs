@@ -84,7 +84,7 @@ impl CompoundSelector {
                 ..
             }) = simple2
             {
-                if simple2.is_super_selector_of_compound(&self) {
+                if !simple2.is_super_selector_of_compound(&self) {
                     return false;
                 }
             }

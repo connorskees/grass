@@ -73,3 +73,156 @@ test!(
     "a {\n  color: is-superselector(\"c, d, e\", \"c, f\");\n}\n",
     "a {\n  color: false;\n}\n"
 );
+test!(
+    simple_attribute_equal,
+    "a {\n  color: is-superselector(\"[c=d]\", \"[c=d]\");\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    simple_attribute_different_attr,
+    "a {\n  color: is-superselector(\"[c=d]\", \"[e=d]\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    simple_attribute_different_val,
+    "a {\n  color: is-superselector(\"[c=d]\", \"[c=e]\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    simple_attribute_different_operator,
+    "a {\n  color: is-superselector(\"[c=d]\", \"[c^=e]\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    simple_class_equal,
+    "a {\n  color: is-superselector(\".c\", \".c\");\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    simple_class_not_equal,
+    "a {\n  color: is-superselector(\".c\", \".d\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    simple_id_equal,
+    "a {\n  color: is-superselector(\"#c\", \"#c\");\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    simple_id_not_equal,
+    "a {\n  color: is-superselector(\"#c\", \"#d\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    simple_placeholder_equal,
+    "a {\n  color: is-superselector(\"%c\", \"%c\");\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    simple_placeholder_not_equal,
+    "a {\n  color: is-superselector(\"%c\", \"%d\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    simple_type_equal,
+    "a {\n  color: is-superselector(\"c\", \"c\");\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    simple_type_not_equal,
+    "a {\n  color: is-superselector(\"c\", \"d\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    simple_type_and_universal,
+    "a {\n  color: is-superselector(\"c\", \"*\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    simple_type_explicit_namespace_equal,
+    "a {\n  color: is-superselector(\"c|d\", \"c|d\");\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    simple_type_different_explicit_namespace,
+    "a {\n  color: is-superselector(\"c|d\", \"e|d\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    simple_type_explicit_namespace_and_implicit_namespace,
+    "a {\n  color: is-superselector(\"c|d\", \"d\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    simple_type_explicit_namespace_and_empty_namespace,
+    "a {\n  color: is-superselector(\"c|d\", \"|d\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    simple_type_explicit_namespace_and_universal_namespace,
+    "a {\n  color: is-superselector(\"c|d\", \"*|d\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    simple_type_empty_namespace_and_explicit_namespace,
+    "a {\n  color: is-superselector(\"|c\", \"d|c\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    simple_type_empty_namespace_and_empty_namespace,
+    "a {\n  color: is-superselector(\"|c\", \"|c\");\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    #[ignore = "https://github.com/sass/dart-sass/issues/789"]
+    simple_type_universal_namespace_and_explicit_namespace,
+    "a {\n  color: is-superselector(\"*|c\", \"d|c\");\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    #[ignore = "https://github.com/sass/dart-sass/issues/789"]
+    simple_type_universal_namespace_and_implicit_namespace,
+    "a {\n  color: is-superselector(\"*|c\", \"c\");\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    #[ignore = "https://github.com/sass/dart-sass/issues/789"]
+    simple_type_universal_namespace_and_empty_namespace,
+    "a {\n  color: is-superselector(\"*|c\", \"|c\");\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    simple_type_universal_namespace_and_universal_namespace,
+    "a {\n  color: is-superselector(\"*|c\", \"*|c\");\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    simple_pseudo_no_args_equal,
+    "a {\n  color: is-superselector(\":c\", \":c\");\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    simple_pseudo_no_args_different,
+    "a {\n  color: is-superselector(\":c\", \":d\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    simple_pseudo_no_args_class_and_element,
+    "a {\n  color: is-superselector(\":c\", \"::c\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    simple_pseudo_no_args_element_and_element_equal,
+    "a {\n  color: is-superselector(\"::c\", \"::c\");\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    simple_pseudo_no_args_element_and_element_different,
+    "a {\n  color: is-superselector(\"::c\", \"::d\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    simple_pseudo_no_args_element_and_class,
+    "a {\n  color: is-superselector(\"::c\", \":c\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
