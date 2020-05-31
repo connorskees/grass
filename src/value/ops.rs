@@ -324,7 +324,9 @@ impl Value {
                     format!("{}{}", self.to_css_string(span)?, s),
                     QuoteKind::Quoted,
                 ),
-                Self::Null => Value::String(self.to_css_string(span)?.into_owned(), QuoteKind::None),
+                Self::Null => {
+                    Value::String(self.to_css_string(span)?.into_owned(), QuoteKind::None)
+                }
                 _ => Value::String(
                     format!(
                         "{}{}",
