@@ -1,0 +1,91 @@
+name: CI
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@master
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: version info
+        run:  rustc --version; cargo --version;
+
+      - name: Run all tests
+        run: cargo test
+
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@master
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --all -- --check
+
+  clippy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@master
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: -- -D warnings
+
+
+  sass-spec:
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@master
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: version info
+        run:  rustc --version; cargo --version;
+
+      - name: Build binary
+        run: cargo b --release
+
+      - name: Get sass-spec
+        run: git submodule init && git submodule update
+
+      - name: Install whatever Ruby needs
+        run: |
+          sudo apt-get install libncurses5-dev libncursesw5-dev
+          sudo gem install bundler
+          cd sass-spec && bundler install
+
+      - name: Run Sass spec
+        run: ./sass-spec/sass-spec.rb -c './target/release/grass'

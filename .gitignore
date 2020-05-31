@@ -4,3 +4,5 @@
 Cargo.lock
 coverage
 pkg
+.idea/
+!input.scss
