@@ -50,9 +50,6 @@ grass input.scss
     // this is too pedantic for now -- the library is changing too quickly for
     // good docs to be written
     clippy::missing_errors_doc,
-    // this incorrectly results in errors for types that derive `Debug`
-    // https://github.com/rust-lang/rust-clippy/issues/4980
-    // clippy::let_underscore_must_use,
     // this is too pedantic -- it results in some names being less explicit
     // than they should
     clippy::module_name_repetitions,
@@ -61,6 +58,7 @@ grass input.scss
     // filter isn't fallible
     clippy::filter_map,
     clippy::else_if_without_else,
+    clippy::new_ret_no_self,
 
     // temporarily allowed while under heavy development.
     // eventually these allows should be refactored away
@@ -74,9 +72,15 @@ grass input.scss
     clippy::cast_possible_truncation,
     clippy::single_match_else,
     clippy::indexing_slicing,
-    // clippy::match_same_arms,
-    // clippy::or_fun_call,
     clippy::redundant_pub_crate,
+
+    clippy::string_add,
+    clippy::get_unwrap,
+    clippy::unit_arg,
+    clippy::wrong_self_convention,
+    clippy::items_after_statements,
+    clippy::shadow_reuse,
+    clippy::shadow_unrelated,
 )]
 #![cfg_attr(feature = "nightly", feature(track_caller))]
 #![cfg_attr(feature = "profiling", inline(never))]

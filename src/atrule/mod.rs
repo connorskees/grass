@@ -173,6 +173,7 @@ impl AtRule {
                 body.push(toks.next().unwrap());
                 devour_whitespace(toks);
                 let mut styles = Vec::new();
+                #[allow(clippy::unnecessary_filter_map)]
                 let raw_stmts = eat_stmts_at_root(
                     &mut body.into_iter().peekmore(),
                     scope,

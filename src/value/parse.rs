@@ -431,7 +431,7 @@ fn single_value<I: Iterator<Item = Token>>(
     })
 }
 
-fn parse_i64(s: String) -> i64 {
+fn parse_i64(s: &str) -> i64 {
     s.as_bytes()
         .iter()
         .fold(0, |total, this| total * 10 + i64::from(this - b'0'))
@@ -741,7 +741,7 @@ impl Value {
 
                 let n = if val.dec_len == 0 {
                     if val.num.len() <= 18 && val.times_ten.is_empty() {
-                        let n = Rational64::new_raw(parse_i64(val.num), 1);
+                        let n = Rational64::new_raw(parse_i64(&val.num), 1);
                         return Some(Ok(IntermediateValue::Value(Value::Dimension(
                             Number::new_machine(n),
                             unit,
@@ -751,7 +751,7 @@ impl Value {
                     BigRational::new_raw(val.num.parse::<BigInt>().unwrap(), BigInt::one())
                 } else {
                     if val.num.len() <= 18 && val.times_ten.is_empty() {
-                        let n = Rational64::new(parse_i64(val.num), pow(10, val.dec_len));
+                        let n = Rational64::new(parse_i64(&val.num), pow(10, val.dec_len));
                         return Some(Ok(IntermediateValue::Value(Value::Dimension(
                             Number::new_machine(n),
                             unit,
@@ -884,9 +884,10 @@ impl Value {
                 IntermediateValue::Comma.span(span)
             }
             q @ '>' | q @ '<' => {
-                let mut span = toks.next().unwrap().pos();
+                let mut span = toks.next().unwrap().pos;
+                #[allow(clippy::eval_order_dependence)]
                 IntermediateValue::Op(if let Some(Token { kind: '=', .. }) = toks.peek() {
-                    span = span.merge(toks.next().unwrap().pos());
+                    span = span.merge(toks.next().unwrap().pos);
                     match q {
                         '>' => Op::GreaterThanEqual,
                         '<' => Op::LessThanEqual,

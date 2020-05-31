@@ -77,7 +77,7 @@ impl Value {
                     }
                 }
                 _ => false,
-            }
+            },
             s => s == other.eval(span)?.node,
         })
         .span(span))
@@ -151,7 +151,7 @@ impl Value {
                     }
                 }
                 _ => true,
-            }
+            },
             s => s != other.eval(span)?.node,
         })
         .span(span))
@@ -487,11 +487,7 @@ impl Value {
                         )
                     }
                 }
-                Self::List(..) => Value::String(
-                    format!("{}{}-{}", num, unit, other.to_css_string(span)?),
-                    QuoteKind::None,
-                ),
-                Self::String(..) => Value::String(
+                Self::List(..) | Self::String(..) => Value::String(
                     format!("{}{}-{}", num, unit, other.to_css_string(span)?),
                     QuoteKind::None,
                 ),

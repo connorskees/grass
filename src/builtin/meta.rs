@@ -86,6 +86,7 @@ fn type_of(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> Sass
 
 fn unitless(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
     args.max_args(1)?;
+    #[allow(clippy::match_same_arms)]
     Ok(match arg!(args, scope, super_selector, 0, "number") {
         Value::Dimension(_, Unit::None) => Value::True,
         Value::Dimension(_, _) => Value::False,

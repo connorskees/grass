@@ -214,7 +214,7 @@ impl From<i64> for Number {
     }
 }
 
-// todo: implement std::convertTryFrom instead
+#[allow(clippy::fallible_impl_from)]
 impl From<f64> for Number {
     fn from(b: f64) -> Self {
         Number::Big(BigRational::from_float(b).unwrap())
@@ -241,10 +241,10 @@ impl Display for Number {
         let mut whole = self.to_integer().abs();
         let has_decimal = self.is_decimal();
         let mut frac = self.abs().fract();
-        let mut dec = String::with_capacity(if has_decimal { PRECISION + 1 } else { 0 });
+        let mut dec = String::with_capacity(if has_decimal { PRECISION } else { 0 });
         if has_decimal {
             for _ in 0..(PRECISION - 1) {
-                frac *= Self::from(10);
+                frac *= 10_i64;
                 write!(dec, "{}", frac.to_integer())?;
                 frac = frac.fract();
                 if frac.is_zero() {
@@ -252,7 +252,7 @@ impl Display for Number {
                 }
             }
             if !frac.is_zero() {
-                let end = (frac * Self::from(10)).round().to_integer();
+                let end = (frac * 10_i64).round().to_integer();
                 if end.is_ten() {
                     loop {
                         match dec.pop() {
@@ -492,6 +492,24 @@ impl Mul for Number {
                 }
             },
         }
+    }
+}
+
+impl Mul<i64> for Number {
+    type Output = Self;
+
+    fn mul(self, other: i64) -> Self {
+        match self {
+            Self::Machine(val1) => Self::Machine(val1 * other),
+            Self::Big(val1) => Self::Big(val1 * BigInt::from(other)),
+        }
+    }
+}
+
+impl MulAssign<i64> for Number {
+    fn mul_assign(&mut self, other: i64) {
+        let tmp = mem::take(self);
+        *self = tmp * other;
     }
 }
 

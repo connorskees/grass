@@ -73,6 +73,7 @@ impl For {
         Ok(stmts)
     }
 
+    #[allow(clippy::range_plus_one)]
     pub fn iter(&self) -> ForIterator {
         if self.from < self.to {
             ForIterator::Forward(self.from..(self.to + self.through))
