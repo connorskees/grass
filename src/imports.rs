@@ -17,7 +17,7 @@ pub(crate) fn import(
     if path.is_absolute() {
         todo!("absolute import")
     }
-    let path_buf = ctx.parent().unwrap_or(Path::new("")).join(path);
+    let path_buf = ctx.parent().unwrap_or_else(|| Path::new("")).join(path);
     // "todo: will panic if path ended in `..`"
     let name = path_buf.file_name().unwrap();
     if path_buf.extension() == Some(OsStr::new(".css")) {

@@ -346,6 +346,7 @@ fn str_insert(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> S
 }
 
 #[cfg(feature = "random")]
+#[allow(clippy::needless_pass_by_value)]
 fn unique_id(args: CallArgs, _: &Scope, _: &Selector) -> SassResult<Value> {
     args.max_args(0)?;
     let mut rng = thread_rng();

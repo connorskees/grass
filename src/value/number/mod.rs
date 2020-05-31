@@ -214,7 +214,7 @@ impl From<i64> for Number {
     }
 }
 
-// todo: implement std::convertTryFrom instead
+#[allow(clippy::fallible_impl_from)]
 impl From<f64> for Number {
     fn from(b: f64) -> Self {
         Number::Big(BigRational::from_float(b).unwrap())

@@ -378,6 +378,7 @@ impl<'a> StyleSheetParser<'a> {
                     node: Stmt::Style(s),
                     span,
                 }),
+                #[allow(clippy::match_same_arms)]
                 Expr::AtRule(a) => match a {
                     AtRule::For(f) => stmts.extend(f.ruleset_eval(scope, super_selector, None)?),
                     AtRule::While(w) => {
