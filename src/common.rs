@@ -105,21 +105,6 @@ impl ListSeparator {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub(crate) struct QualifiedName {
-    pub ident: String,
-    pub namespace: Option<String>,
-}
-
-impl Display for QualifiedName {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some(namespace) = &self.namespace {
-            write!(f, "{}|", namespace)?;
-        }
-        f.write_str(&self.ident)
-    }
-}
-
 #[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub(crate) struct Identifier(String);
 

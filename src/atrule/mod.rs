@@ -159,6 +159,7 @@ impl AtRule {
                         &mut read_until_open_curly_brace(toks)?.into_iter().peekmore(),
                         scope,
                         super_selector,
+                        true,
                     )?,
                 );
                 let mut is_some = true;

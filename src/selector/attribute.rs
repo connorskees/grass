@@ -4,8 +4,8 @@ use peekmore::PeekMoreIterator;
 
 use codemap::Span;
 
-use super::{Selector, SelectorKind};
-use crate::common::{QualifiedName, QuoteKind};
+use super::{Namespace, QualifiedName, Selector};
+use crate::common::QuoteKind;
 use crate::error::SassResult;
 use crate::scope::Scope;
 use crate::utils::{devour_whitespace, eat_ident, is_ident, parse_quoted_string};
@@ -40,7 +40,7 @@ fn attribute_name<I: Iterator<Item = Token>>(
         let ident = eat_ident(toks, scope, super_selector, span_before)?.node;
         return Ok(QualifiedName {
             ident,
-            namespace: Some('*'.to_string()),
+            namespace: Namespace::Asterisk,
         });
     }
     let span_before = next.pos;
@@ -49,7 +49,7 @@ fn attribute_name<I: Iterator<Item = Token>>(
         Some(v) if v.kind != '|' => {
             return Ok(QualifiedName {
                 ident: name_or_namespace.node,
-                namespace: None,
+                namespace: Namespace::None,
             });
         }
         Some(..) => {}
@@ -57,14 +57,14 @@ fn attribute_name<I: Iterator<Item = Token>>(
     }
     match toks.peek_forward(1) {
         Some(v) if v.kind == '=' => {
-            toks.peek_backward(1).unwrap();
+            toks.reset_view();
             return Ok(QualifiedName {
                 ident: name_or_namespace.node,
-                namespace: None,
+                namespace: Namespace::None,
             });
         }
         Some(..) => {
-            toks.peek_backward(1).unwrap();
+            toks.reset_view();
         }
         None => return Err(("expected more input.", name_or_namespace.span).into()),
     }
@@ -72,7 +72,7 @@ fn attribute_name<I: Iterator<Item = Token>>(
     let ident = eat_ident(toks, scope, super_selector, span_before)?.node;
     Ok(QualifiedName {
         ident,
-        namespace: Some(name_or_namespace.node),
+        namespace: Namespace::Other(name_or_namespace.node),
     })
 }
 
@@ -100,19 +100,19 @@ impl Attribute {
         scope: &Scope,
         super_selector: &Selector,
         start: Span,
-    ) -> SassResult<SelectorKind> {
+    ) -> SassResult<Attribute> {
         devour_whitespace(toks);
         let attr = attribute_name(toks, scope, super_selector, start)?;
         devour_whitespace(toks);
         if toks.peek().ok_or(("expected more input.", start))?.kind == ']' {
             toks.next();
-            return Ok(SelectorKind::Attribute(Attribute {
+            return Ok(Attribute {
                 attr,
                 value: String::new(),
                 modifier: None,
                 op: AttributeOp::Any,
                 span: start,
-            }));
+            });
         }
 
         let op = attribute_operator(toks, start)?;
@@ -152,13 +152,13 @@ impl Attribute {
 
         toks.next();
 
-        Ok(SelectorKind::Attribute(Attribute {
+        Ok(Attribute {
             op,
             attr,
             value,
             modifier,
             span: start,
-        }))
+        })
     }
 }
 

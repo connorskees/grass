@@ -530,16 +530,25 @@ test!(
     "+ {\n  color: &;\n}\n",
     "+ {\n  color: +;\n}\n"
 );
-error!(
-    #[ignore = "namespaces are not yet parsed correctly"]
-    empty_namespace,
-    "| {}", "Error: Expected identifier."
+test!(
+    invalid_chars_in_pseudo_parens,
+    ":c(@#$) {\n  color: &;\n}\n",
+    ":c(@#$) {\n  color: :c(@#$);\n}\n"
 );
 test!(
-    #[ignore = "namespaces are not yet parsed correctly"]
-    simple_namespace,
+    empty_namespace_element,
     "|f {\n  color: &;\n}\n",
     "|f {\n  color: |f;\n}\n"
+);
+test!(
+    universal_with_namespace,
+    "a|* {\n  color: &;\n}\n",
+    "a|* {\n  color: a|*;\n}\n"
+);
+test!(
+    psuedo_element_slotted_args,
+    "::slotted(b, c) {\n  color: &;\n}\n",
+    "::slotted(b, c) {\n  color: ::slotted(b, c);\n}\n"
 );
 error!(nothing_after_period, ". {}", "Error: Expected identifier.");
 error!(nothing_after_hash, "# {}", "Error: Expected identifier.");

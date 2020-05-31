@@ -75,7 +75,9 @@ impl Css {
                 super_selector,
                 rules,
             }) => {
-                let selector = super_selector.zip(&selector).remove_placeholders();
+                let selector = selector
+                    .resolve_parent_selectors(&super_selector, true)
+                    .remove_placeholders();
                 if selector.is_empty() {
                     return Ok(Vec::new());
                 }

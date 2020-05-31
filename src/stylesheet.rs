@@ -420,7 +420,8 @@ impl<'a> StyleSheetParser<'a> {
                 }
                 Expr::Selector(s) => {
                     self.nesting += 1;
-                    let rules = self.eat_rules(&super_selector.zip(&s), scope)?;
+                    let rules =
+                        self.eat_rules(&s.resolve_parent_selectors(&super_selector, true), scope)?;
                     stmts.push(Spanned {
                         node: Stmt::RuleSet(RuleSet {
                             super_selector: super_selector.clone(),

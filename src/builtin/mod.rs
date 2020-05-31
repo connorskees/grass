@@ -50,6 +50,7 @@ pub(crate) static GLOBAL_FUNCTIONS: Lazy<GlobalFunctionMap> = Lazy::new(|| {
     map::declare(&mut m);
     math::declare(&mut m);
     meta::declare(&mut m);
+    selector::declare(&mut m);
     string::declare(&mut m);
     m
 });

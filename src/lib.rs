@@ -278,6 +278,7 @@ pub(crate) fn eat_expr<I: Iterator<Item = Token>>(
                         &mut values.into_iter().peekmore(),
                         scope,
                         super_selector,
+                        true,
                     )?),
                     span,
                 }));

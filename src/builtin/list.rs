@@ -22,11 +22,7 @@ fn length(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassR
 
 fn nth(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
     args.max_args(2)?;
-    let mut list = match arg!(args, scope, super_selector, 0, "list") {
-        Value::List(v, ..) => v,
-        Value::Map(m) => m.entries(),
-        v => vec![v],
-    };
+    let mut list = arg!(args, scope, super_selector, 0, "list").as_list();
     let n = match arg!(args, scope, super_selector, 1, "n") {
         Value::Dimension(num, _) => num,
         v => {
@@ -260,11 +256,7 @@ fn is_bracketed(mut args: CallArgs, scope: &Scope, super_selector: &Selector) ->
 
 fn index(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
     args.max_args(2)?;
-    let list = match arg!(args, scope, super_selector, 0, "list") {
-        Value::List(v, ..) => v,
-        Value::Map(m) => m.entries(),
-        v => vec![v],
-    };
+    let list = arg!(args, scope, super_selector, 0, "list").as_list();
     let value = arg!(args, scope, super_selector, 1, "value");
     // TODO: find a way around this unwrap.
     // It should be impossible to hit as the arg is
@@ -288,13 +280,7 @@ fn zip(args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<V
     let lists = args
         .get_variadic(scope, super_selector)?
         .into_iter()
-        .map(|x| {
-            Ok(match x.node.eval(span)?.node {
-                Value::List(v, ..) => v,
-                Value::Map(m) => m.entries(),
-                v => vec![v],
-            })
-        })
+        .map(|x| Ok(x.node.eval(span)?.node.as_list()))
         .collect::<SassResult<Vec<Vec<Value>>>>()?;
 
     let len = lists.iter().map(Vec::len).min().unwrap_or(0);

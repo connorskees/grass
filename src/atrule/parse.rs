@@ -33,7 +33,7 @@ pub(crate) fn eat_stmts<I: Iterator<Item = Token>>(
                 let rules = eat_stmts(
                     toks,
                     scope,
-                    &super_selector.zip(&selector),
+                    &selector.resolve_parent_selectors(&super_selector, true),
                     at_root,
                     content,
                 )?;
@@ -82,7 +82,7 @@ pub(crate) fn eat_stmts_at_root<I: Iterator<Item = Token>>(
             Expr::MixinDecl(..) | Expr::FunctionDecl(..) => todo!(),
             Expr::Selector(mut selector) => {
                 if nesting > 1 || is_some {
-                    selector = super_selector.zip(&selector);
+                    selector = selector.resolve_parent_selectors(&super_selector, true);
                 } else {
                     selector = Selector::replace(super_selector, selector);
                 }
