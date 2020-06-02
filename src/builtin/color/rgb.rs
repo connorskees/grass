@@ -39,7 +39,7 @@ fn inner_rgb(
                 .into());
         }
 
-        let blue = match channels.pop() {
+        let blue = match channels.pop().map(|v| v.eval(args.span()).unwrap().node) {
             Some(Value::Dimension(n, Unit::None)) => n,
             Some(Value::Dimension(n, Unit::Percent)) => (n / Number::from(100)) * Number::from(255),
             Some(v) if v.is_special_function() => {
@@ -66,7 +66,7 @@ fn inner_rgb(
             None => return Err(("Missing element $blue.", args.span()).into()),
         };
 
-        let green = match channels.pop() {
+        let green = match channels.pop().map(|v| v.eval(args.span()).unwrap().node) {
             Some(Value::Dimension(n, Unit::None)) => n,
             Some(Value::Dimension(n, Unit::Percent)) => (n / Number::from(100)) * Number::from(255),
             Some(v) if v.is_special_function() => {
@@ -92,7 +92,7 @@ fn inner_rgb(
             None => return Err(("Missing element $green.", args.span()).into()),
         };
 
-        let red = match channels.pop() {
+        let red = match channels.pop().map(|v| v.eval(args.span()).unwrap().node) {
             Some(Value::Dimension(n, Unit::None)) => n,
             Some(Value::Dimension(n, Unit::Percent)) => (n / Number::from(100)) * Number::from(255),
             Some(v) if v.is_special_function() => {

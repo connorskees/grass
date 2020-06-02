@@ -572,3 +572,8 @@ test!(
     "a {\n  color: opacity(transparent);\n}\n",
     "a {\n  color: 0;\n}\n"
 );
+test!(
+    negative_values_in_rgb,
+    "a {\n  color: rgb(-1 -1 -1);\n}\n",
+    "a {\n  color: black;\n}\n"
+);
