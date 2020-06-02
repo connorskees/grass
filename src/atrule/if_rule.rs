@@ -64,18 +64,16 @@ impl If {
         let mut else_ = Vec::new();
 
         loop {
-            match toks.peek().cloned() {
-                Some(Token { kind: '@', pos }) => {
-                    toks.peek_forward(1);
-                    let mut ident = peek_ident_no_interpolation(toks, false, pos)?;
-                    ident.node.make_ascii_lowercase();
-                    if ident.as_str() != "else" {
-                        toks.reset_view();
-                        break;
-                    }
-                    toks.take(4).for_each(drop);
+            if let Some(Token { kind: '@', pos }) = toks.peek().cloned() {
+                toks.peek_forward(1);
+                let ident = peek_ident_no_interpolation(toks, false, pos)?;
+                if ident.as_str() != "else" {
+                    toks.reset_view();
+                    break;
                 }
-                Some(..) | None => break,
+                toks.take(4).for_each(drop);
+            } else {
+                break;
             }
             devour_whitespace(toks);
             if let Some(tok) = toks.next() {
