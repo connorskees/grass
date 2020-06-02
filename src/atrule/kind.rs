@@ -72,7 +72,7 @@ pub enum AtRuleKind {
 impl TryFrom<&Spanned<String>> for AtRuleKind {
     type Error = SassError;
     fn try_from(c: &Spanned<String>) -> Result<Self, SassError> {
-        Ok(match c.node.to_ascii_lowercase().as_str() {
+        Ok(match c.node.as_str() {
             "use" => Self::Use,
             "forward" => Self::Forward,
             "import" => Self::Import,

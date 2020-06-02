@@ -96,7 +96,7 @@ test!(
 test!(
     uppercase_escaped_if,
     "@\\49 f true {\n  a {\n    color: red;\n  }\n}\n",
-    "a {\n  color: red;\n}\n"
+    "@If true {\n  a {\n    color: red;\n  }\n}\n"
 );
 test!(
     escaped_else,
@@ -108,6 +108,7 @@ test!(
     "@if false {}\n\n@\\45lse {\n  a {\n    color: red;\n  }\n}\n",
     "a {\n  color: red;\n}\n"
 );
+test!(uppercase_if, "@If true {\n  a {\n    color: red;\n  }\n}\n");
 error!(nothing_after_if, "@if", "Error: Expected expression.");
 error!(
     nothing_after_dollar,
