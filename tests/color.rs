@@ -577,3 +577,8 @@ test!(
     "a {\n  color: rgb(-1 -1 -1);\n}\n",
     "a {\n  color: black;\n}\n"
 );
+test!(
+    negative_values_in_hsl,
+    "a {\n  color: hsl(-1 -1 -1);\n}\n",
+    "a {\n  color: black;\n}\n"
+);

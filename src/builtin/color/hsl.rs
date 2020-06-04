@@ -38,7 +38,7 @@ fn inner_hsl(
                 .into());
         }
 
-        let lightness = match channels.pop() {
+        let lightness = match channels.pop().map(|v| v.eval(args.span()).unwrap().node) {
             Some(Value::Dimension(n, _)) => n / Number::from(100),
             Some(v) => {
                 return Err((
@@ -53,7 +53,7 @@ fn inner_hsl(
             None => return Err(("Missing element $lightness.", args.span()).into()),
         };
 
-        let saturation = match channels.pop() {
+        let saturation = match channels.pop().map(|v| v.eval(args.span()).unwrap().node) {
             Some(Value::Dimension(n, _)) => n / Number::from(100),
             Some(v) => {
                 return Err((
@@ -68,7 +68,7 @@ fn inner_hsl(
             None => return Err(("Missing element $saturation.", args.span()).into()),
         };
 
-        let hue = match channels.pop() {
+        let hue = match channels.pop().map(|v| v.eval(args.span()).unwrap().node) {
             Some(Value::Dimension(n, _)) => n,
             Some(v) => {
                 return Err((
