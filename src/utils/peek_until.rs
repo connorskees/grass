@@ -115,9 +115,10 @@ pub(crate) fn peek_escape<I: Iterator<Item = Token>>(
 ) -> SassResult<String> {
     let mut value = 0;
     let first = match toks.peek() {
-        Some(t) => t,
+        Some(t) => *t,
         None => return Ok(String::new()),
     };
+    let mut span = first.pos;
     if first.kind == '\n' {
         return Err(("Expected escape sequence.", first.pos()).into());
     } else if first.kind.is_ascii_hexdigit() {
@@ -131,6 +132,7 @@ pub(crate) fn peek_escape<I: Iterator<Item = Token>>(
             }
             value *= 16;
             value += as_hex(next.kind);
+            span = span.merge(next.pos);
             toks.peek_forward(1);
         }
         if toks.peek().is_some() && toks.peek().unwrap().kind.is_whitespace() {
@@ -140,7 +142,7 @@ pub(crate) fn peek_escape<I: Iterator<Item = Token>>(
         value = toks.peek_forward(1).unwrap().kind as u32;
     }
 
-    let c = std::char::from_u32(value).unwrap();
+    let c = std::char::from_u32(value).ok_or(("Invalid escape sequence.", span))?;
     if is_name(c) {
         Ok(c.to_string())
     } else if value <= 0x1F || value == 0x7F {

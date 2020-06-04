@@ -139,3 +139,7 @@ error!(
     undefined_variable,
     "a {color: $a;}", "Error: Undefined variable."
 );
+error!(
+    invalid_escape,
+    "$\\110000: red;", "Error: Invalid escape sequence."
+);
