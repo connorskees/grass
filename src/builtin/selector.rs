@@ -3,6 +3,7 @@
 use super::{Builtin, GlobalFunctionMap};
 
 use crate::args::CallArgs;
+use crate::common::{Brackets, ListSeparator, QuoteKind};
 use crate::error::SassResult;
 use crate::scope::Scope;
 use crate::selector::{
@@ -42,7 +43,36 @@ fn simple_selectors(
     super_selector: &Selector,
 ) -> SassResult<Value> {
     args.max_args(1)?;
-    todo!("built-in fn simple-selectors")
+    // todo: Value::to_compound_selector
+    let selector = arg!(args, scope, super_selector, 0, "selector").to_selector(
+        args.span(),
+        scope,
+        super_selector,
+        "selector",
+        false,
+    )?;
+
+    if selector.0.components.len() != 1 {
+        return Err(("$selector: expected selector.", args.span()).into());
+    }
+
+    let compound = if let Some(ComplexSelectorComponent::Compound(compound)) =
+        selector.0.components[0].components.get(0).cloned()
+    {
+        compound
+    } else {
+        todo!()
+    };
+
+    Ok(Value::List(
+        compound
+            .components
+            .into_iter()
+            .map(|simple| Value::String(simple.to_string(), QuoteKind::None))
+            .collect(),
+        ListSeparator::Comma,
+        Brackets::None,
+    ))
 }
 
 fn selector_parse(
