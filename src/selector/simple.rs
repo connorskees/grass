@@ -349,7 +349,7 @@ impl SimpleSelector {
             }) = their_simple
             {
                 if SUBSELECTOR_PSEUDOS.contains(&normalized_name.as_str()) {
-                    sel.components.iter().all(|complex| {
+                    return sel.components.iter().all(|complex| {
                         if complex.components.len() != 1 {
                             return false;
                         };
