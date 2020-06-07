@@ -129,6 +129,66 @@ test!(
     "a {\n  color: *|c, d;\n}\n"
 );
 test!(
+    simple_pseudo_class_no_arg_equal,
+    "a {\n  color: selector-extend(\":c\", \":c\", \"e\");\n}\n",
+    "a {\n  color: :c, e;\n}\n"
+);
+test!(
+    simple_pseudo_class_no_arg_unequal,
+    "a {\n  color: selector-extend(\":c\", \":d\", \"e\");\n}\n",
+    "a {\n  color: :c;\n}\n"
+);
+test!(
+    simple_pseudo_class_no_arg_and_element,
+    "a {\n  color: selector-extend(\":c\", \"::c\", \"e\");\n}\n",
+    "a {\n  color: :c;\n}\n"
+);
+test!(
+    simple_pseudo_element_no_arg_and_element_equal,
+    "a {\n  color: selector-extend(\"::c\", \"::c\", \"e\");\n}\n",
+    "a {\n  color: ::c, e;\n}\n"
+);
+test!(
+    simple_pseudo_element_no_arg_and_class,
+    "a {\n  color: selector-extend(\"::c\", \":c\", \"e\");\n}\n",
+    "a {\n  color: ::c;\n}\n"
+);
+test!(
+    simple_pseudo_class_arg_equal,
+    "a {\n  color: selector-extend(\":c(@#$)\", \":c(@#$)\", \"e\");\n}\n",
+    "a {\n  color: :c(@#$), e;\n}\n"
+);
+test!(
+    simple_pseudo_class_arg_unequal_name,
+    "a {\n  color: selector-extend(\":c(@#$)\", \":d(@#$)\", \"e\");\n}\n",
+    "a {\n  color: :c(@#$);\n}\n"
+);
+test!(
+    simple_pseudo_class_arg_unequal_arg,
+    "a {\n  color: selector-extend(\":c(@#$)\", \":c(*&^)\", \"e\");\n}\n",
+    "a {\n  color: :c(@#$);\n}\n"
+);
+test!(
+    simple_pseudo_class_arg_unequal_no_arg,
+    "a {\n  color: selector-extend(\":c(@#$)\", \":c\", \"e\");\n}\n",
+    "a {\n  color: :c(@#$);\n}\n"
+);
+test!(
+    simple_pseudo_class_arg_and_element,
+    "a {\n  color: selector-extend(\":c(@#$)\", \"::c(@#$)\", \"e\");\n}\n",
+    "a {\n  color: :c(@#$);\n}\n"
+);
+test!(
+    simple_pseudo_element_arg_and_element_equal,
+    "a {\n  color: selector-extend(\"::c(@#$)\", \"::c(@#$)\", \"e\");\n}\n",
+    "a {\n  color: ::c(@#$), e;\n}\n"
+);
+test!(
+    simple_pseudo_element_arg_and_class,
+    "a {\n  color: selector-extend(\"::c(@#$)\", \":c(@#$)\", \"e\");\n}\n",
+    "a {\n  color: ::c(@#$);\n}\n"
+);
+test!(
     complex_parent_without_grandparents_simple,
     "a {\n  color: selector-extend(\".c .d\", \".c\", \".e\");\n}\n",
     "a {\n  color: .c .d, .e .d;\n}\n"
@@ -173,3 +233,4 @@ test!(
     "a {\n  color: selector-extend(\".c .d\", \".c\", \".e +\");\n}\n",
     "a {\n  color: .c .d, .e + .d;\n}\n"
 );
+// todo: https://github.com/sass/sass-spec/tree/master/spec/core_functions/selector/extend/simple/pseudo/selector/

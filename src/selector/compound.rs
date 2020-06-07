@@ -40,11 +40,11 @@ impl fmt::Display for CompoundSelector {
 
 impl CompoundSelector {
     pub fn max_specificity(&self) -> i32 {
-        self.specificity().min
+        self.specificity().max
     }
 
     pub fn min_specificity(&self) -> i32 {
-        self.specificity().max
+        self.specificity().min
     }
 
     /// Returns tuple of (min, max) specificity

@@ -2,10 +2,12 @@ use std::fmt::{self, Write};
 
 use super::{
     Attribute, ComplexSelector, ComplexSelectorComponent, CompoundSelector, Namespace,
-    QualifiedName, SelectorList,
+    QualifiedName, SelectorList, Specificity,
 };
 
 const SUBSELECTOR_PSEUDOS: [&str; 4] = ["matches", "any", "nth-child", "nth-last-child"];
+
+const BASE_SPECIFICITY: i32 = 1000;
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub(crate) enum SimpleSelector {
@@ -84,9 +86,9 @@ impl SimpleSelector {
         match self {
             Self::Universal(..) => 0,
             Self::Type(..) => 1,
-            Self::Pseudo { .. } => todo!(),
-            Self::Id(..) => 1000_i32.pow(2_u32),
-            _ => 1000,
+            Self::Pseudo(pseudo) => pseudo.min_specificity(),
+            Self::Id(..) => BASE_SPECIFICITY.pow(2_u32),
+            _ => BASE_SPECIFICITY,
         }
     }
 
@@ -97,6 +99,7 @@ impl SimpleSelector {
     pub fn max_specificity(&self) -> i32 {
         match self {
             Self::Universal(..) => 0,
+            Self::Pseudo(pseudo) => pseudo.max_specificity(),
             _ => self.min_specificity(),
         }
     }
@@ -566,6 +569,49 @@ impl Pseudo {
 
     pub fn with_selector(self, selector: Option<SelectorList>) -> Self {
         Self { selector, ..self }
+    }
+
+    pub fn max_specificity(&self) -> i32 {
+        self.specificity().max
+    }
+
+    pub fn min_specificity(&self) -> i32 {
+        self.specificity().min
+    }
+
+    pub fn specificity(&self) -> Specificity {
+        if !self.is_class {
+            return Specificity { min: 1, max: 1 };
+        }
+
+        let selector = match &self.selector {
+            Some(sel) => sel,
+            None => {
+                return Specificity {
+                    min: BASE_SPECIFICITY,
+                    max: BASE_SPECIFICITY,
+                }
+            }
+        };
+
+        if self.name == "not" {
+            let mut min = 0;
+            let mut max = 0;
+            for complex in &selector.components {
+                min = min.max(complex.min_specificity());
+                max = max.max(complex.max_specificity());
+            }
+            return Specificity { min, max };
+        } else {
+            // This is higher than any selector's specificity can actually be.
+            let mut min = BASE_SPECIFICITY.pow(3_u32);
+            let mut max = 0;
+            for complex in &selector.components {
+                min = min.min(complex.min_specificity());
+                max = max.max(complex.max_specificity());
+            }
+            return Specificity { min, max };
+        }
     }
 }
 
