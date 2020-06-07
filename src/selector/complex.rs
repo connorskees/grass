@@ -1,11 +1,11 @@
-use super::{CompoundSelector, Pseudo, SelectorList, SimpleSelector};
+use super::{CompoundSelector, Pseudo, SelectorList, SimpleSelector, Specificity};
 use std::fmt::{self, Display, Write};
 
 /// A complex selector.
 ///
 /// A complex selector is composed of `CompoundSelector`s separated by
 /// `Combinator`s. It selects elements based on their parent selectors.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub(crate) struct ComplexSelector {
     /// The components of this selector.
     ///
@@ -48,16 +48,25 @@ fn omit_spaces_around(component: &ComplexSelectorComponent) -> bool {
 }
 
 impl ComplexSelector {
-    // pub fn specificity(&self) -> Specificity {
-    //     let mut min = 0;
-    //     let mut max = 0;
-    //     for component in self.components.iter() {
-    //         todo!()
-    //         // min += simple.min_specificity();
-    //         // max += simple.max_specificity();
-    //     }
-    //     Specificity::new(min, max)
-    // }
+    pub fn max_specificity(&self) -> i32 {
+        self.specificity().min
+    }
+
+    pub fn min_specificity(&self) -> i32 {
+        self.specificity().max
+    }
+
+    pub fn specificity(&self) -> Specificity {
+        let mut min = 0;
+        let mut max = 0;
+        for component in &self.components {
+            if let ComplexSelectorComponent::Compound(compound) = component {
+                min += compound.min_specificity();
+                max += compound.max_specificity();
+            }
+        }
+        Specificity::new(min, max)
+    }
 
     pub fn is_invisible(&self) -> bool {
         self.components
@@ -201,7 +210,7 @@ impl ComplexSelector {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Copy)]
+#[derive(Clone, Debug, Eq, PartialEq, Copy, Hash)]
 pub(crate) enum Combinator {
     /// Matches the right-hand selector if it's immediately adjacent to the
     /// left-hand selector in the DOM tree.
@@ -232,7 +241,7 @@ impl Display for Combinator {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub(crate) enum ComplexSelectorComponent {
     Combinator(Combinator),
     Compound(CompoundSelector),

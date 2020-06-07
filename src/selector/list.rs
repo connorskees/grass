@@ -13,7 +13,7 @@ use crate::value::Value;
 ///
 /// A selector list is composed of `ComplexSelector`s. It matches an element
 /// that matches any of the component selectors.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub(crate) struct SelectorList {
     /// The components of this selector.
     ///

@@ -6,7 +6,7 @@ use std::fmt::{self, Display};
 /// it's `Empty`, this matches all elements that aren't in any
 /// namespace. If it's `Asterisk`, this matches all elements in any namespace.
 /// Otherwise, it matches all elements in the given namespace.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub(crate) enum Namespace {
     Empty,
     Asterisk,
@@ -25,7 +25,7 @@ impl Display for Namespace {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub(crate) struct QualifiedName {
     pub ident: String,
     pub namespace: Namespace,
@@ -38,18 +38,13 @@ impl Display for QualifiedName {
     }
 }
 
-pub(crate) struct Specificity(u32, u32);
+pub(crate) struct Specificity {
+    pub min: i32,
+    pub max: i32,
+}
 
 impl Specificity {
-    pub const fn new(min: u32, max: u32) -> Self {
-        Specificity(min, max)
-    }
-
-    pub const fn min(&self) -> u32 {
-        self.0
-    }
-
-    pub const fn max(&self) -> u32 {
-        self.1
+    pub const fn new(min: i32, max: i32) -> Self {
+        Specificity { min, max }
     }
 }

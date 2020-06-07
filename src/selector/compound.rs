@@ -7,7 +7,7 @@ use super::{
 
 /// A compound selector is composed of several
 /// simple selectors
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub(crate) struct CompoundSelector {
     pub components: Vec<SimpleSelector>,
 }
@@ -39,14 +39,21 @@ impl fmt::Display for CompoundSelector {
 }
 
 impl CompoundSelector {
+    pub fn max_specificity(&self) -> i32 {
+        self.specificity().min
+    }
+
+    pub fn min_specificity(&self) -> i32 {
+        self.specificity().max
+    }
+
     /// Returns tuple of (min, max) specificity
     pub fn specificity(&self) -> Specificity {
         let mut min = 0;
         let mut max = 0;
         for simple in &self.components {
-            todo!()
-            // min += simple.min_specificity;
-            // max += simple.max_specificity;
+            min += simple.min_specificity();
+            max += simple.max_specificity();
         }
         Specificity::new(min, max)
     }

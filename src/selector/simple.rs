@@ -7,7 +7,7 @@ use super::{
 
 const SUBSELECTOR_PSEUDOS: [&str; 4] = ["matches", "any", "nth-child", "nth-last-child"];
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub(crate) enum SimpleSelector {
     /// *
     Universal(Namespace),
@@ -80,12 +80,12 @@ impl SimpleSelector {
     /// Specifity is represented in base 1000. The spec says this should be
     /// "sufficiently high"; it's extremely unlikely that any single selector
     /// sequence will contain 1000 simple selectors.
-    pub fn min_specificity(&self) -> u32 {
+    pub fn min_specificity(&self) -> i32 {
         match self {
             Self::Universal(..) => 0,
             Self::Type(..) => 1,
             Self::Pseudo { .. } => todo!(),
-            Self::Id(..) => 1000_u32.pow(2_u32),
+            Self::Id(..) => 1000_i32.pow(2_u32),
             _ => 1000,
         }
     }
@@ -94,7 +94,7 @@ impl SimpleSelector {
     ///
     /// Pseudo selectors that contain selectors, like `:not()` and `:matches()`,
     /// can have a range of possible specificities.
-    pub fn max_specificity(&self) -> u32 {
+    pub fn max_specificity(&self) -> i32 {
         match self {
             Self::Universal(..) => 0,
             _ => self.min_specificity(),
@@ -128,7 +128,7 @@ impl SimpleSelector {
                 selector: None,
                 ..
             }) => name.push_str(suffix),
-            _ => todo!(),
+            _ => todo!("Invalid parent selector"), //return Err((format!("Invalid parent selector \"{}\"", self), SPAN)),
         }
     }
 
@@ -367,7 +367,7 @@ impl SimpleSelector {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub(crate) struct Pseudo {
     /// The name of this selector.
     pub name: String,
@@ -562,6 +562,10 @@ impl Pseudo {
             }),
             _ => unreachable!(),
         }
+    }
+
+    pub fn with_selector(self, selector: Option<SelectorList>) -> Self {
+        Self { selector, ..self }
     }
 }
 

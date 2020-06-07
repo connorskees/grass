@@ -1,786 +1,825 @@
-#![allow(clippy::similar_names)]
+use std::collections::{HashMap, HashSet, VecDeque};
 
-use std::collections::VecDeque;
+use indexmap::IndexMap;
 
 use super::{
-    Combinator, ComplexSelector, ComplexSelectorComponent, CompoundSelector, Pseudo, SimpleSelector,
+    ComplexSelector, ComplexSelectorComponent, CompoundSelector, Pseudo, SelectorList,
+    SimpleSelector,
 };
 
-/// Returns the contents of a `SelectorList` that matches only elements that are
-/// matched by both `complex_one` and `complex_two`.
-///
-/// If no such list can be produced, returns `None`.
-pub(crate) fn unify_complex(
-    complexes: Vec<Vec<ComplexSelectorComponent>>,
-) -> Option<Vec<Vec<ComplexSelectorComponent>>> {
-    debug_assert!(!complexes.is_empty());
+use extension::Extension;
+pub(crate) use functions::unify_complex;
+use functions::{paths, weave};
 
-    if complexes.len() == 1 {
-        return Some(complexes);
-    }
+mod extension;
+mod functions;
 
-    let mut unified_base: Option<Vec<SimpleSelector>> = None;
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+pub(crate) struct CssMediaQuery;
 
-    for complex in &complexes {
-        let base = complex.last()?;
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+/// Different modes in which extension can run.
+enum ExtendMode {
+    /// Normal mode, used with the `@extend` rule.
+    ///
+    /// This preserves existing selectors and extends each target individually.
+    Normal,
 
-        if let ComplexSelectorComponent::Compound(base) = base {
-            if let Some(mut some_unified_base) = unified_base.clone() {
-                for simple in base.components.clone() {
-                    some_unified_base = simple.unify(some_unified_base.clone())?;
-                }
-                unified_base = Some(some_unified_base);
-            } else {
-                unified_base = Some(base.components.clone());
-            }
-        } else {
-            return None;
-        }
-    }
+    /// Replace mode, used by the `selector-replace()` function.
+    ///
+    /// This replaces existing selectors and requires every target to match to
+    /// extend a given compound selector.
+    Replace,
 
-    let mut complexes_without_bases: Vec<Vec<ComplexSelectorComponent>> = complexes
-        .into_iter()
-        .map(|mut complex| {
-            complex.pop();
-            complex
-        })
-        .collect();
-
-    complexes_without_bases
-        .last_mut()
-        .unwrap()
-        .push(ComplexSelectorComponent::Compound(CompoundSelector {
-            components: unified_base?,
-        }));
-
-    Some(weave(complexes_without_bases))
+    /// All-targets mode, used by the `selector-extend()` function.
+    ///
+    /// This preserves existing selectors but requires every target to match to
+    /// extend a given compound selector.
+    AllTargets,
 }
 
-/// Expands "parenthesized selectors" in `complexes`.
-///
-/// That is, if we have `.A .B {@extend .C}` and `.D .C {...}`, this
-/// conceptually expands into `.D .C, .D (.A .B)`, and this function translates
-/// `.D (.A .B)` into `.D .A .B, .A .D .B`. For thoroughness, `.A.D .B` would
-/// also be required, but including merged selectors results in exponential
-/// output for very little gain.
-///
-/// The selector `.D (.A .B)` is represented as the list `[[.D], [.A, .B]]`.
-fn weave(complexes: Vec<Vec<ComplexSelectorComponent>>) -> Vec<Vec<ComplexSelectorComponent>> {
-    let mut prefixes: Vec<Vec<ComplexSelectorComponent>> = vec![complexes.first().unwrap().clone()];
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct Extender {
+    /// A map from all simple selectors in the stylesheet to the selector lists
+    /// that contain them.
+    ///
+    /// This is used to find which selectors an `@extend` applies to and adjust
+    /// them.
+    selectors: HashMap<SimpleSelector, HashSet<SelectorList>>,
 
-    for complex in complexes.into_iter().skip(1) {
-        if complex.is_empty() {
-            continue;
-        }
+    /// A map from all extended simple selectors to the sources of those
+    /// extensions.
+    extensions: HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>>,
 
-        let target = complex.last().unwrap().clone();
+    /// A map from all simple selectors in extenders to the extensions that those
+    /// extenders define.
+    extensions_by_extender: HashMap<SimpleSelector, Vec<Extension>>,
 
-        if complex.len() == 1 {
-            for prefix in &mut prefixes {
-                prefix.push(target.clone());
-            }
-            continue;
-        }
+    /// A map from CSS selectors to the media query contexts they're defined in.
+    ///
+    /// This tracks the contexts in which each selector's style rule is defined.
+    /// If a rule is defined at the top level, it doesn't have an entry.
+    media_contexts: HashMap<SelectorList, Vec<CssMediaQuery>>,
 
-        let complex_len = complex.len();
+    /// A map from `SimpleSelector`s to the specificity of their source
+    /// selectors.
+    ///
+    /// This tracks the maximum specificity of the `ComplexSelector` that
+    /// originally contained each `SimpleSelector`. This allows us to ensure that
+    /// we don't trim any selectors that need to exist to satisfy the [second law
+    /// of extend][].
+    ///
+    /// [second law of extend]: https://github.com/sass/sass/issues/324#issuecomment-4607184
+    source_specificity: HashMap<SimpleSelector, i32>,
 
-        let parents: Vec<ComplexSelectorComponent> =
-            complex.into_iter().take(complex_len - 1).collect();
-        let mut new_prefixes: Vec<Vec<ComplexSelectorComponent>> = Vec::new();
+    /// A set of `ComplexSelector`s that were originally part of
+    /// their component `SelectorList`s, as opposed to being added by `@extend`.
+    ///
+    /// This allows us to ensure that we don't trim any selectors that need to
+    /// exist to satisfy the [first law of extend][].
+    ///
+    /// [first law of extend]: https://github.com/sass/sass/issues/324#issuecomment-4607184
+    originals: HashSet<ComplexSelector>,
 
-        for prefix in prefixes {
-            let parent_prefixes = weave_parents(prefix, parents.clone());
-
-            if let Some(parent_prefixes) = parent_prefixes {
-                for mut parent_prefix in parent_prefixes {
-                    parent_prefix.push(target.clone());
-                    new_prefixes.push(parent_prefix);
-                }
-            }
-        }
-        prefixes = new_prefixes;
-    }
-
-    prefixes
+    /// The mode that controls this extender's behavior.
+    mode: ExtendMode,
 }
 
-/// Interweaves `parents_one` and `parents_two` as parents of the same target selector.
-///
-/// Returns all possible orderings of the selectors in the inputs (including
-/// using unification) that maintain the relative ordering of the input. For
-/// example, given `.foo .bar` and `.baz .bang`, this would return `.foo .bar
-/// .baz .bang`, `.foo .bar.baz .bang`, `.foo .baz .bar .bang`, `.foo .baz
-/// .bar.bang`, `.foo .baz .bang .bar`, and so on until `.baz .bang .foo .bar`.
-///
-/// Semantically, for selectors A and B, this returns all selectors `AB_i`
-/// such that the union over all i of elements matched by `AB_i X` is
-/// identical to the intersection of all elements matched by `A X` and all
-/// elements matched by `B X`. Some `AB_i` are elided to reduce the size of
-/// the output.
-fn weave_parents(
-    parents_one: Vec<ComplexSelectorComponent>,
-    parents_two: Vec<ComplexSelectorComponent>,
-) -> Option<Vec<Vec<ComplexSelectorComponent>>> {
-    let mut queue_one = VecDeque::from(parents_one);
-    let mut queue_two = VecDeque::from(parents_two);
+impl Extender {
+    /// An `Extender` that contains no extensions and can have no extensions added.
+    // TODO: empty extender
+    const EMPTY: () = ();
 
-    let initial_combinators = merge_initial_combinators(&mut queue_one, &mut queue_two)?;
-
-    let mut final_combinators = merge_final_combinators(&mut queue_one, &mut queue_two, None)?;
-
-    match (first_if_root(&mut queue_one), first_if_root(&mut queue_two)) {
-        (Some(root_one), Some(root_two)) => {
-            let root = ComplexSelectorComponent::Compound(root_one.unify(root_two)?);
-            queue_one.push_front(root.clone());
-            queue_two.push_front(root);
-        }
-        (Some(root_one), None) => {
-            queue_two.push_front(ComplexSelectorComponent::Compound(root_one));
-        }
-        (None, Some(root_two)) => {
-            queue_one.push_front(ComplexSelectorComponent::Compound(root_two));
-        }
-        (None, None) => {}
+    pub fn extend(
+        selector: SelectorList,
+        source: SelectorList,
+        targets: SelectorList,
+    ) -> SelectorList {
+        Self::extend_or_replace(selector, source, targets, ExtendMode::AllTargets)
     }
 
-    let mut groups_one = group_selectors(Vec::from(queue_one));
-    let mut groups_two = group_selectors(Vec::from(queue_two));
+    pub fn replace(
+        selector: SelectorList,
+        source: SelectorList,
+        targets: SelectorList,
+    ) -> SelectorList {
+        Self::extend_or_replace(selector, source, targets, ExtendMode::Replace)
+    }
 
-    let lcs = longest_common_subsequence(
-        groups_two.as_slices().0,
-        groups_one.as_slices().0,
-        Some(&|group_one, group_two| {
-            if group_one == group_two {
-                return Some(group_one);
-            }
-
-            if let ComplexSelectorComponent::Combinator(..) = group_one.first()? {
-                return None;
-            }
-            if let ComplexSelectorComponent::Combinator(..) = group_two.first()? {
-                return None;
-            }
-
-            if complex_is_parent_superselector(group_one.clone(), group_two.clone()) {
-                return Some(group_two);
-            }
-            if complex_is_parent_superselector(group_two.clone(), group_one.clone()) {
-                return Some(group_one);
-            }
-
-            if !must_unify(&group_one, &group_two) {
-                return None;
-            }
-
-            let unified = unify_complex(vec![group_one, group_two])?;
-            if unified.len() > 1 {
-                return None;
-            }
-
-            unified.first().cloned()
-        }),
-    );
-
-    let mut choices = vec![vec![initial_combinators
-        .into_iter()
-        .map(ComplexSelectorComponent::Combinator)
-        .collect::<Vec<ComplexSelectorComponent>>()]];
-
-    for group in lcs {
-        choices.push(
-            chunks(&mut groups_one, &mut groups_two, |sequence| {
-                complex_is_parent_superselector(sequence.get(0).unwrap().clone(), group.clone())
-            })
+    fn extend_or_replace(
+        mut selector: SelectorList,
+        source: SelectorList,
+        targets: SelectorList,
+        mode: ExtendMode,
+    ) -> SelectorList {
+        let mut extenders: IndexMap<ComplexSelector, Extension> = source
+            .components
+            .clone()
             .into_iter()
-            .map(|chunk| chunk.into_iter().flatten().collect())
-            .collect(),
-        );
-        choices.push(vec![group]);
-        groups_one.pop_front();
-        groups_two.pop_front();
-    }
+            .zip(
+                source
+                    .components
+                    .into_iter()
+                    .map(|complex| Extension::one_off(complex, None, false)),
+            )
+            .collect();
 
-    choices.push(
-        chunks(&mut groups_one, &mut groups_two, VecDeque::is_empty)
-            .into_iter()
-            .map(|chunk| chunk.into_iter().flatten().collect())
-            .collect(),
-    );
+        for complex in targets.components {
+            if complex.components.len() != 1 {
+                todo!("throw SassScriptException(\"Can't extend complex selector $complex.\");")
+            }
 
-    choices.append(&mut final_combinators);
-
-    Some(
-        paths(
-            choices
-                .into_iter()
-                .filter(|choice| !choice.is_empty())
-                .collect(),
-        )
-        .into_iter()
-        .map(|chunk| chunk.into_iter().flatten().collect())
-        .collect(),
-    )
-}
-
-/// Extracts leading `Combinator`s from `components_one` and `components_two` and
-/// merges them together into a single list of combinators.
-///
-/// If there are no combinators to be merged, returns an empty list. If the
-/// combinators can't be merged, returns `None`.
-fn merge_initial_combinators(
-    components_one: &mut VecDeque<ComplexSelectorComponent>,
-    components_two: &mut VecDeque<ComplexSelectorComponent>,
-) -> Option<Vec<Combinator>> {
-    let mut combinators_one: Vec<Combinator> = Vec::new();
-
-    while let Some(ComplexSelectorComponent::Combinator(c)) = components_one.get(0) {
-        combinators_one.push(*c);
-        components_one.pop_front();
-    }
-
-    let mut combinators_two = Vec::new();
-
-    while let Some(ComplexSelectorComponent::Combinator(c)) = components_two.get(0) {
-        combinators_two.push(*c);
-        components_two.pop_front();
-    }
-
-    let lcs = longest_common_subsequence(&combinators_one, &combinators_two, None);
-
-    if lcs == combinators_one {
-        Some(combinators_two)
-    } else if lcs == combinators_two {
-        Some(combinators_one)
-    } else {
-        // If neither sequence of combinators is a subsequence of the other, they
-        // cannot be merged successfully.
-        None
-    }
-}
-
-/// Returns the longest common subsequence between `list_one` and `list_two`.
-///
-/// If there are more than one equally long common subsequence, returns the one
-/// which starts first in `list_one`.
-///
-/// If `select` is passed, it's used to check equality between elements in each
-/// list. If it returns `None`, the elements are considered unequal; otherwise,
-/// it should return the element to include in the return value.
-#[allow(clippy::cast_sign_loss, clippy::cast_possible_wrap)]
-fn longest_common_subsequence<T: PartialEq + Clone + std::fmt::Debug>(
-    list_one: &[T],
-    list_two: &[T],
-    select: Option<&dyn Fn(T, T) -> Option<T>>,
-) -> Vec<T> {
-    let select = select.unwrap_or(&|element_one, element_two| {
-        if element_one == element_two {
-            Some(element_one)
-        } else {
-            None
-        }
-    });
-
-    let mut lengths = vec![vec![0; list_two.len() + 1]; list_one.len() + 1];
-
-    let mut selections: Vec<Vec<Option<T>>> = vec![vec![None; list_two.len()]; list_one.len()];
-
-    for i in 0..list_one.len() {
-        for j in 0..list_two.len() {
-            let selection = select(
-                list_one.get(i).unwrap().clone(),
-                list_two.get(j).unwrap().clone(),
-            );
-            selections[i][j] = selection.clone();
-            lengths[i + 1][j + 1] = if selection.is_none() {
-                std::cmp::max(lengths[i + 1][j], lengths[i][j + 1])
-            } else {
-                lengths[i][j] + 1
-            };
-        }
-    }
-
-    fn backtrack<T: Clone>(
-        i: isize,
-        j: isize,
-        lengths: Vec<Vec<i32>>,
-        selections: &mut Vec<Vec<Option<T>>>,
-    ) -> Vec<T> {
-        if i == -1 || j == -1 {
-            return Vec::new();
-        }
-        let selection = selections.get(i as usize).cloned().unwrap_or_else(Vec::new);
-
-        if let Some(Some(selection)) = selection.get(j as usize) {
-            let mut tmp = backtrack(i - 1, j - 1, lengths, selections);
-            tmp.push(selection.clone());
-            return tmp;
-        }
-
-        if lengths[(i + 1) as usize][j as usize] > lengths[i as usize][(j + 1) as usize] {
-            backtrack(i, j - 1, lengths, selections)
-        } else {
-            backtrack(i - 1, j, lengths, selections)
-        }
-    }
-    backtrack(
-        (list_one.len() as isize).saturating_sub(1),
-        (list_two.len() as isize).saturating_sub(1),
-        lengths,
-        &mut selections,
-    )
-}
-
-/// Extracts trailing `Combinator`s, and the selectors to which they apply, from
-/// `components_one` and `components_two` and merges them together into a single list.
-///
-/// If there are no combinators to be merged, returns an empty list. If the
-/// sequences can't be merged, returns `None`.
-#[allow(clippy::cognitive_complexity)]
-fn merge_final_combinators(
-    components_one: &mut VecDeque<ComplexSelectorComponent>,
-    components_two: &mut VecDeque<ComplexSelectorComponent>,
-    result: Option<VecDeque<Vec<Vec<ComplexSelectorComponent>>>>,
-) -> Option<Vec<Vec<Vec<ComplexSelectorComponent>>>> {
-    let mut result = result.unwrap_or_default();
-
-    if (components_one.is_empty()
-        || !components_one
-            .get(components_one.len() - 1)
-            .unwrap()
-            .is_combinator())
-        && (components_two.is_empty()
-            || !components_two
-                .get(components_two.len() - 1)
-                .unwrap()
-                .is_combinator())
-    {
-        return Some(Vec::from(result));
-    }
-
-    let mut combinators_one = Vec::new();
-
-    while let Some(ComplexSelectorComponent::Combinator(combinator)) =
-        components_one.get(components_one.len().saturating_sub(1))
-    {
-        combinators_one.push(*combinator);
-        components_one.pop_back();
-    }
-
-    let mut combinators_two = Vec::new();
-
-    while let Some(ComplexSelectorComponent::Combinator(combinator)) =
-        components_two.get(components_two.len().saturating_sub(1))
-    {
-        combinators_two.push(*combinator);
-        components_two.pop_back();
-    }
-
-    if combinators_one.len() > 1 || combinators_two.len() > 1 {
-        // If there are multiple combinators, something hacky's going on. If one
-        // is a supersequence of the other, use that, otherwise give up.
-        let lcs = longest_common_subsequence(&combinators_one, &combinators_two, None);
-        if lcs == combinators_one {
-            result.push_front(vec![combinators_two
-                .into_iter()
-                .map(ComplexSelectorComponent::Combinator)
-                .rev()
-                .collect()]);
-        } else if lcs == combinators_two {
-            result.push_front(vec![combinators_one
-                .into_iter()
-                .map(ComplexSelectorComponent::Combinator)
-                .rev()
-                .collect()]);
-        } else {
-            return None;
-        }
-
-        return Some(Vec::from(result));
-    }
-
-    let combinator_one = if combinators_one.is_empty() {
-        None
-    } else {
-        combinators_one.first()
-    };
-
-    let combinator_two = if combinators_two.is_empty() {
-        None
-    } else {
-        combinators_two.first()
-    };
-
-    // This code looks complicated, but it's actually just a bunch of special
-    // cases for interactions between different combinators.
-    match (combinator_one, combinator_two) {
-        (Some(combinator_one), Some(combinator_two)) => {
-            let compound_one = match components_one.pop_back() {
+            let compound = match complex.components.first() {
                 Some(ComplexSelectorComponent::Compound(c)) => c,
-                Some(..) | None => unreachable!(),
-            };
-            let compound_two = match components_two.pop_back() {
-                Some(ComplexSelectorComponent::Compound(c)) => c,
-                Some(..) | None => unreachable!(),
+                Some(..) | None => todo!(),
             };
 
-            match (combinator_one, combinator_two) {
-                (Combinator::FollowingSibling, Combinator::FollowingSibling) => {
-                    if compound_one.is_super_selector(&compound_two, &None) {
-                        result.push_front(vec![vec![
-                            ComplexSelectorComponent::Compound(compound_two),
-                            ComplexSelectorComponent::Combinator(Combinator::FollowingSibling),
-                        ]])
-                    } else if compound_two.is_super_selector(&compound_one, &None) {
-                        result.push_front(vec![vec![
-                            ComplexSelectorComponent::Compound(compound_one),
-                            ComplexSelectorComponent::Combinator(Combinator::FollowingSibling),
-                        ]])
-                    } else {
-                        let mut choices = vec![
-                            vec![
-                                ComplexSelectorComponent::Compound(compound_one.clone()),
-                                ComplexSelectorComponent::Combinator(Combinator::FollowingSibling),
-                                ComplexSelectorComponent::Compound(compound_two.clone()),
-                                ComplexSelectorComponent::Combinator(Combinator::FollowingSibling),
-                            ],
-                            vec![
-                                ComplexSelectorComponent::Compound(compound_two.clone()),
-                                ComplexSelectorComponent::Combinator(Combinator::FollowingSibling),
-                                ComplexSelectorComponent::Compound(compound_one.clone()),
-                                ComplexSelectorComponent::Combinator(Combinator::FollowingSibling),
-                            ],
-                        ];
+            let extensions: HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>> =
+                compound
+                    .components
+                    .clone()
+                    .into_iter()
+                    .map(|simple| (simple, extenders.clone()))
+                    .collect();
 
-                        if let Some(unified) = compound_one.unify(compound_two) {
-                            choices.push(vec![
-                                ComplexSelectorComponent::Compound(unified),
-                                ComplexSelectorComponent::Combinator(Combinator::FollowingSibling),
-                            ])
-                        }
+            let mut extender = Extender::with_mode(mode);
+            if !selector.is_invisible() {
+                extender
+                    .originals
+                    .extend(selector.components.clone().into_iter());
+            }
 
-                        result.push_front(choices);
+            selector = extender.extend_list(selector, extensions, None);
+        }
+
+        selector
+    }
+
+    fn with_mode(mode: ExtendMode) -> Self {
+        Self {
+            mode,
+            selectors: Default::default(),
+            extensions: Default::default(),
+            extensions_by_extender: Default::default(),
+            media_contexts: Default::default(),
+            source_specificity: Default::default(),
+            originals: Default::default(),
+        }
+    }
+
+    /// Extends `list` using `extensions`.
+    fn extend_list(
+        &mut self,
+        list: SelectorList,
+        extensions: HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>>,
+        media_query_context: Option<Vec<CssMediaQuery>>,
+    ) -> SelectorList {
+        // This could be written more simply using Vec<Vec<T>>, but we want to avoid
+        // any allocations in the common case where no extends apply.
+        let mut extended: Vec<ComplexSelector> = Vec::new();
+        for i in 0..list.components.len() {
+            let complex = list.components.get(i).unwrap().clone();
+
+            if let Some(result) = self.extend_complex(
+                complex.clone(),
+                extensions.clone(),
+                media_query_context.clone(),
+            ) {
+                if extended.is_empty() {
+                    if i != 0 {
+                        extended = list.components[0..i].to_vec();
                     }
+
+                    extended.extend(result.into_iter());
                 }
-                (Combinator::FollowingSibling, Combinator::NextSibling)
-                | (Combinator::NextSibling, Combinator::FollowingSibling) => {
-                    let following_sibling_selector =
-                        if combinator_one == &Combinator::FollowingSibling {
-                            compound_one.clone()
-                        } else {
-                            compound_two.clone()
+            } else {
+                if !extended.is_empty() {
+                    extended.push(complex);
+                }
+            }
+        }
+
+        if extended.is_empty() {
+            return list;
+        }
+
+        SelectorList {
+            components: self.trim(extended, |complex| self.originals.contains(&complex)),
+        }
+    }
+
+    /// Extends `complex` using `extensions`, and returns the contents of a
+    /// `SelectorList`.
+    fn extend_complex(
+        &mut self,
+        complex: ComplexSelector,
+        extensions: HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>>,
+        media_query_context: Option<Vec<CssMediaQuery>>,
+    ) -> Option<Vec<ComplexSelector>> {
+        // The complex selectors that each compound selector in `complex.components`
+        // can expand to.
+        //
+        // For example, given
+        //
+        //     .a .b {...}
+        //     .x .y {@extend .b}
+        //
+        // this will contain
+        //
+        //     [
+        //       [.a],
+        //       [.b, .x .y]
+        //     ]
+        //
+        // This could be written more simply using `Vec::into_iter::map`, but we want to avoid
+        // any allocations in the common case where no extends apply.
+        let mut extended_not_expanded: Vec<Vec<ComplexSelector>> = Vec::new();
+
+        let complex_has_line_break = complex.line_break;
+
+        let is_original = self.originals.contains(&complex);
+
+        for i in 0..complex.components.len() {
+            if let Some(ComplexSelectorComponent::Compound(component)) = complex.components.get(i) {
+                if let Some(extended) = self.extend_compound(
+                    component.clone(),
+                    extensions.clone(),
+                    media_query_context.clone(),
+                    is_original,
+                ) {
+                    if extended_not_expanded.is_empty() {
+                        extended_not_expanded = complex
+                            .components
+                            .clone()
+                            .into_iter()
+                            .take(i)
+                            .map(|component| {
+                                vec![ComplexSelector {
+                                    components: vec![component],
+                                    line_break: complex.line_break,
+                                }]
+                            })
+                            .collect();
+                    }
+                    extended_not_expanded.push(extended);
+                } else {
+                    extended_not_expanded.push(vec![ComplexSelector {
+                        components: vec![ComplexSelectorComponent::Compound(component.clone())],
+                        line_break: false,
+                    }])
+                }
+            }
+        }
+
+        if extended_not_expanded.is_empty() {
+            return None;
+        }
+
+        // dbg!(&extended_not_expanded);
+
+        let mut first = true;
+
+        let mut originals: Vec<ComplexSelector> = Vec::new();
+
+        Some(
+            paths(extended_not_expanded)
+                .into_iter()
+                .flat_map(move |path| {
+                    weave(
+                        path.clone()
+                            .into_iter()
+                            .map(move |complex| complex.components)
+                            .collect(),
+                    )
+                    .into_iter()
+                    .map(|components| {
+                        let output_complex = ComplexSelector {
+                            components,
+                            line_break: complex_has_line_break
+                                || path.iter().any(|input_complex| input_complex.line_break),
                         };
 
-                    let next_sibling_selector = if combinator_one == &Combinator::FollowingSibling {
-                        compound_two.clone()
-                    } else {
-                        compound_one.clone()
-                    };
-
-                    if following_sibling_selector.is_super_selector(&next_sibling_selector, &None) {
-                        result.push_front(vec![vec![
-                            ComplexSelectorComponent::Compound(next_sibling_selector),
-                            ComplexSelectorComponent::Combinator(Combinator::NextSibling),
-                        ]]);
-                    } else {
-                        let mut v = vec![vec![
-                            ComplexSelectorComponent::Compound(following_sibling_selector),
-                            ComplexSelectorComponent::Combinator(Combinator::FollowingSibling),
-                            ComplexSelectorComponent::Compound(next_sibling_selector),
-                            ComplexSelectorComponent::Combinator(Combinator::NextSibling),
-                        ]];
-
-                        if let Some(unified) = compound_one.unify(compound_two) {
-                            v.push(vec![
-                                ComplexSelectorComponent::Compound(unified),
-                                ComplexSelectorComponent::Combinator(Combinator::NextSibling),
-                            ]);
+                        if first && originals.contains(&complex.clone()) {
+                            originals.push(output_complex.clone());
                         }
-                        result.push_front(v);
-                    }
-                }
-                (Combinator::Child, Combinator::NextSibling)
-                | (Combinator::Child, Combinator::FollowingSibling) => {
-                    result.push_front(vec![vec![
-                        ComplexSelectorComponent::Compound(compound_two),
-                        ComplexSelectorComponent::Combinator(*combinator_two),
-                    ]]);
-                    components_one.push_back(ComplexSelectorComponent::Compound(compound_one));
-                    components_one
-                        .push_back(ComplexSelectorComponent::Combinator(Combinator::Child));
-                }
-                (Combinator::NextSibling, Combinator::Child)
-                | (Combinator::FollowingSibling, Combinator::Child) => {
-                    result.push_front(vec![vec![
-                        ComplexSelectorComponent::Compound(compound_one),
-                        ComplexSelectorComponent::Combinator(*combinator_one),
-                    ]]);
-                    components_two.push_back(ComplexSelectorComponent::Compound(compound_two));
-                    components_two
-                        .push_back(ComplexSelectorComponent::Combinator(Combinator::Child));
-                }
-                (..) => {
-                    if combinator_one != combinator_two {
-                        return None;
-                    }
+                        first = false;
 
-                    let unified = compound_one.unify(compound_two)?;
-
-                    result.push_front(vec![vec![
-                        ComplexSelectorComponent::Compound(unified),
-                        ComplexSelectorComponent::Combinator(*combinator_one),
-                    ]]);
-                }
-            }
-
-            merge_final_combinators(components_one, components_two, Some(result))
-        }
-        (Some(combinator_one), None) => {
-            if *combinator_one == Combinator::Child && !components_two.is_empty() {
-                if let Some(ComplexSelectorComponent::Compound(c1)) =
-                    components_one.get(components_one.len() - 1)
-                {
-                    if let Some(ComplexSelectorComponent::Compound(c2)) =
-                        components_two.get(components_two.len() - 1)
-                    {
-                        if c2.is_super_selector(c1, &None) {
-                            components_two.pop_back();
-                        }
-                    }
-                }
-            }
-
-            result.push_front(vec![vec![
-                components_one.pop_back().unwrap(),
-                ComplexSelectorComponent::Combinator(*combinator_one),
-            ]]);
-
-            merge_final_combinators(components_one, components_two, Some(result))
-        }
-        (None, Some(combinator_two)) => {
-            if *combinator_two == Combinator::Child && !components_one.is_empty() {
-                if let Some(ComplexSelectorComponent::Compound(c1)) =
-                    components_one.get(components_one.len() - 1)
-                {
-                    if let Some(ComplexSelectorComponent::Compound(c2)) =
-                        components_two.get(components_two.len() - 1)
-                    {
-                        if c1.is_super_selector(c2, &None) {
-                            components_one.pop_back();
-                        }
-                    }
-                }
-            }
-
-            result.push_front(vec![vec![
-                components_two.pop_back().unwrap(),
-                ComplexSelectorComponent::Combinator(*combinator_two),
-            ]]);
-            merge_final_combinators(components_one, components_two, Some(result))
-        }
-        (None, None) => todo!("the above, but we dont have access to combinator_two"),
+                        output_complex
+                    })
+                    .collect::<Vec<ComplexSelector>>()
+                })
+                .collect(),
+        )
     }
-}
 
-/// If the first element of `queue` has a `::root` selector, removes and returns
-/// that element.
-fn first_if_root(queue: &mut VecDeque<ComplexSelectorComponent>) -> Option<CompoundSelector> {
-    if queue.is_empty() {
-        return None;
-    }
-    if let Some(ComplexSelectorComponent::Compound(c)) = queue.get(0) {
-        if !has_root(c) {
+    /// Extends `compound` using `extensions`, and returns the contents of a
+    /// `SelectorList`.
+    ///
+    /// The `in_original` parameter indicates whether this is in an original
+    /// complex selector, meaning that `compound` should not be trimmed out.
+    fn extend_compound(
+        &mut self,
+        compound: CompoundSelector,
+        extensions: HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>>,
+        media_query_context: Option<Vec<CssMediaQuery>>,
+        in_original: bool,
+    ) -> Option<Vec<ComplexSelector>> {
+        // If there's more than one target and they all need to match, we track
+        // which targets are actually extended.
+        let mut targets_used: HashSet<SimpleSelector> = HashSet::new();
+
+        let mut options: Vec<Vec<Extension>> = Vec::new();
+
+        for i in 0..compound.components.len() {
+            let simple = compound.components.get(i).cloned().unwrap();
+
+            if let Some(extended) = self.extend_simple(
+                simple.clone(),
+                extensions.clone(),
+                media_query_context.clone(),
+                &mut targets_used,
+            ) {
+                if options.is_empty() {
+                    if i != 0 {
+                        options.push(vec![self.extension_for_compound(
+                            compound.components.clone().into_iter().take(i).collect(),
+                        )]);
+                    }
+                }
+
+                options.extend(extended.into_iter());
+            } else {
+                options.push(vec![self.extension_for_simple(simple)]);
+            }
+        }
+
+        if options.is_empty() {
             return None;
         }
-        let compound = c.clone();
-        queue.pop_front();
-        Some(compound)
-    } else {
-        None
-    }
-}
 
-/// Returns whether or not `compound` contains a `::root` selector.
-fn has_root(compound: &CompoundSelector) -> bool {
-    compound.components.iter().any(|simple| {
-        if let SimpleSelector::Pseudo(pseudo) = simple {
-            pseudo.is_class && pseudo.normalized_name == "root"
-        } else {
-            false
+        // If `self.mode` isn't `ExtendMode::Normal` and we didn't use all the targets in
+        // `extensions`, extension fails for `compound`.
+        if targets_used.len() != extensions.len() {
+            return None;
         }
-    })
-}
 
-/// Returns `complex`, grouped into sub-lists such that no sub-list contains two
-/// adjacent `ComplexSelector`s.
-///
-/// For example, `(A B > C D + E ~ > G)` is grouped into
-/// `[(A) (B > C) (D + E ~ > G)]`.
-fn group_selectors(
-    complex: Vec<ComplexSelectorComponent>,
-) -> VecDeque<Vec<ComplexSelectorComponent>> {
-    let mut groups = VecDeque::new();
-
-    let mut iter = complex.into_iter();
-
-    let mut group = if let Some(c) = iter.next() {
-        vec![c]
-    } else {
-        return groups;
-    };
-
-    groups.push_back(group.clone());
-
-    for c in iter {
-        if group
-            .last()
-            .map_or(false, ComplexSelectorComponent::is_combinator)
-            || c.is_combinator()
-        {
-            group.push(c);
-        } else {
-            group = vec![c];
-            groups.push_back(group.clone());
+        // Optimize for the simple case of a single simple selector that doesn't
+        // need any unification.
+        if options.len() == 1 {
+            return Some(
+                options
+                    .first()?
+                    .clone()
+                    .into_iter()
+                    .map(|state| {
+                        state.assert_compatible_media_context(&media_query_context);
+                        state.extender
+                    })
+                    .collect(),
+            );
         }
-    }
 
-    groups
-}
+        // Find all paths through `options`. In this case, each path represents a
+        // different unification of the base selector. For example, if we have:
+        //
+        //     .a.b {...}
+        //     .w .x {@extend .a}
+        //     .y .z {@extend .b}
+        //
+        // then `options` is `[[.a, .w .x], [.b, .y .z]]` and `paths(options)` is
+        //
+        //     [
+        //       [.a, .b],
+        //       [.a, .y .z],
+        //       [.w .x, .b],
+        //       [.w .x, .y .z]
+        //     ]
+        //
+        // We then unify each path to get a list of complex selectors:
+        //
+        //     [
+        //       [.a.b],
+        //       [.y .a.z],
+        //       [.w .x.b],
+        //       [.w .y .x.z, .y .w .x.z]
+        //     ]
+        let mut first = self.mode != ExtendMode::Replace;
 
-/// Returns all orderings of initial subseqeuences of `queue_one` and `queue_two`.
-///
-/// The `done` callback is used to determine the extent of the initial
-/// subsequences. It's called with each queue until it returns `true`.
-///
-/// This destructively removes the initial subsequences of `queue_one` and
-/// `queue_two`.
-///
-/// For example, given `(A B C | D E)` and `(1 2 | 3 4 5)` (with `|` denoting
-/// the boundary of the initial subsequence), this would return `[(A B C 1 2),
-/// (1 2 A B C)]`. The queues would then contain `(D E)` and `(3 4 5)`.
-fn chunks<T: Clone>(
-    queue_one: &mut VecDeque<T>,
-    queue_two: &mut VecDeque<T>,
-    done: impl Fn(&VecDeque<T>) -> bool,
-) -> Vec<Vec<T>> {
-    let mut chunk_one = Vec::new();
-    while !done(queue_one) {
-        chunk_one.push(queue_one.pop_front().unwrap());
-    }
-
-    let mut chunk_two = Vec::new();
-    while !done(queue_two) {
-        chunk_two.push(queue_two.pop_front().unwrap());
-    }
-
-    match (chunk_one.is_empty(), chunk_two.is_empty()) {
-        (true, true) => Vec::new(),
-        (true, false) => vec![chunk_two],
-        (false, true) => vec![chunk_one],
-        (false, false) => {
-            let mut l1 = chunk_one.clone();
-            l1.append(&mut chunk_two.clone());
-
-            let mut l2 = chunk_two;
-            l2.append(&mut chunk_one);
-
-            vec![l1, l2]
-        }
-    }
-}
-
-/// Like `complex_is_superselector`, but compares `complex_one` and `complex_two` as
-/// though they shared an implicit base `SimpleSelector`.
-///
-/// For example, `B` is not normally a superselector of `B A`, since it doesn't
-/// match elements that match `A`. However, it *is* a parent superselector,
-/// since `B X` is a superselector of `B A X`.
-fn complex_is_parent_superselector(
-    mut complex_one: Vec<ComplexSelectorComponent>,
-    mut complex_two: Vec<ComplexSelectorComponent>,
-) -> bool {
-    if let Some(ComplexSelectorComponent::Combinator(..)) = complex_one.first() {
-        return false;
-    }
-    if let Some(ComplexSelectorComponent::Combinator(..)) = complex_two.first() {
-        return false;
-    }
-    if complex_one.len() > complex_two.len() {
-        return false;
-    }
-    let base = CompoundSelector {
-        components: vec![SimpleSelector::Placeholder(String::new())],
-    };
-    complex_one.push(ComplexSelectorComponent::Compound(base.clone()));
-    complex_two.push(ComplexSelectorComponent::Compound(base));
-
-    ComplexSelector {
-        components: complex_one,
-        line_break: false,
-    }
-    .is_super_selector(&ComplexSelector {
-        components: complex_two,
-        line_break: false,
-    })
-}
-
-/// Returns a list of all possible paths through the given lists.
-///
-/// For example, given `[[1, 2], [3, 4], [5]]`, this returns:
-///
-/// ```norun
-/// [[1, 3, 5],
-///  [2, 3, 5],
-///  [1, 4, 5],
-///  [2, 4, 5]]
-/// ```
-fn paths<T: Clone + std::fmt::Debug>(choices: Vec<Vec<T>>) -> Vec<Vec<T>> {
-    choices.into_iter().fold(vec![vec![]], |paths, choice| {
-        choice
+        let unified_paths: Vec<Option<Vec<ComplexSelector>>> = paths(options)
             .into_iter()
-            .flat_map(move |option| {
-                paths.clone().into_iter().map(move |mut path| {
-                    path.push(option.clone());
-                    path
-                })
+            .map(|path| {
+                let complexes: Vec<Vec<ComplexSelectorComponent>>;
+
+                if first {
+                    // The first path is always the original selector. We can't just
+                    // return `compound` directly because pseudo selectors may be
+                    // modified, but we don't have to do any unification.
+                    first = false;
+
+                    complexes = vec![vec![ComplexSelectorComponent::Compound(CompoundSelector {
+                        components: path
+                            .clone()
+                            .into_iter()
+                            .flat_map(|state| {
+                                assert!(state.extender.components.len() == 1);
+                                match state.extender.components.last().cloned() {
+                                    Some(ComplexSelectorComponent::Compound(c)) => c.components,
+                                    Some(..) | None => unreachable!(),
+                                }
+                            })
+                            .collect(),
+                    })]];
+                } else {
+                    let mut to_unify: VecDeque<Vec<ComplexSelectorComponent>> = VecDeque::new();
+                    let mut originals: Vec<SimpleSelector> = Vec::new();
+
+                    for state in path.clone() {
+                        if state.is_original {
+                            originals.extend(match state.extender.components.last().cloned() {
+                                Some(ComplexSelectorComponent::Compound(c)) => c.components,
+                                Some(..) | None => unreachable!(),
+                            });
+                        } else {
+                            to_unify.push_back(state.extender.components.clone());
+                        }
+                    }
+                    if originals.is_empty() {
+                        to_unify.push_front(vec![ComplexSelectorComponent::Compound(
+                            CompoundSelector {
+                                components: originals,
+                            },
+                        )]);
+                    }
+
+                    complexes = unify_complex(Vec::from(to_unify))?;
+                }
+
+                let mut line_break = false;
+
+                for state in path {
+                    state.assert_compatible_media_context(&media_query_context);
+                    line_break = line_break || state.extender.line_break;
+                }
+
+                Some(
+                    complexes
+                        .into_iter()
+                        .map(|components| ComplexSelector {
+                            components,
+                            line_break,
+                        })
+                        .collect(),
+                )
             })
-            .collect()
-    })
-}
+            .collect();
 
-/// Returns whether `complex_one` and `complex_two` need to be unified to produce a
-/// valid combined selector.
-///
-/// This is necessary when both selectors contain the same unique simple
-/// selector, such as an ID.
-fn must_unify(
-    complex_one: &[ComplexSelectorComponent],
-    complex_two: &[ComplexSelectorComponent],
-) -> bool {
-    let mut unique_selectors = Vec::new();
-    for component in complex_one {
-        if let ComplexSelectorComponent::Compound(c) = component {
-            unique_selectors.extend(c.components.iter().filter(|f| is_unique(f)));
+        dbg!(&unified_paths);
+
+        Some(
+            unified_paths
+                .into_iter()
+                .filter_map(|complexes| complexes)
+                .flatten()
+                .collect(),
+        )
+    }
+
+    fn extend_simple(
+        &mut self,
+        simple: SimpleSelector,
+        extensions: HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>>,
+        media_query_context: Option<Vec<CssMediaQuery>>,
+        targets_used: &mut HashSet<SimpleSelector>,
+    ) -> Option<Vec<Vec<Extension>>> {
+        if let SimpleSelector::Pseudo(
+            simple @ Pseudo {
+                selector: Some(..), ..
+            },
+        ) = simple.clone()
+        {
+            if let Some(extended) =
+                self.extend_pseudo(simple, extensions.clone(), media_query_context)
+            {
+                return Some(
+                    extended
+                        .into_iter()
+                        .map(move |pseudo| {
+                            self.without_pseudo(
+                                SimpleSelector::Pseudo(pseudo.clone()),
+                                extensions.clone(),
+                                targets_used,
+                                self.mode,
+                            )
+                            .unwrap_or_else(|| {
+                                vec![self.extension_for_simple(SimpleSelector::Pseudo(pseudo))]
+                            })
+                        })
+                        .collect(),
+                );
+            }
         }
+
+        self.without_pseudo(simple, extensions, targets_used, self.mode)
+            .map(|v| vec![v])
     }
 
-    if unique_selectors.is_empty() {
-        return false;
-    }
+    /// Extends `pseudo` using `extensions`, and returns a list of resulting
+    /// pseudo selectors.
+    fn extend_pseudo(
+        &mut self,
+        pseudo: Pseudo,
+        extensions: HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>>,
+        media_query_context: Option<Vec<CssMediaQuery>>,
+    ) -> Option<Vec<Pseudo>> {
+        let extended = self.extend_list(
+            pseudo
+                .selector
+                .clone()
+                .unwrap_or_else(|| SelectorList::new()),
+            extensions,
+            media_query_context,
+        );
+        /*todo: identical(extended, pseudo.selector)*/
+        if Some(&extended) == pseudo.selector.as_ref() {
+            return None;
+        }
 
-    complex_two.iter().any(|component| {
-        if let ComplexSelectorComponent::Compound(compound) = component {
-            compound
+        // For `:not()`, we usually want to get rid of any complex selectors because
+        // that will cause the selector to fail to parse on all browsers at time of
+        // writing. We can keep them if either the original selector had a complex
+        // selector, or the result of extending has only complex selectors, because
+        // either way we aren't breaking anything that isn't already broken.
+        let mut complexes = extended.components.clone();
+        if pseudo.normalized_name == "not"
+            && !pseudo
+                .selector
+                .clone()
+                .unwrap()
                 .components
                 .iter()
-                .any(|simple| is_unique(simple) && unique_selectors.contains(&simple))
-        } else {
-            false
+                .any(|complex| complex.components.len() > 1)
+            && extended
+                .components
+                .iter()
+                .any(|complex| complex.components.len() == 1)
+        {
+            complexes = extended
+                .components
+                .clone()
+                .into_iter()
+                .filter(|complex| complex.components.len() <= 1)
+                .collect();
         }
-    })
+
+        complexes = complexes
+            .into_iter()
+            .flat_map(|complex| {
+                if complex.components.len() != 1 {
+                    return vec![complex];
+                }
+                let compound = match complex.components.first() {
+                    Some(ComplexSelectorComponent::Compound(c)) => c,
+                    Some(..) | None => return vec![complex],
+                };
+                if compound.components.len() != 1 {
+                    return vec![complex];
+                }
+                if !compound.components.first().unwrap().is_pseudo() {
+                    return vec![complex];
+                }
+                let inner_pseudo = match compound.components.first() {
+                    Some(SimpleSelector::Pseudo(pseudo)) => pseudo,
+                    Some(..) | None => return vec![complex],
+                };
+                if inner_pseudo.selector.is_none() {
+                    return vec![complex];
+                }
+
+                match pseudo.normalized_name.as_str() {
+                    "not" => {
+                        // In theory, if there's a `:not` nested within another `:not`, the
+                        // inner `:not`'s contents should be unified with the return value.
+                        // For example, if `:not(.foo)` extends `.bar`, `:not(.bar)` should
+                        // become `.foo:not(.bar)`. However, this is a narrow edge case and
+                        // supporting it properly would make this code and the code calling it
+                        // a lot more complicated, so it's not supported for now.
+                        if inner_pseudo.normalized_name != "matches" {
+                            Vec::new()
+                        } else {
+                            inner_pseudo.selector.clone().unwrap().components
+                        }
+                    }
+                    "matches" | "any" | "current" | "nth-child" | "nth-last-child" => {
+                        // As above, we could theoretically support :not within :matches, but
+                        // doing so would require this method and its callers to handle much
+                        // more complex cases that likely aren't worth the pain.
+                        if inner_pseudo.name != pseudo.name
+                            || inner_pseudo.argument != pseudo.argument
+                        {
+                            Vec::new()
+                        } else {
+                            inner_pseudo.selector.clone().unwrap().components
+                        }
+                    }
+                    "has" | "host" | "host-context" | "slotted" => {
+                        // We can't expand nested selectors here, because each layer adds an
+                        // additional layer of semantics. For example, `:has(:has(img))`
+                        // doesn't match `<div><img></div>` but `:has(img)` does.
+                        vec![complex]
+                    }
+                    _ => Vec::new(),
+                }
+            })
+            .collect();
+        // Older browsers support `:not`, but only with a single complex selector.
+        // In order to support those browsers, we break up the contents of a `:not`
+        // unless it originally contained a selector list.
+        if pseudo.normalized_name == "not" && pseudo.selector.clone().unwrap().components.len() == 1
+        {
+            let result = complexes
+                .into_iter()
+                .map(|complex| {
+                    pseudo.clone().with_selector(Some(SelectorList {
+                        components: vec![complex],
+                    }))
+                })
+                .collect::<Vec<Pseudo>>();
+            if result.is_empty() {
+                None
+            } else {
+                Some(result)
+            }
+        } else {
+            Some(vec![pseudo.with_selector(Some(SelectorList {
+                components: complexes,
+            }))])
+        }
+    }
+
+    // Extends `simple` without extending the contents of any selector pseudos
+    // it contains.
+    fn without_pseudo(
+        &self,
+        simple: SimpleSelector,
+        extensions: HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>>,
+        targets_used: &mut HashSet<SimpleSelector>,
+        mode: ExtendMode,
+    ) -> Option<Vec<Extension>> {
+        let extenders = extensions.get(&simple)?;
+
+        targets_used.insert(simple.clone());
+
+        if mode == ExtendMode::Replace {
+            return Some(extenders.values().cloned().collect());
+        }
+
+        let mut tmp = vec![self.extension_for_simple(simple)];
+        tmp.extend(extenders.values().cloned());
+
+        Some(tmp)
+    }
+
+    /// Returns a one-off `Extension` whose extender is composed solely of
+    /// `simple`.
+    fn extension_for_simple(&self, simple: SimpleSelector) -> Extension {
+        let specificity = Some(*self.source_specificity.get(&simple).unwrap_or(&0_i32));
+        Extension::one_off(
+            ComplexSelector {
+                components: vec![ComplexSelectorComponent::Compound(CompoundSelector {
+                    components: vec![simple],
+                })],
+                line_break: false,
+            },
+            specificity,
+            true,
+        )
+    }
+
+    /// Returns a one-off `Extension` whose extender is composed solely of a
+    /// compound selector containing `simples`.
+    fn extension_for_compound(&self, simples: Vec<SimpleSelector>) -> Extension {
+        let compound = CompoundSelector {
+            components: simples,
+        };
+        let specificity = Some(self.source_specificity_for(&compound));
+        Extension::one_off(
+            ComplexSelector {
+                components: vec![ComplexSelectorComponent::Compound(compound)],
+                line_break: false,
+            },
+            specificity,
+            true,
+        )
+    }
+
+    /// Returns the maximum specificity for sources that went into producing
+    /// `compound`.
+    fn source_specificity_for(&self, compound: &CompoundSelector) -> i32 {
+        let mut specificity = 0;
+        for simple in &compound.components {
+            specificity = specificity.max(*self.source_specificity.get(simple).unwrap_or(&0));
+        }
+        specificity
+    }
+
+    // Removes elements from `selectors` if they're subselectors of other
+    // elements.
+    //
+    // The `is_original` callback indicates which selectors are original to the
+    // document, and thus should never be trimmed.
+    fn trim(
+        &self,
+        selectors: Vec<ComplexSelector>,
+        is_original: impl Fn(ComplexSelector) -> bool,
+    ) -> Vec<ComplexSelector> {
+        // Avoid truly horrific quadratic behavior.
+        //
+        // TODO(nweiz): I think there may be a way to get perfect trimming without
+        // going quadratic by building some sort of trie-like data structure that
+        // can be used to look up superselectors.
+        if selectors.len() > 100 {
+            return selectors;
+        }
+
+        // This is n² on the sequences, but only comparing between separate
+        // sequences should limit the quadratic behavior. We iterate from last to
+        // first and reverse the result so that, if two selectors are identical, we
+        // keep the first one.
+        let mut result: VecDeque<ComplexSelector> = VecDeque::new();
+        let mut num_originals = 0;
+
+        // :outer
+        loop {
+            let mut should_break_to_outer = false;
+            for i in (0..=(selectors.len().saturating_sub(1))).rev() {
+                let complex1 = selectors.get(i).unwrap();
+                if is_original(complex1.clone()) {
+                    // Make sure we don't include duplicate originals, which could happen if
+                    // a style rule extends a component of its own selector.
+                    for j in 0..num_originals {
+                        if result.get(j).unwrap() == complex1 {
+                            rotate_slice(&mut result, 0, j + 1);
+                            should_break_to_outer = true;
+                            break;
+                        }
+                    }
+                    if should_break_to_outer {
+                        break;
+                    }
+                    num_originals += 1;
+                    result.push_front(complex1.clone());
+                    continue;
+                }
+
+                // The maximum specificity of the sources that caused `complex1` to be
+                // generated. In order for `complex1` to be removed, there must be another
+                // selector that's a superselector of it *and* that has specificity
+                // greater or equal to this.
+                let mut max_specificity = 0;
+                for component in &complex1.components {
+                    if let ComplexSelectorComponent::Compound(compound) = component {
+                        max_specificity = max_specificity.max(self.source_specificity_for(compound))
+                    }
+                }
+
+                // Look in `result` rather than `selectors` for selectors after `i`. This
+                // ensures that we aren't comparing against a selector that's already been
+                // trimmed, and thus that if there are two identical selectors only one is
+                // trimmed.
+                if result.iter().any(|complex2| {
+                    complex2.min_specificity() >= max_specificity
+                        && complex2.is_super_selector(complex1)
+                }) {
+                    continue;
+                }
+
+                if selectors.iter().take(i).any(|complex2| {
+                    complex2.min_specificity() >= max_specificity
+                        && complex2.is_super_selector(complex1)
+                }) {
+                    continue;
+                }
+
+                result.push_front(complex1.clone());
+            }
+            if should_break_to_outer {
+                continue;
+            } else {
+                break;
+            }
+        }
+
+        return Vec::from(result);
+    }
 }
 
-/// Returns whether a `CompoundSelector` may contain only one simple selector of
-/// the same type as `simple`.
-fn is_unique(simple: &SimpleSelector) -> bool {
-    matches!(simple, SimpleSelector::Id(..) | SimpleSelector::Pseudo(Pseudo { is_class: false, .. }))
+/// Rotates the element in list from `start` (inclusive) to `end` (exclusive)
+/// one index higher, looping the final element back to `start`.
+fn rotate_slice<T: Clone>(list: &mut VecDeque<T>, start: usize, end: usize) {
+    let mut element = list.get(end - 1).unwrap().clone();
+    for i in start..end {
+        let next = list.get(i).unwrap().clone();
+        list[i] = element;
+        element = next;
+    }
 }

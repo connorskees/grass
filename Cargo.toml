@@ -58,6 +58,7 @@ beef = "0.4.4"
 # criterion is not a dev-dependency because it makes tests take too
 # long to compile, and you cannot make dev-dependencies optional
 criterion = { version = "0.3.2", optional = true }
+indexmap = "1.4.0"
 
 [features]
 default = ["commandline", "random"]

@@ -12,7 +12,7 @@ use crate::utils::{devour_whitespace, eat_ident, is_ident, parse_quoted_string};
 use crate::value::Value;
 use crate::Token;
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub(crate) struct Attribute {
     attr: QualifiedName,
     value: String,
@@ -201,7 +201,7 @@ impl Display for Attribute {
     }
 }
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 enum AttributeOp {
     /// \[attr\]
     ///
