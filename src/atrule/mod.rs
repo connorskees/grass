@@ -153,15 +153,13 @@ impl AtRule {
                 }
             }
             AtRuleKind::AtRoot => {
-                let mut selector = &Selector::replace(
+                let mut selector = &Selector::from_tokens(
+                    &mut read_until_open_curly_brace(toks)?.into_iter().peekmore(),
+                    scope,
                     super_selector,
-                    Selector::from_tokens(
-                        &mut read_until_open_curly_brace(toks)?.into_iter().peekmore(),
-                        scope,
-                        super_selector,
-                        true,
-                    )?,
-                );
+                    true,
+                )?
+                .resolve_parent_selectors(super_selector, false);
                 let mut is_some = true;
                 if selector.is_empty() {
                     is_some = false;

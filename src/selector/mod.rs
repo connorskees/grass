@@ -112,11 +112,6 @@ impl Selector {
         ))
     }
 
-    #[allow(clippy::needless_pass_by_value)]
-    pub fn replace(super_selector: &Selector, this: Selector) -> Selector {
-        todo!()
-    }
-
     /// Small wrapper around `SelectorList`'s method that turns an empty parent selector
     /// into `None`. This is a hack and in the future should be replaced.
     // todo: take Option<Self> for parent
