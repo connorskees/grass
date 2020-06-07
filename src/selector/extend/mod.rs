@@ -189,9 +189,8 @@ impl Extender {
                     if i != 0 {
                         extended = list.components[0..i].to_vec();
                     }
-
-                    extended.extend(result.into_iter());
                 }
+                extended.extend(result.into_iter());
             } else {
                 if !extended.is_empty() {
                     extended.push(complex);
@@ -275,8 +274,6 @@ impl Extender {
             return None;
         }
 
-        // dbg!(&extended_not_expanded);
-
         let mut first = true;
 
         let mut originals: Vec<ComplexSelector> = Vec::new();
@@ -359,7 +356,7 @@ impl Extender {
 
         // If `self.mode` isn't `ExtendMode::Normal` and we didn't use all the targets in
         // `extensions`, extension fails for `compound`.
-        if targets_used.len() != extensions.len() {
+        if targets_used.len() > 0 && targets_used.len() != extensions.len() {
             return None;
         }
 
@@ -443,7 +440,7 @@ impl Extender {
                             to_unify.push_back(state.extender.components.clone());
                         }
                     }
-                    if originals.is_empty() {
+                    if !originals.is_empty() {
                         to_unify.push_front(vec![ComplexSelectorComponent::Compound(
                             CompoundSelector {
                                 components: originals,
@@ -472,8 +469,6 @@ impl Extender {
                 )
             })
             .collect();
-
-        dbg!(&unified_paths);
 
         Some(
             unified_paths
@@ -631,6 +626,7 @@ impl Extender {
                 }
             })
             .collect();
+
         // Older browsers support `:not`, but only with a single complex selector.
         // In order to support those browsers, we break up the contents of a `:not`
         // unless it originally contained a selector list.

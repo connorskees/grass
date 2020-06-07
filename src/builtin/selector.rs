@@ -177,7 +177,28 @@ fn selector_replace(
     super_selector: &Selector,
 ) -> SassResult<Value> {
     args.max_args(3)?;
-    todo!("built-in fn selector-replace")
+    let selector = arg!(args, scope, super_selector, 0, "selector").to_selector(
+        args.span(),
+        scope,
+        super_selector,
+        "selector",
+        false,
+    )?;
+    let target = arg!(args, scope, super_selector, 1, "original").to_selector(
+        args.span(),
+        scope,
+        super_selector,
+        "original",
+        false,
+    )?;
+    let source = arg!(args, scope, super_selector, 2, "replacement").to_selector(
+        args.span(),
+        scope,
+        super_selector,
+        "replacement",
+        false,
+    )?;
+    Ok(Extender::replace(selector.0, source.0, target.0).to_sass_list())
 }
 
 fn selector_unify(
