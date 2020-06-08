@@ -125,8 +125,15 @@ error!(
     "@if foo {", "Error: expected \"}\"."
 );
 error!(
-    condition_is_evaluated_eagerly,
+    first_condition_error,
     "@if 1 + 1 =s {\n}", "Error: expected \"=\"."
+);
+test!(
+    conditions_evaluated_lazily,
+    "$p: null;
+    @if $p==null {}
+    @else if not comparable($p, 0) {}",
+    ""
 );
 error!(
     nothing_after_escape,

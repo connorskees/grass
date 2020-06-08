@@ -22,12 +22,12 @@ pub(crate) struct If {
 
 #[derive(Debug, Clone)]
 pub(crate) struct Branch {
-    pub cond: Spanned<Value>,
+    pub cond: Vec<Token>,
     pub toks: Vec<Token>,
 }
 
 impl Branch {
-    pub fn new(cond: Spanned<Value>, toks: Vec<Token>) -> Branch {
+    pub fn new(cond: Vec<Token>, toks: Vec<Token>) -> Branch {
         Branch { cond, toks }
     }
 }
@@ -35,8 +35,6 @@ impl Branch {
 impl If {
     pub fn from_tokens<I: Iterator<Item = Token>>(
         toks: &mut PeekMoreIterator<I>,
-        scope: &Scope,
-        super_selector: &Selector,
         span_before: Span,
     ) -> SassResult<If> {
         devour_whitespace_or_comment(toks)?;
@@ -49,7 +47,6 @@ impl If {
             Some(t) => t.pos,
             None => return Err(("Expected expression.", span_before).into()),
         };
-        let init_cond = Value::from_vec(init_cond_toks, scope, super_selector, span_before)?;
         devour_whitespace_or_comment(toks)?;
         let mut init_toks = read_until_closing_curly_brace(toks)?;
         if let Some(tok) = toks.next() {
@@ -59,7 +56,7 @@ impl If {
         }
         devour_whitespace(toks);
 
-        branches.push(Branch::new(init_cond, init_toks));
+        branches.push(Branch::new(init_cond_toks, init_toks));
 
         let mut else_ = Vec::new();
 
@@ -80,13 +77,8 @@ impl If {
                 devour_whitespace(toks);
                 match tok.kind.to_ascii_lowercase() {
                     'i' if toks.next().unwrap().kind.to_ascii_lowercase() == 'f' => {
-                        let pos = toks.next().unwrap().pos;
-                        let cond = Value::from_vec(
-                            read_until_open_curly_brace(toks)?,
-                            scope,
-                            super_selector,
-                            pos,
-                        )?;
+                        toks.next();
+                        let cond = read_until_open_curly_brace(toks)?;
                         toks.next();
                         devour_whitespace(toks);
                         branches.push(Branch::new(cond, read_until_closing_curly_brace(toks)?));
@@ -121,7 +113,9 @@ impl If {
         let mut toks = Vec::new();
         let mut found_true = false;
         for branch in self.branches {
-            if branch.cond.node.is_true(branch.cond.span)? {
+            let span_before = branch.cond.first().unwrap().pos;
+            let cond = Value::from_vec(branch.cond, scope, super_selector, span_before)?;
+            if cond.node.is_true(cond.span)? {
                 toks = branch.toks;
                 found_true = true;
                 break;
