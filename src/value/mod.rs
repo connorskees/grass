@@ -1,13 +1,17 @@
 use std::iter::Iterator;
 
+use peekmore::PeekMore;
+
 use codemap::{Span, Spanned};
 
 use crate::color::Color;
 use crate::common::{Brackets, ListSeparator, Op, QuoteKind};
 use crate::error::SassResult;
+use crate::scope::Scope;
+use crate::selector::Selector;
 use crate::unit::Unit;
 use crate::utils::hex_char_for;
-use crate::Cow;
+use crate::{Cow, Token};
 
 use css_function::is_special_function;
 pub(crate) use map::SassMap;
@@ -308,5 +312,78 @@ impl Value {
             Value::Paren(v) => v.inspect(span)?,
             v => v.to_css_string(span)?,
         })
+    }
+
+    pub fn as_list(self) -> Vec<Value> {
+        match self {
+            Value::List(v, ..) => v,
+            Value::Map(m) => m.entries(),
+            v => vec![v],
+        }
+    }
+
+    /// Parses `self` as a selector list, in the same manner as the
+    /// `selector-parse()` function.
+    ///
+    /// Returns a `SassError` if `self` isn't a type that can be parsed as a
+    /// selector, or if parsing fails. If `allow_parent` is `true`, this allows
+    /// parent selectors. Otherwise, they're considered parse errors.
+    ///
+    /// `name` is the argument name. It's used for error reporting.
+    pub fn to_selector(
+        self,
+        span: Span,
+        scope: &Scope,
+        super_selector: &Selector,
+        name: &str,
+        allows_parent: bool,
+    ) -> SassResult<Selector> {
+        let string = match self.clone().selector_string(span)? {
+            Some(v) => v,
+            None => return Err((format!("${}: {} is not a valid selector: it must be a string, a list of strings, or a list of lists of strings.", name, self.inspect(span)?), span).into()),
+        };
+        Selector::from_tokens(
+            &mut string.chars().map(|c| Token::new(span, c)).peekmore(),
+            scope,
+            super_selector,
+            allows_parent,
+        )
+    }
+
+    fn selector_string(self, span: Span) -> SassResult<Option<String>> {
+        Ok(Some(match self.eval(span)?.node {
+            Self::String(text, ..) => text,
+            Self::List(list, sep, ..) if !list.is_empty() => {
+                let mut result = Vec::new();
+                match sep {
+                    ListSeparator::Comma => {
+                        for complex in list {
+                            if let Value::String(text, ..) = complex {
+                                result.push(text);
+                            } else if let Value::List(_, ListSeparator::Space, ..) = complex {
+                                result.push(match complex.selector_string(span)? {
+                                    Some(v) => v,
+                                    None => return Ok(None),
+                                });
+                            } else {
+                                return Ok(None);
+                            }
+                        }
+                    }
+                    ListSeparator::Space => {
+                        for compound in list {
+                            if let Value::String(text, ..) = compound {
+                                result.push(text);
+                            } else {
+                                return Ok(None);
+                            }
+                        }
+                    }
+                }
+
+                result.join(sep.as_str())
+            }
+            _ => return Ok(None),
+        }))
     }
 }

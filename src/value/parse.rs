@@ -809,7 +809,7 @@ impl Value {
             }
             '&' => {
                 let span = toks.next().unwrap().pos();
-                IntermediateValue::Value(super_selector.into_value()).span(span)
+                IntermediateValue::Value(super_selector.clone().into_value()).span(span)
             }
             '#' => {
                 if let Some(Token { kind: '{', pos }) = toks.peek_forward(1) {

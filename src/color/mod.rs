@@ -47,7 +47,7 @@ impl Color {
         }
     }
 
-    fn new_hsla(
+    const fn new_hsla(
         red: Number,
         green: Number,
         blue: Number,

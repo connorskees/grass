@@ -20,7 +20,7 @@ impl SassError {
         }
     }
 
-    pub(crate) fn from_loc(message: String, loc: SpanLoc) -> Self {
+    pub(crate) const fn from_loc(message: String, loc: SpanLoc) -> Self {
         SassError {
             kind: SassErrorKind::ParseError { message, loc },
         }

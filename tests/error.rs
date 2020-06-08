@@ -187,6 +187,7 @@ error!(toplevel_caret_alone, "^", "Error: expected \"{\".");
 test!(toplevel_gt_as_selector, "> {}", "");
 test!(toplevel_tilde_as_selector, "~ {}", "");
 error!(toplevel_lt_as_selector, "< {}", "Error: expected selector.");
+error!(toplevel_pipe, "| {}", "Error: Expected identifier.");
 error!(
     toplevel_question_as_selector,
     "? {}", "Error: expected selector."

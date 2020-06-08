@@ -155,7 +155,10 @@ impl Mixin {
                     return Err(("Mixins may not contain mixin declarations.", span).into())
                 }
                 Expr::Selector(selector) => {
-                    let rules = self.eval(&super_selector.zip(&selector), content)?;
+                    let rules = self.eval(
+                        &selector.resolve_parent_selectors(super_selector, true),
+                        content,
+                    )?;
                     stmts.push(Spanned {
                         node: Stmt::RuleSet(RuleSet {
                             super_selector: super_selector.clone(),

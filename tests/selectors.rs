@@ -530,16 +530,145 @@ test!(
     "+ {\n  color: &;\n}\n",
     "+ {\n  color: +;\n}\n"
 );
-error!(
-    #[ignore = "namespaces are not yet parsed correctly"]
-    empty_namespace,
-    "| {}", "Error: Expected identifier."
+test!(
+    invalid_chars_in_pseudo_parens,
+    ":c(@#$) {\n  color: &;\n}\n",
+    ":c(@#$) {\n  color: :c(@#$);\n}\n"
 );
 test!(
-    #[ignore = "namespaces are not yet parsed correctly"]
-    simple_namespace,
+    empty_namespace_element,
     "|f {\n  color: &;\n}\n",
     "|f {\n  color: |f;\n}\n"
+);
+test!(
+    universal_with_namespace,
+    "a|* {\n  color: &;\n}\n",
+    "a|* {\n  color: a|*;\n}\n"
+);
+test!(
+    psuedo_element_slotted_args,
+    "::slotted(b, c) {\n  color: &;\n}\n",
+    "::slotted(b, c) {\n  color: ::slotted(b, c);\n}\n"
+);
+test!(
+    a_n_plus_b,
+    ":nth-child(2n+0) {\n  color: &;\n}\n",
+    ":nth-child(2n+0) {\n  color: :nth-child(2n+0);\n}\n"
+);
+test!(
+    a_n_plus_b_leading_negative,
+    ":nth-child(-1n+6) {\n  color: &;\n}\n",
+    ":nth-child(-1n+6) {\n  color: :nth-child(-1n+6);\n}\n"
+);
+test!(
+    a_n_plus_b_leading_plus,
+    ":nth-child(+3n-2) {\n  color: &;\n}\n",
+    ":nth-child(+3n-2) {\n  color: :nth-child(+3n-2);\n}\n"
+);
+test!(
+    a_n_plus_b_n_alone,
+    ":nth-child(n) {\n  color: &;\n}\n",
+    ":nth-child(n) {\n  color: :nth-child(n);\n}\n"
+);
+test!(
+    a_n_plus_b_capital_n,
+    ":nth-child(N) {\n  color: &;\n}\n",
+    ":nth-child(n) {\n  color: :nth-child(n);\n}\n"
+);
+test!(
+    a_n_plus_b_n_with_leading_number,
+    ":nth-child(2n) {\n  color: &;\n}\n",
+    ":nth-child(2n) {\n  color: :nth-child(2n);\n}\n"
+);
+test!(
+    a_n_plus_b_n_whitespace_on_both_sides,
+    ":nth-child(3n + 1) {\n  color: &;\n}\n",
+    ":nth-child(3n+1) {\n  color: :nth-child(3n+1);\n}\n"
+);
+test!(
+    a_n_plus_b_n_of,
+    ":nth-child(2n+1 of b, c) {\n  color: &;\n}\n",
+    ":nth-child(2n+1 of b, c) {\n  color: :nth-child(2n+1 of b, c);\n}\n"
+);
+test!(
+    a_n_plus_b_n_number_alone,
+    ":nth-child(5) {\n  color: &;\n}\n",
+    ":nth-child(5) {\n  color: :nth-child(5);\n}\n"
+);
+test!(
+    a_n_plus_b_n_number_leading_negative,
+    ":nth-child(-5) {\n  color: &;\n}\n",
+    ":nth-child(-5) {\n  color: :nth-child(-5);\n}\n"
+);
+test!(
+    a_n_plus_b_n_number_leading_plus,
+    ":nth-child(+5) {\n  color: &;\n}\n",
+    ":nth-child(+5) {\n  color: :nth-child(+5);\n}\n"
+);
+test!(
+    a_n_plus_b_n_leading_negative_no_leading_number,
+    ":nth-child(-n+ 6) {\n  color: &;\n}\n",
+    ":nth-child(-n+6) {\n  color: :nth-child(-n+6);\n}\n"
+);
+test!(
+    a_n_plus_b_n_even_all_lowercase,
+    ":nth-child(even) {\n  color: &;\n}\n",
+    ":nth-child(even) {\n  color: :nth-child(even);\n}\n"
+);
+test!(
+    a_n_plus_b_n_even_mixed_case,
+    ":nth-child(eVeN) {\n  color: &;\n}\n",
+    ":nth-child(even) {\n  color: :nth-child(even);\n}\n"
+);
+test!(
+    a_n_plus_b_n_even_uppercase,
+    ":nth-child(EVEN) {\n  color: &;\n}\n",
+    ":nth-child(even) {\n  color: :nth-child(even);\n}\n"
+);
+test!(
+    a_n_plus_b_n_even_whitespace,
+    ":nth-child(    even   ) {\n  color: &;\n}\n",
+    ":nth-child(even) {\n  color: :nth-child(even);\n}\n"
+);
+error!(
+    a_n_plus_b_n_value_after_even,
+    ":nth-child(even 1) {\n  color: &;\n}\n", "Error: Expected \"of\"."
+);
+error!(
+    a_n_plus_b_n_invalid_even,
+    ":nth-child(efven) {\n  color: &;\n}\n", "Error: Expected \"even\"."
+);
+test!(
+    a_n_plus_b_n_odd_all_lowercase,
+    ":nth-child(odd) {\n  color: &;\n}\n",
+    ":nth-child(odd) {\n  color: :nth-child(odd);\n}\n"
+);
+test!(
+    a_n_plus_b_n_odd_mixed_case,
+    ":nth-child(oDd) {\n  color: &;\n}\n",
+    ":nth-child(odd) {\n  color: :nth-child(odd);\n}\n"
+);
+test!(
+    a_n_plus_b_n_odd_uppercase,
+    ":nth-child(ODD) {\n  color: &;\n}\n",
+    ":nth-child(odd) {\n  color: :nth-child(odd);\n}\n"
+);
+error!(
+    a_n_plus_b_n_invalid_odd,
+    ":nth-child(ofdd) {\n  color: &;\n}\n", "Error: Expected \"odd\"."
+);
+error!(
+    a_n_plus_b_n_invalid_starting_char,
+    ":nth-child(f) {\n  color: &;\n}\n", "Error: Expected \"n\"."
+);
+error!(
+    #[ignore = "we read until closing paren, giving a different error message"]
+    a_n_plus_b_n_nothing_after_open_paren,
+    ":nth-child({\n  color: &;\n}\n", "Error: expected more input."
+);
+error!(
+    a_n_plus_b_n_invalid_char_after_even,
+    ":nth-child(even#) {\n  color: &;\n}\n", "Error: expected \")\"."
 );
 error!(nothing_after_period, ". {}", "Error: Expected identifier.");
 error!(nothing_after_hash, "# {}", "Error: Expected identifier.");
