@@ -541,7 +541,7 @@ impl Pseudo {
                         }
                     })
                 }),
-            "current" => selector_pseudos_named(compound.clone(), &self.name, false)
+            "current" => selector_pseudos_named(compound.clone(), &self.name, self.is_class)
                 .iter()
                 .any(|pseudo2| self.selector == pseudo2.selector),
             "nth-child" | "nth-last-child" => compound.components.iter().any(|pseudo2| {

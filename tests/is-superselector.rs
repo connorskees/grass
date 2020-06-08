@@ -226,3 +226,88 @@ test!(
     "a {\n  color: is-superselector(\"::c\", \":c\");\n}\n",
     "a {\n  color: false;\n}\n"
 );
+test!(
+    simple_pseudo_arg_class_equal,
+    "a {\n  color: is-superselector(\":c(@#$)\", \":c(@#$)\");\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    simple_pseudo_arg_class_different_name,
+    "a {\n  color: is-superselector(\":c(@#$)\", \":d(@#$)\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    simple_pseudo_arg_class_different_arg,
+    "a {\n  color: is-superselector(\":c(@#$)\", \":d(*&^)\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    simple_pseudo_arg_class_different_no_arg,
+    "a {\n  color: is-superselector(\":c(@#$)\", \":c\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    simple_pseudo_arg_class_and_element,
+    "a {\n  color: is-superselector(\":c(@#$)\", \"::c(@#$)\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    simple_pseudo_arg_element_and_element_equal,
+    "a {\n  color: is-superselector(\"::c(@#$)\", \"::c(@#$)\");\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    simple_pseudo_arg_element_and_element_different_name,
+    "a {\n  color: is-superselector(\"::c(@#$)\", \"::d(@#$)\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    simple_pseudo_arg_element_and_element_different_arg,
+    "a {\n  color: is-superselector(\"::c(@#$)\", \"::c(*&^)\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    simple_pseudo_arg_element_and_element_different_no_arg,
+    "a {\n  color: is-superselector(\"::c(@#$)\", \"::c\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    simple_pseudo_arg_element_and_class,
+    "a {\n  color: is-superselector(\"::c(@#$)\", \":c(@#$)\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    psuedo_current_superset,
+    "a {\n  color: is-superselector(\":current(c d, e f, g h)\", \":current(c d.i, e j f)\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    psuedo_current_subset,
+    "a {\n  color: is-superselector(\":current(c d.i, e j f)\", \":current(c d, e f, g h)\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    psuedo_current_equal,
+    "a {\n  color: is-superselector(\":current(c d, e f)\", \":current(c d, e f)\");\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    psuedo_current_bare_sub,
+    "a {\n  color: is-superselector(\":current(c d, e f)\", \"c d, e f\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    psuedo_current_prefix_superset,
+    "a {\n  color: is-superselector(\":-pfx-current(c d, e f, g h)\", \":-pfx-current(c d.i, e j f)\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    psuedo_current_prefix_subset,
+    "a {\n  color: is-superselector(\":-pfx-current(c d.i, e j f)\", \":-pfx-current(c d, e f, g h)\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    psuedo_current_prefix_equal,
+    "a {\n  color: is-superselector(\":-pfx-current(c d, e f)\", \":-pfx-current(c d, e f)\");\n}\n",
+    "a {\n  color: true;\n}\n"
+);
