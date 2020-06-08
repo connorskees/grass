@@ -31,7 +31,6 @@ for this version will be provided when the library becomes more stable.
 The large features remaining are
 
 ```
-all builtin selector functions (274 tests)
 builtin functions content-exists, min, max
 @extend (~600 tests)
 indented syntax (27 tests)
@@ -74,6 +73,13 @@ cargo b --release
 ```
 
 These numbers come from a default run of the sass specification as shown above.
+
+```
+2020-06-07
+PASSING: 2442
+FAILING: 2651
+TOTAL: 5093
+```
 
 ```
 2020-05-01
