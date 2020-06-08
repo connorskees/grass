@@ -277,6 +277,26 @@ test!(
     "a {\n  color: false;\n}\n"
 );
 test!(
+    psuedo_any_superset,
+    "a {\n  color: is-superselector(\":any(c d, e f, g h)\", \":any(c d.i, e j f)\");\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    psuedo_any_subset,
+    "a {\n  color: is-superselector(\":any(c d.i, e j f)\", \":any(c d, e f, g h)\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    psuedo_any_prefix_superset,
+    "a {\n  color: is-superselector(\":-pfx-any(c d, e f, g h)\", \":-pfx-any(c d.i, e j f)\");\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    psuedo_any_prefix_subset,
+    "a {\n  color: is-superselector(\":-pfx-any(c d.i, e j f)\", \":-pfx-any(c d, e f, g h)\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
     psuedo_current_superset,
     "a {\n  color: is-superselector(\":current(c d, e f, g h)\", \":current(c d.i, e j f)\");\n}\n",
     "a {\n  color: false;\n}\n"
@@ -311,3 +331,146 @@ test!(
     "a {\n  color: is-superselector(\":-pfx-current(c d, e f)\", \":-pfx-current(c d, e f)\");\n}\n",
     "a {\n  color: true;\n}\n"
 );
+test!(
+    psuedo_has_superset,
+    "a {\n  color: is-superselector(\":has(c d, e f, g h)\", \":has(c d.i, e j f)\");\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    psuedo_has_subset,
+    "a {\n  color: is-superselector(\":has(c d.i, e j f)\", \":has(c d, e f, g h)\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    psuedo_has_equal,
+    "a {\n  color: is-superselector(\":has(c d, e f)\", \":has(c d, e f)\");\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    psuedo_has_bare_sub,
+    "a {\n  color: is-superselector(\":has(c d, e f)\", \"c d, e f\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    psuedo_has_prefix_superset,
+    "a {\n  color: is-superselector(\":-pfx-has(c d, e f, g h)\", \":-pfx-has(c d.i, e j f)\");\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    psuedo_has_prefix_subset,
+    "a {\n  color: is-superselector(\":-pfx-has(c d.i, e j f)\", \":-pfx-has(c d, e f, g h)\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    psuedo_has_prefix_equal,
+    "a {\n  color: is-superselector(\":-pfx-has(c d, e f)\", \":-pfx-has(c d, e f)\");\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    psuedo_host_superset,
+    "a {\n  color: is-superselector(\":host(c d, e f, g h)\", \":host(c d.i, e j f)\");\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    psuedo_host_subset,
+    "a {\n  color: is-superselector(\":host(c d.i, e j f)\", \":host(c d, e f, g h)\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    psuedo_host_equal,
+    "a {\n  color: is-superselector(\":host(c d, e f)\", \":host(c d, e f)\");\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    psuedo_host_bare_sub,
+    "a {\n  color: is-superselector(\":host(c d, e f)\", \"c d, e f\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    psuedo_host_prefix_superset,
+    "a {\n  color: is-superselector(\":-pfx-host(c d, e f, g h)\", \":-pfx-host(c d.i, e j f)\");\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    psuedo_host_prefix_subset,
+    "a {\n  color: is-superselector(\":-pfx-host(c d.i, e j f)\", \":-pfx-host(c d, e f, g h)\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    psuedo_host_prefix_equal,
+    "a {\n  color: is-superselector(\":-pfx-host(c d, e f)\", \":-pfx-host(c d, e f)\");\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    psuedo_host_context_superset,
+    "a {\n  color: is-superselector(\":host-context(c d, e f, g h)\", \":host-context(c d.i, e j f)\");\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    psuedo_host_context_subset,
+    "a {\n  color: is-superselector(\":host-context(c d.i, e j f)\", \":host-context(c d, e f, g h)\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    psuedo_host_context_equal,
+    "a {\n  color: is-superselector(\":host-context(c d, e f)\", \":host-context(c d, e f)\");\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    psuedo_host_context_bare_sub,
+    "a {\n  color: is-superselector(\":host-context(c d, e f)\", \"c d, e f\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    psuedo_host_context_prefix_superset,
+    "a {\n  color: is-superselector(\":-pfx-host-context(c d, e f, g h)\", \":-pfx-host-context(c d.i, e j f)\");\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    psuedo_host_context_prefix_subset,
+    "a {\n  color: is-superselector(\":-pfx-host-context(c d.i, e j f)\", \":-pfx-host-context(c d, e f, g h)\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    psuedo_host_context_prefix_equal,
+    "a {\n  color: is-superselector(\":-pfx-host-context(c d, e f)\", \":-pfx-host-context(c d, e f)\");\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    psuedo_slotted_superset,
+    "a {\n  color: is-superselector(\"::slotted(c d, e f, g h)\", \"::slotted(c d.i, e j f)\");\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    psuedo_slotted_subset,
+    "a {\n  color: is-superselector(\"::slotted(c d.i, e j f)\", \"::slotted(c d, e f, g h)\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    psuedo_slotted_equal,
+    "a {\n  color: is-superselector(\"::slotted(c d, e f)\", \"::slotted(c d, e f)\");\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    psuedo_slotted_bare_sub,
+    "a {\n  color: is-superselector(\"::slotted(c d, e f)\", \"c d, e f\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    psuedo_slotted_prefix_superset,
+    "a {\n  color: is-superselector(\"::-pfx-slotted(c d, e f, g h)\", \"::-pfx-slotted(c d.i, e j f)\");\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    psuedo_slotted_prefix_subset,
+    "a {\n  color: is-superselector(\"::-pfx-slotted(c d.i, e j f)\", \"::-pfx-slotted(c d, e f, g h)\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    psuedo_slotted_prefix_equal,
+    "a {\n  color: is-superselector(\"::-pfx-slotted(c d, e f)\", \"::-pfx-slotted(c d, e f)\");\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+
+// todo: /spec/core_functions/selector/is_superselector/simple/pseudo/selector_arg/
+// :not, :matches, :nth-child, :nth-last-child
