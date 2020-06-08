@@ -567,6 +567,7 @@ impl Pseudo {
         }
     }
 
+    #[allow(clippy::missing_const_for_fn)]
     pub fn with_selector(self, selector: Option<SelectorList>) -> Self {
         Self { selector, ..self }
     }
@@ -601,7 +602,7 @@ impl Pseudo {
                 min = min.max(complex.min_specificity());
                 max = max.max(complex.max_specificity());
             }
-            return Specificity { min, max };
+            Specificity { min, max }
         } else {
             // This is higher than any selector's specificity can actually be.
             let mut min = BASE_SPECIFICITY.pow(3_u32);
@@ -610,7 +611,7 @@ impl Pseudo {
                 min = min.min(complex.min_specificity());
                 max = max.max(complex.max_specificity());
             }
-            return Specificity { min, max };
+            Specificity { min, max }
         }
     }
 }

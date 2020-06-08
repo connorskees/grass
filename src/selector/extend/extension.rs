@@ -35,7 +35,7 @@ pub(super) struct Extension {
 impl Extension {
     pub fn one_off(extender: ComplexSelector, specificity: Option<i32>, is_original: bool) -> Self {
         Self {
-            specificity: specificity.unwrap_or(extender.max_specificity()),
+            specificity: specificity.unwrap_or_else(|| extender.max_specificity()),
             extender,
             target: None,
             span: None,

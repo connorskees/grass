@@ -1,5 +1,3 @@
-#![allow(unused_variables, unused_mut)]
-
 use super::{Builtin, GlobalFunctionMap};
 
 use crate::args::CallArgs;
@@ -107,11 +105,7 @@ fn selector_nest(args: CallArgs, scope: &Scope, super_selector: &Selector) -> Sa
         .into_value())
 }
 
-fn selector_append(
-    mut args: CallArgs,
-    scope: &Scope,
-    super_selector: &Selector,
-) -> SassResult<Value> {
+fn selector_append(args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
     let span = args.span();
     let selectors = args.get_variadic(scope, super_selector)?;
     if selectors.is_empty() {

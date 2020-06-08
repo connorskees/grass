@@ -38,7 +38,13 @@ enum ExtendMode {
     AllTargets,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+impl Default for ExtendMode {
+    fn default() -> Self {
+        Self::Normal
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Default)]
 pub(crate) struct Extender {
     /// A map from all simple selectors in the stylesheet to the selector lists
     /// that contain them.
@@ -88,6 +94,7 @@ pub(crate) struct Extender {
 impl Extender {
     /// An `Extender` that contains no extensions and can have no extensions added.
     // TODO: empty extender
+    #[allow(dead_code)]
     const EMPTY: () = ();
 
     pub fn extend(
@@ -112,7 +119,7 @@ impl Extender {
         targets: SelectorList,
         mode: ExtendMode,
     ) -> SelectorList {
-        let mut extenders: IndexMap<ComplexSelector, Extension> = source
+        let extenders: IndexMap<ComplexSelector, Extension> = source
             .components
             .clone()
             .into_iter()
@@ -149,7 +156,7 @@ impl Extender {
                     .extend(selector.components.clone().into_iter());
             }
 
-            selector = extender.extend_list(selector, extensions, None);
+            selector = extender.extend_list(selector, &extensions, &None);
         }
 
         selector
@@ -158,12 +165,7 @@ impl Extender {
     fn with_mode(mode: ExtendMode) -> Self {
         Self {
             mode,
-            selectors: Default::default(),
-            extensions: Default::default(),
-            extensions_by_extender: Default::default(),
-            media_contexts: Default::default(),
-            source_specificity: Default::default(),
-            originals: Default::default(),
+            ..Extender::default()
         }
     }
 
@@ -171,8 +173,8 @@ impl Extender {
     fn extend_list(
         &mut self,
         list: SelectorList,
-        extensions: HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>>,
-        media_query_context: Option<Vec<CssMediaQuery>>,
+        extensions: &HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>>,
+        media_query_context: &Option<Vec<CssMediaQuery>>,
     ) -> SelectorList {
         // This could be written more simply using Vec<Vec<T>>, but we want to avoid
         // any allocations in the common case where no extends apply.
@@ -180,21 +182,15 @@ impl Extender {
         for i in 0..list.components.len() {
             let complex = list.components.get(i).unwrap().clone();
 
-            if let Some(result) = self.extend_complex(
-                complex.clone(),
-                extensions.clone(),
-                media_query_context.clone(),
-            ) {
-                if extended.is_empty() {
-                    if i != 0 {
-                        extended = list.components[0..i].to_vec();
-                    }
+            if let Some(result) =
+                self.extend_complex(complex.clone(), extensions, media_query_context)
+            {
+                if extended.is_empty() && i != 0 {
+                    extended = list.components[0..i].to_vec();
                 }
                 extended.extend(result.into_iter());
-            } else {
-                if !extended.is_empty() {
-                    extended.push(complex);
-                }
+            } else if !extended.is_empty() {
+                extended.push(complex);
             }
         }
 
@@ -212,8 +208,8 @@ impl Extender {
     fn extend_complex(
         &mut self,
         complex: ComplexSelector,
-        extensions: HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>>,
-        media_query_context: Option<Vec<CssMediaQuery>>,
+        extensions: &HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>>,
+        media_query_context: &Option<Vec<CssMediaQuery>>,
     ) -> Option<Vec<ComplexSelector>> {
         // The complex selectors that each compound selector in `complex.components`
         // can expand to.
@@ -236,16 +232,11 @@ impl Extender {
 
         let complex_has_line_break = complex.line_break;
 
-        let is_original = self.originals.contains(&complex);
-
         for i in 0..complex.components.len() {
             if let Some(ComplexSelectorComponent::Compound(component)) = complex.components.get(i) {
-                if let Some(extended) = self.extend_compound(
-                    component.clone(),
-                    extensions.clone(),
-                    media_query_context.clone(),
-                    is_original,
-                ) {
+                if let Some(extended) =
+                    self.extend_compound(component, extensions, media_query_context)
+                {
                     if extended_not_expanded.is_empty() {
                         extended_not_expanded = complex
                             .components
@@ -311,15 +302,11 @@ impl Extender {
 
     /// Extends `compound` using `extensions`, and returns the contents of a
     /// `SelectorList`.
-    ///
-    /// The `in_original` parameter indicates whether this is in an original
-    /// complex selector, meaning that `compound` should not be trimmed out.
     fn extend_compound(
         &mut self,
-        compound: CompoundSelector,
-        extensions: HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>>,
-        media_query_context: Option<Vec<CssMediaQuery>>,
-        in_original: bool,
+        compound: &CompoundSelector,
+        extensions: &HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>>,
+        media_query_context: &Option<Vec<CssMediaQuery>>,
     ) -> Option<Vec<ComplexSelector>> {
         // If there's more than one target and they all need to match, we track
         // which targets are actually extended.
@@ -332,16 +319,14 @@ impl Extender {
 
             if let Some(extended) = self.extend_simple(
                 simple.clone(),
-                extensions.clone(),
-                media_query_context.clone(),
+                extensions,
+                media_query_context,
                 &mut targets_used,
             ) {
-                if options.is_empty() {
-                    if i != 0 {
-                        options.push(vec![self.extension_for_compound(
-                            compound.components.clone().into_iter().take(i).collect(),
-                        )]);
-                    }
+                if options.is_empty() && i != 0 {
+                    options.push(vec![self.extension_for_compound(
+                        compound.components.clone().into_iter().take(i).collect(),
+                    )]);
                 }
 
                 options.extend(extended.into_iter());
@@ -356,7 +341,7 @@ impl Extender {
 
         // If `self.mode` isn't `ExtendMode::Normal` and we didn't use all the targets in
         // `extensions`, extension fails for `compound`.
-        if targets_used.len() > 0 && targets_used.len() != extensions.len() {
+        if !targets_used.is_empty() && targets_used.len() != extensions.len() {
             return None;
         }
 
@@ -369,7 +354,7 @@ impl Extender {
                     .clone()
                     .into_iter()
                     .map(|state| {
-                        state.assert_compatible_media_context(&media_query_context);
+                        state.assert_compatible_media_context(media_query_context);
                         state.extender
                     })
                     .collect(),
@@ -405,15 +390,13 @@ impl Extender {
         let unified_paths: Vec<Option<Vec<ComplexSelector>>> = paths(options)
             .into_iter()
             .map(|path| {
-                let complexes: Vec<Vec<ComplexSelectorComponent>>;
-
-                if first {
+                let complexes: Vec<Vec<ComplexSelectorComponent>> = if first {
                     // The first path is always the original selector. We can't just
                     // return `compound` directly because pseudo selectors may be
                     // modified, but we don't have to do any unification.
                     first = false;
 
-                    complexes = vec![vec![ComplexSelectorComponent::Compound(CompoundSelector {
+                    vec![vec![ComplexSelectorComponent::Compound(CompoundSelector {
                         components: path
                             .clone()
                             .into_iter()
@@ -425,7 +408,7 @@ impl Extender {
                                 }
                             })
                             .collect(),
-                    })]];
+                    })]]
                 } else {
                     let mut to_unify: VecDeque<Vec<ComplexSelectorComponent>> = VecDeque::new();
                     let mut originals: Vec<SimpleSelector> = Vec::new();
@@ -448,13 +431,13 @@ impl Extender {
                         )]);
                     }
 
-                    complexes = unify_complex(Vec::from(to_unify))?;
-                }
+                    unify_complex(Vec::from(to_unify))?
+                };
 
                 let mut line_break = false;
 
                 for state in path {
-                    state.assert_compatible_media_context(&media_query_context);
+                    state.assert_compatible_media_context(media_query_context);
                     line_break = line_break || state.extender.line_break;
                 }
 
@@ -482,8 +465,8 @@ impl Extender {
     fn extend_simple(
         &mut self,
         simple: SimpleSelector,
-        extensions: HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>>,
-        media_query_context: Option<Vec<CssMediaQuery>>,
+        extensions: &HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>>,
+        media_query_context: &Option<Vec<CssMediaQuery>>,
         targets_used: &mut HashSet<SimpleSelector>,
     ) -> Option<Vec<Vec<Extension>>> {
         if let SimpleSelector::Pseudo(
@@ -492,16 +475,14 @@ impl Extender {
             },
         ) = simple.clone()
         {
-            if let Some(extended) =
-                self.extend_pseudo(simple, extensions.clone(), media_query_context)
-            {
+            if let Some(extended) = self.extend_pseudo(simple, extensions, media_query_context) {
                 return Some(
                     extended
                         .into_iter()
                         .map(move |pseudo| {
                             self.without_pseudo(
                                 SimpleSelector::Pseudo(pseudo.clone()),
-                                extensions.clone(),
+                                extensions,
                                 targets_used,
                                 self.mode,
                             )
@@ -523,14 +504,11 @@ impl Extender {
     fn extend_pseudo(
         &mut self,
         pseudo: Pseudo,
-        extensions: HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>>,
-        media_query_context: Option<Vec<CssMediaQuery>>,
+        extensions: &HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>>,
+        media_query_context: &Option<Vec<CssMediaQuery>>,
     ) -> Option<Vec<Pseudo>> {
         let extended = self.extend_list(
-            pseudo
-                .selector
-                .clone()
-                .unwrap_or_else(|| SelectorList::new()),
+            pseudo.selector.clone().unwrap_or_else(SelectorList::new),
             extensions,
             media_query_context,
         );
@@ -544,8 +522,7 @@ impl Extender {
         // writing. We can keep them if either the original selector had a complex
         // selector, or the result of extending has only complex selectors, because
         // either way we aren't breaking anything that isn't already broken.
-        let mut complexes = extended.components.clone();
-        if pseudo.normalized_name == "not"
+        let mut complexes = if pseudo.normalized_name == "not"
             && !pseudo
                 .selector
                 .clone()
@@ -558,13 +535,14 @@ impl Extender {
                 .iter()
                 .any(|complex| complex.components.len() == 1)
         {
-            complexes = extended
+            extended
                 .components
-                .clone()
                 .into_iter()
                 .filter(|complex| complex.components.len() <= 1)
-                .collect();
-        }
+                .collect()
+        } else {
+            extended.components
+        };
 
         complexes = complexes
             .into_iter()
@@ -598,10 +576,10 @@ impl Extender {
                         // become `.foo:not(.bar)`. However, this is a narrow edge case and
                         // supporting it properly would make this code and the code calling it
                         // a lot more complicated, so it's not supported for now.
-                        if inner_pseudo.normalized_name != "matches" {
-                            Vec::new()
-                        } else {
+                        if inner_pseudo.normalized_name == "matches" {
                             inner_pseudo.selector.clone().unwrap().components
+                        } else {
+                            Vec::new()
                         }
                     }
                     "matches" | "any" | "current" | "nth-child" | "nth-last-child" => {
@@ -657,7 +635,7 @@ impl Extender {
     fn without_pseudo(
         &self,
         simple: SimpleSelector,
-        extensions: HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>>,
+        extensions: &HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>>,
         targets_used: &mut HashSet<SimpleSelector>,
         mode: ExtendMode,
     ) -> Option<Vec<Extension>> {
@@ -782,17 +760,19 @@ impl Extender {
                 // ensures that we aren't comparing against a selector that's already been
                 // trimmed, and thus that if there are two identical selectors only one is
                 // trimmed.
-                if result.iter().any(|complex2| {
+                let should_continue = result.iter().any(|complex2| {
                     complex2.min_specificity() >= max_specificity
                         && complex2.is_super_selector(complex1)
-                }) {
+                });
+                if should_continue {
                     continue;
                 }
 
-                if selectors.iter().take(i).any(|complex2| {
+                let should_continue = selectors.iter().take(i).any(|complex2| {
                     complex2.min_specificity() >= max_specificity
                         && complex2.is_super_selector(complex1)
-                }) {
+                });
+                if should_continue {
                     continue;
                 }
 
@@ -800,12 +780,11 @@ impl Extender {
             }
             if should_break_to_outer {
                 continue;
-            } else {
-                break;
             }
+            break;
         }
 
-        return Vec::from(result);
+        Vec::from(result)
     }
 }
 

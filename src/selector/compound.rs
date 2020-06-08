@@ -214,7 +214,7 @@ impl CompoundSelector {
 
                 Self { components }
             }
-            simple => {
+            _ => {
                 let mut components = vec![SimpleSelector::Parent(None)];
                 components.append(&mut self.components);
                 Self { components }

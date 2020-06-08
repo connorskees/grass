@@ -335,7 +335,7 @@ impl<'a, I: Iterator<Item = Token>> SelectorParser<'a, I> {
                 devour_whitespace(self.toks);
                 self.expect_closing_paren()?;
             } else {
-                argument = Some(self.declaration_value(true)?);
+                argument = Some(self.declaration_value()?);
             }
         } else if SELECTOR_PSEUDO_CLASSES.contains(&unvendored) {
             selector = Some(self.parse_selector_list()?);
@@ -358,7 +358,7 @@ impl<'a, I: Iterator<Item = Token>> SelectorParser<'a, I> {
             self.expect_closing_paren()?;
             argument = Some(this_arg);
         } else {
-            argument = Some(self.declaration_value(true)?.trim_end().to_string());
+            argument = Some(self.declaration_value()?.trim_end().to_string());
         }
 
         Ok(SimpleSelector::Pseudo(Pseudo {
@@ -533,7 +533,7 @@ impl<'a, I: Iterator<Item = Token>> SelectorParser<'a, I> {
         Ok(buf)
     }
 
-    fn declaration_value(&mut self, allow_empty: bool) -> SassResult<String> {
+    fn declaration_value(&mut self) -> SassResult<String> {
         // todo: this consumes the closing paren
         let mut tmp = read_until_closing_paren(self.toks)?;
         if let Some(Token { kind: ')', .. }) = tmp.pop() {

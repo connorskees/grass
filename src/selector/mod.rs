@@ -1,5 +1,3 @@
-#![allow(dead_code, unused_variables, unused_mut)]
-
 use std::fmt::{self, Display};
 
 use peekmore::{PeekMore, PeekMoreIterator};

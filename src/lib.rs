@@ -59,6 +59,9 @@ grass input.scss
     clippy::filter_map,
     clippy::else_if_without_else,
     clippy::new_ret_no_self,
+    renamed_and_removed_lints,
+    clippy::unknown_clippy_lints,
+    clippy::replace_consts,
 
     // temporarily allowed while under heavy development.
     // eventually these allows should be refactored away

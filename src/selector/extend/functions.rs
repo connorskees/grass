@@ -729,11 +729,11 @@ fn complex_is_parent_superselector(
 ///
 /// For example, given `[[1, 2], [3, 4], [5]]`, this returns:
 ///
-/// ```norun
+/// ```no_run
 /// [[1, 3, 5],
 ///  [2, 3, 5],
 ///  [1, 4, 5],
-///  [2, 4, 5]]
+///  [2, 4, 5]];
 /// ```
 pub(crate) fn paths<T: Clone>(choices: Vec<Vec<T>>) -> Vec<Vec<T>> {
     choices.into_iter().fold(vec![vec![]], |paths, choice| {
