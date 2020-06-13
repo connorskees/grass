@@ -674,6 +674,7 @@ error!(nothing_after_period, ". {}", "Error: Expected identifier.");
 error!(nothing_after_hash, "# {}", "Error: Expected identifier.");
 error!(nothing_after_percent, "% {}", "Error: Expected identifier.");
 error!(no_ident_after_colon, ": {}", "Error: Expected identifier.");
+error!(double_colon_no_space, "::{}", "Error: Expected identifier.");
 error!(
     non_ident_char_after_colon,
     ":#ab {}", "Error: Expected identifier."
