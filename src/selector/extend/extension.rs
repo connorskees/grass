@@ -1,5 +1,7 @@
 use codemap::Span;
 
+use crate::error::SassResult;
+
 use super::{ComplexSelector, CssMediaQuery, SimpleSelector};
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
@@ -47,6 +49,9 @@ impl Extension {
 
     /// Asserts that the `media_context` for a selector is compatible with the
     /// query context for this extender.
+    // todo: this should return a `Result`. it currently does not because the cascade effect
+    // from this returning a `Result` will make some code returning `Option`s much uglier (we can't
+    // use `?` to return both `Option` and `Result` from the same function)
     pub fn assert_compatible_media_context(&self, media_context: &Option<Vec<CssMediaQuery>>) {
         if let Some(media_context) = media_context {
             if &self.media_context == media_context {
@@ -54,6 +59,6 @@ impl Extension {
             }
         }
 
-        // todo!("throw SassException(\"You may not @extend selectors across media queries.\", span);")
+        // Err(("You may not @extend selectors across media queries.", self.span.unwrap()).into())
     }
 }
