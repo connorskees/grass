@@ -7,14 +7,13 @@ use rand::Rng;
 
 use crate::args::CallArgs;
 use crate::error::SassResult;
-use crate::scope::Scope;
-use crate::selector::Selector;
+use crate::parse::Parser;
 use crate::unit::Unit;
 use crate::value::{Number, Value};
 
-fn percentage(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
+fn percentage(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    let num = match arg!(args, scope, super_selector, 0, "number") {
+    let num = match parser.arg(&mut args, 0, "number")? {
         Value::Dimension(n, Unit::None) => n * Number::from(100),
         v @ Value::Dimension(..) => {
             return Err((
@@ -40,9 +39,9 @@ fn percentage(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> S
     Ok(Value::Dimension(num, Unit::Percent))
 }
 
-fn round(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
+fn round(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    match arg!(args, scope, super_selector, 0, "number") {
+    match parser.arg(&mut args, 0, "number")? {
         Value::Dimension(n, u) => Ok(Value::Dimension(n.round(), u)),
         v => Err((
             format!(
@@ -55,9 +54,9 @@ fn round(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassRe
     }
 }
 
-fn ceil(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
+fn ceil(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    match arg!(args, scope, super_selector, 0, "number") {
+    match parser.arg(&mut args, 0, "number")? {
         Value::Dimension(n, u) => Ok(Value::Dimension(n.ceil(), u)),
         v => Err((
             format!(
@@ -70,9 +69,9 @@ fn ceil(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassRes
     }
 }
 
-fn floor(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
+fn floor(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    match arg!(args, scope, super_selector, 0, "number") {
+    match parser.arg(&mut args, 0, "number")? {
         Value::Dimension(n, u) => Ok(Value::Dimension(n.floor(), u)),
         v => Err((
             format!(
@@ -85,9 +84,9 @@ fn floor(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassRe
     }
 }
 
-fn abs(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
+fn abs(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    match arg!(args, scope, super_selector, 0, "number") {
+    match parser.arg(&mut args, 0, "number")? {
         Value::Dimension(n, u) => Ok(Value::Dimension(n.abs(), u)),
         v => Err((
             format!(
@@ -100,9 +99,9 @@ fn abs(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResu
     }
 }
 
-fn comparable(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
+fn comparable(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;
-    let unit1 = match arg!(args, scope, super_selector, 0, "number1") {
+    let unit1 = match parser.arg(&mut args, 0, "number1")? {
         Value::Dimension(_, u) => u,
         v => {
             return Err((
@@ -115,7 +114,7 @@ fn comparable(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> S
                 .into())
         }
     };
-    let unit2 = match arg!(args, scope, super_selector, 1, "number2") {
+    let unit2 = match parser.arg(&mut args, 1, "number2")? {
         Value::Dimension(_, u) => u,
         v => {
             return Err((
@@ -134,9 +133,9 @@ fn comparable(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> S
 
 // TODO: write tests for this
 #[cfg(feature = "random")]
-fn random(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
+fn random(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    let limit = match arg!(args, scope, super_selector, 0, "limit" = Value::Null) {
+    let limit = match parser.default_arg(&mut args, 0, "limit", Value::Null)? {
         Value::Dimension(n, _) => n,
         Value::Null => {
             let mut rng = rand::thread_rng();

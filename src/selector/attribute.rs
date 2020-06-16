@@ -1,16 +1,13 @@
 use std::fmt::{self, Display, Write};
 
-use peekmore::PeekMoreIterator;
-
 use codemap::Span;
 
-use super::{Namespace, QualifiedName, Selector};
+use super::{Namespace, QualifiedName};
 use crate::common::QuoteKind;
 use crate::error::SassResult;
-use crate::scope::Scope;
-use crate::utils::{devour_whitespace, eat_ident, is_ident, parse_quoted_string};
+use crate::parse::Parser;
+use crate::utils::is_ident;
 use crate::value::Value;
-use crate::Token;
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub(crate) struct Attribute {
@@ -21,31 +18,26 @@ pub(crate) struct Attribute {
     span: Span,
 }
 
-fn attribute_name<I: Iterator<Item = Token>>(
-    toks: &mut PeekMoreIterator<I>,
-    scope: &Scope,
-    super_selector: &Selector,
-    start: Span,
-) -> SassResult<QualifiedName> {
-    let next = toks.peek().ok_or(("Expected identifier.", start))?;
+fn attribute_name(parser: &mut Parser<'_>, start: Span) -> SassResult<QualifiedName> {
+    let next = parser.toks.peek().ok_or(("Expected identifier.", start))?;
     if next.kind == '*' {
         let pos = next.pos;
-        toks.next();
-        if toks.peek().ok_or(("expected \"|\".", pos))?.kind != '|' {
+        parser.toks.next();
+        if parser.toks.peek().ok_or(("expected \"|\".", pos))?.kind != '|' {
             return Err(("expected \"|\".", pos).into());
         }
 
-        let span_before = toks.next().unwrap().pos();
+        parser.span_before = parser.toks.next().unwrap().pos();
 
-        let ident = eat_ident(toks, scope, super_selector, span_before)?.node;
+        let ident = parser.parse_identifier()?.node;
         return Ok(QualifiedName {
             ident,
             namespace: Namespace::Asterisk,
         });
     }
-    let span_before = next.pos;
-    let name_or_namespace = eat_ident(toks, scope, super_selector, span_before)?;
-    match toks.peek() {
+    parser.span_before = next.pos;
+    let name_or_namespace = parser.parse_identifier()?;
+    match parser.toks.peek() {
         Some(v) if v.kind != '|' => {
             return Ok(QualifiedName {
                 ident: name_or_namespace.node,
@@ -55,32 +47,30 @@ fn attribute_name<I: Iterator<Item = Token>>(
         Some(..) => {}
         None => return Err(("expected more input.", name_or_namespace.span).into()),
     }
-    match toks.peek_forward(1) {
+    match parser.toks.peek_forward(1) {
         Some(v) if v.kind == '=' => {
-            toks.reset_view();
+            parser.toks.reset_view();
             return Ok(QualifiedName {
                 ident: name_or_namespace.node,
                 namespace: Namespace::None,
             });
         }
         Some(..) => {
-            toks.reset_view();
+            parser.toks.reset_view();
         }
         None => return Err(("expected more input.", name_or_namespace.span).into()),
     }
-    let span_before = toks.next().unwrap().pos();
-    let ident = eat_ident(toks, scope, super_selector, span_before)?.node;
+    parser.span_before = parser.toks.next().unwrap().pos();
+    let ident = parser.parse_identifier()?.node;
     Ok(QualifiedName {
         ident,
         namespace: Namespace::Other(name_or_namespace.node),
     })
 }
 
-fn attribute_operator<I: Iterator<Item = Token>>(
-    toks: &mut PeekMoreIterator<I>,
-    start: Span,
-) -> SassResult<AttributeOp> {
-    let op = match toks.next().ok_or(("Expected \"]\".", start))?.kind {
+fn attribute_operator(parser: &mut Parser<'_>) -> SassResult<AttributeOp> {
+    let start = parser.span_before;
+    let op = match parser.toks.next().ok_or(("Expected \"]\".", start))?.kind {
         '=' => return Ok(AttributeOp::Equals),
         '~' => AttributeOp::Include,
         '|' => AttributeOp::Dash,
@@ -89,23 +79,25 @@ fn attribute_operator<I: Iterator<Item = Token>>(
         '*' => AttributeOp::Contains,
         _ => return Err(("Expected \"]\".", start).into()),
     };
-    if toks.next().ok_or(("expected \"=\".", start))?.kind != '=' {
+    if parser.toks.next().ok_or(("expected \"=\".", start))?.kind != '=' {
         return Err(("expected \"=\".", start).into());
     }
     Ok(op)
 }
 impl Attribute {
-    pub fn from_tokens<I: Iterator<Item = Token>>(
-        toks: &mut PeekMoreIterator<I>,
-        scope: &Scope,
-        super_selector: &Selector,
-        start: Span,
-    ) -> SassResult<Attribute> {
-        devour_whitespace(toks);
-        let attr = attribute_name(toks, scope, super_selector, start)?;
-        devour_whitespace(toks);
-        if toks.peek().ok_or(("expected more input.", start))?.kind == ']' {
-            toks.next();
+    pub fn from_tokens(parser: &mut Parser<'_>) -> SassResult<Attribute> {
+        let start = parser.span_before;
+        parser.whitespace();
+        let attr = attribute_name(parser, start)?;
+        parser.whitespace();
+        if parser
+            .toks
+            .peek()
+            .ok_or(("expected more input.", start))?
+            .kind
+            == ']'
+        {
+            parser.toks.next();
             return Ok(Attribute {
                 attr,
                 value: String::new(),
@@ -115,24 +107,25 @@ impl Attribute {
             });
         }
 
-        let op = attribute_operator(toks, start)?;
-        devour_whitespace(toks);
+        parser.span_before = start;
+        let op = attribute_operator(parser)?;
+        parser.whitespace();
 
-        let peek = toks.peek().ok_or(("expected more input.", start))?;
-        let span_before = peek.pos;
+        let peek = parser.toks.peek().ok_or(("expected more input.", start))?;
+        parser.span_before = peek.pos;
         let value = match peek.kind {
             q @ '\'' | q @ '"' => {
-                toks.next();
-                match parse_quoted_string(toks, scope, q, super_selector, span_before)?.node {
+                parser.toks.next();
+                match parser.parse_quoted_string(q)?.node {
                     Value::String(s, ..) => s,
                     _ => unreachable!(),
                 }
             }
-            _ => eat_ident(toks, scope, super_selector, span_before)?.node,
+            _ => parser.parse_identifier()?.node,
         };
-        devour_whitespace(toks);
+        parser.whitespace();
 
-        let peek = toks.peek().ok_or(("expected more input.", start))?;
+        let peek = parser.toks.peek().ok_or(("expected more input.", start))?;
 
         let modifier = match peek.kind {
             c if c.is_alphabetic() => Some(c),
@@ -142,15 +135,15 @@ impl Attribute {
         let pos = peek.pos();
 
         if modifier.is_some() {
-            toks.next();
-            devour_whitespace(toks);
+            parser.toks.next();
+            parser.whitespace();
         }
 
-        if toks.peek().ok_or(("expected \"]\".", pos))?.kind != ']' {
+        if parser.toks.peek().ok_or(("expected \"]\".", pos))?.kind != ']' {
             return Err(("expected \"]\".", pos).into());
         }
 
-        toks.next();
+        parser.toks.next();
 
         Ok(Attribute {
             op,

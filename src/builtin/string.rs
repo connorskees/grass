@@ -9,18 +9,13 @@ use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use crate::args::CallArgs;
 use crate::common::QuoteKind;
 use crate::error::SassResult;
-use crate::scope::Scope;
-use crate::selector::Selector;
+use crate::parse::Parser;
 use crate::unit::Unit;
 use crate::value::{Number, Value};
 
-fn to_upper_case(
-    mut args: CallArgs,
-    scope: &Scope,
-    super_selector: &Selector,
-) -> SassResult<Value> {
+fn to_upper_case(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    match arg!(args, scope, super_selector, 0, "string") {
+    match parser.arg(&mut args, 0, "string")? {
         Value::String(mut i, q) => {
             i.make_ascii_uppercase();
             Ok(Value::String(i, q))
@@ -36,13 +31,9 @@ fn to_upper_case(
     }
 }
 
-fn to_lower_case(
-    mut args: CallArgs,
-    scope: &Scope,
-    super_selector: &Selector,
-) -> SassResult<Value> {
+fn to_lower_case(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    match arg!(args, scope, super_selector, 0, "string") {
+    match parser.arg(&mut args, 0, "string")? {
         Value::String(mut i, q) => {
             i.make_ascii_lowercase();
             Ok(Value::String(i, q))
@@ -58,9 +49,9 @@ fn to_lower_case(
     }
 }
 
-fn str_length(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
+fn str_length(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    match arg!(args, scope, super_selector, 0, "string") {
+    match parser.arg(&mut args, 0, "string")? {
         Value::String(i, _) => Ok(Value::Dimension(
             Number::from(i.chars().count()),
             Unit::None,
@@ -76,9 +67,9 @@ fn str_length(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> S
     }
 }
 
-fn quote(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
+fn quote(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    match arg!(args, scope, super_selector, 0, "string") {
+    match parser.arg(&mut args, 0, "string")? {
         Value::String(i, _) => Ok(Value::String(i, QuoteKind::Quoted)),
         v => Err((
             format!(
@@ -91,9 +82,9 @@ fn quote(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassRe
     }
 }
 
-fn unquote(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
+fn unquote(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    match arg!(args, scope, super_selector, 0, "string") {
+    match parser.arg(&mut args, 0, "string")? {
         i @ Value::String(..) => Ok(i.unquote()),
         v => Err((
             format!(
@@ -106,9 +97,9 @@ fn unquote(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> Sass
     }
 }
 
-fn str_slice(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
+fn str_slice(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(3)?;
-    let (string, quotes) = match arg!(args, scope, super_selector, 0, "string") {
+    let (string, quotes) = match parser.arg(&mut args, 0, "string")? {
         Value::String(s, q) => (s, q),
         v => {
             return Err((
@@ -122,7 +113,7 @@ fn str_slice(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> Sa
         }
     };
     let str_len = string.chars().count();
-    let start = match arg!(args, scope, super_selector, 1, "start-at") {
+    let start = match parser.arg(&mut args, 1, "start-at")? {
         Value::Dimension(n, Unit::None) if n.is_decimal() => {
             return Err((format!("{} is not an int.", n), args.span()).into())
         }
@@ -155,7 +146,7 @@ fn str_slice(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> Sa
                 .into())
         }
     };
-    let mut end = match arg!(args, scope, super_selector, 2, "end-at" = Value::Null) {
+    let mut end = match parser.default_arg(&mut args, 2, "end-at", Value::Null)? {
         Value::Dimension(n, Unit::None) if n.is_decimal() => {
             return Err((format!("{} is not an int.", n), args.span()).into())
         }
@@ -208,9 +199,9 @@ fn str_slice(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> Sa
     }
 }
 
-fn str_index(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
+fn str_index(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;
-    let s1 = match arg!(args, scope, super_selector, 0, "string") {
+    let s1 = match parser.arg(&mut args, 0, "string")? {
         Value::String(i, _) => i,
         v => {
             return Err((
@@ -224,7 +215,7 @@ fn str_index(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> Sa
         }
     };
 
-    let substr = match arg!(args, scope, super_selector, 1, "substring") {
+    let substr = match parser.arg(&mut args, 1, "substring")? {
         Value::String(i, _) => i,
         v => {
             return Err((
@@ -244,9 +235,9 @@ fn str_index(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> Sa
     })
 }
 
-fn str_insert(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
+fn str_insert(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(3)?;
-    let (s1, quotes) = match arg!(args, scope, super_selector, 0, "string") {
+    let (s1, quotes) = match parser.arg(&mut args, 0, "string")? {
         Value::String(i, q) => (i, q),
         v => {
             return Err((
@@ -260,7 +251,7 @@ fn str_insert(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> S
         }
     };
 
-    let substr = match arg!(args, scope, super_selector, 1, "insert") {
+    let substr = match parser.arg(&mut args, 1, "insert")? {
         Value::String(i, _) => i,
         v => {
             return Err((
@@ -274,7 +265,7 @@ fn str_insert(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> S
         }
     };
 
-    let index = match arg!(args, scope, super_selector, 2, "index") {
+    let index = match parser.arg(&mut args, 2, "index")? {
         Value::Dimension(n, Unit::None) if n.is_decimal() => {
             return Err((format!("$index: {} is not an int.", n), args.span()).into())
         }
@@ -347,7 +338,7 @@ fn str_insert(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> S
 
 #[cfg(feature = "random")]
 #[allow(clippy::needless_pass_by_value)]
-fn unique_id(args: CallArgs, _: &Scope, _: &Selector) -> SassResult<Value> {
+fn unique_id(args: CallArgs, _: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(0)?;
     let mut rng = thread_rng();
     let string = std::iter::repeat(())

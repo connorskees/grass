@@ -3,52 +3,32 @@ use super::{Builtin, GlobalFunctionMap};
 use crate::args::CallArgs;
 use crate::common::{Brackets, ListSeparator, QuoteKind};
 use crate::error::SassResult;
-use crate::scope::Scope;
+use crate::parse::Parser;
 use crate::selector::{
     ComplexSelector, ComplexSelectorComponent, Extender, Selector, SelectorList,
 };
 use crate::value::Value;
 
-fn is_superselector(
-    mut args: CallArgs,
-    scope: &Scope,
-    super_selector: &Selector,
-) -> SassResult<Value> {
+fn is_superselector(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;
-    let parent_selector = arg!(args, scope, super_selector, 0, "super").to_selector(
-        args.span(),
-        scope,
-        super_selector,
-        "super",
-        false,
-    )?;
-    let child_selector = arg!(args, scope, super_selector, 1, "sub").to_selector(
-        args.span(),
-        scope,
-        super_selector,
-        "sub",
-        false,
-    )?;
+    let parent_selector = parser
+        .arg(&mut args, 0, "super")?
+        .to_selector(parser, "super", false)?;
+    let child_selector = parser
+        .arg(&mut args, 1, "sub")?
+        .to_selector(parser, "sub", false)?;
 
     Ok(Value::bool(
         parent_selector.is_super_selector(&child_selector),
     ))
 }
 
-fn simple_selectors(
-    mut args: CallArgs,
-    scope: &Scope,
-    super_selector: &Selector,
-) -> SassResult<Value> {
+fn simple_selectors(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     // todo: Value::to_compound_selector
-    let selector = arg!(args, scope, super_selector, 0, "selector").to_selector(
-        args.span(),
-        scope,
-        super_selector,
-        "selector",
-        false,
-    )?;
+    let selector = parser
+        .arg(&mut args, 0, "selector")?
+        .to_selector(parser, "selector", false)?;
 
     if selector.0.components.len() != 1 {
         return Err(("$selector: expected selector.", args.span()).into());
@@ -73,30 +53,24 @@ fn simple_selectors(
     ))
 }
 
-fn selector_parse(
-    mut args: CallArgs,
-    scope: &Scope,
-    super_selector: &Selector,
-) -> SassResult<Value> {
+fn selector_parse(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    Ok(arg!(args, scope, super_selector, 0, "selector")
-        .to_selector(args.span(), scope, super_selector, "selector", false)?
+    Ok(parser
+        .arg(&mut args, 0, "selector")?
+        .to_selector(parser, "selector", false)?
         .into_value())
 }
 
-fn selector_nest(args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
+fn selector_nest(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     let span = args.span();
-    let selectors = args.get_variadic(scope, super_selector)?;
+    let selectors = parser.variadic_args(args)?;
     if selectors.is_empty() {
         return Err(("$selectors: At least one selector must be passed.", span).into());
     }
 
     Ok(selectors
         .into_iter()
-        .map(|sel| {
-            sel.node
-                .to_selector(span, scope, super_selector, "selectors", true)
-        })
+        .map(|sel| sel.node.to_selector(parser, "selectors", true))
         .collect::<SassResult<Vec<Selector>>>()?
         .into_iter()
         .fold(Selector::new(), |parent, child| {
@@ -105,9 +79,9 @@ fn selector_nest(args: CallArgs, scope: &Scope, super_selector: &Selector) -> Sa
         .into_value())
 }
 
-fn selector_append(args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
+fn selector_append(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     let span = args.span();
-    let selectors = args.get_variadic(scope, super_selector)?;
+    let selectors = parser.variadic_args(args)?;
     if selectors.is_empty() {
         return Err(("$selectors: At least one selector must be passed.", span).into());
     }
@@ -115,9 +89,7 @@ fn selector_append(args: CallArgs, scope: &Scope, super_selector: &Selector) -> 
     let mut parsed_selectors = selectors
         .into_iter()
         .map(|s| {
-            let tmp = s
-                .node
-                .to_selector(span, scope, super_selector, "selectors", false)?;
+            let tmp = s.node.to_selector(parser, "selectors", false)?;
             if tmp.contains_parent_selector() {
                 Err(("Parent selectors aren't allowed here.", span).into())
             } else {
@@ -164,80 +136,42 @@ fn selector_append(args: CallArgs, scope: &Scope, super_selector: &Selector) -> 
         .into_value())
 }
 
-fn selector_extend(
-    mut args: CallArgs,
-    scope: &Scope,
-    super_selector: &Selector,
-) -> SassResult<Value> {
+fn selector_extend(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(3)?;
-    let selector = arg!(args, scope, super_selector, 0, "selector").to_selector(
-        args.span(),
-        scope,
-        super_selector,
-        "selector",
-        false,
-    )?;
-    let target = arg!(args, scope, super_selector, 1, "extendee").to_selector(
-        args.span(),
-        scope,
-        super_selector,
-        "extendee",
-        false,
-    )?;
-    let source = arg!(args, scope, super_selector, 2, "extender").to_selector(
-        args.span(),
-        scope,
-        super_selector,
-        "extender",
-        false,
-    )?;
+    let selector = parser
+        .arg(&mut args, 0, "selector")?
+        .to_selector(parser, "selector", false)?;
+    let target = parser
+        .arg(&mut args, 1, "extendee")?
+        .to_selector(parser, "extendee", false)?;
+    let source = parser
+        .arg(&mut args, 2, "extender")?
+        .to_selector(parser, "extender", false)?;
 
     Ok(Extender::extend(selector.0, source.0, target.0).to_sass_list())
 }
 
-fn selector_replace(
-    mut args: CallArgs,
-    scope: &Scope,
-    super_selector: &Selector,
-) -> SassResult<Value> {
+fn selector_replace(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(3)?;
-    let selector = arg!(args, scope, super_selector, 0, "selector").to_selector(
-        args.span(),
-        scope,
-        super_selector,
-        "selector",
-        false,
-    )?;
-    let target = arg!(args, scope, super_selector, 1, "original").to_selector(
-        args.span(),
-        scope,
-        super_selector,
-        "original",
-        false,
-    )?;
-    let source = arg!(args, scope, super_selector, 2, "replacement").to_selector(
-        args.span(),
-        scope,
-        super_selector,
-        "replacement",
-        false,
-    )?;
+    let selector = parser
+        .arg(&mut args, 0, "selector")?
+        .to_selector(parser, "selector", false)?;
+    let target = parser
+        .arg(&mut args, 1, "original")?
+        .to_selector(parser, "original", false)?;
+    let source =
+        parser
+            .arg(&mut args, 2, "replacement")?
+            .to_selector(parser, "replacement", false)?;
     Ok(Extender::replace(selector.0, source.0, target.0).to_sass_list())
 }
 
-fn selector_unify(
-    mut args: CallArgs,
-    scope: &Scope,
-    super_selector: &Selector,
-) -> SassResult<Value> {
+fn selector_unify(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;
-    let selector1 = arg!(args, scope, super_selector, 0, "selector1").to_selector(
-        args.span(),
-        scope,
-        super_selector,
-        "selector1",
-        false,
-    )?;
+    let selector1 =
+        parser
+            .arg(&mut args, 0, "selector1")?
+            .to_selector(parser, "selector1", false)?;
 
     if selector1.contains_parent_selector() {
         return Err((
@@ -247,13 +181,10 @@ fn selector_unify(
             .into());
     }
 
-    let selector2 = arg!(args, scope, super_selector, 1, "selector2").to_selector(
-        args.span(),
-        scope,
-        super_selector,
-        "selector2",
-        false,
-    )?;
+    let selector2 =
+        parser
+            .arg(&mut args, 1, "selector2")?
+            .to_selector(parser, "selector2", false)?;
 
     if selector2.contains_parent_selector() {
         return Err((

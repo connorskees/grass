@@ -16,8 +16,7 @@ use crate::atrule::Function;
 use crate::builtin::Builtin;
 use crate::common::Identifier;
 use crate::error::SassResult;
-use crate::scope::Scope;
-use crate::selector::Selector;
+use crate::parse::Parser;
 use crate::value::Value;
 
 /// A SASS function
@@ -52,15 +51,10 @@ impl SassFunction {
         }
     }
 
-    pub fn call(
-        self,
-        args: CallArgs,
-        scope: &Scope,
-        super_selector: &Selector,
-    ) -> SassResult<Value> {
+    pub fn call(self, args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         match self {
-            Self::Builtin(f, ..) => f.0(args, scope, super_selector),
-            Self::UserDefined(f, ..) => f.eval(args, scope, super_selector),
+            Self::Builtin(f, ..) => f.0(args, parser),
+            Self::UserDefined(f, ..) => parser.eval_function(*f, args),
         }
     }
 }

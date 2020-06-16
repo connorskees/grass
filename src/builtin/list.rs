@@ -5,14 +5,13 @@ use num_traits::{One, Signed, ToPrimitive, Zero};
 use crate::args::CallArgs;
 use crate::common::{Brackets, ListSeparator, QuoteKind};
 use crate::error::SassResult;
-use crate::scope::Scope;
-use crate::selector::Selector;
+use crate::parse::Parser;
 use crate::unit::Unit;
 use crate::value::{Number, Value};
 
-fn length(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
+fn length(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    let len = match arg!(args, scope, super_selector, 0, "list") {
+    let len = match parser.arg(&mut args, 0, "list")? {
         Value::List(v, ..) => Number::from(v.len()),
         Value::Map(m) => Number::from(m.len()),
         _ => Number::one(),
@@ -20,10 +19,10 @@ fn length(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassR
     Ok(Value::Dimension(len, Unit::None))
 }
 
-fn nth(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
+fn nth(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;
-    let mut list = arg!(args, scope, super_selector, 0, "list").as_list();
-    let n = match arg!(args, scope, super_selector, 1, "n") {
+    let mut list = parser.arg(&mut args, 0, "list")?.as_list();
+    let n = match parser.arg(&mut args, 1, "n")? {
         Value::Dimension(num, _) => num,
         v => {
             return Err((
@@ -61,14 +60,10 @@ fn nth(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResu
     }))
 }
 
-fn list_separator(
-    mut args: CallArgs,
-    scope: &Scope,
-    super_selector: &Selector,
-) -> SassResult<Value> {
+fn list_separator(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     Ok(Value::String(
-        match arg!(args, scope, super_selector, 0, "list") {
+        match parser.arg(&mut args, 0, "list")? {
             Value::List(_, sep, ..) => sep.name(),
             _ => ListSeparator::Space.name(),
         }
@@ -77,14 +72,14 @@ fn list_separator(
     ))
 }
 
-fn set_nth(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
+fn set_nth(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(3)?;
-    let (mut list, sep, brackets) = match arg!(args, scope, super_selector, 0, "list") {
+    let (mut list, sep, brackets) = match parser.arg(&mut args, 0, "list")? {
         Value::List(v, sep, b) => (v, sep, b),
         Value::Map(m) => (m.entries(), ListSeparator::Comma, Brackets::None),
         v => (vec![v], ListSeparator::Space, Brackets::None),
     };
-    let n = match arg!(args, scope, super_selector, 1, "n") {
+    let n = match parser.arg(&mut args, 1, "n")? {
         Value::Dimension(num, _) => num,
         v => {
             return Err((
@@ -113,7 +108,7 @@ fn set_nth(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> Sass
         return Err((format!("$n: {} is not an int.", n), args.span()).into());
     }
 
-    let val = arg!(args, scope, super_selector, 2, "value");
+    let val = parser.arg(&mut args, 2, "value")?;
 
     if n.is_positive() {
         list[n.to_integer().to_usize().unwrap_or(std::usize::MAX) - 1] = val;
@@ -124,20 +119,19 @@ fn set_nth(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> Sass
     Ok(Value::List(list, sep, brackets))
 }
 
-fn append(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
+fn append(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(3)?;
-    let (mut list, sep, brackets) = match arg!(args, scope, super_selector, 0, "list") {
+    let (mut list, sep, brackets) = match parser.arg(&mut args, 0, "list")? {
         Value::List(v, sep, b) => (v, sep, b),
         v => (vec![v], ListSeparator::Space, Brackets::None),
     };
-    let val = arg!(args, scope, super_selector, 1, "val");
-    let sep = match arg!(
-        args,
-        scope,
-        super_selector,
+    let val = parser.arg(&mut args, 1, "val")?;
+    let sep = match parser.default_arg(
+        &mut args,
         2,
-        "separator" = Value::String("auto".to_owned(), QuoteKind::None)
-    ) {
+        "separator",
+        Value::String("auto".to_owned(), QuoteKind::None),
+    )? {
         Value::String(s, ..) => match s.as_str() {
             "auto" => sep,
             "comma" => ListSeparator::Comma,
@@ -167,25 +161,24 @@ fn append(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassR
     Ok(Value::List(list, sep, brackets))
 }
 
-fn join(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
+fn join(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(4)?;
-    let (mut list1, sep1, brackets) = match arg!(args, scope, super_selector, 0, "list1") {
+    let (mut list1, sep1, brackets) = match parser.arg(&mut args, 0, "list1")? {
         Value::List(v, sep, brackets) => (v, sep, brackets),
         Value::Map(m) => (m.entries(), ListSeparator::Comma, Brackets::None),
         v => (vec![v], ListSeparator::Space, Brackets::None),
     };
-    let (list2, sep2) = match arg!(args, scope, super_selector, 1, "list2") {
+    let (list2, sep2) = match parser.arg(&mut args, 1, "list2")? {
         Value::List(v, sep, ..) => (v, sep),
         Value::Map(m) => (m.entries(), ListSeparator::Comma),
         v => (vec![v], ListSeparator::Space),
     };
-    let sep = match arg!(
-        args,
-        scope,
-        super_selector,
+    let sep = match parser.default_arg(
+        &mut args,
         2,
-        "separator" = Value::String("auto".to_owned(), QuoteKind::None)
-    ) {
+        "separator",
+        Value::String("auto".to_owned(), QuoteKind::None),
+    )? {
         Value::String(s, ..) => match s.as_str() {
             "auto" => {
                 if list1.is_empty() || (list1.len() == 1 && sep1 == ListSeparator::Space) {
@@ -216,13 +209,12 @@ fn join(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassRes
         }
     };
 
-    let brackets = match arg!(
-        args,
-        scope,
-        super_selector,
+    let brackets = match parser.default_arg(
+        &mut args,
         3,
-        "bracketed" = Value::String("auto".to_owned(), QuoteKind::None)
-    ) {
+        "bracketed",
+        Value::String("auto".to_owned(), QuoteKind::None),
+    )? {
         Value::String(s, ..) => match s.as_str() {
             "auto" => brackets,
             _ => Brackets::Bracketed,
@@ -241,23 +233,21 @@ fn join(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassRes
     Ok(Value::List(list1, sep, brackets))
 }
 
-fn is_bracketed(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
+fn is_bracketed(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    Ok(Value::bool(
-        match arg!(args, scope, super_selector, 0, "list") {
-            Value::List(.., brackets) => match brackets {
-                Brackets::Bracketed => true,
-                Brackets::None => false,
-            },
-            _ => false,
+    Ok(Value::bool(match parser.arg(&mut args, 0, "list")? {
+        Value::List(.., brackets) => match brackets {
+            Brackets::Bracketed => true,
+            Brackets::None => false,
         },
-    ))
+        _ => false,
+    }))
 }
 
-fn index(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
+fn index(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;
-    let list = arg!(args, scope, super_selector, 0, "list").as_list();
-    let value = arg!(args, scope, super_selector, 1, "value");
+    let list = parser.arg(&mut args, 0, "list")?.as_list();
+    let value = parser.arg(&mut args, 1, "value")?;
     // TODO: find a way around this unwrap.
     // It should be impossible to hit as the arg is
     // evaluated prior to checking equality, but
@@ -275,10 +265,10 @@ fn index(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassRe
     Ok(Value::Dimension(index, Unit::None))
 }
 
-fn zip(args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
+fn zip(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     let span = args.span();
-    let lists = args
-        .get_variadic(scope, super_selector)?
+    let lists = parser
+        .variadic_args(args)?
         .into_iter()
         .map(|x| Ok(x.node.eval(span)?.node.as_list()))
         .collect::<SassResult<Vec<Vec<Value>>>>()?;

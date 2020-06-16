@@ -1,8 +1,6 @@
 use std::io::Write;
 use tempfile::Builder;
 
-use grass::StyleSheet;
-
 /// Create a temporary file with the given name
 /// and contents.
 ///
@@ -42,7 +40,7 @@ fn imports_variable() {
     tempfile!("imports_variable", "$a: red;");
     assert_eq!(
         "a {\n  color: red;\n}\n",
-        &StyleSheet::new(input.to_string()).expect(input)
+        &grass::from_string(input.to_string()).expect(input)
     );
 }
 
@@ -52,7 +50,7 @@ fn import_no_semicolon() {
     tempfile!("import_no_semicolon", "$a: red;");
     assert_eq!(
         "a {\n  color: red;\n}\n",
-        &StyleSheet::new(input.to_string()).expect(input)
+        &grass::from_string(input.to_string()).expect(input)
     );
 }
 
@@ -60,7 +58,7 @@ fn import_no_semicolon() {
 fn import_no_quotes() {
     let input = "@import import_no_quotes";
     tempfile!("import_no_quotes", "$a: red;");
-    match grass::StyleSheet::new(input.to_string()) {
+    match grass::from_string(input.to_string()) {
         Ok(..) => panic!("did not fail"),
         Err(e) => assert_eq!(
             "Error: Expected string.",
@@ -79,7 +77,7 @@ fn single_quotes_import() {
     tempfile!("single_quotes_import", "$a: red;");
     assert_eq!(
         "a {\n  color: red;\n}\n",
-        &StyleSheet::new(input.to_string()).expect(input)
+        &grass::from_string(input.to_string()).expect(input)
     );
 }
 
@@ -89,7 +87,7 @@ fn finds_name_scss() {
     tempfile!("finds_name_scss.scss", "$a: red;");
     assert_eq!(
         "a {\n  color: red;\n}\n",
-        &StyleSheet::new(input.to_string()).expect(input)
+        &grass::from_string(input.to_string()).expect(input)
     );
 }
 
@@ -99,7 +97,7 @@ fn finds_underscore_name_scss() {
     tempfile!("_finds_underscore_name_scss.scss", "$a: red;");
     assert_eq!(
         "a {\n  color: red;\n}\n",
-        &StyleSheet::new(input.to_string()).expect(input)
+        &grass::from_string(input.to_string()).expect(input)
     );
 }
 
@@ -111,7 +109,7 @@ fn chained_imports() {
     tempfile!("chained_imports__c.scss", "$a: red;");
     assert_eq!(
         "a {\n  color: red;\n}\n",
-        &StyleSheet::new(input.to_string()).expect(input)
+        &grass::from_string(input.to_string()).expect(input)
     );
 }
 
@@ -130,7 +128,7 @@ fn chained_imports_in_directory() {
     tempfile!("chained_imports_in_directory__c.scss", "$a: red;");
     assert_eq!(
         "a {\n  color: red;\n}\n",
-        &StyleSheet::new(input.to_string()).expect(input)
+        &grass::from_string(input.to_string()).expect(input)
     );
 }
 

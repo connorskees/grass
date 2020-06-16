@@ -233,4 +233,9 @@ test!(
     "a {\n  color: selector-extend(\".c .d\", \".c\", \".e +\");\n}\n",
     "a {\n  color: .c .d, .e + .d;\n}\n"
 );
+test!(
+    list_partial_no_op,
+    "a {\n  color: selector-extend(\"c, d\", \"d\", \"e\");\n}\n",
+    "a {\n  color: c, d, e;\n}\n"
+);
 // todo: https://github.com/sass/sass-spec/tree/master/spec/core_functions/selector/extend/simple/pseudo/selector/

@@ -6,24 +6,20 @@ use crate::args::CallArgs;
 use crate::color::Color;
 use crate::common::QuoteKind;
 use crate::error::SassResult;
-use crate::scope::Scope;
-use crate::selector::Selector;
+use crate::parse::Parser;
 use crate::unit::Unit;
 use crate::value::{Number, Value};
 
 /// name: Either `rgb` or `rgba` depending on the caller
-fn inner_rgb(
-    name: &'static str,
-    mut args: CallArgs,
-    scope: &Scope,
-    super_selector: &Selector,
-) -> SassResult<Value> {
+// todo: refactor into smaller functions
+#[allow(clippy::cognitive_complexity)]
+fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     if args.is_empty() {
         return Err(("Missing argument $channels.", args.span()).into());
     }
 
     if args.len() == 1 {
-        let mut channels = match arg!(args, scope, super_selector, 0, "channels") {
+        let mut channels = match parser.arg(&mut args, 0, "channels")? {
             Value::List(v, ..) => v,
             _ => return Err(("Missing argument $channels.", args.span()).into()),
         };
@@ -121,10 +117,10 @@ fn inner_rgb(
 
         Ok(Value::Color(Box::new(color)))
     } else if args.len() == 2 {
-        let color = match arg!(args, scope, super_selector, 0, "color") {
+        let color = match parser.arg(&mut args, 0, "color")? {
             Value::Color(c) => c,
             v if v.is_special_function() => {
-                let alpha = arg!(args, scope, super_selector, 1, "alpha");
+                let alpha = parser.arg(&mut args, 1, "alpha")?;
                 return Ok(Value::String(
                     format!(
                         "{}({}, {})",
@@ -143,7 +139,7 @@ fn inner_rgb(
                     .into())
             }
         };
-        let alpha = match arg!(args, scope, super_selector, 1, "alpha") {
+        let alpha = match parser.arg(&mut args, 1, "alpha")? {
             Value::Dimension(n, Unit::None) => n,
             Value::Dimension(n, Unit::Percent) => n / Number::from(100),
             v @ Value::Dimension(..) => {
@@ -179,7 +175,7 @@ fn inner_rgb(
         };
         Ok(Value::Color(Box::new(color.with_alpha(alpha))))
     } else {
-        let red = match arg!(args, scope, super_selector, 0, "red") {
+        let red = match parser.arg(&mut args, 0, "red")? {
             Value::Dimension(n, Unit::None) => n,
             Value::Dimension(n, Unit::Percent) => (n / Number::from(100)) * Number::from(255),
             v @ Value::Dimension(..) => {
@@ -193,8 +189,8 @@ fn inner_rgb(
                     .into())
             }
             v if v.is_special_function() => {
-                let green = arg!(args, scope, super_selector, 1, "green");
-                let blue = arg!(args, scope, super_selector, 2, "blue");
+                let green = parser.arg(&mut args, 1, "green")?;
+                let blue = parser.arg(&mut args, 2, "blue")?;
                 let mut string = format!(
                     "{}({}, {}, {}",
                     name,
@@ -205,7 +201,8 @@ fn inner_rgb(
                 if !args.is_empty() {
                     string.push_str(", ");
                     string.push_str(
-                        &arg!(args, scope, super_selector, 3, "alpha")
+                        &parser
+                            .arg(&mut args, 3, "alpha")?
                             .to_css_string(args.span())?,
                     );
                 }
@@ -220,7 +217,7 @@ fn inner_rgb(
                     .into())
             }
         };
-        let green = match arg!(args, scope, super_selector, 1, "green") {
+        let green = match parser.arg(&mut args, 1, "green")? {
             Value::Dimension(n, Unit::None) => n,
             Value::Dimension(n, Unit::Percent) => (n / Number::from(100)) * Number::from(255),
             v @ Value::Dimension(..) => {
@@ -234,7 +231,7 @@ fn inner_rgb(
                     .into())
             }
             v if v.is_special_function() => {
-                let blue = arg!(args, scope, super_selector, 2, "blue");
+                let blue = parser.arg(&mut args, 2, "blue")?;
                 let mut string = format!(
                     "{}({}, {}, {}",
                     name,
@@ -245,7 +242,8 @@ fn inner_rgb(
                 if !args.is_empty() {
                     string.push_str(", ");
                     string.push_str(
-                        &arg!(args, scope, super_selector, 3, "alpha")
+                        &parser
+                            .arg(&mut args, 3, "alpha")?
                             .to_css_string(args.span())?,
                     );
                 }
@@ -260,7 +258,7 @@ fn inner_rgb(
                     .into())
             }
         };
-        let blue = match arg!(args, scope, super_selector, 2, "blue") {
+        let blue = match parser.arg(&mut args, 2, "blue")? {
             Value::Dimension(n, Unit::None) => n,
             Value::Dimension(n, Unit::Percent) => (n / Number::from(100)) * Number::from(255),
             v @ Value::Dimension(..) => {
@@ -284,7 +282,8 @@ fn inner_rgb(
                 if !args.is_empty() {
                     string.push_str(", ");
                     string.push_str(
-                        &arg!(args, scope, super_selector, 3, "alpha")
+                        &parser
+                            .arg(&mut args, 3, "alpha")?
                             .to_css_string(args.span())?,
                     );
                 }
@@ -299,13 +298,12 @@ fn inner_rgb(
                     .into())
             }
         };
-        let alpha = match arg!(
-            args,
-            scope,
-            super_selector,
+        let alpha = match parser.default_arg(
+            &mut args,
             3,
-            "alpha" = Value::Dimension(Number::one(), Unit::None)
-        ) {
+            "alpha",
+            Value::Dimension(Number::one(), Unit::None),
+        )? {
             Value::Dimension(n, Unit::None) => n,
             Value::Dimension(n, Unit::Percent) => n / Number::from(100),
             v @ Value::Dimension(..) => {
@@ -343,17 +341,17 @@ fn inner_rgb(
     }
 }
 
-fn rgb(args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
-    inner_rgb("rgb", args, scope, super_selector)
+fn rgb(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+    inner_rgb("rgb", args, parser)
 }
 
-fn rgba(args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
-    inner_rgb("rgba", args, scope, super_selector)
+fn rgba(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+    inner_rgb("rgba", args, parser)
 }
 
-fn red(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
+fn red(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    match arg!(args, scope, super_selector, 0, "color") {
+    match parser.arg(&mut args, 0, "color")? {
         Value::Color(c) => Ok(Value::Dimension(c.red(), Unit::None)),
         v => Err((
             format!("$color: {} is not a color.", v.to_css_string(args.span())?),
@@ -363,9 +361,9 @@ fn red(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResu
     }
 }
 
-fn green(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
+fn green(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    match arg!(args, scope, super_selector, 0, "color") {
+    match parser.arg(&mut args, 0, "color")? {
         Value::Color(c) => Ok(Value::Dimension(c.green(), Unit::None)),
         v => Err((
             format!("$color: {} is not a color.", v.to_css_string(args.span())?),
@@ -375,9 +373,9 @@ fn green(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassRe
     }
 }
 
-fn blue(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
+fn blue(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    match arg!(args, scope, super_selector, 0, "color") {
+    match parser.arg(&mut args, 0, "color")? {
         Value::Color(c) => Ok(Value::Dimension(c.blue(), Unit::None)),
         v => Err((
             format!("$color: {} is not a color.", v.to_css_string(args.span())?),
@@ -387,9 +385,9 @@ fn blue(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassRes
     }
 }
 
-fn mix(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
+fn mix(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(3)?;
-    let color1 = match arg!(args, scope, super_selector, 0, "color1") {
+    let color1 = match parser.arg(&mut args, 0, "color1")? {
         Value::Color(c) => c,
         v => {
             return Err((
@@ -400,7 +398,7 @@ fn mix(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResu
         }
     };
 
-    let color2 = match arg!(args, scope, super_selector, 1, "color2") {
+    let color2 = match parser.arg(&mut args, 1, "color2")? {
         Value::Color(c) => c,
         v => {
             return Err((
@@ -411,13 +409,12 @@ fn mix(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResu
         }
     };
 
-    let weight = match arg!(
-        args,
-        scope,
-        super_selector,
+    let weight = match parser.default_arg(
+        &mut args,
         2,
-        "weight" = Value::Dimension(Number::from(50), Unit::None)
-    ) {
+        "weight",
+        Value::Dimension(Number::from(50), Unit::None),
+    )? {
         Value::Dimension(n, u) => bound!(args, "weight", n, u, 0, 100) / Number::from(100),
         v => {
             return Err((
