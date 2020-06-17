@@ -582,3 +582,18 @@ test!(
     "a {\n  color: hsl(-1 -1 -1);\n}\n",
     "a {\n  color: black;\n}\n"
 );
+test!(
+    interpolation_after_hash_containing_only_hex_chars,
+    "a {\n  color: ##{123};\n  color: type-of(##{123});\n}\n",
+    "a {\n  color: #123;\n  color: string;\n}\n"
+);
+test!(
+    non_hex_chars_after_hash_are_still_touching_hash,
+    "a {\n  color: #ooobar;\n}\n",
+    "a {\n  color: #ooobar;\n}\n"
+);
+test!(
+    more_than_8_hex_chars_after_hash,
+    "a {\n  color: #ffffffffff;\n}\n",
+    "a {\n  color: #ffffffffff;\n}\n"
+);

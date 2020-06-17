@@ -526,41 +526,38 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_hex(&mut self) -> SassResult<Spanned<Value>> {
-        let mut s = String::with_capacity(8);
+        let mut s = String::with_capacity(7);
+        s.push('#');
         if self
             .toks
             .peek()
             .ok_or(("Expected identifier.", self.span_before))?
             .kind
-            .is_ascii_digit()
+            .is_ascii_hexdigit()
         {
             while let Some(c) = self.toks.peek() {
-                if !c.kind.is_ascii_hexdigit() || s.len() == 8 {
+                if !c.kind.is_ascii_hexdigit() {
                     break;
                 }
                 let tok = self.toks.next().unwrap();
                 self.span_before = self.span_before.merge(tok.pos());
                 s.push(tok.kind);
             }
+        // this branch exists so that we can emit `#` combined with
+        // identifiers. e.g. `#ooobar` should be emitted exactly as written;
+        // that is, `#ooobar`.
         } else {
-            let i = self.parse_identifier()?;
-            if i.node.chars().all(|c| c.is_ascii_hexdigit()) {
-                s = i.node;
-                self.span_before = self.span_before.merge(i.span);
-            } else {
-                return Ok(Spanned {
-                    node: Value::String(format!("#{}", i.node), QuoteKind::None),
-                    span: i.span,
-                });
-            }
+            let ident = self.parse_identifier()?;
+            return Ok(Spanned {
+                node: Value::String(format!("#{}", ident.node), QuoteKind::None),
+                span: ident.span,
+            });
         }
-        let v = match u32::from_str_radix(&s, 16) {
+        let v = match u32::from_str_radix(&s[1..], 16) {
             Ok(a) => a,
-            Err(_) => {
-                return Ok(Value::String(format!("#{}", s), QuoteKind::None).span(self.span_before))
-            }
+            Err(_) => return Ok(Value::String(s, QuoteKind::None).span(self.span_before)),
         };
-        let (red, green, blue, alpha) = match s.len() {
+        let (red, green, blue, alpha) = match s.len().saturating_sub(1) {
             3 => (
                 (((v & 0x0f00) >> 8) * 0x11) as u8,
                 (((v & 0x00f0) >> 4) * 0x11) as u8,
@@ -587,7 +584,7 @@ impl<'a> Parser<'a> {
             ),
             _ => return Err(("Expected hex digit.", self.span_before).into()),
         };
-        let color = Color::new(red, green, blue, alpha, format!("#{}", s));
+        let color = Color::new(red, green, blue, alpha, s);
         Ok(Value::Color(Box::new(color)).span(self.span_before))
     }
 
