@@ -18,17 +18,11 @@ impl<T> NeverEmptyVec<T> {
     }
 
     pub fn last(&self) -> &T {
-        match self.rest.last() {
-            Some(v) => v,
-            None => &self.first,
-        }
+        self.rest.last().unwrap_or(&self.first)
     }
 
     pub fn last_mut(&mut self) -> &mut T {
-        match self.rest.last_mut() {
-            Some(v) => v,
-            None => &mut self.first,
-        }
+        self.rest.last_mut().unwrap_or(&mut self.first)
     }
 
     pub fn push(&mut self, value: T) {
