@@ -230,9 +230,9 @@ impl<'a> Parser<'a> {
                         }
                         AtRuleKind::Use => todo!("@use not yet implemented"),
                         AtRuleKind::Forward => todo!("@forward not yet implemented"),
-                        AtRuleKind::Extend => todo!("@extend not yet implemented"),
-                        AtRuleKind::Supports => todo!("@supports not yet implemented"),
-                        AtRuleKind::Keyframes => todo!("@keyframes not yet implemented"),
+                        AtRuleKind::Extend => self.parse_extend()?,
+                        AtRuleKind::Supports => stmts.push(self.parse_supports()?),
+                        AtRuleKind::Keyframes => stmts.push(self.parse_keyframes()?),
                     }
                 }
                 '$' => self.parse_variable_declaration()?,
@@ -1908,6 +1908,18 @@ impl<'a> Parser<'a> {
         }];
         stmts.extend(raw_stmts);
         Ok(stmts)
+    }
+
+    fn parse_extend(&mut self) -> SassResult<()> {
+        todo!("@extend not yet implemented")
+    }
+
+    fn parse_supports(&mut self) -> SassResult<Stmt> {
+        todo!("@supports not yet implemented")
+    }
+
+    fn parse_keyframes(&mut self) -> SassResult<Stmt> {
+        todo!("@keyframes not yet implemented")
     }
 }
 
