@@ -283,6 +283,7 @@ impl<'a> Parser<'a> {
                         let body = self.parse_stmt()?;
                         self.scopes.pop();
                         self.super_selectors.pop();
+                        self.at_root = self.super_selectors.is_empty();
                         stmts.push(Stmt::RuleSet {
                             selector,
                             body,

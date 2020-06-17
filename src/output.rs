@@ -114,7 +114,8 @@ impl Css {
             Stmt::UnknownAtRule {
                 params, name, body, ..
             } => vec![Toplevel::UnknownAtRule { params, name, body }],
-            Stmt::Return(..) | Stmt::AtRoot { .. } => unreachable!(),
+            Stmt::Return(..) => unreachable!("@return: {:?}", stmt),
+            Stmt::AtRoot { .. } => unreachable!("@at-root: {:?}", stmt),
         })
     }
 

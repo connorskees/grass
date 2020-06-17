@@ -63,3 +63,8 @@ test!(
     "test {\n  @at-root {\n    #{&} {\n      foo {\n        bar: baz;\n      }\n    }\n  }\n}\n",
     "test foo {\n  bar: baz;\n}\n"
 );
+test!(
+    style_before_at_root,
+    "a {}\n\n@at-root {\n    @-ms-viewport { width: device-width; }\n}\n",
+    "@-ms-viewport {\n  width: device-width;\n}\n"
+);

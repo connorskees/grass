@@ -1,3 +1,6 @@
+# 0.9.1
+ - fix issue in which `@at-root` would panic when placed after a ruleset
+
 # 0.9.0
 
 This release is focused on setting up the groundwork for implementing `@extend` as well
