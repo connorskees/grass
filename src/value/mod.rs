@@ -317,6 +317,7 @@ impl Value {
         match self {
             Value::List(v, ..) => v,
             Value::Map(m) => m.entries(),
+            Value::ArgList(v) => v.into_iter().map(|val| val.node).collect(),
             v => vec![v],
         }
     }

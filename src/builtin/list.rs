@@ -1,6 +1,6 @@
 use super::{Builtin, GlobalFunctionMap};
 
-use num_traits::{One, Signed, ToPrimitive, Zero};
+use num_traits::{Signed, ToPrimitive, Zero};
 
 use crate::{
     args::CallArgs,
@@ -13,12 +13,10 @@ use crate::{
 
 fn length(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    let len = match parser.arg(&mut args, 0, "list")? {
-        Value::List(v, ..) => Number::from(v.len()),
-        Value::Map(m) => Number::from(m.len()),
-        _ => Number::one(),
-    };
-    Ok(Value::Dimension(len, Unit::None))
+    Ok(Value::Dimension(
+        Number::from(parser.arg(&mut args, 0, "list")?.as_list().len()),
+        Unit::None,
+    ))
 }
 
 fn nth(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
