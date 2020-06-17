@@ -1,8 +1,4 @@
-use std::{
-    ffi::{OsStr, OsString},
-    fs,
-    path::Path,
-};
+use std::{ffi::OsStr, fs, path::Path};
 
 use peekmore::PeekMore;
 
@@ -42,7 +38,6 @@ impl<'a> Parser<'a> {
 
         let path: &Path = file_name.as_ref();
 
-        let mut rules = Vec::new();
         let path_buf = if path.is_absolute() {
             // todo: test for absolute path imports
             path.into()
@@ -58,24 +53,23 @@ impl<'a> Parser<'a> {
             // || name.starts_with("http://") || name.starts_with("https://") {
             todo!("css imports")
         }
-        let mut p1 = path_buf.clone();
-        p1.push(OsString::from("index.scss"));
-        let mut p2 = path_buf.clone();
-        p2.push(OsString::from("_index.scss"));
+
         let paths = [
             path_buf.with_file_name(name).with_extension("scss"),
             path_buf.with_file_name(format!("_{}.scss", name.to_str().unwrap())),
-            path_buf,
-            p1,
-            p2,
+            path_buf.clone(),
+            path_buf.clone().join("index.scss"),
+            path_buf.clone().join("_index.scss"),
         ];
+
         for name in &paths {
             if name.is_file() {
                 let file = self.map.add_file(
                     name.to_string_lossy().into(),
                     String::from_utf8(fs::read(name)?)?,
                 );
-                let rules2 = Parser {
+
+                return Parser {
                     toks: &mut Lexer::new(&file)
                         .collect::<Vec<Token>>()
                         .into_iter()
@@ -93,13 +87,10 @@ impl<'a> Parser<'a> {
                     at_root: self.at_root,
                     at_root_has_selector: self.at_root_has_selector,
                 }
-                .parse()?;
-
-                rules.extend(rules2);
-                break;
+                .parse();
             }
         }
 
-        Ok(rules)
+        Ok(Vec::new())
     }
 }
