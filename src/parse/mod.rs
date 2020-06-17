@@ -856,14 +856,7 @@ impl<'a> Parser<'a> {
         self.whitespace();
         let iter_val_toks = read_until_open_curly_brace(self.toks)?;
         let iter_val = self.parse_value_from_vec(iter_val_toks)?;
-        let iter = match iter_val.node.eval(iter_val.span)?.node {
-            Value::List(v, ..) => v,
-            Value::Map(m) => m
-                .into_iter()
-                .map(|(k, v)| Value::List(vec![k, v], ListSeparator::Space, Brackets::None))
-                .collect(),
-            v => vec![v],
-        };
+        let iter = iter_val.node.eval(iter_val.span)?.node.as_list();
         self.toks.next();
         self.whitespace();
         let mut body = read_until_closing_curly_brace(self.toks)?;
@@ -873,14 +866,7 @@ impl<'a> Parser<'a> {
         let mut stmts = Vec::new();
 
         for row in iter {
-            let this_iterator = match row {
-                Value::List(v, ..) => v,
-                Value::Map(m) => m
-                    .into_iter()
-                    .map(|(k, v)| Value::List(vec![k, v], ListSeparator::Space, Brackets::None))
-                    .collect(),
-                v => vec![v],
-            };
+            let this_iterator = row.as_list();
 
             if vars.len() == 1 {
                 if this_iterator.len() == 1 {
