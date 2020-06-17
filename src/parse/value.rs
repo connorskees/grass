@@ -629,14 +629,14 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub(crate) fn eat_calc_args(&mut self, buf: &mut String) -> SassResult<()> {
+    fn eat_calc_args(&mut self, buf: &mut String) -> SassResult<()> {
         buf.reserve(2);
         buf.push('(');
         let mut nesting = 0;
         while let Some(tok) = self.toks.next() {
             match tok.kind {
                 ' ' | '\t' | '\n' => {
-                    devour_whitespace(self.toks);
+                    self.whitespace();
                     buf.push(' ');
                 }
                 '#' => {
@@ -668,7 +668,7 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    pub(crate) fn eat_progid(&mut self) -> SassResult<String> {
+    fn eat_progid(&mut self) -> SassResult<String> {
         let mut string = String::new();
         let mut span = self.toks.peek().unwrap().pos();
         while let Some(tok) = self.toks.next() {
@@ -687,7 +687,7 @@ impl<'a> Parser<'a> {
         Ok(string)
     }
 
-    pub(crate) fn try_eat_url(&mut self) -> SassResult<Option<String>> {
+    fn try_eat_url(&mut self) -> SassResult<Option<String>> {
         let mut buf = String::from("url(");
         let mut peek_counter = 0;
         peek_counter += peek_whitespace(self.toks);
@@ -756,7 +756,7 @@ impl<'a> Parser<'a> {
         ))
     }
 
-    pub(crate) fn peek_escape(&mut self) -> SassResult<String> {
+    fn peek_escape(&mut self) -> SassResult<String> {
         let mut value = 0;
         let first = match self.toks.peek() {
             Some(t) => *t,
