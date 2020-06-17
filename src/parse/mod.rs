@@ -107,10 +107,12 @@ impl<'a> Parser<'a> {
             if self.in_function && !stmts.is_empty() {
                 return Ok(stmts);
             }
+            self.span_before = *pos;
             match kind {
                 '@' => {
                     self.toks.next();
                     let kind_string = self.parse_identifier()?;
+                    self.span_before = kind_string.span;
                     match AtRuleKind::try_from(&kind_string)? {
                         AtRuleKind::Import => stmts.append(&mut self.import()?),
                         AtRuleKind::Mixin => self.parse_mixin()?,
@@ -228,7 +230,7 @@ impl<'a> Parser<'a> {
                     }
                 }
                 '\u{0}'..='\u{8}' | '\u{b}'..='\u{1f}' => {
-                    return Err(("expected selector.", self.toks.next().unwrap().pos).into())
+                    return Err(("expected selector.", *pos).into())
                 }
                 '}' => {
                     self.toks.next();
@@ -286,6 +288,8 @@ impl<'a> Parser<'a> {
         } else {
             return Err(("expected \"{\".", self.span_before).into());
         };
+
+        self.span_before = span;
 
         let mut found_curly = false;
 
