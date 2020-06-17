@@ -1,4 +1,4 @@
-use std::fmt::{self, Display};
+use std::fmt;
 
 use crate::value::Value;
 
@@ -23,7 +23,7 @@ mod simple;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Selector(pub SelectorList);
 
-impl Display for Selector {
+impl fmt::Display for Selector {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
     }

@@ -2,10 +2,12 @@ use std::collections::HashMap;
 
 use codemap::{Span, Spanned};
 
-use crate::common::Identifier;
-use crate::error::SassResult;
-use crate::parse::Parser;
-use crate::{Cow, Token};
+use crate::{
+    common::Identifier,
+    error::SassResult,
+    parse::Parser,
+    {Cow, Token},
+};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub(crate) struct FuncArgs(pub Vec<FuncArg>);

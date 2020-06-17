@@ -1,11 +1,12 @@
-use std::slice::Iter;
-use std::vec::IntoIter;
+use std::{slice::Iter, vec::IntoIter};
 
 use codemap::Span;
 
-use super::Value;
-use crate::common::{Brackets, ListSeparator};
-use crate::error::SassResult;
+use crate::{
+    common::{Brackets, ListSeparator},
+    error::SassResult,
+    value::Value,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct SassMap(Vec<(Value, Value)>);

@@ -1,17 +1,17 @@
-use std::iter::Iterator;
-
 use peekmore::PeekMore;
 
 use codemap::{Span, Spanned};
 
-use crate::color::Color;
-use crate::common::{Brackets, ListSeparator, Op, QuoteKind};
-use crate::error::SassResult;
-use crate::parse::Parser;
-use crate::selector::Selector;
-use crate::unit::Unit;
-use crate::utils::hex_char_for;
-use crate::{Cow, Token};
+use crate::{
+    color::Color,
+    common::{Brackets, ListSeparator, Op, QuoteKind},
+    error::SassResult,
+    parse::Parser,
+    selector::Selector,
+    unit::Unit,
+    utils::hex_char_for,
+    {Cow, Token},
+};
 
 use css_function::is_special_function;
 pub(crate) use map::SassMap;

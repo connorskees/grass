@@ -6,12 +6,14 @@ use num_traits::{Signed, ToPrimitive, Zero};
 #[cfg(feature = "random")]
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 
-use crate::args::CallArgs;
-use crate::common::QuoteKind;
-use crate::error::SassResult;
-use crate::parse::Parser;
-use crate::unit::Unit;
-use crate::value::{Number, Value};
+use crate::{
+    args::CallArgs,
+    common::QuoteKind,
+    error::SassResult,
+    parse::Parser,
+    unit::Unit,
+    value::{Number, Value},
+};
 
 fn to_upper_case(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;

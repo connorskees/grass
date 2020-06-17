@@ -10,22 +10,24 @@ use codemap::{CodeMap, Span, Spanned};
 use num_traits::cast::ToPrimitive;
 use peekmore::{PeekMore, PeekMoreIterator};
 
-use crate::args::{CallArgs, FuncArgs};
-use crate::atrule::{AtRuleKind, Function, Mixin};
-use crate::common::{Brackets, Identifier, ListSeparator};
-use crate::error::SassResult;
-use crate::lexer::Lexer;
-use crate::scope::Scope;
-use crate::selector::{Selector, SelectorParser};
-use crate::style::Style;
-use crate::unit::Unit;
-use crate::utils::{
-    is_name, is_name_start, peek_ident_no_interpolation, read_until_closing_curly_brace,
-    read_until_closing_paren, read_until_closing_quote, read_until_newline,
-    read_until_open_curly_brace, read_until_semicolon_or_closing_curly_brace,
+use crate::{
+    args::{CallArgs, FuncArgs},
+    atrule::{AtRuleKind, Function, Mixin},
+    common::{Brackets, Identifier, ListSeparator},
+    error::SassResult,
+    lexer::Lexer,
+    scope::Scope,
+    selector::{Selector, SelectorParser},
+    style::Style,
+    unit::Unit,
+    utils::{
+        is_name, is_name_start, peek_ident_no_interpolation, read_until_closing_curly_brace,
+        read_until_closing_paren, read_until_closing_quote, read_until_newline,
+        read_until_open_curly_brace, read_until_semicolon_or_closing_curly_brace,
+    },
+    value::{Number, Value},
+    {Cow, Token},
 };
-use crate::value::{Number, Value};
-use crate::{Cow, Token};
 
 use common::{Branch, NeverEmptyVec, SelectorOrStyle};
 

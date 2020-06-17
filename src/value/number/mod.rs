@@ -1,9 +1,9 @@
-use std::cmp::Ordering;
-use std::convert::{From, TryFrom};
-use std::fmt::{self, Display, Write};
-use std::mem;
-use std::ops::{
-    Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign,
+use std::{
+    cmp::Ordering,
+    convert::{From, TryFrom},
+    fmt::{self, Display, Write},
+    mem,
+    ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign},
 };
 
 use num_bigint::BigInt;

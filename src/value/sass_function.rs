@@ -11,13 +11,10 @@
 
 use std::fmt;
 
-use crate::args::CallArgs;
-use crate::atrule::Function;
-use crate::builtin::Builtin;
-use crate::common::Identifier;
-use crate::error::SassResult;
-use crate::parse::Parser;
-use crate::value::Value;
+use crate::{
+    args::CallArgs, atrule::Function, builtin::Builtin, common::Identifier, error::SassResult,
+    parse::Parser, value::Value,
+};
 
 /// A SASS function
 ///

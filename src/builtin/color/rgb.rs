@@ -2,13 +2,15 @@ use super::{Builtin, GlobalFunctionMap};
 
 use num_traits::One;
 
-use crate::args::CallArgs;
-use crate::color::Color;
-use crate::common::QuoteKind;
-use crate::error::SassResult;
-use crate::parse::Parser;
-use crate::unit::Unit;
-use crate::value::{Number, Value};
+use crate::{
+    args::CallArgs,
+    color::Color,
+    common::QuoteKind,
+    error::SassResult,
+    parse::Parser,
+    unit::Unit,
+    value::{Number, Value},
+};
 
 /// name: Either `rgb` or `rgba` depending on the caller
 // todo: refactor into smaller functions

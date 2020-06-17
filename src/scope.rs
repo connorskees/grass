@@ -2,11 +2,13 @@ use std::collections::HashMap;
 
 use codemap::Spanned;
 
-use crate::atrule::{Function, Mixin};
-use crate::builtin::GLOBAL_FUNCTIONS;
-use crate::common::Identifier;
-use crate::error::SassResult;
-use crate::value::Value;
+use crate::{
+    atrule::{Function, Mixin},
+    builtin::GLOBAL_FUNCTIONS,
+    common::Identifier,
+    error::SassResult,
+    value::Value,
+};
 
 #[derive(Debug, Clone, Default)]
 pub(crate) struct Scope {

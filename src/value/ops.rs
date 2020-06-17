@@ -2,10 +2,12 @@ use std::cmp::Ordering;
 
 use codemap::{Span, Spanned};
 
-use crate::common::{Op, QuoteKind};
-use crate::error::SassResult;
-use crate::unit::{Unit, UNIT_CONVERSION_TABLE};
-use crate::value::Value;
+use crate::{
+    common::{Op, QuoteKind},
+    error::SassResult,
+    unit::{Unit, UNIT_CONVERSION_TABLE},
+    value::Value,
+};
 
 impl Value {
     pub fn equals(mut self, mut other: Value, span: Span) -> SassResult<Spanned<Value>> {

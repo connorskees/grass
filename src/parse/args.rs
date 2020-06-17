@@ -1,15 +1,14 @@
-use std::collections::HashMap;
-use std::mem;
+use std::{collections::HashMap, mem};
 
 use codemap::{Span, Spanned};
 
-use crate::args::{CallArg, CallArgs, FuncArg, FuncArgs};
-use crate::error::SassResult;
-use crate::utils::{
-    read_until_closing_paren, read_until_closing_quote, read_until_closing_square_brace,
+use crate::{
+    args::{CallArg, CallArgs, FuncArg, FuncArgs},
+    error::SassResult,
+    utils::{read_until_closing_paren, read_until_closing_quote, read_until_closing_square_brace},
+    value::Value,
+    Token,
 };
-use crate::value::Value;
-use crate::Token;
 
 use super::Parser;
 

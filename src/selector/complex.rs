@@ -1,5 +1,6 @@
-use super::{CompoundSelector, Pseudo, SelectorList, SimpleSelector, Specificity};
 use std::fmt::{self, Display, Write};
+
+use super::{CompoundSelector, Pseudo, SelectorList, SimpleSelector, Specificity};
 
 /// A complex selector.
 ///

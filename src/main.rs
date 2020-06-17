@@ -1,5 +1,7 @@
-use std::fs::File;
-use std::io::{stdout, BufWriter, Write};
+use std::{
+    fs::File,
+    io::{stdout, BufWriter, Write},
+};
 
 use clap::{arg_enum, App, Arg};
 

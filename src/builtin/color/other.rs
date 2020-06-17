@@ -2,13 +2,15 @@ use super::{Builtin, GlobalFunctionMap};
 
 use num_traits::{One, Signed, Zero};
 
-use crate::args::CallArgs;
-use crate::color::Color;
-use crate::common::QuoteKind;
-use crate::error::SassResult;
-use crate::parse::Parser;
-use crate::unit::Unit;
-use crate::value::{Number, Value};
+use crate::{
+    args::CallArgs,
+    color::Color,
+    common::QuoteKind,
+    error::SassResult,
+    parse::Parser,
+    unit::Unit,
+    value::{Number, Value},
+};
 
 macro_rules! opt_rgba {
     ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal, $parser:ident) => {

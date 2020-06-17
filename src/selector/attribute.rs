@@ -2,12 +2,9 @@ use std::fmt::{self, Display, Write};
 
 use codemap::Span;
 
+use crate::{common::QuoteKind, error::SassResult, parse::Parser, utils::is_ident, value::Value};
+
 use super::{Namespace, QualifiedName};
-use crate::common::QuoteKind;
-use crate::error::SassResult;
-use crate::parse::Parser;
-use crate::utils::is_ident;
-use crate::value::Value;
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub(crate) struct Attribute {

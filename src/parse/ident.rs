@@ -1,13 +1,14 @@
-use std::borrow::Borrow;
-use std::iter::Iterator;
+use std::{borrow::Borrow, iter::Iterator};
 
 use codemap::Spanned;
 
-use crate::common::QuoteKind;
-use crate::error::SassResult;
-use crate::utils::{as_hex, hex_char_for, is_name, is_name_start};
-use crate::value::Value;
-use crate::Token;
+use crate::{
+    common::QuoteKind,
+    error::SassResult,
+    utils::{as_hex, hex_char_for, is_name, is_name_start},
+    value::Value,
+    Token,
+};
 
 use super::Parser;
 

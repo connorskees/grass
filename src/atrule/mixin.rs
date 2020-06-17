@@ -2,9 +2,7 @@ use std::vec::IntoIter;
 
 use peekmore::{PeekMore, PeekMoreIterator};
 
-use crate::args::FuncArgs;
-use crate::scope::Scope;
-use crate::Token;
+use crate::{args::FuncArgs, scope::Scope, Token};
 
 #[derive(Debug, Clone)]
 pub(crate) struct Mixin {

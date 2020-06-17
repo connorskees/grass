@@ -1,13 +1,16 @@
 use codemap::Span;
 
+use crate::{
+    error::SassResult,
+    parse::Parser,
+    utils::{devour_whitespace, is_name, is_name_start, read_until_closing_paren},
+    Token,
+};
+
 use super::{
     Attribute, Combinator, ComplexSelector, ComplexSelectorComponent, CompoundSelector, Namespace,
     Pseudo, QualifiedName, SelectorList, SimpleSelector,
 };
-use crate::error::SassResult;
-use crate::parse::Parser;
-use crate::utils::{devour_whitespace, is_name, is_name_start, read_until_closing_paren};
-use crate::Token;
 
 #[derive(PartialEq)]
 enum DevouredWhitespace {

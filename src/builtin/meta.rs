@@ -2,12 +2,14 @@ use super::{Builtin, GlobalFunctionMap, GLOBAL_FUNCTIONS};
 
 use codemap::Spanned;
 
-use crate::args::CallArgs;
-use crate::common::QuoteKind;
-use crate::error::SassResult;
-use crate::parse::Parser;
-use crate::unit::Unit;
-use crate::value::{SassFunction, Value};
+use crate::{
+    args::CallArgs,
+    common::QuoteKind,
+    error::SassResult,
+    parse::Parser,
+    unit::Unit,
+    value::{SassFunction, Value},
+};
 
 fn if_(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(3)?;

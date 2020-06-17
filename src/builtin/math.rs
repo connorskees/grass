@@ -5,11 +5,13 @@ use num_traits::{One, Signed, ToPrimitive, Zero};
 #[cfg(feature = "random")]
 use rand::Rng;
 
-use crate::args::CallArgs;
-use crate::error::SassResult;
-use crate::parse::Parser;
-use crate::unit::Unit;
-use crate::value::{Number, Value};
+use crate::{
+    args::CallArgs,
+    error::SassResult,
+    parse::Parser,
+    unit::Unit,
+    value::{Number, Value},
+};
 
 fn percentage(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;

@@ -15,8 +15,10 @@
 //! Named colors retain their original casing,
 //! so `rEd` should be emitted as `rEd`.
 
-use std::cmp::{max, min};
-use std::fmt::{self, Display};
+use std::{
+    cmp::{max, min},
+    fmt::{self, Display},
+};
 
 use crate::value::Number;
 pub(crate) use name::NAMED_COLORS;

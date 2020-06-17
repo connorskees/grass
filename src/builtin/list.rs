@@ -2,12 +2,14 @@ use super::{Builtin, GlobalFunctionMap};
 
 use num_traits::{One, Signed, ToPrimitive, Zero};
 
-use crate::args::CallArgs;
-use crate::common::{Brackets, ListSeparator, QuoteKind};
-use crate::error::SassResult;
-use crate::parse::Parser;
-use crate::unit::Unit;
-use crate::value::{Number, Value};
+use crate::{
+    args::CallArgs,
+    common::{Brackets, ListSeparator, QuoteKind},
+    error::SassResult,
+    parse::Parser,
+    unit::Unit,
+    value::{Number, Value},
+};
 
 fn length(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;

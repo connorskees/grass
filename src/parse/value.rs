@@ -1,6 +1,4 @@
-use std::borrow::Borrow;
-use std::iter::Iterator;
-use std::mem;
+use std::{borrow::Borrow, iter::Iterator, mem};
 
 use num_bigint::BigInt;
 use num_rational::{BigRational, Rational64};
@@ -10,19 +8,21 @@ use codemap::{Span, Spanned};
 
 use peekmore::PeekMore;
 
-use crate::builtin::GLOBAL_FUNCTIONS;
-use crate::color::{Color, NAMED_COLORS};
-use crate::common::{Brackets, Identifier, ListSeparator, Op, QuoteKind};
-use crate::error::SassResult;
-use crate::unit::Unit;
-use crate::utils::{
-    as_hex, devour_whitespace, eat_number, hex_char_for, is_name, peek_until_closing_curly_brace,
-    peek_whitespace, read_until_char, read_until_closing_paren, read_until_closing_square_brace,
-    IsWhitespace,
+use crate::{
+    builtin::GLOBAL_FUNCTIONS,
+    color::{Color, NAMED_COLORS},
+    common::{Brackets, Identifier, ListSeparator, Op, QuoteKind},
+    error::SassResult,
+    unit::Unit,
+    utils::{
+        as_hex, devour_whitespace, eat_number, hex_char_for, is_name,
+        peek_until_closing_curly_brace, peek_whitespace, read_until_char, read_until_closing_paren,
+        read_until_closing_square_brace, IsWhitespace,
+    },
+    value::Value,
+    value::{Number, SassMap},
+    Token,
 };
-use crate::value::Value;
-use crate::value::{Number, SassMap};
-use crate::Token;
 
 use super::Parser;
 

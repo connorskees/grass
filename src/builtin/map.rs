@@ -1,10 +1,12 @@
 use super::{Builtin, GlobalFunctionMap};
 
-use crate::args::CallArgs;
-use crate::common::{Brackets, ListSeparator};
-use crate::error::SassResult;
-use crate::parse::Parser;
-use crate::value::{SassMap, Value};
+use crate::{
+    args::CallArgs,
+    common::{Brackets, ListSeparator},
+    error::SassResult,
+    parse::Parser,
+    value::{SassMap, Value},
+};
 
 fn map_get(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;

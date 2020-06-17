@@ -1,11 +1,11 @@
-use once_cell::sync::Lazy;
-use std::collections::HashMap;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::{
+    collections::HashMap,
+    sync::atomic::{AtomicUsize, Ordering},
+};
 
-use crate::args::CallArgs;
-use crate::error::SassResult;
-use crate::parse::Parser;
-use crate::value::Value;
+use once_cell::sync::Lazy;
+
+use crate::{args::CallArgs, error::SassResult, parse::Parser, value::Value};
 
 #[macro_use]
 mod macros;

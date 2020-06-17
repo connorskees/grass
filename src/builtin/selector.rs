@@ -1,13 +1,13 @@
 use super::{Builtin, GlobalFunctionMap};
 
-use crate::args::CallArgs;
-use crate::common::{Brackets, ListSeparator, QuoteKind};
-use crate::error::SassResult;
-use crate::parse::Parser;
-use crate::selector::{
-    ComplexSelector, ComplexSelectorComponent, Extender, Selector, SelectorList,
+use crate::{
+    args::CallArgs,
+    common::{Brackets, ListSeparator, QuoteKind},
+    error::SassResult,
+    parse::Parser,
+    selector::{ComplexSelector, ComplexSelectorComponent, Extender, Selector, SelectorList},
+    value::Value,
 };
-use crate::value::Value;
 
 fn is_superselector(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;

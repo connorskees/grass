@@ -1,7 +1,6 @@
 use codemap::Spanned;
 
-use crate::error::SassResult;
-use crate::value::Value;
+use crate::{error::SassResult, value::Value};
 
 /// A style: `color: red`
 #[derive(Clone, Debug, Eq, PartialEq)]

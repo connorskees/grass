@@ -3,10 +3,7 @@ use std::io::Write;
 
 use codemap::CodeMap;
 
-use crate::error::SassResult;
-use crate::parse::Stmt;
-use crate::selector::Selector;
-use crate::style::Style;
+use crate::{error::SassResult, parse::Stmt, selector::Selector, style::Style};
 
 #[derive(Debug, Clone)]
 enum Toplevel {

@@ -1,8 +1,6 @@
 use codemap::Span;
 
-use crate::args::FuncArgs;
-use crate::scope::Scope;
-use crate::Token;
+use crate::{args::FuncArgs, scope::Scope, Token};
 
 #[derive(Debug, Clone)]
 pub(crate) struct Function {

@@ -1,7 +1,9 @@
-use std::error::Error;
-use std::fmt::{self, Display};
-use std::io;
-use std::string::FromUtf8Error;
+use std::{
+    error::Error,
+    fmt::{self, Display},
+    io,
+    string::FromUtf8Error,
+};
 
 use codemap::{Span, SpanLoc};
 
