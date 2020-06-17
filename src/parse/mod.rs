@@ -31,9 +31,6 @@ use crate::{
 
 use common::{Branch, NeverEmptyVec, SelectorOrStyle};
 
-#[cfg(feature = "wasm")]
-use wasm_bindgen::prelude::*;
-
 mod args;
 pub mod common;
 mod ident;

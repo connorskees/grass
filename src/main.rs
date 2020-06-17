@@ -5,6 +5,7 @@ use std::{
 
 use clap::{arg_enum, App, Arg};
 
+#[cfg(not(feature = "wasm"))]
 use grass::from_path;
 
 arg_enum! {

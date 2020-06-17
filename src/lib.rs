@@ -7,7 +7,7 @@ Spec progress as of 2020-05-01:
 
 | Passing | Failing | Total |
 |---------|---------|-------|
-| 2193    | 2900    | 5093  |
+| 2489    | 2604    | 5093  |
 
 ## Use as library
 ```
@@ -87,6 +87,9 @@ grass input.scss
 #![cfg_attr(feature = "nightly", feature(track_caller))]
 #![cfg_attr(feature = "profiling", inline(never))]
 use std::{fs, path::Path};
+
+#[cfg(feature = "wasm")]
+use wasm_bindgen::prelude::*;
 
 #[cfg(target_pointer_width = "64")]
 pub(crate) use beef::lean::Cow;
@@ -179,9 +182,9 @@ pub fn from_path(p: &str) -> Result<String> {
 ///     Ok(())
 /// }
 /// ```
-#[cfg_attr(feature = "wasm", wasm_bindgen)]
 #[cfg_attr(feature = "profiling", inline(never))]
 #[cfg_attr(not(feature = "profiling"), inline)]
+#[cfg(not(feature = "wasm"))]
 pub fn from_string(p: String) -> Result<String> {
     let mut map = CodeMap::new();
     let file = map.add_file("stdin".into(), p);
@@ -210,4 +213,36 @@ pub fn from_string(p: String) -> Result<String> {
     .map_err(|e| raw_to_parse_error(&map, e))?
     .pretty_print(&map)
     .map_err(|e| raw_to_parse_error(&map, e))
+}
+
+#[cfg(feature = "wasm")]
+#[wasm_bindgen]
+pub fn from_string(p: String) -> std::result::Result<String, JsValue> {
+    let mut map = CodeMap::new();
+    let file = map.add_file("stdin".into(), p);
+    Ok(Css::from_stmts(
+        Parser {
+            toks: &mut Lexer::new(&file)
+                .collect::<Vec<Token>>()
+                .into_iter()
+                .peekmore(),
+            map: &mut map,
+            path: Path::new(""),
+            scopes: &mut NeverEmptyVec::new(Scope::new()),
+            global_scope: &mut Scope::new(),
+            super_selectors: &mut NeverEmptyVec::new(Selector::new()),
+            span_before: file.span.subspan(0, 0),
+            content: None,
+            in_mixin: false,
+            in_function: false,
+            in_control_flow: false,
+            at_root: true,
+            at_root_has_selector: false,
+        }
+        .parse()
+        .map_err(|e| raw_to_parse_error(&map, e).to_string())?,
+    )
+    .map_err(|e| raw_to_parse_error(&map, e).to_string())?
+    .pretty_print(&map)
+    .map_err(|e| raw_to_parse_error(&map, e).to_string())?)
 }

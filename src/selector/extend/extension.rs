@@ -1,7 +1,5 @@
 use codemap::Span;
 
-use crate::error::SassResult;
-
 use super::{ComplexSelector, CssMediaQuery, SimpleSelector};
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]

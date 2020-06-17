@@ -1,3 +1,23 @@
+# 0.9.0
+
+This release is focused on setting up the groundwork for implementing `@extend` as well
+as being able to compile Bootstrap.
+ - Implement all builtin selector functions
+   - `selector-append`
+   - `selector-extend`
+   - `selector-nest`
+   - `selector-parse`
+   - `selector-replace`
+   - `selector-unify`
+   - `simple-selectors`
+   - `is-superselector`
+ - Implement builtin function `content-exists`
+ - Allow `@import`, `@warn`, and `@debug` in all contexts, such as inside `@mixin`
+ - Refactor control flow evaluation, resolving some issues blocking Bootstrap
+
+#### Breaking Changes
+ - remove the `StyleSheet` struct in favor of freestanding functions, `from_string` and `from_path`
+
 # 0.8.3
 
 This release is largely focused on performance and robustness
