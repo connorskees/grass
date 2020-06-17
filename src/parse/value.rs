@@ -372,7 +372,7 @@ impl<'a> Parser<'a> {
             }
             '&' => {
                 let span = self.toks.next().unwrap().pos();
-                if self.super_selectors.is_empty() {
+                if self.super_selectors.is_empty() && !self.at_root_has_selector && !self.at_root {
                     IntermediateValue::Value(Value::Null).span(span)
                 } else {
                     IntermediateValue::Value(self.super_selectors.last().clone().into_value())
