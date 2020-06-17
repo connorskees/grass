@@ -1,16 +1,17 @@
 use super::{Builtin, GlobalFunctionMap};
 
-use crate::args::CallArgs;
-use crate::common::{Brackets, ListSeparator};
-use crate::error::SassResult;
-use crate::scope::Scope;
-use crate::selector::Selector;
-use crate::value::{SassMap, Value};
+use crate::{
+    args::CallArgs,
+    common::{Brackets, ListSeparator},
+    error::SassResult,
+    parse::Parser,
+    value::{SassMap, Value},
+};
 
-fn map_get(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
+fn map_get(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;
-    let key = arg!(args, scope, super_selector, 1, "key");
-    let map = match arg!(args, scope, super_selector, 0, "map") {
+    let key = parser.arg(&mut args, 1, "key")?;
+    let map = match parser.arg(&mut args, 0, "map")? {
         Value::Map(m) => m,
         Value::List(v, ..) if v.is_empty() => SassMap::new(),
         v => {
@@ -24,10 +25,10 @@ fn map_get(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> Sass
     Ok(map.get(&key, args.span())?.unwrap_or(Value::Null))
 }
 
-fn map_has_key(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
+fn map_has_key(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;
-    let key = arg!(args, scope, super_selector, 1, "key");
-    let map = match arg!(args, scope, super_selector, 0, "map") {
+    let key = parser.arg(&mut args, 1, "key")?;
+    let map = match parser.arg(&mut args, 0, "map")? {
         Value::Map(m) => m,
         Value::List(v, ..) if v.is_empty() => SassMap::new(),
         v => {
@@ -41,9 +42,9 @@ fn map_has_key(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> 
     Ok(Value::bool(map.get(&key, args.span())?.is_some()))
 }
 
-fn map_keys(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
+fn map_keys(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    let map = match arg!(args, scope, super_selector, 0, "map") {
+    let map = match parser.arg(&mut args, 0, "map")? {
         Value::Map(m) => m,
         Value::List(v, ..) if v.is_empty() => SassMap::new(),
         v => {
@@ -61,9 +62,9 @@ fn map_keys(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> Sas
     ))
 }
 
-fn map_values(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
+fn map_values(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    let map = match arg!(args, scope, super_selector, 0, "map") {
+    let map = match parser.arg(&mut args, 0, "map")? {
         Value::Map(m) => m,
         Value::List(v, ..) if v.is_empty() => SassMap::new(),
         v => {
@@ -81,9 +82,9 @@ fn map_values(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> S
     ))
 }
 
-fn map_merge(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
+fn map_merge(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;
-    let mut map1 = match arg!(args, scope, super_selector, 0, "map1") {
+    let mut map1 = match parser.arg(&mut args, 0, "map1")? {
         Value::Map(m) => m,
         Value::List(v, ..) if v.is_empty() => SassMap::new(),
         v => {
@@ -94,7 +95,7 @@ fn map_merge(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> Sa
                 .into())
         }
     };
-    let map2 = match arg!(args, scope, super_selector, 1, "map2") {
+    let map2 = match parser.arg(&mut args, 1, "map2")? {
         Value::Map(m) => m,
         Value::List(v, ..) if v.is_empty() => SassMap::new(),
         v => {
@@ -109,8 +110,8 @@ fn map_merge(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> Sa
     Ok(Value::Map(map1))
 }
 
-fn map_remove(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
-    let mut map = match arg!(args, scope, super_selector, 0, "map") {
+fn map_remove(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+    let mut map = match parser.arg(&mut args, 0, "map")? {
         Value::Map(m) => m,
         Value::List(v, ..) if v.is_empty() => SassMap::new(),
         v => {
@@ -121,7 +122,7 @@ fn map_remove(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> S
                 .into())
         }
     };
-    let keys = args.get_variadic(scope, super_selector)?;
+    let keys = parser.variadic_args(args)?;
     for key in keys {
         map.remove(&key);
     }

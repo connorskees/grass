@@ -116,3 +116,8 @@ test!(
     }",
     "a {\n  color: get-function(\"-test\");\n  color: get-function(\"-test\");\n}\n"
 );
+test!(
+    nested_call_and_get_function,
+    "a {\n  color: call(call(get-function(get-function), darken), red, 10%);\n}\n",
+    "a {\n  color: #cc0000;\n}\n"
+);

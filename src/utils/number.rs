@@ -1,11 +1,8 @@
-use std::iter::Iterator;
-
 use codemap::Spanned;
 
 use peekmore::PeekMoreIterator;
 
-use crate::error::SassResult;
-use crate::Token;
+use crate::{error::SassResult, Token};
 
 #[derive(Debug)]
 pub(crate) struct ParsedNumber {

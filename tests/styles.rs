@@ -125,6 +125,11 @@ test!(
     "a {\n  webkit-webkit-color: red;\n}\n"
 );
 test!(
+    no_space_after_colon_before_nested_style,
+    "a {\n    foo:{\n        bar: baz\n    }\n}\n",
+    "a {\n  foo-bar: baz;\n}\n"
+);
+test!(
     no_space_between_colon,
     "a {\n  color:red;\n}\n",
     "a {\n  color: red;\n}\n"

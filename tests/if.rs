@@ -135,6 +135,11 @@ test!(
     @else if not comparable($p, 0) {}",
     ""
 );
+test!(
+    at_rule_inside_ruleset,
+    "@mixin foo {\n    color: red;\n}\n\n@if true {\n    a {\n        @include foo;\n    }\n}\n",
+    "a {\n  color: red;\n}\n"
+);
 error!(
     nothing_after_escape,
     "@if \\", "Error: Expected expression."

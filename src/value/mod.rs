@@ -1,28 +1,27 @@
-use std::iter::Iterator;
-
 use peekmore::PeekMore;
 
 use codemap::{Span, Spanned};
 
-use crate::color::Color;
-use crate::common::{Brackets, ListSeparator, Op, QuoteKind};
-use crate::error::SassResult;
-use crate::scope::Scope;
-use crate::selector::Selector;
-use crate::unit::Unit;
-use crate::utils::hex_char_for;
-use crate::{Cow, Token};
+use crate::{
+    color::Color,
+    common::{Brackets, ListSeparator, Op, QuoteKind},
+    error::SassResult,
+    parse::Parser,
+    selector::Selector,
+    unit::Unit,
+    utils::hex_char_for,
+    {Cow, Token},
+};
 
 use css_function::is_special_function;
 pub(crate) use map::SassMap;
 pub(crate) use number::Number;
 pub(crate) use sass_function::SassFunction;
 
-mod css_function;
+pub(crate) mod css_function;
 mod map;
 mod number;
 mod ops;
-mod parse;
 mod sass_function;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -332,22 +331,35 @@ impl Value {
     /// `name` is the argument name. It's used for error reporting.
     pub fn to_selector(
         self,
-        span: Span,
-        scope: &Scope,
-        super_selector: &Selector,
+        parser: &mut Parser<'_>,
         name: &str,
         allows_parent: bool,
     ) -> SassResult<Selector> {
-        let string = match self.clone().selector_string(span)? {
+        let string = match self.clone().selector_string(parser.span_before)? {
             Some(v) => v,
-            None => return Err((format!("${}: {} is not a valid selector: it must be a string, a list of strings, or a list of lists of strings.", name, self.inspect(span)?), span).into()),
+            None => return Err((format!("${}: {} is not a valid selector: it must be a string, a list of strings, or a list of lists of strings.", name, self.inspect(parser.span_before)?), parser.span_before).into()),
         };
-        Selector::from_tokens(
-            &mut string.chars().map(|c| Token::new(span, c)).peekmore(),
-            scope,
-            super_selector,
-            allows_parent,
-        )
+        Parser {
+            toks: &mut string
+                .chars()
+                .map(|c| Token::new(parser.span_before, c))
+                .collect::<Vec<Token>>()
+                .into_iter()
+                .peekmore(),
+            map: parser.map,
+            path: parser.path,
+            scopes: parser.scopes,
+            global_scope: parser.global_scope,
+            super_selectors: parser.super_selectors,
+            span_before: parser.span_before,
+            content: parser.content.clone(),
+            in_mixin: parser.in_mixin,
+            in_function: parser.in_function,
+            in_control_flow: parser.in_control_flow,
+            at_root: parser.at_root,
+            at_root_has_selector: parser.at_root_has_selector,
+        }
+        .parse_selector(allows_parent, true, String::new())
     }
 
     fn selector_string(self, span: Span) -> SassResult<Option<String>> {

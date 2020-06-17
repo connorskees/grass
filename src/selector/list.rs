@@ -1,13 +1,15 @@
-use std::collections::VecDeque;
 use std::{
+    collections::VecDeque,
     fmt::{self, Write},
     mem,
 };
 
 use super::{unify_complex, ComplexSelector, ComplexSelectorComponent};
 
-use crate::common::{Brackets, ListSeparator, QuoteKind};
-use crate::value::Value;
+use crate::{
+    common::{Brackets, ListSeparator, QuoteKind},
+    value::Value,
+};
 
 /// A selector list.
 ///

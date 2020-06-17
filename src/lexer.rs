@@ -1,6 +1,4 @@
-use std::iter::Peekable;
-use std::str::Chars;
-use std::sync::Arc;
+use std::{iter::Peekable, str::Chars, sync::Arc};
 
 use codemap::File;
 

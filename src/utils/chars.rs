@@ -1,12 +1,8 @@
-use std::iter::Iterator;
-
 use peekmore::PeekMoreIterator;
 
+use crate::{error::SassResult, Token};
+
 use super::read_until_closing_quote;
-
-use crate::error::SassResult;
-use crate::Token;
-
 /// Reads until the char is found, consuming the char,
 /// or until the end of the iterator is hit
 pub(crate) fn read_until_char<I: Iterator<Item = Token>>(

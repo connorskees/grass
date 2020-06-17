@@ -1,6 +1,8 @@
-use std::fmt::{self, Display, UpperHex};
-use std::mem;
-use std::ops::{Add, AddAssign};
+use std::{
+    fmt::{self, Display, UpperHex},
+    mem,
+    ops::{Add, AddAssign},
+};
 
 use num_bigint::BigInt;
 use num_traits::{Signed, ToPrimitive, Zero};

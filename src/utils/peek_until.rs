@@ -1,11 +1,8 @@
-use std::iter::Iterator;
-
 use codemap::{Span, Spanned};
 
 use peekmore::PeekMoreIterator;
 
-use crate::error::SassResult;
-use crate::Token;
+use crate::{error::SassResult, Token};
 
 use super::{as_hex, hex_char_for, is_name, is_name_start, IsWhitespace};
 

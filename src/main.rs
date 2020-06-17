@@ -1,9 +1,11 @@
-use std::fs::File;
-use std::io::{stdout, BufWriter, Write};
+use std::{
+    fs::File,
+    io::{stdout, BufWriter, Write},
+};
 
 use clap::{arg_enum, App, Arg};
 
-use grass::StyleSheet;
+use grass::from_path;
 
 arg_enum! {
     #[derive(PartialEq, Debug)]
@@ -165,7 +167,7 @@ fn main() -> std::io::Result<()> {
         if let Some(path) = matches.value_of("OUTPUT") {
             let mut buf = BufWriter::new(File::open(path).unwrap_or(File::create(path)?));
             buf.write_all(
-                StyleSheet::from_path(name)
+                from_path(name)
                     .unwrap_or_else(|e| {
                         eprintln!("{}", e);
                         std::process::exit(1)
@@ -175,7 +177,7 @@ fn main() -> std::io::Result<()> {
         } else {
             let mut stdout = BufWriter::new(stdout());
             stdout.write_all(
-                StyleSheet::from_path(name)
+                from_path(name)
                     .unwrap_or_else(|e| {
                         eprintln!("{}", e);
                         std::process::exit(1)

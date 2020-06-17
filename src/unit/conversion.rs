@@ -2,8 +2,7 @@
 //!
 //! Arbitrary precision is retained.
 
-use std::collections::HashMap;
-use std::f64::consts::PI;
+use std::{collections::HashMap, f64::consts::PI};
 
 use num_traits::One;
 use once_cell::sync::Lazy;

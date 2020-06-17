@@ -1,19 +1,16 @@
-use peekmore::PeekMoreIterator;
-
 use codemap::Span;
+
+use crate::{
+    error::SassResult,
+    parse::Parser,
+    utils::{devour_whitespace, is_name, is_name_start, read_until_closing_paren},
+    Token,
+};
 
 use super::{
     Attribute, Combinator, ComplexSelector, ComplexSelectorComponent, CompoundSelector, Namespace,
     Pseudo, QualifiedName, SelectorList, SimpleSelector,
 };
-use crate::error::SassResult;
-use crate::scope::Scope;
-use crate::selector::Selector;
-use crate::utils::{
-    devour_whitespace, eat_ident, eat_ident_no_interpolation, is_name, is_name_start,
-    read_until_closing_paren,
-};
-use crate::Token;
 
 #[derive(PartialEq)]
 enum DevouredWhitespace {
@@ -51,35 +48,27 @@ const SELECTOR_PSEUDO_CLASSES: [&str; 7] = [
 /// Pseudo-element selectors that take unadorned selectors as arguments.
 const SELECTOR_PSEUDO_ELEMENTS: [&str; 1] = ["slotted"];
 
-pub(crate) struct SelectorParser<'a, I: Iterator<Item = Token>> {
+pub(crate) struct SelectorParser<'a, 'b> {
     /// Whether this parser allows the parent selector `&`.
     allows_parent: bool,
 
     /// Whether this parser allows placeholder selectors beginning with `%`.
     allows_placeholder: bool,
 
-    toks: &'a mut PeekMoreIterator<I>,
-
-    scope: &'a Scope,
-
-    super_selector: &'a Selector,
+    parser: &'a mut Parser<'b>,
 
     span: Span,
 }
 
-impl<'a, I: Iterator<Item = Token>> SelectorParser<'a, I> {
+impl<'a, 'b> SelectorParser<'a, 'b> {
     pub fn new(
-        toks: &'a mut PeekMoreIterator<I>,
-        scope: &'a Scope,
-        super_selector: &'a Selector,
+        parser: &'a mut Parser<'b>,
         allows_parent: bool,
         allows_placeholder: bool,
         span: Span,
     ) -> Self {
         Self {
-            toks,
-            scope,
-            super_selector,
+            parser,
             allows_parent,
             allows_placeholder,
             span,
@@ -88,7 +77,7 @@ impl<'a, I: Iterator<Item = Token>> SelectorParser<'a, I> {
 
     pub fn parse(mut self) -> SassResult<SelectorList> {
         let tmp = self.parse_selector_list()?;
-        if self.toks.peek().is_some() {
+        if self.parser.toks.peek().is_some() {
             return Err(("expected selector.", self.span).into());
         }
         Ok(tmp)
@@ -97,14 +86,14 @@ impl<'a, I: Iterator<Item = Token>> SelectorParser<'a, I> {
     fn parse_selector_list(&mut self) -> SassResult<SelectorList> {
         let mut components = vec![self.parse_complex_selector(false)?];
 
-        devour_whitespace(self.toks);
+        devour_whitespace(self.parser.toks);
 
         let mut line_break = false;
 
-        while let Some(Token { kind: ',', .. }) = self.toks.peek() {
-            self.toks.next();
+        while let Some(Token { kind: ',', .. }) = self.parser.toks.peek() {
+            self.parser.toks.next();
             line_break = self.eat_whitespace() == DevouredWhitespace::Newline || line_break;
-            match self.toks.peek() {
+            match self.parser.toks.peek() {
                 Some(Token { kind: ',', .. }) => continue,
                 Some(..) => {}
                 None => break,
@@ -119,13 +108,13 @@ impl<'a, I: Iterator<Item = Token>> SelectorParser<'a, I> {
 
     fn eat_whitespace(&mut self) -> DevouredWhitespace {
         let mut whitespace_devoured = DevouredWhitespace::None;
-        while let Some(tok) = self.toks.peek() {
+        while let Some(tok) = self.parser.toks.peek() {
             match tok.kind {
                 ' ' | '\t' => whitespace_devoured.found_whitespace(),
                 '\n' => whitespace_devoured.found_newline(),
                 _ => break,
             }
-            self.toks.next();
+            self.parser.toks.next();
         }
 
         whitespace_devoured
@@ -140,22 +129,22 @@ impl<'a, I: Iterator<Item = Token>> SelectorParser<'a, I> {
 
         // todo: or patterns
         loop {
-            devour_whitespace(self.toks);
+            devour_whitespace(self.parser.toks);
 
-            // todo: can we do while let Some(..) = self.toks.peek() ?
-            match self.toks.peek() {
+            // todo: can we do while let Some(..) = self.parser.toks.peek() ?
+            match self.parser.toks.peek() {
                 Some(Token { kind: '+', .. }) => {
-                    self.toks.next();
+                    self.parser.toks.next();
                     components.push(ComplexSelectorComponent::Combinator(
                         Combinator::NextSibling,
                     ));
                 }
                 Some(Token { kind: '>', .. }) => {
-                    self.toks.next();
+                    self.parser.toks.next();
                     components.push(ComplexSelectorComponent::Combinator(Combinator::Child))
                 }
                 Some(Token { kind: '~', .. }) => {
-                    self.toks.next();
+                    self.parser.toks.next();
                     components.push(ComplexSelectorComponent::Combinator(
                         Combinator::FollowingSibling,
                     ));
@@ -172,7 +161,7 @@ impl<'a, I: Iterator<Item = Token>> SelectorParser<'a, I> {
                     components.push(ComplexSelectorComponent::Compound(
                         self.parse_compound_selector()?,
                     ));
-                    if let Some(Token { kind: '&', .. }) = self.toks.peek() {
+                    if let Some(Token { kind: '&', .. }) = self.parser.toks.peek() {
                         return Err(("\"&\" may only used at the beginning of a compound selector.", self.span).into());
                     }
                 }
@@ -183,7 +172,7 @@ impl<'a, I: Iterator<Item = Token>> SelectorParser<'a, I> {
                     components.push(ComplexSelectorComponent::Compound(
                         self.parse_compound_selector()?,
                     ));
-                    if let Some(Token { kind: '&', .. }) = self.toks.peek() {
+                    if let Some(Token { kind: '&', .. }) = self.parser.toks.peek() {
                         return Err(("\"&\" may only used at the beginning of a compound selector.", self.span).into());
                     }
                 }
@@ -204,7 +193,7 @@ impl<'a, I: Iterator<Item = Token>> SelectorParser<'a, I> {
     fn parse_compound_selector(&mut self) -> SassResult<CompoundSelector> {
         let mut components = vec![self.parse_simple_selector(true)?];
 
-        while let Some(Token { kind, .. }) = self.toks.peek() {
+        while let Some(Token { kind, .. }) = self.parser.toks.peek() {
             if !is_simple_selector_start(*kind) {
                 break;
             }
@@ -225,31 +214,31 @@ impl<'a, I: Iterator<Item = Token>> SelectorParser<'a, I> {
     ///
     /// [the CSS algorithm]: https://drafts.csswg.org/css-syntax-3/#would-start-an-identifier
     fn looking_at_identifier(&mut self) -> bool {
-        match self.toks.peek() {
+        match self.parser.toks.peek() {
             Some(Token { kind, .. }) if is_name_start(*kind) || kind == &'\\' => return true,
             Some(Token { kind: '-', .. }) => {}
             Some(..) | None => return false,
         }
 
-        match self.toks.peek_forward(1) {
+        match self.parser.toks.peek_forward(1) {
             Some(Token { kind, .. }) if is_name_start(*kind) || kind == &'-' || kind == &'\\' => {
-                self.toks.reset_view();
+                self.parser.toks.reset_view();
                 true
             }
             Some(..) | None => {
-                self.toks.reset_view();
+                self.parser.toks.reset_view();
                 false
             }
         }
     }
 
     fn looking_at_identifier_body(&mut self) -> bool {
-        matches!(self.toks.peek(), Some(t) if is_name(t.kind) || t.kind == '\\')
+        matches!(self.parser.toks.peek(), Some(t) if is_name(t.kind) || t.kind == '\\')
     }
 
     /// Consumes a simple selector.
     fn parse_simple_selector(&mut self, allow_parent: bool) -> SassResult<SimpleSelector> {
-        match self.toks.peek() {
+        match self.parser.toks.peek() {
             Some(Token { kind: '[', .. }) => self.parse_attribute_selector(),
             Some(Token { kind: '.', .. }) => self.parse_class_selector(),
             Some(Token { kind: '#', .. }) => self.parse_id_selector(),
@@ -271,43 +260,36 @@ impl<'a, I: Iterator<Item = Token>> SelectorParser<'a, I> {
     }
 
     fn parse_attribute_selector(&mut self) -> SassResult<SimpleSelector> {
-        self.toks.next();
+        self.parser.toks.next();
         Ok(SimpleSelector::Attribute(Attribute::from_tokens(
-            self.toks,
-            self.scope,
-            self.super_selector,
-            self.span,
+            self.parser,
         )?))
     }
 
     fn parse_class_selector(&mut self) -> SassResult<SimpleSelector> {
-        self.toks.next();
-        Ok(SimpleSelector::Class(
-            eat_ident(self.toks, self.scope, self.super_selector, self.span)?.node,
-        ))
+        self.parser.toks.next();
+        Ok(SimpleSelector::Class(self.parser.parse_identifier()?.node))
     }
 
     fn parse_id_selector(&mut self) -> SassResult<SimpleSelector> {
-        self.toks.next();
-        Ok(SimpleSelector::Id(
-            eat_ident(self.toks, self.scope, self.super_selector, self.span)?.node,
-        ))
+        self.parser.toks.next();
+        Ok(SimpleSelector::Id(self.parser.parse_identifier()?.node))
     }
 
     fn parse_pseudo_selector(&mut self) -> SassResult<SimpleSelector> {
-        self.toks.next();
-        let element = match self.toks.peek() {
+        self.parser.toks.next();
+        let element = match self.parser.toks.peek() {
             Some(Token { kind: ':', .. }) => {
-                self.toks.next();
+                self.parser.toks.next();
                 true
             }
             _ => false,
         };
 
-        let name = eat_ident(self.toks, self.scope, self.super_selector, self.span)?;
+        let name = self.parser.parse_identifier()?;
 
-        match self.toks.peek() {
-            Some(Token { kind: '(', .. }) => self.toks.next(),
+        match self.parser.toks.peek() {
+            Some(Token { kind: '(', .. }) => self.parser.toks.next(),
             _ => {
                 return Ok(SimpleSelector::Pseudo(Pseudo {
                     // todo: we can store the reference to this
@@ -321,7 +303,7 @@ impl<'a, I: Iterator<Item = Token>> SelectorParser<'a, I> {
             }
         };
 
-        devour_whitespace(self.toks);
+        devour_whitespace(self.parser.toks);
 
         let unvendored = unvendor(&name);
 
@@ -332,25 +314,25 @@ impl<'a, I: Iterator<Item = Token>> SelectorParser<'a, I> {
             // todo: lowercase?
             if SELECTOR_PSEUDO_ELEMENTS.contains(&unvendored) {
                 selector = Some(self.parse_selector_list()?);
-                devour_whitespace(self.toks);
+                devour_whitespace(self.parser.toks);
                 self.expect_closing_paren()?;
             } else {
                 argument = Some(self.declaration_value()?);
             }
         } else if SELECTOR_PSEUDO_CLASSES.contains(&unvendored) {
             selector = Some(self.parse_selector_list()?);
-            devour_whitespace(self.toks);
+            devour_whitespace(self.parser.toks);
             self.expect_closing_paren()?;
         } else if unvendored == "nth-child" || unvendored == "nth-last-child" {
             let mut this_arg = self.parse_a_n_plus_b()?;
-            let found_whitespace = devour_whitespace(self.toks);
+            let found_whitespace = devour_whitespace(self.parser.toks);
             #[allow(clippy::match_same_arms)]
-            match (found_whitespace, self.toks.peek()) {
+            match (found_whitespace, self.parser.toks.peek()) {
                 (_, Some(Token { kind: ')', .. })) => {}
                 (true, _) => {
                     self.expect_identifier("of")?;
                     this_arg.push_str(" of");
-                    devour_whitespace(self.toks);
+                    devour_whitespace(self.parser.toks);
                     selector = Some(self.parse_selector_list()?);
                 }
                 _ => {}
@@ -373,9 +355,9 @@ impl<'a, I: Iterator<Item = Token>> SelectorParser<'a, I> {
     }
 
     fn parse_parent_selector(&mut self) -> SassResult<SimpleSelector> {
-        self.toks.next();
+        self.parser.toks.next();
         let suffix = if self.looking_at_identifier_body() {
-            Some(eat_ident(self.toks, self.scope, self.super_selector, self.span)?.node)
+            Some(self.parser.parse_identifier()?.node)
         } else {
             None
         };
@@ -383,9 +365,9 @@ impl<'a, I: Iterator<Item = Token>> SelectorParser<'a, I> {
     }
 
     fn parse_placeholder_selector(&mut self) -> SassResult<SimpleSelector> {
-        self.toks.next();
+        self.parser.toks.next();
         Ok(SimpleSelector::Placeholder(
-            eat_ident(self.toks, self.scope, self.super_selector, self.span)?.node,
+            self.parser.parse_identifier()?.node,
         ))
     }
 
@@ -393,19 +375,20 @@ impl<'a, I: Iterator<Item = Token>> SelectorParser<'a, I> {
     ///
     /// These are combined because either one could start with `*`.
     fn parse_type_or_universal_selector(&mut self) -> SassResult<SimpleSelector> {
-        self.toks.peek();
+        self.parser.toks.peek();
 
-        match self.toks.peek().cloned() {
+        match self.parser.toks.peek() {
             Some(Token { kind: '*', pos }) => {
-                self.toks.next();
-                if let Some(Token { kind: '|', .. }) = self.toks.peek() {
-                    self.toks.next();
-                    if let Some(Token { kind: '*', .. }) = self.toks.peek() {
-                        self.toks.next();
+                self.parser.span_before = self.parser.span_before.merge(*pos);
+                self.parser.toks.next();
+                if let Some(Token { kind: '|', .. }) = self.parser.toks.peek() {
+                    self.parser.toks.next();
+                    if let Some(Token { kind: '*', .. }) = self.parser.toks.peek() {
+                        self.parser.toks.next();
                         return Ok(SimpleSelector::Universal(Namespace::Asterisk));
                     } else {
                         return Ok(SimpleSelector::Type(QualifiedName {
-                            ident: eat_ident(self.toks, self.scope, self.super_selector, pos)?.node,
+                            ident: self.parser.parse_identifier()?.node,
                             namespace: Namespace::Asterisk,
                         }));
                     }
@@ -414,15 +397,16 @@ impl<'a, I: Iterator<Item = Token>> SelectorParser<'a, I> {
                 }
             }
             Some(Token { kind: '|', pos }) => {
-                self.toks.next();
-                match self.toks.peek() {
+                self.parser.span_before = self.parser.span_before.merge(*pos);
+                self.parser.toks.next();
+                match self.parser.toks.peek() {
                     Some(Token { kind: '*', .. }) => {
-                        self.toks.next();
+                        self.parser.toks.next();
                         return Ok(SimpleSelector::Universal(Namespace::Empty));
                     }
                     _ => {
                         return Ok(SimpleSelector::Type(QualifiedName {
-                            ident: eat_ident(self.toks, self.scope, self.super_selector, pos)?.node,
+                            ident: self.parser.parse_identifier()?.node,
                             namespace: Namespace::Empty,
                         }));
                     }
@@ -431,19 +415,17 @@ impl<'a, I: Iterator<Item = Token>> SelectorParser<'a, I> {
             _ => {}
         }
 
-        let name_or_namespace =
-            eat_ident(self.toks, self.scope, self.super_selector, self.span)?.node;
+        let name_or_namespace = self.parser.parse_identifier()?.node;
 
-        Ok(match self.toks.peek() {
+        Ok(match self.parser.toks.peek() {
             Some(Token { kind: '|', .. }) => {
-                self.toks.next();
-                if let Some(Token { kind: '*', .. }) = self.toks.peek() {
-                    self.toks.next();
+                self.parser.toks.next();
+                if let Some(Token { kind: '*', .. }) = self.parser.toks.peek() {
+                    self.parser.toks.next();
                     SimpleSelector::Universal(Namespace::Other(name_or_namespace))
                 } else {
                     SimpleSelector::Type(QualifiedName {
-                        ident: eat_ident(self.toks, self.scope, self.super_selector, self.span)?
-                            .node,
+                        ident: self.parser.parse_identifier()?.node,
                         namespace: Namespace::Other(name_or_namespace),
                     })
                 }
@@ -461,7 +443,7 @@ impl<'a, I: Iterator<Item = Token>> SelectorParser<'a, I> {
     fn parse_a_n_plus_b(&mut self) -> SassResult<String> {
         let mut buf = String::new();
 
-        match self.toks.peek() {
+        match self.parser.toks.peek() {
             Some(Token { kind: 'e', .. }) | Some(Token { kind: 'E', .. }) => {
                 self.expect_identifier("even")?;
                 return Ok("even".to_string());
@@ -472,31 +454,31 @@ impl<'a, I: Iterator<Item = Token>> SelectorParser<'a, I> {
             }
             Some(t @ Token { kind: '+', .. }) | Some(t @ Token { kind: '-', .. }) => {
                 buf.push(t.kind);
-                self.toks.next();
+                self.parser.toks.next();
             }
             _ => {}
         }
 
-        match self.toks.peek() {
+        match self.parser.toks.peek() {
             Some(t) if t.kind.is_ascii_digit() => {
-                while let Some(t) = self.toks.peek() {
+                while let Some(t) = self.parser.toks.peek() {
                     if !t.kind.is_ascii_digit() {
                         break;
                     }
                     buf.push(t.kind);
-                    self.toks.next();
+                    self.parser.toks.next();
                 }
-                devour_whitespace(self.toks);
-                if let Some(t) = self.toks.peek() {
+                devour_whitespace(self.parser.toks);
+                if let Some(t) = self.parser.toks.peek() {
                     if t.kind != 'n' && t.kind != 'N' {
                         return Ok(buf);
                     }
-                    self.toks.next();
+                    self.parser.toks.next();
                 }
             }
             Some(t) => {
                 if t.kind == 'n' || t.kind == 'N' {
-                    self.toks.next();
+                    self.parser.toks.next();
                 } else {
                     return Err(("Expected \"n\".", self.span).into());
                 }
@@ -506,15 +488,15 @@ impl<'a, I: Iterator<Item = Token>> SelectorParser<'a, I> {
 
         buf.push('n');
 
-        devour_whitespace(self.toks);
+        devour_whitespace(self.parser.toks);
 
         if let Some(t @ Token { kind: '+', .. }) | Some(t @ Token { kind: '-', .. }) =
-            self.toks.peek()
+            self.parser.toks.peek()
         {
             buf.push(t.kind);
-            self.toks.next();
-            devour_whitespace(self.toks);
-            match self.toks.peek() {
+            self.parser.toks.next();
+            devour_whitespace(self.parser.toks);
+            match self.parser.toks.peek() {
                 Some(t) if !t.kind.is_ascii_digit() => {
                     return Err(("Expected a number.", self.span).into())
                 }
@@ -522,12 +504,12 @@ impl<'a, I: Iterator<Item = Token>> SelectorParser<'a, I> {
                 Some(..) => {}
             }
 
-            while let Some(t) = self.toks.peek() {
+            while let Some(t) = self.parser.toks.peek() {
                 if !t.kind.is_ascii_digit() {
                     break;
                 }
                 buf.push(t.kind);
-                self.toks.next();
+                self.parser.toks.next();
             }
         }
         Ok(buf)
@@ -535,7 +517,7 @@ impl<'a, I: Iterator<Item = Token>> SelectorParser<'a, I> {
 
     fn declaration_value(&mut self) -> SassResult<String> {
         // todo: this consumes the closing paren
-        let mut tmp = read_until_closing_paren(self.toks)?;
+        let mut tmp = read_until_closing_paren(self.parser.toks)?;
         if let Some(Token { kind: ')', .. }) = tmp.pop() {
         } else {
             return Err(("expected \")\".", self.span).into());
@@ -544,7 +526,7 @@ impl<'a, I: Iterator<Item = Token>> SelectorParser<'a, I> {
     }
 
     fn expect_identifier(&mut self, s: &str) -> SassResult<()> {
-        let mut ident = eat_ident_no_interpolation(self.toks, false, self.span)?.node;
+        let mut ident = self.parser.parse_identifier_no_interpolation(false)?.node;
         ident.make_ascii_lowercase();
         if ident == s {
             Ok(())
@@ -554,7 +536,7 @@ impl<'a, I: Iterator<Item = Token>> SelectorParser<'a, I> {
     }
 
     fn expect_closing_paren(&mut self) -> SassResult<()> {
-        if let Some(Token { kind: ')', .. }) = self.toks.next() {
+        if let Some(Token { kind: ')', .. }) = self.parser.toks.next() {
             Ok(())
         } else {
             Err(("expected \")\".", self.span).into())

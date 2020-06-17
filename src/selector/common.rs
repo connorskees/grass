@@ -1,4 +1,4 @@
-use std::fmt::{self, Display};
+use std::fmt;
 
 /// The selector namespace.
 ///
@@ -14,7 +14,7 @@ pub(crate) enum Namespace {
     None,
 }
 
-impl Display for Namespace {
+impl fmt::Display for Namespace {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Empty => write!(f, "|"),
@@ -31,7 +31,7 @@ pub(crate) struct QualifiedName {
     pub namespace: Namespace,
 }
 
-impl Display for QualifiedName {
+impl fmt::Display for QualifiedName {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.namespace)?;
         f.write_str(&self.ident)

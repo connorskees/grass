@@ -2,8 +2,7 @@ use std::iter::Iterator;
 
 use peekmore::PeekMoreIterator;
 
-use crate::error::SassResult;
-use crate::Token;
+use crate::{error::SassResult, Token};
 
 use super::{devour_whitespace, read_until_newline};
 

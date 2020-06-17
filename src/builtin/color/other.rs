@@ -2,18 +2,19 @@ use super::{Builtin, GlobalFunctionMap};
 
 use num_traits::{One, Signed, Zero};
 
-use crate::args::CallArgs;
-use crate::color::Color;
-use crate::common::QuoteKind;
-use crate::error::SassResult;
-use crate::scope::Scope;
-use crate::selector::Selector;
-use crate::unit::Unit;
-use crate::value::{Number, Value};
+use crate::{
+    args::CallArgs,
+    color::Color,
+    common::QuoteKind,
+    error::SassResult,
+    parse::Parser,
+    unit::Unit,
+    value::{Number, Value},
+};
 
 macro_rules! opt_rgba {
-    ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal, $scope:ident, $super_selector:ident) => {
-        let $name = match named_arg!($args, $scope, $super_selector, $arg = Value::Null) {
+    ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal, $parser:ident) => {
+        let $name = match $parser.default_named_arg(&mut $args, $arg, Value::Null)? {
             Value::Dimension(n, u) => Some(bound!($args, $arg, n, u, $low, $high)),
             Value::Null => None,
             v => {
@@ -32,8 +33,8 @@ macro_rules! opt_rgba {
 }
 
 macro_rules! opt_hsl {
-    ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal, $scope:ident, $super_selector:ident) => {
-        let $name = match named_arg!($args, $scope, $super_selector, $arg = Value::Null) {
+    ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal, $parser:ident) => {
+        let $name = match $parser.default_named_arg(&mut $args, $arg, Value::Null)? {
             Value::Dimension(n, u) => {
                 Some(bound!($args, $arg, n, u, $low, $high) / Number::from(100))
             }
@@ -53,8 +54,8 @@ macro_rules! opt_hsl {
     };
 }
 
-fn change_color(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
-    if args.get_positional(1, scope, super_selector).is_some() {
+fn change_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+    if parser.positional_arg(&mut args, 1).is_some() {
         return Err((
             "Only one positional argument is allowed. All other arguments must be passed by name.",
             args.span(),
@@ -62,7 +63,7 @@ fn change_color(mut args: CallArgs, scope: &Scope, super_selector: &Selector) ->
             .into());
     }
 
-    let color = match arg!(args, scope, super_selector, 0, "color") {
+    let color = match parser.arg(&mut args, 0, "color")? {
         Value::Color(c) => c,
         v => {
             return Err((
@@ -73,10 +74,10 @@ fn change_color(mut args: CallArgs, scope: &Scope, super_selector: &Selector) ->
         }
     };
 
-    opt_rgba!(args, alpha, "alpha", 0, 1, scope, super_selector);
-    opt_rgba!(args, red, "red", 0, 255, scope, super_selector);
-    opt_rgba!(args, green, "green", 0, 255, scope, super_selector);
-    opt_rgba!(args, blue, "blue", 0, 255, scope, super_selector);
+    opt_rgba!(args, alpha, "alpha", 0, 1, parser);
+    opt_rgba!(args, red, "red", 0, 255, parser);
+    opt_rgba!(args, green, "green", 0, 255, parser);
+    opt_rgba!(args, blue, "blue", 0, 255, parser);
 
     if red.is_some() || green.is_some() || blue.is_some() {
         return Ok(Value::Color(Box::new(Color::from_rgba(
@@ -87,7 +88,7 @@ fn change_color(mut args: CallArgs, scope: &Scope, super_selector: &Selector) ->
         ))));
     }
 
-    let hue = match named_arg!(args, scope, super_selector, "hue" = Value::Null) {
+    let hue = match parser.default_named_arg(&mut args, "hue", Value::Null)? {
         Value::Dimension(n, _) => Some(n),
         Value::Null => None,
         v => {
@@ -99,16 +100,8 @@ fn change_color(mut args: CallArgs, scope: &Scope, super_selector: &Selector) ->
         }
     };
 
-    opt_hsl!(
-        args,
-        saturation,
-        "saturation",
-        0,
-        100,
-        scope,
-        super_selector
-    );
-    opt_hsl!(args, luminance, "lightness", 0, 100, scope, super_selector);
+    opt_hsl!(args, saturation, "saturation", 0, 100, parser);
+    opt_hsl!(args, luminance, "lightness", 0, 100, parser);
 
     if hue.is_some() || saturation.is_some() || luminance.is_some() {
         // Color::as_hsla() returns more exact values than Color::hue(), etc.
@@ -128,8 +121,8 @@ fn change_color(mut args: CallArgs, scope: &Scope, super_selector: &Selector) ->
     }))
 }
 
-fn adjust_color(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
-    let color = match arg!(args, scope, super_selector, 0, "color") {
+fn adjust_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+    let color = match parser.arg(&mut args, 0, "color")? {
         Value::Color(c) => c,
         v => {
             return Err((
@@ -140,10 +133,10 @@ fn adjust_color(mut args: CallArgs, scope: &Scope, super_selector: &Selector) ->
         }
     };
 
-    opt_rgba!(args, alpha, "alpha", -1, 1, scope, super_selector);
-    opt_rgba!(args, red, "red", -255, 255, scope, super_selector);
-    opt_rgba!(args, green, "green", -255, 255, scope, super_selector);
-    opt_rgba!(args, blue, "blue", -255, 255, scope, super_selector);
+    opt_rgba!(args, alpha, "alpha", -1, 1, parser);
+    opt_rgba!(args, red, "red", -255, 255, parser);
+    opt_rgba!(args, green, "green", -255, 255, parser);
+    opt_rgba!(args, blue, "blue", -255, 255, parser);
 
     if red.is_some() || green.is_some() || blue.is_some() {
         return Ok(Value::Color(Box::new(Color::from_rgba(
@@ -154,7 +147,7 @@ fn adjust_color(mut args: CallArgs, scope: &Scope, super_selector: &Selector) ->
         ))));
     }
 
-    let hue = match named_arg!(args, scope, super_selector, "hue" = Value::Null) {
+    let hue = match parser.default_named_arg(&mut args, "hue", Value::Null)? {
         Value::Dimension(n, _) => Some(n),
         Value::Null => None,
         v => {
@@ -166,24 +159,8 @@ fn adjust_color(mut args: CallArgs, scope: &Scope, super_selector: &Selector) ->
         }
     };
 
-    opt_hsl!(
-        args,
-        saturation,
-        "saturation",
-        -100,
-        100,
-        scope,
-        super_selector
-    );
-    opt_hsl!(
-        args,
-        luminance,
-        "lightness",
-        -100,
-        100,
-        scope,
-        super_selector
-    );
+    opt_hsl!(args, saturation, "saturation", -100, 100, parser);
+    opt_hsl!(args, luminance, "lightness", -100, 100, parser);
 
     if hue.is_some() || saturation.is_some() || luminance.is_some() {
         // Color::as_hsla() returns more exact values than Color::hue(), etc.
@@ -204,7 +181,9 @@ fn adjust_color(mut args: CallArgs, scope: &Scope, super_selector: &Selector) ->
     }))
 }
 
-fn scale_color(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
+#[allow(clippy::cognitive_complexity)]
+// todo: refactor into rgb and hsl?
+fn scale_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     fn scale(val: Number, by: Number, max: Number) -> Number {
         if by.is_zero() {
             return val;
@@ -213,7 +192,7 @@ fn scale_color(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> 
     }
 
     let span = args.span();
-    let color = match arg!(args, scope, super_selector, 0, "color") {
+    let color = match parser.arg(&mut args, 0, "color")? {
         Value::Color(c) => c,
         v => {
             return Err((
@@ -225,8 +204,8 @@ fn scale_color(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> 
     };
 
     macro_rules! opt_scale_arg {
-        ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal, $scope:ident, $super_selector:ident) => {
-            let $name = match named_arg!($args, $scope, $super_selector, $arg = Value::Null) {
+        ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal, $parser:ident) => {
+            let $name = match $parser.default_named_arg(&mut $args, $arg, Value::Null)? {
                 Value::Dimension(n, Unit::Percent) => {
                     Some(bound!($args, $arg, n, Unit::Percent, $low, $high) / Number::from(100))
                 }
@@ -257,10 +236,10 @@ fn scale_color(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> 
         };
     }
 
-    opt_scale_arg!(args, alpha, "alpha", -100, 100, scope, super_selector);
-    opt_scale_arg!(args, red, "red", -100, 100, scope, super_selector);
-    opt_scale_arg!(args, green, "green", -100, 100, scope, super_selector);
-    opt_scale_arg!(args, blue, "blue", -100, 100, scope, super_selector);
+    opt_scale_arg!(args, alpha, "alpha", -100, 100, parser);
+    opt_scale_arg!(args, red, "red", -100, 100, parser);
+    opt_scale_arg!(args, green, "green", -100, 100, parser);
+    opt_scale_arg!(args, blue, "blue", -100, 100, parser);
 
     if red.is_some() || green.is_some() || blue.is_some() {
         return Ok(Value::Color(Box::new(Color::from_rgba(
@@ -287,24 +266,8 @@ fn scale_color(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> 
         ))));
     }
 
-    opt_scale_arg!(
-        args,
-        saturation,
-        "saturation",
-        -100,
-        100,
-        scope,
-        super_selector
-    );
-    opt_scale_arg!(
-        args,
-        luminance,
-        "lightness",
-        -100,
-        100,
-        scope,
-        super_selector
-    );
+    opt_scale_arg!(args, saturation, "saturation", -100, 100, parser);
+    opt_scale_arg!(args, luminance, "lightness", -100, 100, parser);
 
     if saturation.is_some() || luminance.is_some() {
         // Color::as_hsla() returns more exact values than Color::hue(), etc.
@@ -337,9 +300,9 @@ fn scale_color(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> 
     }))
 }
 
-fn ie_hex_str(mut args: CallArgs, scope: &Scope, super_selector: &Selector) -> SassResult<Value> {
+fn ie_hex_str(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    let color = match arg!(args, scope, super_selector, 0, "color") {
+    let color = match parser.arg(&mut args, 0, "color")? {
         Value::Color(c) => c,
         v => {
             return Err((
