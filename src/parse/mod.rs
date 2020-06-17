@@ -1147,14 +1147,17 @@ impl<'a> Parser<'a> {
         Ok(stmts)
     }
 
+    #[allow(clippy::unused_self)]
     fn parse_extend(&mut self) -> SassResult<()> {
         todo!("@extend not yet implemented")
     }
 
+    #[allow(clippy::unused_self)]
     fn parse_supports(&mut self) -> SassResult<Stmt> {
         todo!("@supports not yet implemented")
     }
 
+    #[allow(clippy::unused_self)]
     fn parse_keyframes(&mut self) -> SassResult<Stmt> {
         todo!("@keyframes not yet implemented")
     }
