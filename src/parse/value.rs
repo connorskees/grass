@@ -372,8 +372,12 @@ impl<'a> Parser<'a> {
             }
             '&' => {
                 let span = self.toks.next().unwrap().pos();
-                IntermediateValue::Value(self.super_selectors.last().clone().into_value())
-                    .span(span)
+                if self.super_selectors.is_empty() {
+                    IntermediateValue::Value(Value::Null).span(span)
+                } else {
+                    IntermediateValue::Value(self.super_selectors.last().clone().into_value())
+                        .span(span)
+                }
             }
             '#' => {
                 if let Some(Token { kind: '{', pos }) = self.toks.peek_forward(1) {

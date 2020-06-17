@@ -653,6 +653,11 @@ test!(
     ":nth-child(ODD) {\n  color: &;\n}\n",
     ":nth-child(odd) {\n  color: :nth-child(odd);\n}\n"
 );
+test!(
+    super_selector_is_null_when_at_root,
+    "@mixin foo {\n    #{if(&, 'true', 'false')} {\n        color: red;\n    }\n}\n\n@include foo;\n\na {\n    @include foo;\n}\n",
+    "false {\n  color: red;\n}\n\na true {\n  color: red;\n}\n"
+);
 error!(
     a_n_plus_b_n_invalid_odd,
     ":nth-child(ofdd) {\n  color: &;\n}\n", "Error: Expected \"odd\"."
