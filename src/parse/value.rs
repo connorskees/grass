@@ -554,83 +554,41 @@ impl<'a> Parser<'a> {
                 });
             }
         }
-        match s.len() {
-            3 => {
-                let v = match u16::from_str_radix(&s, 16) {
-                    Ok(a) => a,
-                    Err(_) => {
-                        return Ok(Value::String(format!("#{}", s), QuoteKind::None)
-                            .span(self.span_before))
-                    }
-                };
-                let red = (((v & 0xf00) >> 8) * 0x11) as u8;
-                let green = (((v & 0x0f0) >> 4) * 0x11) as u8;
-                let blue = ((v & 0x00f) * 0x11) as u8;
-                Ok(
-                    Value::Color(Box::new(Color::new(red, green, blue, 1, format!("#{}", s))))
-                        .span(self.span_before),
-                )
+        let v = match u32::from_str_radix(&s, 16) {
+            Ok(a) => a,
+            Err(_) => {
+                return Ok(Value::String(format!("#{}", s), QuoteKind::None).span(self.span_before))
             }
-            4 => {
-                let v = match u16::from_str_radix(&s, 16) {
-                    Ok(a) => a,
-                    Err(_) => {
-                        return Ok(Value::String(format!("#{}", s), QuoteKind::None)
-                            .span(self.span_before))
-                    }
-                };
-                let red = (((v & 0xf000) >> 12) * 0x11) as u8;
-                let green = (((v & 0x0f00) >> 8) * 0x11) as u8;
-                let blue = (((v & 0x00f0) >> 4) * 0x11) as u8;
-                let alpha = ((v & 0x000f) * 0x11) as u8;
-                Ok(Value::Color(Box::new(Color::new(
-                    red,
-                    green,
-                    blue,
-                    alpha,
-                    format!("#{}", s),
-                )))
-                .span(self.span_before))
-            }
-            6 => {
-                let v = match u32::from_str_radix(&s, 16) {
-                    Ok(a) => a,
-                    Err(_) => {
-                        return Ok(Value::String(format!("#{}", s), QuoteKind::None)
-                            .span(self.span_before))
-                    }
-                };
-                let red = ((v & 0x00ff_0000) >> 16) as u8;
-                let green = ((v & 0x0000_ff00) >> 8) as u8;
-                let blue = (v & 0x0000_00ff) as u8;
-                Ok(
-                    Value::Color(Box::new(Color::new(red, green, blue, 1, format!("#{}", s))))
-                        .span(self.span_before),
-                )
-            }
-            8 => {
-                let v = match u32::from_str_radix(&s, 16) {
-                    Ok(a) => a,
-                    Err(_) => {
-                        return Ok(Value::String(format!("#{}", s), QuoteKind::None)
-                            .span(self.span_before))
-                    }
-                };
-                let red = ((v & 0xff00_0000) >> 24) as u8;
-                let green = ((v & 0x00ff_0000) >> 16) as u8;
-                let blue = ((v & 0x0000_ff00) >> 8) as u8;
-                let alpha = (v & 0x0000_00ff) as u8;
-                Ok(Value::Color(Box::new(Color::new(
-                    red,
-                    green,
-                    blue,
-                    alpha,
-                    format!("#{}", s),
-                )))
-                .span(self.span_before))
-            }
-            _ => Err(("Expected hex digit.", self.span_before).into()),
-        }
+        };
+        let (red, green, blue, alpha) = match s.len() {
+            3 => (
+                (((v & 0x0f00) >> 8) * 0x11) as u8,
+                (((v & 0x00f0) >> 4) * 0x11) as u8,
+                ((v & 0x000f) * 0x11) as u8,
+                1,
+            ),
+            4 => (
+                (((v & 0xf000) >> 12) * 0x11) as u8,
+                (((v & 0x0f00) >> 8) * 0x11) as u8,
+                (((v & 0x00f0) >> 4) * 0x11) as u8,
+                ((v & 0x000f) * 0x11) as u8,
+            ),
+            6 => (
+                ((v & 0x00ff_0000) >> 16) as u8,
+                ((v & 0x0000_ff00) >> 8) as u8,
+                (v & 0x0000_00ff) as u8,
+                1,
+            ),
+            8 => (
+                ((v & 0xff00_0000) >> 24) as u8,
+                ((v & 0x00ff_0000) >> 16) as u8,
+                ((v & 0x0000_ff00) >> 8) as u8,
+                (v & 0x0000_00ff) as u8,
+            ),
+            _ => return Err(("Expected hex digit.", self.span_before).into()),
+        };
+        let color = Color::new(red, green, blue, alpha, format!("#{}", s));
+        Ok(Value::Color(Box::new(color)).span(self.span_before))
     }
 
     fn eat_calc_args(&mut self, buf: &mut String) -> SassResult<()> {
