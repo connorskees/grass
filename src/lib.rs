@@ -119,7 +119,6 @@ mod parse;
 mod scope;
 mod selector;
 mod style;
-mod stylesheet;
 mod token;
 mod unit;
 mod utils;

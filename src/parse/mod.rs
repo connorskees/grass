@@ -96,12 +96,7 @@ pub(crate) struct Parser<'a> {
     pub toks: &'a mut PeekMoreIterator<IntoIter<Token>>,
     pub map: &'a mut CodeMap,
     pub path: &'a Path,
-    // `pub` to allow meta functions
     pub global_scope: &'a mut Scope,
-    // todo: make these fields private. they are currently public to hack in
-    // `Value::to_selector`, which requires a scope and selector to parse.
-    // presumably we could pass in empty scope since no interpolation will ever be done
-    // maybe even empty selector
     pub scopes: &'a mut NeverEmptyVec<Scope>,
     pub super_selectors: &'a mut NeverEmptyVec<Selector>,
     pub span_before: Span,
