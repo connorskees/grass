@@ -242,3 +242,8 @@ test!(
     "@mixin c {}\n\na {\n    @include c()\n}\n",
     ""
 );
+test!(
+    local_variable_declared_before_mixin_is_still_in_scope,
+    "@mixin foo {}\n\na {\n    $a: red;\n    @include foo;\n    color: $a;\n}\n",
+    "a {\n  color: red;\n}\n"
+);
