@@ -126,7 +126,7 @@ impl<'a> Parser<'a> {
     }
 
     fn eval_mixin_args(&mut self, mixin: &mut Mixin, mut args: CallArgs) -> SassResult<()> {
-        let mut scope = self.scopes.last().clone();
+        self.scopes.push(self.scopes.last().clone());
         for (idx, arg) in mixin.args.0.iter_mut().enumerate() {
             if arg.is_variadic {
                 let span = args.span();
@@ -152,9 +152,12 @@ impl<'a> Parser<'a> {
                     }
                 },
             };
-            scope.insert_var(arg.name.clone(), val.clone())?;
+            self.scopes
+                .last_mut()
+                .insert_var(arg.name.clone(), val.clone())?;
             mixin.scope.insert_var(mem::take(&mut arg.name), val)?;
         }
+        self.scopes.pop();
         Ok(())
     }
 }
