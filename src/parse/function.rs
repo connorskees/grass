@@ -61,8 +61,9 @@ impl<'a> Parser<'a> {
     }
 
     pub fn eval_function(&mut self, mut function: Function, args: CallArgs) -> SassResult<Value> {
-        self.scopes.push(self.scopes.last().clone());
         self.eval_fn_args(&mut function, args)?;
+        self.scopes.push(function.scope);
+
         let mut return_value = Parser {
             toks: &mut function.body.into_iter().peekmore(),
             map: self.map,
@@ -79,7 +80,9 @@ impl<'a> Parser<'a> {
             at_root_has_selector: self.at_root_has_selector,
         }
         .parse()?;
+
         self.scopes.pop();
+
         debug_assert!(return_value.len() <= 1);
         match return_value
             .pop()
@@ -91,11 +94,12 @@ impl<'a> Parser<'a> {
     }
 
     fn eval_fn_args(&mut self, function: &mut Function, mut args: CallArgs) -> SassResult<()> {
+        self.scopes.push(self.scopes.last().clone());
         for (idx, arg) in function.args.0.iter_mut().enumerate() {
             if arg.is_variadic {
                 let span = args.span();
                 let arg_list = Value::ArgList(self.variadic_args(args)?);
-                self.scopes.last_mut().insert_var(
+                function.scope.insert_var(
                     arg.name.clone(),
                     Spanned {
                         node: arg_list,
@@ -117,8 +121,10 @@ impl<'a> Parser<'a> {
             };
             self.scopes
                 .last_mut()
-                .insert_var(mem::take(&mut arg.name), val)?;
+                .insert_var(arg.name.clone(), val.clone())?;
+            function.scope.insert_var(mem::take(&mut arg.name), val)?;
         }
+        self.scopes.pop();
         Ok(())
     }
 }
