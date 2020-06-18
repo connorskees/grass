@@ -148,7 +148,7 @@ impl Value {
             Self::List(vals, sep, brackets) => match brackets {
                 Brackets::None => Cow::owned(
                     vals.iter()
-                        .filter(|x| !x.clone().is_null(span).unwrap_or(false))
+                        .filter(|x| !x.is_null(span).unwrap_or(false))
                         .map(|x| x.to_css_string(span))
                         .collect::<SassResult<Vec<Cow<'static, str>>>>()?
                         .join(sep.as_str()),

@@ -171,8 +171,9 @@ impl<'a> Parser<'a> {
                                 span,
                             } = self.parse_value_from_vec(toks)?;
                             span.merge(kind_string.span);
-                            if let Some(Token { kind: ';', .. }) = self.toks.peek() {
-                                kind_string.span.merge(self.toks.next().unwrap().pos());
+                            if let Some(Token { kind: ';', pos }) = self.toks.peek() {
+                                kind_string.span.merge(*pos);
+                                self.toks.next();
                             }
                             self.warn(&Spanned {
                                 node: message.to_css_string(span)?,
@@ -186,8 +187,9 @@ impl<'a> Parser<'a> {
                                 span,
                             } = self.parse_value_from_vec(toks)?;
                             span.merge(kind_string.span);
-                            if let Some(Token { kind: ';', .. }) = self.toks.peek() {
-                                kind_string.span.merge(self.toks.next().unwrap().pos());
+                            if let Some(Token { kind: ';', pos }) = self.toks.peek() {
+                                kind_string.span.merge(*pos);
+                                self.toks.next();
                             }
                             self.debug(&Spanned {
                                 node: message.inspect(span)?,
@@ -529,7 +531,11 @@ impl<'a> Parser<'a> {
             if let Some(tok) = self.toks.next() {
                 self.whitespace();
                 match tok.kind.to_ascii_lowercase() {
-                    'i' if self.toks.next().unwrap().kind.to_ascii_lowercase() == 'f' => {
+                    'i' if matches!(
+                        self.toks.peek(),
+                        Some(Token { kind: 'f', .. }) | Some(Token { kind: 'F', .. })
+                    ) =>
+                    {
                         self.toks.next();
                         let cond = read_until_open_curly_brace(self.toks)?;
                         self.toks.next();
@@ -610,10 +616,10 @@ impl<'a> Parser<'a> {
             _ => return Err(("expected \"$\".", self.span_before).into()),
         };
         self.whitespace();
-        if self.toks.peek().is_none() {
-            return Err(("Expected \"from\".", var.span).into());
-        }
-        self.span_before = self.toks.peek().unwrap().pos;
+        self.span_before = match self.toks.peek() {
+            Some(tok) => tok.pos,
+            None => return Err(("Expected \"from\".", var.span).into()),
+        };
         if self.parse_identifier()?.node.to_ascii_lowercase() != "from" {
             return Err(("Expected \"from\".", var.span).into());
         }
@@ -644,7 +650,10 @@ impl<'a> Parser<'a> {
                 '{' => {
                     return Err(("Expected \"to\" or \"through\".", tok.pos()).into());
                 }
-                _ => from_toks.push(self.toks.next().unwrap()),
+                _ => {
+                    from_toks.push(tok);
+                    self.toks.next();
+                }
             }
         }
         self.whitespace();
@@ -766,7 +775,10 @@ impl<'a> Parser<'a> {
 
         let mut body = read_until_closing_curly_brace(self.toks)?;
 
-        body.push(self.toks.next().unwrap());
+        body.push(match self.toks.next() {
+            Some(tok) => tok,
+            None => return Err(("expected \"}\".", self.span_before).into()),
+        });
 
         self.whitespace();
 
@@ -860,7 +872,10 @@ impl<'a> Parser<'a> {
         self.toks.next();
         self.whitespace();
         let mut body = read_until_closing_curly_brace(self.toks)?;
-        body.push(self.toks.next().unwrap());
+        body.push(match self.toks.next() {
+            Some(tok) => tok,
+            None => return Err(("expected \"}\".", self.span_before).into()),
+        });
         self.whitespace();
 
         let mut stmts = Vec::new();
@@ -1102,7 +1117,10 @@ impl<'a> Parser<'a> {
         self.whitespace();
 
         let mut body = read_until_closing_curly_brace(self.toks)?;
-        body.push(self.toks.next().unwrap());
+        body.push(match self.toks.next() {
+            Some(tok) => tok,
+            None => return Err(("expected \"}\".", self.span_before).into()),
+        });
 
         self.whitespace();
 

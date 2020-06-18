@@ -35,7 +35,10 @@ impl<'a> Parser<'a> {
         self.whitespace();
 
         let mut body = read_until_closing_curly_brace(self.toks)?;
-        body.push(self.toks.next().unwrap());
+        body.push(match self.toks.next() {
+            Some(tok) => tok,
+            None => return Err(("expected \"}\".", self.span_before).into()),
+        });
         self.whitespace();
 
         let function = Function::new(self.scopes.last().clone(), args, body, span);

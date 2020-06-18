@@ -710,7 +710,7 @@ impl<'a> Parser<'a> {
     }
 
     fn peek_interpolation(&mut self) -> SassResult<(Spanned<Value>, usize)> {
-        let vec = peek_until_closing_curly_brace(self.toks);
+        let vec = peek_until_closing_curly_brace(self.toks)?;
         let peek_counter = vec.len();
         self.toks.move_forward(1);
         let val = self.parse_value_from_vec(vec)?;

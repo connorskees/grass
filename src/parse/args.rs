@@ -15,7 +15,10 @@ use super::Parser;
 impl<'a> Parser<'a> {
     pub(super) fn parse_func_args(&mut self) -> SassResult<FuncArgs> {
         let mut args: Vec<FuncArg> = Vec::new();
-        let mut close_paren_span: Span = self.toks.peek().unwrap().pos();
+        let mut close_paren_span: Span = match self.toks.peek() {
+            Some(Token { pos, .. }) => *pos,
+            None => return Err(("expected \")\".", self.span_before).into()),
+        };
 
         self.whitespace();
         while let Some(Token { kind, pos }) = self.toks.next() {
@@ -130,9 +133,10 @@ impl<'a> Parser<'a> {
             .ok_or(("expected \")\".", self.span_before))?
             .pos();
         loop {
-            match self.toks.peek() {
-                Some(Token { kind: '$', .. }) => {
-                    let Token { pos, .. } = self.toks.next().unwrap();
+            match self.toks.peek().cloned() {
+                Some(Token { kind: '$', pos }) => {
+                    span = span.merge(pos);
+                    self.toks.next();
                     let v = self.parse_identifier_no_interpolation(false)?;
                     let whitespace = self.whitespace_or_comment();
                     if let Some(Token { kind: ':', .. }) = self.toks.peek() {

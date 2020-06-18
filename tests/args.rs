@@ -46,7 +46,11 @@ test!(
     "a {\n  color: 2;\n}\n"
 );
 error!(
-    #[ignore = "does not fail"]
+    #[ignore = "expects incorrect char, '{'"]
     nothing_after_open,
     "a { color:rgb(; }", "Error: expected \")\"."
+);
+error!(
+    nothing_after_open_paren_in_fn_args,
+    "@function foo(", "Error: expected \")\"."
 );

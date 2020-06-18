@@ -8,19 +8,19 @@ use super::{as_hex, hex_char_for, is_name, is_name_start, IsWhitespace};
 
 pub(crate) fn peek_until_closing_curly_brace<I: Iterator<Item = Token>>(
     toks: &mut PeekMoreIterator<I>,
-) -> Vec<Token> {
+) -> SassResult<Vec<Token>> {
     let mut t = Vec::new();
     let mut nesting = 0;
-    while let Some(tok) = toks.peek() {
+    while let Some(tok) = toks.peek().cloned() {
         match tok.kind {
             q @ '"' | q @ '\'' => {
-                t.push(*toks.peek().unwrap());
+                t.push(tok);
                 toks.move_forward(1);
-                t.extend(peek_until_closing_quote(toks, q));
+                t.extend(peek_until_closing_quote(toks, q)?);
             }
             '{' => {
                 nesting += 1;
-                t.push(*toks.peek().unwrap());
+                t.push(tok);
                 toks.move_forward(1);
             }
             '}' => {
@@ -28,62 +28,71 @@ pub(crate) fn peek_until_closing_curly_brace<I: Iterator<Item = Token>>(
                     break;
                 } else {
                     nesting -= 1;
-                    t.push(*toks.peek().unwrap());
+                    t.push(tok);
                     toks.move_forward(1);
                 }
             }
             '/' => {
-                let next = *toks.peek_forward(1).unwrap();
-                match toks.peek().unwrap().kind {
-                    '/' => peek_until_newline(toks),
+                let next = *toks
+                    .peek_forward(1)
+                    .ok_or(("Expected expression.", tok.pos))?;
+                match toks.peek() {
+                    Some(Token { kind: '/', .. }) => peek_until_newline(toks),
                     _ => t.push(next),
                 };
                 continue;
             }
             _ => {
-                t.push(*toks.peek().unwrap());
+                t.push(tok);
                 toks.move_forward(1);
             }
         }
     }
     peek_whitespace(toks);
-    t
+    Ok(t)
 }
 
 fn peek_until_closing_quote<I: Iterator<Item = Token>>(
     toks: &mut PeekMoreIterator<I>,
     q: char,
-) -> Vec<Token> {
+) -> SassResult<Vec<Token>> {
     let mut t = Vec::new();
-    while let Some(tok) = toks.peek() {
+    while let Some(tok) = toks.peek().cloned() {
         match tok.kind {
             '"' if q == '"' => {
-                t.push(*tok);
+                t.push(tok);
                 toks.move_forward(1);
                 break;
             }
             '\'' if q == '\'' => {
-                t.push(*tok);
+                t.push(tok);
                 toks.move_forward(1);
                 break;
             }
             '\\' => {
-                t.push(*tok);
-                t.push(*toks.peek_forward(1).unwrap());
+                t.push(tok);
+                t.push(match toks.peek_forward(1) {
+                    Some(tok) => *tok,
+                    None => return Err((format!("Expected {}.", q), tok.pos).into()),
+                });
             }
             '#' => {
-                t.push(*tok);
-                let next = toks.peek().unwrap();
+                t.push(tok);
+                let next = match toks.peek() {
+                    Some(tok) => tok,
+                    None => return Err((format!("Expected {}.", q), tok.pos).into()),
+                };
                 if next.kind == '{' {
-                    t.push(*toks.peek_forward(1).unwrap());
-                    t.append(&mut peek_until_closing_curly_brace(toks));
+                    t.push(*next);
+                    toks.peek_forward(1);
+                    t.append(&mut peek_until_closing_curly_brace(toks)?);
                 }
             }
-            _ => t.push(*tok),
+            _ => t.push(tok),
         }
         toks.move_forward(1);
     }
-    t
+    Ok(t)
 }
 
 fn peek_until_newline<I: Iterator<Item = Token>>(toks: &mut PeekMoreIterator<I>) {
@@ -166,13 +175,13 @@ pub(crate) fn peek_ident_no_interpolation<I: Iterator<Item = Token>>(
         .ok_or(("Expected identifier.", span_before))?
         .pos();
     let mut text = String::new();
-    if toks.peek().unwrap().kind == '-' {
+    if let Some(Token { kind: '-', .. }) = toks.peek() {
         toks.peek_forward(1);
         text.push('-');
         if toks.peek().is_none() {
             return Ok(Spanned { node: text, span });
         }
-        if toks.peek().unwrap().kind == '-' {
+        if let Some(Token { kind: '-', .. }) = toks.peek() {
             toks.peek_forward(1);
             text.push('-');
             text.push_str(&peek_ident_body_no_interpolation(toks, unit, span)?.node);
