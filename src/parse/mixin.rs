@@ -116,6 +116,8 @@ impl<'a> Parser<'a> {
         }
         .parse()?;
 
+        self.scopes.pop();
+
         Ok(body)
     }
 
