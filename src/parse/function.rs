@@ -3,7 +3,6 @@ use std::mem;
 use codemap::Spanned;
 use peekmore::PeekMore;
 
-use super::{Parser, Stmt};
 use crate::{
     args::CallArgs,
     atrule::Function,
@@ -12,6 +11,8 @@ use crate::{
     value::Value,
     Token,
 };
+
+use super::{NeverEmptyVec, Parser, Stmt};
 
 impl<'a> Parser<'a> {
     pub(super) fn parse_function(&mut self) -> SassResult<()> {
@@ -62,13 +63,12 @@ impl<'a> Parser<'a> {
 
     pub fn eval_function(&mut self, mut function: Function, args: CallArgs) -> SassResult<Value> {
         self.eval_fn_args(&mut function, args)?;
-        self.scopes.push(function.scope);
 
         let mut return_value = Parser {
             toks: &mut function.body.into_iter().peekmore(),
             map: self.map,
             path: self.path,
-            scopes: self.scopes,
+            scopes: &mut NeverEmptyVec::new(function.scope),
             global_scope: self.global_scope,
             super_selectors: self.super_selectors,
             span_before: self.span_before,
@@ -80,8 +80,6 @@ impl<'a> Parser<'a> {
             at_root_has_selector: self.at_root_has_selector,
         }
         .parse()?;
-
-        self.scopes.pop();
 
         debug_assert!(return_value.len() <= 1);
         match return_value

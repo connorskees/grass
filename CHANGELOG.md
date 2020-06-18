@@ -1,6 +1,7 @@
 # 0.9.1
+
  - fix regression in which `@at-root` would panic when placed after a ruleset
- - fix regression related to `@mixin` scoping and outer, local variables
+ - fix regression related to `@mixin` and `@function` scoping when combined with outer, local variables
 
 # 0.9.0
 

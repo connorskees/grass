@@ -6,13 +6,12 @@ use crate::{
     args::{CallArgs, FuncArgs},
     atrule::Mixin,
     error::SassResult,
-    scope::Scope,
     utils::read_until_closing_curly_brace,
     value::Value,
     Token,
 };
 
-use super::{Parser, Stmt};
+use super::{NeverEmptyVec, Parser, Stmt};
 
 impl<'a> Parser<'a> {
     pub(super) fn parse_mixin(&mut self) -> SassResult<()> {
@@ -41,7 +40,7 @@ impl<'a> Parser<'a> {
         // this is blocked on figuring out just how to check for this. presumably we could have a check
         // not when parsing initially, but rather when `@include`ing to see if an `@content` was found.
 
-        let mixin = Mixin::new(Scope::new(), args, body, false);
+        let mixin = Mixin::new(self.scopes.last().clone(), args, body, false);
 
         if self.at_root {
             self.global_scope.insert_mixin(name, mixin);
@@ -97,13 +96,11 @@ impl<'a> Parser<'a> {
         let mut mixin = self.scopes.last().get_mixin(name, self.global_scope)?;
         self.eval_mixin_args(&mut mixin, args)?;
 
-        self.scopes.push(mixin.scope);
-
         let body = Parser {
             toks: &mut mixin.body,
             map: self.map,
             path: self.path,
-            scopes: self.scopes,
+            scopes: &mut NeverEmptyVec::new(mixin.scope),
             global_scope: self.global_scope,
             super_selectors: self.super_selectors,
             span_before: self.span_before,
@@ -115,8 +112,6 @@ impl<'a> Parser<'a> {
             at_root_has_selector: self.at_root_has_selector,
         }
         .parse()?;
-
-        self.scopes.pop();
 
         Ok(body)
     }

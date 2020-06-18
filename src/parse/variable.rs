@@ -81,6 +81,11 @@ impl<'a> Parser<'a> {
                     scope.insert_var(ident.clone(), value.value.clone())?;
                 }
             }
+            if self.scopes.first().var_exists_no_global(&ident) {
+                self.scopes
+                    .first_mut()
+                    .insert_var(ident.clone(), value.value.clone())?;
+            }
             self.scopes.last_mut().insert_var(ident, value.value)?;
         }
         Ok(())

@@ -99,3 +99,25 @@ error!(
     body_missing_closing_curly_brace,
     "@function foo() {", "Error: expected \"}\"."
 );
+test!(
+    does_not_modify_local_variables,
+    "@function bar($color-name) {
+        @if $color-name==bar {
+            @error bar;
+        }
+
+        $color: bar;
+        @return null;
+    }
+
+    @function foo($a, $b) {
+        @return \"success!\";
+    }
+
+    a {
+        $color: foo;
+    
+        color: foo(bar($color), bar($color));
+    }",
+    "a {\n  color: \"success!\";\n}\n"
+);

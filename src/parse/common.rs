@@ -25,6 +25,14 @@ impl<T> NeverEmptyVec<T> {
         self.rest.last_mut().unwrap_or(&mut self.first)
     }
 
+    pub fn first(&mut self) -> &T {
+        &self.first
+    }
+
+    pub fn first_mut(&mut self) -> &mut T {
+        &mut self.first
+    }
+
     pub fn push(&mut self, value: T) {
         self.rest.push(value)
     }
