@@ -107,7 +107,6 @@ test!(
     }",
     "result {\n  root_default: initial;\n  root_implicit: inner;\n  root_explicit: inner;\n}\n"
 );
-
 test!(
     if_inside_while,
     "$continue_outer: true;
@@ -125,4 +124,8 @@ test!(
       }
     }",
     "a {\n  color: red;\n}\n\na {\n  color: blue;\n}\n"
+);
+error!(
+    missing_closing_curly_brace,
+    "@while true {", "Error: expected \"}\"."
 );

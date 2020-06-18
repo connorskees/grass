@@ -28,10 +28,10 @@ pub(crate) fn read_until_open_curly_brace<I: Iterator<Item = Token>>(
             }
             '\\' => {
                 t.push(toks.next().unwrap());
-                if toks.peek().is_some() {
-                    t.push(toks.next().unwrap());
-                }
-                continue;
+                t.push(match toks.next() {
+                    Some(tok) => tok,
+                    None => continue,
+                });
             }
             q @ '"' | q @ '\'' => {
                 t.push(toks.next().unwrap());
@@ -89,9 +89,10 @@ pub(crate) fn read_until_closing_curly_brace<I: Iterator<Item = Token>>(
             }
             '\\' => {
                 t.push(toks.next().unwrap());
-                if toks.peek().is_some() {
-                    t.push(toks.next().unwrap());
-                }
+                t.push(match toks.next() {
+                    Some(tok) => tok,
+                    None => continue,
+                });
             }
             _ => t.push(toks.next().unwrap()),
         }
@@ -120,16 +121,21 @@ pub(crate) fn read_until_closing_quote<I: Iterator<Item = Token>>(
             }
             '\\' => {
                 t.push(tok);
-                if toks.peek().is_some() {
-                    t.push(toks.next().unwrap());
-                }
+                t.push(match toks.next() {
+                    Some(tok) => tok,
+                    None => return Err((format!("Expected {}.", q), tok.pos).into()),
+                });
             }
             '#' => {
                 t.push(tok);
-                let next = toks.peek().unwrap();
-                if next.kind == '{' {
-                    t.push(toks.next().unwrap());
-                    t.append(&mut read_until_closing_curly_brace(toks)?);
+                match toks.peek() {
+                    Some(tok @ Token { kind: '{', .. }) => {
+                        t.push(*tok);
+                        toks.next();
+                        t.append(&mut read_until_closing_curly_brace(toks)?);
+                    }
+                    Some(..) => continue,
+                    None => return Err((format!("Expected {}.", q), tok.pos).into()),
                 }
             }
             _ => t.push(tok),
@@ -156,9 +162,10 @@ pub(crate) fn read_until_semicolon_or_closing_curly_brace<I: Iterator<Item = Tok
             }
             '\\' => {
                 t.push(toks.next().unwrap());
-                if toks.peek().is_some() {
-                    t.push(toks.next().unwrap());
-                }
+                t.push(match toks.next() {
+                    Some(tok) => tok,
+                    None => continue,
+                });
             }
             '"' | '\'' => {
                 let quote = toks.next().unwrap();
@@ -217,11 +224,11 @@ pub(crate) fn read_until_closing_paren<I: Iterator<Item = Token>>(
                 continue;
             }
             '\\' => {
-                t.push(tok);
-                if toks.peek().is_some() {
-                    t.push(toks.next().unwrap());
-                }
-                continue;
+                t.push(toks.next().unwrap());
+                t.push(match toks.next() {
+                    Some(tok) => tok,
+                    None => continue,
+                });
             }
             _ => {}
         }
@@ -253,10 +260,11 @@ pub(crate) fn read_until_closing_square_brace<I: Iterator<Item = Token>>(
                 continue;
             }
             '\\' => {
-                t.push(tok);
-                if toks.peek().is_some() {
-                    t.push(toks.next().unwrap());
-                }
+                t.push(toks.next().unwrap());
+                t.push(match toks.next() {
+                    Some(tok) => tok,
+                    None => continue,
+                });
             }
             _ => {}
         }

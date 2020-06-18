@@ -51,11 +51,7 @@ pub(crate) fn eat_number<I: Iterator<Item = Token>>(
 ) -> SassResult<Spanned<ParsedNumber>> {
     let mut whole = String::with_capacity(1);
     // TODO: merge this span with chars
-    let span = if let Some(tok) = toks.peek() {
-        tok.pos()
-    } else {
-        todo!()
-    };
+    let span = toks.peek().unwrap().pos;
     eat_whole_number(toks, &mut whole);
 
     if toks.peek().is_none() {

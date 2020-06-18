@@ -134,3 +134,15 @@ test!(
     "a {\n  color: UrL(http://foo);\n}\n",
     "a {\n  color: url(http://foo);\n}\n"
 );
+error!(
+    url_nothing_after_forward_slash_in_interpolation,
+    "a { color: url(#{/", "Error: Expected expression."
+);
+error!(
+    url_nothing_after_backslash_in_interpolation_in_quote,
+    "a { color: url(#{\"\\", "Error: Expected \"."
+);
+error!(
+    url_nothing_after_hash_in_interpolation_in_quote,
+    "a { color: url(#{\"#", "Error: Expected \"."
+);

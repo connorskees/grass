@@ -48,3 +48,7 @@ test!(
     "a {\n  @each $i in 1 2 3 {\n    color: type-of($i);\n  }\n}\n",
     "a {\n  color: number;\n  color: number;\n  color: number;\n}\n"
 );
+error!(
+    missing_closing_curly_brace,
+    "@each $i in 1 {", "Error: expected \"}\"."
+);

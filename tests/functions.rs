@@ -95,3 +95,7 @@ error!(
     double_comma_args,
     "@function foo($a,$b,,) {}", "Error: expected \")\"."
 );
+error!(
+    body_missing_closing_curly_brace,
+    "@function foo() {", "Error: expected \"}\"."
+);

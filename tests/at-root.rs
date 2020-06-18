@@ -68,3 +68,7 @@ test!(
     "a {}\n\n@at-root {\n    @-ms-viewport { width: device-width; }\n}\n",
     "@-ms-viewport {\n  width: device-width;\n}\n"
 );
+error!(
+    missing_closing_curly_brace,
+    "@at-root {", "Error: expected \"}\"."
+);

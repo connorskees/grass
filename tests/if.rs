@@ -149,3 +149,7 @@ error!(unclosed_sgl_quote, "@if true ' {}", "Error: Expected '.");
 error!(unclosed_call_args, "@if a({}", "Error: expected \")\".");
 error!(nothing_after_div, "@if a/", "Error: Expected expression.");
 error!(multiline_error, "@if \"\n\"{}", "Error: Expected \".");
+error!(
+    nothing_after_i_after_else,
+    "@if true {} @else i", "Error: expected \"{\"."
+);

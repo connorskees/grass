@@ -233,6 +233,10 @@ error!(
     undefined_mixin,
     "a {@include foo;}", "Error: Undefined mixin."
 );
+error!(
+    body_missing_closing_curly_brace,
+    "@mixin foo() {", "Error: expected \"}\"."
+);
 test!(
     include_empty_args_no_semicolon,
     "@mixin c {}\n\na {\n    @include c()\n}\n",
