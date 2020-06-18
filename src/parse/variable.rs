@@ -123,7 +123,9 @@ impl<'a> Parser<'a> {
                         }
                         Some(..) | None => {}
                     }
-                    val_toks.push(self.toks.next().unwrap());
+                    if let Some(tok) = self.toks.next() {
+                        val_toks.push(tok);
+                    }
                 }
                 '{' => break,
                 '}' => {

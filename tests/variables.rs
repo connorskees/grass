@@ -143,3 +143,7 @@ error!(
     invalid_escape,
     "$\\110000: red;", "Error: Invalid escape sequence."
 );
+error!(
+    nothing_after_hash_in_variable_decl,
+    "$color: #", "Error: Expected identifier."
+);
