@@ -593,7 +593,17 @@ test!(
     "a {\n  color: #ooobar;\n}\n"
 );
 test!(
-    more_than_8_hex_chars_after_hash,
+    more_than_8_hex_chars_after_hash_starts_with_letter,
     "a {\n  color: #ffffffffff;\n}\n",
     "a {\n  color: #ffffffffff;\n}\n"
+);
+test!(
+    more_than_8_hex_chars_after_hash_starts_with_number,
+    "a {\n  color: #0000000000;\n}\n",
+    "a {\n  color: #00000000 0;\n}\n"
+);
+test!(
+    more_than_8_hex_chars_after_hash_starts_with_number_contains_hex_char,
+    "a {\n  color: #00000000f00;\n}\n",
+    "a {\n  color: #00000000 f00;\n}\n"
 );
