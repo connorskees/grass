@@ -528,15 +528,16 @@ impl<'a> Parser<'a> {
     fn parse_hex(&mut self) -> SassResult<Spanned<Value>> {
         let mut s = String::with_capacity(7);
         s.push('#');
-        if self
+        let first_char = self
             .toks
             .peek()
             .ok_or(("Expected identifier.", self.span_before))?
-            .kind
-            .is_ascii_hexdigit()
-        {
+            .kind;
+        let first_is_digit = first_char.is_ascii_digit();
+        let first_is_hexdigit = first_char.is_ascii_hexdigit();
+        if first_is_digit {
             while let Some(c) = self.toks.peek() {
-                if !c.kind.is_ascii_hexdigit() {
+                if !c.kind.is_ascii_hexdigit() || s.len() == 9 {
                     break;
                 }
                 let tok = self.toks.next().unwrap();
@@ -548,10 +549,17 @@ impl<'a> Parser<'a> {
         // that is, `#ooobar`.
         } else {
             let ident = self.parse_identifier()?;
-            return Ok(Spanned {
-                node: Value::String(format!("#{}", ident.node), QuoteKind::None),
-                span: ident.span,
-            });
+            if first_is_hexdigit
+                && ident.node.chars().all(|c| c.is_ascii_hexdigit())
+                && matches!(ident.node.len(), 3 | 4 | 6 | 8)
+            {
+                s.push_str(&ident.node);
+            } else {
+                return Ok(Spanned {
+                    node: Value::String(format!("#{}", ident.node), QuoteKind::None),
+                    span: ident.span,
+                });
+            }
         }
         let v = match u32::from_str_radix(&s[1..], 16) {
             Ok(a) => a,
