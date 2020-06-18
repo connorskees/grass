@@ -82,11 +82,11 @@ fn visit_quoted_string(buf: &mut String, force_double_quote: bool, string: &str)
                     buffer.push(hex_char_for(c as u32 >> 4))
                 }
                 buffer.push(hex_char_for(c as u32 & 0xF));
-                if iter.peek().is_none() {
-                    break;
-                }
 
-                let next = iter.peek().unwrap();
+                let next = match iter.peek() {
+                    Some(v) => v,
+                    None => break,
+                };
 
                 if next.is_ascii_hexdigit() || next == &' ' || next == &'\t' {
                     buffer.push(' ');
@@ -148,7 +148,7 @@ impl Value {
             Self::List(vals, sep, brackets) => match brackets {
                 Brackets::None => Cow::owned(
                     vals.iter()
-                        .filter(|x| !x.is_null(span).unwrap())
+                        .filter(|x| !x.clone().is_null(span).unwrap_or(false))
                         .map(|x| x.to_css_string(span))
                         .collect::<SassResult<Vec<Cow<'static, str>>>>()?
                         .join(sep.as_str()),
@@ -156,7 +156,7 @@ impl Value {
                 Brackets::Bracketed => Cow::owned(format!(
                     "[{}]",
                     vals.iter()
-                        .filter(|x| !x.is_null(span).unwrap())
+                        .filter(|x| !x.is_null(span).unwrap_or(false))
                         .map(|x| x.to_css_string(span))
                         .collect::<SassResult<Vec<Cow<'static, str>>>>()?
                         .join(sep.as_str()),
@@ -199,7 +199,7 @@ impl Value {
             Self::Null => Cow::const_str(""),
             Self::ArgList(args) => Cow::owned(
                 args.iter()
-                    .filter(|x| !x.is_null(span).unwrap())
+                    .filter(|x| !x.is_null(span).unwrap_or(false))
                     .map(|a| Ok(a.node.to_css_string(span)?))
                     .collect::<SassResult<Vec<Cow<'static, str>>>>()?
                     .join(", "),

@@ -314,3 +314,19 @@ test!(
     "a {\n  color: 3;\n}\n"
 );
 test!(empty_bracketed_list, "a {\n  empty: [];\n}\n");
+error!(
+    invalid_item_in_space_separated_list,
+    "a {\n  color: red color * #abc;\n}\n", "Error: Undefined operation \"color * #abc\"."
+);
+error!(
+    invalid_item_in_comma_separated_list,
+    "a {\n  color: red, color * #abc;\n}\n", "Error: Undefined operation \"color * #abc\"."
+);
+error!(
+    invalid_item_in_space_separated_list_inside_interpolation,
+    "a {\n  color: #{red color * #abc};\n}\n", "Error: Undefined operation \"color * #abc\"."
+);
+error!(
+    invalid_item_in_comma_separated_list_inside_interpolation,
+    "a {\n  color: #{red, color * #abc};\n}\n", "Error: Undefined operation \"color * #abc\"."
+);
