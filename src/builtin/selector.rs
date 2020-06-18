@@ -148,7 +148,7 @@ fn selector_extend(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Va
         .arg(&mut args, 2, "extender")?
         .to_selector(parser, "extender", false)?;
 
-    Ok(Extender::extend(selector.0, source.0, target.0).to_sass_list())
+    Ok(Extender::extend(selector.0, source.0, target.0)?.to_sass_list())
 }
 
 fn selector_replace(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
@@ -163,7 +163,7 @@ fn selector_replace(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<V
         parser
             .arg(&mut args, 2, "replacement")?
             .to_selector(parser, "replacement", false)?;
-    Ok(Extender::replace(selector.0, source.0, target.0).to_sass_list())
+    Ok(Extender::replace(selector.0, source.0, target.0)?.to_sass_list())
 }
 
 fn selector_unify(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {

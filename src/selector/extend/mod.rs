@@ -1,6 +1,13 @@
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::{
+    collections::{HashMap, HashSet, VecDeque},
+    hash::Hash,
+};
+
+use codemap::Span;
 
 use indexmap::IndexMap;
+
+use crate::error::SassResult;
 
 use super::{
     ComplexSelector, ComplexSelectorComponent, CompoundSelector, Pseudo, SelectorList,
@@ -10,9 +17,13 @@ use super::{
 use extension::Extension;
 pub(crate) use functions::unify_complex;
 use functions::{paths, weave};
+use merged::MergedExtension;
+pub(crate) use rule::ExtendRule;
 
 mod extension;
 mod functions;
+mod merged;
+mod rule;
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub(crate) struct CssMediaQuery;
@@ -101,65 +112,79 @@ impl Extender {
         selector: SelectorList,
         source: SelectorList,
         targets: SelectorList,
-    ) -> SelectorList {
+    ) -> SassResult<SelectorList> {
         Self::extend_or_replace(selector, source, targets, ExtendMode::AllTargets)
+    }
+
+    pub fn new() -> Self {
+        Self {
+            selectors: HashMap::new(),
+            extensions: HashMap::new(),
+            extensions_by_extender: HashMap::new(),
+            media_contexts: HashMap::new(),
+            source_specificity: HashMap::new(),
+            originals: HashSet::new(),
+            mode: ExtendMode::Normal,
+        }
+    }
+
+    /// Whether there exist any extensions
+    pub fn is_empty(&self) -> bool {
+        self.extensions.is_empty()
     }
 
     pub fn replace(
         selector: SelectorList,
         source: SelectorList,
         targets: SelectorList,
-    ) -> SelectorList {
+    ) -> SassResult<SelectorList> {
         Self::extend_or_replace(selector, source, targets, ExtendMode::Replace)
     }
 
     fn extend_or_replace(
-        mut selector: SelectorList,
+        selector: SelectorList,
         source: SelectorList,
         targets: SelectorList,
         mode: ExtendMode,
-    ) -> SelectorList {
+    ) -> SassResult<SelectorList> {
         let extenders: IndexMap<ComplexSelector, Extension> = source
             .components
-            .clone()
             .into_iter()
-            .zip(
-                source
-                    .components
-                    .into_iter()
-                    .map(|complex| Extension::one_off(complex, None, false)),
-            )
+            .map(|complex| (complex.clone(), Extension::one_off(complex, None, false)))
             .collect();
 
-        for complex in targets.components {
-            if complex.components.len() != 1 {
-                todo!("throw SassScriptException(\"Can't extend complex selector $complex.\");")
-            }
+        let compound_targets = targets
+            .components
+            .into_iter()
+            .map(|complex| {
+                if complex.components.len() == 1 {
+                    Ok(complex.components.first().unwrap().as_compound().clone())
+                } else {
+                    todo!("Can't extend complex selector $complex.")
+                }
+            })
+            .collect::<SassResult<Vec<CompoundSelector>>>()?;
 
-            let compound = match complex.components.first() {
-                Some(ComplexSelectorComponent::Compound(c)) => c,
-                Some(..) | None => todo!(),
-            };
+        let extensions: HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>> =
+            compound_targets
+                .into_iter()
+                .flat_map(|compound| {
+                    compound
+                        .components
+                        .into_iter()
+                        .map(|simple| (simple, extenders.clone()))
+                })
+                .collect();
 
-            let extensions: HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>> =
-                compound
-                    .components
-                    .clone()
-                    .into_iter()
-                    .map(|simple| (simple, extenders.clone()))
-                    .collect();
+        let mut extender = Extender::with_mode(mode);
 
-            let mut extender = Extender::with_mode(mode);
-            if !selector.is_invisible() {
-                extender
-                    .originals
-                    .extend(selector.components.clone().into_iter());
-            }
-
-            selector = extender.extend_list(selector, &extensions, &None);
+        if !selector.is_invisible() {
+            extender
+                .originals
+                .extend(selector.components.iter().cloned());
         }
 
-        selector
+        Ok(extender.extend_list(selector, &extensions, &None))
     }
 
     fn with_mode(mode: ExtendMode) -> Self {
@@ -199,7 +224,7 @@ impl Extender {
         }
 
         SelectorList {
-            components: self.trim(extended, |complex| self.originals.contains(&complex)),
+            components: self.trim(extended, |complex| self.originals.contains(complex)),
         }
     }
 
@@ -258,6 +283,13 @@ impl Extender {
                         line_break: false,
                     }])
                 }
+            } else if let Some(component @ ComplexSelectorComponent::Combinator(..)) =
+                complex.components.get(i)
+            {
+                extended_not_expanded.push(vec![ComplexSelector {
+                    components: vec![component.clone()],
+                    line_break: false,
+                }])
             }
         }
 
@@ -266,8 +298,6 @@ impl Extender {
         }
 
         let mut first = true;
-
-        let mut originals: Vec<ComplexSelector> = Vec::new();
 
         Some(
             paths(extended_not_expanded)
@@ -287,8 +317,11 @@ impl Extender {
                                 || path.iter().any(|input_complex| input_complex.line_break),
                         };
 
-                        if first && originals.contains(&complex.clone()) {
-                            originals.push(output_complex.clone());
+                        // Make sure that copies of `complex` retain their status as "original"
+                        // selectors. This includes selectors that are modified because a :not()
+                        // was extended into.
+                        if first && self.originals.contains(&complex.clone()) {
+                            self.originals.insert(output_complex.clone());
                         }
                         first = false;
 
@@ -302,6 +335,11 @@ impl Extender {
 
     /// Extends `compound` using `extensions`, and returns the contents of a
     /// `SelectorList`.
+    ///
+    /// The `in_original` parameter indicates whether this is in an original
+    /// complex selector, meaning that `compound` should not be trimmed out.
+    // todo: `in_original` is actually obsolete and we should upstream its removal
+    // to dart-sass
     fn extend_compound(
         &mut self,
         compound: &CompoundSelector,
@@ -341,7 +379,11 @@ impl Extender {
 
         // If `self.mode` isn't `ExtendMode::Normal` and we didn't use all the targets in
         // `extensions`, extension fails for `compound`.
-        if !targets_used.is_empty() && targets_used.len() != extensions.len() {
+        // todo: test for `extensions.len() > 2`. may cause issues
+        if !targets_used.is_empty()
+            && targets_used.len() != extensions.len()
+            && self.mode != ExtendMode::Normal
+        {
             return None;
         }
 
@@ -401,7 +443,7 @@ impl Extender {
                             .clone()
                             .into_iter()
                             .flat_map(|state| {
-                                assert!(state.extender.components.len() == 1);
+                                debug_assert!(state.extender.components.len() == 1);
                                 match state.extender.components.last().cloned() {
                                     Some(ComplexSelectorComponent::Compound(c)) => c.components,
                                     Some(..) | None => unreachable!(),
@@ -630,8 +672,8 @@ impl Extender {
         }
     }
 
-    // Extends `simple` without extending the contents of any selector pseudos
-    // it contains.
+    /// Extends `simple` without extending the contents of any selector pseudos
+    /// it contains.
     fn without_pseudo(
         &self,
         simple: SimpleSelector,
@@ -696,15 +738,15 @@ impl Extender {
         specificity
     }
 
-    // Removes elements from `selectors` if they're subselectors of other
-    // elements.
-    //
-    // The `is_original` callback indicates which selectors are original to the
-    // document, and thus should never be trimmed.
+    /// Removes elements from `selectors` if they're subselectors of other
+    /// elements.
+    ///
+    /// The `is_original` callback indicates which selectors are original to the
+    /// document, and thus should never be trimmed.
     fn trim(
         &self,
         selectors: Vec<ComplexSelector>,
-        is_original: impl Fn(ComplexSelector) -> bool,
+        is_original: impl Fn(&ComplexSelector) -> bool,
     ) -> Vec<ComplexSelector> {
         // Avoid truly horrific quadratic behavior.
         //
@@ -723,68 +765,377 @@ impl Extender {
         let mut num_originals = 0;
 
         // :outer
-        loop {
-            let mut should_break_to_outer = false;
-            for i in (0..=(selectors.len().saturating_sub(1))).rev() {
-                let complex1 = selectors.get(i).unwrap();
-                if is_original(complex1.clone()) {
-                    // Make sure we don't include duplicate originals, which could happen if
-                    // a style rule extends a component of its own selector.
-                    for j in 0..num_originals {
-                        if result.get(j).unwrap() == complex1 {
-                            rotate_slice(&mut result, 0, j + 1);
-                            should_break_to_outer = true;
-                            break;
-                        }
-                    }
-                    if should_break_to_outer {
+        for i in (0..=(selectors.len().saturating_sub(1))).rev() {
+            let mut should_continue_to_outer = false;
+            let complex1 = selectors.get(i).unwrap();
+            if is_original(complex1) {
+                // Make sure we don't include duplicate originals, which could happen if
+                // a style rule extends a component of its own selector.
+                for j in 0..num_originals {
+                    if result.get(j) == Some(complex1) {
+                        rotate_slice(&mut result, 0, j + 1);
+                        should_continue_to_outer = true;
                         break;
                     }
-                    num_originals += 1;
-                    result.push_front(complex1.clone());
+                }
+                if should_continue_to_outer {
                     continue;
                 }
-
-                // The maximum specificity of the sources that caused `complex1` to be
-                // generated. In order for `complex1` to be removed, there must be another
-                // selector that's a superselector of it *and* that has specificity
-                // greater or equal to this.
-                let mut max_specificity = 0;
-                for component in &complex1.components {
-                    if let ComplexSelectorComponent::Compound(compound) = component {
-                        max_specificity = max_specificity.max(self.source_specificity_for(compound))
-                    }
-                }
-
-                // Look in `result` rather than `selectors` for selectors after `i`. This
-                // ensures that we aren't comparing against a selector that's already been
-                // trimmed, and thus that if there are two identical selectors only one is
-                // trimmed.
-                let should_continue = result.iter().any(|complex2| {
-                    complex2.min_specificity() >= max_specificity
-                        && complex2.is_super_selector(complex1)
-                });
-                if should_continue {
-                    continue;
-                }
-
-                let should_continue = selectors.iter().take(i).any(|complex2| {
-                    complex2.min_specificity() >= max_specificity
-                        && complex2.is_super_selector(complex1)
-                });
-                if should_continue {
-                    continue;
-                }
-
+                num_originals += 1;
                 result.push_front(complex1.clone());
-            }
-            if should_break_to_outer {
                 continue;
             }
-            break;
+
+            // The maximum specificity of the sources that caused `complex1` to be
+            // generated. In order for `complex1` to be removed, there must be another
+            // selector that's a superselector of it *and* that has specificity
+            // greater or equal to this.
+            let mut max_specificity = 0;
+            for component in &complex1.components {
+                if let ComplexSelectorComponent::Compound(compound) = component {
+                    max_specificity = max_specificity.max(self.source_specificity_for(compound))
+                }
+            }
+
+            // Look in `result` rather than `selectors` for selectors after `i`. This
+            // ensures that we aren't comparing against a selector that's already been
+            // trimmed, and thus that if there are two identical selectors only one is
+            // trimmed.
+            let should_continue = result.iter().any(|complex2| {
+                complex2.min_specificity() >= max_specificity
+                    && complex2.is_super_selector(complex1)
+            });
+            if should_continue {
+                continue;
+            }
+
+            let should_continue = selectors.iter().take(i).any(|complex2| {
+                complex2.min_specificity() >= max_specificity
+                    && complex2.is_super_selector(complex1)
+            });
+            if should_continue {
+                continue;
+            }
+
+            result.push_front(complex1.clone());
         }
 
         Vec::from(result)
+    }
+
+    /// Adds `selector` to this extender.
+    ///
+    /// Extends `selector` using any registered extensions, then returns the resulting
+    /// selector. If any more relevant extensions are added, the returned selector
+    /// is automatically updated.
+    ///
+    /// The `media_query_context` is the media query context in which the selector was
+    /// defined, or `null` if it was defined at the top level of the document.
+    // todo: the docs are wrong, and we may want to consider returning an `Rc<RefCell<SelectorList>>`
+    // the reason we don't is that it would interfere with hashing
+    pub fn add_selector(
+        &mut self,
+        mut selector: SelectorList,
+        // span: Span,
+        media_query_context: Option<Vec<CssMediaQuery>>,
+    ) -> SelectorList {
+        // todo: we should be able to remove this variable and clone
+        let original_selector = selector.clone();
+        if !original_selector.is_invisible() {
+            for complex in &original_selector.components {
+                self.originals.insert(complex.clone());
+            }
+        }
+
+        if !self.extensions.is_empty() {
+            let extensions = self.extensions.clone();
+            selector = self.extend_list(original_selector, &extensions, &media_query_context);
+            /*
+              todo: when we have error handling
+                  } on SassException catch (error) {
+              throw SassException(
+                  "From ${error.span.message('')}\n"
+                  "${error.message}",
+                  span);
+            }
+              */
+        }
+        if let Some(mut media_query_context) = media_query_context {
+            self.media_contexts
+                .get_mut(&selector)
+                .replace(&mut media_query_context);
+        }
+        self.register_selector(selector.clone(), &selector);
+        selector
+    }
+
+    /// Registers the `SimpleSelector`s in `list` to point to `selector` in
+    /// `self.selectors`.
+    fn register_selector(&mut self, list: SelectorList, selector: &SelectorList) {
+        for complex in list.components {
+            for component in complex.components {
+                if let ComplexSelectorComponent::Compound(component) = component {
+                    for simple in component.components {
+                        self.selectors
+                            .entry(simple.clone())
+                            .or_insert_with(HashSet::new)
+                            .insert(selector.clone());
+
+                        if let SimpleSelector::Pseudo(Pseudo {
+                            selector: Some(simple_selector),
+                            ..
+                        }) = simple
+                        {
+                            self.register_selector(simple_selector, selector);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Adds an extension to this extender.
+    ///
+    /// The `extender` is the selector for the style rule in which the extension
+    /// is defined, and `target` is the selector passed to `@extend`. The `extend`
+    /// provides the extend span and indicates whether the extension is optional.
+    ///
+    /// The `media_context` defines the media query context in which the extension
+    /// is defined. It can only extend selectors within the same context. A `None`
+    /// context indicates no media queries.
+    pub fn add_extension(
+        &mut self,
+        extender: SelectorList,
+        target: &SimpleSelector,
+        extend: &ExtendRule,
+        media_context: &Option<Vec<CssMediaQuery>>,
+        span: Option<Span>,
+    ) {
+        let selectors = self.selectors.get(target).cloned();
+        let existing_extensions = self.extensions_by_extender.get(target).cloned();
+
+        let mut new_extensions: Option<IndexMap<ComplexSelector, Extension>> = None;
+
+        let mut sources = self
+            .extensions
+            .entry(target.clone())
+            .or_insert_with(IndexMap::new)
+            .clone();
+
+        for complex in extender.components {
+            let state = Extension {
+                specificity: complex.max_specificity(),
+                extender: complex.clone(),
+                target: Some(target.clone()),
+                span,
+                media_context: media_context.clone(),
+                is_optional: extend.is_optional,
+                is_original: false,
+                left: None,
+                right: None,
+            };
+
+            if let Some(existing_state) = sources.get(&complex) {
+                // If there's already an extend from `extender` to `target`, we don't need
+                // to re-run the extension. We may need to mark the extension as
+                // mandatory, though.
+                let mut new_val = MergedExtension::merge(existing_state.clone(), state).unwrap();
+                sources.get_mut(&complex).replace(&mut new_val);
+                continue;
+            }
+
+            sources.insert(complex.clone(), state.clone());
+
+            for component in complex.components.clone() {
+                if let ComplexSelectorComponent::Compound(component) = component {
+                    for simple in component.components {
+                        self.extensions_by_extender
+                            .entry(simple.clone())
+                            .or_insert_with(Vec::new)
+                            .push(state.clone());
+                        // Only source specificity for the original selector is relevant.
+                        // Selectors generated by `@extend` don't get new specificity.
+                        self.source_specificity
+                            .entry(simple.clone())
+                            .or_insert_with(|| complex.max_specificity());
+                    }
+                }
+            }
+
+            if selectors.is_some() || existing_extensions.is_some() {
+                new_extensions
+                    .get_or_insert_with(IndexMap::new)
+                    .insert(complex.clone(), state.clone());
+            }
+
+            let new_extensions = if let Some(new) = new_extensions.clone() {
+                new
+            } else {
+                // TODO: HACK: we extend by sources here, but we should be able to mutate sources directly
+                self.extensions
+                    .get_mut(target)
+                    .get_or_insert(&mut IndexMap::new())
+                    .extend(sources);
+                return;
+            };
+
+            let mut new_extensions_by_target = HashMap::new();
+            new_extensions_by_target.insert(target.clone(), new_extensions);
+
+            if let Some(existing_extensions) = existing_extensions.clone() {
+                let additional_extensions =
+                    self.extend_existing_extensions(existing_extensions, &new_extensions_by_target);
+                if let Some(additional_extensions) = additional_extensions {
+                    map_add_all_2(&mut new_extensions_by_target, additional_extensions);
+                }
+            }
+
+            if let Some(selectors) = selectors.clone() {
+                self.extend_existing_selectors(selectors, &new_extensions_by_target);
+            }
+        }
+
+        // TODO: HACK: we extend by sources here, but we should be able to mutate sources directly
+        self.extensions
+            .get_mut(target)
+            .get_or_insert(&mut IndexMap::new())
+            .extend(sources);
+    }
+
+    /// Extend `extensions` using `new_extensions`.
+    ///
+    /// Note that this does duplicate some work done by
+    /// `Extender::extend_existing_selectors`, but it's necessary to expand each extension's
+    /// extender separately without reference to the full selector list, so that
+    /// relevant results don't get trimmed too early.
+    ///
+    /// Returns extensions that should be added to `new_extensions` before
+    /// extending selectors in order to properly handle extension loops such as:
+    ///
+    ///     .c {x: y; @extend .a}
+    ///     .x.y.a {@extend .b}
+    ///     .z.b {@extend .c}
+    ///
+    /// Returns `null` if there are no extensions to add.
+    fn extend_existing_extensions(
+        &mut self,
+        extensions: Vec<Extension>,
+        new_extensions: &HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>>,
+    ) -> Option<HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>>> {
+        let mut additional_extensions: Option<
+            HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>>,
+        > = None;
+        for extension in extensions {
+            let mut sources = self
+                .extensions
+                .get(&extension.target.clone().unwrap())
+                .unwrap()
+                .clone();
+
+            // `extend_existing_selectors` would have thrown already.
+            let selectors: Vec<ComplexSelector> = if let Some(v) = self.extend_complex(
+                extension.extender.clone(),
+                new_extensions,
+                &extension.media_context,
+            ) {
+                v
+            } else {
+                continue;
+            };
+            // todo: when we add error handling, this error is special
+            /*
+            } on SassException catch (error) {
+                throw SassException(
+                    "From ${extension.extenderSpan.message('')}\n"
+                    "${error.message}",
+                    error.span);
+            }
+            */
+
+            let contains_extension = selectors.first() == Some(&extension.extender);
+
+            let mut first = false;
+            for complex in selectors {
+                // If the output contains the original complex selector, there's no
+                // need to recreate it.
+                if contains_extension && first {
+                    first = false;
+                    continue;
+                }
+
+                let with_extender = extension.clone().with_extender(complex.clone());
+                let existing_extension = sources.get(&complex);
+                if let Some(existing_extension) = existing_extension.cloned() {
+                    sources.get_mut(&complex).replace(
+                        &mut MergedExtension::merge(existing_extension.clone(), with_extender)
+                            .unwrap(),
+                    );
+                } else {
+                    sources
+                        .get_mut(&complex)
+                        .replace(&mut with_extender.clone());
+
+                    for component in complex.components.clone() {
+                        if let ComplexSelectorComponent::Compound(component) = component {
+                            for simple in component.components {
+                                self.extensions_by_extender
+                                    .entry(simple)
+                                    .or_insert_with(Vec::new)
+                                    .push(with_extender.clone());
+                            }
+                        }
+                    }
+
+                    if new_extensions.contains_key(&extension.target.clone().unwrap()) {
+                        additional_extensions
+                            .get_or_insert_with(HashMap::new)
+                            .entry(extension.target.clone().unwrap())
+                            .or_insert_with(IndexMap::new)
+                            .insert(complex.clone(), with_extender.clone());
+                    }
+                }
+            }
+            // If `selectors` doesn't contain `extension.extender`, for example if it
+            // was replaced due to :not() expansion, we must get rid of the old
+            // version.
+            if !contains_extension {
+                sources.remove(&extension.extender);
+            }
+        }
+        additional_extensions
+    }
+
+    /// Extend `extensions` using `new_extensions`.
+    fn extend_existing_selectors(
+        &mut self,
+        selectors: HashSet<SelectorList>,
+        new_extensions: &HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>>,
+    ) {
+        for mut selector in selectors {
+            let old_value = selector.clone();
+            selector = self.extend_list(
+                old_value.clone(),
+                new_extensions,
+                &self.media_contexts.get(&selector).cloned(),
+            );
+            /*
+            todo: error handling
+            } on SassException catch (error) {
+            throw SassException(
+                "From ${selector.span.message('')}\n"
+                "${error.message}",
+                error.span);
+            }
+
+            */
+
+            // If no extends actually happened (for example becaues unification
+            // failed), we don't need to re-register the selector.
+            if old_value == selector {
+                continue;
+            }
+            self.register_selector(selector.clone(), &old_value);
+        }
     }
 }
 
@@ -797,4 +1148,23 @@ fn rotate_slice<T: Clone>(list: &mut VecDeque<T>, start: usize, end: usize) {
         list[i] = element;
         element = next;
     }
+}
+
+/// Like `HashMap::extend`, but for two-layer maps.
+///
+/// This avoids copying inner maps from `source` if possible.
+fn map_add_all_2<K1: Hash + Eq, K2: Hash + Eq, V>(
+    destination: &mut HashMap<K1, IndexMap<K2, V>>,
+    source: HashMap<K1, IndexMap<K2, V>>,
+) {
+    source.into_iter().for_each(|(key, mut inner)| {
+        if destination.contains_key(&key) {
+            destination
+                .get_mut(&key)
+                .get_or_insert(&mut IndexMap::new())
+                .extend(inner);
+        } else {
+            destination.get_mut(&key).replace(&mut inner);
+        }
+    })
 }

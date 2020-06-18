@@ -110,6 +110,7 @@ impl<'a> Parser<'a> {
             content,
             at_root: false,
             at_root_has_selector: self.at_root_has_selector,
+            extender: self.extender,
         }
         .parse()?;
 

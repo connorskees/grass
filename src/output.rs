@@ -3,7 +3,7 @@ use std::io::Write;
 
 use codemap::CodeMap;
 
-use crate::{error::SassResult, parse::Stmt, selector::Selector, style::Style};
+use crate::{error::SassResult, parse::Stmt, selector::Extender, selector::Selector, style::Style};
 
 #[derive(Debug, Clone)]
 enum Toplevel {
@@ -61,7 +61,7 @@ impl Toplevel {
 }
 
 #[derive(Debug, Clone)]
-pub struct Css {
+pub(crate) struct Css {
     blocks: Vec<Toplevel>,
 }
 
@@ -70,27 +70,36 @@ impl Css {
         Css { blocks: Vec::new() }
     }
 
-    pub(crate) fn from_stmts(s: Vec<Stmt>) -> SassResult<Self> {
-        Css::new().parse_stylesheet(s)
+    pub(crate) fn from_stmts(s: Vec<Stmt>, extender: &mut Extender) -> SassResult<Self> {
+        Css::new().parse_stylesheet(s, extender)
     }
 
-    fn parse_stmt(&mut self, stmt: Stmt) -> SassResult<Vec<Toplevel>> {
+    fn parse_stmt(&mut self, stmt: Stmt, extender: &mut Extender) -> SassResult<Vec<Toplevel>> {
         Ok(match stmt {
             Stmt::RuleSet {
                 selector,
                 super_selector,
                 body,
             } => {
-                let selector = selector
-                    .resolve_parent_selectors(&super_selector, true)
-                    .remove_placeholders();
+                if body.is_empty() {
+                    return Ok(Vec::new());
+                }
+                let selector = if extender.is_empty() {
+                    selector.resolve_parent_selectors(&super_selector, true)
+                } else {
+                    Selector(extender.add_selector(
+                        selector.resolve_parent_selectors(&super_selector, true).0,
+                        None,
+                    ))
+                }
+                .remove_placeholders();
                 if selector.is_empty() {
                     return Ok(Vec::new());
                 }
                 let mut vals = vec![Toplevel::new_rule(selector)];
                 for rule in body {
                     match rule {
-                        Stmt::RuleSet { .. } => vals.extend(self.parse_stmt(rule)?),
+                        Stmt::RuleSet { .. } => vals.extend(self.parse_stmt(rule, extender)?),
                         Stmt::Style(s) => vals.get_mut(0).unwrap().push_style(*s)?,
                         Stmt::Comment(s) => vals.get_mut(0).unwrap().push_comment(s),
                         Stmt::Media { params, body, .. } => {
@@ -102,7 +111,7 @@ impl Css {
                         Stmt::Return(..) => unreachable!(),
                         Stmt::AtRoot { body } => body
                             .into_iter()
-                            .map(|r| Ok(vals.extend(self.parse_stmt(r)?)))
+                            .map(|r| Ok(vals.extend(self.parse_stmt(r, extender)?)))
                             .collect::<SassResult<()>>()?,
                     };
                 }
@@ -119,10 +128,10 @@ impl Css {
         })
     }
 
-    fn parse_stylesheet(mut self, stmts: Vec<Stmt>) -> SassResult<Css> {
+    fn parse_stylesheet(mut self, stmts: Vec<Stmt>, extender: &mut Extender) -> SassResult<Css> {
         let mut is_first = true;
         for stmt in stmts {
-            let v = self.parse_stmt(stmt)?;
+            let v = self.parse_stmt(stmt, extender)?;
             // this is how we print newlines between unrelated styles
             // it could probably be refactored
             if !v.is_empty() {
@@ -138,9 +147,9 @@ impl Css {
         Ok(self)
     }
 
-    pub fn pretty_print(self, map: &CodeMap) -> SassResult<String> {
+    pub fn pretty_print(self, map: &CodeMap, extender: &mut Extender) -> SassResult<String> {
         let mut string = Vec::new();
-        self._inner_pretty_print(&mut string, map, 0)?;
+        self._inner_pretty_print(&mut string, map, extender, 0)?;
         if string.iter().any(|s| !s.is_ascii()) {
             return Ok(format!("@charset \"UTF-8\";\n{}", unsafe {
                 String::from_utf8_unchecked(string)
@@ -153,10 +162,12 @@ impl Css {
         self,
         buf: &mut Vec<u8>,
         map: &CodeMap,
+        extender: &mut Extender,
         nesting: usize,
     ) -> SassResult<()> {
         let mut has_written = false;
         let padding = vec![' '; nesting * 2].iter().collect::<String>();
+        let mut should_emit_newline = false;
         for block in self.blocks {
             match block {
                 Toplevel::RuleSet(selector, styles) => {
@@ -164,6 +175,10 @@ impl Css {
                         continue;
                     }
                     has_written = true;
+                    if should_emit_newline {
+                        should_emit_newline = false;
+                        writeln!(buf)?;
+                    }
                     writeln!(buf, "{}{} {{", padding, selector)?;
                     for style in styles {
                         writeln!(buf, "{}  {}", padding, style.to_string()?)?;
@@ -175,6 +190,11 @@ impl Css {
                     writeln!(buf, "{}/*{}*/", padding, s)?;
                 }
                 Toplevel::UnknownAtRule { params, name, body } => {
+                    if should_emit_newline {
+                        should_emit_newline = false;
+                        writeln!(buf)?;
+                    }
+
                     if params.is_empty() {
                         write!(buf, "{}@{}", padding, name)?;
                     } else {
@@ -188,15 +208,29 @@ impl Css {
                         writeln!(buf, " {{")?;
                     }
 
-                    Css::from_stmts(body)?._inner_pretty_print(buf, map, nesting + 1)?;
+                    Css::from_stmts(body, extender)?._inner_pretty_print(
+                        buf,
+                        map,
+                        extender,
+                        nesting + 1,
+                    )?;
                     writeln!(buf, "{}}}", padding)?;
                 }
                 Toplevel::Media { params, body } => {
                     if body.is_empty() {
                         continue;
                     }
+                    if should_emit_newline {
+                        should_emit_newline = false;
+                        writeln!(buf)?;
+                    }
                     writeln!(buf, "{}@media {} {{", padding, params)?;
-                    Css::from_stmts(body)?._inner_pretty_print(buf, map, nesting + 1)?;
+                    Css::from_stmts(body, extender)?._inner_pretty_print(
+                        buf,
+                        map,
+                        extender,
+                        nesting + 1,
+                    )?;
                     writeln!(buf, "{}}}", padding)?;
                 }
                 Toplevel::Style(s) => {
@@ -204,8 +238,9 @@ impl Css {
                 }
                 Toplevel::Newline => {
                     if has_written {
-                        writeln!(buf)?
+                        should_emit_newline = true;
                     }
+                    continue;
                 }
             }
         }

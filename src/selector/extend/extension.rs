@@ -3,7 +3,7 @@ use codemap::Span;
 use super::{ComplexSelector, CssMediaQuery, SimpleSelector};
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
-pub(super) struct Extension {
+pub(crate) struct Extension {
     /// The selector in which the `@extend` appeared.
     pub extender: ComplexSelector,
 
@@ -26,10 +26,13 @@ pub(super) struct Extension {
     /// The media query context to which this extend is restricted, or `None` if
     /// it can apply within any context.
     // todo: Option
-    pub media_context: Vec<CssMediaQuery>,
+    pub media_context: Option<Vec<CssMediaQuery>>,
 
     /// The span in which `extender` was defined.
     pub span: Option<Span>,
+
+    pub left: Option<Box<Extension>>,
+    pub right: Option<Box<Extension>>,
 }
 
 impl Extension {
@@ -41,7 +44,9 @@ impl Extension {
             span: None,
             is_optional: true,
             is_original,
-            media_context: Vec::new(),
+            media_context: None,
+            left: None,
+            right: None,
         }
     }
 
@@ -51,12 +56,16 @@ impl Extension {
     // from this returning a `Result` will make some code returning `Option`s much uglier (we can't
     // use `?` to return both `Option` and `Result` from the same function)
     pub fn assert_compatible_media_context(&self, media_context: &Option<Vec<CssMediaQuery>>) {
-        if let Some(media_context) = media_context {
-            if &self.media_context == media_context {
-                return;
-            }
+        if &self.media_context == media_context {
+            return;
         }
 
         // Err(("You may not @extend selectors across media queries.", self.span.unwrap()).into())
+    }
+
+    #[allow(clippy::missing_const_for_fn)]
+    pub fn with_extender(mut self, extender: ComplexSelector) -> Self {
+        self.extender = extender;
+        self
     }
 }

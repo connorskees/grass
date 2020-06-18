@@ -238,4 +238,24 @@ test!(
     "a {\n  color: selector-extend(\"c, d\", \"d\", \"e\");\n}\n",
     "a {\n  color: c, d, e;\n}\n"
 );
+test!(
+    combinator_in_selector,
+    "a {\n  color: selector-extend(\"a > b\", \"foo\", \"bar\");\n}\n",
+    "a {\n  color: a > b;\n}\n"
+);
+test!(
+    combinator_in_selector_with_complex_child_and_complex_2_as_extender,
+    "a {\n  color: selector-extend(\"a + b .c1\", \".c1\", \"a c\");\n}\n",
+    "a {\n  color: a + b .c1, a + b a c, a a + b c;\n}\n"
+);
+test!(
+    combinator_in_selector_with_complex_child_and_complex_3_as_extender,
+    "a {\n  color: selector-extend(\"a + b .c1\", \".c1\", \"a b .c2\");\n}\n",
+    "a {\n  color: a + b .c1, a a + b .c2;\n}\n"
+);
+test!(
+    list_as_target_with_compound_selector,
+    "a {\n  color: selector-extend(\".foo.bar\", \".foo, .bar\", \".x\");\n}\n",
+    "a {\n  color: .foo.bar, .x;\n}\n"
+);
 // todo: https://github.com/sass/sass-spec/tree/master/spec/core_functions/selector/extend/simple/pseudo/selector/

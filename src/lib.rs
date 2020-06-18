@@ -107,7 +107,7 @@ use crate::{
     output::Css,
     parse::{common::NeverEmptyVec, Parser},
     scope::Scope,
-    selector::Selector,
+    selector::{Extender, Selector},
 };
 
 mod args;
@@ -145,6 +145,7 @@ fn raw_to_parse_error(map: &CodeMap, err: Error) -> Error {
 #[cfg(not(feature = "wasm"))]
 pub fn from_path(p: &str) -> Result<String> {
     let mut map = CodeMap::new();
+    let mut extender = Extender::new();
     let file = map.add_file(p.into(), String::from_utf8(fs::read(p)?)?);
     Css::from_stmts(
         Parser {
@@ -164,12 +165,14 @@ pub fn from_path(p: &str) -> Result<String> {
             in_control_flow: false,
             at_root: true,
             at_root_has_selector: false,
+            extender: &mut extender,
         }
         .parse()
         .map_err(|e| raw_to_parse_error(&map, e))?,
+        &mut extender,
     )
     .map_err(|e| raw_to_parse_error(&map, e))?
-    .pretty_print(&map)
+    .pretty_print(&map, &mut extender)
     .map_err(|e| raw_to_parse_error(&map, e))
 }
 
@@ -187,6 +190,7 @@ pub fn from_path(p: &str) -> Result<String> {
 #[cfg(not(feature = "wasm"))]
 pub fn from_string(p: String) -> Result<String> {
     let mut map = CodeMap::new();
+    let mut extender = Extender::new();
     let file = map.add_file("stdin".into(), p);
     Css::from_stmts(
         Parser {
@@ -206,12 +210,14 @@ pub fn from_string(p: String) -> Result<String> {
             in_control_flow: false,
             at_root: true,
             at_root_has_selector: false,
+            extender: &mut extender,
         }
         .parse()
         .map_err(|e| raw_to_parse_error(&map, e))?,
+        &mut extender,
     )
     .map_err(|e| raw_to_parse_error(&map, e))?
-    .pretty_print(&map)
+    .pretty_print(&map, &mut extender)
     .map_err(|e| raw_to_parse_error(&map, e))
 }
 

@@ -112,3 +112,8 @@ test!(
     "a {\n  color: ie_hex-str(rgba(0, 255, 0, 0.5));\n}\n",
     "a {\n  color: #8000FF00;\n}\n"
 );
+test!(
+    empty_style_after_style_emits_one_newline,
+    "a {\n  a: b\n}\n\nb {}\n",
+    "a {\n  a: b;\n}\n"
+);

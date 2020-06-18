@@ -359,6 +359,7 @@ impl Value {
             in_control_flow: parser.in_control_flow,
             at_root: parser.at_root,
             at_root_has_selector: parser.at_root_has_selector,
+            extender: parser.extender,
         }
         .parse_selector(allows_parent, true, String::new())
     }

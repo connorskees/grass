@@ -314,7 +314,7 @@ impl SimpleSelector {
             }) = simple
             {
                 // A given compound selector may only contain one pseudo element. If
-                // [compound] has a different one than [this], unification fails.
+                // `compound` has a different one than `self`, unification fails.
                 if let Self::Pseudo(Pseudo {
                     is_class: false, ..
                 }) = self

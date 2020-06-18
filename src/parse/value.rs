@@ -157,6 +157,7 @@ impl<'a> Parser<'a> {
             in_control_flow: self.in_control_flow,
             at_root: self.at_root,
             at_root_has_selector: self.at_root_has_selector,
+            extender: self.extender,
         }
         .parse_value()
     }
@@ -256,6 +257,8 @@ impl<'a> Parser<'a> {
             Some(v) => (v.kind, v.pos()),
             None => return None,
         };
+
+        self.span_before = span;
 
         if self.whitespace() {
             return Some(Ok(Spanned {
@@ -491,10 +494,13 @@ impl<'a> Parser<'a> {
                     Err(e) => return Some(Err(e)),
                 };
                 span = span.merge(v.span);
-                if v.node.to_ascii_lowercase().as_str() == "important" {
-                    IntermediateValue::Value(Value::Important).span(span)
-                } else {
-                    return Some(Err(("Expected \"important\".", span).into()));
+                // TODO: we return `None` when encountering `optional` here as a hack for
+                // supporting `!optional` in `@extend`. In the future, we should have a better
+                // check for `!optional` as this technically allows `!optional` everywhere
+                match v.node.to_ascii_lowercase().as_str() {
+                    "important" => IntermediateValue::Value(Value::Important).span(span),
+                    "optional" => return None,
+                    _ => return Some(Err(("Expected \"important\".", span).into())),
                 }
             }
             '/' => {

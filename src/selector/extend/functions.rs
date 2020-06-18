@@ -77,23 +77,21 @@ pub(crate) fn weave(
 
         let target = complex.last().unwrap().clone();
 
-        if complex.len() == 1 {
+        let complex_len = complex.len();
+
+        if complex_len == 1 {
             for prefix in &mut prefixes {
                 prefix.push(target.clone());
             }
             continue;
         }
 
-        let complex_len = complex.len();
-
         let parents: Vec<ComplexSelectorComponent> =
             complex.into_iter().take(complex_len - 1).collect();
         let mut new_prefixes: Vec<Vec<ComplexSelectorComponent>> = Vec::new();
 
         for prefix in prefixes {
-            let parent_prefixes = weave_parents(prefix, parents.clone());
-
-            if let Some(parent_prefixes) = parent_prefixes {
+            if let Some(parent_prefixes) = weave_parents(prefix, parents.clone()) {
                 for mut parent_prefix in parent_prefixes {
                     parent_prefix.push(target.clone());
                     new_prefixes.push(parent_prefix);
@@ -624,24 +622,24 @@ fn group_selectors(
 
     let mut iter = complex.into_iter();
 
-    let mut group = if let Some(c) = iter.next() {
+    groups.push_back(if let Some(c) = iter.next() {
         vec![c]
     } else {
         return groups;
-    };
-
-    groups.push_back(group.clone());
+    });
 
     for c in iter {
-        if group
+        let mut last_group = groups.pop_back().unwrap();
+        if last_group
             .last()
             .map_or(false, ComplexSelectorComponent::is_combinator)
             || c.is_combinator()
         {
-            group.push(c);
+            last_group.push(c);
+            groups.push_back(last_group);
         } else {
-            group = vec![c];
-            groups.push_back(group.clone());
+            groups.push_back(last_group);
+            groups.push_back(vec![c]);
         }
     }
 

@@ -9,7 +9,7 @@ use crate::{
     common::{Brackets, ListSeparator},
     error::SassResult,
     scope::Scope,
-    selector::{Selector, SelectorParser},
+    selector::{ComplexSelectorComponent, ExtendRule, Extender, Selector, SelectorParser},
     style::Style,
     unit::Unit,
     utils::{
@@ -86,6 +86,7 @@ pub(crate) struct Parser<'a> {
     /// If this parser is inside an `@at-rule` block, this is whether or
     /// not the `@at-rule` block has a super selector
     pub at_root_has_selector: bool,
+    pub extender: &'a mut Extender,
 }
 
 impl<'a> Parser<'a> {
@@ -348,29 +349,37 @@ impl<'a> Parser<'a> {
 
         let mut iter = sel_toks.into_iter().peekmore();
 
-        Ok(Selector(
-            SelectorParser::new(
-                &mut Parser {
-                    toks: &mut iter,
-                    map: self.map,
-                    path: self.path,
-                    scopes: self.scopes,
-                    global_scope: self.global_scope,
-                    super_selectors: self.super_selectors,
-                    span_before: self.span_before,
-                    content: self.content.clone(),
-                    in_mixin: self.in_mixin,
-                    in_function: self.in_function,
-                    in_control_flow: self.in_control_flow,
-                    at_root: self.at_root,
-                    at_root_has_selector: self.at_root_has_selector,
-                },
-                allows_parent,
-                true,
-                span,
-            )
-            .parse()?,
-        ))
+        let selector = SelectorParser::new(
+            &mut Parser {
+                toks: &mut iter,
+                map: self.map,
+                path: self.path,
+                scopes: self.scopes,
+                global_scope: self.global_scope,
+                super_selectors: self.super_selectors,
+                span_before: self.span_before,
+                content: self.content.clone(),
+                in_mixin: self.in_mixin,
+                in_function: self.in_function,
+                in_control_flow: self.in_control_flow,
+                at_root: self.at_root,
+                at_root_has_selector: self.at_root_has_selector,
+                extender: self.extender,
+            },
+            allows_parent,
+            true,
+            span,
+        )
+        .parse()?;
+
+        // todo: HACK: we have this here to support `&`, but I'm not actually
+        // sure we shouldn't be adding it. It's tricky to change how we resolve
+        // parent selectors because of `@at-root` hacks
+        Ok(Selector(if selector.contains_parent_selector() {
+            selector
+        } else {
+            self.extender.add_selector(selector, None)
+        }))
     }
 
     /// Eat and return the contents of a comment.
@@ -580,6 +589,7 @@ impl<'a> Parser<'a> {
                     in_control_flow: true,
                     at_root: self.at_root,
                     at_root_has_selector: self.at_root_has_selector,
+                    extender: self.extender,
                 }
                 .parse();
             }
@@ -601,6 +611,7 @@ impl<'a> Parser<'a> {
             in_control_flow: true,
             at_root: self.at_root,
             at_root_has_selector: self.at_root_has_selector,
+            extender: self.extender,
         }
         .parse()
     }
@@ -722,7 +733,7 @@ impl<'a> Parser<'a> {
                     map: self.map,
                     path: self.path,
                     scopes: self.scopes,
-                    global_scope: &mut self.global_scope,
+                    global_scope: self.global_scope,
                     super_selectors: self.super_selectors,
                     span_before: self.span_before,
                     content: self.content.clone(),
@@ -731,6 +742,7 @@ impl<'a> Parser<'a> {
                     in_control_flow: true,
                     at_root: self.at_root,
                     at_root_has_selector: self.at_root_has_selector,
+                    extender: self.extender,
                 }
                 .parse()?;
                 if !these_stmts.is_empty() {
@@ -743,7 +755,7 @@ impl<'a> Parser<'a> {
                         map: self.map,
                         path: self.path,
                         scopes: self.scopes,
-                        global_scope: &mut self.global_scope,
+                        global_scope: self.global_scope,
                         super_selectors: self.super_selectors,
                         span_before: self.span_before,
                         content: self.content.clone(),
@@ -752,6 +764,7 @@ impl<'a> Parser<'a> {
                         in_control_flow: true,
                         at_root: self.at_root,
                         at_root_has_selector: self.at_root_has_selector,
+                        extender: self.extender,
                     }
                     .parse()?,
                 );
@@ -801,6 +814,7 @@ impl<'a> Parser<'a> {
                     in_control_flow: true,
                     at_root: self.at_root,
                     at_root_has_selector: self.at_root_has_selector,
+                    extender: self.extender,
                 }
                 .parse()?;
                 if !these_stmts.is_empty() {
@@ -822,6 +836,7 @@ impl<'a> Parser<'a> {
                         in_control_flow: true,
                         at_root: self.at_root,
                         at_root_has_selector: self.at_root_has_selector,
+                        extender: self.extender,
                     }
                     .parse()?,
                 );
@@ -932,6 +947,7 @@ impl<'a> Parser<'a> {
                     in_control_flow: true,
                     at_root: self.at_root,
                     at_root_has_selector: self.at_root_has_selector,
+                    extender: self.extender,
                 }
                 .parse()?;
                 if !these_stmts.is_empty() {
@@ -953,6 +969,7 @@ impl<'a> Parser<'a> {
                         in_control_flow: true,
                         at_root: self.at_root,
                         at_root_has_selector: self.at_root_has_selector,
+                        extender: self.extender,
                     }
                     .parse()?,
                 );
@@ -1072,6 +1089,7 @@ impl<'a> Parser<'a> {
             in_control_flow: self.in_control_flow,
             at_root: false,
             at_root_has_selector: self.at_root_has_selector,
+            extender: self.extender,
         }
         .parse()?;
 
@@ -1140,6 +1158,7 @@ impl<'a> Parser<'a> {
             in_control_flow: self.in_control_flow,
             at_root: true,
             at_root_has_selector,
+            extender: self.extender,
         }
         .parse()?
         .into_iter()
@@ -1167,7 +1186,79 @@ impl<'a> Parser<'a> {
 
     #[allow(clippy::unused_self)]
     fn parse_extend(&mut self) -> SassResult<()> {
-        todo!("@extend not yet implemented")
+        // todo: track when inside ruleset or `@content`
+        // if !self.in_style_rule && !self.in_mixin && !self.in_content_block {
+        //     return Err(("@extend may only be used within style rules.", self.span_before).into());
+        // }
+        let value = Parser {
+            toks: &mut read_until_semicolon_or_closing_curly_brace(self.toks)?
+                .into_iter()
+                .peekmore(),
+            map: self.map,
+            path: self.path,
+            scopes: self.scopes,
+            global_scope: self.global_scope,
+            super_selectors: self.super_selectors,
+            span_before: self.span_before,
+            content: self.content.clone(),
+            in_mixin: self.in_mixin,
+            in_function: self.in_function,
+            in_control_flow: self.in_control_flow,
+            at_root: self.at_root,
+            at_root_has_selector: self.at_root_has_selector,
+            extender: self.extender,
+        }
+        .parse_selector(false, true, String::new())?;
+
+        let is_optional = if let Some(Token { kind: '!', .. }) = self.toks.peek() {
+            self.toks.next();
+            assert_eq!(
+                self.parse_identifier_no_interpolation(false)?.node,
+                "optional"
+            );
+            true
+        } else {
+            false
+        };
+
+        self.whitespace();
+
+        if let Some(Token { kind: ';', .. }) = self.toks.peek() {
+            self.toks.next();
+        }
+
+        let extend_rule = ExtendRule::new(value.clone(), is_optional, self.span_before);
+
+        for complex in value.0.components {
+            if complex.components.len() != 1 || !complex.components.first().unwrap().is_compound() {
+                // If the selector was a compound selector but not a simple
+                // selector, emit a more explicit error.
+                return Err(("complex selectors may not be extended.", self.span_before).into());
+            }
+
+            let compound = match complex.components.first() {
+                Some(ComplexSelectorComponent::Compound(c)) => c.clone(),
+                Some(..) | None => todo!(),
+            };
+            if compound.components.len() != 1 {
+                return Err((
+                    format!(
+                        "compound selectors may no longer be extended.\nConsider `@extend {}` instead.\nSee http://bit.ly/ExtendCompound for details.\n",
+                        compound.components.into_iter().map(|x| x.to_string()).collect::<Vec<String>>().join(", ")
+                    )
+                , self.span_before).into());
+            }
+
+            self.extender.add_extension(
+                self.super_selectors.last().clone().0,
+                compound.components.first().unwrap(),
+                &extend_rule,
+                &None,
+                Some(self.span_before),
+            )
+        }
+
+        Ok(())
     }
 
     #[allow(clippy::unused_self)]
