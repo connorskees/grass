@@ -36,7 +36,6 @@ indented syntax (27 tests)
 css imports
 @use, @forward, and the module system (~1000 tests)
 @keyframes (~30 tests)
-@supports (~100 tests)
 ```
 
 ## Features
@@ -73,8 +72,8 @@ These numbers come from a default run of the Sass specification as shown above.
 
 ```
 2020-06-20
-PASSING: 2750
-FAILING: 2343
+PASSING: 2752
+FAILING: 2341
 TOTAL: 5093
 ```
 
