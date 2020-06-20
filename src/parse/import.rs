@@ -58,8 +58,8 @@ impl<'a> Parser<'a> {
             path_buf.with_file_name(name).with_extension("scss"),
             path_buf.with_file_name(format!("_{}.scss", name.to_str().unwrap())),
             path_buf.clone(),
-            path_buf.clone().join("index.scss"),
-            path_buf.clone().join("_index.scss"),
+            path_buf.join("index.scss"),
+            path_buf.join("_index.scss"),
         ];
 
         for name in &paths {
