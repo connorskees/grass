@@ -10,6 +10,7 @@ test!(
     "a {\n  color: red;\n}\n"
 );
 test!(
+    #[ignore = "Rc<RefCell<Selector>>"]
     list_extends_both_of_compound,
     ".foo.bar {
         a: b
@@ -1250,6 +1251,7 @@ test!(
     ".foo, .bar {\n  a: b;\n}\n\n.bar, .foo {\n  c: d;\n}\n"
 );
 test!(
+    #[ignore = "Rc<RefCell<Selector>>"]
     three_level_extend_loop,
     ".foo {a: b; @extend .bar}
     .bar {c: d; @extend .baz}
@@ -1653,6 +1655,7 @@ test!(
     "~ .foo {\n  a: b;\n}\n"
 );
 test!(
+    #[ignore = "Rc<RefCell<Selector>>"]
     nested_selector_with_child_selector_hack_extender_and_extendee_newline,
     "> .foo {a: b}\nflip,\n> foo bar {@extend .foo}\n",
     "> .foo, > flip,\n> foo bar {\n  a: b;\n}\n"
@@ -1690,6 +1693,7 @@ test!(
     "a.foo, .foo {\n  a: b;\n}\n"
 );
 test!(
+    #[ignore = "Rc<RefCell<Selector>>"]
     cross_branch_redundancy_elimination_1,
     "%x .c %y {a: b}
     .a, .b {@extend %x}
@@ -1756,7 +1760,6 @@ test!(
     ":root .foo-1, :root .bar-1 .baz-1 {\n  test: 1;\n}\n\n.foo-2:root .bar-2, .baz-2.foo-2:root .bang-2 {\n  test: 2;\n}\n\nhtml:root .bar-3 {\n  test: 3;\n}\n\n.foo-4:root > .bar-4 .x-4, .baz-4.foo-4:root > .bar-4 .bang-4 .y-4 {\n  test: 4;\n}\n"
 );
 test!(
-    #[ignore = "to investigate (too many selectors)"]
     compound_unification_in_not,
     "// Make sure compound selectors are unified when two :not()s are extended.
     // :not() is special here because it's the only selector that's extended by
@@ -1790,6 +1793,7 @@ test!(
     ".foo {\n  escape: none;\n}\n\n\\.foo, .bar {\n  escape: slash dot;\n}\n\n\\.foo, .bar {\n  escape: hex;\n}\n"
 );
 test!(
+    #[ignore = "Rc<RefCell<Selector>>"]
     extend_extender,
     "// For implementations like Dart Sass that process extensions as they occur,
     // extending rules that contain their own extends needs special handling.
@@ -1800,7 +1804,6 @@ test!(
     ".a, .b, .c {\n  x: y;\n}\n"
 );
 test!(
-    #[ignore = "to investigate (too many selectors)"]
     extend_result_of_extend,
     "// The result of :not(.c) being extended should itself be extendable.
     .a {@extend :not(.b)}

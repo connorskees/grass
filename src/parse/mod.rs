@@ -372,14 +372,9 @@ impl<'a> Parser<'a> {
         )
         .parse()?;
 
-        // todo: HACK: we have this here to support `&`, but I'm not actually
-        // sure we shouldn't be adding it. It's tricky to change how we resolve
-        // parent selectors because of `@at-root` hacks
-        Ok(Selector(if selector.contains_parent_selector() {
-            selector
-        } else {
-            self.extender.add_selector(selector, None)
-        }))
+        // todo: we should be registering the selector here, but that would require being given
+        // an `Rc<RefCell<Selector>>`, which we haven't implemented yet.
+        Ok(Selector(selector))
     }
 
     /// Eat and return the contents of a comment.
