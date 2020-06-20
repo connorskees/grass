@@ -1011,11 +1011,11 @@ impl Extender {
     ///
     /// Returns extensions that should be added to `new_extensions` before
     /// extending selectors in order to properly handle extension loops such as:
-    ///no_run
+    ///```no_run
     ///     .c {x: y; @extend .a}
     ///     .x.y.a {@extend .b}
     ///     .z.b {@extend .c}
-    ///
+    ///```
     /// Returns `None` if there are no extensions to add.
     fn extend_existing_extensions(
         &mut self,
