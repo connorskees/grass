@@ -385,10 +385,10 @@ impl<'a> Parser<'a> {
             '#' => {
                 if let Some(Token { kind: '{', pos }) = self.toks.peek_forward(1) {
                     self.span_before = *pos;
-                    self.toks.reset_view();
+                    self.toks.reset_cursor();
                     return Some(self.parse_ident_value());
                 }
-                self.toks.reset_view();
+                self.toks.reset_cursor();
                 self.toks.next();
                 let hex = match self.parse_hex() {
                     Ok(v) => v,
@@ -666,7 +666,7 @@ impl<'a> Parser<'a> {
         peek_counter += peek_whitespace(self.toks);
         while let Some(tok) = self.toks.peek() {
             let kind = tok.kind;
-            self.toks.move_forward(1);
+            self.toks.advance_cursor();
             peek_counter += 1;
             if kind == '!'
                 || kind == '%'
@@ -679,7 +679,7 @@ impl<'a> Parser<'a> {
                 buf.push_str(&self.peek_escape()?);
             } else if kind == '#' {
                 if let Some(Token { kind: '{', .. }) = self.toks.peek() {
-                    self.toks.move_forward(1);
+                    self.toks.advance_cursor();
                     peek_counter += 1;
                     let (interpolation, count) = self.peek_interpolation()?;
                     peek_counter += count;
@@ -711,14 +711,14 @@ impl<'a> Parser<'a> {
                 break;
             }
         }
-        self.toks.reset_view();
+        self.toks.reset_cursor();
         Ok(None)
     }
 
     fn peek_interpolation(&mut self) -> SassResult<(Spanned<Value>, usize)> {
         let vec = peek_until_closing_curly_brace(self.toks)?;
         let peek_counter = vec.len();
-        self.toks.move_forward(1);
+        self.toks.advance_cursor();
         let val = self.parse_value_from_vec(vec)?;
         Ok((
             Spanned {

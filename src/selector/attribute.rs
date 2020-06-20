@@ -46,14 +46,14 @@ fn attribute_name(parser: &mut Parser<'_>, start: Span) -> SassResult<QualifiedN
     }
     match parser.toks.peek_forward(1) {
         Some(v) if v.kind == '=' => {
-            parser.toks.reset_view();
+            parser.toks.reset_cursor();
             return Ok(QualifiedName {
                 ident: name_or_namespace.node,
                 namespace: Namespace::None,
             });
         }
         Some(..) => {
-            parser.toks.reset_view();
+            parser.toks.reset_cursor();
         }
         None => return Err(("expected more input.", name_or_namespace.span).into()),
     }

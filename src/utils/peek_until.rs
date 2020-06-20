@@ -15,13 +15,13 @@ pub(crate) fn peek_until_closing_curly_brace<I: Iterator<Item = Token>>(
         match tok.kind {
             q @ '"' | q @ '\'' => {
                 t.push(tok);
-                toks.move_forward(1);
+                toks.advance_cursor();
                 t.extend(peek_until_closing_quote(toks, q)?);
             }
             '{' => {
                 nesting += 1;
                 t.push(tok);
-                toks.move_forward(1);
+                toks.advance_cursor();
             }
             '}' => {
                 if nesting == 0 {
@@ -29,7 +29,7 @@ pub(crate) fn peek_until_closing_curly_brace<I: Iterator<Item = Token>>(
                 } else {
                     nesting -= 1;
                     t.push(tok);
-                    toks.move_forward(1);
+                    toks.advance_cursor();
                 }
             }
             '/' => {
@@ -44,7 +44,7 @@ pub(crate) fn peek_until_closing_curly_brace<I: Iterator<Item = Token>>(
             }
             _ => {
                 t.push(tok);
-                toks.move_forward(1);
+                toks.advance_cursor();
             }
         }
     }
@@ -61,12 +61,12 @@ fn peek_until_closing_quote<I: Iterator<Item = Token>>(
         match tok.kind {
             '"' if q == '"' => {
                 t.push(tok);
-                toks.move_forward(1);
+                toks.advance_cursor();
                 break;
             }
             '\'' if q == '\'' => {
                 t.push(tok);
-                toks.move_forward(1);
+                toks.advance_cursor();
                 break;
             }
             '\\' => {
@@ -90,7 +90,7 @@ fn peek_until_closing_quote<I: Iterator<Item = Token>>(
             }
             _ => t.push(tok),
         }
-        toks.move_forward(1);
+        toks.advance_cursor();
     }
     Ok(t)
 }
@@ -100,7 +100,7 @@ fn peek_until_newline<I: Iterator<Item = Token>>(toks: &mut PeekMoreIterator<I>)
         if tok.kind == '\n' {
             break;
         }
-        toks.move_forward(1);
+        toks.advance_cursor();
     }
 }
 
@@ -111,7 +111,7 @@ fn peek_whitespace<I: Iterator<Item = W>, W: IsWhitespace>(s: &mut PeekMoreItera
             break;
         }
         found_whitespace = true;
-        s.move_forward(1);
+        s.advance_cursor();
     }
     found_whitespace
 }
