@@ -56,6 +56,10 @@ pub(crate) enum Stmt {
         params: String,
         body: Vec<Stmt>,
     },
+    Supports {
+        params: String,
+        body: Vec<Stmt>,
+    },
     AtRoot {
         body: Vec<Stmt>,
     },
@@ -1040,31 +1044,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_media(&mut self) -> SassResult<Stmt> {
-        let mut params = String::new();
-        self.whitespace();
-        while let Some(tok) = self.toks.next() {
-            match tok.kind {
-                '{' => break,
-                '#' => {
-                    if let Some(Token { kind: '{', pos }) = self.toks.peek().cloned() {
-                        self.toks.next();
-                        self.span_before = pos;
-                        let interpolation = self.parse_interpolation()?;
-                        params.push_str(&interpolation.node.to_css_string(interpolation.span)?);
-                        continue;
-                    } else {
-                        params.push(tok.kind);
-                    }
-                }
-                '\n' | ' ' | '\t' => {
-                    self.whitespace();
-                    params.push(' ');
-                    continue;
-                }
-                _ => {}
-            }
-            params.push(tok.kind);
-        }
+        let params = self.parse_media_args()?;
 
         if params.is_empty() {
             return Err(("Expected identifier.", self.span_before).into());
@@ -1179,7 +1159,6 @@ impl<'a> Parser<'a> {
         Ok(stmts)
     }
 
-    #[allow(clippy::unused_self)]
     fn parse_extend(&mut self) -> SassResult<()> {
         // todo: track when inside ruleset or `@content`
         // if !self.in_style_rule && !self.in_mixin && !self.in_content_block {
@@ -1256,14 +1235,90 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    #[allow(clippy::unused_self)]
     fn parse_supports(&mut self) -> SassResult<Stmt> {
-        todo!("@supports not yet implemented")
+        let params = self.parse_media_args()?;
+
+        if params.is_empty() {
+            return Err(("Expected \"not\".", self.span_before).into());
+        }
+
+        let raw_body = Parser {
+            toks: self.toks,
+            map: self.map,
+            path: self.path,
+            scopes: self.scopes,
+            global_scope: self.global_scope,
+            super_selectors: self.super_selectors,
+            span_before: self.span_before,
+            content: self.content.clone(),
+            in_mixin: self.in_mixin,
+            in_function: self.in_function,
+            in_control_flow: self.in_control_flow,
+            at_root: false,
+            at_root_has_selector: self.at_root_has_selector,
+            extender: self.extender,
+        }
+        .parse()?;
+
+        let mut rules = Vec::with_capacity(raw_body.len());
+        let mut body = Vec::new();
+
+        for stmt in raw_body {
+            match stmt {
+                Stmt::Style(..) => body.push(stmt),
+                _ => rules.push(stmt),
+            }
+        }
+
+        if !self.super_selectors.last().is_empty() {
+            body = vec![Stmt::RuleSet {
+                selector: self.super_selectors.last().clone(),
+                body,
+                super_selector: Selector::new(),
+            }];
+        }
+
+        body.append(&mut rules);
+
+        Ok(Stmt::Supports {
+            params: params.trim().to_owned(),
+            body,
+        })
     }
 
     #[allow(clippy::unused_self)]
     fn parse_keyframes(&mut self) -> SassResult<Stmt> {
         todo!("@keyframes not yet implemented")
+    }
+
+    // todo: we should use a specialized struct to represent these
+    fn parse_media_args(&mut self) -> SassResult<String> {
+        let mut params = String::new();
+        self.whitespace();
+        while let Some(tok) = self.toks.next() {
+            match tok.kind {
+                '{' => break,
+                '#' => {
+                    if let Some(Token { kind: '{', pos }) = self.toks.peek().cloned() {
+                        self.toks.next();
+                        self.span_before = pos;
+                        let interpolation = self.parse_interpolation()?;
+                        params.push_str(&interpolation.node.to_css_string(interpolation.span)?);
+                        continue;
+                    } else {
+                        params.push(tok.kind);
+                    }
+                }
+                '\n' | ' ' | '\t' => {
+                    self.whitespace();
+                    params.push(' ');
+                    continue;
+                }
+                _ => {}
+            }
+            params.push(tok.kind);
+        }
+        Ok(params)
     }
 }
 

@@ -18,6 +18,10 @@ enum Toplevel {
         params: String,
         body: Vec<Stmt>,
     },
+    Supports {
+        params: String,
+        body: Vec<Stmt>,
+    },
     Newline,
     Style(Box<Style>),
 }
@@ -105,6 +109,9 @@ impl Css {
                         Stmt::Media { params, body, .. } => {
                             vals.push(Toplevel::Media { params, body })
                         }
+                        Stmt::Supports { params, body, .. } => {
+                            vals.push(Toplevel::Supports { params, body })
+                        }
                         Stmt::UnknownAtRule {
                             params, body, name, ..
                         } => vals.push(Toplevel::UnknownAtRule { params, body, name }),
@@ -120,6 +127,7 @@ impl Css {
             Stmt::Comment(s) => vec![Toplevel::MultilineComment(s)],
             Stmt::Style(s) => vec![Toplevel::Style(s)],
             Stmt::Media { params, body, .. } => vec![Toplevel::Media { params, body }],
+            Stmt::Supports { params, body, .. } => vec![Toplevel::Supports { params, body }],
             Stmt::UnknownAtRule {
                 params, name, body, ..
             } => vec![Toplevel::UnknownAtRule { params, name, body }],
@@ -199,6 +207,33 @@ impl Css {
                         write!(buf, "{}@{}", padding, name)?;
                     } else {
                         write!(buf, "{}@{} {}", padding, name, params)?;
+                    }
+
+                    if body.is_empty() {
+                        writeln!(buf, ";")?;
+                        continue;
+                    } else {
+                        writeln!(buf, " {{")?;
+                    }
+
+                    Css::from_stmts(body, extender)?._inner_pretty_print(
+                        buf,
+                        map,
+                        extender,
+                        nesting + 1,
+                    )?;
+                    writeln!(buf, "{}}}", padding)?;
+                }
+                Toplevel::Supports { params, body } => {
+                    if should_emit_newline {
+                        should_emit_newline = false;
+                        writeln!(buf)?;
+                    }
+
+                    if params.is_empty() {
+                        write!(buf, "{}@supports", padding)?;
+                    } else {
+                        write!(buf, "{}@supports {}", padding, params)?;
                     }
 
                     if body.is_empty() {
