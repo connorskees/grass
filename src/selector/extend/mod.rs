@@ -1011,7 +1011,7 @@ impl Extender {
     ///
     /// Returns extensions that should be added to `new_extensions` before
     /// extending selectors in order to properly handle extension loops such as:
-    ///```no_run
+    ///```foo
     ///     .c {x: y; @extend .a}
     ///     .x.y.a {@extend .b}
     ///     .z.b {@extend .c}
