@@ -830,7 +830,7 @@ impl Extender {
     /// is automatically updated.
     ///
     /// The `media_query_context` is the media query context in which the selector was
-    /// defined, or `null` if it was defined at the top level of the document.
+    /// defined, or `None` if it was defined at the top level of the document.
     // todo: the docs are wrong, and we may want to consider returning an `Rc<RefCell<SelectorList>>`
     // the reason we don't is that it would interfere with hashing
     pub fn add_selector(
@@ -1011,12 +1011,12 @@ impl Extender {
     ///
     /// Returns extensions that should be added to `new_extensions` before
     /// extending selectors in order to properly handle extension loops such as:
-    ///
+    ///no_run
     ///     .c {x: y; @extend .a}
     ///     .x.y.a {@extend .b}
     ///     .z.b {@extend .c}
     ///
-    /// Returns `null` if there are no extensions to add.
+    /// Returns `None` if there are no extensions to add.
     fn extend_existing_extensions(
         &mut self,
         extensions: Vec<Extension>,
