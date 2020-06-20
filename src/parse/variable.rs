@@ -171,7 +171,7 @@ impl<'a> Parser<'a> {
                             default = true;
                         }
                         "important" => {
-                            self.toks.reset_view();
+                            self.toks.reset_cursor();
                             val_toks.push(self.toks.next().unwrap());
                             continue;
                         }

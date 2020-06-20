@@ -106,7 +106,7 @@ pub(crate) fn eat_number<I: Iterator<Item = Token>>(
         break;
     }
 
-    toks.reset_view();
+    toks.reset_cursor();
 
     whole.push_str(&dec);
 

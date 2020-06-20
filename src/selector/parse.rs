@@ -222,11 +222,11 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
 
         match self.parser.toks.peek_forward(1) {
             Some(Token { kind, .. }) if is_name_start(*kind) || kind == &'-' || kind == &'\\' => {
-                self.parser.toks.reset_view();
+                self.parser.toks.reset_cursor();
                 true
             }
             Some(..) | None => {
-                self.parser.toks.reset_view();
+                self.parser.toks.reset_cursor();
                 false
             }
         }

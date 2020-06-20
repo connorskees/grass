@@ -479,7 +479,7 @@ impl<'a> Parser<'a> {
                         self.read_until_newline();
                     }
                     _ => {
-                        self.toks.reset_view();
+                        self.toks.reset_cursor();
                         return found_whitespace;
                     }
                 },
@@ -520,7 +520,7 @@ impl<'a> Parser<'a> {
                 self.toks.peek_forward(1);
                 let ident = peek_ident_no_interpolation(self.toks, false, pos)?;
                 if ident.as_str() != "else" {
-                    self.toks.reset_view();
+                    self.toks.reset_cursor();
                     break;
                 }
                 self.toks.take(4).for_each(drop);

@@ -49,11 +49,11 @@ impl<'a> Parser<'a> {
         while let Some(tok) = self.toks.peek() {
             match tok.kind {
                 ';' | '}' => {
-                    self.toks.reset_view();
+                    self.toks.reset_cursor();
                     break;
                 }
                 '{' => {
-                    self.toks.reset_view();
+                    self.toks.reset_cursor();
                     return None;
                 }
                 '(' => {
@@ -98,10 +98,10 @@ impl<'a> Parser<'a> {
         if let Some(first_char) = self.toks.peek() {
             if first_char.kind == '#' {
                 if !matches!(self.toks.peek_forward(1), Some(Token { kind: '{', .. })) {
-                    self.toks.reset_view();
+                    self.toks.reset_cursor();
                     return Ok(SelectorOrStyle::Selector(String::new()));
                 }
-                self.toks.reset_view();
+                self.toks.reset_cursor();
             } else if !is_name_start(first_char.kind) && first_char.kind != '-' {
                 return Ok(SelectorOrStyle::Selector(String::new()));
             }

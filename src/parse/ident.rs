@@ -66,7 +66,7 @@ impl<'a> Parser<'a> {
                         let interpolation = self.parse_interpolation()?;
                         buf.push_str(&interpolation.node.to_css_string(interpolation.span)?);
                     } else {
-                        self.toks.reset_view();
+                        self.toks.reset_cursor();
                         break;
                     }
                 }
