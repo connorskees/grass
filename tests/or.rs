@@ -59,3 +59,17 @@ test!(
     "a {\n  color: 1 - OR;\n}\n",
     "a {\n  color: 1-OR;\n}\n"
 );
+test!(
+    short_circuits_when_lhs_is_true,
+    "a {\n  color: true or red % foo;\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+error!(
+    does_not_short_circuit_when_lhs_is_false,
+    "a {\n  color: false or red % foo;\n}\n", "Error: Undefined operation \"red % foo\"."
+);
+test!(
+    short_circuiting_in_comma_separated_list,
+    "a {\n  color: true or red % foo, red;\n}\n",
+    "a {\n  color: true, red;\n}\n"
+);

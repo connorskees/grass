@@ -887,9 +887,9 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
                     space_separated.push(right.map_node(|n| Value::UnaryOp(op.node, Box::new(n))));
                 }
             }
-            Op::And | Op::Or => {
+            Op::And => {
                 self.whitespace();
-                // special case when the value is literally "and" or "or"
+                // special case when the value is literally "and"
                 if self.peek().is_none() {
                     space_separated
                         .push(Value::String(op.to_string(), QuoteKind::None).span(op.span));
@@ -900,6 +900,38 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
                         Value::BinaryOp(Box::new(left.node), op.node, Box::new(right.node))
                             .span(left.span.merge(right.span)),
                     );
+                } else {
+                    return Err(("Expected expression.", op.span).into());
+                }
+            }
+            Op::Or => {
+                self.whitespace();
+                // special case when the value is literally "or"
+                if self.peek().is_none() {
+                    space_separated
+                        .push(Value::String(op.to_string(), QuoteKind::None).span(op.span));
+                } else if let Some(left) = space_separated.pop() {
+                    self.whitespace();
+                    if left.node.is_true(left.span)? {
+                        // we explicitly ignore errors here as a workaround for short circuiting
+                        while let Some(foo) = self.peek() {
+                            if let Ok(Spanned {
+                                node: IntermediateValue::Comma,
+                                ..
+                            }) = foo
+                            {
+                                break;
+                            }
+                            self.next();
+                        }
+                        space_separated.push(left);
+                    } else {
+                        let right = self.single_value()?;
+                        space_separated.push(
+                            Value::BinaryOp(Box::new(left.node), op.node, Box::new(right.node))
+                                .span(left.span.merge(right.span)),
+                        );
+                    }
                 } else {
                     return Err(("Expected expression.", op.span).into());
                 }
