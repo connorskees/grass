@@ -6,7 +6,7 @@ use crate::error::SassError;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum AtRuleKind {
-    // SASS specific @rules
+    // Sass specific @rules
     /// Loads mixins, functions, and variables from other Sass
     /// stylesheets, and combines CSS from multiple stylesheets together
     Use,

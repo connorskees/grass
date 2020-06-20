@@ -1,8 +1,8 @@
-//! SASS functions are those that are evaluated and return a value
+//! Sass functions are those that are evaluated and return a value
 //!
-//! SASS functions can be either user-defined or builtin.
+//! Sass functions can be either user-defined or builtin.
 //!
-//! User-defined functions are those that have been implemented in SASS
+//! User-defined functions are those that have been implemented in Sass
 //! using the @function rule. See the documentation of `crate::atrule::Function`
 //! for more information.
 //!
@@ -16,7 +16,7 @@ use crate::{
     parse::Parser, value::Value,
 };
 
-/// A SASS function
+/// A Sass function
 ///
 /// See toplevel documentation for more information
 ///

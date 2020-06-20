@@ -1,7 +1,7 @@
 [package]
 name = "grass"
 version = "0.9.0"
-description = "SASS compiler"
+description = "A near-feature-complete Sass compiler written purely in Rust"
 readme = "README.md"
 license = "MIT"
 categories = ["command-line-utilities", "web-programming"]
@@ -20,7 +20,7 @@ required-features = ["commandline"]
 [lib]
 name = "grass"
 path = "src/lib.rs"
-# crate-type = ["cdylib", "rlib"]
+crate-type = ["cdylib", "rlib"]
 bench = false
 
 [[bench]]

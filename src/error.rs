@@ -120,6 +120,6 @@ impl From<(String, Span)> for SassError {
 impl Error for SassError {
     #[inline]
     fn description(&self) -> &'static str {
-        "SASS parsing error"
+        "Sass parsing error"
     }
 }

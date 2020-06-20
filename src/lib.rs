@@ -1,7 +1,5 @@
 /*! # grass
-An implementation of the sass specification in pure rust.
-
-All functionality is currently exposed through [`StyleSheet`].
+An implementation of the Sass specification in pure rust.
 
 Spec progress as of 2020-05-01:
 

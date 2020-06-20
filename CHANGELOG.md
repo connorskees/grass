@@ -1,7 +1,11 @@
 # 0.9.1
 
+This release is largely focused on `@extend`, but it also resolves some regressions resulting from the new parser.
+ - **Implement `@extend`**
+ - properly document new API
  - fix regression in which `@at-root` would panic when placed after a ruleset
  - fix regression related to `@mixin` and `@function` scoping when combined with outer, local variables
+ - remove most remaining `unwrap`s that could result in a panic
 
 # 0.9.0
 

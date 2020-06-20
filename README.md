@@ -1,13 +1,13 @@
 # grass
 
-This crate aims to provide a high level interface for compiling SASS into
-plain CSS. It offers a very limited API, currently exposing only 2 structs.
+This crate aims to provide a high level interface for compiling Sass into
+plain CSS. It offers a very limited API, currently exposing only 2 functions.
 
 In addition to a library, also included is a binary that is intended to act as an invisible
-replacement to the sass commandline executable.
+replacement to the Sass commandline executable.
 
-This crate aims to achieve complete feature parity with the dart-sass reference
-implementation. A deviation from the dart-sass implementation can be considered
+This crate aims to achieve complete feature parity with the `dart-sass` reference
+implementation. A deviation from the `dart-sass` implementation can be considered
 a bug except for in the following situations:
 
 - Error messages
@@ -32,13 +32,11 @@ The large features remaining are
 
 ```
 builtin functions min, max
-@extend (~600 tests)
 indented syntax (27 tests)
 css imports
-@use and module system (~1200 tests)
-@forward (~400 tests)
+@use, @forward, and the module system (~1000 tests)
 @keyframes (~30 tests)
-@supports (~128 tests)
+@supports (~100 tests)
 ```
 
 ## Features
@@ -71,7 +69,14 @@ cargo b --release
 ./sass-spec/sass-spec.rb -c './target/release/grass'
 ```
 
-These numbers come from a default run of the sass specification as shown above.
+These numbers come from a default run of the Sass specification as shown above.
+
+```
+2020-06-20
+PASSING: 2750
+FAILING: 2343
+TOTAL: 5093
+```
 
 ```
 2020-06-16
