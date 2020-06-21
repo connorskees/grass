@@ -2,7 +2,7 @@ use peekmore::PeekMoreIterator;
 
 use crate::{error::SassResult, Token};
 
-use super::read_until_closing_quote;
+use super::{read_until_closing_paren, read_until_closing_quote};
 /// Reads until the char is found, consuming the char,
 /// or until the end of the iterator is hit
 pub(crate) fn read_until_char<I: Iterator<Item = Token>>(
@@ -15,6 +15,11 @@ pub(crate) fn read_until_char<I: Iterator<Item = Token>>(
             '"' | '\'' => {
                 v.push(tok);
                 v.extend(read_until_closing_quote(toks, tok.kind)?);
+                continue;
+            }
+            '(' => {
+                v.push(tok);
+                v.extend(read_until_closing_paren(toks)?);
                 continue;
             }
             t if t == c => break,
