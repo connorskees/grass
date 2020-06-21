@@ -914,11 +914,11 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
                     self.whitespace();
                     if left.node.is_true(left.span)? {
                         // we explicitly ignore errors here as a workaround for short circuiting
-                        while let Some(foo) = self.peek() {
+                        while let Some(value) = self.peek() {
                             if let Ok(Spanned {
                                 node: IntermediateValue::Comma,
                                 ..
-                            }) = foo
+                            }) = value
                             {
                                 break;
                             }
