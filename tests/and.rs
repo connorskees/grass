@@ -51,3 +51,8 @@ test!(
     "a {\n  color: 1 - AND;\n}\n",
     "a {\n  color: 1-AND;\n}\n"
 );
+test!(
+    short_circuits_when_lhs_is_false,
+    "a {\n  color: false and comparable(\"a\", \"b\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);

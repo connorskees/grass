@@ -895,11 +895,26 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
                         .push(Value::String(op.to_string(), QuoteKind::None).span(op.span));
                 } else if let Some(left) = space_separated.pop() {
                     self.whitespace();
-                    let right = self.single_value()?;
-                    space_separated.push(
-                        Value::BinaryOp(Box::new(left.node), op.node, Box::new(right.node))
-                            .span(left.span.merge(right.span)),
-                    );
+                    if left.node.is_true(left.span)? {
+                        let right = self.single_value()?;
+                        space_separated.push(
+                            Value::BinaryOp(Box::new(left.node), op.node, Box::new(right.node))
+                                .span(left.span.merge(right.span)),
+                        );
+                    } else {
+                        // we explicitly ignore errors here as a workaround for short circuiting
+                        while let Some(value) = self.peek() {
+                            if let Ok(Spanned {
+                                node: IntermediateValue::Comma,
+                                ..
+                            }) = value
+                            {
+                                break;
+                            }
+                            self.next();
+                        }
+                        space_separated.push(left);
+                    }
                 } else {
                     return Err(("Expected expression.", op.span).into());
                 }
