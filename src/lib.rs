@@ -5,7 +5,7 @@ Spec progress as of 2020-05-01:
 
 | Passing | Failing | Total |
 |---------|---------|-------|
-| 2489    | 2604    | 5093  |
+| 2755    | 2338    | 5093  |
 
 ## Use as library
 ```
@@ -222,6 +222,7 @@ pub fn from_string(p: String) -> Result<String> {
 #[cfg(feature = "wasm")]
 #[wasm_bindgen]
 pub fn from_string(p: String) -> std::result::Result<String, JsValue> {
+    let mut extender = Extender::new();
     let mut map = CodeMap::new();
     let file = map.add_file("stdin".into(), p);
     Ok(Css::from_stmts(
@@ -242,11 +243,13 @@ pub fn from_string(p: String) -> std::result::Result<String, JsValue> {
             in_control_flow: false,
             at_root: true,
             at_root_has_selector: false,
+            extender: &mut extender,
         }
         .parse()
         .map_err(|e| raw_to_parse_error(&map, e).to_string())?,
+        &mut extender,
     )
     .map_err(|e| raw_to_parse_error(&map, e).to_string())?
-    .pretty_print(&map)
+    .pretty_print(&map, &mut extender)
     .map_err(|e| raw_to_parse_error(&map, e).to_string())?)
 }
