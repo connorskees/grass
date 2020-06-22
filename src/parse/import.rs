@@ -56,7 +56,7 @@ impl<'a> Parser<'a> {
 
         let paths = [
             path_buf.with_file_name(name).with_extension("scss"),
-            path_buf.with_file_name(format!("_{}.scss", name.to_str().unwrap())),
+            path_buf.with_file_name(format!("_{}", name.to_str().unwrap())).with_extension("scss"),
             path_buf.clone(),
             path_buf.join("index.scss"),
             path_buf.join("_index.scss"),
