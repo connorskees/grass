@@ -25,10 +25,10 @@ pub(crate) struct Extension {
 
     /// The media query context to which this extend is restricted, or `None` if
     /// it can apply within any context.
-    // todo: Option
     pub media_context: Option<Vec<CssMediaQuery>>,
 
     /// The span in which `extender` was defined.
+    // todo: no `Option<>`
     pub span: Option<Span>,
 
     pub left: Option<Box<Extension>>,

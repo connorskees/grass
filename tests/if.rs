@@ -153,3 +153,7 @@ error!(
     nothing_after_i_after_else,
     "@if true {} @else i", "Error: expected \"{\"."
 );
+error!(
+    invalid_toplevel_selector,
+    "@if true { & { } }", "Error: Top-level selectors may not contain the parent selector \"&\"."
+);

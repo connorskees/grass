@@ -267,7 +267,7 @@ impl<'a> Parser<'a> {
                         self.super_selectors.push(selector.resolve_parent_selectors(
                             &super_selector,
                             !at_root || self.at_root_has_selector,
-                        ));
+                        )?);
                         let body = self.parse_stmt()?;
                         self.scopes.pop();
                         self.super_selectors.pop();
@@ -985,7 +985,7 @@ impl<'a> Parser<'a> {
             self.toks.next();
             return Ok(Stmt::UnknownAtRule {
                 name,
-                super_selector: Selector::new(),
+                super_selector: Selector::new(self.span_before),
                 params: String::new(),
                 body: Vec::new(),
             });
@@ -1029,7 +1029,7 @@ impl<'a> Parser<'a> {
             body = vec![Stmt::RuleSet {
                 selector: self.super_selectors.last().clone(),
                 body,
-                super_selector: Selector::new(),
+                super_selector: Selector::new(self.span_before),
             }];
         }
 
@@ -1037,7 +1037,7 @@ impl<'a> Parser<'a> {
 
         Ok(Stmt::UnknownAtRule {
             name,
-            super_selector: Selector::new(),
+            super_selector: Selector::new(self.span_before),
             params: params.trim().to_owned(),
             body,
         })
@@ -1082,14 +1082,14 @@ impl<'a> Parser<'a> {
             body = vec![Stmt::RuleSet {
                 selector: self.super_selectors.last().clone(),
                 body,
-                super_selector: Selector::new(),
+                super_selector: Selector::new(self.span_before),
             }];
         }
 
         body.append(&mut rules);
 
         Ok(Stmt::Media {
-            super_selector: Selector::new(),
+            super_selector: Selector::new(self.span_before),
             params: params.trim().to_owned(),
             body,
         })
@@ -1105,7 +1105,7 @@ impl<'a> Parser<'a> {
             at_root_has_selector = true;
             self.parse_selector(true, false, String::new())?
         }
-        .resolve_parent_selectors(self.super_selectors.last(), false);
+        .resolve_parent_selectors(self.super_selectors.last(), false)?;
 
         self.whitespace();
 
@@ -1142,18 +1142,23 @@ impl<'a> Parser<'a> {
                 styles.push(s);
                 None
             }
-            Stmt::RuleSet { selector, body, .. } if !at_root_has_selector => Some(Stmt::RuleSet {
-                super_selector: Selector::new(),
-                selector: selector.resolve_parent_selectors(&at_rule_selector, false),
-                body,
-            }),
-            _ => Some(s),
+            Stmt::RuleSet { selector, body, .. } if !at_root_has_selector => {
+                Some(Ok(Stmt::RuleSet {
+                    super_selector: Selector::new(self.span_before),
+                    selector: match selector.resolve_parent_selectors(&at_rule_selector, false) {
+                        Ok(v) => v,
+                        Err(e) => return Some(Err(e)),
+                    },
+                    body,
+                }))
+            }
+            _ => Some(Ok(s)),
         })
-        .collect::<Vec<Stmt>>();
+        .collect::<SassResult<Vec<Stmt>>>()?;
         let mut stmts = vec![Stmt::RuleSet {
             selector: at_rule_selector,
             body: styles,
-            super_selector: Selector::new(),
+            super_selector: Selector::new(self.span_before),
         }];
         stmts.extend(raw_stmts);
         Ok(stmts)
@@ -1274,7 +1279,7 @@ impl<'a> Parser<'a> {
             body = vec![Stmt::RuleSet {
                 selector: self.super_selectors.last().clone(),
                 body,
-                super_selector: Selector::new(),
+                super_selector: Selector::new(self.span_before),
             }];
         }
 

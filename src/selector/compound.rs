@@ -1,5 +1,7 @@
 use std::fmt::{self, Write};
 
+use crate::error::SassResult;
+
 use super::{
     ComplexSelector, ComplexSelectorComponent, Namespace, Pseudo, SelectorList, SimpleSelector,
     Specificity,
@@ -102,7 +104,10 @@ impl CompoundSelector {
     /// `SimpleSelector::Parent`s replaced with `parent`.
     ///
     /// Returns `None` if `compound` doesn't contain any `SimpleSelector::Parent`s.
-    pub fn resolve_parent_selectors(self, parent: SelectorList) -> Option<Vec<ComplexSelector>> {
+    pub fn resolve_parent_selectors(
+        self,
+        parent: SelectorList,
+    ) -> SassResult<Option<Vec<ComplexSelector>>> {
         let contains_selector_pseudo = self.components.iter().any(|simple| {
             if let SimpleSelector::Pseudo(Pseudo {
                 selector: Some(sel),
@@ -116,7 +121,7 @@ impl CompoundSelector {
         });
 
         if !contains_selector_pseudo && !self.components[0].is_parent() {
-            return None;
+            return Ok(None);
         }
 
         let resolved_members: Vec<SimpleSelector> = if contains_selector_pseudo {
@@ -127,64 +132,81 @@ impl CompoundSelector {
                     if let SimpleSelector::Pseudo(mut pseudo) = simple {
                         if let Some(sel) = pseudo.selector.clone() {
                             if !sel.contains_parent_selector() {
-                                return SimpleSelector::Pseudo(pseudo);
+                                return Ok(SimpleSelector::Pseudo(pseudo));
                             }
                             pseudo.selector =
-                                Some(sel.resolve_parent_selectors(Some(parent.clone()), false));
-                            SimpleSelector::Pseudo(pseudo)
+                                Some(sel.resolve_parent_selectors(Some(parent.clone()), false)?);
+                            Ok(SimpleSelector::Pseudo(pseudo))
                         } else {
-                            SimpleSelector::Pseudo(pseudo)
+                            Ok(SimpleSelector::Pseudo(pseudo))
                         }
                     } else {
-                        simple
+                        Ok(simple)
                     }
                 })
-                .collect()
+                .collect::<SassResult<Vec<SimpleSelector>>>()?
         } else {
             self.components.clone()
         };
 
         if let Some(SimpleSelector::Parent(suffix)) = self.components.first() {
             if self.components.len() == 1 && suffix.is_none() {
-                return Some(parent.components);
+                return Ok(Some(parent.components));
             }
         } else {
-            return Some(vec![ComplexSelector {
+            return Ok(Some(vec![ComplexSelector {
                 components: vec![ComplexSelectorComponent::Compound(CompoundSelector {
                     components: resolved_members,
                 })],
                 line_break: false,
-            }]);
+            }]));
         }
 
-        Some(parent.components.into_iter().map(move |mut complex| {
-          let last_component = complex.components.last();
-          let last = if let Some(ComplexSelectorComponent::Compound(c)) = last_component {
-            c.clone()
-          } else {
-            todo!("throw SassScriptException('Parent \"$complex\" is incompatible with this selector.');")
-          };
+        let span = parent.span;
 
-          let last = if let Some(SimpleSelector::Parent(Some(suffix))) = self.components.first() {
-            let mut components = last.components;
-            let mut end = components.pop().unwrap();
-            end.add_suffix(suffix);
-            components.push(end);
-            components.extend(resolved_members.clone().into_iter().skip(1));
-            CompoundSelector { components }
-          } else {
-            let mut components = last.components;
-            components.extend(resolved_members.clone().into_iter().skip(1));
-            CompoundSelector { components }
-          };
+        Ok(Some(
+            parent
+                .components
+                .into_iter()
+                .map(move |mut complex| {
+                    let last_component = complex.components.last();
+                    let last = if let Some(ComplexSelectorComponent::Compound(c)) = last_component {
+                        c.clone()
+                    } else {
+                        return Err((
+                            format!("Parent \"{}\" is incompatible with this selector.", complex),
+                            span,
+                        )
+                            .into());
+                    };
 
-          complex.components.pop();
+                    let last = if let Some(SimpleSelector::Parent(Some(suffix))) =
+                        self.components.first()
+                    {
+                        let mut components = last.components;
+                        let mut end = components.pop().unwrap();
+                        end.add_suffix(suffix, span)?;
+                        components.push(end);
+                        components.extend(resolved_members.clone().into_iter().skip(1));
+                        CompoundSelector { components }
+                    } else {
+                        let mut components = last.components;
+                        components.extend(resolved_members.clone().into_iter().skip(1));
+                        CompoundSelector { components }
+                    };
 
-          let mut components = complex.components;
-          components.push(ComplexSelectorComponent::Compound(last));
+                    complex.components.pop();
 
-          ComplexSelector { components, line_break: complex.line_break }
-        }).collect())
+                    let mut components = complex.components;
+                    components.push(ComplexSelectorComponent::Compound(last));
+
+                    Ok(ComplexSelector {
+                        components,
+                        line_break: complex.line_break,
+                    })
+                })
+                .collect::<SassResult<Vec<ComplexSelector>>>()?,
+        ))
     }
 
     /// Returns a `CompoundSelector` that matches only elements that are matched by

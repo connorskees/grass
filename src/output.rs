@@ -89,10 +89,10 @@ impl Css {
                     return Ok(Vec::new());
                 }
                 let selector = if extender.is_empty() {
-                    selector.resolve_parent_selectors(&super_selector, true)
+                    selector.resolve_parent_selectors(&super_selector, true)?
                 } else {
                     Selector(extender.add_selector(
-                        selector.resolve_parent_selectors(&super_selector, true).0,
+                        selector.resolve_parent_selectors(&super_selector, true)?.0,
                         None,
                     ))
                 }

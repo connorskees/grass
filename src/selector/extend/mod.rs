@@ -55,7 +55,7 @@ impl Default for ExtendMode {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Default)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Extender {
     /// A map from all simple selectors in the stylesheet to the selector lists
     /// that contain them.
@@ -100,6 +100,8 @@ pub(crate) struct Extender {
 
     /// The mode that controls this extender's behavior.
     mode: ExtendMode,
+
+    span: Span,
 }
 
 impl Extender {
@@ -112,11 +114,12 @@ impl Extender {
         selector: SelectorList,
         source: SelectorList,
         targets: SelectorList,
+        span: Span,
     ) -> SassResult<SelectorList> {
-        Self::extend_or_replace(selector, source, targets, ExtendMode::AllTargets)
+        Self::extend_or_replace(selector, source, targets, ExtendMode::AllTargets, span)
     }
 
-    pub fn new() -> Self {
+    pub fn new(span: Span) -> Self {
         Self {
             selectors: HashMap::new(),
             extensions: HashMap::new(),
@@ -125,6 +128,7 @@ impl Extender {
             source_specificity: HashMap::new(),
             originals: HashSet::new(),
             mode: ExtendMode::Normal,
+            span,
         }
     }
 
@@ -137,8 +141,9 @@ impl Extender {
         selector: SelectorList,
         source: SelectorList,
         targets: SelectorList,
+        span: Span,
     ) -> SassResult<SelectorList> {
-        Self::extend_or_replace(selector, source, targets, ExtendMode::Replace)
+        Self::extend_or_replace(selector, source, targets, ExtendMode::Replace, span)
     }
 
     fn extend_or_replace(
@@ -146,6 +151,7 @@ impl Extender {
         source: SelectorList,
         targets: SelectorList,
         mode: ExtendMode,
+        span: Span,
     ) -> SassResult<SelectorList> {
         let extenders: IndexMap<ComplexSelector, Extension> = source
             .components
@@ -160,7 +166,7 @@ impl Extender {
                 if complex.components.len() == 1 {
                     Ok(complex.components.first().unwrap().as_compound().clone())
                 } else {
-                    todo!("Can't extend complex selector $complex.")
+                    return Err(("Can't extend complex selector $complex.", span).into());
                 }
             })
             .collect::<SassResult<Vec<CompoundSelector>>>()?;
@@ -176,7 +182,7 @@ impl Extender {
                 })
                 .collect();
 
-        let mut extender = Extender::with_mode(mode);
+        let mut extender = Extender::with_mode(mode, span);
 
         if !selector.is_invisible() {
             extender
@@ -187,10 +193,10 @@ impl Extender {
         Ok(extender.extend_list(selector, &extensions, &None))
     }
 
-    fn with_mode(mode: ExtendMode) -> Self {
+    fn with_mode(mode: ExtendMode, span: Span) -> Self {
         Self {
             mode,
-            ..Extender::default()
+            ..Extender::new(span)
         }
     }
 
@@ -225,6 +231,7 @@ impl Extender {
 
         SelectorList {
             components: self.trim(extended, |complex| self.originals.contains(complex)),
+            span: self.span,
         }
     }
 
@@ -550,7 +557,10 @@ impl Extender {
         media_query_context: &Option<Vec<CssMediaQuery>>,
     ) -> Option<Vec<Pseudo>> {
         let extended = self.extend_list(
-            pseudo.selector.clone().unwrap_or_else(SelectorList::new),
+            pseudo
+                .selector
+                .clone()
+                .unwrap_or_else(|| SelectorList::new(self.span)),
             extensions,
             media_query_context,
         );
@@ -657,6 +667,7 @@ impl Extender {
                 .map(|complex| {
                     pseudo.clone().with_selector(Some(SelectorList {
                         components: vec![complex],
+                        span: self.span,
                     }))
                 })
                 .collect::<Vec<Pseudo>>();
@@ -668,6 +679,7 @@ impl Extender {
         } else {
             Some(vec![pseudo.with_selector(Some(SelectorList {
                 components: complexes,
+                span: self.span,
             }))])
         }
     }

@@ -103,7 +103,10 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
             line_break = false;
         }
 
-        Ok(SelectorList { components })
+        Ok(SelectorList {
+            components,
+            span: self.span,
+        })
     }
 
     fn eat_whitespace(&mut self) -> DevouredWhitespace {
@@ -299,6 +302,7 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
                     selector: None,
                     is_syntactic_class: !element,
                     argument: None,
+                    span: self.span,
                 }));
             }
         };
@@ -351,6 +355,7 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
             // todo: we can store the reference to this
             is_syntactic_class: !element,
             argument,
+            span: self.span,
         }))
     }
 

@@ -73,9 +73,12 @@ fn selector_nest(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         .map(|sel| sel.node.to_selector(parser, "selectors", true))
         .collect::<SassResult<Vec<Selector>>>()?
         .into_iter()
-        .fold(Selector::new(), |parent, child| {
-            child.resolve_parent_selectors(&parent, true)
-        })
+        .try_fold(
+            Selector::new(span),
+            |parent, child| -> SassResult<Selector> {
+                Ok(child.resolve_parent_selectors(&parent, true)?)
+            },
+        )?
         .into_value())
 }
 
@@ -130,8 +133,9 @@ fn selector_append(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value>
                         }
                     })
                     .collect::<SassResult<Vec<ComplexSelector>>>()?,
+                span,
             })
-            .resolve_parent_selectors(&parent, false))
+            .resolve_parent_selectors(&parent, false)?)
         })?
         .into_value())
 }
@@ -148,7 +152,7 @@ fn selector_extend(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Va
         .arg(&mut args, 2, "extender")?
         .to_selector(parser, "extender", false)?;
 
-    Ok(Extender::extend(selector.0, source.0, target.0)?.to_sass_list())
+    Ok(Extender::extend(selector.0, source.0, target.0, args.span())?.to_sass_list())
 }
 
 fn selector_replace(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
@@ -163,7 +167,7 @@ fn selector_replace(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<V
         parser
             .arg(&mut args, 2, "replacement")?
             .to_selector(parser, "replacement", false)?;
-    Ok(Extender::replace(selector.0, source.0, target.0)?.to_sass_list())
+    Ok(Extender::replace(selector.0, source.0, target.0, args.span())?.to_sass_list())
 }
 
 fn selector_unify(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {

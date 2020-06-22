@@ -1,5 +1,9 @@
 use std::fmt::{self, Write};
 
+use codemap::Span;
+
+use crate::error::SassResult;
+
 use super::{
     Attribute, ComplexSelector, ComplexSelectorComponent, CompoundSelector, Namespace,
     QualifiedName, SelectorList, Specificity,
@@ -119,8 +123,8 @@ impl SimpleSelector {
         }
     }
 
-    pub fn add_suffix(&mut self, suffix: &str) {
-        match self {
+    pub fn add_suffix(&mut self, suffix: &str, span: Span) -> SassResult<()> {
+        Ok(match self {
             Self::Type(name) => name.ident.push_str(suffix),
             Self::Placeholder(name)
             | Self::Id(name)
@@ -131,8 +135,9 @@ impl SimpleSelector {
                 selector: None,
                 ..
             }) => name.push_str(suffix),
-            _ => todo!("Invalid parent selector"), //return Err((format!("Invalid parent selector \"{}\"", self), SPAN)),
-        }
+            // todo: add test for this?
+            _ => return Err((format!("Invalid parent selector \"{}\"", self), span).into()),
+        })
     }
 
     pub fn is_universal(&self) -> bool {
@@ -403,6 +408,8 @@ pub(crate) struct Pseudo {
     /// This is `None` if there's no selector. If `argument` and `selector` are
     /// both non-`None`, the selector follows the argument.
     pub selector: Option<SelectorList>,
+
+    pub span: Span,
 }
 
 impl fmt::Display for Pseudo {
@@ -535,6 +542,7 @@ impl Pseudo {
                             }
                             sel.is_superselector(&SelectorList {
                                 components: vec![complex.clone()],
+                                span: self.span,
                             })
                         } else {
                             false

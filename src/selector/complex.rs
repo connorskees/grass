@@ -1,5 +1,7 @@
 use std::fmt::{self, Display, Write};
 
+use crate::error::SassResult;
+
 use super::{CompoundSelector, Pseudo, SelectorList, SimpleSelector, Specificity};
 
 /// A complex selector.
@@ -264,7 +266,10 @@ impl ComplexSelectorComponent {
         matches!(self, Self::Combinator(..))
     }
 
-    pub fn resolve_parent_selectors(self, parent: SelectorList) -> Option<Vec<ComplexSelector>> {
+    pub fn resolve_parent_selectors(
+        self,
+        parent: SelectorList,
+    ) -> SassResult<Option<Vec<ComplexSelector>>> {
         match self {
             Self::Compound(c) => c.resolve_parent_selectors(parent),
             Self::Combinator(..) => todo!(),

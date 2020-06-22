@@ -143,8 +143,9 @@ fn raw_to_parse_error(map: &CodeMap, err: Error) -> Error {
 #[cfg(not(feature = "wasm"))]
 pub fn from_path(p: &str) -> Result<String> {
     let mut map = CodeMap::new();
-    let mut extender = Extender::new();
     let file = map.add_file(p.into(), String::from_utf8(fs::read(p)?)?);
+    let empty_span = file.span.subspan(0, 0);
+    let mut extender = Extender::new(empty_span);
     Css::from_stmts(
         Parser {
             toks: &mut Lexer::new(&file)
@@ -155,8 +156,8 @@ pub fn from_path(p: &str) -> Result<String> {
             path: p.as_ref(),
             scopes: &mut NeverEmptyVec::new(Scope::new()),
             global_scope: &mut Scope::new(),
-            super_selectors: &mut NeverEmptyVec::new(Selector::new()),
-            span_before: file.span.subspan(0, 0),
+            super_selectors: &mut NeverEmptyVec::new(Selector::new(empty_span)),
+            span_before: empty_span,
             content: None,
             in_mixin: false,
             in_function: false,
@@ -188,8 +189,9 @@ pub fn from_path(p: &str) -> Result<String> {
 #[cfg(not(feature = "wasm"))]
 pub fn from_string(p: String) -> Result<String> {
     let mut map = CodeMap::new();
-    let mut extender = Extender::new();
     let file = map.add_file("stdin".into(), p);
+    let empty_span = file.span.subspan(0, 0);
+    let mut extender = Extender::new(empty_span);
     Css::from_stmts(
         Parser {
             toks: &mut Lexer::new(&file)
@@ -200,8 +202,8 @@ pub fn from_string(p: String) -> Result<String> {
             path: Path::new(""),
             scopes: &mut NeverEmptyVec::new(Scope::new()),
             global_scope: &mut Scope::new(),
-            super_selectors: &mut NeverEmptyVec::new(Selector::new()),
-            span_before: file.span.subspan(0, 0),
+            super_selectors: &mut NeverEmptyVec::new(Selector::new(empty_span)),
+            span_before: empty_span,
             content: None,
             in_mixin: false,
             in_function: false,
@@ -222,9 +224,10 @@ pub fn from_string(p: String) -> Result<String> {
 #[cfg(feature = "wasm")]
 #[wasm_bindgen]
 pub fn from_string(p: String) -> std::result::Result<String, JsValue> {
-    let mut extender = Extender::new();
     let mut map = CodeMap::new();
     let file = map.add_file("stdin".into(), p);
+    let empty_span = file.span.subspan(0, 0);
+    let mut extender = Extender::new(empty_span);
     Ok(Css::from_stmts(
         Parser {
             toks: &mut Lexer::new(&file)
@@ -235,8 +238,8 @@ pub fn from_string(p: String) -> std::result::Result<String, JsValue> {
             path: Path::new(""),
             scopes: &mut NeverEmptyVec::new(Scope::new()),
             global_scope: &mut Scope::new(),
-            super_selectors: &mut NeverEmptyVec::new(Selector::new()),
-            span_before: file.span.subspan(0, 0),
+            super_selectors: &mut NeverEmptyVec::new(Selector::new(empty_span)),
+            span_before: empty_span,
             content: None,
             in_mixin: false,
             in_function: false,

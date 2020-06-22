@@ -4,10 +4,13 @@ use std::{
     mem,
 };
 
+use codemap::Span;
+
 use super::{unify_complex, ComplexSelector, ComplexSelectorComponent};
 
 use crate::{
     common::{Brackets, ListSeparator, QuoteKind},
+    error::SassResult,
     value::Value,
 };
 
@@ -21,6 +24,7 @@ pub(crate) struct SelectorList {
     ///
     /// This is never empty.
     pub components: Vec<ComplexSelector>,
+    pub span: Span,
 }
 
 impl fmt::Display for SelectorList {
@@ -58,9 +62,10 @@ impl SelectorList {
             .any(ComplexSelector::contains_parent_selector)
     }
 
-    pub const fn new() -> Self {
+    pub const fn new(span: Span) -> Self {
         Self {
             components: Vec::new(),
+            span,
         }
     }
 
@@ -126,6 +131,7 @@ impl SelectorList {
 
         Some(Self {
             components: contents,
+            span: self.span.merge(other.span),
         })
     }
 
@@ -137,28 +143,35 @@ impl SelectorList {
     /// The given `parent` may be `None`, indicating that this has no parents. If
     /// so, this list is returned as-is if it doesn't contain any explicit
     /// `SimpleSelector::Parent`s. If it does, this returns a `SassError`.
-    // todo: return SassResult<Self> (the issue is figuring out the span)
-    pub fn resolve_parent_selectors(self, parent: Option<Self>, implicit_parent: bool) -> Self {
+    pub fn resolve_parent_selectors(
+        self,
+        parent: Option<Self>,
+        implicit_parent: bool,
+    ) -> SassResult<Self> {
         let parent = match parent {
             Some(p) => p,
             None => {
                 if !self.contains_parent_selector() {
-                    return self;
+                    return Ok(self);
                 }
-                todo!("Top-level selectors may not contain the parent selector \"&\".")
+                return Err((
+                    "Top-level selectors may not contain the parent selector \"&\".",
+                    self.span,
+                )
+                    .into());
             }
         };
 
-        Self {
+        Ok(Self {
             components: flatten_vertically(
                 self.components
                     .into_iter()
                     .map(|complex| {
                         if !complex.contains_parent_selector() {
                             if !implicit_parent {
-                                return vec![complex];
+                                return Ok(vec![complex]);
                             }
-                            return parent
+                            return Ok(parent
                                 .clone()
                                 .components
                                 .into_iter()
@@ -170,7 +183,7 @@ impl SelectorList {
                                         line_break: complex.line_break || parent_complex.line_break,
                                     }
                                 })
-                                .collect();
+                                .collect());
                         }
 
                         let mut new_complexes: Vec<Vec<ComplexSelectorComponent>> =
@@ -181,7 +194,7 @@ impl SelectorList {
                             if component.is_compound() {
                                 let resolved = match component
                                     .clone()
-                                    .resolve_parent_selectors(parent.clone())
+                                    .resolve_parent_selectors(parent.clone())?
                                 {
                                     Some(r) => r,
                                     None => {
@@ -213,7 +226,7 @@ impl SelectorList {
                         }
 
                         let mut i = 0;
-                        new_complexes
+                        Ok(new_complexes
                             .into_iter()
                             .map(|new_complex| {
                                 i += 1;
@@ -222,11 +235,12 @@ impl SelectorList {
                                     line_break: line_breaks[i - 1],
                                 }
                             })
-                            .collect()
+                            .collect())
                     })
-                    .collect(),
+                    .collect::<SassResult<Vec<Vec<ComplexSelector>>>>()?,
             ),
-        }
+            span: self.span,
+        })
     }
 
     pub fn is_superselector(&self, other: &Self) -> bool {
