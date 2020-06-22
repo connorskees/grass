@@ -546,10 +546,12 @@ impl<'a> Parser<'a> {
             }
             ';' | '}' | '{' => return None,
             ':' | '?' | ')' | '@' | '^' | ']' | '|' => {
-                return Some(Err(("expected \";\".", span).into()))
+                self.toks.next();
+                return Some(Err(("expected \";\".", span).into()));
             }
             '\u{0}'..='\u{8}' | '\u{b}'..='\u{1f}' | '\u{7f}'..=std::char::MAX | '`' | '~' => {
-                return Some(Err(("Expected expression.", span).into()))
+                self.toks.next();
+                return Some(Err(("Expected expression.", span).into()));
             }
             ' ' | '\n' | '\t' => unreachable!("whitespace is checked prior to this match"),
             'A'..='Z' | 'a'..='z' | '_' | '\\' => {
@@ -1194,14 +1196,20 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
                     if left.node.is_true(left.span)? {
                         // we explicitly ignore errors here as a workaround for short circuiting
                         while let Some(value) = self.peek() {
-                            if let Ok(Spanned {
-                                node: IntermediateValue::Comma,
-                                ..
-                            }) = value
-                            {
-                                break;
+                            match value {
+                                Ok(Spanned {
+                                    node: IntermediateValue::Comma,
+                                    ..
+                                }) => break,
+                                Ok(..) => {
+                                    self.next();
+                                }
+                                Err(..) => {
+                                    if let Some(v) = self.next() {
+                                        v?;
+                                    }
+                                }
                             }
-                            self.next();
                         }
                         space_separated.push(left);
                     } else {

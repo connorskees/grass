@@ -56,3 +56,8 @@ test!(
     "a {\n  color: false and comparable(\"a\", \"b\");\n}\n",
     "a {\n  color: false;\n}\n"
 );
+error!(
+    #[ignore = "blocked on a rewrite of value eval"]
+    properly_bubbles_error_when_invalid_char_after_and,
+    "a {\n  color: false and? foo;\n}\n", "Error: expected \";\"."
+);

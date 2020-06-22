@@ -73,3 +73,7 @@ test!(
     "a {\n  color: true or red % foo, red;\n}\n",
     "a {\n  color: true, red;\n}\n"
 );
+error!(
+    properly_bubbles_error_when_invalid_char_after_or,
+    "a {\n  color: true or? foo;\n}\n", "Error: expected \";\"."
+);
