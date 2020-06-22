@@ -145,6 +145,17 @@ impl CallArgs {
         self.0.is_empty()
     }
 
+    pub fn min_args(&self, min: usize) -> SassResult<()> {
+        let len = self.len();
+        if len < min {
+            if min == 1 {
+                return Err(("At least one argument must be passed.", self.span()).into());
+            }
+            todo!("min args greater than one")
+        }
+        Ok(())
+    }
+
     pub fn max_args(&self, max: usize) -> SassResult<()> {
         let len = self.len();
         if len > max {

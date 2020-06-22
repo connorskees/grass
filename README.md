@@ -31,12 +31,14 @@ for this version will be provided when the library becomes more stable.
 The large features remaining are
 
 ```
-builtin functions min, max
-indented syntax (27 tests)
+indented syntax
 css imports
-@use, @forward, and the module system (~1000 tests)
-@keyframes (~30 tests)
+@use, @forward, and the module system
+@keyframes
 ```
+
+This is in addition to dozens of smaller features, edge cases, and miscompilations. 
+Features currently blocking Bootstrap are tracked [here](https://github.com/connorskees/grass/issues/4).
 
 ## Features
 

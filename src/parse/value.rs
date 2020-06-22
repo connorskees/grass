@@ -15,9 +15,9 @@ use crate::{
     error::SassResult,
     unit::Unit,
     utils::{
-        as_hex, devour_whitespace, eat_number, hex_char_for, is_name,
+        as_hex, devour_whitespace, eat_number, hex_char_for, is_name, peek_ident_no_interpolation,
         peek_until_closing_curly_brace, peek_whitespace, read_until_char, read_until_closing_paren,
-        read_until_closing_square_brace, IsWhitespace,
+        read_until_closing_square_brace, IsWhitespace, 
     },
     value::Value,
     value::{Number, SassMap},
@@ -183,6 +183,35 @@ impl<'a> Parser<'a> {
 
         if let Some(Token { kind: '(', .. }) = self.toks.peek() {
             self.toks.next();
+
+            if lower == "min" {
+                match self.try_parse_min_max("min", true)? {
+                    Some((val, len)) => {
+                        self.toks.take(len).for_each(drop);
+                        return Ok(
+                            IntermediateValue::Value(Value::String(val, QuoteKind::None))
+                                .span(span),
+                        );
+                    }
+                    None => {
+                        self.toks.reset_cursor();
+                    }
+                }
+            } else if lower == "max" {
+                match self.try_parse_min_max("max", true)? {
+                    Some((val, len)) => {
+                        self.toks.take(len).for_each(drop);
+                        return Ok(
+                            IntermediateValue::Value(Value::String(val, QuoteKind::None))
+                                .span(span),
+                        );
+                    }
+                    None => {
+                        self.toks.reset_cursor();
+                    }
+                }
+            }
+
             let as_ident = Identifier::from(&s);
             let ident_as_string = as_ident.clone().into_inner();
             let func = match self.scopes.last().get_fn(
@@ -206,8 +235,6 @@ impl<'a> Parser<'a> {
                                 s = lower;
                                 self.eat_calc_args(&mut s)?;
                             }
-                            // "min" => {}
-                            // "max" => {}
                             "url" => match self.try_eat_url()? {
                                 Some(val) => s = val,
                                 None => s.push_str(&self.parse_call_args()?.to_css_string(self)?),
@@ -713,6 +740,243 @@ impl<'a> Parser<'a> {
         }
         self.toks.reset_cursor();
         Ok(None)
+    }
+
+    fn peek_number(&mut self) -> SassResult<Option<(String, usize)>> {
+        let mut buf = String::new();
+        let mut peek_counter = 0;
+
+        let (num, count) = self.peek_whole_number();
+        peek_counter += count;
+        buf.push_str(&num);
+
+        self.toks.advance_cursor();
+
+        if let Some(Token { kind: '.', .. }) = self.toks.peek() {
+            self.toks.advance_cursor();
+            let (num, count) = self.peek_whole_number();
+            if count == 0 {
+                return Ok(None);
+            }
+            peek_counter += count;
+            buf.push_str(&num);
+        } else {
+            self.toks.move_cursor_back().unwrap();
+        }
+
+        let next = match self.toks.peek() {
+            Some(tok) => tok,
+            None => return Ok(Some((buf, peek_counter))),
+        };
+
+        match next.kind {
+            'a'..='z' | 'A'..='Z' | '-' | '_' | '\\' => {
+                let unit = peek_ident_no_interpolation(self.toks, true, self.span_before)?.node;
+
+                buf.push_str(&unit);
+                peek_counter += unit.chars().count();
+            }
+            '%' => {
+                self.toks.advance_cursor();
+                peek_counter += 1;
+                buf.push('%');
+            }
+            _ => {}
+        }
+
+        Ok(Some((buf, peek_counter)))
+    }
+
+    fn peek_whole_number(&mut self) -> (String, usize) {
+        let mut buf = String::new();
+        let mut peek_counter = 0;
+        while let Some(tok) = self.toks.peek() {
+            if tok.kind.is_ascii_digit() {
+                buf.push(tok.kind);
+                peek_counter += 1;
+                self.toks.advance_cursor();
+            } else {
+                return (buf, peek_counter);
+            }
+        }
+        (buf, peek_counter)
+    }
+
+    fn try_parse_min_max(
+        &mut self,
+        fn_name: &str,
+        allow_comma: bool,
+    ) -> SassResult<Option<(String, usize)>> {
+        let mut buf = if allow_comma {
+            format!("{}(", fn_name)
+        } else {
+            String::new()
+        };
+        let mut peek_counter = 0;
+        peek_counter += peek_whitespace(self.toks);
+        while let Some(tok) = self.toks.peek() {
+            let kind = tok.kind;
+            peek_counter += 1;
+            match kind {
+                '+' | '-' | '0'..='9' => {
+                    self.toks.advance_cursor();
+                    if let Some((number, count)) = self.peek_number()? {
+                        buf.push(kind);
+                        buf.push_str(&number);
+                        peek_counter += count;
+                    } else {
+                        return Ok(None);
+                    }
+                }
+                '#' => {
+                    self.toks.advance_cursor();
+                    if let Some(Token { kind: '{', .. }) = self.toks.peek() {
+                        self.toks.advance_cursor();
+                        peek_counter += 1;
+                        let (interpolation, count) = self.peek_interpolation()?;
+                        peek_counter += count;
+                        match interpolation.node {
+                            Value::String(ref s, ..) => buf.push_str(s),
+                            v => buf.push_str(v.to_css_string(interpolation.span)?.borrow()),
+                        };
+                    } else {
+                        return Ok(None);
+                    }
+                }
+                'c' | 'C' => {
+                    if let Some((name, additional_peek_count)) =
+                        self.try_parse_min_max_function("calc")?
+                    {
+                        peek_counter += additional_peek_count;
+                        buf.push_str(&name);
+                    } else {
+                        return Ok(None);
+                    }
+                }
+                'e' | 'E' => {
+                    if let Some((name, additional_peek_count)) =
+                        self.try_parse_min_max_function("env")?
+                    {
+                        peek_counter += additional_peek_count;
+                        buf.push_str(&name);
+                    } else {
+                        return Ok(None);
+                    }
+                }
+                'v' | 'V' => {
+                    if let Some((name, additional_peek_count)) =
+                        self.try_parse_min_max_function("var")?
+                    {
+                        peek_counter += additional_peek_count;
+                        buf.push_str(&name);
+                    } else {
+                        return Ok(None);
+                    }
+                }
+                '(' => {
+                    self.toks.advance_cursor();
+                    buf.push('(');
+                    if let Some((val, len)) = self.try_parse_min_max(fn_name, false)? {
+                        buf.push_str(&val);
+                        peek_counter += len;
+                    } else {
+                        return Ok(None);
+                    }
+                }
+                'm' | 'M' => {
+                    self.toks.advance_cursor();
+                    match self.toks.peek() {
+                        Some(Token { kind: 'i', .. }) | Some(Token { kind: 'I', .. }) => {
+                            self.toks.advance_cursor();
+                            if !matches!(self.toks.peek(), Some(Token { kind: 'n', .. }) | Some(Token { kind: 'N', .. }))
+                            {
+                                return Ok(None);
+                            }
+                            buf.push_str("min(")
+                        }
+                        Some(Token { kind: 'a', .. }) | Some(Token { kind: 'A', .. }) => {
+                            self.toks.advance_cursor();
+                            if !matches!(self.toks.peek(), Some(Token { kind: 'x', .. }) | Some(Token { kind: 'X', .. }))
+                            {
+                                return Ok(None);
+                            }
+                            buf.push_str("max(")
+                        }
+                        _ => return Ok(None),
+                    }
+
+                    self.toks.advance_cursor();
+
+                    if !matches!(self.toks.peek(), Some(Token { kind: '(', .. })) {
+                        return Ok(None);
+                    }
+                    peek_counter += 1;
+
+                    if let Some((val, len)) = self.try_parse_min_max(fn_name, false)? {
+                        buf.push_str(&val);
+                        peek_counter += len;
+                    } else {
+                        return Ok(None);
+                    }
+                }
+                _ => return Ok(None),
+            }
+
+            peek_counter += peek_whitespace(self.toks);
+
+            let next = match self.toks.peek() {
+                Some(tok) => tok,
+                None => return Ok(None),
+            };
+
+            match next.kind {
+                ')' => {
+                    peek_counter += 1;
+                    self.toks.advance_cursor();
+                    buf.push(')');
+                    return Ok(Some((buf, peek_counter)));
+                }
+                '+' | '-' | '*' | '/' => {
+                    buf.push(' ');
+                    buf.push(next.kind);
+                    buf.push(' ');
+                    self.toks.advance_cursor();
+                }
+                ',' => {
+                    if !allow_comma {
+                        return Ok(None);
+                    }
+                    self.toks.advance_cursor();
+                    buf.push(',');
+                    buf.push(' ');
+                }
+                _ => return Ok(None),
+            }
+
+            peek_counter += peek_whitespace(self.toks);
+        }
+
+        Ok(Some((buf, peek_counter)))
+    }
+
+    #[allow(dead_code, unused_mut, unused_variables, unused_assignments)]
+    fn try_parse_min_max_function(
+        &mut self,
+        fn_name: &'static str,
+    ) -> SassResult<Option<(String, usize)>> {
+        let mut ident = peek_ident_no_interpolation(self.toks, false, self.span_before)?.node;
+        let mut peek_counter = ident.chars().count();
+        ident.make_ascii_lowercase();
+        if ident != fn_name {
+            return Ok(None);
+        }
+        if !matches!(self.toks.peek(), Some(Token { kind: '(', .. })) {
+            return Ok(None);
+        }
+        self.toks.advance_cursor();
+        ident.push('(');
+        peek_counter += 1;
+        todo!("special functions inside `min()` or `max()`")
     }
 
     fn peek_interpolation(&mut self) -> SassResult<(Spanned<Value>, usize)> {

@@ -7,6 +7,7 @@ use rand::Rng;
 
 use crate::{
     args::CallArgs,
+    common::Op,
     error::SassResult,
     parse::Parser,
     unit::Unit,
@@ -189,12 +190,78 @@ fn random(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     ))
 }
 
+fn min(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+    args.min_args(1)?;
+    let span = args.span();
+    let mut nums = parser
+        .variadic_args(args)?
+        .into_iter()
+        .map(|val| match val.node {
+            Value::Dimension(number, unit) => Ok((number, unit)),
+            v => Err((format!("{} is not a number.", v.inspect(span)?), span).into()),
+        })
+        .collect::<SassResult<Vec<(Number, Unit)>>>()?
+        .into_iter();
+
+    // we know that there *must* be at least one item
+    let mut min = nums.next().unwrap();
+
+    for num in nums {
+        if Value::Dimension(num.0.clone(), num.1.clone())
+            .cmp(
+                Value::Dimension(min.0.clone(), min.1.clone()),
+                Op::LessThan,
+                span,
+            )?
+            .node
+            .is_true(span)?
+        {
+            min = num;
+        }
+    }
+    Ok(Value::Dimension(min.0, min.1))
+}
+
+fn max(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+    args.min_args(1)?;
+    let span = args.span();
+    let mut nums = parser
+        .variadic_args(args)?
+        .into_iter()
+        .map(|val| match val.node {
+            Value::Dimension(number, unit) => Ok((number, unit)),
+            v => Err((format!("{} is not a number.", v.inspect(span)?), span).into()),
+        })
+        .collect::<SassResult<Vec<(Number, Unit)>>>()?
+        .into_iter();
+
+    // we know that there *must* be at least one item
+    let mut max = nums.next().unwrap();
+
+    for num in nums {
+        if Value::Dimension(num.0.clone(), num.1.clone())
+            .cmp(
+                Value::Dimension(max.0.clone(), max.1.clone()),
+                Op::GreaterThan,
+                span,
+            )?
+            .node
+            .is_true(span)?
+        {
+            max = num;
+        }
+    }
+    Ok(Value::Dimension(max.0, max.1))
+}
+
 pub(crate) fn declare(f: &mut GlobalFunctionMap) {
     f.insert("percentage", Builtin::new(percentage));
     f.insert("round", Builtin::new(round));
     f.insert("ceil", Builtin::new(ceil));
     f.insert("floor", Builtin::new(floor));
     f.insert("abs", Builtin::new(abs));
+    f.insert("min", Builtin::new(min));
+    f.insert("max", Builtin::new(max));
     f.insert("comparable", Builtin::new(comparable));
     #[cfg(feature = "random")]
     f.insert("random", Builtin::new(random));
