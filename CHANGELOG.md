@@ -1,7 +1,11 @@
+# 0.9.2
+
+ - implement builtin functions `min` and `max`
+
 # 0.9.1
 
 This release is largely focused on `@extend`, but it also resolves some regressions resulting from the new parser.
- - **Implement `@extend`**
+ - **implement `@extend`**
  - properly document new API
  - MVP implementation of `@supports`
  - fix regression in which `@at-root` would panic when placed after a ruleset
@@ -12,7 +16,7 @@ This release is largely focused on `@extend`, but it also resolves some regressi
 
 This release is focused on setting up the groundwork for implementing `@extend` as well
 as being able to compile Bootstrap.
- - Implement all builtin selector functions
+ - implement all builtin selector functions
    - `selector-append`
    - `selector-extend`
    - `selector-nest`
@@ -21,9 +25,9 @@ as being able to compile Bootstrap.
    - `selector-unify`
    - `simple-selectors`
    - `is-superselector`
- - Implement builtin function `content-exists`
- - Allow `@import`, `@warn`, and `@debug` in all contexts, such as inside `@mixin`
- - Refactor control flow evaluation, resolving some issues blocking Bootstrap
+ - implement builtin function `content-exists`
+ - allow `@import`, `@warn`, and `@debug` in all contexts, such as inside `@mixin`
+ - refactor control flow evaluation, resolving some issues blocking Bootstrap
 
 #### Breaking Changes
  - remove the `StyleSheet` struct in favor of freestanding functions, `from_string` and `from_path`
