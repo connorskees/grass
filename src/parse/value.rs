@@ -17,7 +17,7 @@ use crate::{
     utils::{
         as_hex, devour_whitespace, eat_number, hex_char_for, is_name, peek_ident_no_interpolation,
         peek_until_closing_curly_brace, peek_whitespace, read_until_char, read_until_closing_paren,
-        read_until_closing_square_brace, IsWhitespace, 
+        read_until_closing_square_brace, IsWhitespace,
     },
     value::Value,
     value::{Number, SassMap},
