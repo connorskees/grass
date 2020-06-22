@@ -18,7 +18,7 @@ use super::{NeverEmptyVec, Parser, Stmt};
 const FORBIDDEN_IDENTIFIERS: [&str; 7] =
     ["calc", "element", "expression", "url", "and", "or", "not"];
 
-fn unvendor<'a>(name: &'a str) -> &'a str {
+fn unvendor(name: &str) -> &str {
     let mut chars = name.chars();
     if !matches!(chars.next(), Some('-')) {
         return name;

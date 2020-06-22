@@ -166,7 +166,7 @@ impl Extender {
                 if complex.components.len() == 1 {
                     Ok(complex.components.first().unwrap().as_compound().clone())
                 } else {
-                    return Err(("Can't extend complex selector $complex.", span).into());
+                    Err(("Can't extend complex selector $complex.", span).into())
                 }
             })
             .collect::<SassResult<Vec<CompoundSelector>>>()?;
