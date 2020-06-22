@@ -121,3 +121,12 @@ test!(
     }",
     "a {\n  color: \"success!\";\n}\n"
 );
+error!(
+    denies_function_declaration_in_control_flow,
+    "@if true {\n    @function foo() {}\n}\n",
+    "Error: Functions may not be declared in control directives."
+);
+error!(
+    denies_function_declaration_with_reserved_name,
+    "@function url() {}", "Error: Invalid function name."
+);

@@ -14,18 +14,48 @@ use crate::{
 
 use super::{NeverEmptyVec, Parser, Stmt};
 
+/// Names that functions are not allowed to have
+const FORBIDDEN_IDENTIFIERS: [&str; 7] =
+    ["calc", "element", "expression", "url", "and", "or", "not"];
+
+fn unvendor<'a>(name: &'a str) -> &'a str {
+    let mut chars = name.chars();
+    if !matches!(chars.next(), Some('-')) {
+        return name;
+    }
+    if matches!(chars.next(), Some('-')) {
+        return name;
+    }
+    if name.chars().count() < 2 {
+        return name;
+    }
+    let mut pos = 2;
+    for c in chars {
+        if c == '-' {
+            return &name[pos..];
+        }
+        pos += 1;
+    }
+    name
+}
+
 impl<'a> Parser<'a> {
     pub(super) fn parse_function(&mut self) -> SassResult<()> {
-        if self.in_mixin {
-            return Err((
-                "Mixins may not contain function declarations.",
-                self.span_before,
-            )
-                .into());
-        }
-
         self.whitespace_or_comment();
         let Spanned { node: name, span } = self.parse_identifier()?;
+
+        if self.in_mixin {
+            return Err(("Mixins may not contain function declarations.", span).into());
+        }
+
+        if self.in_control_flow {
+            return Err(("Functions may not be declared in control directives.", span).into());
+        }
+
+        if FORBIDDEN_IDENTIFIERS.contains(&unvendor(&name)) {
+            return Err(("Invalid function name.", span).into());
+        }
+
         self.whitespace_or_comment();
         let args = match self.toks.next() {
             Some(Token { kind: '(', .. }) => self.parse_func_args()?,
