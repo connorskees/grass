@@ -87,6 +87,11 @@ test!(
     "$a: 1px;\n$b: 2px;\na {\n  color: max($a, $b);\n}\n",
     "a {\n  color: 2px;\n}\n"
 );
+test!(
+    max_evaluated_binop,
+    "a {\n  color: max(100% - lightness(red) - 2%);\n}\n",
+    "a {\n  color: 52%;\n}\n"
+);
 error!(
     max_arg_of_incorrect_type,
     "$a: 1px;\n$b: 2px;\na {\n  color: max($a, $b, foo);\n}\n", "Error: foo is not a number."

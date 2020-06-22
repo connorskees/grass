@@ -281,6 +281,7 @@ impl<'a> Parser<'a> {
 
     pub fn variadic_args(&mut self, args: CallArgs) -> SassResult<Vec<Spanned<Value>>> {
         let mut vals = Vec::new();
+        let span = args.span();
         let mut args = match args
             .0
             .into_iter()
@@ -292,7 +293,7 @@ impl<'a> Parser<'a> {
         };
         args.sort_by(|(a1, _), (a2, _)| a1.cmp(a2));
         for arg in args {
-            vals.push(self.parse_value_from_vec(arg.1)?);
+            vals.push(self.parse_value_from_vec(arg.1)?.node.eval(span)?);
         }
         Ok(vals)
     }
