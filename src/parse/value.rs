@@ -786,7 +786,7 @@ impl<'a, 'b: 'a> Iterator for IntermediateValueIterator<'a, 'b> {
     type Item = SassResult<Spanned<IntermediateValue>>;
     fn next(&mut self) -> Option<Self::Item> {
         if self.peek.is_some() {
-            mem::take(&mut self.peek)
+            self.peek.take()
         } else {
             self.parser.parse_intermediate_value()
         }

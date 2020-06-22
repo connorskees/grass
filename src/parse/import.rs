@@ -74,10 +74,10 @@ impl<'a> Parser<'a> {
                         .collect::<Vec<Token>>()
                         .into_iter()
                         .peekmore(),
-                    map: &mut self.map,
+                    map: self.map,
                     path: name.as_ref(),
-                    scopes: &mut self.scopes,
-                    global_scope: &mut self.global_scope,
+                    scopes: self.scopes,
+                    global_scope: self.global_scope,
                     super_selectors: self.super_selectors,
                     span_before: file.span.subspan(0, 0),
                     content: self.content.clone(),
