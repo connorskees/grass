@@ -2,7 +2,7 @@ use codemap::Span;
 
 use super::{ComplexSelector, CssMediaQuery, SimpleSelector};
 
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Clone, Debug)]
 pub(crate) struct Extension {
     /// The selector in which the `@extend` appeared.
     pub extender: ComplexSelector,

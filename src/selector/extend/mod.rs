@@ -55,7 +55,7 @@ impl Default for ExtendMode {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug)]
 pub(crate) struct Extender {
     /// A map from all simple selectors in the stylesheet to the selector lists
     /// that contain them.

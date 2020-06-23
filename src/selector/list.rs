@@ -1,6 +1,7 @@
 use std::{
     collections::VecDeque,
     fmt::{self, Write},
+    hash::{Hash, Hasher},
     mem,
 };
 
@@ -18,13 +19,27 @@ use crate::{
 ///
 /// A selector list is composed of `ComplexSelector`s. It matches an element
 /// that matches any of the component selectors.
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Clone, Debug)]
 pub(crate) struct SelectorList {
     /// The components of this selector.
     ///
     /// This is never empty.
     pub components: Vec<ComplexSelector>,
     pub span: Span,
+}
+
+impl PartialEq for SelectorList {
+    fn eq(&self, other: &SelectorList) -> bool {
+        self.components == other.components
+    }
+}
+
+impl Eq for SelectorList {}
+
+impl Hash for SelectorList {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.components.hash(state);
+    }
 }
 
 impl fmt::Display for SelectorList {
