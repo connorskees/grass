@@ -37,15 +37,17 @@ css imports
 @keyframes
 ```
 
-This is in addition to dozens of smaller features, edge cases, and miscompilations. 
+This is in addition to dozens of smaller features, edge cases, and miscompilations.
 Features currently blocking Bootstrap are tracked [here](https://github.com/connorskees/grass/issues/4).
 
 ## Features
 
 ### commandline
+
 (enabled by default): build a binary using clap
 
 ### random
+
 (enabled by default): enable the builtin functions `random([$limit])` and `unique-id()`
 
 In the future this feature will be removed when it is no longer necessary to rely on `rand` for
@@ -73,9 +75,9 @@ cargo b --release
 These numbers come from a default run of the Sass specification as shown above.
 
 ```
-2020-06-22
-PASSING: 2772
-FAILING: 2321
+2020-06-23
+PASSING: 2800
+FAILING: 2293
 TOTAL: 5093
 ```
 
