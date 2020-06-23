@@ -1,4 +1,7 @@
-use std::fmt::{self, Write};
+use std::{
+    fmt::{self, Write},
+    hash::{Hash, Hasher},
+};
 
 use codemap::Span;
 
@@ -375,7 +378,7 @@ impl SimpleSelector {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Clone, Debug)]
 pub(crate) struct Pseudo {
     /// The name of this selector.
     pub name: String,
@@ -410,6 +413,30 @@ pub(crate) struct Pseudo {
     pub selector: Option<SelectorList>,
 
     pub span: Span,
+}
+
+impl PartialEq for Pseudo {
+    fn eq(&self, other: &Pseudo) -> bool {
+        self.name == other.name
+            && self.normalized_name == other.normalized_name
+            && self.is_class == other.is_class
+            && self.is_syntactic_class == other.is_syntactic_class
+            && self.argument == other.argument
+            && self.selector == other.selector
+    }
+}
+
+impl Eq for Pseudo {}
+
+impl Hash for Pseudo {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.name.hash(state);
+        self.normalized_name.hash(state);
+        self.is_class.hash(state);
+        self.is_syntactic_class.hash(state);
+        self.argument.hash(state);
+        self.selector.hash(state);
+    }
 }
 
 impl fmt::Display for Pseudo {
