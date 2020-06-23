@@ -3,7 +3,7 @@ use codemap::Span;
 use crate::{
     error::SassResult,
     parse::Parser,
-    utils::{devour_whitespace, is_name, is_name_start, read_until_closing_paren},
+    utils::{is_name, is_name_start, read_until_closing_paren},
     Token,
 };
 
@@ -86,7 +86,7 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
     fn parse_selector_list(&mut self) -> SassResult<SelectorList> {
         let mut components = vec![self.parse_complex_selector(false)?];
 
-        devour_whitespace(self.parser.toks);
+        self.parser.whitespace();
 
         let mut line_break = false;
 
@@ -132,7 +132,7 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
 
         // todo: or patterns
         loop {
-            devour_whitespace(self.parser.toks);
+            self.parser.whitespace();
 
             // todo: can we do while let Some(..) = self.parser.toks.peek() ?
             match self.parser.toks.peek() {
@@ -307,7 +307,7 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
             }
         };
 
-        devour_whitespace(self.parser.toks);
+        self.parser.whitespace();
 
         let unvendored = unvendor(&name);
 
@@ -318,25 +318,25 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
             // todo: lowercase?
             if SELECTOR_PSEUDO_ELEMENTS.contains(&unvendored) {
                 selector = Some(self.parse_selector_list()?);
-                devour_whitespace(self.parser.toks);
+                self.parser.whitespace();
                 self.expect_closing_paren()?;
             } else {
                 argument = Some(self.declaration_value()?);
             }
         } else if SELECTOR_PSEUDO_CLASSES.contains(&unvendored) {
             selector = Some(self.parse_selector_list()?);
-            devour_whitespace(self.parser.toks);
+            self.parser.whitespace();
             self.expect_closing_paren()?;
         } else if unvendored == "nth-child" || unvendored == "nth-last-child" {
             let mut this_arg = self.parse_a_n_plus_b()?;
-            let found_whitespace = devour_whitespace(self.parser.toks);
+            let found_whitespace = self.parser.whitespace();
             #[allow(clippy::match_same_arms)]
             match (found_whitespace, self.parser.toks.peek()) {
                 (_, Some(Token { kind: ')', .. })) => {}
                 (true, _) => {
                     self.expect_identifier("of")?;
                     this_arg.push_str(" of");
-                    devour_whitespace(self.parser.toks);
+                    self.parser.whitespace();
                     selector = Some(self.parse_selector_list()?);
                 }
                 _ => {}
@@ -473,7 +473,7 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
                     buf.push(t.kind);
                     self.parser.toks.next();
                 }
-                devour_whitespace(self.parser.toks);
+                self.parser.whitespace();
                 if let Some(t) = self.parser.toks.peek() {
                     if t.kind != 'n' && t.kind != 'N' {
                         return Ok(buf);
@@ -493,14 +493,14 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
 
         buf.push('n');
 
-        devour_whitespace(self.parser.toks);
+        self.parser.whitespace();
 
         if let Some(t @ Token { kind: '+', .. }) | Some(t @ Token { kind: '-', .. }) =
             self.parser.toks.peek()
         {
             buf.push(t.kind);
             self.parser.toks.next();
-            devour_whitespace(self.parser.toks);
+            self.parser.whitespace();
             match self.parser.toks.peek() {
                 Some(t) if !t.kind.is_ascii_digit() => {
                     return Err(("Expected a number.", self.span).into())
