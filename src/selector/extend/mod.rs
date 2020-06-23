@@ -14,12 +14,14 @@ use super::{
     SimpleSelector,
 };
 
+pub(crate) use extended_selector::ExtendedSelector;
 use extension::Extension;
 pub(crate) use functions::unify_complex;
 use functions::{paths, weave};
 use merged::MergedExtension;
 pub(crate) use rule::ExtendRule;
 
+mod extended_selector;
 mod extension;
 mod functions;
 mod merged;
@@ -62,7 +64,7 @@ pub(crate) struct Extender {
     ///
     /// This is used to find which selectors an `@extend` applies to and adjust
     /// them.
-    selectors: HashMap<SimpleSelector, HashSet<SelectorList>>,
+    selectors: HashMap<SimpleSelector, HashSet<ExtendedSelector>>,
 
     /// A map from all extended simple selectors to the sources of those
     /// extensions.
@@ -845,7 +847,7 @@ impl Extender {
         mut selector: SelectorList,
         // span: Span,
         media_query_context: Option<Vec<CssMediaQuery>>,
-    ) -> SelectorList {
+    ) -> ExtendedSelector {
         // todo: we should be able to remove this variable and clone
         let original_selector = selector.clone();
         if !original_selector.is_invisible() {
@@ -872,13 +874,14 @@ impl Extender {
                 .get_mut(&selector)
                 .replace(&mut media_query_context);
         }
-        self.register_selector(selector.clone(), &selector);
-        selector
+        let extended_selector = ExtendedSelector::new(selector.clone());
+        self.register_selector(selector, extended_selector.clone());
+        extended_selector
     }
 
     /// Registers the `SimpleSelector`s in `list` to point to `selector` in
     /// `self.selectors`.
-    fn register_selector(&mut self, list: SelectorList, selector: &SelectorList) {
+    fn register_selector(&mut self, list: SelectorList, selector: ExtendedSelector) {
         for complex in list.components {
             for component in complex.components {
                 if let ComplexSelectorComponent::Compound(component) = component {
@@ -893,7 +896,7 @@ impl Extender {
                             ..
                         }) = simple
                         {
-                            self.register_selector(simple_selector, selector);
+                            self.register_selector(simple_selector, selector.clone());
                         }
                     }
                 }
@@ -1115,16 +1118,16 @@ impl Extender {
     /// Extend `extensions` using `new_extensions`.
     fn extend_existing_selectors(
         &mut self,
-        selectors: HashSet<SelectorList>,
+        selectors: HashSet<ExtendedSelector>,
         new_extensions: &HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>>,
     ) {
         for mut selector in selectors {
-            let old_value = selector.clone();
-            selector = self.extend_list(
+            let old_value = selector.clone().into_selector().0;
+            selector.set_inner(self.extend_list(
                 old_value.clone(),
                 new_extensions,
-                &self.media_contexts.get(&selector).cloned(),
-            );
+                &self.media_contexts.get(&old_value).cloned(),
+            ));
             /*
             todo: error handling
             } on SassException catch (error) {
@@ -1138,10 +1141,11 @@ impl Extender {
 
             // If no extends actually happened (for example becaues unification
             // failed), we don't need to re-register the selector.
-            if old_value == selector {
+            let selector_as_selector = selector.clone().into_selector().0;
+            if old_value == selector_as_selector {
                 continue;
             }
-            self.register_selector(selector.clone(), &old_value);
+            self.register_selector(selector_as_selector, selector);
         }
     }
 }

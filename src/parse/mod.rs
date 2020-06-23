@@ -9,7 +9,9 @@ use crate::{
     common::{Brackets, ListSeparator},
     error::SassResult,
     scope::Scope,
-    selector::{ComplexSelectorComponent, ExtendRule, Extender, Selector, SelectorParser},
+    selector::{
+        ComplexSelectorComponent, ExtendRule, ExtendedSelector, Extender, Selector, SelectorParser,
+    },
     style::Style,
     unit::Unit,
     utils::{
@@ -40,7 +42,7 @@ pub(crate) enum Comment {
 #[derive(Debug, Clone)]
 pub(crate) enum Stmt {
     RuleSet {
-        selector: Selector,
+        selector: ExtendedSelector,
         body: Vec<Self>,
     },
     Style(Box<Style>),
@@ -259,27 +261,25 @@ impl<'a> Parser<'a> {
                     SelectorOrStyle::Selector(init) => {
                         let at_root = self.at_root;
                         self.at_root = false;
-                        let selector =
-                            self.parse_selector(!self.super_selectors.is_empty(), false, init)?;
-                        let selector = Selector(
-                            self.extender.add_selector(
-                                selector
-                                    .resolve_parent_selectors(
-                                        self.super_selectors.last(),
-                                        !at_root || self.at_root_has_selector,
-                                    )?
-                                    .0,
-                                None,
-                            ),
-                        );
-
+                        let selector = self
+                            .parse_selector(!self.super_selectors.is_empty(), false, init)?
+                            .resolve_parent_selectors(
+                                self.super_selectors.last(),
+                                !at_root || self.at_root_has_selector,
+                            )?;
                         self.scopes.push(self.scopes.last().clone());
                         self.super_selectors.push(selector.clone());
+
+                        let extended_selector = self.extender.add_selector(selector.0, None);
+
                         let body = self.parse_stmt()?;
                         self.scopes.pop();
                         self.super_selectors.pop();
                         self.at_root = self.super_selectors.is_empty();
-                        stmts.push(Stmt::RuleSet { selector, body });
+                        stmts.push(Stmt::RuleSet {
+                            selector: extended_selector,
+                            body,
+                        });
                     }
                 },
             }
@@ -1030,7 +1030,7 @@ impl<'a> Parser<'a> {
 
         if !self.super_selectors.last().is_empty() {
             body = vec![Stmt::RuleSet {
-                selector: self.super_selectors.last().clone(),
+                selector: ExtendedSelector::new(self.super_selectors.last().clone().0),
                 body,
             }];
         }
@@ -1082,7 +1082,7 @@ impl<'a> Parser<'a> {
 
         if !self.super_selectors.last().is_empty() {
             body = vec![Stmt::RuleSet {
-                selector: self.super_selectors.last().clone(),
+                selector: ExtendedSelector::new(self.super_selectors.last().clone().0),
                 body,
             }];
         }
@@ -1147,7 +1147,7 @@ impl<'a> Parser<'a> {
         })
         .collect::<SassResult<Vec<Stmt>>>()?;
         let mut stmts = vec![Stmt::RuleSet {
-            selector: at_rule_selector,
+            selector: ExtendedSelector::new(at_rule_selector.0),
             body: styles,
         }];
         stmts.extend(raw_stmts);
@@ -1267,7 +1267,7 @@ impl<'a> Parser<'a> {
 
         if !self.super_selectors.last().is_empty() {
             body = vec![Stmt::RuleSet {
-                selector: self.super_selectors.last().clone(),
+                selector: ExtendedSelector::new(self.super_selectors.last().clone().0),
                 body,
             }];
         }

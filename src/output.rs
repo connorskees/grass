@@ -84,7 +84,7 @@ impl Css {
                 if body.is_empty() {
                     return Ok(Vec::new());
                 }
-                let selector = selector.remove_placeholders();
+                let selector = selector.into_selector().remove_placeholders();
                 if selector.is_empty() {
                     return Ok(Vec::new());
                 }

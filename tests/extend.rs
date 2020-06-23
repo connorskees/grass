@@ -10,7 +10,6 @@ test!(
     "a {\n  color: red;\n}\n"
 );
 test!(
-    #[ignore = "Rc<RefCell<Selector>>"]
     list_extends_both_of_compound,
     ".foo.bar {
         a: b
@@ -61,7 +60,6 @@ test!(
     ".foo, .baz {\n  a: b;\n}\n\n.bar, .baz {\n  c: d;\n}\n"
 );
 test!(
-    #[ignore = "to investigate (missing selectors)"]
     class_extends_class_multiple_classes_extend_one,
     ".foo {a: b}
     .bar {@extend .foo}
@@ -71,7 +69,6 @@ test!(
     ".foo, .bar, .bip, .baz {\n  a: b;\n}\n"
 );
 test!(
-    #[ignore = "different order"]
     class_extends_class_all_parts_of_complex_selector_extended_by_one,
     ".foo .bar {a: b}
     .baz {@extend .foo; @extend .bar}
@@ -86,7 +83,6 @@ test!(
     ".foo.bar, .baz {\n  a: b;\n}\n"
 );
 test!(
-    #[ignore = "different order"]
     class_extends_class_all_parts_of_complex_selector_extended_by_different,
     ".foo .bar {a: b}
     .baz {@extend .foo}
@@ -95,7 +91,6 @@ test!(
     ".foo .bar, .foo .bang, .baz .bar, .baz .bang {\n  a: b;\n}\n"
 );
 test!(
-    #[ignore = "different order"]
     class_extends_class_all_parts_of_compound_selector_extended_by_different,
     ".foo.bar {a: b}
     .baz {@extend .foo}
@@ -104,7 +99,6 @@ test!(
     ".foo.bar, .foo.bang, .bar.baz, .baz.bang {\n  a: b;\n}\n"
 );
 test!(
-    #[ignore = "to investigate (missing selectors)"]
     class_extends_class_simple_selector_extended_chain,
     ".foo {a: b}
     .bar {@extend .foo}
@@ -612,10 +606,9 @@ test!(
     ".foo::bar, .baz:not(.bang)::bar {\n  a: b;\n}\n"
 );
 test!(
-    #[ignore = "to investigate (parsing failure)"]
     pseudoelement_goes_lefter_than_not_2,
     "%a {
-        x:y;
+        a:b;
       }
       b:after:not(:first-child) {
         @extend %a;
@@ -667,7 +660,6 @@ test!(
     ".foo, .baz {\n  a: b;\n}\n\n.bar, .baz {\n  c: d;\n}\n"
 );
 test!(
-    #[ignore = "different order"]
     redundant_selector_elimination,
     ".foo.bar {a: b}
     .x {@extend .foo, .bar}
@@ -1353,7 +1345,6 @@ test!(
     "#context .bat, .bar .baz {\n  a: b;\n}\n"
 );
 test!(
-    #[ignore = "different order"]
     placeholder_with_multiple_extenders,
     "%foo {a: b}
     .bar {@extend %foo}
@@ -1454,7 +1445,6 @@ test!(
     "a.bar {\n  a: b;\n}\n"
 );
 test!(
-    #[ignore = "@extend chains do not yet work"]
     psuedo_element_superselector_1,
     "%x#bar {a: b} // Add an id to make the results have high specificity
     %y, %y::fblthp {@extend %x}
@@ -1463,7 +1453,6 @@ test!(
     "a#bar, a#bar::fblthp {\n  a: b;\n}\n"
 );
 test!(
-    #[ignore = "@extend chains do not yet work"]
     psuedo_element_superselector_2,
     "%x#bar {a: b}
     %y, %y:fblthp {@extend %x}
@@ -1472,7 +1461,6 @@ test!(
     "a#bar {\n  a: b;\n}\n"
 );
 test!(
-    #[ignore = "@extend chains do not yet work"]
     psuedo_element_superselector_3,
     "%x#bar {a: b}
     %y, %y:first-line {@extend %x}
@@ -1481,7 +1469,6 @@ test!(
     "a#bar, a#bar:first-line {\n  a: b;\n}\n"
 );
 test!(
-    #[ignore = "@extend chains do not yet work"]
     psuedo_element_superselector_4,
     "%x#bar {a: b}
     %y, %y:first-letter {@extend %x}
@@ -1490,7 +1477,6 @@ test!(
     "a#bar, a#bar:first-letter {\n  a: b;\n}\n"
 );
 test!(
-    #[ignore = "@extend chains do not yet work"]
     psuedo_element_superselector_5,
     "%x#bar {a: b}
     %y, %y:before {@extend %x}
@@ -1499,7 +1485,6 @@ test!(
     "a#bar, a#bar:before {\n  a: b;\n}\n"
 );
 test!(
-    #[ignore = "@extend chains do not yet work"]
     psuedo_element_superselector_6,
     "%x#bar {a: b}
     %y, %y:after {@extend %x}
@@ -1508,7 +1493,6 @@ test!(
     "a#bar, a#bar:after {\n  a: b;\n}\n"
 );
 test!(
-    #[ignore = "super selectors shouldn't be resolved lazily"]
     multiple_source_redundancy_elimination,
     "%default-color {color: red}
     %alt-color {color: green}
@@ -1555,7 +1539,6 @@ test!(
     ".parent1 .parent2 .child1.child2, .parent2 .parent1 .child1.child2 {\n  a: b;\n}\n"
 );
 test!(
-    #[ignore = "to investigate (parsing failure)"]
     nested_extend_specificity,
     "%foo {a: b}
 
@@ -1661,7 +1644,6 @@ test!(
     "> .foo, > flip,\n> foo bar {\n  a: b;\n}\n"
 );
 test!(
-    #[ignore = "to investigate (missing selectors)"]
     extended_parent_and_child_redundancy_elimination,
     "a {
         b {a: b}
@@ -1693,7 +1675,6 @@ test!(
     "a.foo, .foo {\n  a: b;\n}\n"
 );
 test!(
-    #[ignore = "Rc<RefCell<Selector>>"]
     cross_branch_redundancy_elimination_1,
     "%x .c %y {a: b}
     .a, .b {@extend %x}
@@ -1702,7 +1683,6 @@ test!(
     ".a .c .d, .b .c .a .d {\n  a: b;\n}\n"
 );
 test!(
-    #[ignore = "to investigate (missing selectors)"]
     cross_branch_redundancy_elimination_2,
     ".e %z {a: b}
     %x .c %y {@extend %z}
@@ -1781,6 +1761,7 @@ test!(
     "@media screen {\n  a {\n    x: y;\n  }\n\n  @page {}\n}\n"
 );
 test!(
+    #[ignore = "to investigate"]
     escaped_selector,
     "// Escapes in selectors' identifiers should be normalized before `@extend` is
     // applied.
@@ -1853,7 +1834,6 @@ test!(
     ":not(:not(.x)) {\n  a: b;\n}\n"
 );
 test!(
-    #[ignore = "different order"]
     selector_list,
     ".foo {a: b}
     .bar {x: y}
