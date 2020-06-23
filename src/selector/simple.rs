@@ -418,9 +418,7 @@ pub(crate) struct Pseudo {
 impl PartialEq for Pseudo {
     fn eq(&self, other: &Pseudo) -> bool {
         self.name == other.name
-            && self.normalized_name == other.normalized_name
             && self.is_class == other.is_class
-            && self.is_syntactic_class == other.is_syntactic_class
             && self.argument == other.argument
             && self.selector == other.selector
     }
@@ -431,9 +429,7 @@ impl Eq for Pseudo {}
 impl Hash for Pseudo {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.name.hash(state);
-        self.normalized_name.hash(state);
         self.is_class.hash(state);
-        self.is_syntactic_class.hash(state);
         self.argument.hash(state);
         self.selector.hash(state);
     }

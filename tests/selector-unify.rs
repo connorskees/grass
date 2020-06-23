@@ -600,3 +600,73 @@ error!(
     "a {\n  color: selector-unify(\"c\", 1);\n}\n",
     "Error: $selector2: 1 is not a valid selector: it must be a string, a list of strings, or a list of lists of strings."
 );
+test!(
+    simple_pseudo_no_arg_class_same,
+    "a {\n  color: selector-unify(\":c\", \":c\");\n}\n",
+    "a {\n  color: :c;\n}\n"
+);
+test!(
+    simple_pseudo_no_arg_class_different,
+    "a {\n  color: selector-unify(\":c\", \":d\");\n}\n",
+    "a {\n  color: :c:d;\n}\n"
+);
+test!(
+    simple_pseudo_no_arg_element_same,
+    "a {\n  color: selector-unify(\"::c\", \"::c\");\n}\n",
+    "a {\n  color: ::c;\n}\n"
+);
+test!(
+    simple_pseudo_no_arg_element_different,
+    "a {\n  color: inspect(selector-unify(\"::c\", \"::d\"));\n}\n",
+    "a {\n  color: null;\n}\n"
+);
+test!(
+    simple_pseudo_no_arg_element_and_class_same_before,
+    "a {\n  color: selector-unify(\":before\", \"::before\");\n}\n",
+    "a {\n  color: :before;\n}\n"
+);
+test!(
+    simple_pseudo_no_arg_element_and_class_same_after,
+    "a {\n  color: selector-unify(\":after\", \"::after\");\n}\n",
+    "a {\n  color: :after;\n}\n"
+);
+test!(
+    simple_pseudo_no_arg_element_and_class_same_first_line,
+    "a {\n  color: selector-unify(\":first-line\", \"::first-line\");\n}\n",
+    "a {\n  color: :first-line;\n}\n"
+);
+test!(
+    simple_pseudo_no_arg_element_and_class_same_first_letter,
+    "a {\n  color: selector-unify(\":first-letter\", \"::first-letter\");\n}\n",
+    "a {\n  color: :first-letter;\n}\n"
+);
+test!(
+    simple_pseudo_arg_class_same,
+    "a {\n  color: selector-unify(\":c(@#$)\", \":c(@#$)\");\n}\n",
+    "a {\n  color: :c(@#$);\n}\n"
+);
+test!(
+    simple_pseudo_arg_class_different_arg,
+    "a {\n  color: selector-unify(\":c(@#$)\", \":c(*&^)\");\n}\n",
+    "a {\n  color: :c(@#$):c(*&^);\n}\n"
+);
+test!(
+    simple_pseudo_arg_element_same,
+    "a {\n  color: selector-unify(\"::c(@#$)\", \"::c(@#$)\");\n}\n",
+    "a {\n  color: ::c(@#$);\n}\n"
+);
+test!(
+    simple_pseudo_arg_element_different_arg,
+    "a {\n  color: inspect(selector-unify(\"::c(@#$)\", \"::c(*&^)\"));\n}\n",
+    "a {\n  color: null;\n}\n"
+);
+test!(
+    simple_pseudo_arg_matches_same_selector_arg,
+    "a {\n  color: selector-unify(\":matches(.c)\", \":matches(.c)\");\n}\n",
+    "a {\n  color: :matches(.c);\n}\n"
+);
+test!(
+    simple_pseudo_arg_matches_different_selector_arg,
+    "a {\n  color: selector-unify(\":matches(.c)\", \":matches(.d)\");\n}\n",
+    "a {\n  color: :matches(.c):matches(.d);\n}\n"
+);
