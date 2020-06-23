@@ -875,13 +875,13 @@ impl Extender {
                 .replace(&mut media_query_context);
         }
         let extended_selector = ExtendedSelector::new(selector.clone());
-        self.register_selector(selector, extended_selector.clone());
+        self.register_selector(selector, &extended_selector);
         extended_selector
     }
 
     /// Registers the `SimpleSelector`s in `list` to point to `selector` in
     /// `self.selectors`.
-    fn register_selector(&mut self, list: SelectorList, selector: ExtendedSelector) {
+    fn register_selector(&mut self, list: SelectorList, selector: &ExtendedSelector) {
         for complex in list.components {
             for component in complex.components {
                 if let ComplexSelectorComponent::Compound(component) = component {
@@ -896,7 +896,7 @@ impl Extender {
                             ..
                         }) = simple
                         {
-                            self.register_selector(simple_selector, selector.clone());
+                            self.register_selector(simple_selector, selector);
                         }
                     }
                 }
@@ -1145,7 +1145,7 @@ impl Extender {
             if old_value == selector_as_selector {
                 continue;
             }
-            self.register_selector(selector_as_selector, selector);
+            self.register_selector(selector_as_selector, &selector);
         }
     }
 }

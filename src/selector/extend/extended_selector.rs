@@ -6,8 +6,16 @@ use std::{
 
 use crate::selector::{Selector, SelectorList};
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone)]
 pub(crate) struct ExtendedSelector(Rc<RefCell<SelectorList>>);
+
+impl PartialEq for ExtendedSelector {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
+
+impl Eq for ExtendedSelector {}
 
 impl Hash for ExtendedSelector {
     fn hash<H: Hasher>(&self, state: &mut H) {
