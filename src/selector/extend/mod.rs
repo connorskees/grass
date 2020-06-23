@@ -132,11 +132,6 @@ impl Extender {
         }
     }
 
-    /// Whether there exist any extensions
-    pub fn is_empty(&self) -> bool {
-        self.extensions.is_empty()
-    }
-
     pub fn replace(
         selector: SelectorList,
         source: SelectorList,

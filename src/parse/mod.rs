@@ -259,14 +259,22 @@ impl<'a> Parser<'a> {
                     SelectorOrStyle::Selector(init) => {
                         let at_root = self.at_root;
                         self.at_root = false;
-                        let super_selector = self.super_selectors.last().clone().clone();
                         let selector =
                             self.parse_selector(!self.super_selectors.is_empty(), false, init)?;
+                        let selector = Selector(
+                            self.extender.add_selector(
+                                selector
+                                    .resolve_parent_selectors(
+                                        self.super_selectors.last(),
+                                        !at_root || self.at_root_has_selector,
+                                    )?
+                                    .0,
+                                None,
+                            ),
+                        );
+
                         self.scopes.push(self.scopes.last().clone());
-                        self.super_selectors.push(selector.resolve_parent_selectors(
-                            &super_selector,
-                            !at_root || self.at_root_has_selector,
-                        )?);
+                        self.super_selectors.push(selector.clone());
                         let body = self.parse_stmt()?;
                         self.scopes.pop();
                         self.super_selectors.pop();
@@ -373,10 +381,7 @@ impl<'a> Parser<'a> {
 
         // todo: we should be registering the selector here, but that would require being given
         // an `Rc<RefCell<Selector>>`, which we haven't implemented yet.
-        Ok(Selector(selector).resolve_parent_selectors(
-            self.super_selectors.last(),
-            !self.at_root || self.at_root_has_selector,
-        )?)
+        Ok(Selector(selector))
     }
 
     /// Eat and return the contents of a comment.
@@ -1137,16 +1142,6 @@ impl<'a> Parser<'a> {
             Stmt::Style(..) => {
                 styles.push(s);
                 None
-            }
-            Stmt::RuleSet { selector, body, .. } if !at_root_has_selector => {
-                Some(Ok(Stmt::RuleSet {
-                    selector,
-                    // selector: match selector.resolve_parent_selectors(&at_rule_selector, false) {
-                    //     Ok(v) => v,
-                    //     Err(e) => return Some(Err(e)),
-                    // },
-                    body,
-                }))
             }
             _ => Some(Ok(s)),
         })
