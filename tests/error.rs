@@ -134,7 +134,6 @@ error!(
 );
 error!(toplevel_at, "@", "Error: Expected identifier.");
 error!(
-    #[ignore = "this panics until we can return a result in selector parsing"]
     toplevel_ampersand,
     "& {}", "Error: Top-level selectors may not contain the parent selector \"&\"."
 );

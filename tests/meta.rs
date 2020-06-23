@@ -63,9 +63,7 @@ test!(
     "a {\n  color: feature-exists(global-variable-shadowing)\n}\n",
     "a {\n  color: true;\n}\n"
 );
-// Unignore as more features are added
 test!(
-    #[ignore]
     feature_exists_extend_selector_pseudoclass,
     "a {\n  color: feature-exists(extend-selector-pseudoclass)\n}\n",
     "a {\n  color: true;\n}\n"

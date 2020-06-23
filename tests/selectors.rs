@@ -667,7 +667,6 @@ error!(
     ":nth-child(f) {\n  color: &;\n}\n", "Error: Expected \"n\"."
 );
 error!(
-    #[ignore = "we read until closing paren, giving a different error message"]
     a_n_plus_b_n_nothing_after_open_paren,
     ":nth-child({\n  color: &;\n}\n", "Error: expected more input."
 );

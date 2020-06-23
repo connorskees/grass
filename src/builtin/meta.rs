@@ -33,7 +33,7 @@ fn feature_exists(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Val
             "global-variable-shadowing" => Value::True,
             // the @extend rule will affect selectors nested in pseudo-classes
             // like :not()
-            "extend-selector-pseudoclass" => Value::False,
+            "extend-selector-pseudoclass" => Value::True,
             // Full support for unit arithmetic using units defined in the
             // [Values and Units Level 3][] spec.
             "units-level-3" => Value::True,
