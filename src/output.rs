@@ -80,23 +80,11 @@ impl Css {
 
     fn parse_stmt(&mut self, stmt: Stmt, extender: &mut Extender) -> SassResult<Vec<Toplevel>> {
         Ok(match stmt {
-            Stmt::RuleSet {
-                selector,
-                super_selector,
-                body,
-            } => {
+            Stmt::RuleSet { selector, body } => {
                 if body.is_empty() {
                     return Ok(Vec::new());
                 }
-                let selector = if extender.is_empty() {
-                    selector.resolve_parent_selectors(&super_selector, true)?
-                } else {
-                    Selector(extender.add_selector(
-                        selector.resolve_parent_selectors(&super_selector, true)?.0,
-                        None,
-                    ))
-                }
-                .remove_placeholders();
+                let selector = selector.remove_placeholders();
                 if selector.is_empty() {
                     return Ok(Vec::new());
                 }

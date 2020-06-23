@@ -40,7 +40,6 @@ pub(crate) enum Comment {
 #[derive(Debug, Clone)]
 pub(crate) enum Stmt {
     RuleSet {
-        super_selector: Selector,
         selector: Selector,
         body: Vec<Self>,
     },
@@ -272,11 +271,7 @@ impl<'a> Parser<'a> {
                         self.scopes.pop();
                         self.super_selectors.pop();
                         self.at_root = self.super_selectors.is_empty();
-                        stmts.push(Stmt::RuleSet {
-                            selector,
-                            body,
-                            super_selector,
-                        });
+                        stmts.push(Stmt::RuleSet { selector, body });
                     }
                 },
             }
@@ -378,7 +373,10 @@ impl<'a> Parser<'a> {
 
         // todo: we should be registering the selector here, but that would require being given
         // an `Rc<RefCell<Selector>>`, which we haven't implemented yet.
-        Ok(Selector(selector))
+        Ok(Selector(selector).resolve_parent_selectors(
+            self.super_selectors.last(),
+            !self.at_root || self.at_root_has_selector,
+        )?)
     }
 
     /// Eat and return the contents of a comment.
@@ -1029,7 +1027,6 @@ impl<'a> Parser<'a> {
             body = vec![Stmt::RuleSet {
                 selector: self.super_selectors.last().clone(),
                 body,
-                super_selector: Selector::new(self.span_before),
             }];
         }
 
@@ -1082,7 +1079,6 @@ impl<'a> Parser<'a> {
             body = vec![Stmt::RuleSet {
                 selector: self.super_selectors.last().clone(),
                 body,
-                super_selector: Selector::new(self.span_before),
             }];
         }
 
@@ -1144,11 +1140,11 @@ impl<'a> Parser<'a> {
             }
             Stmt::RuleSet { selector, body, .. } if !at_root_has_selector => {
                 Some(Ok(Stmt::RuleSet {
-                    super_selector: Selector::new(self.span_before),
-                    selector: match selector.resolve_parent_selectors(&at_rule_selector, false) {
-                        Ok(v) => v,
-                        Err(e) => return Some(Err(e)),
-                    },
+                    selector,
+                    // selector: match selector.resolve_parent_selectors(&at_rule_selector, false) {
+                    //     Ok(v) => v,
+                    //     Err(e) => return Some(Err(e)),
+                    // },
                     body,
                 }))
             }
@@ -1158,7 +1154,6 @@ impl<'a> Parser<'a> {
         let mut stmts = vec![Stmt::RuleSet {
             selector: at_rule_selector,
             body: styles,
-            super_selector: Selector::new(self.span_before),
         }];
         stmts.extend(raw_stmts);
         Ok(stmts)
@@ -1279,7 +1274,6 @@ impl<'a> Parser<'a> {
             body = vec![Stmt::RuleSet {
                 selector: self.super_selectors.last().clone(),
                 body,
-                super_selector: Selector::new(self.span_before),
             }];
         }
 
