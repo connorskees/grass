@@ -15,7 +15,7 @@ enum Toplevel {
         body: Vec<Stmt>,
     },
     Media {
-        params: String,
+        query: String,
         body: Vec<Stmt>,
     },
     Supports {
@@ -94,8 +94,8 @@ impl Css {
                         Stmt::RuleSet { .. } => vals.extend(self.parse_stmt(rule, extender)?),
                         Stmt::Style(s) => vals.get_mut(0).unwrap().push_style(*s)?,
                         Stmt::Comment(s) => vals.get_mut(0).unwrap().push_comment(s),
-                        Stmt::Media { params, body, .. } => {
-                            vals.push(Toplevel::Media { params, body })
+                        Stmt::Media { query, body, .. } => {
+                            vals.push(Toplevel::Media { query, body })
                         }
                         Stmt::Supports { params, body, .. } => {
                             vals.push(Toplevel::Supports { params, body })
@@ -114,7 +114,7 @@ impl Css {
             }
             Stmt::Comment(s) => vec![Toplevel::MultilineComment(s)],
             Stmt::Style(s) => vec![Toplevel::Style(s)],
-            Stmt::Media { params, body, .. } => vec![Toplevel::Media { params, body }],
+            Stmt::Media { query, body, .. } => vec![Toplevel::Media { query, body }],
             Stmt::Supports { params, body, .. } => vec![Toplevel::Supports { params, body }],
             Stmt::UnknownAtRule {
                 params, name, body, ..
@@ -239,7 +239,7 @@ impl Css {
                     )?;
                     writeln!(buf, "{}}}", padding)?;
                 }
-                Toplevel::Media { params, body } => {
+                Toplevel::Media { query, body } => {
                     if body.is_empty() {
                         continue;
                     }
@@ -247,7 +247,7 @@ impl Css {
                         should_emit_newline = false;
                         writeln!(buf)?;
                     }
-                    writeln!(buf, "{}@media {} {{", padding, params)?;
+                    writeln!(buf, "{}@media {} {{", padding, query)?;
                     Css::from_stmts(body, extender)?._inner_pretty_print(
                         buf,
                         map,

@@ -29,6 +29,7 @@ pub mod common;
 mod function;
 mod ident;
 mod import;
+mod media;
 mod mixin;
 mod style;
 mod value;
@@ -48,7 +49,7 @@ pub(crate) enum Stmt {
     Style(Box<Style>),
     Media {
         super_selector: Selector,
-        params: String,
+        query: String,
         body: Vec<Stmt>,
     },
     UnknownAtRule {
@@ -440,6 +441,22 @@ impl<'a> Parser<'a> {
             node: val.node.eval(val.span)?.node.unquote(),
             span: val.span,
         })
+    }
+
+    pub fn parse_interpolation_as_string(&mut self) -> SassResult<Cow<'static, str>> {
+        let interpolation = self.parse_interpolation()?;
+        Ok(match interpolation.node {
+            Value::String(v, ..) => Cow::owned(v),
+            v => v.to_css_string(interpolation.span)?,
+        })
+    }
+
+    pub fn parse_value_as_string_from_vec(
+        &mut self,
+        toks: Vec<Token>,
+    ) -> SassResult<Cow<'static, str>> {
+        let value = self.parse_value_from_vec(toks)?;
+        value.node.to_css_string(value.span)
     }
 
     pub fn whitespace(&mut self) -> bool {
@@ -1000,8 +1017,7 @@ impl<'a> Parser<'a> {
                     if let Some(Token { kind: '{', pos }) = self.toks.peek() {
                         self.span_before = self.span_before.merge(*pos);
                         self.toks.next();
-                        let interpolation = self.parse_interpolation()?;
-                        params.push_str(&interpolation.node.to_css_string(interpolation.span)?);
+                        params.push_str(&self.parse_interpolation_as_string()?);
                     } else {
                         params.push(tok.kind);
                     }
@@ -1046,10 +1062,12 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_media(&mut self) -> SassResult<Stmt> {
-        let params = self.parse_media_args()?;
+        let query = self.parse_media_query_list()?;
 
-        if params.is_empty() {
-            return Err(("Expected identifier.", self.span_before).into());
+        self.whitespace();
+
+        if !matches!(self.toks.next(), Some(Token { kind: '{', .. })) {
+            return Err(("expected \"{\".", self.span_before).into());
         }
 
         let raw_body = Parser {
@@ -1091,7 +1109,7 @@ impl<'a> Parser<'a> {
 
         Ok(Stmt::Media {
             super_selector: Selector::new(self.span_before),
-            params: params.trim().to_owned(),
+            query,
             body,
         })
     }
