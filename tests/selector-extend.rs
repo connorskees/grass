@@ -258,4 +258,51 @@ test!(
     "a {\n  color: selector-extend(\".foo.bar\", \".foo, .bar\", \".x\");\n}\n",
     "a {\n  color: .foo.bar, .x;\n}\n"
 );
+test!(
+    simple_pseudo_idempotent_not_simple,
+    "a {\n  color: selector-extend(\":not(.c)\", \".c\", \".d\");\n}\n",
+    "a {\n  color: :not(.c):not(.d);\n}\n"
+);
+test!(
+    simple_pseudo_idempotent_not_list,
+    "a {\n  color: selector-extend(\":not(.c)\", \".c\", \".d, .e\");\n}\n",
+    "a {\n  color: :not(.c):not(.d):not(.e);\n}\n"
+);
+test!(
+    simple_pseudo_idempotent_not_complex,
+    "a {\n  color: selector-extend(\":not(.c .d)\", \".d\", \".e .f\");\n}\n",
+    "a {\n  color: :not(.c .d):not(.c .e .f):not(.e .c .f);\n}\n"
+);
+test!(
+    simple_pseudo_idempotent_not_compound,
+    "a {\n  color: selector-extend(\":not(.c.d)\", \".c\", \".e\");\n}\n",
+    "a {\n  color: :not(.c.d):not(.d.e);\n}\n"
+);
+test!(
+    simple_pseudo_idempotent_not_contains_list,
+    "a {\n  color: selector-extend(\":not(.c, .d)\", \".c\", \".e\");\n}\n",
+    "a {\n  color: :not(.c, .e, .d);\n}\n"
+);
+test!(
+    simple_pseudo_idempotent_not_and_matches_list,
+    "a {\n  color: selector-extend(\":not(.c)\", \".c\", \":matches(.d, .e)\");\n}\n",
+    "a {\n  color: :not(.c):not(.d):not(.e);\n}\n"
+);
+test!(
+    simple_pseudo_idempotent_not_and_matches_list_of_complex,
+    "a {\n  color: selector-extend(\":not(.c)\", \".c\", \":matches(.d .e, .f .g)\");\n}\n",
+    "a {\n  color: :not(.c):not(.d .e):not(.f .g);\n}\n"
+);
+test!(
+    simple_pseudo_idempotent_not_and_matches_in_compound,
+    "a {\n  color: selector-extend(\":not(.c)\", \".c\", \".d:matches(.e, .f)\");\n}\n",
+    "a {\n  color: :not(.c):not(.d:matches(.e, .f));\n}\n"
+);
+test!(
+    simple_pseudo_idempotent_not_and_not_in_extender,
+    "a {\n  color: selector-extend(\":not(.c)\", \".c\", \":not(.d)\");\n}\n",
+    "a {\n  color: :not(.c);\n}\n"
+);
+// todo: https://github.com/sass/sass-spec/blob/master/spec/core_functions/selector/extend/simple/pseudo/selector/idempotent.hrx
+// (starting at line 113)
 // todo: https://github.com/sass/sass-spec/tree/master/spec/core_functions/selector/extend/simple/pseudo/selector/
