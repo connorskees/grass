@@ -1,4 +1,7 @@
-use std::fmt::{self, Display, Write};
+use std::{
+    fmt::{self, Display, Write},
+    hash::{Hash, Hasher},
+};
 
 use codemap::Span;
 
@@ -6,13 +9,33 @@ use crate::{common::QuoteKind, error::SassResult, parse::Parser, utils::is_ident
 
 use super::{Namespace, QualifiedName};
 
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Clone, Debug)]
 pub(crate) struct Attribute {
     attr: QualifiedName,
     value: String,
     modifier: Option<char>,
     op: AttributeOp,
     span: Span,
+}
+
+impl PartialEq for Attribute {
+    fn eq(&self, other: &Self) -> bool {
+        self.attr == other.attr
+            && self.value == other.value
+            && self.modifier == other.modifier
+            && self.op == other.op
+    }
+}
+
+impl Eq for Attribute {}
+
+impl Hash for Attribute {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.attr.hash(state);
+        self.value.hash(state);
+        self.modifier.hash(state);
+        self.op.hash(state);
+    }
 }
 
 fn attribute_name(parser: &mut Parser<'_>, start: Span) -> SassResult<QualifiedName> {

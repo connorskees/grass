@@ -486,7 +486,6 @@ test!(
     "-a [foo=bar].baz, -a [foo=bar][ns|foo=bar] {\n  a: b;\n}\n"
 );
 test!(
-    #[ignore = "to investigate (too many selectors)"]
     attribute_unification_5,
     "%-a %-a [foo=bar].bar {a: b}
     [foo=bar] {@extend .bar} -a {@extend %-a}
@@ -644,7 +643,6 @@ test!(
     "-a :not(.foo) {\n  a: b;\n}\n"
 );
 test!(
-    #[ignore = "to investigate (too many selectors)"]
     negation_unification_3,
     "%-a :not([a=b]).baz {a: b}
     :not([a = b]) {@extend .baz} -a {@extend %-a}

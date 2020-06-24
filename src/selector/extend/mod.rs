@@ -206,25 +206,33 @@ impl Extender {
     ) -> SelectorList {
         // This could be written more simply using Vec<Vec<T>>, but we want to avoid
         // any allocations in the common case where no extends apply.
-        let mut extended: Vec<ComplexSelector> = Vec::new();
+        let mut extended: Option<Vec<ComplexSelector>> = None;
         for i in 0..list.components.len() {
             let complex = list.components.get(i).unwrap().clone();
 
             if let Some(result) =
                 self.extend_complex(complex.clone(), extensions, media_query_context)
             {
-                if extended.is_empty() && i != 0 {
-                    extended = list.components[0..i].to_vec();
+                if extended.is_none() {
+                    extended = Some(if i == 0 {
+                        Vec::new()
+                    } else {
+                        list.components[0..i].to_vec()
+                    });
                 }
-                extended.extend(result.into_iter());
-            } else if !extended.is_empty() {
+                match extended.as_mut() {
+                    Some(v) => v.extend(result.into_iter()),
+                    None => unreachable!(),
+                }
+            } else if let Some(extended) = extended.as_mut() {
                 extended.push(complex);
             }
         }
 
-        if extended.is_empty() {
-            return list;
-        }
+        let extended = match extended {
+            Some(v) => v,
+            None => return list,
+        };
 
         SelectorList {
             components: self.trim(extended, |complex| self.originals.contains(complex)),
@@ -257,7 +265,7 @@ impl Extender {
         //
         // This could be written more simply using `Vec::into_iter::map`, but we want to avoid
         // any allocations in the common case where no extends apply.
-        let mut extended_not_expanded: Vec<Vec<ComplexSelector>> = Vec::new();
+        let mut extended_not_expanded: Option<Vec<Vec<ComplexSelector>>> = None;
 
         let complex_has_line_break = complex.line_break;
 
@@ -266,40 +274,49 @@ impl Extender {
                 if let Some(extended) =
                     self.extend_compound(component, extensions, media_query_context)
                 {
-                    if extended_not_expanded.is_empty() {
-                        extended_not_expanded = complex
-                            .components
-                            .clone()
-                            .into_iter()
-                            .take(i)
-                            .map(|component| {
-                                vec![ComplexSelector {
-                                    components: vec![component],
-                                    line_break: complex.line_break,
-                                }]
-                            })
-                            .collect();
+                    if extended_not_expanded.is_none() {
+                        extended_not_expanded = Some(
+                            complex
+                                .components
+                                .clone()
+                                .into_iter()
+                                .take(i)
+                                .map(|component| {
+                                    vec![ComplexSelector {
+                                        components: vec![component],
+                                        line_break: complex.line_break,
+                                    }]
+                                })
+                                .collect(),
+                        );
                     }
-                    extended_not_expanded.push(extended);
+                    match extended_not_expanded.as_mut() {
+                        Some(v) => v.push(extended),
+                        None => unreachable!(),
+                    }
                 } else {
-                    extended_not_expanded.push(vec![ComplexSelector {
-                        components: vec![ComplexSelectorComponent::Compound(component.clone())],
-                        line_break: false,
-                    }])
+                    match extended_not_expanded.as_mut() {
+                        Some(v) => v.push(vec![ComplexSelector {
+                            components: vec![ComplexSelectorComponent::Compound(component.clone())],
+                            line_break: false,
+                        }]),
+                        None => {}
+                    }
                 }
             } else if let Some(component @ ComplexSelectorComponent::Combinator(..)) =
                 complex.components.get(i)
             {
-                extended_not_expanded.push(vec![ComplexSelector {
-                    components: vec![component.clone()],
-                    line_break: false,
-                }])
+                match extended_not_expanded.as_mut() {
+                    Some(v) => v.push(vec![ComplexSelector {
+                        components: vec![component.clone()],
+                        line_break: false,
+                    }]),
+                    None => {}
+                }
             }
         }
 
-        if extended_not_expanded.is_empty() {
-            return None;
-        }
+        let extended_not_expanded = extended_not_expanded?;
 
         let mut first = true;
 
@@ -354,7 +371,7 @@ impl Extender {
         // which targets are actually extended.
         let mut targets_used: HashSet<SimpleSelector> = HashSet::new();
 
-        let mut options: Vec<Vec<Extension>> = Vec::new();
+        let mut options: Option<Vec<Vec<Extension>>> = None;
 
         for i in 0..compound.components.len() {
             let simple = compound.components.get(i).cloned().unwrap();
@@ -365,21 +382,29 @@ impl Extender {
                 media_query_context,
                 &mut targets_used,
             ) {
-                if options.is_empty() && i != 0 {
-                    options.push(vec![self.extension_for_compound(
-                        compound.components.clone().into_iter().take(i).collect(),
-                    )]);
+                if options.is_none() {
+                    let mut new_options = Vec::new();
+                    if i != 0 {
+                        new_options.push(vec![self.extension_for_compound(
+                            compound.components.clone().into_iter().take(i).collect(),
+                        )]);
+                    }
+                    options.replace(new_options);
                 }
 
-                options.extend(extended.into_iter());
+                match options.as_mut() {
+                    Some(v) => v.extend(extended.into_iter()),
+                    None => unreachable!(),
+                }
             } else {
-                options.push(vec![self.extension_for_simple(simple)]);
+                match options.as_mut() {
+                    Some(v) => v.push(vec![self.extension_for_simple(simple)]),
+                    None => {}
+                }
             }
         }
 
-        if options.is_empty() {
-            return None;
-        }
+        let options = options?;
 
         // If `self.mode` isn't `ExtendMode::Normal` and we didn't use all the targets in
         // `extensions`, extension fails for `compound`.
