@@ -58,6 +58,7 @@ grass input.scss
     renamed_and_removed_lints,
     clippy::unknown_clippy_lints,
     clippy::replace_consts,
+    clippy::single_match,
 
     // temporarily allowed while under heavy development.
     // eventually these allows should be refactored away

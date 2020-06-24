@@ -376,31 +376,32 @@ impl Extender {
         for i in 0..compound.components.len() {
             let simple = compound.components.get(i).cloned().unwrap();
 
-            if let Some(extended) = self.extend_simple(
+            match self.extend_simple(
                 simple.clone(),
                 extensions,
                 media_query_context,
                 &mut targets_used,
             ) {
-                if options.is_none() {
-                    let mut new_options = Vec::new();
-                    if i != 0 {
-                        new_options.push(vec![self.extension_for_compound(
-                            compound.components.clone().into_iter().take(i).collect(),
-                        )]);
+                Some(extended) => {
+                    if options.is_none() {
+                        let mut new_options = Vec::new();
+                        if i != 0 {
+                            new_options.push(vec![self.extension_for_compound(
+                                compound.components.clone().into_iter().take(i).collect(),
+                            )]);
+                        }
+                        options.replace(new_options);
                     }
-                    options.replace(new_options);
-                }
 
-                match options.as_mut() {
-                    Some(v) => v.extend(extended.into_iter()),
-                    None => unreachable!(),
+                    match options.as_mut() {
+                        Some(v) => v.extend(extended.into_iter()),
+                        None => unreachable!(),
+                    }
                 }
-            } else {
-                match options.as_mut() {
+                None => match options.as_mut() {
                     Some(v) => v.push(vec![self.extension_for_simple(simple)]),
                     None => {}
-                }
+                },
             }
         }
 
