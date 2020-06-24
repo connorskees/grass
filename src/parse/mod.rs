@@ -215,14 +215,14 @@ impl<'a> Parser<'a> {
                             continue;
                         }
                         AtRuleKind::Media => stmts.push(self.parse_media()?),
-                        AtRuleKind::Unknown(_) => {
+                        AtRuleKind::Unknown(_) | AtRuleKind::Keyframes => {
                             stmts.push(self.parse_unknown_at_rule(kind_string.node)?)
                         }
                         AtRuleKind::Use => todo!("@use not yet implemented"),
                         AtRuleKind::Forward => todo!("@forward not yet implemented"),
                         AtRuleKind::Extend => self.parse_extend()?,
                         AtRuleKind::Supports => stmts.push(self.parse_supports()?),
-                        AtRuleKind::Keyframes => stmts.push(self.parse_keyframes()?),
+                        // AtRuleKind::Keyframes => stmts.push(self.parse_keyframes()?),
                     }
                 }
                 '$' => self.parse_variable_declaration()?,
@@ -1298,7 +1298,7 @@ impl<'a> Parser<'a> {
         })
     }
 
-    #[allow(clippy::unused_self)]
+    #[allow(dead_code, clippy::unused_self)]
     fn parse_keyframes(&mut self) -> SassResult<Stmt> {
         todo!("@keyframes not yet implemented")
     }
