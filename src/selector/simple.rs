@@ -487,6 +487,7 @@ impl Pseudo {
         compound: &CompoundSelector,
         parents: Option<Vec<ComplexSelectorComponent>>,
     ) -> bool {
+        debug_assert!(self.selector.is_some());
         match self.normalized_name.as_str() {
             "matches" | "any" => {
                 let pseudos = selector_pseudos_named(compound.clone(), &self.name, true);
