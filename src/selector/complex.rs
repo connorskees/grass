@@ -1,4 +1,7 @@
-use std::fmt::{self, Display, Write};
+use std::{
+    fmt::{self, Display, Write},
+    hash::{Hash, Hasher},
+};
 
 use crate::error::SassResult;
 
@@ -8,7 +11,7 @@ use super::{CompoundSelector, Pseudo, SelectorList, SimpleSelector, Specificity}
 ///
 /// A complex selector is composed of `CompoundSelector`s separated by
 /// `Combinator`s. It selects elements based on their parent selectors.
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Clone, Debug)]
 pub(crate) struct ComplexSelector {
     /// The components of this selector.
     ///
@@ -24,6 +27,20 @@ pub(crate) struct ComplexSelector {
 
     /// Whether a line break should be emitted *before* this selector.
     pub line_break: bool,
+}
+
+impl PartialEq for ComplexSelector {
+    fn eq(&self, other: &Self) -> bool {
+        self.components == other.components
+    }
+}
+
+impl Eq for ComplexSelector {}
+
+impl Hash for ComplexSelector {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.components.hash(state);
+    }
 }
 
 impl fmt::Display for ComplexSelector {
