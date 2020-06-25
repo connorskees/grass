@@ -238,10 +238,7 @@ impl<'a> Parser<'a> {
                 _ => match self.is_selector_or_style()? {
                     SelectorOrStyle::Style(property, value) => {
                         let styles = if let Some(value) = value {
-                            vec![Style {
-                                property,
-                                value: value,
-                            }]
+                            vec![Style { property, value }]
                         } else {
                             self.parse_style_group(property)?
                         };

@@ -131,7 +131,7 @@ impl Css {
                 vec![Toplevel::Media { query, body }]
             }
             Stmt::Supports(s) => {
-                let SupportsRule { params, body, .. } = *s;
+                let SupportsRule { params, body } = *s;
                 vec![Toplevel::Supports { params, body }]
             }
             Stmt::UnknownAtRule(u) => {
