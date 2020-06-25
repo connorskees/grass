@@ -6,7 +6,7 @@ use crate::{error::SassResult, value::Value};
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Style {
     pub property: String,
-    pub value: Spanned<Value>,
+    pub value: Box<Spanned<Value>>,
 }
 
 impl Style {
@@ -21,10 +21,10 @@ impl Style {
     pub(crate) fn eval(self) -> SassResult<Self> {
         Ok(Style {
             property: self.property,
-            value: Spanned {
+            value: Box::new(Spanned {
                 span: self.value.span,
                 node: self.value.node.eval(self.value.span)?.node,
-            },
+            }),
         })
     }
 }

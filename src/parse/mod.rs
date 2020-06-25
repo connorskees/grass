@@ -5,7 +5,7 @@ use num_traits::cast::ToPrimitive;
 use peekmore::{PeekMore, PeekMoreIterator};
 
 use crate::{
-    atrule::AtRuleKind,
+    atrule::{media::MediaRule, AtRuleKind, SupportsRule, UnknownAtRule},
     common::{Brackets, ListSeparator},
     error::SassResult,
     scope::Scope,
@@ -46,27 +46,15 @@ pub(crate) enum Stmt {
         selector: ExtendedSelector,
         body: Vec<Self>,
     },
-    Style(Box<Style>),
-    Media {
-        super_selector: Selector,
-        query: String,
-        body: Vec<Stmt>,
-    },
-    UnknownAtRule {
-        name: String,
-        super_selector: Selector,
-        params: String,
-        body: Vec<Stmt>,
-    },
-    Supports {
-        params: String,
-        body: Vec<Stmt>,
-    },
+    Style(Style),
+    Media(Box<MediaRule>),
+    UnknownAtRule(Box<UnknownAtRule>),
+    Supports(Box<SupportsRule>),
     AtRoot {
         body: Vec<Stmt>,
     },
     Comment(String),
-    Return(Value),
+    Return(Box<Value>),
 }
 
 /// We could use a generic for the toks, but it makes the API
@@ -252,12 +240,12 @@ impl<'a> Parser<'a> {
                         let styles = if let Some(value) = value {
                             vec![Style {
                                 property,
-                                value: *value,
+                                value: value,
                             }]
                         } else {
                             self.parse_style_group(property)?
                         };
-                        stmts.extend(styles.into_iter().map(Box::new).map(Stmt::Style));
+                        stmts.extend(styles.into_iter().map(Stmt::Style));
                     }
                     SelectorOrStyle::Selector(init) => {
                         let at_root = self.at_root;
@@ -1003,12 +991,12 @@ impl<'a> Parser<'a> {
         self.whitespace();
         if let Some(Token { kind: ';', .. }) | None = self.toks.peek() {
             self.toks.next();
-            return Ok(Stmt::UnknownAtRule {
+            return Ok(Stmt::UnknownAtRule(Box::new(UnknownAtRule {
                 name,
                 super_selector: Selector::new(self.span_before),
                 params: String::new(),
                 body: Vec::new(),
-            });
+            })));
         }
         while let Some(tok) = self.toks.next() {
             match tok.kind {
@@ -1053,12 +1041,12 @@ impl<'a> Parser<'a> {
 
         body.append(&mut rules);
 
-        Ok(Stmt::UnknownAtRule {
+        Ok(Stmt::UnknownAtRule(Box::new(UnknownAtRule {
             name,
             super_selector: Selector::new(self.span_before),
             params: params.trim().to_owned(),
             body,
-        })
+        })))
     }
 
     fn parse_media(&mut self) -> SassResult<Stmt> {
@@ -1107,11 +1095,11 @@ impl<'a> Parser<'a> {
 
         body.append(&mut rules);
 
-        Ok(Stmt::Media {
+        Ok(Stmt::Media(Box::new(MediaRule {
             super_selector: Selector::new(self.span_before),
             query,
             body,
-        })
+        })))
     }
 
     fn parse_at_root(&mut self) -> SassResult<Vec<Stmt>> {
@@ -1292,10 +1280,10 @@ impl<'a> Parser<'a> {
 
         body.append(&mut rules);
 
-        Ok(Stmt::Supports {
+        Ok(Stmt::Supports(Box::new(SupportsRule {
             params: params.trim().to_owned(),
             body,
-        })
+        })))
     }
 
     #[allow(dead_code, clippy::unused_self)]

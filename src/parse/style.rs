@@ -198,7 +198,7 @@ impl<'a> Parser<'a> {
                                 continue;
                             }
                         }
-                        let value = self.parse_style_value()?;
+                        let value = Box::new(self.parse_style_value()?);
                         match self.toks.peek() {
                             Some(Token { kind: '}', .. }) => {
                                 styles.push(Style { property, value });
@@ -246,7 +246,7 @@ impl<'a> Parser<'a> {
                         '{' => {
                             let mut v = vec![Style {
                                 property: super_property.clone(),
-                                value,
+                                value: Box::new(value),
                             }];
                             v.append(&mut self.parse_style_group(super_property)?);
                             return Ok(v);
@@ -255,7 +255,7 @@ impl<'a> Parser<'a> {
                     }
                     return Ok(vec![Style {
                         property: super_property,
-                        value,
+                        value: Box::new(value),
                     }]);
                 }
             }

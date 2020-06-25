@@ -82,13 +82,13 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    pub(super) fn parse_return(&mut self) -> SassResult<Value> {
+    pub(super) fn parse_return(&mut self) -> SassResult<Box<Value>> {
         let toks = read_until_semicolon_or_closing_curly_brace(self.toks)?;
         let v = self.parse_value_from_vec(toks)?;
         if let Some(Token { kind: ';', .. }) = self.toks.peek() {
             self.toks.next();
         }
-        Ok(v.node)
+        Ok(Box::new(v.node))
     }
 
     pub fn eval_function(&mut self, mut function: Function, args: CallArgs) -> SassResult<Value> {
@@ -117,7 +117,7 @@ impl<'a> Parser<'a> {
             .pop()
             .ok_or(("Function finished without @return.", self.span_before))?
         {
-            Stmt::Return(v) => Ok(v),
+            Stmt::Return(v) => Ok(*v),
             _ => todo!("should be unreachable"),
         }
     }

@@ -3,7 +3,14 @@ use std::io::Write;
 
 use codemap::CodeMap;
 
-use crate::{error::SassResult, parse::Stmt, selector::Extender, selector::Selector, style::Style};
+use crate::{
+    atrule::{media::MediaRule, SupportsRule, UnknownAtRule},
+    error::SassResult,
+    parse::Stmt,
+    selector::Extender,
+    selector::Selector,
+    style::Style,
+};
 
 #[derive(Debug, Clone)]
 enum Toplevel {
@@ -23,7 +30,7 @@ enum Toplevel {
         body: Vec<Stmt>,
     },
     Newline,
-    Style(Box<Style>),
+    Style(Style),
 }
 
 #[derive(Debug, Clone)]
@@ -92,17 +99,22 @@ impl Css {
                 for rule in body {
                     match rule {
                         Stmt::RuleSet { .. } => vals.extend(self.parse_stmt(rule, extender)?),
-                        Stmt::Style(s) => vals.get_mut(0).unwrap().push_style(*s)?,
+                        Stmt::Style(s) => vals.get_mut(0).unwrap().push_style(s)?,
                         Stmt::Comment(s) => vals.get_mut(0).unwrap().push_comment(s),
-                        Stmt::Media { query, body, .. } => {
+                        Stmt::Media(m) => {
+                            let MediaRule { query, body, .. } = *m;
                             vals.push(Toplevel::Media { query, body })
                         }
-                        Stmt::Supports { params, body, .. } => {
+                        Stmt::Supports(s) => {
+                            let SupportsRule { params, body, .. } = *s;
                             vals.push(Toplevel::Supports { params, body })
                         }
-                        Stmt::UnknownAtRule {
-                            params, body, name, ..
-                        } => vals.push(Toplevel::UnknownAtRule { params, body, name }),
+                        Stmt::UnknownAtRule(u) => {
+                            let UnknownAtRule {
+                                params, body, name, ..
+                            } = *u;
+                            vals.push(Toplevel::UnknownAtRule { params, body, name })
+                        }
                         Stmt::Return(..) => unreachable!(),
                         Stmt::AtRoot { body } => body
                             .into_iter()
@@ -114,11 +126,20 @@ impl Css {
             }
             Stmt::Comment(s) => vec![Toplevel::MultilineComment(s)],
             Stmt::Style(s) => vec![Toplevel::Style(s)],
-            Stmt::Media { query, body, .. } => vec![Toplevel::Media { query, body }],
-            Stmt::Supports { params, body, .. } => vec![Toplevel::Supports { params, body }],
-            Stmt::UnknownAtRule {
-                params, name, body, ..
-            } => vec![Toplevel::UnknownAtRule { params, name, body }],
+            Stmt::Media(m) => {
+                let MediaRule { query, body, .. } = *m;
+                vec![Toplevel::Media { query, body }]
+            }
+            Stmt::Supports(s) => {
+                let SupportsRule { params, body, .. } = *s;
+                vec![Toplevel::Supports { params, body }]
+            }
+            Stmt::UnknownAtRule(u) => {
+                let UnknownAtRule {
+                    params, body, name, ..
+                } = *u;
+                vec![Toplevel::UnknownAtRule { params, name, body }]
+            }
             Stmt::Return(..) => unreachable!("@return: {:?}", stmt),
             Stmt::AtRoot { .. } => unreachable!("@at-root: {:?}", stmt),
         })
