@@ -70,8 +70,8 @@ pub enum AtRuleKind {
 }
 
 impl TryFrom<&Spanned<String>> for AtRuleKind {
-    type Error = SassError;
-    fn try_from(c: &Spanned<String>) -> Result<Self, SassError> {
+    type Error = Box<SassError>;
+    fn try_from(c: &Spanned<String>) -> Result<Self, Box<SassError>> {
         Ok(match c.node.as_str() {
             "use" => Self::Use,
             "forward" => Self::Forward,

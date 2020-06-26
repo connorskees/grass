@@ -126,9 +126,9 @@ mod unit;
 mod utils;
 mod value;
 
-fn raw_to_parse_error(map: &CodeMap, err: Error) -> Error {
+fn raw_to_parse_error(map: &CodeMap, err: Box<Error>) -> Box<Error> {
     let (message, span) = err.raw();
-    Error::from_loc(message, map.look_up_span(span))
+    Box::new(Error::from_loc(message, map.look_up_span(span)))
 }
 
 /// Write CSS to `buf`, constructed from a path

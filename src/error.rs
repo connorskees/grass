@@ -7,7 +7,7 @@ use std::{
 
 use codemap::{Span, SpanLoc};
 
-pub type SassResult<T> = Result<T, SassError>;
+pub type SassResult<T> = Result<T, Box<SassError>>;
 
 #[derive(Debug)]
 pub struct SassError {
@@ -78,42 +78,42 @@ impl Display for SassError {
     }
 }
 
-impl From<io::Error> for SassError {
+impl From<io::Error> for Box<SassError> {
     #[inline]
-    fn from(error: io::Error) -> Self {
-        SassError {
+    fn from(error: io::Error) -> Box<SassError> {
+        Box::new(SassError {
             kind: SassErrorKind::IoError(error),
-        }
+        })
     }
 }
 
-impl From<FromUtf8Error> for SassError {
+impl From<FromUtf8Error> for Box<SassError> {
     #[inline]
-    fn from(error: FromUtf8Error) -> Self {
-        SassError {
+    fn from(error: FromUtf8Error) -> Box<SassError> {
+        Box::new(SassError {
             kind: SassErrorKind::FromUtf8Error(format!(
                 "Invalid UTF-8 character \"\\x{:X?}\"",
                 error.as_bytes()[0]
             )),
-        }
+        })
     }
 }
 
-impl From<(&str, Span)> for SassError {
+impl From<(&str, Span)> for Box<SassError> {
     #[inline]
-    fn from(error: (&str, Span)) -> SassError {
-        SassError {
+    fn from(error: (&str, Span)) -> Box<SassError> {
+        Box::new(SassError {
             kind: SassErrorKind::Raw(error.0.to_owned(), error.1),
-        }
+        })
     }
 }
 
-impl From<(String, Span)> for SassError {
+impl From<(String, Span)> for Box<SassError> {
     #[inline]
-    fn from(error: (String, Span)) -> SassError {
-        SassError {
+    fn from(error: (String, Span)) -> Box<SassError> {
+        Box::new(SassError {
             kind: SassErrorKind::Raw(error.0, error.1),
-        }
+        })
     }
 }
 
