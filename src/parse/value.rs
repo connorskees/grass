@@ -338,7 +338,7 @@ impl<'a> Parser<'a> {
                     if val.num.len() <= 18 && val.times_ten.is_empty() {
                         let n = Rational64::new_raw(parse_i64(&val.num), 1);
                         return Some(Ok(IntermediateValue::Value(Value::Dimension(
-                            Number::new_machine(n),
+                            Number::new_small(n),
                             unit,
                         ))
                         .span(span)));
@@ -348,7 +348,7 @@ impl<'a> Parser<'a> {
                     if val.num.len() <= 18 && val.times_ten.is_empty() {
                         let n = Rational64::new(parse_i64(&val.num), pow(10, val.dec_len));
                         return Some(Ok(IntermediateValue::Value(Value::Dimension(
-                            Number::new_machine(n),
+                            Number::new_small(n),
                             unit,
                         ))
                         .span(span)));

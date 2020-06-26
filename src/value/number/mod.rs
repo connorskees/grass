@@ -18,13 +18,13 @@ const PRECISION: usize = 10;
 
 #[derive(Clone, Eq, PartialEq, Ord)]
 pub(crate) enum Number {
-    Machine(Rational64),
+    Small(Rational64),
     Big(Box<BigRational>),
 }
 
 impl Number {
-    pub const fn new_machine(val: Rational64) -> Number {
-        Number::Machine(val)
+    pub const fn new_small(val: Rational64) -> Number {
+        Number::Small(val)
     }
 
     pub fn new_big(val: BigRational) -> Number {
@@ -33,13 +33,13 @@ impl Number {
 
     pub fn to_integer(&self) -> Integer {
         match self {
-            Self::Machine(val) => Integer::Machine(val.to_integer()),
+            Self::Small(val) => Integer::Small(val.to_integer()),
             Self::Big(val) => Integer::Big(val.to_integer()),
         }
     }
 
-    pub fn machine_ratio<A: Into<i64>, B: Into<i64>>(a: A, b: B) -> Self {
-        Number::new_machine(Rational64::new(a.into(), b.into()))
+    pub fn small_ratio<A: Into<i64>, B: Into<i64>>(a: A, b: B) -> Self {
+        Number::new_small(Rational64::new(a.into(), b.into()))
     }
 
     #[allow(dead_code)]
@@ -49,42 +49,42 @@ impl Number {
 
     pub fn round(&self) -> Self {
         match self {
-            Self::Machine(val) => Self::Machine(val.round()),
+            Self::Small(val) => Self::Small(val.round()),
             Self::Big(val) => Self::Big(Box::new(val.round())),
         }
     }
 
     pub fn ceil(&self) -> Self {
         match self {
-            Self::Machine(val) => Self::Machine(val.ceil()),
+            Self::Small(val) => Self::Small(val.ceil()),
             Self::Big(val) => Self::Big(Box::new(val.ceil())),
         }
     }
 
     pub fn floor(&self) -> Self {
         match self {
-            Self::Machine(val) => Self::Machine(val.floor()),
+            Self::Small(val) => Self::Small(val.floor()),
             Self::Big(val) => Self::Big(Box::new(val.floor())),
         }
     }
 
     pub fn abs(&self) -> Self {
         match self {
-            Self::Machine(val) => Self::Machine(val.abs()),
+            Self::Small(val) => Self::Small(val.abs()),
             Self::Big(val) => Self::Big(Box::new(val.abs())),
         }
     }
 
     pub fn is_decimal(&self) -> bool {
         match self {
-            Self::Machine(v) => !v.is_integer(),
+            Self::Small(v) => !v.is_integer(),
             Self::Big(v) => !v.is_integer(),
         }
     }
 
     pub fn fract(&mut self) -> Number {
         match self {
-            Self::Machine(v) => Number::new_machine(v.fract()),
+            Self::Small(v) => Number::new_small(v.fract()),
             Self::Big(v) => Number::new_big(v.fract()),
         }
     }
@@ -116,12 +116,12 @@ impl Default for Number {
 
 impl Zero for Number {
     fn zero() -> Self {
-        Number::new_machine(Rational64::from_integer(0))
+        Number::new_small(Rational64::from_integer(0))
     }
 
     fn is_zero(&self) -> bool {
         match self {
-            Self::Machine(v) => v.is_zero(),
+            Self::Small(v) => v.is_zero(),
             Self::Big(v) => v.is_zero(),
         }
     }
@@ -129,12 +129,12 @@ impl Zero for Number {
 
 impl One for Number {
     fn one() -> Self {
-        Number::new_machine(Rational64::from_integer(1))
+        Number::new_small(Rational64::from_integer(1))
     }
 
     fn is_one(&self) -> bool {
         match self {
-            Self::Machine(v) => v.is_one(),
+            Self::Small(v) => v.is_one(),
             Self::Big(v) => v.is_one(),
         }
     }
@@ -171,14 +171,14 @@ impl Signed for Number {
 
     fn is_positive(&self) -> bool {
         match self {
-            Self::Machine(v) => v.is_positive(),
+            Self::Small(v) => v.is_positive(),
             Self::Big(v) => v.is_positive(),
         }
     }
 
     fn is_negative(&self) -> bool {
         match self {
-            Self::Machine(v) => v.is_negative(),
+            Self::Small(v) => v.is_negative(),
             Self::Big(v) => v.is_negative(),
         }
     }
@@ -189,7 +189,7 @@ macro_rules! from_integer {
         impl From<$ty> for Number {
             fn from(b: $ty) -> Self {
                 if let Ok(v) = i64::try_from(b) {
-                    Number::Machine(Rational64::from_integer(v))
+                    Number::Small(Rational64::from_integer(v))
                 } else {
                     Number::Big(Box::new(BigRational::from_integer(BigInt::from(b))))
                 }
@@ -202,7 +202,7 @@ macro_rules! from_smaller_integer {
     ($ty:ty) => {
         impl From<$ty> for Number {
             fn from(val: $ty) -> Self {
-                Number::new_machine(Rational64::from_integer(val as i64))
+                Number::new_small(Rational64::from_integer(val as i64))
             }
         }
     };
@@ -210,7 +210,7 @@ macro_rules! from_smaller_integer {
 
 impl From<i64> for Number {
     fn from(val: i64) -> Self {
-        Number::new_machine(Rational64::from_integer(val))
+        Number::new_small(Rational64::from_integer(val))
     }
 }
 
@@ -230,7 +230,7 @@ from_smaller_integer!(u8);
 impl fmt::Debug for Number {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Machine(..) => write!(f, "Number::Machine( {} )", self),
+            Self::Small(..) => write!(f, "Number::Small( {} )", self),
             Self::Big(..) => write!(f, "Number::Big( {} )", self),
         }
     }
@@ -299,8 +299,8 @@ impl Display for Number {
 impl PartialOrd for Number {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         match self {
-            Self::Machine(val1) => match other {
-                Self::Machine(val2) => val1.partial_cmp(val2),
+            Self::Small(val1) => match other {
+                Self::Small(val2) => val1.partial_cmp(val2),
                 Self::Big(val2) => {
                     let tuple: (i64, i64) = (*val1).into();
                     BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1))
@@ -308,7 +308,7 @@ impl PartialOrd for Number {
                 }
             },
             Self::Big(val1) => match other {
-                Self::Machine(val2) => {
+                Self::Small(val2) => {
                     let tuple: (i64, i64) = (*val2).into();
                     (**val1).partial_cmp(&BigRational::new_raw(
                         BigInt::from(tuple.0),
@@ -326,9 +326,9 @@ impl Add for Number {
 
     fn add(self, other: Self) -> Self {
         match self {
-            Self::Machine(val1) => match other {
-                Self::Machine(val2) => match val1.checked_add(&val2) {
-                    Some(v) => Self::Machine(v),
+            Self::Small(val1) => match other {
+                Self::Small(val2) => match val1.checked_add(&val2) {
+                    Some(v) => Self::Small(v),
                     None => {
                         let tuple1: (i64, i64) = val1.into();
                         let tuple2: (i64, i64) = val2.into();
@@ -350,7 +350,7 @@ impl Add for Number {
             },
             Self::Big(val1) => match other {
                 Self::Big(val2) => Self::Big(Box::new(*val1 + *val2)),
-                Self::Machine(val2) => {
+                Self::Small(val2) => {
                     let tuple: (i64, i64) = val2.into();
                     Self::Big(Box::new(
                         (*val1)
@@ -367,9 +367,9 @@ impl Add<&Self> for Number {
 
     fn add(self, other: &Self) -> Self {
         match self {
-            Self::Machine(val1) => match other {
-                Self::Machine(val2) => match val1.checked_add(val2) {
-                    Some(v) => Self::Machine(v),
+            Self::Small(val1) => match other {
+                Self::Small(val2) => match val1.checked_add(val2) {
+                    Some(v) => Self::Small(v),
                     None => {
                         let tuple1: (i64, i64) = val1.into();
                         let tuple2: (i64, i64) = (*val2).into();
@@ -392,7 +392,7 @@ impl Add<&Self> for Number {
             },
             Self::Big(val1) => match other {
                 Self::Big(val2) => Self::Big(Box::new(*val1 + *val2.clone())),
-                Self::Machine(val2) => {
+                Self::Small(val2) => {
                     let tuple: (i64, i64) = (*val2).into();
                     Self::Big(Box::new(
                         *val1 + BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1)),
@@ -415,9 +415,9 @@ impl Sub for Number {
 
     fn sub(self, other: Self) -> Self {
         match self {
-            Self::Machine(val1) => match other {
-                Self::Machine(val2) => match val1.checked_sub(&val2) {
-                    Some(v) => Self::Machine(v),
+            Self::Small(val1) => match other {
+                Self::Small(val2) => match val1.checked_sub(&val2) {
+                    Some(v) => Self::Small(v),
                     None => {
                         let tuple1: (i64, i64) = val1.into();
                         let tuple2: (i64, i64) = val2.into();
@@ -439,7 +439,7 @@ impl Sub for Number {
             },
             Self::Big(val1) => match other {
                 Self::Big(val2) => Self::Big(Box::new(*val1 - *val2)),
-                Self::Machine(val2) => {
+                Self::Small(val2) => {
                     let tuple: (i64, i64) = val2.into();
                     Self::Big(Box::new(
                         *val1 - BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1)),
@@ -462,9 +462,9 @@ impl Mul for Number {
 
     fn mul(self, other: Self) -> Self {
         match self {
-            Self::Machine(val1) => match other {
-                Self::Machine(val2) => match val1.checked_mul(&val2) {
-                    Some(v) => Self::Machine(v),
+            Self::Small(val1) => match other {
+                Self::Small(val2) => match val1.checked_mul(&val2) {
+                    Some(v) => Self::Small(v),
                     None => {
                         let tuple1: (i64, i64) = val1.into();
                         let tuple2: (i64, i64) = val2.into();
@@ -486,7 +486,7 @@ impl Mul for Number {
             },
             Self::Big(val1) => match other {
                 Self::Big(val2) => Self::Big(Box::new(*val1 * *val2)),
-                Self::Machine(val2) => {
+                Self::Small(val2) => {
                     let tuple: (i64, i64) = val2.into();
                     Self::Big(Box::new(
                         *val1 * BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1)),
@@ -502,7 +502,7 @@ impl Mul<i64> for Number {
 
     fn mul(self, other: i64) -> Self {
         match self {
-            Self::Machine(val1) => Self::Machine(val1 * other),
+            Self::Small(val1) => Self::Small(val1 * other),
             Self::Big(val1) => Self::Big(Box::new(*val1 * BigInt::from(other))),
         }
     }
@@ -527,9 +527,9 @@ impl Div for Number {
 
     fn div(self, other: Self) -> Self {
         match self {
-            Self::Machine(val1) => match other {
-                Self::Machine(val2) => match val1.checked_div(&val2) {
-                    Some(v) => Self::Machine(v),
+            Self::Small(val1) => match other {
+                Self::Small(val2) => match val1.checked_div(&val2) {
+                    Some(v) => Self::Small(v),
                     None => {
                         let tuple1: (i64, i64) = val1.into();
                         let tuple2: (i64, i64) = val2.into();
@@ -551,7 +551,7 @@ impl Div for Number {
             },
             Self::Big(val1) => match other {
                 Self::Big(val2) => Self::Big(Box::new(*val1 / *val2)),
-                Self::Machine(val2) => {
+                Self::Small(val2) => {
                     let tuple: (i64, i64) = val2.into();
                     Self::Big(Box::new(
                         *val1 / BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1)),
@@ -574,9 +574,9 @@ impl Rem for Number {
 
     fn rem(self, other: Self) -> Self {
         match self {
-            Self::Machine(val1) => match other {
+            Self::Small(val1) => match other {
                 // todo: checked_rem for ratio?
-                Self::Machine(val2) => {
+                Self::Small(val2) => {
                     let tuple1: (i64, i64) = val1.into();
                     let tuple2: (i64, i64) = val2.into();
                     Self::Big(Box::new(
@@ -593,7 +593,7 @@ impl Rem for Number {
             },
             Self::Big(val1) => match other {
                 Self::Big(val2) => Self::Big(Box::new(*val1 % *val2)),
-                Self::Machine(val2) => {
+                Self::Small(val2) => {
                     let tuple: (i64, i64) = val2.into();
                     Self::Big(Box::new(
                         *val1 % BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1)),
@@ -616,7 +616,7 @@ impl Neg for Number {
 
     fn neg(self) -> Self {
         match self {
-            Self::Machine(v) => Self::Machine(-v),
+            Self::Small(v) => Self::Small(-v),
             Self::Big(v) => Self::Big(Box::new(-*v)),
         }
     }
