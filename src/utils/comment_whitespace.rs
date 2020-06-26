@@ -26,18 +26,13 @@ pub(crate) fn devour_whitespace<I: Iterator<Item = W>, W: IsWhitespace>(
     found_whitespace
 }
 
-pub(crate) fn peek_whitespace<I: Iterator<Item = W>, W: IsWhitespace>(
-    s: &mut PeekMoreIterator<I>,
-) -> usize {
-    let mut peek_counter = 0;
+pub(crate) fn peek_whitespace<I: Iterator<Item = W>, W: IsWhitespace>(s: &mut PeekMoreIterator<I>) {
     while let Some(w) = s.peek() {
         if !w.is_whitespace() {
             break;
         }
-        peek_counter += 1;
-        s.peek_forward(1);
+        s.advance_cursor();
     }
-    peek_counter
 }
 
 /// Eat tokens until a newline

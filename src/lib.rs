@@ -9,7 +9,7 @@ Spec progress as of 2020-06-22:
 
 ## Use as library
 ```
-fn main() -> Result<(), grass::Error> {
+fn main() -> Result<(), Box<grass::Error>> {
     let sass = grass::from_string("a { b { color: &; } }".to_string())?;
     assert_eq!(sass, "a b {\n  color: a b;\n}\n");
     Ok(())

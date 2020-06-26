@@ -14,8 +14,8 @@ impl<'a> Parser<'a> {
                 Err(..) => return Ok(false),
             };
         if peeked_identifier == ident {
-            self.toks.take(ident.chars().count()).for_each(drop);
-            self.toks.reset_cursor();
+            self.toks.truncate_iterator_to_cursor();
+            self.toks.next();
             return Ok(true);
         }
         self.toks.reset_cursor();
