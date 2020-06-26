@@ -134,7 +134,7 @@ fn raw_to_parse_error(map: &CodeMap, err: Error) -> Box<Error> {
 /// Write CSS to `buf`, constructed from a path
 ///
 /// ```
-/// fn main() -> Result<(), grass::Error> {
+/// fn main() -> Result<(), Box<grass::Error>> {
 ///     let sass = grass::from_path("input.scss")?;
 ///     Ok(())
 /// }
@@ -179,7 +179,7 @@ pub fn from_path(p: &str) -> Result<String> {
 /// Write CSS to `buf`, constructed from a string
 ///
 /// ```
-/// fn main() -> Result<(), grass::Error> {
+/// fn main() -> Result<(), Box<grass::Error>> {
 ///     let sass = grass::from_string("a { b { color: &; } }".to_string())?;
 ///     assert_eq!(sass, "a b {\n  color: a b;\n}\n");
 ///     Ok(())
