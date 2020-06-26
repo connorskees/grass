@@ -126,7 +126,7 @@ mod unit;
 mod utils;
 mod value;
 
-fn raw_to_parse_error(map: &CodeMap, err: Box<Error>) -> Box<Error> {
+fn raw_to_parse_error(map: &CodeMap, err: Error) -> Box<Error> {
     let (message, span) = err.raw();
     Box::new(Error::from_loc(message, map.look_up_span(span)))
 }
@@ -168,12 +168,12 @@ pub fn from_path(p: &str) -> Result<String> {
             extender: &mut extender,
         }
         .parse()
-        .map_err(|e| raw_to_parse_error(&map, e))?,
+        .map_err(|e| raw_to_parse_error(&map, *e))?,
         &mut extender,
     )
-    .map_err(|e| raw_to_parse_error(&map, e))?
+    .map_err(|e| raw_to_parse_error(&map, *e))?
     .pretty_print(&map, &mut extender)
-    .map_err(|e| raw_to_parse_error(&map, e))
+    .map_err(|e| raw_to_parse_error(&map, *e))
 }
 
 /// Write CSS to `buf`, constructed from a string
@@ -214,12 +214,12 @@ pub fn from_string(p: String) -> Result<String> {
             extender: &mut extender,
         }
         .parse()
-        .map_err(|e| raw_to_parse_error(&map, e))?,
+        .map_err(|e| raw_to_parse_error(&map, *e))?,
         &mut extender,
     )
-    .map_err(|e| raw_to_parse_error(&map, e))?
+    .map_err(|e| raw_to_parse_error(&map, *e))?
     .pretty_print(&map, &mut extender)
-    .map_err(|e| raw_to_parse_error(&map, e))
+    .map_err(|e| raw_to_parse_error(&map, *e))
 }
 
 #[cfg(feature = "wasm")]
@@ -250,10 +250,10 @@ pub fn from_string(p: String) -> std::result::Result<String, JsValue> {
             extender: &mut extender,
         }
         .parse()
-        .map_err(|e| raw_to_parse_error(&map, e).to_string())?,
+        .map_err(|e| raw_to_parse_error(&map, *e).to_string())?,
         &mut extender,
     )
-    .map_err(|e| raw_to_parse_error(&map, e).to_string())?
+    .map_err(|e| raw_to_parse_error(&map, *e).to_string())?
     .pretty_print(&map, &mut extender)
-    .map_err(|e| raw_to_parse_error(&map, e).to_string())?)
+    .map_err(|e| raw_to_parse_error(&map, *e).to_string())?)
 }

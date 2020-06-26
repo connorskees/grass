@@ -103,7 +103,7 @@ impl Css {
                             vals.push(Toplevel::Media { query, body })
                         }
                         Stmt::Supports(s) => {
-                            let SupportsRule { params, body, .. } = *s;
+                            let SupportsRule { params, body } = *s;
                             vals.push(Toplevel::Supports { params, body })
                         }
                         Stmt::UnknownAtRule(u) => {

@@ -353,7 +353,7 @@ impl Value {
             global_scope: parser.global_scope,
             super_selectors: parser.super_selectors,
             span_before: parser.span_before,
-            content: parser.content.clone(),
+            content: parser.content,
             in_mixin: parser.in_mixin,
             in_function: parser.in_function,
             in_control_flow: parser.in_control_flow,
