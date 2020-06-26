@@ -96,12 +96,12 @@ pub(crate) enum Unit {
     Percent,
 
     /// Unknown unit
-    Unknown(String),
+    Unknown(Box<str>),
     /// Unspecified unit
     None,
 
     /// Units multiplied together
-    Mul(Vec<Unit>),
+    Mul(Box<[Unit]>),
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub(crate) enum UnitKind {
@@ -193,7 +193,7 @@ impl From<String> for Unit {
             "dppx" => Unit::Dppx,
             "x" => Unit::X,
             "fr" => Unit::Fr,
-            _ => Unit::Unknown(unit),
+            _ => Unit::Unknown(unit.into_boxed_str()),
         }
     }
 }

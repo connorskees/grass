@@ -600,15 +600,19 @@ impl Value {
                         Value::Dimension(num * num2, unit2)
                     } else if unit2 == Unit::None {
                         Value::Dimension(num * num2, unit)
-                    } else if let Unit::Mul(mut u) = unit {
-                        u.push(unit2);
-                        Value::Dimension(num * num2, Unit::Mul(u))
+                    } else if let Unit::Mul(u) = unit {
+                        let mut unit1 = u.into_vec();
+                        unit1.push(unit2);
+                        Value::Dimension(num * num2, Unit::Mul(unit1.into_boxed_slice()))
                     } else if let Unit::Mul(u2) = unit2 {
                         let mut u = vec![unit];
-                        u.extend(u2);
-                        Value::Dimension(num * num2, Unit::Mul(u))
+                        u.append(&mut u2.into_vec());
+                        Value::Dimension(num * num2, Unit::Mul(u.into_boxed_slice()))
                     } else {
-                        Value::Dimension(num * num2, Unit::Mul(vec![unit, unit2]))
+                        Value::Dimension(
+                            num * num2,
+                            Unit::Mul(vec![unit, unit2].into_boxed_slice()),
+                        )
                     }
                 }
                 _ => {
