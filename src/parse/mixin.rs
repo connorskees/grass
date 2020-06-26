@@ -107,7 +107,7 @@ impl<'a> Parser<'a> {
             in_mixin: true,
             in_function: self.in_function,
             in_control_flow: self.in_control_flow,
-            content,
+            content: content.as_deref(),
             at_root: false,
             at_root_has_selector: self.at_root_has_selector,
             extender: self.extender,

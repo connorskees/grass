@@ -102,7 +102,7 @@ impl<'a> Parser<'a> {
             global_scope: self.global_scope,
             super_selectors: self.super_selectors,
             span_before: self.span_before,
-            content: self.content.clone(),
+            content: self.content,
             in_mixin: self.in_mixin,
             in_function: true,
             in_control_flow: self.in_control_flow,
