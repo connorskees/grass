@@ -427,11 +427,11 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
                 self.parser.toks.next();
                 if let Some(Token { kind: '*', .. }) = self.parser.toks.peek() {
                     self.parser.toks.next();
-                    SimpleSelector::Universal(Namespace::Other(name_or_namespace))
+                    SimpleSelector::Universal(Namespace::Other(name_or_namespace.into_boxed_str()))
                 } else {
                     SimpleSelector::Type(QualifiedName {
                         ident: self.parser.parse_identifier()?.node,
-                        namespace: Namespace::Other(name_or_namespace),
+                        namespace: Namespace::Other(name_or_namespace.into_boxed_str()),
                     })
                 }
             }

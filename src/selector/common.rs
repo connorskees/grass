@@ -10,7 +10,7 @@ use std::fmt;
 pub(crate) enum Namespace {
     Empty,
     Asterisk,
-    Other(String),
+    Other(Box<str>),
     None,
 }
 

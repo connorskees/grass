@@ -13,22 +13,19 @@ use crate::{
 };
 
 #[derive(Debug, Clone)]
+struct ToplevelUnknownAtRule {
+    name: String,
+    params: String,
+    body: Vec<Stmt>,
+}
+
+#[derive(Debug, Clone)]
 enum Toplevel {
     RuleSet(Selector, Vec<BlockEntry>),
     MultilineComment(String),
-    UnknownAtRule {
-        name: String,
-        params: String,
-        body: Vec<Stmt>,
-    },
-    Media {
-        query: String,
-        body: Vec<Stmt>,
-    },
-    Supports {
-        params: String,
-        body: Vec<Stmt>,
-    },
+    UnknownAtRule(Box<ToplevelUnknownAtRule>),
+    Media { query: String, body: Vec<Stmt> },
+    Supports { params: String, body: Vec<Stmt> },
     Newline,
     Style(Style),
 }
@@ -113,7 +110,11 @@ impl Css {
                             let UnknownAtRule {
                                 params, body, name, ..
                             } = *u;
-                            vals.push(Toplevel::UnknownAtRule { params, body, name })
+                            vals.push(Toplevel::UnknownAtRule(Box::new(ToplevelUnknownAtRule {
+                                params,
+                                body,
+                                name,
+                            })))
                         }
                         Stmt::Return(..) => unreachable!(),
                         Stmt::AtRoot { body } => body
@@ -138,7 +139,11 @@ impl Css {
                 let UnknownAtRule {
                     params, body, name, ..
                 } = *u;
-                vec![Toplevel::UnknownAtRule { params, name, body }]
+                vec![Toplevel::UnknownAtRule(Box::new(ToplevelUnknownAtRule {
+                    params,
+                    name,
+                    body,
+                }))]
             }
             Stmt::Return(..) => unreachable!("@return: {:?}", stmt),
             Stmt::AtRoot { .. } => unreachable!("@at-root: {:?}", stmt),
@@ -206,7 +211,8 @@ impl Css {
                     has_written = true;
                     writeln!(buf, "{}/*{}*/", padding, s)?;
                 }
-                Toplevel::UnknownAtRule { params, name, body } => {
+                Toplevel::UnknownAtRule(u) => {
+                    let ToplevelUnknownAtRule { params, name, body } = *u;
                     if should_emit_newline {
                         should_emit_newline = false;
                         writeln!(buf)?;

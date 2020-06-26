@@ -84,7 +84,7 @@ fn attribute_name(parser: &mut Parser<'_>, start: Span) -> SassResult<QualifiedN
     let ident = parser.parse_identifier()?.node;
     Ok(QualifiedName {
         ident,
-        namespace: Namespace::Other(name_or_namespace.node),
+        namespace: Namespace::Other(name_or_namespace.node.into_boxed_str()),
     })
 }
 
