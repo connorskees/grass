@@ -130,3 +130,16 @@ error!(
     denies_function_declaration_with_reserved_name,
     "@function url() {}", "Error: Invalid function name."
 );
+test!(
+    function_finds_outer_local_variable,
+    "a {
+        $a: red;
+    
+        @function foo() {
+            @return $a;
+        }
+    
+        color: foo();
+    }",
+    "a {\n  color: red;\n}\n"
+);
