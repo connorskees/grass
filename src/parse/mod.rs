@@ -237,12 +237,15 @@ impl<'a> Parser<'a> {
                 '!' | '{' => return Err(("expected \"}\".", *pos).into()),
                 _ => match self.is_selector_or_style()? {
                     SelectorOrStyle::Style(property, value) => {
-                        let styles = if let Some(value) = value {
-                            vec![Style { property, value }]
+                        if let Some(value) = value {
+                            stmts.push(Stmt::Style(Style { property, value }));
                         } else {
-                            self.parse_style_group(property)?
-                        };
-                        stmts.extend(styles.into_iter().map(Stmt::Style));
+                            stmts.extend(
+                                self.parse_style_group(property)?
+                                    .into_iter()
+                                    .map(Stmt::Style),
+                            );
+                        }
                     }
                     SelectorOrStyle::Selector(init) => {
                         let at_root = self.at_root;
