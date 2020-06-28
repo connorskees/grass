@@ -100,6 +100,8 @@ pub(crate) fn eat_number<I: Iterator<Item = Token>>(
 
             if times_ten.is_empty() && !times_ten_is_postive {
                 return Err(("Expected digit.", toks.peek().unwrap_or(&t).pos).into());
+            } else if times_ten.len() > 2 {
+                return Err(("Exponent too large.", toks.peek().unwrap_or(&t).pos).into());
             }
         }
         break;
