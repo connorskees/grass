@@ -296,7 +296,7 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
             _ => {
                 return Ok(SimpleSelector::Pseudo(Pseudo {
                     // todo: we can store the reference to this
-                    normalized_name: unvendor(&name.node).to_string(),
+                    normalized_name: unvendor(&name.node).to_string().into_boxed_str(),
                     is_class: !element && !is_fake_pseudo_element(&name),
                     name: name.node,
                     selector: None,
@@ -311,7 +311,7 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
 
         let unvendored = unvendor(&name);
 
-        let mut argument: Option<String> = None;
+        let mut argument: Option<Box<str>> = None;
         let mut selector: Option<SelectorList> = None;
 
         if element {
@@ -321,7 +321,7 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
                 self.parser.whitespace();
                 self.expect_closing_paren()?;
             } else {
-                argument = Some(self.declaration_value()?);
+                argument = Some(self.declaration_value()?.into_boxed_str());
             }
         } else if SELECTOR_PSEUDO_CLASSES.contains(&unvendored) {
             selector = Some(self.parse_selector_list()?);
@@ -342,13 +342,18 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
                 _ => {}
             }
             self.expect_closing_paren()?;
-            argument = Some(this_arg);
+            argument = Some(this_arg.into_boxed_str());
         } else {
-            argument = Some(self.declaration_value()?.trim_end().to_string());
+            argument = Some(
+                self.declaration_value()?
+                    .trim_end()
+                    .to_string()
+                    .into_boxed_str(),
+            );
         }
 
         Ok(SimpleSelector::Pseudo(Pseudo {
-            normalized_name: unvendor(&name.node).to_string(),
+            normalized_name: unvendor(&name.node).to_string().into_boxed_str(),
             is_class: !element && !is_fake_pseudo_element(&name),
             name: name.node,
             selector,

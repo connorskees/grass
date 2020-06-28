@@ -356,7 +356,7 @@ impl SimpleSelector {
                 ..
             }) = their_simple
             {
-                if SUBSELECTOR_PSEUDOS.contains(&normalized_name.as_str()) {
+                if SUBSELECTOR_PSEUDOS.contains(&&**normalized_name) {
                     return sel.components.iter().all(|complex| {
                         if complex.components.len() != 1 {
                             return false;
@@ -384,7 +384,7 @@ pub(crate) struct Pseudo {
     pub name: String,
 
     /// Like `name`, but without any vendor prefixes.
-    pub normalized_name: String,
+    pub normalized_name: Box<str>,
 
     /// Whether this is a pseudo-class selector.
     ///
@@ -404,7 +404,7 @@ pub(crate) struct Pseudo {
     ///
     /// This is `None` if there's no argument. If `argument` and `selector` are
     /// both non-`None`, the selector follows the argument.
-    pub argument: Option<String>,
+    pub argument: Option<Box<str>>,
 
     /// The selector argument passed to this selector.
     ///
@@ -488,7 +488,7 @@ impl Pseudo {
         parents: Option<Vec<ComplexSelectorComponent>>,
     ) -> bool {
         debug_assert!(self.selector.is_some());
-        match self.normalized_name.as_str() {
+        match &*self.normalized_name {
             "matches" | "any" => {
                 let pseudos = selector_pseudos_named(compound.clone(), &self.name, true);
                 pseudos.iter().any(move |pseudo2| {

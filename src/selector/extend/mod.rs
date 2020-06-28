@@ -597,7 +597,7 @@ impl Extender {
         // writing. We can keep them if either the original selector had a complex
         // selector, or the result of extending has only complex selectors, because
         // either way we aren't breaking anything that isn't already broken.
-        let mut complexes = if pseudo.normalized_name == "not"
+        let mut complexes = if &*pseudo.normalized_name == "not"
             && !pseudo
                 .selector
                 .clone()
@@ -643,7 +643,7 @@ impl Extender {
                     return vec![complex];
                 }
 
-                match pseudo.normalized_name.as_str() {
+                match &*pseudo.normalized_name {
                     "not" => {
                         // In theory, if there's a `:not` nested within another `:not`, the
                         // inner `:not`'s contents should be unified with the return value.
@@ -651,7 +651,7 @@ impl Extender {
                         // become `.foo:not(.bar)`. However, this is a narrow edge case and
                         // supporting it properly would make this code and the code calling it
                         // a lot more complicated, so it's not supported for now.
-                        if inner_pseudo.normalized_name == "matches" {
+                        if &*inner_pseudo.normalized_name == "matches" {
                             inner_pseudo.selector.clone().unwrap().components
                         } else {
                             Vec::new()
@@ -683,7 +683,8 @@ impl Extender {
         // Older browsers support `:not`, but only with a single complex selector.
         // In order to support those browsers, we break up the contents of a `:not`
         // unless it originally contained a selector list.
-        if pseudo.normalized_name == "not" && pseudo.selector.clone().unwrap().components.len() == 1
+        if &*pseudo.normalized_name == "not"
+            && pseudo.selector.clone().unwrap().components.len() == 1
         {
             let result = complexes
                 .into_iter()
