@@ -129,23 +129,5 @@ impl Scope {
         self.functions.contains_key(&name)
             || global_scope.fn_exists_no_global(&name)
             || GLOBAL_FUNCTIONS.contains_key(name.clone().into_inner().as_str())
-            // special functions not in the `GLOBAL_FUNCTIONS` map
-            || matches!(
-                name.into_inner().as_str(),
-                "function-exists"
-                    | "content-exists"
-                    | "mixin-exists"
-                    | "variable-exists"
-                    | "global-variable-exists"
-                    | "get-function"
-                    | "call"
-            )
-    }
-
-    #[allow(dead_code)]
-    pub fn extend(&mut self, other: Scope) {
-        self.vars.extend(other.vars);
-        self.mixins.extend(other.mixins);
-        self.functions.extend(other.functions);
     }
 }
