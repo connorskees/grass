@@ -333,14 +333,6 @@ impl<'a> Parser<'a> {
             return Err(("expected \"{\".", span).into());
         }
 
-        while let Some(c) = string.pop() {
-            if c == ' ' || c == ',' || c == '\t' {
-                continue;
-            }
-            string.push(c);
-            break;
-        }
-
         let sel_toks: Vec<Token> = string.chars().map(|x| Token::new(span, x)).collect();
 
         let mut iter = sel_toks.into_iter().peekmore();

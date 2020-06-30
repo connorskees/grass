@@ -654,6 +654,11 @@ test!(
     ":nth-child(odd) {\n  color: :nth-child(odd);\n}\n"
 );
 test!(
+    escaped_space_at_end_of_selector_immediately_after_pseudo_color,
+    "a color:\\  {\n  color: &;\n}\n",
+    "a color:\\  {\n  color: a color:\\ ;\n}\n"
+);
+test!(
     super_selector_is_null_when_at_root,
     "@mixin foo {\n    #{if(&, 'true', 'false')} {\n        color: red;\n    }\n}\n\n@include foo;\n\na {\n    @include foo;\n}\n",
     "false {\n  color: red;\n}\n\na true {\n  color: red;\n}\n"

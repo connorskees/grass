@@ -587,10 +587,10 @@ fn unvendor(name: &str) -> &str {
 /// with pseudo-class syntax (`:before`, `:after`, `:first-line`, or
 /// `:first-letter`)
 fn is_fake_pseudo_element(name: &str) -> bool {
-    match name.as_bytes()[0] {
-        b'a' | b'A' => name.to_ascii_lowercase() == "after",
-        b'b' | b'B' => name.to_ascii_lowercase() == "before",
-        b'f' | b'F' => match name.to_ascii_lowercase().as_str() {
+    match name.as_bytes().get(0) {
+        Some(b'a') | Some(b'A') => name.to_ascii_lowercase() == "after",
+        Some(b'b') | Some(b'B') => name.to_ascii_lowercase() == "before",
+        Some(b'f') | Some(b'F') => match name.to_ascii_lowercase().as_str() {
             "first-line" | "first-letter" => true,
             _ => false,
         },
