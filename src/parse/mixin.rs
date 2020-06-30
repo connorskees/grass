@@ -2,6 +2,8 @@ use std::mem;
 
 use codemap::Spanned;
 
+use peekmore::PeekMore;
+
 use crate::{
     args::{CallArgs, FuncArgs},
     atrule::Mixin,
@@ -97,7 +99,7 @@ impl<'a> Parser<'a> {
         self.eval_mixin_args(&mut mixin, args)?;
 
         let body = Parser {
-            toks: &mut mixin.body,
+            toks: &mut mixin.body.into_iter().peekmore(),
             map: self.map,
             path: self.path,
             scopes: &mut NeverEmptyVec::new(mixin.scope),
