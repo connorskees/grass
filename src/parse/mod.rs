@@ -1066,7 +1066,7 @@ impl<'a> Parser<'a> {
             at_root_has_selector: self.at_root_has_selector,
             extender: self.extender,
         }
-        .parse()?;
+        .parse_stmt()?;
 
         let mut rules = Vec::with_capacity(raw_body.len());
         let mut body = Vec::new();

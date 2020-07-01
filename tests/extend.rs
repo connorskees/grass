@@ -1360,7 +1360,6 @@ test!(
     ".bar {\n  a: b;\n}\n"
 );
 test!(
-    #[ignore = "media queries are not yet parsed correctly"]
     media_inside_placeholder,
     "%foo {bar {@media screen {a {b: c}}}}
     .baz {c: d}
