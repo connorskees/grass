@@ -40,3 +40,24 @@ test!(
     }",
     "a {\n  color: false;\n  color: false;\n}\n"
 );
+test!(
+    variable_redeclarations_propagate_to_outer_scopes,
+    "
+    a {
+        $a: red;
+        b {
+            $a: blue;
+            c {
+                d {
+                    $a: orange;
+                    color: $a;
+                }
+                color: $a;
+            }
+            color: $a;
+        }
+        color: $a;
+    }
+    ",
+    "a {\n  color: orange;\n}\na b {\n  color: orange;\n}\na b c {\n  color: orange;\n}\na b c d {\n  color: orange;\n}\n"
+);
