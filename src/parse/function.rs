@@ -1,5 +1,3 @@
-use std::mem;
-
 use codemap::Spanned;
 use peekmore::PeekMore;
 
@@ -91,14 +89,21 @@ impl<'a> Parser<'a> {
         Ok(Box::new(v.node))
     }
 
-    pub fn eval_function(&mut self, mut function: Function, args: CallArgs) -> SassResult<Value> {
-        self.eval_fn_args(&mut function, args)?;
+    pub fn eval_function(&mut self, function: Function, args: CallArgs) -> SassResult<Value> {
+        let Function {
+            mut scope,
+            body,
+            args: fn_args,
+            ..
+        } = function;
+
+        self.eval_args(fn_args, args, &mut scope)?;
 
         let mut return_value = Parser {
-            toks: &mut function.body.into_iter().peekmore(),
+            toks: &mut body.into_iter().peekmore(),
             map: self.map,
             path: self.path,
-            scopes: &mut NeverEmptyVec::new(function.scope),
+            scopes: &mut NeverEmptyVec::new(scope),
             global_scope: self.global_scope,
             super_selectors: self.super_selectors,
             span_before: self.span_before,
@@ -120,40 +125,5 @@ impl<'a> Parser<'a> {
             Stmt::Return(v) => Ok(*v),
             _ => todo!("should be unreachable"),
         }
-    }
-
-    fn eval_fn_args(&mut self, function: &mut Function, mut args: CallArgs) -> SassResult<()> {
-        self.scopes.push(self.scopes.last().clone());
-        for (idx, arg) in function.args.0.iter_mut().enumerate() {
-            if arg.is_variadic {
-                let span = args.span();
-                let arg_list = Value::ArgList(self.variadic_args(args)?);
-                function.scope.insert_var(
-                    arg.name.clone(),
-                    Spanned {
-                        node: arg_list,
-                        span,
-                    },
-                )?;
-                break;
-            }
-            let val = match args.get(idx, arg.name.clone()) {
-                Some(v) => self.parse_value_from_vec(v)?,
-                None => match arg.default.as_mut() {
-                    Some(v) => self.parse_value_from_vec(mem::take(v))?,
-                    None => {
-                        return Err(
-                            (format!("Missing argument ${}.", &arg.name), args.span()).into()
-                        )
-                    }
-                },
-            };
-            self.scopes
-                .last_mut()
-                .insert_var(arg.name.clone(), val.clone())?;
-            function.scope.insert_var(mem::take(&mut arg.name), val)?;
-        }
-        self.scopes.pop();
-        Ok(())
     }
 }

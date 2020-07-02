@@ -5,6 +5,7 @@ use codemap::{Span, Spanned};
 use crate::{
     args::{CallArg, CallArgs, FuncArg, FuncArgs},
     error::SassResult,
+    scope::Scope,
     utils::{read_until_closing_paren, read_until_closing_quote, read_until_closing_square_brace},
     value::Value,
     Token,
@@ -297,5 +298,46 @@ impl<'a> Parser<'a> {
             vals.push(self.parse_value_from_vec(arg.1)?.node.eval(span)?);
         }
         Ok(vals)
+    }
+
+    pub(super) fn eval_args(
+        &mut self,
+        mut fn_args: FuncArgs,
+        mut args: CallArgs,
+        scope: &mut Scope,
+    ) -> SassResult<()> {
+        self.scopes.push(self.scopes.last().clone());
+        for (idx, arg) in fn_args.0.iter_mut().enumerate() {
+            if arg.is_variadic {
+                let span = args.span();
+                // todo: does this get the most recent scope?
+                let arg_list = Value::ArgList(self.variadic_args(args)?);
+                scope.insert_var(
+                    arg.name.clone(),
+                    Spanned {
+                        node: arg_list,
+                        span,
+                    },
+                )?;
+                break;
+            }
+            let val = match args.get(idx, arg.name.clone()) {
+                Some(v) => self.parse_value_from_vec(v)?,
+                None => match arg.default.as_mut() {
+                    Some(v) => self.parse_value_from_vec(mem::take(v))?,
+                    None => {
+                        return Err(
+                            (format!("Missing argument ${}.", &arg.name), args.span()).into()
+                        )
+                    }
+                },
+            };
+            self.scopes
+                .last_mut()
+                .insert_var(arg.name.clone(), val.clone())?;
+            scope.insert_var(mem::take(&mut arg.name), val)?;
+        }
+        self.scopes.pop();
+        Ok(())
     }
 }
