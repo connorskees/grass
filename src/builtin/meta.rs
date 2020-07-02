@@ -249,8 +249,7 @@ fn content_exists(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
         parser
             .content
             .last()
-            .map(|c| c.content.is_some())
-            .unwrap_or(false),
+            .map_or(false, |c| c.content.is_some())
     ))
 }
 
