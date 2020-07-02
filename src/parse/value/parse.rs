@@ -19,15 +19,14 @@ use crate::{
         peek_until_closing_curly_brace, peek_whitespace, read_until_char, read_until_closing_paren,
         read_until_closing_square_brace, IsWhitespace,
     },
-    value::Value,
-    value::{Number, SassMap},
+    value::{Number, SassMap, Value},
     Token,
 };
 
-use super::Parser;
+use super::super::Parser;
 
 impl<'a> Parser<'a> {
-    pub(super) fn parse_value(&mut self) -> SassResult<Spanned<Value>> {
+    pub(crate) fn parse_value(&mut self) -> SassResult<Spanned<Value>> {
         self.whitespace();
         let span = match self.toks.peek() {
             Some(Token { pos, .. }) => *pos,
@@ -142,7 +141,7 @@ impl<'a> Parser<'a> {
         })
     }
 
-    pub(super) fn parse_value_from_vec(&mut self, toks: Vec<Token>) -> SassResult<Spanned<Value>> {
+    pub(crate) fn parse_value_from_vec(&mut self, toks: Vec<Token>) -> SassResult<Spanned<Value>> {
         Parser {
             toks: &mut toks.into_iter().peekmore(),
             map: self.map,
