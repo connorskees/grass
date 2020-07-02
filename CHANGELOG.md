@@ -2,6 +2,9 @@
 
 - implement builtin functions `min` and `max`
 - bugfixes for `@extend` and `selector-unify`
+- allow `@content` to take arguments
+- various optimizations, improving performance by around 10% (and resolving performance regressions due to `@extend`)
+- bugfixes for `@media`
 
 # 0.9.1
 
