@@ -286,6 +286,43 @@ test!(
     }",
     "a {\n  color: red;\n}\n"
 );
+test!(
+    multiple_content_using_different_args,
+    "@mixin foo {
+        @content(1);
+        @content(2);
+    }
+
+    @mixin bar {
+        @include foo using ($a) {
+            color: $a
+        }
+    }
+
+    a {
+        @include bar;
+    }",
+    "a {\n  color: 1;\n  color: 2;\n}\n"
+);
+test!(
+    chained_content,
+    "@mixin foo {
+        @content;
+    }
+
+    @mixin bar {
+        @include foo {
+            @content;
+        }
+    }
+
+    a {
+        @include bar {
+            color: red;
+        }
+    }",
+    "a {\n  color: red;\n}\n"
+);
 error!(
     content_using_too_many_args,
     "@mixin foo {

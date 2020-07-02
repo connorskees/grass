@@ -113,6 +113,11 @@ impl<'a> Parser<'a> {
         } = self.scopes.last().get_mixin(name, self.global_scope)?;
         self.eval_args(fn_args, args, &mut scope)?;
 
+        self.content.push(Content {
+            content,
+            content_args,
+        });
+
         let body = Parser {
             toks: &mut body.into_iter().peekmore(),
             map: self.map,
@@ -124,15 +129,14 @@ impl<'a> Parser<'a> {
             in_mixin: true,
             in_function: self.in_function,
             in_control_flow: self.in_control_flow,
-            content: &Content {
-                content,
-                content_args,
-            },
+            content: self.content,
             at_root: false,
             at_root_has_selector: self.at_root_has_selector,
             extender: self.extender,
         }
         .parse()?;
+
+        self.content.pop();
 
         Ok(body)
     }
@@ -143,7 +147,9 @@ impl<'a> Parser<'a> {
             if let Some(Token { kind: '(', .. }) = self.toks.peek() {
                 self.toks.next();
                 let args = self.parse_call_args()?;
-                if let Some(content_args) = self.content.content_args.clone() {
+                if let Some(Some(content_args)) =
+                    self.content.last().map(|v| v.content_args.clone())
+                {
                     args.max_args(content_args.len())?;
 
                     self.eval_args(content_args, args, &mut scope)?;
@@ -152,24 +158,30 @@ impl<'a> Parser<'a> {
                 }
             }
 
-            Ok(if let Some(content) = &self.content.content {
-                Parser {
-                    toks: &mut content.to_vec().into_iter().peekmore(),
-                    map: self.map,
-                    path: self.path,
-                    scopes: &mut NeverEmptyVec::new(scope),
-                    global_scope: self.global_scope,
-                    super_selectors: self.super_selectors,
-                    span_before: self.span_before,
-                    in_mixin: false,
-                    in_function: self.in_function,
-                    in_control_flow: self.in_control_flow,
-                    content: self.content,
-                    at_root: false,
-                    at_root_has_selector: self.at_root_has_selector,
-                    extender: self.extender,
-                }
-                .parse()?
+            Ok(if let Some(content) = &self.content.pop() {
+                let stmts = if let Some(body) = content.content.clone() {
+                    Parser {
+                        toks: &mut body.into_iter().peekmore(),
+                        map: self.map,
+                        path: self.path,
+                        scopes: &mut NeverEmptyVec::new(scope),
+                        global_scope: self.global_scope,
+                        super_selectors: self.super_selectors,
+                        span_before: self.span_before,
+                        in_mixin: self.in_mixin,
+                        in_function: self.in_function,
+                        in_control_flow: self.in_control_flow,
+                        content: self.content,
+                        at_root: self.at_root,
+                        at_root_has_selector: self.at_root_has_selector,
+                        extender: self.extender,
+                    }
+                    .parse()?
+                } else {
+                    Vec::new()
+                };
+                self.content.push(content.clone());
+                stmts
             } else {
                 Vec::new()
             })

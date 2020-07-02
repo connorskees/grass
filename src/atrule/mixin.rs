@@ -24,6 +24,7 @@ impl Mixin {
     }
 }
 
+#[derive(Debug, Clone)]
 pub(crate) struct Content {
     pub content: Option<Vec<Token>>,
     pub content_args: Option<FuncArgs>,

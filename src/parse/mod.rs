@@ -70,7 +70,7 @@ pub(crate) struct Parser<'a> {
     pub scopes: &'a mut NeverEmptyVec<Scope>,
     pub super_selectors: &'a mut NeverEmptyVec<Selector>,
     pub span_before: Span,
-    pub content: &'a Content,
+    pub content: &'a mut Vec<Content>,
     pub in_mixin: bool,
     pub in_function: bool,
     pub in_control_flow: bool,

@@ -33,6 +33,22 @@ test!(
     "@mixin foo {\n    color: content-exists();\n    @content;\n}\n\na {\n    @include foo{color: red};\n}\n",
     "a {\n  color: true;\n  color: red;\n}\n"
 );
+test!(
+    chained_mixin_second_doesnt_have_content,
+    "@mixin foo {
+        color: content-exists();
+    }
+
+    @mixin bar {
+        @include foo;
+        @content;
+    }
+
+    a {
+        @include bar {}
+    }",
+    "a {\n  color: false;\n}\n"
+);
 error!(
     #[ignore = "haven't yet figured out a good way to check for whether an @content block exists"]
     include_empty_braces_no_args_no_at_content,
