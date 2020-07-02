@@ -125,7 +125,7 @@ impl<'a> Parser<'a> {
     }
 
     pub(super) fn parse_call_args(&mut self) -> SassResult<CallArgs> {
-        let mut args: HashMap<CallArg, Vec<Token>> = HashMap::new();
+        let mut args = HashMap::new();
         self.whitespace_or_comment();
         let mut name = String::new();
         let mut val: Vec<Token> = Vec::new();
@@ -176,7 +176,10 @@ impl<'a> Parser<'a> {
                             } else {
                                 CallArg::Named(name.into())
                             },
-                            val,
+                            {
+                                let val = self.parse_value_from_vec(val)?;
+                                val.node.eval(val.span)?
+                            },
                         );
                         span = span.merge(tok.pos());
                         return Ok(CallArgs(args, span));
@@ -204,7 +207,10 @@ impl<'a> Parser<'a> {
                 } else {
                     CallArg::Named(name.as_str().into())
                 },
-                mem::take(&mut val),
+                {
+                    let val = self.parse_value_from_vec(mem::take(&mut val))?;
+                    val.node.eval(val.span)?
+                },
             );
             self.whitespace();
 
@@ -222,11 +228,7 @@ impl<'a> Parser<'a> {
         position: usize,
         name: &'static str,
     ) -> SassResult<Value> {
-        Ok(self
-            .parse_value_from_vec(args.get_err(position, name)?)?
-            .node
-            .eval(args.span())?
-            .node)
+        Ok(args.get_err(position, name)?.node)
     }
 
     pub fn default_arg(
@@ -237,12 +239,7 @@ impl<'a> Parser<'a> {
         default: Value,
     ) -> SassResult<Value> {
         Ok(match args.get(position, name) {
-            Some(toks) => {
-                self.parse_value_from_vec(toks)?
-                    .node
-                    .eval(args.span())?
-                    .node
-            }
+            Some(val) => val.node,
             None => default,
         })
     }
@@ -251,17 +248,13 @@ impl<'a> Parser<'a> {
         &mut self,
         args: &mut CallArgs,
         position: usize,
-    ) -> Option<SassResult<Spanned<Value>>> {
-        Some(self.parse_value_from_vec(args.get_positional(position)?))
+    ) -> Option<Spanned<Value>> {
+        args.get_positional(position)
     }
 
     #[allow(dead_code)]
-    fn named_arg(
-        &mut self,
-        args: &mut CallArgs,
-        name: &'static str,
-    ) -> Option<SassResult<Spanned<Value>>> {
-        Some(self.parse_value_from_vec(args.get_named(name)?))
+    fn named_arg(&mut self, args: &mut CallArgs, name: &'static str) -> Option<Spanned<Value>> {
+        args.get_named(name)
     }
 
     pub fn default_named_arg(
@@ -271,31 +264,25 @@ impl<'a> Parser<'a> {
         default: Value,
     ) -> SassResult<Value> {
         Ok(match args.get_named(name) {
-            Some(toks) => {
-                self.parse_value_from_vec(toks)?
-                    .node
-                    .eval(args.span())?
-                    .node
-            }
+            Some(val) => val.node,
             None => default,
         })
     }
 
     pub fn variadic_args(&mut self, args: CallArgs) -> SassResult<Vec<Spanned<Value>>> {
         let mut vals = Vec::new();
-        let span = args.span();
         let mut args = match args
             .0
             .into_iter()
             .map(|(a, v)| Ok((a.position()?, v)))
-            .collect::<Result<Vec<(usize, Vec<Token>)>, String>>()
+            .collect::<Result<Vec<(usize, Spanned<Value>)>, String>>()
         {
             Ok(v) => v,
             Err(e) => return Err((format!("No argument named ${}.", e), args.1).into()),
         };
         args.sort_by(|(a1, _), (a2, _)| a1.cmp(a2));
         for arg in args {
-            vals.push(self.parse_value_from_vec(arg.1)?.node.eval(span)?);
+            vals.push(arg.1);
         }
         Ok(vals)
     }
@@ -322,9 +309,12 @@ impl<'a> Parser<'a> {
                 break;
             }
             let val = match args.get(idx, arg.name.clone()) {
-                Some(v) => self.parse_value_from_vec(v)?,
+                Some(v) => v,
                 None => match arg.default.as_mut() {
-                    Some(v) => self.parse_value_from_vec(mem::take(v))?,
+                    Some(v) => {
+                        let val = self.parse_value_from_vec(mem::take(v))?;
+                        val.node.eval(val.span)?
+                    }
                     None => {
                         return Err(
                             (format!("Missing argument ${}.", &arg.name), args.span()).into()

@@ -6,6 +6,7 @@ use crate::{
     common::Identifier,
     error::SassResult,
     parse::Parser,
+    value::Value,
     {Cow, Token},
 };
 
@@ -35,7 +36,7 @@ impl FuncArgs {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct CallArgs(pub HashMap<CallArg, Vec<Token>>, pub Span);
+pub(crate) struct CallArgs(pub HashMap<CallArg, Spanned<Value>>, pub Span);
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub(crate) enum CallArg {
@@ -100,25 +101,25 @@ impl CallArgs {
     /// Get argument by name
     ///
     /// Removes the argument
-    pub fn get_named<T: Into<Identifier>>(&mut self, val: T) -> Option<Vec<Token>> {
+    pub fn get_named<T: Into<Identifier>>(&mut self, val: T) -> Option<Spanned<Value>> {
         self.0.remove(&CallArg::Named(val.into()))
     }
 
     /// Get a positional argument by 0-indexed position
     ///
     /// Removes the argument
-    pub fn get_positional(&mut self, val: usize) -> Option<Vec<Token>> {
+    pub fn get_positional(&mut self, val: usize) -> Option<Spanned<Value>> {
         self.0.remove(&CallArg::Positional(val))
     }
 
-    pub fn get<T: Into<Identifier>>(&mut self, position: usize, name: T) -> Option<Vec<Token>> {
+    pub fn get<T: Into<Identifier>>(&mut self, position: usize, name: T) -> Option<Spanned<Value>> {
         match self.get_named(name) {
             Some(v) => Some(v),
             None => self.get_positional(position),
         }
     }
 
-    pub fn get_err(&mut self, position: usize, name: &'static str) -> SassResult<Vec<Token>> {
+    pub fn get_err(&mut self, position: usize, name: &'static str) -> SassResult<Spanned<Value>> {
         match self.get_named(name) {
             Some(v) => Ok(v),
             None => match self.get_positional(position) {
