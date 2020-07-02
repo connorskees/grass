@@ -23,3 +23,17 @@ impl Mixin {
         }
     }
 }
+
+pub(crate) struct Content {
+    pub content: Option<Vec<Token>>,
+    pub content_args: Option<FuncArgs>,
+}
+
+impl Content {
+    pub const fn new() -> Self {
+        Self {
+            content: None,
+            content_args: None,
+        }
+    }
+}

@@ -4,6 +4,7 @@ use codemap::Spanned;
 
 use crate::{value::Value, Token};
 
+#[derive(Debug, Clone)]
 pub(crate) struct NeverEmptyVec<T> {
     first: T,
     rest: Vec<T>,

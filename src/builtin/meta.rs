@@ -245,7 +245,7 @@ fn content_exists(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
         )
             .into());
     }
-    Ok(Value::bool(parser.content.is_some()))
+    Ok(Value::bool(parser.content.content.is_some()))
 }
 
 pub(crate) fn declare(f: &mut GlobalFunctionMap) {

@@ -115,6 +115,7 @@ impl<'a> Parser<'a> {
             self.whitespace();
         }
         self.whitespace();
+        // TODO: this should NOT eat the opening curly brace
         match self.toks.next() {
             Some(v) if v.kind == '{' => {}
             Some(..) | None => return Err(("expected \"{\".", close_paren_span).into()),

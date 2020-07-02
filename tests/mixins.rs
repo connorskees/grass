@@ -247,3 +247,68 @@ test!(
     "@mixin foo {}\n\na {\n    $a: red;\n    @include foo;\n    color: $a;\n}\n",
     "a {\n  color: red;\n}\n"
 );
+test!(
+    empty_content_args,
+    "@mixin foo {
+        @content()
+    }
+
+    a {
+        @include foo {
+            color: red;
+        };
+    }",
+    "a {\n  color: red;\n}\n"
+);
+test!(
+    empty_content_args_using_empty_args,
+    "@mixin foo {
+        @content()
+    }
+
+    a {
+        @include foo using () {
+            color: red;
+        };
+    }",
+    "a {\n  color: red;\n}\n"
+);
+test!(
+    content_using_one_arg,
+    "@mixin foo {
+        @content(red)
+    }
+
+    a {
+        @include foo using ($a) {
+            color: $a;
+        }
+    }",
+    "a {\n  color: red;\n}\n"
+);
+error!(
+    content_using_too_many_args,
+    "@mixin foo {
+        @content(red, blue)
+    }
+
+    a {
+        @include foo using ($a) {
+            color: $a;
+        }
+    }",
+    "Error: Only 1 argument allowed, but 2 were passed."
+);
+error!(
+    content_using_too_few_args,
+    "@mixin foo {
+        @content()
+    }
+
+    a {
+        @include foo using ($a) {
+            color: $a;
+        }
+    }",
+    "Error: Missing argument $a."
+);

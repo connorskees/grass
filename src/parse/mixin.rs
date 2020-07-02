@@ -6,8 +6,9 @@ use peekmore::PeekMore;
 
 use crate::{
     args::{CallArgs, FuncArgs},
-    atrule::Mixin,
+    atrule::{Content, Mixin},
     error::SassResult,
+    scope::Scope,
     utils::read_until_closing_curly_brace,
     value::Value,
     Token,
@@ -58,58 +59,79 @@ impl<'a> Parser<'a> {
 
         self.whitespace_or_comment();
 
-        let mut has_content = false;
-
-        let args = match self.toks.next() {
-            Some(Token { kind: ';', .. }) => CallArgs::new(name.span),
-            Some(Token { kind: '(', .. }) => {
-                let tmp = self.parse_call_args()?;
-                self.whitespace_or_comment();
-                if let Some(tok) = self.toks.peek() {
-                    match tok.kind {
-                        ';' => {
-                            self.toks.next();
-                        }
-                        '{' => {
-                            self.toks.next();
-                            has_content = true
-                        }
-                        _ => {}
-                    }
-                }
-                tmp
-            }
-            Some(Token { kind: '{', .. }) => {
-                has_content = true;
-                CallArgs::new(name.span)
-            }
-            Some(Token { pos, .. }) => return Err(("expected \"{\".", pos).into()),
-            None => return Err(("expected \"{\".", name.span).into()),
+        let args = if let Some(Token { kind: '(', .. }) = self.toks.peek() {
+            self.toks.next();
+            self.parse_call_args()?
+        } else {
+            CallArgs::new(name.span)
         };
 
-        self.whitespace();
+        self.whitespace_or_comment();
 
-        let content = if has_content {
-            Some(self.parse_content()?)
+        let content_args = if let Some(Token { kind: 'u', .. }) | Some(Token { kind: 'U', .. }) =
+            self.toks.peek()
+        {
+            let mut ident = self.parse_identifier_no_interpolation(false)?;
+            ident.node.make_ascii_lowercase();
+            if ident.node == "using" {
+                self.whitespace_or_comment();
+                if !matches!(self.toks.next(), Some(Token { kind: '(', .. })) {
+                    return Err(("expected \"(\".", ident.span).into());
+                }
+
+                Some(self.parse_func_args()?)
+            } else {
+                return Err(("expected keyword \"using\".", ident.span).into());
+            }
         } else {
             None
         };
 
-        let mut mixin = self.scopes.last().get_mixin(name, self.global_scope)?;
-        self.eval_mixin_args(&mut mixin, args)?;
+        self.whitespace_or_comment();
+
+        let content = if content_args.is_some()
+            || matches!(self.toks.peek(), Some(Token { kind: '{', .. }))
+        {
+            if matches!(self.toks.peek(), Some(Token { kind: '{', .. })) {
+                self.toks.next();
+            }
+            let mut toks = read_until_closing_curly_brace(self.toks)?;
+            if let Some(tok) = self.toks.peek() {
+                toks.push(*tok);
+                self.toks.next();
+            }
+            Some(toks)
+        } else {
+            None
+        };
+
+        if let Some(Token { kind: ';', .. }) = self.toks.peek() {
+            self.toks.next();
+        }
+
+        let Mixin {
+            mut scope,
+            body,
+            args: fn_args,
+            ..
+        } = self.scopes.last().get_mixin(name, self.global_scope)?;
+        self.eval_args(fn_args, args, &mut scope)?;
 
         let body = Parser {
-            toks: &mut mixin.body.into_iter().peekmore(),
+            toks: &mut body.into_iter().peekmore(),
             map: self.map,
             path: self.path,
-            scopes: &mut NeverEmptyVec::new(mixin.scope),
+            scopes: &mut NeverEmptyVec::new(scope),
             global_scope: self.global_scope,
             super_selectors: self.super_selectors,
             span_before: self.span_before,
             in_mixin: true,
             in_function: self.in_function,
             in_control_flow: self.in_control_flow,
-            content: content.as_deref(),
+            content: &Content {
+                content,
+                content_args,
+            },
             at_root: false,
             at_root_has_selector: self.at_root_has_selector,
             extender: self.extender,
@@ -119,18 +141,64 @@ impl<'a> Parser<'a> {
         Ok(body)
     }
 
-    pub(super) fn parse_content(&mut self) -> SassResult<Vec<Stmt>> {
-        self.parse_stmt()
+    pub(super) fn parse_content_rule(&mut self) -> SassResult<Vec<Stmt>> {
+        if self.in_mixin {
+            let mut scope = self.scopes.last().clone();
+            if let Some(Token { kind: '(', .. }) = self.toks.peek() {
+                self.toks.next();
+                let args = self.parse_call_args()?;
+                if let Some(content_args) = self.content.content_args.clone() {
+                    args.max_args(content_args.len())?;
+
+                    self.eval_args(content_args, args, &mut scope)?;
+                } else {
+                    args.max_args(0)?;
+                }
+            }
+
+            Ok(if let Some(content) = &self.content.content {
+                Parser {
+                    toks: &mut content.to_vec().into_iter().peekmore(),
+                    map: self.map,
+                    path: self.path,
+                    scopes: &mut NeverEmptyVec::new(scope),
+                    global_scope: self.global_scope,
+                    super_selectors: self.super_selectors,
+                    span_before: self.span_before,
+                    in_mixin: false,
+                    in_function: self.in_function,
+                    in_control_flow: self.in_control_flow,
+                    content: self.content,
+                    at_root: false,
+                    at_root_has_selector: self.at_root_has_selector,
+                    extender: self.extender,
+                }
+                .parse()?
+            } else {
+                Vec::new()
+            })
+        } else {
+            Err((
+                "@content is only allowed within mixin declarations.",
+                self.span_before,
+            )
+                .into())
+        }
     }
 
-    fn eval_mixin_args(&mut self, mixin: &mut Mixin, mut args: CallArgs) -> SassResult<()> {
+    fn eval_args(
+        &mut self,
+        mut fn_args: FuncArgs,
+        mut args: CallArgs,
+        scope: &mut Scope,
+    ) -> SassResult<()> {
         self.scopes.push(self.scopes.last().clone());
-        for (idx, arg) in mixin.args.0.iter_mut().enumerate() {
+        for (idx, arg) in fn_args.0.iter_mut().enumerate() {
             if arg.is_variadic {
                 let span = args.span();
                 // todo: does this get the most recent scope?
                 let arg_list = Value::ArgList(self.variadic_args(args)?);
-                mixin.scope.insert_var(
+                scope.insert_var(
                     arg.name.clone(),
                     Spanned {
                         node: arg_list,
@@ -153,7 +221,7 @@ impl<'a> Parser<'a> {
             self.scopes
                 .last_mut()
                 .insert_var(arg.name.clone(), val.clone())?;
-            mixin.scope.insert_var(mem::take(&mut arg.name), val)?;
+            scope.insert_var(mem::take(&mut arg.name), val)?;
         }
         self.scopes.pop();
         Ok(())

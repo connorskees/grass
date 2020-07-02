@@ -5,7 +5,7 @@ use num_traits::cast::ToPrimitive;
 use peekmore::{PeekMore, PeekMoreIterator};
 
 use crate::{
-    atrule::{media::MediaRule, AtRuleKind, SupportsRule, UnknownAtRule},
+    atrule::{media::MediaRule, AtRuleKind, Content, SupportsRule, UnknownAtRule},
     common::{Brackets, ListSeparator},
     error::SassResult,
     scope::Scope,
@@ -70,7 +70,7 @@ pub(crate) struct Parser<'a> {
     pub scopes: &'a mut NeverEmptyVec<Scope>,
     pub super_selectors: &'a mut NeverEmptyVec<Selector>,
     pub span_before: Span,
-    pub content: Option<&'a [Stmt]>,
+    pub content: &'a Content,
     pub in_mixin: bool,
     pub in_function: bool,
     pub in_control_flow: bool,
@@ -111,19 +111,7 @@ impl<'a> Parser<'a> {
                     match AtRuleKind::try_from(&kind_string)? {
                         AtRuleKind::Import => stmts.append(&mut self.import()?),
                         AtRuleKind::Mixin => self.parse_mixin()?,
-                        AtRuleKind::Content => {
-                            if self.in_mixin {
-                                if let Some(content) = &self.content {
-                                    stmts.extend_from_slice(content);
-                                }
-                            } else {
-                                return Err((
-                                    "@content is only allowed within mixin declarations.",
-                                    kind_string.span,
-                                )
-                                    .into());
-                            }
-                        }
+                        AtRuleKind::Content => stmts.append(&mut self.parse_content_rule()?),
                         AtRuleKind::Include => stmts.append(&mut self.parse_include()?),
                         AtRuleKind::Function => self.parse_function()?,
                         AtRuleKind::Return => {
