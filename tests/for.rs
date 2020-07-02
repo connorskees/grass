@@ -68,3 +68,14 @@ test!(
     "@for $i from -1 to -3 {\n    a {\n        color: red;\n    }\n}\n",
     "a {\n  color: red;\n}\n\na {\n  color: red;\n}\n"
 );
+test!(
+    variable_named_to_as_value,
+    "$to: 0;
+
+    @for $i from $to to 1 {
+        a {
+            color: red;
+        }
+    }",
+    "a {\n  color: red;\n}\n"
+);

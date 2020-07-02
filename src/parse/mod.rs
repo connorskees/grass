@@ -631,17 +631,29 @@ impl<'a> Parser<'a> {
                     match ident.node.to_ascii_lowercase().as_str() {
                         "through" => {
                             through = 1;
-                            // todo: it should take more if there were escapes
-                            self.toks.take(7).for_each(drop);
+                            self.toks.truncate_iterator_to_cursor();
                             break;
                         }
                         "to" => {
-                            // todo: it should take more if there were escapes
-                            self.toks.take(2).for_each(drop);
+                            self.toks.truncate_iterator_to_cursor();
                             break;
                         }
                         _ => {
-                            return Err(("Invalid flag name.", ident.span).into());
+                            from_toks.push(tok);
+                            self.toks.next();
+                            self.toks.reset_cursor();
+                        }
+                    }
+                }
+                '$' => {
+                    from_toks.push(tok);
+                    self.toks.next();
+                    while let Some(tok) = self.toks.peek() {
+                        if matches!(tok.kind, '0'..='9' | 'a'..='z' | 'A'..='Z' | '\\' | '-' | '_')
+                        {
+                            from_toks.push(self.toks.next().unwrap());
+                        } else {
+                            break;
                         }
                     }
                 }
