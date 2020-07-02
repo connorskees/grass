@@ -155,19 +155,25 @@ impl<'a> Parser<'a> {
                 }
                 '!' => {
                     let pos = tok.pos();
-                    if self.toks.peek_forward(1).is_none() {
-                        return Err(("Expected identifier.", pos).into());
+                    match self.toks.peek_forward(1) {
+                        Some(Token { kind: '=', .. }) => {
+                            self.toks.reset_cursor();
+                            val_toks.push(self.toks.next().unwrap());
+                            continue;
+                        }
+                        Some(..) => {}
+                        None => return Err(("Expected identifier.", pos).into()),
                     }
                     // todo: it should not be possible to declare the same flag more than once
                     let mut ident = peek_ident_no_interpolation(self.toks, false, pos)?;
                     ident.node.make_ascii_lowercase();
                     match ident.node.as_str() {
                         "global" => {
-                            self.toks.take(7).for_each(drop);
+                            self.toks.truncate_iterator_to_cursor();
                             global = true;
                         }
                         "default" => {
-                            self.toks.take(8).for_each(drop);
+                            self.toks.truncate_iterator_to_cursor();
                             default = true;
                         }
                         "important" => {

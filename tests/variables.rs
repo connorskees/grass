@@ -133,6 +133,11 @@ test!(
     "$a: red;\n\na {\n  $a: green !\\67 lobal;\n}\n\na {\n  color: $a;\n}\n",
     "a {\n  color: green;\n}\n"
 );
+test!(
+    not_equal_in_variable_decl,
+    "$a: red != blue;\n\na {\n    color: $a;\n}\n",
+    "a {\n  color: true;\n}\n"
+);
 error!(ends_with_bang, "$a: red !;", "Error: Expected identifier.");
 error!(unknown_flag, "$a: red !foo;", "Error: Invalid flag name.");
 error!(
