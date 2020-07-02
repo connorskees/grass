@@ -131,7 +131,7 @@ fn append(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         2,
         "separator",
         Value::String("auto".to_owned(), QuoteKind::None),
-    )? {
+    ) {
         Value::String(s, ..) => match s.as_str() {
             "auto" => sep,
             "comma" => ListSeparator::Comma,
@@ -178,7 +178,7 @@ fn join(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         2,
         "separator",
         Value::String("auto".to_owned(), QuoteKind::None),
-    )? {
+    ) {
         Value::String(s, ..) => match s.as_str() {
             "auto" => {
                 if list1.is_empty() || (list1.len() == 1 && sep1 == ListSeparator::Space) {
@@ -214,7 +214,7 @@ fn join(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         3,
         "bracketed",
         Value::String("auto".to_owned(), QuoteKind::None),
-    )? {
+    ) {
         Value::String(s, ..) => match s.as_str() {
             "auto" => brackets,
             _ => Brackets::Bracketed,

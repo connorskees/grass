@@ -138,7 +138,7 @@ fn comparable(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
 #[cfg(feature = "random")]
 fn random(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    let limit = match parser.default_arg(&mut args, 0, "limit", Value::Null)? {
+    let limit = match parser.default_arg(&mut args, 0, "limit", Value::Null) {
         Value::Dimension(n, _) => n,
         Value::Null => {
             let mut rng = rand::thread_rng();

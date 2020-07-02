@@ -14,7 +14,7 @@ use crate::{
 
 macro_rules! opt_rgba {
     ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal, $parser:ident) => {
-        let $name = match $parser.default_named_arg(&mut $args, $arg, Value::Null)? {
+        let $name = match $parser.default_named_arg(&mut $args, $arg, Value::Null) {
             Value::Dimension(n, u) => Some(bound!($args, $arg, n, u, $low, $high)),
             Value::Null => None,
             v => {
@@ -34,7 +34,7 @@ macro_rules! opt_rgba {
 
 macro_rules! opt_hsl {
     ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal, $parser:ident) => {
-        let $name = match $parser.default_named_arg(&mut $args, $arg, Value::Null)? {
+        let $name = match $parser.default_named_arg(&mut $args, $arg, Value::Null) {
             Value::Dimension(n, u) => {
                 Some(bound!($args, $arg, n, u, $low, $high) / Number::from(100))
             }
@@ -88,7 +88,7 @@ fn change_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value
         ))));
     }
 
-    let hue = match parser.default_named_arg(&mut args, "hue", Value::Null)? {
+    let hue = match parser.default_named_arg(&mut args, "hue", Value::Null) {
         Value::Dimension(n, _) => Some(n),
         Value::Null => None,
         v => {
@@ -147,7 +147,7 @@ fn adjust_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value
         ))));
     }
 
-    let hue = match parser.default_named_arg(&mut args, "hue", Value::Null)? {
+    let hue = match parser.default_named_arg(&mut args, "hue", Value::Null) {
         Value::Dimension(n, _) => Some(n),
         Value::Null => None,
         v => {
@@ -205,7 +205,7 @@ fn scale_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value>
 
     macro_rules! opt_scale_arg {
         ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal, $parser:ident) => {
-            let $name = match $parser.default_named_arg(&mut $args, $arg, Value::Null)? {
+            let $name = match $parser.default_named_arg(&mut $args, $arg, Value::Null) {
                 Value::Dimension(n, Unit::Percent) => {
                     Some(bound!($args, $arg, n, Unit::Percent, $low, $high) / Number::from(100))
                 }

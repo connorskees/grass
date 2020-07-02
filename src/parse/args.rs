@@ -237,11 +237,11 @@ impl<'a> Parser<'a> {
         position: usize,
         name: &'static str,
         default: Value,
-    ) -> SassResult<Value> {
-        Ok(match args.get(position, name) {
+    ) -> Value {
+        match args.get(position, name) {
             Some(val) => val.node,
             None => default,
-        })
+        }
     }
 
     pub fn positional_arg(
@@ -262,11 +262,11 @@ impl<'a> Parser<'a> {
         args: &mut CallArgs,
         name: &'static str,
         default: Value,
-    ) -> SassResult<Value> {
-        Ok(match args.get_named(name) {
+    ) -> Value {
+        match args.get_named(name) {
             Some(val) => val.node,
             None => default,
-        })
+        }
     }
 
     pub fn variadic_args(&mut self, args: CallArgs) -> SassResult<Vec<Spanned<Value>>> {

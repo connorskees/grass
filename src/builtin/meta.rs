@@ -176,9 +176,9 @@ fn get_function(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value
         }
     };
     let css = parser
-        .default_arg(&mut args, 1, "css", Value::False)?
+        .default_arg(&mut args, 1, "css", Value::False)
         .is_true(args.span())?;
-    let module = match parser.default_arg(&mut args, 2, "module", Value::Null)? {
+    let module = match parser.default_arg(&mut args, 2, "module", Value::Null) {
         Value::String(s, ..) => Some(s),
         Value::Null => None,
         v => {
@@ -246,10 +246,7 @@ fn content_exists(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
             .into());
     }
     Ok(Value::bool(
-        parser
-            .content
-            .last()
-            .map_or(false, |c| c.content.is_some())
+        parser.content.last().map_or(false, |c| c.content.is_some()),
     ))
 }
 
