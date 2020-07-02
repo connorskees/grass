@@ -4,6 +4,7 @@ use peekmore::PeekMore;
 use crate::{
     args::CallArgs,
     atrule::Function,
+    common::unvendor,
     error::SassResult,
     utils::{read_until_closing_curly_brace, read_until_semicolon_or_closing_curly_brace},
     value::Value,
@@ -15,27 +16,6 @@ use super::{NeverEmptyVec, Parser, Stmt};
 /// Names that functions are not allowed to have
 const FORBIDDEN_IDENTIFIERS: [&str; 7] =
     ["calc", "element", "expression", "url", "and", "or", "not"];
-
-fn unvendor(name: &str) -> &str {
-    let mut chars = name.chars();
-    if !matches!(chars.next(), Some('-')) {
-        return name;
-    }
-    if matches!(chars.next(), Some('-')) {
-        return name;
-    }
-    if name.chars().count() < 2 {
-        return name;
-    }
-    let mut pos = 2;
-    for c in chars {
-        if c == '-' {
-            return &name[pos..];
-        }
-        pos += 1;
-    }
-    name
-}
 
 impl<'a> Parser<'a> {
     pub(super) fn parse_function(&mut self) -> SassResult<()> {

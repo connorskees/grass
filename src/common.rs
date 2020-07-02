@@ -144,3 +144,26 @@ impl Identifier {
         self.0
     }
 }
+
+/// Returns `name` without a vendor prefix.
+///
+/// If `name` has no vendor prefix, it's returned as-is.
+pub(crate) fn unvendor(name: &str) -> &str {
+    let bytes = name.as_bytes();
+
+    if bytes.len() < 2 {
+        return name;
+    }
+
+    if bytes.get(0_usize) != Some(&b'-') || bytes.get(1_usize) == Some(&b'-') {
+        return name;
+    }
+
+    for i in 2..bytes.len() {
+        if bytes.get(i) == Some(&b'-') {
+            return &name[i + 1..];
+        }
+    }
+
+    name
+}

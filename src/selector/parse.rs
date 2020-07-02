@@ -1,6 +1,7 @@
 use codemap::Span;
 
 use crate::{
+    common::unvendor,
     error::SassResult,
     parse::Parser,
     utils::{is_name, is_name_start, read_until_closing_paren},
@@ -558,29 +559,6 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
 /// selector.
 fn is_simple_selector_start(c: char) -> bool {
     matches!(c, '*' | '[' | '.' | '#' | '%' | ':')
-}
-
-/// Returns `name` without a vendor prefix.
-///
-/// If `name` has no vendor prefix, it's returned as-is.
-fn unvendor(name: &str) -> &str {
-    let bytes = name.as_bytes();
-
-    if bytes.len() < 2 {
-        return name;
-    }
-
-    if bytes[0_usize] != b'-' || bytes[1_usize] == b'-' {
-        return name;
-    }
-
-    for i in 2..bytes.len() {
-        if bytes.get(i) == Some(&b'-') {
-            return &name[i + 1..];
-        }
-    }
-
-    name
 }
 
 /// Returns whether `name` is the name of a pseudo-element that can be written
