@@ -1305,6 +1305,8 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
 
         map.insert(key.node, val.node);
 
+        devour_whitespace(paren_toks);
+
         if paren_toks.peek().is_none() {
             return Ok(Spanned {
                 node: Value::Map(map),

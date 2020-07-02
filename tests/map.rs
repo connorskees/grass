@@ -177,3 +177,8 @@ test!(
     "$foo: ((\"<\", \"%3c\"), );",
     ""
 );
+test!(
+    map_with_whitespace_after_trailing_comma,
+    "$a: (foo: red, ); a {\n  color: inspect($a);\n}\n",
+    "a {\n  color: (foo: red);\n}\n"
+);
