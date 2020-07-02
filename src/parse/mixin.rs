@@ -116,6 +116,7 @@ impl<'a> Parser<'a> {
         self.content.push(Content {
             content,
             content_args,
+            scope: self.scopes.last().clone(),
         });
 
         let body = Parser {
@@ -143,7 +144,12 @@ impl<'a> Parser<'a> {
 
     pub(super) fn parse_content_rule(&mut self) -> SassResult<Vec<Stmt>> {
         if self.in_mixin {
-            let mut scope = self.scopes.last().clone();
+            let mut scope = self
+                .content
+                .last()
+                .cloned()
+                .unwrap_or_else(Content::new)
+                .scope;
             if let Some(Token { kind: '(', .. }) = self.toks.peek() {
                 self.toks.next();
                 let args = self.parse_call_args()?;

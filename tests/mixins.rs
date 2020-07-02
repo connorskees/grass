@@ -323,6 +323,21 @@ test!(
     }",
     "a {\n  color: red;\n}\n"
 );
+test!(
+    content_can_access_local_variables,
+    "@mixin foo {
+        @content;
+    }
+
+    a {
+        $bar: red;
+
+        @include foo {
+            color: $bar;
+        }
+    }",
+    "a {\n  color: red;\n}\n"
+);
 error!(
     content_using_too_many_args,
     "@mixin foo {

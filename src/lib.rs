@@ -102,7 +102,6 @@ use peekmore::PeekMore;
 pub use crate::error::{SassError as Error, SassResult as Result};
 pub(crate) use crate::token::Token;
 use crate::{
-    atrule::Content,
     lexer::Lexer,
     output::Css,
     parse::{common::NeverEmptyVec, Parser},
@@ -160,7 +159,7 @@ pub fn from_path(p: &str) -> Result<String> {
             global_scope: &mut Scope::new(),
             super_selectors: &mut NeverEmptyVec::new(Selector::new(empty_span)),
             span_before: empty_span,
-            content: &mut vec![Content::new()],
+            content: &mut Vec::new(),
             in_mixin: false,
             in_function: false,
             in_control_flow: false,
@@ -206,7 +205,7 @@ pub fn from_string(p: String) -> Result<String> {
             global_scope: &mut Scope::new(),
             super_selectors: &mut NeverEmptyVec::new(Selector::new(empty_span)),
             span_before: empty_span,
-            content: &mut vec![Content::new()],
+            content: &mut Vec::new(),
             in_mixin: false,
             in_function: false,
             in_control_flow: false,
@@ -242,7 +241,7 @@ pub fn from_string(p: String) -> std::result::Result<String, JsValue> {
             global_scope: &mut Scope::new(),
             super_selectors: &mut NeverEmptyVec::new(Selector::new(empty_span)),
             span_before: empty_span,
-            content: &mut vec![Content::new()],
+            content: &mut Vec::new(),
             in_mixin: false,
             in_function: false,
             in_control_flow: false,
