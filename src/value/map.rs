@@ -48,11 +48,16 @@ impl SassMap {
         self.0.into_iter().map(|(.., v)| v).collect()
     }
 
-    pub fn entries(self) -> Vec<Value> {
+    pub fn as_list(self) -> Vec<Value> {
         self.0
             .into_iter()
             .map(|(k, v)| Value::List(vec![k, v], ListSeparator::Space, Brackets::None))
             .collect()
+    }
+
+    #[allow(clippy::missing_const_for_fn)]
+    pub fn entries(self) -> Vec<(Value, Value)> {
+        self.0
     }
 
     /// Returns true if the key already exists

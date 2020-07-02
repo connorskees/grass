@@ -76,7 +76,7 @@ fn set_nth(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(3)?;
     let (mut list, sep, brackets) = match parser.arg(&mut args, 0, "list")? {
         Value::List(v, sep, b) => (v, sep, b),
-        Value::Map(m) => (m.entries(), ListSeparator::Comma, Brackets::None),
+        Value::Map(m) => (m.as_list(), ListSeparator::Comma, Brackets::None),
         v => (vec![v], ListSeparator::Space, Brackets::None),
     };
     let n = match parser.arg(&mut args, 1, "n")? {
@@ -165,12 +165,12 @@ fn join(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(4)?;
     let (mut list1, sep1, brackets) = match parser.arg(&mut args, 0, "list1")? {
         Value::List(v, sep, brackets) => (v, sep, brackets),
-        Value::Map(m) => (m.entries(), ListSeparator::Comma, Brackets::None),
+        Value::Map(m) => (m.as_list(), ListSeparator::Comma, Brackets::None),
         v => (vec![v], ListSeparator::Space, Brackets::None),
     };
     let (list2, sep2) = match parser.arg(&mut args, 1, "list2")? {
         Value::List(v, sep, ..) => (v, sep),
-        Value::Map(m) => (m.entries(), ListSeparator::Comma),
+        Value::Map(m) => (m.as_list(), ListSeparator::Comma),
         v => (vec![v], ListSeparator::Space),
     };
     let sep = match parser.default_arg(

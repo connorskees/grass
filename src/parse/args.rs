@@ -167,6 +167,8 @@ impl<'a> Parser<'a> {
             }
             self.whitespace_or_comment();
 
+            let mut is_splat = false;
+
             while let Some(tok) = self.toks.next() {
                 match tok.kind {
                     ')' => {
@@ -197,21 +199,67 @@ impl<'a> Parser<'a> {
                         val.push(tok);
                         val.extend(read_until_closing_quote(self.toks, tok.kind)?);
                     }
+                    '.' => {
+                        if let Some(Token { kind: '.', pos }) = self.toks.peek().cloned() {
+                            if !name.is_empty() {
+                                return Err(("expected \")\".", pos).into());
+                            }
+                            self.toks.next();
+                            if let Some(Token { kind: '.', .. }) = self.toks.peek() {
+                                self.toks.next();
+                                is_splat = true;
+                                break;
+                            } else {
+                                return Err(("expected \".\".", pos).into());
+                            }
+                        } else {
+                            val.push(tok);
+                        }
+                    }
                     _ => val.push(tok),
                 }
             }
 
-            args.insert(
-                if name.is_empty() {
-                    CallArg::Positional(args.len())
-                } else {
-                    CallArg::Named(name.as_str().into())
-                },
-                {
+            if is_splat {
+                let val = {
                     let val = self.parse_value_from_vec(mem::take(&mut val))?;
                     val.node.eval(val.span)?
-                },
-            );
+                };
+                match val.node {
+                    Value::ArgList(v) => {
+                        for arg in v {
+                            args.insert(CallArg::Positional(args.len()), arg);
+                        }
+                    }
+                    Value::List(v, ..) => {
+                        for arg in v {
+                            args.insert(CallArg::Positional(args.len()), arg.eval(val.span)?);
+                        }
+                    }
+                    Value::Map(v) => {
+                        for (name, arg) in v.entries() {
+                            let name = name.to_css_string(val.span)?.to_string();
+                            args.insert(CallArg::Named(name.into()), arg.eval(val.span)?);
+                        }
+                    }
+                    _ => {
+                        args.insert(CallArg::Positional(args.len()), val);
+                    }
+                }
+            } else {
+                args.insert(
+                    if name.is_empty() {
+                        CallArg::Positional(args.len())
+                    } else {
+                        CallArg::Named(name.as_str().into())
+                    },
+                    {
+                        let val = self.parse_value_from_vec(mem::take(&mut val))?;
+                        val.node.eval(val.span)?
+                    },
+                );
+            }
+
             self.whitespace();
 
             if self.toks.peek().is_none() {
@@ -222,8 +270,9 @@ impl<'a> Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
+    #[allow(clippy::unused_self)]
     pub fn arg(
-        &mut self,
+        &self,
         args: &mut CallArgs,
         position: usize,
         name: &'static str,
@@ -231,8 +280,9 @@ impl<'a> Parser<'a> {
         Ok(args.get_err(position, name)?.node)
     }
 
+    #[allow(clippy::unused_self)]
     pub fn default_arg(
-        &mut self,
+        &self,
         args: &mut CallArgs,
         position: usize,
         name: &'static str,
@@ -244,21 +294,19 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn positional_arg(
-        &mut self,
-        args: &mut CallArgs,
-        position: usize,
-    ) -> Option<Spanned<Value>> {
+    #[allow(clippy::unused_self)]
+    pub fn positional_arg(&self, args: &mut CallArgs, position: usize) -> Option<Spanned<Value>> {
         args.get_positional(position)
     }
 
-    #[allow(dead_code)]
-    fn named_arg(&mut self, args: &mut CallArgs, name: &'static str) -> Option<Spanned<Value>> {
+    #[allow(dead_code, clippy::unused_self)]
+    fn named_arg(&self, args: &mut CallArgs, name: &'static str) -> Option<Spanned<Value>> {
         args.get_named(name)
     }
 
+    #[allow(clippy::unused_self)]
     pub fn default_named_arg(
-        &mut self,
+        &self,
         args: &mut CallArgs,
         name: &'static str,
         default: Value,
@@ -269,7 +317,8 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn variadic_args(&mut self, args: CallArgs) -> SassResult<Vec<Spanned<Value>>> {
+    #[allow(clippy::unused_self)]
+    pub fn variadic_args(&self, args: CallArgs) -> SassResult<Vec<Spanned<Value>>> {
         let mut vals = Vec::new();
         let mut args = match args
             .0

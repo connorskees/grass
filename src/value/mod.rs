@@ -316,7 +316,7 @@ impl Value {
     pub fn as_list(self) -> Vec<Value> {
         match self {
             Value::List(v, ..) => v,
-            Value::Map(m) => m.entries(),
+            Value::Map(m) => m.as_list(),
             Value::ArgList(v) => v.into_iter().map(|val| val.node).collect(),
             v => vec![v],
         }
