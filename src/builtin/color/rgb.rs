@@ -305,7 +305,7 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
             3,
             "alpha",
             Value::Dimension(Number::one(), Unit::None),
-        ) {
+        )? {
             Value::Dimension(n, Unit::None) => n,
             Value::Dimension(n, Unit::Percent) => n / Number::from(100),
             v @ Value::Dimension(..) => {
@@ -416,7 +416,7 @@ fn mix(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         2,
         "weight",
         Value::Dimension(Number::from(50), Unit::None),
-    ) {
+    )? {
         Value::Dimension(n, u) => bound!(args, "weight", n, u, 0, 100) / Number::from(100),
         v => {
             return Err((

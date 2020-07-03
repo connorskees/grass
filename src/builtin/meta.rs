@@ -170,9 +170,9 @@ fn get_function(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value
         }
     };
     let css = parser
-        .default_arg(&mut args, 1, "css", Value::False)
+        .default_arg(&mut args, 1, "css", Value::False)?
         .is_true();
-    let module = match parser.default_arg(&mut args, 2, "module", Value::Null) {
+    let module = match parser.default_arg(&mut args, 2, "module", Value::Null)? {
         Value::String(s, ..) => Some(s),
         Value::Null => None,
         v => {

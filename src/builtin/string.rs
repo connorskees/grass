@@ -148,7 +148,7 @@ fn str_slice(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
                 .into())
         }
     };
-    let mut end = match parser.default_arg(&mut args, 2, "end-at", Value::Null) {
+    let mut end = match parser.default_arg(&mut args, 2, "end-at", Value::Null)? {
         Value::Dimension(n, Unit::None) if n.is_decimal() => {
             return Err((format!("{} is not an int.", n), args.span()).into())
         }

@@ -184,7 +184,7 @@ fn inner_hsl(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
             3,
             "alpha",
             Value::Dimension(Number::one(), Unit::None),
-        ) {
+        )? {
             Value::Dimension(n, Unit::None) => n,
             Value::Dimension(n, Unit::Percent) => n / Number::from(100),
             v @ Value::Dimension(..) => {
@@ -469,7 +469,7 @@ fn invert(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         1,
         "weight",
         Value::Dimension(Number::from(100), Unit::Percent),
-    ) {
+    )? {
         Value::Dimension(n, u) => bound!(args, "weight", n, u, 0, 100) / Number::from(100),
         v => {
             return Err((

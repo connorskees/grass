@@ -45,6 +45,11 @@ test!(
     "@function foo($a, $b: $a) {\n    @return $b;\n}\n\na {\n    color: foo(2);\n}\n",
     "a {\n  color: 2;\n}\n"
 );
+test!(
+    arg_errors_are_lazy_for_if,
+    "a {\n  color: if(false, unit(foo), red);\n}\n",
+    "a {\n  color: red;\n}\n"
+);
 error!(
     #[ignore = "expects incorrect char, '{'"]
     nothing_after_open,
@@ -53,4 +58,9 @@ error!(
 error!(
     nothing_after_open_paren_in_fn_args,
     "@function foo(", "Error: expected \")\"."
+);
+error!(
+    args_are_evaluated_eagerly,
+    "@function foo($a) {\n    @return foo;\n}\n\na {\n    color: foo(unit(bar));\n}\n",
+    "Error: $number: bar is not a number."
 );

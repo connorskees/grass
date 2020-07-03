@@ -14,6 +14,47 @@ pub struct SassError {
     kind: SassErrorKind,
 }
 
+impl Clone for SassError {
+    fn clone(&self) -> Self {
+        match &self.kind {
+            SassErrorKind::Raw(a, b) => SassError {
+                kind: SassErrorKind::Raw(a.clone(), *b),
+            },
+            SassErrorKind::ParseError { message, loc } => SassError {
+                kind: SassErrorKind::ParseError {
+                    message: message.clone(),
+                    loc: loc.clone(),
+                },
+            },
+            _ => unimplemented!(),
+        }
+    }
+}
+
+impl PartialEq for SassError {
+    fn eq(&self, other: &Self) -> bool {
+        match &self.kind {
+            SassErrorKind::Raw(a, b) => match &other.kind {
+                SassErrorKind::Raw(c, d) => a == c && b == d,
+                _ => false,
+            },
+            SassErrorKind::ParseError {
+                message: message1,
+                loc: loc1,
+            } => match &other.kind {
+                SassErrorKind::ParseError {
+                    message: message2,
+                    loc: loc2,
+                } => message1 == message2 && loc1 == loc2,
+                _ => false,
+            },
+            _ => unimplemented!(),
+        }
+    }
+}
+
+impl Eq for SassError {}
+
 impl SassError {
     pub(crate) fn raw(self) -> (String, Span) {
         match self.kind {

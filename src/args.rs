@@ -36,7 +36,7 @@ impl FuncArgs {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub(crate) struct CallArgs(pub HashMap<CallArg, Spanned<Value>>, pub Span);
+pub(crate) struct CallArgs(pub HashMap<CallArg, SassResult<Spanned<Value>>>, pub Span);
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub(crate) enum CallArg {
@@ -101,18 +101,22 @@ impl CallArgs {
     /// Get argument by name
     ///
     /// Removes the argument
-    pub fn get_named<T: Into<Identifier>>(&mut self, val: T) -> Option<Spanned<Value>> {
+    pub fn get_named<T: Into<Identifier>>(&mut self, val: T) -> Option<SassResult<Spanned<Value>>> {
         self.0.remove(&CallArg::Named(val.into()))
     }
 
     /// Get a positional argument by 0-indexed position
     ///
     /// Removes the argument
-    pub fn get_positional(&mut self, val: usize) -> Option<Spanned<Value>> {
+    pub fn get_positional(&mut self, val: usize) -> Option<SassResult<Spanned<Value>>> {
         self.0.remove(&CallArg::Positional(val))
     }
 
-    pub fn get<T: Into<Identifier>>(&mut self, position: usize, name: T) -> Option<Spanned<Value>> {
+    pub fn get<T: Into<Identifier>>(
+        &mut self,
+        position: usize,
+        name: T,
+    ) -> Option<SassResult<Spanned<Value>>> {
         match self.get_named(name) {
             Some(v) => Some(v),
             None => self.get_positional(position),
@@ -121,9 +125,9 @@ impl CallArgs {
 
     pub fn get_err(&mut self, position: usize, name: &'static str) -> SassResult<Spanned<Value>> {
         match self.get_named(name) {
-            Some(v) => Ok(v),
+            Some(v) => v,
             None => match self.get_positional(position) {
-                Some(v) => Ok(v),
+                Some(v) => v,
                 None => Err((format!("Missing argument ${}.", name), self.span()).into()),
             },
         }
