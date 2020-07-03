@@ -6,7 +6,7 @@ use crate::{
     args::CallArgs,
     common::{Brackets, ListSeparator, QuoteKind},
     error::SassResult,
-    parse::Parser,
+    parse::{HigherIntermediateValue, Parser, ValueVisitor},
     unit::Unit,
     value::{Number, Value},
 };
@@ -220,7 +220,7 @@ fn join(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
             _ => Brackets::Bracketed,
         },
         v => {
-            if v.is_true(args.span())? {
+            if v.is_true() {
                 Brackets::Bracketed
             } else {
                 Brackets::None
@@ -248,16 +248,15 @@ fn index(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;
     let list = parser.arg(&mut args, 0, "list")?.as_list();
     let value = parser.arg(&mut args, 1, "value")?;
-    // TODO: find a way around this unwrap.
-    // It should be impossible to hit as the arg is
-    // evaluated prior to checking equality, but
-    // it is still dirty.
+    // TODO: find a way to propagate any errors here
     // Potential input to fuzz: index(1px 1in 1cm, 96px + 1rem)
     let index = match list.into_iter().position(|v| {
-        v.equals(value.clone(), args.span())
-            .unwrap()
-            .is_true(args.span())
-            .unwrap()
+        ValueVisitor::new(parser, args.span())
+            .equal(
+                HigherIntermediateValue::Literal(v),
+                HigherIntermediateValue::Literal(value.clone()),
+            )
+            .map_or(false, |v| v.is_true())
     }) {
         Some(v) => Number::from(v + 1),
         None => return Ok(Value::Null),
@@ -266,12 +265,11 @@ fn index(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 }
 
 fn zip(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
-    let span = args.span();
     let lists = parser
         .variadic_args(args)?
         .into_iter()
-        .map(|x| Ok(x.node.eval(span)?.node.as_list()))
-        .collect::<SassResult<Vec<Vec<Value>>>>()?;
+        .map(|x| x.node.as_list())
+        .collect::<Vec<Vec<Value>>>();
 
     let len = lists.iter().map(Vec::len).min().unwrap_or(0);
 

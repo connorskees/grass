@@ -34,22 +34,13 @@ grass input.scss
 #![allow(
     // explicit return makes some things look ugly
     clippy::implicit_return,
-    // Self { .. } is less explicit than Foo { .. }
     clippy::use_self,
-    // this is too pedantic -- some things don't need docs!
     clippy::missing_docs_in_private_items,
     clippy::unreachable,
-    // this disallows binding as well
+    // this disallows binding as well, e.g. `v => ...`
     clippy::wildcard_enum_match_arm,
-    // this is too pedantic -- we are allowed to add numbers!
-    clippy::integer_arithmetic,
-    // this is too pedantic for now -- the library is changing too quickly for
-    // good docs to be written
-    clippy::missing_errors_doc,
-    // this is too pedantic -- it results in some names being less explicit
-    // than they should
     clippy::module_name_repetitions,
-    // this is too pedantic -- it is sometimes useful to break up `impl`s
+    // it is sometimes useful to break up `impl`s
     clippy::multiple_inherent_impl,
     // filter isn't fallible
     clippy::filter_map,
@@ -74,10 +65,12 @@ grass input.scss
     clippy::single_match_else,
     clippy::indexing_slicing,
     clippy::redundant_pub_crate,
+    // the api is changing too often to allot this
+    clippy::missing_errors_doc,
 
+    clippy::integer_arithmetic,
     clippy::string_add,
     clippy::get_unwrap,
-    clippy::unit_arg,
     clippy::wrong_self_convention,
     clippy::items_after_statements,
     clippy::shadow_reuse,
@@ -90,10 +83,7 @@ use std::{fs, path::Path};
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::*;
 
-#[cfg(target_pointer_width = "64")]
 pub(crate) use beef::lean::Cow;
-#[cfg(not(target_pointer_width = "64"))]
-pub(crate) use beef::Cow;
 
 use codemap::CodeMap;
 

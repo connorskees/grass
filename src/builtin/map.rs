@@ -22,7 +22,7 @@ fn map_get(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
                 .into())
         }
     };
-    Ok(map.get(&key, args.span())?.unwrap_or(Value::Null))
+    Ok(map.get(&key, args.span(), parser)?.unwrap_or(Value::Null))
 }
 
 fn map_has_key(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
@@ -39,7 +39,7 @@ fn map_has_key(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value>
                 .into())
         }
     };
-    Ok(Value::bool(map.get(&key, args.span())?.is_some()))
+    Ok(Value::bool(map.get(&key, args.span(), parser)?.is_some()))
 }
 
 fn map_keys(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {

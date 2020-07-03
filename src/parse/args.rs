@@ -178,10 +178,7 @@ impl<'a> Parser<'a> {
                             } else {
                                 CallArg::Named(name.into())
                             },
-                            {
-                                let val = self.parse_value_from_vec(val)?;
-                                val.node.eval(val.span)?
-                            },
+                            self.parse_value_from_vec(val)?,
                         );
                         span = span.merge(tok.pos());
                         return Ok(CallArgs(args, span));
@@ -221,10 +218,7 @@ impl<'a> Parser<'a> {
             }
 
             if is_splat {
-                let val = {
-                    let val = self.parse_value_from_vec(mem::take(&mut val))?;
-                    val.node.eval(val.span)?
-                };
+                let val = self.parse_value_from_vec(mem::take(&mut val))?;
                 match val.node {
                     Value::ArgList(v) => {
                         for arg in v {
@@ -233,13 +227,13 @@ impl<'a> Parser<'a> {
                     }
                     Value::List(v, ..) => {
                         for arg in v {
-                            args.insert(CallArg::Positional(args.len()), arg.eval(val.span)?);
+                            args.insert(CallArg::Positional(args.len()), arg.span(val.span));
                         }
                     }
                     Value::Map(v) => {
                         for (name, arg) in v.entries() {
                             let name = name.to_css_string(val.span)?.to_string();
-                            args.insert(CallArg::Named(name.into()), arg.eval(val.span)?);
+                            args.insert(CallArg::Named(name.into()), arg.span(val.span));
                         }
                     }
                     _ => {
@@ -253,10 +247,7 @@ impl<'a> Parser<'a> {
                     } else {
                         CallArg::Named(name.as_str().into())
                     },
-                    {
-                        let val = self.parse_value_from_vec(mem::take(&mut val))?;
-                        val.node.eval(val.span)?
-                    },
+                    self.parse_value_from_vec(mem::take(&mut val))?,
                 );
             }
 
@@ -354,16 +345,13 @@ impl<'a> Parser<'a> {
                         node: arg_list,
                         span,
                     },
-                )?;
+                );
                 break;
             }
             let val = match args.get(idx, arg.name.clone()) {
                 Some(v) => v,
                 None => match arg.default.as_mut() {
-                    Some(v) => {
-                        let val = self.parse_value_from_vec(mem::take(v))?;
-                        val.node.eval(val.span)?
-                    }
+                    Some(v) => self.parse_value_from_vec(mem::take(v))?,
                     None => {
                         return Err(
                             (format!("Missing argument ${}.", &arg.name), args.span()).into()
@@ -373,8 +361,8 @@ impl<'a> Parser<'a> {
             };
             self.scopes
                 .last_mut()
-                .insert_var(arg.name.clone(), val.clone())?;
-            scope.insert_var(mem::take(&mut arg.name), val)?;
+                .insert_var(arg.name.clone(), val.clone());
+            scope.insert_var(mem::take(&mut arg.name), val);
         }
         self.scopes.pop();
         Ok(())

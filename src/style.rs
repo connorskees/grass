@@ -17,14 +17,4 @@ impl Style {
             self.value.node.to_css_string(self.value.span)?
         ))
     }
-
-    pub(crate) fn eval(self) -> SassResult<Self> {
-        Ok(Style {
-            property: self.property,
-            value: Box::new(Spanned {
-                span: self.value.span,
-                node: self.value.node.eval(self.value.span)?.node,
-            }),
-        })
-    }
 }
