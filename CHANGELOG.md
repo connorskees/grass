@@ -3,8 +3,12 @@
 - implement builtin functions `min` and `max`
 - bugfixes for `@extend` and `selector-unify`
 - allow `@content` to take arguments
-- various optimizations, improving performance by around 10% (and resolving performance regressions due to `@extend`)
+- bugfixes for `@content`, for example chained mixins
+- better support queries in `@media`
 - bugfixes for `@media`
+- add support for splats, e.g. `rgba([1, 2, 3, 4]...)`
+- resolve a number of parsing bugs for `@for`, variable declarations, selectors, and maps
+- various optimizations, improving performance by around 10% (and resolving performance regressions due to `@extend`)
 
 # 0.9.1
 
