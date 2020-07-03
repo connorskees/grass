@@ -1635,7 +1635,6 @@ test!(
     "~ .foo {\n  a: b;\n}\n"
 );
 test!(
-    #[ignore = "Rc<RefCell<Selector>>"]
     nested_selector_with_child_selector_hack_extender_and_extendee_newline,
     "> .foo {a: b}\nflip,\n> foo bar {@extend .foo}\n",
     "> .foo, > flip,\n> foo bar {\n  a: b;\n}\n"
@@ -1843,5 +1842,41 @@ test!(
     ",
     ".foo, .bang, .baz {\n  a: b;\n}\n\n.bar, .bang, .baz {\n  x: y;\n}\n"
 );
+test!(
+    selector_list_after_selector,
+    "a {
+        color: red;
+    }
+
+    b,
+    c {
+        @extend a;
+    }",
+    "a, b,\nc {\n  color: red;\n}\n"
+);
+test!(
+    selector_list_before_selector,
+    "b, c {
+        @extend a;
+    }
+
+    a {
+        color: red;
+    }",
+    "a, b, c {\n  color: red;\n}\n"
+);
+test!(
+    selector_list_of_selector_pseudo_classes_after_selector,
+    "foo {
+        color: black;
+    }
+
+    a:current(foo),
+    :current(foo) {
+        @extend foo;
+    }",
+    "foo, a:current(foo),\n:current(foo) {\n  color: black;\n}\n"
+);
 
 // todo: extend_loop (massive test)
+// todo: extend tests in folders

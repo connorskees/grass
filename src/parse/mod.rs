@@ -1193,6 +1193,8 @@ impl<'a> Parser<'a> {
 
         let extend_rule = ExtendRule::new(value.clone(), is_optional, self.span_before);
 
+        let super_selector = self.super_selectors.last();
+
         for complex in value.0.components {
             if complex.components.len() != 1 || !complex.components.first().unwrap().is_compound() {
                 // If the selector was a compound selector but not a simple
@@ -1214,7 +1216,7 @@ impl<'a> Parser<'a> {
             }
 
             self.extender.add_extension(
-                self.super_selectors.last().clone().0,
+                super_selector.clone().0,
                 compound.components.first().unwrap(),
                 &extend_rule,
                 &None,

@@ -36,3 +36,22 @@ impl ExtendedSelector {
         self.0.replace(selector);
     }
 }
+
+#[derive(Clone, Debug)]
+pub(crate) struct SelectorHashSet(Vec<ExtendedSelector>);
+
+impl SelectorHashSet {
+    pub const fn new() -> Self {
+        Self(Vec::new())
+    }
+
+    pub fn insert(&mut self, selector: ExtendedSelector) {
+        if !self.0.contains(&selector) {
+            self.0.push(selector);
+        }
+    }
+
+    pub fn into_iter(self) -> std::vec::IntoIter<ExtendedSelector> {
+        self.0.into_iter()
+    }
+}

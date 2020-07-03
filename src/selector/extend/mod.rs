@@ -15,6 +15,7 @@ use super::{
 };
 
 pub(crate) use extended_selector::ExtendedSelector;
+use extended_selector::SelectorHashSet;
 use extension::Extension;
 pub(crate) use functions::unify_complex;
 use functions::{paths, weave};
@@ -64,7 +65,7 @@ pub(crate) struct Extender {
     ///
     /// This is used to find which selectors an `@extend` applies to and adjust
     /// them.
-    selectors: HashMap<SimpleSelector, HashSet<ExtendedSelector>>,
+    selectors: HashMap<SimpleSelector, SelectorHashSet>,
 
     /// A map from all extended simple selectors to the sources of those
     /// extensions.
@@ -867,8 +868,6 @@ impl Extender {
     ///
     /// The `media_query_context` is the media query context in which the selector was
     /// defined, or `None` if it was defined at the top level of the document.
-    // todo: the docs are wrong, and we may want to consider returning an `Rc<RefCell<SelectorList>>`
-    // the reason we don't is that it would interfere with hashing
     pub fn add_selector(
         &mut self,
         mut selector: SelectorList,
@@ -915,7 +914,7 @@ impl Extender {
                     for simple in component.components {
                         self.selectors
                             .entry(simple.clone())
-                            .or_insert_with(HashSet::new)
+                            .or_insert_with(SelectorHashSet::new)
                             .insert(selector.clone());
 
                         if let SimpleSelector::Pseudo(Pseudo {
@@ -953,12 +952,6 @@ impl Extender {
 
         let mut new_extensions: Option<IndexMap<ComplexSelector, Extension>> = None;
 
-        let mut sources = self
-            .extensions
-            .entry(target.clone())
-            .or_insert_with(IndexMap::new)
-            .clone();
-
         for complex in extender.components {
             let state = Extension {
                 specificity: complex.max_specificity(),
@@ -971,6 +964,11 @@ impl Extender {
                 left: None,
                 right: None,
             };
+
+            let sources = self
+                .extensions
+                .entry(target.clone())
+                .or_insert_with(IndexMap::new);
 
             if let Some(existing_state) = sources.get(&complex) {
                 // If there's already an extend from `extender` to `target`, we don't need
@@ -1004,39 +1002,28 @@ impl Extender {
                     .get_or_insert_with(IndexMap::new)
                     .insert(complex.clone(), state.clone());
             }
+        }
 
-            let new_extensions = if let Some(new) = new_extensions.clone() {
-                new
-            } else {
-                // TODO: HACK: we extend by sources here, but we should be able to mutate sources directly
-                self.extensions
-                    .get_mut(target)
-                    .get_or_insert(&mut IndexMap::new())
-                    .extend(sources);
-                return;
-            };
+        let new_extensions = if let Some(new) = new_extensions {
+            new
+        } else {
+            return;
+        };
 
-            let mut new_extensions_by_target = HashMap::new();
-            new_extensions_by_target.insert(target.clone(), new_extensions);
+        let mut new_extensions_by_target = HashMap::new();
+        new_extensions_by_target.insert(target.clone(), new_extensions);
 
-            if let Some(existing_extensions) = existing_extensions.clone() {
-                let additional_extensions =
-                    self.extend_existing_extensions(existing_extensions, &new_extensions_by_target);
-                if let Some(additional_extensions) = additional_extensions {
-                    map_add_all_2(&mut new_extensions_by_target, additional_extensions);
-                }
-            }
-
-            if let Some(selectors) = selectors.clone() {
-                self.extend_existing_selectors(selectors, &new_extensions_by_target);
+        if let Some(existing_extensions) = existing_extensions {
+            let additional_extensions =
+                self.extend_existing_extensions(existing_extensions, &new_extensions_by_target);
+            if let Some(additional_extensions) = additional_extensions {
+                map_add_all_2(&mut new_extensions_by_target, additional_extensions);
             }
         }
 
-        // TODO: HACK: we extend by sources here, but we should be able to mutate sources directly
-        self.extensions
-            .get_mut(target)
-            .get_or_insert(&mut IndexMap::new())
-            .extend(sources);
+        if let Some(selectors) = selectors {
+            self.extend_existing_selectors(selectors, &new_extensions_by_target);
+        }
     }
 
     /// Extend `extensions` using `new_extensions`.
@@ -1145,10 +1132,10 @@ impl Extender {
     /// Extend `extensions` using `new_extensions`.
     fn extend_existing_selectors(
         &mut self,
-        selectors: HashSet<ExtendedSelector>,
+        selectors: SelectorHashSet,
         new_extensions: &HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>>,
     ) {
-        for mut selector in selectors {
+        for mut selector in selectors.into_iter() {
             let old_value = selector.clone().into_selector().0;
             selector.set_inner(self.extend_list(
                 old_value.clone(),
