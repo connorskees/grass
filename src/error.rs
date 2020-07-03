@@ -14,7 +14,11 @@ pub struct SassError {
     kind: SassErrorKind,
 }
 
+// todo: we should split the unclonable errors (io, potentially others) into
+// a separate enum to allow these methods to be infallible
+#[allow(clippy::unimplemented)]
 impl Clone for SassError {
+    #[inline]
     fn clone(&self) -> Self {
         match &self.kind {
             SassErrorKind::Raw(a, b) => SassError {
@@ -31,7 +35,9 @@ impl Clone for SassError {
     }
 }
 
+#[allow(clippy::unimplemented)]
 impl PartialEq for SassError {
+    #[inline]
     fn eq(&self, other: &Self) -> bool {
         match &self.kind {
             SassErrorKind::Raw(a, b) => match &other.kind {
