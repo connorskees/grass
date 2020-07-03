@@ -50,7 +50,7 @@ grass input.scss
     clippy::unknown_clippy_lints,
     clippy::replace_consts,
     clippy::single_match,
-    
+
     // temporarily allowed while under heavy development.
     // eventually these allows should be refactored away
     // to no longer be necessary
@@ -67,7 +67,7 @@ grass input.scss
     clippy::redundant_pub_crate,
     // the api is changing too often to allot this
     clippy::missing_errors_doc,
-    
+
     clippy::integer_arithmetic,
     clippy::string_add,
     clippy::get_unwrap,
