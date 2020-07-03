@@ -110,8 +110,8 @@ impl Value {
         match self {
             Value::Null => true,
             Value::String(i, QuoteKind::None) if i.is_empty() => true,
-            Self::List(v, _, Brackets::Bracketed) if v.is_empty() => false,
-            Self::List(v, ..) => v
+            Value::List(v, _, Brackets::Bracketed) if v.is_empty() => false,
+            Value::List(v, ..) => v
                 .iter()
                 .map(Value::is_null)
                 .collect::<Vec<bool>>()
@@ -123,21 +123,21 @@ impl Value {
 
     pub fn to_css_string(&self, span: Span) -> SassResult<Cow<'static, str>> {
         Ok(match self {
-            Self::Important => Cow::const_str("!important"),
-            Self::Dimension(num, unit) => match unit {
+            Value::Important => Cow::const_str("!important"),
+            Value::Dimension(num, unit) => match unit {
                 Unit::Mul(..) => {
                     return Err((format!("{}{} isn't a valid CSS value.", num, unit), span).into());
                 }
                 _ => Cow::owned(format!("{}{}", num, unit)),
             },
-            Self::Map(..) | Self::FunctionRef(..) => {
+            Value::Map(..) | Value::FunctionRef(..) => {
                 return Err((
                     format!("{} isn't a valid CSS value.", self.inspect(span)?),
                     span,
                 )
                     .into())
             }
-            Self::List(vals, sep, brackets) => match brackets {
+            Value::List(vals, sep, brackets) => match brackets {
                 Brackets::None => Cow::owned(
                     vals.iter()
                         .filter(|x| !x.is_null())
@@ -154,8 +154,8 @@ impl Value {
                         .join(sep.as_str()),
                 )),
             },
-            Self::Color(c) => Cow::owned(c.to_string()),
-            Self::String(string, QuoteKind::None) => {
+            Value::Color(c) => Cow::owned(c.to_string()),
+            Value::String(string, QuoteKind::None) => {
                 let mut after_newline = false;
                 let mut buf = String::with_capacity(string.len());
                 for c in string.chars() {
@@ -177,15 +177,15 @@ impl Value {
                 }
                 Cow::owned(buf)
             }
-            Self::String(string, QuoteKind::Quoted) => {
+            Value::String(string, QuoteKind::Quoted) => {
                 let mut buf = String::with_capacity(string.len());
                 visit_quoted_string(&mut buf, false, string);
                 Cow::owned(buf)
             }
-            Self::True => Cow::const_str("true"),
-            Self::False => Cow::const_str("false"),
-            Self::Null => Cow::const_str(""),
-            Self::ArgList(args) => Cow::owned(
+            Value::True => Cow::const_str("true"),
+            Value::False => Cow::const_str("false"),
+            Value::Null => Cow::const_str(""),
+            Value::ArgList(args) => Cow::owned(
                 args.iter()
                     .filter(|x| !x.is_null())
                     .map(|a| Ok(a.node.to_css_string(span)?))
@@ -204,9 +204,9 @@ impl Value {
 
     pub fn unquote(self) -> Self {
         match self {
-            Self::String(s1, _) => Self::String(s1, QuoteKind::None),
-            Self::List(v, sep, bracket) => {
-                Self::List(v.into_iter().map(Value::unquote).collect(), sep, bracket)
+            Value::String(s1, _) => Value::String(s1, QuoteKind::None),
+            Value::List(v, sep, bracket) => {
+                Value::List(v.into_iter().map(Value::unquote).collect(), sep, bracket)
             }
             v => v,
         }
@@ -218,21 +218,21 @@ impl Value {
 
     pub fn kind(&self) -> &'static str {
         match self {
-            Self::Color(..) => "color",
-            Self::String(..) | Self::Important => "string",
-            Self::Dimension(..) => "number",
-            Self::List(..) => "list",
-            Self::FunctionRef(..) => "function",
-            Self::ArgList(..) => "arglist",
-            Self::True | Self::False => "bool",
-            Self::Null => "null",
-            Self::Map(..) => "map",
+            Value::Color(..) => "color",
+            Value::String(..) | Value::Important => "string",
+            Value::Dimension(..) => "number",
+            Value::List(..) => "list",
+            Value::FunctionRef(..) => "function",
+            Value::ArgList(..) => "arglist",
+            Value::True | Value::False => "bool",
+            Value::Null => "null",
+            Value::Map(..) => "map",
         }
     }
 
     pub fn is_special_function(&self) -> bool {
         match self {
-            Self::String(s, QuoteKind::None) => is_special_function(s),
+            Value::String(s, QuoteKind::None) => is_special_function(s),
             _ => false,
         }
     }
@@ -263,7 +263,7 @@ impl Value {
                     ListSeparator::Comma => Cow::owned(format!("[{},]", v[0].inspect(span)?)),
                 },
             },
-            Self::List(vals, sep, brackets) => Cow::owned(match brackets {
+            Value::List(vals, sep, brackets) => Cow::owned(match brackets {
                 Brackets::None => vals
                     .iter()
                     .map(|x| x.inspect(span))
@@ -347,8 +347,8 @@ impl Value {
 
     fn selector_string(self, span: Span) -> SassResult<Option<String>> {
         Ok(Some(match self {
-            Self::String(text, ..) => text,
-            Self::List(list, sep, ..) if !list.is_empty() => {
+            Value::String(text, ..) => text,
+            Value::List(list, sep, ..) if !list.is_empty() => {
                 let mut result = Vec::new();
                 match sep {
                     ListSeparator::Comma => {
