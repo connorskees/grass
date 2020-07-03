@@ -1,4 +1,4 @@
-use std::{borrow::Borrow, iter::Iterator, mem};
+use std::{iter::Iterator, mem};
 
 use num_bigint::BigInt;
 use num_rational::{BigRational, Rational64};
@@ -15,15 +15,41 @@ use crate::{
     error::SassResult,
     unit::Unit,
     utils::{
-        as_hex, devour_whitespace, eat_number, hex_char_for, is_name, peek_ident_no_interpolation,
-        peek_until_closing_curly_brace, peek_whitespace, read_until_char, read_until_closing_paren,
+        devour_whitespace, eat_number, read_until_char, read_until_closing_paren,
         read_until_closing_square_brace, IsWhitespace,
     },
-    value::{Number, SassMap, Value},
+    value::{Number, SassFunction, SassMap, Value},
     Token,
 };
 
+use super::eval::{HigherIntermediateValue, ValueVisitor};
+
 use super::super::Parser;
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum IntermediateValue {
+    Value(HigherIntermediateValue),
+    Op(Op),
+    Bracketed(Vec<Token>),
+    Paren(Vec<Token>),
+    Comma,
+    Whitespace,
+}
+
+impl IntermediateValue {
+    const fn span(self, span: Span) -> Spanned<Self> {
+        Spanned { node: self, span }
+    }
+}
+
+impl IsWhitespace for IntermediateValue {
+    fn is_whitespace(&self) -> bool {
+        if self == &IntermediateValue::Whitespace {
+            return true;
+        }
+        false
+    }
+}
 
 impl<'a> Parser<'a> {
     pub(crate) fn parse_value(&mut self) -> SassResult<Spanned<Value>> {
@@ -68,17 +94,18 @@ impl<'a> Parser<'a> {
                             .ok_or(("Expected expression.", val.span))?
                             .span;
                         comma_separated.push(
-                            Value::List(
+                            HigherIntermediateValue::Literal(Value::List(
                                 mem::take(&mut space_separated)
                                     .into_iter()
-                                    .map(|a| {
+                                    .map(move |a| {
                                         span = span.merge(a.span);
                                         a.node
                                     })
-                                    .collect(),
+                                    .map(|a| ValueVisitor::new(iter.parser, span).eval(a))
+                                    .collect::<SassResult<Vec<Value>>>()?,
                                 ListSeparator::Space,
                                 Brackets::None,
-                            )
+                            ))
                             .span(span),
                         );
                     }
@@ -87,18 +114,28 @@ impl<'a> Parser<'a> {
                     last_was_whitespace = false;
                     if t.is_empty() {
                         space_separated.push(
-                            Value::List(Vec::new(), ListSeparator::Space, Brackets::Bracketed)
-                                .span(val.span),
+                            HigherIntermediateValue::Literal(Value::List(
+                                Vec::new(),
+                                ListSeparator::Space,
+                                Brackets::Bracketed,
+                            ))
+                            .span(val.span),
                         );
                         continue;
                     }
-                    space_separated.push(match iter.parser.parse_value_from_vec(t)?.node {
-                        Value::List(v, sep, Brackets::None) => {
-                            Value::List(v, sep, Brackets::Bracketed).span(val.span)
-                        }
-                        v => Value::List(vec![v], ListSeparator::Space, Brackets::Bracketed)
-                            .span(val.span),
-                    })
+                    space_separated.push(
+                        HigherIntermediateValue::Literal(
+                            match iter.parser.parse_value_from_vec(t)?.node {
+                                Value::List(v, sep, Brackets::None) => {
+                                    Value::List(v, sep, Brackets::Bracketed)
+                                }
+                                v => {
+                                    Value::List(vec![v], ListSeparator::Space, Brackets::Bracketed)
+                                }
+                            },
+                        )
+                        .span(val.span),
+                    )
                 }
                 IntermediateValue::Paren(t) => {
                     last_was_whitespace = false;
@@ -115,25 +152,36 @@ impl<'a> Parser<'a> {
                 comma_separated.push(space_separated.pop().unwrap());
             } else if !space_separated.is_empty() {
                 comma_separated.push(
-                    Value::List(
-                        space_separated.into_iter().map(|a| a.node).collect(),
+                    HigherIntermediateValue::Literal(Value::List(
+                        space_separated
+                            .into_iter()
+                            .map(|a| ValueVisitor::new(self, span).eval(a.node))
+                            .collect::<SassResult<Vec<Value>>>()?,
                         ListSeparator::Space,
                         Brackets::None,
-                    )
+                    ))
                     .span(span),
                 );
             }
             Value::List(
-                comma_separated.into_iter().map(|a| a.node).collect(),
+                comma_separated
+                    .into_iter()
+                    .map(|a| ValueVisitor::new(self, span).eval(a.node))
+                    .collect::<SassResult<Vec<Value>>>()?,
                 ListSeparator::Comma,
                 Brackets::None,
             )
             .span(span)
         } else if space_separated.len() == 1 {
-            space_separated.pop().unwrap()
+            ValueVisitor::new(self, span)
+                .eval(space_separated.pop().unwrap().node)?
+                .span(span)
         } else {
             Value::List(
-                space_separated.into_iter().map(|a| a.node).collect(),
+                space_separated
+                    .into_iter()
+                    .map(|a| ValueVisitor::new(self, span).eval(a.node))
+                    .collect::<SassResult<Vec<Value>>>()?,
                 ListSeparator::Space,
                 Brackets::None,
             )
@@ -175,7 +223,10 @@ impl<'a> Parser<'a> {
             s.push(':');
             s.push_str(&self.eat_progid()?);
             return Ok(Spanned {
-                node: IntermediateValue::Value(Value::String(s, QuoteKind::None)),
+                node: IntermediateValue::Value(HigherIntermediateValue::Literal(Value::String(
+                    s,
+                    QuoteKind::None,
+                ))),
                 span,
             });
         }
@@ -188,10 +239,10 @@ impl<'a> Parser<'a> {
                     Some(val) => {
                         self.toks.truncate_iterator_to_cursor();
                         self.toks.next();
-                        return Ok(
-                            IntermediateValue::Value(Value::String(val, QuoteKind::None))
-                                .span(span),
-                        );
+                        return Ok(IntermediateValue::Value(HigherIntermediateValue::Literal(
+                            Value::String(val, QuoteKind::None),
+                        ))
+                        .span(span));
                     }
                     None => {
                         self.toks.reset_cursor();
@@ -202,10 +253,10 @@ impl<'a> Parser<'a> {
                     Some(val) => {
                         self.toks.truncate_iterator_to_cursor();
                         self.toks.next();
-                        return Ok(
-                            IntermediateValue::Value(Value::String(val, QuoteKind::None))
-                                .span(span),
-                        );
+                        return Ok(IntermediateValue::Value(HigherIntermediateValue::Literal(
+                            Value::String(val, QuoteKind::None),
+                        ))
+                        .span(span));
                     }
                     None => {
                         self.toks.reset_cursor();
@@ -217,7 +268,7 @@ impl<'a> Parser<'a> {
             let ident_as_string = as_ident.clone().into_inner();
             let func = match self.scopes.last().get_fn(
                 Spanned {
-                    node: as_ident,
+                    node: as_ident.clone(),
                     span,
                 },
                 self.global_scope,
@@ -225,10 +276,11 @@ impl<'a> Parser<'a> {
                 Ok(f) => f,
                 Err(_) => {
                     if let Some(f) = GLOBAL_FUNCTIONS.get(ident_as_string.as_str()) {
-                        return Ok(
-                            IntermediateValue::Value(f.0(self.parse_call_args()?, self)?)
-                                .span(span),
-                        );
+                        return Ok(IntermediateValue::Value(HigherIntermediateValue::Function(
+                            SassFunction::Builtin(f.clone(), as_ident),
+                            self.parse_call_args()?,
+                        ))
+                        .span(span));
                     } else {
                         // check for special cased CSS functions
                         match lower.as_str() {
@@ -243,34 +295,44 @@ impl<'a> Parser<'a> {
                             _ => s.push_str(&self.parse_call_args()?.to_css_string(self)?),
                         }
 
-                        return Ok(
-                            IntermediateValue::Value(Value::String(s, QuoteKind::None)).span(span)
-                        );
+                        return Ok(IntermediateValue::Value(HigherIntermediateValue::Literal(
+                            Value::String(s, QuoteKind::None),
+                        ))
+                        .span(span));
                     }
                 }
             };
 
             let call_args = self.parse_call_args()?;
-            return Ok(IntermediateValue::Value(self.eval_function(func, call_args)?).span(span));
+            return Ok(IntermediateValue::Value(HigherIntermediateValue::Function(
+                SassFunction::UserDefined(Box::new(func), as_ident),
+                call_args,
+            ))
+            .span(span));
         }
 
         // check for named colors
         if let Some(c) = NAMED_COLORS.get_by_name(lower.as_str()) {
-            return Ok(IntermediateValue::Value(Value::Color(Box::new(Color::new(
-                c[0], c[1], c[2], c[3], s,
-            ))))
-            .span(span));
+            return Ok(
+                IntermediateValue::Value(HigherIntermediateValue::Literal(Value::Color(Box::new(
+                    Color::new(c[0], c[1], c[2], c[3], s),
+                ))))
+                .span(span),
+            );
         }
 
         // check for keywords
         Ok(match lower.as_str() {
-            "true" => IntermediateValue::Value(Value::True),
-            "false" => IntermediateValue::Value(Value::False),
-            "null" => IntermediateValue::Value(Value::Null),
+            "true" => IntermediateValue::Value(HigherIntermediateValue::Literal(Value::True)),
+            "false" => IntermediateValue::Value(HigherIntermediateValue::Literal(Value::False)),
+            "null" => IntermediateValue::Value(HigherIntermediateValue::Literal(Value::Null)),
             "not" => IntermediateValue::Op(Op::Not),
             "and" => IntermediateValue::Op(Op::And),
             "or" => IntermediateValue::Op(Op::Or),
-            _ => IntermediateValue::Value(Value::String(s, QuoteKind::None)),
+            _ => IntermediateValue::Value(HigherIntermediateValue::Literal(Value::String(
+                s,
+                QuoteKind::None,
+            ))),
         }
         .span(span))
     }
@@ -336,30 +398,36 @@ impl<'a> Parser<'a> {
                 let n = if val.dec_len == 0 {
                     if val.num.len() <= 18 && val.times_ten.is_empty() {
                         let n = Rational64::new_raw(parse_i64(&val.num), 1);
-                        return Some(Ok(IntermediateValue::Value(Value::Dimension(
-                            Number::new_small(n),
-                            unit,
-                        ))
+                        return Some(Ok(IntermediateValue::Value(
+                            HigherIntermediateValue::Literal(Value::Dimension(
+                                Number::new_small(n),
+                                unit,
+                            )),
+                        )
                         .span(span)));
                     }
                     BigRational::new_raw(val.num.parse::<BigInt>().unwrap(), BigInt::one())
                 } else {
                     if val.num.len() <= 18 && val.times_ten.is_empty() {
                         let n = Rational64::new(parse_i64(&val.num), pow(10, val.dec_len));
-                        return Some(Ok(IntermediateValue::Value(Value::Dimension(
-                            Number::new_small(n),
-                            unit,
-                        ))
+                        return Some(Ok(IntermediateValue::Value(
+                            HigherIntermediateValue::Literal(Value::Dimension(
+                                Number::new_small(n),
+                                unit,
+                            )),
+                        )
                         .span(span)));
                     }
                     BigRational::new(val.num.parse().unwrap(), pow(BigInt::from(10), val.dec_len))
                 };
 
                 if val.times_ten.is_empty() {
-                    return Some(Ok(IntermediateValue::Value(Value::Dimension(
-                        Number::new_big(n),
-                        unit,
-                    ))
+                    return Some(Ok(IntermediateValue::Value(
+                        HigherIntermediateValue::Literal(Value::Dimension(
+                            Number::new_big(n),
+                            unit,
+                        )),
+                    )
                     .span(span)));
                 }
 
@@ -383,8 +451,11 @@ impl<'a> Parser<'a> {
                     BigRational::new(BigInt::one(), times_ten)
                 };
 
-                IntermediateValue::Value(Value::Dimension(Number::new_big(n * times_ten), unit))
-                    .span(span)
+                IntermediateValue::Value(HigherIntermediateValue::Literal(Value::Dimension(
+                    Number::new_big(n * times_ten),
+                    unit,
+                )))
+                .span(span)
             }
             '(' => {
                 let mut span = self.toks.next().unwrap().pos();
@@ -404,10 +475,13 @@ impl<'a> Parser<'a> {
             '&' => {
                 let span = self.toks.next().unwrap().pos();
                 if self.super_selectors.is_empty() && !self.at_root_has_selector && !self.at_root {
-                    IntermediateValue::Value(Value::Null).span(span)
-                } else {
-                    IntermediateValue::Value(self.super_selectors.last().clone().into_value())
+                    IntermediateValue::Value(HigherIntermediateValue::Literal(Value::Null))
                         .span(span)
+                } else {
+                    IntermediateValue::Value(HigherIntermediateValue::Literal(
+                        self.super_selectors.last().clone().into_value(),
+                    ))
+                    .span(span)
                 }
             }
             '#' => {
@@ -422,7 +496,7 @@ impl<'a> Parser<'a> {
                     Ok(v) => v,
                     Err(e) => return Some(Err(e)),
                 };
-                IntermediateValue::Value(hex.node).span(hex.span)
+                IntermediateValue::Value(HigherIntermediateValue::Literal(hex.node)).span(hex.span)
             }
             q @ '"' | q @ '\'' => {
                 let span_start = self.toks.next().unwrap().pos();
@@ -430,7 +504,8 @@ impl<'a> Parser<'a> {
                     Ok(v) => v,
                     Err(e) => return Some(Err(e)),
                 };
-                IntermediateValue::Value(node).span(span_start.merge(span))
+                IntermediateValue::Value(HigherIntermediateValue::Literal(node))
+                    .span(span_start.merge(span))
             }
             '[' => {
                 let mut span = self.toks.next().unwrap().pos();
@@ -453,13 +528,13 @@ impl<'a> Parser<'a> {
                     Err(e) => return Some(Err(e)),
                 };
                 let span = val.span;
-                IntermediateValue::Value(
+                IntermediateValue::Value(HigherIntermediateValue::Literal(
                     match self.scopes.last().get_var(val, self.global_scope) {
                         Ok(v) => v,
                         Err(e) => return Some(Err(e)),
                     }
                     .node,
-                )
+                ))
                 .span(span)
             }
             '+' => {
@@ -526,7 +601,10 @@ impl<'a> Parser<'a> {
                 // supporting `!optional` in `@extend`. In the future, we should have a better
                 // check for `!optional` as this technically allows `!optional` everywhere
                 match v.node.to_ascii_lowercase().as_str() {
-                    "important" => IntermediateValue::Value(Value::Important).span(span),
+                    "important" => {
+                        IntermediateValue::Value(HigherIntermediateValue::Literal(Value::Important))
+                            .span(span)
+                    }
                     "optional" => return None,
                     _ => return Some(Err(("Expected \"important\".", span).into())),
                 }
@@ -631,381 +709,6 @@ impl<'a> Parser<'a> {
         let color = Color::new(red, green, blue, alpha, s);
         Ok(Value::Color(Box::new(color)).span(self.span_before))
     }
-
-    fn eat_calc_args(&mut self, buf: &mut String) -> SassResult<()> {
-        buf.reserve(2);
-        buf.push('(');
-        let mut nesting = 0;
-        while let Some(tok) = self.toks.next() {
-            match tok.kind {
-                ' ' | '\t' | '\n' => {
-                    self.whitespace();
-                    buf.push(' ');
-                }
-                '#' => {
-                    if let Some(Token { kind: '{', pos }) = self.toks.peek() {
-                        self.span_before = *pos;
-                        self.toks.next();
-                        let interpolation = self.parse_interpolation()?;
-                        buf.push_str(&interpolation.node.to_css_string(interpolation.span)?);
-                    } else {
-                        buf.push('#');
-                    }
-                }
-                '(' => {
-                    nesting += 1;
-                    buf.push('(');
-                }
-                ')' => {
-                    if nesting == 0 {
-                        break;
-                    } else {
-                        nesting -= 1;
-                        buf.push(')');
-                    }
-                }
-                c => buf.push(c),
-            }
-        }
-        buf.push(')');
-        Ok(())
-    }
-
-    fn eat_progid(&mut self) -> SassResult<String> {
-        let mut string = String::new();
-        let mut span = self.toks.peek().unwrap().pos();
-        while let Some(tok) = self.toks.next() {
-            span = span.merge(tok.pos());
-            match tok.kind {
-                'a'..='z' | 'A'..='Z' | '.' => {
-                    string.push(tok.kind);
-                }
-                '(' => {
-                    self.eat_calc_args(&mut string)?;
-                    break;
-                }
-                _ => return Err(("expected \"(\".", span).into()),
-            }
-        }
-        Ok(string)
-    }
-
-    fn try_eat_url(&mut self) -> SassResult<Option<String>> {
-        let mut buf = String::from("url(");
-        peek_whitespace(self.toks);
-        while let Some(tok) = self.toks.peek() {
-            let kind = tok.kind;
-            self.toks.advance_cursor();
-            if kind == '!'
-                || kind == '%'
-                || kind == '&'
-                || (kind >= '*' && kind <= '~')
-                || kind as u32 >= 0x0080
-            {
-                buf.push(kind);
-            } else if kind == '\\' {
-                buf.push_str(&self.peek_escape()?);
-            } else if kind == '#' {
-                if let Some(Token { kind: '{', .. }) = self.toks.peek() {
-                    self.toks.advance_cursor();
-                    let interpolation = self.peek_interpolation()?;
-                    match interpolation.node {
-                        Value::String(ref s, ..) => buf.push_str(s),
-                        v => buf.push_str(v.to_css_string(interpolation.span)?.borrow()),
-                    };
-                } else {
-                    buf.push('#');
-                }
-            } else if kind == ')' {
-                buf.push(')');
-                self.toks.truncate_iterator_to_cursor();
-                self.toks.next();
-                return Ok(Some(buf));
-            } else if kind.is_whitespace() {
-                peek_whitespace(self.toks);
-                let next = match self.toks.peek() {
-                    Some(v) => v,
-                    None => break,
-                };
-                if next.kind == ')' {
-                    buf.push(')');
-                    self.toks.truncate_iterator_to_cursor();
-                    self.toks.next();
-                    return Ok(Some(buf));
-                } else {
-                    break;
-                }
-            } else {
-                break;
-            }
-        }
-        self.toks.reset_cursor();
-        Ok(None)
-    }
-
-    fn peek_number(&mut self) -> SassResult<Option<String>> {
-        let mut buf = String::new();
-
-        let num = self.peek_whole_number();
-        buf.push_str(&num);
-
-        self.toks.advance_cursor();
-
-        if let Some(Token { kind: '.', .. }) = self.toks.peek() {
-            self.toks.advance_cursor();
-            let num = self.peek_whole_number();
-            if num.is_empty() {
-                return Ok(None);
-            }
-            buf.push_str(&num);
-        } else {
-            self.toks.move_cursor_back().unwrap();
-        }
-
-        let next = match self.toks.peek() {
-            Some(tok) => tok,
-            None => return Ok(Some(buf)),
-        };
-
-        match next.kind {
-            'a'..='z' | 'A'..='Z' | '-' | '_' | '\\' => {
-                let unit = peek_ident_no_interpolation(self.toks, true, self.span_before)?.node;
-
-                buf.push_str(&unit);
-            }
-            '%' => {
-                self.toks.advance_cursor();
-                buf.push('%');
-            }
-            _ => {}
-        }
-
-        Ok(Some(buf))
-    }
-
-    fn peek_whole_number(&mut self) -> String {
-        let mut buf = String::new();
-        while let Some(tok) = self.toks.peek() {
-            if tok.kind.is_ascii_digit() {
-                buf.push(tok.kind);
-                self.toks.advance_cursor();
-            } else {
-                return buf;
-            }
-        }
-        buf
-    }
-
-    fn try_parse_min_max(
-        &mut self,
-        fn_name: &str,
-        allow_comma: bool,
-    ) -> SassResult<Option<String>> {
-        let mut buf = if allow_comma {
-            format!("{}(", fn_name)
-        } else {
-            String::new()
-        };
-        peek_whitespace(self.toks);
-        while let Some(tok) = self.toks.peek() {
-            let kind = tok.kind;
-            match kind {
-                '+' | '-' | '0'..='9' => {
-                    self.toks.advance_cursor();
-                    if let Some(number) = self.peek_number()? {
-                        buf.push(kind);
-                        buf.push_str(&number);
-                    } else {
-                        return Ok(None);
-                    }
-                }
-                '#' => {
-                    self.toks.advance_cursor();
-                    if let Some(Token { kind: '{', .. }) = self.toks.peek() {
-                        self.toks.advance_cursor();
-                        let interpolation = self.peek_interpolation()?;
-                        match interpolation.node {
-                            Value::String(ref s, ..) => buf.push_str(s),
-                            v => buf.push_str(v.to_css_string(interpolation.span)?.borrow()),
-                        };
-                    } else {
-                        return Ok(None);
-                    }
-                }
-                'c' | 'C' => {
-                    if let Some(name) = self.try_parse_min_max_function("calc")? {
-                        buf.push_str(&name);
-                    } else {
-                        return Ok(None);
-                    }
-                }
-                'e' | 'E' => {
-                    if let Some(name) = self.try_parse_min_max_function("env")? {
-                        buf.push_str(&name);
-                    } else {
-                        return Ok(None);
-                    }
-                }
-                'v' | 'V' => {
-                    if let Some(name) = self.try_parse_min_max_function("var")? {
-                        buf.push_str(&name);
-                    } else {
-                        return Ok(None);
-                    }
-                }
-                '(' => {
-                    self.toks.advance_cursor();
-                    buf.push('(');
-                    if let Some(val) = self.try_parse_min_max(fn_name, false)? {
-                        buf.push_str(&val);
-                    } else {
-                        return Ok(None);
-                    }
-                }
-                'm' | 'M' => {
-                    self.toks.advance_cursor();
-                    match self.toks.peek() {
-                        Some(Token { kind: 'i', .. }) | Some(Token { kind: 'I', .. }) => {
-                            self.toks.advance_cursor();
-                            if !matches!(self.toks.peek(), Some(Token { kind: 'n', .. }) | Some(Token { kind: 'N', .. }))
-                            {
-                                return Ok(None);
-                            }
-                            buf.push_str("min(")
-                        }
-                        Some(Token { kind: 'a', .. }) | Some(Token { kind: 'A', .. }) => {
-                            self.toks.advance_cursor();
-                            if !matches!(self.toks.peek(), Some(Token { kind: 'x', .. }) | Some(Token { kind: 'X', .. }))
-                            {
-                                return Ok(None);
-                            }
-                            buf.push_str("max(")
-                        }
-                        _ => return Ok(None),
-                    }
-
-                    self.toks.advance_cursor();
-
-                    if !matches!(self.toks.peek(), Some(Token { kind: '(', .. })) {
-                        return Ok(None);
-                    }
-
-                    if let Some(val) = self.try_parse_min_max(fn_name, false)? {
-                        buf.push_str(&val);
-                    } else {
-                        return Ok(None);
-                    }
-                }
-                _ => return Ok(None),
-            }
-
-            peek_whitespace(self.toks);
-
-            let next = match self.toks.peek() {
-                Some(tok) => tok,
-                None => return Ok(None),
-            };
-
-            match next.kind {
-                ')' => {
-                    self.toks.advance_cursor();
-                    buf.push(')');
-                    return Ok(Some(buf));
-                }
-                '+' | '-' | '*' | '/' => {
-                    buf.push(' ');
-                    buf.push(next.kind);
-                    buf.push(' ');
-                    self.toks.advance_cursor();
-                }
-                ',' => {
-                    if !allow_comma {
-                        return Ok(None);
-                    }
-                    self.toks.advance_cursor();
-                    buf.push(',');
-                    buf.push(' ');
-                }
-                _ => return Ok(None),
-            }
-
-            peek_whitespace(self.toks);
-        }
-
-        Ok(Some(buf))
-    }
-
-    #[allow(dead_code, unused_mut, unused_variables, unused_assignments)]
-    fn try_parse_min_max_function(&mut self, fn_name: &'static str) -> SassResult<Option<String>> {
-        let mut ident = peek_ident_no_interpolation(self.toks, false, self.span_before)?.node;
-        ident.make_ascii_lowercase();
-        if ident != fn_name {
-            return Ok(None);
-        }
-        if !matches!(self.toks.peek(), Some(Token { kind: '(', .. })) {
-            return Ok(None);
-        }
-        self.toks.advance_cursor();
-        ident.push('(');
-        todo!("special functions inside `min()` or `max()`")
-    }
-
-    fn peek_interpolation(&mut self) -> SassResult<Spanned<Value>> {
-        let vec = peek_until_closing_curly_brace(self.toks)?;
-        self.toks.advance_cursor();
-        let val = self.parse_value_from_vec(vec)?;
-        Ok(Spanned {
-            node: val.node.eval(val.span)?.node.unquote(),
-            span: val.span,
-        })
-    }
-
-    fn peek_escape(&mut self) -> SassResult<String> {
-        let mut value = 0;
-        let first = match self.toks.peek() {
-            Some(t) => *t,
-            None => return Ok(String::new()),
-        };
-        let mut span = first.pos;
-        if first.kind == '\n' {
-            return Err(("Expected escape sequence.", first.pos()).into());
-        } else if first.kind.is_ascii_hexdigit() {
-            for _ in 0..6 {
-                let next = match self.toks.peek() {
-                    Some(t) => t,
-                    None => break,
-                };
-                if !next.kind.is_ascii_hexdigit() {
-                    break;
-                }
-                value *= 16;
-                value += as_hex(next.kind);
-                span = span.merge(next.pos);
-                self.toks.peek_forward(1);
-            }
-            if self.toks.peek().is_some() && self.toks.peek().unwrap().kind.is_whitespace() {
-                self.toks.peek_forward(1);
-            }
-        } else {
-            value = self.toks.peek_forward(1).unwrap().kind as u32;
-        }
-
-        let c = std::char::from_u32(value).ok_or(("Invalid escape sequence.", span))?;
-        if is_name(c) {
-            Ok(c.to_string())
-        } else if value <= 0x1F || value == 0x7F {
-            let mut buf = String::with_capacity(4);
-            buf.push('\\');
-            if value > 0xF {
-                buf.push(hex_char_for(value >> 4));
-            }
-            buf.push(hex_char_for(value & 0xF));
-            buf.push(' ');
-            Ok(buf)
-        } else {
-            Ok(format!("\\{}", c))
-        }
-    }
 }
 
 struct IntermediateValueIterator<'a, 'b: 'a> {
@@ -1049,7 +752,7 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
     fn eat_op(
         &mut self,
         op: Spanned<Op>,
-        space_separated: &mut Vec<Spanned<Value>>,
+        space_separated: &mut Vec<Spanned<HigherIntermediateValue>>,
         last_was_whitespace: bool,
     ) -> SassResult<()> {
         match op.node {
@@ -1057,7 +760,7 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
                 self.whitespace();
                 let right = self.single_value()?;
                 space_separated.push(Spanned {
-                    node: Value::UnaryOp(op.node, Box::new(right.node)),
+                    node: HigherIntermediateValue::UnaryOp(op.node, Box::new(right.node)),
                     span: right.span,
                 });
             }
@@ -1066,16 +769,25 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
                 let right = self.single_value()?;
                 if let Some(left) = space_separated.pop() {
                     space_separated.push(Spanned {
-                        node: Value::BinaryOp(Box::new(left.node), op.node, Box::new(right.node)),
+                        node: HigherIntermediateValue::BinaryOp(
+                            Box::new(left.node),
+                            op.node,
+                            Box::new(right.node),
+                        ),
                         span: left.span.merge(right.span),
                     });
                 } else {
                     self.whitespace();
                     space_separated.push(Spanned {
-                        node: Value::String(
-                            format!("/{}", right.node.to_css_string(right.span)?),
+                        node: HigherIntermediateValue::Literal(Value::String(
+                            format!(
+                                "/{}",
+                                ValueVisitor::new(self.parser, right.span)
+                                    .eval(right.node)?
+                                    .to_css_string(right.span)?
+                            ),
                             QuoteKind::None,
-                        ),
+                        )),
                         span: op.span.merge(right.span),
                     });
                 }
@@ -1085,14 +797,18 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
                     self.whitespace();
                     let right = self.single_value()?;
                     space_separated.push(Spanned {
-                        node: Value::BinaryOp(Box::new(left.node), op.node, Box::new(right.node)),
+                        node: HigherIntermediateValue::BinaryOp(
+                            Box::new(left.node),
+                            op.node,
+                            Box::new(right.node),
+                        ),
                         span: left.span.merge(right.span),
                     });
                 } else {
                     self.whitespace();
                     let right = self.single_value()?;
                     space_separated.push(Spanned {
-                        node: Value::UnaryOp(op.node, Box::new(right.node)),
+                        node: HigherIntermediateValue::UnaryOp(op.node, Box::new(right.node)),
                         span: right.span,
                     });
                 }
@@ -1102,7 +818,7 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
                     let right = self.single_value()?;
                     if let Some(left) = space_separated.pop() {
                         space_separated.push(Spanned {
-                            node: Value::BinaryOp(
+                            node: HigherIntermediateValue::BinaryOp(
                                 Box::new(left.node),
                                 op.node,
                                 Box::new(right.node),
@@ -1110,27 +826,44 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
                             span: left.span.merge(right.span),
                         });
                     } else {
-                        space_separated
-                            .push(right.map_node(|n| Value::UnaryOp(op.node, Box::new(n))));
+                        space_separated.push(
+                            right.map_node(|n| {
+                                HigherIntermediateValue::UnaryOp(op.node, Box::new(n))
+                            }),
+                        );
                     }
                 } else {
                     let right = self.single_value()?;
-                    space_separated.push(right.map_node(|n| Value::UnaryOp(op.node, Box::new(n))));
+                    space_separated.push(
+                        right.map_node(|n| HigherIntermediateValue::UnaryOp(op.node, Box::new(n))),
+                    );
                 }
             }
             Op::And => {
                 self.whitespace();
                 // special case when the value is literally "and"
                 if self.peek().is_none() {
-                    space_separated
-                        .push(Value::String(op.to_string(), QuoteKind::None).span(op.span));
+                    space_separated.push(
+                        HigherIntermediateValue::Literal(Value::String(
+                            op.to_string(),
+                            QuoteKind::None,
+                        ))
+                        .span(op.span),
+                    );
                 } else if let Some(left) = space_separated.pop() {
                     self.whitespace();
-                    if left.node.is_true(left.span)? {
+                    if ValueVisitor::new(self.parser, left.span)
+                        .eval(left.node.clone())?
+                        .is_true()
+                    {
                         let right = self.single_value()?;
                         space_separated.push(
-                            Value::BinaryOp(Box::new(left.node), op.node, Box::new(right.node))
-                                .span(left.span.merge(right.span)),
+                            HigherIntermediateValue::BinaryOp(
+                                Box::new(left.node),
+                                op.node,
+                                Box::new(right.node),
+                            )
+                            .span(left.span.merge(right.span)),
                         );
                     } else {
                         // we explicitly ignore errors here as a workaround for short circuiting
@@ -1154,11 +887,19 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
                 self.whitespace();
                 // special case when the value is literally "or"
                 if self.peek().is_none() {
-                    space_separated
-                        .push(Value::String(op.to_string(), QuoteKind::None).span(op.span));
+                    space_separated.push(
+                        HigherIntermediateValue::Literal(Value::String(
+                            op.to_string(),
+                            QuoteKind::None,
+                        ))
+                        .span(op.span),
+                    );
                 } else if let Some(left) = space_separated.pop() {
                     self.whitespace();
-                    if left.node.is_true(left.span)? {
+                    if ValueVisitor::new(self.parser, left.span)
+                        .eval(left.node.clone())?
+                        .is_true()
+                    {
                         // we explicitly ignore errors here as a workaround for short circuiting
                         while let Some(value) = self.peek() {
                             match value {
@@ -1180,8 +921,12 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
                     } else {
                         let right = self.single_value()?;
                         space_separated.push(
-                            Value::BinaryOp(Box::new(left.node), op.node, Box::new(right.node))
-                                .span(left.span.merge(right.span)),
+                            HigherIntermediateValue::BinaryOp(
+                                Box::new(left.node),
+                                op.node,
+                                Box::new(right.node),
+                            )
+                            .span(left.span.merge(right.span)),
                         );
                     }
                 } else {
@@ -1193,8 +938,12 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
                     self.whitespace();
                     let right = self.single_value()?;
                     space_separated.push(
-                        Value::BinaryOp(Box::new(left.node), op.node, Box::new(right.node))
-                            .span(left.span.merge(right.span)),
+                        HigherIntermediateValue::BinaryOp(
+                            Box::new(left.node),
+                            op.node,
+                            Box::new(right.node),
+                        )
+                        .span(left.span.merge(right.span)),
                     );
                 } else {
                     return Err(("Expected expression.", op.span).into());
@@ -1204,7 +953,7 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
         Ok(())
     }
 
-    fn single_value(&mut self) -> SassResult<Spanned<Value>> {
+    fn single_value(&mut self) -> SassResult<Spanned<HigherIntermediateValue>> {
         let next = self
             .next()
             .ok_or(("Expected expression.", self.parser.span_before))??;
@@ -1215,7 +964,7 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
                     self.whitespace();
                     let val = self.single_value()?;
                     Spanned {
-                        node: val.node.neg(val.span)?,
+                        node: HigherIntermediateValue::UnaryOp(Op::Minus, Box::new(val.node)),
                         span: next.span.merge(val.span),
                     }
                 }
@@ -1223,7 +972,7 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
                     self.whitespace();
                     let val = self.single_value()?;
                     Spanned {
-                        node: Value::UnaryOp(Op::Not, Box::new(val.node)),
+                        node: HigherIntermediateValue::UnaryOp(Op::Not, Box::new(val.node)),
                         span: next.span.merge(val.span),
                     }
                 }
@@ -1235,19 +984,30 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
                     self.whitespace();
                     let val = self.single_value()?;
                     Spanned {
-                        node: Value::String(
-                            format!("/{}", val.node.to_css_string(val.span)?),
+                        node: HigherIntermediateValue::Literal(Value::String(
+                            format!(
+                                "/{}",
+                                ValueVisitor::new(self.parser, val.span)
+                                    .eval(val.node)?
+                                    .to_css_string(val.span)?
+                            ),
                             QuoteKind::None,
-                        ),
+                        )),
                         span: next.span.merge(val.span),
                     }
                 }
                 Op::And => Spanned {
-                    node: Value::String("and".into(), QuoteKind::None),
+                    node: HigherIntermediateValue::Literal(Value::String(
+                        "and".into(),
+                        QuoteKind::None,
+                    )),
                     span: next.span,
                 },
                 Op::Or => Spanned {
-                    node: Value::String("or".into(), QuoteKind::None),
+                    node: HigherIntermediateValue::Literal(Value::String(
+                        "or".into(),
+                        QuoteKind::None,
+                    )),
                     span: next.span,
                 },
                 _ => {
@@ -1260,10 +1020,10 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
             }
             IntermediateValue::Bracketed(t) => {
                 let v = self.parser.parse_value_from_vec(t)?;
-                match v.node {
+                HigherIntermediateValue::Literal(match v.node {
                     Value::List(v, sep, Brackets::None) => Value::List(v, sep, Brackets::Bracketed),
                     v => Value::List(vec![v], ListSeparator::Space, Brackets::Bracketed),
-                }
+                })
                 .span(v.span)
             }
             IntermediateValue::Paren(t) => {
@@ -1272,16 +1032,24 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
                     span: next.span,
                 })?;
                 Spanned {
-                    node: Value::Paren(Box::new(val.node)),
+                    node: HigherIntermediateValue::Paren(Box::new(val.node)),
                     span: val.span,
                 }
             }
         })
     }
 
-    fn parse_paren(&mut self, t: Spanned<Vec<Token>>) -> SassResult<Spanned<Value>> {
+    fn parse_paren(
+        &mut self,
+        t: Spanned<Vec<Token>>,
+    ) -> SassResult<Spanned<HigherIntermediateValue>> {
         if t.is_empty() {
-            return Ok(Value::List(Vec::new(), ListSeparator::Space, Brackets::None).span(t.span));
+            return Ok(HigherIntermediateValue::Literal(Value::List(
+                Vec::new(),
+                ListSeparator::Space,
+                Brackets::None,
+            ))
+            .span(t.span));
         }
 
         let paren_toks = &mut t.node.into_iter().peekmore();
@@ -1293,7 +1061,9 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
 
         if paren_toks.peek().is_none() {
             return Ok(Spanned {
-                node: Value::Paren(Box::new(key.node)),
+                node: HigherIntermediateValue::Paren(Box::new(HigherIntermediateValue::Literal(
+                    key.node,
+                ))),
                 span: key.span,
             });
         }
@@ -1308,7 +1078,7 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
 
         if paren_toks.peek().is_none() {
             return Ok(Spanned {
-                node: Value::Map(map),
+                node: HigherIntermediateValue::Literal(Value::Map(map)),
                 span: key.span.merge(val.span),
             });
         }
@@ -1333,7 +1103,7 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
             }
         }
         Ok(Spanned {
-            node: Value::Map(map),
+            node: HigherIntermediateValue::Literal(Value::Map(map)),
             span,
         })
     }
@@ -1345,31 +1115,6 @@ impl IsWhitespace for SassResult<Spanned<IntermediateValue>> {
             Ok(v) => v.node.is_whitespace(),
             _ => false,
         }
-    }
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-enum IntermediateValue {
-    Value(Value),
-    Op(Op),
-    Bracketed(Vec<Token>),
-    Paren(Vec<Token>),
-    Comma,
-    Whitespace,
-}
-
-impl IntermediateValue {
-    const fn span(self, span: Span) -> Spanned<Self> {
-        Spanned { node: self, span }
-    }
-}
-
-impl IsWhitespace for IntermediateValue {
-    fn is_whitespace(&self) -> bool {
-        if self == &IntermediateValue::Whitespace {
-            return true;
-        }
-        false
     }
 }
 

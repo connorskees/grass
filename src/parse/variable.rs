@@ -42,32 +42,32 @@ impl<'a> Parser<'a> {
 
         if value.global && !value.default {
             self.global_scope
-                .insert_var(ident.clone(), value.value.clone())?;
+                .insert_var(ident.clone(), value.value.clone());
         }
 
         if value.default {
             if self.at_root && !self.in_control_flow {
                 if !self.global_scope.var_exists_no_global(&ident) {
-                    self.global_scope.insert_var(ident, value.value)?;
+                    self.global_scope.insert_var(ident, value.value);
                 }
             } else {
                 if value.global && !self.global_scope.var_exists_no_global(&ident) {
                     self.global_scope
-                        .insert_var(ident.clone(), value.value.clone())?;
+                        .insert_var(ident.clone(), value.value.clone());
                 }
                 if !self.scopes.last().var_exists_no_global(&ident) {
-                    self.scopes.last_mut().insert_var(ident, value.value)?;
+                    self.scopes.last_mut().insert_var(ident, value.value);
                 }
             }
         } else if self.at_root {
             if self.in_control_flow {
                 if self.global_scope.var_exists_no_global(&ident) {
-                    self.global_scope.insert_var(ident, value.value)?;
+                    self.global_scope.insert_var(ident, value.value);
                 } else {
-                    self.scopes.last_mut().insert_var(ident, value.value)?;
+                    self.scopes.last_mut().insert_var(ident, value.value);
                 }
             } else {
-                self.global_scope.insert_var(ident, value.value)?;
+                self.global_scope.insert_var(ident, value.value);
             }
         } else {
             let len = self.scopes.len();
@@ -78,15 +78,15 @@ impl<'a> Parser<'a> {
                 .filter(|(i, _)| *i != len)
             {
                 if scope.var_exists_no_global(&ident) {
-                    scope.insert_var(ident.clone(), value.value.clone())?;
+                    scope.insert_var(ident.clone(), value.value.clone());
                 }
             }
             if self.scopes.first().var_exists_no_global(&ident) {
                 self.scopes
                     .first_mut()
-                    .insert_var(ident.clone(), value.value.clone())?;
+                    .insert_var(ident.clone(), value.value.clone());
             }
-            self.scopes.last_mut().insert_var(ident, value.value)?;
+            self.scopes.last_mut().insert_var(ident, value.value);
         }
         Ok(())
     }

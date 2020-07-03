@@ -13,10 +13,7 @@ use crate::{
 
 fn if_(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(3)?;
-    if parser
-        .arg(&mut args, 0, "condition")?
-        .is_true(args.span())?
-    {
+    if parser.arg(&mut args, 0, "condition")?.is_true() {
         Ok(parser.arg(&mut args, 1, "if-true")?)
     } else {
         Ok(parser.arg(&mut args, 2, "if-false")?)
@@ -77,10 +74,7 @@ fn unit(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 fn type_of(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     let value = parser.arg(&mut args, 0, "value")?;
-    Ok(Value::String(
-        value.kind(args.span())?.to_owned(),
-        QuoteKind::None,
-    ))
+    Ok(Value::String(value.kind().to_owned(), QuoteKind::None))
 }
 
 fn unitless(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
@@ -177,7 +171,7 @@ fn get_function(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value
     };
     let css = parser
         .default_arg(&mut args, 1, "css", Value::False)
-        .is_true(args.span())?;
+        .is_true();
     let module = match parser.default_arg(&mut args, 2, "module", Value::Null) {
         Value::String(s, ..) => Some(s),
         Value::Null => None,

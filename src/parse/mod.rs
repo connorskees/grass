@@ -24,6 +24,8 @@ use crate::{
 
 use common::{Branch, NeverEmptyVec, SelectorOrStyle};
 
+pub(crate) use value::{HigherIntermediateValue, ValueVisitor};
+
 mod args;
 pub mod common;
 mod function;
@@ -405,10 +407,7 @@ impl<'a> Parser<'a> {
             Some(Token { kind: '}', .. }) => {}
             Some(..) | None => return Err(("expected \"}\".", val.span).into()),
         }
-        Ok(Spanned {
-            node: val.node.eval(val.span)?.node.unquote(),
-            span: val.span,
-        })
+        Ok(val.map_node(Value::unquote))
     }
 
     pub fn parse_interpolation_as_string(&mut self) -> SassResult<Cow<'static, str>> {
@@ -560,8 +559,7 @@ impl<'a> Parser<'a> {
 
         for branch in branches {
             self.span_before = branch.cond.first().unwrap().pos;
-            let cond = self.parse_value_from_vec(branch.cond)?;
-            if cond.node.is_true(cond.span)? {
+            if self.parse_value_from_vec(branch.cond)?.node.is_true() {
                 return Parser {
                     toks: &mut branch.toks.into_iter().peekmore(),
                     map: self.map,
@@ -668,7 +666,7 @@ impl<'a> Parser<'a> {
         }
         self.whitespace();
         let from_val = self.parse_value_from_vec(from_toks)?;
-        let from = match from_val.node.eval(from_val.span)?.node {
+        let from = match from_val.node {
             Value::Dimension(n, _) => match n.to_integer().to_isize() {
                 Some(v) => v,
                 None => return Err((format!("{} is not a int.", n), from_val.span).into()),
@@ -685,7 +683,7 @@ impl<'a> Parser<'a> {
         let to_toks = read_until_open_curly_brace(self.toks)?;
         self.toks.next();
         let to_val = self.parse_value_from_vec(to_toks)?;
-        let to = match to_val.node.eval(to_val.span)?.node {
+        let to = match to_val.node {
             Value::Dimension(n, _) => match n.to_integer().to_isize() {
                 Some(v) => v,
                 None => return Err((format!("{} is not a int.", n), to_val.span).into()),
@@ -725,7 +723,7 @@ impl<'a> Parser<'a> {
                     node: Value::Dimension(Number::from(i), Unit::None),
                     span: var.span,
                 },
-            )?;
+            );
             if self.in_function {
                 let these_stmts = Parser {
                     toks: &mut body.clone().into_iter().peekmore(),
@@ -797,7 +795,7 @@ impl<'a> Parser<'a> {
         let mut stmts = Vec::new();
         let mut val = self.parse_value_from_vec(cond.clone())?;
         self.scopes.push(self.scopes.last().clone());
-        while val.node.is_true(val.span)? {
+        while val.node.is_true() {
             if self.in_function {
                 let these_stmts = Parser {
                     toks: &mut body.clone().into_iter().peekmore(),
@@ -881,8 +879,7 @@ impl<'a> Parser<'a> {
         }
         self.whitespace();
         let iter_val_toks = read_until_open_curly_brace(self.toks)?;
-        let iter_val = self.parse_value_from_vec(iter_val_toks)?;
-        let iter = iter_val.node.eval(iter_val.span)?.node.as_list();
+        let iter = self.parse_value_from_vec(iter_val_toks)?.node.as_list();
         self.toks.next();
         self.whitespace();
         let mut body = read_until_closing_curly_brace(self.toks)?;
@@ -905,7 +902,7 @@ impl<'a> Parser<'a> {
                             node: this_iterator[0].clone(),
                             span: vars[0].span,
                         },
-                    )?;
+                    );
                 } else {
                     self.scopes.last_mut().insert_var(
                         &vars[0].node,
@@ -913,7 +910,7 @@ impl<'a> Parser<'a> {
                             node: Value::List(this_iterator, ListSeparator::Space, Brackets::None),
                             span: vars[0].span,
                         },
-                    )?;
+                    );
                 }
             } else {
                 for (var, val) in vars.clone().into_iter().zip(
@@ -927,7 +924,7 @@ impl<'a> Parser<'a> {
                             node: val,
                             span: var.span,
                         },
-                    )?;
+                    );
                 }
             }
 

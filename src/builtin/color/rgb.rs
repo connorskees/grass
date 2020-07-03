@@ -37,7 +37,7 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
                 .into());
         }
 
-        let blue = match channels.pop().map(|v| v.eval(args.span()).unwrap().node) {
+        let blue = match channels.pop() {
             Some(Value::Dimension(n, Unit::None)) => n,
             Some(Value::Dimension(n, Unit::Percent)) => (n / Number::from(100)) * Number::from(255),
             Some(v) if v.is_special_function() => {
@@ -64,7 +64,7 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
             None => return Err(("Missing element $blue.", args.span()).into()),
         };
 
-        let green = match channels.pop().map(|v| v.eval(args.span()).unwrap().node) {
+        let green = match channels.pop() {
             Some(Value::Dimension(n, Unit::None)) => n,
             Some(Value::Dimension(n, Unit::Percent)) => (n / Number::from(100)) * Number::from(255),
             Some(v) if v.is_special_function() => {
@@ -90,7 +90,7 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
             None => return Err(("Missing element $green.", args.span()).into()),
         };
 
-        let red = match channels.pop().map(|v| v.eval(args.span()).unwrap().node) {
+        let red = match channels.pop() {
             Some(Value::Dimension(n, Unit::None)) => n,
             Some(Value::Dimension(n, Unit::Percent)) => (n / Number::from(100)) * Number::from(255),
             Some(v) if v.is_special_function() => {

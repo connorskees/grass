@@ -127,7 +127,7 @@ impl SimpleSelector {
     }
 
     pub fn add_suffix(&mut self, suffix: &str, span: Span) -> SassResult<()> {
-        Ok(match self {
+        match self {
             Self::Type(name) => name.ident.push_str(suffix),
             Self::Placeholder(name)
             | Self::Id(name)
@@ -140,7 +140,8 @@ impl SimpleSelector {
             }) => name.push_str(suffix),
             // todo: add test for this?
             _ => return Err((format!("Invalid parent selector \"{}\"", self), span).into()),
-        })
+        };
+        Ok(())
     }
 
     pub fn is_universal(&self) -> bool {

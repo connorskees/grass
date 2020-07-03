@@ -50,15 +50,13 @@ impl Toplevel {
         Toplevel::RuleSet(selector, Vec::new())
     }
 
-    fn push_style(&mut self, mut s: Style) -> SassResult<()> {
-        s = s.eval()?;
-        if s.value.is_null(s.value.span)? {
-            return Ok(());
+    fn push_style(&mut self, s: Style) {
+        if s.value.is_null() {
+            return;
         }
         if let Toplevel::RuleSet(_, entries) = self {
             entries.push(BlockEntry::Style(Box::new(s)));
         }
-        Ok(())
     }
 
     fn push_comment(&mut self, s: String) {
@@ -96,7 +94,7 @@ impl Css {
                 for rule in body {
                     match rule {
                         Stmt::RuleSet { .. } => vals.extend(self.parse_stmt(rule, extender)?),
-                        Stmt::Style(s) => vals.get_mut(0).unwrap().push_style(s)?,
+                        Stmt::Style(s) => vals.get_mut(0).unwrap().push_style(s),
                         Stmt::Comment(s) => vals.get_mut(0).unwrap().push_comment(s),
                         Stmt::Media(m) => {
                             let MediaRule { query, body, .. } = *m;
@@ -117,10 +115,12 @@ impl Css {
                             })))
                         }
                         Stmt::Return(..) => unreachable!(),
-                        Stmt::AtRoot { body } => body
-                            .into_iter()
-                            .map(|r| Ok(vals.extend(self.parse_stmt(r, extender)?)))
-                            .collect::<SassResult<()>>()?,
+                        Stmt::AtRoot { body } => {
+                            body.into_iter().try_for_each(|r| -> SassResult<()> {
+                                vals.append(&mut self.parse_stmt(r, extender)?);
+                                Ok(())
+                            })?
+                        }
                     };
                 }
                 vals

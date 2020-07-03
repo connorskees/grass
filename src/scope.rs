@@ -51,9 +51,8 @@ impl Scope {
         &mut self,
         s: T,
         v: Spanned<Value>,
-    ) -> SassResult<Option<Spanned<Value>>> {
-        let Spanned { node, span } = v;
-        Ok(self.vars.insert(s.into(), node.eval(span)?))
+    ) -> Option<Spanned<Value>> {
+        self.vars.insert(s.into(), v)
     }
 
     pub fn var_exists_no_global(&self, name: &Identifier) -> bool {

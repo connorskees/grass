@@ -4,7 +4,7 @@ use codemap::{Span, Spanned};
 
 use crate::{
     color::Color,
-    common::{Brackets, ListSeparator, Op, QuoteKind},
+    common::{Brackets, ListSeparator, QuoteKind},
     error::SassResult,
     parse::Parser,
     selector::Selector,
@@ -21,7 +21,6 @@ pub(crate) use sass_function::SassFunction;
 pub(crate) mod css_function;
 mod map;
 mod number;
-mod ops;
 mod sass_function;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -33,9 +32,6 @@ pub(crate) enum Value {
     Dimension(Number, Unit),
     List(Vec<Value>, ListSeparator, Brackets),
     Color(Box<Color>),
-    UnaryOp(Op, Box<Value>),
-    BinaryOp(Box<Value>, Op, Box<Value>),
-    Paren(Box<Value>),
     String(String, QuoteKind),
     Map(SassMap),
     ArgList(Vec<Spanned<Value>>),
@@ -43,7 +39,7 @@ pub(crate) enum Value {
     Function(SassFunction),
 }
 
-fn visit_quoted_string(buf: &mut String, force_double_quote: bool, string: &str) -> SassResult<()> {
+fn visit_quoted_string(buf: &mut String, force_double_quote: bool, string: &str) {
     let mut has_single_quote = false;
     let mut has_double_quote = false;
 
@@ -107,26 +103,22 @@ fn visit_quoted_string(buf: &mut String, force_double_quote: bool, string: &str)
         buffer = format!("{}{}{}", quote, buffer, quote);
     }
     buf.push_str(&buffer);
-    Ok(())
 }
 
 impl Value {
-    pub fn is_null(&self, span: Span) -> SassResult<bool> {
-        Ok(match self {
+    pub fn is_null(&self) -> bool {
+        match self {
             Value::Null => true,
             Value::String(i, QuoteKind::None) if i.is_empty() => true,
-            Self::BinaryOp(..) | Self::Paren(..) | Self::UnaryOp(..) => {
-                self.clone().eval(span)?.is_null(span)?
-            }
             Self::List(v, _, Brackets::Bracketed) if v.is_empty() => false,
             Self::List(v, ..) => v
                 .iter()
-                .map(|f| Ok(f.is_null(span)?))
-                .collect::<SassResult<Vec<bool>>>()?
+                .map(Value::is_null)
+                .collect::<Vec<bool>>()
                 .into_iter()
                 .all(|f| f),
             _ => false,
-        })
+        }
     }
 
     pub fn to_css_string(&self, span: Span) -> SassResult<Cow<'static, str>> {
@@ -148,7 +140,7 @@ impl Value {
             Self::List(vals, sep, brackets) => match brackets {
                 Brackets::None => Cow::owned(
                     vals.iter()
-                        .filter(|x| !x.is_null(span).unwrap_or(false))
+                        .filter(|x| !x.is_null())
                         .map(|x| x.to_css_string(span))
                         .collect::<SassResult<Vec<Cow<'static, str>>>>()?
                         .join(sep.as_str()),
@@ -156,17 +148,13 @@ impl Value {
                 Brackets::Bracketed => Cow::owned(format!(
                     "[{}]",
                     vals.iter()
-                        .filter(|x| !x.is_null(span).unwrap_or(false))
+                        .filter(|x| !x.is_null())
                         .map(|x| x.to_css_string(span))
                         .collect::<SassResult<Vec<Cow<'static, str>>>>()?
                         .join(sep.as_str()),
                 )),
             },
             Self::Color(c) => Cow::owned(c.to_string()),
-            Self::UnaryOp(..) | Self::BinaryOp(..) => {
-                self.clone().eval(span)?.to_css_string(span)?
-            }
-            Self::Paren(val) => val.to_css_string(span)?,
             Self::String(string, QuoteKind::None) => {
                 let mut after_newline = false;
                 let mut buf = String::with_capacity(string.len());
@@ -191,7 +179,7 @@ impl Value {
             }
             Self::String(string, QuoteKind::Quoted) => {
                 let mut buf = String::with_capacity(string.len());
-                visit_quoted_string(&mut buf, false, string)?;
+                visit_quoted_string(&mut buf, false, string);
                 Cow::owned(buf)
             }
             Self::True => Cow::const_str("true"),
@@ -199,7 +187,7 @@ impl Value {
             Self::Null => Cow::const_str(""),
             Self::ArgList(args) => Cow::owned(
                 args.iter()
-                    .filter(|x| !x.is_null(span).unwrap_or(false))
+                    .filter(|x| !x.is_null())
                     .map(|a| Ok(a.node.to_css_string(span)?))
                     .collect::<SassResult<Vec<Cow<'static, str>>>>()?
                     .join(", "),
@@ -207,13 +195,10 @@ impl Value {
         })
     }
 
-    pub fn is_true(&self, span: Span) -> SassResult<bool> {
+    pub fn is_true(&self) -> bool {
         match self {
-            Value::Null | Value::False => Ok(false),
-            Self::BinaryOp(..) | Self::Paren(..) | Self::UnaryOp(..) => {
-                self.clone().eval(span)?.is_true(span)
-            }
-            _ => Ok(true),
+            Value::Null | Value::False => false,
+            _ => true,
         }
     }
 
@@ -231,20 +216,17 @@ impl Value {
         Spanned { node: self, span }
     }
 
-    pub fn kind(&self, span: Span) -> SassResult<&'static str> {
+    pub fn kind(&self) -> &'static str {
         match self {
-            Self::Color(..) => Ok("color"),
-            Self::String(..) | Self::Important => Ok("string"),
-            Self::Dimension(..) => Ok("number"),
-            Self::List(..) => Ok("list"),
-            Self::Function(..) => Ok("function"),
-            Self::ArgList(..) => Ok("arglist"),
-            Self::True | Self::False => Ok("bool"),
-            Self::Null => Ok("null"),
-            Self::Map(..) => Ok("map"),
-            Self::BinaryOp(..) | Self::Paren(..) | Self::UnaryOp(..) => {
-                self.clone().eval(span)?.kind(span)
-            }
+            Self::Color(..) => "color",
+            Self::String(..) | Self::Important => "string",
+            Self::Dimension(..) => "number",
+            Self::List(..) => "list",
+            Self::Function(..) => "function",
+            Self::ArgList(..) => "arglist",
+            Self::True | Self::False => "bool",
+            Self::Null => "null",
+            Self::Map(..) => "map",
         }
     }
 
@@ -308,7 +290,6 @@ impl Value {
                     .collect::<SassResult<Vec<String>>>()?
                     .join(", ")
             )),
-            Value::Paren(v) => v.inspect(span)?,
             v => v.to_css_string(span)?,
         })
     }
@@ -365,7 +346,7 @@ impl Value {
     }
 
     fn selector_string(self, span: Span) -> SassResult<Option<String>> {
-        Ok(Some(match self.eval(span)?.node {
+        Ok(Some(match self {
             Self::String(text, ..) => text,
             Self::List(list, sep, ..) if !list.is_empty() => {
                 let mut result = Vec::new();

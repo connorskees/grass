@@ -7,9 +7,8 @@ use rand::Rng;
 
 use crate::{
     args::CallArgs,
-    common::Op,
     error::SassResult,
-    parse::Parser,
+    parse::{HigherIntermediateValue, Parser, ValueVisitor},
     unit::Unit,
     value::{Number, Value},
 };
@@ -207,14 +206,12 @@ fn min(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     let mut min = nums.next().unwrap();
 
     for num in nums {
-        if Value::Dimension(num.0.clone(), num.1.clone())
-            .cmp(
-                Value::Dimension(min.0.clone(), min.1.clone()),
-                Op::LessThan,
-                span,
+        if ValueVisitor::new(parser, span)
+            .less_than(
+                HigherIntermediateValue::Literal(Value::Dimension(num.0.clone(), num.1.clone())),
+                HigherIntermediateValue::Literal(Value::Dimension(min.0.clone(), min.1.clone())),
             )?
-            .node
-            .is_true(span)?
+            .is_true()
         {
             min = num;
         }
@@ -239,14 +236,12 @@ fn max(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     let mut max = nums.next().unwrap();
 
     for num in nums {
-        if Value::Dimension(num.0.clone(), num.1.clone())
-            .cmp(
-                Value::Dimension(max.0.clone(), max.1.clone()),
-                Op::GreaterThan,
-                span,
+        if ValueVisitor::new(parser, span)
+            .greater_than(
+                HigherIntermediateValue::Literal(Value::Dimension(num.0.clone(), num.1.clone())),
+                HigherIntermediateValue::Literal(Value::Dimension(max.0.clone(), max.1.clone())),
             )?
-            .node
-            .is_true(span)?
+            .is_true()
         {
             max = num;
         }

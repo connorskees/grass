@@ -50,32 +50,6 @@ test!(
 );
 test!(positive_float_leading_zero, "a {\n  color: 0.1;\n}\n");
 test!(negative_float_leading_zero, "a {\n  color: -0.1;\n}\n");
-
-test!(
-    px_mod_px,
-    "a {\n  color: 10px % 2px;\n}\n",
-    "a {\n  color: 0px;\n}\n"
-);
-test!(
-    px_mod_in,
-    "a {\n  color: 10px % 2in;\n}\n",
-    "a {\n  color: 10px;\n}\n"
-);
-test!(
-    px_mod_none,
-    "a {\n  color: 10px % 2;\n}\n",
-    "a {\n  color: 0px;\n}\n"
-);
-test!(
-    none_mod_px,
-    "a {\n  color: 10 % 2px;\n}\n",
-    "a {\n  color: 0px;\n}\n"
-);
-test!(
-    none_mod_none,
-    "a {\n  color: 10 % 2;\n}\n",
-    "a {\n  color: 0;\n}\n"
-);
 test!(
     num_plus_div,
     "a {\n  color: 1 + 3/4;\n}\n",

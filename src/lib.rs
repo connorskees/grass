@@ -77,7 +77,7 @@ grass input.scss
 
     clippy::string_add,
     clippy::get_unwrap,
-    clippy::unit_arg,
+    // clippy::unit_arg,
     clippy::wrong_self_convention,
     clippy::items_after_statements,
     clippy::shadow_reuse,
