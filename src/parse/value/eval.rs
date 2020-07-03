@@ -160,7 +160,7 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
             v => panic!("{:?}", v),
         };
         Ok(match left {
-            Value::Map(..) | Value::Function(..) => {
+            Value::Map(..) | Value::FunctionRef(..) => {
                 return Err((
                     format!("{} isn't a valid CSS value.", left.inspect(self.span)?),
                     self.span,
@@ -223,7 +223,7 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
                     format!("{}{}{}", num, unit, right.to_css_string(self.span)?),
                     QuoteKind::None,
                 ),
-                Value::Map(..) | Value::Function(..) => {
+                Value::Map(..) | Value::FunctionRef(..) => {
                     return Err((
                         format!("{} isn't a valid CSS value.", right.inspect(self.span)?),
                         self.span,
@@ -329,7 +329,7 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
                     format!("{}{}-{}", num, unit, right.to_css_string(self.span)?),
                     QuoteKind::None,
                 ),
-                Value::Map(..) | Value::Function(..) => {
+                Value::Map(..) | Value::FunctionRef(..) => {
                     return Err((
                         format!("{} isn't a valid CSS value.", right.inspect(self.span)?),
                         self.span,
@@ -517,7 +517,7 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
                     QuoteKind::None,
                 ),
                 Value::Null => Value::String(format!("{}{}/", num, unit), QuoteKind::None),
-                Value::Map(..) | Value::Function(..) => {
+                Value::Map(..) | Value::FunctionRef(..) => {
                     return Err((
                         format!("{} isn't a valid CSS value.", right.inspect(self.span)?),
                         self.span,

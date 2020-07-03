@@ -209,12 +209,12 @@ fn get_function(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value
         },
     };
 
-    Ok(Value::Function(func))
+    Ok(Value::FunctionRef(func))
 }
 
 fn call(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     let func = match parser.arg(&mut args, 0, "function")? {
-        Value::Function(f) => f,
+        Value::FunctionRef(f) => f,
         v => {
             return Err((
                 format!(

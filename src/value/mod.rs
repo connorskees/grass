@@ -36,7 +36,7 @@ pub(crate) enum Value {
     Map(SassMap),
     ArgList(Vec<Spanned<Value>>),
     /// Returned by `get-function()`
-    Function(SassFunction),
+    FunctionRef(SassFunction),
 }
 
 fn visit_quoted_string(buf: &mut String, force_double_quote: bool, string: &str) {
@@ -130,7 +130,7 @@ impl Value {
                 }
                 _ => Cow::owned(format!("{}{}", num, unit)),
             },
-            Self::Map(..) | Self::Function(..) => {
+            Self::Map(..) | Self::FunctionRef(..) => {
                 return Err((
                     format!("{} isn't a valid CSS value.", self.inspect(span)?),
                     span,
@@ -222,7 +222,7 @@ impl Value {
             Self::String(..) | Self::Important => "string",
             Self::Dimension(..) => "number",
             Self::List(..) => "list",
-            Self::Function(..) => "function",
+            Self::FunctionRef(..) => "function",
             Self::ArgList(..) => "arglist",
             Self::True | Self::False => "bool",
             Self::Null => "null",
@@ -277,7 +277,7 @@ impl Value {
                         .join(sep.as_str()),
                 ),
             }),
-            Value::Function(f) => Cow::owned(format!("get-function(\"{}\")", f.name())),
+            Value::FunctionRef(f) => Cow::owned(format!("get-function(\"{}\")", f.name())),
             Value::Null => Cow::const_str("null"),
             Value::Map(map) => Cow::owned(format!(
                 "({})",
