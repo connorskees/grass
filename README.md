@@ -75,9 +75,9 @@ cargo b --release
 These numbers come from a default run of the Sass specification as shown above.
 
 ```
-2020-07-02
-PASSING: 2840
-FAILING: 2253
+2020-07-03
+PASSING: 2867
+FAILING: 2226
 TOTAL: 5093
 ```
 
