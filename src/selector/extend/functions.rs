@@ -70,7 +70,7 @@ pub(crate) fn weave(
 ) -> Vec<Vec<ComplexSelectorComponent>> {
     let mut prefixes: Vec<Vec<ComplexSelectorComponent>> = vec![complexes.remove(0)];
 
-    for mut complex in complexes.into_iter() {
+    for mut complex in complexes {
         if complex.is_empty() {
             continue;
         }

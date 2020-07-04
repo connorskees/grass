@@ -412,7 +412,7 @@ impl Extender {
         // `extensions`, extension fails for `compound`.
         // todo: test for `extensions.len() > 2`. may cause issues
         if !targets_used.is_empty()
-            && targets_used.len() != extensions.map_or(self.extensions.len(), |e| e.len())
+            && targets_used.len() != extensions.map_or(self.extensions.len(), HashMap::len)
             && self.mode != ExtendMode::Normal
         {
             return None;
