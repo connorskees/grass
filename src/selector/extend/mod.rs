@@ -874,17 +874,15 @@ impl Extender {
         // span: Span,
         media_query_context: Option<Vec<CssMediaQuery>>,
     ) -> ExtendedSelector {
-        // todo: we should be able to remove this variable and clone
-        let original_selector = selector.clone();
-        if !original_selector.is_invisible() {
-            for complex in &original_selector.components {
-                self.originals.insert(complex.clone());
+        if !selector.is_invisible() {
+            for complex in selector.components.clone() {
+                self.originals.insert(complex);
             }
         }
 
         if !self.extensions.is_empty() {
             let extensions = self.extensions.clone();
-            selector = self.extend_list(original_selector, &extensions, &media_query_context);
+            selector = self.extend_list(selector.clone(), &extensions, &media_query_context);
             /*
               todo: when we have error handling
                   } on SassException catch (error) {
