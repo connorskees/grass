@@ -2,6 +2,7 @@ use std::{
     cell::RefCell,
     hash::{Hash, Hasher},
     rc::Rc,
+    vec::IntoIter
 };
 
 use crate::selector::{Selector, SelectorList};
@@ -37,6 +38,11 @@ impl ExtendedSelector {
     }
 }
 
+/// We could use a `HashSet` here, but since selectors are
+/// in a `RefCell`, we may unintentionally cause (library) UB.
+///
+/// Initial benchmarking found that a `Vec` was actually *faster*
+/// than a `HashSet`, the reason for which I am unsure.
 #[derive(Clone, Debug)]
 pub(crate) struct SelectorHashSet(Vec<ExtendedSelector>);
 
@@ -51,7 +57,7 @@ impl SelectorHashSet {
         }
     }
 
-    pub fn into_iter(self) -> std::vec::IntoIter<ExtendedSelector> {
+    pub fn into_iter(self) -> IntoIter<ExtendedSelector> {
         self.0.into_iter()
     }
 }
