@@ -89,6 +89,55 @@ test!(
     "a {\n  color: 2߄;\n}\n",
     "@charset \"UTF-8\";\na {\n  color: 2߄;\n}\n"
 );
+test!(
+    unit_div_same,
+    "a {\n  color: unit(1em / 1em);\n}\n",
+    "a {\n  color: \"\";\n}\n"
+);
+test!(
+    unit_div_first_none,
+    "a {\n  color: unit(1 / 1em);\n}\n",
+    "a {\n  color: \"em^-1\";\n}\n"
+);
+test!(
+    unit_div_second_none,
+    "a {\n  color: unit(1em / 1);\n}\n",
+    "a {\n  color: \"em\";\n}\n"
+);
+test!(
+    unit_div_comparable,
+    "a {\n  color: unit(1in / 1px);\n  color: (1in / 1px);\n}\n",
+    "a {\n  color: \"\";\n  color: 96;\n}\n"
+);
+test!(
+    unit_mul_times_mul,
+    "a {\n  color: unit((1em * 1px) * (1em * 1px));\n}\n",
+    "a {\n  color: \"em*px*em*px\";\n}\n"
+);
+test!(
+    unit_single_times_mul,
+    "a {\n  color: unit(1in * (1em * 1px));\n}\n",
+    "a {\n  color: \"in*em*px\";\n}\n"
+);
+test!(
+    unit_div_lhs_mul_uncomparable,
+    "a {\n  color: unit((1 / 1in) * 1em);\n}\n",
+    "a {\n  color: \"em/in\";\n}\n"
+);
+test!(
+    unit_div_lhs_mul_same,
+    "a {\n  color: unit((1 / 1in) * 1in);\n}\n",
+    "a {\n  color: \"\";\n}\n"
+);
+error!(
+    display_single_div_with_none_numerator,
+    "a {\n  color: (1 / 1em);\n}\n", "Error: 1em^-1 isn't a valid CSS value."
+);
+error!(
+    #[ignore = "non-comparable inverse units"]
+    display_single_div_with_non_comparable_numerator,
+    "a {\n  color: (1px / 1em);\n}\n", "Error: 1px/em isn't a valid CSS value."
+);
 error!(
     display_single_mul,
     "a {\n  color: 1rem * 1px;\n}\n", "Error: 1rem*px isn't a valid CSS value."
@@ -99,8 +148,7 @@ error!(
     "Error: 1rem*px*rad*foo isn't a valid CSS value."
 );
 error!(
-    #[ignore]
-    none_div_unit,
+    display_single_div_with_none_numerator_percent,
     "a {\n  color: (35 / 7%);\n}\n", "Error: 5%^-1 isn't a valid CSS value."
 );
 

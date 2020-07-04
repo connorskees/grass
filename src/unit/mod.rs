@@ -1,4 +1,7 @@
-use std::fmt;
+use std::{
+    fmt,
+    ops::{Div, Mul},
+};
 
 pub(crate) use conversion::UNIT_CONVERSION_TABLE;
 
@@ -102,6 +105,9 @@ pub(crate) enum Unit {
 
     /// Units multiplied together
     Mul(Box<[Unit]>),
+
+    /// Units divided by each other
+    Div(Box<DivUnit>),
 }
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub(crate) enum UnitKind {
@@ -114,6 +120,113 @@ pub(crate) enum UnitKind {
     Resolution,
     Other,
     None,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct DivUnit {
+    numer: Unit,
+    denom: Unit,
+}
+
+impl DivUnit {
+    pub const fn new(numer: Unit, denom: Unit) -> Self {
+        Self { numer, denom }
+    }
+}
+
+impl fmt::Display for DivUnit {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.numer == Unit::None {
+            write!(f, "{}^-1", self.denom)
+        } else {
+            write!(f, "{}/{}", self.numer, self.denom)
+        }
+    }
+}
+
+#[allow(clippy::match_same_arms)]
+impl Mul<Unit> for DivUnit {
+    type Output = Unit;
+    fn mul(self, rhs: Unit) -> Self::Output {
+        match rhs {
+            Unit::Mul(..) => todo!(),
+            Unit::Div(..) => todo!(),
+            Unit::None => todo!(),
+            _ => {
+                if self.denom == rhs {
+                    self.numer
+                } else {
+                    match self.denom {
+                        Unit::Mul(..) => todo!(),
+                        Unit::Div(..) => unreachable!(),
+                        _ => match self.numer {
+                            Unit::Mul(..) => todo!(),
+                            Unit::Div(..) => unreachable!(),
+                            Unit::None => {
+                                let numer = Unit::Mul(vec![rhs].into_boxed_slice());
+                                Unit::Div(Box::new(DivUnit::new(numer, self.denom)))
+                            }
+                            _ => {
+                                let numer = Unit::Mul(vec![self.numer, rhs].into_boxed_slice());
+                                Unit::Div(Box::new(DivUnit::new(numer, self.denom)))
+                            }
+                        },
+                    }
+                }
+            }
+        }
+    }
+}
+
+// impl Div<Unit> for DivUnit {
+//     type Output = Unit;
+//     fn div(self, rhs: Unit) -> Self::Output {
+//         todo!()
+//     }
+// }
+
+impl Mul<Unit> for Unit {
+    type Output = Unit;
+    fn mul(self, rhs: Unit) -> Self::Output {
+        match self {
+            Unit::Mul(u) => match rhs {
+                Unit::Mul(u2) => {
+                    let mut unit1 = u.into_vec();
+                    unit1.extend_from_slice(&*u2);
+                    Unit::Mul(unit1.into_boxed_slice())
+                }
+                Unit::Div(..) => todo!(),
+                _ => {
+                    let mut unit1 = u.into_vec();
+                    unit1.push(rhs);
+                    Unit::Mul(unit1.into_boxed_slice())
+                }
+            },
+            Unit::Div(div) => *div * rhs,
+            _ => match rhs {
+                Unit::Mul(u2) => {
+                    let mut unit1 = vec![self];
+                    unit1.extend_from_slice(&*u2);
+                    Unit::Mul(unit1.into_boxed_slice())
+                }
+                Unit::Div(..) => todo!(),
+                _ => Unit::Mul(vec![self, rhs].into_boxed_slice()),
+            },
+        }
+    }
+}
+
+impl Div<Unit> for Unit {
+    type Output = Unit;
+    fn div(self, rhs: Unit) -> Self::Output {
+        if let Unit::Div(..) = self {
+            todo!()
+        } else if let Unit::Div(..) = rhs {
+            todo!()
+        } else {
+            Unit::Div(Box::new(DivUnit::new(self, rhs)))
+        }
+    }
 }
 
 impl Unit {
@@ -150,7 +263,9 @@ impl Unit {
             Unit::Hz | Unit::Khz => UnitKind::Frequency,
             Unit::Dpi | Unit::Dpcm | Unit::Dppx | Unit::X => UnitKind::Resolution,
             Unit::None => UnitKind::None,
-            Unit::Fr | Unit::Percent | Unit::Unknown(..) | Unit::Mul(..) => UnitKind::Other,
+            Unit::Fr | Unit::Percent | Unit::Unknown(..) | Unit::Mul(..) | Unit::Div(..) => {
+                UnitKind::Other
+            }
         }
     }
 }
@@ -246,6 +361,7 @@ impl fmt::Display for Unit {
                     .collect::<Vec<String>>()
                     .join("*")
             ),
+            Unit::Div(u) => write!(f, "{}", u),
         }
     }
 }

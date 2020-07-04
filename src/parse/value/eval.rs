@@ -424,19 +424,8 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
                         Value::Dimension(num * num2, unit2)
                     } else if unit2 == Unit::None {
                         Value::Dimension(num * num2, unit)
-                    } else if let Unit::Mul(u) = unit {
-                        let mut unit1 = u.into_vec();
-                        unit1.push(unit2);
-                        Value::Dimension(num * num2, Unit::Mul(unit1.into_boxed_slice()))
-                    } else if let Unit::Mul(u2) = unit2 {
-                        let mut u = vec![unit];
-                        u.append(&mut u2.into_vec());
-                        Value::Dimension(num * num2, Unit::Mul(u.into_boxed_slice()))
                     } else {
-                        Value::Dimension(
-                            num * num2,
-                            Unit::Mul(vec![unit, unit2].into_boxed_slice()),
-                        )
+                        Value::Dimension(num * num2, unit * unit2)
                     }
                 }
                 _ => {
@@ -486,20 +475,20 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
             ),
             Value::Dimension(num, unit) => match right {
                 Value::Dimension(num2, unit2) => {
-                    if !unit.comparable(&unit2) {
-                        return Err((
-                            format!("Incompatible units {} and {}.", unit2, unit),
-                            self.span,
-                        )
-                            .into());
-                    }
+                    // `unit(1em / 1em)` => `""`
                     if unit == unit2 {
                         Value::Dimension(num / num2, Unit::None)
+
+                    // `unit(1 / 1em)` => `"em^-1"`
                     } else if unit == Unit::None {
-                        todo!("inverse units")
+                        Value::Dimension(num / num2, Unit::None / unit2)
+
+                    // `unit(1em / 1)` => `"em"`
                     } else if unit2 == Unit::None {
                         Value::Dimension(num / num2, unit)
-                    } else {
+
+                    // `unit(1in / 1px)` => `""`
+                    } else if unit.comparable(&unit2) {
                         Value::Dimension(
                             num / (num2
                                 * UNIT_CONVERSION_TABLE[unit.to_string().as_str()]
@@ -507,6 +496,12 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
                                 .clone()),
                             Unit::None,
                         )
+                    // `unit(1em / 1px)` => `"em/px"`
+                    // todo: this should probably be its own variant
+                    // within the `Value` enum
+                    } else {
+                        // todo: remember to account for `Mul` and `Div`
+                        todo!("non-comparable inverse units")
                     }
                 }
                 Value::String(s, q) => {

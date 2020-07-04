@@ -125,7 +125,7 @@ impl Value {
         Ok(match self {
             Value::Important => Cow::const_str("!important"),
             Value::Dimension(num, unit) => match unit {
-                Unit::Mul(..) => {
+                Unit::Mul(..) | Unit::Div(..) => {
                     return Err((format!("{}{} isn't a valid CSS value.", num, unit), span).into());
                 }
                 _ => Cow::owned(format!("{}{}", num, unit)),
