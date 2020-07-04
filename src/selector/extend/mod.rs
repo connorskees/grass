@@ -912,10 +912,17 @@ impl Extender {
             for component in complex.components {
                 if let ComplexSelectorComponent::Compound(component) = component {
                     for simple in component.components {
-                        self.selectors
-                            .entry(simple.clone())
-                            .or_insert_with(SelectorHashSet::new)
-                            .insert(selector.clone());
+                        // PERF: we compute the hash twice, which isn't great, but we avoid a superfluous
+                        // clone in cases where we have already seen a simple selector (common in
+                        // scenarios in which there is a lot of nesting)
+                        if let Some(entry) = self.selectors.get_mut(&simple) {
+                            entry.insert(selector.clone())
+                        } else {
+                            self.selectors
+                                .entry(simple.clone())
+                                .or_insert_with(SelectorHashSet::new)
+                                .insert(selector.clone());
+                        }
 
                         if let SimpleSelector::Pseudo(Pseudo {
                             selector: Some(simple_selector),
