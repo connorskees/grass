@@ -131,7 +131,6 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
     fn parse_complex_selector(&mut self, line_break: bool) -> SassResult<ComplexSelector> {
         let mut components = Vec::new();
 
-        // todo: or patterns
         loop {
             self.parser.whitespace();
 

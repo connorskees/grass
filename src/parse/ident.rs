@@ -287,7 +287,6 @@ impl<'a> Parser<'a> {
                     if first.kind.is_ascii_hexdigit() {
                         let mut value = 0;
                         for _ in 0..6 {
-                            // todo: or patterns
                             let next = match self.toks.peek() {
                                 Some(c) => c,
                                 None => break,
