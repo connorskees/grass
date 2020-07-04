@@ -2,6 +2,7 @@ use std::{
     cell::RefCell,
     collections::{hash_set::IntoIter, HashSet},
     hash::{Hash, Hasher},
+    ptr,
     rc::Rc,
 };
 
@@ -19,8 +20,14 @@ impl PartialEq for ExtendedSelector {
 impl Eq for ExtendedSelector {}
 
 impl Hash for ExtendedSelector {
+    // We hash the ptr here for efficiency.
+    // TODO: is this an issue? it probably is,
+    // but I haven't managed to find a test case
+    // that exhibits it.
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.0.borrow().hash(state);
+        ptr::hash(&*self.0, state)
+        // in case we need to hash the actual value:
+        // self.0.borrow().hash(state);
     }
 }
 
