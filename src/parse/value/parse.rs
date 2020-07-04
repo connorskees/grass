@@ -596,15 +596,11 @@ impl<'a> Parser<'a> {
                     Err(e) => return Some(Err(e)),
                 };
                 span = span.merge(v.span);
-                // TODO: we return `None` when encountering `optional` here as a hack for
-                // supporting `!optional` in `@extend`. In the future, we should have a better
-                // check for `!optional` as this technically allows `!optional` everywhere
                 match v.node.to_ascii_lowercase().as_str() {
                     "important" => {
                         IntermediateValue::Value(HigherIntermediateValue::Literal(Value::Important))
                             .span(span)
                     }
-                    "optional" => return None,
                     _ => return Some(Err(("Expected \"important\".", span).into())),
                 }
             }
