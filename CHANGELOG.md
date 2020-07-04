@@ -1,6 +1,10 @@
-# TBD
+# 0.9.3
 
- - more robustly parse empty bracketed lists
+ - fix parsing bugs for empty bracketed lists
+ - partially implement inverse units
+ - remove all remaining `todo!()`s from binary and unary ops
+ - parse keywords case sensitively
+ - various optimizations that make bulma about *6x faster* to compile
 
 # 0.9.2
 
