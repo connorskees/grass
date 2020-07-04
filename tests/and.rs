@@ -46,7 +46,6 @@ test!(
     "a {\n  color: 1-and;\n}\n"
 );
 test!(
-    #[ignore = "casing is not preserved for keyword operators"]
     part_of_binop_casing,
     "a {\n  color: 1 - AND;\n}\n",
     "a {\n  color: 1-AND;\n}\n"

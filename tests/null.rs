@@ -33,3 +33,8 @@ test!(
     "a {\n  $x: null;\n  color: -$x;\n}\n",
     "a {\n  color: -;\n}\n"
 );
+test!(
+    null_is_case_sensitive,
+    "a {\n  color: NULL;\n}\n",
+    "a {\n  color: NULL;\n}\n"
+);

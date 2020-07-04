@@ -311,7 +311,7 @@ impl<'a> Parser<'a> {
         }
 
         // check for keywords
-        Ok(match lower.as_str() {
+        Ok(match s.as_str() {
             "true" => IntermediateValue::Value(HigherIntermediateValue::Literal(Value::True)),
             "false" => IntermediateValue::Value(HigherIntermediateValue::Literal(Value::False)),
             "null" => IntermediateValue::Value(HigherIntermediateValue::Literal(Value::Null)),

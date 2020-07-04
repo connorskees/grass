@@ -1757,7 +1757,6 @@ test!(
     "@media screen {\n  a {\n    x: y;\n  }\n\n  @page {}\n}\n"
 );
 test!(
-    #[ignore = "to investigate"]
     escaped_selector,
     "// Escapes in selectors' identifiers should be normalized before `@extend` is
     // applied.
