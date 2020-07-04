@@ -603,3 +603,23 @@ test!(
     "a {\n  color: #00000000f00;\n}\n",
     "a {\n  color: #00000000 f00;\n}\n"
 );
+test!(
+    all_three_rgb_channels_have_decimal,
+    "a {\n  color: rgba(1.5, 1.5, 1.5, 1);\n}\n",
+    "a {\n  color: #020202;\n}\n"
+);
+test!(
+    builtin_fn_red_rounds_channel,
+    "a {\n  color: red(rgba(1.5, 1.5, 1.5, 1));\n}\n",
+    "a {\n  color: 2;\n}\n"
+);
+test!(
+    builtin_fn_green_rounds_channel,
+    "a {\n  color: green(rgba(1.5, 1.5, 1.5, 1));\n}\n",
+    "a {\n  color: 2;\n}\n"
+);
+test!(
+    builtin_fn_blue_rounds_channel,
+    "a {\n  color: blue(rgba(1.5, 1.5, 1.5, 1));\n}\n",
+    "a {\n  color: 2;\n}\n"
+);

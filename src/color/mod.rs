@@ -151,15 +151,15 @@ impl Color {
     }
 
     pub fn red(&self) -> Number {
-        self.rgba.red.clone()
+        self.rgba.red.clone().round()
     }
 
     pub fn blue(&self) -> Number {
-        self.rgba.blue.clone()
+        self.rgba.blue.clone().round()
     }
 
     pub fn green(&self) -> Number {
-        self.rgba.green.clone()
+        self.rgba.green.clone().round()
     }
 
     /// Mix two colors together with weight
