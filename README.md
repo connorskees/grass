@@ -76,8 +76,8 @@ These numbers come from a default run of the Sass specification as shown above.
 
 ```
 2020-07-03
-PASSING: 2867
-FAILING: 2226
+PASSING: 2870
+FAILING: 2223
 TOTAL: 5093
 ```
 
