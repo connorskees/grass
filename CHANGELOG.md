@@ -1,3 +1,7 @@
+# TBD
+
+ - more robustly parse empty bracketed lists
+
 # 0.9.2
 
 - implement builtin functions `min` and `max`

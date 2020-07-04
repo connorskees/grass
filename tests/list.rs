@@ -314,6 +314,16 @@ test!(
     "a {\n  color: 3;\n}\n"
 );
 test!(empty_bracketed_list, "a {\n  empty: [];\n}\n");
+test!(
+    empty_bracketed_list_equality,
+    "a {\n  color: []==[];\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    empty_bracketed_list_whitespace,
+    "a {\n  color: [ /**/ ];\n}\n",
+    "a {\n  color: [];\n}\n"
+);
 error!(
     invalid_item_in_space_separated_list,
     "a {\n  color: red color * #abc;\n}\n", "Error: Undefined operation \"color * #abc\"."

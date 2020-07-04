@@ -112,17 +112,6 @@ impl<'a> Parser<'a> {
                 }
                 IntermediateValue::Bracketed(t) => {
                     last_was_whitespace = false;
-                    if t.is_empty() {
-                        space_separated.push(
-                            HigherIntermediateValue::Literal(Value::List(
-                                Vec::new(),
-                                ListSeparator::Space,
-                                Brackets::Bracketed,
-                            ))
-                            .span(val.span),
-                        );
-                        continue;
-                    }
                     space_separated.push(
                         HigherIntermediateValue::Literal(
                             match iter.parser.parse_value_from_vec(t)?.node {
@@ -509,6 +498,7 @@ impl<'a> Parser<'a> {
             }
             '[' => {
                 let mut span = self.toks.next().unwrap().pos();
+                self.whitespace_or_comment();
                 let mut inner = match read_until_closing_square_brace(self.toks) {
                     Ok(v) => v,
                     Err(e) => return Some(Err(e)),
@@ -519,7 +509,16 @@ impl<'a> Parser<'a> {
                     }
                     span = span.merge(last_tok.pos());
                 }
-                IntermediateValue::Bracketed(inner).span(span)
+                if inner.is_empty() {
+                    IntermediateValue::Value(HigherIntermediateValue::Literal(Value::List(
+                        Vec::new(),
+                        ListSeparator::Space,
+                        Brackets::Bracketed,
+                    )))
+                } else {
+                    IntermediateValue::Bracketed(inner)
+                }
+                .span(span)
             }
             '$' => {
                 self.toks.next();
