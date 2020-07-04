@@ -14,7 +14,7 @@ use crate::{
 
 use super::super::Parser;
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug)]
 pub(crate) enum HigherIntermediateValue {
     Literal(Value),
     /// A function that hasn't yet been evaluated

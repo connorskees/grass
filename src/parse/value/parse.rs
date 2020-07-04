@@ -26,7 +26,7 @@ use super::eval::{HigherIntermediateValue, ValueVisitor};
 
 use super::super::Parser;
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug)]
 enum IntermediateValue {
     Value(HigherIntermediateValue),
     Op(Op),
@@ -44,7 +44,7 @@ impl IntermediateValue {
 
 impl IsWhitespace for IntermediateValue {
     fn is_whitespace(&self) -> bool {
-        if self == &IntermediateValue::Whitespace {
+        if let IntermediateValue::Whitespace = self {
             return true;
         }
         false

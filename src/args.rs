@@ -35,7 +35,7 @@ impl FuncArgs {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone)]
 pub(crate) struct CallArgs(pub HashMap<CallArg, SassResult<Spanned<Value>>>, pub Span);
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]

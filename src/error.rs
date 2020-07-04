@@ -2,6 +2,7 @@ use std::{
     error::Error,
     fmt::{self, Display},
     io,
+    rc::Rc,
     string::FromUtf8Error,
 };
 
@@ -9,57 +10,10 @@ use codemap::{Span, SpanLoc};
 
 pub type SassResult<T> = Result<T, Box<SassError>>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SassError {
     kind: SassErrorKind,
 }
-
-// todo: we should split the unclonable errors (io, potentially others) into
-// a separate enum to allow these methods to be infallible
-#[allow(clippy::unimplemented)]
-impl Clone for SassError {
-    #[inline]
-    fn clone(&self) -> Self {
-        match &self.kind {
-            SassErrorKind::Raw(a, b) => SassError {
-                kind: SassErrorKind::Raw(a.clone(), *b),
-            },
-            SassErrorKind::ParseError { message, loc } => SassError {
-                kind: SassErrorKind::ParseError {
-                    message: message.clone(),
-                    loc: loc.clone(),
-                },
-            },
-            _ => unimplemented!(),
-        }
-    }
-}
-
-#[allow(clippy::unimplemented)]
-impl PartialEq for SassError {
-    #[inline]
-    fn eq(&self, other: &Self) -> bool {
-        match &self.kind {
-            SassErrorKind::Raw(a, b) => match &other.kind {
-                SassErrorKind::Raw(c, d) => a == c && b == d,
-                _ => false,
-            },
-            SassErrorKind::ParseError {
-                message: message1,
-                loc: loc1,
-            } => match &other.kind {
-                SassErrorKind::ParseError {
-                    message: message2,
-                    loc: loc2,
-                } => message1 == message2 && loc1 == loc2,
-                _ => false,
-            },
-            _ => unimplemented!(),
-        }
-    }
-}
-
-impl Eq for SassError {}
 
 impl SassError {
     pub(crate) fn raw(self) -> (String, Span) {
@@ -76,7 +30,7 @@ impl SassError {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum SassErrorKind {
     /// A raw error with no additional metadata
     /// It contains only a `String` message and
@@ -86,7 +40,9 @@ enum SassErrorKind {
         message: String,
         loc: SpanLoc,
     },
-    IoError(io::Error),
+    // we put IoErrors in an `Rc` to allow it to be
+    // cloneable
+    IoError(Rc<io::Error>),
     FromUtf8Error(String),
 }
 
@@ -129,7 +85,7 @@ impl From<io::Error> for Box<SassError> {
     #[inline]
     fn from(error: io::Error) -> Box<SassError> {
         Box::new(SassError {
-            kind: SassErrorKind::IoError(error),
+            kind: SassErrorKind::IoError(Rc::new(error)),
         })
     }
 }
