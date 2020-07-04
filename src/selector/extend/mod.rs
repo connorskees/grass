@@ -188,7 +188,7 @@ impl Extender {
                 .extend(selector.components.iter().cloned());
         }
 
-        Ok(extender.extend_list(selector, &extensions, &None))
+        Ok(extender.extend_list(selector, Some(&extensions), &None))
     }
 
     fn with_mode(mode: ExtendMode, span: Span) -> Self {
@@ -202,7 +202,7 @@ impl Extender {
     fn extend_list(
         &mut self,
         list: SelectorList,
-        extensions: &HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>>,
+        extensions: Option<&HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>>>,
         media_query_context: &Option<Vec<CssMediaQuery>>,
     ) -> SelectorList {
         // This could be written more simply using Vec<Vec<T>>, but we want to avoid
@@ -246,7 +246,7 @@ impl Extender {
     fn extend_complex(
         &mut self,
         complex: ComplexSelector,
-        extensions: &HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>>,
+        extensions: Option<&HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>>>,
         media_query_context: &Option<Vec<CssMediaQuery>>,
     ) -> Option<Vec<ComplexSelector>> {
         // The complex selectors that each compound selector in `complex.components`
@@ -365,7 +365,7 @@ impl Extender {
     fn extend_compound(
         &mut self,
         compound: &CompoundSelector,
-        extensions: &HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>>,
+        extensions: Option<&HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>>>,
         media_query_context: &Option<Vec<CssMediaQuery>>,
     ) -> Option<Vec<ComplexSelector>> {
         // If there's more than one target and they all need to match, we track
@@ -412,7 +412,7 @@ impl Extender {
         // `extensions`, extension fails for `compound`.
         // todo: test for `extensions.len() > 2`. may cause issues
         if !targets_used.is_empty()
-            && targets_used.len() != extensions.len()
+            && targets_used.len() != extensions.map_or(self.extensions.len(), |e| e.len())
             && self.mode != ExtendMode::Normal
         {
             return None;
@@ -538,7 +538,7 @@ impl Extender {
     fn extend_simple(
         &mut self,
         simple: SimpleSelector,
-        extensions: &HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>>,
+        extensions: Option<&HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>>>,
         media_query_context: &Option<Vec<CssMediaQuery>>,
         targets_used: &mut HashSet<SimpleSelector>,
     ) -> Option<Vec<Vec<Extension>>> {
@@ -580,7 +580,7 @@ impl Extender {
     fn extend_pseudo(
         &mut self,
         pseudo: Pseudo,
-        extensions: &HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>>,
+        extensions: Option<&HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>>>,
         media_query_context: &Option<Vec<CssMediaQuery>>,
     ) -> Option<Vec<Pseudo>> {
         let extended = self.extend_list(
@@ -717,11 +717,11 @@ impl Extender {
     fn without_pseudo(
         &self,
         simple: SimpleSelector,
-        extensions: &HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>>,
+        extensions: Option<&HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>>>,
         targets_used: &mut HashSet<SimpleSelector>,
         mode: ExtendMode,
     ) -> Option<Vec<Extension>> {
-        let extenders = extensions.get(&simple)?;
+        let extenders = extensions.unwrap_or(&self.extensions).get(&simple)?;
 
         targets_used.insert(simple.clone());
 
@@ -884,8 +884,7 @@ impl Extender {
         }
 
         if !self.extensions.is_empty() {
-            let extensions = self.extensions.clone();
-            selector = self.extend_list(selector.clone(), &extensions, &media_query_context);
+            selector = self.extend_list(selector.clone(), None, &media_query_context);
             /*
               todo: when we have error handling
                   } on SassException catch (error) {
@@ -1067,7 +1066,7 @@ impl Extender {
             // `extend_existing_selectors` would have thrown already.
             let selectors: Vec<ComplexSelector> = if let Some(v) = self.extend_complex(
                 extension.extender.clone(),
-                new_extensions,
+                Some(new_extensions),
                 &extension.media_context,
             ) {
                 v
@@ -1147,7 +1146,7 @@ impl Extender {
             let old_value = selector.clone().into_selector().0;
             selector.set_inner(self.extend_list(
                 old_value.clone(),
-                new_extensions,
+                Some(new_extensions),
                 &self.media_contexts.get(&old_value).cloned(),
             ));
             /*
