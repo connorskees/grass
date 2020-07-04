@@ -7,7 +7,6 @@ use crate::{
     atrule::{media::MediaRule, SupportsRule, UnknownAtRule},
     error::SassResult,
     parse::Stmt,
-    selector::Extender,
     selector::Selector,
     style::Style,
 };
@@ -76,11 +75,11 @@ impl Css {
         Css { blocks: Vec::new() }
     }
 
-    pub(crate) fn from_stmts(s: Vec<Stmt>, extender: &mut Extender) -> SassResult<Self> {
-        Css::new().parse_stylesheet(s, extender)
+    pub(crate) fn from_stmts(s: Vec<Stmt>) -> SassResult<Self> {
+        Css::new().parse_stylesheet(s)
     }
 
-    fn parse_stmt(&mut self, stmt: Stmt, extender: &mut Extender) -> SassResult<Vec<Toplevel>> {
+    fn parse_stmt(&mut self, stmt: Stmt) -> SassResult<Vec<Toplevel>> {
         Ok(match stmt {
             Stmt::RuleSet { selector, body } => {
                 if body.is_empty() {
@@ -93,7 +92,7 @@ impl Css {
                 let mut vals = vec![Toplevel::new_rule(selector)];
                 for rule in body {
                     match rule {
-                        Stmt::RuleSet { .. } => vals.extend(self.parse_stmt(rule, extender)?),
+                        Stmt::RuleSet { .. } => vals.extend(self.parse_stmt(rule)?),
                         Stmt::Style(s) => vals.get_mut(0).unwrap().push_style(s),
                         Stmt::Comment(s) => vals.get_mut(0).unwrap().push_comment(s),
                         Stmt::Media(m) => {
@@ -117,7 +116,7 @@ impl Css {
                         Stmt::Return(..) => unreachable!(),
                         Stmt::AtRoot { body } => {
                             body.into_iter().try_for_each(|r| -> SassResult<()> {
-                                vals.append(&mut self.parse_stmt(r, extender)?);
+                                vals.append(&mut self.parse_stmt(r)?);
                                 Ok(())
                             })?
                         }
@@ -150,10 +149,10 @@ impl Css {
         })
     }
 
-    fn parse_stylesheet(mut self, stmts: Vec<Stmt>, extender: &mut Extender) -> SassResult<Css> {
+    fn parse_stylesheet(mut self, stmts: Vec<Stmt>) -> SassResult<Css> {
         let mut is_first = true;
         for stmt in stmts {
-            let v = self.parse_stmt(stmt, extender)?;
+            let v = self.parse_stmt(stmt)?;
             // this is how we print newlines between unrelated styles
             // it could probably be refactored
             if !v.is_empty() {
@@ -169,9 +168,9 @@ impl Css {
         Ok(self)
     }
 
-    pub fn pretty_print(self, map: &CodeMap, extender: &mut Extender) -> SassResult<String> {
+    pub fn pretty_print(self, map: &CodeMap) -> SassResult<String> {
         let mut string = Vec::new();
-        self._inner_pretty_print(&mut string, map, extender, 0)?;
+        self._inner_pretty_print(&mut string, map, 0)?;
         if string.iter().any(|s| !s.is_ascii()) {
             return Ok(format!("@charset \"UTF-8\";\n{}", unsafe {
                 String::from_utf8_unchecked(string)
@@ -184,7 +183,6 @@ impl Css {
         self,
         buf: &mut Vec<u8>,
         map: &CodeMap,
-        extender: &mut Extender,
         nesting: usize,
     ) -> SassResult<()> {
         let mut has_written = false;
@@ -231,12 +229,7 @@ impl Css {
                         writeln!(buf, " {{")?;
                     }
 
-                    Css::from_stmts(body, extender)?._inner_pretty_print(
-                        buf,
-                        map,
-                        extender,
-                        nesting + 1,
-                    )?;
+                    Css::from_stmts(body)?._inner_pretty_print(buf, map, nesting + 1)?;
                     writeln!(buf, "{}}}", padding)?;
                 }
                 Toplevel::Supports { params, body } => {
@@ -258,12 +251,7 @@ impl Css {
                         writeln!(buf, " {{")?;
                     }
 
-                    Css::from_stmts(body, extender)?._inner_pretty_print(
-                        buf,
-                        map,
-                        extender,
-                        nesting + 1,
-                    )?;
+                    Css::from_stmts(body)?._inner_pretty_print(buf, map, nesting + 1)?;
                     writeln!(buf, "{}}}", padding)?;
                 }
                 Toplevel::Media { query, body } => {
@@ -275,12 +263,7 @@ impl Css {
                         writeln!(buf)?;
                     }
                     writeln!(buf, "{}@media {} {{", padding, query)?;
-                    Css::from_stmts(body, extender)?._inner_pretty_print(
-                        buf,
-                        map,
-                        extender,
-                        nesting + 1,
-                    )?;
+                    Css::from_stmts(body)?._inner_pretty_print(buf, map, nesting + 1)?;
                     writeln!(buf, "{}}}", padding)?;
                 }
                 Toplevel::Style(s) => {

@@ -37,7 +37,10 @@ impl ExtendedSelector {
     }
 
     pub fn into_selector(self) -> Selector {
-        Selector(self.0.borrow().clone())
+        Selector(match Rc::try_unwrap(self.0) {
+            Ok(v) => v.into_inner(),
+            Err(v) => v.borrow().clone(),
+        })
     }
 
     pub fn set_inner(&mut self, selector: SelectorList) {
