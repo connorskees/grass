@@ -1,8 +1,8 @@
 use std::{
     cell::RefCell,
+    collections::{hash_set::IntoIter, HashSet},
     hash::{Hash, Hasher},
     rc::Rc,
-    vec::IntoIter
 };
 
 use crate::selector::{Selector, SelectorList};
@@ -38,23 +38,23 @@ impl ExtendedSelector {
     }
 }
 
-/// We could use a `HashSet` here, but since selectors are
-/// in a `RefCell`, we may unintentionally cause (library) UB.
+/// There is the potential for danger here by modifying the hash
+/// through `RefCell`, but I haven't come up with a good solution
+/// for this yet (we can't just use a `Vec` because linear insert)
+/// is too big of a penalty
 ///
-/// Initial benchmarking found that a `Vec` was actually *faster*
-/// than a `HashSet`, the reason for which I am unsure.
+/// In pratice, I have yet to find a test case that can demonstrate
+/// an issue with storing a `RefCell`.
 #[derive(Clone, Debug)]
-pub(crate) struct SelectorHashSet(Vec<ExtendedSelector>);
+pub(crate) struct SelectorHashSet(HashSet<ExtendedSelector>);
 
 impl SelectorHashSet {
-    pub const fn new() -> Self {
-        Self(Vec::new())
+    pub fn new() -> Self {
+        Self(HashSet::new())
     }
 
     pub fn insert(&mut self, selector: ExtendedSelector) {
-        if !self.0.contains(&selector) {
-            self.0.push(selector);
-        }
+        self.0.insert(selector);
     }
 
     pub fn into_iter(self) -> IntoIter<ExtendedSelector> {
