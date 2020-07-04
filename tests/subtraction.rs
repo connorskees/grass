@@ -224,6 +224,41 @@ test!(
     "a {\n  color: null - foo;\n}\n",
     "a {\n  color: -foo;\n}\n"
 );
+test!(
+    number_minus_true,
+    "a {\n  color: 1 - true;\n}\n",
+    "a {\n  color: 1-true;\n}\n"
+);
+test!(
+    number_minus_false,
+    "a {\n  color: 1 - false;\n}\n",
+    "a {\n  color: 1-false;\n}\n"
+);
+test!(
+    number_minus_important,
+    "a {\n  color: 1 - !important;\n}\n",
+    "a {\n  color: 1-!important;\n}\n"
+);
+test!(
+    number_minus_null,
+    "a {\n  color: 1 - null;\n}\n",
+    "a {\n  color: 1-;\n}\n"
+);
+test!(
+    number_minus_arglist,
+    "@function foo($a...) {
+        @return 1 - $a;
+    }
+
+    a {
+        color: foo(a, b);
+    }",
+    "a {\n  color: 1-a, b;\n}\n"
+);
+error!(
+    number_minus_color,
+    "a {\n  color: 1 - #abc;\n}\n", "Error: Undefined operation \"1 - #abc\"."
+);
 error!(
     null_minus_function,
     "a {\n  color: null - get-function(lighten);\n}\n",

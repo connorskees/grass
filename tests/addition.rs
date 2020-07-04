@@ -278,6 +278,17 @@ test!(
     "a {\n  color: 1+/2;\n}\n",
     "a {\n  color: 1/2;\n}\n"
 );
+test!(
+    arglist_plus_number,
+    "@function foo($a...) {
+        @return $a + 1;
+    }
+
+    a {
+        color: foo(a, b);
+    }",
+    "a {\n  color: a, b1;\n}\n"
+);
 error!(
     map_lhs_add,
     "a {color: (a: b) + 1;}", "Error: (a: b) isn't a valid CSS value."

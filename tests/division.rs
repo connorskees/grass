@@ -63,6 +63,52 @@ test!(
     "a {\n  color: 1 / red;\n}\n",
     "a {\n  color: 1/red;\n}\n"
 );
+test!(
+    dblquoted_string_div_space_separated_list,
+    "a {\n  color: \"foo\"/(a b);\n}\n",
+    "a {\n  color: \"foo\"/a b;\n}\n"
+);
+test!(
+    null_div_number,
+    "a {\n  color: null / 1;\n}\n",
+    "a {\n  color: /1;\n}\n"
+);
+test!(
+    null_div_dblquoted_string,
+    "a {\n  color: null / \"foo\";\n}\n",
+    "a {\n  color: /\"foo\";\n}\n"
+);
+test!(
+    number_div_arglist,
+    "@function foo($a...) {
+        @return 1 / $a;
+    }
+
+    a {
+        color: foo(a, b);
+    }",
+    "a {\n  color: 1/a, b;\n}\n"
+);
+test!(
+    string_div_arglist,
+    "@function foo($a...) {
+        @return foo / $a;
+    }
+
+    a {
+        color: foo(a, b);
+    }",
+    "a {\n  color: foo/a, b;\n}\n"
+);
+error!(
+    string_div_map,
+    "a {\n  color: foo / (a: b);\n}\n", "Error: (a: b) isn't a valid CSS value."
+);
+error!(
+    string_div_function,
+    "a {\n  color: foo / get-function(lighten);\n}\n",
+    "Error: get-function(\"lighten\") isn't a valid CSS value."
+);
 error!(
     num_div_map,
     "a {\n  color: 1 / (a: b);\n}\n", "Error: (a: b) isn't a valid CSS value."

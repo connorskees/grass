@@ -167,7 +167,6 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
                 )
                     .into())
             }
-            Value::ArgList(..) => todo!(),
             Value::Important | Value::True | Value::False => match right {
                 Value::String(s, QuoteKind::Quoted) => Value::String(
                     format!("{}{}", left.to_css_string(self.span)?, s),
@@ -266,7 +265,7 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
                 Value::String(text2, ..) => Value::String(text + &text2, quotes),
                 _ => Value::String(text + &right.to_css_string(self.span)?, quotes),
             },
-            Value::List(..) => match right {
+            Value::List(..) | Value::ArgList(..) => match right {
                 Value::String(s, q) => {
                     Value::String(format!("{}{}", left.to_css_string(self.span)?, s), q)
                 }
@@ -325,7 +324,12 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
                         )
                     }
                 }
-                Value::List(..) | Value::String(..) => Value::String(
+                Value::List(..)
+                | Value::String(..)
+                | Value::Important
+                | Value::True
+                | Value::False
+                | Value::ArgList(..) => Value::String(
                     format!("{}{}-{}", num, unit, right.to_css_string(self.span)?),
                     QuoteKind::None,
                 ),
@@ -336,7 +340,19 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
                     )
                         .into())
                 }
-                _ => todo!(),
+                Value::Color(..) => {
+                    return Err((
+                        format!(
+                            "Undefined operation \"{}{} - {}\".",
+                            num,
+                            unit,
+                            right.inspect(self.span)?
+                        ),
+                        self.span,
+                    )
+                        .into())
+                }
+                Value::Null => Value::String(format!("{}{}-", num, unit), QuoteKind::None),
             },
             Value::Color(c) => match right {
                 Value::String(s, q) => {
@@ -367,20 +383,6 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
                 ),
                 QuoteKind::None,
             ),
-            Value::List(..) => match right {
-                Value::String(s, q) => Value::String(
-                    format!("{}-{}{}{}", left.to_css_string(self.span)?, q, s, q),
-                    QuoteKind::None,
-                ),
-                _ => Value::String(
-                    format!(
-                        "{}-{}",
-                        left.to_css_string(self.span)?,
-                        right.to_css_string(self.span)?
-                    ),
-                    QuoteKind::None,
-                ),
-            },
             _ => match right {
                 Value::String(s, q) => Value::String(
                     format!("{}-{}{}{}", left.to_css_string(self.span)?, q, s, q),
@@ -416,7 +418,6 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
             v => panic!("{:?}", v),
         };
         Ok(match left {
-            Value::Null => todo!(),
             Value::Dimension(num, unit) => match right {
                 Value::Dimension(num2, unit2) => {
                     if unit == Unit::None {
@@ -479,7 +480,10 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
             v => panic!("{:?}", v),
         };
         Ok(match left {
-            Value::Null => todo!(),
+            Value::Null => Value::String(
+                format!("/{}", right.to_css_string(self.span)?),
+                QuoteKind::None,
+            ),
             Value::Dimension(num, unit) => match right {
                 Value::Dimension(num2, unit2) => {
                     if !unit.comparable(&unit2) {
@@ -512,7 +516,8 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
                 | Value::True
                 | Value::False
                 | Value::Important
-                | Value::Color(..) => Value::String(
+                | Value::Color(..)
+                | Value::ArgList(..) => Value::String(
                     format!("{}{}/{}", num, unit, right.to_css_string(self.span)?),
                     QuoteKind::None,
                 ),
@@ -524,7 +529,6 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
                     )
                         .into())
                 }
-                Value::ArgList(..) => todo!(),
             },
             Value::Color(c) => match right {
                 Value::String(s, q) => {
@@ -556,12 +560,20 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
                 | Value::True
                 | Value::False
                 | Value::Dimension(..)
-                | Value::Color(..) => Value::String(
+                | Value::Color(..)
+                | Value::List(..)
+                | Value::ArgList(..) => Value::String(
                     format!("{}{}{}/{}", q1, s1, q1, right.to_css_string(self.span)?),
                     QuoteKind::None,
                 ),
                 Value::Null => Value::String(format!("{}{}{}/", q1, s1, q1), QuoteKind::None),
-                _ => todo!(),
+                Value::Map(..) | Value::FunctionRef(..) => {
+                    return Err((
+                        format!("{} isn't a valid CSS value.", right.inspect(self.span)?),
+                        self.span,
+                    )
+                        .into())
+                }
             },
             _ => match right {
                 Value::String(s, q) => Value::String(

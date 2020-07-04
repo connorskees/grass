@@ -21,3 +21,7 @@ error!(
     "a {color: 1 * get-function(lighten);}",
     "Error: Undefined operation \"1 * get-function(\"lighten\")\"."
 );
+error!(
+    null_mul_number,
+    "a {color: null * 1;}", "Error: Undefined operation \"null * 1\"."
+);
