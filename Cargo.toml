@@ -1,6 +1,6 @@
 [package]
 name = "grass"
-version = "0.9.1"
+version = "0.9.2"
 description = "A near-feature-complete Sass compiler written purely in Rust"
 readme = "README.md"
 license = "MIT"
@@ -24,22 +24,27 @@ crate-type = ["cdylib", "rlib"]
 bench = false
 
 [[bench]]
+path = "benches/variables.rs"
 name = "variables"
 harness = false
 
 [[bench]]
+path = "benches/colors.rs"
 name = "colors"
 harness = false
 
 [[bench]]
+path = "benches/numbers.rs"
 name = "numbers"
 harness = false
 
 [[bench]]
+path = "benches/control_flow.rs"
 name = "control_flow"
 harness = false
 
 [[bench]]
+path = "benches/styles.rs"
 name = "styles"
 harness = false
 
