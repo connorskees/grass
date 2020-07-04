@@ -542,12 +542,15 @@ impl Extender {
         media_query_context: &Option<Vec<CssMediaQuery>>,
         targets_used: &mut HashSet<SimpleSelector>,
     ) -> Option<Vec<Vec<Extension>>> {
-        if let SimpleSelector::Pseudo(
-            simple @ Pseudo {
-                selector: Some(..), ..
-            },
-        ) = simple.clone()
+        if let SimpleSelector::Pseudo(Pseudo {
+            selector: Some(..), ..
+        }) = &simple
         {
+            let simple = if let SimpleSelector::Pseudo(pseudo) = simple.clone() {
+                pseudo
+            } else {
+                unreachable!()
+            };
             if let Some(extended) = self.extend_pseudo(simple, extensions, media_query_context) {
                 return Some(
                     extended
