@@ -1,8 +1,25 @@
-/target
 *.s[ac]ss
 *.css
+*.exe
+!input.scss
+
+# devops
+/target
 Cargo.lock
 coverage
 pkg
-.idea/
-!input.scss
+flamegraph.svg
+
+# editor specific
+.idea
+.vscode
+
+# automation tools
+*.py
+*.sh
+*.cmd
+
+# common Sass frameworks that may wish to live alongside grass for testing
+susy
+bulma*
+bootstrap*
