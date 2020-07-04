@@ -68,7 +68,7 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
         let val2 = self.paren_or_unary(val2)?;
 
         if let HigherIntermediateValue::BinaryOp(val1_1, op2, val1_2) = val1 {
-            if op2.precedence() > op.precedence() {
+            if op2.precedence() >= op.precedence() {
                 val1 = HigherIntermediateValue::Literal(self.bin_op(*val1_1, op2, *val1_2)?);
             } else {
                 let val2 = HigherIntermediateValue::Literal(self.bin_op(*val1_2, op, val2)?);

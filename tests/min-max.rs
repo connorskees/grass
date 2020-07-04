@@ -90,7 +90,7 @@ test!(
 test!(
     max_evaluated_binop,
     "a {\n  color: max(100% - lightness(red) - 2%);\n}\n",
-    "a {\n  color: 52%;\n}\n"
+    "a {\n  color: 48%;\n}\n"
 );
 error!(
     max_arg_of_incorrect_type,

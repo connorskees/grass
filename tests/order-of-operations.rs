@@ -38,3 +38,8 @@ test!(
     "a {\n  color: a or b !=c;\n}\n",
     "a {\n  color: a;\n}\n"
 );
+test!(
+    leftmost_is_evaluated_first_when_same_precedence,
+    "a {\n  color: 1 / 2 * 1em;\n}\n",
+    "a {\n  color: 0.5em;\n}\n"
+);
