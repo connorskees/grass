@@ -66,28 +66,25 @@ pub(crate) fn unify_complex(
 ///
 /// The selector `.D (.A .B)` is represented as the list `[[.D], [.A, .B]]`.
 pub(crate) fn weave(
-    complexes: Vec<Vec<ComplexSelectorComponent>>,
+    mut complexes: Vec<Vec<ComplexSelectorComponent>>,
 ) -> Vec<Vec<ComplexSelectorComponent>> {
-    let mut prefixes: Vec<Vec<ComplexSelectorComponent>> = vec![complexes.first().unwrap().clone()];
+    let mut prefixes: Vec<Vec<ComplexSelectorComponent>> = vec![complexes.remove(0)];
 
-    for complex in complexes.into_iter().skip(1) {
+    for mut complex in complexes.into_iter() {
         if complex.is_empty() {
             continue;
         }
 
-        let target = complex.last().unwrap().clone();
+        let target = complex.pop().unwrap();
 
-        let complex_len = complex.len();
-
-        if complex_len == 1 {
+        if complex.is_empty() {
             for prefix in &mut prefixes {
                 prefix.push(target.clone());
             }
             continue;
         }
 
-        let parents: Vec<ComplexSelectorComponent> =
-            complex.into_iter().take(complex_len - 1).collect();
+        let parents: Vec<ComplexSelectorComponent> = complex;
         let mut new_prefixes: Vec<Vec<ComplexSelectorComponent>> = Vec::new();
 
         for prefix in prefixes {
