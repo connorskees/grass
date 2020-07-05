@@ -1,6 +1,7 @@
-# 0.10.0
+# 0.9.4
 
 - implement `@keyframes`
+- don't strip newlines following comments in selectors
 
 # 0.9.3
 
