@@ -188,13 +188,10 @@ impl<'a> Parser<'a> {
             super_selectors: self.super_selectors,
             span_before: self.span_before,
             content: self.content,
-            in_mixin: self.in_mixin,
-            in_function: self.in_function,
-            in_control_flow: self.in_control_flow,
+            flags: self.flags,
             at_root: self.at_root,
             at_root_has_selector: self.at_root_has_selector,
             extender: self.extender,
-            in_keyframes: self.in_keyframes,
         }
         .parse_value()
     }
