@@ -10,7 +10,7 @@ use crate::{
     Token,
 };
 
-use super::{Flags, NeverEmptyVec, Parser, Stmt};
+use super::{common::ContextFlags, NeverEmptyVec, Parser, Stmt};
 
 impl<'a> Parser<'a> {
     pub(super) fn parse_mixin(&mut self) -> SassResult<()> {
@@ -127,7 +127,7 @@ impl<'a> Parser<'a> {
             global_scope: self.global_scope,
             super_selectors: self.super_selectors,
             span_before: self.span_before,
-            flags: self.flags | Flags::IN_MIXIN,
+            flags: self.flags | ContextFlags::IN_MIXIN,
             content: self.content,
             at_root: false,
             at_root_has_selector: self.at_root_has_selector,
@@ -141,7 +141,7 @@ impl<'a> Parser<'a> {
     }
 
     pub(super) fn parse_content_rule(&mut self) -> SassResult<Vec<Stmt>> {
-        if self.flags.contains(Flags::IN_MIXIN) {
+        if self.flags.in_mixin() {
             let mut scope = self
                 .content
                 .last()

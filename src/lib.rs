@@ -94,7 +94,10 @@ pub(crate) use crate::token::Token;
 use crate::{
     lexer::Lexer,
     output::Css,
-    parse::{common::NeverEmptyVec, Flags, Parser},
+    parse::{
+        common::{ContextFlags, NeverEmptyVec},
+        Parser,
+    },
     scope::Scope,
     selector::{Extender, Selector},
 };
@@ -149,7 +152,7 @@ pub fn from_path(p: &str) -> Result<String> {
         super_selectors: &mut NeverEmptyVec::new(Selector::new(empty_span)),
         span_before: empty_span,
         content: &mut Vec::new(),
-        flags: Flags::empty(),
+        flags: ContextFlags::empty(),
         at_root: true,
         at_root_has_selector: false,
         extender: &mut Extender::new(empty_span),
@@ -191,7 +194,7 @@ pub fn from_string(p: String) -> Result<String> {
         super_selectors: &mut NeverEmptyVec::new(Selector::new(empty_span)),
         span_before: empty_span,
         content: &mut Vec::new(),
-        flags: Flags::empty(),
+        flags: ContextFlags::empty(),
         at_root: true,
         at_root_has_selector: false,
         extender: &mut Extender::new(empty_span),
@@ -224,7 +227,7 @@ pub fn from_string(p: String) -> std::result::Result<String, JsValue> {
         super_selectors: &mut NeverEmptyVec::new(Selector::new(empty_span)),
         span_before: empty_span,
         content: &mut Vec::new(),
-        flags: Flags::empty(),
+        flags: ContextFlags::empty(),
         at_root: true,
         at_root_has_selector: false,
         extender: &mut Extender::new(empty_span),

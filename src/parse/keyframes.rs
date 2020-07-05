@@ -10,7 +10,7 @@ use crate::{
     Token,
 };
 
-use super::{Flags, Parser};
+use super::{common::ContextFlags, Parser};
 
 impl fmt::Display for KeyframesSelector {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -189,7 +189,7 @@ impl<'a> Parser<'a> {
             super_selectors: self.super_selectors,
             span_before: self.span_before,
             content: self.content,
-            flags: self.flags | Flags::IN_KEYFRAMES,
+            flags: self.flags | ContextFlags::IN_KEYFRAMES,
             at_root: false,
             at_root_has_selector: self.at_root_has_selector,
             extender: self.extender,
