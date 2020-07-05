@@ -66,11 +66,21 @@ pub(crate) enum Stmt {
     KeyframesRuleSet(Box<KeyframesRuleSet>),
 }
 
+bitflags::bitflags! {
+    // todo: try to remove the flag IN_CONTROL_FLOW
+    /// Flags to indicate the context during parsing.
+    pub struct Flags: u8 {
+        const IN_MIXIN        = 1;
+        const IN_FUNCTION     = 1 << 1;
+        const IN_CONTROL_FLOW = 1 << 2;
+        const IN_KEYFRAMES    = 1 << 3;
+    }
+}
+
 /// We could use a generic for the toks, but it makes the API
 /// much simpler to work with if it isn't generic. The performance
 /// hit (if there is one) is not important for now.
-// todo: refactor `in_mixin`, in_function`, and `at_root` into state machine enum
-#[allow(clippy::struct_excessive_bools)]
+// todo: merge at_root and at_root_has_selector into an enum
 pub(crate) struct Parser<'a> {
     pub toks: &'a mut PeekMoreIterator<IntoIter<Token>>,
     pub map: &'a mut CodeMap,
@@ -80,10 +90,7 @@ pub(crate) struct Parser<'a> {
     pub super_selectors: &'a mut NeverEmptyVec<Selector>,
     pub span_before: Span,
     pub content: &'a mut Vec<Content>,
-    pub in_mixin: bool,
-    pub in_function: bool,
-    pub in_control_flow: bool,
-    pub in_keyframes: bool,
+    pub flags: Flags,
     /// Whether this parser is at the root of the document
     /// E.g. not inside a style, mixin, or function
     pub at_root: bool,
@@ -98,7 +105,7 @@ impl<'a> Parser<'a> {
         let mut stmts = Vec::new();
         while self.toks.peek().is_some() {
             stmts.append(&mut self.parse_stmt()?);
-            if self.in_function && !stmts.is_empty() {
+            if self.flags.contains(Flags::IN_FUNCTION) && !stmts.is_empty() {
                 return Ok(stmts);
             }
             self.at_root = true;
@@ -109,7 +116,7 @@ impl<'a> Parser<'a> {
     fn parse_stmt(&mut self) -> SassResult<Vec<Stmt>> {
         let mut stmts = Vec::new();
         while let Some(Token { kind, pos }) = self.toks.peek() {
-            if self.in_function && !stmts.is_empty() {
+            if self.flags.contains(Flags::IN_FUNCTION) && !stmts.is_empty() {
                 return Ok(stmts);
             }
             self.span_before = *pos;
@@ -125,7 +132,7 @@ impl<'a> Parser<'a> {
                         AtRuleKind::Include => stmts.append(&mut self.parse_include()?),
                         AtRuleKind::Function => self.parse_function()?,
                         AtRuleKind::Return => {
-                            if self.in_function {
+                            if self.flags.contains(Flags::IN_FUNCTION) {
                                 return Ok(vec![Stmt::Return(self.parse_return()?)]);
                             } else {
                                 return Err((
@@ -235,7 +242,7 @@ impl<'a> Parser<'a> {
                 // dart-sass seems to special-case the error message here?
                 '!' | '{' => return Err(("expected \"}\".", *pos).into()),
                 _ => {
-                    if self.in_keyframes {
+                    if self.flags.contains(Flags::IN_KEYFRAMES) {
                         match self.is_selector_or_style()? {
                             SelectorOrStyle::Style(property, value) => {
                                 if let Some(value) = value {
@@ -375,13 +382,10 @@ impl<'a> Parser<'a> {
                 super_selectors: self.super_selectors,
                 span_before: self.span_before,
                 content: self.content,
-                in_mixin: self.in_mixin,
-                in_function: self.in_function,
-                in_control_flow: self.in_control_flow,
+                flags: self.flags,
                 at_root: self.at_root,
                 at_root_has_selector: self.at_root_has_selector,
                 extender: self.extender,
-                in_keyframes: self.in_keyframes,
             },
             allows_parent,
             true,
@@ -607,13 +611,10 @@ impl<'a> Parser<'a> {
                     super_selectors: self.super_selectors,
                     span_before: self.span_before,
                     content: self.content,
-                    in_mixin: self.in_mixin,
-                    in_function: self.in_function,
-                    in_control_flow: true,
+                    flags: self.flags | Flags::IN_CONTROL_FLOW,
                     at_root: self.at_root,
                     at_root_has_selector: self.at_root_has_selector,
                     extender: self.extender,
-                    in_keyframes: self.in_keyframes,
                 }
                 .parse();
             }
@@ -630,13 +631,10 @@ impl<'a> Parser<'a> {
             super_selectors: self.super_selectors,
             span_before: self.span_before,
             content: self.content,
-            in_mixin: self.in_mixin,
-            in_function: self.in_function,
-            in_control_flow: true,
+            flags: self.flags | Flags::IN_CONTROL_FLOW,
             at_root: self.at_root,
             at_root_has_selector: self.at_root_has_selector,
             extender: self.extender,
-            in_keyframes: self.in_keyframes,
         }
         .parse()
     }
@@ -764,7 +762,7 @@ impl<'a> Parser<'a> {
                     span: var.span,
                 },
             );
-            if self.in_function {
+            if self.flags.contains(Flags::IN_FUNCTION) {
                 let these_stmts = Parser {
                     toks: &mut body.clone().into_iter().peekmore(),
                     map: self.map,
@@ -774,13 +772,10 @@ impl<'a> Parser<'a> {
                     super_selectors: self.super_selectors,
                     span_before: self.span_before,
                     content: self.content,
-                    in_mixin: self.in_mixin,
-                    in_function: self.in_function,
-                    in_control_flow: true,
+                    flags: self.flags | Flags::IN_CONTROL_FLOW,
                     at_root: self.at_root,
                     at_root_has_selector: self.at_root_has_selector,
                     extender: self.extender,
-                    in_keyframes: self.in_keyframes,
                 }
                 .parse()?;
                 if !these_stmts.is_empty() {
@@ -797,13 +792,10 @@ impl<'a> Parser<'a> {
                         super_selectors: self.super_selectors,
                         span_before: self.span_before,
                         content: self.content,
-                        in_mixin: self.in_mixin,
-                        in_function: self.in_function,
-                        in_control_flow: true,
+                        flags: self.flags | Flags::IN_CONTROL_FLOW,
                         at_root: self.at_root,
                         at_root_has_selector: self.at_root_has_selector,
                         extender: self.extender,
-                        in_keyframes: self.in_keyframes,
                     }
                     .parse()?,
                 );
@@ -838,7 +830,7 @@ impl<'a> Parser<'a> {
         let mut val = self.parse_value_from_vec(cond.clone())?;
         self.scopes.push(self.scopes.last().clone());
         while val.node.is_true() {
-            if self.in_function {
+            if self.flags.contains(Flags::IN_FUNCTION) {
                 let these_stmts = Parser {
                     toks: &mut body.clone().into_iter().peekmore(),
                     map: self.map,
@@ -848,13 +840,10 @@ impl<'a> Parser<'a> {
                     super_selectors: self.super_selectors,
                     span_before: self.span_before,
                     content: self.content,
-                    in_mixin: self.in_mixin,
-                    in_function: self.in_function,
-                    in_control_flow: true,
+                    flags: self.flags | Flags::IN_CONTROL_FLOW,
                     at_root: self.at_root,
                     at_root_has_selector: self.at_root_has_selector,
                     extender: self.extender,
-                    in_keyframes: self.in_keyframes,
                 }
                 .parse()?;
                 if !these_stmts.is_empty() {
@@ -871,13 +860,10 @@ impl<'a> Parser<'a> {
                         super_selectors: self.super_selectors,
                         span_before: self.span_before,
                         content: self.content,
-                        in_mixin: self.in_mixin,
-                        in_function: self.in_function,
-                        in_control_flow: true,
+                        flags: self.flags | Flags::IN_CONTROL_FLOW,
                         at_root: self.at_root,
                         at_root_has_selector: self.at_root_has_selector,
                         extender: self.extender,
-                        in_keyframes: self.in_keyframes,
                     }
                     .parse()?,
                 );
@@ -972,7 +958,7 @@ impl<'a> Parser<'a> {
                 }
             }
 
-            if self.in_function {
+            if self.flags.contains(Flags::IN_FUNCTION) {
                 let these_stmts = Parser {
                     toks: &mut body.clone().into_iter().peekmore(),
                     map: self.map,
@@ -982,13 +968,10 @@ impl<'a> Parser<'a> {
                     super_selectors: self.super_selectors,
                     span_before: self.span_before,
                     content: self.content,
-                    in_mixin: self.in_mixin,
-                    in_function: self.in_function,
-                    in_control_flow: true,
+                    flags: self.flags | Flags::IN_CONTROL_FLOW,
                     at_root: self.at_root,
                     at_root_has_selector: self.at_root_has_selector,
                     extender: self.extender,
-                    in_keyframes: self.in_keyframes,
                 }
                 .parse()?;
                 if !these_stmts.is_empty() {
@@ -1005,13 +988,10 @@ impl<'a> Parser<'a> {
                         super_selectors: self.super_selectors,
                         span_before: self.span_before,
                         content: self.content,
-                        in_mixin: self.in_mixin,
-                        in_function: self.in_function,
-                        in_control_flow: true,
+                        flags: self.flags | Flags::IN_CONTROL_FLOW,
                         at_root: self.at_root,
                         at_root_has_selector: self.at_root_has_selector,
                         extender: self.extender,
-                        in_keyframes: self.in_keyframes,
                     }
                     .parse()?,
                 );
@@ -1102,13 +1082,10 @@ impl<'a> Parser<'a> {
             super_selectors: self.super_selectors,
             span_before: self.span_before,
             content: self.content,
-            in_mixin: self.in_mixin,
-            in_function: self.in_function,
-            in_control_flow: self.in_control_flow,
+            flags: self.flags,
             at_root: false,
             at_root_has_selector: self.at_root_has_selector,
             extender: self.extender,
-            in_keyframes: self.in_keyframes,
         }
         .parse_stmt()?;
 
@@ -1171,13 +1148,10 @@ impl<'a> Parser<'a> {
             super_selectors: &mut NeverEmptyVec::new(at_rule_selector.clone()),
             span_before: self.span_before,
             content: self.content,
-            in_mixin: self.in_mixin,
-            in_function: self.in_function,
-            in_control_flow: self.in_control_flow,
+            flags: self.flags,
             at_root: true,
             at_root_has_selector,
             extender: self.extender,
-            in_keyframes: self.in_keyframes,
         }
         .parse()?
         .into_iter()
@@ -1213,13 +1187,10 @@ impl<'a> Parser<'a> {
             super_selectors: self.super_selectors,
             span_before: self.span_before,
             content: self.content,
-            in_mixin: self.in_mixin,
-            in_function: self.in_function,
-            in_control_flow: self.in_control_flow,
+            flags: self.flags,
             at_root: self.at_root,
             at_root_has_selector: self.at_root_has_selector,
             extender: self.extender,
-            in_keyframes: self.in_keyframes,
         }
         .parse_selector(false, true, String::new())?;
 
@@ -1292,13 +1263,10 @@ impl<'a> Parser<'a> {
             super_selectors: self.super_selectors,
             span_before: self.span_before,
             content: self.content,
-            in_mixin: self.in_mixin,
-            in_function: self.in_function,
-            in_control_flow: self.in_control_flow,
+            flags: self.flags,
             at_root: false,
             at_root_has_selector: self.at_root_has_selector,
             extender: self.extender,
-            in_keyframes: self.in_keyframes,
         }
         .parse()?;
 

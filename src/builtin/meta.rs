@@ -6,7 +6,7 @@ use crate::{
     args::CallArgs,
     common::QuoteKind,
     error::SassResult,
-    parse::Parser,
+    parse::{Flags, Parser},
     unit::Unit,
     value::{SassFunction, Value},
 };
@@ -232,7 +232,7 @@ fn call(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 #[allow(clippy::needless_pass_by_value)]
 fn content_exists(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(0)?;
-    if !parser.in_mixin {
+    if !parser.flags.contains(Flags::IN_MIXIN) {
         return Err((
             "content-exists() may only be called within a mixin.",
             parser.span_before,
