@@ -109,3 +109,15 @@ test!(
     "@keyframes foo {/**/}",
     "@keyframes foo {\n  /**/\n}\n"
 );
+test!(
+    keyframes_multiple_rulesets,
+    "@keyframes {
+        to {
+            color: red;
+        }
+        from {
+            color: green;
+        }
+    }",
+    "@keyframes {\n  to {\n    color: red;\n  }\n  from {\n    color: green;\n  }\n}\n"
+);

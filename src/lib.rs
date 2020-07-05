@@ -160,7 +160,7 @@ pub fn from_path(p: &str) -> Result<String> {
     .parse()
     .map_err(|e| raw_to_parse_error(&map, *e))?;
 
-    Css::from_stmts(stmts)
+    Css::from_stmts(stmts, false)
         .map_err(|e| raw_to_parse_error(&map, *e))?
         .pretty_print(&map)
         .map_err(|e| raw_to_parse_error(&map, *e))
@@ -205,7 +205,7 @@ pub fn from_string(p: String) -> Result<String> {
     .parse()
     .map_err(|e| raw_to_parse_error(&map, *e))?;
 
-    Css::from_stmts(stmts)
+    Css::from_stmts(stmts, false)
         .map_err(|e| raw_to_parse_error(&map, *e))?
         .pretty_print(&map)
         .map_err(|e| raw_to_parse_error(&map, *e))
@@ -241,7 +241,7 @@ pub fn from_string(p: String) -> std::result::Result<String, JsValue> {
     .parse()
     .map_err(|e| raw_to_parse_error(&map, *e).to_string())?;
 
-    Ok(Css::from_stmts(stmts)
+    Ok(Css::from_stmts(stmts, false)
         .map_err(|e| raw_to_parse_error(&map, *e).to_string())?
         .pretty_print(&map)
         .map_err(|e| raw_to_parse_error(&map, *e).to_string())?)

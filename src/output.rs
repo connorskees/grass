@@ -82,15 +82,19 @@ impl Toplevel {
 #[derive(Debug, Clone)]
 pub(crate) struct Css {
     blocks: Vec<Toplevel>,
+    in_at_rule: bool,
 }
 
 impl Css {
-    pub const fn new() -> Self {
-        Css { blocks: Vec::new() }
+    pub const fn new(in_at_rule: bool) -> Self {
+        Css {
+            blocks: Vec::new(),
+            in_at_rule,
+        }
     }
 
-    pub(crate) fn from_stmts(s: Vec<Stmt>) -> SassResult<Self> {
-        Css::new().parse_stylesheet(s)
+    pub(crate) fn from_stmts(s: Vec<Stmt>, in_at_rule: bool) -> SassResult<Self> {
+        Css::new(in_at_rule).parse_stylesheet(s)
     }
 
     fn parse_stmt(&mut self, stmt: Stmt) -> SassResult<Vec<Toplevel>> {
@@ -232,7 +236,7 @@ impl Css {
                         continue;
                     }
                     has_written = true;
-                    if should_emit_newline {
+                    if should_emit_newline && !self.in_at_rule {
                         should_emit_newline = false;
                         writeln!(buf)?;
                     }
@@ -247,10 +251,7 @@ impl Css {
                         continue;
                     }
                     has_written = true;
-                    if should_emit_newline {
-                        should_emit_newline = false;
-                        writeln!(buf)?;
-                    }
+
                     writeln!(
                         buf,
                         "{}{} {{",
@@ -290,7 +291,7 @@ impl Css {
                         writeln!(buf, " {{")?;
                     }
 
-                    Css::from_stmts(body)?._inner_pretty_print(buf, map, nesting + 1)?;
+                    Css::from_stmts(body, true)?._inner_pretty_print(buf, map, nesting + 1)?;
                     writeln!(buf, "{}}}", padding)?;
                 }
                 Toplevel::Keyframes(k) => {
@@ -313,7 +314,7 @@ impl Css {
                         writeln!(buf, " {{")?;
                     }
 
-                    Css::from_stmts(body)?._inner_pretty_print(buf, map, nesting + 1)?;
+                    Css::from_stmts(body, true)?._inner_pretty_print(buf, map, nesting + 1)?;
                     writeln!(buf, "{}}}", padding)?;
                 }
                 Toplevel::Supports { params, body } => {
@@ -335,19 +336,16 @@ impl Css {
                         writeln!(buf, " {{")?;
                     }
 
-                    Css::from_stmts(body)?._inner_pretty_print(buf, map, nesting + 1)?;
+                    Css::from_stmts(body, true)?._inner_pretty_print(buf, map, nesting + 1)?;
                     writeln!(buf, "{}}}", padding)?;
                 }
                 Toplevel::Media { query, body } => {
                     if body.is_empty() {
                         continue;
                     }
-                    if should_emit_newline {
-                        should_emit_newline = false;
-                        writeln!(buf)?;
-                    }
+
                     writeln!(buf, "{}@media {} {{", padding, query)?;
-                    Css::from_stmts(body)?._inner_pretty_print(buf, map, nesting + 1)?;
+                    Css::from_stmts(body, true)?._inner_pretty_print(buf, map, nesting + 1)?;
                     writeln!(buf, "{}}}", padding)?;
                 }
                 Toplevel::Style(s) => {
