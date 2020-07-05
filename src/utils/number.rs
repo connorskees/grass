@@ -1,5 +1,4 @@
 use codemap::Spanned;
-
 use peekmore::PeekMoreIterator;
 
 use crate::{error::SassResult, Token};
@@ -49,10 +48,8 @@ impl ParsedNumber {
 pub(crate) fn eat_number<I: Iterator<Item = Token>>(
     toks: &mut PeekMoreIterator<I>,
 ) -> SassResult<Spanned<ParsedNumber>> {
-    let mut whole = String::with_capacity(1);
-    // TODO: merge this span with chars
-    let span = toks.peek().unwrap().pos;
-    eat_whole_number(toks, &mut whole);
+    let mut span = toks.peek().unwrap().pos;
+    let mut whole = eat_whole_number(toks);
 
     if toks.peek().is_none() {
         return Ok(Spanned {
@@ -61,66 +58,64 @@ pub(crate) fn eat_number<I: Iterator<Item = Token>>(
         });
     }
 
-    let mut dec = String::new();
-
     let next_tok = *toks.peek().unwrap();
 
-    if next_tok.kind == '.' {
+    let dec_len = if next_tok.kind == '.' {
         toks.next();
-        eat_whole_number(toks, &mut dec);
 
+        let dec = eat_whole_number(toks);
         if dec.is_empty() {
             return Err(("Expected digit.", next_tok.pos()).into());
         }
-    }
+
+        whole.push_str(&dec);
+
+        dec.len()
+    } else {
+        0
+    };
 
     let mut times_ten = String::new();
     let mut times_ten_is_postive = true;
-    #[allow(clippy::never_loop)]
-    loop {
-        if let Some(Token { kind: 'e', .. }) | Some(Token { kind: 'E', .. }) = toks.peek() {
-            let t = if let Some(tok) = toks.peek_forward(1) {
-                *tok
-            } else {
-                break;
-            };
+    if let Some(Token { kind: 'e', .. }) | Some(Token { kind: 'E', .. }) = toks.peek() {
+        if let Some(&tok) = toks.peek_next() {
+            if tok.kind == '-' {
+                toks.next();
+                times_ten_is_postive = false;
 
-            match t.kind {
-                '-' => {
-                    toks.next();
-                    times_ten_is_postive = false;
+                toks.next();
+                times_ten = eat_whole_number(toks);
+
+                if times_ten.is_empty() {
+                    return Err(("Expected digit.", toks.peek().unwrap_or(&tok).pos).into());
                 }
-                '0'..='9' => {}
-                _ => break,
-            }
+            } else if matches!(tok.kind, '0'..='9') {
+                toks.next();
+                times_ten = eat_whole_number(toks);
 
-            toks.next();
-
-            eat_whole_number(toks, &mut times_ten);
-
-            if times_ten.is_empty() && !times_ten_is_postive {
-                return Err(("Expected digit.", toks.peek().unwrap_or(&t).pos).into());
-            } else if times_ten.len() > 2 {
-                return Err(("Exponent too large.", toks.peek().unwrap_or(&t).pos).into());
+                if times_ten.len() > 2 {
+                    return Err(("Exponent too large.", toks.peek().unwrap_or(&tok).pos).into());
+                }
             }
         }
-        break;
+    }
+
+    if let Ok(Some(Token { pos, .. })) = toks.peek_previous() {
+        span = span.merge(*pos);
     }
 
     toks.reset_cursor();
 
-    whole.push_str(&dec);
-
     Ok(Spanned {
-        node: ParsedNumber::new(whole, dec.len(), times_ten, times_ten_is_postive),
+        node: ParsedNumber::new(whole, dec_len, times_ten, times_ten_is_postive),
         span,
     })
 }
 
 pub(crate) fn eat_whole_number<I: Iterator<Item = Token>>(
     toks: &mut PeekMoreIterator<I>,
-    buf: &mut String,
-) {
+) -> String {
+    let mut buf = String::new();
     while let Some(c) = toks.peek() {
         if !c.kind.is_ascii_digit() {
             break;
@@ -128,4 +123,5 @@ pub(crate) fn eat_whole_number<I: Iterator<Item = Token>>(
         let tok = toks.next().unwrap();
         buf.push(tok.kind);
     }
+    buf
 }

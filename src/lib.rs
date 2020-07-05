@@ -94,7 +94,7 @@ pub(crate) use crate::token::Token;
 use crate::{
     lexer::Lexer,
     output::Css,
-    parse::{common::NeverEmptyVec, Parser},
+    parse::{common::NeverEmptyVec, Flags, Parser},
     scope::Scope,
     selector::{Extender, Selector},
 };
@@ -149,13 +149,10 @@ pub fn from_path(p: &str) -> Result<String> {
         super_selectors: &mut NeverEmptyVec::new(Selector::new(empty_span)),
         span_before: empty_span,
         content: &mut Vec::new(),
-        in_mixin: false,
-        in_function: false,
-        in_control_flow: false,
+        flags: Flags::empty(),
         at_root: true,
         at_root_has_selector: false,
         extender: &mut Extender::new(empty_span),
-        in_keyframes: false,
     }
     .parse()
     .map_err(|e| raw_to_parse_error(&map, *e))?;
@@ -194,13 +191,10 @@ pub fn from_string(p: String) -> Result<String> {
         super_selectors: &mut NeverEmptyVec::new(Selector::new(empty_span)),
         span_before: empty_span,
         content: &mut Vec::new(),
-        in_mixin: false,
-        in_function: false,
-        in_control_flow: false,
+        flags: Flags::empty(),
         at_root: true,
         at_root_has_selector: false,
         extender: &mut Extender::new(empty_span),
-        in_keyframes: false,
     }
     .parse()
     .map_err(|e| raw_to_parse_error(&map, *e))?;
@@ -230,13 +224,10 @@ pub fn from_string(p: String) -> std::result::Result<String, JsValue> {
         super_selectors: &mut NeverEmptyVec::new(Selector::new(empty_span)),
         span_before: empty_span,
         content: &mut Vec::new(),
-        in_mixin: false,
-        in_function: false,
-        in_control_flow: false,
+        flags: Flags::empty(),
         at_root: true,
         at_root_has_selector: false,
         extender: &mut Extender::new(empty_span),
-        in_keyframes: false,
     }
     .parse()
     .map_err(|e| raw_to_parse_error(&map, *e).to_string())?;

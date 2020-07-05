@@ -11,7 +11,7 @@ use crate::{
     Token,
 };
 
-use super::{NeverEmptyVec, Parser, Stmt};
+use super::{Flags, NeverEmptyVec, Parser, Stmt};
 
 /// Names that functions are not allowed to have
 const FORBIDDEN_IDENTIFIERS: [&str; 7] =
@@ -22,11 +22,11 @@ impl<'a> Parser<'a> {
         self.whitespace_or_comment();
         let Spanned { node: name, span } = self.parse_identifier()?;
 
-        if self.in_mixin {
+        if self.flags.contains(Flags::IN_MIXIN) {
             return Err(("Mixins may not contain function declarations.", span).into());
         }
 
-        if self.in_control_flow {
+        if self.flags.contains(Flags::IN_CONTROL_FLOW) {
             return Err(("Functions may not be declared in control directives.", span).into());
         }
 
@@ -88,13 +88,10 @@ impl<'a> Parser<'a> {
             super_selectors: self.super_selectors,
             span_before: self.span_before,
             content: self.content,
-            in_mixin: self.in_mixin,
-            in_function: true,
-            in_control_flow: self.in_control_flow,
+            flags: self.flags | Flags::IN_FUNCTION,
             at_root: false,
             at_root_has_selector: self.at_root_has_selector,
             extender: self.extender,
-            in_keyframes: self.in_keyframes,
         }
         .parse()?;
 

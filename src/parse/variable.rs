@@ -11,7 +11,7 @@ use crate::{
     Token,
 };
 
-use super::Parser;
+use super::{Flags, Parser};
 
 #[derive(Debug)]
 struct VariableValue {
@@ -46,7 +46,7 @@ impl<'a> Parser<'a> {
         }
 
         if value.default {
-            if self.at_root && !self.in_control_flow {
+            if self.at_root && !self.flags.contains(Flags::IN_CONTROL_FLOW) {
                 if !self.global_scope.var_exists_no_global(&ident) {
                     self.global_scope.insert_var(ident, value.value);
                 }
@@ -60,7 +60,7 @@ impl<'a> Parser<'a> {
                 }
             }
         } else if self.at_root {
-            if self.in_control_flow {
+            if self.flags.contains(Flags::IN_CONTROL_FLOW) {
                 if self.global_scope.var_exists_no_global(&ident) {
                     self.global_scope.insert_var(ident, value.value);
                 } else {

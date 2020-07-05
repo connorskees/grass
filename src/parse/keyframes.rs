@@ -10,7 +10,7 @@ use crate::{
     Token,
 };
 
-use super::Parser;
+use super::{Flags, Parser};
 
 impl fmt::Display for KeyframesSelector {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -55,8 +55,7 @@ impl<'a, 'b> KeyframesSelectorParser<'a, 'b> {
                     }
                 }
                 '0'..='9' => {
-                    let mut num = String::new();
-                    eat_whole_number(self.parser.toks, &mut num);
+                    let num = eat_whole_number(self.parser.toks);
                     if !matches!(self.parser.toks.next(), Some(Token { kind: '%', .. })) {
                         return Err(("expected \"%\".", tok.pos).into());
                     }
@@ -81,7 +80,6 @@ impl<'a, 'b> KeyframesSelectorParser<'a, 'b> {
 impl<'a> Parser<'a> {
     fn parse_keyframes_name(&mut self) -> SassResult<String> {
         let mut name = String::new();
-        let mut found_open_brace = false;
         self.whitespace_or_comment();
         while let Some(tok) = self.toks.next() {
             match tok.kind {
@@ -98,19 +96,14 @@ impl<'a> Parser<'a> {
                     name.push(' ');
                 }
                 '{' => {
-                    found_open_brace = true;
-                    break;
+                    // todo: we can avoid the reallocation by trimming before emitting
+                    // (in `output.rs`)
+                    return Ok(name.trim().to_string());
                 }
                 _ => name.push(tok.kind),
             }
         }
-
-        if !found_open_brace {
-            return Err(("expected \"{\".", self.span_before).into());
-        }
-
-        // todo: we can avoid the reallocation by trimming before emitting (in `output.rs`)
-        Ok(name.trim().to_string())
+        Err(("expected \"{\".", self.span_before).into())
     }
 
     pub(super) fn parse_keyframes_selector(
@@ -124,8 +117,6 @@ impl<'a> Parser<'a> {
         };
 
         self.span_before = span;
-
-        let mut found_curly = false;
 
         while let Some(tok) = self.toks.next() {
             span = span.merge(tok.pos());
@@ -157,41 +148,31 @@ impl<'a> Parser<'a> {
                     string.push(' ');
                 }
                 '{' => {
-                    found_curly = true;
-                    break;
+                    let sel_toks: Vec<Token> =
+                        string.chars().map(|x| Token::new(span, x)).collect();
+
+                    let selector = KeyframesSelectorParser::new(&mut Parser {
+                        toks: &mut sel_toks.into_iter().peekmore(),
+                        map: self.map,
+                        path: self.path,
+                        scopes: self.scopes,
+                        global_scope: self.global_scope,
+                        super_selectors: self.super_selectors,
+                        span_before: self.span_before,
+                        content: self.content,
+                        flags: self.flags,
+                        at_root: self.at_root,
+                        at_root_has_selector: self.at_root_has_selector,
+                        extender: self.extender,
+                    })
+                    .parse_keyframes_selector()?;
+
+                    return Ok(selector);
                 }
                 c => string.push(c),
             }
         }
-
-        if !found_curly {
-            return Err(("expected \"{\".", span).into());
-        }
-
-        let sel_toks: Vec<Token> = string.chars().map(|x| Token::new(span, x)).collect();
-
-        let mut iter = sel_toks.into_iter().peekmore();
-
-        let selector = KeyframesSelectorParser::new(&mut Parser {
-            toks: &mut iter,
-            map: self.map,
-            path: self.path,
-            scopes: self.scopes,
-            global_scope: self.global_scope,
-            super_selectors: self.super_selectors,
-            span_before: self.span_before,
-            content: self.content,
-            in_mixin: self.in_mixin,
-            in_function: self.in_function,
-            in_control_flow: self.in_control_flow,
-            at_root: self.at_root,
-            at_root_has_selector: self.at_root_has_selector,
-            extender: self.extender,
-            in_keyframes: self.in_keyframes,
-        })
-        .parse_keyframes_selector()?;
-
-        Ok(selector)
+        Err(("expected \"{\".", span).into())
     }
 
     pub(super) fn parse_keyframes(&mut self) -> SassResult<Stmt> {
@@ -208,11 +189,8 @@ impl<'a> Parser<'a> {
             super_selectors: self.super_selectors,
             span_before: self.span_before,
             content: self.content,
-            in_mixin: self.in_mixin,
-            in_function: self.in_function,
-            in_control_flow: self.in_control_flow,
+            flags: self.flags | Flags::IN_KEYFRAMES,
             at_root: false,
-            in_keyframes: true,
             at_root_has_selector: self.at_root_has_selector,
             extender: self.extender,
         }
