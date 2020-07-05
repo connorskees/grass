@@ -1,10 +1,14 @@
+# 0.10.0
+
+- implement `@keyframes`
+
 # 0.9.3
 
- - fix parsing bugs for empty bracketed lists
- - partially implement inverse units
- - remove all remaining `todo!()`s from binary and unary ops
- - parse keywords case sensitively
- - various optimizations that make bulma about *6x faster* to compile
+- fix parsing bugs for empty bracketed lists
+- partially implement inverse units
+- remove all remaining `todo!()`s from binary and unary ops
+- parse keywords case sensitively
+- various optimizations that make bulma about _6x faster_ to compile
 
 # 0.9.2
 

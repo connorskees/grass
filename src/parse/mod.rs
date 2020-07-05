@@ -5,7 +5,11 @@ use num_traits::cast::ToPrimitive;
 use peekmore::{PeekMore, PeekMoreIterator};
 
 use crate::{
-    atrule::{media::MediaRule, AtRuleKind, Content, SupportsRule, UnknownAtRule},
+    atrule::{
+        keyframes::{Keyframes, KeyframesRuleSet},
+        media::MediaRule,
+        AtRuleKind, Content, SupportsRule, UnknownAtRule,
+    },
     common::{Brackets, ListSeparator},
     error::SassResult,
     scope::Scope,
@@ -31,6 +35,7 @@ pub mod common;
 mod function;
 mod ident;
 mod import;
+mod keyframes;
 mod media;
 mod mixin;
 mod style;
@@ -57,6 +62,8 @@ pub(crate) enum Stmt {
     },
     Comment(String),
     Return(Box<Value>),
+    Keyframes(Box<Keyframes>),
+    KeyframesRuleSet(Box<KeyframesRuleSet>),
 }
 
 /// We could use a generic for the toks, but it makes the API
@@ -76,6 +83,7 @@ pub(crate) struct Parser<'a> {
     pub in_mixin: bool,
     pub in_function: bool,
     pub in_control_flow: bool,
+    pub in_keyframes: bool,
     /// Whether this parser is at the root of the document
     /// E.g. not inside a style, mixin, or function
     pub at_root: bool,
@@ -193,14 +201,14 @@ impl<'a> Parser<'a> {
                             continue;
                         }
                         AtRuleKind::Media => stmts.push(self.parse_media()?),
-                        AtRuleKind::Unknown(_) | AtRuleKind::Keyframes => {
+                        AtRuleKind::Unknown(_) => {
                             stmts.push(self.parse_unknown_at_rule(kind_string.node)?)
                         }
                         AtRuleKind::Use => todo!("@use not yet implemented"),
                         AtRuleKind::Forward => todo!("@forward not yet implemented"),
                         AtRuleKind::Extend => self.parse_extend()?,
                         AtRuleKind::Supports => stmts.push(self.parse_supports()?),
-                        // AtRuleKind::Keyframes => stmts.push(self.parse_keyframes()?),
+                        AtRuleKind::Keyframes => stmts.push(self.parse_keyframes()?),
                     }
                 }
                 '$' => self.parse_variable_declaration()?,
@@ -225,42 +233,72 @@ impl<'a> Parser<'a> {
                 }
                 // dart-sass seems to special-case the error message here?
                 '!' | '{' => return Err(("expected \"}\".", *pos).into()),
-                _ => match self.is_selector_or_style()? {
-                    SelectorOrStyle::Style(property, value) => {
-                        if let Some(value) = value {
-                            stmts.push(Stmt::Style(Style { property, value }));
-                        } else {
-                            stmts.extend(
-                                self.parse_style_group(property)?
-                                    .into_iter()
-                                    .map(Stmt::Style),
-                            );
+                _ => {
+                    if self.in_keyframes {
+                        match self.is_selector_or_style()? {
+                            SelectorOrStyle::Style(property, value) => {
+                                if let Some(value) = value {
+                                    stmts.push(Stmt::Style(Style { property, value }));
+                                } else {
+                                    stmts.extend(
+                                        self.parse_style_group(property)?
+                                            .into_iter()
+                                            .map(Stmt::Style),
+                                    );
+                                }
+                            }
+                            SelectorOrStyle::Selector(init) => {
+                                let selector = self.parse_keyframes_selector(init)?;
+                                self.scopes.push(self.scopes.last().clone());
+
+                                let body = self.parse_stmt()?;
+                                self.scopes.pop();
+                                stmts.push(Stmt::KeyframesRuleSet(Box::new(KeyframesRuleSet {
+                                    selector,
+                                    body,
+                                })));
+                            }
+                        }
+                        continue;
+                    }
+
+                    match self.is_selector_or_style()? {
+                        SelectorOrStyle::Style(property, value) => {
+                            if let Some(value) = value {
+                                stmts.push(Stmt::Style(Style { property, value }));
+                            } else {
+                                stmts.extend(
+                                    self.parse_style_group(property)?
+                                        .into_iter()
+                                        .map(Stmt::Style),
+                                );
+                            }
+                        }
+                        SelectorOrStyle::Selector(init) => {
+                            let at_root = self.at_root;
+                            self.at_root = false;
+                            let selector = self
+                                .parse_selector(!self.super_selectors.is_empty(), false, init)?
+                                .resolve_parent_selectors(
+                                    self.super_selectors.last(),
+                                    !at_root || self.at_root_has_selector,
+                                )?;
+                            self.scopes.push(self.scopes.last().clone());
+                            self.super_selectors.push(selector.clone());
+
+                            let extended_selector = self.extender.add_selector(selector.0, None);
+
+                            let body = self.parse_stmt()?;
+                            self.scopes.pop();
+                            self.super_selectors.pop();
+                            self.at_root = self.super_selectors.is_empty();
+                            stmts.push(Stmt::RuleSet {
+                                selector: extended_selector,
+                                body,
+                            });
                         }
                     }
-                    SelectorOrStyle::Selector(init) => {
-                        let at_root = self.at_root;
-                        self.at_root = false;
-                        let selector = self
-                            .parse_selector(!self.super_selectors.is_empty(), false, init)?
-                            .resolve_parent_selectors(
-                                self.super_selectors.last(),
-                                !at_root || self.at_root_has_selector,
-                            )?;
-                        self.scopes.push(self.scopes.last().clone());
-                        self.super_selectors.push(selector.clone());
-
-                        let extended_selector = self.extender.add_selector(selector.0, None);
-
-                        let body = self.parse_stmt()?;
-                        self.scopes.pop();
-                        self.super_selectors.pop();
-                        self.at_root = self.super_selectors.is_empty();
-                        stmts.push(Stmt::RuleSet {
-                            selector: extended_selector,
-                            body,
-                        });
-                    }
-                },
+                }
             }
         }
         Ok(stmts)
@@ -343,6 +381,7 @@ impl<'a> Parser<'a> {
                 at_root: self.at_root,
                 at_root_has_selector: self.at_root_has_selector,
                 extender: self.extender,
+                in_keyframes: self.in_keyframes,
             },
             allows_parent,
             true,
@@ -350,8 +389,6 @@ impl<'a> Parser<'a> {
         )
         .parse()?;
 
-        // todo: we should be registering the selector here, but that would require being given
-        // an `Rc<RefCell<Selector>>`, which we haven't implemented yet.
         Ok(Selector(selector))
     }
 
@@ -575,6 +612,7 @@ impl<'a> Parser<'a> {
                     at_root: self.at_root,
                     at_root_has_selector: self.at_root_has_selector,
                     extender: self.extender,
+                    in_keyframes: self.in_keyframes,
                 }
                 .parse();
             }
@@ -597,6 +635,7 @@ impl<'a> Parser<'a> {
             at_root: self.at_root,
             at_root_has_selector: self.at_root_has_selector,
             extender: self.extender,
+            in_keyframes: self.in_keyframes,
         }
         .parse()
     }
@@ -740,6 +779,7 @@ impl<'a> Parser<'a> {
                     at_root: self.at_root,
                     at_root_has_selector: self.at_root_has_selector,
                     extender: self.extender,
+                    in_keyframes: self.in_keyframes,
                 }
                 .parse()?;
                 if !these_stmts.is_empty() {
@@ -762,6 +802,7 @@ impl<'a> Parser<'a> {
                         at_root: self.at_root,
                         at_root_has_selector: self.at_root_has_selector,
                         extender: self.extender,
+                        in_keyframes: self.in_keyframes,
                     }
                     .parse()?,
                 );
@@ -812,6 +853,7 @@ impl<'a> Parser<'a> {
                     at_root: self.at_root,
                     at_root_has_selector: self.at_root_has_selector,
                     extender: self.extender,
+                    in_keyframes: self.in_keyframes,
                 }
                 .parse()?;
                 if !these_stmts.is_empty() {
@@ -834,6 +876,7 @@ impl<'a> Parser<'a> {
                         at_root: self.at_root,
                         at_root_has_selector: self.at_root_has_selector,
                         extender: self.extender,
+                        in_keyframes: self.in_keyframes,
                     }
                     .parse()?,
                 );
@@ -944,6 +987,7 @@ impl<'a> Parser<'a> {
                     at_root: self.at_root,
                     at_root_has_selector: self.at_root_has_selector,
                     extender: self.extender,
+                    in_keyframes: self.in_keyframes,
                 }
                 .parse()?;
                 if !these_stmts.is_empty() {
@@ -966,6 +1010,7 @@ impl<'a> Parser<'a> {
                         at_root: self.at_root,
                         at_root_has_selector: self.at_root_has_selector,
                         extender: self.extender,
+                        in_keyframes: self.in_keyframes,
                     }
                     .parse()?,
                 );
@@ -1062,6 +1107,7 @@ impl<'a> Parser<'a> {
             at_root: false,
             at_root_has_selector: self.at_root_has_selector,
             extender: self.extender,
+            in_keyframes: self.in_keyframes,
         }
         .parse_stmt()?;
 
@@ -1130,6 +1176,7 @@ impl<'a> Parser<'a> {
             at_root: true,
             at_root_has_selector,
             extender: self.extender,
+            in_keyframes: self.in_keyframes,
         }
         .parse()?
         .into_iter()
@@ -1171,6 +1218,7 @@ impl<'a> Parser<'a> {
             at_root: self.at_root,
             at_root_has_selector: self.at_root_has_selector,
             extender: self.extender,
+            in_keyframes: self.in_keyframes,
         }
         .parse_selector(false, true, String::new())?;
 
@@ -1249,6 +1297,7 @@ impl<'a> Parser<'a> {
             at_root: false,
             at_root_has_selector: self.at_root_has_selector,
             extender: self.extender,
+            in_keyframes: self.in_keyframes,
         }
         .parse()?;
 
@@ -1275,11 +1324,6 @@ impl<'a> Parser<'a> {
             params: params.trim().to_owned(),
             body,
         })))
-    }
-
-    #[allow(dead_code, clippy::unused_self)]
-    fn parse_keyframes(&mut self) -> SassResult<Stmt> {
-        todo!("@keyframes not yet implemented")
     }
 
     // todo: we should use a specialized struct to represent these

@@ -5,6 +5,7 @@ pub(crate) use supports::SupportsRule;
 pub(crate) use unknown::UnknownAtRule;
 
 mod function;
+pub mod keyframes;
 mod kind;
 pub mod media;
 mod mixin;

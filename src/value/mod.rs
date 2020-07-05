@@ -341,6 +341,7 @@ impl Value {
             at_root: parser.at_root,
             at_root_has_selector: parser.at_root_has_selector,
             extender: parser.extender,
+            in_keyframes: parser.in_keyframes,
         }
         .parse_selector(allows_parent, true, String::new())
     }

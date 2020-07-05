@@ -13,37 +13,6 @@ use super::common::SelectorOrStyle;
 use super::Parser;
 
 impl<'a> Parser<'a> {
-    /// Determines whether the parser is looking at a style or a selector
-    ///
-    /// When parsing the children of a style rule, property declarations,
-    /// namespaced variable declarations, and nested style rules can all begin
-    /// with bare identifiers. In order to know which statement type to produce,
-    /// we need to disambiguate them. We use the following criteria:
-    ///
-    /// * If the entity starts with an identifier followed by a period and a
-    ///   dollar sign, it's a variable declaration. This is the simplest case,
-    ///   because `.$` is used in and only in variable declarations.
-    ///
-    /// * If the entity doesn't start with an identifier followed by a colon,
-    ///   it's a selector. There are some additional mostly-unimportant cases
-    ///   here to support various declaration hacks.
-    ///
-    /// * If the colon is followed by another colon, it's a selector.
-    ///
-    /// * Otherwise, if the colon is followed by anything other than
-    ///   interpolation or a character that's valid as the beginning of an
-    ///   identifier, it's a declaration.
-    ///
-    /// * If the colon is followed by interpolation or a valid identifier, try
-    ///   parsing it as a declaration value. If this fails, backtrack and parse
-    ///   it as a selector.
-    ///
-    /// * If the declaration value is valid but is followed by "{", backtrack and
-    ///   parse it as a selector anyway. This ensures that ".foo:bar {" is always
-    ///   parsed as a selector and never as a property with nested properties
-    ///   beneath it.
-    // todo: potentially we read the property to a string already since properties
-    // are more common than selectors? this seems to be annihilating our performance
     fn parse_style_value_when_no_space_after_semicolon(&mut self) -> Option<Vec<Token>> {
         let mut toks = Vec::new();
         while let Some(tok) = self.toks.peek() {
@@ -94,6 +63,37 @@ impl<'a> Parser<'a> {
         Some(toks)
     }
 
+    /// Determines whether the parser is looking at a style or a selector
+    ///
+    /// When parsing the children of a style rule, property declarations,
+    /// namespaced variable declarations, and nested style rules can all begin
+    /// with bare identifiers. In order to know which statement type to produce,
+    /// we need to disambiguate them. We use the following criteria:
+    ///
+    /// * If the entity starts with an identifier followed by a period and a
+    ///   dollar sign, it's a variable declaration. This is the simplest case,
+    ///   because `.$` is used in and only in variable declarations.
+    ///
+    /// * If the entity doesn't start with an identifier followed by a colon,
+    ///   it's a selector. There are some additional mostly-unimportant cases
+    ///   here to support various declaration hacks.
+    ///
+    /// * If the colon is followed by another colon, it's a selector.
+    ///
+    /// * Otherwise, if the colon is followed by anything other than
+    ///   interpolation or a character that's valid as the beginning of an
+    ///   identifier, it's a declaration.
+    ///
+    /// * If the colon is followed by interpolation or a valid identifier, try
+    ///   parsing it as a declaration value. If this fails, backtrack and parse
+    ///   it as a selector.
+    ///
+    /// * If the declaration value is valid but is followed by "{", backtrack and
+    ///   parse it as a selector anyway. This ensures that ".foo:bar {" is always
+    ///   parsed as a selector and never as a property with nested properties
+    ///   beneath it.
+    // todo: potentially we read the property to a string already since properties
+    // are more common than selectors? this seems to be annihilating our performance
     pub(super) fn is_selector_or_style(&mut self) -> SassResult<SelectorOrStyle> {
         if let Some(first_char) = self.toks.peek() {
             if first_char.kind == '#' {

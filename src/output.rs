@@ -4,7 +4,11 @@ use std::io::Write;
 use codemap::CodeMap;
 
 use crate::{
-    atrule::{media::MediaRule, SupportsRule, UnknownAtRule},
+    atrule::{
+        keyframes::{Keyframes, KeyframesRuleSet, KeyframesSelector},
+        media::MediaRule,
+        SupportsRule, UnknownAtRule,
+    },
     error::SassResult,
     parse::Stmt,
     selector::Selector,
@@ -23,6 +27,8 @@ enum Toplevel {
     RuleSet(Selector, Vec<BlockEntry>),
     MultilineComment(String),
     UnknownAtRule(Box<ToplevelUnknownAtRule>),
+    Keyframes(Box<Keyframes>),
+    KeyframesRuleSet(Vec<KeyframesSelector>, Vec<BlockEntry>),
     Media { query: String, body: Vec<Stmt> },
     Supports { params: String, body: Vec<Stmt> },
     Newline,
@@ -49,18 +55,26 @@ impl Toplevel {
         Toplevel::RuleSet(selector, Vec::new())
     }
 
+    fn new_keyframes_rule(selector: Vec<KeyframesSelector>) -> Self {
+        Toplevel::KeyframesRuleSet(selector, Vec::new())
+    }
+
     fn push_style(&mut self, s: Style) {
         if s.value.is_null() {
             return;
         }
-        if let Toplevel::RuleSet(_, entries) = self {
+        if let Toplevel::RuleSet(_, entries) | Toplevel::KeyframesRuleSet(_, entries) = self {
             entries.push(BlockEntry::Style(Box::new(s)));
+        } else {
+            panic!()
         }
     }
 
     fn push_comment(&mut self, s: String) {
-        if let Toplevel::RuleSet(_, entries) = self {
+        if let Toplevel::RuleSet(_, entries) | Toplevel::KeyframesRuleSet(_, entries) = self {
             entries.push(BlockEntry::MultilineComment(s));
+        } else {
+            panic!()
         }
     }
 }
@@ -120,6 +134,13 @@ impl Css {
                                 Ok(())
                             })?
                         }
+                        Stmt::Keyframes(k) => {
+                            let Keyframes { name, body } = *k;
+                            vals.push(Toplevel::Keyframes(Box::new(Keyframes { name, body })))
+                        }
+                        k @ Stmt::KeyframesRuleSet(..) => {
+                            unreachable!("@keyframes ruleset {:?}", k)
+                        }
                     };
                 }
                 vals
@@ -146,6 +167,22 @@ impl Css {
             }
             Stmt::Return(..) => unreachable!("@return: {:?}", stmt),
             Stmt::AtRoot { .. } => unreachable!("@at-root: {:?}", stmt),
+            Stmt::Keyframes(k) => vec![Toplevel::Keyframes(k)],
+            Stmt::KeyframesRuleSet(k) => {
+                let KeyframesRuleSet { body, selector } = *k;
+                if body.is_empty() {
+                    return Ok(Vec::new());
+                }
+                let mut vals = vec![Toplevel::new_keyframes_rule(selector)];
+                for rule in body {
+                    match rule {
+                        Stmt::Style(s) => vals.get_mut(0).unwrap().push_style(s),
+                        Stmt::KeyframesRuleSet(..) => vals.extend(self.parse_stmt(rule)?),
+                        _ => todo!(),
+                    }
+                }
+                vals
+            }
         })
     }
 
@@ -205,6 +242,30 @@ impl Css {
                     }
                     writeln!(buf, "{}}}", padding)?;
                 }
+                Toplevel::KeyframesRuleSet(selector, body) => {
+                    if body.is_empty() {
+                        continue;
+                    }
+                    has_written = true;
+                    if should_emit_newline {
+                        should_emit_newline = false;
+                        writeln!(buf)?;
+                    }
+                    writeln!(
+                        buf,
+                        "{}{} {{",
+                        padding,
+                        selector
+                            .into_iter()
+                            .map(|s| s.to_string())
+                            .collect::<Vec<String>>()
+                            .join(", ")
+                    )?;
+                    for style in body {
+                        writeln!(buf, "{}  {}", padding, style.to_string()?)?;
+                    }
+                    writeln!(buf, "{}}}", padding)?;
+                }
                 Toplevel::MultilineComment(s) => {
                     has_written = true;
                     writeln!(buf, "{}/*{}*/", padding, s)?;
@@ -224,6 +285,29 @@ impl Css {
 
                     if body.is_empty() {
                         writeln!(buf, ";")?;
+                        continue;
+                    } else {
+                        writeln!(buf, " {{")?;
+                    }
+
+                    Css::from_stmts(body)?._inner_pretty_print(buf, map, nesting + 1)?;
+                    writeln!(buf, "{}}}", padding)?;
+                }
+                Toplevel::Keyframes(k) => {
+                    let Keyframes { name, body } = *k;
+                    if should_emit_newline {
+                        should_emit_newline = false;
+                        writeln!(buf)?;
+                    }
+
+                    write!(buf, "{}@keyframes", padding)?;
+
+                    if !name.is_empty() {
+                        write!(buf, " {}", name)?;
+                    }
+
+                    if body.is_empty() {
+                        writeln!(buf, " {{}}")?;
                         continue;
                     } else {
                         writeln!(buf, " {{")?;

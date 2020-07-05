@@ -194,6 +194,7 @@ impl<'a> Parser<'a> {
             at_root: self.at_root,
             at_root_has_selector: self.at_root_has_selector,
             extender: self.extender,
+            in_keyframes: self.in_keyframes,
         }
         .parse_value()
     }
