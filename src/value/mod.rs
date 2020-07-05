@@ -282,15 +282,23 @@ impl Value {
             Value::Map(map) => Cow::owned(format!(
                 "({})",
                 map.iter()
-                    .map(|(k, v)| Ok(format!(
-                        "{}: {}",
-                        k.to_css_string(span)?,
-                        v.to_css_string(span)?
-                    )))
+                    .map(|(k, v)| Ok(format!("{}: {}", k.inspect(span)?, v.inspect(span)?)))
                     .collect::<SassResult<Vec<String>>>()?
                     .join(", ")
             )),
-            v => v.to_css_string(span)?,
+            Value::Dimension(num, unit) => Cow::owned(format!("{}{}", num, unit)),
+            Value::ArgList(args) => Cow::owned(
+                args.iter()
+                    .filter(|x| !x.is_null())
+                    .map(|a| Ok(a.node.inspect(span)?))
+                    .collect::<SassResult<Vec<Cow<'static, str>>>>()?
+                    .join(", "),
+            ),
+            Value::Important
+            | Value::True
+            | Value::False
+            | Value::Color(..)
+            | Value::String(..) => self.to_css_string(span)?,
         })
     }
 

@@ -110,3 +110,24 @@ test!(
     "a {\n  color: inspect((((a))));\n}\n",
     "a {\n  color: a;\n}\n"
 );
+test!(
+    inspect_mul_units,
+    "a {\n  color: inspect(1em * 1px);\n}\n",
+    "a {\n  color: 1em*px;\n}\n"
+);
+test!(
+    inspect_map_with_map_key_and_value,
+    "a {\n  color: inspect(((a: b): (c: d)));\n}\n",
+    "a {\n  color: ((a: b): (c: d));\n}\n"
+);
+test!(
+    inspect_map_in_arglist,
+    "@function foo($a...) {
+        @return inspect($a);
+    }
+
+    a {
+        color: foo((a: b));
+    }",
+    "a {\n  color: (a: b);\n}\n"
+);
