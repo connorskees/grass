@@ -5,7 +5,7 @@ Spec progress as of 2020-07-04:
 
 | Passing | Failing | Total |
 |---------|---------|-------|
-| 2874    | 2219    | 5093  |
+| 2880    | 2213    | 5093  |
 
 ## Use as library
 ```

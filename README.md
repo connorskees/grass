@@ -34,7 +34,6 @@ The large features remaining are
 indented syntax
 css imports
 @use, @forward, and the module system
-@keyframes
 ```
 
 This is in addition to dozens of smaller features, edge cases, and miscompilations.
@@ -76,8 +75,8 @@ These numbers come from a default run of the Sass specification as shown above.
 
 ```
 2020-07-04
-PASSING: 2874
-FAILING: 2219
+PASSING: 2880
+FAILING: 2213
 TOTAL: 5093
 ```
 
