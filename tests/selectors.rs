@@ -663,6 +663,11 @@ test!(
     "@mixin foo {\n    #{if(&, 'true', 'false')} {\n        color: red;\n    }\n}\n\n@include foo;\n\na {\n    @include foo;\n}\n",
     "false {\n  color: red;\n}\n\na true {\n  color: red;\n}\n"
 );
+test!(
+    newline_is_preserved_when_following_comment,
+    "a, // 1\nb,\nc {\n    color: red;\n}\n",
+    "a,\nb,\nc {\n  color: red;\n}\n"
+);
 error!(
     a_n_plus_b_n_invalid_odd,
     ":nth-child(ofdd) {\n  color: &;\n}\n", "Error: Expected \"odd\"."

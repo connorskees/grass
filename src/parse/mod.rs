@@ -219,6 +219,7 @@ impl<'a> Parser<'a> {
                 '/' => {
                     self.toks.next();
                     let comment = self.parse_comment()?;
+                    self.whitespace();
                     match comment.node {
                         Comment::Silent => continue,
                         Comment::Loud(s) => stmts.push(Stmt::Comment(s)),
@@ -346,7 +347,6 @@ impl<'a> Parser<'a> {
                         return Err(("Expected selector.", tok.pos()).into());
                     }
                     self.parse_comment()?;
-                    self.whitespace();
                     string.push(' ');
                 }
                 '{' => {
@@ -403,11 +403,12 @@ impl<'a> Parser<'a> {
         Ok(Spanned {
             node: match self.toks.next() {
                 Some(Token { kind: '/', .. }) => {
-                    while let Some(tok) = self.toks.next() {
+                    while let Some(tok) = self.toks.peek() {
                         if tok.kind == '\n' {
                             break;
                         }
                         span = span.merge(tok.pos);
+                        self.toks.next();
                     }
 
                     Comment::Silent
