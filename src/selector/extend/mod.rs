@@ -208,9 +208,7 @@ impl Extender {
         // This could be written more simply using Vec<Vec<T>>, but we want to avoid
         // any allocations in the common case where no extends apply.
         let mut extended: Option<Vec<ComplexSelector>> = None;
-        for i in 0..list.components.len() {
-            let complex = list.components.get(i).unwrap().clone();
-
+        for (i, complex) in list.components.iter().enumerate() {
             if let Some(result) =
                 self.extend_complex(complex.clone(), extensions, media_query_context)
             {
@@ -226,7 +224,7 @@ impl Extender {
                     None => unreachable!(),
                 }
             } else if let Some(extended) = extended.as_mut() {
-                extended.push(complex);
+                extended.push(complex.clone());
             }
         }
 
@@ -270,8 +268,8 @@ impl Extender {
 
         let complex_has_line_break = complex.line_break;
 
-        for i in 0..complex.components.len() {
-            if let Some(ComplexSelectorComponent::Compound(component)) = complex.components.get(i) {
+        for (i, component) in complex.components.iter().enumerate() {
+            if let ComplexSelectorComponent::Compound(component) = component {
                 if let Some(extended) =
                     self.extend_compound(component, extensions, media_query_context)
                 {
@@ -304,9 +302,7 @@ impl Extender {
                         None => {}
                     }
                 }
-            } else if let Some(component @ ComplexSelectorComponent::Combinator(..)) =
-                complex.components.get(i)
-            {
+            } else if component.is_combinator() {
                 match extended_not_expanded.as_mut() {
                     Some(v) => v.push(vec![ComplexSelector {
                         components: vec![component.clone()],
@@ -884,7 +880,7 @@ impl Extender {
         }
 
         if !self.extensions.is_empty() {
-            selector = self.extend_list(selector.clone(), None, &media_query_context);
+            selector = self.extend_list(selector, None, &media_query_context);
             /*
               todo: when we have error handling
                   } on SassException catch (error) {
