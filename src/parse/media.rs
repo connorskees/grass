@@ -161,7 +161,7 @@ impl<'a> Parser<'a> {
             self.whitespace();
 
             if ident.to_ascii_lowercase() == "and" {
-                buf.push_str(" and ");
+                buf.push_str("and ");
             } else {
                 buf.push_str(&ident);
 

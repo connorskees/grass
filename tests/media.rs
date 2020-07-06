@@ -40,3 +40,12 @@ test!(
     }",
     "@media not screen {\n  a {\n    color: red;\n  }\n}\n"
 );
+test!(
+    multiple_identifiers_in_query_second_is_and,
+    "@media print and (foo: 1 2 3) {
+        a {
+            color: red;
+        }
+    }",
+    "@media print and (foo: 1 2 3) {\n  a {\n    color: red;\n  }\n}\n"
+);
