@@ -31,3 +31,12 @@ test!(
     }",
     "@media screen {\n  a b {\n    color: red;\n  }\n  a c {\n    color: green;\n  }\n}\n"
 );
+test!(
+    multiple_identifiers_in_query,
+    "@media not screen {
+        a {
+            color: red;
+        }
+    }",
+    "@media not screen {\n  a {\n    color: red;\n  }\n}\n"
+);

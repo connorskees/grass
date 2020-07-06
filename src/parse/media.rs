@@ -155,6 +155,7 @@ impl<'a> Parser<'a> {
                 }
             }
 
+            buf.push(' ');
             let ident = self.parse_identifier()?;
 
             self.whitespace();
