@@ -1,5 +1,9 @@
+#![cfg(test)]
 use std::io::Write;
 use tempfile::Builder;
+
+#[macro_use]
+mod macros;
 
 /// Create a temporary file with the given name
 /// and contents.
@@ -131,5 +135,10 @@ fn chained_imports_in_directory() {
         &grass::from_string(input.to_string()).expect(input)
     );
 }
+
+error!(
+    missing_input_after_import,
+    "@import", "Error: expected more input."
+);
 
 // todo: test for calling paths, e.g. `grass b\index.scss`

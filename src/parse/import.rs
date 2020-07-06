@@ -14,7 +14,7 @@ impl<'a> Parser<'a> {
         let mut file_name = String::new();
         let next = match self.toks.next() {
             Some(v) => v,
-            None => todo!("expected input after @import"),
+            None => return Err(("expected more input.", self.span_before).into()),
         };
         match next.kind {
             q @ '"' | q @ '\'' => {
