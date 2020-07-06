@@ -185,6 +185,9 @@ impl Value {
             Value::True => Cow::const_str("true"),
             Value::False => Cow::const_str("false"),
             Value::Null => Cow::const_str(""),
+            Value::ArgList(args) if args.is_empty() => {
+                return Err(("() isn't a valid CSS value.", span).into());
+            }
             Value::ArgList(args) => Cow::owned(
                 args.iter()
                     .filter(|x| !x.is_null())
@@ -287,6 +290,7 @@ impl Value {
                     .join(", ")
             )),
             Value::Dimension(num, unit) => Cow::owned(format!("{}{}", num, unit)),
+            Value::ArgList(args) if args.is_empty() => Cow::const_str("()"),
             Value::ArgList(args) => Cow::owned(
                 args.iter()
                     .filter(|x| !x.is_null())

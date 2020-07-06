@@ -21,7 +21,6 @@ test!(
         @each $number in $numbers {
             $sum: $sum + $number;
         }
-    
         @return $sum;
     }
     
@@ -29,4 +28,26 @@ test!(
         width: sum(50px, 30px, 100px);
     }",
     "a {\n  width: 180px;\n}\n"
+);
+error!(
+    emit_empty_arglist,
+    "@function foo($a...) {
+        @return $a;
+    }
+    
+    a {
+        color: foo();
+    }",
+    "Error: () isn't a valid CSS value."
+);
+test!(
+    inspect_empty_arglist,
+    "@function foo($a...) {
+        @return inspect($a);
+    }
+    
+    a {
+        color: foo();
+    }",
+    "a {\n  color: ();\n}\n"
 );
