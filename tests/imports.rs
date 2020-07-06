@@ -49,13 +49,10 @@ fn imports_variable() {
 }
 
 #[test]
+#[ignore = "we don't actually check if the semicolon exists"]
 fn import_no_semicolon() {
     let input = "@import \"import_no_semicolon\"\na {\n color: $a;\n}";
     tempfile!("import_no_semicolon", "$a: red;");
-    assert_eq!(
-        "a {\n  color: red;\n}\n",
-        &grass::from_string(input.to_string()).expect(input)
-    );
 }
 
 #[test]
@@ -140,5 +137,44 @@ error!(
     missing_input_after_import,
     "@import", "Error: expected more input."
 );
+error!(
+    import_unquoted_http,
+    "@import http://foo.com/;", "Error: Expected string."
+);
+error!(
+    import_file_doesnt_exist,
+    "@import \"idontexist\";", "Error: Can't find stylesheet to import."
+);
+error!(
+    file_name_is_two_periods,
+    "@import \"foo/..\";", "Error: Can't find stylesheet to import."
+);
+test!(
+    import_beginning_with_http,
+    "@import \"http://foo.com/\";",
+    "@import \"http://foo.com/\";\n"
+);
+test!(
+    import_beginning_with_http_no_ending_slash,
+    "@import \"http://foo.com\";",
+    "@import \"http://foo.com\";\n"
+);
+test!(
+    import_beginning_with_https,
+    "@import \"https://foo.com/\";",
+    "@import \"https://foo.com/\";\n"
+);
+test!(
+    import_ending_in_css,
+    "@import \"foo.css\";",
+    "@import \"foo.css\";\n"
+);
+test!(import_url, "@import url(foo..);", "@import url(foo..);\n");
+test!(
+    import_url_interpolation,
+    "@import url(#{1+1}..);",
+    "@import url(2..);\n"
+);
 
 // todo: test for calling paths, e.g. `grass b\index.scss`
+// todo: test for absolute paths (how?)

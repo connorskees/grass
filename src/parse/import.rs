@@ -1,38 +1,45 @@
 use std::{ffi::OsStr, fs, path::Path};
 
+use codemap::Spanned;
 use peekmore::PeekMore;
 
-use crate::{error::SassResult, Token};
-
-use crate::lexer::Lexer;
+use crate::{common::QuoteKind, error::SassResult, lexer::Lexer, value::Value, Token};
 
 use super::{Parser, Stmt};
 
 impl<'a> Parser<'a> {
     pub(super) fn import(&mut self) -> SassResult<Vec<Stmt>> {
         self.whitespace();
-        let mut file_name = String::new();
-        let next = match self.toks.next() {
-            Some(v) => v,
+
+        match self.toks.peek() {
+            Some(Token { kind: '\'', .. })
+            | Some(Token { kind: '"', .. })
+            | Some(Token { kind: 'u', .. }) => {}
+            Some(Token { pos, .. }) => return Err(("Expected string.", *pos).into()),
             None => return Err(("expected more input.", self.span_before).into()),
         };
-        match next.kind {
-            q @ '"' | q @ '\'' => {
-                file_name.push_str(
-                    &self
-                        .parse_quoted_string(q)?
-                        .node
-                        .unquote()
-                        .to_css_string(self.span_before)?,
-                );
+
+        let Spanned {
+            node: file_name_as_value,
+            span,
+        } = self.parse_value()?;
+        let file_name = match file_name_as_value {
+            Value::String(s, QuoteKind::Quoted) => {
+                if s.ends_with(".css") || s.starts_with("http://") || s.starts_with("https://") {
+                    return Ok(vec![Stmt::Import(format!("\"{}\"", s))]);
+                } else {
+                    s
+                }
             }
-            _ => return Err(("Expected string.", next.pos()).into()),
-        }
-        if let Some(t) = self.toks.peek() {
-            if t.kind == ';' {
-                self.toks.next();
+            Value::String(s, QuoteKind::None) => {
+                if s.starts_with("url(") {
+                    return Ok(vec![Stmt::Import(s)]);
+                } else {
+                    s
+                }
             }
-        }
+            _ => return Err(("Expected string.", span).into()),
+        };
 
         self.whitespace();
 
@@ -47,12 +54,8 @@ impl<'a> Parser<'a> {
                 .unwrap_or_else(|| Path::new(""))
                 .join(path)
         };
-        // todo: will panic if path ended in `..`
-        let name = path_buf.file_name().unwrap();
-        if path_buf.extension() == Some(OsStr::new(".css")) {
-            // || name.starts_with("http://") || name.starts_with("https://") {
-            todo!("css imports")
-        }
+
+        let name = path_buf.file_name().unwrap_or_else(|| OsStr::new(".."));
 
         let paths = [
             path_buf.with_file_name(name).with_extension("scss"),
@@ -92,6 +95,6 @@ impl<'a> Parser<'a> {
             }
         }
 
-        Ok(Vec::new())
+        Err(("Can't find stylesheet to import.", span).into())
     }
 }

@@ -32,13 +32,16 @@ enum Toplevel {
     Media { query: String, body: Vec<Stmt> },
     Supports { params: String, body: Vec<Stmt> },
     Newline,
+    // todo: do we actually need a toplevel style variant?
     Style(Style),
+    Import(String),
 }
 
 #[derive(Debug, Clone)]
 enum BlockEntry {
-    Style(Box<Style>),
+    Style(Style),
     MultilineComment(String),
+    Import(String),
 }
 
 impl BlockEntry {
@@ -46,6 +49,7 @@ impl BlockEntry {
         match self {
             BlockEntry::Style(s) => s.to_string(),
             BlockEntry::MultilineComment(s) => Ok(format!("/*{}*/", s)),
+            BlockEntry::Import(s) => Ok(format!("@import {};", s)),
         }
     }
 }
@@ -64,7 +68,7 @@ impl Toplevel {
             return;
         }
         if let Toplevel::RuleSet(_, entries) | Toplevel::KeyframesRuleSet(_, entries) = self {
-            entries.push(BlockEntry::Style(Box::new(s)));
+            entries.push(BlockEntry::Style(s));
         } else {
             panic!()
         }
@@ -73,6 +77,14 @@ impl Toplevel {
     fn push_comment(&mut self, s: String) {
         if let Toplevel::RuleSet(_, entries) | Toplevel::KeyframesRuleSet(_, entries) = self {
             entries.push(BlockEntry::MultilineComment(s));
+        } else {
+            panic!()
+        }
+    }
+
+    fn push_import(&mut self, s: String) {
+        if let Toplevel::RuleSet(_, entries) | Toplevel::KeyframesRuleSet(_, entries) = self {
+            entries.push(BlockEntry::Import(s));
         } else {
             panic!()
         }
@@ -145,11 +157,13 @@ impl Css {
                         k @ Stmt::KeyframesRuleSet(..) => {
                             unreachable!("@keyframes ruleset {:?}", k)
                         }
+                        Stmt::Import(s) => vals.get_mut(0).unwrap().push_import(s),
                     };
                 }
                 vals
             }
             Stmt::Comment(s) => vec![Toplevel::MultilineComment(s)],
+            Stmt::Import(s) => vec![Toplevel::Import(s)],
             Stmt::Style(s) => vec![Toplevel::Style(s)],
             Stmt::Media(m) => {
                 let MediaRule { query, body, .. } = *m;
@@ -270,6 +284,10 @@ impl Css {
                 Toplevel::MultilineComment(s) => {
                     has_written = true;
                     writeln!(buf, "{}/*{}*/", padding, s)?;
+                }
+                Toplevel::Import(s) => {
+                    has_written = true;
+                    writeln!(buf, "{}@import {};", padding, s)?;
                 }
                 Toplevel::UnknownAtRule(u) => {
                     let ToplevelUnknownAtRule { params, name, body } = *u;

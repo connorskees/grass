@@ -64,6 +64,9 @@ pub(crate) enum Stmt {
     Return(Box<Value>),
     Keyframes(Box<Keyframes>),
     KeyframesRuleSet(Box<KeyframesRuleSet>),
+    /// A plain import such as `@import "foo.css";` or
+    /// `@import url(https://fonts.google.com/foo?bar);`
+    Import(String),
 }
 
 /// We could use a generic for the toks, but it makes the API
