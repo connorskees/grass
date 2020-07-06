@@ -49,6 +49,15 @@ test!(
     "a {\n  color: number;\n  color: number;\n  color: number;\n}\n"
 );
 error!(
+    list_of_single_map,
+    "a {
+        @each $a in [(a: b)] {
+          color: $a;
+        }
+      }",
+    "Error: (a: b) isn't a valid CSS value."
+);
+error!(
     missing_closing_curly_brace,
     "@each $i in 1 {", "Error: expected \"}\"."
 );

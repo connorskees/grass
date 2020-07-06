@@ -911,14 +911,13 @@ impl<'a> Parser<'a> {
         let mut stmts = Vec::new();
 
         for row in iter {
-            let this_iterator = row.as_list();
-
+            let this_iterator = row.clone().as_list();
             if vars.len() == 1 {
                 if this_iterator.len() == 1 {
                     self.scopes.last_mut().insert_var(
                         &vars[0].node,
                         Spanned {
-                            node: this_iterator[0].clone(),
+                            node: row,
                             span: vars[0].span,
                         },
                     );
@@ -932,7 +931,7 @@ impl<'a> Parser<'a> {
                     );
                 }
             } else {
-                for (var, val) in vars.clone().into_iter().zip(
+                for (var, val) in vars.iter().zip(
                     this_iterator
                         .into_iter()
                         .chain(std::iter::once(Value::Null).cycle()),
