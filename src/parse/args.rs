@@ -231,8 +231,24 @@ impl<'a> Parser<'a> {
                         }
                     }
                     Value::Map(v) => {
-                        for (name, arg) in v.entries() {
-                            let name = name.to_css_string(val.span)?.to_string();
+                        // NOTE: we clone the map here because it is used
+                        // later for error reporting. perhaps there is
+                        // some way around this?
+                        for (name, arg) in v.clone().entries() {
+                            let name = match name {
+                                Value::String(s, ..) => s,
+                                _ => {
+                                    return Err((
+                                        format!(
+                                            "{} is not a string in {}.",
+                                            name.inspect(val.span)?,
+                                            Value::Map(v).inspect(val.span)?
+                                        ),
+                                        val.span,
+                                    )
+                                        .into())
+                                }
+                            };
                             args.insert(CallArg::Named(name.into()), Ok(arg.span(val.span)));
                         }
                     }
