@@ -18,14 +18,6 @@ a bug except for in the following situations:
 [Documentation](https://docs.rs/grass/)  
 [crates.io](https://crates.io/crates/grass)
 
-## Web Assembly
-
-`grass` experimentally releases a
-[WASM version of the library to npm](https://www.npmjs.com/package/@connorskees/grass),
-compiled using wasm-bindgen. To use `grass` in your JavaScript projects, just run
-`npm install @connorskees/grass` to your package.json. Better documentation
-for this version will be provided when the library becomes more stable.
-
 ## Status
 
 The large features remaining are
@@ -34,10 +26,22 @@ The large features remaining are
 indented syntax
 css imports
 @use, @forward, and the module system
+compressed output
 ```
 
 This is in addition to dozens of smaller features, edge cases, and miscompilations.
-Features currently blocking Bootstrap are tracked [here](https://github.com/connorskees/grass/issues/4).
+
+Starting from `grass v0.9.4`, it is possible to compile Twitter Bootstrap 4 as well as bulma-scss.
+
+The output is not exact byte-for-byte, and the remaining differences in output are tracked [here](https://github.com/connorskees/grass/issues/4).
+
+## Web Assembly
+
+`grass` experimentally releases a
+[WASM version of the library to npm](https://www.npmjs.com/package/@connorskees/grass),
+compiled using wasm-bindgen. To use `grass` in your JavaScript projects, just run
+`npm install @connorskees/grass` to your package.json. Better documentation
+for this version will be provided when the library becomes more stable.
 
 ## Features
 

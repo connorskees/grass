@@ -10,6 +10,27 @@ use codemap::{Span, SpanLoc};
 
 pub type SassResult<T> = Result<T, Box<SassError>>;
 
+/// `SassError`s can be either a structured error
+/// specific to `grass` or an `io::Error`.
+///
+/// In the former case, the best way to interact with
+/// the error is to simply print it to the user. The
+/// `Display` implementation of this kind of error
+/// mirrors that of the errors `dart-sass` emits, e.g.
+///```scss
+/// Error: $number: foo is not a number.
+///     |
+/// 308 |     color: unit(foo);
+///     |                 ^^^
+///     |
+/// ./input.scss:308:17
+///```
+///
+/// The file name, line number, and column are structured in
+/// such a way as to allow Visual Studio Code users to go
+/// directly to the error by simply clicking the file name.
+///
+/// Note that this is a deviation from the Sass specification.
 #[derive(Debug, Clone)]
 pub struct SassError {
     kind: SassErrorKind,

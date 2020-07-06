@@ -124,7 +124,7 @@ fn raw_to_parse_error(map: &CodeMap, err: Error) -> Box<Error> {
     Box::new(Error::from_loc(message, map.look_up_span(span)))
 }
 
-/// Write CSS to `buf`, constructed from a path
+/// Compile CSS from a path
 ///
 /// ```
 /// fn main() -> Result<(), Box<grass::Error>> {
@@ -132,6 +132,7 @@ fn raw_to_parse_error(map: &CodeMap, err: Error) -> Box<Error> {
 ///     Ok(())
 /// }
 /// ```
+/// (grass does not currently allow files or paths that are not valid UTF-8)
 #[cfg_attr(feature = "profiling", inline(never))]
 #[cfg_attr(not(feature = "profiling"), inline)]
 #[cfg(not(feature = "wasm"))]
@@ -166,7 +167,7 @@ pub fn from_path(p: &str) -> Result<String> {
         .map_err(|e| raw_to_parse_error(&map, *e))
 }
 
-/// Write CSS to `buf`, constructed from a string
+/// Compile CSS from a string
 ///
 /// ```
 /// fn main() -> Result<(), Box<grass::Error>> {

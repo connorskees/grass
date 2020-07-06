@@ -1,3 +1,10 @@
+# 0.9.5
+
+A small release fixing potential build issues and improving documentation.
+
+This release is not published to NPM due to [a bug](https://github.com/rustwasm/wasm-pack/issues/837)
+in `wasm-pack`.
+
 # 0.9.4
 
 - implement `@keyframes`
