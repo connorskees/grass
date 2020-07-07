@@ -26,7 +26,7 @@ fn nth(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         Value::Dimension(num, _) => num,
         v => {
             return Err((
-                format!("$n: {} is not a number.", v.to_css_string(args.span())?),
+                format!("$n: {} is not a number.", v.inspect(args.span())?),
                 args.span(),
             )
                 .into())
@@ -83,7 +83,7 @@ fn set_nth(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         Value::Dimension(num, _) => num,
         v => {
             return Err((
-                format!("$n: {} is not a number.", v.to_css_string(args.span())?),
+                format!("$n: {} is not a number.", v.inspect(args.span())?),
                 args.span(),
             )
                 .into())
@@ -146,10 +146,7 @@ fn append(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         },
         v => {
             return Err((
-                format!(
-                    "$separator: {} is not a string.",
-                    v.to_css_string(args.span())?
-                ),
+                format!("$separator: {} is not a string.", v.inspect(args.span())?),
                 args.span(),
             )
                 .into())
@@ -199,10 +196,7 @@ fn join(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         },
         v => {
             return Err((
-                format!(
-                    "$separator: {} is not a string.",
-                    v.to_css_string(args.span())?
-                ),
+                format!("$separator: {} is not a string.", v.inspect(args.span())?),
                 args.span(),
             )
                 .into())

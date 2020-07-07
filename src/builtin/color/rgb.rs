@@ -56,7 +56,7 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
             }
             Some(v) => {
                 return Err((
-                    format!("$blue: {} is not a number.", v.to_css_string(args.span())?),
+                    format!("$blue: {} is not a number.", v.inspect(args.span())?),
                     args.span(),
                 )
                     .into())
@@ -82,7 +82,7 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
             }
             Some(v) => {
                 return Err((
-                    format!("$green: {} is not a number.", v.to_css_string(args.span())?),
+                    format!("$green: {} is not a number.", v.inspect(args.span())?),
                     args.span(),
                 )
                     .into())
@@ -107,7 +107,7 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
             }
             Some(v) => {
                 return Err((
-                    format!("$red: {} is not a number.", v.to_css_string(args.span())?),
+                    format!("$red: {} is not a number.", v.inspect(args.span())?),
                     args.span(),
                 )
                     .into())
@@ -135,7 +135,7 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
             }
             v => {
                 return Err((
-                    format!("$color: {} is not a color.", v.to_css_string(args.span())?),
+                    format!("$color: {} is not a color.", v.inspect(args.span())?),
                     args.span(),
                 )
                     .into())
@@ -169,7 +169,7 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
             }
             v => {
                 return Err((
-                    format!("$alpha: {} is not a number.", v.to_css_string(args.span())?),
+                    format!("$alpha: {} is not a number.", v.inspect(args.span())?),
                     args.span(),
                 )
                     .into())
@@ -213,7 +213,7 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
             }
             v => {
                 return Err((
-                    format!("$red: {} is not a number.", v.to_css_string(args.span())?),
+                    format!("$red: {} is not a number.", v.inspect(args.span())?),
                     args.span(),
                 )
                     .into())
@@ -254,7 +254,7 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
             }
             v => {
                 return Err((
-                    format!("$green: {} is not a number.", v.to_css_string(args.span())?),
+                    format!("$green: {} is not a number.", v.inspect(args.span())?),
                     args.span(),
                 )
                     .into())
@@ -294,7 +294,7 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
             }
             v => {
                 return Err((
-                    format!("$blue: {} is not a number.", v.to_css_string(args.span())?),
+                    format!("$blue: {} is not a number.", v.inspect(args.span())?),
                     args.span(),
                 )
                     .into())
@@ -331,7 +331,7 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
             }
             v => {
                 return Err((
-                    format!("$alpha: {} is not a number.", v.to_css_string(args.span())?),
+                    format!("$alpha: {} is not a number.", v.inspect(args.span())?),
                     args.span(),
                 )
                     .into())
@@ -356,7 +356,7 @@ fn red(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     match parser.arg(&mut args, 0, "color")? {
         Value::Color(c) => Ok(Value::Dimension(c.red(), Unit::None)),
         v => Err((
-            format!("$color: {} is not a color.", v.to_css_string(args.span())?),
+            format!("$color: {} is not a color.", v.inspect(args.span())?),
             args.span(),
         )
             .into()),
@@ -368,7 +368,7 @@ fn green(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     match parser.arg(&mut args, 0, "color")? {
         Value::Color(c) => Ok(Value::Dimension(c.green(), Unit::None)),
         v => Err((
-            format!("$color: {} is not a color.", v.to_css_string(args.span())?),
+            format!("$color: {} is not a color.", v.inspect(args.span())?),
             args.span(),
         )
             .into()),
@@ -380,7 +380,7 @@ fn blue(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     match parser.arg(&mut args, 0, "color")? {
         Value::Color(c) => Ok(Value::Dimension(c.blue(), Unit::None)),
         v => Err((
-            format!("$color: {} is not a color.", v.to_css_string(args.span())?),
+            format!("$color: {} is not a color.", v.inspect(args.span())?),
             args.span(),
         )
             .into()),
@@ -393,7 +393,7 @@ fn mix(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         Value::Color(c) => c,
         v => {
             return Err((
-                format!("$color1: {} is not a color.", v.to_css_string(args.span())?),
+                format!("$color1: {} is not a color.", v.inspect(args.span())?),
                 args.span(),
             )
                 .into())
@@ -404,7 +404,7 @@ fn mix(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         Value::Color(c) => c,
         v => {
             return Err((
-                format!("$color2: {} is not a color.", v.to_css_string(args.span())?),
+                format!("$color2: {} is not a color.", v.inspect(args.span())?),
                 args.span(),
             )
                 .into())

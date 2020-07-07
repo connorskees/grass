@@ -38,10 +38,7 @@ fn inner_hsl(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
             Some(Value::Dimension(n, _)) => n / Number::from(100),
             Some(v) => {
                 return Err((
-                    format!(
-                        "$lightness: {} is not a number.",
-                        v.to_css_string(args.span())?
-                    ),
+                    format!("$lightness: {} is not a number.", v.inspect(args.span())?),
                     args.span(),
                 )
                     .into())
@@ -53,10 +50,7 @@ fn inner_hsl(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
             Some(Value::Dimension(n, _)) => n / Number::from(100),
             Some(v) => {
                 return Err((
-                    format!(
-                        "$saturation: {} is not a number.",
-                        v.to_css_string(args.span())?
-                    ),
+                    format!("$saturation: {} is not a number.", v.inspect(args.span())?),
                     args.span(),
                 )
                     .into())
@@ -68,7 +62,7 @@ fn inner_hsl(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
             Some(Value::Dimension(n, _)) => n,
             Some(v) => {
                 return Err((
-                    format!("$hue: {} is not a number.", v.to_css_string(args.span())?),
+                    format!("$hue: {} is not a number.", v.inspect(args.span())?),
                     args.span(),
                 )
                     .into())
@@ -108,7 +102,7 @@ fn inner_hsl(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
             }
             v => {
                 return Err((
-                    format!("$hue: {} is not a number.", v.to_css_string(args.span())?),
+                    format!("$hue: {} is not a number.", v.inspect(args.span())?),
                     args.span(),
                 )
                     .into())
@@ -212,7 +206,7 @@ fn inner_hsl(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
             }
             v => {
                 return Err((
-                    format!("$alpha: {} is not a number.", v.to_css_string(args.span())?),
+                    format!("$alpha: {} is not a number.", v.inspect(args.span())?),
                     args.span(),
                 )
                     .into())
@@ -237,7 +231,7 @@ fn hue(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     match parser.arg(&mut args, 0, "color")? {
         Value::Color(c) => Ok(Value::Dimension(c.hue(), Unit::Deg)),
         v => Err((
-            format!("$color: {} is not a color.", v.to_css_string(args.span())?),
+            format!("$color: {} is not a color.", v.inspect(args.span())?),
             args.span(),
         )
             .into()),
@@ -249,7 +243,7 @@ fn saturation(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
     match parser.arg(&mut args, 0, "color")? {
         Value::Color(c) => Ok(Value::Dimension(c.saturation(), Unit::Percent)),
         v => Err((
-            format!("$color: {} is not a color.", v.to_css_string(args.span())?),
+            format!("$color: {} is not a color.", v.inspect(args.span())?),
             args.span(),
         )
             .into()),
@@ -261,7 +255,7 @@ fn lightness(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     match parser.arg(&mut args, 0, "color")? {
         Value::Color(c) => Ok(Value::Dimension(c.lightness(), Unit::Percent)),
         v => Err((
-            format!("$color: {} is not a color.", v.to_css_string(args.span())?),
+            format!("$color: {} is not a color.", v.inspect(args.span())?),
             args.span(),
         )
             .into()),
@@ -274,7 +268,7 @@ fn adjust_hue(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
         Value::Color(c) => c,
         v => {
             return Err((
-                format!("$color: {} is not a color.", v.to_css_string(args.span())?),
+                format!("$color: {} is not a color.", v.inspect(args.span())?),
                 args.span(),
             )
                 .into())
@@ -302,7 +296,7 @@ fn lighten(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         Value::Color(c) => c,
         v => {
             return Err((
-                format!("$color: {} is not a color.", v.to_css_string(args.span())?),
+                format!("$color: {} is not a color.", v.inspect(args.span())?),
                 args.span(),
             )
                 .into())
@@ -330,7 +324,7 @@ fn darken(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         Value::Color(c) => c,
         v => {
             return Err((
-                format!("$color: {} is not a color.", v.to_css_string(args.span())?),
+                format!("$color: {} is not a color.", v.inspect(args.span())?),
                 args.span(),
             )
                 .into())
@@ -389,7 +383,7 @@ fn saturate(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         }
         v => {
             return Err((
-                format!("$color: {} is not a color.", v.to_css_string(args.span())?),
+                format!("$color: {} is not a color.", v.inspect(args.span())?),
                 args.span(),
             )
                 .into())
@@ -404,7 +398,7 @@ fn desaturate(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
         Value::Color(c) => c,
         v => {
             return Err((
-                format!("$color: {} is not a color.", v.to_css_string(args.span())?),
+                format!("$color: {} is not a color.", v.inspect(args.span())?),
                 args.span(),
             )
                 .into())
@@ -438,7 +432,7 @@ fn grayscale(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         }
         v => {
             return Err((
-                format!("$color: {} is not a color.", v.to_css_string(args.span())?),
+                format!("$color: {} is not a color.", v.inspect(args.span())?),
                 args.span(),
             )
                 .into())
@@ -453,7 +447,7 @@ fn complement(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
         Value::Color(c) => c,
         v => {
             return Err((
-                format!("$color: {} is not a color.", v.to_css_string(args.span())?),
+                format!("$color: {} is not a color.", v.inspect(args.span())?),
                 args.span(),
             )
                 .into())
@@ -493,7 +487,7 @@ fn invert(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         )
             .into()),
         v => Err((
-            format!("$color: {} is not a color.", v.to_css_string(args.span())?),
+            format!("$color: {} is not a color.", v.inspect(args.span())?),
             args.span(),
         )
             .into()),

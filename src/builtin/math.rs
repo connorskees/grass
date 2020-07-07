@@ -21,7 +21,7 @@ fn percentage(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
             return Err((
                 format!(
                     "$number: Expected {} to have no units.",
-                    v.to_css_string(args.span())?
+                    v.inspect(args.span())?
                 ),
                 args.span(),
             )
@@ -29,10 +29,7 @@ fn percentage(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
         }
         v => {
             return Err((
-                format!(
-                    "$number: {} is not a number.",
-                    v.to_css_string(args.span())?
-                ),
+                format!("$number: {} is not a number.", v.inspect(args.span())?),
                 args.span(),
             )
                 .into())
@@ -46,10 +43,7 @@ fn round(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     match parser.arg(&mut args, 0, "number")? {
         Value::Dimension(n, u) => Ok(Value::Dimension(n.round(), u)),
         v => Err((
-            format!(
-                "$number: {} is not a number.",
-                v.to_css_string(args.span())?
-            ),
+            format!("$number: {} is not a number.", v.inspect(args.span())?),
             args.span(),
         )
             .into()),
@@ -61,10 +55,7 @@ fn ceil(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     match parser.arg(&mut args, 0, "number")? {
         Value::Dimension(n, u) => Ok(Value::Dimension(n.ceil(), u)),
         v => Err((
-            format!(
-                "$number: {} is not a number.",
-                v.to_css_string(args.span())?
-            ),
+            format!("$number: {} is not a number.", v.inspect(args.span())?),
             args.span(),
         )
             .into()),
@@ -76,10 +67,7 @@ fn floor(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     match parser.arg(&mut args, 0, "number")? {
         Value::Dimension(n, u) => Ok(Value::Dimension(n.floor(), u)),
         v => Err((
-            format!(
-                "$number: {} is not a number.",
-                v.to_css_string(args.span())?
-            ),
+            format!("$number: {} is not a number.", v.inspect(args.span())?),
             args.span(),
         )
             .into()),
@@ -91,10 +79,7 @@ fn abs(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     match parser.arg(&mut args, 0, "number")? {
         Value::Dimension(n, u) => Ok(Value::Dimension(n.abs(), u)),
         v => Err((
-            format!(
-                "$number: {} is not a number.",
-                v.to_css_string(args.span())?
-            ),
+            format!("$number: {} is not a number.", v.inspect(args.span())?),
             args.span(),
         )
             .into()),
@@ -107,10 +92,7 @@ fn comparable(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
         Value::Dimension(_, u) => u,
         v => {
             return Err((
-                format!(
-                    "$number1: {} is not a number.",
-                    v.to_css_string(args.span())?
-                ),
+                format!("$number1: {} is not a number.", v.inspect(args.span())?),
                 args.span(),
             )
                 .into())
@@ -120,10 +102,7 @@ fn comparable(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
         Value::Dimension(_, u) => u,
         v => {
             return Err((
-                format!(
-                    "$number2: {} is not a number.",
-                    v.to_css_string(args.span())?
-                ),
+                format!("$number2: {} is not a number.", v.inspect(args.span())?),
                 args.span(),
             )
                 .into())
@@ -148,7 +127,7 @@ fn random(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         }
         v => {
             return Err((
-                format!("$limit: {} is not a number.", v.to_css_string(args.span())?),
+                format!("$limit: {} is not a number.", v.inspect(args.span())?),
                 args.span(),
             )
                 .into())

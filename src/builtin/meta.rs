@@ -43,10 +43,7 @@ fn feature_exists(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Val
             _ => Value::False,
         }),
         v => Err((
-            format!(
-                "$feature: {} is not a string.",
-                v.to_css_string(args.span())?
-            ),
+            format!("$feature: {} is not a string.", v.inspect(args.span())?),
             args.span(),
         )
             .into()),
@@ -59,10 +56,7 @@ fn unit(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         Value::Dimension(_, u) => u.to_string(),
         v => {
             return Err((
-                format!(
-                    "$number: {} is not a number.",
-                    v.to_css_string(args.span())?
-                ),
+                format!("$number: {} is not a number.", v.inspect(args.span())?),
                 args.span(),
             )
                 .into())
@@ -108,7 +102,7 @@ fn variable_exists(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Va
                 .var_exists(&s.into(), parser.global_scope),
         )),
         v => Err((
-            format!("$name: {} is not a string.", v.to_css_string(args.span())?),
+            format!("$name: {} is not a string.", v.inspect(args.span())?),
             args.span(),
         )
             .into()),
@@ -122,7 +116,7 @@ fn global_variable_exists(mut args: CallArgs, parser: &mut Parser<'_>) -> SassRe
             parser.global_scope.var_exists_no_global(&s.into()),
         )),
         v => Err((
-            format!("$name: {} is not a string.", v.to_css_string(args.span())?),
+            format!("$name: {} is not a string.", v.inspect(args.span())?),
             args.span(),
         )
             .into()),
@@ -136,7 +130,7 @@ fn mixin_exists(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value
             parser.scopes.last().mixin_exists(&s, parser.global_scope),
         )),
         v => Err((
-            format!("$name: {} is not a string.", v.to_css_string(args.span())?),
+            format!("$name: {} is not a string.", v.inspect(args.span())?),
             args.span(),
         )
             .into()),
@@ -150,7 +144,7 @@ fn function_exists(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Va
             parser.scopes.last().fn_exists(&s, parser.global_scope),
         )),
         v => Err((
-            format!("$name: {} is not a string.", v.to_css_string(args.span())?),
+            format!("$name: {} is not a string.", v.inspect(args.span())?),
             args.span(),
         )
             .into()),
@@ -163,7 +157,7 @@ fn get_function(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value
         Value::String(s, _) => s,
         v => {
             return Err((
-                format!("$name: {} is not a string.", v.to_css_string(args.span())?),
+                format!("$name: {} is not a string.", v.inspect(args.span())?),
                 args.span(),
             )
                 .into())
@@ -177,10 +171,7 @@ fn get_function(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value
         Value::Null => None,
         v => {
             return Err((
-                format!(
-                    "$module: {} is not a string.",
-                    v.to_css_string(args.span())?
-                ),
+                format!("$module: {} is not a string.", v.inspect(args.span())?),
                 args.span(),
             )
                 .into())
@@ -219,7 +210,7 @@ fn call(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
             return Err((
                 format!(
                     "$function: {} is not a function reference.",
-                    v.to_css_string(args.span())?
+                    v.inspect(args.span())?
                 ),
                 args.span(),
             )

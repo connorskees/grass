@@ -23,10 +23,7 @@ fn to_upper_case(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Valu
             Ok(Value::String(i, q))
         }
         v => Err((
-            format!(
-                "$string: {} is not a string.",
-                v.to_css_string(args.span())?
-            ),
+            format!("$string: {} is not a string.", v.inspect(args.span())?),
             args.span(),
         )
             .into()),
@@ -41,10 +38,7 @@ fn to_lower_case(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Valu
             Ok(Value::String(i, q))
         }
         v => Err((
-            format!(
-                "$string: {} is not a string.",
-                v.to_css_string(args.span())?
-            ),
+            format!("$string: {} is not a string.", v.inspect(args.span())?),
             args.span(),
         )
             .into()),
@@ -59,10 +53,7 @@ fn str_length(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
             Unit::None,
         )),
         v => Err((
-            format!(
-                "$string: {} is not a string.",
-                v.to_css_string(args.span())?
-            ),
+            format!("$string: {} is not a string.", v.inspect(args.span())?),
             args.span(),
         )
             .into()),
@@ -74,10 +65,7 @@ fn quote(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     match parser.arg(&mut args, 0, "string")? {
         Value::String(i, _) => Ok(Value::String(i, QuoteKind::Quoted)),
         v => Err((
-            format!(
-                "$string: {} is not a string.",
-                v.to_css_string(args.span())?
-            ),
+            format!("$string: {} is not a string.", v.inspect(args.span())?),
             args.span(),
         )
             .into()),
@@ -89,10 +77,7 @@ fn unquote(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     match parser.arg(&mut args, 0, "string")? {
         i @ Value::String(..) => Ok(i.unquote()),
         v => Err((
-            format!(
-                "$string: {} is not a string.",
-                v.to_css_string(args.span())?
-            ),
+            format!("$string: {} is not a string.", v.inspect(args.span())?),
             args.span(),
         )
             .into()),
@@ -105,10 +90,7 @@ fn str_slice(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         Value::String(s, q) => (s, q),
         v => {
             return Err((
-                format!(
-                    "$string: {} is not a string.",
-                    v.to_css_string(args.span())?
-                ),
+                format!("$string: {} is not a string.", v.inspect(args.span())?),
                 args.span(),
             )
                 .into())
@@ -131,7 +113,7 @@ fn str_slice(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
             return Err((
                 format!(
                     "$start: Expected {} to have no units.",
-                    v.to_css_string(args.span())?
+                    v.inspect(args.span())?
                 ),
                 args.span(),
             )
@@ -139,10 +121,7 @@ fn str_slice(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         }
         v => {
             return Err((
-                format!(
-                    "$start-at: {} is not a number.",
-                    v.to_css_string(args.span())?
-                ),
+                format!("$start-at: {} is not a number.", v.inspect(args.span())?),
                 args.span(),
             )
                 .into())
@@ -164,7 +143,7 @@ fn str_slice(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
             return Err((
                 format!(
                     "$end: Expected {} to have no units.",
-                    v.to_css_string(args.span())?
+                    v.inspect(args.span())?
                 ),
                 args.span(),
             )
@@ -173,10 +152,7 @@ fn str_slice(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         Value::Null => str_len,
         v => {
             return Err((
-                format!(
-                    "$end-at: {} is not a number.",
-                    v.to_css_string(args.span())?
-                ),
+                format!("$end-at: {} is not a number.", v.inspect(args.span())?),
                 args.span(),
             )
                 .into())
@@ -207,10 +183,7 @@ fn str_index(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         Value::String(i, _) => i,
         v => {
             return Err((
-                format!(
-                    "$string: {} is not a string.",
-                    v.to_css_string(args.span())?
-                ),
+                format!("$string: {} is not a string.", v.inspect(args.span())?),
                 args.span(),
             )
                 .into())
@@ -221,10 +194,7 @@ fn str_index(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         Value::String(i, _) => i,
         v => {
             return Err((
-                format!(
-                    "$substring: {} is not a string.",
-                    v.to_css_string(args.span())?
-                ),
+                format!("$substring: {} is not a string.", v.inspect(args.span())?),
                 args.span(),
             )
                 .into())
@@ -243,10 +213,7 @@ fn str_insert(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
         Value::String(i, q) => (i, q),
         v => {
             return Err((
-                format!(
-                    "$string: {} is not a string.",
-                    v.to_css_string(args.span())?
-                ),
+                format!("$string: {} is not a string.", v.inspect(args.span())?),
                 args.span(),
             )
                 .into())
@@ -257,10 +224,7 @@ fn str_insert(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
         Value::String(i, _) => i,
         v => {
             return Err((
-                format!(
-                    "$insert: {} is not a string.",
-                    v.to_css_string(args.span())?
-                ),
+                format!("$insert: {} is not a string.", v.inspect(args.span())?),
                 args.span(),
             )
                 .into())
@@ -276,7 +240,7 @@ fn str_insert(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
             return Err((
                 format!(
                     "$index: Expected {} to have no units.",
-                    v.to_css_string(args.span())?
+                    v.inspect(args.span())?
                 ),
                 args.span(),
             )
@@ -284,7 +248,7 @@ fn str_insert(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
         }
         v => {
             return Err((
-                format!("$index: {} is not a number.", v.to_css_string(args.span())?),
+                format!("$index: {} is not a number.", v.inspect(args.span())?),
                 args.span(),
             )
                 .into())

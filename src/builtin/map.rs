@@ -16,7 +16,7 @@ fn map_get(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         Value::List(v, ..) if v.is_empty() => SassMap::new(),
         v => {
             return Err((
-                format!("$map: {} is not a map.", v.to_css_string(args.span())?),
+                format!("$map: {} is not a map.", v.inspect(args.span())?),
                 args.span(),
             )
                 .into())
@@ -33,7 +33,7 @@ fn map_has_key(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value>
         Value::List(v, ..) if v.is_empty() => SassMap::new(),
         v => {
             return Err((
-                format!("$map: {} is not a map.", v.to_css_string(args.span())?),
+                format!("$map: {} is not a map.", v.inspect(args.span())?),
                 args.span(),
             )
                 .into())
@@ -49,7 +49,7 @@ fn map_keys(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         Value::List(v, ..) if v.is_empty() => SassMap::new(),
         v => {
             return Err((
-                format!("$map: {} is not a map.", v.to_css_string(args.span())?),
+                format!("$map: {} is not a map.", v.inspect(args.span())?),
                 args.span(),
             )
                 .into())
@@ -69,7 +69,7 @@ fn map_values(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
         Value::List(v, ..) if v.is_empty() => SassMap::new(),
         v => {
             return Err((
-                format!("$map: {} is not a map.", v.to_css_string(args.span())?),
+                format!("$map: {} is not a map.", v.inspect(args.span())?),
                 args.span(),
             )
                 .into())
@@ -89,7 +89,7 @@ fn map_merge(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         Value::List(v, ..) if v.is_empty() => SassMap::new(),
         v => {
             return Err((
-                format!("$map1: {} is not a map.", v.to_css_string(args.span())?),
+                format!("$map1: {} is not a map.", v.inspect(args.span())?),
                 args.span(),
             )
                 .into())
@@ -100,7 +100,7 @@ fn map_merge(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         Value::List(v, ..) if v.is_empty() => SassMap::new(),
         v => {
             return Err((
-                format!("$map2: {} is not a map.", v.to_css_string(args.span())?),
+                format!("$map2: {} is not a map.", v.inspect(args.span())?),
                 args.span(),
             )
                 .into())
@@ -116,7 +116,7 @@ fn map_remove(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
         Value::List(v, ..) if v.is_empty() => SassMap::new(),
         v => {
             return Err((
-                format!("$map: {} is not a map.", v.to_css_string(args.span())?),
+                format!("$map: {} is not a map.", v.inspect(args.span())?),
                 args.span(),
             )
                 .into())

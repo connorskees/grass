@@ -19,11 +19,7 @@ macro_rules! opt_rgba {
             Value::Null => None,
             v => {
                 return Err((
-                    format!(
-                        "${}: {} is not a number.",
-                        $arg,
-                        v.to_css_string($args.span())?
-                    ),
+                    format!("${}: {} is not a number.", $arg, v.inspect($args.span())?),
                     $args.span(),
                 )
                     .into())
@@ -41,11 +37,7 @@ macro_rules! opt_hsl {
             Value::Null => None,
             v => {
                 return Err((
-                    format!(
-                        "${}: {} is not a number.",
-                        $arg,
-                        v.to_css_string($args.span())?
-                    ),
+                    format!("${}: {} is not a number.", $arg, v.inspect($args.span())?),
                     $args.span(),
                 )
                     .into())
@@ -67,7 +59,7 @@ fn change_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value
         Value::Color(c) => c,
         v => {
             return Err((
-                format!("$color: {} is not a color.", v.to_css_string(args.span())?),
+                format!("$color: {} is not a color.", v.inspect(args.span())?),
                 args.span(),
             )
                 .into())
@@ -93,7 +85,7 @@ fn change_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value
         Value::Null => None,
         v => {
             return Err((
-                format!("$hue: {} is not a number.", v.to_css_string(args.span())?),
+                format!("$hue: {} is not a number.", v.inspect(args.span())?),
                 args.span(),
             )
                 .into())
@@ -126,7 +118,7 @@ fn adjust_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value
         Value::Color(c) => c,
         v => {
             return Err((
-                format!("$color: {} is not a color.", v.to_css_string(args.span())?),
+                format!("$color: {} is not a color.", v.inspect(args.span())?),
                 args.span(),
             )
                 .into())
@@ -152,7 +144,7 @@ fn adjust_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value
         Value::Null => None,
         v => {
             return Err((
-                format!("$hue: {} is not a number.", v.to_css_string(args.span())?),
+                format!("$hue: {} is not a number.", v.inspect(args.span())?),
                 args.span(),
             )
                 .into())
@@ -196,7 +188,7 @@ fn scale_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value>
         Value::Color(c) => c,
         v => {
             return Err((
-                format!("$color: {} is not a color.", v.to_css_string(span)?),
+                format!("$color: {} is not a color.", v.inspect(span)?),
                 span,
             )
                 .into())
@@ -214,7 +206,7 @@ fn scale_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value>
                         format!(
                             "${}: Expected {} to have unit \"%\".",
                             $arg,
-                            v.to_css_string($args.span())?
+                            v.inspect($args.span())?
                         ),
                         $args.span(),
                     )
@@ -223,11 +215,7 @@ fn scale_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value>
                 Value::Null => None,
                 v => {
                     return Err((
-                        format!(
-                            "${}: {} is not a number.",
-                            $arg,
-                            v.to_css_string($args.span())?
-                        ),
+                        format!("${}: {} is not a number.", $arg, v.inspect($args.span())?),
                         $args.span(),
                     )
                         .into())
@@ -306,7 +294,7 @@ fn ie_hex_str(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
         Value::Color(c) => c,
         v => {
             return Err((
-                format!("$color: {} is not a color.", v.to_css_string(args.span())?),
+                format!("$color: {} is not a color.", v.inspect(args.span())?),
                 args.span(),
             )
                 .into())
