@@ -51,3 +51,14 @@ test!(
     }",
     "a {\n  color: ();\n}\n"
 );
+test!(
+    empty_arglist_is_allowed_in_map_functions,
+    "@function foo($a...) {
+        @return map-get($map: $a, $key: foo);
+    }
+
+    a {
+        color: inspect(foo());
+    }",
+    "a {\n  color: null;\n}\n"
+);
