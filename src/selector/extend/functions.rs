@@ -600,7 +600,7 @@ fn first_if_root(queue: &mut VecDeque<ComplexSelectorComponent>) -> Option<Compo
 fn has_root(compound: &CompoundSelector) -> bool {
     compound.components.iter().any(|simple| {
         if let SimpleSelector::Pseudo(pseudo) = simple {
-            pseudo.is_class && &*pseudo.normalized_name == "root"
+            pseudo.is_class && pseudo.normalized_name() == "root"
         } else {
             false
         }

@@ -295,8 +295,6 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
             Some(Token { kind: '(', .. }) => self.parser.toks.next(),
             _ => {
                 return Ok(SimpleSelector::Pseudo(Pseudo {
-                    // todo: we can store the reference to this
-                    normalized_name: unvendor(&name.node).to_string().into_boxed_str(),
                     is_class: !element && !is_fake_pseudo_element(&name),
                     name: name.node,
                     selector: None,
@@ -353,7 +351,6 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
         }
 
         Ok(SimpleSelector::Pseudo(Pseudo {
-            normalized_name: unvendor(&name.node).to_string().into_boxed_str(),
             is_class: !element && !is_fake_pseudo_element(&name),
             name: name.node,
             selector,

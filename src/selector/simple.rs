@@ -5,7 +5,7 @@ use std::{
 
 use codemap::Span;
 
-use crate::error::SassResult;
+use crate::{common::unvendor, error::SassResult};
 
 use super::{
     Attribute, ComplexSelector, ComplexSelectorComponent, CompoundSelector, Namespace,
@@ -353,11 +353,11 @@ impl SimpleSelector {
             }
             if let SimpleSelector::Pseudo(Pseudo {
                 selector: Some(sel),
-                normalized_name,
+                name,
                 ..
             }) = their_simple
             {
-                if SUBSELECTOR_PSEUDOS.contains(&&**normalized_name) {
+                if SUBSELECTOR_PSEUDOS.contains(&unvendor(&name)) {
                     return sel.components.iter().all(|complex| {
                         if complex.components.len() != 1 {
                             return false;
@@ -383,9 +383,6 @@ impl SimpleSelector {
 pub(crate) struct Pseudo {
     /// The name of this selector.
     pub name: String,
-
-    /// Like `name`, but without any vendor prefixes.
-    pub normalized_name: Box<str>,
 
     /// Whether this is a pseudo-class selector.
     ///
@@ -489,7 +486,7 @@ impl Pseudo {
         parents: Option<Vec<ComplexSelectorComponent>>,
     ) -> bool {
         debug_assert!(self.selector.is_some());
-        match &*self.normalized_name {
+        match self.normalized_name() {
             "matches" | "any" => {
                 let pseudos = selector_pseudos_named(compound.clone(), &self.name, true);
                 pseudos.iter().any(move |pseudo2| {
@@ -646,6 +643,11 @@ impl Pseudo {
             }
             Specificity { min, max }
         }
+    }
+
+    /// Like `name`, but without any vendor prefixes.
+    pub fn normalized_name(&self) -> &str {
+        unvendor(&self.name)
     }
 }
 
