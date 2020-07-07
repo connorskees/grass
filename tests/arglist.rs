@@ -62,3 +62,14 @@ test!(
     }",
     "a {\n  color: null;\n}\n"
 );
+test!(
+    inspect_arglist_with_one_arg,
+    "@function foo($a...) {
+        @return inspect($a);
+    }
+    
+    a {
+        color: inspect(foo(1));
+    }",
+    "a {\n  color: (1,);\n}\n"
+);

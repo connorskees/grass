@@ -291,6 +291,14 @@ impl Value {
             )),
             Value::Dimension(num, unit) => Cow::owned(format!("{}{}", num, unit)),
             Value::ArgList(args) if args.is_empty() => Cow::const_str("()"),
+            Value::ArgList(args) if args.len() == 1 => Cow::owned(format!(
+                "({},)",
+                args.iter()
+                    .filter(|x| !x.is_null())
+                    .map(|a| Ok(a.node.inspect(span)?))
+                    .collect::<SassResult<Vec<Cow<'static, str>>>>()?
+                    .join(", "),
+            )),
             Value::ArgList(args) => Cow::owned(
                 args.iter()
                     .filter(|x| !x.is_null())

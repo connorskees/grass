@@ -129,5 +129,5 @@ test!(
     a {
         color: foo((a: b));
     }",
-    "a {\n  color: (a: b);\n}\n"
+    "a {\n  color: ((a: b),);\n}\n"
 );
