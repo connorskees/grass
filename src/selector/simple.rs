@@ -119,7 +119,7 @@ impl SimpleSelector {
             | Self::Class(..)
             | Self::Attribute(..) => false,
             Self::Pseudo(Pseudo { name, selector, .. }) => {
-                name != "not" && selector.as_ref().map_or(false, SelectorList::is_invisible)
+                name != "not" && selector.as_ref().map_or(false, |sel| sel.is_invisible())
             }
             Self::Placeholder(..) => true,
             Self::Parent(..) => todo!(),
@@ -411,7 +411,7 @@ pub(crate) struct Pseudo {
     ///
     /// This is `None` if there's no selector. If `argument` and `selector` are
     /// both non-`None`, the selector follows the argument.
-    pub selector: Option<SelectorList>,
+    pub selector: Option<Box<SelectorList>>,
 
     pub span: Span,
 }
@@ -601,7 +601,7 @@ impl Pseudo {
     }
 
     #[allow(clippy::missing_const_for_fn)]
-    pub fn with_selector(self, selector: Option<SelectorList>) -> Self {
+    pub fn with_selector(self, selector: Option<Box<SelectorList>>) -> Self {
         Self { selector, ..self }
     }
 

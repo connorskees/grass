@@ -312,19 +312,19 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
         let unvendored = unvendor(&name);
 
         let mut argument: Option<Box<str>> = None;
-        let mut selector: Option<SelectorList> = None;
+        let mut selector: Option<Box<SelectorList>> = None;
 
         if element {
             // todo: lowercase?
             if SELECTOR_PSEUDO_ELEMENTS.contains(&unvendored) {
-                selector = Some(self.parse_selector_list()?);
+                selector = Some(Box::new(self.parse_selector_list()?));
                 self.parser.whitespace();
                 self.expect_closing_paren()?;
             } else {
                 argument = Some(self.declaration_value()?.into_boxed_str());
             }
         } else if SELECTOR_PSEUDO_CLASSES.contains(&unvendored) {
-            selector = Some(self.parse_selector_list()?);
+            selector = Some(Box::new(self.parse_selector_list()?));
             self.parser.whitespace();
             self.expect_closing_paren()?;
         } else if unvendored == "nth-child" || unvendored == "nth-last-child" {
@@ -337,7 +337,7 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
                     self.expect_identifier("of")?;
                     this_arg.push_str(" of");
                     self.parser.whitespace();
-                    selector = Some(self.parse_selector_list()?);
+                    selector = Some(Box::new(self.parse_selector_list()?));
                 }
                 _ => {}
             }

@@ -582,13 +582,14 @@ impl Extender {
         let extended = self.extend_list(
             pseudo
                 .selector
-                .clone()
+                .as_deref()
+                .cloned()
                 .unwrap_or_else(|| SelectorList::new(self.span)),
             extensions,
             media_query_context,
         );
         /*todo: identical(extended, pseudo.selector)*/
-        if Some(&extended) == pseudo.selector.as_ref() {
+        if Some(&extended) == pseudo.selector.as_deref() {
             return None;
         }
 
@@ -689,10 +690,10 @@ impl Extender {
             let result = complexes
                 .into_iter()
                 .map(|complex| {
-                    pseudo.clone().with_selector(Some(SelectorList {
+                    pseudo.clone().with_selector(Some(Box::new(SelectorList {
                         components: vec![complex],
                         span: self.span,
-                    }))
+                    })))
                 })
                 .collect::<Vec<Pseudo>>();
             if result.is_empty() {
@@ -701,10 +702,10 @@ impl Extender {
                 Some(result)
             }
         } else {
-            Some(vec![pseudo.with_selector(Some(SelectorList {
+            Some(vec![pseudo.with_selector(Some(Box::new(SelectorList {
                 components: complexes,
                 span: self.span,
-            }))])
+            })))])
         }
     }
 
@@ -925,7 +926,7 @@ impl Extender {
                             ..
                         }) = simple
                         {
-                            self.register_selector(simple_selector, selector);
+                            self.register_selector(*simple_selector, selector);
                         }
                     }
                 }
