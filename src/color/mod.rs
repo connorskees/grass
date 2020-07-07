@@ -27,7 +27,7 @@ use num_traits::{One, Signed, ToPrimitive, Zero};
 
 mod name;
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub(crate) struct Color {
     rgba: Rgba,
     hsla: Option<Hsla>,
@@ -65,7 +65,7 @@ impl Color {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 struct Rgba {
     red: Number,
     green: Number,
@@ -88,7 +88,7 @@ impl Rgba {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 struct Hsla {
     hue: Number,
     saturation: Number,

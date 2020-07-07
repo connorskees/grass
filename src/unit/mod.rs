@@ -7,7 +7,7 @@ pub(crate) use conversion::UNIT_CONVERSION_TABLE;
 
 mod conversion;
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub(crate) enum Unit {
     // Absolute units
     /// Pixels
@@ -122,7 +122,7 @@ pub(crate) enum UnitKind {
     None,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub(crate) struct DivUnit {
     numer: Unit,
     denom: Unit,

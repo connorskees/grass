@@ -1,3 +1,5 @@
+use std::hash::{Hash, Hasher};
+
 use codemap::Span;
 
 use crate::{args::FuncArgs, scope::Scope, Token};
@@ -8,6 +10,12 @@ pub(crate) struct Function {
     pub args: FuncArgs,
     pub body: Vec<Token>,
     pos: Span,
+}
+
+impl Hash for Function {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.pos.hash(state)
+    }
 }
 
 impl PartialEq for Function {

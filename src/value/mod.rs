@@ -24,7 +24,7 @@ mod number;
 mod sass_function;
 
 // todo: remove Eq and PartialEq impls
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub(crate) enum Value {
     Important,
     True,

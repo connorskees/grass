@@ -16,7 +16,7 @@ mod integer;
 
 const PRECISION: usize = 10;
 
-#[derive(Clone, Eq, PartialEq, Ord)]
+#[derive(Clone, Eq, PartialEq, Ord, Hash)]
 pub(crate) enum Number {
     Small(Rational64),
     Big(Box<BigRational>),
