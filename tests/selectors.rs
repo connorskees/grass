@@ -668,6 +668,11 @@ test!(
     "a, // 1\nb,\nc {\n    color: red;\n}\n",
     "a,\nb,\nc {\n  color: red;\n}\n"
 );
+test!(
+    spaces_are_preserved_before_comma_in_pseudo_arg,
+    ":a(a , b) {\n  color: &;\n}\n",
+    ":a(a , b) {\n  color: :a(a , b);\n}\n"
+);
 error!(
     a_n_plus_b_n_invalid_odd,
     ":nth-child(ofdd) {\n  color: &;\n}\n", "Error: Expected \"odd\"."

@@ -319,6 +319,7 @@ impl<'a> Parser<'a> {
 
         let mut found_curly = false;
 
+        // we resolve interpolation and strip comments
         while let Some(tok) = self.toks.next() {
             span = span.merge(tok.pos());
             match tok.kind {
@@ -328,16 +329,6 @@ impl<'a> Parser<'a> {
                         string.push_str(&self.parse_interpolation()?.to_css_string(span)?);
                     } else {
                         string.push('#');
-                    }
-                }
-                ',' => {
-                    while let Some(c) = string.pop() {
-                        if c == ' ' || c == ',' {
-                            continue;
-                        }
-                        string.push(c);
-                        string.push(',');
-                        break;
                     }
                 }
                 '/' => {
