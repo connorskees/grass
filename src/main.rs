@@ -3,7 +3,7 @@ use std::{
     io::{stdout, BufWriter, Write},
 };
 
-use clap::{arg_enum, App, Arg};
+use clap::{arg_enum, App, AppSettings, Arg};
 
 #[cfg(not(feature = "wasm"))]
 use grass::from_path;
@@ -31,6 +31,7 @@ fn main() {}
 #[cfg_attr(feature = "profiling", inline(never))]
 fn main() -> std::io::Result<()> {
     let matches = App::new("grass")
+        .setting(AppSettings::ColoredHelp)
         .version(env!("CARGO_PKG_VERSION"))
         .about("SCSS Compiler in rust")
         .version_short("v")
