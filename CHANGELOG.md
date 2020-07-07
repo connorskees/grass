@@ -1,3 +1,10 @@
+# TBD
+
+ - bugfixes for `@media` query regressions
+ - remove all panics from `@import` and correctly emit `@import` in certain cases
+ - bugfixes for empty arglists
+ - bugfixes for maps in rare cases in arglists and `@each`
+
 # 0.9.5
 
 A small release fixing potential build issues and improving documentation.
