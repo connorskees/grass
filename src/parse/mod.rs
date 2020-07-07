@@ -10,6 +10,7 @@ use crate::{
         media::MediaRule,
         AtRuleKind, Content, SupportsRule, UnknownAtRule,
     },
+    common::Identifier,
     error::SassResult,
     scope::Scope,
     selector::{
@@ -514,10 +515,12 @@ impl<'a> Parser<'a> {
         let mut scope = 0;
         while let Some(tok) = self.toks.next() {
             match tok.kind {
-                '}' => if scope == 0 {
-                    break
-                } else {
-                    scope -= 1;
+                '}' => {
+                    if scope == 0 {
+                        break;
+                    } else {
+                        scope -= 1;
+                    }
                 }
                 '{' => scope += 1,
                 _ => continue,
@@ -640,8 +643,10 @@ impl<'a> Parser<'a> {
             .toks
             .next()
             .ok_or(("expected \"$\".", self.span_before))?;
-        let var = match next.kind {
-            '$' => self.parse_identifier_no_interpolation(false)?,
+        let var: Spanned<Identifier> = match next.kind {
+            '$' => self
+                .parse_identifier_no_interpolation(false)?
+                .map_node(|i| i.into()),
             _ => return Err(("expected \"$\".", self.span_before).into()),
         };
         self.whitespace();
@@ -872,7 +877,7 @@ impl<'a> Parser<'a> {
 
     fn parse_each(&mut self) -> SassResult<Vec<Stmt>> {
         self.whitespace();
-        let mut vars = Vec::new();
+        let mut vars: Vec<Spanned<Identifier>> = Vec::new();
 
         loop {
             let next = self
@@ -881,7 +886,7 @@ impl<'a> Parser<'a> {
                 .ok_or(("expected \"$\".", self.span_before))?;
 
             match next.kind {
-                '$' => vars.push(self.parse_identifier()?),
+                '$' => vars.push(self.parse_identifier()?.map_node(|i| i.into())),
                 _ => return Err(("expected \"$\".", next.pos()).into()),
             }
             self.whitespace();
@@ -919,7 +924,7 @@ impl<'a> Parser<'a> {
         for row in iter {
             if vars.len() == 1 {
                 self.scopes.last_mut().insert_var(
-                    &vars[0].node,
+                    vars[0].node.clone(),
                     Spanned {
                         node: row,
                         span: vars[0].span,
@@ -932,7 +937,7 @@ impl<'a> Parser<'a> {
                         .chain(std::iter::once(Value::Null).cycle()),
                 ) {
                     self.scopes.last_mut().insert_var(
-                        &var.node,
+                        var.node.clone(),
                         Spanned {
                             node: val,
                             span: var.span,

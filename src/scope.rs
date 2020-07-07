@@ -35,24 +35,19 @@ impl Scope {
         }
     }
 
-    pub fn get_var<T: Into<Identifier>>(
+    pub fn get_var(
         &self,
-        name: Spanned<T>,
+        name: &Spanned<Identifier>,
         global_scope: &Scope,
     ) -> SassResult<Spanned<Value>> {
-        let name = name.map_node(Into::into);
         match self.vars.get(&name.node) {
             Some(v) => Ok(v.clone()),
-            None => global_scope.get_var_no_global(&name),
+            None => global_scope.get_var_no_global(name),
         }
     }
 
-    pub fn insert_var<T: Into<Identifier>>(
-        &mut self,
-        s: T,
-        v: Spanned<Value>,
-    ) -> Option<Spanned<Value>> {
-        self.vars.insert(s.into(), v)
+    pub fn insert_var(&mut self, s: Identifier, v: Spanned<Value>) -> Option<Spanned<Value>> {
+        self.vars.insert(s, v)
     }
 
     pub fn var_exists_no_global(&self, name: &Identifier) -> bool {

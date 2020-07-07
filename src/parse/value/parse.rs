@@ -521,12 +521,12 @@ impl<'a> Parser<'a> {
             '$' => {
                 self.toks.next();
                 let val = match self.parse_identifier_no_interpolation(false) {
-                    Ok(v) => v,
+                    Ok(v) => v.map_node(|i| i.into()),
                     Err(e) => return Some(Err(e)),
                 };
                 let span = val.span;
                 IntermediateValue::Value(HigherIntermediateValue::Literal(
-                    match self.scopes.last().get_var(val, self.global_scope) {
+                    match self.scopes.last().get_var(&val, self.global_scope) {
                         Ok(v) => v,
                         Err(e) => return Some(Err(e)),
                     }
