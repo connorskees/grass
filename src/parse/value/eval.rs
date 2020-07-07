@@ -84,8 +84,8 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
             Op::Rem => self.rem(val1, val2)?,
             Op::And => Self::and(val1, val2)?,
             Op::Or => Self::or(val1, val2)?,
-            Op::Equal => self.equal(val1, val2),
-            Op::NotEqual => self.not_equal(val1, val2),
+            Op::Equal => Self::equal(val1, val2),
+            Op::NotEqual => Self::not_equal(val1, val2),
             Op::GreaterThan => self.greater_than(val1, val2)?,
             Op::GreaterThanEqual => self.greater_than_or_equal(val1, val2)?,
             Op::LessThan => self.less_than(val1, val2)?,
@@ -672,7 +672,7 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
         Ok(if left.is_true() { left } else { right })
     }
 
-    pub fn equal(&self, left: HigherIntermediateValue, right: HigherIntermediateValue) -> Value {
+    pub fn equal(left: HigherIntermediateValue, right: HigherIntermediateValue) -> Value {
         let left = match left {
             HigherIntermediateValue::Literal(v) => v,
             v => panic!("{:?}", v),
@@ -684,7 +684,7 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
         Value::bool(left.equals(&right))
     }
 
-    fn not_equal(&self, left: HigherIntermediateValue, right: HigherIntermediateValue) -> Value {
+    fn not_equal(left: HigherIntermediateValue, right: HigherIntermediateValue) -> Value {
         let left = match left {
             HigherIntermediateValue::Literal(v) => v,
             v => panic!("{:?}", v),

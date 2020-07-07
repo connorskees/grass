@@ -1,4 +1,9 @@
-use std::{collections::HashSet, slice::Iter, vec::IntoIter};
+use std::{
+    collections::HashSet,
+    hash::{Hash, Hasher},
+    slice::Iter,
+    vec::IntoIter,
+};
 
 use crate::{
     common::{Brackets, ListSeparator},
@@ -6,7 +11,7 @@ use crate::{
     value::Value,
 };
 
-#[derive(Debug, Clone, Hash)]
+#[derive(Debug, Clone)]
 pub(crate) struct SassMap(Vec<(Value, Value)>);
 
 impl PartialEq for SassMap {
@@ -19,6 +24,12 @@ impl PartialEq for SassMap {
 
 impl Eq for SassMap {}
 
+impl Hash for SassMap {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.0.hash(state)
+    }
+}
+
 impl SassMap {
     pub const fn new() -> SassMap {
         SassMap(Vec::new())
@@ -26,7 +37,7 @@ impl SassMap {
 
     pub fn get(self, key: &Value) -> SassResult<Option<Value>> {
         for (k, v) in self.0 {
-            if k.equals(&key) {
+            if k.equals(key) {
                 return Ok(Some(v));
             }
         }

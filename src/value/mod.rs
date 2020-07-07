@@ -257,7 +257,7 @@ impl Value {
             },
             Value::Dimension(n, unit) => match other {
                 Value::Dimension(n2, unit2) => {
-                    if !unit.comparable(&unit2) {
+                    if !unit.comparable(unit2) {
                         false
                     } else if unit == unit2 {
                         n == n2
@@ -277,7 +277,7 @@ impl Value {
                     if sep1 != sep2 || brackets1 != brackets2 || list1.len() != list2.len() {
                         false
                     } else {
-                        for (a, b) in list1.into_iter().zip(list2) {
+                        for (a, b) in list1.iter().zip(list2) {
                             if !a.equals(b) {
                                 return false;
                             }
@@ -299,7 +299,7 @@ impl Value {
             },
             Value::Dimension(n, unit) => match other {
                 Value::Dimension(n2, unit2) => {
-                    if !unit.comparable(&unit2) {
+                    if !unit.comparable(unit2) {
                         true
                     } else if unit == unit2 {
                         n != n2

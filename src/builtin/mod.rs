@@ -49,6 +49,8 @@ impl PartialEq for Builtin {
     }
 }
 
+impl Eq for Builtin {}
+
 pub(crate) static GLOBAL_FUNCTIONS: Lazy<GlobalFunctionMap> = Lazy::new(|| {
     let mut m = HashMap::new();
     color::declare(&mut m);

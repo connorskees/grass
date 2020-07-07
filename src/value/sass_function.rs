@@ -22,7 +22,7 @@ use crate::{
 ///
 /// The function name is stored in addition to the body
 /// for use in the builtin function `inspect()`
-#[derive(Clone, Hash)]
+#[derive(Clone, Eq, PartialEq, Hash)]
 pub(crate) enum SassFunction {
     Builtin(Builtin, Identifier),
     UserDefined(Box<Function>, Identifier),
@@ -64,20 +64,3 @@ impl fmt::Debug for SassFunction {
             .finish()
     }
 }
-
-impl PartialEq for SassFunction {
-    fn eq(&self, other: &Self) -> bool {
-        match self {
-            Self::UserDefined(f, ..) => match other {
-                Self::UserDefined(f2, ..) => f == f2,
-                Self::Builtin(..) => false,
-            },
-            Self::Builtin(f, ..) => match other {
-                Self::UserDefined(..) => false,
-                Self::Builtin(f2, ..) => f == f2,
-            },
-        }
-    }
-}
-
-impl Eq for SassFunction {}
