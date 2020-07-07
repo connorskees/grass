@@ -192,3 +192,8 @@ test!(
     "a {\n  color: (c: d, a: b)==(a: b, c: d);\n}\n",
     "a {\n  color: true;\n}\n"
 );
+test!(
+    map_equality_considers_both_key_and_value,
+    "a {\n  color: (a: b)==(a: c);\n}\n",
+    "a {\n  color: false;\n}\n"
+);

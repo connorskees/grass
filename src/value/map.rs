@@ -16,8 +16,8 @@ pub(crate) struct SassMap(Vec<(Value, Value)>);
 
 impl PartialEq for SassMap {
     fn eq(&self, other: &Self) -> bool {
-        let set_one: HashSet<&Value> = self.0.iter().map(|(v1, _)| v1).collect();
-        let set_two: HashSet<&Value> = other.0.iter().map(|(v1, _)| v1).collect();
+        let set_one: HashSet<&(Value, Value)> = self.0.iter().collect();
+        let set_two: HashSet<&(Value, Value)> = other.0.iter().collect();
         set_one == set_two
     }
 }
