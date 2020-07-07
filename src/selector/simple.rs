@@ -357,7 +357,7 @@ impl SimpleSelector {
                 ..
             }) = their_simple
             {
-                if SUBSELECTOR_PSEUDOS.contains(&unvendor(&name)) {
+                if SUBSELECTOR_PSEUDOS.contains(&unvendor(name)) {
                     return sel.components.iter().all(|complex| {
                         if complex.components.len() != 1 {
                             return false;
