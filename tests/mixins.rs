@@ -364,3 +364,16 @@ error!(
     }",
     "Error: Missing argument $a."
 );
+test!(
+    #[ignore = "haven't yet figured out how scoping works"]
+    mixin_ignores_the_scope_with_which_it_was_defined,
+    "a {
+        $a: red;
+        @mixin foo {
+            color: $a;
+        }
+        $a: green;
+        @include foo;
+    }",
+    "a {\n  color: green;\n}\n"
+);

@@ -143,3 +143,16 @@ test!(
     }",
     "a {\n  color: red;\n}\n"
 );
+test!(
+    #[ignore = "haven't yet figured out how scoping works"]
+    function_ignores_the_scope_with_which_it_was_defined,
+    "a {
+        $a: red;
+        @function foo() {
+            @return $a;
+        }
+        $a: green;
+        color: foo();
+    }",
+    "a {\n  color: green;\n}\n"
+);
