@@ -8,7 +8,7 @@ use crate::{
     error::SassResult,
     parse::Parser,
     selector::Selector,
-    unit::Unit,
+    unit::{Unit, UNIT_CONVERSION_TABLE},
     utils::hex_char_for,
     {Cow, Token},
 };
@@ -23,6 +23,7 @@ mod map;
 mod number;
 mod sass_function;
 
+// todo: remove Eq and PartialEq impls
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Value {
     Important,
@@ -245,6 +246,90 @@ impl Value {
             Value::True
         } else {
             Value::False
+        }
+    }
+
+    pub fn equals(&self, other: &Self) -> bool {
+        match self {
+            Value::String(s1, ..) => match other {
+                Value::String(s2, ..) => s1 == s2,
+                _ => false,
+            },
+            Value::Dimension(n, unit) => match other {
+                Value::Dimension(n2, unit2) => {
+                    if !unit.comparable(&unit2) {
+                        false
+                    } else if unit == unit2 {
+                        n == n2
+                    } else if unit == &Unit::None || unit2 == &Unit::None {
+                        false
+                    } else {
+                        n == &(n2.clone()
+                            * UNIT_CONVERSION_TABLE[unit.to_string().as_str()]
+                                [unit2.to_string().as_str()]
+                            .clone())
+                    }
+                }
+                _ => false,
+            },
+            Value::List(list1, sep1, brackets1) => match other {
+                Value::List(list2, sep2, brackets2) => {
+                    if sep1 != sep2 || brackets1 != brackets2 || list1.len() != list2.len() {
+                        false
+                    } else {
+                        for (a, b) in list1.into_iter().zip(list2) {
+                            if !a.equals(b) {
+                                return false;
+                            }
+                        }
+                        true
+                    }
+                }
+                _ => false,
+            },
+            s => s == other,
+        }
+    }
+
+    pub fn not_equals(&self, other: &Self) -> bool {
+        match self {
+            Value::String(s1, ..) => match other {
+                Value::String(s2, ..) => s1 != s2,
+                _ => true,
+            },
+            Value::Dimension(n, unit) => match other {
+                Value::Dimension(n2, unit2) => {
+                    if !unit.comparable(&unit2) {
+                        true
+                    } else if unit == unit2 {
+                        n != n2
+                    } else if unit == &Unit::None || unit2 == &Unit::None {
+                        true
+                    } else {
+                        n != &(n2.clone()
+                            * UNIT_CONVERSION_TABLE[unit.to_string().as_str()]
+                                [unit2.to_string().as_str()]
+                            .clone())
+                    }
+                }
+                _ => true,
+            },
+            Value::List(list1, sep1, brackets1) => match other {
+                Value::List(list2, sep2, brackets2) => {
+                    if sep1 != sep2 || brackets1 != brackets2 || list1.len() != list2.len() {
+                        true
+                    } else {
+                        for (a, b) in list1.iter().zip(list2) {
+                            if a.not_equals(b) {
+                                return true;
+                            }
+                        }
+                        false
+                    }
+                }
+                _ => true,
+            },
+            s => s != other,
         }
     }
 

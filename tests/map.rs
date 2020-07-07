@@ -182,3 +182,8 @@ test!(
     "$a: (foo: red, ); a {\n  color: inspect($a);\n}\n",
     "a {\n  color: (foo: red);\n}\n"
 );
+test!(
+    map_merge_not_exactly_equal,
+    "a {\n  color: inspect(map-merge((0cm: a), (0mm: b)));;\n}\n",
+    "a {\n  color: (0cm: b);\n}\n"
+);

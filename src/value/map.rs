@@ -1,11 +1,8 @@
 use std::{slice::Iter, vec::IntoIter};
 
-use codemap::Span;
-
 use crate::{
     common::{Brackets, ListSeparator},
     error::SassResult,
-    parse::{HigherIntermediateValue, Parser, ValueVisitor},
     value::Value,
 };
 
@@ -17,20 +14,9 @@ impl SassMap {
         SassMap(Vec::new())
     }
 
-    pub fn get(
-        self,
-        key: &Value,
-        span: Span,
-        parser: &mut Parser<'_>,
-    ) -> SassResult<Option<Value>> {
+    pub fn get(self, key: &Value) -> SassResult<Option<Value>> {
         for (k, v) in self.0 {
-            if ValueVisitor::new(parser, span)
-                .equal(
-                    HigherIntermediateValue::Literal(k),
-                    HigherIntermediateValue::Literal(key.clone()),
-                )?
-                .is_true()
-            {
+            if k.equals(&key) {
                 return Ok(Some(v));
             }
         }
@@ -38,7 +24,7 @@ impl SassMap {
     }
 
     pub fn remove(&mut self, key: &Value) {
-        self.0.retain(|(ref k, ..)| k != key);
+        self.0.retain(|(ref k, ..)| k.not_equals(key));
     }
 
     pub fn merge(&mut self, other: SassMap) {
@@ -74,7 +60,7 @@ impl SassMap {
     /// Returns true if the key already exists
     pub fn insert(&mut self, key: Value, value: Value) -> bool {
         for (ref k, ref mut v) in &mut self.0 {
-            if k == &key {
+            if k.equals(&key) {
                 *v = value;
                 return true;
             }

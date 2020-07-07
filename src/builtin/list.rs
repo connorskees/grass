@@ -6,7 +6,7 @@ use crate::{
     args::CallArgs,
     common::{Brackets, ListSeparator, QuoteKind},
     error::SassResult,
-    parse::{HigherIntermediateValue, Parser, ValueVisitor},
+    parse::Parser,
     unit::Unit,
     value::{Number, Value},
 };
@@ -244,14 +244,7 @@ fn index(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     let value = parser.arg(&mut args, 1, "value")?;
     // TODO: find a way to propagate any errors here
     // Potential input to fuzz: index(1px 1in 1cm, 96px + 1rem)
-    let index = match list.into_iter().position(|v| {
-        ValueVisitor::new(parser, args.span())
-            .equal(
-                HigherIntermediateValue::Literal(v),
-                HigherIntermediateValue::Literal(value.clone()),
-            )
-            .map_or(false, |v| v.is_true())
-    }) {
+    let index = match list.into_iter().position(|v| v.equals(&value)) {
         Some(v) => Number::from(v + 1),
         None => return Ok(Value::Null),
     };

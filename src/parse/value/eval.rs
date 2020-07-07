@@ -84,8 +84,8 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
             Op::Rem => self.rem(val1, val2)?,
             Op::And => Self::and(val1, val2)?,
             Op::Or => Self::or(val1, val2)?,
-            Op::Equal => self.equal(val1, val2)?,
-            Op::NotEqual => self.not_equal(val1, val2)?,
+            Op::Equal => self.equal(val1, val2),
+            Op::NotEqual => self.not_equal(val1, val2),
             Op::GreaterThan => self.greater_than(val1, val2)?,
             Op::GreaterThanEqual => self.greater_than_or_equal(val1, val2)?,
             Op::LessThan => self.less_than(val1, val2)?,
@@ -672,11 +672,7 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
         Ok(if left.is_true() { left } else { right })
     }
 
-    pub fn equal(
-        &self,
-        left: HigherIntermediateValue,
-        right: HigherIntermediateValue,
-    ) -> SassResult<Value> {
+    pub fn equal(&self, left: HigherIntermediateValue, right: HigherIntermediateValue) -> Value {
         let left = match left {
             HigherIntermediateValue::Literal(v) => v,
             v => panic!("{:?}", v),
@@ -685,60 +681,10 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
             HigherIntermediateValue::Literal(v) => v,
             v => panic!("{:?}", v),
         };
-        Ok(Value::bool(match left {
-            Value::String(s1, ..) => match right {
-                Value::String(s2, ..) => s1 == s2,
-                _ => false,
-            },
-            Value::Dimension(n, unit) => match right {
-                Value::Dimension(n2, unit2) => {
-                    if !unit.comparable(&unit2) {
-                        false
-                    } else if unit == unit2 {
-                        n == n2
-                    } else if unit == Unit::None || unit2 == Unit::None {
-                        false
-                    } else {
-                        n == (n2
-                            * UNIT_CONVERSION_TABLE[unit.to_string().as_str()]
-                                [unit2.to_string().as_str()]
-                            .clone())
-                    }
-                }
-                _ => false,
-            },
-            Value::List(list1, sep1, brackets1) => match right {
-                Value::List(list2, sep2, brackets2) => {
-                    if sep1 != sep2 || brackets1 != brackets2 || list1.len() != list2.len() {
-                        false
-                    } else {
-                        let mut equals = true;
-                        for (a, b) in list1.into_iter().zip(list2) {
-                            if !self
-                                .equal(
-                                    HigherIntermediateValue::Literal(a),
-                                    HigherIntermediateValue::Literal(b),
-                                )?
-                                .is_true()
-                            {
-                                equals = false;
-                                break;
-                            }
-                        }
-                        equals
-                    }
-                }
-                _ => false,
-            },
-            s => s == right,
-        }))
+        Value::bool(left.equals(&right))
     }
 
-    fn not_equal(
-        &self,
-        left: HigherIntermediateValue,
-        right: HigherIntermediateValue,
-    ) -> SassResult<Value> {
+    fn not_equal(&self, left: HigherIntermediateValue, right: HigherIntermediateValue) -> Value {
         let left = match left {
             HigherIntermediateValue::Literal(v) => v,
             v => panic!("{:?}", v),
@@ -747,53 +693,7 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
             HigherIntermediateValue::Literal(v) => v,
             v => panic!("{:?}", v),
         };
-        Ok(Value::bool(match left {
-            Value::String(s1, ..) => match right {
-                Value::String(s2, ..) => s1 != s2,
-                _ => true,
-            },
-            Value::Dimension(n, unit) => match right {
-                Value::Dimension(n2, unit2) => {
-                    if !unit.comparable(&unit2) {
-                        true
-                    } else if unit == unit2 {
-                        n != n2
-                    } else if unit == Unit::None || unit2 == Unit::None {
-                        true
-                    } else {
-                        n != (n2
-                            * UNIT_CONVERSION_TABLE[unit.to_string().as_str()]
-                                [unit2.to_string().as_str()]
-                            .clone())
-                    }
-                }
-                _ => true,
-            },
-            Value::List(list1, sep1, brackets1) => match right {
-                Value::List(list2, sep2, brackets2) => {
-                    if sep1 != sep2 || brackets1 != brackets2 || list1.len() != list2.len() {
-                        true
-                    } else {
-                        let mut equals = false;
-                        for (a, b) in list1.into_iter().zip(list2) {
-                            if self
-                                .not_equal(
-                                    HigherIntermediateValue::Literal(a),
-                                    HigherIntermediateValue::Literal(b),
-                                )?
-                                .is_true()
-                            {
-                                equals = true;
-                                break;
-                            }
-                        }
-                        equals
-                    }
-                }
-                _ => true,
-            },
-            s => s != right,
-        }))
+        Value::bool(left.not_equals(&right))
     }
 
     fn cmp(
