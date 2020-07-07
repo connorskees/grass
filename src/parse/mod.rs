@@ -25,7 +25,7 @@ use crate::{
     {Cow, Token},
 };
 
-use common::{Branch, ContextFlags, NeverEmptyVec, SelectorOrStyle};
+use common::{ContextFlags, NeverEmptyVec, SelectorOrStyle};
 
 pub(crate) use value::{HigherIntermediateValue, ValueVisitor};
 
@@ -510,29 +510,52 @@ impl<'a> Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
+    fn throw_away_until_closing_curly_brace(&mut self) {
+        let mut scope = 0;
+        while let Some(tok) = self.toks.next() {
+            match tok.kind {
+                '}' => if scope == 0 {
+                    break
+                } else {
+                    scope -= 1;
+                }
+                '{' => scope += 1,
+                _ => continue,
+            }
+        }
+    }
+
     fn parse_if(&mut self) -> SassResult<Vec<Stmt>> {
         self.whitespace_or_comment();
-        let mut branches = Vec::new();
+
+        let mut found_true = false;
+        let mut body = Vec::new();
+
         let init_cond_toks = read_until_open_curly_brace(self.toks)?;
         if init_cond_toks.is_empty() {
             return Err(("Expected expression.", self.span_before).into());
         }
+        // consume the open curly brace
         let span_before = match self.toks.next() {
             Some(t) => t.pos,
             None => return Err(("Expected expression.", self.span_before).into()),
         };
         self.whitespace_or_comment();
-        let mut init_toks = read_until_closing_curly_brace(self.toks)?;
-        if let Some(tok) = self.toks.next() {
-            init_toks.push(tok);
+
+        if self.parse_value_from_vec(init_cond_toks)?.is_true() {
+            found_true = true;
+            let mut init_toks = read_until_closing_curly_brace(self.toks)?;
+            if let Some(tok) = self.toks.next() {
+                init_toks.push(tok);
+            } else {
+                return Err(("expected \"}\".", span_before).into());
+            }
+            body = init_toks;
         } else {
-            return Err(("expected \"}\".", span_before).into());
+            self.throw_away_until_closing_curly_brace();
         }
-        self.whitespace();
 
-        branches.push(Branch::new(init_cond_toks, init_toks));
-
-        let mut else_ = Vec::new();
+        self.whitespace_or_comment();
 
         loop {
             if let Some(Token { kind: '@', pos }) = self.toks.peek().cloned() {
@@ -542,34 +565,43 @@ impl<'a> Parser<'a> {
                     self.toks.reset_cursor();
                     break;
                 }
-                self.toks.take(4).for_each(drop);
+                self.toks.truncate_iterator_to_cursor();
             } else {
                 break;
             }
             self.whitespace();
-            if let Some(tok) = self.toks.next() {
-                self.whitespace();
-                match tok.kind.to_ascii_lowercase() {
+            if let Some(tok) = self.toks.peek().cloned() {
+                match tok.kind {
                     'i' if matches!(
-                        self.toks.peek(),
+                        self.toks.peek_forward(1),
                         Some(Token { kind: 'f', .. }) | Some(Token { kind: 'F', .. })
                     ) =>
                     {
                         self.toks.next();
+                        self.toks.next();
                         let cond = read_until_open_curly_brace(self.toks)?;
+                        // todo: ensure there is a `{`
                         self.toks.next();
-                        self.whitespace();
-                        branches.push(Branch::new(
-                            cond,
-                            read_until_closing_curly_brace(self.toks)?,
-                        ));
-                        self.toks.next();
+                        if !found_true && self.parse_value_from_vec(cond)?.is_true() {
+                            found_true = true;
+                            body = read_until_closing_curly_brace(self.toks)?;
+                            // todo: ensure there is a `{`
+                            self.toks.next();
+                        } else {
+                            self.throw_away_until_closing_curly_brace();
+                        }
                         self.whitespace();
                     }
                     '{' => {
-                        else_ = read_until_closing_curly_brace(self.toks)?;
                         self.toks.next();
-                        break;
+                        if !found_true {
+                            found_true = true;
+                            body = read_until_closing_curly_brace(self.toks)?;
+                            self.toks.next();
+                            break;
+                        } else {
+                            self.throw_away_until_closing_curly_brace();
+                        }
                     }
                     _ => {
                         return Err(("expected \"{\".", tok.pos()).into());
@@ -581,44 +613,25 @@ impl<'a> Parser<'a> {
         }
         self.whitespace();
 
-        for branch in branches {
-            self.span_before = branch.cond.first().unwrap().pos;
-            if self.parse_value_from_vec(branch.cond)?.node.is_true() {
-                return Parser {
-                    toks: &mut branch.toks.into_iter().peekmore(),
-                    map: self.map,
-                    path: self.path,
-                    scopes: self.scopes,
-                    global_scope: self.global_scope,
-                    super_selectors: self.super_selectors,
-                    span_before: self.span_before,
-                    content: self.content,
-                    flags: self.flags | ContextFlags::IN_CONTROL_FLOW,
-                    at_root: self.at_root,
-                    at_root_has_selector: self.at_root_has_selector,
-                    extender: self.extender,
-                }
-                .parse();
+        if found_true {
+            Parser {
+                toks: &mut body.into_iter().peekmore(),
+                map: self.map,
+                path: self.path,
+                scopes: self.scopes,
+                global_scope: self.global_scope,
+                super_selectors: self.super_selectors,
+                span_before: self.span_before,
+                content: self.content,
+                flags: self.flags | ContextFlags::IN_CONTROL_FLOW,
+                at_root: self.at_root,
+                at_root_has_selector: self.at_root_has_selector,
+                extender: self.extender,
             }
+            .parse()
+        } else {
+            Ok(Vec::new())
         }
-        if else_.is_empty() {
-            return Ok(Vec::new());
-        }
-        Parser {
-            toks: &mut else_.into_iter().peekmore(),
-            map: self.map,
-            path: self.path,
-            scopes: self.scopes,
-            global_scope: self.global_scope,
-            super_selectors: self.super_selectors,
-            span_before: self.span_before,
-            content: self.content,
-            flags: self.flags | ContextFlags::IN_CONTROL_FLOW,
-            at_root: self.at_root,
-            at_root_has_selector: self.at_root_has_selector,
-            extender: self.extender,
-        }
-        .parse()
     }
 
     fn parse_for(&mut self) -> SassResult<Vec<Stmt>> {

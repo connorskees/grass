@@ -5,7 +5,7 @@ use std::{
 
 use codemap::Spanned;
 
-use crate::{value::Value, Token};
+use crate::value::Value;
 
 #[derive(Debug, Clone)]
 pub(crate) struct NeverEmptyVec<T> {
@@ -65,18 +65,6 @@ impl<T> NeverEmptyVec<T> {
 pub(super) enum SelectorOrStyle {
     Selector(String),
     Style(String, Option<Box<Spanned<Value>>>),
-}
-
-#[derive(Debug, Clone)]
-pub(super) struct Branch {
-    pub cond: Vec<Token>,
-    pub toks: Vec<Token>,
-}
-
-impl Branch {
-    pub fn new(cond: Vec<Token>, toks: Vec<Token>) -> Branch {
-        Branch { cond, toks }
-    }
 }
 
 #[derive(Debug, Copy, Clone)]
