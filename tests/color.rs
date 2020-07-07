@@ -623,3 +623,13 @@ test!(
     "a {\n  color: blue(rgba(1.5, 1.5, 1.5, 1));\n}\n",
     "a {\n  color: 2;\n}\n"
 );
+test!(
+    color_equality_named_and_hex,
+    "a {\n  color: red==#ff0000;\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    color_equality_named_and_hsla,
+    "a {\n  color: hsla(0deg, 100%, 50%)==red;\n}\n",
+    "a {\n  color: true;\n}\n"
+);

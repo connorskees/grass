@@ -18,6 +18,7 @@
 use std::{
     cmp::{max, min},
     fmt::{self, Display},
+    hash::{Hash, Hasher},
 };
 
 use crate::value::Number;
@@ -27,11 +28,25 @@ use num_traits::{One, Signed, ToPrimitive, Zero};
 
 mod name;
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone)]
 pub(crate) struct Color {
     rgba: Rgba,
     hsla: Option<Hsla>,
     repr: String,
+}
+
+impl PartialEq for Color {
+    fn eq(&self, other: &Self) -> bool {
+        self.rgba == other.rgba
+    }
+}
+
+impl Eq for Color {}
+
+impl Hash for Color {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.rgba.hash(state)
+    }
 }
 
 impl Color {
@@ -65,12 +80,68 @@ impl Color {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone)]
 struct Rgba {
     red: Number,
     green: Number,
     blue: Number,
     alpha: Number,
+}
+
+impl PartialEq for Rgba {
+    fn eq(&self, other: &Self) -> bool {
+        if self.red != other.red
+            && !(self.red >= Number::from(255) && other.red >= Number::from(255))
+        {
+            return false;
+        }
+        if self.green != other.green
+            && !(self.green >= Number::from(255) && other.green >= Number::from(255))
+        {
+            return false;
+        }
+        if self.blue != other.blue
+            && !(self.blue >= Number::from(255) && other.blue >= Number::from(255))
+        {
+            return false;
+        }
+        if self.alpha != other.alpha
+            && !(self.alpha >= Number::one() && other.alpha >= Number::one())
+        {
+            return false;
+        }
+        true
+    }
+}
+
+impl Eq for Rgba {}
+
+impl Hash for Rgba {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        if self.red > Number::from(255) {
+            255.hash(state);
+        } else {
+            self.red.hash(state)
+        }
+
+        if self.green > Number::from(255) {
+            255.hash(state);
+        } else {
+            self.green.hash(state)
+        }
+
+        if self.blue > Number::from(255) {
+            255.hash(state);
+        } else {
+            self.blue.hash(state)
+        }
+
+        if self.alpha > Number::one() {
+            1.hash(state);
+        } else {
+            self.alpha.hash(state)
+        }
+    }
 }
 
 impl Rgba {
@@ -88,7 +159,7 @@ impl Rgba {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+#[derive(Debug, Clone)]
 struct Hsla {
     hue: Number,
     saturation: Number,
