@@ -633,3 +633,8 @@ test!(
     "a {\n  color: hsla(0deg, 100%, 50%)==red;\n}\n",
     "a {\n  color: true;\n}\n"
 );
+test!(
+    hsla_becomes_named_color,
+    "a {\n  color: hsla(0deg, 100%, 50%);\n}\n",
+    "a {\n  color: red;\n}\n"
+);
