@@ -34,7 +34,7 @@ impl<'a> Parser<'a> {
                 _ => {}
             }
         }
-        return Err((format!("Expected {}.", q), self.span_before).into());
+        Err((format!("Expected {}.", q), self.span_before).into())
     }
 
     pub(super) fn throw_away_until_open_curly_brace(&mut self) -> SassResult<()> {

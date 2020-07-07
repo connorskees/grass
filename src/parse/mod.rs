@@ -569,7 +569,10 @@ impl<'a> Parser<'a> {
                     {
                         self.toks.next();
                         self.toks.next();
-                        let cond = if !found_true {
+                        let cond = if found_true {
+                            self.throw_away_until_open_curly_brace()?;
+                            false
+                        } else {
                             let v = self.parse_value()?.node.is_true();
                             match self.toks.next() {
                                 Some(Token { kind: '{', .. }) => {}
@@ -578,9 +581,6 @@ impl<'a> Parser<'a> {
                                 }
                             }
                             v
-                        } else {
-                            self.throw_away_until_open_curly_brace()?;
-                            false
                         };
                         if cond {
                             found_true = true;
