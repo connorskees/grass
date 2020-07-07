@@ -597,14 +597,14 @@ impl<'a> Parser<'a> {
                     }
                     '{' => {
                         self.toks.next();
-                        if !found_true {
+                        if found_true {
+                            self.throw_away_until_closing_curly_brace();
+                        } else {
                             found_true = true;
                             body = read_until_closing_curly_brace(self.toks)?;
                             self.toks.next();
-                            break;
-                        } else {
-                            self.throw_away_until_closing_curly_brace();
                         }
+                        break;
                     }
                     _ => {
                         return Err(("expected \"{\".", tok.pos()).into());
