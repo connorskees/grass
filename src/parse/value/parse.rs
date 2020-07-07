@@ -70,7 +70,7 @@ impl<'a> Parser<'a> {
                     space_separated.push(v.span(val.span))
                 }
                 IntermediateValue::Op(op) => {
-                    iter.eat_op(
+                    iter.parse_op(
                         Spanned {
                             node: op,
                             span: val.span,
@@ -208,7 +208,7 @@ impl<'a> Parser<'a> {
             s = lower;
             self.toks.next();
             s.push(':');
-            s.push_str(&self.eat_progid()?);
+            s.push_str(&self.parse_progid()?);
             return Ok(Spanned {
                 node: IntermediateValue::Value(HigherIntermediateValue::Literal(Value::String(
                     s,
@@ -273,9 +273,9 @@ impl<'a> Parser<'a> {
                         match lower.as_str() {
                             "calc" | "element" | "expression" => {
                                 s = lower;
-                                self.eat_calc_args(&mut s)?;
+                                self.parse_calc_args(&mut s)?;
                             }
-                            "url" => match self.try_eat_url()? {
+                            "url" => match self.try_parse_url()? {
                                 Some(val) => s = val,
                                 None => s.push_str(&self.parse_call_args()?.to_css_string(self)?),
                             },
@@ -742,7 +742,7 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
         found_whitespace
     }
 
-    fn eat_op(
+    fn parse_op(
         &mut self,
         op: Spanned<Op>,
         space_separated: &mut Vec<Spanned<HigherIntermediateValue>>,

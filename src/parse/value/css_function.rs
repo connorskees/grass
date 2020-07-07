@@ -15,7 +15,7 @@ use crate::{
 use super::super::Parser;
 
 impl<'a> Parser<'a> {
-    pub(super) fn eat_calc_args(&mut self, buf: &mut String) -> SassResult<()> {
+    pub(super) fn parse_calc_args(&mut self, buf: &mut String) -> SassResult<()> {
         buf.reserve(2);
         buf.push('(');
         let mut nesting = 0;
@@ -54,7 +54,7 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    pub(super) fn eat_progid(&mut self) -> SassResult<String> {
+    pub(super) fn parse_progid(&mut self) -> SassResult<String> {
         let mut string = String::new();
         let mut span = self.toks.peek().unwrap().pos();
         while let Some(tok) = self.toks.next() {
@@ -64,7 +64,7 @@ impl<'a> Parser<'a> {
                     string.push(tok.kind);
                 }
                 '(' => {
-                    self.eat_calc_args(&mut string)?;
+                    self.parse_calc_args(&mut string)?;
                     break;
                 }
                 _ => return Err(("expected \"(\".", span).into()),
@@ -73,7 +73,7 @@ impl<'a> Parser<'a> {
         Ok(string)
     }
 
-    pub(super) fn try_eat_url(&mut self) -> SassResult<Option<String>> {
+    pub(super) fn try_parse_url(&mut self) -> SassResult<Option<String>> {
         let mut buf = String::from("url(");
         peek_whitespace(self.toks);
         while let Some(tok) = self.toks.peek() {
