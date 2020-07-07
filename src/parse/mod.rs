@@ -10,7 +10,6 @@ use crate::{
         media::MediaRule,
         AtRuleKind, Content, SupportsRule, UnknownAtRule,
     },
-    common::{Brackets, ListSeparator},
     error::SassResult,
     scope::Scope,
     selector::{
@@ -914,28 +913,17 @@ impl<'a> Parser<'a> {
         let mut stmts = Vec::new();
 
         for row in iter {
-            let this_iterator = row.clone().as_list();
             if vars.len() == 1 {
-                if this_iterator.len() == 1 {
-                    self.scopes.last_mut().insert_var(
-                        &vars[0].node,
-                        Spanned {
-                            node: row,
-                            span: vars[0].span,
-                        },
-                    );
-                } else {
-                    self.scopes.last_mut().insert_var(
-                        &vars[0].node,
-                        Spanned {
-                            node: Value::List(this_iterator, ListSeparator::Space, Brackets::None),
-                            span: vars[0].span,
-                        },
-                    );
-                }
+                self.scopes.last_mut().insert_var(
+                    &vars[0].node,
+                    Spanned {
+                        node: row,
+                        span: vars[0].span,
+                    },
+                );
             } else {
                 for (var, val) in vars.iter().zip(
-                    this_iterator
+                    row.as_list()
                         .into_iter()
                         .chain(std::iter::once(Value::Null).cycle()),
                 ) {

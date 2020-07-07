@@ -48,6 +48,19 @@ test!(
     "a {\n  @each $i in 1 2 3 {\n    color: type-of($i);\n  }\n}\n",
     "a {\n  color: number;\n  color: number;\n  color: number;\n}\n"
 );
+test!(
+    list_of_single_map_with_multiple_elements,
+    "a {
+        $settings: ();
+
+        @each $config in [(a: b, c: d)] {
+            $settings: map-merge($settings, $config);
+        }
+
+        color: inspect($settings);
+    }",
+    "a {\n  color: (a: b, c: d);\n}\n"
+);
 error!(
     list_of_single_map,
     "a {
