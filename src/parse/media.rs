@@ -58,7 +58,7 @@ impl<'a> Parser<'a> {
                     self.toks.next();
                     self.toks.next();
                 }
-                '>' | '<' | ':' => {
+                '>' | '<' | ':' | ')' => {
                     break;
                 }
                 _ => {

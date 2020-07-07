@@ -49,3 +49,8 @@ test!(
     }",
     "@media print and (foo: 1 2 3) {\n  a {\n    color: red;\n  }\n}\n"
 );
+test!(
+    single_identifier_inside_parens,
+    "@media (color) {a {color: red;}}",
+    "@media (color) {\n  a {\n    color: red;\n  }\n}\n"
+);
