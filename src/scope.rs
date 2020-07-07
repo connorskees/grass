@@ -17,7 +17,6 @@ pub(crate) struct Scope {
     functions: HashMap<Identifier, Function>,
 }
 
-// todo: separate struct for global scope?
 impl Scope {
     #[must_use]
     pub fn new() -> Self {
@@ -28,20 +27,20 @@ impl Scope {
         }
     }
 
-    fn get_var_no_global(&self, name: &Spanned<Identifier>) -> SassResult<Spanned<Value>> {
+    fn get_var_no_global(&self, name: &Spanned<Identifier>) -> SassResult<&Value> {
         match self.vars.get(&name.node) {
-            Some(v) => Ok(v.clone()),
+            Some(v) => Ok(&v.node),
             None => Err(("Undefined variable.", name.span).into()),
         }
     }
 
-    pub fn get_var(
-        &self,
+    pub fn get_var<'a>(
+        &'a self,
         name: &Spanned<Identifier>,
-        global_scope: &Scope,
-    ) -> SassResult<Spanned<Value>> {
+        global_scope: &'a Scope,
+    ) -> SassResult<&Value> {
         match self.vars.get(&name.node) {
-            Some(v) => Ok(v.clone()),
+            Some(v) => Ok(&v.node),
             None => global_scope.get_var_no_global(name),
         }
     }

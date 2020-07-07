@@ -524,15 +524,13 @@ impl<'a> Parser<'a> {
                     Ok(v) => v.map_node(|i| i.into()),
                     Err(e) => return Some(Err(e)),
                 };
-                let span = val.span;
                 IntermediateValue::Value(HigherIntermediateValue::Literal(
                     match self.scopes.last().get_var(&val, self.global_scope) {
-                        Ok(v) => v,
+                        Ok(v) => v.clone(),
                         Err(e) => return Some(Err(e)),
-                    }
-                    .node,
+                    },
                 ))
-                .span(span)
+                .span(val.span)
             }
             '+' => {
                 let span = self.toks.next().unwrap().pos();
