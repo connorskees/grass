@@ -39,6 +39,7 @@ mod keyframes;
 mod media;
 mod mixin;
 mod style;
+mod throw_away;
 mod value;
 mod variable;
 
@@ -508,23 +509,6 @@ impl<'a> Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-    fn throw_away_until_closing_curly_brace(&mut self) {
-        let mut scope = 0;
-        while let Some(tok) = self.toks.next() {
-            match tok.kind {
-                '}' => {
-                    if scope == 0 {
-                        break;
-                    } else {
-                        scope -= 1;
-                    }
-                }
-                '{' => scope += 1,
-                _ => continue,
-            }
-        }
-    }
-
     fn parse_if(&mut self) -> SassResult<Vec<Stmt>> {
         self.whitespace_or_comment();
 
@@ -536,7 +520,7 @@ impl<'a> Parser<'a> {
         // consume the open curly brace
         let span_before = match self.toks.next() {
             Some(Token { kind: '{', pos }) => pos,
-            Some(..) | None => return Err(("expected \"}\".", self.span_before).into()),
+            Some(..) | None => return Err(("expected \"{\".", self.span_before).into()),
         };
 
         if self.toks.peek().is_none() {
@@ -563,7 +547,7 @@ impl<'a> Parser<'a> {
             }
             .parse_stmt()?;
         } else {
-            self.throw_away_until_closing_curly_brace();
+            self.throw_away_until_closing_curly_brace()?;
         }
 
         self.whitespace_or_comment();
@@ -590,10 +574,20 @@ impl<'a> Parser<'a> {
                     {
                         self.toks.next();
                         self.toks.next();
-                        let cond = read_until_open_curly_brace(self.toks)?;
-                        // todo: ensure there is a `{`
-                        self.toks.next();
-                        if !found_true && self.parse_value_from_vec(cond)?.is_true() {
+                        let cond = if !found_true {
+                            let v = self.parse_value()?.node.is_true();
+                            match self.toks.next() {
+                                Some(Token { kind: '{', .. }) => {}
+                                Some(..) | None => {
+                                    return Err(("expected \"{\".", self.span_before).into())
+                                }
+                            }
+                            v
+                        } else {
+                            self.throw_away_until_open_curly_brace()?;
+                            false
+                        };
+                        if cond {
                             found_true = true;
                             body = Parser {
                                 toks: self.toks,
@@ -610,17 +604,15 @@ impl<'a> Parser<'a> {
                                 extender: self.extender,
                             }
                             .parse_stmt()?;
-                            // todo: ensure there is a `{`
-                            self.toks.next();
                         } else {
-                            self.throw_away_until_closing_curly_brace();
+                            self.throw_away_until_closing_curly_brace()?;
                         }
                         self.whitespace();
                     }
                     '{' => {
                         self.toks.next();
                         if found_true {
-                            self.throw_away_until_closing_curly_brace();
+                            self.throw_away_until_closing_curly_brace()?;
                             break;
                         } else {
                             return Parser {

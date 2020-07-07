@@ -224,7 +224,6 @@ pub(crate) fn read_until_closing_paren<I: Iterator<Item = Token>>(
                 continue;
             }
             '\\' => {
-                t.push(toks.next().unwrap());
                 t.push(match toks.next() {
                     Some(tok) => tok,
                     None => continue,
