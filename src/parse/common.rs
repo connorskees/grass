@@ -113,3 +113,8 @@ impl BitOr<ContextFlag> for ContextFlags {
         Self(self.0 | rhs.0)
     }
 }
+
+pub(crate) enum Comment {
+    Silent,
+    Loud(String),
+}

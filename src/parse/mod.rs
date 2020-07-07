@@ -26,7 +26,7 @@ use crate::{
     {Cow, Token},
 };
 
-use common::{ContextFlags, NeverEmptyVec, SelectorOrStyle};
+use common::{Comment, ContextFlags, NeverEmptyVec, SelectorOrStyle};
 
 pub(crate) use value::{HigherIntermediateValue, ValueVisitor};
 
@@ -42,11 +42,6 @@ mod style;
 mod throw_away;
 mod value;
 mod variable;
-
-pub(crate) enum Comment {
-    Silent,
-    Loud(String),
-}
 
 #[derive(Debug, Clone)]
 pub(crate) enum Stmt {
