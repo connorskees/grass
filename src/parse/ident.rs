@@ -80,7 +80,7 @@ impl<'a> Parser<'a> {
         let mut value = 0;
         let first = match self.toks.peek() {
             Some(t) => t,
-            None => return Ok(String::new()),
+            None => return Err(("Expected expression.", self.span_before).into()),
         };
         let mut span = first.pos();
         if first.kind == '\n' {
@@ -252,8 +252,18 @@ impl<'a> Parser<'a> {
         while let Some(tok) = self.toks.next() {
             span = span.merge(tok.pos());
             match tok.kind {
-                '"' if q == '"' => break,
-                '\'' if q == '\'' => break,
+                '"' if q == '"' => {
+                    return Ok(Spanned {
+                        node: Value::String(s, QuoteKind::Quoted),
+                        span,
+                    })
+                }
+                '\'' if q == '\'' => {
+                    return Ok(Spanned {
+                        node: Value::String(s, QuoteKind::Quoted),
+                        span,
+                    })
+                }
                 '#' => {
                     if let Some(Token { kind: '{', pos }) = self.toks.peek() {
                         self.span_before = self.span_before.merge(*pos);
@@ -318,9 +328,6 @@ impl<'a> Parser<'a> {
                 _ => s.push(tok.kind),
             }
         }
-        Ok(Spanned {
-            node: Value::String(s, QuoteKind::Quoted),
-            span,
-        })
+        Err((format!("Expected {}.", q), span).into())
     }
 }

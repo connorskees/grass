@@ -144,11 +144,10 @@ impl<'a> Parser<'a> {
                             }
                         }
                         AtRuleKind::Error => {
-                            let toks = read_until_semicolon_or_closing_curly_brace(self.toks)?;
                             let Spanned {
                                 node: message,
                                 span,
-                            } = self.parse_value_from_vec(toks)?;
+                            } = self.parse_value()?;
 
                             return Err((
                                 message.inspect(span)?.to_string(),
@@ -157,11 +156,10 @@ impl<'a> Parser<'a> {
                                 .into());
                         }
                         AtRuleKind::Warn => {
-                            let toks = read_until_semicolon_or_closing_curly_brace(self.toks)?;
                             let Spanned {
                                 node: message,
                                 span,
-                            } = self.parse_value_from_vec(toks)?;
+                            } = self.parse_value()?;
                             span.merge(kind_string.span);
                             if let Some(Token { kind: ';', pos }) = self.toks.peek() {
                                 kind_string.span.merge(*pos);
@@ -173,11 +171,10 @@ impl<'a> Parser<'a> {
                             })
                         }
                         AtRuleKind::Debug => {
-                            let toks = read_until_semicolon_or_closing_curly_brace(self.toks)?;
                             let Spanned {
                                 node: message,
                                 span,
-                            } = self.parse_value_from_vec(toks)?;
+                            } = self.parse_value()?;
                             span.merge(kind_string.span);
                             if let Some(Token { kind: ';', pos }) = self.toks.peek() {
                                 kind_string.span.merge(*pos);
@@ -534,14 +531,12 @@ impl<'a> Parser<'a> {
         let mut found_true = false;
         let mut body = Vec::new();
 
-        let init_cond_toks = read_until_open_curly_brace(self.toks)?;
-        if init_cond_toks.is_empty() {
-            return Err(("Expected expression.", self.span_before).into());
-        }
+        let init_cond = self.parse_value()?.node;
+
         // consume the open curly brace
         let span_before = match self.toks.next() {
-            Some(t) => t.pos,
-            None => return Err(("Expected expression.", self.span_before).into()),
+            Some(Token { kind: '{', pos }) => pos,
+            Some(..) | None => return Err(("expected \"}\".", self.span_before).into()),
         };
 
         if self.toks.peek().is_none() {
@@ -550,7 +545,7 @@ impl<'a> Parser<'a> {
 
         self.whitespace_or_comment();
 
-        if self.parse_value_from_vec(init_cond_toks)?.is_true() {
+        if init_cond.is_true() {
             found_true = true;
             body = Parser {
                 toks: self.toks,

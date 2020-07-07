@@ -55,8 +55,11 @@ impl<'a> Parser<'a> {
     pub(crate) fn parse_value(&mut self) -> SassResult<Spanned<Value>> {
         self.whitespace();
         let span = match self.toks.peek() {
+            Some(Token { kind: '}', .. })
+            | Some(Token { kind: ';', .. })
+            | Some(Token { kind: '{', .. })
+            | None => return Err(("Expected expression.", self.span_before).into()),
             Some(Token { pos, .. }) => *pos,
-            None => return Err(("Expected expression.", self.span_before).into()),
         };
         let mut last_was_whitespace = false;
         let mut space_separated = Vec::new();

@@ -270,7 +270,7 @@ impl<'a> Parser<'a> {
             self.whitespace();
 
             if self.toks.peek().is_none() {
-                return Ok(CallArgs(args, span));
+                return Err(("expected \")\".", span).into());
             }
         }
     }

@@ -219,17 +219,14 @@ error!(
     "a {$color: {ed;}", "Error: Expected expression."
 );
 error!(
-    #[ignore = "this test does not fail because the closing brace is included in the value"]
     empty_style_value_no_semicolon,
     "a {color:}", "Error: Expected expression."
 );
 error!(
-    #[ignore = "this test does not fail because the semicolon is included in the value"]
     empty_style_value_semicolon,
     "a {color:;}", "Error: Expected expression."
 );
 error!(
-    #[ignore = "this does not fail"]
     ident_colon_closing_brace,
     "r:}", "Error: Expected expression."
 );
