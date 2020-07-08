@@ -264,9 +264,9 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
 
     fn parse_attribute_selector(&mut self) -> SassResult<SimpleSelector> {
         self.parser.toks.next();
-        Ok(SimpleSelector::Attribute(Attribute::from_tokens(
+        Ok(SimpleSelector::Attribute(Box::new(Attribute::from_tokens(
             self.parser,
-        )?))
+        )?)))
     }
 
     fn parse_class_selector(&mut self) -> SassResult<SimpleSelector> {

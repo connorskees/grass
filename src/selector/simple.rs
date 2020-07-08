@@ -62,7 +62,7 @@ pub(crate) enum SimpleSelector {
     /// the given name.
     Class(String),
 
-    Attribute(Attribute),
+    Attribute(Box<Attribute>),
 }
 
 impl fmt::Display for SimpleSelector {
