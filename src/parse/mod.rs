@@ -720,9 +720,7 @@ impl<'a> Parser<'a> {
             }
         };
 
-        let to_toks = read_until_open_curly_brace(self.toks)?;
-        self.toks.next();
-        let to_val = self.parse_value_from_vec(to_toks)?;
+        let to_val = self.parse_value()?;
         let to = match to_val.node {
             Value::Dimension(n, _) => match n.to_integer().to_isize() {
                 Some(v) => v,
@@ -736,6 +734,13 @@ impl<'a> Parser<'a> {
                     .into())
             }
         };
+
+        // consume the open curly brace
+        match self.toks.next() {
+            Some(Token { kind: '{', pos }) => pos,
+            Some(..) | None => return Err(("expected \"{\".", to_val.span).into()),
+        };
+
         let body = read_until_closing_curly_brace(self.toks)?;
         self.toks.next();
 

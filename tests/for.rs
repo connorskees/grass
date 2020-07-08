@@ -79,3 +79,12 @@ test!(
     }",
     "a {\n  color: red;\n}\n"
 );
+test!(
+    to_crazy_interpolation,
+    "a {
+        @for $i from 0 to length(#{\"#{\"\\\\}}}{{{\"}#\"}) {
+            color: #{\"#{\"\\\\}}}{{{\"}#\"};
+        }
+    }",
+    "a {\n  color: \\}}}{{{#;\n}\n"
+);
