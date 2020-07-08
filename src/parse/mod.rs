@@ -414,8 +414,7 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse_interpolation(&mut self) -> SassResult<Spanned<Value>> {
-        let toks = read_until_closing_curly_brace(self.toks)?;
-        let val = self.parse_value_from_vec(toks)?;
+        let val = self.parse_value()?;
         match self.toks.next() {
             Some(Token { kind: '}', .. }) => {}
             Some(..) | None => return Err(("expected \"}\".", val.span).into()),
