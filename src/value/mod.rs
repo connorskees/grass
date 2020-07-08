@@ -444,6 +444,7 @@ impl Value {
             at_root: parser.at_root,
             at_root_has_selector: parser.at_root_has_selector,
             extender: parser.extender,
+            content_scopes: parser.content_scopes,
         }
         .parse_selector(allows_parent, true, String::new())
     }

@@ -195,6 +195,7 @@ impl<'a> Parser<'a> {
             at_root: self.at_root,
             at_root_has_selector: self.at_root_has_selector,
             extender: self.extender,
+            content_scopes: self.content_scopes,
         }
         .parse_value()
     }

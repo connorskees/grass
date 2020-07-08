@@ -70,6 +70,7 @@ pub(crate) struct Parser<'a> {
     pub path: &'a Path,
     pub global_scope: &'a mut Scope,
     pub scopes: &'a mut Scopes,
+    pub content_scopes: &'a mut Scopes,
     pub super_selectors: &'a mut NeverEmptyVec<Selector>,
     pub span_before: Span,
     pub content: &'a mut Vec<Content>,
@@ -357,6 +358,7 @@ impl<'a> Parser<'a> {
                 at_root: self.at_root,
                 at_root_has_selector: self.at_root_has_selector,
                 extender: self.extender,
+                content_scopes: self.content_scopes,
             },
             allows_parent,
             true,
@@ -583,6 +585,7 @@ impl<'a> Parser<'a> {
             at_root: false,
             at_root_has_selector: self.at_root_has_selector,
             extender: self.extender,
+            content_scopes: self.content_scopes,
         }
         .parse_stmt()?;
 
@@ -649,6 +652,7 @@ impl<'a> Parser<'a> {
             at_root: true,
             at_root_has_selector,
             extender: self.extender,
+            content_scopes: self.content_scopes,
         }
         .parse()?
         .into_iter()
@@ -688,6 +692,7 @@ impl<'a> Parser<'a> {
             at_root: self.at_root,
             at_root_has_selector: self.at_root_has_selector,
             extender: self.extender,
+            content_scopes: self.content_scopes,
         }
         .parse_selector(false, true, String::new())?;
 
@@ -764,6 +769,7 @@ impl<'a> Parser<'a> {
             at_root: false,
             at_root_has_selector: self.at_root_has_selector,
             extender: self.extender,
+            content_scopes: self.content_scopes,
         }
         .parse()?;
 

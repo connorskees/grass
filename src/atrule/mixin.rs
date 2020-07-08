@@ -1,4 +1,4 @@
-use crate::{args::FuncArgs, scope::Scopes, Token};
+use crate::{args::FuncArgs, Token};
 
 #[derive(Debug, Clone)]
 pub(crate) struct Mixin {
@@ -28,7 +28,6 @@ impl Mixin {
 pub(crate) struct Content {
     pub content: Option<Vec<Token>>,
     pub content_args: Option<FuncArgs>,
-    pub scopes: Scopes,
 }
 
 impl Content {
@@ -36,7 +35,6 @@ impl Content {
         Self {
             content: None,
             content_args: None,
-            scopes: Scopes::new(),
         }
     }
 }

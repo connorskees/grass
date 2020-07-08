@@ -51,6 +51,7 @@ impl<'a> Parser<'a> {
                 at_root: self.at_root,
                 at_root_has_selector: self.at_root_has_selector,
                 extender: self.extender,
+                content_scopes: self.content_scopes,
             }
             .parse_stmt()?;
         } else {
@@ -108,6 +109,7 @@ impl<'a> Parser<'a> {
                                 at_root: self.at_root,
                                 at_root_has_selector: self.at_root_has_selector,
                                 extender: self.extender,
+                                content_scopes: self.content_scopes,
                             }
                             .parse_stmt()?;
                         } else {
@@ -134,6 +136,7 @@ impl<'a> Parser<'a> {
                                 at_root: self.at_root,
                                 at_root_has_selector: self.at_root_has_selector,
                                 extender: self.extender,
+                                content_scopes: self.content_scopes,
                             }
                             .parse_stmt();
                         }
@@ -312,6 +315,7 @@ impl<'a> Parser<'a> {
                     at_root: self.at_root,
                     at_root_has_selector: self.at_root_has_selector,
                     extender: self.extender,
+                    content_scopes: self.content_scopes,
                 }
                 .parse()?;
                 if !these_stmts.is_empty() {
@@ -332,6 +336,7 @@ impl<'a> Parser<'a> {
                         at_root: self.at_root,
                         at_root_has_selector: self.at_root_has_selector,
                         extender: self.extender,
+                        content_scopes: self.content_scopes,
                     }
                     .parse()?,
                 );
@@ -380,6 +385,7 @@ impl<'a> Parser<'a> {
                     at_root: self.at_root,
                     at_root_has_selector: self.at_root_has_selector,
                     extender: self.extender,
+                    content_scopes: self.content_scopes,
                 }
                 .parse()?;
                 if !these_stmts.is_empty() {
@@ -400,6 +406,7 @@ impl<'a> Parser<'a> {
                         at_root: self.at_root,
                         at_root_has_selector: self.at_root_has_selector,
                         extender: self.extender,
+                        content_scopes: self.content_scopes,
                     }
                     .parse()?,
                 );
@@ -496,6 +503,7 @@ impl<'a> Parser<'a> {
                     at_root: self.at_root,
                     at_root_has_selector: self.at_root_has_selector,
                     extender: self.extender,
+                    content_scopes: self.content_scopes,
                 }
                 .parse()?;
                 if !these_stmts.is_empty() {
@@ -516,6 +524,7 @@ impl<'a> Parser<'a> {
                         at_root: self.at_root,
                         at_root_has_selector: self.at_root_has_selector,
                         extender: self.extender,
+                        content_scopes: self.content_scopes,
                     }
                     .parse()?,
                 );

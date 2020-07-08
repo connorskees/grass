@@ -1,3 +1,5 @@
+use std::mem;
+
 use codemap::Spanned;
 
 use peekmore::PeekMore;
@@ -6,7 +8,6 @@ use crate::{
     args::{CallArgs, FuncArgs},
     atrule::{Content, Mixin},
     error::SassResult,
-    scope::Scopes,
     utils::read_until_closing_curly_brace,
     Token,
 };
@@ -121,30 +122,32 @@ impl<'a> Parser<'a> {
 
         let scope = self.eval_args(fn_args, args)?;
 
-        let mut new_scope = Scopes::new();
-        let mut entered_scope = false;
-        if declared_at_root {
-            new_scope.enter_scope(scope);
-        } else {
-            entered_scope = true;
-            self.scopes.enter_scope(scope);
-        };
+        let mut new_scope = std::mem::take(self.content_scopes);
 
         self.content.push(Content {
             content,
             content_args,
-            scopes: self.scopes.clone(),
         });
+
+        let mut scopes = if declared_at_root {
+            mem::take(&mut new_scope)
+        } else {
+            mem::take(self.scopes)
+        };
+
+        let mut content_scopes = if declared_at_root {
+            mem::take(self.scopes)
+        } else {
+            mem::take(&mut new_scope)
+        };
+
+        scopes.enter_scope(scope);
 
         let body = Parser {
             toks: &mut body.into_iter().peekmore(),
             map: self.map,
             path: self.path,
-            scopes: if declared_at_root {
-                &mut new_scope
-            } else {
-                self.scopes
-            },
+            scopes: &mut scopes,
             global_scope: self.global_scope,
             super_selectors: self.super_selectors,
             span_before: self.span_before,
@@ -153,12 +156,18 @@ impl<'a> Parser<'a> {
             at_root: false,
             at_root_has_selector: self.at_root_has_selector,
             extender: self.extender,
+            content_scopes: &mut content_scopes,
         }
         .parse()?;
 
         self.content.pop();
-        if entered_scope {
-            self.scopes.exit_scope();
+        if declared_at_root {
+            *self.scopes = content_scopes;
+            *self.content_scopes = scopes;
+        } else {
+            scopes.exit_scope();
+            *self.scopes = scopes;
+            *self.content_scopes = content_scopes;
         }
 
         Ok(body)
@@ -173,19 +182,14 @@ impl<'a> Parser<'a> {
                 .into());
         }
 
-        let mut scope = self
-            .content
-            .last()
-            .cloned()
-            .unwrap_or_else(Content::new)
-            .scopes;
         if let Some(Token { kind: '(', .. }) = self.toks.peek() {
             self.toks.next();
             let args = self.parse_call_args()?;
             if let Some(Some(content_args)) = self.content.last().map(|v| v.content_args.clone()) {
                 args.max_args(content_args.len())?;
 
-                scope.merge(self.eval_args(content_args, args)?);
+                let scope = self.eval_args(content_args, args)?;
+                self.content_scopes.merge(scope);
             } else {
                 args.max_args(0)?;
             }
@@ -197,7 +201,7 @@ impl<'a> Parser<'a> {
                     toks: &mut body.into_iter().peekmore(),
                     map: self.map,
                     path: self.path,
-                    scopes: &mut scope,
+                    scopes: self.content_scopes,
                     global_scope: self.global_scope,
                     super_selectors: self.super_selectors,
                     span_before: self.span_before,
@@ -206,6 +210,7 @@ impl<'a> Parser<'a> {
                     at_root: self.at_root,
                     at_root_has_selector: self.at_root_has_selector,
                     extender: self.extender,
+                    content_scopes: self.scopes,
                 }
                 .parse()?
             } else {

@@ -157,6 +157,7 @@ pub fn from_path(p: &str) -> Result<String> {
         at_root: true,
         at_root_has_selector: false,
         extender: &mut Extender::new(empty_span),
+        content_scopes: &mut Scopes::new(),
     }
     .parse()
     .map_err(|e| raw_to_parse_error(&map, *e))?;
@@ -199,6 +200,7 @@ pub fn from_string(p: String) -> Result<String> {
         at_root: true,
         at_root_has_selector: false,
         extender: &mut Extender::new(empty_span),
+        content_scopes: &mut Scopes::new(),
     }
     .parse()
     .map_err(|e| raw_to_parse_error(&map, *e))?;
@@ -232,6 +234,7 @@ pub fn from_string(p: String) -> std::result::Result<String, JsValue> {
         at_root: true,
         at_root_has_selector: false,
         extender: &mut Extender::new(empty_span),
+        content_scopes: &mut Scopes::new(),
     }
     .parse()
     .map_err(|e| raw_to_parse_error(&map, *e).to_string())?;

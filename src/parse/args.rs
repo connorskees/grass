@@ -357,6 +357,10 @@ impl<'a> Parser<'a> {
         mut args: CallArgs,
     ) -> SassResult<Scope> {
         let mut scope = Scope::new();
+        if fn_args.0.is_empty() {
+            args.max_args(0)?;
+            return Ok(scope);
+        }
         self.scopes.enter_new_scope();
         for (idx, arg) in fn_args.0.iter_mut().enumerate() {
             if arg.is_variadic {

@@ -399,3 +399,30 @@ test!(
     }",
     "a {\n  color: foo;\n  color: bar;\n}\n"
 );
+test!(
+    three_depth_of_content,
+    "@mixin foo($arg) {
+        @include bar {
+            color: $arg;
+        }
+    }
+
+    @mixin bar {
+        @include baz {
+          @content;
+        }
+    }
+
+    @mixin baz {
+        @content;
+    }
+
+    @mixin font-size($value) {
+      @include foo($value);
+    }
+
+    a {
+        @include font-size(1rem);
+    }",
+    "a {\n  color: 1rem;\n}\n"
+);
