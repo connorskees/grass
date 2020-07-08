@@ -27,10 +27,14 @@ impl<'a> Parser<'a> {
                         return Err((format!("Expected {}.", q), tok.pos).into());
                     }
                 }
-                '#' => {
-                    self.toks.next();
-                    self.throw_away_until_closing_curly_brace()?;
-                }
+                '#' => match self.toks.peek() {
+                    Some(Token { kind: '{', .. }) => {
+                        self.toks.next();
+                        self.throw_away_until_closing_curly_brace()?;
+                    }
+                    Some(..) => {}
+                    None => return Err(("expected \"{\".", self.span_before).into()),
+                },
                 _ => {}
             }
         }

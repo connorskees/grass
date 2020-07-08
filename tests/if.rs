@@ -140,6 +140,29 @@ test!(
     "@mixin foo {\n    color: red;\n}\n\n@if true {\n    a {\n        @include foo;\n    }\n}\n",
     "a {\n  color: red;\n}\n"
 );
+test!(
+    crazy_interpolation,
+    "a {
+        @if true {
+            a: #{\"#{\"\\\\}}}{{{\"}#\"};
+        }
+
+        @if false {
+            a: #{\"#{\"\\\\}}}{{{\"}#\"};
+        } @else if true {
+            b: #{\"#{\"\\\\}}}{{{\"}#\"};
+        }
+
+        @if false {
+            a: #{\"#{\"\\\\}}}{{{\"}#\"};
+        } @else if false {
+            b: #{\"#{\"\\\\}}}{{{\"}#\"};
+        } @else {
+            c: #{\"#{\"\\\\}}}{{{\"}#\"};
+        }
+    }",
+    "a {\n  a: \\}}}{{{#;\n  b: \\}}}{{{#;\n  c: \\}}}{{{#;\n}\n"
+);
 error!(
     nothing_after_escape,
     "@if \\", "Error: Expected expression."

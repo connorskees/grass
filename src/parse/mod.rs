@@ -545,9 +545,8 @@ impl<'a> Parser<'a> {
             self.throw_away_until_closing_curly_brace()?;
         }
 
-        self.whitespace_or_comment();
-
         loop {
+            self.whitespace_or_comment();
             if let Some(Token { kind: '@', pos }) = self.toks.peek().cloned() {
                 self.toks.peek_forward(1);
                 let ident = peek_ident_no_interpolation(self.toks, false, pos)?;
