@@ -6,11 +6,12 @@ use crate::{
     args::{CallArgs, FuncArgs},
     atrule::{Content, Mixin},
     error::SassResult,
+    scope::Scopes,
     utils::read_until_closing_curly_brace,
     Token,
 };
 
-use super::{common::ContextFlags, NeverEmptyVec, Parser, Stmt};
+use super::{common::ContextFlags, Parser, Stmt};
 
 impl<'a> Parser<'a> {
     pub(super) fn parse_mixin(&mut self) -> SassResult<()> {
@@ -39,19 +40,19 @@ impl<'a> Parser<'a> {
         // this is blocked on figuring out just how to check for this. presumably we could have a check
         // not when parsing initially, but rather when `@include`ing to see if an `@content` was found.
 
-        let mixin = Mixin::new(self.scopes.last().clone(), args, body, false);
+        let mixin = Mixin::new(args, body, false, self.at_root);
 
         if self.at_root {
             self.global_scope.insert_mixin(name, mixin);
         } else {
-            self.scopes.last_mut().insert_mixin(name, mixin);
+            self.scopes.insert_mixin(name.into(), mixin);
         }
         Ok(())
     }
 
     pub(super) fn parse_include(&mut self) -> SassResult<Vec<Stmt>> {
         self.whitespace_or_comment();
-        let name = self.parse_identifier()?;
+        let name = self.parse_identifier()?.map_node(Into::into);
 
         self.whitespace_or_comment();
 
@@ -106,24 +107,44 @@ impl<'a> Parser<'a> {
         }
 
         let Mixin {
-            mut scope,
             body,
             args: fn_args,
+            declared_at_root,
             ..
-        } = self.scopes.last().get_mixin(name, self.global_scope)?;
-        self.eval_args(fn_args, args, &mut scope)?;
+        } = self.scopes.get_mixin(
+            {
+                let Spanned { ref node, span } = name;
+                Spanned { node, span }
+            },
+            self.global_scope,
+        )?;
+
+        let scope = self.eval_args(fn_args, args)?;
+
+        let mut new_scope = Scopes::new();
+        let mut entered_scope = false;
+        if declared_at_root {
+            new_scope.enter_scope(scope);
+        } else {
+            entered_scope = true;
+            self.scopes.enter_scope(scope);
+        };
 
         self.content.push(Content {
             content,
             content_args,
-            scope: self.scopes.last().clone(),
+            scopes: self.scopes.clone(),
         });
 
         let body = Parser {
             toks: &mut body.into_iter().peekmore(),
             map: self.map,
             path: self.path,
-            scopes: &mut NeverEmptyVec::new(scope),
+            scopes: if declared_at_root {
+                &mut new_scope
+            } else {
+                self.scopes
+            },
             global_scope: self.global_scope,
             super_selectors: self.super_selectors,
             span_before: self.span_before,
@@ -136,6 +157,9 @@ impl<'a> Parser<'a> {
         .parse()?;
 
         self.content.pop();
+        if entered_scope {
+            self.scopes.exit_scope();
+        }
 
         Ok(body)
     }
@@ -147,7 +171,7 @@ impl<'a> Parser<'a> {
                 .last()
                 .cloned()
                 .unwrap_or_else(Content::new)
-                .scope;
+                .scopes;
             if let Some(Token { kind: '(', .. }) = self.toks.peek() {
                 self.toks.next();
                 let args = self.parse_call_args()?;
@@ -156,7 +180,7 @@ impl<'a> Parser<'a> {
                 {
                     args.max_args(content_args.len())?;
 
-                    self.eval_args(content_args, args, &mut scope)?;
+                    scope.merge(self.eval_args(content_args, args)?);
                 } else {
                     args.max_args(0)?;
                 }
@@ -168,7 +192,7 @@ impl<'a> Parser<'a> {
                         toks: &mut body.into_iter().peekmore(),
                         map: self.map,
                         path: self.path,
-                        scopes: &mut NeverEmptyVec::new(scope),
+                        scopes: &mut scope,
                         global_scope: self.global_scope,
                         super_selectors: self.super_selectors,
                         span_before: self.span_before,
@@ -183,6 +207,7 @@ impl<'a> Parser<'a> {
                     Vec::new()
                 };
                 self.content.push(content.clone());
+                self.scopes.exit_scope();
                 stmts
             } else {
                 Vec::new()

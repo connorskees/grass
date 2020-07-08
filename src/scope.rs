@@ -27,21 +27,10 @@ impl Scope {
         }
     }
 
-    fn get_var_no_global(&self, name: &Spanned<Identifier>) -> SassResult<&Value> {
-        match self.vars.get(&name.node) {
+    fn get_var(&self, name: Spanned<&Identifier>) -> SassResult<&Value> {
+        match self.vars.get(name.node) {
             Some(v) => Ok(&v.node),
             None => Err(("Undefined variable.", name.span).into()),
-        }
-    }
-
-    pub fn get_var<'a>(
-        &'a self,
-        name: &Spanned<Identifier>,
-        global_scope: &'a Scope,
-    ) -> SassResult<&Value> {
-        match self.vars.get(&name.node) {
-            Some(v) => Ok(&v.node),
-            None => global_scope.get_var_no_global(name),
         }
     }
 
@@ -49,31 +38,14 @@ impl Scope {
         self.vars.insert(s, v)
     }
 
-    pub fn var_exists_no_global(&self, name: &Identifier) -> bool {
+    pub fn var_exists(&self, name: &Identifier) -> bool {
         self.vars.contains_key(name)
     }
 
-    pub fn var_exists<'a, T: Into<&'a Identifier>>(&self, v: T, global_scope: &Scope) -> bool {
-        let name = v.into();
-        self.vars.contains_key(name) || global_scope.var_exists_no_global(name)
-    }
-
-    fn get_mixin_no_global(&self, name: &Spanned<Identifier>) -> SassResult<Mixin> {
-        match self.mixins.get(&name.node) {
+    fn get_mixin(&self, name: Spanned<&Identifier>) -> SassResult<Mixin> {
+        match self.mixins.get(name.node) {
             Some(v) => Ok(v.clone()),
             None => Err(("Undefined mixin.", name.span).into()),
-        }
-    }
-
-    pub fn get_mixin<T: Into<Identifier>>(
-        &self,
-        name: Spanned<T>,
-        global_scope: &Scope,
-    ) -> SassResult<Mixin> {
-        let name = name.map_node(Into::into);
-        match self.mixins.get(&name.node) {
-            Some(v) => Ok(v.clone()),
-            None => global_scope.get_mixin_no_global(&name),
         }
     }
 
@@ -81,26 +53,14 @@ impl Scope {
         self.mixins.insert(s.into(), v)
     }
 
-    fn mixin_exists_no_global(&self, name: &Identifier) -> bool {
+    fn mixin_exists(&self, name: &Identifier) -> bool {
         self.mixins.contains_key(name)
     }
 
-    pub fn mixin_exists<T: Into<Identifier>>(&self, v: T, global_scope: &Scope) -> bool {
-        let name = v.into();
-        self.mixins.contains_key(&name) || global_scope.mixin_exists_no_global(&name)
-    }
-
-    fn get_fn_no_global(&self, name: Spanned<&Identifier>) -> SassResult<Function> {
+    fn get_fn(&self, name: Spanned<&Identifier>) -> SassResult<Function> {
         match self.functions.get(name.node) {
             Some(v) => Ok(v.clone()),
             None => Err(("Undefined function.", name.span).into()),
-        }
-    }
-
-    pub fn get_fn(&self, name: Spanned<&Identifier>, global_scope: &Scope) -> SassResult<Function> {
-        match self.functions.get(name.node) {
-            Some(v) => Ok(v.clone()),
-            None => global_scope.get_fn_no_global(name),
         }
     }
 
@@ -108,14 +68,171 @@ impl Scope {
         self.functions.insert(s.into(), v)
     }
 
-    fn fn_exists_no_global(&self, name: &Identifier) -> bool {
+    fn fn_exists(&self, name: &Identifier) -> bool {
         self.functions.contains_key(name)
     }
 
-    pub fn fn_exists<T: Into<Identifier>>(&self, v: T, global_scope: &Scope) -> bool {
-        let name = v.into();
-        self.functions.contains_key(&name)
-            || global_scope.fn_exists_no_global(&name)
-            || GLOBAL_FUNCTIONS.contains_key(name.as_str())
+    fn merge(&mut self, other: Scope) {
+        self.vars.extend(other.vars);
+        self.mixins.extend(other.mixins);
+        self.functions.extend(other.functions);
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub(crate) struct Scopes(Vec<Scope>);
+
+impl Scopes {
+    pub const fn new() -> Self {
+        Self(Vec::new())
+    }
+
+    pub fn enter_new_scope(&mut self) {
+        self.0.push(Scope::new());
+    }
+
+    pub fn enter_scope(&mut self, scope: Scope) {
+        self.0.push(scope);
+    }
+
+    pub fn exit_scope(&mut self) {
+        self.0.pop();
+    }
+
+    pub fn merge(&mut self, other: Scope) {
+        if let Some(scope) = self.0.last_mut() {
+            scope.merge(other)
+        } else {
+            panic!()
+        }
+    }
+}
+
+/// Variables
+impl Scopes {
+    pub fn insert_var(&mut self, s: Identifier, v: Spanned<Value>) -> Option<Spanned<Value>> {
+        for scope in self.0.iter_mut().rev() {
+            if scope.var_exists(&s) {
+                return scope.insert_var(s, v);
+            }
+        }
+        if let Some(scope) = self.0.last_mut() {
+            scope.insert_var(s, v)
+        } else {
+            let mut scope = Scope::new();
+            scope.insert_var(s, v);
+            self.0.push(scope);
+            None
+        }
+    }
+
+    pub fn insert_default_var(
+        &mut self,
+        s: Identifier,
+        v: Spanned<Value>,
+    ) -> Option<Spanned<Value>> {
+        if let Some(scope) = self.0.last_mut() {
+            if scope.var_exists(&s) {
+                None
+            } else {
+                scope.insert_var(s, v)
+            }
+        } else {
+            panic!()
+        }
+    }
+
+    pub fn get_var<'a>(
+        &'a self,
+        name: Spanned<&Identifier>,
+        global_scope: &'a Scope,
+    ) -> SassResult<&Value> {
+        for scope in self.0.iter().rev() {
+            if let Ok(v) = scope.get_var(name) {
+                return Ok(v);
+            }
+        }
+        global_scope.get_var(name)
+    }
+
+    pub fn var_exists(&self, name: &Identifier, global_scope: &Scope) -> bool {
+        for scope in &self.0 {
+            if scope.var_exists(name) {
+                return true;
+            }
+        }
+        global_scope.var_exists(name)
+    }
+}
+
+/// Mixins
+impl Scopes {
+    pub fn insert_mixin(&mut self, s: Identifier, v: Mixin) -> Option<Mixin> {
+        if let Some(scope) = self.0.last_mut() {
+            scope.insert_mixin(s, v)
+        } else {
+            let mut scope = Scope::new();
+            scope.insert_mixin(s, v);
+            self.0.push(scope);
+            None
+        }
+    }
+
+    pub fn get_mixin<'a>(
+        &'a self,
+        name: Spanned<&Identifier>,
+        global_scope: &'a Scope,
+    ) -> SassResult<Mixin> {
+        for scope in self.0.iter().rev() {
+            if let Ok(v) = scope.get_mixin(name) {
+                return Ok(v);
+            }
+        }
+        global_scope.get_mixin(name)
+    }
+
+    pub fn mixin_exists(&self, name: &Identifier, global_scope: &Scope) -> bool {
+        for scope in &self.0 {
+            if scope.mixin_exists(name) {
+                return true;
+            }
+        }
+        global_scope.mixin_exists(name)
+    }
+}
+
+/// Functions
+impl Scopes {
+    pub fn insert_fn(&mut self, s: Identifier, v: Function) -> Option<Function> {
+        if let Some(scope) = self.0.last_mut() {
+            scope.insert_fn(s, v)
+        } else {
+            let mut scope = Scope::new();
+            scope.insert_fn(s, v);
+            self.0.push(scope);
+            None
+        }
+    }
+
+    pub fn get_fn<'a>(
+        &'a self,
+        name: Spanned<&Identifier>,
+        global_scope: &'a Scope,
+    ) -> SassResult<Function> {
+        for scope in self.0.iter().rev() {
+            if let Ok(v) = scope.get_fn(name) {
+                return Ok(v);
+            }
+        }
+        global_scope.get_fn(name)
+    }
+
+    pub fn fn_exists(&self, name: &Identifier, global_scope: &Scope) -> bool {
+        for scope in &self.0 {
+            if scope.fn_exists(name) {
+                return true;
+            }
+        }
+        global_scope.fn_exists(name) || GLOBAL_FUNCTIONS.contains_key(name.as_str())
     }
 }

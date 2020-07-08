@@ -255,7 +255,7 @@ impl<'a> Parser<'a> {
             }
 
             let as_ident = Identifier::from(&s);
-            let func = match self.scopes.last().get_fn(
+            let func = match self.scopes.get_fn(
                 Spanned {
                     node: &as_ident,
                     span,
@@ -527,7 +527,13 @@ impl<'a> Parser<'a> {
                     Err(e) => return Some(Err(e)),
                 };
                 IntermediateValue::Value(HigherIntermediateValue::Literal(
-                    match self.scopes.last().get_var(&val, self.global_scope) {
+                    match self.scopes.get_var(
+                        {
+                            let Spanned { ref node, span } = val;
+                            Spanned { node, span }
+                        },
+                        self.global_scope,
+                    ) {
                         Ok(v) => v.clone(),
                         Err(e) => return Some(Err(e)),
                     },

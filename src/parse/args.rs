@@ -355,13 +355,12 @@ impl<'a> Parser<'a> {
         &mut self,
         mut fn_args: FuncArgs,
         mut args: CallArgs,
-        scope: &mut Scope,
-    ) -> SassResult<()> {
-        self.scopes.push(self.scopes.last().clone());
+    ) -> SassResult<Scope> {
+        let mut scope = Scope::new();
+        self.scopes.enter_new_scope();
         for (idx, arg) in fn_args.0.iter_mut().enumerate() {
             if arg.is_variadic {
                 let span = args.span();
-                // todo: does this get the most recent scope?
                 let arg_list = Value::ArgList(self.variadic_args(args)?);
                 scope.insert_var(
                     arg.name.clone(),
@@ -383,12 +382,10 @@ impl<'a> Parser<'a> {
                     }
                 },
             }?;
-            self.scopes
-                .last_mut()
-                .insert_var(arg.name.clone(), val.clone());
+            self.scopes.insert_var(arg.name.clone(), val.clone());
             scope.insert_var(mem::take(&mut arg.name), val);
         }
-        self.scopes.pop();
-        Ok(())
+        self.scopes.exit_scope();
+        Ok(scope)
     }
 }

@@ -2,13 +2,13 @@ use std::hash::{Hash, Hasher};
 
 use codemap::Span;
 
-use crate::{args::FuncArgs, scope::Scope, Token};
+use crate::{args::FuncArgs, Token};
 
 #[derive(Debug, Clone)]
 pub(crate) struct Function {
-    pub scope: Scope,
     pub args: FuncArgs,
     pub body: Vec<Token>,
+    pub declared_at_root: bool,
     pos: Span,
 }
 
@@ -27,12 +27,12 @@ impl PartialEq for Function {
 impl Eq for Function {}
 
 impl Function {
-    pub fn new(scope: Scope, args: FuncArgs, body: Vec<Token>, pos: Span) -> Self {
+    pub fn new(args: FuncArgs, body: Vec<Token>, declared_at_root: bool, pos: Span) -> Self {
         Function {
-            scope,
             args,
             body,
             pos,
+            declared_at_root,
         }
     }
 }

@@ -6,15 +6,16 @@ use crate::{
     atrule::Function,
     common::unvendor,
     error::SassResult,
+    scope::Scopes,
     utils::{read_until_closing_curly_brace, read_until_semicolon_or_closing_curly_brace},
     value::Value,
     Token,
 };
 
-use super::{common::ContextFlags, NeverEmptyVec, Parser, Stmt};
+use super::{common::ContextFlags, Parser, Stmt};
 
 /// Names that functions are not allowed to have
-const FORBIDDEN_IDENTIFIERS: [&str; 7] =
+const RESERVED_IDENTIFIERS: [&str; 7] =
     ["calc", "element", "expression", "url", "and", "or", "not"];
 
 impl<'a> Parser<'a> {
@@ -30,7 +31,7 @@ impl<'a> Parser<'a> {
             return Err(("Functions may not be declared in control directives.", span).into());
         }
 
-        if FORBIDDEN_IDENTIFIERS.contains(&unvendor(&name)) {
+        if RESERVED_IDENTIFIERS.contains(&unvendor(&name)) {
             return Err(("Invalid function name.", span).into());
         }
 
@@ -50,12 +51,12 @@ impl<'a> Parser<'a> {
         });
         self.whitespace();
 
-        let function = Function::new(self.scopes.last().clone(), args, body, span);
+        let function = Function::new(args, body, self.at_root, span);
 
         if self.at_root {
             self.global_scope.insert_fn(name, function);
         } else {
-            self.scopes.last_mut().insert_fn(name, function);
+            self.scopes.insert_fn(name.into(), function);
         }
         Ok(())
     }
@@ -71,19 +72,32 @@ impl<'a> Parser<'a> {
 
     pub fn eval_function(&mut self, function: Function, args: CallArgs) -> SassResult<Value> {
         let Function {
-            mut scope,
             body,
             args: fn_args,
+            declared_at_root,
             ..
         } = function;
 
-        self.eval_args(fn_args, args, &mut scope)?;
+        let scope = self.eval_args(fn_args, args)?;
+
+        let mut new_scope = Scopes::new();
+        let mut entered_scope = false;
+        if declared_at_root {
+            new_scope.enter_scope(scope);
+        } else {
+            entered_scope = true;
+            self.scopes.enter_scope(scope);
+        };
 
         let mut return_value = Parser {
             toks: &mut body.into_iter().peekmore(),
             map: self.map,
             path: self.path,
-            scopes: &mut NeverEmptyVec::new(scope),
+            scopes: if declared_at_root {
+                &mut new_scope
+            } else {
+                self.scopes
+            },
             global_scope: self.global_scope,
             super_selectors: self.super_selectors,
             span_before: self.span_before,
@@ -94,6 +108,10 @@ impl<'a> Parser<'a> {
             extender: self.extender,
         }
         .parse()?;
+
+        if entered_scope {
+            self.scopes.exit_scope();
+        }
 
         debug_assert!(return_value.len() <= 1);
         match return_value

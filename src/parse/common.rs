@@ -1,7 +1,4 @@
-use std::{
-    ops::{BitAnd, BitOr},
-    slice::IterMut,
-};
+use std::ops::{BitAnd, BitOr};
 
 use codemap::Spanned;
 
@@ -25,32 +22,12 @@ impl<T> NeverEmptyVec<T> {
         self.rest.last().unwrap_or(&self.first)
     }
 
-    pub fn last_mut(&mut self) -> &mut T {
-        self.rest.last_mut().unwrap_or(&mut self.first)
-    }
-
-    pub fn first(&mut self) -> &T {
-        &self.first
-    }
-
-    pub fn first_mut(&mut self) -> &mut T {
-        &mut self.first
-    }
-
     pub fn push(&mut self, value: T) {
         self.rest.push(value)
     }
 
     pub fn pop(&mut self) -> Option<T> {
         self.rest.pop()
-    }
-
-    pub fn iter_mut(&mut self) -> IterMut<'_, T> {
-        self.rest.iter_mut()
-    }
-
-    pub fn len(&self) -> usize {
-        self.rest.len()
     }
 
     pub fn is_empty(&self) -> bool {

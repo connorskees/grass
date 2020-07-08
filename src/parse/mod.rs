@@ -10,7 +10,7 @@ use crate::{
         AtRuleKind, Content, SupportsRule, UnknownAtRule,
     },
     error::SassResult,
-    scope::Scope,
+    scope::{Scope, Scopes},
     selector::{
         ComplexSelectorComponent, ExtendRule, ExtendedSelector, Extender, Selector, SelectorParser,
     },
@@ -69,7 +69,7 @@ pub(crate) struct Parser<'a> {
     pub map: &'a mut CodeMap,
     pub path: &'a Path,
     pub global_scope: &'a mut Scope,
-    pub scopes: &'a mut NeverEmptyVec<Scope>,
+    pub scopes: &'a mut Scopes,
     pub super_selectors: &'a mut NeverEmptyVec<Selector>,
     pub span_before: Span,
     pub content: &'a mut Vec<Content>,
@@ -237,10 +237,10 @@ impl<'a> Parser<'a> {
                             }
                             SelectorOrStyle::Selector(init) => {
                                 let selector = self.parse_keyframes_selector(init)?;
-                                self.scopes.push(self.scopes.last().clone());
+                                self.scopes.enter_new_scope();
 
                                 let body = self.parse_stmt()?;
-                                self.scopes.pop();
+                                self.scopes.exit_scope();
                                 stmts.push(Stmt::KeyframesRuleSet(Box::new(KeyframesRuleSet {
                                     selector,
                                     body,
@@ -271,13 +271,13 @@ impl<'a> Parser<'a> {
                                     self.super_selectors.last(),
                                     !at_root || self.at_root_has_selector,
                                 )?;
-                            self.scopes.push(self.scopes.last().clone());
+                            self.scopes.enter_new_scope();
                             self.super_selectors.push(selector.clone());
 
                             let extended_selector = self.extender.add_selector(selector.0, None);
 
                             let body = self.parse_stmt()?;
-                            self.scopes.pop();
+                            self.scopes.exit_scope();
                             self.super_selectors.pop();
                             self.at_root = self.super_selectors.is_empty();
                             stmts.push(Stmt::RuleSet {

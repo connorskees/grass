@@ -144,7 +144,6 @@ test!(
     "a {\n  color: red;\n}\n"
 );
 test!(
-    #[ignore = "haven't yet figured out how scoping works"]
     function_ignores_the_scope_with_which_it_was_defined,
     "a {
         $a: red;
@@ -155,4 +154,44 @@ test!(
         color: foo();
     }",
     "a {\n  color: green;\n}\n"
+);
+test!(
+    function_defined_and_called_at_toplevel_can_recognize_inner_variables,
+    "@function foo($level) {
+        $level: abs($level);
+      
+        @return $level;
+    }
+    
+    @mixin bar($a) {
+        a {
+            color: $a;
+        }
+    }
+    
+    @include bar(foo(-9));",
+    "a {\n  color: 9;\n}\n"
+);
+test!(
+    redeclaration_in_inner_scope,
+    "@function foo() {
+        @return foo;
+    }
+
+    a {
+        color: foo();
+    
+        @function foo() {
+            @return bar;
+        }
+
+        a {
+            @function foo() {
+                @return baz;
+            }
+        }
+
+        color: foo();
+    }",
+    "a {\n  color: foo;\n  color: bar;\n}\n"
 );

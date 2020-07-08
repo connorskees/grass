@@ -61,3 +61,23 @@ test!(
     ",
     "a {\n  color: orange;\n}\na b {\n  color: orange;\n}\na b c {\n  color: orange;\n}\na b c d {\n  color: orange;\n}\n"
 );
+test!(
+    local_variable_exists_in_inner_fn_mixin_scope,
+    "a {
+        $x: foo;
+    
+        a {
+            @function exists-fn-inner($name) {
+                @return variable-exists($name);
+            }
+    
+            @mixin exists-mixin-inner($name) {
+                color: variable-exists($name);
+            }
+    
+            color: exists-fn-inner(x);
+            @include exists-mixin-inner(x);
+        }
+    }",
+    "a a {\n  color: true;\n  color: true;\n}\n"
+);

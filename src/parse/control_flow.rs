@@ -288,10 +288,10 @@ impl<'a> Parser<'a> {
 
         let mut stmts = Vec::new();
 
-        self.scopes.push(self.scopes.last().clone());
+        self.scopes.enter_new_scope();
 
         for i in iter {
-            self.scopes.last_mut().insert_var(
+            self.scopes.insert_var(
                 var.node.clone(),
                 Spanned {
                     node: Value::Dimension(Number::from(i), Unit::None),
@@ -338,7 +338,7 @@ impl<'a> Parser<'a> {
             }
         }
 
-        self.scopes.pop();
+        self.scopes.exit_scope();
 
         Ok(stmts)
     }
@@ -364,7 +364,7 @@ impl<'a> Parser<'a> {
 
         let mut stmts = Vec::new();
         let mut val = self.parse_value_from_vec(cond.clone())?;
-        self.scopes.push(self.scopes.last().clone());
+        self.scopes.enter_new_scope();
         while val.node.is_true() {
             if self.flags.in_function() {
                 let these_stmts = Parser {
@@ -406,7 +406,7 @@ impl<'a> Parser<'a> {
             }
             val = self.parse_value_from_vec(cond.clone())?;
         }
-        self.scopes.pop();
+        self.scopes.exit_scope();
 
         Ok(stmts)
     }
@@ -459,7 +459,7 @@ impl<'a> Parser<'a> {
 
         for row in iter {
             if vars.len() == 1 {
-                self.scopes.last_mut().insert_var(
+                self.scopes.insert_var(
                     vars[0].node.clone(),
                     Spanned {
                         node: row,
@@ -472,7 +472,7 @@ impl<'a> Parser<'a> {
                         .into_iter()
                         .chain(std::iter::once(Value::Null).cycle()),
                 ) {
-                    self.scopes.last_mut().insert_var(
+                    self.scopes.insert_var(
                         var.node.clone(),
                         Spanned {
                             node: val,

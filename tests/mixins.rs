@@ -365,8 +365,7 @@ error!(
     "Error: Missing argument $a."
 );
 test!(
-    #[ignore = "haven't yet figured out how scoping works"]
-    mixin_ignores_the_scope_with_which_it_was_defined,
+    inner_mixin_can_modify_scope,
     "a {
         $a: red;
         @mixin foo {
@@ -376,4 +375,27 @@ test!(
         @include foo;
     }",
     "a {\n  color: green;\n}\n"
+);
+test!(
+    redeclaration_in_inner_scope,
+    "@mixin foo {
+        color: foo;
+    }
+    
+    a {
+        @include foo();
+    
+        @mixin foo {
+            color: bar;
+        }
+    
+        a {
+            @mixin foo {
+                color: baz;
+            }
+        }
+    
+        @include foo();
+    }",
+    "a {\n  color: foo;\n  color: bar;\n}\n"
 );
