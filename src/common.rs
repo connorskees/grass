@@ -139,9 +139,8 @@ impl Default for Identifier {
 }
 
 impl Identifier {
-    #[allow(clippy::missing_const_for_fn)]
-    pub fn into_inner(self) -> String {
-        self.0
+    pub fn as_str(&self) -> &str {
+        &self.0
     }
 }
 

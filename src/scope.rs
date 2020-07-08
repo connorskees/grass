@@ -90,22 +90,17 @@ impl Scope {
         self.mixins.contains_key(&name) || global_scope.mixin_exists_no_global(&name)
     }
 
-    fn get_fn_no_global(&self, name: &Spanned<Identifier>) -> SassResult<Function> {
-        match self.functions.get(&name.node) {
+    fn get_fn_no_global(&self, name: Spanned<&Identifier>) -> SassResult<Function> {
+        match self.functions.get(name.node) {
             Some(v) => Ok(v.clone()),
             None => Err(("Undefined function.", name.span).into()),
         }
     }
 
-    pub fn get_fn<T: Into<Identifier>>(
-        &self,
-        name: Spanned<T>,
-        global_scope: &Scope,
-    ) -> SassResult<Function> {
-        let name = name.map_node(Into::into);
-        match self.functions.get(&name.node) {
+    pub fn get_fn(&self, name: Spanned<&Identifier>, global_scope: &Scope) -> SassResult<Function> {
+        match self.functions.get(name.node) {
             Some(v) => Ok(v.clone()),
-            None => global_scope.get_fn_no_global(&name),
+            None => global_scope.get_fn_no_global(name),
         }
     }
 
@@ -121,6 +116,6 @@ impl Scope {
         let name = v.into();
         self.functions.contains_key(&name)
             || global_scope.fn_exists_no_global(&name)
-            || GLOBAL_FUNCTIONS.contains_key(name.clone().into_inner().as_str())
+            || GLOBAL_FUNCTIONS.contains_key(name.as_str())
     }
 }

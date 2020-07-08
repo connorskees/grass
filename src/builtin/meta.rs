@@ -4,7 +4,7 @@ use codemap::Spanned;
 
 use crate::{
     args::CallArgs,
-    common::QuoteKind,
+    common::{Identifier, QuoteKind},
     error::SassResult,
     parse::Parser,
     unit::Unit,
@@ -153,8 +153,8 @@ fn function_exists(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Va
 
 fn get_function(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(3)?;
-    let name = match parser.arg(&mut args, 0, "name")? {
-        Value::String(s, _) => s,
+    let name: Identifier = match parser.arg(&mut args, 0, "name")? {
+        Value::String(s, _) => s.into(),
         v => {
             return Err((
                 format!("$name: {} is not a string.", v.inspect(args.span())?),
@@ -193,9 +193,9 @@ fn get_function(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value
         },
         parser.global_scope,
     ) {
-        Ok(f) => SassFunction::UserDefined(Box::new(f), name.into()),
+        Ok(f) => SassFunction::UserDefined(Box::new(f), name),
         Err(..) => match GLOBAL_FUNCTIONS.get(name.as_str()) {
-            Some(f) => SassFunction::Builtin(f.clone(), name.into()),
+            Some(f) => SassFunction::Builtin(f.clone(), name),
             None => return Err((format!("Function not found: {}", name), args.span()).into()),
         },
     };

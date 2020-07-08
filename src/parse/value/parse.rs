@@ -255,17 +255,16 @@ impl<'a> Parser<'a> {
             }
 
             let as_ident = Identifier::from(&s);
-            let ident_as_string = as_ident.clone().into_inner();
             let func = match self.scopes.last().get_fn(
                 Spanned {
-                    node: as_ident.clone(),
+                    node: &as_ident,
                     span,
                 },
                 self.global_scope,
             ) {
                 Ok(f) => f,
                 Err(_) => {
-                    if let Some(f) = GLOBAL_FUNCTIONS.get(ident_as_string.as_str()) {
+                    if let Some(f) = GLOBAL_FUNCTIONS.get(as_ident.as_str()) {
                         return Ok(IntermediateValue::Value(HigherIntermediateValue::Function(
                             SassFunction::Builtin(f.clone(), as_ident),
                             self.parse_call_args()?,
