@@ -165,59 +165,57 @@ impl<'a> Parser<'a> {
     }
 
     pub(super) fn parse_content_rule(&mut self) -> SassResult<Vec<Stmt>> {
-        if self.flags.in_mixin() {
-            let mut scope = self
-                .content
-                .last()
-                .cloned()
-                .unwrap_or_else(Content::new)
-                .scopes;
-            if let Some(Token { kind: '(', .. }) = self.toks.peek() {
-                self.toks.next();
-                let args = self.parse_call_args()?;
-                if let Some(Some(content_args)) =
-                    self.content.last().map(|v| v.content_args.clone())
-                {
-                    args.max_args(content_args.len())?;
-
-                    scope.merge(self.eval_args(content_args, args)?);
-                } else {
-                    args.max_args(0)?;
-                }
-            }
-
-            Ok(if let Some(content) = &self.content.pop() {
-                let stmts = if let Some(body) = content.content.clone() {
-                    Parser {
-                        toks: &mut body.into_iter().peekmore(),
-                        map: self.map,
-                        path: self.path,
-                        scopes: &mut scope,
-                        global_scope: self.global_scope,
-                        super_selectors: self.super_selectors,
-                        span_before: self.span_before,
-                        flags: self.flags,
-                        content: self.content,
-                        at_root: self.at_root,
-                        at_root_has_selector: self.at_root_has_selector,
-                        extender: self.extender,
-                    }
-                    .parse()?
-                } else {
-                    Vec::new()
-                };
-                self.content.push(content.clone());
-                self.scopes.exit_scope();
-                stmts
-            } else {
-                Vec::new()
-            })
-        } else {
-            Err((
+        if !self.flags.in_mixin() {
+            return Err((
                 "@content is only allowed within mixin declarations.",
                 self.span_before,
             )
-                .into())
+                .into());
         }
+
+        let mut scope = self
+            .content
+            .last()
+            .cloned()
+            .unwrap_or_else(Content::new)
+            .scopes;
+        if let Some(Token { kind: '(', .. }) = self.toks.peek() {
+            self.toks.next();
+            let args = self.parse_call_args()?;
+            if let Some(Some(content_args)) = self.content.last().map(|v| v.content_args.clone()) {
+                args.max_args(content_args.len())?;
+
+                scope.merge(self.eval_args(content_args, args)?);
+            } else {
+                args.max_args(0)?;
+            }
+        }
+
+        Ok(if let Some(content) = &self.content.pop() {
+            let stmts = if let Some(body) = content.content.clone() {
+                Parser {
+                    toks: &mut body.into_iter().peekmore(),
+                    map: self.map,
+                    path: self.path,
+                    scopes: &mut scope,
+                    global_scope: self.global_scope,
+                    super_selectors: self.super_selectors,
+                    span_before: self.span_before,
+                    flags: self.flags,
+                    content: self.content,
+                    at_root: self.at_root,
+                    at_root_has_selector: self.at_root_has_selector,
+                    extender: self.extender,
+                }
+                .parse()?
+            } else {
+                Vec::new()
+            };
+            self.content.push(content.clone());
+            self.scopes.exit_scope();
+            stmts
+        } else {
+            Vec::new()
+        })
     }
 }
