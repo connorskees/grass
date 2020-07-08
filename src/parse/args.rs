@@ -186,15 +186,15 @@ impl<'a> Parser<'a> {
                     ',' => break,
                     '[' => {
                         val.push(tok);
-                        val.extend(read_until_closing_square_brace(self.toks)?);
+                        val.append(&mut read_until_closing_square_brace(self.toks)?);
                     }
                     '(' => {
                         val.push(tok);
-                        val.extend(read_until_closing_paren(self.toks)?);
+                        val.append(&mut read_until_closing_paren(self.toks)?);
                     }
                     '"' | '\'' => {
                         val.push(tok);
-                        val.extend(read_until_closing_quote(self.toks, tok.kind)?);
+                        val.append(&mut read_until_closing_quote(self.toks, tok.kind)?);
                     }
                     '.' => {
                         if let Some(Token { kind: '.', pos }) = self.toks.peek().cloned() {
