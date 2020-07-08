@@ -19,8 +19,8 @@ use crate::{
     style::Style,
     unit::Unit,
     utils::{
-        peek_ident_no_interpolation, read_until_closing_curly_brace, read_until_open_curly_brace,
-        read_until_semicolon_or_closing_curly_brace,
+        peek_ident_no_interpolation, read_until_closing_curly_brace, read_until_closing_quote,
+        read_until_open_curly_brace, read_until_semicolon_or_closing_curly_brace,
     },
     value::{Number, Value},
     {Cow, Token},
@@ -697,6 +697,23 @@ impl<'a> Parser<'a> {
                 }
                 '{' => {
                     return Err(("Expected \"to\" or \"through\".", tok.pos()).into());
+                }
+                '#' => {
+                    from_toks.push(tok);
+                    self.toks.next();
+                    match self.toks.peek() {
+                        Some(Token { kind: '{', .. }) => {
+                            from_toks.push(self.toks.next().unwrap());
+                            from_toks.append(&mut read_until_closing_curly_brace(self.toks)?);
+                        }
+                        Some(..) => {}
+                        None => return Err(("expected \"{\".", self.span_before).into()),
+                    }
+                }
+                q @ '\'' | q @ '"' => {
+                    from_toks.push(tok);
+                    self.toks.next();
+                    from_toks.append(&mut read_until_closing_quote(self.toks, q)?);
                 }
                 _ => {
                     from_toks.push(tok);

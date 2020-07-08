@@ -88,3 +88,12 @@ test!(
     }",
     "a {\n  color: \\}}}{{{#;\n}\n"
 );
+test!(
+    from_crazy_interpolation,
+    "a {
+        @for $i from length(#{\"#{\"\\\\}}}{{{\"}#\"}) to 2 {
+            color: #{\"#{\"\\\\}}}{{{\"}#\"};
+        }
+    }",
+    "a {\n  color: \\}}}{{{#;\n}\n"
+);
