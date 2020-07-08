@@ -122,32 +122,22 @@ impl<'a> Parser<'a> {
 
         let scope = self.eval_args(fn_args, args)?;
 
-        let mut new_scope = std::mem::take(self.content_scopes);
+        if declared_at_root {
+            mem::swap(self.scopes, self.content_scopes);
+        }
+
+        self.scopes.enter_scope(scope);
 
         self.content.push(Content {
             content,
             content_args,
         });
 
-        let mut scopes = if declared_at_root {
-            mem::take(&mut new_scope)
-        } else {
-            mem::take(self.scopes)
-        };
-
-        let mut content_scopes = if declared_at_root {
-            mem::take(self.scopes)
-        } else {
-            mem::take(&mut new_scope)
-        };
-
-        scopes.enter_scope(scope);
-
         let body = Parser {
             toks: &mut body.into_iter().peekmore(),
             map: self.map,
             path: self.path,
-            scopes: &mut scopes,
+            scopes: self.scopes,
             global_scope: self.global_scope,
             super_selectors: self.super_selectors,
             span_before: self.span_before,
@@ -156,18 +146,15 @@ impl<'a> Parser<'a> {
             at_root: false,
             at_root_has_selector: self.at_root_has_selector,
             extender: self.extender,
-            content_scopes: &mut content_scopes,
+            content_scopes: self.content_scopes,
         }
         .parse()?;
 
         self.content.pop();
         if declared_at_root {
-            *self.scopes = content_scopes;
-            *self.content_scopes = scopes;
+            mem::swap(self.scopes, self.content_scopes);
         } else {
-            scopes.exit_scope();
-            *self.scopes = scopes;
-            *self.content_scopes = content_scopes;
+            self.scopes.exit_scope();
         }
 
         Ok(body)
