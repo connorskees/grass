@@ -115,7 +115,11 @@ pub(crate) struct Identifier(String);
 
 impl From<String> for Identifier {
     fn from(s: String) -> Identifier {
-        Identifier(s.replace('_', "-"))
+        if s.contains('_') {
+            Identifier(s.replace('_', "-"))
+        } else {
+            Identifier(s)
+        }
     }
 }
 

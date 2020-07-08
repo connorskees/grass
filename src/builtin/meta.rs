@@ -127,7 +127,7 @@ fn mixin_exists(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value
     args.max_args(2)?;
     match parser.arg(&mut args, 0, "name")? {
         Value::String(s, _) => Ok(Value::bool(
-            parser.scopes.last().mixin_exists(&s, parser.global_scope),
+            parser.scopes.last().mixin_exists(s, parser.global_scope),
         )),
         v => Err((
             format!("$name: {} is not a string.", v.inspect(args.span())?),
@@ -141,7 +141,7 @@ fn function_exists(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Va
     args.max_args(2)?;
     match parser.arg(&mut args, 0, "name")? {
         Value::String(s, _) => Ok(Value::bool(
-            parser.scopes.last().fn_exists(&s, parser.global_scope),
+            parser.scopes.last().fn_exists(s, parser.global_scope),
         )),
         v => Err((
             format!("$name: {} is not a string.", v.inspect(args.span())?),

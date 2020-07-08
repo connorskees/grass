@@ -176,7 +176,7 @@ impl<'a> Parser<'a> {
                             if name.is_empty() {
                                 CallArg::Positional(args.len())
                             } else {
-                                CallArg::Named(name.into())
+                                CallArg::Named(mem::take(&mut name).into())
                             },
                             self.parse_value_from_vec(val),
                         );
@@ -261,7 +261,7 @@ impl<'a> Parser<'a> {
                     if name.is_empty() {
                         CallArg::Positional(args.len())
                     } else {
-                        CallArg::Named(name.as_str().into())
+                        CallArg::Named(mem::take(&mut name).into())
                     },
                     self.parse_value_from_vec(mem::take(&mut val)),
                 );
