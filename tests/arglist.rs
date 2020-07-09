@@ -73,3 +73,24 @@ test!(
     }",
     "a {\n  color: (1,);\n}\n"
 );
+error!(
+    empty_arglist_is_error,
+    "@function foo($a...) {
+        @return $a;
+    }
+
+    a {
+        color: foo();
+    }",
+    "Error: () isn't a valid CSS value."
+);
+test!(
+    arglist_of_only_null_is_null,
+    "@function foo($a...) {
+        @return $a;
+    }
+    a {
+        color: foo(null, null);
+    }",
+    ""
+);

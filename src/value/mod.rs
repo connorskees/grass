@@ -112,12 +112,9 @@ impl Value {
             Value::Null => true,
             Value::String(i, QuoteKind::None) if i.is_empty() => true,
             Value::List(v, _, Brackets::Bracketed) if v.is_empty() => false,
-            Value::List(v, ..) => v
-                .iter()
-                .map(Value::is_null)
-                .collect::<Vec<bool>>()
-                .into_iter()
-                .all(|f| f),
+            Value::List(v, ..) => v.iter().map(Value::is_null).all(|f| f),
+            Value::ArgList(v, ..) if v.is_empty() => false,
+            Value::ArgList(v, ..) => v.iter().map(|v| v.node.is_null()).all(|f| f),
             _ => false,
         }
     }

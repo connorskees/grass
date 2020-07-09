@@ -10,10 +10,10 @@ use crate::{
     {Cow, Token},
 };
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone)]
 pub(crate) struct FuncArgs(pub Vec<FuncArg>);
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone)]
 pub(crate) struct FuncArg {
     pub name: Identifier,
     pub default: Option<Vec<Token>>,
@@ -89,7 +89,7 @@ impl CallArgs {
                 .iter()
                 .map(|a| {
                     span = span.merge(a.span);
-                    Ok(a.node.to_css_string(a.span)?)
+                    a.node.to_css_string(a.span)
                 })
                 .collect::<SassResult<Vec<Cow<'static, str>>>>()?
                 .join(", "),

@@ -207,8 +207,7 @@ impl<'a> Parser<'a> {
 
         let lower = s.to_ascii_lowercase();
 
-        if lower == "progid" && self.toks.peek().is_some() && self.toks.peek().unwrap().kind == ':'
-        {
+        if lower == "progid" && matches!(self.toks.peek(), Some(Token { kind: ':', .. })) {
             s = lower;
             self.toks.next();
             s.push(':');
