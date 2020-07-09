@@ -3,6 +3,8 @@ use std::{
     ops::{Div, Mul},
 };
 
+use crate::interner::InternedString;
+
 pub(crate) use conversion::UNIT_CONVERSION_TABLE;
 
 mod conversion;
@@ -99,12 +101,13 @@ pub(crate) enum Unit {
     Percent,
 
     /// Unknown unit
-    Unknown(Box<str>),
+    Unknown(InternedString),
     /// Unspecified unit
     None,
 
     /// Units multiplied together
-    Mul(Box<[Unit]>),
+    /// Boxed under the assumption that mul units are exceedingly rare
+    Mul(Box<Vec<Unit>>),
 
     /// Units divided by each other
     Div(Box<DivUnit>),
@@ -163,11 +166,11 @@ impl Mul<Unit> for DivUnit {
                             Unit::Mul(..) => todo!(),
                             Unit::Div(..) => unreachable!(),
                             Unit::None => {
-                                let numer = Unit::Mul(vec![rhs].into_boxed_slice());
+                                let numer = Unit::Mul(Box::new(vec![rhs]));
                                 Unit::Div(Box::new(DivUnit::new(numer, self.denom)))
                             }
                             _ => {
-                                let numer = Unit::Mul(vec![self.numer, rhs].into_boxed_slice());
+                                let numer = Unit::Mul(Box::new(vec![self.numer, rhs]));
                                 Unit::Div(Box::new(DivUnit::new(numer, self.denom)))
                             }
                         },
@@ -191,15 +194,15 @@ impl Mul<Unit> for Unit {
         match self {
             Unit::Mul(u) => match rhs {
                 Unit::Mul(u2) => {
-                    let mut unit1 = u.into_vec();
+                    let mut unit1 = *u;
                     unit1.extend_from_slice(&*u2);
-                    Unit::Mul(unit1.into_boxed_slice())
+                    Unit::Mul(Box::new(unit1))
                 }
                 Unit::Div(..) => todo!(),
                 _ => {
-                    let mut unit1 = u.into_vec();
+                    let mut unit1 = *u;
                     unit1.push(rhs);
-                    Unit::Mul(unit1.into_boxed_slice())
+                    Unit::Mul(Box::new(unit1))
                 }
             },
             Unit::Div(div) => *div * rhs,
@@ -207,10 +210,10 @@ impl Mul<Unit> for Unit {
                 Unit::Mul(u2) => {
                     let mut unit1 = vec![self];
                     unit1.extend_from_slice(&*u2);
-                    Unit::Mul(unit1.into_boxed_slice())
+                    Unit::Mul(Box::new(unit1))
                 }
                 Unit::Div(..) => todo!(),
-                _ => Unit::Mul(vec![self, rhs].into_boxed_slice()),
+                _ => Unit::Mul(Box::new(vec![self, rhs])),
             },
         }
     }
@@ -308,7 +311,7 @@ impl From<String> for Unit {
             "dppx" => Unit::Dppx,
             "x" => Unit::X,
             "fr" => Unit::Fr,
-            _ => Unit::Unknown(unit.into_boxed_str()),
+            _ => Unit::Unknown(InternedString::get_or_intern(unit)),
         }
     }
 }
