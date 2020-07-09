@@ -1,5 +1,7 @@
 use std::fmt::{self, Display, Write};
 
+use crate::interner::InternedString;
+
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Op {
     Equal,
@@ -111,27 +113,35 @@ impl ListSeparator {
 /// This struct protects that invariant by normalizing all
 /// underscores into hypens.
 #[derive(Debug, Clone, Eq, PartialEq, Hash, PartialOrd, Ord)]
-pub(crate) struct Identifier(String);
+pub(crate) struct Identifier(InternedString);
 
 impl From<String> for Identifier {
     fn from(s: String) -> Identifier {
-        if s.contains('_') {
-            Identifier(s.replace('_', "-"))
+        Identifier(InternedString::get_or_intern(if s.contains('_') {
+            s.replace('_', "-")
         } else {
-            Identifier(s)
-        }
+            s
+        }))
     }
 }
 
 impl From<&String> for Identifier {
     fn from(s: &String) -> Identifier {
-        Identifier(s.replace('_', "-"))
+        if s.contains('_') {
+            Identifier(InternedString::get_or_intern(s.replace('_', "-")))
+        } else {
+            Identifier(InternedString::get_or_intern(s))
+        }
     }
 }
 
 impl From<&str> for Identifier {
     fn from(s: &str) -> Identifier {
-        Identifier(s.replace('_', "-"))
+        if s.contains('_') {
+            Identifier(InternedString::get_or_intern(s.replace('_', "-")))
+        } else {
+            Identifier(InternedString::get_or_intern(s))
+        }
     }
 }
 
@@ -141,15 +151,9 @@ impl Display for Identifier {
     }
 }
 
-impl Default for Identifier {
-    fn default() -> Self {
-        Self(String::new())
-    }
-}
-
 impl Identifier {
     pub fn as_str(&self) -> &str {
-        &self.0
+        self.0.resolve_ref()
     }
 }
 

@@ -1,11 +1,11 @@
 use codemap::Spanned;
 
-use crate::{error::SassResult, value::Value};
+use crate::{error::SassResult, interner::InternedString, value::Value};
 
 /// A style: `color: red`
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Style {
-    pub property: String,
+    pub property: InternedString,
     pub value: Box<Spanned<Value>>,
 }
 

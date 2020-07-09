@@ -351,18 +351,14 @@ impl<'a> Parser<'a> {
         Ok(vals)
     }
 
-    pub(super) fn eval_args(
-        &mut self,
-        mut fn_args: FuncArgs,
-        mut args: CallArgs,
-    ) -> SassResult<Scope> {
+    pub(super) fn eval_args(&mut self, fn_args: FuncArgs, mut args: CallArgs) -> SassResult<Scope> {
         let mut scope = Scope::new();
         if fn_args.0.is_empty() {
             args.max_args(0)?;
             return Ok(scope);
         }
         self.scopes.enter_new_scope();
-        for (idx, arg) in fn_args.0.iter_mut().enumerate() {
+        for (idx, mut arg) in fn_args.0.into_iter().enumerate() {
             if arg.is_variadic {
                 let span = args.span();
                 let arg_list = Value::ArgList(self.variadic_args(args)?);
@@ -387,7 +383,7 @@ impl<'a> Parser<'a> {
                 },
             }?;
             self.scopes.insert_var(arg.name.clone(), val.clone());
-            scope.insert_var(mem::take(&mut arg.name), val);
+            scope.insert_var(arg.name, val);
         }
         self.scopes.exit_scope();
         Ok(scope)

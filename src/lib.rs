@@ -116,6 +116,7 @@ mod selector;
 mod style;
 mod token;
 mod unit;
+mod interner;
 mod utils;
 mod value;
 

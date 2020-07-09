@@ -2,7 +2,7 @@ use std::ops::{BitAnd, BitOr};
 
 use codemap::Spanned;
 
-use crate::value::Value;
+use crate::{interner::InternedString, value::Value};
 
 #[derive(Debug, Clone)]
 pub(crate) struct NeverEmptyVec<T> {
@@ -41,7 +41,7 @@ impl<T> NeverEmptyVec<T> {
 #[derive(Debug)]
 pub(super) enum SelectorOrStyle {
     Selector(String),
-    Style(String, Option<Box<Spanned<Value>>>),
+    Style(InternedString, Option<Box<Spanned<Value>>>),
 }
 
 #[derive(Debug, Copy, Clone)]

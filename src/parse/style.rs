@@ -2,6 +2,7 @@ use codemap::Spanned;
 
 use crate::{
     error::SassResult,
+    interner::InternedString,
     style::Style,
     utils::{is_name, is_name_start},
     value::Value,
@@ -126,7 +127,10 @@ impl<'a> Parser<'a> {
                             let len = toks.len();
                             if let Ok(val) = self.parse_value_from_vec(toks) {
                                 self.toks.take(len).for_each(drop);
-                                return Ok(SelectorOrStyle::Style(property, Some(Box::new(val))));
+                                return Ok(SelectorOrStyle::Style(
+                                    InternedString::get_or_intern(property),
+                                    Some(Box::new(val)),
+                                ));
                             }
                         }
 
@@ -136,7 +140,7 @@ impl<'a> Parser<'a> {
                         property.push(':');
                         return Ok(SelectorOrStyle::Selector(property));
                     }
-                    _ => SelectorOrStyle::Style(property, None),
+                    _ => SelectorOrStyle::Style(InternedString::get_or_intern(property), None),
                 });
             }
         } else {
@@ -172,7 +176,10 @@ impl<'a> Parser<'a> {
         self.parse_value()
     }
 
-    pub(super) fn parse_style_group(&mut self, super_property: String) -> SassResult<Vec<Style>> {
+    pub(super) fn parse_style_group(
+        &mut self,
+        super_property: InternedString,
+    ) -> SassResult<Vec<Style>> {
         let mut styles = Vec::new();
         self.whitespace();
         while let Some(tok) = self.toks.peek().cloned() {
@@ -181,7 +188,9 @@ impl<'a> Parser<'a> {
                     self.toks.next();
                     self.whitespace();
                     loop {
-                        let property = self.parse_property(super_property.clone())?;
+                        let property = InternedString::get_or_intern(
+                            self.parse_property(super_property.resolve())?,
+                        );
                         if let Some(tok) = self.toks.peek() {
                             if tok.kind == '{' {
                                 styles.append(&mut self.parse_style_group(property)?);

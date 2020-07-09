@@ -64,6 +64,7 @@ beef = "0.4.4"
 # long to compile, and you cannot make dev-dependencies optional
 criterion = { version = "0.3.2", optional = true }
 indexmap = "1.4.0"
+lasso = "0.2.2"
 
 [features]
 default = ["commandline", "random"]
