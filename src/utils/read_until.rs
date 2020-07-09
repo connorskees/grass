@@ -1,4 +1,4 @@
-use std::iter::Iterator;
+use std::vec::IntoIter;
 
 use peekmore::PeekMoreIterator;
 
@@ -9,8 +9,8 @@ use super::{devour_whitespace, read_until_newline};
 // Eat tokens until an open curly brace
 //
 // Does not consume the open curly brace
-pub(crate) fn read_until_open_curly_brace<I: Iterator<Item = Token>>(
-    toks: &mut PeekMoreIterator<I>,
+pub(crate) fn read_until_open_curly_brace(
+    toks: &mut PeekMoreIterator<IntoIter<Token>>,
 ) -> SassResult<Vec<Token>> {
     let mut t = Vec::new();
     let mut n = 0;
@@ -49,27 +49,27 @@ pub(crate) fn read_until_open_curly_brace<I: Iterator<Item = Token>>(
     Ok(t)
 }
 
-pub(crate) fn read_until_closing_curly_brace<I: Iterator<Item = Token>>(
-    toks: &mut PeekMoreIterator<I>,
+pub(crate) fn read_until_closing_curly_brace(
+    toks: &mut PeekMoreIterator<IntoIter<Token>>,
 ) -> SassResult<Vec<Token>> {
-    let mut t = Vec::new();
+    let mut buf = Vec::new();
     let mut nesting = 0;
     while let Some(tok) = toks.peek() {
         match tok.kind {
             q @ '"' | q @ '\'' => {
-                t.push(toks.next().unwrap());
-                t.extend(read_until_closing_quote(toks, q)?);
+                buf.push(toks.next().unwrap());
+                buf.extend(read_until_closing_quote(toks, q)?);
             }
             '{' => {
                 nesting += 1;
-                t.push(toks.next().unwrap());
+                buf.push(toks.next().unwrap());
             }
             '}' => {
                 if nesting == 0 {
                     break;
                 } else {
                     nesting -= 1;
-                    t.push(toks.next().unwrap());
+                    buf.push(toks.next().unwrap());
                 }
             }
             '/' => {
@@ -79,33 +79,33 @@ pub(crate) fn read_until_closing_curly_brace<I: Iterator<Item = Token>>(
                         read_until_newline(toks);
                         devour_whitespace(toks);
                     }
-                    Some(..) | None => t.push(next),
+                    Some(..) | None => buf.push(next),
                 };
                 continue;
             }
             '(' => {
-                t.push(toks.next().unwrap());
-                t.extend(read_until_closing_paren(toks)?);
+                buf.push(toks.next().unwrap());
+                buf.extend(read_until_closing_paren(toks)?);
             }
             '\\' => {
-                t.push(toks.next().unwrap());
-                t.push(match toks.next() {
+                buf.push(toks.next().unwrap());
+                buf.push(match toks.next() {
                     Some(tok) => tok,
                     None => continue,
                 });
             }
-            _ => t.push(toks.next().unwrap()),
+            _ => buf.push(toks.next().unwrap()),
         }
     }
     devour_whitespace(toks);
-    Ok(t)
+    Ok(buf)
 }
 
 /// Read tokens into a vector until a matching closing quote is found
 ///
 /// The closing quote is included in the output
-pub(crate) fn read_until_closing_quote<I: Iterator<Item = Token>>(
-    toks: &mut PeekMoreIterator<I>,
+pub(crate) fn read_until_closing_quote(
+    toks: &mut PeekMoreIterator<IntoIter<Token>>,
     q: char,
 ) -> SassResult<Vec<Token>> {
     let mut t = Vec::new();
@@ -150,8 +150,8 @@ pub(crate) fn read_until_closing_quote<I: Iterator<Item = Token>>(
     Ok(t)
 }
 
-pub(crate) fn read_until_semicolon_or_closing_curly_brace<I: Iterator<Item = Token>>(
-    toks: &mut PeekMoreIterator<I>,
+pub(crate) fn read_until_semicolon_or_closing_curly_brace(
+    toks: &mut PeekMoreIterator<IntoIter<Token>>,
 ) -> SassResult<Vec<Token>> {
     let mut t = Vec::new();
     let mut nesting = 0;
@@ -202,8 +202,8 @@ pub(crate) fn read_until_semicolon_or_closing_curly_brace<I: Iterator<Item = Tok
     Ok(t)
 }
 
-pub(crate) fn read_until_closing_paren<I: Iterator<Item = Token>>(
-    toks: &mut PeekMoreIterator<I>,
+pub(crate) fn read_until_closing_paren(
+    toks: &mut PeekMoreIterator<IntoIter<Token>>,
 ) -> SassResult<Vec<Token>> {
     let mut t = Vec::new();
     let mut scope = 0;
@@ -236,8 +236,8 @@ pub(crate) fn read_until_closing_paren<I: Iterator<Item = Token>>(
     Ok(t)
 }
 
-pub(crate) fn read_until_closing_square_brace<I: Iterator<Item = Token>>(
-    toks: &mut PeekMoreIterator<I>,
+pub(crate) fn read_until_closing_square_brace(
+    toks: &mut PeekMoreIterator<IntoIter<Token>>,
 ) -> SassResult<Vec<Token>> {
     let mut t = Vec::new();
     let mut scope = 0;

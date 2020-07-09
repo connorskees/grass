@@ -1,3 +1,5 @@
+use std::vec::IntoIter;
+
 use codemap::Spanned;
 use peekmore::PeekMoreIterator;
 
@@ -45,8 +47,8 @@ impl ParsedNumber {
     }
 }
 
-pub(crate) fn eat_number<I: Iterator<Item = Token>>(
-    toks: &mut PeekMoreIterator<I>,
+pub(crate) fn eat_number(
+    toks: &mut PeekMoreIterator<IntoIter<Token>>,
 ) -> SassResult<Spanned<ParsedNumber>> {
     let mut span = toks.peek().unwrap().pos;
     let mut whole = eat_whole_number(toks);
@@ -112,9 +114,7 @@ pub(crate) fn eat_number<I: Iterator<Item = Token>>(
     })
 }
 
-pub(crate) fn eat_whole_number<I: Iterator<Item = Token>>(
-    toks: &mut PeekMoreIterator<I>,
-) -> String {
+pub(crate) fn eat_whole_number(toks: &mut PeekMoreIterator<IntoIter<Token>>) -> String {
     let mut buf = String::new();
     while let Some(c) = toks.peek() {
         if !c.kind.is_ascii_digit() {

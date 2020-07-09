@@ -1,13 +1,15 @@
+use std::vec::IntoIter;
+
 use codemap::{Span, Spanned};
 
 use peekmore::PeekMoreIterator;
 
 use crate::{error::SassResult, Token};
 
-use super::{as_hex, hex_char_for, is_name, is_name_start, IsWhitespace};
+use super::{as_hex, hex_char_for, is_name, is_name_start, peek_whitespace};
 
-pub(crate) fn peek_until_closing_curly_brace<I: Iterator<Item = Token>>(
-    toks: &mut PeekMoreIterator<I>,
+pub(crate) fn peek_until_closing_curly_brace(
+    toks: &mut PeekMoreIterator<IntoIter<Token>>,
 ) -> SassResult<Vec<Token>> {
     let mut t = Vec::new();
     let mut nesting = 0;
@@ -52,8 +54,8 @@ pub(crate) fn peek_until_closing_curly_brace<I: Iterator<Item = Token>>(
     Ok(t)
 }
 
-fn peek_until_closing_quote<I: Iterator<Item = Token>>(
-    toks: &mut PeekMoreIterator<I>,
+fn peek_until_closing_quote(
+    toks: &mut PeekMoreIterator<IntoIter<Token>>,
     q: char,
 ) -> SassResult<Vec<Token>> {
     let mut t = Vec::new();
@@ -95,7 +97,7 @@ fn peek_until_closing_quote<I: Iterator<Item = Token>>(
     Ok(t)
 }
 
-fn peek_until_newline<I: Iterator<Item = Token>>(toks: &mut PeekMoreIterator<I>) {
+fn peek_until_newline(toks: &mut PeekMoreIterator<IntoIter<Token>>) {
     while let Some(tok) = toks.peek() {
         if tok.kind == '\n' {
             break;
@@ -104,21 +106,7 @@ fn peek_until_newline<I: Iterator<Item = Token>>(toks: &mut PeekMoreIterator<I>)
     }
 }
 
-fn peek_whitespace<I: Iterator<Item = W>, W: IsWhitespace>(s: &mut PeekMoreIterator<I>) -> bool {
-    let mut found_whitespace = false;
-    while let Some(w) = s.peek() {
-        if !w.is_whitespace() {
-            break;
-        }
-        found_whitespace = true;
-        s.advance_cursor();
-    }
-    found_whitespace
-}
-
-pub(crate) fn peek_escape<I: Iterator<Item = Token>>(
-    toks: &mut PeekMoreIterator<I>,
-) -> SassResult<String> {
+pub(crate) fn peek_escape(toks: &mut PeekMoreIterator<IntoIter<Token>>) -> SassResult<String> {
     let mut value = 0;
     let first = match toks.peek() {
         Some(t) => *t,
@@ -165,8 +153,8 @@ pub(crate) fn peek_escape<I: Iterator<Item = Token>>(
     }
 }
 
-pub(crate) fn peek_ident_no_interpolation<I: Iterator<Item = Token>>(
-    toks: &mut PeekMoreIterator<I>,
+pub(crate) fn peek_ident_no_interpolation(
+    toks: &mut PeekMoreIterator<IntoIter<Token>>,
     unit: bool,
     span_before: Span,
 ) -> SassResult<Spanned<String>> {
@@ -210,8 +198,8 @@ pub(crate) fn peek_ident_no_interpolation<I: Iterator<Item = Token>>(
     Ok(Spanned { node: text, span })
 }
 
-fn peek_ident_body_no_interpolation<I: Iterator<Item = Token>>(
-    toks: &mut PeekMoreIterator<I>,
+fn peek_ident_body_no_interpolation(
+    toks: &mut PeekMoreIterator<IntoIter<Token>>,
     unit: bool,
     mut span: Span,
 ) -> SassResult<Spanned<String>> {
