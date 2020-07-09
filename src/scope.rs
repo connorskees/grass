@@ -66,6 +66,9 @@ impl Scope {
     }
 
     fn fn_exists(&self, name: &Identifier) -> bool {
+        if self.functions.is_empty() {
+            return false;
+        }
         self.functions.contains_key(name)
     }
 
