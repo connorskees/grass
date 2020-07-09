@@ -54,3 +54,12 @@ test!(
     "@media (color) {a {color: red;}}",
     "@media (color) {\n  a {\n    color: red;\n  }\n}\n"
 );
+test!(
+    quoted_colon_in_parens,
+    "@media screen and (\":\") {
+        a {
+            color: red;
+        }
+    }",
+    "@media screen and (:) {\n  a {\n    color: red;\n  }\n}\n"
+);

@@ -1,6 +1,9 @@
 use crate::{
     error::SassResult,
-    utils::{is_name_start, peek_ident_no_interpolation, read_until_closing_paren},
+    utils::{
+        is_name_start, peek_ident_no_interpolation, read_until_closing_paren,
+        read_until_closing_quote,
+    },
     {Cow, Token},
 };
 
@@ -61,13 +64,18 @@ impl<'a> Parser<'a> {
                 '>' | '<' | ':' | ')' => {
                     break;
                 }
+                '\'' | '"' => {
+                    toks.push(tok);
+                    self.toks.next();
+                    toks.append(&mut read_until_closing_quote(self.toks, tok.kind)?);
+                }
                 _ => {
                     toks.push(tok);
                     self.toks.next();
                 }
             }
         }
-        self.parse_value_as_string_from_vec(toks)
+        self.parse_value_as_string_from_vec(toks, false)
     }
 
     pub(super) fn parse_media_query_list(&mut self) -> SassResult<String> {
@@ -112,7 +120,7 @@ impl<'a> Parser<'a> {
                     todo!()
                 }
             }
-            buf.push_str(&self.parse_value_as_string_from_vec(toks)?);
+            buf.push_str(&self.parse_value_as_string_from_vec(toks, true)?);
 
             self.whitespace();
             buf.push(')');

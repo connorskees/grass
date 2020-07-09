@@ -435,9 +435,14 @@ impl<'a> Parser<'a> {
     pub fn parse_value_as_string_from_vec(
         &mut self,
         toks: Vec<Token>,
+        quoted: bool,
     ) -> SassResult<Cow<'static, str>> {
         let value = self.parse_value_from_vec(toks)?;
-        value.node.to_css_string(value.span)
+        if quoted {
+            value.node.to_css_string(value.span)
+        } else {
+            value.node.unquote().to_css_string(value.span)
+        }
     }
 
     pub fn whitespace(&mut self) -> bool {
