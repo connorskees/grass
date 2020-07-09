@@ -294,7 +294,7 @@ impl<'a> Parser<'a> {
         self.scopes.enter_new_scope();
 
         for i in iter {
-            self.scopes.insert_var(
+            self.scopes.insert_var_last(
                 var.node,
                 Spanned {
                     node: Value::Dimension(Number::from(i), Unit::None),
@@ -464,9 +464,11 @@ impl<'a> Parser<'a> {
 
         let mut stmts = Vec::new();
 
+        self.scopes.enter_new_scope();
+
         for row in iter {
             if vars.len() == 1 {
-                self.scopes.insert_var(
+                self.scopes.insert_var_last(
                     vars[0].node,
                     Spanned {
                         node: row,
@@ -479,7 +481,7 @@ impl<'a> Parser<'a> {
                         .into_iter()
                         .chain(std::iter::once(Value::Null).cycle()),
                 ) {
-                    self.scopes.insert_var(
+                    self.scopes.insert_var_last(
                         var.node,
                         Spanned {
                             node: val,
@@ -530,6 +532,8 @@ impl<'a> Parser<'a> {
                 );
             }
         }
+
+        self.scopes.exit_scope();
 
         Ok(stmts)
     }

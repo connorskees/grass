@@ -97,3 +97,19 @@ test!(
     }",
     "a {\n  color: \\}}}{{{#;\n}\n"
 );
+test!(
+    indexing_variable_does_not_affect_outer_scopes,
+    "a {
+        $a: 1;
+        $b: 1;
+
+        @for $a from 1 through 2 {
+            color: $a;
+            $b: $a;
+        }
+
+        color: $a;
+        color: $b;
+    }",
+    "a {\n  color: 1;\n  color: 2;\n  color: 1;\n  color: 2;\n}\n"
+);

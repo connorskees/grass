@@ -61,6 +61,22 @@ test!(
     }",
     "a {\n  color: (a: b, c: d);\n}\n"
 );
+test!(
+    indexing_variable_does_not_affect_outer_scopes,
+    "a {
+        $a: 1;
+        $b: 1;
+
+        @each $a in a b {
+            color: $a;
+            $b: $a;
+        }
+
+        color: $a;
+        color: $b;
+    }",
+    "a {\n  color: a;\n  color: b;\n  color: 1;\n  color: b;\n}\n"
+);
 error!(
     list_of_single_map,
     "a {

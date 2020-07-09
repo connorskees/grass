@@ -128,6 +128,20 @@ impl Scopes {
         }
     }
 
+    /// Always insert this variable into the innermost scope
+    ///
+    /// Used, for example, for variables from `@each` and `@for`
+    pub fn insert_var_last(&mut self, s: Identifier, v: Spanned<Value>) -> Option<Spanned<Value>> {
+        if let Some(scope) = self.0.last_mut() {
+            scope.insert_var(s, v)
+        } else {
+            let mut scope = Scope::new();
+            scope.insert_var(s, v);
+            self.0.push(scope);
+            None
+        }
+    }
+
     pub fn insert_default_var(
         &mut self,
         s: Identifier,
