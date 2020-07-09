@@ -10,7 +10,7 @@ use crate::{
     value::Value,
 };
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Default)]
 pub(crate) struct Scope {
     vars: HashMap<Identifier, Spanned<Value>>,
     mixins: HashMap<Identifier, Mixin>,
@@ -79,7 +79,7 @@ impl Scope {
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Default)]
 pub(crate) struct Scopes(Vec<Scope>);
 
 impl Scopes {
@@ -148,8 +148,8 @@ impl Scopes {
         global_scope: &'a Scope,
     ) -> SassResult<&Value> {
         for scope in self.0.iter().rev() {
-            if let Ok(v) = scope.get_var(name) {
-                return Ok(v);
+            if scope.var_exists(&name.node) {
+                return scope.get_var(name);
             }
         }
         global_scope.get_var(name)
@@ -184,8 +184,8 @@ impl Scopes {
         global_scope: &'a Scope,
     ) -> SassResult<Mixin> {
         for scope in self.0.iter().rev() {
-            if let Ok(v) = scope.get_mixin(name) {
-                return Ok(v);
+            if scope.mixin_exists(&name.node) {
+                return scope.get_mixin(name);
             }
         }
         global_scope.get_mixin(name)
@@ -220,8 +220,8 @@ impl Scopes {
         global_scope: &'a Scope,
     ) -> SassResult<Function> {
         for scope in self.0.iter().rev() {
-            if let Ok(v) = scope.get_fn(name) {
-                return Ok(v);
+            if scope.fn_exists(&name.node) {
+                return scope.get_fn(name);
             }
         }
         global_scope.get_fn(name)
