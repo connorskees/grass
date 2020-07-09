@@ -263,8 +263,8 @@ impl<'a> Parser<'a> {
                 },
                 self.global_scope,
             ) {
-                Ok(f) => f,
-                Err(_) => {
+                Some(f) => f,
+                None => {
                     if let Some(f) = GLOBAL_FUNCTIONS.get(as_ident.as_str()) {
                         return Ok(IntermediateValue::Value(HigherIntermediateValue::Function(
                             SassFunction::Builtin(f.clone(), as_ident),

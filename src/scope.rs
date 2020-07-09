@@ -57,11 +57,8 @@ impl Scope {
         self.mixins.contains_key(name)
     }
 
-    fn get_fn(&self, name: Spanned<&Identifier>) -> SassResult<Function> {
-        match self.functions.get(name.node) {
-            Some(v) => Ok(v.clone()),
-            None => Err(("Undefined function.", name.span).into()),
-        }
+    fn get_fn(&self, name: &Identifier) -> Option<Function> {
+        self.functions.get(name).cloned()
     }
 
     pub fn insert_fn<T: Into<Identifier>>(&mut self, s: T, v: Function) -> Option<Function> {
@@ -218,13 +215,13 @@ impl Scopes {
         &'a self,
         name: Spanned<&Identifier>,
         global_scope: &'a Scope,
-    ) -> SassResult<Function> {
+    ) -> Option<Function> {
         for scope in self.0.iter().rev() {
             if scope.fn_exists(&name.node) {
-                return scope.get_fn(name);
+                return scope.get_fn(name.node);
             }
         }
-        global_scope.get_fn(name)
+        global_scope.get_fn(name.node)
     }
 
     pub fn fn_exists(&self, name: &Identifier, global_scope: &Scope) -> bool {

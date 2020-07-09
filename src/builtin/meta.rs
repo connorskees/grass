@@ -188,8 +188,8 @@ fn get_function(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value
         },
         parser.global_scope,
     ) {
-        Ok(f) => SassFunction::UserDefined(Box::new(f), name),
-        Err(..) => match GLOBAL_FUNCTIONS.get(name.as_str()) {
+        Some(f) => SassFunction::UserDefined(Box::new(f), name),
+        None => match GLOBAL_FUNCTIONS.get(name.as_str()) {
             Some(f) => SassFunction::Builtin(f.clone(), name),
             None => return Err((format!("Function not found: {}", name), args.span()).into()),
         },
