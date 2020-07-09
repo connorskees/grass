@@ -112,7 +112,7 @@ impl ListSeparator {
 ///
 /// This struct protects that invariant by normalizing all
 /// underscores into hypens.
-#[derive(Debug, Clone, Eq, PartialEq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, PartialOrd, Ord, Copy)]
 pub(crate) struct Identifier(InternedString);
 
 impl From<String> for Identifier {

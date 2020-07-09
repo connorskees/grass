@@ -96,7 +96,7 @@ fn variable_exists(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Va
     args.max_args(1)?;
     match parser.arg(&mut args, 0, "name")? {
         Value::String(s, _) => Ok(Value::bool(
-            parser.scopes.var_exists(&s.into(), parser.global_scope),
+            parser.scopes.var_exists(s.into(), parser.global_scope),
         )),
         v => Err((
             format!("$name: {} is not a string.", v.inspect(args.span())?),
@@ -109,7 +109,7 @@ fn variable_exists(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Va
 fn global_variable_exists(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     match parser.arg(&mut args, 0, "name")? {
-        Value::String(s, _) => Ok(Value::bool(parser.global_scope.var_exists(&s.into()))),
+        Value::String(s, _) => Ok(Value::bool(parser.global_scope.var_exists(s.into()))),
         v => Err((
             format!("$name: {} is not a string.", v.inspect(args.span())?),
             args.span(),
@@ -122,7 +122,7 @@ fn mixin_exists(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value
     args.max_args(2)?;
     match parser.arg(&mut args, 0, "name")? {
         Value::String(s, _) => Ok(Value::bool(
-            parser.scopes.mixin_exists(&s.into(), parser.global_scope),
+            parser.scopes.mixin_exists(s.into(), parser.global_scope),
         )),
         v => Err((
             format!("$name: {} is not a string.", v.inspect(args.span())?),
@@ -136,7 +136,7 @@ fn function_exists(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Va
     args.max_args(2)?;
     match parser.arg(&mut args, 0, "name")? {
         Value::String(s, _) => Ok(Value::bool(
-            parser.scopes.fn_exists(&s.into(), parser.global_scope),
+            parser.scopes.fn_exists(s.into(), parser.global_scope),
         )),
         v => Err((
             format!("$name: {} is not a string.", v.inspect(args.span())?),
@@ -183,7 +183,7 @@ fn get_function(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value
 
     let func = match parser.scopes.get_fn(
         Spanned {
-            node: &name,
+            node: name,
             span: args.span(),
         },
         parser.global_scope,

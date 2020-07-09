@@ -107,6 +107,7 @@ pub(crate) enum Unit {
 
     /// Units multiplied together
     /// Boxed under the assumption that mul units are exceedingly rare
+    #[allow(clippy::box_vec)]
     Mul(Box<Vec<Unit>>),
 
     /// Units divided by each other

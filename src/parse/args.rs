@@ -363,7 +363,7 @@ impl<'a> Parser<'a> {
                 let span = args.span();
                 let arg_list = Value::ArgList(self.variadic_args(args)?);
                 scope.insert_var(
-                    arg.name.clone(),
+                    arg.name,
                     Spanned {
                         node: arg_list,
                         span,
@@ -371,7 +371,7 @@ impl<'a> Parser<'a> {
                 );
                 break;
             }
-            let val = match args.get(idx, arg.name.clone()) {
+            let val = match args.get(idx, arg.name) {
                 Some(v) => v,
                 None => match arg.default.as_mut() {
                     Some(v) => self.parse_value_from_vec(mem::take(v)),
@@ -382,7 +382,7 @@ impl<'a> Parser<'a> {
                     }
                 },
             }?;
-            self.scopes.insert_var(arg.name.clone(), val.clone());
+            self.scopes.insert_var(arg.name, val.clone());
             scope.insert_var(arg.name, val);
         }
         self.scopes.exit_scope();

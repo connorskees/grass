@@ -112,13 +112,7 @@ impl<'a> Parser<'a> {
             args: fn_args,
             declared_at_root,
             ..
-        } = self.scopes.get_mixin(
-            {
-                let Spanned { ref node, span } = name;
-                Spanned { node, span }
-            },
-            self.global_scope,
-        )?;
+        } = self.scopes.get_mixin(name, self.global_scope)?;
 
         let scope = self.eval_args(fn_args, args)?;
 

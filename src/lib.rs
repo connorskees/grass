@@ -75,6 +75,8 @@ grass input.scss
     clippy::items_after_statements,
     clippy::shadow_reuse,
     clippy::shadow_unrelated,
+    // this is only available on nightly
+    clippy::unnested_or_patterns,
 )]
 #![cfg_attr(feature = "nightly", feature(track_caller))]
 #![cfg_attr(feature = "profiling", inline(never))]
@@ -108,6 +110,7 @@ mod builtin;
 mod color;
 mod common;
 mod error;
+mod interner;
 mod lexer;
 mod output;
 mod parse;
@@ -116,7 +119,6 @@ mod selector;
 mod style;
 mod token;
 mod unit;
-mod interner;
 mod utils;
 mod value;
 

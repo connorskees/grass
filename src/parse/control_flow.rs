@@ -295,7 +295,7 @@ impl<'a> Parser<'a> {
 
         for i in iter {
             self.scopes.insert_var(
-                var.node.clone(),
+                var.node,
                 Spanned {
                     node: Value::Dimension(Number::from(i), Unit::None),
                     span: var.span,
@@ -467,7 +467,7 @@ impl<'a> Parser<'a> {
         for row in iter {
             if vars.len() == 1 {
                 self.scopes.insert_var(
-                    vars[0].node.clone(),
+                    vars[0].node,
                     Spanned {
                         node: row,
                         span: vars[0].span,
@@ -480,7 +480,7 @@ impl<'a> Parser<'a> {
                         .chain(std::iter::once(Value::Null).cycle()),
                 ) {
                     self.scopes.insert_var(
-                        var.node.clone(),
+                        var.node,
                         Spanned {
                             node: val,
                             span: var.span,

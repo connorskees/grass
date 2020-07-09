@@ -218,10 +218,7 @@ impl<'a> Parser<'a> {
                                 styles.push(Style { property, value });
                             }
                             Some(Token { kind: '{', .. }) => {
-                                styles.push(Style {
-                                    property: property.clone(),
-                                    value,
-                                });
+                                styles.push(Style { property, value });
                                 styles.append(&mut self.parse_style_group(property)?);
                             }
                             Some(..) | None => {
@@ -254,7 +251,7 @@ impl<'a> Parser<'a> {
                         }
                         '{' => {
                             let mut v = vec![Style {
-                                property: super_property.clone(),
+                                property: super_property,
                                 value: Box::new(value),
                             }];
                             v.append(&mut self.parse_style_group(super_property)?);

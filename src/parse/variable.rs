@@ -41,25 +41,23 @@ impl<'a> Parser<'a> {
         let value = self.parse_variable_value()?;
 
         if value.global && !value.default {
-            self.global_scope
-                .insert_var(ident.clone(), value.value.clone());
+            self.global_scope.insert_var(ident, value.value.clone());
         }
 
         if value.default {
             if self.at_root && !self.flags.in_control_flow() {
-                if !self.global_scope.var_exists(&ident) {
+                if !self.global_scope.var_exists(ident) {
                     self.global_scope.insert_var(ident, value.value);
                 }
             } else {
-                if value.global && !self.global_scope.var_exists(&ident) {
-                    self.global_scope
-                        .insert_var(ident.clone(), value.value.clone());
+                if value.global && !self.global_scope.var_exists(ident) {
+                    self.global_scope.insert_var(ident, value.value.clone());
                 }
                 self.scopes.insert_default_var(ident, value.value);
             }
         } else if self.at_root {
             if self.flags.in_control_flow() {
-                if self.global_scope.var_exists(&ident) {
+                if self.global_scope.var_exists(ident) {
                     self.global_scope.insert_var(ident, value.value);
                 } else {
                     self.scopes.insert_var(ident, value.value);
