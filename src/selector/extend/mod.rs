@@ -383,9 +383,9 @@ impl Extender {
                     if options.is_none() {
                         let mut new_options = Vec::new();
                         if i != 0 {
-                            new_options.push(vec![self.extension_for_compound(
-                                compound.components.clone().into_iter().take(i).collect(),
-                            )]);
+                            new_options.push(vec![
+                                self.extension_for_compound(compound.components[..i].to_vec())
+                            ]);
                         }
                         options.replace(new_options);
                     }
