@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use codemap::Spanned;
 
@@ -12,18 +12,18 @@ use crate::{
 
 #[derive(Debug, Default)]
 pub(crate) struct Scope {
-    vars: HashMap<Identifier, Spanned<Value>>,
-    mixins: HashMap<Identifier, Mixin>,
-    functions: HashMap<Identifier, Function>,
+    vars: BTreeMap<Identifier, Spanned<Value>>,
+    mixins: BTreeMap<Identifier, Mixin>,
+    functions: BTreeMap<Identifier, Function>,
 }
 
 impl Scope {
     #[must_use]
     pub fn new() -> Self {
         Self {
-            vars: HashMap::new(),
-            mixins: HashMap::new(),
-            functions: HashMap::new(),
+            vars: BTreeMap::new(),
+            mixins: BTreeMap::new(),
+            functions: BTreeMap::new(),
         }
     }
 
