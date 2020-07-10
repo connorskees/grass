@@ -245,7 +245,7 @@ fn index(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     let value = parser.arg(&mut args, 1, "value")?;
     // TODO: find a way to propagate any errors here
     // Potential input to fuzz: index(1px 1in 1cm, 96px + 1rem)
-    let index = match list.into_iter().position(|v| v.equals(&value)) {
+    let index = match list.into_iter().position(|v| v == value) {
         Some(v) => Number::from(v + 1),
         None => return Ok(Value::Null),
     };

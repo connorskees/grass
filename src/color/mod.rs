@@ -18,7 +18,6 @@
 use std::{
     cmp::{max, min},
     fmt::{self, Display},
-    hash::{Hash, Hasher},
 };
 
 use crate::value::Number;
@@ -42,12 +41,6 @@ impl PartialEq for Color {
 }
 
 impl Eq for Color {}
-
-impl Hash for Color {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.rgba.hash(state)
-    }
-}
 
 impl Color {
     pub const fn new_rgba(
@@ -115,34 +108,6 @@ impl PartialEq for Rgba {
 }
 
 impl Eq for Rgba {}
-
-impl Hash for Rgba {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        if self.red > Number::from(255) {
-            255.hash(state);
-        } else {
-            self.red.hash(state)
-        }
-
-        if self.green > Number::from(255) {
-            255.hash(state);
-        } else {
-            self.green.hash(state)
-        }
-
-        if self.blue > Number::from(255) {
-            255.hash(state);
-        } else {
-            self.blue.hash(state)
-        }
-
-        if self.alpha > Number::one() {
-            1.hash(state);
-        } else {
-            self.alpha.hash(state)
-        }
-    }
-}
 
 impl Rgba {
     pub const fn new(red: Number, green: Number, blue: Number, alpha: Number) -> Self {

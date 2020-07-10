@@ -1,9 +1,4 @@
-use std::{
-    collections::HashSet,
-    hash::{Hash, Hasher},
-    slice::Iter,
-    vec::IntoIter,
-};
+use std::{slice::Iter, vec::IntoIter};
 
 use crate::{
     common::{Brackets, ListSeparator},
@@ -16,28 +11,36 @@ pub(crate) struct SassMap(Vec<(Value, Value)>);
 
 impl PartialEq for SassMap {
     fn eq(&self, other: &Self) -> bool {
-        let set_one: HashSet<&(Value, Value)> = self.0.iter().collect();
-        let set_two: HashSet<&(Value, Value)> = other.0.iter().collect();
-        set_one == set_two
+        if self.0.len() != other.0.len() {
+            return false;
+        }
+        for (key, value) in &self.0 {
+            if !other
+                .0
+                .iter()
+                .any(|(key2, value2)| key == key2 && value == value2)
+            {
+                return false;
+            }
+        }
+        true
     }
 }
 
 impl Eq for SassMap {}
-
-impl Hash for SassMap {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.0.hash(state)
-    }
-}
 
 impl SassMap {
     pub const fn new() -> SassMap {
         SassMap(Vec::new())
     }
 
+    /// We take by value here (consuming the map) in order to
+    /// save a clone of the value, since the only place this
+    /// should be called is in a builtin function, which throws
+    /// away the map immediately anyway
     pub fn get(self, key: &Value) -> SassResult<Option<Value>> {
         for (k, v) in self.0 {
-            if k.equals(key) {
+            if &k == key {
                 return Ok(Some(v));
             }
         }
@@ -81,7 +84,7 @@ impl SassMap {
     /// Returns true if the key already exists
     pub fn insert(&mut self, key: Value, value: Value) -> bool {
         for (ref k, ref mut v) in &mut self.0 {
-            if k.equals(&key) {
+            if k == &key {
                 *v = value;
                 return true;
             }

@@ -58,3 +58,8 @@ test!(
     "a {\n  color: (\"foo\",) != (foo,);\n}\n",
     "a {\n  color: false;\n}\n"
 );
+test!(
+    map_keys_equivalent,
+    "a {\n  color: (0mm: a)==(0cm: a);\n}\n",
+    "a {\n  color: true;\n}\n"
+);

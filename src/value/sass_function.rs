@@ -22,7 +22,7 @@ use crate::{
 ///
 /// The function name is stored in addition to the body
 /// for use in the builtin function `inspect()`
-#[derive(Clone, Eq, PartialEq, Hash)]
+#[derive(Clone, Eq, PartialEq)]
 pub(crate) enum SassFunction {
     Builtin(Builtin, Identifier),
     UserDefined(Box<Function>, Identifier),

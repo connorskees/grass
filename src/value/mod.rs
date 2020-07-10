@@ -23,8 +23,7 @@ mod map;
 mod number;
 mod sass_function;
 
-// todo: remove Eq and PartialEq impls
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone)]
 pub(crate) enum Value {
     Important,
     True,
@@ -39,6 +38,83 @@ pub(crate) enum Value {
     /// Returned by `get-function()`
     FunctionRef(SassFunction),
 }
+
+impl PartialEq for Value {
+    fn eq(&self, other: &Self) -> bool {
+        match self {
+            Value::String(s1, ..) => match other {
+                Value::String(s2, ..) => s1 == s2,
+                _ => false,
+            },
+            Value::Dimension(n, unit, _) => match other {
+                Value::Dimension(n2, unit2, _) => {
+                    if !unit.comparable(unit2) {
+                        false
+                    } else if unit == unit2 {
+                        n == n2
+                    } else if unit == &Unit::None || unit2 == &Unit::None {
+                        false
+                    } else {
+                        n == &(n2.clone()
+                            * UNIT_CONVERSION_TABLE[unit.to_string().as_str()]
+                                [unit2.to_string().as_str()]
+                            .clone())
+                    }
+                }
+                _ => false,
+            },
+            Value::List(list1, sep1, brackets1) => match other {
+                Value::List(list2, sep2, brackets2) => {
+                    if sep1 != sep2 || brackets1 != brackets2 || list1.len() != list2.len() {
+                        false
+                    } else {
+                        for (a, b) in list1.iter().zip(list2) {
+                            if a != b {
+                                return false;
+                            }
+                        }
+                        true
+                    }
+                }
+                _ => false,
+            },
+            Value::Null => matches!(other, Value::Null),
+            Value::True => matches!(other, Value::True),
+            Value::False => matches!(other, Value::False),
+            Value::Important => matches!(other, Value::Important),
+            Value::FunctionRef(fn1) => {
+                if let Value::FunctionRef(fn2) = other {
+                    fn1 == fn2
+                } else {
+                    false
+                }
+            }
+            Value::Map(map1) => {
+                if let Value::Map(map2) = other {
+                    map1 == map2
+                } else {
+                    false
+                }
+            }
+            Value::Color(color1) => {
+                if let Value::Color(color2) = other {
+                    color1 == color2
+                } else {
+                    false
+                }
+            }
+            Value::ArgList(list1) => {
+                if let Value::ArgList(list2) = other {
+                    list1 == list2
+                } else {
+                    false
+                }
+            }
+        }
+    }
+}
+
+impl Eq for Value {}
 
 fn visit_quoted_string(buf: &mut String, force_double_quote: bool, string: &str) {
     let mut has_single_quote = false;
@@ -243,48 +319,6 @@ impl Value {
             Value::True
         } else {
             Value::False
-        }
-    }
-
-    pub fn equals(&self, other: &Self) -> bool {
-        match self {
-            Value::String(s1, ..) => match other {
-                Value::String(s2, ..) => s1 == s2,
-                _ => false,
-            },
-            Value::Dimension(n, unit, _) => match other {
-                Value::Dimension(n2, unit2, _) => {
-                    if !unit.comparable(unit2) {
-                        false
-                    } else if unit == unit2 {
-                        n == n2
-                    } else if unit == &Unit::None || unit2 == &Unit::None {
-                        false
-                    } else {
-                        n == &(n2.clone()
-                            * UNIT_CONVERSION_TABLE[unit.to_string().as_str()]
-                                [unit2.to_string().as_str()]
-                            .clone())
-                    }
-                }
-                _ => false,
-            },
-            Value::List(list1, sep1, brackets1) => match other {
-                Value::List(list2, sep2, brackets2) => {
-                    if sep1 != sep2 || brackets1 != brackets2 || list1.len() != list2.len() {
-                        false
-                    } else {
-                        for (a, b) in list1.iter().zip(list2) {
-                            if !a.equals(b) {
-                                return false;
-                            }
-                        }
-                        true
-                    }
-                }
-                _ => false,
-            },
-            s => s == other,
         }
     }
 

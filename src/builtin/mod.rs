@@ -1,6 +1,5 @@
 use std::{
     collections::HashMap,
-    hash::{Hash, Hasher},
     sync::atomic::{AtomicUsize, Ordering},
 };
 
@@ -29,12 +28,6 @@ pub(crate) struct Builtin(
     pub fn(CallArgs, &mut Parser<'_>) -> SassResult<Value>,
     usize,
 );
-
-impl Hash for Builtin {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.1.hash(state)
-    }
-}
 
 impl Builtin {
     pub fn new(body: fn(CallArgs, &mut Parser<'_>) -> SassResult<Value>) -> Builtin {

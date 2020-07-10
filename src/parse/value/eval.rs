@@ -706,7 +706,7 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
             HigherIntermediateValue::Literal(v) => v,
             v => panic!("{:?}", v),
         };
-        Value::bool(left.equals(&right))
+        Value::bool(left == right)
     }
 
     fn not_equal(left: HigherIntermediateValue, right: HigherIntermediateValue) -> Value {

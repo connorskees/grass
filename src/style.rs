@@ -3,7 +3,7 @@ use codemap::Spanned;
 use crate::{error::SassResult, interner::InternedString, value::Value};
 
 /// A style: `color: red`
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug)]
 pub(crate) struct Style {
     pub property: InternedString,
     pub value: Box<Spanned<Value>>,
