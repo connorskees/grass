@@ -38,17 +38,20 @@ fn main() -> std::io::Result<()> {
         .arg(
             Arg::with_name("STDIN")
                 .long("stdin")
+                .hidden(true)
                 .help("Read the stylesheet from stdin"),
         )
         .arg(
             Arg::with_name("INDENTED")
                 .long("indented")
+                .hidden(true)
                 .help("Use the indented syntax for input from stdin"),
         )
         .arg(
             Arg::with_name("LOAD_PATH")
                 .short("I")
                 .long("load-path")
+                .hidden(true)
                 .help("A path to use when resolving imports. May be passed multiple times.")
                 .multiple(true)
                 .takes_value(true)
@@ -60,6 +63,7 @@ fn main() -> std::io::Result<()> {
                 // this is required for compatibility with ruby sass
                 .short("t")
                 .long("style")
+                .hidden(true)
                 .help("Minified or expanded output")
                 .default_value("expanded")
                 .case_insensitive(true)
@@ -69,27 +73,32 @@ fn main() -> std::io::Result<()> {
         .arg(
             Arg::with_name("NO_CHARSET")
                 .long("no-charset")
+                .hidden(true)
                 .help("Don't emit a @charset or BOM for CSS with non-ASCII characters."),
         )
         .arg(
             Arg::with_name("UPDATE")
                 .long("update")
+                .hidden(true)
                 .help("Only compile out-of-date stylesheets."),
         )
         .arg(
             Arg::with_name("NO_ERROR_CSS")
                 .long("no-error-css")
+                .hidden(true)
                 .help("When an error occurs, don't emit a stylesheet describing it."),
         )
         // Source maps
         .arg(
             Arg::with_name("NO_SOURCE_MAP")
                 .long("no-source-map")
+                .hidden(true)
                 .help("Whether to generate source maps."),
         )
         .arg(
             Arg::with_name("SOURCE_MAP_URLS")
                 .long("source-map-urls")
+                .hidden(true)
                 .help("How to link from source maps to source files.")
                 .default_value("relative")
                 .case_insensitive(true)
@@ -99,51 +108,60 @@ fn main() -> std::io::Result<()> {
         .arg(
             Arg::with_name("EMBED_SOURCES")
                 .long("embed-sources")
+                .hidden(true)
                 .help("Embed source file contents in source maps."),
         )
         .arg(
             Arg::with_name("EMBED_SOURCE_MAP")
                 .long("embed-source-map")
+                .hidden(true)
                 .help("Embed source map contents in CSS."),
         )
         // Other
         .arg(
             Arg::with_name("WATCH")
                 .long("watch")
+                .hidden(true)
                 .help("Watch stylesheets and recompile when they change."),
         )
         .arg(
             Arg::with_name("POLL")
                 .long("poll")
+                .hidden(true)
                 .help("Manually check for changes rather than using a native watcher. Only valid with --watch.")
                 .requires("WATCH"),
         )
         .arg(
             Arg::with_name("NO_STOP_ON_ERROR")
                 .long("no-stop-on-error")
+                .hidden(true)
                 .help("Continue to compile more files after error is encountered.")
         )
         .arg(
             Arg::with_name("INTERACTIVE")
                 .short("i")
                 .long("interactive")
+                .hidden(true)
                 .help("Run an interactive SassScript shell.")
         )
         .arg(
             Arg::with_name("NO_COLOR")
                 .short("c")
                 .long("no-color")
+                .hidden(true)
                 .help("Whether to use terminal colors for messages.")
         )
         .arg(
             Arg::with_name("NO_UNICODE")
                 .long("no-unicode")
+                .hidden(true)
                 .help("Whether to use Unicode characters for messages.")
         )
         .arg(
             Arg::with_name("QUIET")
                 .short("q")
                 .long("quiet")
+                .hidden(true)
                 .help("Don't print warnings."),
         )
         .arg(
