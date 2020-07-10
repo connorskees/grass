@@ -1,9 +1,15 @@
 # TBD
 
  - bugfixes for `@media` query regressions
- - remove all panics from `@import` and correctly emit `@import` in certain cases
- - bugfixes for empty arglists
- - bugfixes for maps in rare cases in arglists and `@each`
+ - bugfixes for maps, arglists, and `@each`
+ - implement string interning for identifiers and style properties
+ - implement spec-compliant variable scoping
+ - emit `@import` when importing `url(...)` or `*.css`
+ - resolve all panics for malformed `@import`
+ - various optimizations that now allow us to compile bootstrap 10% faster than `libsass`
+ - errors inside builtin functions use `inspect` to print values
+ - bugfixes for color and map equality (e.g. `red` == `#ff0000`)
+ - hide unimplemented command line flags
 
 # 0.9.5
 
