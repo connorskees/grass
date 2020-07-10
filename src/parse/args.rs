@@ -178,7 +178,7 @@ impl<'a> Parser<'a> {
                             } else {
                                 CallArg::Named(mem::take(&mut name).into())
                             },
-                            self.parse_value_from_vec(val),
+                            self.parse_value_from_vec(val, true),
                         );
                         span = span.merge(tok.pos());
                         return Ok(CallArgs(args, span));
@@ -218,7 +218,7 @@ impl<'a> Parser<'a> {
             }
 
             if is_splat {
-                let val = self.parse_value_from_vec(mem::take(&mut val))?;
+                let val = self.parse_value_from_vec(mem::take(&mut val), true)?;
                 match val.node {
                     Value::ArgList(v) => {
                         for arg in v {
@@ -263,7 +263,7 @@ impl<'a> Parser<'a> {
                     } else {
                         CallArg::Named(mem::take(&mut name).into())
                     },
-                    self.parse_value_from_vec(mem::take(&mut val)),
+                    self.parse_value_from_vec(mem::take(&mut val), true),
                 );
             }
 
@@ -374,7 +374,7 @@ impl<'a> Parser<'a> {
             let val = match args.get(idx, arg.name) {
                 Some(v) => v,
                 None => match arg.default.as_mut() {
-                    Some(v) => self.parse_value_from_vec(mem::take(v)),
+                    Some(v) => self.parse_value_from_vec(mem::take(v), true),
                     None => {
                         return Err(
                             (format!("Missing argument ${}.", &arg.name), args.span()).into()

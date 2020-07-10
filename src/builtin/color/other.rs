@@ -15,7 +15,7 @@ use crate::{
 macro_rules! opt_rgba {
     ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal, $parser:ident) => {
         let $name = match $parser.default_named_arg(&mut $args, $arg, Value::Null)? {
-            Value::Dimension(n, u) => Some(bound!($args, $arg, n, u, $low, $high)),
+            Value::Dimension(n, u, _) => Some(bound!($args, $arg, n, u, $low, $high)),
             Value::Null => None,
             v => {
                 return Err((
@@ -31,7 +31,7 @@ macro_rules! opt_rgba {
 macro_rules! opt_hsl {
     ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal, $parser:ident) => {
         let $name = match $parser.default_named_arg(&mut $args, $arg, Value::Null)? {
-            Value::Dimension(n, u) => {
+            Value::Dimension(n, u, _) => {
                 Some(bound!($args, $arg, n, u, $low, $high) / Number::from(100))
             }
             Value::Null => None,
@@ -81,7 +81,7 @@ fn change_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value
     }
 
     let hue = match parser.default_named_arg(&mut args, "hue", Value::Null)? {
-        Value::Dimension(n, _) => Some(n),
+        Value::Dimension(n, ..) => Some(n),
         Value::Null => None,
         v => {
             return Err((
@@ -140,7 +140,7 @@ fn adjust_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value
     }
 
     let hue = match parser.default_named_arg(&mut args, "hue", Value::Null)? {
-        Value::Dimension(n, _) => Some(n),
+        Value::Dimension(n, ..) => Some(n),
         Value::Null => None,
         v => {
             return Err((
@@ -198,7 +198,7 @@ fn scale_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value>
     macro_rules! opt_scale_arg {
         ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal, $parser:ident) => {
             let $name = match $parser.default_named_arg(&mut $args, $arg, Value::Null)? {
-                Value::Dimension(n, Unit::Percent) => {
+                Value::Dimension(n, Unit::Percent, _) => {
                     Some(bound!($args, $arg, n, Unit::Percent, $low, $high) / Number::from(100))
                 }
                 v @ Value::Dimension(..) => {

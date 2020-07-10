@@ -169,7 +169,7 @@ impl<'a> Parser<'a> {
                 _ => val_toks.push(self.toks.next().unwrap()),
             }
         }
-        let val = self.parse_value_from_vec(val_toks)?;
+        let val = self.parse_value_from_vec(val_toks, true)?;
         Ok(VariableValue::new(val, global, default))
     }
 }

@@ -51,6 +51,7 @@ fn str_length(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
         Value::String(i, _) => Ok(Value::Dimension(
             Number::from(i.chars().count()),
             Unit::None,
+            true,
         )),
         v => Err((
             format!("$string: {} is not a string.", v.inspect(args.span())?),
@@ -98,15 +99,15 @@ fn str_slice(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     };
     let str_len = string.chars().count();
     let start = match parser.arg(&mut args, 1, "start-at")? {
-        Value::Dimension(n, Unit::None) if n.is_decimal() => {
+        Value::Dimension(n, Unit::None, _) if n.is_decimal() => {
             return Err((format!("{} is not an int.", n), args.span()).into())
         }
-        Value::Dimension(n, Unit::None) if n.is_positive() => {
+        Value::Dimension(n, Unit::None, _) if n.is_positive() => {
             n.to_integer().to_usize().unwrap_or(str_len + 1)
         }
-        Value::Dimension(n, Unit::None) if n.is_zero() => 1_usize,
-        Value::Dimension(n, Unit::None) if n < -Number::from(str_len) => 1_usize,
-        Value::Dimension(n, Unit::None) => (n.to_integer() + BigInt::from(str_len + 1))
+        Value::Dimension(n, Unit::None, _) if n.is_zero() => 1_usize,
+        Value::Dimension(n, Unit::None, _) if n < -Number::from(str_len) => 1_usize,
+        Value::Dimension(n, Unit::None, _) => (n.to_integer() + BigInt::from(str_len + 1))
             .to_usize()
             .unwrap(),
         v @ Value::Dimension(..) => {
@@ -128,15 +129,15 @@ fn str_slice(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         }
     };
     let mut end = match parser.default_arg(&mut args, 2, "end-at", Value::Null)? {
-        Value::Dimension(n, Unit::None) if n.is_decimal() => {
+        Value::Dimension(n, Unit::None, _) if n.is_decimal() => {
             return Err((format!("{} is not an int.", n), args.span()).into())
         }
-        Value::Dimension(n, Unit::None) if n.is_positive() => {
+        Value::Dimension(n, Unit::None, _) if n.is_positive() => {
             n.to_integer().to_usize().unwrap_or(str_len + 1)
         }
-        Value::Dimension(n, Unit::None) if n.is_zero() => 0_usize,
-        Value::Dimension(n, Unit::None) if n < -Number::from(str_len) => 0_usize,
-        Value::Dimension(n, Unit::None) => (n.to_integer() + BigInt::from(str_len + 1))
+        Value::Dimension(n, Unit::None, _) if n.is_zero() => 0_usize,
+        Value::Dimension(n, Unit::None, _) if n < -Number::from(str_len) => 0_usize,
+        Value::Dimension(n, Unit::None, _) => (n.to_integer() + BigInt::from(str_len + 1))
             .to_usize()
             .unwrap_or(str_len + 1),
         v @ Value::Dimension(..) => {
@@ -202,7 +203,7 @@ fn str_index(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     };
 
     Ok(match s1.find(&substr) {
-        Some(v) => Value::Dimension(Number::from(v + 1), Unit::None),
+        Some(v) => Value::Dimension(Number::from(v + 1), Unit::None, true),
         None => Value::Null,
     })
 }
@@ -232,10 +233,10 @@ fn str_insert(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
     };
 
     let index = match parser.arg(&mut args, 2, "index")? {
-        Value::Dimension(n, Unit::None) if n.is_decimal() => {
+        Value::Dimension(n, Unit::None, _) if n.is_decimal() => {
             return Err((format!("$index: {} is not an int.", n), args.span()).into())
         }
-        Value::Dimension(n, Unit::None) => n,
+        Value::Dimension(n, Unit::None, _) => n,
         v @ Value::Dimension(..) => {
             return Err((
                 format!(

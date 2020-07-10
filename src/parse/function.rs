@@ -63,7 +63,7 @@ impl<'a> Parser<'a> {
 
     pub(super) fn parse_return(&mut self) -> SassResult<Box<Value>> {
         let toks = read_until_semicolon_or_closing_curly_brace(self.toks)?;
-        let v = self.parse_value_from_vec(toks)?;
+        let v = self.parse_value_from_vec(toks, true)?;
         if let Some(Token { kind: ';', .. }) = self.toks.peek() {
             self.toks.next();
         }

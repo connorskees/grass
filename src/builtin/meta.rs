@@ -53,7 +53,7 @@ fn feature_exists(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Val
 fn unit(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     let unit = match parser.arg(&mut args, 0, "number")? {
-        Value::Dimension(_, u) => u.to_string(),
+        Value::Dimension(_, u, _) => u.to_string(),
         v => {
             return Err((
                 format!("$number: {} is not a number.", v.inspect(args.span())?),
@@ -75,8 +75,8 @@ fn unitless(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     #[allow(clippy::match_same_arms)]
     Ok(match parser.arg(&mut args, 0, "number")? {
-        Value::Dimension(_, Unit::None) => Value::True,
-        Value::Dimension(_, _) => Value::False,
+        Value::Dimension(_, Unit::None, _) => Value::True,
+        Value::Dimension(..) => Value::False,
         _ => Value::True,
     })
 }

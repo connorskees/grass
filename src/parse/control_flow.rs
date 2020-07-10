@@ -22,7 +22,7 @@ impl<'a> Parser<'a> {
         let mut found_true = false;
         let mut body = Vec::new();
 
-        let init_cond = self.parse_value()?.node;
+        let init_cond = self.parse_value(true)?.node;
 
         // consume the open curly brace
         let span_before = match self.toks.next() {
@@ -85,7 +85,7 @@ impl<'a> Parser<'a> {
                             self.throw_away_until_open_curly_brace()?;
                             false
                         } else {
-                            let v = self.parse_value()?.node.is_true();
+                            let v = self.parse_value(true)?.node.is_true();
                             match self.toks.next() {
                                 Some(Token { kind: '{', .. }) => {}
                                 Some(..) | None => {
@@ -237,9 +237,9 @@ impl<'a> Parser<'a> {
             }
         }
         self.whitespace();
-        let from_val = self.parse_value_from_vec(from_toks)?;
+        let from_val = self.parse_value_from_vec(from_toks, true)?;
         let from = match from_val.node {
-            Value::Dimension(n, _) => match n.to_integer().to_isize() {
+            Value::Dimension(n, ..) => match n.to_integer().to_isize() {
                 Some(v) => v,
                 None => return Err((format!("{} is not a int.", n), from_val.span).into()),
             },
@@ -252,9 +252,9 @@ impl<'a> Parser<'a> {
             }
         };
 
-        let to_val = self.parse_value()?;
+        let to_val = self.parse_value(true)?;
         let to = match to_val.node {
-            Value::Dimension(n, _) => match n.to_integer().to_isize() {
+            Value::Dimension(n, ..) => match n.to_integer().to_isize() {
                 Some(v) => v,
                 None => return Err((format!("{} is not a int.", n), to_val.span).into()),
             },
@@ -297,7 +297,7 @@ impl<'a> Parser<'a> {
             self.scopes.insert_var_last(
                 var.node,
                 Spanned {
-                    node: Value::Dimension(Number::from(i), Unit::None),
+                    node: Value::Dimension(Number::from(i), Unit::None, true),
                     span: var.span,
                 },
             );
@@ -368,7 +368,7 @@ impl<'a> Parser<'a> {
         self.whitespace();
 
         let mut stmts = Vec::new();
-        let mut val = self.parse_value_from_vec(cond.clone())?;
+        let mut val = self.parse_value_from_vec(cond.clone(), true)?;
         self.scopes.enter_new_scope();
         while val.node.is_true() {
             if self.flags.in_function() {
@@ -411,7 +411,7 @@ impl<'a> Parser<'a> {
                     .parse()?,
                 );
             }
-            val = self.parse_value_from_vec(cond.clone())?;
+            val = self.parse_value_from_vec(cond.clone(), true)?;
         }
         self.scopes.exit_scope();
 
@@ -452,7 +452,10 @@ impl<'a> Parser<'a> {
         }
         self.whitespace();
         let iter_val_toks = read_until_open_curly_brace(self.toks)?;
-        let iter = self.parse_value_from_vec(iter_val_toks)?.node.as_list();
+        let iter = self
+            .parse_value_from_vec(iter_val_toks, true)?
+            .node
+            .as_list();
         self.toks.next();
         self.whitespace();
         let mut body = read_until_closing_curly_brace(self.toks)?;

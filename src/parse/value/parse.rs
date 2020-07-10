@@ -52,7 +52,7 @@ impl IsWhitespace for IntermediateValue {
 }
 
 impl<'a> Parser<'a> {
-    pub(crate) fn parse_value(&mut self) -> SassResult<Spanned<Value>> {
+    pub(crate) fn parse_value(&mut self, in_paren: bool) -> SassResult<Spanned<Value>> {
         self.whitespace();
         let span = match self.toks.peek() {
             Some(Token { kind: '}', .. })
@@ -80,6 +80,7 @@ impl<'a> Parser<'a> {
                         },
                         &mut space_separated,
                         last_was_whitespace,
+                        in_paren,
                     )?;
                 }
                 IntermediateValue::Whitespace => {
@@ -104,7 +105,7 @@ impl<'a> Parser<'a> {
                                         span = span.merge(a.span);
                                         a.node
                                     })
-                                    .map(|a| ValueVisitor::new(iter.parser, span).eval(a))
+                                    .map(|a| ValueVisitor::new(iter.parser, span).eval(a, in_paren))
                                     .collect::<SassResult<Vec<Value>>>()?,
                                 ListSeparator::Space,
                                 Brackets::None,
@@ -117,7 +118,7 @@ impl<'a> Parser<'a> {
                     last_was_whitespace = false;
                     space_separated.push(
                         HigherIntermediateValue::Literal(
-                            match iter.parser.parse_value_from_vec(t)?.node {
+                            match iter.parser.parse_value_from_vec(t, in_paren)?.node {
                                 Value::List(v, sep, Brackets::None) => {
                                     Value::List(v, sep, Brackets::Bracketed)
                                 }
@@ -147,7 +148,7 @@ impl<'a> Parser<'a> {
                     HigherIntermediateValue::Literal(Value::List(
                         space_separated
                             .into_iter()
-                            .map(|a| ValueVisitor::new(self, span).eval(a.node))
+                            .map(|a| ValueVisitor::new(self, span).eval(a.node, in_paren))
                             .collect::<SassResult<Vec<Value>>>()?,
                         ListSeparator::Space,
                         Brackets::None,
@@ -158,7 +159,7 @@ impl<'a> Parser<'a> {
             Value::List(
                 comma_separated
                     .into_iter()
-                    .map(|a| ValueVisitor::new(self, span).eval(a.node))
+                    .map(|a| ValueVisitor::new(self, span).eval(a.node, in_paren))
                     .collect::<SassResult<Vec<Value>>>()?,
                 ListSeparator::Comma,
                 Brackets::None,
@@ -166,13 +167,13 @@ impl<'a> Parser<'a> {
             .span(span)
         } else if space_separated.len() == 1 {
             ValueVisitor::new(self, span)
-                .eval(space_separated.pop().unwrap().node)?
+                .eval(space_separated.pop().unwrap().node, in_paren)?
                 .span(span)
         } else {
             Value::List(
                 space_separated
                     .into_iter()
-                    .map(|a| ValueVisitor::new(self, span).eval(a.node))
+                    .map(|a| ValueVisitor::new(self, span).eval(a.node, in_paren))
                     .collect::<SassResult<Vec<Value>>>()?,
                 ListSeparator::Space,
                 Brackets::None,
@@ -181,7 +182,11 @@ impl<'a> Parser<'a> {
         })
     }
 
-    pub(crate) fn parse_value_from_vec(&mut self, toks: Vec<Token>) -> SassResult<Spanned<Value>> {
+    pub(crate) fn parse_value_from_vec(
+        &mut self,
+        toks: Vec<Token>,
+        in_paren: bool,
+    ) -> SassResult<Spanned<Value>> {
         Parser {
             toks: &mut toks.into_iter().peekmore(),
             map: self.map,
@@ -197,7 +202,7 @@ impl<'a> Parser<'a> {
             extender: self.extender,
             content_scopes: self.content_scopes,
         }
-        .parse_value()
+        .parse_value(in_paren)
     }
 
     fn parse_ident_value(&mut self) -> SassResult<Spanned<IntermediateValue>> {
@@ -391,6 +396,7 @@ impl<'a> Parser<'a> {
                             HigherIntermediateValue::Literal(Value::Dimension(
                                 Number::new_small(n),
                                 unit,
+                                false,
                             )),
                         )
                         .span(span)));
@@ -403,6 +409,7 @@ impl<'a> Parser<'a> {
                             HigherIntermediateValue::Literal(Value::Dimension(
                                 Number::new_small(n),
                                 unit,
+                                false,
                             )),
                         )
                         .span(span)));
@@ -415,6 +422,7 @@ impl<'a> Parser<'a> {
                         HigherIntermediateValue::Literal(Value::Dimension(
                             Number::new_big(n),
                             unit,
+                            false,
                         )),
                     )
                     .span(span)));
@@ -443,6 +451,7 @@ impl<'a> Parser<'a> {
                 IntermediateValue::Value(HigherIntermediateValue::Literal(Value::Dimension(
                     Number::new_big(n * times_ten),
                     unit,
+                    false,
                 )))
                 .span(span)
             }
@@ -747,11 +756,12 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
         op: Spanned<Op>,
         space_separated: &mut Vec<Spanned<HigherIntermediateValue>>,
         last_was_whitespace: bool,
+        in_paren: bool,
     ) -> SassResult<()> {
         match op.node {
             Op::Not => {
                 self.whitespace();
-                let right = self.single_value()?;
+                let right = self.single_value(in_paren)?;
                 space_separated.push(Spanned {
                     node: HigherIntermediateValue::UnaryOp(op.node, Box::new(right.node)),
                     span: right.span,
@@ -759,7 +769,7 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
             }
             Op::Div => {
                 self.whitespace();
-                let right = self.single_value()?;
+                let right = self.single_value(in_paren)?;
                 if let Some(left) = space_separated.pop() {
                     space_separated.push(Spanned {
                         node: HigherIntermediateValue::BinaryOp(
@@ -776,7 +786,7 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
                             format!(
                                 "/{}",
                                 ValueVisitor::new(self.parser, right.span)
-                                    .eval(right.node)?
+                                    .eval(right.node, false)?
                                     .to_css_string(right.span)?
                             ),
                             QuoteKind::None,
@@ -788,7 +798,7 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
             Op::Plus => {
                 if let Some(left) = space_separated.pop() {
                     self.whitespace();
-                    let right = self.single_value()?;
+                    let right = self.single_value(in_paren)?;
                     space_separated.push(Spanned {
                         node: HigherIntermediateValue::BinaryOp(
                             Box::new(left.node),
@@ -799,7 +809,7 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
                     });
                 } else {
                     self.whitespace();
-                    let right = self.single_value()?;
+                    let right = self.single_value(in_paren)?;
                     space_separated.push(Spanned {
                         node: HigherIntermediateValue::UnaryOp(op.node, Box::new(right.node)),
                         span: right.span,
@@ -808,7 +818,7 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
             }
             Op::Minus => {
                 if self.whitespace() || !last_was_whitespace {
-                    let right = self.single_value()?;
+                    let right = self.single_value(in_paren)?;
                     if let Some(left) = space_separated.pop() {
                         space_separated.push(Spanned {
                             node: HigherIntermediateValue::BinaryOp(
@@ -826,7 +836,7 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
                         );
                     }
                 } else {
-                    let right = self.single_value()?;
+                    let right = self.single_value(in_paren)?;
                     space_separated.push(
                         right.map_node(|n| HigherIntermediateValue::UnaryOp(op.node, Box::new(n))),
                     );
@@ -846,10 +856,10 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
                 } else if let Some(left) = space_separated.pop() {
                     self.whitespace();
                     if ValueVisitor::new(self.parser, left.span)
-                        .eval(left.node.clone())?
+                        .eval(left.node.clone(), false)?
                         .is_true()
                     {
-                        let right = self.single_value()?;
+                        let right = self.single_value(in_paren)?;
                         space_separated.push(
                             HigherIntermediateValue::BinaryOp(
                                 Box::new(left.node),
@@ -890,7 +900,7 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
                 } else if let Some(left) = space_separated.pop() {
                     self.whitespace();
                     if ValueVisitor::new(self.parser, left.span)
-                        .eval(left.node.clone())?
+                        .eval(left.node.clone(), false)?
                         .is_true()
                     {
                         // we explicitly ignore errors here as a workaround for short circuiting
@@ -912,7 +922,7 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
                         }
                         space_separated.push(left);
                     } else {
-                        let right = self.single_value()?;
+                        let right = self.single_value(in_paren)?;
                         space_separated.push(
                             HigherIntermediateValue::BinaryOp(
                                 Box::new(left.node),
@@ -929,7 +939,7 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
             _ => {
                 if let Some(left) = space_separated.pop() {
                     self.whitespace();
-                    let right = self.single_value()?;
+                    let right = self.single_value(in_paren)?;
                     space_separated.push(
                         HigherIntermediateValue::BinaryOp(
                             Box::new(left.node),
@@ -946,7 +956,7 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
         Ok(())
     }
 
-    fn single_value(&mut self) -> SassResult<Spanned<HigherIntermediateValue>> {
+    fn single_value(&mut self, in_paren: bool) -> SassResult<Spanned<HigherIntermediateValue>> {
         let next = self
             .next()
             .ok_or(("Expected expression.", self.parser.span_before))??;
@@ -955,7 +965,7 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
             IntermediateValue::Op(op) => match op {
                 Op::Minus => {
                     self.whitespace();
-                    let val = self.single_value()?;
+                    let val = self.single_value(in_paren)?;
                     Spanned {
                         node: HigherIntermediateValue::UnaryOp(Op::Minus, Box::new(val.node)),
                         span: next.span.merge(val.span),
@@ -963,7 +973,7 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
                 }
                 Op::Not => {
                     self.whitespace();
-                    let val = self.single_value()?;
+                    let val = self.single_value(in_paren)?;
                     Spanned {
                         node: HigherIntermediateValue::UnaryOp(Op::Not, Box::new(val.node)),
                         span: next.span.merge(val.span),
@@ -971,17 +981,17 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
                 }
                 Op::Plus => {
                     self.whitespace();
-                    self.single_value()?
+                    self.single_value(in_paren)?
                 }
                 Op::Div => {
                     self.whitespace();
-                    let val = self.single_value()?;
+                    let val = self.single_value(in_paren)?;
                     Spanned {
                         node: HigherIntermediateValue::Literal(Value::String(
                             format!(
                                 "/{}",
                                 ValueVisitor::new(self.parser, val.span)
-                                    .eval(val.node)?
+                                    .eval(val.node, false)?
                                     .to_css_string(val.span)?
                             ),
                             QuoteKind::None,
@@ -1012,7 +1022,7 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
                 return Err(("Expected expression.", self.parser.span_before).into())
             }
             IntermediateValue::Bracketed(t) => {
-                let v = self.parser.parse_value_from_vec(t)?;
+                let v = self.parser.parse_value_from_vec(t, in_paren)?;
                 HigherIntermediateValue::Literal(match v.node {
                     Value::List(v, sep, Brackets::None) => Value::List(v, sep, Brackets::Bracketed),
                     v => Value::List(vec![v], ListSeparator::Space, Brackets::Bracketed),
@@ -1050,7 +1060,7 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
         let mut map = SassMap::new();
         let key = self
             .parser
-            .parse_value_from_vec(read_until_char(paren_toks, ':')?)?;
+            .parse_value_from_vec(read_until_char(paren_toks, ':')?, true)?;
 
         if paren_toks.peek().is_none() {
             return Ok(Spanned {
@@ -1063,7 +1073,7 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
 
         let val = self
             .parser
-            .parse_value_from_vec(read_until_char(paren_toks, ',')?)?;
+            .parse_value_from_vec(read_until_char(paren_toks, ',')?, true)?;
 
         map.insert(key.node, val.node);
 
@@ -1081,11 +1091,11 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
         loop {
             let key = self
                 .parser
-                .parse_value_from_vec(read_until_char(paren_toks, ':')?)?;
+                .parse_value_from_vec(read_until_char(paren_toks, ':')?, true)?;
             devour_whitespace(paren_toks);
             let val = self
                 .parser
-                .parse_value_from_vec(read_until_char(paren_toks, ',')?)?;
+                .parse_value_from_vec(read_until_char(paren_toks, ',')?, true)?;
             span = span.merge(val.span);
             devour_whitespace(paren_toks);
             if map.insert(key.node, val.node) {

@@ -339,7 +339,7 @@ impl<'a> Parser<'a> {
     fn peek_interpolation(&mut self) -> SassResult<Spanned<Value>> {
         let vec = peek_until_closing_curly_brace(self.toks)?;
         self.toks.advance_cursor();
-        let val = self.parse_value_from_vec(vec)?;
+        let val = self.parse_value_from_vec(vec, false)?;
         Ok(Spanned {
             node: val.node.unquote(),
             span: val.span,

@@ -16,7 +16,7 @@ use crate::{
 fn percentage(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     let num = match parser.arg(&mut args, 0, "number")? {
-        Value::Dimension(n, Unit::None) => n * Number::from(100),
+        Value::Dimension(n, Unit::None, _) => n * Number::from(100),
         v @ Value::Dimension(..) => {
             return Err((
                 format!(
@@ -35,13 +35,13 @@ fn percentage(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
                 .into())
         }
     };
-    Ok(Value::Dimension(num, Unit::Percent))
+    Ok(Value::Dimension(num, Unit::Percent, true))
 }
 
 fn round(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     match parser.arg(&mut args, 0, "number")? {
-        Value::Dimension(n, u) => Ok(Value::Dimension(n.round(), u)),
+        Value::Dimension(n, u, _) => Ok(Value::Dimension(n.round(), u, true)),
         v => Err((
             format!("$number: {} is not a number.", v.inspect(args.span())?),
             args.span(),
@@ -53,7 +53,7 @@ fn round(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 fn ceil(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     match parser.arg(&mut args, 0, "number")? {
-        Value::Dimension(n, u) => Ok(Value::Dimension(n.ceil(), u)),
+        Value::Dimension(n, u, _) => Ok(Value::Dimension(n.ceil(), u, true)),
         v => Err((
             format!("$number: {} is not a number.", v.inspect(args.span())?),
             args.span(),
@@ -65,7 +65,7 @@ fn ceil(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 fn floor(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     match parser.arg(&mut args, 0, "number")? {
-        Value::Dimension(n, u) => Ok(Value::Dimension(n.floor(), u)),
+        Value::Dimension(n, u, _) => Ok(Value::Dimension(n.floor(), u, true)),
         v => Err((
             format!("$number: {} is not a number.", v.inspect(args.span())?),
             args.span(),
@@ -77,7 +77,7 @@ fn floor(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 fn abs(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     match parser.arg(&mut args, 0, "number")? {
-        Value::Dimension(n, u) => Ok(Value::Dimension(n.abs(), u)),
+        Value::Dimension(n, u, _) => Ok(Value::Dimension(n.abs(), u, true)),
         v => Err((
             format!("$number: {} is not a number.", v.inspect(args.span())?),
             args.span(),
@@ -89,7 +89,7 @@ fn abs(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 fn comparable(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;
     let unit1 = match parser.arg(&mut args, 0, "number1")? {
-        Value::Dimension(_, u) => u,
+        Value::Dimension(_, u, _) => u,
         v => {
             return Err((
                 format!("$number1: {} is not a number.", v.inspect(args.span())?),
@@ -99,7 +99,7 @@ fn comparable(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
         }
     };
     let unit2 = match parser.arg(&mut args, 1, "number2")? {
-        Value::Dimension(_, u) => u,
+        Value::Dimension(_, u, _) => u,
         v => {
             return Err((
                 format!("$number2: {} is not a number.", v.inspect(args.span())?),
@@ -117,12 +117,13 @@ fn comparable(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
 fn random(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     let limit = match parser.default_arg(&mut args, 0, "limit", Value::Null)? {
-        Value::Dimension(n, _) => n,
+        Value::Dimension(n, ..) => n,
         Value::Null => {
             let mut rng = rand::thread_rng();
             return Ok(Value::Dimension(
                 Number::from(rng.gen_range(0.0, 1.0)),
                 Unit::None,
+                true,
             ));
         }
         v => {
@@ -135,7 +136,7 @@ fn random(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     };
 
     if limit.is_one() {
-        return Ok(Value::Dimension(Number::one(), Unit::None));
+        return Ok(Value::Dimension(Number::one(), Unit::None, true));
     }
 
     if limit.is_decimal() {
@@ -165,6 +166,7 @@ fn random(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     Ok(Value::Dimension(
         Number::from(rng.gen_range(0, limit) + 1),
         Unit::None,
+        true,
     ))
 }
 
@@ -175,7 +177,7 @@ fn min(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         .variadic_args(args)?
         .into_iter()
         .map(|val| match val.node {
-            Value::Dimension(number, unit) => Ok((number, unit)),
+            Value::Dimension(number, unit, _) => Ok((number, unit)),
             v => Err((format!("{} is not a number.", v.inspect(span)?), span).into()),
         })
         .collect::<SassResult<Vec<(Number, Unit)>>>()?
@@ -187,15 +189,23 @@ fn min(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     for num in nums {
         if ValueVisitor::new(parser, span)
             .less_than(
-                HigherIntermediateValue::Literal(Value::Dimension(num.0.clone(), num.1.clone())),
-                HigherIntermediateValue::Literal(Value::Dimension(min.0.clone(), min.1.clone())),
+                HigherIntermediateValue::Literal(Value::Dimension(
+                    num.0.clone(),
+                    num.1.clone(),
+                    true,
+                )),
+                HigherIntermediateValue::Literal(Value::Dimension(
+                    min.0.clone(),
+                    min.1.clone(),
+                    true,
+                )),
             )?
             .is_true()
         {
             min = num;
         }
     }
-    Ok(Value::Dimension(min.0, min.1))
+    Ok(Value::Dimension(min.0, min.1, true))
 }
 
 fn max(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
@@ -205,7 +215,7 @@ fn max(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         .variadic_args(args)?
         .into_iter()
         .map(|val| match val.node {
-            Value::Dimension(number, unit) => Ok((number, unit)),
+            Value::Dimension(number, unit, _) => Ok((number, unit)),
             v => Err((format!("{} is not a number.", v.inspect(span)?), span).into()),
         })
         .collect::<SassResult<Vec<(Number, Unit)>>>()?
@@ -217,15 +227,23 @@ fn max(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     for num in nums {
         if ValueVisitor::new(parser, span)
             .greater_than(
-                HigherIntermediateValue::Literal(Value::Dimension(num.0.clone(), num.1.clone())),
-                HigherIntermediateValue::Literal(Value::Dimension(max.0.clone(), max.1.clone())),
+                HigherIntermediateValue::Literal(Value::Dimension(
+                    num.0.clone(),
+                    num.1.clone(),
+                    true,
+                )),
+                HigherIntermediateValue::Literal(Value::Dimension(
+                    max.0.clone(),
+                    max.1.clone(),
+                    true,
+                )),
             )?
             .is_true()
         {
             max = num;
         }
     }
-    Ok(Value::Dimension(max.0, max.1))
+    Ok(Value::Dimension(max.0, max.1, true))
 }
 
 pub(crate) fn declare(f: &mut GlobalFunctionMap) {

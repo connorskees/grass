@@ -46,12 +46,15 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
         Self { parser, span }
     }
 
-    pub fn eval(&mut self, value: HigherIntermediateValue) -> SassResult<Value> {
+    pub fn eval(&mut self, value: HigherIntermediateValue, in_parens: bool) -> SassResult<Value> {
         match value {
+            HigherIntermediateValue::Literal(Value::Dimension(n, u, _)) if in_parens => {
+                Ok(Value::Dimension(n, u, true))
+            }
             HigherIntermediateValue::Literal(v) => Ok(v),
-            HigherIntermediateValue::BinaryOp(v1, op, v2) => self.bin_op(*v1, op, *v2),
-            HigherIntermediateValue::UnaryOp(op, val) => self.unary_op(op, *val),
-            HigherIntermediateValue::Paren(val) => self.eval(*val),
+            HigherIntermediateValue::BinaryOp(v1, op, v2) => self.bin_op(*v1, op, *v2, in_parens),
+            HigherIntermediateValue::UnaryOp(op, val) => self.unary_op(op, *val, in_parens),
+            HigherIntermediateValue::Paren(val) => self.eval(*val, true),
             HigherIntermediateValue::Function(function, args) => {
                 self.parser.call_function(function, args)
             }
@@ -63,16 +66,21 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
         val1: HigherIntermediateValue,
         op: Op,
         val2: HigherIntermediateValue,
+        in_parens: bool,
     ) -> SassResult<Value> {
-        let mut val1 = self.paren_or_unary(val1)?;
-        let val2 = self.paren_or_unary(val2)?;
+        let mut val1 = self.paren_or_unary(val1, in_parens)?;
+        let val2 = self.paren_or_unary(val2, in_parens)?;
 
         if let HigherIntermediateValue::BinaryOp(val1_1, op2, val1_2) = val1 {
+            let in_parens = op != Op::Div || op2 != Op::Div;
             if op2.precedence() >= op.precedence() {
-                val1 = HigherIntermediateValue::Literal(self.bin_op(*val1_1, op2, *val1_2)?);
+                val1 = HigherIntermediateValue::Literal(
+                    self.bin_op(*val1_1, op2, *val1_2, in_parens)?,
+                );
             } else {
-                let val2 = HigherIntermediateValue::Literal(self.bin_op(*val1_2, op, val2)?);
-                return self.bin_op(*val1_1, op2, val2);
+                let val2 =
+                    HigherIntermediateValue::Literal(self.bin_op(*val1_2, op, val2, in_parens)?);
+                return self.bin_op(*val1_1, op2, val2, in_parens);
             }
         }
 
@@ -80,7 +88,7 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
             Op::Plus => self.add(val1, val2)?,
             Op::Minus => self.sub(val1, val2)?,
             Op::Mul => self.mul(val1, val2)?,
-            Op::Div => self.div(val1, val2)?,
+            Op::Div => self.div(val1, val2, in_parens)?,
             Op::Rem => self.rem(val1, val2)?,
             Op::And => Self::and(val1, val2)?,
             Op::Or => Self::or(val1, val2)?,
@@ -94,8 +102,13 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
         })
     }
 
-    fn unary_op(&mut self, op: Op, val: HigherIntermediateValue) -> SassResult<Value> {
-        let val = self.eval(val)?;
+    fn unary_op(
+        &mut self,
+        op: Op,
+        val: HigherIntermediateValue,
+        in_parens: bool,
+    ) -> SassResult<Value> {
+        let val = self.eval(val, in_parens)?;
         match op {
             Op::Minus => self.unary_minus(val),
             Op::Not => Self::unary_not(&val),
@@ -106,7 +119,7 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
 
     fn unary_minus(&self, val: Value) -> SassResult<Value> {
         Ok(match val {
-            Value::Dimension(n, u) => Value::Dimension(-n, u),
+            Value::Dimension(n, u, should_divide) => Value::Dimension(-n, u, should_divide),
             v => Value::String(format!("-{}", v.to_css_string(self.span)?), QuoteKind::None),
         })
     }
@@ -124,7 +137,7 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
 
     fn paren(&mut self, val: HigherIntermediateValue) -> SassResult<HigherIntermediateValue> {
         Ok(if let HigherIntermediateValue::Paren(v) = val {
-            HigherIntermediateValue::Literal(self.eval(*v)?)
+            HigherIntermediateValue::Literal(self.eval(*v, true)?)
         } else {
             val
         })
@@ -133,11 +146,12 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
     fn paren_or_unary(
         &mut self,
         val: HigherIntermediateValue,
+        in_parens: bool,
     ) -> SassResult<HigherIntermediateValue> {
         let val = self.paren(val)?;
         Ok(match val {
             HigherIntermediateValue::UnaryOp(op, val) => {
-                HigherIntermediateValue::Literal(self.unary_op(op, *val)?)
+                HigherIntermediateValue::Literal(self.unary_op(op, *val, in_parens)?)
             }
             HigherIntermediateValue::Function(function, args) => {
                 HigherIntermediateValue::Literal(self.parser.call_function(function, args)?)
@@ -191,8 +205,8 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
                     QuoteKind::None,
                 ),
             },
-            Value::Dimension(num, unit) => match right {
-                Value::Dimension(num2, unit2) => {
+            Value::Dimension(num, unit, _) => match right {
+                Value::Dimension(num2, unit2, _) => {
                     if !unit.comparable(&unit2) {
                         return Err((
                             format!("Incompatible units {} and {}.", unit2, unit),
@@ -201,11 +215,11 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
                             .into());
                     }
                     if unit == unit2 {
-                        Value::Dimension(num + num2, unit)
+                        Value::Dimension(num + num2, unit, true)
                     } else if unit == Unit::None {
-                        Value::Dimension(num + num2, unit2)
+                        Value::Dimension(num + num2, unit2, true)
                     } else if unit2 == Unit::None {
-                        Value::Dimension(num + num2, unit)
+                        Value::Dimension(num + num2, unit, true)
                     } else {
                         Value::Dimension(
                             num + num2
@@ -213,6 +227,7 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
                                     [unit2.to_string().as_str()]
                                 .clone(),
                             unit,
+                            true,
                         )
                     }
                 }
@@ -299,8 +314,8 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
                 format!("-{}", right.to_css_string(self.span)?),
                 QuoteKind::None,
             ),
-            Value::Dimension(num, unit) => match right {
-                Value::Dimension(num2, unit2) => {
+            Value::Dimension(num, unit, _) => match right {
+                Value::Dimension(num2, unit2, _) => {
                     if !unit.comparable(&unit2) {
                         return Err((
                             format!("Incompatible units {} and {}.", unit2, unit),
@@ -309,11 +324,11 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
                             .into());
                     }
                     if unit == unit2 {
-                        Value::Dimension(num - num2, unit)
+                        Value::Dimension(num - num2, unit, true)
                     } else if unit == Unit::None {
-                        Value::Dimension(num - num2, unit2)
+                        Value::Dimension(num - num2, unit2, true)
                     } else if unit2 == Unit::None {
-                        Value::Dimension(num - num2, unit)
+                        Value::Dimension(num - num2, unit, true)
                     } else {
                         Value::Dimension(
                             num - num2
@@ -321,6 +336,7 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
                                     [unit2.to_string().as_str()]
                                 .clone(),
                             unit,
+                            true,
                         )
                     }
                 }
@@ -418,14 +434,14 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
             v => panic!("{:?}", v),
         };
         Ok(match left {
-            Value::Dimension(num, unit) => match right {
-                Value::Dimension(num2, unit2) => {
+            Value::Dimension(num, unit, _) => match right {
+                Value::Dimension(num2, unit2, _) => {
                     if unit == Unit::None {
-                        Value::Dimension(num * num2, unit2)
+                        Value::Dimension(num * num2, unit2, true)
                     } else if unit2 == Unit::None {
-                        Value::Dimension(num * num2, unit)
+                        Value::Dimension(num * num2, unit, true)
                     } else {
-                        Value::Dimension(num * num2, unit * unit2)
+                        Value::Dimension(num * num2, unit * unit2, true)
                     }
                 }
                 _ => {
@@ -459,6 +475,7 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
         &self,
         left: HigherIntermediateValue,
         right: HigherIntermediateValue,
+        in_parens: bool,
     ) -> SassResult<Value> {
         let left = match left {
             HigherIntermediateValue::Literal(v) => v,
@@ -473,35 +490,43 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
                 format!("/{}", right.to_css_string(self.span)?),
                 QuoteKind::None,
             ),
-            Value::Dimension(num, unit) => match right {
-                Value::Dimension(num2, unit2) => {
-                    // `unit(1em / 1em)` => `""`
-                    if unit == unit2 {
-                        Value::Dimension(num / num2, Unit::None)
+            Value::Dimension(num, unit, should_divide1) => match right {
+                Value::Dimension(num2, unit2, should_divide2) => {
+                    if should_divide1 || should_divide2 || in_parens {
+                        // `unit(1em / 1em)` => `""`
+                        if unit == unit2 {
+                            Value::Dimension(num / num2, Unit::None, true)
 
-                    // `unit(1 / 1em)` => `"em^-1"`
-                    } else if unit == Unit::None {
-                        Value::Dimension(num / num2, Unit::None / unit2)
+                        // `unit(1 / 1em)` => `"em^-1"`
+                        } else if unit == Unit::None {
+                            Value::Dimension(num / num2, Unit::None / unit2, true)
 
-                    // `unit(1em / 1)` => `"em"`
-                    } else if unit2 == Unit::None {
-                        Value::Dimension(num / num2, unit)
+                        // `unit(1em / 1)` => `"em"`
+                        } else if unit2 == Unit::None {
+                            Value::Dimension(num / num2, unit, true)
 
-                    // `unit(1in / 1px)` => `""`
-                    } else if unit.comparable(&unit2) {
-                        Value::Dimension(
-                            num / (num2
-                                * UNIT_CONVERSION_TABLE[unit.to_string().as_str()]
-                                    [unit2.to_string().as_str()]
-                                .clone()),
-                            Unit::None,
-                        )
-                    // `unit(1em / 1px)` => `"em/px"`
-                    // todo: this should probably be its own variant
-                    // within the `Value` enum
+                        // `unit(1in / 1px)` => `""`
+                        } else if unit.comparable(&unit2) {
+                            Value::Dimension(
+                                num / (num2
+                                    * UNIT_CONVERSION_TABLE[unit.to_string().as_str()]
+                                        [unit2.to_string().as_str()]
+                                    .clone()),
+                                Unit::None,
+                                true,
+                            )
+                        // `unit(1em / 1px)` => `"em/px"`
+                        // todo: this should probably be its own variant
+                        // within the `Value` enum
+                        } else {
+                            // todo: remember to account for `Mul` and `Div`
+                            todo!("non-comparable inverse units")
+                        }
                     } else {
-                        // todo: remember to account for `Mul` and `Div`
-                        todo!("non-comparable inverse units")
+                        Value::String(
+                            format!("{}{}/{}{}", num, unit, num2, unit2),
+                            QuoteKind::None,
+                        )
                     }
                 }
                 Value::String(s, q) => {
@@ -605,28 +630,28 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
             v => panic!("{:?}", v),
         };
         Ok(match left {
-            Value::Dimension(n, u) => match right {
-                Value::Dimension(n2, u2) => {
+            Value::Dimension(n, u, _) => match right {
+                Value::Dimension(n2, u2, _) => {
                     if !u.comparable(&u2) {
                         return Err(
                             (format!("Incompatible units {} and {}.", u2, u), self.span).into()
                         );
                     }
                     if u == u2 {
-                        Value::Dimension(n % n2, u)
+                        Value::Dimension(n % n2, u, true)
                     } else if u == Unit::None {
-                        Value::Dimension(n % n2, u2)
+                        Value::Dimension(n % n2, u2, true)
                     } else if u2 == Unit::None {
-                        Value::Dimension(n % n2, u)
+                        Value::Dimension(n % n2, u, true)
                     } else {
-                        Value::Dimension(n, u)
+                        Value::Dimension(n, u, true)
                     }
                 }
                 _ => {
                     return Err((
                         format!(
                             "Undefined operation \"{} % {}\".",
-                            Value::Dimension(n, u).inspect(self.span)?,
+                            Value::Dimension(n, u, true).inspect(self.span)?,
                             right.inspect(self.span)?
                         ),
                         self.span,
@@ -711,8 +736,8 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
             v => panic!("{:?}", v),
         };
         let ordering = match left {
-            Value::Dimension(num, unit) => match &right {
-                Value::Dimension(num2, unit2) => {
+            Value::Dimension(num, unit, _) => match &right {
+                Value::Dimension(num2, unit2, _) => {
                     if !unit.comparable(unit2) {
                         return Err((
                             format!("Incompatible units {} and {}.", unit2, unit),

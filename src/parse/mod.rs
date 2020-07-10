@@ -139,7 +139,7 @@ impl<'a> Parser<'a> {
                             let Spanned {
                                 node: message,
                                 span,
-                            } = self.parse_value()?;
+                            } = self.parse_value(false)?;
 
                             return Err((
                                 message.inspect(span)?.to_string(),
@@ -151,7 +151,7 @@ impl<'a> Parser<'a> {
                             let Spanned {
                                 node: message,
                                 span,
-                            } = self.parse_value()?;
+                            } = self.parse_value(false)?;
                             span.merge(kind_string.span);
                             if let Some(Token { kind: ';', pos }) = self.toks.peek() {
                                 kind_string.span.merge(*pos);
@@ -166,7 +166,7 @@ impl<'a> Parser<'a> {
                             let Spanned {
                                 node: message,
                                 span,
-                            } = self.parse_value()?;
+                            } = self.parse_value(false)?;
                             span.merge(kind_string.span);
                             if let Some(Token { kind: ';', pos }) = self.toks.peek() {
                                 kind_string.span.merge(*pos);
@@ -416,7 +416,7 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse_interpolation(&mut self) -> SassResult<Spanned<Value>> {
-        let val = self.parse_value()?;
+        let val = self.parse_value(true)?;
         match self.toks.next() {
             Some(Token { kind: '}', .. }) => {}
             Some(..) | None => return Err(("expected \"}\".", val.span).into()),
@@ -437,7 +437,7 @@ impl<'a> Parser<'a> {
         toks: Vec<Token>,
         quoted: bool,
     ) -> SassResult<Cow<'static, str>> {
-        let value = self.parse_value_from_vec(toks)?;
+        let value = self.parse_value_from_vec(toks, false)?;
         if quoted {
             value.node.to_css_string(value.span)
         } else {

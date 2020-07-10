@@ -125,7 +125,7 @@ impl<'a> Parser<'a> {
                     c if is_name(*c) => {
                         if let Some(toks) = self.parse_style_value_when_no_space_after_semicolon() {
                             let len = toks.len();
-                            if let Ok(val) = self.parse_value_from_vec(toks) {
+                            if let Ok(val) = self.parse_value_from_vec(toks, false) {
                                 self.toks.take(len).for_each(drop);
                                 return Ok(SelectorOrStyle::Style(
                                     InternedString::get_or_intern(property),
@@ -173,7 +173,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_style_value(&mut self) -> SassResult<Spanned<Value>> {
-        self.parse_value()
+        self.parse_value(false)
     }
 
     pub(super) fn parse_style_group(

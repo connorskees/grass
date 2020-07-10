@@ -118,3 +118,54 @@ error!(
     "a {\n  color: 1 / get-function(lighten);\n}\n",
     "Error: get-function(\"lighten\") isn't a valid CSS value."
 );
+test!(
+    does_not_eval_plain,
+    "a {\n  color: 1 / 2;\n}\n",
+    "a {\n  color: 1/2;\n}\n"
+);
+test!(
+    does_eval_inside_parens,
+    "a {\n  color: (1/2);\n}\n",
+    "a {\n  color: 0.5;\n}\n"
+);
+test!(
+    does_eval_when_one_is_calculated,
+    "a {\n  color: (1*1) / 2;\n}\n",
+    "a {\n  color: 0.5;\n}\n"
+);
+test!(
+    does_not_eval_from_unary_minus,
+    "a {\n  color: -1 / 2;\n}\n",
+    "a {\n  color: -1/2;\n}\n"
+);
+test!(
+    does_eval_from_variable,
+    "$a: 1;\na {\n  color: $a / 2;\n}\n",
+    "a {\n  color: 0.5;\n}\n"
+);
+test!(
+    does_eval_single_number_in_parens,
+    "a {\n  color: (1) / 2;\n}\n",
+    "a {\n  color: 0.5;\n}\n"
+);
+test!(
+    does_eval_function_call,
+    "@function foo() {
+        @return 1;
+    }
+    
+    a {
+        color: foo() / 2;
+    }",
+    "a {\n  color: 0.5;\n}\n"
+);
+test!(
+    does_not_eval_chained_binop_division,
+    "a {\n  color: 1 / 3 / 4;\n}\n",
+    "a {\n  color: 1/3/4;\n}\n"
+);
+test!(
+    does_not_eval_chained_binop_one_not_division,
+    "a {\n  color: 1 + 3 / 4;\n}\n",
+    "a {\n  color: 1.75;\n}\n"
+);

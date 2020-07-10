@@ -22,7 +22,7 @@ impl<'a> Parser<'a> {
         let Spanned {
             node: file_name_as_value,
             span,
-        } = self.parse_value()?;
+        } = self.parse_value(true)?;
         let file_name = match file_name_as_value {
             Value::String(s, QuoteKind::Quoted) => {
                 if s.ends_with(".css") || s.starts_with("http://") || s.starts_with("https://") {

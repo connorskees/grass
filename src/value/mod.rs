@@ -30,7 +30,7 @@ pub(crate) enum Value {
     True,
     False,
     Null,
-    Dimension(Number, Unit),
+    Dimension(Number, Unit, bool),
     List(Vec<Value>, ListSeparator, Brackets),
     Color(Box<Color>),
     String(String, QuoteKind),
@@ -122,7 +122,7 @@ impl Value {
     pub fn to_css_string(&self, span: Span) -> SassResult<Cow<'static, str>> {
         Ok(match self {
             Value::Important => Cow::const_str("!important"),
-            Value::Dimension(num, unit) => match unit {
+            Value::Dimension(num, unit, _) => match unit {
                 Unit::Mul(..) | Unit::Div(..) => {
                     return Err((format!("{}{} isn't a valid CSS value.", num, unit), span).into());
                 }
@@ -252,8 +252,8 @@ impl Value {
                 Value::String(s2, ..) => s1 == s2,
                 _ => false,
             },
-            Value::Dimension(n, unit) => match other {
-                Value::Dimension(n2, unit2) => {
+            Value::Dimension(n, unit, _) => match other {
+                Value::Dimension(n2, unit2, _) => {
                     if !unit.comparable(unit2) {
                         false
                     } else if unit == unit2 {
@@ -294,8 +294,8 @@ impl Value {
                 Value::String(s2, ..) => s1 != s2,
                 _ => true,
             },
-            Value::Dimension(n, unit) => match other {
-                Value::Dimension(n2, unit2) => {
+            Value::Dimension(n, unit, _) => match other {
+                Value::Dimension(n2, unit2, _) => {
                     if !unit.comparable(unit2) {
                         true
                     } else if unit == unit2 {
@@ -371,7 +371,7 @@ impl Value {
                     .collect::<SassResult<Vec<String>>>()?
                     .join(", ")
             )),
-            Value::Dimension(num, unit) => Cow::owned(format!("{}{}", num, unit)),
+            Value::Dimension(num, unit, _) => Cow::owned(format!("{}{}", num, unit)),
             Value::ArgList(args) if args.is_empty() => Cow::const_str("()"),
             Value::ArgList(args) if args.len() == 1 => Cow::owned(format!(
                 "({},)",

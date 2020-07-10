@@ -51,11 +51,6 @@ test!(
 test!(positive_float_leading_zero, "a {\n  color: 0.1;\n}\n");
 test!(negative_float_leading_zero, "a {\n  color: -0.1;\n}\n");
 test!(
-    num_plus_div,
-    "a {\n  color: 1 + 3/4;\n}\n",
-    "a {\n  color: 1.75;\n}\n"
-);
-test!(
     negative_near_zero_no_sign,
     "a {\n  color: -0.000000000001;\n}\n",
     "a {\n  color: 0;\n}\n"

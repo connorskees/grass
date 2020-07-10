@@ -16,6 +16,7 @@ fn length(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     Ok(Value::Dimension(
         Number::from(parser.arg(&mut args, 0, "list")?.as_list().len()),
         Unit::None,
+        true,
     ))
 }
 
@@ -23,7 +24,7 @@ fn nth(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;
     let mut list = parser.arg(&mut args, 0, "list")?.as_list();
     let n = match parser.arg(&mut args, 1, "n")? {
-        Value::Dimension(num, _) => num,
+        Value::Dimension(num, ..) => num,
         v => {
             return Err((
                 format!("$n: {} is not a number.", v.inspect(args.span())?),
@@ -80,7 +81,7 @@ fn set_nth(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         v => (vec![v], ListSeparator::Space, Brackets::None),
     };
     let n = match parser.arg(&mut args, 1, "n")? {
-        Value::Dimension(num, _) => num,
+        Value::Dimension(num, ..) => num,
         v => {
             return Err((
                 format!("$n: {} is not a number.", v.inspect(args.span())?),
@@ -248,7 +249,7 @@ fn index(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         Some(v) => Number::from(v + 1),
         None => return Ok(Value::Null),
     };
-    Ok(Value::Dimension(index, Unit::None))
+    Ok(Value::Dimension(index, Unit::None, true))
 }
 
 fn zip(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
