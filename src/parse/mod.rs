@@ -546,7 +546,7 @@ impl<'a> Parser<'a> {
             params.push(tok.kind);
         }
 
-        let raw_body = self.parse()?;
+        let raw_body = self.parse_stmt()?;
         let mut rules = Vec::with_capacity(raw_body.len());
         let mut body = Vec::new();
 
@@ -782,7 +782,7 @@ impl<'a> Parser<'a> {
             extender: self.extender,
             content_scopes: self.content_scopes,
         }
-        .parse()?;
+        .parse_stmt()?;
 
         let mut rules = Vec::with_capacity(raw_body.len());
         let mut body = Vec::new();

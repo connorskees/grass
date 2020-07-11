@@ -16,3 +16,16 @@ test!(
     "@false;\n"
 );
 test!(nothing_after_hash, "@foo #", "@foo #;\n");
+test!(
+    style_following,
+    "@foo (a: b) {
+        a {
+            color: red;
+        }
+    }
+
+    a {
+        color: green;
+    }",
+    "@foo (a: b) {\n  a {\n    color: red;\n  }\n}\na {\n  color: green;\n}\n"
+);
