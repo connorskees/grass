@@ -17,7 +17,7 @@ use crate::{
 
 fn to_upper_case(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    match parser.arg(&mut args, 0, "string")? {
+    match args.get_err(0, "string")? {
         Value::String(mut i, q) => {
             i.make_ascii_uppercase();
             Ok(Value::String(i, q))
@@ -32,7 +32,7 @@ fn to_upper_case(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Valu
 
 fn to_lower_case(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    match parser.arg(&mut args, 0, "string")? {
+    match args.get_err(0, "string")? {
         Value::String(mut i, q) => {
             i.make_ascii_lowercase();
             Ok(Value::String(i, q))
@@ -47,7 +47,7 @@ fn to_lower_case(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Valu
 
 fn str_length(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    match parser.arg(&mut args, 0, "string")? {
+    match args.get_err(0, "string")? {
         Value::String(i, _) => Ok(Value::Dimension(
             Number::from(i.chars().count()),
             Unit::None,
@@ -63,7 +63,7 @@ fn str_length(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
 
 fn quote(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    match parser.arg(&mut args, 0, "string")? {
+    match args.get_err(0, "string")? {
         Value::String(i, _) => Ok(Value::String(i, QuoteKind::Quoted)),
         v => Err((
             format!("$string: {} is not a string.", v.inspect(args.span())?),
@@ -75,7 +75,7 @@ fn quote(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 
 fn unquote(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    match parser.arg(&mut args, 0, "string")? {
+    match args.get_err(0, "string")? {
         i @ Value::String(..) => Ok(i.unquote()),
         v => Err((
             format!("$string: {} is not a string.", v.inspect(args.span())?),
@@ -87,7 +87,7 @@ fn unquote(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 
 fn str_slice(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(3)?;
-    let (string, quotes) = match parser.arg(&mut args, 0, "string")? {
+    let (string, quotes) = match args.get_err(0, "string")? {
         Value::String(s, q) => (s, q),
         v => {
             return Err((
@@ -98,7 +98,7 @@ fn str_slice(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         }
     };
     let str_len = string.chars().count();
-    let start = match parser.arg(&mut args, 1, "start-at")? {
+    let start = match args.get_err(1, "start-at")? {
         Value::Dimension(n, Unit::None, _) if n.is_decimal() => {
             return Err((format!("{} is not an int.", n), args.span()).into())
         }
@@ -128,7 +128,7 @@ fn str_slice(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
                 .into())
         }
     };
-    let mut end = match parser.default_arg(&mut args, 2, "end-at", Value::Null)? {
+    let mut end = match args.default_arg(2, "end-at", Value::Null)? {
         Value::Dimension(n, Unit::None, _) if n.is_decimal() => {
             return Err((format!("{} is not an int.", n), args.span()).into())
         }
@@ -180,7 +180,7 @@ fn str_slice(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 
 fn str_index(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;
-    let s1 = match parser.arg(&mut args, 0, "string")? {
+    let s1 = match args.get_err(0, "string")? {
         Value::String(i, _) => i,
         v => {
             return Err((
@@ -191,7 +191,7 @@ fn str_index(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         }
     };
 
-    let substr = match parser.arg(&mut args, 1, "substring")? {
+    let substr = match args.get_err(1, "substring")? {
         Value::String(i, _) => i,
         v => {
             return Err((
@@ -210,7 +210,7 @@ fn str_index(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 
 fn str_insert(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(3)?;
-    let (s1, quotes) = match parser.arg(&mut args, 0, "string")? {
+    let (s1, quotes) = match args.get_err(0, "string")? {
         Value::String(i, q) => (i, q),
         v => {
             return Err((
@@ -221,7 +221,7 @@ fn str_insert(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
         }
     };
 
-    let substr = match parser.arg(&mut args, 1, "insert")? {
+    let substr = match args.get_err(1, "insert")? {
         Value::String(i, _) => i,
         v => {
             return Err((
@@ -232,7 +232,7 @@ fn str_insert(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
         }
     };
 
-    let index = match parser.arg(&mut args, 2, "index")? {
+    let index = match args.get_err(2, "index")? {
         Value::Dimension(n, Unit::None, _) if n.is_decimal() => {
             return Err((format!("$index: {} is not an int.", n), args.span()).into())
         }

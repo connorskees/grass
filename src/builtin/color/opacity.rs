@@ -7,7 +7,7 @@ use crate::{
 
 fn alpha(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    match parser.arg(&mut args, 0, "color")? {
+    match args.get_err(0, "color")? {
         Value::Color(c) => Ok(Value::Dimension(c.alpha(), Unit::None, true)),
         v => Err((
             format!("$color: {} is not a color.", v.inspect(args.span())?),
@@ -19,7 +19,7 @@ fn alpha(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 
 fn opacity(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    match parser.arg(&mut args, 0, "color")? {
+    match args.get_err(0, "color")? {
         Value::Color(c) => Ok(Value::Dimension(c.alpha(), Unit::None, true)),
         Value::Dimension(num, unit, _) => Ok(Value::String(
             format!("opacity({}{})", num, unit),
@@ -35,7 +35,7 @@ fn opacity(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 
 fn opacify(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;
-    let color = match parser.arg(&mut args, 0, "color")? {
+    let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,
         v => {
             return Err((
@@ -45,7 +45,7 @@ fn opacify(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
                 .into())
         }
     };
-    let amount = match parser.arg(&mut args, 1, "amount")? {
+    let amount = match args.get_err(1, "amount")? {
         Value::Dimension(n, u, _) => bound!(args, "amount", n, u, 0, 1),
         v => {
             return Err((
@@ -60,7 +60,7 @@ fn opacify(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 
 fn fade_in(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;
-    let color = match parser.arg(&mut args, 0, "color")? {
+    let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,
         v => {
             return Err((
@@ -70,7 +70,7 @@ fn fade_in(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
                 .into())
         }
     };
-    let amount = match parser.arg(&mut args, 1, "amount")? {
+    let amount = match args.get_err(1, "amount")? {
         Value::Dimension(n, u, _) => bound!(args, "amount", n, u, 0, 1),
         v => {
             return Err((
@@ -85,7 +85,7 @@ fn fade_in(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 
 fn transparentize(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;
-    let color = match parser.arg(&mut args, 0, "color")? {
+    let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,
         v => {
             return Err((
@@ -95,7 +95,7 @@ fn transparentize(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Val
                 .into())
         }
     };
-    let amount = match parser.arg(&mut args, 1, "amount")? {
+    let amount = match args.get_err(1, "amount")? {
         Value::Dimension(n, u, _) => bound!(args, "amount", n, u, 0, 1),
         v => {
             return Err((
@@ -110,7 +110,7 @@ fn transparentize(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Val
 
 fn fade_out(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;
-    let color = match parser.arg(&mut args, 0, "color")? {
+    let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,
         v => {
             return Err((
@@ -120,7 +120,7 @@ fn fade_out(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
                 .into())
         }
     };
-    let amount = match parser.arg(&mut args, 1, "amount")? {
+    let amount = match args.get_err(1, "amount")? {
         Value::Dimension(n, u, _) => bound!(args, "amount", n, u, 0, 1),
         v => {
             return Err((

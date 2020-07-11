@@ -15,7 +15,7 @@ use crate::{
 
 fn percentage(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    let num = match parser.arg(&mut args, 0, "number")? {
+    let num = match args.get_err(0, "number")? {
         Value::Dimension(n, Unit::None, _) => n * Number::from(100),
         v @ Value::Dimension(..) => {
             return Err((
@@ -40,7 +40,7 @@ fn percentage(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
 
 fn round(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    match parser.arg(&mut args, 0, "number")? {
+    match args.get_err(0, "number")? {
         Value::Dimension(n, u, _) => Ok(Value::Dimension(n.round(), u, true)),
         v => Err((
             format!("$number: {} is not a number.", v.inspect(args.span())?),
@@ -52,7 +52,7 @@ fn round(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 
 fn ceil(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    match parser.arg(&mut args, 0, "number")? {
+    match args.get_err(0, "number")? {
         Value::Dimension(n, u, _) => Ok(Value::Dimension(n.ceil(), u, true)),
         v => Err((
             format!("$number: {} is not a number.", v.inspect(args.span())?),
@@ -64,7 +64,7 @@ fn ceil(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 
 fn floor(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    match parser.arg(&mut args, 0, "number")? {
+    match args.get_err(0, "number")? {
         Value::Dimension(n, u, _) => Ok(Value::Dimension(n.floor(), u, true)),
         v => Err((
             format!("$number: {} is not a number.", v.inspect(args.span())?),
@@ -76,7 +76,7 @@ fn floor(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 
 fn abs(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    match parser.arg(&mut args, 0, "number")? {
+    match args.get_err(0, "number")? {
         Value::Dimension(n, u, _) => Ok(Value::Dimension(n.abs(), u, true)),
         v => Err((
             format!("$number: {} is not a number.", v.inspect(args.span())?),
@@ -88,7 +88,7 @@ fn abs(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 
 fn comparable(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;
-    let unit1 = match parser.arg(&mut args, 0, "number1")? {
+    let unit1 = match args.get_err(0, "number1")? {
         Value::Dimension(_, u, _) => u,
         v => {
             return Err((
@@ -98,7 +98,7 @@ fn comparable(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
                 .into())
         }
     };
-    let unit2 = match parser.arg(&mut args, 1, "number2")? {
+    let unit2 = match args.get_err(1, "number2")? {
         Value::Dimension(_, u, _) => u,
         v => {
             return Err((
@@ -116,7 +116,7 @@ fn comparable(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
 #[cfg(feature = "random")]
 fn random(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    let limit = match parser.default_arg(&mut args, 0, "limit", Value::Null)? {
+    let limit = match args.default_arg(0, "limit", Value::Null)? {
         Value::Dimension(n, ..) => n,
         Value::Null => {
             let mut rng = rand::thread_rng();
@@ -173,8 +173,8 @@ fn random(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 fn min(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.min_args(1)?;
     let span = args.span();
-    let mut nums = parser
-        .variadic_args(args)?
+    let mut nums = args
+        .get_variadic()?
         .into_iter()
         .map(|val| match val.node {
             Value::Dimension(number, unit, _) => Ok((number, unit)),
@@ -211,8 +211,8 @@ fn min(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 fn max(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.min_args(1)?;
     let span = args.span();
-    let mut nums = parser
-        .variadic_args(args)?
+    let mut nums = args
+        .get_variadic()?
         .into_iter()
         .map(|val| match val.node {
             Value::Dimension(number, unit, _) => Ok((number, unit)),

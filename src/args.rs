@@ -5,7 +5,6 @@ use codemap::{Span, Spanned};
 use crate::{
     common::Identifier,
     error::SassResult,
-    parse::Parser,
     value::Value,
     {Cow, Token},
 };
@@ -65,7 +64,7 @@ impl CallArgs {
         CallArgs(HashMap::new(), span)
     }
 
-    pub fn to_css_string(self, parser: &mut Parser<'_>) -> SassResult<Spanned<String>> {
+    pub fn to_css_string(self) -> SassResult<Spanned<String>> {
         let mut string = String::with_capacity(2 + self.len() * 10);
         string.push('(');
         let mut span = self.1;
@@ -77,7 +76,7 @@ impl CallArgs {
             });
         }
 
-        let args = match parser.variadic_args(self) {
+        let args = match self.get_variadic() {
             Ok(v) => v,
             Err(..) => {
                 return Err(("Plain CSS functions don't support keyword arguments.", span).into())
@@ -123,11 +122,11 @@ impl CallArgs {
         }
     }
 
-    pub fn get_err(&mut self, position: usize, name: &'static str) -> SassResult<Spanned<Value>> {
+    pub fn get_err(&mut self, position: usize, name: &'static str) -> SassResult<Value> {
         match self.get_named(name) {
-            Some(v) => v,
+            Some(v) => Ok(v?.node),
             None => match self.get_positional(position) {
-                Some(v) => v,
+                Some(v) => Ok(v?.node),
                 None => Err((format!("Missing argument ${}.", name), self.span()).into()),
             },
         }
@@ -189,5 +188,51 @@ impl CallArgs {
             return Err((err, self.span()).into());
         }
         Ok(())
+    }
+
+    pub fn default_arg(
+        &mut self,
+        position: usize,
+        name: &'static str,
+        default: Value,
+    ) -> SassResult<Value> {
+        Ok(match self.get(position, name) {
+            Some(val) => val?.node,
+            None => default,
+        })
+    }
+
+    pub fn positional_arg(&mut self, position: usize) -> Option<SassResult<Spanned<Value>>> {
+        self.get_positional(position)
+    }
+
+    #[allow(dead_code, clippy::unused_self)]
+    fn named_arg(&mut self, name: &'static str) -> Option<SassResult<Spanned<Value>>> {
+        self.get_named(name)
+    }
+
+    pub fn default_named_arg(&mut self, name: &'static str, default: Value) -> SassResult<Value> {
+        Ok(match self.get_named(name) {
+            Some(val) => val?.node,
+            None => default,
+        })
+    }
+
+    pub fn get_variadic(self) -> SassResult<Vec<Spanned<Value>>> {
+        let mut vals = Vec::new();
+        let mut args = match self
+            .0
+            .into_iter()
+            .map(|(a, v)| Ok((a.position()?, v)))
+            .collect::<Result<Vec<(usize, SassResult<Spanned<Value>>)>, String>>()
+        {
+            Ok(v) => v,
+            Err(e) => return Err((format!("No argument named ${}.", e), self.1).into()),
+        };
+        args.sort_by(|(a1, _), (a2, _)| a1.cmp(a2));
+        for arg in args {
+            vals.push(arg.1?);
+        }
+        Ok(vals)
     }
 }

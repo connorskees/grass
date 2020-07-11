@@ -21,7 +21,7 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
     }
 
     if args.len() == 1 {
-        let mut channels = match parser.arg(&mut args, 0, "channels")? {
+        let mut channels = match args.get_err(0, "channels")? {
             Value::List(v, ..) => v,
             _ => return Err(("Missing argument $channels.", args.span()).into()),
         };
@@ -125,10 +125,10 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
 
         Ok(Value::Color(Box::new(color)))
     } else if args.len() == 2 {
-        let color = match parser.arg(&mut args, 0, "color")? {
+        let color = match args.get_err(0, "color")? {
             Value::Color(c) => c,
             v if v.is_special_function() => {
-                let alpha = parser.arg(&mut args, 1, "alpha")?;
+                let alpha = args.get_err(1, "alpha")?;
                 return Ok(Value::String(
                     format!(
                         "{}({}, {})",
@@ -147,7 +147,7 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
                     .into())
             }
         };
-        let alpha = match parser.arg(&mut args, 1, "alpha")? {
+        let alpha = match args.get_err(1, "alpha")? {
             Value::Dimension(n, Unit::None, _) => n,
             Value::Dimension(n, Unit::Percent, _) => n / Number::from(100),
             v @ Value::Dimension(..) => {
@@ -183,7 +183,7 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
         };
         Ok(Value::Color(Box::new(color.with_alpha(alpha))))
     } else {
-        let red = match parser.arg(&mut args, 0, "red")? {
+        let red = match args.get_err(0, "red")? {
             Value::Dimension(n, Unit::None, _) => n,
             Value::Dimension(n, Unit::Percent, _) => (n / Number::from(100)) * Number::from(255),
             v @ Value::Dimension(..) => {
@@ -197,8 +197,8 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
                     .into())
             }
             v if v.is_special_function() => {
-                let green = parser.arg(&mut args, 1, "green")?;
-                let blue = parser.arg(&mut args, 2, "blue")?;
+                let green = args.get_err(1, "green")?;
+                let blue = args.get_err(2, "blue")?;
                 let mut string = format!(
                     "{}({}, {}, {}",
                     name,
@@ -208,11 +208,7 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
                 );
                 if !args.is_empty() {
                     string.push_str(", ");
-                    string.push_str(
-                        &parser
-                            .arg(&mut args, 3, "alpha")?
-                            .to_css_string(args.span())?,
-                    );
+                    string.push_str(&args.get_err(3, "alpha")?.to_css_string(args.span())?);
                 }
                 string.push(')');
                 return Ok(Value::String(string, QuoteKind::None));
@@ -225,7 +221,7 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
                     .into())
             }
         };
-        let green = match parser.arg(&mut args, 1, "green")? {
+        let green = match args.get_err(1, "green")? {
             Value::Dimension(n, Unit::None, _) => n,
             Value::Dimension(n, Unit::Percent, _) => (n / Number::from(100)) * Number::from(255),
             v @ Value::Dimension(..) => {
@@ -239,7 +235,7 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
                     .into())
             }
             v if v.is_special_function() => {
-                let blue = parser.arg(&mut args, 2, "blue")?;
+                let blue = args.get_err(2, "blue")?;
                 let mut string = format!(
                     "{}({}, {}, {}",
                     name,
@@ -249,11 +245,7 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
                 );
                 if !args.is_empty() {
                     string.push_str(", ");
-                    string.push_str(
-                        &parser
-                            .arg(&mut args, 3, "alpha")?
-                            .to_css_string(args.span())?,
-                    );
+                    string.push_str(&args.get_err(3, "alpha")?.to_css_string(args.span())?);
                 }
                 string.push(')');
                 return Ok(Value::String(string, QuoteKind::None));
@@ -266,7 +258,7 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
                     .into())
             }
         };
-        let blue = match parser.arg(&mut args, 2, "blue")? {
+        let blue = match args.get_err(2, "blue")? {
             Value::Dimension(n, Unit::None, _) => n,
             Value::Dimension(n, Unit::Percent, _) => (n / Number::from(100)) * Number::from(255),
             v @ Value::Dimension(..) => {
@@ -289,11 +281,7 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
                 );
                 if !args.is_empty() {
                     string.push_str(", ");
-                    string.push_str(
-                        &parser
-                            .arg(&mut args, 3, "alpha")?
-                            .to_css_string(args.span())?,
-                    );
+                    string.push_str(&args.get_err(3, "alpha")?.to_css_string(args.span())?);
                 }
                 string.push(')');
                 return Ok(Value::String(string, QuoteKind::None));
@@ -306,8 +294,7 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
                     .into())
             }
         };
-        let alpha = match parser.default_arg(
-            &mut args,
+        let alpha = match args.default_arg(
             3,
             "alpha",
             Value::Dimension(Number::one(), Unit::None, true),
@@ -359,7 +346,7 @@ fn rgba(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 
 fn red(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    match parser.arg(&mut args, 0, "color")? {
+    match args.get_err(0, "color")? {
         Value::Color(c) => Ok(Value::Dimension(c.red(), Unit::None, true)),
         v => Err((
             format!("$color: {} is not a color.", v.inspect(args.span())?),
@@ -371,7 +358,7 @@ fn red(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 
 fn green(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    match parser.arg(&mut args, 0, "color")? {
+    match args.get_err(0, "color")? {
         Value::Color(c) => Ok(Value::Dimension(c.green(), Unit::None, true)),
         v => Err((
             format!("$color: {} is not a color.", v.inspect(args.span())?),
@@ -383,7 +370,7 @@ fn green(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 
 fn blue(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    match parser.arg(&mut args, 0, "color")? {
+    match args.get_err(0, "color")? {
         Value::Color(c) => Ok(Value::Dimension(c.blue(), Unit::None, true)),
         v => Err((
             format!("$color: {} is not a color.", v.inspect(args.span())?),
@@ -395,7 +382,7 @@ fn blue(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 
 fn mix(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(3)?;
-    let color1 = match parser.arg(&mut args, 0, "color1")? {
+    let color1 = match args.get_err(0, "color1")? {
         Value::Color(c) => c,
         v => {
             return Err((
@@ -406,7 +393,7 @@ fn mix(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         }
     };
 
-    let color2 = match parser.arg(&mut args, 1, "color2")? {
+    let color2 = match args.get_err(1, "color2")? {
         Value::Color(c) => c,
         v => {
             return Err((
@@ -417,8 +404,7 @@ fn mix(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         }
     };
 
-    let weight = match parser.default_arg(
-        &mut args,
+    let weight = match args.default_arg(
         2,
         "weight",
         Value::Dimension(Number::from(50), Unit::None, true),

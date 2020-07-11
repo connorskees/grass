@@ -1,3 +1,6 @@
+// A reference to the parser is only necessary for some functions
+#![allow(unused_variables)]
+
 use std::{
     collections::HashMap,
     sync::atomic::{AtomicUsize, Ordering},

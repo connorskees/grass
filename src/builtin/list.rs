@@ -14,7 +14,7 @@ use crate::{
 fn length(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     Ok(Value::Dimension(
-        Number::from(parser.arg(&mut args, 0, "list")?.as_list().len()),
+        Number::from(args.get_err(0, "list")?.as_list().len()),
         Unit::None,
         true,
     ))
@@ -22,8 +22,8 @@ fn length(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 
 fn nth(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;
-    let mut list = parser.arg(&mut args, 0, "list")?.as_list();
-    let n = match parser.arg(&mut args, 1, "n")? {
+    let mut list = args.get_err(0, "list")?.as_list();
+    let n = match args.get_err(1, "n")? {
         Value::Dimension(num, ..) => num,
         v => {
             return Err((
@@ -64,7 +64,7 @@ fn nth(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 fn list_separator(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     Ok(Value::String(
-        match parser.arg(&mut args, 0, "list")? {
+        match args.get_err(0, "list")? {
             Value::List(_, sep, ..) => sep.name(),
             _ => ListSeparator::Space.name(),
         }
@@ -75,12 +75,12 @@ fn list_separator(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Val
 
 fn set_nth(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(3)?;
-    let (mut list, sep, brackets) = match parser.arg(&mut args, 0, "list")? {
+    let (mut list, sep, brackets) = match args.get_err(0, "list")? {
         Value::List(v, sep, b) => (v, sep, b),
         Value::Map(m) => (m.as_list(), ListSeparator::Comma, Brackets::None),
         v => (vec![v], ListSeparator::Space, Brackets::None),
     };
-    let n = match parser.arg(&mut args, 1, "n")? {
+    let n = match args.get_err(1, "n")? {
         Value::Dimension(num, ..) => num,
         v => {
             return Err((
@@ -109,7 +109,7 @@ fn set_nth(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         return Err((format!("$n: {} is not an int.", n), args.span()).into());
     }
 
-    let val = parser.arg(&mut args, 2, "value")?;
+    let val = args.get_err(2, "value")?;
 
     if n.is_positive() {
         list[n.to_integer().to_usize().unwrap_or(std::usize::MAX) - 1] = val;
@@ -122,13 +122,12 @@ fn set_nth(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 
 fn append(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(3)?;
-    let (mut list, sep, brackets) = match parser.arg(&mut args, 0, "list")? {
+    let (mut list, sep, brackets) = match args.get_err(0, "list")? {
         Value::List(v, sep, b) => (v, sep, b),
         v => (vec![v], ListSeparator::Space, Brackets::None),
     };
-    let val = parser.arg(&mut args, 1, "val")?;
-    let sep = match parser.default_arg(
-        &mut args,
+    let val = args.get_err(1, "val")?;
+    let sep = match args.default_arg(
         2,
         "separator",
         Value::String("auto".to_owned(), QuoteKind::None),
@@ -161,18 +160,17 @@ fn append(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 
 fn join(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(4)?;
-    let (mut list1, sep1, brackets) = match parser.arg(&mut args, 0, "list1")? {
+    let (mut list1, sep1, brackets) = match args.get_err(0, "list1")? {
         Value::List(v, sep, brackets) => (v, sep, brackets),
         Value::Map(m) => (m.as_list(), ListSeparator::Comma, Brackets::None),
         v => (vec![v], ListSeparator::Space, Brackets::None),
     };
-    let (list2, sep2) = match parser.arg(&mut args, 1, "list2")? {
+    let (list2, sep2) = match args.get_err(1, "list2")? {
         Value::List(v, sep, ..) => (v, sep),
         Value::Map(m) => (m.as_list(), ListSeparator::Comma),
         v => (vec![v], ListSeparator::Space),
     };
-    let sep = match parser.default_arg(
-        &mut args,
+    let sep = match args.default_arg(
         2,
         "separator",
         Value::String("auto".to_owned(), QuoteKind::None),
@@ -204,8 +202,7 @@ fn join(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         }
     };
 
-    let brackets = match parser.default_arg(
-        &mut args,
+    let brackets = match args.default_arg(
         3,
         "bracketed",
         Value::String("auto".to_owned(), QuoteKind::None),
@@ -230,7 +227,7 @@ fn join(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 
 fn is_bracketed(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    Ok(Value::bool(match parser.arg(&mut args, 0, "list")? {
+    Ok(Value::bool(match args.get_err(0, "list")? {
         Value::List(.., brackets) => match brackets {
             Brackets::Bracketed => true,
             Brackets::None => false,
@@ -241,8 +238,8 @@ fn is_bracketed(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value
 
 fn index(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;
-    let list = parser.arg(&mut args, 0, "list")?.as_list();
-    let value = parser.arg(&mut args, 1, "value")?;
+    let list = args.get_err(0, "list")?.as_list();
+    let value = args.get_err(1, "value")?;
     // TODO: find a way to propagate any errors here
     // Potential input to fuzz: index(1px 1in 1cm, 96px + 1rem)
     let index = match list.into_iter().position(|v| v == value) {
@@ -253,8 +250,8 @@ fn index(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 }
 
 fn zip(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
-    let lists = parser
-        .variadic_args(args)?
+    let lists = args
+        .get_variadic()?
         .into_iter()
         .map(|x| x.node.as_list())
         .collect::<Vec<Vec<Value>>>();

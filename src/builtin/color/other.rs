@@ -13,8 +13,8 @@ use crate::{
 };
 
 macro_rules! opt_rgba {
-    ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal, $parser:ident) => {
-        let $name = match $parser.default_named_arg(&mut $args, $arg, Value::Null)? {
+    ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal) => {
+        let $name = match $args.default_named_arg($arg, Value::Null)? {
             Value::Dimension(n, u, _) => Some(bound!($args, $arg, n, u, $low, $high)),
             Value::Null => None,
             v => {
@@ -29,8 +29,8 @@ macro_rules! opt_rgba {
 }
 
 macro_rules! opt_hsl {
-    ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal, $parser:ident) => {
-        let $name = match $parser.default_named_arg(&mut $args, $arg, Value::Null)? {
+    ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal) => {
+        let $name = match $args.default_named_arg($arg, Value::Null)? {
             Value::Dimension(n, u, _) => {
                 Some(bound!($args, $arg, n, u, $low, $high) / Number::from(100))
             }
@@ -47,7 +47,7 @@ macro_rules! opt_hsl {
 }
 
 fn change_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
-    if parser.positional_arg(&mut args, 1).is_some() {
+    if args.positional_arg(1).is_some() {
         return Err((
             "Only one positional argument is allowed. All other arguments must be passed by name.",
             args.span(),
@@ -55,7 +55,7 @@ fn change_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value
             .into());
     }
 
-    let color = match parser.arg(&mut args, 0, "color")? {
+    let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,
         v => {
             return Err((
@@ -66,10 +66,10 @@ fn change_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value
         }
     };
 
-    opt_rgba!(args, alpha, "alpha", 0, 1, parser);
-    opt_rgba!(args, red, "red", 0, 255, parser);
-    opt_rgba!(args, green, "green", 0, 255, parser);
-    opt_rgba!(args, blue, "blue", 0, 255, parser);
+    opt_rgba!(args, alpha, "alpha", 0, 1);
+    opt_rgba!(args, red, "red", 0, 255);
+    opt_rgba!(args, green, "green", 0, 255);
+    opt_rgba!(args, blue, "blue", 0, 255);
 
     if red.is_some() || green.is_some() || blue.is_some() {
         return Ok(Value::Color(Box::new(Color::from_rgba(
@@ -80,7 +80,7 @@ fn change_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value
         ))));
     }
 
-    let hue = match parser.default_named_arg(&mut args, "hue", Value::Null)? {
+    let hue = match args.default_named_arg("hue", Value::Null)? {
         Value::Dimension(n, ..) => Some(n),
         Value::Null => None,
         v => {
@@ -92,8 +92,8 @@ fn change_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value
         }
     };
 
-    opt_hsl!(args, saturation, "saturation", 0, 100, parser);
-    opt_hsl!(args, luminance, "lightness", 0, 100, parser);
+    opt_hsl!(args, saturation, "saturation", 0, 100);
+    opt_hsl!(args, luminance, "lightness", 0, 100);
 
     if hue.is_some() || saturation.is_some() || luminance.is_some() {
         // Color::as_hsla() returns more exact values than Color::hue(), etc.
@@ -114,7 +114,7 @@ fn change_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value
 }
 
 fn adjust_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
-    let color = match parser.arg(&mut args, 0, "color")? {
+    let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,
         v => {
             return Err((
@@ -125,10 +125,10 @@ fn adjust_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value
         }
     };
 
-    opt_rgba!(args, alpha, "alpha", -1, 1, parser);
-    opt_rgba!(args, red, "red", -255, 255, parser);
-    opt_rgba!(args, green, "green", -255, 255, parser);
-    opt_rgba!(args, blue, "blue", -255, 255, parser);
+    opt_rgba!(args, alpha, "alpha", -1, 1);
+    opt_rgba!(args, red, "red", -255, 255);
+    opt_rgba!(args, green, "green", -255, 255);
+    opt_rgba!(args, blue, "blue", -255, 255);
 
     if red.is_some() || green.is_some() || blue.is_some() {
         return Ok(Value::Color(Box::new(Color::from_rgba(
@@ -139,7 +139,7 @@ fn adjust_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value
         ))));
     }
 
-    let hue = match parser.default_named_arg(&mut args, "hue", Value::Null)? {
+    let hue = match args.default_named_arg("hue", Value::Null)? {
         Value::Dimension(n, ..) => Some(n),
         Value::Null => None,
         v => {
@@ -151,8 +151,8 @@ fn adjust_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value
         }
     };
 
-    opt_hsl!(args, saturation, "saturation", -100, 100, parser);
-    opt_hsl!(args, luminance, "lightness", -100, 100, parser);
+    opt_hsl!(args, saturation, "saturation", -100, 100);
+    opt_hsl!(args, luminance, "lightness", -100, 100);
 
     if hue.is_some() || saturation.is_some() || luminance.is_some() {
         // Color::as_hsla() returns more exact values than Color::hue(), etc.
@@ -184,7 +184,7 @@ fn scale_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value>
     }
 
     let span = args.span();
-    let color = match parser.arg(&mut args, 0, "color")? {
+    let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,
         v => {
             return Err((
@@ -196,8 +196,8 @@ fn scale_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value>
     };
 
     macro_rules! opt_scale_arg {
-        ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal, $parser:ident) => {
-            let $name = match $parser.default_named_arg(&mut $args, $arg, Value::Null)? {
+        ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal) => {
+            let $name = match $args.default_named_arg($arg, Value::Null)? {
                 Value::Dimension(n, Unit::Percent, _) => {
                     Some(bound!($args, $arg, n, Unit::Percent, $low, $high) / Number::from(100))
                 }
@@ -224,10 +224,10 @@ fn scale_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value>
         };
     }
 
-    opt_scale_arg!(args, alpha, "alpha", -100, 100, parser);
-    opt_scale_arg!(args, red, "red", -100, 100, parser);
-    opt_scale_arg!(args, green, "green", -100, 100, parser);
-    opt_scale_arg!(args, blue, "blue", -100, 100, parser);
+    opt_scale_arg!(args, alpha, "alpha", -100, 100);
+    opt_scale_arg!(args, red, "red", -100, 100);
+    opt_scale_arg!(args, green, "green", -100, 100);
+    opt_scale_arg!(args, blue, "blue", -100, 100);
 
     if red.is_some() || green.is_some() || blue.is_some() {
         return Ok(Value::Color(Box::new(Color::from_rgba(
@@ -254,8 +254,8 @@ fn scale_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value>
         ))));
     }
 
-    opt_scale_arg!(args, saturation, "saturation", -100, 100, parser);
-    opt_scale_arg!(args, luminance, "lightness", -100, 100, parser);
+    opt_scale_arg!(args, saturation, "saturation", -100, 100);
+    opt_scale_arg!(args, luminance, "lightness", -100, 100);
 
     if saturation.is_some() || luminance.is_some() {
         // Color::as_hsla() returns more exact values than Color::hue(), etc.
@@ -290,7 +290,7 @@ fn scale_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value>
 
 fn ie_hex_str(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    let color = match parser.arg(&mut args, 0, "color")? {
+    let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,
         v => {
             return Err((

@@ -284,9 +284,9 @@ impl<'a> Parser<'a> {
                             }
                             "url" => match self.try_parse_url()? {
                                 Some(val) => s = val,
-                                None => s.push_str(&self.parse_call_args()?.to_css_string(self)?),
+                                None => s.push_str(&self.parse_call_args()?.to_css_string()?),
                             },
-                            _ => s.push_str(&self.parse_call_args()?.to_css_string(self)?),
+                            _ => s.push_str(&self.parse_call_args()?.to_css_string()?),
                         }
 
                         return Ok(IntermediateValue::Value(HigherIntermediateValue::Literal(

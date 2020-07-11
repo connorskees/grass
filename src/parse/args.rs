@@ -277,80 +277,6 @@ impl<'a> Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-    #[allow(clippy::unused_self)]
-    pub fn arg(
-        &self,
-        args: &mut CallArgs,
-        position: usize,
-        name: &'static str,
-    ) -> SassResult<Value> {
-        Ok(args.get_err(position, name)?.node)
-    }
-
-    #[allow(clippy::unused_self)]
-    pub fn default_arg(
-        &self,
-        args: &mut CallArgs,
-        position: usize,
-        name: &'static str,
-        default: Value,
-    ) -> SassResult<Value> {
-        Ok(match args.get(position, name) {
-            Some(val) => val?.node,
-            None => default,
-        })
-    }
-
-    #[allow(clippy::unused_self)]
-    pub fn positional_arg(
-        &self,
-        args: &mut CallArgs,
-        position: usize,
-    ) -> Option<SassResult<Spanned<Value>>> {
-        args.get_positional(position)
-    }
-
-    #[allow(dead_code, clippy::unused_self)]
-    fn named_arg(
-        &self,
-        args: &mut CallArgs,
-        name: &'static str,
-    ) -> Option<SassResult<Spanned<Value>>> {
-        args.get_named(name)
-    }
-
-    #[allow(clippy::unused_self)]
-    pub fn default_named_arg(
-        &self,
-        args: &mut CallArgs,
-        name: &'static str,
-        default: Value,
-    ) -> SassResult<Value> {
-        Ok(match args.get_named(name) {
-            Some(val) => val?.node,
-            None => default,
-        })
-    }
-
-    #[allow(clippy::unused_self)]
-    pub fn variadic_args(&self, args: CallArgs) -> SassResult<Vec<Spanned<Value>>> {
-        let mut vals = Vec::new();
-        let mut args = match args
-            .0
-            .into_iter()
-            .map(|(a, v)| Ok((a.position()?, v)))
-            .collect::<Result<Vec<(usize, SassResult<Spanned<Value>>)>, String>>()
-        {
-            Ok(v) => v,
-            Err(e) => return Err((format!("No argument named ${}.", e), args.1).into()),
-        };
-        args.sort_by(|(a1, _), (a2, _)| a1.cmp(a2));
-        for arg in args {
-            vals.push(arg.1?);
-        }
-        Ok(vals)
-    }
-
     pub(super) fn eval_args(&mut self, fn_args: FuncArgs, mut args: CallArgs) -> SassResult<Scope> {
         let mut scope = Scope::new();
         if fn_args.0.is_empty() {
@@ -361,7 +287,7 @@ impl<'a> Parser<'a> {
         for (idx, mut arg) in fn_args.0.into_iter().enumerate() {
             if arg.is_variadic {
                 let span = args.span();
-                let arg_list = Value::ArgList(self.variadic_args(args)?);
+                let arg_list = Value::ArgList(args.get_variadic()?);
                 scope.insert_var(
                     arg.name,
                     Spanned {

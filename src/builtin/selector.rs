@@ -11,12 +11,10 @@ use crate::{
 
 fn is_superselector(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;
-    let parent_selector = parser
-        .arg(&mut args, 0, "super")?
+    let parent_selector = args
+        .get_err(0, "super")?
         .to_selector(parser, "super", false)?;
-    let child_selector = parser
-        .arg(&mut args, 1, "sub")?
-        .to_selector(parser, "sub", false)?;
+    let child_selector = args.get_err(1, "sub")?.to_selector(parser, "sub", false)?;
 
     Ok(Value::bool(
         parent_selector.is_super_selector(&child_selector),
@@ -26,8 +24,8 @@ fn is_superselector(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<V
 fn simple_selectors(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     // todo: Value::to_compound_selector
-    let selector = parser
-        .arg(&mut args, 0, "selector")?
+    let selector = args
+        .get_err(0, "selector")?
         .to_selector(parser, "selector", false)?;
 
     if selector.0.components.len() != 1 {
@@ -55,15 +53,15 @@ fn simple_selectors(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<V
 
 fn selector_parse(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    Ok(parser
-        .arg(&mut args, 0, "selector")?
+    Ok(args
+        .get_err(0, "selector")?
         .to_selector(parser, "selector", false)?
         .into_value())
 }
 
 fn selector_nest(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     let span = args.span();
-    let selectors = parser.variadic_args(args)?;
+    let selectors = args.get_variadic()?;
     if selectors.is_empty() {
         return Err(("$selectors: At least one selector must be passed.", span).into());
     }
@@ -84,7 +82,7 @@ fn selector_nest(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 
 fn selector_append(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     let span = args.span();
-    let selectors = parser.variadic_args(args)?;
+    let selectors = args.get_variadic()?;
     if selectors.is_empty() {
         return Err(("$selectors: At least one selector must be passed.", span).into());
     }
@@ -142,14 +140,14 @@ fn selector_append(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value>
 
 fn selector_extend(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(3)?;
-    let selector = parser
-        .arg(&mut args, 0, "selector")?
+    let selector = args
+        .get_err(0, "selector")?
         .to_selector(parser, "selector", false)?;
-    let target = parser
-        .arg(&mut args, 1, "extendee")?
+    let target = args
+        .get_err(1, "extendee")?
         .to_selector(parser, "extendee", false)?;
-    let source = parser
-        .arg(&mut args, 2, "extender")?
+    let source = args
+        .get_err(2, "extender")?
         .to_selector(parser, "extender", false)?;
 
     Ok(Extender::extend(selector.0, source.0, target.0, args.span())?.to_sass_list())
@@ -157,25 +155,23 @@ fn selector_extend(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Va
 
 fn selector_replace(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(3)?;
-    let selector = parser
-        .arg(&mut args, 0, "selector")?
+    let selector = args
+        .get_err(0, "selector")?
         .to_selector(parser, "selector", false)?;
-    let target = parser
-        .arg(&mut args, 1, "original")?
+    let target = args
+        .get_err(1, "original")?
         .to_selector(parser, "original", false)?;
-    let source =
-        parser
-            .arg(&mut args, 2, "replacement")?
-            .to_selector(parser, "replacement", false)?;
+    let source = args
+        .get_err(2, "replacement")?
+        .to_selector(parser, "replacement", false)?;
     Ok(Extender::replace(selector.0, source.0, target.0, args.span())?.to_sass_list())
 }
 
 fn selector_unify(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;
-    let selector1 =
-        parser
-            .arg(&mut args, 0, "selector1")?
-            .to_selector(parser, "selector1", false)?;
+    let selector1 = args
+        .get_err(0, "selector1")?
+        .to_selector(parser, "selector1", false)?;
 
     if selector1.contains_parent_selector() {
         return Err((
@@ -185,10 +181,9 @@ fn selector_unify(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Val
             .into());
     }
 
-    let selector2 =
-        parser
-            .arg(&mut args, 1, "selector2")?
-            .to_selector(parser, "selector2", false)?;
+    let selector2 = args
+        .get_err(1, "selector2")?
+        .to_selector(parser, "selector2", false)?;
 
     if selector2.contains_parent_selector() {
         return Err((

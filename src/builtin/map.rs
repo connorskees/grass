@@ -10,8 +10,8 @@ use crate::{
 
 fn map_get(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;
-    let key = parser.arg(&mut args, 1, "key")?;
-    let map = match parser.arg(&mut args, 0, "map")? {
+    let key = args.get_err(1, "key")?;
+    let map = match args.get_err(0, "map")? {
         Value::Map(m) => m,
         Value::List(v, ..) if v.is_empty() => SassMap::new(),
         Value::ArgList(v) if v.is_empty() => SassMap::new(),
@@ -28,8 +28,8 @@ fn map_get(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 
 fn map_has_key(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;
-    let key = parser.arg(&mut args, 1, "key")?;
-    let map = match parser.arg(&mut args, 0, "map")? {
+    let key = args.get_err(1, "key")?;
+    let map = match args.get_err(0, "map")? {
         Value::Map(m) => m,
         Value::List(v, ..) if v.is_empty() => SassMap::new(),
         Value::ArgList(v) if v.is_empty() => SassMap::new(),
@@ -46,7 +46,7 @@ fn map_has_key(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value>
 
 fn map_keys(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    let map = match parser.arg(&mut args, 0, "map")? {
+    let map = match args.get_err(0, "map")? {
         Value::Map(m) => m,
         Value::List(v, ..) if v.is_empty() => SassMap::new(),
         Value::ArgList(v) if v.is_empty() => SassMap::new(),
@@ -67,7 +67,7 @@ fn map_keys(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 
 fn map_values(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    let map = match parser.arg(&mut args, 0, "map")? {
+    let map = match args.get_err(0, "map")? {
         Value::Map(m) => m,
         Value::List(v, ..) if v.is_empty() => SassMap::new(),
         Value::ArgList(v) if v.is_empty() => SassMap::new(),
@@ -88,7 +88,7 @@ fn map_values(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
 
 fn map_merge(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;
-    let mut map1 = match parser.arg(&mut args, 0, "map1")? {
+    let mut map1 = match args.get_err(0, "map1")? {
         Value::Map(m) => m,
         Value::List(v, ..) if v.is_empty() => SassMap::new(),
         Value::ArgList(v) if v.is_empty() => SassMap::new(),
@@ -100,7 +100,7 @@ fn map_merge(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
                 .into())
         }
     };
-    let map2 = match parser.arg(&mut args, 1, "map2")? {
+    let map2 = match args.get_err(1, "map2")? {
         Value::Map(m) => m,
         Value::List(v, ..) if v.is_empty() => SassMap::new(),
         Value::ArgList(v) if v.is_empty() => SassMap::new(),
@@ -117,7 +117,7 @@ fn map_merge(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 }
 
 fn map_remove(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
-    let mut map = match parser.arg(&mut args, 0, "map")? {
+    let mut map = match args.get_err(0, "map")? {
         Value::Map(m) => m,
         Value::List(v, ..) if v.is_empty() => SassMap::new(),
         Value::ArgList(v) if v.is_empty() => SassMap::new(),
@@ -129,7 +129,7 @@ fn map_remove(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
                 .into())
         }
     };
-    let keys = parser.variadic_args(args)?;
+    let keys = args.get_variadic()?;
     for key in keys {
         map.remove(&key);
     }

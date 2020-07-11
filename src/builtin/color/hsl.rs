@@ -18,7 +18,7 @@ fn inner_hsl(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
     }
 
     if args.len() == 1 {
-        let mut channels = match parser.arg(&mut args, 0, "channels")? {
+        let mut channels = match args.get_err(0, "channels")? {
             Value::List(v, ..) => v,
             _ => return Err(("Missing argument $channels.", args.span()).into()),
         };
@@ -77,11 +77,11 @@ fn inner_hsl(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
             Number::one(),
         ))))
     } else {
-        let hue = match parser.arg(&mut args, 0, "hue")? {
+        let hue = match args.get_err(0, "hue")? {
             Value::Dimension(n, ..) => n,
             v if v.is_special_function() => {
-                let saturation = parser.arg(&mut args, 1, "saturation")?;
-                let lightness = parser.arg(&mut args, 2, "lightness")?;
+                let saturation = args.get_err(1, "saturation")?;
+                let lightness = args.get_err(2, "lightness")?;
                 let mut string = format!(
                     "{}({}, {}, {}",
                     name,
@@ -91,11 +91,7 @@ fn inner_hsl(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
                 );
                 if !args.is_empty() {
                     string.push_str(", ");
-                    string.push_str(
-                        &parser
-                            .arg(&mut args, 3, "alpha")?
-                            .to_css_string(args.span())?,
-                    );
+                    string.push_str(&args.get_err(3, "alpha")?.to_css_string(args.span())?);
                 }
                 string.push(')');
                 return Ok(Value::String(string, QuoteKind::None));
@@ -108,10 +104,10 @@ fn inner_hsl(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
                     .into())
             }
         };
-        let saturation = match parser.arg(&mut args, 1, "saturation")? {
+        let saturation = match args.get_err(1, "saturation")? {
             Value::Dimension(n, ..) => n / Number::from(100),
             v if v.is_special_function() => {
-                let lightness = parser.arg(&mut args, 2, "lightness")?;
+                let lightness = args.get_err(2, "lightness")?;
                 let mut string = format!(
                     "{}({}, {}, {}",
                     name,
@@ -121,11 +117,7 @@ fn inner_hsl(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
                 );
                 if !args.is_empty() {
                     string.push_str(", ");
-                    string.push_str(
-                        &parser
-                            .arg(&mut args, 3, "alpha")?
-                            .to_css_string(args.span())?,
-                    );
+                    string.push_str(&args.get_err(3, "alpha")?.to_css_string(args.span())?);
                 }
                 string.push(')');
                 return Ok(Value::String(string, QuoteKind::None));
@@ -141,7 +133,7 @@ fn inner_hsl(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
                     .into())
             }
         };
-        let lightness = match parser.arg(&mut args, 2, "lightness")? {
+        let lightness = match args.get_err(2, "lightness")? {
             Value::Dimension(n, ..) => n / Number::from(100),
             v if v.is_special_function() => {
                 let mut string = format!(
@@ -153,11 +145,7 @@ fn inner_hsl(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
                 );
                 if !args.is_empty() {
                     string.push_str(", ");
-                    string.push_str(
-                        &parser
-                            .arg(&mut args, 3, "alpha")?
-                            .to_css_string(args.span())?,
-                    );
+                    string.push_str(&args.get_err(3, "alpha")?.to_css_string(args.span())?);
                 }
                 string.push(')');
                 return Ok(Value::String(string, QuoteKind::None));
@@ -173,8 +161,7 @@ fn inner_hsl(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
                     .into())
             }
         };
-        let alpha = match parser.default_arg(
-            &mut args,
+        let alpha = match args.default_arg(
             3,
             "alpha",
             Value::Dimension(Number::one(), Unit::None, true),
@@ -228,7 +215,7 @@ fn hsla(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 
 fn hue(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    match parser.arg(&mut args, 0, "color")? {
+    match args.get_err(0, "color")? {
         Value::Color(c) => Ok(Value::Dimension(c.hue(), Unit::Deg, true)),
         v => Err((
             format!("$color: {} is not a color.", v.inspect(args.span())?),
@@ -240,7 +227,7 @@ fn hue(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 
 fn saturation(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    match parser.arg(&mut args, 0, "color")? {
+    match args.get_err(0, "color")? {
         Value::Color(c) => Ok(Value::Dimension(c.saturation(), Unit::Percent, true)),
         v => Err((
             format!("$color: {} is not a color.", v.inspect(args.span())?),
@@ -252,7 +239,7 @@ fn saturation(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
 
 fn lightness(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    match parser.arg(&mut args, 0, "color")? {
+    match args.get_err(0, "color")? {
         Value::Color(c) => Ok(Value::Dimension(c.lightness(), Unit::Percent, true)),
         v => Err((
             format!("$color: {} is not a color.", v.inspect(args.span())?),
@@ -264,7 +251,7 @@ fn lightness(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 
 fn adjust_hue(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;
-    let color = match parser.arg(&mut args, 0, "color")? {
+    let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,
         v => {
             return Err((
@@ -274,7 +261,7 @@ fn adjust_hue(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
                 .into())
         }
     };
-    let degrees = match parser.arg(&mut args, 1, "degrees")? {
+    let degrees = match args.get_err(1, "degrees")? {
         Value::Dimension(n, ..) => n,
         v => {
             return Err((
@@ -292,7 +279,7 @@ fn adjust_hue(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
 
 fn lighten(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;
-    let color = match parser.arg(&mut args, 0, "color")? {
+    let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,
         v => {
             return Err((
@@ -302,7 +289,7 @@ fn lighten(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
                 .into())
         }
     };
-    let amount = match parser.arg(&mut args, 1, "amount")? {
+    let amount = match args.get_err(1, "amount")? {
         Value::Dimension(n, u, _) => bound!(args, "amount", n, u, 0, 100) / Number::from(100),
         v => {
             return Err((
@@ -320,7 +307,7 @@ fn lighten(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 
 fn darken(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;
-    let color = match parser.arg(&mut args, 0, "color")? {
+    let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,
         v => {
             return Err((
@@ -330,7 +317,7 @@ fn darken(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
                 .into())
         }
     };
-    let amount = match parser.arg(&mut args, 1, "amount")? {
+    let amount = match args.get_err(1, "amount")? {
         Value::Dimension(n, u, _) => bound!(args, "amount", n, u, 0, 100) / Number::from(100),
         v => {
             return Err((
@@ -352,15 +339,13 @@ fn saturate(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         return Ok(Value::String(
             format!(
                 "saturate({})",
-                parser
-                    .arg(&mut args, 0, "amount")?
-                    .to_css_string(args.span())?
+                args.get_err(0, "amount")?.to_css_string(args.span())?
             ),
             QuoteKind::None,
         ));
     }
 
-    let amount = match parser.arg(&mut args, 1, "amount")? {
+    let amount = match args.get_err(1, "amount")? {
         Value::Dimension(n, u, _) => bound!(args, "amount", n, u, 0, 100) / Number::from(100),
         v => {
             return Err((
@@ -373,7 +358,7 @@ fn saturate(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
                 .into())
         }
     };
-    let color = match parser.arg(&mut args, 0, "color")? {
+    let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,
         Value::Dimension(n, u, _) => {
             return Ok(Value::String(
@@ -394,7 +379,7 @@ fn saturate(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 
 fn desaturate(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;
-    let color = match parser.arg(&mut args, 0, "color")? {
+    let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,
         v => {
             return Err((
@@ -404,7 +389,7 @@ fn desaturate(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
                 .into())
         }
     };
-    let amount = match parser.arg(&mut args, 1, "amount")? {
+    let amount = match args.get_err(1, "amount")? {
         Value::Dimension(n, u, _) => bound!(args, "amount", n, u, 0, 100) / Number::from(100),
         v => {
             return Err((
@@ -422,7 +407,7 @@ fn desaturate(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
 
 fn grayscale(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    let color = match parser.arg(&mut args, 0, "color")? {
+    let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,
         Value::Dimension(n, u, _) => {
             return Ok(Value::String(
@@ -443,7 +428,7 @@ fn grayscale(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 
 fn complement(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    let color = match parser.arg(&mut args, 0, "color")? {
+    let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,
         v => {
             return Err((
@@ -458,8 +443,7 @@ fn complement(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
 
 fn invert(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;
-    let weight = match parser.default_arg(
-        &mut args,
+    let weight = match args.default_arg(
         1,
         "weight",
         Value::Dimension(Number::from(100), Unit::Percent, true),
@@ -476,7 +460,7 @@ fn invert(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
                 .into())
         }
     };
-    match parser.arg(&mut args, 0, "color")? {
+    match args.get_err(0, "color")? {
         Value::Color(c) => Ok(Value::Color(Box::new(c.invert(weight)))),
         Value::Dimension(n, Unit::Percent, _) => {
             Ok(Value::String(format!("invert({}%)", n), QuoteKind::None))
