@@ -3,10 +3,7 @@ use codemap::Spanned;
 use crate::{
     common::Identifier,
     error::SassResult,
-    utils::{
-        peek_ident_no_interpolation, read_until_closing_paren, read_until_closing_quote,
-        read_until_newline,
-    },
+    utils::{peek_ident_no_interpolation, read_until_closing_paren, read_until_closing_quote},
     value::Value,
     Token,
 };
@@ -124,7 +121,7 @@ impl<'a> Parser<'a> {
                 '/' => {
                     let next = self.toks.next().unwrap();
                     match self.toks.peek() {
-                        Some(Token { kind: '/', .. }) => read_until_newline(self.toks),
+                        Some(Token { kind: '/', .. }) => self.read_until_newline(),
                         Some(..) | None => val_toks.push(next),
                     };
                     continue;

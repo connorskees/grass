@@ -459,7 +459,13 @@ impl<'a> Parser<'a> {
         found_whitespace
     }
 
-    fn read_until_newline(&mut self) {
+    /// Eat tokens until a newline
+    ///
+    /// This exists largely to eat silent comments, "//"
+    /// We only have to check for \n as the lexing step normalizes all newline characters
+    ///
+    /// The newline is consumed
+    pub fn read_until_newline(&mut self) {
         while let Some(tok) = self.toks.next() {
             if tok.kind == '\n' {
                 break;
