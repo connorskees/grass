@@ -18,6 +18,19 @@ impl<'a> Parser<'a> {
     pub(super) fn parse_mixin(&mut self) -> SassResult<()> {
         self.whitespace();
         let Spanned { node: name, span } = self.parse_identifier()?;
+
+        if self.flags.in_mixin() {
+            return Err(("Mixins may not contain mixin declarations.", span).into());
+        }
+
+        if self.flags.in_function() {
+            return Err(("This at-rule is not allowed here.", span).into());
+        }
+
+        if self.flags.in_control_flow() {
+            return Err(("Mixins may not be declared in control directives.", span).into());
+        }
+
         self.whitespace();
         let args = match self.toks.next() {
             Some(Token { kind: '(', .. }) => self.parse_func_args()?,

@@ -449,3 +449,32 @@ test!(
     }",
     "a {\n  color: foo;\n  color: foo;\n}\n"
 );
+error!(
+    mixin_in_function,
+    "@function foo() {
+        @mixin bar {}
+    }
+    a {
+        color: foo();
+    }
+    ",
+    "Error: This at-rule is not allowed here."
+);
+error!(
+    mixin_in_mixin,
+    "@mixin foo {
+        @mixin bar {}
+    }
+    a {
+        @include foo;
+    }
+    ",
+    "Error: Mixins may not contain mixin declarations."
+);
+error!(
+    mixin_in_control_directives,
+    "@if true {
+        @mixin bar {}
+    }",
+    "Error: Mixins may not be declared in control directives."
+);
