@@ -145,10 +145,10 @@ impl<'a> Parser<'a> {
         .parse()?;
 
         self.content.pop();
+        self.scopes.exit_scope();
+
         if declared_at_root {
             mem::swap(self.scopes, self.content_scopes);
-        } else {
-            self.scopes.exit_scope();
         }
 
         Ok(body)

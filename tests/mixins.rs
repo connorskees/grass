@@ -426,3 +426,26 @@ test!(
     }",
     "a {\n  color: 1rem;\n}\n"
 );
+test!(
+    can_access_global_variables_set_after_other_include,
+    "$x: true;
+
+    @mixin foobar() {
+        @if $x {
+            $x: false !global;
+            color: foo;
+        }
+
+        @else {
+            $x: true !global;
+            color: bar;
+        }
+    }
+
+    a {
+        @include foobar();
+        $x: true !global;
+        @include foobar();
+    }",
+    "a {\n  color: foo;\n  color: foo;\n}\n"
+);
