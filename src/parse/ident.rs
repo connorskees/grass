@@ -161,31 +161,23 @@ impl<'a> Parser<'a> {
             None => return Err(("Expected identifier.", self.span_before).into()),
         };
 
-        if is_name_start(first) {
-            text.push(self.toks.next().unwrap().kind);
-        } else if first == '\\' {
-            self.toks.next();
-            text.push_str(&self.escape(true)?);
-        // TODO: peekmore
-        // (first == '#' && scanner.peekChar(1) == $lbrace)
-        } else if first == '#' {
-            self.toks.next();
-            let Token { kind, pos } = if let Some(tok) = self.toks.peek() {
-                *tok
-            } else {
-                return Err(("Expected identifier.", pos).into());
-            };
-            if kind == '{' {
+        match first {
+            c if is_name_start(c) => {
+                text.push(self.toks.next().unwrap().kind);
+            }
+            '\\' => {
+                self.toks.next();
+                text.push_str(&self.escape(true)?);
+            }
+            '#' if matches!(self.toks.peek_forward(1), Some(Token { kind: '{', .. })) => {
+                self.toks.next();
                 self.toks.next();
                 match self.parse_interpolation()?.node {
                     Value::String(ref s, ..) => text.push_str(s),
                     v => text.push_str(v.to_css_string(self.span_before)?.borrow()),
                 }
-            } else {
-                return Err(("Expected identifier.", pos).into());
             }
-        } else {
-            return Err(("Expected identifier.", pos).into());
+            _ => return Err(("Expected identifier.", pos).into()),
         }
 
         self.interpolated_ident_body(&mut text)?;
