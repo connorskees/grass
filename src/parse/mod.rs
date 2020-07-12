@@ -753,7 +753,7 @@ impl<'a> Parser<'a> {
                 compound.components.first().unwrap(),
                 &extend_rule,
                 &None,
-                Some(self.span_before),
+                self.span_before,
             )
         }
 

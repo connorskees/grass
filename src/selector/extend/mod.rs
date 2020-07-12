@@ -154,7 +154,12 @@ impl Extender {
         let extenders: IndexMap<ComplexSelector, Extension> = source
             .components
             .into_iter()
-            .map(|complex| (complex.clone(), Extension::one_off(complex, None, false)))
+            .map(|complex| {
+                (
+                    complex.clone(),
+                    Extension::one_off(complex, None, false, span),
+                )
+            })
             .collect();
 
         let compound_targets = targets
@@ -164,7 +169,7 @@ impl Extender {
                 if complex.components.len() == 1 {
                     Ok(complex.components.first().unwrap().as_compound().clone())
                 } else {
-                    Err(("Can't extend complex selector $complex.", span).into())
+                    Err((format!("Can't extend complex selector {}.", complex), span).into())
                 }
             })
             .collect::<SassResult<Vec<CompoundSelector>>>()?;
@@ -745,6 +750,7 @@ impl Extender {
             },
             specificity,
             true,
+            self.span,
         )
     }
 
@@ -762,6 +768,7 @@ impl Extender {
             },
             specificity,
             true,
+            self.span,
         )
     }
 
@@ -949,7 +956,7 @@ impl Extender {
         target: &SimpleSelector,
         extend: &ExtendRule,
         media_context: &Option<Vec<CssMediaQuery>>,
-        span: Option<Span>,
+        span: Span,
     ) {
         let selectors = self.selectors.get(target).cloned();
         let existing_extensions = self.extensions_by_extender.get(target).cloned();

@@ -19,20 +19,25 @@ impl MergedExtension {
     /// extender and target.
     pub fn merge(left: Extension, right: Extension) -> SassResult<Extension> {
         if left.extender != right.extender || left.target != right.target {
-            todo!("we need a span to throw a proper error")
-            //     return Err((format!("{} and {} aren't the same extension.", left, right), ))
+            return Err((
+                format!(
+                    "{} and {} aren't the same extension.",
+                    left.extender, right.extender
+                ),
+                left.span.merge(right.span),
+            )
+                .into());
         }
 
         if left.media_context.is_some()
             && right.media_context.is_some()
             && left.media_context != right.media_context
         {
-            todo!()
-            // throw SassException(
-            //     "From ${left.span.message('')}\n"
-            //     "You may not @extend the same selector from within different media "
-            //     "queries.",
-            //     right.span);
+            return Err((
+                "You may not @extend the same selector from within different media queries.",
+                right.span,
+            )
+                .into());
         }
 
         if right.is_optional && right.media_context.is_none() {
@@ -61,44 +66,5 @@ impl MergedExtension {
             left: None,
             right: None,
         }
-        // : super(left.extender, left.target, left.extenderSpan, left.span,
-        //     left.mediaContext ?? right.mediaContext,
-        //     specificity: left.specificity, optional: true);
-    }
-
-    /// Returns all leaf-node `Extension`s in the tree or `MergedExtension`s.
-    #[allow(dead_code, unused_mut, clippy::unused_self)]
-    pub fn unmerge(mut self) -> Vec<Extension> {
-        todo!()
-        /*  Iterable<Extension> unmerge() sync* {
-            if (left is MergedExtension) {
-              yield* (left as MergedExtension).unmerge();
-            } else {
-              yield left;
-            }
-
-            if (right is MergedExtension) {
-              yield* (right as MergedExtension).unmerge();
-            } else {
-              yield right;
-            }
-          }
-        */
     }
 }
-/*
-class MergedExtension extends Extension {
-  /// One of the merged extensions.
-  final Extension left;
-
-  /// The other merged extension.
-  final Extension right;
-
-  MergedExtension._(this.left, this.right)
-      : super(left.extender, left.target, left.extenderSpan, left.span,
-            left.mediaContext ?? right.mediaContext,
-            specificity: left.specificity, optional: true);
-
-
-}
-*/

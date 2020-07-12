@@ -28,20 +28,24 @@ pub(crate) struct Extension {
     pub media_context: Option<Vec<CssMediaQuery>>,
 
     /// The span in which `extender` was defined.
-    // todo: no `Option<>`
-    pub span: Option<Span>,
+    pub span: Span,
 
     pub left: Option<Box<Extension>>,
     pub right: Option<Box<Extension>>,
 }
 
 impl Extension {
-    pub fn one_off(extender: ComplexSelector, specificity: Option<i32>, is_original: bool) -> Self {
+    pub fn one_off(
+        extender: ComplexSelector,
+        specificity: Option<i32>,
+        is_original: bool,
+        span: Span,
+    ) -> Self {
         Self {
             specificity: specificity.unwrap_or_else(|| extender.max_specificity()),
             extender,
             target: None,
-            span: None,
+            span,
             is_optional: true,
             is_original,
             media_context: None,
@@ -60,7 +64,7 @@ impl Extension {
             return;
         }
 
-        // Err(("You may not @extend selectors across media queries.", self.span.unwrap()).into())
+        // Err(("You may not @extend selectors across media queries.", self.span).into())
     }
 
     #[allow(clippy::missing_const_for_fn)]
