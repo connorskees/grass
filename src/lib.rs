@@ -253,7 +253,7 @@ pub fn from_string(p: String) -> std::result::Result<String, JsValue> {
 #[cfg_attr(feature = "profiling", inline(never))]
 #[cfg_attr(not(feature = "profiling"), inline)]
 #[cfg(not(feature = "wasm"))]
-pub fn from_path_with_load_paths(p: &str, loadpaths: &Vec<&Path>) -> Result<String> {
+pub fn from_path_with_load_paths(p: &str, loadpaths: &[&Path]) -> Result<String> {
     let mut map = CodeMap::new();
     let file = map.add_file(p.into(), String::from_utf8(fs::read(p)?)?);
     let empty_span = file.span.subspan(0, 0);

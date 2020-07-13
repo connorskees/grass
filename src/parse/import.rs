@@ -1,4 +1,4 @@
-use std::{ffi::OsStr, fs, path::Path};
+use std::{ffi::OsStr, fs, path::Path, path::PathBuf};
 
 use codemap::Spanned;
 use peekmore::PeekMore;
@@ -98,24 +98,23 @@ impl<'a> Parser<'a> {
         }
 
         for path in self.load_paths {
-            let paths;
-            if path.is_dir() {
-                paths = vec![
+            let paths: Vec<PathBuf> = if path.is_dir() {
+                vec![
                     path.join(format!("{}.scss", name.to_str().unwrap())),
                     path.join(format!("_{}.scss", name.to_str().unwrap())),
                     path.join("index.scss"),
                     path.join("_index.scss"),
-                ];
+                ]
             } else {
-                paths = vec![
+                vec![
                     path.to_path_buf(),
                     path.with_file_name(name).with_extension("scss"),
                     path.with_file_name(format!("_{}", name.to_str().unwrap()))
                         .with_extension("scss"),
                     path.join("index.scss"),
                     path.join("_index.scss"),
-                ];
-            }
+                ]
+            };
 
             for name in &paths {
                 if name.is_file() {

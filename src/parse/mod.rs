@@ -83,7 +83,7 @@ pub(crate) struct Parser<'a> {
     pub at_root_has_selector: bool,
     pub extender: &'a mut Extender,
 
-    pub load_paths: &'a Vec<&'a Path>,
+    pub load_paths: &'a [&'a Path],
 }
 
 impl<'a> Parser<'a> {
