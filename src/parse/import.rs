@@ -97,24 +97,23 @@ impl<'a> Parser<'a> {
             }
         }
 
-        for _path in self.load_paths {
+        for path in self.load_paths {
             let paths;
-            if _path.is_dir() {
+            if path.is_dir() {
                 paths = vec![
-                    _path.join(format!("{}.scss", name.to_str().unwrap())),
-                    _path.join(format!("_{}.scss", name.to_str().unwrap())),
-                    _path.join("index.scss"),
-                    _path.join("_index.scss"),
+                    path.join(format!("{}.scss", name.to_str().unwrap())),
+                    path.join(format!("_{}.scss", name.to_str().unwrap())),
+                    path.join("index.scss"),
+                    path.join("_index.scss"),
                 ];
             } else {
                 paths = vec![
-                    _path.to_path_buf(),
-                    _path.with_file_name(name).with_extension("scss"),
-                    _path
-                        .with_file_name(format!("_{}", name.to_str().unwrap()))
+                    path.to_path_buf(),
+                    path.with_file_name(name).with_extension("scss"),
+                    path.with_file_name(format!("_{}", name.to_str().unwrap()))
                         .with_extension("scss"),
-                    _path.join("index.scss"),
-                    _path.join("_index.scss"),
+                    path.join("index.scss"),
+                    path.join("_index.scss"),
                 ];
             }
 

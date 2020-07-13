@@ -193,7 +193,7 @@ fn main() -> std::io::Result<()> {
         if let Some(path) = matches.value_of("OUTPUT") {
             let mut buf = BufWriter::new(File::open(path).unwrap_or(File::create(path)?));
             buf.write_all(
-                from_path_with_load_paths(name, vals)
+                from_path_with_load_paths(name, &vals)
                     .unwrap_or_else(|e| {
                         eprintln!("{}", e);
                         std::process::exit(1)
@@ -203,7 +203,7 @@ fn main() -> std::io::Result<()> {
         } else {
             let mut stdout = BufWriter::new(stdout());
             stdout.write_all(
-                from_path_with_load_paths(name, vals)
+                from_path_with_load_paths(name, &vals)
                     .unwrap_or_else(|e| {
                         eprintln!("{}", e);
                         std::process::exit(1)
