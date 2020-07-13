@@ -143,6 +143,16 @@ pub fn from_path(p: &str) -> Result<String> {
     from_paths(p, &Vec::new())
 }
 
+/// Compile CSS from a file and load in additional files through importing them
+/// note: @use is currently unsupported
+///
+/// ```
+/// fn main() -> Result<(), Box<grass::Error>> {
+///     let sass = grass::from_paths("input.scss", &[std::path::Path::new("benches")])?;
+///     Ok(())
+/// }
+/// ```
+/// (grass does not currently allow files or paths that are not valid UTF-8)
 #[cfg_attr(feature = "profiling", inline(never))]
 #[cfg_attr(not(feature = "profiling"), inline)]
 #[cfg(not(feature = "wasm"))]

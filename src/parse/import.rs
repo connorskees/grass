@@ -9,8 +9,8 @@ use super::{Parser, Stmt};
 
 /// Searches the current directory of the file then searches in load paths directories
 /// if the import has not yet been found.
-/// [https://sass-lang.com/documentation/at-rules/import#finding-the-file](finding a file)
-/// [https://sass-lang.com/documentation/at-rules/import#load-paths](load path)
+/// <https://sass-lang.com/documentation/at-rules/import#finding-the-file>
+/// <https://sass-lang.com/documentation/at-rules/import#load-paths>
 fn find_import(file_path: &PathBuf, name: &OsStr, load_paths: &[&Path]) -> Option<PathBuf> {
     let paths = [
         file_path.with_file_name(name).with_extension("scss"),
