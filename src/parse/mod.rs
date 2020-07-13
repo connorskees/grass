@@ -82,6 +82,8 @@ pub(crate) struct Parser<'a> {
     /// not the `@at-rule` block has a super selector
     pub at_root_has_selector: bool,
     pub extender: &'a mut Extender,
+
+    pub load_paths: &'a Vec<&'a Path>,
 }
 
 impl<'a> Parser<'a> {
@@ -359,6 +361,7 @@ impl<'a> Parser<'a> {
                 at_root_has_selector: self.at_root_has_selector,
                 extender: self.extender,
                 content_scopes: self.content_scopes,
+                load_paths: self.load_paths
             },
             allows_parent,
             true,
@@ -597,6 +600,7 @@ impl<'a> Parser<'a> {
             at_root_has_selector: self.at_root_has_selector,
             extender: self.extender,
             content_scopes: self.content_scopes,
+            load_paths: self.load_paths
         }
         .parse_stmt()?;
 
@@ -664,6 +668,7 @@ impl<'a> Parser<'a> {
             at_root_has_selector,
             extender: self.extender,
             content_scopes: self.content_scopes,
+            load_paths: self.load_paths
         }
         .parse()?
         .into_iter()
@@ -704,6 +709,7 @@ impl<'a> Parser<'a> {
             at_root_has_selector: self.at_root_has_selector,
             extender: self.extender,
             content_scopes: self.content_scopes,
+            load_paths: self.load_paths
         }
         .parse_selector(false, true, String::new())?;
 
@@ -781,6 +787,7 @@ impl<'a> Parser<'a> {
             at_root_has_selector: self.at_root_has_selector,
             extender: self.extender,
             content_scopes: self.content_scopes,
+            load_paths: self.load_paths
         }
         .parse_stmt()?;
 

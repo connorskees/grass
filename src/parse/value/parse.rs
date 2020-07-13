@@ -201,6 +201,7 @@ impl<'a> Parser<'a> {
             at_root_has_selector: self.at_root_has_selector,
             extender: self.extender,
             content_scopes: self.content_scopes,
+            load_paths: self.load_paths
         }
         .parse_value(in_paren)
     }

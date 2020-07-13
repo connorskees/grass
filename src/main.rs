@@ -1,12 +1,13 @@
 use std::{
     fs::File,
     io::{stdout, BufWriter, Write},
+    path::Path,
 };
 
 use clap::{arg_enum, App, AppSettings, Arg};
 
 #[cfg(not(feature = "wasm"))]
-use grass::from_path;
+use grass::from_path_with_load_paths;
 
 arg_enum! {
     #[derive(PartialEq, Debug)]
@@ -51,11 +52,9 @@ fn main() -> std::io::Result<()> {
             Arg::with_name("LOAD_PATH")
                 .short("I")
                 .long("load-path")
-                .hidden(true)
                 .help("A path to use when resolving imports. May be passed multiple times.")
                 .multiple(true)
                 .takes_value(true)
-                .number_of_values(1),
         )
         .arg(
             Arg::with_name("STYLE")
@@ -183,11 +182,18 @@ fn main() -> std::io::Result<()> {
         )
         .get_matches();
 
+    let vals: Vec<&Path>;
+    if let Some(load_paths) = matches.values_of("LOAD_PATH") {
+        vals = load_paths.map(|p| Path::new(p)).collect();
+    } else {
+        vals = Vec::new();
+    }
+
     if let Some(name) = matches.value_of("INPUT") {
         if let Some(path) = matches.value_of("OUTPUT") {
             let mut buf = BufWriter::new(File::open(path).unwrap_or(File::create(path)?));
             buf.write_all(
-                from_path(name)
+                from_path_with_load_paths(name, vals)
                     .unwrap_or_else(|e| {
                         eprintln!("{}", e);
                         std::process::exit(1)
@@ -197,7 +203,7 @@ fn main() -> std::io::Result<()> {
         } else {
             let mut stdout = BufWriter::new(stdout());
             stdout.write_all(
-                from_path(name)
+                from_path_with_load_paths(name, vals)
                     .unwrap_or_else(|e| {
                         eprintln!("{}", e);
                         std::process::exit(1)

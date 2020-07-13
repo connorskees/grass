@@ -91,8 +91,62 @@ impl<'a> Parser<'a> {
                     at_root_has_selector: self.at_root_has_selector,
                     extender: self.extender,
                     content_scopes: self.content_scopes,
+                    load_paths: self.load_paths,
                 }
                 .parse();
+            }
+        }
+
+        for _path in self.load_paths {
+            let paths;
+            if _path.is_dir() {
+                paths = vec![
+                    _path.join(format!("{}.scss", name.to_str().unwrap())),
+                    _path.join(format!("_{}.scss", name.to_str().unwrap())),
+                    _path.join("index.scss"),
+                    _path.join("_index.scss"),
+                ];
+            } else {
+                paths = vec![
+                    _path.to_path_buf(),
+                    _path.with_file_name(name).with_extension("scss"),
+                    _path
+                        .with_file_name(format!("_{}", name.to_str().unwrap()))
+                        .with_extension("scss"),
+                    _path.join("index.scss"),
+                    _path.join("_index.scss"),
+                ];
+            }
+
+            for name in &paths {
+                if name.is_file() {
+                    println!("found file: {:?}", name);
+                    let file = self.map.add_file(
+                        name.to_string_lossy().into(),
+                        String::from_utf8(fs::read(name)?)?,
+                    );
+
+                    return Parser {
+                        toks: &mut Lexer::new(&file)
+                            .collect::<Vec<Token>>()
+                            .into_iter()
+                            .peekmore(),
+                        map: self.map,
+                        path: name.as_ref(),
+                        scopes: self.scopes,
+                        global_scope: self.global_scope,
+                        super_selectors: self.super_selectors,
+                        span_before: file.span.subspan(0, 0),
+                        content: self.content,
+                        flags: self.flags,
+                        at_root: self.at_root,
+                        at_root_has_selector: self.at_root_has_selector,
+                        extender: self.extender,
+                        content_scopes: self.content_scopes,
+                        load_paths: self.load_paths,
+                    }
+                    .parse();
+                }
             }
         }
 

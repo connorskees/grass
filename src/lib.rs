@@ -161,6 +161,7 @@ pub fn from_path(p: &str) -> Result<String> {
         at_root_has_selector: false,
         extender: &mut Extender::new(empty_span),
         content_scopes: &mut Scopes::new(),
+        load_paths: &Vec::new(),
     }
     .parse()
     .map_err(|e| raw_to_parse_error(&map, *e))?;
@@ -204,6 +205,7 @@ pub fn from_string(p: String) -> Result<String> {
         at_root_has_selector: false,
         extender: &mut Extender::new(empty_span),
         content_scopes: &mut Scopes::new(),
+        load_paths: &Vec::new(),
     }
     .parse()
     .map_err(|e| raw_to_parse_error(&map, *e))?;
@@ -246,4 +248,41 @@ pub fn from_string(p: String) -> std::result::Result<String, JsValue> {
         .map_err(|e| raw_to_parse_error(&map, *e).to_string())?
         .pretty_print(&map)
         .map_err(|e| raw_to_parse_error(&map, *e).to_string())?)
+}
+
+
+#[cfg_attr(feature = "profiling", inline(never))]
+#[cfg_attr(not(feature = "profiling"), inline)]
+#[cfg(not(feature = "wasm"))]
+pub fn from_path_with_load_paths(p: &str, loadpaths: Vec<&Path>) -> Result<String> {
+    let mut map = CodeMap::new();
+    let file = map.add_file(p.into(), String::from_utf8(fs::read(p)?)?);
+    let empty_span = file.span.subspan(0, 0);
+
+    let stmts = Parser {
+        toks: &mut Lexer::new(&file)
+            .collect::<Vec<Token>>()
+            .into_iter()
+            .peekmore(),
+        map: &mut map,
+        path: p.as_ref(),
+        scopes: &mut Scopes::new(),
+        global_scope: &mut Scope::new(),
+        super_selectors: &mut NeverEmptyVec::new(Selector::new(empty_span)),
+        span_before: empty_span,
+        content: &mut Vec::new(),
+        flags: ContextFlags::empty(),
+        at_root: true,
+        at_root_has_selector: false,
+        extender: &mut Extender::new(empty_span),
+        content_scopes: &mut Scopes::new(),
+        load_paths: &loadpaths,
+    }
+    .parse()
+    .map_err(|e| raw_to_parse_error(&map, *e))?;
+
+    Css::from_stmts(stmts, false)
+        .map_err(|e| raw_to_parse_error(&map, *e))?
+        .pretty_print(&map)
+        .map_err(|e| raw_to_parse_error(&map, *e))
 }
