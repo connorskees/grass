@@ -10,7 +10,7 @@ Spec progress as of 2020-07-04:
 ## Use as library
 ```
 fn main() -> Result<(), Box<grass::Error>> {
-    let sass = grass::from_string("a { b { color: &; } }".to_string())?;
+    let sass = grass::from_string("a { b { color: &; } }".to_string(), &grass::Options::default())?;
     assert_eq!(sass, "a b {\n  color: a b;\n}\n");
     Ok(())
 }
@@ -122,6 +122,77 @@ mod unit;
 mod utils;
 mod value;
 
+#[non_exhaustive]
+#[derive(Debug)]
+pub enum OutputStyle {
+    Expanded,
+    Compressed,
+}
+
+#[derive(Debug)]
+pub struct Options<'a> {
+    pub style: OutputStyle,
+    pub load_paths: Vec<&'a Path>,
+    pub allows_charset: bool,
+    pub unicode_error_messages: bool,
+    pub quiet: bool,
+}
+
+///
+/// `load_paths` - list of paths/files to check for imports for more information see the docs:
+/// - <https://sass-lang.com/documentation/at-rules/import#finding-the-file>
+/// - <https://sass-lang.com/documentation/at-rules/import#load-paths>
+impl<'a> Default for Options<'a> {
+    fn default() -> Self {
+        Self {
+            style: OutputStyle::Expanded,
+            load_paths: Vec::new(),
+            allows_charset: true,
+            unicode_error_messages: true,
+            quiet: false,
+        }
+    }
+}
+
+impl<'a> Options<'a> {
+    /// `grass` currently offers 2 different output styles
+    ///
+    ///  - `OutputStyle::Expanded` writes each selector and declaration on its own line.
+    ///  - `OutputStyle::Compressed` removes as many extra characters as possible, and writes the entire stylesheet on a single line.
+    ///
+    /// By default, output is expanded.
+    pub fn style(mut self, style: OutputStyle) -> Self {
+        self.style = style;
+        self
+    }
+
+    pub fn quiet(mut self, quiet: bool) -> Self {
+        self.quiet = quiet;
+        self
+    }
+
+    pub fn load_path(mut self, path: &'a Path) -> Self {
+        self.load_paths.push(path);
+        self
+    }
+
+    /// adds on to the `load_path` vec, does not set the vec to paths
+    pub fn load_paths(mut self, paths: &'a [&'a Path]) -> Self {
+        self.load_paths.extend_from_slice(paths);
+        self
+    }
+
+    pub fn allows_charset(mut self, allows_charset: bool) -> Self {
+        self.allows_charset = allows_charset;
+        self
+    }
+
+    pub fn unicode_error_messages(mut self, unicode_error_messages: bool) -> Self {
+        self.unicode_error_messages = unicode_error_messages;
+        self
+    }
+}
+
 fn raw_to_parse_error(map: &CodeMap, err: Error) -> Box<Error> {
     let (message, span) = err.raw();
     Box::new(Error::from_loc(message, map.look_up_span(span)))
@@ -131,7 +202,7 @@ fn raw_to_parse_error(map: &CodeMap, err: Error) -> Box<Error> {
 ///
 /// ```
 /// fn main() -> Result<(), Box<grass::Error>> {
-///     let sass = grass::from_path("input.scss")?;
+///     let sass = grass::from_path("input.scss", &grass::Options::default())?;
 ///     Ok(())
 /// }
 /// ```
@@ -139,24 +210,7 @@ fn raw_to_parse_error(map: &CodeMap, err: Error) -> Box<Error> {
 #[cfg_attr(feature = "profiling", inline(never))]
 #[cfg_attr(not(feature = "profiling"), inline)]
 #[cfg(not(feature = "wasm"))]
-pub fn from_path(p: &str) -> Result<String> {
-    from_paths(p, &Vec::new())
-}
-
-/// Compile CSS from a file and load in additional files through importing them
-/// note: @use is currently unsupported
-///
-/// ```
-/// fn main() -> Result<(), Box<grass::Error>> {
-///     let sass = grass::from_paths("input.scss", &[std::path::Path::new("benches")])?;
-///     Ok(())
-/// }
-/// ```
-/// (grass does not currently allow files or paths that are not valid UTF-8)
-#[cfg_attr(feature = "profiling", inline(never))]
-#[cfg_attr(not(feature = "profiling"), inline)]
-#[cfg(not(feature = "wasm"))]
-pub fn from_paths(p: &str, loadpaths: &[&Path]) -> Result<String> {
+pub fn from_path(p: &str, options: &'_ Options<'_>) -> Result<String> {
     let mut map = CodeMap::new();
     let file = map.add_file(p.into(), String::from_utf8(fs::read(p)?)?);
     let empty_span = file.span.subspan(0, 0);
@@ -178,7 +232,7 @@ pub fn from_paths(p: &str, loadpaths: &[&Path]) -> Result<String> {
         at_root_has_selector: false,
         extender: &mut Extender::new(empty_span),
         content_scopes: &mut Scopes::new(),
-        load_paths: loadpaths,
+        options,
     }
     .parse()
     .map_err(|e| raw_to_parse_error(&map, *e))?;
@@ -188,11 +242,12 @@ pub fn from_paths(p: &str, loadpaths: &[&Path]) -> Result<String> {
         .pretty_print(&map)
         .map_err(|e| raw_to_parse_error(&map, *e))
 }
+
 /// Compile CSS from a string
 ///
 /// ```
 /// fn main() -> Result<(), Box<grass::Error>> {
-///     let sass = grass::from_string("a { b { color: &; } }".to_string())?;
+///     let sass = grass::from_string("a { b { color: &; } }".to_string(), &grass::Options::default())?;
 ///     assert_eq!(sass, "a b {\n  color: a b;\n}\n");
 ///     Ok(())
 /// }
@@ -200,7 +255,7 @@ pub fn from_paths(p: &str, loadpaths: &[&Path]) -> Result<String> {
 #[cfg_attr(feature = "profiling", inline(never))]
 #[cfg_attr(not(feature = "profiling"), inline)]
 #[cfg(not(feature = "wasm"))]
-pub fn from_string(p: String) -> Result<String> {
+pub fn from_string(p: String, options: &'_ Options<'_>) -> Result<String> {
     let mut map = CodeMap::new();
     let file = map.add_file("stdin".into(), p);
     let empty_span = file.span.subspan(0, 0);
@@ -221,7 +276,7 @@ pub fn from_string(p: String) -> Result<String> {
         at_root_has_selector: false,
         extender: &mut Extender::new(empty_span),
         content_scopes: &mut Scopes::new(),
-        load_paths: &Vec::new(),
+        options,
     }
     .parse()
     .map_err(|e| raw_to_parse_error(&map, *e))?;
@@ -234,7 +289,7 @@ pub fn from_string(p: String) -> Result<String> {
 
 #[cfg(feature = "wasm")]
 #[wasm_bindgen]
-pub fn from_string(p: String) -> std::result::Result<String, JsValue> {
+pub fn from_string(p: String, options: &'_ Options<'_>) -> std::result::Result<String, JsValue> {
     let mut map = CodeMap::new();
     let file = map.add_file("stdin".into(), p);
     let empty_span = file.span.subspan(0, 0);

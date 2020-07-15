@@ -7,7 +7,7 @@ use crate::{common::QuoteKind, error::SassResult, lexer::Lexer, value::Value, To
 
 use super::{Parser, Stmt};
 
-/// Searches the current directory of the file then searches in load paths directories
+/// Searches the current directory of the file then searches in `load_paths` directories
 /// if the import has not yet been found.
 /// <https://sass-lang.com/documentation/at-rules/import#finding-the-file>
 /// <https://sass-lang.com/documentation/at-rules/import#load-paths>
@@ -107,7 +107,7 @@ impl<'a> Parser<'a> {
 
         let name = path_buf.file_name().unwrap_or_else(|| OsStr::new(".."));
 
-        if let Some(name) = find_import(&path_buf, name, self.load_paths) {
+        if let Some(name) = find_import(&path_buf, name, &self.options.load_paths) {
             let file = self.map.add_file(
                 name.to_string_lossy().into(),
                 String::from_utf8(fs::read(&name)?)?,
@@ -130,7 +130,7 @@ impl<'a> Parser<'a> {
                 at_root_has_selector: self.at_root_has_selector,
                 extender: self.extender,
                 content_scopes: self.content_scopes,
-                load_paths: self.load_paths,
+                options: self.options,
             }
             .parse();
         }

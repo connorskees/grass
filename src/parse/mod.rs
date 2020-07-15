@@ -17,11 +17,10 @@ use crate::{
     style::Style,
     utils::{read_until_closing_curly_brace, read_until_semicolon_or_closing_curly_brace},
     value::Value,
-    {Cow, Token},
+    Options, {Cow, Token},
 };
 
 use common::{Comment, ContextFlags, NeverEmptyVec, SelectorOrStyle};
-
 pub(crate) use value::{HigherIntermediateValue, ValueVisitor};
 
 mod args;
@@ -83,7 +82,7 @@ pub(crate) struct Parser<'a> {
     pub at_root_has_selector: bool,
     pub extender: &'a mut Extender,
 
-    pub load_paths: &'a [&'a Path],
+    pub options: &'a Options<'a>,
 }
 
 impl<'a> Parser<'a> {
@@ -361,7 +360,7 @@ impl<'a> Parser<'a> {
                 at_root_has_selector: self.at_root_has_selector,
                 extender: self.extender,
                 content_scopes: self.content_scopes,
-                load_paths: self.load_paths,
+                options: self.options,
             },
             allows_parent,
             true,
@@ -600,7 +599,7 @@ impl<'a> Parser<'a> {
             at_root_has_selector: self.at_root_has_selector,
             extender: self.extender,
             content_scopes: self.content_scopes,
-            load_paths: self.load_paths,
+            options: self.options,
         }
         .parse_stmt()?;
 
@@ -668,7 +667,7 @@ impl<'a> Parser<'a> {
             at_root_has_selector,
             extender: self.extender,
             content_scopes: self.content_scopes,
-            load_paths: self.load_paths,
+            options: self.options,
         }
         .parse()?
         .into_iter()
@@ -709,7 +708,7 @@ impl<'a> Parser<'a> {
             at_root_has_selector: self.at_root_has_selector,
             extender: self.extender,
             content_scopes: self.content_scopes,
-            load_paths: self.load_paths,
+            options: self.options,
         }
         .parse_selector(false, true, String::new())?;
 
@@ -787,7 +786,7 @@ impl<'a> Parser<'a> {
             at_root_has_selector: self.at_root_has_selector,
             extender: self.extender,
             content_scopes: self.content_scopes,
-            load_paths: self.load_paths,
+            options: self.options,
         }
         .parse_stmt()?;
 

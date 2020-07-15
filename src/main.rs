@@ -7,7 +7,7 @@ use std::{
 use clap::{arg_enum, App, AppSettings, Arg};
 
 #[cfg(not(feature = "wasm"))]
-use grass::from_paths;
+use grass::{from_path, Options};
 
 arg_enum! {
     #[derive(PartialEq, Debug)]
@@ -189,11 +189,13 @@ fn main() -> std::io::Result<()> {
         vals = Vec::new();
     }
 
+    let options = &Options::default().load_paths(&vals);
+
     if let Some(name) = matches.value_of("INPUT") {
         if let Some(path) = matches.value_of("OUTPUT") {
             let mut buf = BufWriter::new(File::open(path).unwrap_or(File::create(path)?));
             buf.write_all(
-                from_paths(name, &vals)
+                from_path(name, &options)
                     .unwrap_or_else(|e| {
                         eprintln!("{}", e);
                         std::process::exit(1)
@@ -203,7 +205,7 @@ fn main() -> std::io::Result<()> {
         } else {
             let mut stdout = BufWriter::new(stdout());
             stdout.write_all(
-                from_paths(name, &vals)
+                from_path(name, &options)
                     .unwrap_or_else(|e| {
                         eprintln!("{}", e);
                         std::process::exit(1)

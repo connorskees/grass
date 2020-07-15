@@ -7,7 +7,7 @@ macro_rules! test {
         #[test]
         #[allow(non_snake_case)]
         fn $func() {
-            let sass = grass::from_string($input.to_string())
+            let sass = grass::from_string($input.to_string(), &grass::Options::default())
                 .expect(concat!("failed to parse on ", $input));
             assert_eq!(
                 String::from($input),
@@ -20,7 +20,7 @@ macro_rules! test {
         #[test]
         #[allow(non_snake_case)]
         fn $func() {
-            let sass = grass::from_string($input.to_string())
+            let sass = grass::from_string($input.to_string(), &grass::Options::default())
                 .expect(concat!("failed to parse on ", $input));
             assert_eq!(
                 String::from($output),
@@ -39,7 +39,7 @@ macro_rules! error {
         #[test]
         #[allow(non_snake_case)]
         fn $func() {
-            match grass::from_string($input.to_string()) {
+            match grass::from_string($input.to_string(), &grass::Options::default()) {
                 Ok(..) => panic!("did not fail"),
                 Err(e) => assert_eq!($err, e.to_string()
                                                 .chars()
