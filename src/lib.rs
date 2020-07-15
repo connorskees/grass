@@ -125,10 +125,20 @@ mod value;
 #[non_exhaustive]
 #[derive(Debug)]
 pub enum OutputStyle {
+    /// The default style, this mode writes each
+    /// selector and declaration on its own line.
     Expanded,
+    /// Ideal for release builds, this mode removes
+    /// as many extra characters as possible and
+    /// writes the entire stylesheet on a single line.
     Compressed,
 }
 
+/// Configuration for Sass compilation
+///
+/// The simplest usage is `grass::Options::default()`;
+/// however, a builder pattern is also exposed to offer
+/// more control.
 #[derive(Debug)]
 pub struct Options<'a> {
     style: OutputStyle,
@@ -156,7 +166,7 @@ impl<'a> Options<'a> {
     /// `grass` currently offers 2 different output styles
     ///
     ///  - `OutputStyle::Expanded` writes each selector and declaration on its own line.
-    ///  - `OutputStyle::Compressed` removes as many extra characters as possible,
+    ///  - `OutputStyle::Compressed` removes as many extra characters as possible
     ///    and writes the entire stylesheet on a single line.
     ///
     /// By default, output is expanded.
@@ -181,9 +191,19 @@ impl<'a> Options<'a> {
         self
     }
 
-    /// `load_paths` - list of paths/files to check for imports for more information see the docs:
-    /// - <https://sass-lang.com/documentation/at-rules/import#finding-the-file>
-    /// - <https://sass-lang.com/documentation/at-rules/import#load-paths>
+    /// All Sass implementations allow users to provide
+    /// load paths: paths on the filesystem that Sass
+    /// will look in when locating modules. For example,
+    /// if you pass `node_modules/susy/sass` as a load path,
+    /// you can use `@import "susy"` to load `node_modules/susy/sass/susy.scss`.
+    ///
+    /// Imports will always be resolved relative to the current
+    /// file first, though. Load paths will only be used if no
+    /// relative file exists that matches the module's URL. This
+    /// ensures that you can't accidentally mess up your relative
+    /// imports when you add a new library.
+    ///
+    /// This method will append a single path to the list.
     #[must_use]
     #[inline]
     pub fn load_path(mut self, path: &'a Path) -> Self {
@@ -191,7 +211,11 @@ impl<'a> Options<'a> {
         self
     }
 
-    /// adds on to the `load_path` vec, does not set the vec to paths
+    /// Append multiple loads paths
+    ///
+    /// Note that this method does *not* remove existing load paths
+    ///
+    /// See [`Options::load_path`](Options::load_path) for more information about load paths
     #[must_use]
     #[inline]
     pub fn load_paths(mut self, paths: &'a [&'a Path]) -> Self {
@@ -199,6 +223,13 @@ impl<'a> Options<'a> {
         self
     }
 
+    /// This flag tells Sass whether to emit a `@charset`
+    /// declaration or a UTF-8 byte-order mark.
+    ///
+    /// By default, Sass will insert either a `@charset`
+    /// declaration (in expanded output mode) or a byte-order
+    /// mark (in compressed output mode) if the stylesheet
+    /// contains any non-ASCII characters.
     #[must_use]
     #[inline]
     pub fn allows_charset(mut self, allows_charset: bool) -> Self {
@@ -206,6 +237,13 @@ impl<'a> Options<'a> {
         self
     }
 
+    /// This flag tells Sass only to emit ASCII characters as
+    /// part of error messages.
+    ///
+    /// By default Sass will emit non-ASCII characters for
+    /// these messages.
+    ///
+    /// This flag does not affect the CSS output.
     #[must_use]
     #[inline]
     pub fn unicode_error_messages(mut self, unicode_error_messages: bool) -> Self {
