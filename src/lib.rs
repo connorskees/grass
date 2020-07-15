@@ -131,17 +131,13 @@ pub enum OutputStyle {
 
 #[derive(Debug)]
 pub struct Options<'a> {
-    pub style: OutputStyle,
-    pub load_paths: Vec<&'a Path>,
-    pub allows_charset: bool,
-    pub unicode_error_messages: bool,
-    pub quiet: bool,
+    style: OutputStyle,
+    load_paths: Vec<&'a Path>,
+    allows_charset: bool,
+    unicode_error_messages: bool,
+    quiet: bool,
 }
 
-///
-/// `load_paths` - list of paths/files to check for imports for more information see the docs:
-/// - <https://sass-lang.com/documentation/at-rules/import#finding-the-file>
-/// - <https://sass-lang.com/documentation/at-rules/import#load-paths>
 impl<'a> Default for Options<'a> {
     #[inline]
     fn default() -> Self {
@@ -160,7 +156,8 @@ impl<'a> Options<'a> {
     /// `grass` currently offers 2 different output styles
     ///
     ///  - `OutputStyle::Expanded` writes each selector and declaration on its own line.
-    ///  - `OutputStyle::Compressed` removes as many extra characters as possible, and writes the entire stylesheet on a single line.
+    ///  - `OutputStyle::Compressed` removes as many extra characters as possible,
+    ///    and writes the entire stylesheet on a single line.
     ///
     /// By default, output is expanded.
     #[must_use]
@@ -170,6 +167,13 @@ impl<'a> Options<'a> {
         self
     }
 
+    /// This flag tells Sass not to emit any warnings
+    /// when compiling. By default, Sass emits warnings
+    /// when deprecated features are used or when the
+    /// `@warn` rule is encountered. It also silences the
+    /// `@debug` rule.
+    ///
+    /// By default, this value is `false` and warnings are emitted.
     #[must_use]
     #[inline]
     pub fn quiet(mut self, quiet: bool) -> Self {
@@ -177,6 +181,9 @@ impl<'a> Options<'a> {
         self
     }
 
+    /// `load_paths` - list of paths/files to check for imports for more information see the docs:
+    /// - <https://sass-lang.com/documentation/at-rules/import#finding-the-file>
+    /// - <https://sass-lang.com/documentation/at-rules/import#load-paths>
     #[must_use]
     #[inline]
     pub fn load_path(mut self, path: &'a Path) -> Self {
@@ -191,6 +198,7 @@ impl<'a> Options<'a> {
         self.load_paths.extend_from_slice(paths);
         self
     }
+
     #[must_use]
     #[inline]
     pub fn allows_charset(mut self, allows_charset: bool) -> Self {

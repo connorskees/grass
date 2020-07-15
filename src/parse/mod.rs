@@ -848,6 +848,9 @@ impl<'a> Parser<'a> {
 
 impl<'a> Parser<'a> {
     fn debug(&self, message: &Spanned<Cow<'a, str>>) {
+        if self.options.quiet {
+            return;
+        }
         let loc = self.map.look_up_span(message.span);
         eprintln!(
             "{}:{} Debug: {}",
@@ -858,6 +861,9 @@ impl<'a> Parser<'a> {
     }
 
     fn warn(&self, message: &Spanned<Cow<'a, str>>) {
+        if self.options.quiet {
+            return;
+        }
         let loc = self.map.look_up_span(message.span);
         eprintln!(
             "Warning: {}\n    {} {}:{}  root stylesheet",
