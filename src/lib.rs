@@ -154,6 +154,7 @@ impl<'a> Default for Options<'a> {
     }
 }
 
+#[allow(clippy::missing_const_for_fn)]
 impl<'a> Options<'a> {
     /// `grass` currently offers 2 different output styles
     ///
@@ -161,32 +162,43 @@ impl<'a> Options<'a> {
     ///  - `OutputStyle::Compressed` removes as many extra characters as possible, and writes the entire stylesheet on a single line.
     ///
     /// By default, output is expanded.
+    #[must_use]
+    #[inline]
     pub fn style(mut self, style: OutputStyle) -> Self {
         self.style = style;
         self
     }
 
+    #[must_use]
+    #[inline]
     pub fn quiet(mut self, quiet: bool) -> Self {
         self.quiet = quiet;
         self
     }
 
+    #[must_use]
+    #[inline]
     pub fn load_path(mut self, path: &'a Path) -> Self {
         self.load_paths.push(path);
         self
     }
 
     /// adds on to the `load_path` vec, does not set the vec to paths
+    #[must_use]
+    #[inline]
     pub fn load_paths(mut self, paths: &'a [&'a Path]) -> Self {
         self.load_paths.extend_from_slice(paths);
         self
     }
-
+    #[must_use]
+    #[inline]
     pub fn allows_charset(mut self, allows_charset: bool) -> Self {
         self.allows_charset = allows_charset;
         self
     }
 
+    #[must_use]
+    #[inline]
     pub fn unicode_error_messages(mut self, unicode_error_messages: bool) -> Self {
         self.unicode_error_messages = unicode_error_messages;
         self
@@ -210,7 +222,7 @@ fn raw_to_parse_error(map: &CodeMap, err: Error) -> Box<Error> {
 #[cfg_attr(feature = "profiling", inline(never))]
 #[cfg_attr(not(feature = "profiling"), inline)]
 #[cfg(not(feature = "wasm"))]
-pub fn from_path(p: &str, options: &'_ Options<'_>) -> Result<String> {
+pub fn from_path(p: &str, options: &Options) -> Result<String> {
     let mut map = CodeMap::new();
     let file = map.add_file(p.into(), String::from_utf8(fs::read(p)?)?);
     let empty_span = file.span.subspan(0, 0);
@@ -255,7 +267,7 @@ pub fn from_path(p: &str, options: &'_ Options<'_>) -> Result<String> {
 #[cfg_attr(feature = "profiling", inline(never))]
 #[cfg_attr(not(feature = "profiling"), inline)]
 #[cfg(not(feature = "wasm"))]
-pub fn from_string(p: String, options: &'_ Options<'_>) -> Result<String> {
+pub fn from_string(p: String, options: &Options) -> Result<String> {
     let mut map = CodeMap::new();
     let file = map.add_file("stdin".into(), p);
     let empty_span = file.span.subspan(0, 0);
@@ -311,6 +323,7 @@ pub fn from_string(p: String, options: &'_ Options<'_>) -> std::result::Result<S
         at_root_has_selector: false,
         extender: &mut Extender::new(empty_span),
         content_scopes: &mut Scopes::new(),
+        options,
     }
     .parse()
     .map_err(|e| raw_to_parse_error(&map, *e).to_string())?;
