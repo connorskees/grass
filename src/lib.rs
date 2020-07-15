@@ -143,6 +143,8 @@ pub struct Options<'a> {
 /// - <https://sass-lang.com/documentation/at-rules/import#finding-the-file>
 /// - <https://sass-lang.com/documentation/at-rules/import#load-paths>
 impl<'a> Default for Options<'a> {
+    
+    #[inline]
     fn default() -> Self {
         Self {
             style: OutputStyle::Expanded,
