@@ -17,7 +17,7 @@ use super::{common::ContextFlags, Parser, Stmt};
 impl<'a> Parser<'a> {
     pub(super) fn parse_mixin(&mut self) -> SassResult<()> {
         self.whitespace();
-        let Spanned { node: name, span } = self.parse_identifier()?;
+        let Spanned { node: name, span } = self.parse_identifier_no_interpolation(false)?;
 
         if self.flags.in_mixin() {
             return Err(("Mixins may not contain mixin declarations.", span).into());

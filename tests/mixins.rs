@@ -478,3 +478,14 @@ error!(
     }",
     "Error: Mixins may not be declared in control directives."
 );
+error!(
+    does_not_allow_interpolation_in_name_of_declaration,
+    "@mixin n#{a}me {
+        color: red;
+    }
+
+    a {
+        @include name;
+    }",
+    "Error: expected \"{\"."
+);
