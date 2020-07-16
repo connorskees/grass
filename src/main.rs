@@ -178,11 +178,9 @@ fn main() -> std::io::Result<()> {
         )
         .get_matches();
 
-    let load_paths = if let Some(load_paths) = matches.values_of("LOAD_PATH") {
-        load_paths.map(|p| Path::new(p)).collect()
-    } else {
-        Vec::new()
-    };
+    let load_paths = matches
+        .values_of("LOAD_PATH")
+        .map_or_else(Vec::new, |vals| vals.map(Path::new).collect());
 
     let options = &Options::default()
         .load_paths(&load_paths)
