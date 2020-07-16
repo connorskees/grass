@@ -83,6 +83,28 @@ fn single_quotes_import() {
 }
 
 #[test]
+fn comma_seperated_import() {
+    let input = "@import 'firsta', 'seconda';\na {\n color: $a;\n}";
+    tempfile!("firsta", "$a: red;");
+    tempfile!("seconda", "p { color: blue; }");
+    assert_eq!(
+        "p {\n  color: blue;\n}\n\na {\n  color: red;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default()).expect(input)
+    );
+}
+
+#[test]
+fn comma_seperated_import_order() {
+    let input = "@import 'firstb', 'secondb', url(third);";
+    tempfile!("firstb", "p { color: red; }");
+    tempfile!("secondb", "p { color: blue; }");
+    assert_eq!(
+        "p {\n  color: red;\n}\n\np {\n  color: blue;\n}\n@import url(third);\n",
+        &grass::from_string(input.to_string(), &grass::Options::default()).expect(input)
+    );
+}
+
+#[test]
 fn finds_name_scss() {
     let input = "@import \"finds_name_scss\";\na {\n color: $a;\n}";
     tempfile!("finds_name_scss.scss", "$a: red;");
