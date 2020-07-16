@@ -83,10 +83,10 @@ fn single_quotes_import() {
 }
 
 #[test]
-fn comma_seperated_import() {
-    let input = "@import 'firsta', 'seconda';\na {\n color: $a;\n}";
-    tempfile!("firsta", "$a: red;");
-    tempfile!("seconda", "p { color: blue; }");
+fn comma_separated_import() {
+    let input = "@import 'comma_separated_import_first', 'comma_separated_import_second';\na {\n color: $a;\n}";
+    tempfile!("comma_separated_import_first", "$a: red;");
+    tempfile!("comma_separated_import_second", "p { color: blue; }");
     assert_eq!(
         "p {\n  color: blue;\n}\n\na {\n  color: red;\n}\n",
         &grass::from_string(input.to_string(), &grass::Options::default()).expect(input)
@@ -94,10 +94,11 @@ fn comma_seperated_import() {
 }
 
 #[test]
-fn comma_seperated_import_order() {
-    let input = "@import 'firstb', 'secondb', url(third);";
-    tempfile!("firstb", "p { color: red; }");
-    tempfile!("secondb", "p { color: blue; }");
+fn comma_separated_import_order() {
+    let input =
+        "@import 'comma_separated_import_order1', 'comma_separated_import_order2', url(third);";
+    tempfile!("comma_separated_import_order1", "p { color: red; }");
+    tempfile!("comma_separated_import_order2", "p { color: blue; }");
     assert_eq!(
         "p {\n  color: red;\n}\n\np {\n  color: blue;\n}\n@import url(third);\n",
         &grass::from_string(input.to_string(), &grass::Options::default()).expect(input)

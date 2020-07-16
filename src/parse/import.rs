@@ -64,7 +64,7 @@ fn find_import(file_path: &PathBuf, name: &OsStr, load_paths: &[&Path]) -> Optio
 }
 
 impl<'a> Parser<'a> {
-    pub fn _parse_single_import(&mut self, file_name: &str, span: Span) -> SassResult<Vec<Stmt>> {
+    fn parse_single_import(&mut self, file_name: &str, span: Span) -> SassResult<Vec<Stmt>> {
         let path: &Path = file_name.as_ref();
 
         let path_buf = if path.is_absolute() {
@@ -76,6 +76,7 @@ impl<'a> Parser<'a> {
                 .unwrap_or_else(|| Path::new(""))
                 .join(path)
         };
+
         let name = path_buf.file_name().unwrap_or_else(|| OsStr::new(".."));
 
         if let Some(name) = find_import(&path_buf, name, &self.options.load_paths) {
@@ -108,8 +109,10 @@ impl<'a> Parser<'a> {
 
         Err(("Can't find stylesheet to import.", span).into())
     }
+
     pub(super) fn import(&mut self) -> SassResult<Vec<Stmt>> {
         self.whitespace();
+
         match self.toks.peek() {
             Some(Token { kind: '\'', .. })
             | Some(Token { kind: '"', .. })
@@ -127,14 +130,14 @@ impl<'a> Parser<'a> {
                 if s.ends_with(".css") || s.starts_with("http://") || s.starts_with("https://") {
                     Ok(vec![Stmt::Import(format!("\"{}\"", s))])
                 } else {
-                    self._parse_single_import(&s, span)
+                    self.parse_single_import(&s, span)
                 }
             }
             Value::String(s, QuoteKind::None) => {
                 if s.starts_with("url(") {
                     Ok(vec![Stmt::Import(s)])
                 } else {
-                    self._parse_single_import(&s, span)
+                    self.parse_single_import(&s, span)
                 }
             }
             Value::List(v, Comma, _) => {
@@ -148,14 +151,14 @@ impl<'a> Parser<'a> {
                             {
                                 list_of_imports.push(Stmt::Import(format!("\"{}\"", s)));
                             } else {
-                                list_of_imports.append(&mut self._parse_single_import(&s, span)?);
+                                list_of_imports.append(&mut self.parse_single_import(&s, span)?);
                             }
                         }
                         Value::String(s, QuoteKind::None) => {
                             if s.starts_with("url(") {
                                 list_of_imports.push(Stmt::Import(s));
                             } else {
-                                list_of_imports.append(&mut self._parse_single_import(&s, span)?);
+                                list_of_imports.append(&mut self.parse_single_import(&s, span)?);
                             }
                         }
                         _ => return Err(("Expected string.", span).into()),
