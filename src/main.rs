@@ -178,15 +178,14 @@ fn main() -> std::io::Result<()> {
         )
         .get_matches();
 
-    let vals: Vec<&Path>;
-    if let Some(load_paths) = matches.values_of("LOAD_PATH") {
-        vals = load_paths.map(|p| Path::new(p)).collect();
+    let load_paths = if let Some(load_paths) = matches.values_of("LOAD_PATH") {
+        load_paths.map(|p| Path::new(p)).collect()
     } else {
-        vals = Vec::new();
-    }
+        Vec::new()
+    };
 
     let options = &Options::default()
-        .load_paths(&vals)
+        .load_paths(&load_paths)
         .quiet(matches.is_present("QUIET"))
         .unicode_error_messages(!matches.is_present("NO_UNICODE"))
         .allows_charset(!matches.is_present("NO_CHARSET"));
