@@ -192,28 +192,24 @@ fn main() -> std::io::Result<()> {
         .unicode_error_messages(!matches.is_present("NO_UNICODE"))
         .allows_charset(!matches.is_present("NO_CHARSET"));
 
+    let (mut stdout_write, mut file_write);
+    let buf_out: &mut dyn Write = if let Some(path) = matches.value_of("OUTPUT") {
+        file_write = BufWriter::new(File::open(path).unwrap_or(File::create(path)?));
+        &mut file_write
+    } else {
+        stdout_write = BufWriter::new(stdout());
+        &mut stdout_write
+    };
+
     if let Some(name) = matches.value_of("INPUT") {
-        if let Some(path) = matches.value_of("OUTPUT") {
-            let mut buf = BufWriter::new(File::open(path).unwrap_or(File::create(path)?));
-            buf.write_all(
-                from_path(name, &options)
-                    .unwrap_or_else(|e| {
-                        eprintln!("{}", e);
-                        std::process::exit(1)
-                    })
-                    .as_bytes(),
-            )?;
-        } else {
-            let mut stdout = BufWriter::new(stdout());
-            stdout.write_all(
-                from_path(name, &options)
-                    .unwrap_or_else(|e| {
-                        eprintln!("{}", e);
-                        std::process::exit(1)
-                    })
-                    .as_bytes(),
-            )?;
-        }
+        buf_out.write_all(
+            from_path(name, &options)
+                .unwrap_or_else(|e| {
+                    eprintln!("{}", e);
+                    std::process::exit(1)
+                })
+                .as_bytes(),
+        )?;
     }
     Ok(())
 }
