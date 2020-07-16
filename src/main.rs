@@ -1,13 +1,13 @@
 use std::{
     fs::File,
-    io::{stdout, BufWriter, Write},
+    io::{stdin, stdout, BufWriter, Read, Write},
     path::Path,
 };
 
 use clap::{arg_enum, App, AppSettings, Arg};
 
 #[cfg(not(feature = "wasm"))]
-use grass::{from_path, Options};
+use grass::{from_path, from_string, Options};
 
 arg_enum! {
     #[derive(PartialEq, Debug)]
@@ -34,12 +34,11 @@ fn main() -> std::io::Result<()> {
     let matches = App::new("grass")
         .setting(AppSettings::ColoredHelp)
         .version(env!("CARGO_PKG_VERSION"))
-        .about("SCSS Compiler in rust")
+        .about("A near-feature-complete Sass compiler written purely in Rust")
         .version_short("v")
         .arg(
             Arg::with_name("STDIN")
                 .long("stdin")
-                .hidden(true)
                 .help("Read the stylesheet from stdin"),
         )
         .arg(
@@ -162,7 +161,7 @@ fn main() -> std::io::Result<()> {
         )
         .arg(
             Arg::with_name("INPUT")
-                .required(true)
+                .required_unless("STDIN")
                 .help("SCSS files"),
         )
         .arg(
@@ -201,15 +200,26 @@ fn main() -> std::io::Result<()> {
         &mut stdout_write
     };
 
-    if let Some(name) = matches.value_of("INPUT") {
-        buf_out.write_all(
+    buf_out.write_all(
+        if let Some(name) = matches.value_of("INPUT") {
             from_path(name, &options)
-                .unwrap_or_else(|e| {
-                    eprintln!("{}", e);
-                    std::process::exit(1)
-                })
-                .as_bytes(),
-        )?;
-    }
+        } else if matches.is_present("STDIN") {
+            from_string(
+                {
+                    let mut buffer = String::new();
+                    stdin().read_to_string(&mut buffer)?;
+                    buffer
+                },
+                options,
+            )
+        } else {
+            unreachable!()
+        }
+        .unwrap_or_else(|e| {
+            eprintln!("{}", e);
+            std::process::exit(1)
+        })
+        .as_bytes(),
+    )?;
     Ok(())
 }
