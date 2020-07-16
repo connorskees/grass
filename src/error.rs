@@ -44,9 +44,13 @@ impl SassError {
         }
     }
 
-    pub(crate) const fn from_loc(message: String, loc: SpanLoc) -> Self {
+    pub(crate) const fn from_loc(message: String, loc: SpanLoc, unicode: bool) -> Self {
         SassError {
-            kind: SassErrorKind::ParseError { message, loc },
+            kind: SassErrorKind::ParseError {
+                message,
+                loc,
+                unicode,
+            },
         }
     }
 }
@@ -60,6 +64,7 @@ enum SassErrorKind {
     ParseError {
         message: String,
         loc: SpanLoc,
+        unicode: bool,
     },
     // we put IoErrors in an `Rc` to allow it to be
     // cloneable
@@ -73,30 +78,47 @@ impl Display for SassError {
     // TODO: integrate with codemap-diagnostics
     #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let (message, loc) = match &self.kind {
-            SassErrorKind::ParseError { message, loc } => (message, loc),
+        let (message, loc, unicode) = match &self.kind {
+            SassErrorKind::ParseError {
+                message,
+                loc,
+                unicode,
+            } => (message, loc, *unicode),
             SassErrorKind::FromUtf8Error(s) => return writeln!(f, "Error: {}", s),
             SassErrorKind::IoError(s) => return writeln!(f, "Error: {}", s),
             SassErrorKind::Raw(..) => todo!(),
         };
+
+        let first_bar = if unicode { '╷' } else { '|' };
+        let second_bar = if unicode { '│' } else { '|' };
+        let third_bar = if unicode { '│' } else { '|' };
+        let fourth_bar = if unicode { '╵' } else { '|' };
+
         let line = loc.begin.line + 1;
         let col = loc.begin.column + 1;
         writeln!(f, "Error: {}", message)?;
         let padding = vec![' '; format!("{}", line).len() + 1]
             .iter()
             .collect::<String>();
-        writeln!(f, "{}|", padding)?;
-        writeln!(f, "{} | {}", line, loc.file.source_line(loc.begin.line))?;
+        writeln!(f, "{}{}", padding, first_bar)?;
         writeln!(
             f,
-            "{}| {}{}",
+            "{} {} {}",
+            line,
+            second_bar,
+            loc.file.source_line(loc.begin.line)
+        )?;
+        writeln!(
+            f,
+            "{}{} {}{}",
             padding,
+            third_bar,
             vec![' '; loc.begin.column].iter().collect::<String>(),
             vec!['^'; loc.end.column.max(loc.begin.column) - loc.begin.column.min(loc.end.column)]
                 .iter()
                 .collect::<String>()
         )?;
-        writeln!(f, "{}|", padding)?;
+        writeln!(f, "{}{}", padding, fourth_bar)?;
         writeln!(f, "./{}:{}:{}", loc.file.name(), line, col)?;
         Ok(())
     }

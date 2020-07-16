@@ -252,9 +252,9 @@ impl<'a> Options<'a> {
     }
 }
 
-fn raw_to_parse_error(map: &CodeMap, err: Error) -> Box<Error> {
+fn raw_to_parse_error(map: &CodeMap, err: Error, unicode: bool) -> Box<Error> {
     let (message, span) = err.raw();
-    Box::new(Error::from_loc(message, map.look_up_span(span)))
+    Box::new(Error::from_loc(message, map.look_up_span(span), unicode))
 }
 
 /// Compile CSS from a path
@@ -294,12 +294,12 @@ pub fn from_path(p: &str, options: &Options) -> Result<String> {
         options,
     }
     .parse()
-    .map_err(|e| raw_to_parse_error(&map, *e))?;
+    .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages))?;
 
     Css::from_stmts(stmts, false)
-        .map_err(|e| raw_to_parse_error(&map, *e))?
+        .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages))?
         .pretty_print(&map)
-        .map_err(|e| raw_to_parse_error(&map, *e))
+        .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages))
 }
 
 /// Compile CSS from a string
@@ -338,12 +338,12 @@ pub fn from_string(p: String, options: &Options) -> Result<String> {
         options,
     }
     .parse()
-    .map_err(|e| raw_to_parse_error(&map, *e))?;
+    .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages))?;
 
     Css::from_stmts(stmts, false)
-        .map_err(|e| raw_to_parse_error(&map, *e))?
+        .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages))?
         .pretty_print(&map)
-        .map_err(|e| raw_to_parse_error(&map, *e))
+        .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages))
 }
 
 #[cfg(feature = "wasm")]
@@ -373,10 +373,10 @@ pub fn from_string(p: String, options: &'_ Options<'_>) -> std::result::Result<S
         options,
     }
     .parse()
-    .map_err(|e| raw_to_parse_error(&map, *e).to_string())?;
+    .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages).to_string())?;
 
     Ok(Css::from_stmts(stmts, false)
-        .map_err(|e| raw_to_parse_error(&map, *e).to_string())?
+        .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages).to_string())?
         .pretty_print(&map)
-        .map_err(|e| raw_to_parse_error(&map, *e).to_string())?)
+        .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages).to_string())?)
 }

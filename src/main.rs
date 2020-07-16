@@ -153,14 +153,12 @@ fn main() -> std::io::Result<()> {
         .arg(
             Arg::with_name("NO_UNICODE")
                 .long("no-unicode")
-                .hidden(true)
                 .help("Whether to use Unicode characters for messages.")
         )
         .arg(
             Arg::with_name("QUIET")
                 .short("q")
                 .long("quiet")
-                .hidden(true)
                 .help("Don't print warnings."),
         )
         .arg(
@@ -189,7 +187,10 @@ fn main() -> std::io::Result<()> {
         vals = Vec::new();
     }
 
-    let options = &Options::default().load_paths(&vals);
+    let options = &Options::default()
+        .load_paths(&vals)
+        .quiet(matches.is_present("QUIET"))
+        .unicode_error_messages(!matches.is_present("NO_UNICODE"));
 
     if let Some(name) = matches.value_of("INPUT") {
         if let Some(path) = matches.value_of("OUTPUT") {
