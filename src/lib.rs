@@ -296,7 +296,7 @@ pub fn from_path(p: &str, options: &Options) -> Result<String> {
     .parse()
     .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages))?;
 
-    Css::from_stmts(stmts, false)
+    Css::from_stmts(stmts, false, options.allows_charset)
         .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages))?
         .pretty_print(&map)
         .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages))
@@ -340,7 +340,7 @@ pub fn from_string(p: String, options: &Options) -> Result<String> {
     .parse()
     .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages))?;
 
-    Css::from_stmts(stmts, false)
+    Css::from_stmts(stmts, false, options.allows_charset)
         .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages))?
         .pretty_print(&map)
         .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages))
@@ -375,7 +375,7 @@ pub fn from_string(p: String, options: &'_ Options<'_>) -> std::result::Result<S
     .parse()
     .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages).to_string())?;
 
-    Ok(Css::from_stmts(stmts, false)
+    Ok(Css::from_stmts(stmts, false, options.allows_charset)
         .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages).to_string())?
         .pretty_print(&map)
         .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages).to_string())?)

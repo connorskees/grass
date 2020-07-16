@@ -72,7 +72,6 @@ fn main() -> std::io::Result<()> {
         .arg(
             Arg::with_name("NO_CHARSET")
                 .long("no-charset")
-                .hidden(true)
                 .help("Don't emit a @charset or BOM for CSS with non-ASCII characters."),
         )
         .arg(
@@ -190,7 +189,8 @@ fn main() -> std::io::Result<()> {
     let options = &Options::default()
         .load_paths(&vals)
         .quiet(matches.is_present("QUIET"))
-        .unicode_error_messages(!matches.is_present("NO_UNICODE"));
+        .unicode_error_messages(!matches.is_present("NO_UNICODE"))
+        .allows_charset(!matches.is_present("NO_CHARSET"));
 
     if let Some(name) = matches.value_of("INPUT") {
         if let Some(path) = matches.value_of("OUTPUT") {

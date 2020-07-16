@@ -95,18 +95,24 @@ impl Toplevel {
 pub(crate) struct Css {
     blocks: Vec<Toplevel>,
     in_at_rule: bool,
+    allows_charset: bool,
 }
 
 impl Css {
-    pub const fn new(in_at_rule: bool) -> Self {
+    pub const fn new(in_at_rule: bool, allows_charset: bool) -> Self {
         Css {
             blocks: Vec::new(),
             in_at_rule,
+            allows_charset,
         }
     }
 
-    pub(crate) fn from_stmts(s: Vec<Stmt>, in_at_rule: bool) -> SassResult<Self> {
-        Css::new(in_at_rule).parse_stylesheet(s)
+    pub(crate) fn from_stmts(
+        s: Vec<Stmt>,
+        in_at_rule: bool,
+        allows_charset: bool,
+    ) -> SassResult<Self> {
+        Css::new(in_at_rule, allows_charset).parse_stylesheet(s)
     }
 
     fn parse_stmt(&mut self, stmt: Stmt) -> SassResult<Vec<Toplevel>> {
@@ -225,8 +231,9 @@ impl Css {
 
     pub fn pretty_print(self, map: &CodeMap) -> SassResult<String> {
         let mut string = Vec::new();
+        let allows_charset = self.allows_charset;
         self._inner_pretty_print(&mut string, map, 0)?;
-        if string.iter().any(|s| !s.is_ascii()) {
+        if allows_charset && string.iter().any(|s| !s.is_ascii()) {
             return Ok(format!("@charset \"UTF-8\";\n{}", unsafe {
                 String::from_utf8_unchecked(string)
             }));
@@ -309,7 +316,11 @@ impl Css {
                         writeln!(buf, " {{")?;
                     }
 
-                    Css::from_stmts(body, true)?._inner_pretty_print(buf, map, nesting + 1)?;
+                    Css::from_stmts(body, true, self.allows_charset)?._inner_pretty_print(
+                        buf,
+                        map,
+                        nesting + 1,
+                    )?;
                     writeln!(buf, "{}}}", padding)?;
                 }
                 Toplevel::Keyframes(k) => {
@@ -332,7 +343,11 @@ impl Css {
                         writeln!(buf, " {{")?;
                     }
 
-                    Css::from_stmts(body, true)?._inner_pretty_print(buf, map, nesting + 1)?;
+                    Css::from_stmts(body, true, self.allows_charset)?._inner_pretty_print(
+                        buf,
+                        map,
+                        nesting + 1,
+                    )?;
                     writeln!(buf, "{}}}", padding)?;
                 }
                 Toplevel::Supports { params, body } => {
@@ -354,7 +369,11 @@ impl Css {
                         writeln!(buf, " {{")?;
                     }
 
-                    Css::from_stmts(body, true)?._inner_pretty_print(buf, map, nesting + 1)?;
+                    Css::from_stmts(body, true, self.allows_charset)?._inner_pretty_print(
+                        buf,
+                        map,
+                        nesting + 1,
+                    )?;
                     writeln!(buf, "{}}}", padding)?;
                 }
                 Toplevel::Media { query, body } => {
@@ -363,7 +382,11 @@ impl Css {
                     }
 
                     writeln!(buf, "{}@media {} {{", padding, query)?;
-                    Css::from_stmts(body, true)?._inner_pretty_print(buf, map, nesting + 1)?;
+                    Css::from_stmts(body, true, self.allows_charset)?._inner_pretty_print(
+                        buf,
+                        map,
+                        nesting + 1,
+                    )?;
                     writeln!(buf, "{}}}", padding)?;
                 }
                 Toplevel::Style(s) => {
