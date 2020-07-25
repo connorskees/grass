@@ -6,7 +6,10 @@ use crate::{
     args::{CallArg, CallArgs, FuncArg, FuncArgs},
     error::SassResult,
     scope::Scope,
-    utils::{read_until_closing_paren, read_until_closing_quote, read_until_closing_square_brace},
+    utils::{
+        peek_ident_no_interpolation, read_until_closing_paren, read_until_closing_quote,
+        read_until_closing_square_brace,
+    },
     value::Value,
     Token,
 };
@@ -139,23 +142,15 @@ impl<'a> Parser<'a> {
                 Some(Token { kind: '$', pos }) => {
                     span = span.merge(pos);
                     self.toks.next();
-                    let v = self.parse_identifier_no_interpolation(false)?;
-                    let whitespace = self.whitespace_or_comment();
+                    let v = peek_ident_no_interpolation(self.toks, false, self.span_before)?;
+
                     if let Some(Token { kind: ':', .. }) = self.toks.peek() {
+                        self.toks.truncate_iterator_to_cursor();
                         self.toks.next();
                         name = v.node;
                     } else {
                         val.push(Token::new(pos, '$'));
-                        let mut current_pos = 0;
-                        val.extend(v.chars().map(|x| {
-                            let len = x.len_utf8() as u64;
-                            let tok = Token::new(v.span.subspan(current_pos, current_pos + len), x);
-                            current_pos += len;
-                            tok
-                        }));
-                        if whitespace {
-                            val.push(Token::new(pos, ' '));
-                        }
+                        self.toks.reset_cursor();
                         name.clear();
                     }
                 }

@@ -64,3 +64,25 @@ error!(
     "@function foo($a) {\n    @return foo;\n}\n\na {\n    color: foo(unit(bar));\n}\n",
     "Error: $number: bar is not a number."
 );
+test!(
+    variable_is_only_hyphens,
+    "$--: red;
+
+    a {
+        color: foo($--);
+    }",
+    "a {\n  color: foo(red);\n}\n"
+);
+test!(
+    no_space_after_colon_in_keyword_arg,
+    "@function foo($a) {
+        @return $a;
+    }
+
+    $b: red;
+
+    a {
+        color: foo($a:$b);
+    }",
+    "a {\n  color: red;\n}\n"
+);
