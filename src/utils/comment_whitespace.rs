@@ -4,6 +4,8 @@ use peekmore::PeekMoreIterator;
 
 use crate::Token;
 
+use super::peek_until_newline;
+
 pub(crate) trait IsWhitespace {
     fn is_whitespace(&self) -> bool;
 }
@@ -36,6 +38,40 @@ pub(crate) fn peek_whitespace(s: &mut PeekMoreIterator<IntoIter<Token>>) -> bool
         }
         found_whitespace = true;
         s.advance_cursor();
+    }
+    found_whitespace
+}
+
+pub(crate) fn peek_whitespace_or_comment(s: &mut PeekMoreIterator<IntoIter<Token>>) -> bool {
+    let mut found_whitespace = false;
+    while let Some(w) = s.peek() {
+        match w.kind {
+            ' ' | '\t' | '\n' => {
+                found_whitespace = true;
+                s.advance_cursor();
+            }
+            '/' => match s.peek_forward(1) {
+                Some(Token { kind: '/', .. }) => {
+                    peek_until_newline(s);
+                    found_whitespace = true;
+                }
+                Some(Token { kind: '*', .. }) => {
+                    found_whitespace = true;
+                    while let Some(tok) = s.peek_next() {
+                        match tok.kind {
+                            '*' => {
+                                if matches!(s.peek_forward(1), Some(Token { kind: '/', .. })) {
+                                    break;
+                                }
+                            }
+                            _ => continue,
+                        }
+                    }
+                }
+                _ => return found_whitespace,
+            },
+            _ => return found_whitespace,
+        }
     }
     found_whitespace
 }

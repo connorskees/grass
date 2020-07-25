@@ -97,7 +97,7 @@ fn peek_until_closing_quote(
     Ok(t)
 }
 
-fn peek_until_newline(toks: &mut PeekMoreIterator<IntoIter<Token>>) {
+pub(crate) fn peek_until_newline(toks: &mut PeekMoreIterator<IntoIter<Token>>) {
     while let Some(tok) = toks.peek() {
         if tok.kind == '\n' {
             break;

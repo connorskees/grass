@@ -7,8 +7,8 @@ use crate::{
     error::SassResult,
     scope::Scope,
     utils::{
-        peek_ident_no_interpolation, read_until_closing_paren, read_until_closing_quote,
-        read_until_closing_square_brace,
+        peek_ident_no_interpolation, peek_whitespace_or_comment, read_until_closing_paren,
+        read_until_closing_quote, read_until_closing_square_brace,
     },
     value::Value,
     Token,
@@ -24,7 +24,7 @@ impl<'a> Parser<'a> {
             None => return Err(("expected \")\".", self.span_before).into()),
         };
 
-        self.whitespace();
+        self.whitespace_or_comment();
         while let Some(Token { kind, pos }) = self.toks.next() {
             let name = match kind {
                 '$' => self.parse_identifier_no_interpolation(false)?,
@@ -36,14 +36,14 @@ impl<'a> Parser<'a> {
             };
             let mut default: Vec<Token> = Vec::new();
             let mut is_variadic = false;
-            self.whitespace();
+            self.whitespace_or_comment();
             let (kind, span) = match self.toks.next() {
                 Some(Token { kind, pos }) => (kind, pos),
                 None => return Err(("expected \")\".", pos).into()),
             };
             match kind {
                 ':' => {
-                    self.whitespace();
+                    self.whitespace_or_comment();
                     while let Some(tok) = self.toks.peek() {
                         match &tok.kind {
                             ',' => {
@@ -81,7 +81,7 @@ impl<'a> Parser<'a> {
                     if next.kind != '.' {
                         return Err(("expected \".\".", next.pos()).into());
                     }
-                    self.whitespace();
+                    self.whitespace_or_comment();
                     let next = self.toks.next().ok_or(("expected \")\".", next.pos()))?;
                     if next.kind != ')' {
                         return Err(("expected \")\".", next.pos()).into());
@@ -116,9 +116,9 @@ impl<'a> Parser<'a> {
                 }),
                 _ => {}
             }
-            self.whitespace();
+            self.whitespace_or_comment();
         }
-        self.whitespace();
+        self.whitespace_or_comment();
         // TODO: this should NOT eat the opening curly brace
         match self.toks.next() {
             Some(v) if v.kind == '{' => {}
@@ -143,6 +143,8 @@ impl<'a> Parser<'a> {
                     span = span.merge(pos);
                     self.toks.next();
                     let v = peek_ident_no_interpolation(self.toks, false, self.span_before)?;
+
+                    peek_whitespace_or_comment(self.toks);
 
                     if let Some(Token { kind: ':', .. }) = self.toks.peek() {
                         self.toks.truncate_iterator_to_cursor();
@@ -262,7 +264,7 @@ impl<'a> Parser<'a> {
                 );
             }
 
-            self.whitespace();
+            self.whitespace_or_comment();
 
             if self.toks.peek().is_none() {
                 return Err(("expected \")\".", span).into());
