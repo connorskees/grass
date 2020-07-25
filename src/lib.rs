@@ -348,7 +348,7 @@ pub fn from_string(p: String, options: &Options) -> Result<String> {
 
 #[cfg(feature = "wasm")]
 #[wasm_bindgen]
-pub fn from_string(p: String, options: &'_ Options<'_>) -> std::result::Result<String, JsValue> {
+pub fn from_string(p: String) -> std::result::Result<String, JsValue> {
     let mut map = CodeMap::new();
     let file = map.add_file("stdin".into(), p);
     let empty_span = file.span.subspan(0, 0);
@@ -370,13 +370,13 @@ pub fn from_string(p: String, options: &'_ Options<'_>) -> std::result::Result<S
         at_root_has_selector: false,
         extender: &mut Extender::new(empty_span),
         content_scopes: &mut Scopes::new(),
-        options,
+        options: &Options::default(),
     }
     .parse()
-    .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages).to_string())?;
+    .map_err(|e| raw_to_parse_error(&map, *e, true).to_string())?;
 
-    Ok(Css::from_stmts(stmts, false, options.allows_charset)
-        .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages).to_string())?
+    Ok(Css::from_stmts(stmts, false, true)
+        .map_err(|e| raw_to_parse_error(&map, *e, true).to_string())?
         .pretty_print(&map)
-        .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages).to_string())?)
+        .map_err(|e| raw_to_parse_error(&map, *e, true).to_string())?)
 }
