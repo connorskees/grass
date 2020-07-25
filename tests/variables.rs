@@ -138,6 +138,17 @@ test!(
     "$a: red != blue;\n\na {\n    color: $a;\n}\n",
     "a {\n  color: true;\n}\n"
 );
+test!(
+    error_in_default_value_already_set_is_ignored,
+    "$a: red;
+
+    $a: hue(\"not a color, should error\") !default;
+
+    a {
+        color: $a;
+    }",
+    "a {\n  color: red;\n}\n"
+);
 // https://github.com/Kixiron/lasso/issues/7
 test!(
     regression_test_for_lasso_0_3_0,

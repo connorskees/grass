@@ -1,10 +1,7 @@
-use codemap::Spanned;
-
 use crate::{
     common::Identifier,
     error::SassResult,
     utils::{peek_ident_no_interpolation, read_until_closing_paren, read_until_closing_quote},
-    value::Value,
     Token,
 };
 
@@ -12,15 +9,15 @@ use super::Parser;
 
 #[derive(Debug)]
 struct VariableValue {
-    value: Spanned<Value>,
+    val_toks: Vec<Token>,
     global: bool,
     default: bool,
 }
 
 impl VariableValue {
-    pub const fn new(value: Spanned<Value>, global: bool, default: bool) -> Self {
+    pub const fn new(val_toks: Vec<Token>, global: bool, default: bool) -> Self {
         Self {
-            value,
+            val_toks,
             global,
             default,
         }
@@ -35,35 +32,47 @@ impl<'a> Parser<'a> {
         if !matches!(self.toks.next(), Some(Token { kind: ':', .. })) {
             return Err(("expected \":\".", self.span_before).into());
         }
-        let value = self.parse_variable_value()?;
+        let VariableValue {
+            val_toks,
+            global,
+            default,
+        } = self.parse_variable_value()?;
 
-        if value.global && !value.default {
-            self.global_scope.insert_var(ident, value.value.clone());
-        }
-
-        if value.default {
+        if default {
             if self.at_root && !self.flags.in_control_flow() {
                 if !self.global_scope.var_exists(ident) {
-                    self.global_scope.insert_var(ident, value.value);
+                    let value = self.parse_value_from_vec(val_toks, true)?;
+                    self.global_scope.insert_var(ident, value);
                 }
             } else {
-                if value.global && !self.global_scope.var_exists(ident) {
-                    self.global_scope.insert_var(ident, value.value.clone());
+                let value = self.parse_value_from_vec(val_toks, true)?;
+                if global && !self.global_scope.var_exists(ident) {
+                    self.global_scope.insert_var(ident, value.clone());
                 }
-                self.scopes.insert_default_var(ident, value.value);
+                self.scopes.insert_default_var(ident, value);
             }
-        } else if self.at_root {
+
+            return Ok(());
+        }
+
+        let value = self.parse_value_from_vec(val_toks, true)?;
+
+        if global {
+            self.global_scope.insert_var(ident, value.clone());
+        }
+
+        if self.at_root {
             if self.flags.in_control_flow() {
                 if self.global_scope.var_exists(ident) {
-                    self.global_scope.insert_var(ident, value.value);
+                    self.global_scope.insert_var(ident, value);
                 } else {
-                    self.scopes.insert_var(ident, value.value);
+                    self.scopes.insert_var(ident, value);
                 }
             } else {
-                self.global_scope.insert_var(ident, value.value);
+                self.global_scope.insert_var(ident, value);
             }
         } else {
-            self.scopes.insert_var(ident, value.value);
+            self.scopes.insert_var(ident, value);
         }
         Ok(())
     }
@@ -166,7 +175,7 @@ impl<'a> Parser<'a> {
                 _ => val_toks.push(self.toks.next().unwrap()),
             }
         }
-        let val = self.parse_value_from_vec(val_toks, true)?;
-        Ok(VariableValue::new(val, global, default))
+
+        Ok(VariableValue::new(val_toks, global, default))
     }
 }
