@@ -138,6 +138,74 @@ test!(
     "$a: red != blue;\n\na {\n    color: $a;\n}\n",
     "a {\n  color: true;\n}\n"
 );
+// https://github.com/Kixiron/lasso/issues/7
+test!(
+    regression_test_for_lasso_0_3_0,
+    "$a: foo;
+    $b: foo;
+    $c: foo;
+    $d: foo;
+    $e: foo;
+    $f: foo;
+    $g: foo;
+    $h: foo;
+    $i: foo;
+    $j: foo;
+    $k: foo;
+    $l: foo;
+    $m: foo;
+    $n: foo;
+    $o: foo;
+    $p: foo;
+    $q: foo;
+    $r: foo;
+    $s: foo;
+    $t: foo;
+    $u: foo;
+    $v: foo;
+    $w: foo;
+    $x: foo;
+    $y: foo;
+    $z: foo;
+    $aa: foo;
+    $bb: foo;
+    $cc: foo;
+    $dd: foo;
+    $ee: foo;
+    $ff: foo;
+    $gg: foo;
+    $hh: foo;
+    $ii: foo;
+    $jj: foo;
+    $kk: foo;
+    $ll: foo;
+    $mm: foo;
+    $nn: foo;
+    $oo: foo;
+    $pp: foo;
+    $qq: foo;
+    $rr: foo;
+    $ss: foo;
+    $tt: foo;
+    $uu: foo;
+    $vv: foo;
+    $ww: foo;
+    $xx: foo;
+    $yy: foo;
+    $zz: foo;
+    $aaa: foo;
+    $bbb: foo;
+    $ccc: foo;
+
+    $global-inverse-color: #fff;
+
+    $inverse-global-muted-color: $global-inverse-color;
+    a {
+        color: $inverse-global-muted-color;
+    }
+    ",
+    "a {\n  color: #fff;\n}\n"
+);
 error!(ends_with_bang, "$a: red !;", "Error: Expected identifier.");
 error!(unknown_flag, "$a: red !foo;", "Error: Invalid flag name.");
 error!(
