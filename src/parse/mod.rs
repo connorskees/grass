@@ -601,23 +601,7 @@ impl<'a> Parser<'a> {
             return Err(("expected \"{\".", self.span_before).into());
         }
 
-        let raw_body = Parser {
-            toks: self.toks,
-            map: self.map,
-            path: self.path,
-            scopes: self.scopes,
-            global_scope: self.global_scope,
-            super_selectors: self.super_selectors,
-            span_before: self.span_before,
-            content: self.content,
-            flags: self.flags,
-            at_root: false,
-            at_root_has_selector: self.at_root_has_selector,
-            extender: self.extender,
-            content_scopes: self.content_scopes,
-            options: self.options,
-        }
-        .parse_stmt()?;
+        let raw_body = self.parse_stmt()?;
 
         let mut rules = Vec::with_capacity(raw_body.len());
         let mut body = Vec::new();
@@ -777,23 +761,7 @@ impl<'a> Parser<'a> {
             return Err(("Expected \"not\".", self.span_before).into());
         }
 
-        let raw_body = Parser {
-            toks: self.toks,
-            map: self.map,
-            path: self.path,
-            scopes: self.scopes,
-            global_scope: self.global_scope,
-            super_selectors: self.super_selectors,
-            span_before: self.span_before,
-            content: self.content,
-            flags: self.flags,
-            at_root: false,
-            at_root_has_selector: self.at_root_has_selector,
-            extender: self.extender,
-            content_scopes: self.content_scopes,
-            options: self.options,
-        }
-        .parse_stmt()?;
+        let raw_body = self.parse_stmt()?;
 
         let mut rules = Vec::with_capacity(raw_body.len());
         let mut body = Vec::new();
