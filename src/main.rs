@@ -54,6 +54,7 @@ fn main() -> std::io::Result<()> {
                 .help("A path to use when resolving imports. May be passed multiple times.")
                 .multiple(true)
                 .takes_value(true)
+                .number_of_values(1)
         )
         .arg(
             Arg::with_name("STYLE")
