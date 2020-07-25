@@ -333,8 +333,11 @@ impl<'a> Parser<'a> {
     }
 
     fn next_is_hypen(&mut self) -> bool {
-        self.toks.peek_forward(1).is_some()
-            && matches!(self.toks.peek().unwrap().kind, '-' | '_' | 'a'..='z' | 'A'..='Z')
+        if let Some(Token { kind, .. }) = self.toks.peek_forward(1) {
+            matches!(kind, '-' | '_' | 'a'..='z' | 'A'..='Z')
+        } else {
+            false
+        }
     }
 
     fn parse_intermediate_value(&mut self) -> Option<SassResult<Spanned<IntermediateValue>>> {
