@@ -1,4 +1,4 @@
-# TBD
+# 0.10.0
 
  - bugfixes for `@media` query regressions
  - bugfixes for maps, arglists, and `@each`
@@ -10,6 +10,16 @@
  - errors inside builtin functions use `inspect` to print values
  - bugfixes for color and map equality (e.g. `red` == `#ff0000`)
  - hide unimplemented command line flags
+ - implement CLI options for `--quiet`, `--load-path` ([#22](https://github.com/connorskees/grass/pull/22) by @JosephLing), `--no-charset`, `--stdin`, and `--no-unicode`
+ - use unicode characters in error messages by default
+ - allow comma separated `@import` statements ([#23](https://github.com/connorskees/grass/pull/23) by @JosephLing)
+ - implement and correctly parse `!optional` in `@extend`
+ - lazily evaluate `!default` variable values
+ - disallow interpolation in mixin and function names
+ - improve parsing for `@supports` and unknown at-rules
+
+## Breaking
+ - functions now take an `Options` struct
 
 # 0.9.5
 
