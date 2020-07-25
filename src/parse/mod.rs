@@ -15,7 +15,10 @@ use crate::{
         ComplexSelectorComponent, ExtendRule, ExtendedSelector, Extender, Selector, SelectorParser,
     },
     style::Style,
-    utils::{read_until_closing_curly_brace, read_until_semicolon_or_closing_curly_brace},
+    utils::{
+        peek_ident_no_interpolation, read_until_closing_curly_brace,
+        read_until_semicolon_or_closing_curly_brace,
+    },
     value::Value,
     Options, {Cow, Token},
 };
@@ -269,6 +272,7 @@ impl<'a> Parser<'a> {
                             self.at_root = false;
                             let selector = self
                                 .parse_selector(!self.super_selectors.is_empty(), false, init)?
+                                .0
                                 .resolve_parent_selectors(
                                     self.super_selectors.last(),
                                     !at_root || self.at_root_has_selector,
@@ -299,7 +303,7 @@ impl<'a> Parser<'a> {
         allows_parent: bool,
         from_fn: bool,
         mut string: String,
-    ) -> SassResult<Selector> {
+    ) -> SassResult<(Selector, bool)> {
         let mut span = if let Some(tok) = self.toks.peek() {
             tok.pos()
         } else {
@@ -309,6 +313,8 @@ impl<'a> Parser<'a> {
         self.span_before = span;
 
         let mut found_curly = false;
+
+        let mut optional = false;
 
         // we resolve interpolation and strip comments
         while let Some(tok) = self.toks.next() {
@@ -332,6 +338,16 @@ impl<'a> Parser<'a> {
                 '{' => {
                     found_curly = true;
                     break;
+                }
+                '!' => {
+                    if peek_ident_no_interpolation(self.toks, false, self.span_before)?.node
+                        == "optional"
+                    {
+                        self.toks.truncate_iterator_to_cursor();
+                        optional = true;
+                    } else {
+                        string.push('!');
+                    }
                 }
                 c => string.push(c),
             }
@@ -368,7 +384,7 @@ impl<'a> Parser<'a> {
         )
         .parse()?;
 
-        Ok(Selector(selector))
+        Ok((Selector(selector), optional))
     }
 
     /// Eat and return the contents of a comment.
@@ -637,7 +653,7 @@ impl<'a> Parser<'a> {
             self.super_selectors.last().clone()
         } else {
             at_root_has_selector = true;
-            self.parse_selector(true, false, String::new())?
+            self.parse_selector(true, false, String::new())?.0
         }
         .resolve_parent_selectors(self.super_selectors.last(), false)?;
 
@@ -692,7 +708,7 @@ impl<'a> Parser<'a> {
         // if !self.in_style_rule && !self.in_mixin && !self.in_content_block {
         //     return Err(("@extend may only be used within style rules.", self.span_before).into());
         // }
-        let value = Parser {
+        let (value, is_optional) = Parser {
             toks: &mut read_until_semicolon_or_closing_curly_brace(self.toks)?
                 .into_iter()
                 .peekmore(),
@@ -711,17 +727,6 @@ impl<'a> Parser<'a> {
             options: self.options,
         }
         .parse_selector(false, true, String::new())?;
-
-        let is_optional = if let Some(Token { kind: '!', .. }) = self.toks.peek() {
-            self.toks.next();
-            assert_eq!(
-                self.parse_identifier_no_interpolation(false)?.node,
-                "optional"
-            );
-            true
-        } else {
-            false
-        };
 
         self.whitespace();
 

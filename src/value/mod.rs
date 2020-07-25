@@ -457,7 +457,7 @@ impl Value {
             Some(v) => v,
             None => return Err((format!("${}: {} is not a valid selector: it must be a string, a list of strings, or a list of lists of strings.", name, self.inspect(parser.span_before)?), parser.span_before).into()),
         };
-        Parser {
+        Ok(Parser {
             toks: &mut string
                 .chars()
                 .map(|c| Token::new(parser.span_before, c))
@@ -478,7 +478,8 @@ impl Value {
             content_scopes: parser.content_scopes,
             options: parser.options,
         }
-        .parse_selector(allows_parent, true, String::new())
+        .parse_selector(allows_parent, true, String::new())?
+        .0)
     }
 
     fn selector_string(self, span: Span) -> SassResult<Option<String>> {

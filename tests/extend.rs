@@ -1428,13 +1428,11 @@ test!(
     "a.bar {\n  a: b;\n}\n\n.bar, b.foo {\n  c: d;\n}\n"
 );
 test!(
-    #[ignore = "!optional extend is not yet implemented"]
     optional_extend_succeeds_when_extendee_doesnt_exist,
     ".foo {@extend .bar !optional}",
     ""
 );
 test!(
-    #[ignore = "!optional extend is not yet implemented"]
     optional_extend_succeeds_when_extension_fails,
     "a.bar {a: b}
     b.foo {@extend .bar !optional}
