@@ -155,8 +155,9 @@ impl<'a> Parser<'a> {
             extender: self.extender,
             content_scopes: self.content_scopes,
             options: self.options,
+            modules: self.modules,
         }
-        .parse()?;
+        .parse_stmt()?;
 
         self.content.pop();
         self.scopes.exit_scope();
@@ -207,8 +208,9 @@ impl<'a> Parser<'a> {
                     extender: self.extender,
                     content_scopes: self.scopes,
                     options: self.options,
+                    modules: self.modules,
                 }
-                .parse()?
+                .parse_stmt()?
             } else {
                 Vec::new()
             };

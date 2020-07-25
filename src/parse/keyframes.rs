@@ -166,6 +166,7 @@ impl<'a> Parser<'a> {
                         extender: self.extender,
                         content_scopes: self.content_scopes,
                         options: self.options,
+                        modules: self.modules,
                     })
                     .parse_keyframes_selector()?;
 
@@ -197,6 +198,7 @@ impl<'a> Parser<'a> {
             extender: self.extender,
             content_scopes: self.content_scopes,
             options: self.options,
+            modules: self.modules,
         }
         .parse_stmt()?;
 

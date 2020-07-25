@@ -477,6 +477,7 @@ impl Value {
             extender: parser.extender,
             content_scopes: parser.content_scopes,
             options: parser.options,
+            modules: parser.modules,
         }
         .parse_selector(allows_parent, true, String::new())?
         .0)

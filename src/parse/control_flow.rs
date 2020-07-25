@@ -53,6 +53,7 @@ impl<'a> Parser<'a> {
                 extender: self.extender,
                 content_scopes: self.content_scopes,
                 options: self.options,
+                modules: self.modules,
             }
             .parse_stmt()?;
         } else {
@@ -112,6 +113,7 @@ impl<'a> Parser<'a> {
                                 extender: self.extender,
                                 content_scopes: self.content_scopes,
                                 options: self.options,
+                                modules: self.modules,
                             }
                             .parse_stmt()?;
                         } else {
@@ -140,6 +142,7 @@ impl<'a> Parser<'a> {
                                 extender: self.extender,
                                 content_scopes: self.content_scopes,
                                 options: self.options,
+                                modules: self.modules,
                             }
                             .parse_stmt();
                         }
@@ -320,8 +323,9 @@ impl<'a> Parser<'a> {
                     extender: self.extender,
                     content_scopes: self.content_scopes,
                     options: self.options,
+                    modules: self.modules,
                 }
-                .parse()?;
+                .parse_stmt()?;
                 if !these_stmts.is_empty() {
                     return Ok(these_stmts);
                 }
@@ -342,8 +346,9 @@ impl<'a> Parser<'a> {
                         extender: self.extender,
                         content_scopes: self.content_scopes,
                         options: self.options,
+                        modules: self.modules,
                     }
-                    .parse()?,
+                    .parse_stmt()?,
                 );
             }
         }
@@ -392,8 +397,9 @@ impl<'a> Parser<'a> {
                     extender: self.extender,
                     content_scopes: self.content_scopes,
                     options: self.options,
+                    modules: self.modules,
                 }
-                .parse()?;
+                .parse_stmt()?;
                 if !these_stmts.is_empty() {
                     return Ok(these_stmts);
                 }
@@ -414,8 +420,9 @@ impl<'a> Parser<'a> {
                         extender: self.extender,
                         content_scopes: self.content_scopes,
                         options: self.options,
+                        modules: self.modules,
                     }
-                    .parse()?,
+                    .parse_stmt()?,
                 );
             }
             val = self.parse_value_from_vec(cond.clone(), true)?;
@@ -517,8 +524,9 @@ impl<'a> Parser<'a> {
                     extender: self.extender,
                     content_scopes: self.content_scopes,
                     options: self.options,
+                    modules: self.modules,
                 }
-                .parse()?;
+                .parse_stmt()?;
                 if !these_stmts.is_empty() {
                     return Ok(these_stmts);
                 }
@@ -539,8 +547,9 @@ impl<'a> Parser<'a> {
                         extender: self.extender,
                         content_scopes: self.content_scopes,
                         options: self.options,
+                        modules: self.modules,
                     }
-                    .parse()?,
+                    .parse_stmt()?,
                 );
             }
         }

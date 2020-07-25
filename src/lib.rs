@@ -80,7 +80,7 @@ grass input.scss
 )]
 #![cfg_attr(feature = "nightly", feature(track_caller))]
 #![cfg_attr(feature = "profiling", inline(never))]
-use std::{fs, path::Path};
+use std::{collections::HashMap, fs, path::Path};
 
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::*;
@@ -292,6 +292,7 @@ pub fn from_path(p: &str, options: &Options) -> Result<String> {
         extender: &mut Extender::new(empty_span),
         content_scopes: &mut Scopes::new(),
         options,
+        modules: &mut HashMap::new(),
     }
     .parse()
     .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages))?;
@@ -336,6 +337,7 @@ pub fn from_string(p: String, options: &Options) -> Result<String> {
         extender: &mut Extender::new(empty_span),
         content_scopes: &mut Scopes::new(),
         options,
+        modules: &mut HashMap::new(),
     }
     .parse()
     .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages))?;
@@ -371,6 +373,7 @@ pub fn from_string(p: String) -> std::result::Result<String, JsValue> {
         extender: &mut Extender::new(empty_span),
         content_scopes: &mut Scopes::new(),
         options: &Options::default(),
+        modules: &mut HashMap::new(),
     }
     .parse()
     .map_err(|e| raw_to_parse_error(&map, *e, true).to_string())?;

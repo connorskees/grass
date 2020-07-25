@@ -1,4 +1,4 @@
-use std::{convert::TryFrom, path::Path, vec::IntoIter};
+use std::{collections::HashMap, convert::TryFrom, path::Path, vec::IntoIter};
 
 use codemap::{CodeMap, Span, Spanned};
 use peekmore::{PeekMore, PeekMoreIterator};
@@ -86,11 +86,17 @@ pub(crate) struct Parser<'a> {
     pub extender: &'a mut Extender,
 
     pub options: &'a Options<'a>,
+
+    pub modules: &'a mut HashMap<String, Scope>,
 }
 
 impl<'a> Parser<'a> {
     pub fn parse(&mut self) -> SassResult<Vec<Stmt>> {
         let mut stmts = Vec::new();
+
+        self.whitespace();
+        stmts.append(&mut self.load_modules()?);
+
         while self.toks.peek().is_some() {
             stmts.append(&mut self.parse_stmt()?);
             if self.flags.in_function() && !stmts.is_empty() {
@@ -99,6 +105,76 @@ impl<'a> Parser<'a> {
             self.at_root = true;
         }
         Ok(stmts)
+    }
+
+    /// Returns any multiline comments that may have been found
+    /// while loading modules
+    fn load_modules(&mut self) -> SassResult<Vec<Stmt>> {
+        let mut comments = Vec::new();
+
+        loop {
+            self.whitespace();
+            match self.toks.peek() {
+                Some(Token { kind: '@', .. }) => {
+                    self.toks.advance_cursor();
+
+                    match AtRuleKind::try_from(&peek_ident_no_interpolation(
+                        self.toks,
+                        false,
+                        self.span_before,
+                    )?)? {
+                        AtRuleKind::Use => {
+                            self.toks.truncate_iterator_to_cursor();
+                        }
+                        _ => {
+                            break;
+                        }
+                    }
+
+                    self.whitespace_or_comment();
+
+                    let quote = match self.toks.next() {
+                        Some(Token { kind: q @ '"', .. }) | Some(Token { kind: q @ '\'', .. }) => q,
+                        Some(..) => todo!(),
+                        None => todo!(),
+                    };
+
+                    let Spanned { node: module, span } = self.parse_quoted_string(quote)?;
+                    let module = module.unquote().to_css_string(span)?;
+
+                    if let Some(Token { kind: ';', .. }) = self.toks.peek() {
+                        self.toks.next();
+                    } else {
+                        todo!()
+                    }
+
+                    match module.as_ref() {
+                        "sass:color" => todo!("builtin module `sass:color` not yet implemented"),
+                        "sass:list" => todo!("builtin module `sass:list` not yet implemented"),
+                        "sass:map" => todo!("builtin module `sass:map` not yet implemented"),
+                        "sass:math" => todo!("builtin module `sass:math` not yet implemented"),
+                        "sass:meta" => todo!("builtin module `sass:meta` not yet implemented"),
+                        "sass:selector" => {
+                            todo!("builtin module `sass:selector` not yet implemented")
+                        }
+                        "sass:string" => todo!("builtin module `sass:string` not yet implemented"),
+                        _ => todo!("@use not yet implemented"),
+                    }
+                }
+                Some(Token { kind: '/', .. }) => {
+                    self.toks.advance_cursor();
+                    match self.parse_comment()?.node {
+                        Comment::Silent => continue,
+                        Comment::Loud(s) => comments.push(Stmt::Comment(s)),
+                    }
+                }
+                Some(..) | None => break,
+            }
+        }
+
+        self.toks.reset_cursor();
+
+        Ok(comments)
     }
 
     fn parse_stmt(&mut self) -> SassResult<Vec<Stmt>> {
@@ -196,7 +272,13 @@ impl<'a> Parser<'a> {
                         AtRuleKind::Unknown(_) => {
                             stmts.push(self.parse_unknown_at_rule(kind_string.node)?)
                         }
-                        AtRuleKind::Use => todo!("@use not yet implemented"),
+                        AtRuleKind::Use => {
+                            return Err((
+                                "@use rules must be written before any other rules.",
+                                kind_string.span,
+                            )
+                                .into())
+                        }
                         AtRuleKind::Forward => todo!("@forward not yet implemented"),
                         AtRuleKind::Extend => self.parse_extend()?,
                         AtRuleKind::Supports => stmts.push(self.parse_supports()?),
@@ -377,6 +459,7 @@ impl<'a> Parser<'a> {
                 extender: self.extender,
                 content_scopes: self.content_scopes,
                 options: self.options,
+                modules: self.modules,
             },
             allows_parent,
             true,
@@ -668,8 +751,9 @@ impl<'a> Parser<'a> {
             extender: self.extender,
             content_scopes: self.content_scopes,
             options: self.options,
+            modules: self.modules,
         }
-        .parse()?
+        .parse_stmt()?
         .into_iter()
         .filter_map(|s| match s {
             Stmt::Style(..) => {
@@ -709,6 +793,7 @@ impl<'a> Parser<'a> {
             extender: self.extender,
             content_scopes: self.content_scopes,
             options: self.options,
+            modules: self.modules,
         }
         .parse_selector(false, true, String::new())?;
 
