@@ -108,9 +108,9 @@ fn comma_separated_import_order() {
 #[test]
 fn comma_separated_import_order_css() {
     let input =
-        "@import 'comma_separated_import_order1.css', 'comma_separated_import_order2', url(third);";
+        "@import 'comma_separated_import_order1.css', 'comma_separated_import_order_css', url(third);";
     tempfile!("comma_separated_import_order1.css", "p { color: red; }");
-    tempfile!("comma_separated_import_order2", "p { color: blue; }");
+    tempfile!("comma_separated_import_order_css", "p { color: blue; }");
     assert_eq!(
         "@import \"comma_separated_import_order1.css\";\n\np {\n  color: blue;\n}\n@import url(third);\n",
         &grass::from_string(input.to_string(), &grass::Options::default()).expect(input)
