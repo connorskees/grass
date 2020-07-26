@@ -119,6 +119,12 @@ impl<'a> Parser<'a> {
                 Some(Token { kind: '@', .. }) => {
                     self.toks.advance_cursor();
 
+                    if let Some(Token { kind, .. }) = self.toks.peek() {
+                        if !matches!(kind, 'a'..='z' | 'A'..='Z' | '\\') {
+                            break;
+                        }
+                    }
+
                     match AtRuleKind::try_from(&peek_ident_no_interpolation(
                         self.toks,
                         false,
@@ -173,7 +179,7 @@ impl<'a> Parser<'a> {
                     };
                 }
                 Some(Token { kind: '/', .. }) => {
-                    self.toks.advance_cursor();
+                    self.toks.next();
                     match self.parse_comment()?.node {
                         Comment::Silent => continue,
                         Comment::Loud(s) => comments.push(Stmt::Comment(s)),
