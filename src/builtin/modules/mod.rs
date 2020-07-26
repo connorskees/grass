@@ -37,6 +37,10 @@ impl Module {
         }
     }
 
+    pub fn insert_builtin_var(&mut self, name: &'static str, value: Value) {
+        self.vars.insert(name.into(), value);
+    }
+
     pub fn get_fn(&self, name: Identifier) -> Option<SassFunction> {
         self.functions.get(&name).cloned()
     }

@@ -214,6 +214,7 @@ impl<'a> Parser<'a> {
     ) -> SassResult<Spanned<IntermediateValue>> {
         Ok(IntermediateValue::Value(
             if matches!(self.toks.peek(), Some(Token { kind: '$', .. })) {
+                self.toks.next();
                 let var = self
                     .parse_identifier_no_interpolation(false)?
                     .map_node(|i| i.into());
