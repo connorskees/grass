@@ -191,41 +191,55 @@ fn main() -> std::io::Result<()> {
         .unicode_error_messages(!matches.is_present("NO_UNICODE"))
         .allows_charset(!matches.is_present("NO_CHARSET"));
 
-    let (mut stdout_write, mut file_write);
-    let buf_out: &mut dyn Write = if let Some(path) = matches.value_of("OUTPUT") {
-        file_write = BufWriter::new(
-            OpenOptions::new()
-                .create(true)
-                .write(true)
-                .truncate(true)
-                .open(path)?,
-        );
-        &mut file_write
-    } else {
-        stdout_write = BufWriter::new(stdout());
-        &mut stdout_write
-    };
-
-    buf_out.write_all(
-        if let Some(name) = matches.value_of("INPUT") {
-            from_path(name, &options)
-        } else if matches.is_present("STDIN") {
-            from_string(
-                {
-                    let mut buffer = String::new();
-                    stdin().read_to_string(&mut buffer)?;
-                    buffer
-                },
-                options,
-            )
+    if matches.value_of("INPUT") == Some("-") || matches.is_present("STDIN") {
+        let (mut stdout_write, mut file_write);
+        let buf_out: &mut dyn Write = if let Some(path) = matches.value_of("OUTPUT") {
+            file_write = BufWriter::new(
+                OpenOptions::new()
+                    .create(true)
+                    .write(true)
+                    .truncate(true)
+                    .open(path)?,
+            );
+            &mut file_write
         } else {
-            unreachable!()
-        }
-        .unwrap_or_else(|e| {
+            stdout_write = BufWriter::new(stdout());
+            &mut stdout_write
+        };
+
+        let mut buffer = String::new();
+        stdin().read_to_string(&mut buffer)?;
+        let output = from_string(buffer, options).unwrap_or_else(|e| {
             eprintln!("{}", e);
             std::process::exit(1)
-        })
-        .as_bytes(),
-    )?;
-    Ok(())
+        });
+        buf_out.write_all(output.as_bytes())
+    } else if let Some(name) = matches.value_of("INPUT") {
+        if ["sass", "scss", "css"].contains(&name.rsplitn(2, '.').next().unwrap()) {
+            let (mut stdout_write, mut file_write);
+            let buf_out: &mut dyn Write = if let Some(path) = matches.value_of("OUTPUT") {
+                file_write = BufWriter::new(
+                    OpenOptions::new()
+                        .create(true)
+                        .write(true)
+                        .truncate(true)
+                        .open(path)?,
+                );
+                &mut file_write
+            } else {
+                stdout_write = BufWriter::new(stdout());
+                &mut stdout_write
+            };
+
+            let output = from_path(name, options).unwrap_or_else(|e| {
+                eprintln!("{}", e);
+                std::process::exit(1)
+            });
+            buf_out.write_all(output.as_bytes())
+        } else {
+            todo!("directory input")
+        }
+    } else {
+        unreachable!()
+    }
 }
