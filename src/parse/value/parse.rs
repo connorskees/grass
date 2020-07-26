@@ -224,7 +224,7 @@ impl<'a> Parser<'a> {
                 let value = self
                     .modules
                     .get(module)
-                    .ok_or(("todo: module dne", module_span))?
+                    .ok_or((format!("There is no module with the namespace \"{}\".", module), module_span))?
                     .get_var(var)?;
                 HigherIntermediateValue::Literal(value.clone())
             } else {
@@ -235,9 +235,9 @@ impl<'a> Parser<'a> {
                 let function = self
                     .modules
                     .get(module)
-                    .ok_or(("todo: module dne", module_span))?
+                    .ok_or((format!("There is no module with the namespace \"{}\".", module), module_span))?
                     .get_fn(fn_name.node)
-                    .ok_or(("todo: fn dne", fn_name.span))?;
+                    .ok_or(("Undefined function.", fn_name.span))?;
 
                 if !matches!(self.toks.next(), Some(Token { kind: '(', .. })) {
                     todo!()

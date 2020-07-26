@@ -25,6 +25,21 @@ error!(
     "@use \"sass:math\" a math;",
     "Error: expected \";\"."
 );
+error!(
+    unknown_module_get_variable,
+    "a { color: foo.$bar; }",
+    "Error: There is no module with the namespace \"foo\"."
+);
+error!(
+    unknown_module_get_function,
+    "a { color: foo.bar(); }",
+    "Error: There is no module with the namespace \"foo\"."
+);
+error!(
+    unknown_function,
+    "@use \"sass:math\";\na { color: math.bar(); }",
+    "Error: Undefined function."
+);
 test!(
     use_as,
     "@use \"sass:math\" as foo;
