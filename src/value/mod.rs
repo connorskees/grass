@@ -1,10 +1,12 @@
+use std::cmp::Ordering;
+
 use peekmore::PeekMore;
 
 use codemap::{Span, Spanned};
 
 use crate::{
     color::Color,
-    common::{Brackets, ListSeparator, QuoteKind},
+    common::{Brackets, ListSeparator, Op, QuoteKind},
     error::SassResult,
     parse::Parser,
     selector::Selector,
@@ -319,6 +321,63 @@ impl Value {
             Value::True
         } else {
             Value::False
+        }
+    }
+
+    pub fn cmp(&self, other: &Self, span: Span, op: Op) -> SassResult<Ordering> {
+        Ok(match self {
+            Value::Dimension(num, unit, _) => match &other {
+                Value::Dimension(num2, unit2, _) => {
+                    if !unit.comparable(unit2) {
+                        return Err(
+                            (format!("Incompatible units {} and {}.", unit2, unit), span).into(),
+                        );
+                    }
+                    if unit == unit2 || unit == &Unit::None || unit2 == &Unit::None {
+                        num.cmp(num2)
+                    } else {
+                        num.cmp(
+                            &(num2.clone()
+                                * UNIT_CONVERSION_TABLE[unit.to_string().as_str()]
+                                    [unit2.to_string().as_str()]
+                                .clone()),
+                        )
+                    }
+                }
+                v => {
+                    return Err((
+                        format!(
+                            "Undefined operation \"{} {} {}\".",
+                            v.inspect(span)?,
+                            op,
+                            other.inspect(span)?
+                        ),
+                        span,
+                    )
+                        .into())
+                }
+            },
+            _ => {
+                return Err((
+                    format!(
+                        "Undefined operation \"{} {} {}\".",
+                        self.inspect(span)?,
+                        op,
+                        other.inspect(span)?
+                    ),
+                    span,
+                )
+                    .into())
+            }
+        })
+    }
+
+    pub fn unitless(&self) -> bool {
+        #[allow(clippy::match_same_arms)]
+        match self {
+            Value::Dimension(_, Unit::None, _) => true,
+            Value::Dimension(..) => false,
+            _ => true,
         }
     }
 

@@ -16,7 +16,7 @@ mod integer;
 
 const PRECISION: usize = 10;
 
-#[derive(Clone, Eq, PartialEq, Ord)]
+#[derive(Clone, Eq, PartialEq)]
 pub(crate) enum Number {
     Small(Rational64),
     Big(Box<BigRational>),
@@ -316,6 +316,30 @@ impl PartialOrd for Number {
                     ))
                 }
                 Self::Big(val2) => val1.partial_cmp(val2),
+            },
+        }
+    }
+}
+
+impl Ord for Number {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self {
+            Self::Small(val1) => match other {
+                Self::Small(val2) => val1.cmp(val2),
+                Self::Big(val2) => {
+                    let tuple: (i64, i64) = (*val1).into();
+                    BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1)).cmp(val2)
+                }
+            },
+            Self::Big(val1) => match other {
+                Self::Small(val2) => {
+                    let tuple: (i64, i64) = (*val2).into();
+                    (**val1).cmp(&BigRational::new_raw(
+                        BigInt::from(tuple.0),
+                        BigInt::from(tuple.1),
+                    ))
+                }
+                Self::Big(val2) => val1.cmp(val2),
             },
         }
     }

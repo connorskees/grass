@@ -735,53 +735,9 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
             HigherIntermediateValue::Literal(v) => v,
             v => panic!("{:?}", v),
         };
-        let ordering = match left {
-            Value::Dimension(num, unit, _) => match &right {
-                Value::Dimension(num2, unit2, _) => {
-                    if !unit.comparable(unit2) {
-                        return Err((
-                            format!("Incompatible units {} and {}.", unit2, unit),
-                            self.span,
-                        )
-                            .into());
-                    }
-                    if &unit == unit2 || unit == Unit::None || unit2 == &Unit::None {
-                        num.cmp(num2)
-                    } else {
-                        num.cmp(
-                            &(num2.clone()
-                                * UNIT_CONVERSION_TABLE[unit.to_string().as_str()]
-                                    [unit2.to_string().as_str()]
-                                .clone()),
-                        )
-                    }
-                }
-                v => {
-                    return Err((
-                        format!(
-                            "Undefined operation \"{} {} {}\".",
-                            v.inspect(self.span)?,
-                            op,
-                            right.inspect(self.span)?
-                        ),
-                        self.span,
-                    )
-                        .into())
-                }
-            },
-            _ => {
-                return Err((
-                    format!(
-                        "Undefined operation \"{} {} {}\".",
-                        left.inspect(self.span)?,
-                        op,
-                        right.inspect(self.span)?
-                    ),
-                    self.span,
-                )
-                    .into())
-            }
-        };
+
+        let ordering = left.cmp(&right, self.span, op)?;
+
         Ok(match op {
             Op::GreaterThan => match ordering {
                 Ordering::Greater => Value::True,
