@@ -9,6 +9,7 @@ use crate::{
         media::MediaRule,
         AtRuleKind, Content, SupportsRule, UnknownAtRule,
     },
+    builtin::*,
     error::SassResult,
     scope::{Scope, Scopes},
     selector::{
@@ -87,7 +88,7 @@ pub(crate) struct Parser<'a> {
 
     pub options: &'a Options<'a>,
 
-    pub modules: &'a mut HashMap<String, Scope>,
+    pub modules: &'a mut HashMap<String, Module>,
 }
 
 impl<'a> Parser<'a> {
@@ -149,17 +150,27 @@ impl<'a> Parser<'a> {
                     }
 
                     match module.as_ref() {
-                        "sass:color" => todo!("builtin module `sass:color` not yet implemented"),
-                        "sass:list" => todo!("builtin module `sass:list` not yet implemented"),
-                        "sass:map" => todo!("builtin module `sass:map` not yet implemented"),
-                        "sass:math" => todo!("builtin module `sass:math` not yet implemented"),
-                        "sass:meta" => todo!("builtin module `sass:meta` not yet implemented"),
-                        "sass:selector" => {
-                            todo!("builtin module `sass:selector` not yet implemented")
-                        }
-                        "sass:string" => todo!("builtin module `sass:string` not yet implemented"),
+                        "sass:color" => self
+                            .modules
+                            .insert("color".to_owned(), declare_module_color()),
+                        "sass:list" => self
+                            .modules
+                            .insert("list".to_owned(), declare_module_list()),
+                        "sass:map" => self.modules.insert("map".to_owned(), declare_module_map()),
+                        "sass:math" => self
+                            .modules
+                            .insert("math".to_owned(), declare_module_math()),
+                        "sass:meta" => self
+                            .modules
+                            .insert("meta".to_owned(), declare_module_meta()),
+                        "sass:selector" => self
+                            .modules
+                            .insert("selector".to_owned(), declare_module_selector()),
+                        "sass:string" => self
+                            .modules
+                            .insert("string".to_owned(), declare_module_string()),
                         _ => todo!("@use not yet implemented"),
-                    }
+                    };
                 }
                 Some(Token { kind: '/', .. }) => {
                     self.toks.advance_cursor();
