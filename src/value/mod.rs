@@ -31,7 +31,8 @@ pub(crate) enum Value {
     True,
     False,
     Null,
-    Dimension(Number, Unit, bool),
+    /// A `None` value for `Number` indicates a `NaN` value
+    Dimension(Option<Number>, Unit, bool),
     List(Vec<Value>, ListSeparator, Brackets),
     Color(Box<Color>),
     String(String, QuoteKind),
@@ -48,8 +49,8 @@ impl PartialEq for Value {
                 Value::String(s2, ..) => s1 == s2,
                 _ => false,
             },
-            Value::Dimension(n, unit, _) => match other {
-                Value::Dimension(n2, unit2, _) => {
+            Value::Dimension(Some(n), unit, _) => match other {
+                Value::Dimension(Some(n2), unit2, _) => {
                     if !unit.comparable(unit2) {
                         false
                     } else if unit == unit2 {
@@ -65,6 +66,7 @@ impl PartialEq for Value {
                 }
                 _ => false,
             },
+            Value::Dimension(None, ..) => false,
             Value::List(list1, sep1, brackets1) => match other {
                 Value::List(list2, sep2, brackets2) => {
                     if sep1 != sep2 || brackets1 != brackets2 || list1.len() != list2.len() {
@@ -200,12 +202,13 @@ impl Value {
     pub fn to_css_string(&self, span: Span) -> SassResult<Cow<'static, str>> {
         Ok(match self {
             Value::Important => Cow::const_str("!important"),
-            Value::Dimension(num, unit, _) => match unit {
+            Value::Dimension(Some(num), unit, _) => match unit {
                 Unit::Mul(..) | Unit::Div(..) => {
                     return Err((format!("{}{} isn't a valid CSS value.", num, unit), span).into());
                 }
                 _ => Cow::owned(format!("{}{}", num, unit)),
             },
+            Value::Dimension(None, ..) => Cow::const_str("NaN"),
             Value::Map(..) | Value::FunctionRef(..) => {
                 return Err((
                     format!("{} isn't a valid CSS value.", self.inspect(span)?),
@@ -326,8 +329,10 @@ impl Value {
 
     pub fn cmp(&self, other: &Self, span: Span, op: Op) -> SassResult<Ordering> {
         Ok(match self {
-            Value::Dimension(num, unit, _) => match &other {
-                Value::Dimension(num2, unit2, _) => {
+            Value::Dimension(None, ..) => todo!(),
+            Value::Dimension(Some(num), unit, _) => match &other {
+                Value::Dimension(None, ..) => todo!(),
+                Value::Dimension(Some(num2), unit2, _) => {
                     if !unit.comparable(unit2) {
                         return Err(
                             (format!("Incompatible units {} and {}.", unit2, unit), span).into(),
@@ -387,8 +392,8 @@ impl Value {
                 Value::String(s2, ..) => s1 != s2,
                 _ => true,
             },
-            Value::Dimension(n, unit, _) => match other {
-                Value::Dimension(n2, unit2, _) => {
+            Value::Dimension(Some(n), unit, _) => match other {
+                Value::Dimension(Some(n2), unit2, _) => {
                     if !unit.comparable(unit2) {
                         true
                     } else if unit == unit2 {
@@ -464,7 +469,8 @@ impl Value {
                     .collect::<SassResult<Vec<String>>>()?
                     .join(", ")
             )),
-            Value::Dimension(num, unit, _) => Cow::owned(format!("{}{}", num, unit)),
+            Value::Dimension(Some(num), unit, _) => Cow::owned(format!("{}{}", num, unit)),
+            Value::Dimension(None, ..) => Cow::const_str("NaN"),
             Value::ArgList(args) if args.is_empty() => Cow::const_str("()"),
             Value::ArgList(args) if args.len() == 1 => Cow::owned(format!(
                 "({},)",

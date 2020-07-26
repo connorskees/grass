@@ -169,3 +169,8 @@ test!(
     "a {\n  color: 1 + 3 / 4;\n}\n",
     "a {\n  color: 1.75;\n}\n"
 );
+test!(
+    zero_div_zero_is_nan,
+    "a {\n  color: (0 / 0);\n}\n",
+    "a {\n  color: NaN;\n}\n"
+);

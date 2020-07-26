@@ -14,7 +14,7 @@ use crate::{
 pub(crate) fn length(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     Ok(Value::Dimension(
-        Number::from(args.get_err(0, "list")?.as_list().len()),
+        Some(Number::from(args.get_err(0, "list")?.as_list().len())),
         Unit::None,
         true,
     ))
@@ -24,7 +24,8 @@ pub(crate) fn nth(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Val
     args.max_args(2)?;
     let mut list = args.get_err(0, "list")?.as_list();
     let n = match args.get_err(1, "n")? {
-        Value::Dimension(num, ..) => num,
+        Value::Dimension(Some(num), ..) => num,
+        Value::Dimension(None, ..) => todo!(),
         v => {
             return Err((
                 format!("$n: {} is not a number.", v.inspect(args.span())?),
@@ -81,7 +82,8 @@ pub(crate) fn set_nth(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult
         v => (vec![v], ListSeparator::Space, Brackets::None),
     };
     let n = match args.get_err(1, "n")? {
-        Value::Dimension(num, ..) => num,
+        Value::Dimension(Some(num), ..) => num,
+        Value::Dimension(None, ..) => todo!(),
         v => {
             return Err((
                 format!("$n: {} is not a number.", v.inspect(args.span())?),
@@ -244,7 +246,7 @@ pub(crate) fn index(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<V
         Some(v) => Number::from(v + 1),
         None => return Ok(Value::Null),
     };
-    Ok(Value::Dimension(index, Unit::None, true))
+    Ok(Value::Dimension(Some(index), Unit::None, true))
 }
 
 pub(crate) fn zip(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {

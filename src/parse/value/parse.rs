@@ -459,7 +459,7 @@ impl<'a> Parser<'a> {
                         let n = Rational64::new_raw(parse_i64(&val.num), 1);
                         return Some(Ok(IntermediateValue::Value(
                             HigherIntermediateValue::Literal(Value::Dimension(
-                                Number::new_small(n),
+                                Some(Number::new_small(n)),
                                 unit,
                                 false,
                             )),
@@ -472,7 +472,7 @@ impl<'a> Parser<'a> {
                         let n = Rational64::new(parse_i64(&val.num), pow(10, val.dec_len));
                         return Some(Ok(IntermediateValue::Value(
                             HigherIntermediateValue::Literal(Value::Dimension(
-                                Number::new_small(n),
+                                Some(Number::new_small(n)),
                                 unit,
                                 false,
                             )),
@@ -485,7 +485,7 @@ impl<'a> Parser<'a> {
                 if val.times_ten.is_empty() {
                     return Some(Ok(IntermediateValue::Value(
                         HigherIntermediateValue::Literal(Value::Dimension(
-                            Number::new_big(n),
+                            Some(Number::new_big(n)),
                             unit,
                             false,
                         )),
@@ -514,7 +514,7 @@ impl<'a> Parser<'a> {
                 };
 
                 IntermediateValue::Value(HigherIntermediateValue::Literal(Value::Dimension(
-                    Number::new_big(n * times_ten),
+                    Some(Number::new_big(n * times_ten)),
                     unit,
                     false,
                 )))

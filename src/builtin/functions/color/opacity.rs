@@ -8,7 +8,8 @@ use crate::{
 pub(crate) fn alpha(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "color")? {
-        Value::Color(c) => Ok(Value::Dimension(c.alpha(), Unit::None, true)),
+        Value::Color(c) => Ok(Value::Dimension(Some(c.alpha()), Unit::None, true)),
+        Value::Dimension(None, ..) => todo!(),
         v => Err((
             format!("$color: {} is not a color.", v.inspect(args.span())?),
             args.span(),
@@ -20,11 +21,12 @@ pub(crate) fn alpha(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<V
 pub(crate) fn opacity(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "color")? {
-        Value::Color(c) => Ok(Value::Dimension(c.alpha(), Unit::None, true)),
-        Value::Dimension(num, unit, _) => Ok(Value::String(
+        Value::Color(c) => Ok(Value::Dimension(Some(c.alpha()), Unit::None, true)),
+        Value::Dimension(Some(num), unit, _) => Ok(Value::String(
             format!("opacity({}{})", num, unit),
             QuoteKind::None,
         )),
+        Value::Dimension(None, ..) => todo!(),
         v => Err((
             format!("$color: {} is not a color.", v.inspect(args.span())?),
             args.span(),
@@ -47,7 +49,8 @@ fn opacify(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         }
     };
     let amount = match args.get_err(1, "amount")? {
-        Value::Dimension(n, u, _) => bound!(args, "amount", n, u, 0, 1),
+        Value::Dimension(Some(n), u, _) => bound!(args, "amount", n, u, 0, 1),
+        Value::Dimension(None, ..) => todo!(),
         v => {
             return Err((
                 format!("$amount: {} is not a number.", v.inspect(args.span())?),
@@ -72,7 +75,8 @@ fn fade_in(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         }
     };
     let amount = match args.get_err(1, "amount")? {
-        Value::Dimension(n, u, _) => bound!(args, "amount", n, u, 0, 1),
+        Value::Dimension(Some(n), u, _) => bound!(args, "amount", n, u, 0, 1),
+        Value::Dimension(None, ..) => todo!(),
         v => {
             return Err((
                 format!("$amount: {} is not a number.", v.inspect(args.span())?),
@@ -98,7 +102,8 @@ fn transparentize(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Val
         }
     };
     let amount = match args.get_err(1, "amount")? {
-        Value::Dimension(n, u, _) => bound!(args, "amount", n, u, 0, 1),
+        Value::Dimension(Some(n), u, _) => bound!(args, "amount", n, u, 0, 1),
+        Value::Dimension(None, ..) => todo!(),
         v => {
             return Err((
                 format!("$amount: {} is not a number.", v.inspect(args.span())?),
@@ -123,7 +128,8 @@ fn fade_out(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         }
     };
     let amount = match args.get_err(1, "amount")? {
-        Value::Dimension(n, u, _) => bound!(args, "amount", n, u, 0, 1),
+        Value::Dimension(Some(n), u, _) => bound!(args, "amount", n, u, 0, 1),
+        Value::Dimension(None, ..) => todo!(),
         v => {
             return Err((
                 format!("$amount: {} is not a number.", v.inspect(args.span())?),

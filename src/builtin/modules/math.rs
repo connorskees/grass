@@ -170,10 +170,10 @@ pub(crate) fn declare(f: &mut Module) {
 
     f.insert_builtin_var(
         "pi",
-        Value::Dimension(Number::from(std::f64::consts::PI), Unit::None, true),
+        Value::Dimension(Some(Number::from(std::f64::consts::PI)), Unit::None, true),
     );
     f.insert_builtin_var(
         "e",
-        Value::Dimension(Number::from(std::f64::consts::E), Unit::None, true),
+        Value::Dimension(Some(Number::from(std::f64::consts::E)), Unit::None, true),
     );
 }

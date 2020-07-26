@@ -38,10 +38,11 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
         }
 
         let blue = match channels.pop() {
-            Some(Value::Dimension(n, Unit::None, _)) => n,
-            Some(Value::Dimension(n, Unit::Percent, _)) => {
+            Some(Value::Dimension(Some(n), Unit::None, _)) => n,
+            Some(Value::Dimension(Some(n), Unit::Percent, _)) => {
                 (n / Number::from(100)) * Number::from(255)
             }
+            Some(Value::Dimension(None, ..)) => todo!(),
             Some(v) if v.is_special_function() => {
                 let green = channels.pop().unwrap();
                 let red = channels.pop().unwrap();
@@ -67,10 +68,11 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
         };
 
         let green = match channels.pop() {
-            Some(Value::Dimension(n, Unit::None, _)) => n,
-            Some(Value::Dimension(n, Unit::Percent, _)) => {
+            Some(Value::Dimension(Some(n), Unit::None, _)) => n,
+            Some(Value::Dimension(Some(n), Unit::Percent, _)) => {
                 (n / Number::from(100)) * Number::from(255)
             }
+            Some(Value::Dimension(None, ..)) => todo!(),
             Some(v) if v.is_special_function() => {
                 let string = match channels.pop() {
                     Some(red) => format!(
@@ -95,10 +97,11 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
         };
 
         let red = match channels.pop() {
-            Some(Value::Dimension(n, Unit::None, _)) => n,
-            Some(Value::Dimension(n, Unit::Percent, _)) => {
+            Some(Value::Dimension(Some(n), Unit::None, _)) => n,
+            Some(Value::Dimension(Some(n), Unit::Percent, _)) => {
                 (n / Number::from(100)) * Number::from(255)
             }
+            Some(Value::Dimension(None, ..)) => todo!(),
             Some(v) if v.is_special_function() => {
                 return Ok(Value::String(
                     format!(
@@ -148,8 +151,9 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
             }
         };
         let alpha = match args.get_err(1, "alpha")? {
-            Value::Dimension(n, Unit::None, _) => n,
-            Value::Dimension(n, Unit::Percent, _) => n / Number::from(100),
+            Value::Dimension(Some(n), Unit::None, _) => n,
+            Value::Dimension(Some(n), Unit::Percent, _) => n / Number::from(100),
+            Value::Dimension(None, ..) => todo!(),
             v @ Value::Dimension(..) => {
                 return Err((
                     format!(
@@ -184,8 +188,11 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
         Ok(Value::Color(Box::new(color.with_alpha(alpha))))
     } else {
         let red = match args.get_err(0, "red")? {
-            Value::Dimension(n, Unit::None, _) => n,
-            Value::Dimension(n, Unit::Percent, _) => (n / Number::from(100)) * Number::from(255),
+            Value::Dimension(Some(n), Unit::None, _) => n,
+            Value::Dimension(Some(n), Unit::Percent, _) => {
+                (n / Number::from(100)) * Number::from(255)
+            }
+            Value::Dimension(None, ..) => todo!(),
             v @ Value::Dimension(..) => {
                 return Err((
                     format!(
@@ -222,8 +229,11 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
             }
         };
         let green = match args.get_err(1, "green")? {
-            Value::Dimension(n, Unit::None, _) => n,
-            Value::Dimension(n, Unit::Percent, _) => (n / Number::from(100)) * Number::from(255),
+            Value::Dimension(Some(n), Unit::None, _) => n,
+            Value::Dimension(Some(n), Unit::Percent, _) => {
+                (n / Number::from(100)) * Number::from(255)
+            }
+            Value::Dimension(None, ..) => todo!(),
             v @ Value::Dimension(..) => {
                 return Err((
                     format!(
@@ -259,8 +269,11 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
             }
         };
         let blue = match args.get_err(2, "blue")? {
-            Value::Dimension(n, Unit::None, _) => n,
-            Value::Dimension(n, Unit::Percent, _) => (n / Number::from(100)) * Number::from(255),
+            Value::Dimension(Some(n), Unit::None, _) => n,
+            Value::Dimension(Some(n), Unit::Percent, _) => {
+                (n / Number::from(100)) * Number::from(255)
+            }
+            Value::Dimension(None, ..) => todo!(),
             v @ Value::Dimension(..) => {
                 return Err((
                     format!(
@@ -297,10 +310,11 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
         let alpha = match args.default_arg(
             3,
             "alpha",
-            Value::Dimension(Number::one(), Unit::None, true),
+            Value::Dimension(Some(Number::one()), Unit::None, true),
         )? {
-            Value::Dimension(n, Unit::None, _) => n,
-            Value::Dimension(n, Unit::Percent, _) => n / Number::from(100),
+            Value::Dimension(Some(n), Unit::None, _) => n,
+            Value::Dimension(Some(n), Unit::Percent, _) => n / Number::from(100),
+            Value::Dimension(None, ..) => todo!(),
             v @ Value::Dimension(..) => {
                 return Err((
                     format!(
@@ -347,7 +361,7 @@ pub(crate) fn rgba(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value>
 pub(crate) fn red(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "color")? {
-        Value::Color(c) => Ok(Value::Dimension(c.red(), Unit::None, true)),
+        Value::Color(c) => Ok(Value::Dimension(Some(c.red()), Unit::None, true)),
         v => Err((
             format!("$color: {} is not a color.", v.inspect(args.span())?),
             args.span(),
@@ -359,7 +373,7 @@ pub(crate) fn red(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Val
 pub(crate) fn green(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "color")? {
-        Value::Color(c) => Ok(Value::Dimension(c.green(), Unit::None, true)),
+        Value::Color(c) => Ok(Value::Dimension(Some(c.green()), Unit::None, true)),
         v => Err((
             format!("$color: {} is not a color.", v.inspect(args.span())?),
             args.span(),
@@ -371,7 +385,7 @@ pub(crate) fn green(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<V
 pub(crate) fn blue(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "color")? {
-        Value::Color(c) => Ok(Value::Dimension(c.blue(), Unit::None, true)),
+        Value::Color(c) => Ok(Value::Dimension(Some(c.blue()), Unit::None, true)),
         v => Err((
             format!("$color: {} is not a color.", v.inspect(args.span())?),
             args.span(),
@@ -407,9 +421,10 @@ pub(crate) fn mix(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Val
     let weight = match args.default_arg(
         2,
         "weight",
-        Value::Dimension(Number::from(50), Unit::None, true),
+        Value::Dimension(Some(Number::from(50)), Unit::None, true),
     )? {
-        Value::Dimension(n, u, _) => bound!(args, "weight", n, u, 0, 100) / Number::from(100),
+        Value::Dimension(Some(n), u, _) => bound!(args, "weight", n, u, 0, 100) / Number::from(100),
+        Value::Dimension(None, ..) => todo!(),
         v => {
             return Err((
                 format!(

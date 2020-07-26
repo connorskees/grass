@@ -245,10 +245,11 @@ impl<'a> Parser<'a> {
         self.whitespace();
         let from_val = self.parse_value_from_vec(from_toks, true)?;
         let from = match from_val.node {
-            Value::Dimension(n, ..) => match n.to_integer().to_isize() {
+            Value::Dimension(Some(n), ..) => match n.to_integer().to_isize() {
                 Some(v) => v,
                 None => return Err((format!("{} is not a int.", n), from_val.span).into()),
             },
+            Value::Dimension(None, ..) => todo!(),
             v => {
                 return Err((
                     format!("{} is not an integer.", v.inspect(from_val.span)?),
@@ -260,10 +261,11 @@ impl<'a> Parser<'a> {
 
         let to_val = self.parse_value(true)?;
         let to = match to_val.node {
-            Value::Dimension(n, ..) => match n.to_integer().to_isize() {
+            Value::Dimension(Some(n), ..) => match n.to_integer().to_isize() {
                 Some(v) => v,
                 None => return Err((format!("{} is not a int.", n), to_val.span).into()),
             },
+            Value::Dimension(None, ..) => todo!(),
             v => {
                 return Err((
                     format!("{} is not an integer.", v.to_css_string(to_val.span)?),
@@ -303,7 +305,7 @@ impl<'a> Parser<'a> {
             self.scopes.insert_var_last(
                 var.node,
                 Spanned {
-                    node: Value::Dimension(Number::from(i), Unit::None, true),
+                    node: Value::Dimension(Some(Number::from(i)), Unit::None, true),
                     span: var.span,
                 },
             );
