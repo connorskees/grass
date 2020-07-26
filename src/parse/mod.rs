@@ -9,7 +9,10 @@ use crate::{
         media::MediaRule,
         AtRuleKind, Content, SupportsRule, UnknownAtRule,
     },
-    builtin::modules::*,
+    builtin::modules::{
+        declare_module_color, declare_module_list, declare_module_map, declare_module_math,
+        declare_module_meta, declare_module_selector, declare_module_string, Module,
+    },
     error::SassResult,
     scope::{Scope, Scopes},
     selector::{
@@ -110,6 +113,7 @@ impl<'a> Parser<'a> {
 
     /// Returns any multiline comments that may have been found
     /// while loading modules
+    #[allow(clippy::eval_order_dependence)]
     fn load_modules(&mut self) -> SassResult<Vec<Stmt>> {
         let mut comments = Vec::new();
 
@@ -142,8 +146,7 @@ impl<'a> Parser<'a> {
 
                     let quote = match self.toks.next() {
                         Some(Token { kind: q @ '"', .. }) | Some(Token { kind: q @ '\'', .. }) => q,
-                        Some(..) => todo!(),
-                        None => todo!(),
+                        Some(..) | None => todo!(),
                     };
 
                     let Spanned { node: module, span } = self.parse_quoted_string(quote)?;
@@ -183,31 +186,31 @@ impl<'a> Parser<'a> {
 
                     match module.as_ref() {
                         "sass:color" => self.modules.insert(
-                            module_name.unwrap_or("color".to_owned()),
+                            module_name.unwrap_or_else(|| "color".to_owned()),
                             declare_module_color(),
                         ),
                         "sass:list" => self.modules.insert(
-                            module_name.unwrap_or("list".to_owned()),
+                            module_name.unwrap_or_else(|| "list".to_owned()),
                             declare_module_list(),
                         ),
                         "sass:map" => self.modules.insert(
-                            module_name.unwrap_or("map".to_owned()),
+                            module_name.unwrap_or_else(|| "map".to_owned()),
                             declare_module_map(),
                         ),
                         "sass:math" => self.modules.insert(
-                            module_name.unwrap_or("math".to_owned()),
+                            module_name.unwrap_or_else(|| "math".to_owned()),
                             declare_module_math(),
                         ),
                         "sass:meta" => self.modules.insert(
-                            module_name.unwrap_or("meta".to_owned()),
+                            module_name.unwrap_or_else(|| "meta".to_owned()),
                             declare_module_meta(),
                         ),
                         "sass:selector" => self.modules.insert(
-                            module_name.unwrap_or("selector".to_owned()),
+                            module_name.unwrap_or_else(|| "selector".to_owned()),
                             declare_module_selector(),
                         ),
                         "sass:string" => self.modules.insert(
-                            module_name.unwrap_or("string".to_owned()),
+                            module_name.unwrap_or_else(|| "string".to_owned()),
                             declare_module_string(),
                         ),
                         _ => todo!("@use not yet implemented"),

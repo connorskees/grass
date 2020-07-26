@@ -223,9 +223,10 @@ pub(crate) fn content_exists(args: CallArgs, parser: &mut Parser<'_>) -> SassRes
     ))
 }
 
-#[allow(dead_code, unused_mut, unused_variables)]
+#[allow(unused_variables)]
 pub(crate) fn keywords(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
+    drop(args);
     todo!("builtin function `keywords` blocked on better handling of call args")
 }
 

@@ -207,6 +207,7 @@ impl<'a> Parser<'a> {
         .parse_value(in_paren)
     }
 
+    #[allow(clippy::eval_order_dependence)]
     fn parse_module_item(
         &mut self,
         module: &str,
@@ -224,7 +225,10 @@ impl<'a> Parser<'a> {
                 let value = self
                     .modules
                     .get(module)
-                    .ok_or((format!("There is no module with the namespace \"{}\".", module), module_span))?
+                    .ok_or((
+                        format!("There is no module with the namespace \"{}\".", module),
+                        module_span,
+                    ))?
                     .get_var(var)?;
                 HigherIntermediateValue::Literal(value.clone())
             } else {
@@ -235,7 +239,10 @@ impl<'a> Parser<'a> {
                 let function = self
                     .modules
                     .get(module)
-                    .ok_or((format!("There is no module with the namespace \"{}\".", module), module_span))?
+                    .ok_or((
+                        format!("There is no module with the namespace \"{}\".", module),
+                        module_span,
+                    ))?
                     .get_fn(fn_name.node)
                     .ok_or(("Undefined function.", fn_name.span))?;
 
@@ -250,10 +257,6 @@ impl<'a> Parser<'a> {
         )
         .span(module_span))
     }
-
-    // fn parse_module_fn_call(&mut self, name: &str) -> SassResult<Spanned<IntermediateValue>> {
-
-    // }
 
     fn parse_ident_value(&mut self) -> SassResult<Spanned<IntermediateValue>> {
         let Spanned { node: mut s, span } = self.parse_identifier()?;

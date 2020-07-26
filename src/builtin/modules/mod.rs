@@ -32,7 +32,7 @@ pub(crate) struct Module {
 impl Module {
     pub fn get_var(&self, name: Spanned<Identifier>) -> SassResult<&Value> {
         match self.vars.get(&name.node) {
-            Some(v) => Ok(&v),
+            Some(v) => Ok(v),
             None => Err(("Undefined variable.", name.span).into()),
         }
     }
