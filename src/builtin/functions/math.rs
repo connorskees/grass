@@ -13,7 +13,7 @@ use crate::{
     value::{Number, Value},
 };
 
-fn percentage(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn percentage(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     let num = match args.get_err(0, "number")? {
         Value::Dimension(n, Unit::None, _) => n * Number::from(100),
@@ -38,7 +38,7 @@ fn percentage(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
     Ok(Value::Dimension(num, Unit::Percent, true))
 }
 
-fn round(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn round(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "number")? {
         Value::Dimension(n, u, _) => Ok(Value::Dimension(n.round(), u, true)),
@@ -50,7 +50,7 @@ fn round(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     }
 }
 
-fn ceil(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn ceil(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "number")? {
         Value::Dimension(n, u, _) => Ok(Value::Dimension(n.ceil(), u, true)),
@@ -62,7 +62,7 @@ fn ceil(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     }
 }
 
-fn floor(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn floor(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "number")? {
         Value::Dimension(n, u, _) => Ok(Value::Dimension(n.floor(), u, true)),
@@ -74,7 +74,7 @@ fn floor(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     }
 }
 
-fn abs(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn abs(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "number")? {
         Value::Dimension(n, u, _) => Ok(Value::Dimension(n.abs(), u, true)),
@@ -86,7 +86,7 @@ fn abs(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     }
 }
 
-fn comparable(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn comparable(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;
     let unit1 = match args.get_err(0, "number1")? {
         Value::Dimension(_, u, _) => u,
@@ -114,7 +114,7 @@ fn comparable(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
 
 // TODO: write tests for this
 #[cfg(feature = "random")]
-fn random(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn random(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     let limit = match args.default_arg(0, "limit", Value::Null)? {
         Value::Dimension(n, ..) => n,
@@ -170,7 +170,7 @@ fn random(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     ))
 }
 
-fn min(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn min(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.min_args(1)?;
     let span = args.span();
     let mut nums = args
@@ -208,7 +208,7 @@ fn min(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     Ok(Value::Dimension(min.0, min.1, true))
 }
 
-fn max(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn max(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.min_args(1)?;
     let span = args.span();
     let mut nums = args

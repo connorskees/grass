@@ -9,7 +9,7 @@ use crate::{
         media::MediaRule,
         AtRuleKind, Content, SupportsRule, UnknownAtRule,
     },
-    builtin::*,
+    builtin::modules::*,
     error::SassResult,
     scope::{Scope, Scopes},
     selector::{

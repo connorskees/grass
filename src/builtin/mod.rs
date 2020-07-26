@@ -1,5 +1,4 @@
 mod functions;
-mod modules;
+pub(crate) mod modules;
 
-pub(crate) use functions::{Builtin, GLOBAL_FUNCTIONS};
-pub(crate) use modules::*;
+pub(crate) use functions::{math, meta, Builtin, GLOBAL_FUNCTIONS};

@@ -207,6 +207,53 @@ impl<'a> Parser<'a> {
         .parse_value(in_paren)
     }
 
+    fn parse_module_item(
+        &mut self,
+        module: &str,
+        mut module_span: Span,
+    ) -> SassResult<Spanned<IntermediateValue>> {
+        Ok(IntermediateValue::Value(
+            if matches!(self.toks.peek(), Some(Token { kind: '$', .. })) {
+                let var = self
+                    .parse_identifier_no_interpolation(false)?
+                    .map_node(|i| i.into());
+
+                module_span = module_span.merge(var.span);
+
+                let value = self
+                    .modules
+                    .get(module)
+                    .ok_or(("todo: module dne", module_span))?
+                    .get_var(var)?;
+                HigherIntermediateValue::Literal(value.clone())
+            } else {
+                let fn_name = self
+                    .parse_identifier_no_interpolation(false)?
+                    .map_node(|i| i.into());
+
+                let function = self
+                    .modules
+                    .get(module)
+                    .ok_or(("todo: module dne", module_span))?
+                    .get_fn(fn_name.node)
+                    .ok_or(("todo: fn dne", fn_name.span))?;
+
+                if !matches!(self.toks.next(), Some(Token { kind: '(', .. })) {
+                    todo!()
+                }
+
+                let call_args = self.parse_call_args()?;
+
+                HigherIntermediateValue::Function(function, call_args)
+            },
+        )
+        .span(module_span))
+    }
+
+    // fn parse_module_fn_call(&mut self, name: &str) -> SassResult<Spanned<IntermediateValue>> {
+
+    // }
+
     fn parse_ident_value(&mut self) -> SassResult<Spanned<IntermediateValue>> {
         let Spanned { node: mut s, span } = self.parse_identifier()?;
 
@@ -228,83 +275,92 @@ impl<'a> Parser<'a> {
             });
         }
 
-        if let Some(Token { kind: '(', .. }) = self.toks.peek() {
-            self.toks.next();
+        match self.toks.peek() {
+            Some(Token { kind: '(', .. }) => {
+                self.toks.next();
 
-            if lower == "min" {
-                match self.try_parse_min_max("min", true)? {
-                    Some(val) => {
-                        self.toks.truncate_iterator_to_cursor();
-                        self.toks.next();
-                        return Ok(IntermediateValue::Value(HigherIntermediateValue::Literal(
-                            Value::String(val, QuoteKind::None),
-                        ))
-                        .span(span));
-                    }
-                    None => {
-                        self.toks.reset_cursor();
-                    }
-                }
-            } else if lower == "max" {
-                match self.try_parse_min_max("max", true)? {
-                    Some(val) => {
-                        self.toks.truncate_iterator_to_cursor();
-                        self.toks.next();
-                        return Ok(IntermediateValue::Value(HigherIntermediateValue::Literal(
-                            Value::String(val, QuoteKind::None),
-                        ))
-                        .span(span));
-                    }
-                    None => {
-                        self.toks.reset_cursor();
-                    }
-                }
-            }
-
-            let as_ident = Identifier::from(&s);
-            let func = match self.scopes.get_fn(
-                Spanned {
-                    node: as_ident,
-                    span,
-                },
-                self.global_scope,
-            ) {
-                Some(f) => f,
-                None => {
-                    if let Some(f) = GLOBAL_FUNCTIONS.get(as_ident.as_str()) {
-                        return Ok(IntermediateValue::Value(HigherIntermediateValue::Function(
-                            SassFunction::Builtin(f.clone(), as_ident),
-                            self.parse_call_args()?,
-                        ))
-                        .span(span));
-                    } else {
-                        // check for special cased CSS functions
-                        match lower.as_str() {
-                            "calc" | "element" | "expression" => {
-                                s = lower;
-                                self.parse_calc_args(&mut s)?;
-                            }
-                            "url" => match self.try_parse_url()? {
-                                Some(val) => s = val,
-                                None => s.push_str(&self.parse_call_args()?.to_css_string()?),
-                            },
-                            _ => s.push_str(&self.parse_call_args()?.to_css_string()?),
+                if lower == "min" {
+                    match self.try_parse_min_max("min", true)? {
+                        Some(val) => {
+                            self.toks.truncate_iterator_to_cursor();
+                            self.toks.next();
+                            return Ok(IntermediateValue::Value(HigherIntermediateValue::Literal(
+                                Value::String(val, QuoteKind::None),
+                            ))
+                            .span(span));
                         }
-
-                        return Ok(IntermediateValue::Value(HigherIntermediateValue::Literal(
-                            Value::String(s, QuoteKind::None),
-                        ))
-                        .span(span));
+                        None => {
+                            self.toks.reset_cursor();
+                        }
+                    }
+                } else if lower == "max" {
+                    match self.try_parse_min_max("max", true)? {
+                        Some(val) => {
+                            self.toks.truncate_iterator_to_cursor();
+                            self.toks.next();
+                            return Ok(IntermediateValue::Value(HigherIntermediateValue::Literal(
+                                Value::String(val, QuoteKind::None),
+                            ))
+                            .span(span));
+                        }
+                        None => {
+                            self.toks.reset_cursor();
+                        }
                     }
                 }
-            };
 
-            let call_args = self.parse_call_args()?;
-            return Ok(IntermediateValue::Value(HigherIntermediateValue::Function(
-                SassFunction::UserDefined(Box::new(func), as_ident),
-                call_args,
-            ))
-            .span(span));
+                let as_ident = Identifier::from(&s);
+                let func = match self.scopes.get_fn(
+                    Spanned {
+                        node: as_ident,
+                        span,
+                    },
+                    self.global_scope,
+                ) {
+                    Some(f) => f,
+                    None => {
+                        if let Some(f) = GLOBAL_FUNCTIONS.get(as_ident.as_str()) {
+                            return Ok(IntermediateValue::Value(
+                                HigherIntermediateValue::Function(
+                                    SassFunction::Builtin(f.clone(), as_ident),
+                                    self.parse_call_args()?,
+                                ),
+                            )
+                            .span(span));
+                        } else {
+                            // check for special cased CSS functions
+                            match lower.as_str() {
+                                "calc" | "element" | "expression" => {
+                                    s = lower;
+                                    self.parse_calc_args(&mut s)?;
+                                }
+                                "url" => match self.try_parse_url()? {
+                                    Some(val) => s = val,
+                                    None => s.push_str(&self.parse_call_args()?.to_css_string()?),
+                                },
+                                _ => s.push_str(&self.parse_call_args()?.to_css_string()?),
+                            }
+
+                            return Ok(IntermediateValue::Value(HigherIntermediateValue::Literal(
+                                Value::String(s, QuoteKind::None),
+                            ))
+                            .span(span));
+                        }
+                    }
+                };
+
+                let call_args = self.parse_call_args()?;
+                return Ok(IntermediateValue::Value(HigherIntermediateValue::Function(
+                    SassFunction::UserDefined(Box::new(func), as_ident),
+                    call_args,
+                ))
+                .span(span));
+            }
+            Some(Token { kind: '.', .. }) => {
+                self.toks.next();
+                return self.parse_module_item(&s, span);
+            }
+            _ => {}
         }
 
         // check for named colors

@@ -1,8 +1,16 @@
+#![allow(unused_imports, unused_variables, dead_code, unused_mut)]
+
 use std::collections::BTreeMap;
 
+use codemap::Spanned;
+
 use crate::{
+    args::CallArgs,
     atrule::Mixin,
+    builtin::Builtin,
     common::Identifier,
+    error::SassResult,
+    parse::Parser,
     value::{SassFunction, Value},
 };
 
@@ -19,6 +27,29 @@ pub(crate) struct Module {
     vars: BTreeMap<Identifier, Value>,
     mixins: BTreeMap<Identifier, Mixin>,
     functions: BTreeMap<Identifier, SassFunction>,
+}
+
+impl Module {
+    pub fn get_var(&self, name: Spanned<Identifier>) -> SassResult<&Value> {
+        match self.vars.get(&name.node) {
+            Some(v) => Ok(&v),
+            None => Err(("Undefined variable.", name.span).into()),
+        }
+    }
+
+    pub fn get_fn(&self, name: Identifier) -> Option<SassFunction> {
+        self.functions.get(&name).cloned()
+    }
+
+    pub fn insert_builtin(
+        &mut self,
+        name: &'static str,
+        function: fn(CallArgs, &mut Parser<'_>) -> SassResult<Value>,
+    ) {
+        let ident = name.into();
+        self.functions
+            .insert(ident, SassFunction::Builtin(Builtin::new(function), ident));
+    }
 }
 
 pub(crate) fn declare_module_color() -> Module {

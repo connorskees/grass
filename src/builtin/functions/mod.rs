@@ -13,13 +13,13 @@ use crate::{args::CallArgs, error::SassResult, parse::Parser, value::Value};
 #[macro_use]
 mod macros;
 
-mod color;
-mod list;
-mod map;
-mod math;
-mod meta;
-mod selector;
-mod string;
+pub mod color;
+pub mod list;
+pub mod map;
+pub mod math;
+pub mod meta;
+pub mod selector;
+pub mod string;
 
 pub(crate) type GlobalFunctionMap = HashMap<&'static str, Builtin>;
 

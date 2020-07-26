@@ -50,7 +50,7 @@ fn feature_exists(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Val
     }
 }
 
-fn unit(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn unit(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     let unit = match args.get_err(0, "number")? {
         Value::Dimension(_, u, _) => u.to_string(),
@@ -71,7 +71,7 @@ fn type_of(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     Ok(Value::String(value.kind().to_owned(), QuoteKind::None))
 }
 
-fn unitless(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn unitless(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     #[allow(clippy::match_same_arms)]
     Ok(match args.get_err(0, "number")? {
