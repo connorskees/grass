@@ -39,6 +39,7 @@ fn main() -> std::io::Result<()> {
         .arg(
             Arg::with_name("STDIN")
                 .long("stdin")
+                .conflicts_with_all(&["INPUT", "UPDATE", "WATCH"])
                 .help("Read the stylesheet from stdin"),
         )
         .arg(
@@ -167,6 +168,7 @@ fn main() -> std::io::Result<()> {
         )
         .arg(
             Arg::with_name("OUTPUT")
+                .conflicts_with_all(&["UPDATE", "WATCH"])
                 .help("Output SCSS file")
         )
 
