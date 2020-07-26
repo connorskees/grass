@@ -336,15 +336,15 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
     }
 }
 
-fn rgb(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn rgb(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     inner_rgb("rgb", args, parser)
 }
 
-fn rgba(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn rgba(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     inner_rgb("rgba", args, parser)
 }
 
-fn red(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn red(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "color")? {
         Value::Color(c) => Ok(Value::Dimension(c.red(), Unit::None, true)),
@@ -356,7 +356,7 @@ fn red(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     }
 }
 
-fn green(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn green(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "color")? {
         Value::Color(c) => Ok(Value::Dimension(c.green(), Unit::None, true)),
@@ -368,7 +368,7 @@ fn green(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     }
 }
 
-fn blue(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn blue(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "color")? {
         Value::Color(c) => Ok(Value::Dimension(c.blue(), Unit::None, true)),
@@ -380,7 +380,7 @@ fn blue(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     }
 }
 
-fn mix(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn mix(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(3)?;
     let color1 = match args.get_err(0, "color1")? {
         Value::Color(c) => c,

@@ -205,15 +205,15 @@ fn inner_hsl(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
     }
 }
 
-fn hsl(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn hsl(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     inner_hsl("hsl", args, parser)
 }
 
-fn hsla(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn hsla(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     inner_hsl("hsla", args, parser)
 }
 
-fn hue(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn hue(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "color")? {
         Value::Color(c) => Ok(Value::Dimension(c.hue(), Unit::Deg, true)),
@@ -225,7 +225,7 @@ fn hue(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     }
 }
 
-fn saturation(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn saturation(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "color")? {
         Value::Color(c) => Ok(Value::Dimension(c.saturation(), Unit::Percent, true)),
@@ -237,7 +237,7 @@ fn saturation(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
     }
 }
 
-fn lightness(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn lightness(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "color")? {
         Value::Color(c) => Ok(Value::Dimension(c.lightness(), Unit::Percent, true)),
@@ -249,7 +249,7 @@ fn lightness(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     }
 }
 
-fn adjust_hue(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn adjust_hue(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;
     let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,
@@ -405,7 +405,7 @@ fn desaturate(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
     Ok(Value::Color(Box::new(color.desaturate(amount))))
 }
 
-fn grayscale(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn grayscale(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,
@@ -426,7 +426,7 @@ fn grayscale(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     Ok(Value::Color(Box::new(color.desaturate(Number::one()))))
 }
 
-fn complement(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn complement(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,
@@ -441,7 +441,7 @@ fn complement(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
     Ok(Value::Color(Box::new(color.complement())))
 }
 
-fn invert(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn invert(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;
     let weight = match args.default_arg(
         1,

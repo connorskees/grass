@@ -46,7 +46,7 @@ macro_rules! opt_hsl {
     };
 }
 
-fn change_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn change_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     if args.positional_arg(1).is_some() {
         return Err((
             "Only one positional argument is allowed. All other arguments must be passed by name.",
@@ -113,7 +113,7 @@ fn change_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value
     }))
 }
 
-fn adjust_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn adjust_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,
         v => {
@@ -175,8 +175,8 @@ fn adjust_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value
 
 #[allow(clippy::cognitive_complexity)]
 // todo: refactor into rgb and hsl?
-fn scale_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
-    fn scale(val: Number, by: Number, max: Number) -> Number {
+pub(crate) fn scale_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+    pub(crate) fn scale(val: Number, by: Number, max: Number) -> Number {
         if by.is_zero() {
             return val;
         }
@@ -288,7 +288,7 @@ fn scale_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value>
     }))
 }
 
-fn ie_hex_str(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn ie_hex_str(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,
