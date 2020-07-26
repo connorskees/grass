@@ -1,5 +1,28 @@
 use crate::{
-    args::CallArgs, builtin::modules::Module, error::SassResult, parse::Parser, value::Value,
+    args::CallArgs,
+    builtin::{
+        modules::Module,
+        string::{
+            quote, str_index, str_insert, str_length, str_slice, to_lower_case, to_upper_case,
+            unquote,
+        },
+    },
+    error::SassResult,
+    parse::Parser,
+    value::Value,
 };
 
-pub(crate) fn declare(_f: &mut Module) {}
+#[cfg(feature = "random")]
+use crate::builtin::string::unique_id;
+
+pub(crate) fn declare(f: &mut Module) {
+    f.insert_builtin("quote", quote);
+    f.insert_builtin("index", str_index);
+    f.insert_builtin("insert", str_insert);
+    f.insert_builtin("length", str_length);
+    f.insert_builtin("slice", str_slice);
+    f.insert_builtin("to-lower-case", to_lower_case);
+    f.insert_builtin("to-upper-case", to_upper_case);
+    #[cfg(feature = "random")]
+    f.insert_builtin("unique-id", unique_id);
+}
