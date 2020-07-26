@@ -1,6 +1,6 @@
 use std::{
-    fs::{self, OpenOptions, File},
-    io::{stdin, stdout, BufWriter, Read, Write},
+    fs::{self, File, OpenOptions},
+    io::{self, stdin, stdout, BufWriter, Read, Write},
     path::Path,
 };
 
@@ -8,7 +8,7 @@ use clap::{arg_enum, App, AppSettings, Arg};
 use walkdir::{DirEntry, WalkDir};
 
 #[cfg(not(feature = "wasm"))]
-use grass::{from_path, from_string, Options};
+use grass::{from_path, from_string, Options, Result};
 
 arg_enum! {
     #[derive(PartialEq, Debug)]
@@ -36,12 +36,36 @@ fn is_xcssfile(s: &str) -> bool {
     [".sass", ".scss"].iter().any(|ext| s.ends_with(ext))
 }
 
+/// Write output result to file or standard output or send error to standard error.
+fn write_file(result: Result<String>, output: Option<&str>) -> io::Result<()> {
+    let (mut stdout_write, mut file_write);
+    let buf_out: &mut dyn Write = if let Some(path) = output {
+        file_write = BufWriter::new(
+            OpenOptions::new()
+                .create(true)
+                .write(true)
+                .truncate(true)
+                .open(path)?,
+        );
+        &mut file_write
+    } else {
+        stdout_write = BufWriter::new(stdout());
+        &mut stdout_write
+    };
+
+    let output = result.unwrap_or_else(|e| {
+        eprintln!("{}", e);
+        std::process::exit(1)
+    });
+    buf_out.write_all(output.as_bytes())
+}
+
 #[cfg(feature = "wasm")]
 fn main() {}
 
 #[cfg(not(feature = "wasm"))]
 #[cfg_attr(feature = "profiling", inline(never))]
-fn main() -> std::io::Result<()> {
+fn main() -> io::Result<()> {
     let matches = App::new("grass")
         .setting(AppSettings::ColoredHelp)
         .version(env!("CARGO_PKG_VERSION"))
@@ -203,50 +227,12 @@ fn main() -> std::io::Result<()> {
         .allows_charset(!matches.is_present("NO_CHARSET"));
 
     if matches.value_of("INPUT") == Some("-") || matches.is_present("STDIN") {
-        let (mut stdout_write, mut file_write);
-        let buf_out: &mut dyn Write = if let Some(path) = matches.value_of("OUTPUT") {
-            file_write = BufWriter::new(
-                OpenOptions::new()
-                    .create(true)
-                    .write(true)
-                    .truncate(true)
-                    .open(path)?,
-            );
-            &mut file_write
-        } else {
-            stdout_write = BufWriter::new(stdout());
-            &mut stdout_write
-        };
-
         let mut buffer = String::new();
         stdin().read_to_string(&mut buffer)?;
-        let output = from_string(buffer, options).unwrap_or_else(|e| {
-            eprintln!("{}", e);
-            std::process::exit(1)
-        });
-        buf_out.write_all(output.as_bytes())
+        write_file(from_string(buffer, options), matches.value_of("OUTPUT"))
     } else if let Some(input) = matches.value_of("INPUT") {
         if ["sass", "scss"].contains(&input.rsplitn(2, '.').next().unwrap()) {
-            let (mut stdout_write, mut file_write);
-            let buf_out: &mut dyn Write = if let Some(path) = matches.value_of("OUTPUT") {
-                file_write = BufWriter::new(
-                    OpenOptions::new()
-                        .create(true)
-                        .write(true)
-                        .truncate(true)
-                        .open(path)?,
-                );
-                &mut file_write
-            } else {
-                stdout_write = BufWriter::new(stdout());
-                &mut stdout_write
-            };
-
-            let output = from_path(input, options).unwrap_or_else(|e| {
-                eprintln!("{}", e);
-                std::process::exit(1)
-            });
-            buf_out.write_all(output.as_bytes())
+            write_file(from_path(input, options), matches.value_of("OUTPUT"))
         } else {
             // input is a directory
             let output = match matches.value_of("OUTPUT") {
