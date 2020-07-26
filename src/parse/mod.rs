@@ -149,32 +149,67 @@ impl<'a> Parser<'a> {
                     let Spanned { node: module, span } = self.parse_quoted_string(quote)?;
                     let module = module.unquote().to_css_string(span)?;
 
-                    if let Some(Token { kind: ';', .. }) = self.toks.peek() {
-                        self.toks.next();
-                    } else {
-                        todo!()
+                    self.whitespace_or_comment();
+
+                    let mut module_name: Option<String> = None;
+
+                    match self.toks.peek() {
+                        Some(Token { kind: ';', .. }) => {
+                            self.toks.next();
+                        }
+                        Some(Token { kind: 'a', .. }) | Some(Token { kind: 'A', .. }) => {
+                            let mut ident =
+                                peek_ident_no_interpolation(self.toks, false, self.span_before)?;
+                            ident.node.make_ascii_lowercase();
+                            if ident.node != "as" {
+                                return Err(("expected \";\".", ident.span).into());
+                            }
+
+                            self.whitespace_or_comment();
+
+                            let name = self.parse_identifier_no_interpolation(false)?;
+
+                            module_name = Some(name.node);
+
+                            if !matches!(self.toks.next(), Some(Token { kind: ';', .. })) {
+                                return Err(("expected \";\".", name.span).into());
+                            }
+                        }
+                        Some(Token { kind: 'w', .. }) | Some(Token { kind: 'W', .. }) => {
+                            todo!("with")
+                        }
+                        Some(..) | None => return Err(("expected \";\".", span).into()),
                     }
 
                     match module.as_ref() {
-                        "sass:color" => self
-                            .modules
-                            .insert("color".to_owned(), declare_module_color()),
-                        "sass:list" => self
-                            .modules
-                            .insert("list".to_owned(), declare_module_list()),
-                        "sass:map" => self.modules.insert("map".to_owned(), declare_module_map()),
-                        "sass:math" => self
-                            .modules
-                            .insert("math".to_owned(), declare_module_math()),
-                        "sass:meta" => self
-                            .modules
-                            .insert("meta".to_owned(), declare_module_meta()),
-                        "sass:selector" => self
-                            .modules
-                            .insert("selector".to_owned(), declare_module_selector()),
-                        "sass:string" => self
-                            .modules
-                            .insert("string".to_owned(), declare_module_string()),
+                        "sass:color" => self.modules.insert(
+                            module_name.unwrap_or("color".to_owned()),
+                            declare_module_color(),
+                        ),
+                        "sass:list" => self.modules.insert(
+                            module_name.unwrap_or("list".to_owned()),
+                            declare_module_list(),
+                        ),
+                        "sass:map" => self.modules.insert(
+                            module_name.unwrap_or("map".to_owned()),
+                            declare_module_map(),
+                        ),
+                        "sass:math" => self.modules.insert(
+                            module_name.unwrap_or("math".to_owned()),
+                            declare_module_math(),
+                        ),
+                        "sass:meta" => self.modules.insert(
+                            module_name.unwrap_or("meta".to_owned()),
+                            declare_module_meta(),
+                        ),
+                        "sass:selector" => self.modules.insert(
+                            module_name.unwrap_or("selector".to_owned()),
+                            declare_module_selector(),
+                        ),
+                        "sass:string" => self.modules.insert(
+                            module_name.unwrap_or("string".to_owned()),
+                            declare_module_string(),
+                        ),
                         _ => todo!("@use not yet implemented"),
                     };
                 }
