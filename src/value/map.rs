@@ -34,6 +34,10 @@ impl SassMap {
         SassMap(Vec::new())
     }
 
+    pub const fn new_with(elements: Vec<(Value, Value)>) -> SassMap {
+        SassMap(elements)
+    }
+
     /// We take by value here (consuming the map) in order to
     /// save a clone of the value, since the only place this
     /// should be called is in a builtin function, which throws

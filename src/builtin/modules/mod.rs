@@ -8,10 +8,10 @@ use crate::{
     args::CallArgs,
     atrule::Mixin,
     builtin::Builtin,
-    common::Identifier,
+    common::{Identifier, QuoteKind},
     error::SassResult,
     parse::Parser,
-    value::{SassFunction, Value},
+    value::{SassFunction, SassMap, Value},
 };
 
 mod color;
@@ -53,6 +53,20 @@ impl Module {
         let ident = name.into();
         self.functions
             .insert(ident, SassFunction::Builtin(Builtin::new(function), ident));
+    }
+
+    pub fn functions(&self) -> SassMap {
+        SassMap::new_with(
+            self.functions
+                .iter()
+                .map(|(key, value)| {
+                    (
+                        Value::String(key.to_string(), QuoteKind::Quoted),
+                        Value::FunctionRef(value.clone()),
+                    )
+                })
+                .collect::<Vec<(Value, Value)>>(),
+        )
     }
 }
 
