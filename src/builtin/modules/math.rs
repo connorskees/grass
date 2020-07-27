@@ -250,15 +250,17 @@ fn acos(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     let number = args.get_err(0, "number")?;
 
     Ok(match number {
-        Value::Dimension(Some(n), Unit::None, ..) => {
+        Value::Dimension(Some(n), Unit::None, ..) => Value::Dimension(
             if n > Number::from(1) || n < Number::from(-1) {
-                return Ok(Value::Dimension(None, Unit::Deg, true));
+                None
             } else if n.is_one() {
-                return Ok(Value::Dimension(Some(Number::zero()), Unit::Deg, true));
-            }
-
-            Value::Dimension(n.acos(), Unit::Deg, true)
-        }
+                Some(Number::zero())
+            } else {
+                n.acos()
+            },
+            Unit::Deg,
+            true,
+        ),
         v @ Value::Dimension(Some(..), ..) => {
             return Err((
                 format!(
