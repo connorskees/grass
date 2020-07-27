@@ -78,3 +78,174 @@ error!(
     "@use 'sass:math';\na {\n  color: math.sqrt(1px);\n}\n",
     "Error: $number: Expected 1px to have no units."
 );
+error!(
+    cos_non_angle,
+    "@use 'sass:math';\na {\n  color: math.cos(1px);\n}\n",
+    "Error: $number: Expected 1px to be an angle."
+);
+test!(
+    cos_small_degree,
+    "@use 'sass:math';\na {\n  color: math.cos(1deg);\n}\n",
+    "a {\n  color: 0.9998476952;\n}\n"
+);
+test!(
+    cos_small_radian,
+    "@use 'sass:math';\na {\n  color: math.cos(1rad);\n}\n",
+    "a {\n  color: 0.5403023059;\n}\n"
+);
+test!(
+    cos_small_no_unit,
+    "@use 'sass:math';\na {\n  color: math.cos(1);\n}\n",
+    "a {\n  color: 0.5403023059;\n}\n"
+);
+test!(
+    cos_small_negative_degree,
+    "@use 'sass:math';\na {\n  color: math.cos(-1deg);\n}\n",
+    "a {\n  color: 0.9998476952;\n}\n"
+);
+test!(
+    cos_small_negative_radian,
+    "@use 'sass:math';\na {\n  color: math.cos(-1rad);\n}\n",
+    "a {\n  color: 0.5403023059;\n}\n"
+);
+test!(
+    cos_small_negative_no_unit,
+    "@use 'sass:math';\na {\n  color: math.cos(-1);\n}\n",
+    "a {\n  color: 0.5403023059;\n}\n"
+);
+test!(
+    cos_pi,
+    "@use 'sass:math';\na {\n  color: math.cos(math.$pi);\n}\n",
+    "a {\n  color: -1;\n}\n"
+);
+test!(
+    cos_two_pi,
+    "@use 'sass:math';\na {\n  color: math.cos(2 * math.$pi);\n}\n",
+    "a {\n  color: 1;\n}\n"
+);
+error!(
+    sin_non_angle,
+    "@use 'sass:math';\na {\n  color: math.sin(1px);\n}\n",
+    "Error: $number: Expected 1px to be an angle."
+);
+test!(
+    sin_small_degree,
+    "@use 'sass:math';\na {\n  color: math.sin(1deg);\n}\n",
+    "a {\n  color: 0.0174524064;\n}\n"
+);
+test!(
+    sin_small_radian,
+    "@use 'sass:math';\na {\n  color: math.sin(1rad);\n}\n",
+    "a {\n  color: 0.8414709848;\n}\n"
+);
+test!(
+    sin_small_no_unit,
+    "@use 'sass:math';\na {\n  color: math.sin(1);\n}\n",
+    "a {\n  color: 0.8414709848;\n}\n"
+);
+test!(
+    sin_small_negative_degree,
+    "@use 'sass:math';\na {\n  color: math.sin(-1deg);\n}\n",
+    "a {\n  color: -0.0174524064;\n}\n"
+);
+test!(
+    sin_small_negative_radian,
+    "@use 'sass:math';\na {\n  color: math.sin(-1rad);\n}\n",
+    "a {\n  color: -0.8414709848;\n}\n"
+);
+test!(
+    sin_small_negative_no_unit,
+    "@use 'sass:math';\na {\n  color: math.sin(-1);\n}\n",
+    "a {\n  color: -0.8414709848;\n}\n"
+);
+test!(
+    sin_pi,
+    "@use 'sass:math';\na {\n  color: math.sin(math.$pi);\n}\n",
+    "a {\n  color: 0;\n}\n"
+);
+test!(
+    sin_two_pi,
+    "@use 'sass:math';\na {\n  color: math.sin(2 * math.$pi);\n}\n",
+    "a {\n  color: 0;\n}\n"
+);
+error!(
+    tan_non_angle,
+    "@use 'sass:math';\na {\n  color: math.tan(1px);\n}\n",
+    "Error: $number: Expected 1px to be an angle."
+);
+test!(
+    tan_small_degree,
+    "@use 'sass:math';\na {\n  color: math.tan(1deg);\n}\n",
+    "a {\n  color: 0.0174550649;\n}\n"
+);
+test!(
+    tan_small_radian,
+    "@use 'sass:math';\na {\n  color: math.tan(1rad);\n}\n",
+    "a {\n  color: 1.5574077247;\n}\n"
+);
+test!(
+    tan_small_no_unit,
+    "@use 'sass:math';\na {\n  color: math.tan(1);\n}\n",
+    "a {\n  color: 1.5574077247;\n}\n"
+);
+test!(
+    tan_small_negative_degree,
+    "@use 'sass:math';\na {\n  color: math.tan(-1deg);\n}\n",
+    "a {\n  color: -0.0174550649;\n}\n"
+);
+test!(
+    tan_small_negative_radian,
+    "@use 'sass:math';\na {\n  color: math.tan(-1rad);\n}\n",
+    "a {\n  color: -1.5574077247;\n}\n"
+);
+test!(
+    tan_small_negative_no_unit,
+    "@use 'sass:math';\na {\n  color: math.tan(-1);\n}\n",
+    "a {\n  color: -1.5574077247;\n}\n"
+);
+test!(
+    tan_pi,
+    "@use 'sass:math';\na {\n  color: math.tan(math.$pi);\n}\n",
+    "a {\n  color: 0;\n}\n"
+);
+test!(
+    tan_two_pi,
+    "@use 'sass:math';\na {\n  color: math.tan(2 * math.$pi);\n}\n",
+    "a {\n  color: 0;\n}\n"
+);
+
+test!(
+    acos_above_one,
+    "@use 'sass:math';\na {\n  color: math.acos(2);\n}\n",
+    "a {\n  color: NaNdeg;\n}\n"
+);
+test!(
+    acos_below_negative_one,
+    "@use 'sass:math';\na {\n  color: math.acos(-2);\n}\n",
+    "a {\n  color: NaNdeg;\n}\n"
+);
+test!(
+    acos_one,
+    "@use 'sass:math';\na {\n  color: math.acos(1);\n}\n",
+    "a {\n  color: 0deg;\n}\n"
+);
+test!(
+    acos_negative_one,
+    "@use 'sass:math';\na {\n  color: math.acos(-1);\n}\n",
+    "a {\n  color: 180deg;\n}\n"
+);
+test!(
+    acos_zero,
+    "@use 'sass:math';\na {\n  color: math.acos(0);\n}\n",
+    "a {\n  color: 90deg;\n}\n"
+);
+test!(
+    acos_point_five,
+    "@use 'sass:math';\na {\n  color: math.acos(.5);\n}\n",
+    "a {\n  color: 60deg;\n}\n"
+);
+test!(
+    acos_nan,
+    "@use 'sass:math';\na {\n  color: math.acos((0 / 0));\n}\n",
+    "a {\n  color: NaNdeg;\n}\n"
+);
