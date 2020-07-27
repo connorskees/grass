@@ -117,21 +117,84 @@ impl Number {
         })
     }
 
+    pub fn sqrt(self) -> Option<Self> {
+        Some(Number::Big(Box::new(BigRational::from_float(
+            self.as_float()?.sqrt(),
+        )?)))
+    }
+}
+
+/// Trigonometry methods
+impl Number {
+    pub fn cos(self) -> Option<Self> {
+        Some(Number::Big(Box::new(BigRational::from_float(
+            self.as_float()?.cos(),
+        )?)))
+    }
+
     pub fn cos_deg(self) -> Option<Self> {
         Some(Number::Big(Box::new(BigRational::from_float(
             self.as_float()?.to_radians().cos(),
         )?)))
     }
 
-    pub fn sqrt(self) -> Option<Self> {
+    pub fn acos(self) -> Option<Self> {
         Some(Number::Big(Box::new(BigRational::from_float(
-            self.as_float()?.sqrt(),
+            self.as_float()?.acos(),
         )?)))
     }
 
-    pub fn cos(self) -> Option<Self> {
+    pub fn acos_deg(self) -> Option<Self> {
         Some(Number::Big(Box::new(BigRational::from_float(
-            self.as_float()?.cos(),
+            self.as_float()?.to_radians().acos(),
+        )?)))
+    }
+
+    pub fn sin(self) -> Option<Self> {
+        Some(Number::Big(Box::new(BigRational::from_float(
+            self.as_float()?.sin(),
+        )?)))
+    }
+
+    pub fn sin_deg(self) -> Option<Self> {
+        Some(Number::Big(Box::new(BigRational::from_float(
+            self.as_float()?.to_radians().sin(),
+        )?)))
+    }
+
+    pub fn asin(self) -> Option<Self> {
+        Some(Number::Big(Box::new(BigRational::from_float(
+            self.as_float()?.asin(),
+        )?)))
+    }
+
+    pub fn asin_deg(self) -> Option<Self> {
+        Some(Number::Big(Box::new(BigRational::from_float(
+            self.as_float()?.to_radians().asin(),
+        )?)))
+    }
+
+    pub fn tan(self) -> Option<Self> {
+        Some(Number::Big(Box::new(BigRational::from_float(
+            self.as_float()?.tan(),
+        )?)))
+    }
+
+    pub fn tan_deg(self) -> Option<Self> {
+        Some(Number::Big(Box::new(BigRational::from_float(
+            self.as_float()?.to_radians().tan(),
+        )?)))
+    }
+
+    pub fn atan(self) -> Option<Self> {
+        Some(Number::Big(Box::new(BigRational::from_float(
+            self.as_float()?.atan(),
+        )?)))
+    }
+
+    pub fn atan_deg(self) -> Option<Self> {
+        Some(Number::Big(Box::new(BigRational::from_float(
+            self.as_float()?.to_radians().atan(),
         )?)))
     }
 }
