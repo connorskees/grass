@@ -213,7 +213,6 @@ test!(
     "@use 'sass:math';\na {\n  color: math.tan(2 * math.$pi);\n}\n",
     "a {\n  color: 0;\n}\n"
 );
-
 test!(
     acos_above_one,
     "@use 'sass:math';\na {\n  color: math.acos(2);\n}\n",
@@ -247,5 +246,75 @@ test!(
 test!(
     acos_nan,
     "@use 'sass:math';\na {\n  color: math.acos((0 / 0));\n}\n",
+    "a {\n  color: NaNdeg;\n}\n"
+);
+test!(
+    asin_above_one,
+    "@use 'sass:math';\na {\n  color: math.asin(2);\n}\n",
+    "a {\n  color: NaNdeg;\n}\n"
+);
+test!(
+    asin_below_negative_one,
+    "@use 'sass:math';\na {\n  color: math.asin(-2);\n}\n",
+    "a {\n  color: NaNdeg;\n}\n"
+);
+test!(
+    asin_one,
+    "@use 'sass:math';\na {\n  color: math.asin(1);\n}\n",
+    "a {\n  color: 90deg;\n}\n"
+);
+test!(
+    asin_negative_one,
+    "@use 'sass:math';\na {\n  color: math.asin(-1);\n}\n",
+    "a {\n  color: -90deg;\n}\n"
+);
+test!(
+    asin_zero,
+    "@use 'sass:math';\na {\n  color: math.asin(0);\n}\n",
+    "a {\n  color: 0deg;\n}\n"
+);
+test!(
+    asin_point_five,
+    "@use 'sass:math';\na {\n  color: math.asin(.5);\n}\n",
+    "a {\n  color: 30deg;\n}\n"
+);
+test!(
+    asin_nan,
+    "@use 'sass:math';\na {\n  color: math.asin((0 / 0));\n}\n",
+    "a {\n  color: NaNdeg;\n}\n"
+);
+test!(
+    atan_above_one,
+    "@use 'sass:math';\na {\n  color: math.atan(2);\n}\n",
+    "a {\n  color: 63.4349488229deg;\n}\n"
+);
+test!(
+    atan_below_negative_one,
+    "@use 'sass:math';\na {\n  color: math.atan(-2);\n}\n",
+    "a {\n  color: -63.4349488229deg;\n}\n"
+);
+test!(
+    atan_one,
+    "@use 'sass:math';\na {\n  color: math.atan(1);\n}\n",
+    "a {\n  color: 45deg;\n}\n"
+);
+test!(
+    atan_negative_one,
+    "@use 'sass:math';\na {\n  color: math.atan(-1);\n}\n",
+    "a {\n  color: -45deg;\n}\n"
+);
+test!(
+    atan_zero,
+    "@use 'sass:math';\na {\n  color: math.atan(0);\n}\n",
+    "a {\n  color: 0deg;\n}\n"
+);
+test!(
+    atan_point_five,
+    "@use 'sass:math';\na {\n  color: math.atan(.5);\n}\n",
+    "a {\n  color: 26.5650511771deg;\n}\n"
+);
+test!(
+    atan_nan,
+    "@use 'sass:math';\na {\n  color: math.atan((0 / 0));\n}\n",
     "a {\n  color: NaNdeg;\n}\n"
 );

@@ -155,9 +155,10 @@ impl Number {
     trig_fn!(cos, cos_deg);
     trig_fn!(sin, sin_deg);
     trig_fn!(tan, tan_deg);
+
     inverse_trig_fn!(acos);
-    trig_fn!(asin, asin_deg);
-    trig_fn!(atan, atan_deg);
+    inverse_trig_fn!(asin);
+    inverse_trig_fn!(atan);
 }
 
 impl Default for Number {
