@@ -142,7 +142,32 @@ fn sqrt(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 
 fn cos(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    todo!()
+    let number = args.get_err(0, "number")?;
+
+    Ok(match number {
+        Value::Dimension(Some(n), Unit::None, ..) | Value::Dimension(Some(n), Unit::Rad, ..) => {
+            Value::Dimension(n.cos(), Unit::None, true)
+        }
+        Value::Dimension(Some(n), Unit::Deg, ..) => Value::Dimension(n.cos_deg(), Unit::None, true),
+        v @ Value::Dimension(Some(..), ..) => {
+            return Err((
+                format!(
+                    "$number: Expected {} to be an angle.",
+                    v.inspect(args.span())?
+                ),
+                args.span(),
+            )
+                .into())
+        }
+        Value::Dimension(None, ..) => Value::Dimension(None, Unit::None, true),
+        v => {
+            return Err((
+                format!("$number: {} is not a number.", v.inspect(args.span())?),
+                args.span(),
+            )
+                .into())
+        }
+    })
 }
 
 fn sin(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
@@ -188,6 +213,7 @@ pub(crate) fn declare(f: &mut Module) {
     f.insert_builtin("percentage", percentage);
     f.insert_builtin("clamp", clamp);
     f.insert_builtin("sqrt", sqrt);
+    f.insert_builtin("cos", cos);
     #[cfg(feature = "random")]
     f.insert_builtin("random", random);
 

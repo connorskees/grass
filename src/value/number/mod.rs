@@ -110,15 +110,29 @@ impl Number {
     }
 
     #[allow(clippy::cast_precision_loss)]
-    pub fn sqrt(self) -> Option<Self> {
+    fn as_float(self) -> Option<f64> {
         Some(match self {
-            Number::Small(n) => Number::Big(Box::new(BigRational::from_float(
-                ((*n.numer() as f64) / (*n.denom() as f64)).sqrt(),
-            )?)),
-            Number::Big(n) => Number::Big(Box::new(BigRational::from_float(
-                ((n.numer().to_f64()?) / (n.denom().to_f64()?)).sqrt(),
-            )?)),
+            Number::Small(n) => ((*n.numer() as f64) / (*n.denom() as f64)),
+            Number::Big(n) => ((n.numer().to_f64()?) / (n.denom().to_f64()?)),
         })
+    }
+
+    pub fn cos_deg(self) -> Option<Self> {
+        Some(Number::Big(Box::new(BigRational::from_float(
+            self.as_float()?.to_radians().cos(),
+        )?)))
+    }
+
+    pub fn sqrt(self) -> Option<Self> {
+        Some(Number::Big(Box::new(BigRational::from_float(
+            self.as_float()?.sqrt(),
+        )?)))
+    }
+
+    pub fn cos(self) -> Option<Self> {
+        Some(Number::Big(Box::new(BigRational::from_float(
+            self.as_float()?.cos(),
+        )?)))
     }
 }
 
