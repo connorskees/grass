@@ -4,11 +4,11 @@ use peekmore::PeekMore;
 use crate::{
     args::CallArgs,
     atrule::Function,
-    common::unvendor,
+    common::{unvendor, Identifier},
     error::SassResult,
     scope::Scopes,
     utils::{read_until_closing_curly_brace, read_until_semicolon_or_closing_curly_brace},
-    value::Value,
+    value::{SassFunction, Value},
     Token,
 };
 
@@ -53,10 +53,18 @@ impl<'a> Parser<'a> {
 
         let function = Function::new(args, body, self.at_root, span);
 
+        let name_as_ident = Identifier::from(name);
+
         if self.at_root {
-            self.global_scope.insert_fn(name, function);
+            self.global_scope.insert_fn(
+                name_as_ident,
+                SassFunction::UserDefined(Box::new(function), name_as_ident),
+            );
         } else {
-            self.scopes.insert_fn(name.into(), function);
+            self.scopes.insert_fn(
+                name_as_ident,
+                SassFunction::UserDefined(Box::new(function), name_as_ident),
+            );
         }
         Ok(())
     }

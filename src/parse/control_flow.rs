@@ -304,10 +304,7 @@ impl<'a> Parser<'a> {
         for i in iter {
             self.scopes.insert_var_last(
                 var.node,
-                Spanned {
-                    node: Value::Dimension(Some(Number::from(i)), Unit::None, true),
-                    span: var.span,
-                },
+                Value::Dimension(Some(Number::from(i)), Unit::None, true),
             );
             if self.flags.in_function() {
                 let these_stmts = Parser {
@@ -487,26 +484,14 @@ impl<'a> Parser<'a> {
 
         for row in iter {
             if vars.len() == 1 {
-                self.scopes.insert_var_last(
-                    vars[0].node,
-                    Spanned {
-                        node: row,
-                        span: vars[0].span,
-                    },
-                );
+                self.scopes.insert_var_last(vars[0].node, row);
             } else {
                 for (var, val) in vars.iter().zip(
                     row.as_list()
                         .into_iter()
                         .chain(std::iter::once(Value::Null).cycle()),
                 ) {
-                    self.scopes.insert_var_last(
-                        var.node,
-                        Spanned {
-                            node: val,
-                            span: var.span,
-                        },
-                    );
+                    self.scopes.insert_var_last(var.node, val);
                 }
             }
 

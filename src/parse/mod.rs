@@ -150,11 +150,11 @@ impl<'a> Parser<'a> {
                     };
 
                     let Spanned { node: module, span } = self.parse_quoted_string(quote)?;
-                    let module = module.unquote().to_css_string(span)?;
+                    let module_name = module.unquote().to_css_string(span)?;
 
                     self.whitespace_or_comment();
 
-                    let mut module_name: Option<String> = None;
+                    let mut module_alias: Option<String> = None;
 
                     match self.toks.peek() {
                         Some(Token { kind: ';', .. }) => {
@@ -170,12 +170,21 @@ impl<'a> Parser<'a> {
 
                             self.whitespace_or_comment();
 
-                            let name = self.parse_identifier_no_interpolation(false)?;
+                            let name_span;
 
-                            module_name = Some(name.node);
+                            if let Some(Token { kind: '*', pos }) = self.toks.peek() {
+                                name_span = *pos;
+                                self.toks.next();
+                                module_alias = Some('*'.to_string());
+                            } else {
+                                let name = self.parse_identifier_no_interpolation(false)?;
+
+                                module_alias = Some(name.node);
+                                name_span = name.span;
+                            }
 
                             if !matches!(self.toks.next(), Some(Token { kind: ';', .. })) {
-                                return Err(("expected \";\".", name.span).into());
+                                return Err(("expected \";\".", name_span).into());
                             }
                         }
                         Some(Token { kind: 'w', .. }) | Some(Token { kind: 'W', .. }) => {
@@ -184,37 +193,36 @@ impl<'a> Parser<'a> {
                         Some(..) | None => return Err(("expected \";\".", span).into()),
                     }
 
-                    match module.as_ref() {
-                        "sass:color" => self.modules.insert(
-                            module_name.unwrap_or_else(|| "color".to_owned()),
-                            declare_module_color(),
-                        ),
-                        "sass:list" => self.modules.insert(
-                            module_name.unwrap_or_else(|| "list".to_owned()),
-                            declare_module_list(),
-                        ),
-                        "sass:map" => self.modules.insert(
-                            module_name.unwrap_or_else(|| "map".to_owned()),
-                            declare_module_map(),
-                        ),
-                        "sass:math" => self.modules.insert(
-                            module_name.unwrap_or_else(|| "math".to_owned()),
-                            declare_module_math(),
-                        ),
-                        "sass:meta" => self.modules.insert(
-                            module_name.unwrap_or_else(|| "meta".to_owned()),
-                            declare_module_meta(),
-                        ),
-                        "sass:selector" => self.modules.insert(
-                            module_name.unwrap_or_else(|| "selector".to_owned()),
-                            declare_module_selector(),
-                        ),
-                        "sass:string" => self.modules.insert(
-                            module_name.unwrap_or_else(|| "string".to_owned()),
-                            declare_module_string(),
-                        ),
+                    let module = match module_name.as_ref() {
+                        "sass:color" => declare_module_color(),
+                        "sass:list" => declare_module_list(),
+                        "sass:map" => declare_module_map(),
+                        "sass:math" => declare_module_math(),
+                        "sass:meta" => declare_module_meta(),
+                        "sass:selector" => declare_module_selector(),
+                        "sass:string" => declare_module_string(),
                         _ => todo!("@use not yet implemented"),
                     };
+
+                    let module_name = match module_alias.as_deref() {
+                        Some("*") => {
+                            self.global_scope.merge_module(module);
+                            continue;
+                        }
+                        Some(..) => module_alias.unwrap(),
+                        None => match module_name.as_ref() {
+                            "sass:color" => "color".to_owned(),
+                            "sass:list" => "list".to_owned(),
+                            "sass:map" => "map".to_owned(),
+                            "sass:math" => "math".to_owned(),
+                            "sass:meta" => "meta".to_owned(),
+                            "sass:selector" => "selector".to_owned(),
+                            "sass:string" => "string".to_owned(),
+                            _ => module_name.into_owned(),
+                        },
+                    };
+
+                    self.modules.insert(module_name, module);
                 }
                 Some(Token { kind: '/', .. }) => {
                     self.toks.next();

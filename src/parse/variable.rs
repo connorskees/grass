@@ -41,11 +41,11 @@ impl<'a> Parser<'a> {
         if default {
             if self.at_root && !self.flags.in_control_flow() {
                 if !self.global_scope.var_exists(ident) {
-                    let value = self.parse_value_from_vec(val_toks, true)?;
+                    let value = self.parse_value_from_vec(val_toks, true)?.node;
                     self.global_scope.insert_var(ident, value);
                 }
             } else {
-                let value = self.parse_value_from_vec(val_toks, true)?;
+                let value = self.parse_value_from_vec(val_toks, true)?.node;
                 if global && !self.global_scope.var_exists(ident) {
                     self.global_scope.insert_var(ident, value.clone());
                 }
@@ -55,7 +55,7 @@ impl<'a> Parser<'a> {
             return Ok(());
         }
 
-        let value = self.parse_value_from_vec(val_toks, true)?;
+        let value = self.parse_value_from_vec(val_toks, true)?.node;
 
         if global {
             self.global_scope.insert_var(ident, value.clone());

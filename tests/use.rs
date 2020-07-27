@@ -50,3 +50,11 @@ test!(
     }",
     "a {\n  color: 1;\n}\n"
 );
+test!(
+    use_as_universal,
+    "@use \"sass:math\" as *;
+    a {
+        color: cos(2);
+    }",
+    "a {\n  color: -0.4161468365;\n}\n"
+);

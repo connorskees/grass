@@ -1,6 +1,6 @@
 use std::{collections::HashMap, mem};
 
-use codemap::{Span, Spanned};
+use codemap::Span;
 
 use crate::{
     args::{CallArg, CallArgs, FuncArg, FuncArgs},
@@ -283,15 +283,8 @@ impl<'a> Parser<'a> {
         self.scopes.enter_new_scope();
         for (idx, mut arg) in fn_args.0.into_iter().enumerate() {
             if arg.is_variadic {
-                let span = args.span();
                 let arg_list = Value::ArgList(args.get_variadic()?);
-                scope.insert_var(
-                    arg.name,
-                    Spanned {
-                        node: arg_list,
-                        span,
-                    },
-                );
+                scope.insert_var(arg.name, arg_list);
                 break;
             }
             let val = match args.get(idx, arg.name) {
@@ -304,7 +297,8 @@ impl<'a> Parser<'a> {
                         )
                     }
                 },
-            }?;
+            }?
+            .node;
             self.scopes.insert_var(arg.name, val.clone());
             scope.insert_var(arg.name, val);
         }

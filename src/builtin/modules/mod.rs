@@ -24,9 +24,9 @@ mod string;
 
 #[derive(Debug, Default)]
 pub(crate) struct Module {
-    vars: BTreeMap<Identifier, Value>,
-    mixins: BTreeMap<Identifier, Mixin>,
-    functions: BTreeMap<Identifier, SassFunction>,
+    pub vars: BTreeMap<Identifier, Value>,
+    pub mixins: BTreeMap<Identifier, Mixin>,
+    pub functions: BTreeMap<Identifier, SassFunction>,
 }
 
 impl Module {

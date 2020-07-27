@@ -181,7 +181,7 @@ pub(crate) fn get_function(mut args: CallArgs, parser: &mut Parser<'_>) -> SassR
         },
         parser.global_scope,
     ) {
-        Some(f) => SassFunction::UserDefined(Box::new(f), name),
+        Some(f) => f,
         None => match GLOBAL_FUNCTIONS.get(name.as_str()) {
             Some(f) => SassFunction::Builtin(f.clone(), name),
             None => return Err((format!("Function not found: {}", name), args.span()).into()),

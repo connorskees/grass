@@ -355,8 +355,7 @@ impl<'a> Parser<'a> {
 
                 let call_args = self.parse_call_args()?;
                 return Ok(IntermediateValue::Value(HigherIntermediateValue::Function(
-                    SassFunction::UserDefined(Box::new(func), as_ident),
-                    call_args,
+                    func, call_args,
                 ))
                 .span(span));
             }
