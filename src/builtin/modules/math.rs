@@ -140,192 +140,49 @@ fn sqrt(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     })
 }
 
-fn cos(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
-    args.max_args(1)?;
-    let number = args.get_err(0, "number")?;
+macro_rules! trig_fn {
+    ($name:ident, $name_deg:ident) => {
+        fn $name(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+            args.max_args(1)?;
+            let number = args.get_err(0, "number")?;
 
-    Ok(match number {
-        Value::Dimension(Some(n), Unit::None, ..) | Value::Dimension(Some(n), Unit::Rad, ..) => {
-            Value::Dimension(n.cos(), Unit::None, true)
+            Ok(match number {
+                Value::Dimension(Some(n), Unit::None, ..)
+                | Value::Dimension(Some(n), Unit::Rad, ..) => {
+                    Value::Dimension(n.$name(), Unit::None, true)
+                }
+                Value::Dimension(Some(n), Unit::Deg, ..) => {
+                    Value::Dimension(n.$name_deg(), Unit::None, true)
+                }
+                v @ Value::Dimension(Some(..), ..) => {
+                    return Err((
+                        format!(
+                            "$number: Expected {} to be an angle.",
+                            v.inspect(args.span())?
+                        ),
+                        args.span(),
+                    )
+                        .into())
+                }
+                Value::Dimension(None, ..) => Value::Dimension(None, Unit::None, true),
+                v => {
+                    return Err((
+                        format!("$number: {} is not a number.", v.inspect(args.span())?),
+                        args.span(),
+                    )
+                        .into())
+                }
+            })
         }
-        Value::Dimension(Some(n), Unit::Deg, ..) => Value::Dimension(n.cos_deg(), Unit::None, true),
-        v @ Value::Dimension(Some(..), ..) => {
-            return Err((
-                format!(
-                    "$number: Expected {} to be an angle.",
-                    v.inspect(args.span())?
-                ),
-                args.span(),
-            )
-                .into())
-        }
-        Value::Dimension(None, ..) => Value::Dimension(None, Unit::None, true),
-        v => {
-            return Err((
-                format!("$number: {} is not a number.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    })
+    };
 }
 
-fn sin(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
-    args.max_args(1)?;
-    let number = args.get_err(0, "number")?;
-
-    Ok(match number {
-        Value::Dimension(Some(n), Unit::None, ..) | Value::Dimension(Some(n), Unit::Rad, ..) => {
-            Value::Dimension(n.sin(), Unit::None, true)
-        }
-        Value::Dimension(Some(n), Unit::Deg, ..) => Value::Dimension(n.sin_deg(), Unit::None, true),
-        v @ Value::Dimension(Some(..), ..) => {
-            return Err((
-                format!(
-                    "$number: Expected {} to be an angle.",
-                    v.inspect(args.span())?
-                ),
-                args.span(),
-            )
-                .into())
-        }
-        Value::Dimension(None, ..) => Value::Dimension(None, Unit::None, true),
-        v => {
-            return Err((
-                format!("$number: {} is not a number.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    })
-}
-
-fn tan(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
-    args.max_args(1)?;
-    let number = args.get_err(0, "number")?;
-
-    Ok(match number {
-        Value::Dimension(Some(n), Unit::None, ..) | Value::Dimension(Some(n), Unit::Rad, ..) => {
-            Value::Dimension(n.tan(), Unit::None, true)
-        }
-        Value::Dimension(Some(n), Unit::Deg, ..) => Value::Dimension(n.tan_deg(), Unit::None, true),
-        v @ Value::Dimension(Some(..), ..) => {
-            return Err((
-                format!(
-                    "$number: Expected {} to be an angle.",
-                    v.inspect(args.span())?
-                ),
-                args.span(),
-            )
-                .into())
-        }
-        Value::Dimension(None, ..) => Value::Dimension(None, Unit::None, true),
-        v => {
-            return Err((
-                format!("$number: {} is not a number.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    })
-}
-
-fn acos(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
-    args.max_args(1)?;
-    args.max_args(1)?;
-    let number = args.get_err(0, "number")?;
-
-    Ok(match number {
-        Value::Dimension(Some(n), Unit::None, ..) | Value::Dimension(Some(n), Unit::Rad, ..) => {
-            Value::Dimension(n.acos(), Unit::None, true)
-        }
-        Value::Dimension(Some(n), Unit::Deg, ..) => {
-            Value::Dimension(n.acos_deg(), Unit::None, true)
-        }
-        v @ Value::Dimension(Some(..), ..) => {
-            return Err((
-                format!(
-                    "$number: Expected {} to be an angle.",
-                    v.inspect(args.span())?
-                ),
-                args.span(),
-            )
-                .into())
-        }
-        Value::Dimension(None, ..) => Value::Dimension(None, Unit::None, true),
-        v => {
-            return Err((
-                format!("$number: {} is not a number.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    })
-}
-
-fn asin(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
-    args.max_args(1)?;
-    let number = args.get_err(0, "number")?;
-
-    Ok(match number {
-        Value::Dimension(Some(n), Unit::None, ..) | Value::Dimension(Some(n), Unit::Rad, ..) => {
-            Value::Dimension(n.asin(), Unit::None, true)
-        }
-        Value::Dimension(Some(n), Unit::Deg, ..) => {
-            Value::Dimension(n.asin_deg(), Unit::None, true)
-        }
-        v @ Value::Dimension(Some(..), ..) => {
-            return Err((
-                format!(
-                    "$number: Expected {} to be an angle.",
-                    v.inspect(args.span())?
-                ),
-                args.span(),
-            )
-                .into())
-        }
-        Value::Dimension(None, ..) => Value::Dimension(None, Unit::None, true),
-        v => {
-            return Err((
-                format!("$number: {} is not a number.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    })
-}
-
-fn atan(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
-    args.max_args(1)?;
-    let number = args.get_err(0, "number")?;
-
-    Ok(match number {
-        Value::Dimension(Some(n), Unit::None, ..) | Value::Dimension(Some(n), Unit::Rad, ..) => {
-            Value::Dimension(n.atan(), Unit::None, true)
-        }
-        Value::Dimension(Some(n), Unit::Deg, ..) => {
-            Value::Dimension(n.atan_deg(), Unit::None, true)
-        }
-        v @ Value::Dimension(Some(..), ..) => {
-            return Err((
-                format!(
-                    "$number: Expected {} to be an angle.",
-                    v.inspect(args.span())?
-                ),
-                args.span(),
-            )
-                .into())
-        }
-        Value::Dimension(None, ..) => Value::Dimension(None, Unit::None, true),
-        v => {
-            return Err((
-                format!("$number: {} is not a number.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    })
-}
+trig_fn!(cos, cos_deg);
+trig_fn!(sin, sin_deg);
+trig_fn!(tan, tan_deg);
+trig_fn!(acos, acos_deg);
+trig_fn!(asin, asin_deg);
+trig_fn!(atan, atan_deg);
 
 fn atan2(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;

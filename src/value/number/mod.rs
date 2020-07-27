@@ -124,79 +124,30 @@ impl Number {
     }
 }
 
+macro_rules! trig_fn(
+    ($name:ident, $name_deg:ident) => {
+        pub fn $name(self) -> Option<Self> {
+            Some(Number::Big(Box::new(BigRational::from_float(
+                self.as_float()?.$name(),
+            )?)))
+        }
+
+        pub fn $name_deg(self) -> Option<Self> {
+            Some(Number::Big(Box::new(BigRational::from_float(
+                self.as_float()?.to_radians().$name(),
+            )?)))
+        }
+    }
+);
+
 /// Trigonometry methods
 impl Number {
-    pub fn cos(self) -> Option<Self> {
-        Some(Number::Big(Box::new(BigRational::from_float(
-            self.as_float()?.cos(),
-        )?)))
-    }
-
-    pub fn cos_deg(self) -> Option<Self> {
-        Some(Number::Big(Box::new(BigRational::from_float(
-            self.as_float()?.to_radians().cos(),
-        )?)))
-    }
-
-    pub fn acos(self) -> Option<Self> {
-        Some(Number::Big(Box::new(BigRational::from_float(
-            self.as_float()?.acos(),
-        )?)))
-    }
-
-    pub fn acos_deg(self) -> Option<Self> {
-        Some(Number::Big(Box::new(BigRational::from_float(
-            self.as_float()?.to_radians().acos(),
-        )?)))
-    }
-
-    pub fn sin(self) -> Option<Self> {
-        Some(Number::Big(Box::new(BigRational::from_float(
-            self.as_float()?.sin(),
-        )?)))
-    }
-
-    pub fn sin_deg(self) -> Option<Self> {
-        Some(Number::Big(Box::new(BigRational::from_float(
-            self.as_float()?.to_radians().sin(),
-        )?)))
-    }
-
-    pub fn asin(self) -> Option<Self> {
-        Some(Number::Big(Box::new(BigRational::from_float(
-            self.as_float()?.asin(),
-        )?)))
-    }
-
-    pub fn asin_deg(self) -> Option<Self> {
-        Some(Number::Big(Box::new(BigRational::from_float(
-            self.as_float()?.to_radians().asin(),
-        )?)))
-    }
-
-    pub fn tan(self) -> Option<Self> {
-        Some(Number::Big(Box::new(BigRational::from_float(
-            self.as_float()?.tan(),
-        )?)))
-    }
-
-    pub fn tan_deg(self) -> Option<Self> {
-        Some(Number::Big(Box::new(BigRational::from_float(
-            self.as_float()?.to_radians().tan(),
-        )?)))
-    }
-
-    pub fn atan(self) -> Option<Self> {
-        Some(Number::Big(Box::new(BigRational::from_float(
-            self.as_float()?.atan(),
-        )?)))
-    }
-
-    pub fn atan_deg(self) -> Option<Self> {
-        Some(Number::Big(Box::new(BigRational::from_float(
-            self.as_float()?.to_radians().atan(),
-        )?)))
-    }
+    trig_fn!(cos, cos_deg);
+    trig_fn!(sin, sin_deg);
+    trig_fn!(tan, tan_deg);
+    trig_fn!(acos, acos_deg);
+    trig_fn!(asin, asin_deg);
+    trig_fn!(atan, atan_deg);
 }
 
 impl Default for Number {
