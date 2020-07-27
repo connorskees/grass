@@ -68,6 +68,20 @@ impl Module {
                 .collect::<Vec<(Value, Value)>>(),
         )
     }
+
+    pub fn variables(&self) -> SassMap {
+        SassMap::new_with(
+            self.vars
+                .iter()
+                .map(|(key, value)| {
+                    (
+                        Value::String(key.to_string(), QuoteKind::Quoted),
+                        value.clone(),
+                    )
+                })
+                .collect::<Vec<(Value, Value)>>(),
+        )
+    }
 }
 
 pub(crate) fn declare_module_color() -> Module {

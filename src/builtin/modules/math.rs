@@ -379,11 +379,11 @@ pub(crate) fn declare(f: &mut Module) {
     f.insert_builtin("random", random);
 
     f.insert_builtin_var(
-        "pi",
-        Value::Dimension(Some(Number::from(std::f64::consts::PI)), Unit::None, true),
-    );
-    f.insert_builtin_var(
         "e",
         Value::Dimension(Some(Number::from(std::f64::consts::E)), Unit::None, true),
+    );
+    f.insert_builtin_var(
+        "pi",
+        Value::Dimension(Some(Number::from(std::f64::consts::PI)), Unit::None, true),
     );
 }

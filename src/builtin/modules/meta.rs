@@ -45,7 +45,28 @@ fn module_functions(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<V
 
 fn module_variables(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    todo!()
+
+    let module = match args.get_err(0, "module")? {
+        Value::String(s, ..) => s,
+        v => {
+            return Err((
+                format!("$module: {} is not a string.", v.inspect(args.span())?),
+                args.span(),
+            )
+                .into())
+        }
+    };
+
+    Ok(Value::Map(
+        parser
+            .modules
+            .get(&module)
+            .ok_or((
+                format!("There is no module with the namespace \"{}\".", module),
+                args.span(),
+            ))?
+            .variables(),
+    ))
 }
 
 pub(crate) fn declare(f: &mut Module) {
