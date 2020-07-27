@@ -50,6 +50,7 @@ grass input.scss
     clippy::unknown_clippy_lints,
     clippy::replace_consts,
     clippy::single_match,
+    clippy::float_arithmetic,
 
     // temporarily allowed while under heavy development.
     // eventually these allows should be refactored away

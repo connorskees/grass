@@ -8,7 +8,9 @@ use std::{
 
 use num_bigint::BigInt;
 use num_rational::{BigRational, Rational64};
-use num_traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Num, One, Signed, Zero};
+use num_traits::{
+    CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Num, One, Signed, ToPrimitive, Zero,
+};
 
 use integer::Integer;
 
@@ -105,6 +107,18 @@ impl Number {
         }
 
         self
+    }
+
+    #[allow(clippy::cast_precision_loss)]
+    pub fn sqrt(self) -> Option<Self> {
+        Some(match self {
+            Number::Small(n) => Number::Big(Box::new(BigRational::from_float(
+                ((*n.numer() as f64) / (*n.denom() as f64)).sqrt(),
+            )?)),
+            Number::Big(n) => Number::Big(Box::new(BigRational::from_float(
+                ((n.numer().to_f64()?) / (n.denom().to_f64()?)).sqrt(),
+            )?)),
+        })
     }
 }
 
