@@ -318,3 +318,75 @@ test!(
     "@use 'sass:math';\na {\n  color: math.atan((0 / 0));\n}\n",
     "a {\n  color: NaNdeg;\n}\n"
 );
+test!(
+    log_above_one,
+    "@use 'sass:math';\na {\n  color: math.log(2);\n}\n",
+    "a {\n  color: 0.6931471806;\n}\n"
+);
+test!(
+    log_below_negative_one,
+    "@use 'sass:math';\na {\n  color: math.log(-2);\n}\n",
+    "a {\n  color: NaN;\n}\n"
+);
+test!(
+    log_one,
+    "@use 'sass:math';\na {\n  color: math.log(1);\n}\n",
+    "a {\n  color: 0;\n}\n"
+);
+test!(
+    log_negative_one,
+    "@use 'sass:math';\na {\n  color: math.log(-1);\n}\n",
+    "a {\n  color: NaN;\n}\n"
+);
+test!(
+    #[ignore = "we do not support Infinity"]
+    log_zero,
+    "@use 'sass:math';\na {\n  color: math.log(0);\n}\n",
+    "a {\n  color: -Infinity;\n}\n"
+);
+test!(
+    log_point_five,
+    "@use 'sass:math';\na {\n  color: math.log(.5);\n}\n",
+    "a {\n  color: -0.6931471806;\n}\n"
+);
+test!(
+    log_nan,
+    "@use 'sass:math';\na {\n  color: math.log((0 / 0));\n}\n",
+    "a {\n  color: NaN;\n}\n"
+);
+test!(
+    log_base_nan,
+    "@use 'sass:math';\na {\n  color: math.log(1, (0 / 0));\n}\n",
+    "a {\n  color: NaN;\n}\n"
+);
+test!(
+    log_base_above_one,
+    "@use 'sass:math';\na {\n  color: math.log(2, 2);\n}\n",
+    "a {\n  color: 1;\n}\n"
+);
+test!(
+    log_base_below_negative_one,
+    "@use 'sass:math';\na {\n  color: math.log(2, -2);\n}\n",
+    "a {\n  color: NaN;\n}\n"
+);
+test!(
+    #[ignore = "we do not support Infinity"]
+    log_base_one,
+    "@use 'sass:math';\na {\n  color: math.log(2, 1);\n}\n",
+    "a {\n  color: Infinity;\n}\n"
+);
+test!(
+    log_base_negative_one,
+    "@use 'sass:math';\na {\n  color: math.log(2, -1);\n}\n",
+    "a {\n  color: NaN;\n}\n"
+);
+test!(
+    log_base_zero,
+    "@use 'sass:math';\na {\n  color: math.log(2, 0);\n}\n",
+    "a {\n  color: 0;\n}\n"
+);
+test!(
+    log_base_point_five,
+    "@use 'sass:math';\na {\n  color: math.log(2, .5);\n}\n",
+    "a {\n  color: -1;\n}\n"
+);

@@ -1,6 +1,6 @@
 use std::cmp::Ordering;
 
-use num_traits::{One, Zero};
+use num_traits::{One, Signed, Zero};
 
 use crate::{
     args::CallArgs,
@@ -107,7 +107,69 @@ fn hypot(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 
 fn log(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;
-    todo!()
+
+    let number = match args.get_err(0, "number")? {
+        Value::Dimension(Some(n), Unit::None, ..) => n,
+        v @ Value::Dimension(Some(..), ..) => {
+            return Err((
+                format!(
+                    "$number: Expected {} to be unitless.",
+                    v.inspect(args.span())?
+                ),
+                args.span(),
+            )
+                .into())
+        }
+        v @ Value::Dimension(None, ..) => return Ok(v),
+        v => {
+            return Err((
+                format!("$number: {} is not a number.", v.inspect(args.span())?),
+                args.span(),
+            )
+                .into())
+        }
+    };
+
+    let base = match args.default_arg(1, "base", Value::Null)? {
+        Value::Null => None,
+        Value::Dimension(Some(n), Unit::None, ..) => Some(n),
+        v @ Value::Dimension(Some(..), ..) => {
+            return Err((
+                format!(
+                    "$number: Expected {} to be unitless.",
+                    v.inspect(args.span())?
+                ),
+                args.span(),
+            )
+                .into())
+        }
+        v @ Value::Dimension(None, ..) => return Ok(v),
+        v => {
+            return Err((
+                format!("$base: {} is not a number.", v.inspect(args.span())?),
+                args.span(),
+            )
+                .into())
+        }
+    };
+
+    Ok(Value::Dimension(
+        if let Some(base) = base {
+            if base.is_zero() {
+                Some(Number::zero())
+            } else {
+                (|| Some(number.ln()? / base.ln()?))()
+            }
+        } else if number.is_negative() {
+            None
+        } else if number.is_zero() {
+            todo!()
+        } else {
+            number.ln()
+        },
+        Unit::None,
+        true,
+    ))
 }
 
 fn pow(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
@@ -310,6 +372,7 @@ pub(crate) fn declare(f: &mut Module) {
     f.insert_builtin("acos", acos);
     f.insert_builtin("asin", asin);
     f.insert_builtin("atan", atan);
+    f.insert_builtin("log", log);
     #[cfg(feature = "random")]
     f.insert_builtin("random", random);
 

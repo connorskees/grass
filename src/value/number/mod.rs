@@ -122,6 +122,12 @@ impl Number {
             self.as_float()?.sqrt(),
         )?)))
     }
+
+    pub fn ln(self) -> Option<Self> {
+        Some(Number::Big(Box::new(BigRational::from_float(
+            self.as_float()?.ln(),
+        )?)))
+    }
 }
 
 macro_rules! trig_fn(
