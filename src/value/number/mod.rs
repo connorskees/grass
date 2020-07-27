@@ -140,12 +140,22 @@ macro_rules! trig_fn(
     }
 );
 
+macro_rules! inverse_trig_fn(
+    ($name:ident) => {
+        pub fn $name(self) -> Option<Self> {
+            Some(Number::Big(Box::new(BigRational::from_float(
+                self.as_float()?.$name().to_degrees(),
+            )?)))
+        }
+    }
+);
+
 /// Trigonometry methods
 impl Number {
     trig_fn!(cos, cos_deg);
     trig_fn!(sin, sin_deg);
     trig_fn!(tan, tan_deg);
-    trig_fn!(acos, acos_deg);
+    inverse_trig_fn!(acos);
     trig_fn!(asin, asin_deg);
     trig_fn!(atan, atan_deg);
 }

@@ -202,13 +202,24 @@ impl Value {
     pub fn to_css_string(&self, span: Span) -> SassResult<Cow<'static, str>> {
         Ok(match self {
             Value::Important => Cow::const_str("!important"),
-            Value::Dimension(Some(num), unit, _) => match unit {
+            Value::Dimension(num, unit, _) => match unit {
                 Unit::Mul(..) | Unit::Div(..) => {
-                    return Err((format!("{}{} isn't a valid CSS value.", num, unit), span).into());
+                    if let Some(num) = num {
+                        return Err(
+                            (format!("{}{} isn't a valid CSS value.", num, unit), span).into()
+                        );
+                    } else {
+                        return Err((format!("NaN{} isn't a valid CSS value.", unit), span).into());
+                    }
                 }
-                _ => Cow::owned(format!("{}{}", num, unit)),
+                _ => {
+                    if let Some(num) = num {
+                        Cow::owned(format!("{}{}", num, unit))
+                    } else {
+                        Cow::owned(format!("NaN{}", unit))
+                    }
+                }
             },
-            Value::Dimension(None, ..) => Cow::const_str("NaN"),
             Value::Map(..) | Value::FunctionRef(..) => {
                 return Err((
                     format!("{} isn't a valid CSS value.", self.inspect(span)?),
@@ -470,7 +481,7 @@ impl Value {
                     .join(", ")
             )),
             Value::Dimension(Some(num), unit, _) => Cow::owned(format!("{}{}", num, unit)),
-            Value::Dimension(None, ..) => Cow::const_str("NaN"),
+            Value::Dimension(None, unit, ..) => Cow::owned(format!("NaN{}", unit)),
             Value::ArgList(args) if args.is_empty() => Cow::const_str("()"),
             Value::ArgList(args) if args.len() == 1 => Cow::owned(format!(
                 "({},)",

@@ -1,5 +1,7 @@
 use std::cmp::Ordering;
 
+use num_traits::{One, Zero};
+
 use crate::{
     args::CallArgs,
     builtin::{
@@ -180,9 +182,44 @@ macro_rules! trig_fn {
 trig_fn!(cos, cos_deg);
 trig_fn!(sin, sin_deg);
 trig_fn!(tan, tan_deg);
-trig_fn!(acos, acos_deg);
+
 trig_fn!(asin, asin_deg);
 trig_fn!(atan, atan_deg);
+
+fn acos(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+    args.max_args(1)?;
+    let number = args.get_err(0, "number")?;
+
+    Ok(match number {
+        Value::Dimension(Some(n), Unit::None, ..) => {
+            if n > Number::from(1) || n < Number::from(-1) {
+                return Ok(Value::Dimension(None, Unit::Deg, true));
+            } else if n.is_one() {
+                return Ok(Value::Dimension(Some(Number::zero()), Unit::Deg, true));
+            }
+
+            Value::Dimension(n.acos(), Unit::Deg, true)
+        }
+        v @ Value::Dimension(Some(..), ..) => {
+            return Err((
+                format!(
+                    "$number: Expected {} to be unitless.",
+                    v.inspect(args.span())?
+                ),
+                args.span(),
+            )
+                .into())
+        }
+        Value::Dimension(None, ..) => Value::Dimension(None, Unit::Deg, true),
+        v => {
+            return Err((
+                format!("$number: {} is not a number.", v.inspect(args.span())?),
+                args.span(),
+            )
+                .into())
+        }
+    })
+}
 
 fn atan2(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;
