@@ -14,11 +14,6 @@ use crate::{
     value::Value,
 };
 
-fn adjust_hue(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
-    args.max_args(2)?;
-    todo!()
-}
-
 pub(crate) fn declare(f: &mut Module) {
     f.insert_builtin("adjust", adjust_color);
     f.insert_builtin("alpha", alpha);
