@@ -173,7 +173,7 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_style_value(&mut self) -> SassResult<Spanned<Value>> {
-        self.parse_value(false, &|_| true)
+        self.parse_value(false, &|_| false)
     }
 
     pub(super) fn parse_style_group(

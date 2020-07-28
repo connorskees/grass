@@ -1,4 +1,4 @@
-use std::{iter::Iterator, mem};
+use std::{iter::Iterator, mem, vec::IntoIter};
 
 use num_bigint::BigInt;
 use num_rational::{BigRational, Rational64};
@@ -6,7 +6,7 @@ use num_traits::{pow, One, ToPrimitive};
 
 use codemap::{Span, Spanned};
 
-use peekmore::PeekMore;
+use peekmore::{PeekMore, PeekMoreIterator};
 
 use crate::{
     builtin::GLOBAL_FUNCTIONS,
@@ -15,8 +15,8 @@ use crate::{
     error::SassResult,
     unit::Unit,
     utils::{
-        devour_whitespace, eat_number, read_until_closing_paren, read_until_closing_square_brace,
-        IsWhitespace,
+        devour_whitespace, eat_whole_number, read_until_closing_paren,
+        read_until_closing_square_brace, IsWhitespace, ParsedNumber,
     },
     value::{Number, SassFunction, SassMap, Value},
     Token,
@@ -54,16 +54,14 @@ impl IsWhitespace for IntermediateValue {
 impl<'a> Parser<'a> {
     /// Parse a value from a stream of tokens
     ///
-    /// This function will cease parsing if the predicate returns false.
-    ///
-    /// E.g. A predicate of `|c| c != 'a'` will cease parsing as soon as an
-    /// identifier beginning with `'a'` is encountered.
+    /// This function will cease parsing if the predicate returns true.
     pub(crate) fn parse_value(
         &mut self,
         in_paren: bool,
-        predicate: &dyn Fn(char) -> bool,
+        predicate: &dyn Fn(&mut PeekMoreIterator<IntoIter<Token>>) -> bool,
     ) -> SassResult<Spanned<Value>> {
         self.whitespace();
+
         let span = match self.toks.peek() {
             Some(Token { kind: '}', .. })
             | Some(Token { kind: ';', .. })
@@ -71,6 +69,11 @@ impl<'a> Parser<'a> {
             | None => return Err(("Expected expression.", self.span_before).into()),
             Some(Token { pos, .. }) => *pos,
         };
+
+        if predicate(self.toks) {
+            return Err(("Expected expression.", span).into());
+        }
+
         let mut last_was_whitespace = false;
         let mut space_separated = Vec::new();
         let mut comma_separated = Vec::new();
@@ -194,9 +197,9 @@ impl<'a> Parser<'a> {
 
     fn parse_value_with_body(
         &mut self,
-        toks: &mut peekmore::PeekMoreIterator<std::vec::IntoIter<Token>>,
+        toks: &mut PeekMoreIterator<IntoIter<Token>>,
         in_paren: bool,
-        predicate: &dyn Fn(char) -> bool,
+        predicate: &dyn Fn(&mut PeekMoreIterator<IntoIter<Token>>) -> bool,
     ) -> SassResult<Spanned<Value>> {
         Parser {
             toks,
@@ -238,7 +241,7 @@ impl<'a> Parser<'a> {
             content_scopes: self.content_scopes,
             options: self.options,
         }
-        .parse_value(in_paren, &|_| true)
+        .parse_value(in_paren, &|_| false)
     }
 
     fn parse_ident_value(&mut self) -> SassResult<Spanned<IntermediateValue>> {
@@ -375,17 +378,87 @@ impl<'a> Parser<'a> {
         }
     }
 
+    fn parse_number(
+        &mut self,
+        predicate: &dyn Fn(&mut PeekMoreIterator<IntoIter<Token>>) -> bool,
+    ) -> SassResult<Spanned<ParsedNumber>> {
+        let mut span = self.toks.peek().unwrap().pos;
+        let mut whole = eat_whole_number(self.toks);
+
+        if self.toks.peek().is_none() || predicate(self.toks) {
+            return Ok(Spanned {
+                node: ParsedNumber::new(whole, 0, String::new(), true),
+                span,
+            });
+        }
+
+        let next_tok = *self.toks.peek().unwrap();
+
+        let dec_len = if next_tok.kind == '.' {
+            self.toks.next();
+
+            let dec = eat_whole_number(self.toks);
+            if dec.is_empty() {
+                return Err(("Expected digit.", next_tok.pos()).into());
+            }
+
+            whole.push_str(&dec);
+
+            dec.len()
+        } else {
+            0
+        };
+
+        let mut times_ten = String::new();
+        let mut times_ten_is_postive = true;
+        if let Some(Token { kind: 'e', .. }) | Some(Token { kind: 'E', .. }) = self.toks.peek() {
+            if let Some(&tok) = self.toks.peek_next() {
+                if tok.kind == '-' {
+                    self.toks.next();
+                    times_ten_is_postive = false;
+
+                    self.toks.next();
+                    times_ten = eat_whole_number(self.toks);
+
+                    if times_ten.is_empty() {
+                        return Err(
+                            ("Expected digit.", self.toks.peek().unwrap_or(&tok).pos).into()
+                        );
+                    }
+                } else if matches!(tok.kind, '0'..='9') {
+                    self.toks.next();
+                    times_ten = eat_whole_number(self.toks);
+
+                    if times_ten.len() > 2 {
+                        return Err(
+                            ("Exponent too large.", self.toks.peek().unwrap_or(&tok).pos).into(),
+                        );
+                    }
+                }
+            }
+        }
+
+        if let Ok(Some(Token { pos, .. })) = self.toks.peek_previous() {
+            span = span.merge(*pos);
+        }
+
+        self.toks.reset_cursor();
+
+        Ok(Spanned {
+            node: ParsedNumber::new(whole, dec_len, times_ten, times_ten_is_postive),
+            span,
+        })
+    }
+
     fn parse_intermediate_value(
         &mut self,
-        predicate: &dyn Fn(char) -> bool,
+        predicate: &dyn Fn(&mut PeekMoreIterator<IntoIter<Token>>) -> bool,
     ) -> Option<SassResult<Spanned<IntermediateValue>>> {
+        if predicate(self.toks) {
+            return None;
+        }
         let (kind, span) = match self.toks.peek() {
-            Some(v) => {
-                if !predicate(v.kind) {
-                    return None;
-                }
-                (v.kind, v.pos())
-            }
+            Some(v) => (v.kind, v.pos()),
             None => return None,
         };
 
@@ -411,7 +484,7 @@ impl<'a> Parser<'a> {
                 let Spanned {
                     node: val,
                     mut span,
-                } = match eat_number(self.toks) {
+                } = match self.parse_number(predicate) {
                     Ok(v) => v,
                     Err(e) => return Some(Err(e)),
                 };
@@ -763,7 +836,7 @@ impl<'a> Parser<'a> {
 struct IntermediateValueIterator<'a, 'b: 'a> {
     parser: &'a mut Parser<'b>,
     peek: Option<SassResult<Spanned<IntermediateValue>>>,
-    predicate: &'a dyn Fn(char) -> bool,
+    predicate: &'a dyn Fn(&mut PeekMoreIterator<IntoIter<Token>>) -> bool,
 }
 
 impl<'a, 'b: 'a> Iterator for IntermediateValueIterator<'a, 'b> {
@@ -778,7 +851,10 @@ impl<'a, 'b: 'a> Iterator for IntermediateValueIterator<'a, 'b> {
 }
 
 impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
-    pub fn new(parser: &'a mut Parser<'b>, predicate: &'a dyn Fn(char) -> bool) -> Self {
+    pub fn new(
+        parser: &'a mut Parser<'b>,
+        predicate: &'a dyn Fn(&mut PeekMoreIterator<IntoIter<Token>>) -> bool,
+    ) -> Self {
         Self {
             parser,
             peek: None,
@@ -1110,9 +1186,9 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
         let paren_toks = &mut t.node.into_iter().peekmore();
 
         let mut map = SassMap::new();
-        let key = self
-            .parser
-            .parse_value_with_body(paren_toks, true, &|c| c != ':')?;
+        let key = self.parser.parse_value_with_body(paren_toks, true, &|c| {
+            matches!(c.peek(), Some(Token { kind: ':', .. }))
+        })?;
 
         if let Some(Token { kind: ':', .. }) = paren_toks.peek() {
             paren_toks.next();
@@ -1127,9 +1203,9 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
             });
         }
 
-        let val = self
-            .parser
-            .parse_value_with_body(paren_toks, true, &|c| c != ',')?;
+        let val = self.parser.parse_value_with_body(paren_toks, true, &|c| {
+            matches!(c.peek(), Some(Token { kind: ',', .. }))
+        })?;
 
         if let Some(Token { kind: ',', .. }) = paren_toks.peek() {
             paren_toks.next();
@@ -1149,18 +1225,18 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
         let mut span = key.span;
 
         loop {
-            let key = self
-                .parser
-                .parse_value_with_body(paren_toks, true, &|c| c != ':')?;
+            let key = self.parser.parse_value_with_body(paren_toks, true, &|c| {
+                matches!(c.peek(), Some(Token { kind: ':', .. }))
+            })?;
 
             if let Some(Token { kind: ':', .. }) = paren_toks.peek() {
                 paren_toks.next();
             }
 
             devour_whitespace(paren_toks);
-            let val = self
-                .parser
-                .parse_value_with_body(paren_toks, true, &|c| c != ',')?;
+            let val = self.parser.parse_value_with_body(paren_toks, true, &|c| {
+                matches!(c.peek(), Some(Token { kind: ',', .. }))
+            })?;
 
             if let Some(Token { kind: ',', .. }) = paren_toks.peek() {
                 paren_toks.next();

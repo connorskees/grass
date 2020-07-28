@@ -22,7 +22,7 @@ impl<'a> Parser<'a> {
         let mut found_true = false;
         let mut body = Vec::new();
 
-        let init_cond = self.parse_value(true, &|_| true)?.node;
+        let init_cond = self.parse_value(true, &|_| false)?.node;
 
         // consume the open curly brace
         let span_before = match self.toks.next() {
@@ -86,7 +86,7 @@ impl<'a> Parser<'a> {
                             self.throw_away_until_open_curly_brace()?;
                             false
                         } else {
-                            let v = self.parse_value(true, &|_| true)?.node.is_true();
+                            let v = self.parse_value(true, &|_| false)?.node.is_true();
                             match self.toks.next() {
                                 Some(Token { kind: '{', .. }) => {}
                                 Some(..) | None => {
@@ -255,7 +255,7 @@ impl<'a> Parser<'a> {
             }
         };
 
-        let to_val = self.parse_value(true, &|_| true)?;
+        let to_val = self.parse_value(true, &|_| false)?;
         let to = match to_val.node {
             Value::Dimension(n, ..) => match n.to_integer().to_isize() {
                 Some(v) => v,

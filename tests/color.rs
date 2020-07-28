@@ -638,3 +638,39 @@ test!(
     "a {\n  color: hsla(0deg, 100%, 50%);\n}\n",
     "a {\n  color: red;\n}\n"
 );
+test!(
+    alpha_filter_one_arg,
+    "a {\n  color: alpha(a=a);\n}\n",
+    "a {\n  color: alpha(a=a);\n}\n"
+);
+test!(
+    alpha_filter_multiple_args,
+    "a {\n  color: alpha(a=a, b=b, c=d, d=d);\n}\n",
+    "a {\n  color: alpha(a=a, b=b, c=d, d=d);\n}\n"
+);
+test!(
+    alpha_filter_whitespace,
+    "a {\n  color: alpha(a   =    a);\n}\n",
+    "a {\n  color: alpha(a=a);\n}\n"
+);
+test!(
+    alpha_filter_named,
+    "a {\n  color: alpha($color: a=a);\n}\n",
+    "a {\n  color: alpha(a=a);\n}\n"
+);
+error!(
+    alpha_filter_both_null,
+    "a {\n  color: alpha(null=null);\n}\n", "Error: $color: = is not a color."
+);
+error!(
+    alpha_filter_multiple_args_one_not_valid_filter,
+    "a {\n  color: alpha(a=a, b);\n}\n", "Error: Only 1 argument allowed, but 2 were passed."
+);
+error!(
+    alpha_filter_invalid_from_whitespace,
+    "a {\n  color: alpha( A a   =    a  );\n}\n", "Error: $color: A a=a is not a color."
+);
+error!(
+    alpha_filter_invalid_non_alphabetic_start,
+    "a {\n  color: alpha(1=a);\n}\n", "Error: $color: 1=a is not a color."
+);

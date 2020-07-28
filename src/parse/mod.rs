@@ -143,7 +143,7 @@ impl<'a> Parser<'a> {
                             let Spanned {
                                 node: message,
                                 span,
-                            } = self.parse_value(false, &|_| true)?;
+                            } = self.parse_value(false, &|_| false)?;
 
                             return Err((
                                 message.inspect(span)?.to_string(),
@@ -155,7 +155,7 @@ impl<'a> Parser<'a> {
                             let Spanned {
                                 node: message,
                                 span,
-                            } = self.parse_value(false, &|_| true)?;
+                            } = self.parse_value(false, &|_| false)?;
                             span.merge(kind_string.span);
                             if let Some(Token { kind: ';', pos }) = self.toks.peek() {
                                 kind_string.span.merge(*pos);
@@ -170,7 +170,7 @@ impl<'a> Parser<'a> {
                             let Spanned {
                                 node: message,
                                 span,
-                            } = self.parse_value(false, &|_| true)?;
+                            } = self.parse_value(false, &|_| false)?;
                             span.merge(kind_string.span);
                             if let Some(Token { kind: ';', pos }) = self.toks.peek() {
                                 kind_string.span.merge(*pos);
@@ -434,7 +434,7 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse_interpolation(&mut self) -> SassResult<Spanned<Value>> {
-        let val = self.parse_value(true, &|_| true)?;
+        let val = self.parse_value(true, &|_| false)?;
         match self.toks.next() {
             Some(Token { kind: '}', .. }) => {}
             Some(..) | None => return Err(("expected \"}\".", val.span).into()),
