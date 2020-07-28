@@ -1062,9 +1062,16 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
         let paren_toks = &mut t.node.into_iter().peekmore();
 
         let mut map = SassMap::new();
-        let key = self
-            .parser
-            .parse_value_from_vec(read_until_char(paren_toks, ':')?, true)?;
+        let key_toks = read_until_char(paren_toks, ':')?;
+        if key_toks.iter().all(|t| t.is_whitespace()) {
+            return Ok(Spanned {
+                node: HigherIntermediateValue::Paren(Box::new(HigherIntermediateValue::Literal(
+                    Value::Map(map),
+                ))),
+                span: t.span,
+            });
+        }
+        let key = self.parser.parse_value_from_vec(key_toks, true)?;
 
         if paren_toks.peek().is_none() {
             return Ok(Spanned {
@@ -1096,13 +1103,14 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
             let key = self
                 .parser
                 .parse_value_from_vec(read_until_char(paren_toks, ':')?, true)?;
+
             devour_whitespace(paren_toks);
             let val = self
                 .parser
                 .parse_value_from_vec(read_until_char(paren_toks, ',')?, true)?;
             span = span.merge(val.span);
             devour_whitespace(paren_toks);
-            if map.insert(key.node, val.node) {
+            if map.insert(key.node.clone(), val.node) {
                 return Err(("Duplicate key.", key.span).into());
             }
             if paren_toks.peek().is_none() {

@@ -86,3 +86,16 @@ test!(
     }",
     "a {\n  color: red;\n}\n"
 );
+test!(
+    comment_after_comma_in_func_args,
+    "@mixin a(
+      $foo,//foo
+    ) {
+        color: $foo;
+    }
+
+    a {
+        @include a(red);
+    }",
+    "a {\n  color: red;\n}\n"
+);

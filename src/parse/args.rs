@@ -48,6 +48,7 @@ impl<'a> Parser<'a> {
                         match &tok.kind {
                             ',' => {
                                 self.toks.next();
+                                self.whitespace_or_comment();
                                 args.push(FuncArg {
                                     name: name.node.into(),
                                     default: Some(default),

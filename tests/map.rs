@@ -197,3 +197,11 @@ test!(
     "a {\n  color: (a: b)==(a: c);\n}\n",
     "a {\n  color: false;\n}\n"
 );
+test!(
+    empty_with_single_line_comments,
+    "$foo: (\n  \n  // :/a.b\n  \n  );
+    a {
+        color: inspect($foo);
+    }",
+    "a {\n  color: ();\n}\n"
+);
