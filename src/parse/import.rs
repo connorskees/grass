@@ -123,7 +123,7 @@ impl<'a> Parser<'a> {
         let Spanned {
             node: file_name_as_value,
             span,
-        } = self.parse_value(true)?;
+        } = self.parse_value(true, &|_| true)?;
 
         match file_name_as_value {
             Value::String(s, QuoteKind::Quoted) => {
