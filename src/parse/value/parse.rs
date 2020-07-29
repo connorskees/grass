@@ -322,25 +322,10 @@ impl<'a> Parser<'a> {
             Some(Token { kind: '(', .. }) => {
                 self.toks.next();
 
-                if lower == "min" {
-                    match self.try_parse_min_max("min", true)? {
+                if lower == "min" || lower == "max" {
+                    match self.try_parse_min_max(&lower, true)? {
                         Some(val) => {
                             self.toks.truncate_iterator_to_cursor();
-                            self.toks.next();
-                            return Ok(IntermediateValue::Value(HigherIntermediateValue::Literal(
-                                Value::String(val, QuoteKind::None),
-                            ))
-                            .span(span));
-                        }
-                        None => {
-                            self.toks.reset_cursor();
-                        }
-                    }
-                } else if lower == "max" {
-                    match self.try_parse_min_max("max", true)? {
-                        Some(val) => {
-                            self.toks.truncate_iterator_to_cursor();
-                            self.toks.next();
                             return Ok(IntermediateValue::Value(HigherIntermediateValue::Literal(
                                 Value::String(val, QuoteKind::None),
                             ))
