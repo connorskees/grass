@@ -297,7 +297,10 @@ impl<'a> Parser<'a> {
         .span(module_span))
     }
 
-    fn parse_ident_value(&mut self) -> SassResult<Spanned<IntermediateValue>> {
+    fn parse_ident_value(
+        &mut self,
+        predicate: &dyn Fn(&mut PeekMoreIterator<IntoIter<Token>>) -> bool,
+    ) -> SassResult<Spanned<IntermediateValue>> {
         let Spanned { node: mut s, span } = self.parse_identifier()?;
 
         self.span_before = span;
@@ -384,8 +387,10 @@ impl<'a> Parser<'a> {
                 .span(span));
             }
             Some(Token { kind: '.', .. }) => {
-                self.toks.next();
-                return self.parse_module_item(&s, span);
+                if !predicate(self.toks) {
+                    self.toks.next();
+                    return self.parse_module_item(&s, span);
+                }
             }
             _ => {}
         }
@@ -524,7 +529,7 @@ impl<'a> Parser<'a> {
                 || (!kind.is_ascii() && !kind.is_control())
                 || (kind == '-' && self.next_is_hypen()) =>
             {
-                return Some(self.parse_ident_value());
+                return Some(self.parse_ident_value(predicate));
             }
             '0'..='9' | '.' => {
                 let Spanned {
@@ -652,7 +657,7 @@ impl<'a> Parser<'a> {
                 if let Some(Token { kind: '{', pos }) = self.toks.peek_forward(1) {
                     self.span_before = *pos;
                     self.toks.reset_cursor();
-                    return Some(self.parse_ident_value());
+                    return Some(self.parse_ident_value(predicate));
                 }
                 self.toks.reset_cursor();
                 self.toks.next();
