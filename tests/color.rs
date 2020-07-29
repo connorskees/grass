@@ -674,3 +674,9 @@ error!(
     alpha_filter_invalid_non_alphabetic_start,
     "a {\n  color: alpha(1=a);\n}\n", "Error: $color: 1=a is not a color."
 );
+// todo: we need many more of these tests
+test!(
+    rgba_special_fn_4th_arg_max,
+    "a {\n  color: rgba(1 2 max(3, 3));\n}\n",
+    "a {\n  color: rgba(1, 2, max(3, 3));\n}\n"
+);

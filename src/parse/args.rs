@@ -345,9 +345,9 @@ impl<'a> Parser<'a> {
                         None => return Err(("expected \")\".", span).into()),
                     }
                 }
-                Some(..) => {
+                Some(c) => {
                     value?;
-                    unreachable!()
+                    unreachable!("{:?}", c)
                 }
                 None => return Err(("expected \")\".", span).into()),
             }
