@@ -5,16 +5,84 @@ use crate::{
     value::Value,
 };
 
+fn is_ms_filter(s: &str) -> bool {
+    let mut chars = s.chars();
+
+    if let Some(c) = chars.next() {
+        if !matches!(c, 'a'..='z' | 'A'..='Z') {
+            return false;
+        }
+    } else {
+        return false;
+    }
+
+    for c in &mut chars {
+        match c {
+            ' ' | '\t' | '\n' => break,
+            'a'..='z' | 'A'..='Z' => continue,
+            '=' => return true,
+            _ => return false,
+        }
+    }
+
+    for c in chars {
+        match c {
+            ' ' | '\t' | '\n' => continue,
+            '=' => return true,
+            _ => return false,
+        }
+    }
+
+    false
+}
+
+#[cfg(test)]
+mod test {
+    use super::is_ms_filter;
+    #[test]
+    fn test_is_ms_filter() {
+        assert!(is_ms_filter("a=a"));
+        assert!(is_ms_filter("a="));
+        assert!(is_ms_filter("a  \t\n  =a"));
+        assert!(!is_ms_filter("a  \t\n  a=a"));
+        assert!(!is_ms_filter("aa"));
+        assert!(!is_ms_filter("   aa"));
+        assert!(!is_ms_filter("=a"));
+        assert!(!is_ms_filter("1=a"));
+    }
+}
+
 pub(crate) fn alpha(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
-    args.max_args(1)?;
-    match args.get_err(0, "color")? {
-        Value::Color(c) => Ok(Value::Dimension(Some(c.alpha()), Unit::None, true)),
-        Value::Dimension(None, ..) => todo!(),
-        v => Err((
-            format!("$color: {} is not a color.", v.inspect(args.span())?),
-            args.span(),
-        )
-            .into()),
+    if args.len() <= 1 {
+        match args.get_err(0, "color")? {
+            Value::Color(c) => Ok(Value::Dimension(Some(c.alpha()), Unit::None, true)),
+            Value::String(s, QuoteKind::None) if is_ms_filter(&s) => {
+                Ok(Value::String(format!("alpha({})", s), QuoteKind::None))
+            }
+            v => Err((
+                format!("$color: {} is not a color.", v.inspect(args.span())?),
+                args.span(),
+            )
+                .into()),
+        }
+    } else {
+        let err = args.max_args(1);
+        let args = args
+            .get_variadic()?
+            .into_iter()
+            .map(|arg| match arg.node {
+                Value::String(s, QuoteKind::None) if is_ms_filter(&s) => Ok(s),
+                _ => {
+                    err.clone()?;
+                    unreachable!()
+                }
+            })
+            .collect::<SassResult<Vec<String>>>()?;
+
+        Ok(Value::String(
+            format!("alpha({})", args.join(", "),),
+            QuoteKind::None,
+        ))
     }
 }
 

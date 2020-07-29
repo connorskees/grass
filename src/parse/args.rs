@@ -4,12 +4,10 @@ use codemap::Span;
 
 use crate::{
     args::{CallArg, CallArgs, FuncArg, FuncArgs},
+    common::QuoteKind,
     error::SassResult,
     scope::Scope,
-    utils::{
-        peek_ident_no_interpolation, peek_whitespace_or_comment, read_until_closing_paren,
-        read_until_closing_quote, read_until_closing_square_brace,
-    },
+    utils::{peek_ident_no_interpolation, peek_whitespace_or_comment, read_until_closing_paren},
     value::Value,
     Token,
 };
@@ -48,6 +46,7 @@ impl<'a> Parser<'a> {
                         match &tok.kind {
                             ',' => {
                                 self.toks.next();
+                                self.whitespace_or_comment();
                                 args.push(FuncArg {
                                     name: name.node.into(),
                                     default: Some(default),
@@ -131,143 +130,226 @@ impl<'a> Parser<'a> {
         let mut args = HashMap::new();
         self.whitespace_or_comment();
         let mut name = String::new();
-        let mut val: Vec<Token> = Vec::new();
+
         let mut span = self
             .toks
             .peek()
             .ok_or(("expected \")\".", self.span_before))?
             .pos();
+
         loop {
-            match self.toks.peek().cloned() {
-                Some(Token { kind: '$', pos }) => {
-                    span = span.merge(pos);
-                    self.toks.next();
-                    let v = peek_ident_no_interpolation(self.toks, false, self.span_before)?;
-
-                    peek_whitespace_or_comment(self.toks);
-
-                    if let Some(Token { kind: ':', .. }) = self.toks.peek() {
-                        self.toks.truncate_iterator_to_cursor();
-                        self.toks.next();
-                        name = v.node;
-                    } else {
-                        val.push(Token::new(pos, '$'));
-                        self.toks.reset_cursor();
-                        name.clear();
-                    }
-                }
-                Some(Token { kind: ')', .. }) => {
-                    self.toks.next();
-                    return Ok(CallArgs(args, span));
-                }
-                Some(..) | None => name.clear(),
-            }
             self.whitespace_or_comment();
 
-            let mut is_splat = false;
-
-            while let Some(tok) = self.toks.next() {
-                match tok.kind {
-                    ')' => {
-                        args.insert(
-                            if name.is_empty() {
-                                CallArg::Positional(args.len())
-                            } else {
-                                CallArg::Named(mem::take(&mut name).into())
-                            },
-                            self.parse_value_from_vec(val, true),
-                        );
-                        span = span.merge(tok.pos());
-                        return Ok(CallArgs(args, span));
-                    }
-                    ',' => break,
-                    '[' => {
-                        val.push(tok);
-                        val.append(&mut read_until_closing_square_brace(self.toks)?);
-                    }
-                    '(' => {
-                        val.push(tok);
-                        val.append(&mut read_until_closing_paren(self.toks)?);
-                    }
-                    '"' | '\'' => {
-                        val.push(tok);
-                        val.append(&mut read_until_closing_quote(self.toks, tok.kind)?);
-                    }
-                    '.' => {
-                        if let Some(Token { kind: '.', pos }) = self.toks.peek().cloned() {
-                            if !name.is_empty() {
-                                return Err(("expected \")\".", pos).into());
-                            }
-                            self.toks.next();
-                            if let Some(Token { kind: '.', .. }) = self.toks.peek() {
-                                self.toks.next();
-                                is_splat = true;
-                                break;
-                            } else {
-                                return Err(("expected \".\".", pos).into());
-                            }
-                        } else {
-                            val.push(tok);
-                        }
-                    }
-                    _ => val.push(tok),
-                }
+            if matches!(self.toks.peek(), Some(Token { kind: ')', .. })) {
+                self.toks.next();
+                return Ok(CallArgs(args, span));
             }
 
-            if is_splat {
-                let val = self.parse_value_from_vec(mem::take(&mut val), true)?;
-                match val.node {
-                    Value::ArgList(v) => {
-                        for arg in v {
-                            args.insert(CallArg::Positional(args.len()), Ok(arg));
-                        }
-                    }
-                    Value::List(v, ..) => {
-                        for arg in v {
-                            args.insert(CallArg::Positional(args.len()), Ok(arg.span(val.span)));
-                        }
-                    }
-                    Value::Map(v) => {
-                        // NOTE: we clone the map here because it is used
-                        // later for error reporting. perhaps there is
-                        // some way around this?
-                        for (name, arg) in v.clone().entries() {
-                            let name = match name {
-                                Value::String(s, ..) => s,
-                                _ => {
-                                    return Err((
-                                        format!(
-                                            "{} is not a string in {}.",
-                                            name.inspect(val.span)?,
-                                            Value::Map(v).inspect(val.span)?
-                                        ),
-                                        val.span,
-                                    )
-                                        .into())
-                                }
-                            };
-                            args.insert(CallArg::Named(name.into()), Ok(arg.span(val.span)));
-                        }
-                    }
-                    _ => {
-                        args.insert(CallArg::Positional(args.len()), Ok(val));
-                    }
+            if let Some(Token { kind: '$', pos }) = self.toks.peek() {
+                span = span.merge(*pos);
+                self.toks.advance_cursor();
+
+                let v = peek_ident_no_interpolation(self.toks, false, self.span_before)?;
+
+                peek_whitespace_or_comment(self.toks);
+
+                if let Some(Token { kind: ':', .. }) = self.toks.peek() {
+                    self.toks.truncate_iterator_to_cursor();
+                    self.toks.next();
+                    name = v.node;
+                } else {
+                    self.toks.reset_cursor();
+                    name.clear();
                 }
             } else {
-                args.insert(
-                    if name.is_empty() {
-                        CallArg::Positional(args.len())
-                    } else {
-                        CallArg::Named(mem::take(&mut name).into())
-                    },
-                    self.parse_value_from_vec(mem::take(&mut val), true),
-                );
+                name.clear();
             }
 
             self.whitespace_or_comment();
 
-            if self.toks.peek().is_none() {
-                return Err(("expected \")\".", span).into());
+            let value = self.parse_value(true, &|c| match c.peek() {
+                Some(Token { kind: ')', .. }) | Some(Token { kind: ',', .. }) => true,
+                Some(Token { kind: '.', .. }) => {
+                    if matches!(c.peek_next(), Some(Token { kind: '.', .. })) {
+                        c.reset_cursor();
+                        true
+                    } else {
+                        c.reset_cursor();
+                        false
+                    }
+                }
+                Some(Token { kind: '=', .. }) => {
+                    if matches!(c.peek_next(), Some(Token { kind: '=', .. })) {
+                        c.reset_cursor();
+                        false
+                    } else {
+                        c.reset_cursor();
+                        true
+                    }
+                }
+                Some(..) | None => false,
+            });
+
+            match self.toks.peek() {
+                Some(Token { kind: ')', .. }) => {
+                    self.toks.next();
+                    args.insert(
+                        if name.is_empty() {
+                            CallArg::Positional(args.len())
+                        } else {
+                            CallArg::Named(mem::take(&mut name).into())
+                        },
+                        value,
+                    );
+                    return Ok(CallArgs(args, span));
+                }
+                Some(Token { kind: ',', .. }) => {
+                    self.toks.next();
+                    args.insert(
+                        if name.is_empty() {
+                            CallArg::Positional(args.len())
+                        } else {
+                            CallArg::Named(mem::take(&mut name).into())
+                        },
+                        value,
+                    );
+                    self.whitespace_or_comment();
+                    continue;
+                }
+                Some(Token { kind: '.', pos }) => {
+                    let pos = *pos;
+                    self.toks.next();
+
+                    if let Some(Token { kind: '.', pos }) = self.toks.peek().cloned() {
+                        if !name.is_empty() {
+                            return Err(("expected \")\".", pos).into());
+                        }
+                        self.toks.next();
+                        if let Some(Token { kind: '.', .. }) = self.toks.peek() {
+                            self.toks.next();
+                        } else {
+                            return Err(("expected \".\".", pos).into());
+                        }
+                    } else {
+                        return Err(("expected \")\".", pos).into());
+                    }
+
+                    let val = value?;
+                    match val.node {
+                        Value::ArgList(v) => {
+                            for arg in v {
+                                args.insert(CallArg::Positional(args.len()), Ok(arg));
+                            }
+                        }
+                        Value::List(v, ..) => {
+                            for arg in v {
+                                args.insert(
+                                    CallArg::Positional(args.len()),
+                                    Ok(arg.span(val.span)),
+                                );
+                            }
+                        }
+                        Value::Map(v) => {
+                            // NOTE: we clone the map here because it is used
+                            // later for error reporting. perhaps there is
+                            // some way around this?
+                            for (name, arg) in v.clone().entries() {
+                                let name = match name {
+                                    Value::String(s, ..) => s,
+                                    _ => {
+                                        return Err((
+                                            format!(
+                                                "{} is not a string in {}.",
+                                                name.inspect(val.span)?,
+                                                Value::Map(v).inspect(val.span)?
+                                            ),
+                                            val.span,
+                                        )
+                                            .into())
+                                    }
+                                };
+                                args.insert(CallArg::Named(name.into()), Ok(arg.span(val.span)));
+                            }
+                        }
+                        _ => {
+                            args.insert(CallArg::Positional(args.len()), Ok(val));
+                        }
+                    }
+                }
+                Some(Token { kind: '=', .. }) => {
+                    self.toks.next();
+                    let left = value?;
+
+                    let right = self.parse_value(true, &|c| match c.peek() {
+                        Some(Token { kind: ')', .. }) | Some(Token { kind: ',', .. }) => true,
+                        Some(Token { kind: '.', .. }) => {
+                            if matches!(c.peek_next(), Some(Token { kind: '.', .. })) {
+                                c.reset_cursor();
+                                true
+                            } else {
+                                c.reset_cursor();
+                                false
+                            }
+                        }
+                        Some(..) | None => false,
+                    })?;
+
+                    let value_span = left.span.merge(right.span);
+                    span = span.merge(value_span);
+
+                    let value = format!(
+                        "{}={}",
+                        left.node.to_css_string(left.span)?,
+                        right.node.to_css_string(right.span)?
+                    );
+
+                    args.insert(
+                        if name.is_empty() {
+                            CallArg::Positional(args.len())
+                        } else {
+                            CallArg::Named(mem::take(&mut name).into())
+                        },
+                        Ok(Value::String(value, QuoteKind::None).span(value_span)),
+                    );
+
+                    match self.toks.peek() {
+                        Some(Token { kind: ')', .. }) => {
+                            self.toks.next();
+                            return Ok(CallArgs(args, span));
+                        }
+                        Some(Token { kind: ',', pos }) => {
+                            span = span.merge(*pos);
+                            self.toks.next();
+                            self.whitespace_or_comment();
+                            continue;
+                        }
+                        Some(Token { kind: '.', pos }) => {
+                            let pos = *pos;
+                            self.toks.next();
+
+                            if let Some(Token { kind: '.', pos }) = self.toks.peek().cloned() {
+                                if !name.is_empty() {
+                                    return Err(("expected \")\".", pos).into());
+                                }
+                                self.toks.next();
+                                if let Some(Token { kind: '.', .. }) = self.toks.peek() {
+                                    self.toks.next();
+                                } else {
+                                    return Err(("expected \".\".", pos).into());
+                                }
+                            } else {
+                                return Err(("expected \")\".", pos).into());
+                            }
+                        }
+                        Some(..) => unreachable!(),
+                        None => return Err(("expected \")\".", span).into()),
+                    }
+                }
+                Some(..) => {
+                    value?;
+                    unreachable!()
+                }
+                None => return Err(("expected \")\".", span).into()),
             }
         }
     }

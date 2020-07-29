@@ -1,37 +1,3 @@
-use std::vec::IntoIter;
-
-use peekmore::PeekMoreIterator;
-
-use crate::{error::SassResult, Token};
-
-use super::{read_until_closing_paren, read_until_closing_quote};
-/// Reads until the char is found, consuming the char,
-/// or until the end of the iterator is hit
-pub(crate) fn read_until_char(
-    toks: &mut PeekMoreIterator<IntoIter<Token>>,
-    c: char,
-) -> SassResult<Vec<Token>> {
-    let mut v = Vec::new();
-    while let Some(tok) = toks.next() {
-        match tok.kind {
-            '"' | '\'' => {
-                v.push(tok);
-                v.extend(read_until_closing_quote(toks, tok.kind)?);
-                continue;
-            }
-            '(' => {
-                v.push(tok);
-                v.extend(read_until_closing_paren(toks)?);
-                continue;
-            }
-            t if t == c => break,
-            _ => {}
-        }
-        v.push(tok)
-    }
-    Ok(v)
-}
-
 pub(crate) fn hex_char_for(number: u32) -> char {
     debug_assert!(number < 0x10);
     std::char::from_u32(if number < 0xA {

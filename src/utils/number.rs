@@ -1,9 +1,8 @@
 use std::vec::IntoIter;
 
-use codemap::Spanned;
 use peekmore::PeekMoreIterator;
 
-use crate::{error::SassResult, Token};
+use crate::Token;
 
 #[derive(Debug)]
 pub(crate) struct ParsedNumber {
@@ -45,73 +44,6 @@ impl ParsedNumber {
             times_ten_is_postive,
         }
     }
-}
-
-pub(crate) fn eat_number(
-    toks: &mut PeekMoreIterator<IntoIter<Token>>,
-) -> SassResult<Spanned<ParsedNumber>> {
-    let mut span = toks.peek().unwrap().pos;
-    let mut whole = eat_whole_number(toks);
-
-    if toks.peek().is_none() {
-        return Ok(Spanned {
-            node: ParsedNumber::new(whole, 0, String::new(), true),
-            span,
-        });
-    }
-
-    let next_tok = *toks.peek().unwrap();
-
-    let dec_len = if next_tok.kind == '.' {
-        toks.next();
-
-        let dec = eat_whole_number(toks);
-        if dec.is_empty() {
-            return Err(("Expected digit.", next_tok.pos()).into());
-        }
-
-        whole.push_str(&dec);
-
-        dec.len()
-    } else {
-        0
-    };
-
-    let mut times_ten = String::new();
-    let mut times_ten_is_postive = true;
-    if let Some(Token { kind: 'e', .. }) | Some(Token { kind: 'E', .. }) = toks.peek() {
-        if let Some(&tok) = toks.peek_next() {
-            if tok.kind == '-' {
-                toks.next();
-                times_ten_is_postive = false;
-
-                toks.next();
-                times_ten = eat_whole_number(toks);
-
-                if times_ten.is_empty() {
-                    return Err(("Expected digit.", toks.peek().unwrap_or(&tok).pos).into());
-                }
-            } else if matches!(tok.kind, '0'..='9') {
-                toks.next();
-                times_ten = eat_whole_number(toks);
-
-                if times_ten.len() > 2 {
-                    return Err(("Exponent too large.", toks.peek().unwrap_or(&tok).pos).into());
-                }
-            }
-        }
-    }
-
-    if let Ok(Some(Token { pos, .. })) = toks.peek_previous() {
-        span = span.merge(*pos);
-    }
-
-    toks.reset_cursor();
-
-    Ok(Spanned {
-        node: ParsedNumber::new(whole, dec_len, times_ten, times_ten_is_postive),
-        span,
-    })
 }
 
 pub(crate) fn eat_whole_number(toks: &mut PeekMoreIterator<IntoIter<Token>>) -> String {

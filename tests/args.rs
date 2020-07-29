@@ -86,3 +86,85 @@ test!(
     }",
     "a {\n  color: red;\n}\n"
 );
+test!(
+    comment_after_comma_in_func_args,
+    "@mixin a(
+      $foo,//foo
+    ) {
+        color: $foo;
+    }
+
+    a {
+        @include a(red);
+    }",
+    "a {\n  color: red;\n}\n"
+);
+test!(
+    filter_one_arg,
+    "a {\n  color: foo(a=a);\n}\n",
+    "a {\n  color: foo(a=a);\n}\n"
+);
+test!(
+    filter_two_args,
+    "a {\n  color: foo(a=a, b=b);\n}\n",
+    "a {\n  color: foo(a=a, b=b);\n}\n"
+);
+test!(
+    filter_whitespace,
+    "a {\n  color: foo(   a  =  a  );\n}\n",
+    "a {\n  color: foo(a=a);\n}\n"
+);
+test!(
+    filter_whitespace_list,
+    "a {\n  color: foo( A  a  =  a  );\n}\n",
+    "a {\n  color: foo(A a=a);\n}\n"
+);
+test!(
+    filter_function_call,
+    "a {\n  color: foo(hue(green)=hue(green));\n}\n",
+    "a {\n  color: foo(120deg=120deg);\n}\n"
+);
+test!(
+    filter_addition,
+    "a {\n  color: foo(1+1=1+1);\n}\n",
+    "a {\n  color: foo(2=2);\n}\n"
+);
+test!(
+    filter_splat_of_single_value,
+    "a {\n  color: foo(a=a...);\n}\n",
+    "a {\n  color: foo(a=a);\n}\n"
+);
+test!(
+    filter_splat_of_list,
+    "a {\n  color: foo(a=[a, b]...);\n}\n",
+    "a {\n  color: foo(a=[a, b]);\n}\n"
+);
+test!(
+    filter_both_null,
+    "a {\n  color: foo(null=null);\n}\n",
+    "a {\n  color: foo(=);\n}\n"
+);
+error!(
+    filter_splat_missing_third_period,
+    "a {\n  color: foo(1 + 1 = a..);\n}\n", "Error: expected \".\"."
+);
+error!(
+    filter_invalid_css_value,
+    "a {\n  color: foo((a: b)=a);\n}\n", "Error: (a: b) isn't a valid CSS value."
+);
+error!(
+    filter_nothing_before_equal,
+    "a {\n  color: foo(=a);\n}\n", "Error: Expected expression."
+);
+error!(
+    filter_nothing_after_equal,
+    "a {\n  color: foo(a=);\n}\n", "Error: Expected expression."
+);
+error!(
+    filter_equal_is_last_char,
+    "a {\n  color: foo(a=", "Error: Expected expression."
+);
+error!(
+    filter_value_after_equal_is_last_char,
+    "a {\n  color: foo(a=a", "Error: expected \")\"."
+);
