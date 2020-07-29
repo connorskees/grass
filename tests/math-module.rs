@@ -390,3 +390,59 @@ test!(
     "@use 'sass:math';\na {\n  color: math.log(2, .5);\n}\n",
     "a {\n  color: -1;\n}\n"
 );
+
+test!(
+    pow_exponent_and_base_one,
+    "@use 'sass:math';\na {\n  color: math.pow(1, 1);\n}\n",
+    "a {\n  color: 1;\n}\n"
+);
+test!(
+    pow_exponent_and_base_ten,
+    "@use 'sass:math';\na {\n  color: math.pow(10, 10);\n}\n",
+    "a {\n  color: 10000000000;\n}\n"
+);
+test!(
+    pow_base_negative_exponent_positive,
+    "@use 'sass:math';\na {\n  color: math.pow(-2, 3);\n}\n",
+    "a {\n  color: -8;\n}\n"
+);
+test!(
+    pow_base_positive_exponent_negative,
+    "@use 'sass:math';\na {\n  color: math.pow(2, -3);\n}\n",
+    "a {\n  color: 0.125;\n}\n"
+);
+test!(
+    pow_base_negative_exponent_negative,
+    "@use 'sass:math';\na {\n  color: math.pow(-2, -3);\n}\n",
+    "a {\n  color: -0.125;\n}\n"
+);
+test!(
+    pow_base_decimal,
+    "@use 'sass:math';\na {\n  color: math.pow(2.4, 3);\n}\n",
+    "a {\n  color: 13.824;\n}\n"
+);
+test!(
+    pow_exponent_decimal,
+    "@use 'sass:math';\na {\n  color: math.pow(2, 3.5);\n}\n",
+    "a {\n  color: 11.313708499;\n}\n"
+);
+test!(
+    pow_base_nan,
+    "@use 'sass:math';\na {\n  color: math.pow((0 / 0), 3);\n}\n",
+    "a {\n  color: NaN;\n}\n"
+);
+test!(
+    pow_exponent_nan,
+    "@use 'sass:math';\na {\n  color: math.pow(2, (0 / 0));\n}\n",
+    "a {\n  color: NaN;\n}\n"
+);
+test!(
+    pow_base_and_exponent_nan,
+    "@use 'sass:math';\na {\n  color: math.pow((0 / 0), (0 / 0));\n}\n",
+    "a {\n  color: NaN;\n}\n"
+);
+test!(
+    pow_exponent_zero,
+    "@use 'sass:math';\na {\n  color: math.pow(2, 0);\n}\n",
+    "a {\n  color: 1;\n}\n"
+);

@@ -174,7 +174,52 @@ fn log(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 
 fn pow(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;
-    todo!()
+
+    let base = match args.get_err(0, "base")? {
+        Value::Dimension(Some(n), Unit::None, ..) => n,
+        v @ Value::Dimension(Some(..), ..) => {
+            return Err((
+                format!(
+                    "$base: Expected {} to have no units.",
+                    v.inspect(args.span())?
+                ),
+                args.span(),
+            )
+                .into())
+        }
+        Value::Dimension(None, ..) => return Ok(Value::Dimension(None, Unit::None, true)),
+        v => {
+            return Err((
+                format!("$base: {} is not a number.", v.inspect(args.span())?),
+                args.span(),
+            )
+                .into())
+        }
+    };
+
+    let exponent = match args.get_err(1, "exponent")? {
+        Value::Dimension(Some(n), Unit::None, ..) => n,
+        v @ Value::Dimension(Some(..), ..) => {
+            return Err((
+                format!(
+                    "$exponent: Expected {} to have no units.",
+                    v.inspect(args.span())?
+                ),
+                args.span(),
+            )
+                .into())
+        }
+        Value::Dimension(None, ..) => return Ok(Value::Dimension(None, Unit::None, true)),
+        v => {
+            return Err((
+                format!("$exponent: {} is not a number.", v.inspect(args.span())?),
+                args.span(),
+            )
+                .into())
+        }
+    };
+
+    Ok(Value::Dimension(base.pow(exponent), Unit::None, true))
 }
 
 fn sqrt(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
@@ -375,6 +420,7 @@ pub(crate) fn declare(f: &mut Module) {
     f.insert_builtin("asin", asin);
     f.insert_builtin("atan", atan);
     f.insert_builtin("log", log);
+    f.insert_builtin("pow", pow);
     #[cfg(feature = "random")]
     f.insert_builtin("random", random);
 

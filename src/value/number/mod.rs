@@ -128,6 +128,12 @@ impl Number {
             self.as_float()?.ln(),
         )?)))
     }
+
+    pub fn pow(self, exponent: Self) -> Option<Self> {
+        Some(Number::Big(Box::new(BigRational::from_float(
+            self.as_float()?.powf(exponent.as_float()?),
+        )?)))
+    }
 }
 
 macro_rules! trig_fn(
