@@ -200,7 +200,9 @@ impl<'a> Parser<'a> {
                         AtRuleKind::Forward => todo!("@forward not yet implemented"),
                         AtRuleKind::Extend => self.parse_extend()?,
                         AtRuleKind::Supports => stmts.push(self.parse_supports()?),
-                        AtRuleKind::Keyframes => stmts.push(self.parse_keyframes()?),
+                        AtRuleKind::Keyframes => {
+                            stmts.push(self.parse_keyframes(kind_string.node)?)
+                        }
                     }
                 }
                 '$' => self.parse_variable_declaration()?,

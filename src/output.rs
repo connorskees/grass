@@ -157,8 +157,12 @@ impl Css {
                             })?
                         }
                         Stmt::Keyframes(k) => {
-                            let Keyframes { name, body } = *k;
-                            vals.push(Toplevel::Keyframes(Box::new(Keyframes { name, body })))
+                            let Keyframes { rule, name, body } = *k;
+                            vals.push(Toplevel::Keyframes(Box::new(Keyframes {
+                                rule,
+                                name,
+                                body,
+                            })))
                         }
                         k @ Stmt::KeyframesRuleSet(..) => {
                             unreachable!("@keyframes ruleset {:?}", k)
@@ -324,13 +328,13 @@ impl Css {
                     writeln!(buf, "{}}}", padding)?;
                 }
                 Toplevel::Keyframes(k) => {
-                    let Keyframes { name, body } = *k;
+                    let Keyframes { rule, name, body } = *k;
                     if should_emit_newline {
                         should_emit_newline = false;
                         writeln!(buf)?;
                     }
 
-                    write!(buf, "{}@keyframes", padding)?;
+                    write!(buf, "{}@{}", padding, rule)?;
 
                     if !name.is_empty() {
                         write!(buf, " {}", name)?;

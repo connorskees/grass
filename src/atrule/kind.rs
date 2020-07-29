@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use codemap::Spanned;
 
-use crate::error::SassError;
+use crate::{common::unvendor, error::SassError};
 
 #[derive(Debug)]
 pub enum AtRuleKind {
@@ -72,31 +72,35 @@ pub enum AtRuleKind {
 impl TryFrom<&Spanned<String>> for AtRuleKind {
     type Error = Box<SassError>;
     fn try_from(c: &Spanned<String>) -> Result<Self, Box<SassError>> {
-        Ok(match c.node.as_str() {
-            "use" => Self::Use,
-            "forward" => Self::Forward,
-            "import" => Self::Import,
-            "mixin" => Self::Mixin,
-            "include" => Self::Include,
-            "function" => Self::Function,
-            "return" => Self::Return,
-            "extend" => Self::Extend,
-            "at-root" => Self::AtRoot,
-            "error" => Self::Error,
-            "warn" => Self::Warn,
-            "debug" => Self::Debug,
-            "if" => Self::If,
-            "each" => Self::Each,
-            "for" => Self::For,
-            "while" => Self::While,
-            "charset" => Self::Charset,
-            "supports" => Self::Supports,
-            "keyframes" => Self::Keyframes,
-            "content" => Self::Content,
-            "media" => Self::Media,
+        match c.node.as_str() {
+            "use" => return Ok(Self::Use),
+            "forward" => return Ok(Self::Forward),
+            "import" => return Ok(Self::Import),
+            "mixin" => return Ok(Self::Mixin),
+            "include" => return Ok(Self::Include),
+            "function" => return Ok(Self::Function),
+            "return" => return Ok(Self::Return),
+            "extend" => return Ok(Self::Extend),
+            "at-root" => return Ok(Self::AtRoot),
+            "error" => return Ok(Self::Error),
+            "warn" => return Ok(Self::Warn),
+            "debug" => return Ok(Self::Debug),
+            "if" => return Ok(Self::If),
+            "each" => return Ok(Self::Each),
+            "for" => return Ok(Self::For),
+            "while" => return Ok(Self::While),
+            "charset" => return Ok(Self::Charset),
+            "supports" => return Ok(Self::Supports),
+            "content" => return Ok(Self::Content),
+            "media" => return Ok(Self::Media),
             "else" => return Err(("This at-rule is not allowed here.", c.span).into()),
             "" => return Err(("Expected identifier.", c.span).into()),
-            s => Self::Unknown(s.to_owned()),
+            _ => {}
+        }
+
+        Ok(match unvendor(&c.node) {
+            "keyframes" => Self::Keyframes,
+            _ => Self::Unknown(c.node.to_owned()),
         })
     }
 }

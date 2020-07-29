@@ -121,3 +121,21 @@ test!(
     }",
     "@keyframes {\n  to {\n    color: red;\n  }\n  from {\n    color: green;\n  }\n}\n"
 );
+test!(
+    keyframes_vendor_prefix,
+    "@-webkit-keyframes foo {
+        0% {
+            color: red;
+        }
+    }",
+    "@-webkit-keyframes foo {\n  0% {\n    color: red;\n  }\n}\n"
+);
+test!(
+    keyframes_allow_decimal_selector,
+    "@keyframes foo {
+        12.5% {
+            color: red;
+        }
+    }",
+    "@-webkit-keyframes foo {\n  0% {\n    color: red;\n  }\n}\n"
+);

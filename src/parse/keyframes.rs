@@ -55,7 +55,14 @@ impl<'a, 'b> KeyframesSelectorParser<'a, 'b> {
                     }
                 }
                 '0'..='9' => {
-                    let num = eat_whole_number(self.parser.toks);
+                    let mut num = eat_whole_number(self.parser.toks);
+
+                    if let Some(Token { kind: '.', .. }) = self.parser.toks.peek() {
+                        self.parser.toks.next();
+                        num.push('.');
+                        num.push_str(&eat_whole_number(self.parser.toks));
+                    }
+
                     if !matches!(self.parser.toks.next(), Some(Token { kind: '%', .. })) {
                         return Err(("expected \"%\".", tok.pos).into());
                     }
@@ -177,7 +184,7 @@ impl<'a> Parser<'a> {
         Err(("expected \"{\".", span).into())
     }
 
-    pub(super) fn parse_keyframes(&mut self) -> SassResult<Stmt> {
+    pub(super) fn parse_keyframes(&mut self, rule: String) -> SassResult<Stmt> {
         let name = self.parse_keyframes_name()?;
 
         self.whitespace();
@@ -200,6 +207,6 @@ impl<'a> Parser<'a> {
         }
         .parse_stmt()?;
 
-        Ok(Stmt::Keyframes(Box::new(Keyframes { name, body })))
+        Ok(Stmt::Keyframes(Box::new(Keyframes { rule, name, body })))
     }
 }
