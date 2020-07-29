@@ -137,5 +137,5 @@ test!(
             color: red;
         }
     }",
-    "@-webkit-keyframes foo {\n  0% {\n    color: red;\n  }\n}\n"
+    "@keyframes foo {\n  12.5% {\n    color: red;\n  }\n}\n"
 );
