@@ -8,11 +8,7 @@ use crate::{
 fn is_ms_filter(s: &str) -> bool {
     let mut chars = s.chars();
 
-    if let Some(c) = chars.next() {
-        if !matches!(c, 'a'..='z' | 'A'..='Z') {
-            return false;
-        }
-    } else {
+    if !matches!(chars.next(), Some('a'..='z') | Some('A'..='Z')) {
         return false;
     }
 
