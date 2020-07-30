@@ -1,4 +1,4 @@
-use std::{collections::HashMap, convert::TryFrom, path::Path, vec::IntoIter};
+use std::{collections::HashMap, convert::TryFrom, fs, path::Path, vec::IntoIter};
 
 use codemap::{CodeMap, Span, Spanned};
 use peekmore::{PeekMore, PeekMoreIterator};
@@ -14,6 +14,7 @@ use crate::{
         declare_module_meta, declare_module_selector, declare_module_string, Module,
     },
     error::SassResult,
+    lexer::Lexer,
     scope::{Scope, Scopes},
     selector::{
         ComplexSelectorComponent, ExtendRule, ExtendedSelector, Extender, Selector, SelectorParser,
@@ -201,7 +202,46 @@ impl<'a> Parser<'a> {
                         "sass:meta" => declare_module_meta(),
                         "sass:selector" => declare_module_selector(),
                         "sass:string" => declare_module_string(),
-                        _ => todo!("@use not yet implemented"),
+                        _ => {
+                            if let Some(import) = self.find_import(module_name.as_ref().as_ref()) {
+                                let mut global_scope = Scope::new();
+
+                                let file = self.map.add_file(
+                                    module_name.clone().into_owned(),
+                                    String::from_utf8(fs::read(&import)?)?,
+                                );
+
+                                comments.append(
+                                    &mut Parser {
+                                        toks: &mut Lexer::new(&file)
+                                            .collect::<Vec<Token>>()
+                                            .into_iter()
+                                            .peekmore(),
+                                        map: self.map,
+                                        path: &import,
+                                        scopes: self.scopes,
+                                        global_scope: &mut global_scope,
+                                        super_selectors: self.super_selectors,
+                                        span_before: file.span.subspan(0, 0),
+                                        content: self.content,
+                                        flags: self.flags,
+                                        at_root: self.at_root,
+                                        at_root_has_selector: self.at_root_has_selector,
+                                        extender: self.extender,
+                                        content_scopes: self.content_scopes,
+                                        options: self.options,
+                                        modules: self.modules,
+                                    }
+                                    .parse()?,
+                                );
+
+                                Module::new_from_scope(global_scope)
+                            } else {
+                                return Err(
+                                    ("Error: Can't find stylesheet to import.", span).into()
+                                );
+                            }
+                        }
                     };
 
                     let module_name = match module_alias.as_deref() {

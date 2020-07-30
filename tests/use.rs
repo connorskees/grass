@@ -1,5 +1,7 @@
 #![cfg(test)]
 
+use std::io::Write;
+
 #[macro_use]
 mod macros;
 
@@ -58,3 +60,39 @@ test!(
     }",
     "a {\n  color: -0.4161468365;\n}\n"
 );
+
+#[test]
+fn use_user_defined_same_directory() {
+    let input = "@use \"use_user_defined_same_directory\";\na {\n color: use_user_defined_same_directory.$a;\n}";
+    tempfile!(
+        "use_user_defined_same_directory.scss",
+        "$a: red; a { color: $a; }"
+    );
+    assert_eq!(
+        "a {\n  color: red;\n}\n\na {\n  color: red;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default()).expect(input)
+    );
+}
+
+#[test]
+fn use_user_defined_as() {
+    let input = "@use \"use_user_defined_as\" as module;\na {\n color: module.$a;\n}";
+    tempfile!("use_user_defined_as.scss", "$a: red; a { color: $a; }");
+    assert_eq!(
+        "a {\n  color: red;\n}\n\na {\n  color: red;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default()).expect(input)
+    );
+}
+
+#[test]
+fn use_user_defined_function() {
+    let input = "@use \"use_user_defined_function\" as module;\na {\n color: module.foo(red);\n}";
+    tempfile!(
+        "use_user_defined_function.scss",
+        "@function foo($a) { @return $a; }"
+    );
+    assert_eq!(
+        "a {\n  color: red;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default()).expect(input)
+    );
+}

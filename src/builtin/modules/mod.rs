@@ -11,6 +11,7 @@ use crate::{
     common::{Identifier, QuoteKind},
     error::SassResult,
     parse::Parser,
+    scope::Scope,
     value::{SassFunction, SassMap, Value},
 };
 
@@ -23,26 +24,22 @@ mod selector;
 mod string;
 
 #[derive(Debug, Default)]
-pub(crate) struct Module {
-    pub vars: BTreeMap<Identifier, Value>,
-    pub mixins: BTreeMap<Identifier, Mixin>,
-    pub functions: BTreeMap<Identifier, SassFunction>,
-}
+pub(crate) struct Module(pub Scope);
 
 impl Module {
     pub fn get_var(&self, name: Spanned<Identifier>) -> SassResult<&Value> {
-        match self.vars.get(&name.node) {
+        match self.0.vars.get(&name.node) {
             Some(v) => Ok(v),
             None => Err(("Undefined variable.", name.span).into()),
         }
     }
 
     pub fn insert_builtin_var(&mut self, name: &'static str, value: Value) {
-        self.vars.insert(name.into(), value);
+        self.0.vars.insert(name.into(), value);
     }
 
     pub fn get_fn(&self, name: Identifier) -> Option<SassFunction> {
-        self.functions.get(&name).cloned()
+        self.0.functions.get(&name).cloned()
     }
 
     pub fn insert_builtin(
@@ -51,13 +48,15 @@ impl Module {
         function: fn(CallArgs, &mut Parser<'_>) -> SassResult<Value>,
     ) {
         let ident = name.into();
-        self.functions
+        self.0
+            .functions
             .insert(ident, SassFunction::Builtin(Builtin::new(function), ident));
     }
 
     pub fn functions(&self) -> SassMap {
         SassMap::new_with(
-            self.functions
+            self.0
+                .functions
                 .iter()
                 .map(|(key, value)| {
                     (
@@ -71,7 +70,8 @@ impl Module {
 
     pub fn variables(&self) -> SassMap {
         SassMap::new_with(
-            self.vars
+            self.0
+                .vars
                 .iter()
                 .map(|(key, value)| {
                     (
@@ -81,6 +81,10 @@ impl Module {
                 })
                 .collect::<Vec<(Value, Value)>>(),
         )
+    }
+
+    pub const fn new_from_scope(scope: Scope) -> Self {
+        Module(scope)
     }
 }
 

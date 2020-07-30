@@ -12,9 +12,9 @@ use crate::{
 
 #[derive(Debug, Default)]
 pub(crate) struct Scope {
-    vars: BTreeMap<Identifier, Value>,
-    mixins: BTreeMap<Identifier, Mixin>,
-    functions: BTreeMap<Identifier, SassFunction>,
+    pub vars: BTreeMap<Identifier, Value>,
+    pub mixins: BTreeMap<Identifier, Mixin>,
+    pub functions: BTreeMap<Identifier, SassFunction>,
 }
 
 impl Scope {
@@ -81,9 +81,7 @@ impl Scope {
     }
 
     pub fn merge_module(&mut self, other: Module) {
-        self.vars.extend(other.vars);
-        self.mixins.extend(other.mixins);
-        self.functions.extend(other.functions);
+        self.merge(other.0);
     }
 }
 

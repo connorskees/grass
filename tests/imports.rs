@@ -1,42 +1,9 @@
 #![cfg(test)]
+
 use std::io::Write;
-use tempfile::Builder;
 
 #[macro_use]
 mod macros;
-
-/// Create a temporary file with the given name
-/// and contents.
-///
-/// This must be a macro rather than a function
-/// because the tempfile will be deleted when it
-/// exits scope
-macro_rules! tempfile {
-    ($name:literal, $content:literal) => {
-        let mut f = Builder::new()
-            .rand_bytes(0)
-            .prefix("")
-            .suffix($name)
-            .tempfile_in("")
-            .unwrap();
-        write!(f, "{}", $content).unwrap();
-    };
-    ($name:literal, $content:literal, dir=$dir:literal) => {
-        let _d = Builder::new()
-            .rand_bytes(0)
-            .prefix("")
-            .suffix($dir)
-            .tempdir_in("")
-            .unwrap();
-        let mut f = Builder::new()
-            .rand_bytes(0)
-            .prefix("")
-            .suffix($name)
-            .tempfile_in($dir)
-            .unwrap();
-        write!(f, "{}", $content).unwrap();
-    };
-}
 
 #[test]
 fn imports_variable() {
