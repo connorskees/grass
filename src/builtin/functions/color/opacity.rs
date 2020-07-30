@@ -12,24 +12,10 @@ fn is_ms_filter(s: &str) -> bool {
         return false;
     }
 
-    for c in &mut chars {
-        match c {
-            ' ' | '\t' | '\n' => break,
-            'a'..='z' | 'A'..='Z' => continue,
-            '=' => return true,
-            _ => return false,
-        }
-    }
-
-    for c in chars {
-        match c {
-            ' ' | '\t' | '\n' => continue,
-            '=' => return true,
-            _ => return false,
-        }
-    }
-
-    false
+    chars
+        .skip_while(|c| matches!(c, 'a'..='z' | 'A'..='Z'))
+        .find(|c| !matches!(c, ' ' | '\t' | '\n'))
+        .map_or(false, |c| c == '=')
 }
 
 #[cfg(test)]
