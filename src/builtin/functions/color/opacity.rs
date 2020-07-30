@@ -5,35 +5,18 @@ use crate::{
     value::Value,
 };
 
+/// Matches regex `^[a-zA-Z]+\s*=`.
 fn is_ms_filter(s: &str) -> bool {
-    let mut chars = s.chars();
+    let mut bytes = s.bytes();
 
-    if let Some(c) = chars.next() {
-        if !matches!(c, 'a'..='z' | 'A'..='Z') {
-            return false;
-        }
-    } else {
+    if !bytes.next().map_or(false, |c| c.is_ascii_alphabetic()) {
         return false;
     }
 
-    for c in &mut chars {
-        match c {
-            ' ' | '\t' | '\n' => break,
-            'a'..='z' | 'A'..='Z' => continue,
-            '=' => return true,
-            _ => return false,
-        }
-    }
-
-    for c in chars {
-        match c {
-            ' ' | '\t' | '\n' => continue,
-            '=' => return true,
-            _ => return false,
-        }
-    }
-
-    false
+    bytes
+        .skip_while(|c| c.is_ascii_alphabetic())
+        .find(|c| !matches!(c, b' ' | b'\t' | b'\n'))
+        == Some(b'=')
 }
 
 #[cfg(test)]
