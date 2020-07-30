@@ -1,5 +1,7 @@
 #![cfg(test)]
 
+use std::io::Write;
+
 #[macro_use]
 mod macros;
 
@@ -13,3 +15,13 @@ test!(
     "@use 'sass:meta';\n@use 'sass:math';\na {\n  color: inspect(meta.module-variables(math));\n}\n",
     "a {\n  color: (\"e\": 2.7182818285, \"pi\": 3.1415926536);\n}\n"
 );
+
+#[test]
+fn mixin_exists_module() {
+    let input = "@use \"mixin_exists_module\" as module;\na {\n color: mixin-exists(foo, $module: module);\n}";
+    tempfile!("mixin_exists_module.scss", "@mixin foo {}");
+    assert_eq!(
+        "a {\n  color: true;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default()).expect(input)
+    );
+}

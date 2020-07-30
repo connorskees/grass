@@ -55,7 +55,7 @@ impl Scope {
         self.mixins.insert(s.into(), v)
     }
 
-    fn mixin_exists(&self, name: Identifier) -> bool {
+    pub fn mixin_exists(&self, name: Identifier) -> bool {
         self.mixins.contains_key(&name)
     }
 

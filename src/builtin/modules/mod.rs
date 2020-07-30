@@ -65,6 +65,10 @@ impl Module {
         self.0.functions.get(&name).cloned()
     }
 
+    pub fn mixin_exists(&self, name: Identifier) -> bool {
+        self.0.mixin_exists(name)
+    }
+
     pub fn insert_builtin(
         &mut self,
         name: &'static str,
