@@ -6,16 +6,16 @@ use crate::{
 };
 
 fn is_ms_filter(s: &str) -> bool {
-    let mut chars = s.chars();
+    let mut bytes = s.bytes();
 
-    if !matches!(chars.next(), Some('a'..='z') | Some('A'..='Z')) {
+    if !matches!(bytes.next(), Some(b'a'..=b'z') | Some(b'A'..=b'Z')) {
         return false;
     }
 
-    chars
-        .skip_while(|c| matches!(c, 'a'..='z' | 'A'..='Z'))
-        .find(|c| !matches!(c, ' ' | '\t' | '\n'))
-        .map_or(false, |c| c == '=')
+    bytes
+        .skip_while(|c| matches!(c, b'a'..=b'z' | b'A'..=b'Z'))
+        .find(|c| !matches!(c, b' ' | b'\t' | b'\n'))
+        .map_or(false, |c| c == b'=')
 }
 
 #[cfg(test)]
