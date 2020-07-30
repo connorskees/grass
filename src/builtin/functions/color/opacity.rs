@@ -16,7 +16,7 @@ fn is_ms_filter(s: &str) -> bool {
     bytes
         .skip_while(|c| c.is_ascii_alphabetic())
         .find(|c| !matches!(c, b' ' | b'\t' | b'\n'))
-        .map_or(false, |c| c == b'=')
+        == Some(b'=')
 }
 
 #[cfg(test)]
