@@ -32,14 +32,7 @@ fn module_functions(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<V
     };
 
     Ok(Value::Map(
-        parser
-            .modules
-            .get(&module)
-            .ok_or((
-                format!("There is no module with the namespace \"{}\".", module),
-                args.span(),
-            ))?
-            .functions(),
+        parser.modules.get(module.into(), args.span())?.functions(),
     ))
 }
 
@@ -58,14 +51,7 @@ fn module_variables(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<V
     };
 
     Ok(Value::Map(
-        parser
-            .modules
-            .get(&module)
-            .ok_or((
-                format!("There is no module with the namespace \"{}\".", module),
-                args.span(),
-            ))?
-            .variables(),
+        parser.modules.get(module.into(), args.span())?.variables(),
     ))
 }
 

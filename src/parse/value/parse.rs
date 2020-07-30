@@ -261,14 +261,7 @@ impl<'a> Parser<'a> {
 
                 module_span = module_span.merge(var.span);
 
-                let value = self
-                    .modules
-                    .get(module)
-                    .ok_or((
-                        format!("There is no module with the namespace \"{}\".", module),
-                        module_span,
-                    ))?
-                    .get_var(var)?;
+                let value = self.modules.get(module.into(), module_span)?.get_var(var)?;
                 HigherIntermediateValue::Literal(value.clone())
             } else {
                 let fn_name = self
@@ -277,11 +270,7 @@ impl<'a> Parser<'a> {
 
                 let function = self
                     .modules
-                    .get(module)
-                    .ok_or((
-                        format!("There is no module with the namespace \"{}\".", module),
-                        module_span,
-                    ))?
+                    .get(module.into(), module_span)?
                     .get_fn(fn_name.node)
                     .ok_or(("Undefined function.", fn_name.span))?;
 
@@ -341,13 +330,7 @@ impl<'a> Parser<'a> {
                 }
 
                 let as_ident = Identifier::from(&s);
-                let func = match self.scopes.get_fn(
-                    Spanned {
-                        node: as_ident,
-                        span,
-                    },
-                    self.global_scope,
-                ) {
+                let func = match self.scopes.get_fn(as_ident, self.global_scope) {
                     Some(f) => f,
                     None => {
                         if let Some(f) = GLOBAL_FUNCTIONS.get(as_ident.as_str()) {

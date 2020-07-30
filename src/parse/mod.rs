@@ -1,4 +1,4 @@
-use std::{collections::HashMap, convert::TryFrom, fs, path::Path, vec::IntoIter};
+use std::{convert::TryFrom, fs, path::Path, vec::IntoIter};
 
 use codemap::{CodeMap, Span, Spanned};
 use peekmore::{PeekMore, PeekMoreIterator};
@@ -11,7 +11,7 @@ use crate::{
     },
     builtin::modules::{
         declare_module_color, declare_module_list, declare_module_map, declare_module_math,
-        declare_module_meta, declare_module_selector, declare_module_string, Module,
+        declare_module_meta, declare_module_selector, declare_module_string, Module, Modules,
     },
     error::SassResult,
     lexer::Lexer,
@@ -92,7 +92,7 @@ pub(crate) struct Parser<'a> {
 
     pub options: &'a Options<'a>,
 
-    pub modules: &'a mut HashMap<String, Module>,
+    pub modules: &'a mut Modules,
 }
 
 impl<'a> Parser<'a> {
@@ -262,7 +262,7 @@ impl<'a> Parser<'a> {
                         },
                     };
 
-                    self.modules.insert(module_name, module);
+                    self.modules.insert(module_name.into(), module);
                 }
                 Some(Token { kind: '/', .. }) => {
                     self.toks.next();

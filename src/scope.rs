@@ -230,17 +230,13 @@ impl Scopes {
         }
     }
 
-    pub fn get_fn<'a>(
-        &'a self,
-        name: Spanned<Identifier>,
-        global_scope: &'a Scope,
-    ) -> Option<SassFunction> {
+    pub fn get_fn<'a>(&'a self, name: Identifier, global_scope: &'a Scope) -> Option<SassFunction> {
         for scope in self.0.iter().rev() {
-            if scope.fn_exists(name.node) {
-                return scope.get_fn(name.node);
+            if scope.fn_exists(name) {
+                return scope.get_fn(name);
             }
         }
-        global_scope.get_fn(name.node)
+        global_scope.get_fn(name)
     }
 
     pub fn fn_exists(&self, name: Identifier, global_scope: &Scope) -> bool {

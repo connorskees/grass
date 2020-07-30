@@ -81,7 +81,7 @@ grass input.scss
 )]
 #![cfg_attr(feature = "nightly", feature(track_caller))]
 #![cfg_attr(feature = "profiling", inline(never))]
-use std::{collections::HashMap, fs, path::Path};
+use std::{fs, path::Path};
 
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::*;
@@ -95,6 +95,7 @@ use peekmore::PeekMore;
 pub use crate::error::{SassError as Error, SassResult as Result};
 pub(crate) use crate::token::Token;
 use crate::{
+    builtin::modules::Modules,
     lexer::Lexer,
     output::Css,
     parse::{
@@ -293,7 +294,7 @@ pub fn from_path(p: &str, options: &Options) -> Result<String> {
         extender: &mut Extender::new(empty_span),
         content_scopes: &mut Scopes::new(),
         options,
-        modules: &mut HashMap::new(),
+        modules: &mut Modules::default(),
     }
     .parse()
     .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages))?;
@@ -338,7 +339,7 @@ pub fn from_string(p: String, options: &Options) -> Result<String> {
         extender: &mut Extender::new(empty_span),
         content_scopes: &mut Scopes::new(),
         options,
-        modules: &mut HashMap::new(),
+        modules: &mut Modules::default(),
     }
     .parse()
     .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages))?;
@@ -374,7 +375,7 @@ pub fn from_string(p: String) -> std::result::Result<String, JsValue> {
         extender: &mut Extender::new(empty_span),
         content_scopes: &mut Scopes::new(),
         options: &Options::default(),
-        modules: &mut HashMap::new(),
+        modules: &mut Modules::default(),
     }
     .parse()
     .map_err(|e| raw_to_parse_error(&map, *e, true).to_string())?;

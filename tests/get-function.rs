@@ -121,3 +121,8 @@ test!(
     "a {\n  color: call(call(get-function(get-function), darken), red, 10%);\n}\n",
     "a {\n  color: #cc0000;\n}\n"
 );
+test!(
+    get_function_of_module,
+    "@use 'sass:math';\na {\n  color: call(get-function(cos, $module: math), 2);\n}\n",
+    "a {\n  color: -0.4161468365;\n}\n"
+);

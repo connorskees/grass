@@ -2,7 +2,7 @@
 
 use std::collections::BTreeMap;
 
-use codemap::Spanned;
+use codemap::{Span, Spanned};
 
 use crate::{
     args::CallArgs,
@@ -25,6 +25,29 @@ mod string;
 
 #[derive(Debug, Default)]
 pub(crate) struct Module(pub Scope);
+
+#[derive(Debug, Default)]
+pub(crate) struct Modules(BTreeMap<Identifier, Module>);
+
+impl Modules {
+    pub fn insert(&mut self, name: Identifier, module: Module) {
+        self.0.insert(name, module);
+    }
+
+    pub fn get(&self, name: Identifier, span: Span) -> SassResult<&Module> {
+        match self.0.get(&name) {
+            Some(v) => Ok(v),
+            None => Err((
+                format!(
+                    "There is no module with the namespace \"{}\".",
+                    name.as_str()
+                ),
+                span,
+            )
+                .into()),
+        }
+    }
+}
 
 impl Module {
     pub fn get_var(&self, name: Spanned<Identifier>) -> SassResult<&Value> {

@@ -1,7 +1,5 @@
 use super::{Builtin, GlobalFunctionMap, GLOBAL_FUNCTIONS};
 
-use codemap::Spanned;
-
 use crate::{
     args::CallArgs,
     common::{Identifier, QuoteKind},
@@ -166,21 +164,22 @@ pub(crate) fn get_function(mut args: CallArgs, parser: &mut Parser<'_>) -> SassR
         }
     };
 
-    if module.is_some() && css {
-        return Err((
-            "$css and $module may not both be passed at once.",
-            args.span(),
-        )
-            .into());
-    }
+    let func = match if let Some(module_name) = module {
+        if css {
+            return Err((
+                "$css and $module may not both be passed at once.",
+                args.span(),
+            )
+                .into());
+        }
 
-    let func = match parser.scopes.get_fn(
-        Spanned {
-            node: name,
-            span: args.span(),
-        },
-        parser.global_scope,
-    ) {
+        parser
+            .modules
+            .get(module_name.into(), args.span())?
+            .get_fn(name)
+    } else {
+        parser.scopes.get_fn(name, parser.global_scope)
+    } {
         Some(f) => f,
         None => match GLOBAL_FUNCTIONS.get(name.as_str()) {
             Some(f) => SassFunction::Builtin(f.clone(), name),
