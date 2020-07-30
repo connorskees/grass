@@ -15,6 +15,11 @@ test!(
     "@use 'sass:meta';\n@use 'sass:math';\na {\n  color: inspect(meta.module-variables(math));\n}\n",
     "a {\n  color: (\"e\": 2.7182818285, \"pi\": 3.1415926536);\n}\n"
 );
+test!(
+    global_var_exists_module,
+    "@use 'sass:math';\na {\n  color: global-variable-exists(pi, $module: math);\n}\n",
+    "a {\n  color: true;\n}\n"
+);
 
 #[test]
 fn mixin_exists_module() {
