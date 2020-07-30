@@ -9,12 +9,12 @@ use crate::{
 fn is_ms_filter(s: &str) -> bool {
     let mut bytes = s.bytes();
 
-    if !matches!(bytes.next(), Some(b'a'..=b'z') | Some(b'A'..=b'Z')) {
+    if !bytes.next().map_or(false, |c| c.is_ascii_alphabetic()) {
         return false;
     }
 
     bytes
-        .skip_while(|c| matches!(c, b'a'..=b'z' | b'A'..=b'Z'))
+        .skip_while(|c| c.is_ascii_alphabetic())
         .find(|c| !matches!(c, b' ' | b'\t' | b'\n'))
         .map_or(false, |c| c == b'=')
 }
