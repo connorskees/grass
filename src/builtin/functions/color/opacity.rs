@@ -5,7 +5,7 @@ use crate::{
     value::Value,
 };
 
-/// Matches regex `^[a-zA-Z]+\s*=`.
+/// Check if `s` matches the regex `^[a-zA-Z]+\s*=`
 fn is_ms_filter(s: &str) -> bool {
     let mut bytes = s.bytes();
 
@@ -14,7 +14,7 @@ fn is_ms_filter(s: &str) -> bool {
     }
 
     bytes
-        .skip_while(|c| c.is_ascii_alphabetic())
+        .skip_while(u8::is_ascii_alphabetic)
         .find(|c| !matches!(c, b' ' | b'\t' | b'\n'))
         == Some(b'=')
 }
