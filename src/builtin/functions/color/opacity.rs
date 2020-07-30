@@ -5,6 +5,7 @@ use crate::{
     value::Value,
 };
 
+/// Matches regex `^[a-zA-Z]+\s*=`.
 fn is_ms_filter(s: &str) -> bool {
     let mut bytes = s.bytes();
 
