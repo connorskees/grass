@@ -102,7 +102,74 @@ fn clamp(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 }
 
 fn hypot(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
-    todo!()
+    args.min_args(1)?;
+
+    let span = args.span();
+
+    let mut numbers = args.get_variadic()?.into_iter().map(|v| -> SassResult<_> {
+        match v.node {
+            Value::Dimension(n, u, ..) => Ok((n, u)),
+            v => Err((format!("{} is not a number.", v.inspect(span)?), span).into()),
+        }
+    });
+
+    let first: (Number, Unit) = match numbers.next().unwrap()? {
+        (Some(n), u) => (n.clone() * n, u),
+        (None, u) => return Ok(Value::Dimension(None, u, true)),
+    };
+
+    let rest = numbers
+        .enumerate()
+        .map(|(idx, val)| -> SassResult<Option<Number>> {
+            let (number, unit) = val?;
+            if first.1 == Unit::None {
+                if unit == Unit::None {
+                    Ok(number.map(|n| n.clone() * n))
+                } else {
+                    Err((
+                        format!(
+                            "Argument 1 is unitless but argument {} has unit {}. \
+                            Arguments must all have units or all be unitless.",
+                            idx + 2,
+                            unit
+                        ),
+                        span,
+                    )
+                        .into())
+                }
+            } else if unit == Unit::None {
+                Err((
+                    format!(
+                        "Argument 1 has unit {} but argument {} is unitless. \
+                        Arguments must all have units or all be unitless.",
+                        first.1,
+                        idx + 2,
+                    ),
+                    span,
+                )
+                    .into())
+            } else if first.1.comparable(&unit) {
+                Ok(number
+                    .map(|n| n.convert(&unit, &first.1))
+                    .map(|n| n.clone() * n))
+            } else {
+                Err((
+                    format!("Incompatible units {} and {}.", first.1, unit),
+                    span,
+                )
+                    .into())
+            }
+        })
+        .collect::<SassResult<Option<Vec<Number>>>>()?;
+
+    let rest = match rest {
+        Some(v) => v,
+        None => return Ok(Value::Dimension(None, first.1, true)),
+    };
+
+    let sum = first.0 + rest.into_iter().fold(Number::zero(), |a, b| a + b);
+
+    Ok(Value::Dimension(sum.sqrt(), first.1, true))
 }
 
 fn log(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
@@ -421,6 +488,7 @@ pub(crate) fn declare(f: &mut Module) {
     f.insert_builtin("atan", atan);
     f.insert_builtin("log", log);
     f.insert_builtin("pow", pow);
+    f.insert_builtin("hypot", hypot);
     #[cfg(feature = "random")]
     f.insert_builtin("random", random);
 

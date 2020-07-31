@@ -12,6 +12,8 @@ use num_traits::{
     CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Num, One, Signed, ToPrimitive, Zero,
 };
 
+use crate::unit::{Unit, UNIT_CONVERSION_TABLE};
+
 use integer::Integer;
 
 mod integer;
@@ -133,6 +135,11 @@ impl Number {
         Some(Number::Big(Box::new(BigRational::from_float(
             self.as_float()?.powf(exponent.as_float()?),
         )?)))
+    }
+
+    /// Invariants: `from.comparable(&to)` must be true
+    pub fn convert(self, from: &Unit, to: &Unit) -> Self {
+        self * UNIT_CONVERSION_TABLE[to.to_string().as_str()][from.to_string().as_str()].clone()
     }
 }
 

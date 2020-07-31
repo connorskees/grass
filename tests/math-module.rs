@@ -446,3 +446,52 @@ test!(
     "@use 'sass:math';\na {\n  color: math.pow(2, 0);\n}\n",
     "a {\n  color: 1;\n}\n"
 );
+test!(
+    hypot_all_same_unit,
+    "@use 'sass:math';\na {\n  color: math.hypot(1px, 2px, 3px, 4px, 5px);\n}\n",
+    "a {\n  color: 7.4161984871px;\n}\n"
+);
+test!(
+    hypot_negative,
+    "@use 'sass:math';\na {\n  color: math.hypot(1px, 2px, 3px, 4px, 5px, -20px);\n}\n",
+    "a {\n  color: 21.3307290077px;\n}\n"
+);
+test!(
+    hypot_all_different_but_comparable_unit,
+    "@use 'sass:math';\na {\n  color: math.hypot(1in, 2cm, 3mm, 4pt, 5pc);\n}\n",
+    "a {\n  color: 1.5269191636in;\n}\n"
+);
+test!(
+    hypot_all_no_unit,
+    "@use 'sass:math';\na {\n  color: math.hypot(1, 2, 3);\n}\n",
+    "a {\n  color: 3.7416573868;\n}\n"
+);
+test!(
+    hypot_nan_has_comparable_unit,
+    "@use 'sass:math';\na {\n  color: math.hypot(1deg, 2deg, math.acos(2));\n}\n",
+    "a {\n  color: NaNdeg;\n}\n"
+);
+error!(
+    hypot_no_args,
+    "@use 'sass:math';\na {\n  color: math.hypot();\n}\n",
+    "Error: At least one argument must be passed."
+);
+error!(
+    hypot_first_has_no_unit_third_has_unit,
+    "@use 'sass:math';\na {\n  color: math.hypot(1, 2, 3px);\n}\n",
+    "Error: Argument 1 is unitless but argument 3 has unit px. Arguments must all have units or all be unitless."
+);
+error!(
+    hypot_non_numeric_argument,
+    "@use 'sass:math';\na {\n  color: math.hypot(1, red, 3);\n}\n", "Error: red is not a number."
+);
+error!(
+    hypot_units_not_comparable,
+    "@use 'sass:math';\na {\n  color: math.hypot(1px, 2in, 3rem);\n}\n",
+    "Error: Incompatible units px and rem."
+);
+error!(
+    hypot_nan_has_no_unit_but_first_has_unit,
+    "@use 'sass:math';\na {\n  color: math.hypot(1deg, 2deg, (0 / 0));\n}\n",
+    "Error: Argument 1 has unit deg but argument 3 is unitless. Arguments must all have units or all be unitless."
+);
