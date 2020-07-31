@@ -8,6 +8,7 @@ use crate::{
     args::{CallArgs, FuncArgs},
     atrule::{Content, Mixin},
     error::SassResult,
+    scope::Scopes,
     utils::read_until_closing_curly_brace,
     Token,
 };
@@ -129,6 +130,8 @@ impl<'a> Parser<'a> {
 
         let scope = self.eval_args(fn_args, args)?;
 
+        let scope_len = self.scopes.len();
+
         if declared_at_root {
             mem::swap(self.scopes, self.content_scopes);
         }
@@ -138,6 +141,8 @@ impl<'a> Parser<'a> {
         self.content.push(Content {
             content,
             content_args,
+            scope_len,
+            declared_at_root,
         });
 
         let body = Parser {
@@ -177,26 +182,35 @@ impl<'a> Parser<'a> {
                 .into());
         }
 
-        if let Some(Token { kind: '(', .. }) = self.toks.peek() {
-            self.toks.next();
-            let args = self.parse_call_args()?;
-            if let Some(Some(content_args)) = self.content.last().map(|v| v.content_args.clone()) {
-                args.max_args(content_args.len())?;
-
-                let scope = self.eval_args(content_args, args)?;
-                self.content_scopes.merge(scope);
-            } else {
-                args.max_args(0)?;
-            }
-        }
-
         Ok(if let Some(content) = self.content.pop() {
+            let (mut scope_at_decl, mixin_scope) = if content.declared_at_root {
+                (mem::take(self.content_scopes), Scopes::new())
+            } else {
+                mem::take(self.scopes).split_off(content.scope_len)
+            };
+
+            let mut entered_scope = false;
+
+            if let Some(Token { kind: '(', .. }) = self.toks.peek() {
+                self.toks.next();
+                let args = self.parse_call_args()?;
+                if let Some(ref content_args) = content.content_args {
+                    args.max_args(content_args.len())?;
+
+                    let scope = self.eval_args(content_args.clone(), args)?;
+                    scope_at_decl.enter_scope(scope);
+                    entered_scope = true;
+                } else {
+                    args.max_args(0)?;
+                }
+            }
+
             let stmts = if let Some(body) = content.content.clone() {
                 Parser {
                     toks: &mut body.into_iter().peekmore(),
                     map: self.map,
                     path: self.path,
-                    scopes: self.content_scopes,
+                    scopes: &mut scope_at_decl,
                     global_scope: self.global_scope,
                     super_selectors: self.super_selectors,
                     span_before: self.span_before,
@@ -212,6 +226,18 @@ impl<'a> Parser<'a> {
             } else {
                 Vec::new()
             };
+
+            if entered_scope {
+                scope_at_decl.exit_scope();
+            }
+
+            scope_at_decl.merge(mixin_scope);
+
+            if content.declared_at_root {
+                *self.content_scopes = scope_at_decl;
+            } else {
+                *self.scopes = scope_at_decl;
+            }
 
             self.content.push(content);
 

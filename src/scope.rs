@@ -73,12 +73,6 @@ impl Scope {
         }
         self.functions.contains_key(&name)
     }
-
-    fn merge(&mut self, other: Scope) {
-        self.vars.extend(other.vars);
-        self.mixins.extend(other.mixins);
-        self.functions.extend(other.functions);
-    }
 }
 
 #[derive(Debug, Default)]
@@ -87,6 +81,15 @@ pub(crate) struct Scopes(Vec<Scope>);
 impl Scopes {
     pub const fn new() -> Self {
         Self(Vec::new())
+    }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    pub fn split_off(mut self, len: usize) -> (Scopes, Scopes) {
+        let split = self.0.split_off(len);
+        (self, Scopes(split))
     }
 
     pub fn enter_new_scope(&mut self) {
@@ -101,12 +104,8 @@ impl Scopes {
         self.0.pop();
     }
 
-    pub fn merge(&mut self, other: Scope) {
-        if let Some(scope) = self.0.last_mut() {
-            scope.merge(other)
-        } else {
-            self.0.push(other)
-        }
+    pub fn merge(&mut self, mut other: Self) {
+        self.0.append(&mut other.0);
     }
 }
 
