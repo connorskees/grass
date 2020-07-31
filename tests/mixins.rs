@@ -381,20 +381,20 @@ test!(
     "@mixin foo {
         color: foo;
     }
-    
+
     a {
         @include foo();
-    
+
         @mixin foo {
             color: bar;
         }
-    
+
         a {
             @mixin foo {
                 color: baz;
             }
         }
-    
+
         @include foo();
     }",
     "a {\n  color: foo;\n  color: bar;\n}\n"
@@ -448,6 +448,84 @@ test!(
         @include foobar();
     }",
     "a {\n  color: foo;\n  color: foo;\n}\n"
+);
+test!(
+    can_access_variables_declared_before_content,
+    "@mixin foo {
+        $a: red;
+
+        @content;
+
+        color: $a;
+    }
+
+    a {
+      @include foo;
+    }",
+    "a {\n  color: red;\n}\n"
+);
+test!(
+    content_contains_variable_declared_in_outer_scope_not_declared_at_root,
+    "a {
+        $a: red;
+
+        @mixin foo {
+            @content;
+        }
+
+        @include foo {
+            color: $a;
+        }
+    }",
+    "a {\n  color: red;\n}\n"
+);
+test!(
+    content_contains_variable_declared_in_outer_scope_declared_at_root,
+    "@mixin foo {
+        @content;
+    }
+
+    a {
+        $a: red;
+
+        @include foo {
+            color: $a;
+        }
+    }",
+    "a {\n  color: red;\n}\n"
+);
+test!(
+    content_contains_variable_declared_in_outer_scope_not_declared_at_root_and_modified,
+    "a {
+        $a: red;
+
+        @mixin foo {
+            $a: green;
+            @content;
+        }
+
+        @include foo {
+            color: $a;
+        }
+    }",
+    "a {\n  color: green;\n}\n"
+);
+test!(
+    content_contains_variable_declared_in_outer_scope_declared_at_root_and_modified,
+    "@mixin foo {
+        $a: green;
+        @content;
+    }
+
+    a {
+        $a: red;
+
+
+        @include foo {
+            color: $a;
+        }
+    }",
+    "a {\n  color: red;\n}\n"
 );
 error!(
     mixin_in_function,
