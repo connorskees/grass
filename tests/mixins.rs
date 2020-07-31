@@ -449,6 +449,22 @@ test!(
     }",
     "a {\n  color: foo;\n  color: foo;\n}\n"
 );
+test!(
+    can_access_variables_declared_before_content,
+    "@mixin foo {  
+        $a: red;
+
+        @content;
+
+        color: $a;
+    }
+
+
+    a {
+      @include foo;
+    }",
+    "a {\n  color: red;\n}\n"
+);
 error!(
     mixin_in_function,
     "@function foo() {

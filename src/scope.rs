@@ -105,7 +105,7 @@ impl Scopes {
         if let Some(scope) = self.0.last_mut() {
             scope.merge(other)
         } else {
-            panic!()
+            self.0.push(other)
         }
     }
 }

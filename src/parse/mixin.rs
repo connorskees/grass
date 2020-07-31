@@ -190,7 +190,7 @@ impl<'a> Parser<'a> {
             }
         }
 
-        Ok(if let Some(content) = &self.content.pop() {
+        Ok(if let Some(content) = self.content.pop() {
             let stmts = if let Some(body) = content.content.clone() {
                 Parser {
                     toks: &mut body.into_iter().peekmore(),
@@ -212,8 +212,9 @@ impl<'a> Parser<'a> {
             } else {
                 Vec::new()
             };
-            self.content.push(content.clone());
-            self.scopes.exit_scope();
+
+            self.content.push(content);
+
             stmts
         } else {
             Vec::new()
