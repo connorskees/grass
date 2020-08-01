@@ -10,7 +10,7 @@ use crate::{
     error::SassResult,
     parse::Parser,
     selector::Selector,
-    unit::{Unit, UNIT_CONVERSION_TABLE},
+    unit::Unit,
     utils::hex_char_for,
     {Cow, Token},
 };
@@ -58,10 +58,7 @@ impl PartialEq for Value {
                     } else if unit == &Unit::None || unit2 == &Unit::None {
                         false
                     } else {
-                        n == &(n2.clone()
-                            * UNIT_CONVERSION_TABLE[unit.to_string().as_str()]
-                                [unit2.to_string().as_str()]
-                            .clone())
+                        n == &n2.clone().convert(unit2, unit)
                     }
                 }
                 _ => false,
@@ -352,12 +349,7 @@ impl Value {
                     if unit == unit2 || unit == &Unit::None || unit2 == &Unit::None {
                         num.cmp(num2)
                     } else {
-                        num.cmp(
-                            &(num2.clone()
-                                * UNIT_CONVERSION_TABLE[unit.to_string().as_str()]
-                                    [unit2.to_string().as_str()]
-                                .clone()),
-                        )
+                        num.cmp(&num2.clone().convert(unit2, unit))
                     }
                 }
                 v => {
@@ -412,10 +404,7 @@ impl Value {
                     } else if unit == &Unit::None || unit2 == &Unit::None {
                         true
                     } else {
-                        n != &(n2.clone()
-                            * UNIT_CONVERSION_TABLE[unit.to_string().as_str()]
-                                [unit2.to_string().as_str()]
-                            .clone())
+                        n != &n2.clone().convert(unit2, unit)
                     }
                 }
                 _ => true,

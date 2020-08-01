@@ -139,7 +139,7 @@ impl Number {
 
     /// Invariants: `from.comparable(&to)` must be true
     pub fn convert(self, from: &Unit, to: &Unit) -> Self {
-        self * UNIT_CONVERSION_TABLE[to.to_string().as_str()][from.to_string().as_str()].clone()
+        self * UNIT_CONVERSION_TABLE[to][from].clone()
     }
 }
 

@@ -9,7 +9,7 @@ use crate::{
     args::CallArgs,
     common::{Op, QuoteKind},
     error::SassResult,
-    unit::{Unit, UNIT_CONVERSION_TABLE},
+    unit::Unit,
     value::{SassFunction, Value},
 };
 
@@ -228,16 +228,7 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
                     } else if unit2 == Unit::None {
                         Value::Dimension(Some(num + num2), unit, true)
                     } else {
-                        Value::Dimension(
-                            Some(
-                                num + num2
-                                    * UNIT_CONVERSION_TABLE[unit.to_string().as_str()]
-                                        [unit2.to_string().as_str()]
-                                    .clone(),
-                            ),
-                            unit,
-                            true,
-                        )
+                        Value::Dimension(Some(num + num2.convert(&unit2, &unit)), unit, true)
                     }
                 }
                 Value::String(s, q) => Value::String(format!("{}{}{}", num, unit, s), q),
@@ -341,16 +332,7 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
                     } else if unit2 == Unit::None {
                         Value::Dimension(Some(num - num2), unit, true)
                     } else {
-                        Value::Dimension(
-                            Some(
-                                num - num2
-                                    * UNIT_CONVERSION_TABLE[unit.to_string().as_str()]
-                                        [unit2.to_string().as_str()]
-                                    .clone(),
-                            ),
-                            unit,
-                            true,
-                        )
+                        Value::Dimension(Some(num - num2.convert(&unit2, &unit)), unit, true)
                     }
                 }
                 Value::List(..)
@@ -529,12 +511,7 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
                         // `unit(1in / 1px)` => `""`
                         } else if unit.comparable(&unit2) {
                             Value::Dimension(
-                                Some(
-                                    num / (num2
-                                        * UNIT_CONVERSION_TABLE[unit.to_string().as_str()]
-                                            [unit2.to_string().as_str()]
-                                        .clone()),
-                                ),
+                                Some(num / num2.convert(&unit2, &unit)),
                                 Unit::None,
                                 true,
                             )
