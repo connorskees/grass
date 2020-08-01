@@ -379,27 +379,24 @@ impl<'a> Parser<'a> {
         }
 
         // check for named colors
-        if let Some(c) = NAMED_COLORS.get_by_name(lower.as_str()) {
-            return Ok(
-                IntermediateValue::Value(HigherIntermediateValue::Literal(Value::Color(Box::new(
-                    Color::new(c[0], c[1], c[2], c[3], s),
-                ))))
-                .span(span),
-            );
-        }
-
-        // check for keywords
-        Ok(match s.as_str() {
-            "true" => IntermediateValue::Value(HigherIntermediateValue::Literal(Value::True)),
-            "false" => IntermediateValue::Value(HigherIntermediateValue::Literal(Value::False)),
-            "null" => IntermediateValue::Value(HigherIntermediateValue::Literal(Value::Null)),
-            "not" => IntermediateValue::Op(Op::Not),
-            "and" => IntermediateValue::Op(Op::And),
-            "or" => IntermediateValue::Op(Op::Or),
-            _ => IntermediateValue::Value(HigherIntermediateValue::Literal(Value::String(
-                s,
-                QuoteKind::None,
-            ))),
+        Ok(if let Some(c) = NAMED_COLORS.get_by_name(lower.as_str()) {
+            IntermediateValue::Value(HigherIntermediateValue::Literal(Value::Color(Box::new(
+                Color::new(c[0], c[1], c[2], c[3], s),
+            ))))
+        } else {
+            // check for keywords
+            match s.as_str() {
+                "true" => IntermediateValue::Value(HigherIntermediateValue::Literal(Value::True)),
+                "false" => IntermediateValue::Value(HigherIntermediateValue::Literal(Value::False)),
+                "null" => IntermediateValue::Value(HigherIntermediateValue::Literal(Value::Null)),
+                "not" => IntermediateValue::Op(Op::Not),
+                "and" => IntermediateValue::Op(Op::And),
+                "or" => IntermediateValue::Op(Op::Or),
+                _ => IntermediateValue::Value(HigherIntermediateValue::Literal(Value::String(
+                    s,
+                    QuoteKind::None,
+                ))),
+            }
         }
         .span(span))
     }

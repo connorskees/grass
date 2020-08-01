@@ -150,7 +150,7 @@ pub struct Options<'a> {
     quiet: bool,
 }
 
-impl<'a> Default for Options<'a> {
+impl Default for Options<'_> {
     #[inline]
     fn default() -> Self {
         Self {
