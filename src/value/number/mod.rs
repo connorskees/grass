@@ -137,6 +137,16 @@ impl Number {
         )?)))
     }
 
+    pub fn pi() -> Self {
+        Number::from(std::f64::consts::PI)
+    }
+
+    pub fn atan2(self, other: Self) -> Option<Self> {
+        Some(Number::Big(Box::new(BigRational::from_float(
+            self.as_float()?.atan2(other.as_float()?),
+        )?)))
+    }
+
     /// Invariants: `from.comparable(&to)` must be true
     pub fn convert(self, from: &Unit, to: &Unit) -> Self {
         self * UNIT_CONVERSION_TABLE[to][from].clone()

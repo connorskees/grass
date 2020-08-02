@@ -495,3 +495,98 @@ error!(
     "@use 'sass:math';\na {\n  color: math.hypot(1deg, 2deg, (0 / 0));\n}\n",
     "Error: Argument 1 has unit deg but argument 3 is unitless. Arguments must all have units or all be unitless."
 );
+test!(
+    atan2_both_positive,
+    "@use 'sass:math';\na {\n  color: math.atan2(3, 4);\n}\n",
+    "a {\n  color: 36.8698976458deg;\n}\n"
+);
+test!(
+    atan2_first_negative,
+    "@use 'sass:math';\na {\n  color: math.atan2(-3, 4);\n}\n",
+    "a {\n  color: -36.8698976458deg;\n}\n"
+);
+test!(
+    atan2_second_negative,
+    "@use 'sass:math';\na {\n  color: math.atan2(3, -4);\n}\n",
+    "a {\n  color: 143.1301023542deg;\n}\n"
+);
+test!(
+    atan2_both_negative,
+    "@use 'sass:math';\na {\n  color: math.atan2(-3, -4);\n}\n",
+    "a {\n  color: -143.1301023542deg;\n}\n"
+);
+test!(
+    atan2_first_positive_second_zero,
+    "@use 'sass:math';\na {\n  color: math.atan2(3, 0);\n}\n",
+    "a {\n  color: 90deg;\n}\n"
+);
+test!(
+    atan2_first_negative_second_zero,
+    "@use 'sass:math';\na {\n  color: math.atan2(-3, 0);\n}\n",
+    "a {\n  color: -90deg;\n}\n"
+);
+test!(
+    atan2_first_zero_second_positive,
+    "@use 'sass:math';\na {\n  color: math.atan2(0, 4);\n}\n",
+    "a {\n  color: 0deg;\n}\n"
+);
+test!(
+    atan2_first_zero_second_negative,
+    "@use 'sass:math';\na {\n  color: math.atan2(0, -4);\n}\n",
+    "a {\n  color: 180deg;\n}\n"
+);
+test!(
+    atan2_both_zero,
+    "@use 'sass:math';\na {\n  color: math.atan2(0, 0);\n}\n",
+    "a {\n  color: 0deg;\n}\n"
+);
+test!(
+    atan2_both_same_unit,
+    "@use 'sass:math';\na {\n  color: math.atan2(3px, 4px);\n}\n",
+    "a {\n  color: 36.8698976458deg;\n}\n"
+);
+test!(
+    atan2_both_different_but_comparable_unit,
+    "@use 'sass:math';\na {\n  color: math.atan2(3px, 4in);\n}\n",
+    "a {\n  color: 0.4476141709deg;\n}\n"
+);
+error!(
+    atan2_first_unitless_second_unit,
+    "@use 'sass:math';\na {\n  color: math.atan2(3, 4rem);\n}\n",
+    "Error: $y is unitless but $x has unit rem. Arguments must all have units or all be unitless."
+);
+error!(
+    atan2_first_unit_second_unitless,
+    "@use 'sass:math';\na {\n  color: math.atan2(3px, 4);\n}\n",
+    "Error: $y has unit px but $x is unitless. Arguments must all have units or all be unitless."
+);
+error!(
+    atan2_incompatible_units,
+    "@use 'sass:math';\na {\n  color: math.atan2(3px, 4rem);\n}\n",
+    "Error: Incompatible units px and rem."
+);
+error!(
+    atan2_nan_incompatible_units,
+    "@use 'sass:math';\na {\n  color: math.atan2(math.acos(2), 3);\n}\n",
+    "Error: $y has unit deg but $x is unitless. Arguments must all have units or all be unitless."
+);
+test!(
+    atan2_first_nan,
+    "@use 'sass:math';\na {\n  color: math.atan2((0/0), 0);\n}\n",
+    "a {\n  color: NaNdeg;\n}\n"
+);
+test!(
+    atan2_second_nan,
+    "@use 'sass:math';\na {\n  color: math.atan2(0, (0/0));\n}\n",
+    "a {\n  color: NaNdeg;\n}\n"
+);
+test!(
+    atan2_both_nan,
+    "@use 'sass:math';\na {\n  color: math.atan2((0/0), (0/0));\n}\n",
+    "a {\n  color: NaNdeg;\n}\n"
+);
+test!(
+    atan2_nan_with_same_units,
+    "@use 'sass:math';\na {\n  color: math.atan2(math.acos(2), 3deg);\n}\n",
+    "a {\n  color: NaNdeg;\n}\n"
+);

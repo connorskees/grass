@@ -464,7 +464,125 @@ fn atan(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 
 fn atan2(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;
-    todo!()
+    let (y_num, y_unit) = match args.get_err(0, "y")? {
+        Value::Dimension(n, u, ..) => (n, u),
+        v => {
+            return Err((
+                format!("$y: {} is not a number.", v.inspect(args.span())?),
+                args.span(),
+            )
+                .into())
+        }
+    };
+
+    let (x_num, x_unit) = match args.get_err(1, "x")? {
+        Value::Dimension(n, u, ..) => (n, u),
+        v => {
+            return Err((
+                format!("$x: {} is not a number.", v.inspect(args.span())?),
+                args.span(),
+            )
+                .into())
+        }
+    };
+
+    let (x_num, y_num) = if x_unit == Unit::None && y_unit == Unit::None {
+        let x = match x_num {
+            Some(n) => n,
+            None => return Ok(Value::Dimension(None, Unit::Deg, true)),
+        };
+
+        let y = match y_num {
+            Some(n) => n,
+            None => return Ok(Value::Dimension(None, Unit::Deg, true)),
+        };
+
+        (x, y)
+    } else if y_unit == Unit::None {
+        return Err((
+            format!(
+                "$y is unitless but $x has unit {}. \
+            Arguments must all have units or all be unitless.",
+                x_unit
+            ),
+            args.span(),
+        )
+            .into());
+    } else if x_unit == Unit::None {
+        return Err((
+            format!(
+                "$y has unit {} but $x is unitless. \
+                Arguments must all have units or all be unitless.",
+                y_unit
+            ),
+            args.span(),
+        )
+            .into());
+    } else if x_unit.comparable(&y_unit) {
+        let x = match x_num {
+            Some(n) => n,
+            None => return Ok(Value::Dimension(None, Unit::Deg, true)),
+        };
+
+        let y = match y_num {
+            Some(n) => n,
+            None => return Ok(Value::Dimension(None, Unit::Deg, true)),
+        };
+
+        (x, y.convert(&y_unit, &x_unit))
+    } else {
+        return Err((
+            format!("Incompatible units {} and {}.", y_unit, x_unit),
+            args.span(),
+        )
+            .into());
+    };
+
+    Ok(
+        match (
+            NumberState::from_number(&x_num),
+            NumberState::from_number(&y_num),
+        ) {
+            (NumberState::Zero, NumberState::FiniteNegative) => {
+                Value::Dimension(Some(Number::from(-90)), Unit::Deg, true)
+            }
+            (NumberState::Zero, NumberState::Zero) | (NumberState::Finite, NumberState::Zero) => {
+                Value::Dimension(Some(Number::zero()), Unit::Deg, true)
+            }
+            (NumberState::Zero, NumberState::Finite) => {
+                Value::Dimension(Some(Number::from(90)), Unit::Deg, true)
+            }
+            (NumberState::Finite, NumberState::Finite)
+            | (NumberState::FiniteNegative, NumberState::Finite)
+            | (NumberState::Finite, NumberState::FiniteNegative)
+            | (NumberState::FiniteNegative, NumberState::FiniteNegative) => Value::Dimension(
+                y_num
+                    .atan2(x_num)
+                    .map(|n| (n * Number::from(180)) / Number::pi()),
+                Unit::Deg,
+                true,
+            ),
+            (NumberState::FiniteNegative, NumberState::Zero) => {
+                Value::Dimension(Some(Number::from(180)), Unit::Deg, true)
+            }
+        },
+    )
+}
+
+enum NumberState {
+    Zero,
+    Finite,
+    FiniteNegative,
+}
+
+impl NumberState {
+    fn from_number(num: &Number) -> Self {
+        match (num.is_zero(), num.is_positive()) {
+            (true, _) => NumberState::Zero,
+            (false, true) => NumberState::Finite,
+            (false, false) => NumberState::FiniteNegative,
+        }
+    }
 }
 
 pub(crate) fn declare(f: &mut Module) {
@@ -489,6 +607,7 @@ pub(crate) fn declare(f: &mut Module) {
     f.insert_builtin("log", log);
     f.insert_builtin("pow", pow);
     f.insert_builtin("hypot", hypot);
+    f.insert_builtin("atan2", atan2);
     #[cfg(feature = "random")]
     f.insert_builtin("random", random);
 
