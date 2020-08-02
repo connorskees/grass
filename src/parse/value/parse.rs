@@ -271,7 +271,7 @@ impl<'a> Parser<'a> {
                 let function = self
                     .modules
                     .get(module.into(), module_span)?
-                    .get_fn(fn_name.node)
+                    .get_fn(fn_name)?
                     .ok_or(("Undefined function.", fn_name.span))?;
 
                 if !matches!(self.toks.next(), Some(Token { kind: '(', .. })) {

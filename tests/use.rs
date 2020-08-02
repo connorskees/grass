@@ -75,6 +75,68 @@ fn use_user_defined_same_directory() {
 }
 
 #[test]
+fn private_variable_begins_with_underscore() {
+    let input = "@use \"private_variable_begins_with_underscore\" as module;\na {\n color: module.$_foo;\n}";
+    tempfile!(
+        "private_variable_begins_with_underscore.scss",
+        "$_foo: red; a { color: $_foo; }"
+    );
+
+    assert_err!(
+        "Error: Private members can't be accessed from outside their modules.",
+        input
+    );
+}
+
+#[test]
+fn private_variable_begins_with_hyphen() {
+    let input =
+        "@use \"private_variable_begins_with_hyphen\" as module;\na {\n color: module.$-foo;\n}";
+    tempfile!(
+        "private_variable_begins_with_hyphen.scss",
+        "$-foo: red; a { color: $-foo; }"
+    );
+
+    assert_err!(
+        "Error: Private members can't be accessed from outside their modules.",
+        input
+    );
+}
+
+#[test]
+fn private_function() {
+    let input = "@use \"private_function\" as module;\na {\n color: module._foo(green);\n}";
+    tempfile!(
+        "private_function.scss",
+        "@function _foo($a) { @return $a; } a { color: _foo(red); }"
+    );
+
+    assert_err!(
+        "Error: Private members can't be accessed from outside their modules.",
+        input
+    );
+}
+
+#[test]
+fn global_variable_exists_private() {
+    let input = r#"
+        @use "global_variable_exists_private" as module;
+        a {
+            color: global-variable-exists($name: foo, $module: module);
+            color: global-variable-exists($name: _foo, $module: module);
+        }"#;
+    tempfile!(
+        "global_variable_exists_private.scss",
+        "$foo: red;\n$_foo: red;\n"
+    );
+
+    assert_eq!(
+        "a {\n  color: true;\n  color: false;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default()).expect(input)
+    );
+}
+
+#[test]
 fn use_user_defined_as() {
     let input = "@use \"use_user_defined_as\" as module;\na {\n color: module.$a;\n}";
     tempfile!("use_user_defined_as.scss", "$a: red; a { color: $a; }");

@@ -26,17 +26,8 @@ fn import_no_semicolon() {
 fn import_no_quotes() {
     let input = "@import import_no_quotes";
     tempfile!("import_no_quotes", "$a: red;");
-    match grass::from_string(input.to_string(), &grass::Options::default()) {
-        Ok(..) => panic!("did not fail"),
-        Err(e) => assert_eq!(
-            "Error: Expected string.",
-            e.to_string()
-                .chars()
-                .take_while(|c| *c != '\n')
-                .collect::<String>()
-                .as_str()
-        ),
-    }
+
+    assert_err!("Error: Expected string.", input);
 }
 
 #[test]

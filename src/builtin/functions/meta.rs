@@ -1,5 +1,7 @@
 use super::{Builtin, GlobalFunctionMap, GLOBAL_FUNCTIONS};
 
+use codemap::Spanned;
+
 use crate::{
     args::CallArgs,
     common::{Identifier, QuoteKind},
@@ -220,7 +222,10 @@ pub(crate) fn get_function(mut args: CallArgs, parser: &mut Parser<'_>) -> SassR
         parser
             .modules
             .get(module_name.into(), args.span())?
-            .get_fn(name)
+            .get_fn(Spanned {
+                node: name,
+                span: args.span(),
+            })?
     } else {
         parser.scopes.get_fn(name, parser.global_scope)
     } {

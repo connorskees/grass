@@ -85,3 +85,20 @@ macro_rules! tempfile {
         write!(f, "{}", $content).unwrap();
     };
 }
+
+#[macro_export]
+macro_rules! assert_err {
+    ($err:literal, $input:expr) => {
+        match grass::from_string($input.to_string(), &grass::Options::default()) {
+            Ok(..) => panic!("did not fail"),
+            Err(e) => assert_eq!(
+                $err,
+                e.to_string()
+                    .chars()
+                    .take_while(|c| *c != '\n')
+                    .collect::<String>()
+                    .as_str()
+            ),
+        }
+    };
+}

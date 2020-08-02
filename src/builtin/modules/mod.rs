@@ -51,6 +51,14 @@ impl Modules {
 
 impl Module {
     pub fn get_var(&self, name: Spanned<Identifier>) -> SassResult<&Value> {
+        if name.node.as_str().starts_with('-') {
+            return Err((
+                "Private members can't be accessed from outside their modules.",
+                name.span,
+            )
+                .into());
+        }
+
         match self.0.vars.get(&name.node) {
             Some(v) => Ok(v),
             None => Err(("Undefined variable.", name.span).into()),
@@ -61,16 +69,24 @@ impl Module {
         self.0.vars.insert(name.into(), value);
     }
 
-    pub fn get_fn(&self, name: Identifier) -> Option<SassFunction> {
-        self.0.functions.get(&name).cloned()
+    pub fn get_fn(&self, name: Spanned<Identifier>) -> SassResult<Option<SassFunction>> {
+        if name.node.as_str().starts_with('-') {
+            return Err((
+                "Private members can't be accessed from outside their modules.",
+                name.span,
+            )
+                .into());
+        }
+
+        Ok(self.0.functions.get(&name.node).cloned())
     }
 
     pub fn var_exists(&self, name: Identifier) -> bool {
-        self.0.var_exists(name)
+        !name.as_str().starts_with('-') && self.0.var_exists(name)
     }
 
     pub fn mixin_exists(&self, name: Identifier) -> bool {
-        self.0.mixin_exists(name)
+        !name.as_str().starts_with('-') && self.0.mixin_exists(name)
     }
 
     pub fn insert_builtin(
@@ -89,6 +105,7 @@ impl Module {
             self.0
                 .functions
                 .iter()
+                .filter(|(key, _)| !key.as_str().starts_with('-'))
                 .map(|(key, value)| {
                     (
                         Value::String(key.to_string(), QuoteKind::Quoted),
@@ -104,6 +121,7 @@ impl Module {
             self.0
                 .vars
                 .iter()
+                .filter(|(key, _)| !key.as_str().starts_with('-'))
                 .map(|(key, value)| {
                     (
                         Value::String(key.to_string(), QuoteKind::Quoted),
