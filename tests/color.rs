@@ -248,6 +248,11 @@ test!(
     "a {\n  color: 300deg;\n}\n"
 );
 test!(
+    hue_of_360_becomes_0,
+    "a {\n  color: hue(hsl(360, 10%, 20%));\n}\n",
+    "a {\n  color: 0deg;\n}\n"
+);
+test!(
     hue_green_equals_blue,
     "a {\n  color: hue(rgb(0, 1, 1));\n}\n",
     "a {\n  color: 180deg;\n}\n"

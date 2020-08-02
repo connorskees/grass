@@ -370,7 +370,7 @@ impl Color {
 
     /// Create RGBA representation from HSLA values
     pub fn from_hsla(hue: Number, saturation: Number, luminance: Number, alpha: Number) -> Self {
-        let mut hue = if hue > Number::from(360) {
+        let mut hue = if hue >= Number::from(360) {
             hue % Number::from(360)
         } else if hue < Number::from(-360) {
             Number::from(360) + hue % Number::from(360)
