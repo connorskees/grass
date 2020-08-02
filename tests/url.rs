@@ -134,6 +134,11 @@ test!(
     "a {\n  color: UrL(http://foo);\n}\n",
     "a {\n  color: url(http://foo);\n}\n"
 );
+test!(
+    url_browser_prefixed,
+    "a {\n  color: -webkit-url(https://google.com);\n}\n",
+    "a {\n  color: url(https://google.com);\n}\n"
+);
 error!(
     url_nothing_after_forward_slash_in_interpolation,
     "a { color: url(#{/", "Error: Expected expression."

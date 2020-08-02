@@ -47,6 +47,11 @@ test!(
     "a {\n  color: calc(1 + 1);\n}\n"
 );
 test!(
+    calc_browser_prefixed,
+    "a {\n  color: -webkit-calc(1 + 2);\n}\n",
+    "a {\n  color: -webkit-calc(1 + 2);\n}\n"
+);
+test!(
     element_whitespace,
     "a {\n  color: element(       1      );\n}\n",
     "a {\n  color: element( 1 );\n}\n"
@@ -82,6 +87,11 @@ test!(
     "a {\n  color: element((((()))));\n}\n"
 );
 test!(
+    element_browser_prefixed,
+    "a {\n  color: -webkit-element(1 + 2);\n}\n",
+    "a {\n  color: -webkit-element(1 + 2);\n}\n"
+);
+test!(
     expression_whitespace,
     "a {\n  color: expression(       1      );\n}\n",
     "a {\n  color: expression( 1 );\n}\n"
@@ -115,6 +125,11 @@ test!(
 test!(
     expression_nested_parens,
     "a {\n  color: expression((((()))));\n}\n"
+);
+test!(
+    expression_browser_prefixed,
+    "a {\n  color: -webkit-expression(1 + 2);\n}\n",
+    "a {\n  color: -webkit-expression(1 + 2);\n}\n"
 );
 test!(
     progid_whitespace,

@@ -11,7 +11,7 @@ use peekmore::{PeekMore, PeekMoreIterator};
 use crate::{
     builtin::GLOBAL_FUNCTIONS,
     color::{Color, NAMED_COLORS},
-    common::{Brackets, Identifier, ListSeparator, Op, QuoteKind},
+    common::{unvendor, Brackets, Identifier, ListSeparator, Op, QuoteKind},
     error::SassResult,
     unit::Unit,
     utils::{
@@ -301,7 +301,7 @@ impl<'a> Parser<'a> {
                         .span(span));
                     } else {
                         // check for special cased CSS functions
-                        match lower.as_str() {
+                        match unvendor(&lower) {
                             "calc" | "element" | "expression" => {
                                 s = lower;
                                 self.parse_calc_args(&mut s)?;
