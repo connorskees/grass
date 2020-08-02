@@ -50,7 +50,7 @@ pub(crate) fn peek_whitespace_or_comment(s: &mut PeekMoreIterator<IntoIter<Token
                 found_whitespace = true;
                 s.advance_cursor();
             }
-            '/' => match s.peek_forward(1) {
+            '/' => match s.peek_next() {
                 Some(Token { kind: '/', .. }) => {
                     peek_until_newline(s);
                     found_whitespace = true;
@@ -60,7 +60,8 @@ pub(crate) fn peek_whitespace_or_comment(s: &mut PeekMoreIterator<IntoIter<Token
                     while let Some(tok) = s.peek_next() {
                         match tok.kind {
                             '*' => {
-                                if matches!(s.peek_forward(1), Some(Token { kind: '/', .. })) {
+                                if matches!(s.peek_next(), Some(Token { kind: '/', .. })) {
+                                    s.advance_cursor();
                                     break;
                                 }
                             }

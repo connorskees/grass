@@ -168,3 +168,14 @@ error!(
     filter_value_after_equal_is_last_char,
     "a {\n  color: foo(a=a", "Error: expected \")\"."
 );
+test!(
+    space_after_loud_comment,
+    "@mixin foo($x) {
+        color: $x;
+    }
+
+    a {
+      @include foo($x /* blah */ : kwd-y);
+    }",
+    "a {\n  color: kwd-y;\n}\n"
+);
