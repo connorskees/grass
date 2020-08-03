@@ -31,6 +31,10 @@ impl<'a> Parser<'a> {
             return Err(("Functions may not be declared in control directives.", span).into());
         }
 
+        if self.flags.in_function() {
+            return Err(("This at-rule is not allowed here.", self.span_before).into());
+        }
+
         if RESERVED_IDENTIFIERS.contains(&unvendor(&name)) {
             return Err(("Invalid function name.", span).into());
         }

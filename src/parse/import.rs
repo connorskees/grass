@@ -111,6 +111,10 @@ impl<'a> Parser<'a> {
     }
 
     pub(super) fn import(&mut self) -> SassResult<Vec<Stmt>> {
+        if self.flags.in_function() {
+            return Err(("This at-rule is not allowed here.", self.span_before).into());
+        }
+
         self.whitespace();
 
         match self.toks.peek() {

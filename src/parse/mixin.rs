@@ -66,6 +66,10 @@ impl<'a> Parser<'a> {
     }
 
     pub(super) fn parse_include(&mut self) -> SassResult<Vec<Stmt>> {
+        if self.flags.in_function() {
+            return Err(("This at-rule is not allowed here.", self.span_before).into());
+        }
+
         self.whitespace_or_comment();
         let name = self.parse_identifier()?.map_node(Into::into);
 
