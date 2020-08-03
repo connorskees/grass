@@ -245,6 +245,13 @@ impl<'a> Parser<'a> {
                 // dart-sass seems to special-case the error message here?
                 '!' | '{' => return Err(("expected \"}\".", *pos).into()),
                 _ => {
+                    if self.flags.in_function() {
+                        return Err((
+                        "Functions can only contain variable declarations and control directives.",
+                        self.span_before
+                    )
+                        .into());
+                    }
                     if self.flags.in_keyframes() {
                         match self.is_selector_or_style()? {
                             SelectorOrStyle::Style(property, value) => {

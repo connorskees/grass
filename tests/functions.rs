@@ -305,3 +305,16 @@ error!(
     }",
     "Error: This at-rule is not allowed here."
 );
+error!(
+    disallows_selectors,
+    "@function foo($a) {
+        functiona {
+            @return $a;
+        }
+    }
+
+    a {
+        color: foo(nul);
+    }",
+    "Error: Functions can only contain variable declarations and control directives."
+);
