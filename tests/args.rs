@@ -168,6 +168,10 @@ error!(
     filter_value_after_equal_is_last_char,
     "a {\n  color: foo(a=a", "Error: expected \")\"."
 );
+error!(
+    unclosed_paren_in_nested_args,
+    "a { color: a(b(red); }", "Error: expected \")\"."
+);
 test!(
     space_after_loud_comment,
     "@mixin foo($x) {
