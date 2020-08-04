@@ -364,6 +364,12 @@ impl<'a> Parser<'a> {
                     found_curly = true;
                     break;
                 }
+                '\\' => {
+                    string.push('\\');
+                    if let Some(Token { kind, .. }) = self.toks.next() {
+                        string.push(kind);
+                    }
+                }
                 '!' => {
                     if peek_ident_no_interpolation(self.toks, false, self.span_before)?.node
                         == "optional"
