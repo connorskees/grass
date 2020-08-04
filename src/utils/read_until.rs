@@ -259,7 +259,7 @@ pub(crate) fn read_until_closing_square_brace(
                 continue;
             }
             '\\' => {
-                t.push(toks.next().unwrap());
+                t.push(tok);
                 t.push(match toks.next() {
                     Some(tok) => tok,
                     None => continue,
