@@ -232,7 +232,11 @@ impl<'a> Parser<'a> {
                     self.whitespace();
                     match comment.node {
                         Comment::Silent => continue,
-                        Comment::Loud(s) => stmts.push(Stmt::Comment(s)),
+                        Comment::Loud(s) => {
+                            if !self.flags.in_function() {
+                                stmts.push(Stmt::Comment(s));
+                            }
+                        }
                     }
                 }
                 '\u{0}'..='\u{8}' | '\u{b}'..='\u{1f}' => {

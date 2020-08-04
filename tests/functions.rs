@@ -318,3 +318,15 @@ error!(
     }",
     "Error: Functions can only contain variable declarations and control directives."
 );
+test!(
+    allows_multiline_comment,
+    "@function foo($a) {
+        /* foo */
+        @return $a;
+    }
+
+    a {
+        color: foo(nul);
+    }",
+    "a {\n  color: nul;\n}\n"
+);
