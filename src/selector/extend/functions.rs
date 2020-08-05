@@ -186,7 +186,13 @@ fn weave_parents(
     for group in lcs {
         choices.push(
             chunks(&mut groups_one, &mut groups_two, |sequence| {
-                complex_is_parent_superselector(sequence.get(0).unwrap().clone(), group.clone())
+                complex_is_parent_superselector(
+                    match sequence.get(0) {
+                        Some(v) => v.clone(),
+                        None => return true,
+                    },
+                    group.clone(),
+                )
             })
             .into_iter()
             .map(|chunk| chunk.into_iter().flatten().collect())

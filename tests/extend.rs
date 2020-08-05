@@ -1874,6 +1874,14 @@ test!(
     }",
     "foo, a:current(foo),\n:current(foo) {\n  color: black;\n}\n"
 );
+test!(
+    extend_pseudo_selector_class_containing_combinator_without_rhs_selector,
+    ":has(a >) b {
+        @extend b;
+        color: red;
+    }",
+    ":has(a >) b, :has(a >) :has(a >) :has(a >) b, :has(a >) :has(a >) :has(a >) b {\n  color: red;\n}\n"
+);
 
 // todo: extend_loop (massive test)
 // todo: extend tests in folders
