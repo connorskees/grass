@@ -594,7 +594,7 @@ impl<'a> Parser<'a> {
                 self.toks.next();
                 self.whitespace_or_comment();
 
-                if let Some(Token { kind: ']', pos }) = self.toks.peek()  {
+                if let Some(Token { kind: ']', pos }) = self.toks.peek() {
                     span = span.merge(*pos);
                     self.toks.next();
                     IntermediateValue::Value(HigherIntermediateValue::Literal(Value::List(

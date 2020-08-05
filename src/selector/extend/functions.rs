@@ -346,16 +346,8 @@ fn merge_final_combinators(
 ) -> Option<Vec<Vec<Vec<ComplexSelectorComponent>>>> {
     let mut result = result.unwrap_or_default();
 
-    if (components_one.is_empty()
-        || !components_one
-            .get(components_one.len() - 1)
-            .unwrap()
-            .is_combinator())
-        && (components_two.is_empty()
-            || !components_two
-                .get(components_two.len() - 1)
-                .unwrap()
-                .is_combinator())
+    if (components_one.is_empty() || !components_one.back().unwrap().is_combinator())
+        && (components_two.is_empty() || !components_two.back().unwrap().is_combinator())
     {
         return Some(Vec::from(result));
     }
@@ -539,12 +531,8 @@ fn merge_final_combinators(
         }
         (Some(combinator_one), None) => {
             if *combinator_one == Combinator::Child && !components_two.is_empty() {
-                if let Some(ComplexSelectorComponent::Compound(c1)) =
-                    components_one.get(components_one.len() - 1)
-                {
-                    if let Some(ComplexSelectorComponent::Compound(c2)) =
-                        components_two.get(components_two.len() - 1)
-                    {
+                if let Some(ComplexSelectorComponent::Compound(c1)) = components_one.back() {
+                    if let Some(ComplexSelectorComponent::Compound(c2)) = components_two.back() {
                         if c2.is_super_selector(c1, &None) {
                             components_two.pop_back();
                         }
@@ -561,12 +549,8 @@ fn merge_final_combinators(
         }
         (None, Some(combinator_two)) => {
             if *combinator_two == Combinator::Child && !components_one.is_empty() {
-                if let Some(ComplexSelectorComponent::Compound(c1)) =
-                    components_one.get(components_one.len() - 1)
-                {
-                    if let Some(ComplexSelectorComponent::Compound(c2)) =
-                        components_two.get(components_two.len() - 1)
-                    {
+                if let Some(ComplexSelectorComponent::Compound(c1)) = components_one.back() {
+                    if let Some(ComplexSelectorComponent::Compound(c2)) = components_two.back() {
                         if c1.is_super_selector(c2, &None) {
                             components_one.pop_back();
                         }
