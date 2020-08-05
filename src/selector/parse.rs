@@ -561,7 +561,7 @@ fn is_simple_selector_start(c: char) -> bool {
 /// with pseudo-class syntax (`:before`, `:after`, `:first-line`, or
 /// `:first-letter`)
 fn is_fake_pseudo_element(name: &str) -> bool {
-    match name.as_bytes().get(0) {
+    match name.as_bytes().first() {
         Some(b'a') | Some(b'A') => name.to_ascii_lowercase() == "after",
         Some(b'b') | Some(b'B') => name.to_ascii_lowercase() == "before",
         Some(b'f') | Some(b'F') => match name.to_ascii_lowercase().as_str() {

@@ -105,7 +105,7 @@ impl<'a> Parser<'a> {
                         comma_separated.push(space_separated.pop().unwrap());
                     } else {
                         let mut span = space_separated
-                            .get(0)
+                            .first()
                             .ok_or(("Expected expression.", val.span))?
                             .span;
                         comma_separated.push(
