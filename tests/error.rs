@@ -251,5 +251,5 @@ error!(
 );
 error!(
     nothing_after_escape_inside_brackets,
-    "a { color: [\\", "Error: expected \"]\"."
+    "a { color: [\\", "Error: Expected expression."
 );

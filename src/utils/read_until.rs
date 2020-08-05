@@ -235,39 +235,3 @@ pub(crate) fn read_until_closing_paren(
     }
     Ok(t)
 }
-
-pub(crate) fn read_until_closing_square_brace(
-    toks: &mut PeekMoreIterator<IntoIter<Token>>,
-) -> SassResult<Vec<Token>> {
-    let mut t = Vec::new();
-    let mut scope = 0;
-    while let Some(tok) = toks.next() {
-        // TODO: comments
-        match tok.kind {
-            ']' => {
-                if scope < 1 {
-                    t.push(tok);
-                    return Ok(t);
-                } else {
-                    scope -= 1;
-                }
-            }
-            '[' => scope += 1,
-            '"' | '\'' => {
-                t.push(tok);
-                t.extend(read_until_closing_quote(toks, tok.kind)?);
-                continue;
-            }
-            '\\' => {
-                t.push(tok);
-                t.push(match toks.next() {
-                    Some(tok) => tok,
-                    None => continue,
-                });
-            }
-            _ => {}
-        }
-        t.push(tok)
-    }
-    Ok(t)
-}

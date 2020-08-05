@@ -15,8 +15,7 @@ use crate::{
     error::SassResult,
     unit::Unit,
     utils::{
-        devour_whitespace, eat_whole_number, read_until_closing_paren,
-        read_until_closing_square_brace, IsWhitespace, ParsedNumber,
+        devour_whitespace, eat_whole_number, read_until_closing_paren, IsWhitespace, ParsedNumber,
     },
     value::{Number, SassFunction, SassMap, Value},
     Token,
@@ -30,7 +29,6 @@ use super::super::Parser;
 enum IntermediateValue {
     Value(HigherIntermediateValue),
     Op(Op),
-    Bracketed(Vec<Token>),
     Paren(Vec<Token>),
     Comma,
     Whitespace,
@@ -126,22 +124,6 @@ impl<'a> Parser<'a> {
                             .span(span),
                         );
                     }
-                }
-                IntermediateValue::Bracketed(t) => {
-                    last_was_whitespace = false;
-                    space_separated.push(
-                        HigherIntermediateValue::Literal(
-                            match iter.parser.parse_value_from_vec(t, in_paren)?.node {
-                                Value::List(v, sep, Brackets::None) => {
-                                    Value::List(v, sep, Brackets::Bracketed)
-                                }
-                                v => {
-                                    Value::List(vec![v], ListSeparator::Space, Brackets::Bracketed)
-                                }
-                            },
-                        )
-                        .span(val.span),
-                    )
                 }
                 IntermediateValue::Paren(t) => {
                     last_was_whitespace = false;
@@ -608,28 +590,42 @@ impl<'a> Parser<'a> {
                     .span(span_start.merge(span))
             }
             '[' => {
-                let mut span = self.toks.next().unwrap().pos();
+                let mut span = self.span_before;
+                self.toks.next();
                 self.whitespace_or_comment();
-                let mut inner = match read_until_closing_square_brace(self.toks) {
-                    Ok(v) => v,
-                    Err(e) => return Some(Err(e)),
-                };
-                if let Some(last_tok) = inner.pop() {
-                    if last_tok.kind != ']' {
-                        return Some(Err(("expected \"]\".", span).into()));
-                    }
-                    span = span.merge(last_tok.pos());
-                }
-                if inner.is_empty() {
+
+                if let Some(Token { kind: ']', pos }) = self.toks.peek()  {
+                    span = span.merge(*pos);
+                    self.toks.next();
                     IntermediateValue::Value(HigherIntermediateValue::Literal(Value::List(
                         Vec::new(),
                         ListSeparator::Space,
                         Brackets::Bracketed,
                     )))
+                    .span(span)
                 } else {
-                    IntermediateValue::Bracketed(inner)
+                    // todo: we don't know if we're `in_paren` here
+                    let inner = match self.parse_value(false, &|toks| {
+                        matches!(toks.peek(), Some(Token { kind: ']', .. }))
+                    }) {
+                        Ok(v) => v,
+                        Err(e) => return Some(Err(e)),
+                    };
+
+                    span = span.merge(inner.span);
+
+                    if !matches!(self.toks.next(), Some(Token { kind: ']', .. })) {
+                        return Some(Err(("expected \"]\".", span).into()));
+                    }
+
+                    IntermediateValue::Value(HigherIntermediateValue::Literal(match inner.node {
+                        Value::List(els, sep, Brackets::None) => {
+                            Value::List(els, sep, Brackets::Bracketed)
+                        }
+                        v => Value::List(vec![v], ListSeparator::Space, Brackets::Bracketed),
+                    }))
+                    .span(span)
                 }
-                .span(span)
             }
             '$' => {
                 self.toks.next();
@@ -1130,14 +1126,6 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
             IntermediateValue::Whitespace => unreachable!(),
             IntermediateValue::Comma => {
                 return Err(("Expected expression.", self.parser.span_before).into())
-            }
-            IntermediateValue::Bracketed(t) => {
-                let v = self.parser.parse_value_from_vec(t, in_paren)?;
-                HigherIntermediateValue::Literal(match v.node {
-                    Value::List(v, sep, Brackets::None) => Value::List(v, sep, Brackets::Bracketed),
-                    v => Value::List(vec![v], ListSeparator::Space, Brackets::Bracketed),
-                })
-                .span(v.span)
             }
             IntermediateValue::Paren(t) => {
                 let val = self.parse_paren(Spanned {
