@@ -158,3 +158,36 @@ fn use_user_defined_function() {
         &grass::from_string(input.to_string(), &grass::Options::default()).expect(input)
     );
 }
+
+#[test]
+fn use_idempotent_no_alias() {
+    let input = "@use \"use_idempotent_no_alias\";\n@use \"use_idempotent_no_alias\";\n";
+    tempfile!("use_idempotent_no_alias.scss", "");
+
+    assert_err!(
+        "Error: There's already a module with namespace \"use-idempotent-no-alias\".",
+        input
+    );
+}
+
+#[test]
+fn use_idempotent_with_alias() {
+    let input = "@use \"use_idempotent_with_alias__a\" as foo;\n@use \"use_idempotent_with_alias__b\" as foo;\n";
+    tempfile!("use_idempotent_with_alias__a.scss", "");
+    tempfile!("use_idempotent_with_alias__b.scss", "");
+
+    assert_err!(
+        "Error: There's already a module with namespace \"foo\".",
+        input
+    );
+}
+
+#[test]
+fn use_idempotent_builtin() {
+    let input = "@use \"sass:math\";\n@use \"sass:math\";\n";
+
+    assert_err!(
+        "Error: There's already a module with namespace \"math\".",
+        input
+    );
+}

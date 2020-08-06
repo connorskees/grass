@@ -263,7 +263,7 @@ impl<'a> Parser<'a> {
                         },
                     };
 
-                    self.modules.insert(module_name.into(), module);
+                    self.modules.insert(module_name.into(), module, span)?;
                 }
                 Some(Token { kind: '/', .. }) => {
                     self.toks.next();

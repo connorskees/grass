@@ -28,8 +28,18 @@ pub(crate) struct Module(pub Scope);
 pub(crate) struct Modules(BTreeMap<Identifier, Module>);
 
 impl Modules {
-    pub fn insert(&mut self, name: Identifier, module: Module) {
+    pub fn insert(&mut self, name: Identifier, module: Module, span: Span) -> SassResult<()> {
+        if self.0.contains_key(&name) {
+            return Err((
+                format!("There's already a module with namespace \"{}\".", name),
+                span,
+            )
+                .into());
+        }
+
         self.0.insert(name, module);
+
+        Ok(())
     }
 
     pub fn get(&self, name: Identifier, span: Span) -> SassResult<&Module> {
