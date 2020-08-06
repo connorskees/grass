@@ -245,3 +245,11 @@ error!(
     "a {foo: {bar: red", "Error: Expected identifier."
 );
 error!(toplevel_nullbyte, "\u{0}", "Error: expected selector.");
+error!(
+    double_escaped_bang_at_toplevel,
+    "\\!\\!", "Error: expected \"{\"."
+);
+error!(
+    nothing_after_escape_inside_brackets,
+    "a { color: [\\", "Error: Expected expression."
+);

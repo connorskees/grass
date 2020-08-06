@@ -186,7 +186,13 @@ fn weave_parents(
     for group in lcs {
         choices.push(
             chunks(&mut groups_one, &mut groups_two, |sequence| {
-                complex_is_parent_superselector(sequence.get(0).unwrap().clone(), group.clone())
+                complex_is_parent_superselector(
+                    match sequence.get(0) {
+                        Some(v) => v.clone(),
+                        None => return true,
+                    },
+                    group.clone(),
+                )
             })
             .into_iter()
             .map(|chunk| chunk.into_iter().flatten().collect())
@@ -340,16 +346,8 @@ fn merge_final_combinators(
 ) -> Option<Vec<Vec<Vec<ComplexSelectorComponent>>>> {
     let mut result = result.unwrap_or_default();
 
-    if (components_one.is_empty()
-        || !components_one
-            .get(components_one.len() - 1)
-            .unwrap()
-            .is_combinator())
-        && (components_two.is_empty()
-            || !components_two
-                .get(components_two.len() - 1)
-                .unwrap()
-                .is_combinator())
+    if (components_one.is_empty() || !components_one.back().unwrap().is_combinator())
+        && (components_two.is_empty() || !components_two.back().unwrap().is_combinator())
     {
         return Some(Vec::from(result));
     }
@@ -533,12 +531,8 @@ fn merge_final_combinators(
         }
         (Some(combinator_one), None) => {
             if *combinator_one == Combinator::Child && !components_two.is_empty() {
-                if let Some(ComplexSelectorComponent::Compound(c1)) =
-                    components_one.get(components_one.len() - 1)
-                {
-                    if let Some(ComplexSelectorComponent::Compound(c2)) =
-                        components_two.get(components_two.len() - 1)
-                    {
+                if let Some(ComplexSelectorComponent::Compound(c1)) = components_one.back() {
+                    if let Some(ComplexSelectorComponent::Compound(c2)) = components_two.back() {
                         if c2.is_super_selector(c1, &None) {
                             components_two.pop_back();
                         }
@@ -555,12 +549,8 @@ fn merge_final_combinators(
         }
         (None, Some(combinator_two)) => {
             if *combinator_two == Combinator::Child && !components_one.is_empty() {
-                if let Some(ComplexSelectorComponent::Compound(c1)) =
-                    components_one.get(components_one.len() - 1)
-                {
-                    if let Some(ComplexSelectorComponent::Compound(c2)) =
-                        components_two.get(components_two.len() - 1)
-                    {
+                if let Some(ComplexSelectorComponent::Compound(c1)) = components_one.back() {
+                    if let Some(ComplexSelectorComponent::Compound(c2)) = components_two.back() {
                         if c1.is_super_selector(c2, &None) {
                             components_one.pop_back();
                         }

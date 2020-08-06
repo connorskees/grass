@@ -351,6 +351,11 @@ test!(
 );
 test!(escaped_space, "a\\ b {\n  color: foo;\n}\n");
 test!(
+    escaped_bang,
+    "\\! {\n  color: red;\n}\n",
+    "\\! {\n  color: red;\n}\n"
+);
+test!(
     multiple_consecutive_immediate_child,
     "> > foo {\n  color: foo;\n}\n"
 );

@@ -364,7 +364,7 @@ impl SimpleSelector {
                         };
                         complex
                             .components
-                            .get(0)
+                            .first()
                             .unwrap()
                             .as_compound()
                             .components

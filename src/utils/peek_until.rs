@@ -133,7 +133,8 @@ pub(crate) fn peek_escape(toks: &mut PeekMoreIterator<IntoIter<Token>>) -> SassR
             toks.peek_forward(1);
         }
     } else {
-        value = toks.peek_forward(1).unwrap().kind as u32;
+        value = first.kind as u32;
+        toks.advance_cursor();
     }
 
     let c = std::char::from_u32(value).ok_or(("Invalid escape sequence.", span))?;

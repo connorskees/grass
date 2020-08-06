@@ -341,13 +341,15 @@ impl<'a> Parser<'a> {
                                 return Err(("expected \")\".", pos).into());
                             }
                         }
-                        Some(..) => unreachable!(),
+                        Some(Token { pos, .. }) => {
+                            return Err(("expected \")\".", *pos).into());
+                        }
                         None => return Err(("expected \")\".", span).into()),
                     }
                 }
-                Some(c) => {
+                Some(Token { pos, .. }) => {
                     value?;
-                    unreachable!("{:?}", c)
+                    return Err(("expected \")\".", *pos).into());
                 }
                 None => return Err(("expected \")\".", span).into()),
             }

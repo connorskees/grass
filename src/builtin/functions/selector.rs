@@ -33,7 +33,7 @@ pub(crate) fn simple_selectors(mut args: CallArgs, parser: &mut Parser<'_>) -> S
     }
 
     let compound = if let Some(ComplexSelectorComponent::Compound(compound)) =
-        selector.0.components[0].components.get(0).cloned()
+        selector.0.components[0].components.first().cloned()
     {
         compound
     } else {

@@ -195,3 +195,138 @@ test!(
     }",
     "a {\n  color: foo;\n  color: bar;\n}\n"
 );
+error!(
+    disallows_unknown_at_rule,
+    "@function foo() {
+        @foo;
+    }
+    
+    a {
+        color: foo();
+    }",
+    "Error: This at-rule is not allowed here."
+);
+error!(
+    disallows_media_query,
+    "@function foo() {
+        @media screen {};
+    }
+    
+    a {
+        color: foo();
+    }",
+    "Error: This at-rule is not allowed here."
+);
+error!(
+    disallows_at_root,
+    "@function foo() {
+        @at-root {};
+    }
+    
+    a {
+        color: foo();
+    }",
+    "Error: This at-rule is not allowed here."
+);
+error!(
+    disallows_charset,
+    "@function foo() {
+        @charset 'utf-8';
+    }
+    
+    a {
+        color: foo();
+    }",
+    "Error: This at-rule is not allowed here."
+);
+error!(
+    disallows_extend,
+    "@function foo() {
+        @extend a;
+    }
+    
+    a {
+        color: foo();
+    }",
+    "Error: This at-rule is not allowed here."
+);
+error!(
+    disallows_keyframes,
+    "@function foo() {
+        @keyframes foo {}
+    }
+    
+    a {
+        color: foo();
+    }",
+    "Error: This at-rule is not allowed here."
+);
+error!(
+    disallows_supports,
+    "@function foo() {
+        @supports foo {}
+    }
+    
+    a {
+        color: foo();
+    }",
+    "Error: This at-rule is not allowed here."
+);
+error!(
+    disallows_import,
+    "@function foo() {
+        @import \"foo.css\";
+    }
+    
+    a {
+        color: foo();
+    }",
+    "Error: This at-rule is not allowed here."
+);
+error!(
+    disallows_inner_function_declaration,
+    "@function foo() {
+        @function bar() {}
+    }
+    
+    a {
+        color: foo();
+    }",
+    "Error: This at-rule is not allowed here."
+);
+error!(
+    disallows_include,
+    "@function foo() {
+        @include bar;
+    }
+    
+    a {
+        color: foo();
+    }",
+    "Error: This at-rule is not allowed here."
+);
+error!(
+    disallows_selectors,
+    "@function foo($a) {
+        functiona {
+            @return $a;
+        }
+    }
+
+    a {
+        color: foo(nul);
+    }",
+    "Error: Functions can only contain variable declarations and control directives."
+);
+test!(
+    allows_multiline_comment,
+    "@function foo($a) {
+        /* foo */
+        @return $a;
+    }
+
+    a {
+        color: foo(nul);
+    }",
+    "a {\n  color: nul;\n}\n"
+);

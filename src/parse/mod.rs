@@ -310,6 +310,14 @@ impl<'a> Parser<'a> {
                             }
                         }
                         AtRuleKind::AtRoot => {
+                            if self.flags.in_function() {
+                                return Err((
+                                    "This at-rule is not allowed here.",
+                                    kind_string.span,
+                                )
+                                    .into());
+                            }
+
                             if self.at_root {
                                 stmts.append(&mut self.parse_at_root()?);
                             } else {
@@ -365,6 +373,14 @@ impl<'a> Parser<'a> {
                         AtRuleKind::For => stmts.append(&mut self.parse_for()?),
                         AtRuleKind::While => stmts.append(&mut self.parse_while()?),
                         AtRuleKind::Charset => {
+                            if self.flags.in_function() {
+                                return Err((
+                                    "This at-rule is not allowed here.",
+                                    kind_string.span,
+                                )
+                                    .into());
+                            }
+
                             read_until_semicolon_or_closing_curly_brace(self.toks)?;
                             if let Some(Token { kind: ';', .. }) = self.toks.peek() {
                                 self.toks.next();
@@ -401,7 +417,11 @@ impl<'a> Parser<'a> {
                     self.whitespace();
                     match comment.node {
                         Comment::Silent => continue,
-                        Comment::Loud(s) => stmts.push(Stmt::Comment(s)),
+                        Comment::Loud(s) => {
+                            if !self.flags.in_function() {
+                                stmts.push(Stmt::Comment(s));
+                            }
+                        }
                     }
                 }
                 '\u{0}'..='\u{8}' | '\u{b}'..='\u{1f}' => {
@@ -414,6 +434,13 @@ impl<'a> Parser<'a> {
                 // dart-sass seems to special-case the error message here?
                 '!' | '{' => return Err(("expected \"}\".", *pos).into()),
                 _ => {
+                    if self.flags.in_function() {
+                        return Err((
+                        "Functions can only contain variable declarations and control directives.",
+                        self.span_before
+                    )
+                        .into());
+                    }
                     if self.flags.in_keyframes() {
                         match self.is_selector_or_style()? {
                             SelectorOrStyle::Style(property, value) => {
@@ -525,6 +552,12 @@ impl<'a> Parser<'a> {
                 '{' => {
                     found_curly = true;
                     break;
+                }
+                '\\' => {
+                    string.push('\\');
+                    if let Some(Token { kind, .. }) = self.toks.next() {
+                        string.push(kind);
+                    }
                 }
                 '!' => {
                     if peek_ident_no_interpolation(self.toks, false, self.span_before)?.node
@@ -718,6 +751,10 @@ impl<'a> Parser<'a> {
 
 impl<'a> Parser<'a> {
     fn parse_unknown_at_rule(&mut self, name: String) -> SassResult<Stmt> {
+        if self.flags.in_function() {
+            return Err(("This at-rule is not allowed here.", self.span_before).into());
+        }
+
         let mut params = String::new();
         self.whitespace();
         if let Some(Token { kind: ';', .. }) | None = self.toks.peek() {
@@ -781,6 +818,10 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_media(&mut self) -> SassResult<Stmt> {
+        if self.flags.in_function() {
+            return Err(("This at-rule is not allowed here.", self.span_before).into());
+        }
+
         let query = self.parse_media_query_list()?;
 
         self.whitespace();
@@ -877,6 +918,9 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_extend(&mut self) -> SassResult<()> {
+        if self.flags.in_function() {
+            return Err(("This at-rule is not allowed here.", self.span_before).into());
+        }
         // todo: track when inside ruleset or `@content`
         // if !self.in_style_rule && !self.in_mixin && !self.in_content_block {
         //     return Err(("@extend may only be used within style rules.", self.span_before).into());
@@ -945,6 +989,10 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_supports(&mut self) -> SassResult<Stmt> {
+        if self.flags.in_function() {
+            return Err(("This at-rule is not allowed here.", self.span_before).into());
+        }
+
         let params = self.parse_media_args()?;
 
         if params.is_empty() {

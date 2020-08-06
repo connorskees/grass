@@ -129,8 +129,8 @@ impl Css {
                 for rule in body {
                     match rule {
                         Stmt::RuleSet { .. } => vals.extend(self.parse_stmt(rule)?),
-                        Stmt::Style(s) => vals.get_mut(0).unwrap().push_style(s),
-                        Stmt::Comment(s) => vals.get_mut(0).unwrap().push_comment(s),
+                        Stmt::Style(s) => vals.first_mut().unwrap().push_style(s),
+                        Stmt::Comment(s) => vals.first_mut().unwrap().push_comment(s),
                         Stmt::Media(m) => {
                             let MediaRule { query, body, .. } = *m;
                             vals.push(Toplevel::Media { query, body })
@@ -167,7 +167,7 @@ impl Css {
                         k @ Stmt::KeyframesRuleSet(..) => {
                             unreachable!("@keyframes ruleset {:?}", k)
                         }
-                        Stmt::Import(s) => vals.get_mut(0).unwrap().push_import(s),
+                        Stmt::Import(s) => vals.first_mut().unwrap().push_import(s),
                     };
                 }
                 vals
@@ -204,7 +204,7 @@ impl Css {
                 let mut vals = vec![Toplevel::new_keyframes_rule(selector)];
                 for rule in body {
                     match rule {
-                        Stmt::Style(s) => vals.get_mut(0).unwrap().push_style(s),
+                        Stmt::Style(s) => vals.first_mut().unwrap().push_style(s),
                         Stmt::KeyframesRuleSet(..) => vals.extend(self.parse_stmt(rule)?),
                         _ => todo!(),
                     }
@@ -221,7 +221,7 @@ impl Css {
             // this is how we print newlines between unrelated styles
             // it could probably be refactored
             if !v.is_empty() {
-                if let Some(Toplevel::MultilineComment(..)) = v.get(0) {
+                if let Some(Toplevel::MultilineComment(..)) = v.first() {
                 } else if is_first {
                     is_first = false;
                 } else {

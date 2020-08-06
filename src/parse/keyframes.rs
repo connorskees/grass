@@ -186,6 +186,10 @@ impl<'a> Parser<'a> {
     }
 
     pub(super) fn parse_keyframes(&mut self, rule: String) -> SassResult<Stmt> {
+        if self.flags.in_function() {
+            return Err(("This at-rule is not allowed here.", self.span_before).into());
+        }
+
         let name = self.parse_keyframes_name()?;
 
         self.whitespace();
