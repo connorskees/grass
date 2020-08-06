@@ -39,7 +39,7 @@ fn load_css(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Vec<Stmt>
         }
     };
 
-    if let Some(with) = with {
+    if let Some(..) = with {
         todo!("`$with` to `load-css` not yet implemented")
     } else {
         parser.parse_single_import(&url, args.span())

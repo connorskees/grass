@@ -1,15 +1,8 @@
-use crate::{
-    args::CallArgs,
-    builtin::{
-        modules::Module,
-        string::{
-            quote, str_index, str_insert, str_length, str_slice, to_lower_case, to_upper_case,
-            unquote,
-        },
+use crate::builtin::{
+    modules::Module,
+    string::{
+        quote, str_index, str_insert, str_length, str_slice, to_lower_case, to_upper_case, unquote,
     },
-    error::SassResult,
-    parse::Parser,
-    value::Value,
 };
 
 #[cfg(feature = "random")]
@@ -25,4 +18,5 @@ pub(crate) fn declare(f: &mut Module) {
     f.insert_builtin("to-upper-case", to_upper_case);
     #[cfg(feature = "random")]
     f.insert_builtin("unique-id", unique_id);
+    f.insert_builtin("unquote", unquote);
 }

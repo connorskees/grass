@@ -1,12 +1,6 @@
-use crate::{
-    args::CallArgs,
-    builtin::{
-        list::{append, index, is_bracketed, join, length, list_separator, nth, set_nth, zip},
-        modules::Module,
-    },
-    error::SassResult,
-    parse::Parser,
-    value::Value,
+use crate::builtin::{
+    list::{append, index, is_bracketed, join, length, list_separator, nth, set_nth, zip},
+    modules::Module,
 };
 
 pub(crate) fn declare(f: &mut Module) {

@@ -1,13 +1,9 @@
 use crate::{
-    args::CallArgs,
     builtin::modules::Module,
     builtin::selector::{
         is_superselector, selector_append, selector_extend, selector_nest, selector_parse,
         selector_replace, selector_unify, simple_selectors,
     },
-    error::SassResult,
-    parse::Parser,
-    value::Value,
 };
 
 pub(crate) fn declare(f: &mut Module) {

@@ -1,12 +1,6 @@
-use crate::{
-    args::CallArgs,
-    builtin::{
-        map::{map_get, map_has_key, map_keys, map_merge, map_remove, map_values},
-        modules::Module,
-    },
-    error::SassResult,
-    parse::Parser,
-    value::Value,
+use crate::builtin::{
+    map::{map_get, map_has_key, map_keys, map_merge, map_remove, map_values},
+    modules::Module,
 };
 
 pub(crate) fn declare(f: &mut Module) {

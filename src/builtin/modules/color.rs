@@ -1,17 +1,11 @@
-use crate::{
-    args::CallArgs,
-    builtin::{
-        color::{
-            hsl::{complement, grayscale, hue, invert, lightness, saturation},
-            opacity::alpha,
-            other::{adjust_color, change_color, ie_hex_str, scale_color},
-            rgb::{blue, green, mix, red},
-        },
-        modules::Module,
+use crate::builtin::{
+    color::{
+        hsl::{complement, grayscale, hue, invert, lightness, saturation},
+        opacity::alpha,
+        other::{adjust_color, change_color, ie_hex_str, scale_color},
+        rgb::{blue, green, mix, red},
     },
-    error::SassResult,
-    parse::Parser,
-    value::Value,
+    modules::Module,
 };
 
 pub(crate) fn declare(f: &mut Module) {

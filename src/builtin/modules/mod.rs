@@ -1,5 +1,3 @@
-#![allow(unused_imports, unused_variables, dead_code, unused_mut)]
-
 use std::collections::BTreeMap;
 
 use codemap::{Span, Spanned};
