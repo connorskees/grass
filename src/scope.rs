@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use codemap::Spanned;
 
 use crate::{
-    atrule::Mixin,
+    atrule::mixin::Mixin,
     builtin::{modules::Module, GLOBAL_FUNCTIONS},
     common::Identifier,
     error::SassResult,

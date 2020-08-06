@@ -6,7 +6,7 @@ use codemap::{Span, Spanned};
 
 use crate::{
     args::CallArgs,
-    atrule::Mixin,
+    atrule::mixin::{BuiltinMixin, Mixin},
     builtin::Builtin,
     common::{Identifier, QuoteKind},
     error::SassResult,
@@ -63,6 +63,25 @@ impl Module {
             Some(v) => Ok(v),
             None => Err(("Undefined variable.", name.span).into()),
         }
+    }
+
+    pub fn get_mixin(&self, name: Spanned<Identifier>) -> SassResult<Mixin> {
+        if name.node.as_str().starts_with('-') {
+            return Err((
+                "Private members can't be accessed from outside their modules.",
+                name.span,
+            )
+                .into());
+        }
+
+        match self.0.mixins.get(&name.node) {
+            Some(v) => Ok(v.clone()),
+            None => Err(("Undefined mixin.", name.span).into()),
+        }
+    }
+
+    pub fn insert_builtin_mixin(&mut self, name: &'static str, mixin: BuiltinMixin) {
+        self.0.mixins.insert(name.into(), Mixin::Builtin(mixin));
     }
 
     pub fn insert_builtin_var(&mut self, name: &'static str, value: Value) {

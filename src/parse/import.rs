@@ -77,7 +77,11 @@ impl<'a> Parser<'a> {
         None
     }
 
-    fn parse_single_import(&mut self, file_name: &str, span: Span) -> SassResult<Vec<Stmt>> {
+    pub(crate) fn parse_single_import(
+        &mut self,
+        file_name: &str,
+        span: Span,
+    ) -> SassResult<Vec<Stmt>> {
         let path: &Path = file_name.as_ref();
 
         if let Some(name) = self.find_import(path) {

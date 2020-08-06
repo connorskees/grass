@@ -7,7 +7,8 @@ use crate::{
     atrule::{
         keyframes::{Keyframes, KeyframesRuleSet},
         media::MediaRule,
-        AtRuleKind, Content, SupportsRule, UnknownAtRule,
+        mixin::Content,
+        AtRuleKind, SupportsRule, UnknownAtRule,
     },
     builtin::modules::{
         declare_module_color, declare_module_list, declare_module_map, declare_module_math,

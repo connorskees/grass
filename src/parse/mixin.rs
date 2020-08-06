@@ -6,7 +6,7 @@ use peekmore::PeekMore;
 
 use crate::{
     args::{CallArgs, FuncArgs},
-    atrule::{Content, Mixin},
+    atrule::mixin::{Content, Mixin, UserDefinedMixin},
     error::SassResult,
     scope::Scopes,
     utils::read_until_closing_curly_brace,
@@ -55,7 +55,7 @@ impl<'a> Parser<'a> {
         // this is blocked on figuring out just how to check for this. presumably we could have a check
         // not when parsing initially, but rather when `@include`ing to see if an `@content` was found.
 
-        let mixin = Mixin::new(args, body, false, self.at_root);
+        let mixin = Mixin::new_user_defined(args, body, false, self.at_root);
 
         if self.at_root {
             self.global_scope.insert_mixin(name, mixin);
@@ -72,6 +72,19 @@ impl<'a> Parser<'a> {
 
         self.whitespace_or_comment();
         let name = self.parse_identifier()?.map_node(Into::into);
+
+        let mixin = if let Some(Token { kind: '.', .. }) = self.toks.peek() {
+            self.toks.next();
+
+            let module = name;
+            let name = self.parse_identifier()?.map_node(Into::into);
+
+            self.modules
+                .get(module.node, module.span)?
+                .get_mixin(name)?
+        } else {
+            self.scopes.get_mixin(name, self.global_scope)?
+        };
 
         self.whitespace_or_comment();
 
@@ -125,12 +138,17 @@ impl<'a> Parser<'a> {
             self.toks.next();
         }
 
-        let Mixin {
+        let UserDefinedMixin {
             body,
             args: fn_args,
             declared_at_root,
             ..
-        } = self.scopes.get_mixin(name, self.global_scope)?;
+        } = match mixin {
+            Mixin::UserDefined(u) => u,
+            Mixin::Builtin(b) => {
+                return b(args, self);
+            }
+        };
 
         let scope = self.eval_args(fn_args, args)?;
 
