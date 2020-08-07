@@ -7,12 +7,17 @@ use crate::{
 use super::Parser;
 
 impl<'a> Parser<'a> {
+    /// Peeks to see if the `ident` is at the current position. If it is,
+    /// consume the identifier
+    ///
+    /// This method is case insensitive
     pub fn scan_identifier(&mut self, ident: &'static str) -> SassResult<bool> {
-        let peeked_identifier =
+        let mut peeked_identifier =
             match peek_ident_no_interpolation(self.toks, false, self.span_before) {
                 Ok(v) => v.node,
                 Err(..) => return Ok(false),
             };
+        peeked_identifier.make_ascii_lowercase();
         if peeked_identifier == ident {
             self.toks.truncate_iterator_to_cursor();
             self.toks.next();

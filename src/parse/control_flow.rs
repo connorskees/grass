@@ -8,8 +8,7 @@ use crate::{
     parse::{ContextFlags, Parser, Stmt},
     unit::Unit,
     utils::{
-        peek_ident_no_interpolation, read_until_closing_curly_brace, read_until_closing_quote,
-        read_until_open_curly_brace,
+        peek_ident_no_interpolation, read_until_closing_curly_brace, read_until_open_curly_brace,
     },
     value::{Number, Value},
     Token,
@@ -171,69 +170,35 @@ impl<'a> Parser<'a> {
             return Err(("Expected \"from\".", var.span).into());
         }
         self.whitespace_or_comment();
-        let mut from_toks = Vec::new();
-        let mut through = 0;
-        while let Some(tok) = self.toks.peek().cloned() {
-            match tok.kind {
-                't' | 'T' | '\\' => {
-                    let ident = peek_ident_no_interpolation(self.toks, false, tok.pos)?;
-                    match ident.node.to_ascii_lowercase().as_str() {
-                        "through" => {
-                            through = 1;
-                            self.toks.truncate_iterator_to_cursor();
-                            break;
-                        }
-                        "to" => {
-                            self.toks.truncate_iterator_to_cursor();
-                            break;
-                        }
-                        _ => {
-                            from_toks.push(tok);
-                            self.toks.next();
-                            self.toks.reset_cursor();
-                        }
-                    }
-                }
-                '$' => {
-                    from_toks.push(tok);
-                    self.toks.next();
-                    while let Some(tok) = self.toks.peek() {
-                        if matches!(tok.kind, '0'..='9' | 'a'..='z' | 'A'..='Z' | '\\' | '-' | '_')
-                        {
-                            from_toks.push(self.toks.next().unwrap());
-                        } else {
-                            break;
-                        }
-                    }
-                }
-                '{' => {
-                    return Err(("Expected \"to\" or \"through\".", tok.pos()).into());
-                }
-                '#' => {
-                    from_toks.push(tok);
-                    self.toks.next();
-                    match self.toks.peek() {
-                        Some(Token { kind: '{', .. }) => {
-                            from_toks.push(self.toks.next().unwrap());
-                            from_toks.append(&mut read_until_closing_curly_brace(self.toks)?);
-                        }
-                        Some(..) => {}
-                        None => return Err(("expected \"{\".", self.span_before).into()),
-                    }
-                }
-                q @ '\'' | q @ '"' => {
-                    from_toks.push(tok);
-                    self.toks.next();
-                    from_toks.append(&mut read_until_closing_quote(self.toks, q)?);
-                }
-                _ => {
-                    from_toks.push(tok);
-                    self.toks.next();
-                }
+
+        let from_val = self.parse_value(false, &|toks| match toks.peek() {
+            Some(Token { kind: 't', pos })
+            | Some(Token { kind: 'T', pos })
+            | Some(Token { kind: '\\', pos }) => {
+                let span = *pos;
+                let mut ident = match peek_ident_no_interpolation(toks, false, span) {
+                    Ok(s) => s,
+                    Err(..) => return false,
+                };
+                ident.node.make_ascii_lowercase();
+                let v = match ident.node.to_ascii_lowercase().as_str() {
+                    "to" | "through" => true,
+                    _ => false,
+                };
+                toks.reset_cursor();
+                v
             }
-        }
-        self.whitespace_or_comment();
-        let from_val = self.parse_value_from_vec(from_toks, true)?;
+            Some(..) | None => false,
+        })?;
+
+        let through = if self.scan_identifier("through")? {
+            1
+        } else if self.scan_identifier("to")? {
+            0
+        } else {
+            return Err(("Expected \"to\" or \"through\".", self.span_before).into());
+        };
+
         let from = match from_val.node {
             Value::Dimension(Some(n), ..) => match n.to_i32() {
                 Some(std::i32::MAX) | Some(std::i32::MIN) | None => {
