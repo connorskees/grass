@@ -118,3 +118,51 @@ test!(
     "  /**/  @for  /**/  $i  /**/  from  /**/  0  /**/  to  /**/  2  /**/  {}  /**/  ",
     "/**/\n/**/\n"
 );
+test!(
+    uppercase_keywords,
+    "@for $i FROM 0 TO 2 {
+        @foo;
+    }",
+    "@foo;\n@foo;\n"
+);
+error!(
+    missing_keyword_from,
+    "@for $i fro", "Error: Expected \"from\"."
+);
+error!(missing_dollar_sign, "@for", "Error: expected \"$\".");
+error!(
+    variable_missing_identifier,
+    "@for $", "Error: Expected identifier."
+);
+error!(
+    from_value_is_decimal,
+    "@for $i from 0.5 to 2 {}", "Error: 0.5 is not an int."
+);
+error!(
+    to_value_is_decimal,
+    "@for $i from 0 to 1.5 {}", "Error: 1.5 is not an int."
+);
+error!(
+    from_value_is_non_numeric,
+    "@for $i from red to 2 {}", "Error: red is not a number."
+);
+error!(
+    to_value_is_non_numeric,
+    "@for $i from 0 to red {}", "Error: red is not a number."
+);
+error!(
+    through_i32_max,
+    "@for $i from 0 through 2147483647 {}", "Error: 2147483647 is not an int."
+);
+error!(
+    from_i32_max,
+    "@for $i from 2147483647 through 0 {}", "Error: 2147483647 is not an int."
+);
+error!(
+    from_nan,
+    "@for $i from (0/0) through 0 {}", "Error: NaN is not an int."
+);
+error!(
+    to_nan,
+    "@for $i from 0 through (0/0) {}", "Error: NaN is not an int."
+);

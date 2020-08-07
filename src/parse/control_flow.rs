@@ -156,7 +156,6 @@ impl<'a> Parser<'a> {
 
     pub(super) fn parse_for(&mut self) -> SassResult<Vec<Stmt>> {
         self.whitespace_or_comment();
-        // todo: test for error here
         self.expect_char('$')?;
 
         let var = self
@@ -236,14 +235,16 @@ impl<'a> Parser<'a> {
         self.whitespace_or_comment();
         let from_val = self.parse_value_from_vec(from_toks, true)?;
         let from = match from_val.node {
-            Value::Dimension(Some(n), ..) => match n.to_integer().to_isize() {
+            Value::Dimension(Some(n), ..) => match n.to_i32() {
+                Some(std::i32::MAX) | None => {
+                    return Err((format!("{} is not an int.", n), from_val.span).into())
+                }
                 Some(v) => v,
-                None => return Err((format!("{} is not a int.", n), from_val.span).into()),
             },
-            Value::Dimension(None, ..) => todo!(),
+            Value::Dimension(None, ..) => return Err(("NaN is not an int.", from_val.span).into()),
             v => {
                 return Err((
-                    format!("{} is not an integer.", v.inspect(from_val.span)?),
+                    format!("{} is not a number.", v.inspect(from_val.span)?),
                     from_val.span,
                 )
                     .into())
@@ -252,14 +253,16 @@ impl<'a> Parser<'a> {
 
         let to_val = self.parse_value(true, &|_| false)?;
         let to = match to_val.node {
-            Value::Dimension(Some(n), ..) => match n.to_integer().to_isize() {
+            Value::Dimension(Some(n), ..) => match n.to_i32() {
+                Some(std::i32::MAX) | None => {
+                    return Err((format!("{} is not an int.", n), to_val.span).into())
+                }
                 Some(v) => v,
-                None => return Err((format!("{} is not a int.", n), to_val.span).into()),
             },
-            Value::Dimension(None, ..) => todo!(),
+            Value::Dimension(None, ..) => return Err(("NaN is not an int.", from_val.span).into()),
             v => {
                 return Err((
-                    format!("{} is not an integer.", v.to_css_string(to_val.span)?),
+                    format!("{} is not a number.", v.to_css_string(to_val.span)?),
                     to_val.span,
                 )
                     .into())
@@ -269,12 +272,13 @@ impl<'a> Parser<'a> {
         self.expect_char('{')?;
 
         let body = read_until_closing_curly_brace(self.toks)?;
-        self.toks.next();
+
+        self.expect_char('}')?;
 
         let (mut x, mut y);
         // we can't use an inclusive range here
         #[allow(clippy::range_plus_one)]
-        let iter: &mut dyn Iterator<Item = isize> = if from < to {
+        let iter: &mut dyn Iterator<Item = i32> = if from < to {
             x = from..(to + through);
             &mut x
         } else {

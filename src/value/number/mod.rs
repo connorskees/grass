@@ -318,6 +318,42 @@ impl fmt::Debug for Number {
     }
 }
 
+impl ToPrimitive for Number {
+    fn to_u64(&self) -> Option<u64> {
+        match self {
+            Self::Small(n) => {
+                if !n.denom().is_one() {
+                    return None;
+                }
+                n.to_u64()
+            }
+            Self::Big(n) => {
+                if !n.denom().is_one() {
+                    return None;
+                }
+                n.to_u64()
+            }
+        }
+    }
+
+    fn to_i64(&self) -> Option<i64> {
+        match self {
+            Self::Small(n) => {
+                if !n.denom().is_one() {
+                    return None;
+                }
+                n.to_i64()
+            }
+            Self::Big(n) => {
+                if !n.denom().is_one() {
+                    return None;
+                }
+                n.to_i64()
+            }
+        }
+    }
+}
+
 impl Display for Number {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut whole = self.to_integer().abs();
