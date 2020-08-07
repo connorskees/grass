@@ -191,3 +191,65 @@ fn use_idempotent_builtin() {
         input
     );
 }
+
+#[test]
+fn use_with_simple() {
+    let input = "@use \"use_with_simple\" with ($a: red);\na {\n color: use_with_simple.$a;\n}";
+    tempfile!("use_with_simple.scss", "$a: green !default;");
+    assert_eq!(
+        "a {\n  color: red;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default()).expect(input)
+    );
+}
+
+#[test]
+fn use_as_with() {
+    let input = "@use \"use_as_with\" as module with ($a: red);\na {\n color: module.$a;\n}";
+    tempfile!("use_as_with.scss", "$a: green !default;");
+    assert_eq!(
+        "a {\n  color: red;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default()).expect(input)
+    );
+}
+
+#[test]
+fn use_whitespace_and_comments() {
+    let input = "@use  /**/  \"use_whitespace_and_comments\"  /**/  as  /**/  foo  /**/  with  /**/  (  /**/  $a  /**/  :  /**/  red  /**/  )  /**/  ;";
+    tempfile!(
+        "use_whitespace_and_comments.scss",
+        "$a: green !default; a { color: $a }"
+    );
+    assert_eq!(
+        "a {\n  color: red;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default()).expect(input)
+    );
+}
+
+#[test]
+fn use_with_builtin_module() {
+    let input = "@use \"sass:math\" with ($e: 2.7);";
+
+    assert_err!("Error: Built-in modules can't be configured.", input);
+}
+
+#[test]
+fn use_with_variable_never_used() {
+    let input = "@use \"use_with_variable_never_used\" with ($a: red);";
+    tempfile!("use_with_variable_never_used.scss", "");
+
+    assert_err!(
+        "Error: This variable was not declared with !default in the @used module.",
+        input
+    );
+}
+
+#[test]
+fn use_with_same_variable_multiple_times() {
+    let input = "@use \"use_with_same_variable_multiple_times\" as foo with ($a: b, $a: c);";
+    tempfile!("use_with_same_variable_multiple_times.scss", "");
+
+    assert_err!(
+        "Error: The same variable may only be configured once.",
+        input
+    );
+}

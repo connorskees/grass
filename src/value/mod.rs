@@ -543,6 +543,7 @@ impl Value {
             content_scopes: parser.content_scopes,
             options: parser.options,
             modules: parser.modules,
+            module_config: parser.module_config,
         }
         .parse_selector(allows_parent, true, String::new())?
         .0)

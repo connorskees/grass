@@ -199,6 +199,7 @@ impl<'a> Parser<'a> {
             content_scopes: self.content_scopes,
             options: self.options,
             modules: self.modules,
+            module_config: self.module_config,
         }
         .parse_value(in_paren, predicate)
     }
@@ -224,6 +225,7 @@ impl<'a> Parser<'a> {
             content_scopes: self.content_scopes,
             options: self.options,
             modules: self.modules,
+            module_config: self.module_config,
         }
         .parse_value(in_paren, &|_| false)
     }

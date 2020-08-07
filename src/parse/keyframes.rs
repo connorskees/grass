@@ -174,6 +174,7 @@ impl<'a> Parser<'a> {
                         content_scopes: self.content_scopes,
                         options: self.options,
                         modules: self.modules,
+                        module_config: self.module_config,
                     })
                     .parse_keyframes_selector()?;
 
@@ -210,6 +211,7 @@ impl<'a> Parser<'a> {
             content_scopes: self.content_scopes,
             options: self.options,
             modules: self.modules,
+            module_config: self.module_config,
         }
         .parse_stmt()?;
 

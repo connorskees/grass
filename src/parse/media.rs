@@ -25,16 +25,6 @@ impl<'a> Parser<'a> {
         Ok(false)
     }
 
-    pub fn expect_char(&mut self, c: char) -> SassResult<()> {
-        if let Some(Token { kind, .. }) = self.toks.peek() {
-            if *kind == c {
-                self.toks.next();
-                return Ok(());
-            }
-        }
-        Err((format!("expected \"{}\".", c), self.span_before).into())
-    }
-
     pub fn scan_char(&mut self, c: char) -> bool {
         if let Some(Token { kind, .. }) = self.toks.peek() {
             if *kind == c {

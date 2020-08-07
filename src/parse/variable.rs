@@ -39,13 +39,24 @@ impl<'a> Parser<'a> {
         } = self.parse_variable_value()?;
 
         if default {
+            let config_val = self.module_config.get(ident);
             if self.at_root && !self.flags.in_control_flow() {
                 if !self.global_scope.var_exists(ident) {
-                    let value = self.parse_value_from_vec(val_toks, true)?.node;
+                    let value = if let Some(config_val) = config_val {
+                        config_val
+                    } else {
+                        self.parse_value_from_vec(val_toks, true)?.node
+                    };
+
                     self.global_scope.insert_var(ident, value);
                 }
             } else {
-                let value = self.parse_value_from_vec(val_toks, true)?.node;
+                let value = if let Some(config_val) = config_val {
+                    config_val
+                } else {
+                    self.parse_value_from_vec(val_toks, true)?.node
+                };
+
                 if global && !self.global_scope.var_exists(ident) {
                     self.global_scope.insert_var(ident, value.clone());
                 }

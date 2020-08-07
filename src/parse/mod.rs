@@ -12,7 +12,8 @@ use crate::{
     },
     builtin::modules::{
         declare_module_color, declare_module_list, declare_module_map, declare_module_math,
-        declare_module_meta, declare_module_selector, declare_module_string, Module, Modules,
+        declare_module_meta, declare_module_selector, declare_module_string, Module, ModuleConfig,
+        Modules,
     },
     error::SassResult,
     lexer::Lexer,
@@ -94,6 +95,7 @@ pub(crate) struct Parser<'a> {
     pub options: &'a Options<'a>,
 
     pub modules: &'a mut Modules,
+    pub module_config: &'a mut ModuleConfig,
 }
 
 impl<'a> Parser<'a> {
@@ -111,6 +113,99 @@ impl<'a> Parser<'a> {
             self.at_root = true;
         }
         Ok(stmts)
+    }
+
+    pub fn expect_char(&mut self, c: char) -> SassResult<()> {
+        match self.toks.peek() {
+            Some(Token { kind, pos }) if *kind == c => {
+                self.span_before = *pos;
+                self.toks.next();
+                Ok(())
+            }
+            Some(Token { pos, .. }) => Err((format!("expected \"{}\".", c), *pos).into()),
+            None => Err((format!("expected \"{}\".", c), self.span_before).into()),
+        }
+    }
+
+    pub fn consume_char_if_exists(&mut self, c: char) {
+        if let Some(Token { kind, .. }) = self.toks.peek() {
+            if *kind == c {
+                self.toks.next();
+            }
+        }
+    }
+
+    fn parse_module_alias(&mut self) -> SassResult<Option<String>> {
+        if let Some(Token { kind: 'a', .. }) | Some(Token { kind: 'A', .. }) = self.toks.peek() {
+            let mut ident = peek_ident_no_interpolation(self.toks, false, self.span_before)?;
+            ident.node.make_ascii_lowercase();
+            if ident.node != "as" {
+                return Err(("expected \";\".", ident.span).into());
+            }
+
+            self.whitespace_or_comment();
+
+            if let Some(Token { kind: '*', .. }) = self.toks.peek() {
+                self.toks.next();
+                return Ok(Some('*'.to_string()));
+            } else {
+                let name = self.parse_identifier_no_interpolation(false)?;
+
+                return Ok(Some(name.node));
+            }
+        }
+
+        Ok(None)
+    }
+
+    fn parse_module_config(&mut self) -> SassResult<ModuleConfig> {
+        let mut config = ModuleConfig::default();
+
+        if let Some(Token { kind: 'w', .. }) | Some(Token { kind: 'W', .. }) = self.toks.peek() {
+            let mut ident = peek_ident_no_interpolation(self.toks, false, self.span_before)?;
+            ident.node.make_ascii_lowercase();
+            if ident.node != "with" {
+                return Err(("expected \";\".", ident.span).into());
+            }
+
+            self.whitespace_or_comment();
+
+            self.span_before = ident.span;
+
+            self.expect_char('(')?;
+
+            loop {
+                self.whitespace_or_comment();
+                self.expect_char('$')?;
+
+                let name = self.parse_identifier_no_interpolation(false)?;
+
+                self.whitespace_or_comment();
+                self.expect_char(':')?;
+                self.whitespace_or_comment();
+
+                let value = self.parse_value(false, &|toks| match toks.peek() {
+                    Some(Token { kind: ',', .. }) | Some(Token { kind: ')', .. }) => true,
+                    _ => false,
+                })?;
+
+                config.insert(name.map_node(|n| n.into()), value)?;
+
+                match self.toks.next() {
+                    Some(Token { kind: ',', .. }) => {
+                        continue;
+                    }
+                    Some(Token { kind: ')', .. }) => {
+                        break;
+                    }
+                    Some(..) | None => {
+                        return Err(("expected \")\".", self.span_before).into());
+                    }
+                }
+            }
+        }
+
+        Ok(config)
     }
 
     /// Returns any multiline comments that may have been found
@@ -156,44 +251,14 @@ impl<'a> Parser<'a> {
 
                     self.whitespace_or_comment();
 
-                    let mut module_alias: Option<String> = None;
+                    let module_alias = self.parse_module_alias()?;
 
-                    match self.toks.peek() {
-                        Some(Token { kind: ';', .. }) => {
-                            self.toks.next();
-                        }
-                        Some(Token { kind: 'a', .. }) | Some(Token { kind: 'A', .. }) => {
-                            let mut ident =
-                                peek_ident_no_interpolation(self.toks, false, self.span_before)?;
-                            ident.node.make_ascii_lowercase();
-                            if ident.node != "as" {
-                                return Err(("expected \";\".", ident.span).into());
-                            }
+                    self.whitespace_or_comment();
 
-                            self.whitespace_or_comment();
+                    let mut config = self.parse_module_config()?;
 
-                            let name_span;
-
-                            if let Some(Token { kind: '*', pos }) = self.toks.peek() {
-                                name_span = *pos;
-                                self.toks.next();
-                                module_alias = Some('*'.to_string());
-                            } else {
-                                let name = self.parse_identifier_no_interpolation(false)?;
-
-                                module_alias = Some(name.node);
-                                name_span = name.span;
-                            }
-
-                            if !matches!(self.toks.next(), Some(Token { kind: ';', .. })) {
-                                return Err(("expected \";\".", name_span).into());
-                            }
-                        }
-                        Some(Token { kind: 'w', .. }) | Some(Token { kind: 'W', .. }) => {
-                            todo!("with")
-                        }
-                        Some(..) | None => return Err(("expected \";\".", span).into()),
-                    }
+                    self.whitespace_or_comment();
+                    self.expect_char(';')?;
 
                     let module = match module_name.as_ref() {
                         "sass:color" => declare_module_color(),
@@ -232,18 +297,27 @@ impl<'a> Parser<'a> {
                                         content_scopes: self.content_scopes,
                                         options: self.options,
                                         modules: self.modules,
+                                        module_config: &mut config,
                                     }
                                     .parse()?,
                                 );
 
+                                if !config.is_empty() {
+                                    return Err(("This variable was not declared with !default in the @used module.", span).into());
+                                }
+
                                 Module::new_from_scope(global_scope)
                             } else {
-                                return Err(
-                                    ("Error: Can't find stylesheet to import.", span).into()
-                                );
+                                return Err(("Can't find stylesheet to import.", span).into());
                             }
                         }
                     };
+
+                    // if the config isn't empty here, that means
+                    // variables were passed to a builtin module
+                    if !config.is_empty() {
+                        return Err(("Built-in modules can't be configured.", span).into());
+                    }
 
                     let module_name = match module_alias.as_deref() {
                         Some("*") => {
@@ -599,6 +673,7 @@ impl<'a> Parser<'a> {
                 content_scopes: self.content_scopes,
                 options: self.options,
                 modules: self.modules,
+                module_config: self.module_config,
             },
             allows_parent,
             true,
@@ -657,10 +732,11 @@ impl<'a> Parser<'a> {
 
     pub fn parse_interpolation(&mut self) -> SassResult<Spanned<Value>> {
         let val = self.parse_value(true, &|_| false)?;
-        match self.toks.next() {
-            Some(Token { kind: '}', .. }) => {}
-            Some(..) | None => return Err(("expected \"}\".", val.span).into()),
-        }
+
+        self.span_before = val.span;
+
+        self.expect_char('}')?;
+
         Ok(val.map_node(Value::unquote))
     }
 
@@ -899,6 +975,7 @@ impl<'a> Parser<'a> {
             content_scopes: self.content_scopes,
             options: self.options,
             modules: self.modules,
+            module_config: self.module_config,
         }
         .parse_stmt()?
         .into_iter()
@@ -944,14 +1021,14 @@ impl<'a> Parser<'a> {
             content_scopes: self.content_scopes,
             options: self.options,
             modules: self.modules,
+            module_config: self.module_config,
         }
         .parse_selector(false, true, String::new())?;
 
+        // todo: this might be superfluous
         self.whitespace();
 
-        if let Some(Token { kind: ';', .. }) = self.toks.peek() {
-            self.toks.next();
-        }
+        self.consume_char_if_exists(';');
 
         let extend_rule = ExtendRule::new(value.clone(), is_optional, self.span_before);
 

@@ -95,7 +95,7 @@ use peekmore::PeekMore;
 pub use crate::error::{SassError as Error, SassResult as Result};
 pub(crate) use crate::token::Token;
 use crate::{
-    builtin::modules::Modules,
+    builtin::modules::{ModuleConfig, Modules},
     lexer::Lexer,
     output::Css,
     parse::{
@@ -295,6 +295,7 @@ pub fn from_path(p: &str, options: &Options) -> Result<String> {
         content_scopes: &mut Scopes::new(),
         options,
         modules: &mut Modules::default(),
+        module_config: &mut ModuleConfig::default(),
     }
     .parse()
     .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages))?;
@@ -340,6 +341,7 @@ pub fn from_string(p: String, options: &Options) -> Result<String> {
         content_scopes: &mut Scopes::new(),
         options,
         modules: &mut Modules::default(),
+        module_config: &mut ModuleConfig::default(),
     }
     .parse()
     .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages))?;
@@ -376,6 +378,7 @@ pub fn from_string(p: String) -> std::result::Result<String, JsValue> {
         content_scopes: &mut Scopes::new(),
         options: &Options::default(),
         modules: &mut Modules::default(),
+        module_config: &mut ModuleConfig::default(),
     }
     .parse()
     .map_err(|e| raw_to_parse_error(&map, *e, true).to_string())?;

@@ -54,6 +54,7 @@ impl<'a> Parser<'a> {
                 content_scopes: self.content_scopes,
                 options: self.options,
                 modules: self.modules,
+                module_config: self.module_config,
             }
             .parse_stmt()?;
         } else {
@@ -114,6 +115,7 @@ impl<'a> Parser<'a> {
                                 content_scopes: self.content_scopes,
                                 options: self.options,
                                 modules: self.modules,
+                                module_config: self.module_config,
                             }
                             .parse_stmt()?;
                         } else {
@@ -143,6 +145,7 @@ impl<'a> Parser<'a> {
                                 content_scopes: self.content_scopes,
                                 options: self.options,
                                 modules: self.modules,
+                                module_config: self.module_config,
                             }
                             .parse_stmt();
                         }
@@ -323,6 +326,7 @@ impl<'a> Parser<'a> {
                     content_scopes: self.content_scopes,
                     options: self.options,
                     modules: self.modules,
+                    module_config: self.module_config,
                 }
                 .parse_stmt()?;
                 if !these_stmts.is_empty() {
@@ -346,6 +350,7 @@ impl<'a> Parser<'a> {
                         content_scopes: self.content_scopes,
                         options: self.options,
                         modules: self.modules,
+                        module_config: self.module_config,
                     }
                     .parse_stmt()?,
                 );
@@ -397,6 +402,7 @@ impl<'a> Parser<'a> {
                     content_scopes: self.content_scopes,
                     options: self.options,
                     modules: self.modules,
+                    module_config: self.module_config,
                 }
                 .parse_stmt()?;
                 if !these_stmts.is_empty() {
@@ -420,6 +426,7 @@ impl<'a> Parser<'a> {
                         content_scopes: self.content_scopes,
                         options: self.options,
                         modules: self.modules,
+                        module_config: self.module_config,
                     }
                     .parse_stmt()?,
                 );
@@ -512,6 +519,7 @@ impl<'a> Parser<'a> {
                     content_scopes: self.content_scopes,
                     options: self.options,
                     modules: self.modules,
+                    module_config: self.module_config,
                 }
                 .parse_stmt()?;
                 if !these_stmts.is_empty() {
@@ -535,6 +543,7 @@ impl<'a> Parser<'a> {
                         content_scopes: self.content_scopes,
                         options: self.options,
                         modules: self.modules,
+                        module_config: self.module_config,
                     }
                     .parse_stmt()?,
                 );
