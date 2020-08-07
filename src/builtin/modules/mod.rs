@@ -107,7 +107,10 @@ impl Modules {
 
 impl Module {
     pub fn new_builtin() -> Self {
-        Module { scope: Scope::default(), is_builtin: true }
+        Module {
+            scope: Scope::default(),
+            is_builtin: true,
+        }
     }
 
     pub fn get_var(&self, name: Spanned<Identifier>) -> SassResult<&Value> {
@@ -127,11 +130,7 @@ impl Module {
 
     pub fn update_var(&mut self, name: Spanned<Identifier>, value: Value) -> SassResult<()> {
         if self.is_builtin {
-            return Err((
-                "Cannot modify built-in variable.",
-                name.span,
-            )
-                .into());
+            return Err(("Cannot modify built-in variable.", name.span).into());
         }
 
         if name.node.as_str().starts_with('-') {
