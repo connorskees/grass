@@ -22,7 +22,6 @@ pub(crate) enum HigherIntermediateValue {
     Function(SassFunction, CallArgs),
     BinaryOp(Box<Self>, Op, Box<Self>),
     UnaryOp(Op, Box<Self>),
-    Paren(Box<Self>),
 }
 
 impl HigherIntermediateValue {
@@ -55,7 +54,6 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
             HigherIntermediateValue::Literal(v) => Ok(v),
             HigherIntermediateValue::BinaryOp(v1, op, v2) => self.bin_op(*v1, op, *v2, in_parens),
             HigherIntermediateValue::UnaryOp(op, val) => self.unary_op(op, *val, in_parens),
-            HigherIntermediateValue::Paren(val) => self.eval(*val, true),
             HigherIntermediateValue::Function(function, args) => {
                 self.parser.call_function(function, args)
             }
@@ -69,8 +67,8 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
         val2: HigherIntermediateValue,
         in_parens: bool,
     ) -> SassResult<Value> {
-        let mut val1 = self.paren_or_unary(val1, in_parens)?;
-        let val2 = self.paren_or_unary(val2, in_parens)?;
+        let mut val1 = self.unary(val1, in_parens)?;
+        let val2 = self.unary(val2, in_parens)?;
 
         if let HigherIntermediateValue::BinaryOp(val1_1, op2, val1_2) = val1 {
             let in_parens = op != Op::Div || op2 != Op::Div;
@@ -140,20 +138,11 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
         Ok(Value::bool(!val.is_true()))
     }
 
-    fn paren(&mut self, val: HigherIntermediateValue) -> SassResult<HigherIntermediateValue> {
-        Ok(if let HigherIntermediateValue::Paren(v) = val {
-            HigherIntermediateValue::Literal(self.eval(*v, true)?)
-        } else {
-            val
-        })
-    }
-
-    fn paren_or_unary(
+    fn unary(
         &mut self,
         val: HigherIntermediateValue,
         in_parens: bool,
     ) -> SassResult<HigherIntermediateValue> {
-        let val = self.paren(val)?;
         Ok(match val {
             HigherIntermediateValue::UnaryOp(op, val) => {
                 HigherIntermediateValue::Literal(self.unary_op(op, *val, in_parens)?)

@@ -205,3 +205,15 @@ test!(
     }",
     "a {\n  color: ();\n}\n"
 );
+error!(
+    second_map_value_missing_colon,
+    "a {\n  color: (a: b, c", "Error: expected \":\"."
+);
+error!(
+    second_map_value_missing_closing_paren,
+    "$a: (a: b, c: d", "Error: expected \")\"."
+);
+error!(
+    first_map_value_missing_closing_paren,
+    "$a: (a: b", "Error: expected \")\"."
+);

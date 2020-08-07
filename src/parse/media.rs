@@ -22,16 +22,6 @@ impl<'a> Parser<'a> {
         Ok(false)
     }
 
-    pub fn scan_char(&mut self, c: char) -> bool {
-        if let Some(Token { kind, .. }) = self.toks.peek() {
-            if *kind == c {
-                self.toks.next();
-                return true;
-            }
-        }
-        false
-    }
-
     pub fn expression_until_comparison(&mut self) -> SassResult<Cow<'static, str>> {
         let value = self.parse_value(false, &|toks| match toks.peek() {
             Some(Token { kind: '>', .. })
@@ -58,7 +48,7 @@ impl<'a> Parser<'a> {
         loop {
             self.whitespace_or_comment();
             buf.push_str(&self.parse_single_media_query()?);
-            if !self.scan_char(',') {
+            if !self.consume_char_if_exists(',') {
                 break;
             }
             buf.push(',');
@@ -105,7 +95,7 @@ impl<'a> Parser<'a> {
                 buf.push(' ');
                 // todo: remove this unwrap
                 buf.push(self.toks.next().unwrap().kind);
-                if is_angle && self.scan_char('=') {
+                if is_angle && self.consume_char_if_exists('=') {
                     buf.push('=');
                 }
                 buf.push(' ');

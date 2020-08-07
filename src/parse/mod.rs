@@ -124,12 +124,14 @@ impl<'a> Parser<'a> {
         }
     }
 
-    pub fn consume_char_if_exists(&mut self, c: char) {
+    pub fn consume_char_if_exists(&mut self, c: char) -> bool {
         if let Some(Token { kind, .. }) = self.toks.peek() {
             if *kind == c {
                 self.toks.next();
+                return true;
             }
         }
+        false
     }
 
     fn parse_stmt(&mut self) -> SassResult<Vec<Stmt>> {

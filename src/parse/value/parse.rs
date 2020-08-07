@@ -14,9 +14,7 @@ use crate::{
     common::{unvendor, Brackets, Identifier, ListSeparator, Op, QuoteKind},
     error::SassResult,
     unit::Unit,
-    utils::{
-        devour_whitespace, eat_whole_number, read_until_closing_paren, IsWhitespace, ParsedNumber,
-    },
+    utils::{eat_whole_number, IsWhitespace, ParsedNumber},
     value::{Number, SassFunction, SassMap, Value},
     Token,
 };
@@ -29,7 +27,6 @@ use super::super::Parser;
 enum IntermediateValue {
     Value(HigherIntermediateValue),
     Op(Op),
-    Paren(Vec<Token>),
     Comma,
     Whitespace,
 }
@@ -125,13 +122,6 @@ impl<'a> Parser<'a> {
                         );
                     }
                 }
-                IntermediateValue::Paren(t) => {
-                    last_was_whitespace = false;
-                    space_separated.push(iter.parse_paren(Spanned {
-                        node: t,
-                        span: val.span,
-                    })?);
-                }
             }
         }
 
@@ -175,33 +165,6 @@ impl<'a> Parser<'a> {
             )
             .span(span)
         })
-    }
-
-    fn parse_value_with_body(
-        &mut self,
-        toks: &mut PeekMoreIterator<IntoIter<Token>>,
-        in_paren: bool,
-        predicate: &dyn Fn(&mut PeekMoreIterator<IntoIter<Token>>) -> bool,
-    ) -> SassResult<Spanned<Value>> {
-        Parser {
-            toks,
-            map: self.map,
-            path: self.path,
-            scopes: self.scopes,
-            global_scope: self.global_scope,
-            super_selectors: self.super_selectors,
-            span_before: self.span_before,
-            content: self.content,
-            flags: self.flags,
-            at_root: self.at_root,
-            at_root_has_selector: self.at_root_has_selector,
-            extender: self.extender,
-            content_scopes: self.content_scopes,
-            options: self.options,
-            modules: self.modules,
-            module_config: self.module_config,
-        }
-        .parse_value(in_paren, predicate)
     }
 
     pub(crate) fn parse_value_from_vec(
@@ -465,6 +428,109 @@ impl<'a> Parser<'a> {
         })
     }
 
+    fn parse_paren(&mut self) -> SassResult<Spanned<IntermediateValue>> {
+        if self.consume_char_if_exists(')') {
+            return Ok(
+                IntermediateValue::Value(HigherIntermediateValue::Literal(Value::List(
+                    Vec::new(),
+                    ListSeparator::Space,
+                    Brackets::None,
+                )))
+                .span(self.span_before),
+            );
+        }
+
+        let mut map = SassMap::new();
+        let key = self.parse_value(
+            true,
+            &|c| matches!(c.peek(), Some(Token { kind: ':', .. }) | Some(Token { kind: ')', .. })),
+        )?;
+
+        match self.toks.peek() {
+            Some(Token { kind: ':', .. }) => {
+                self.toks.next();
+            }
+            Some(Token { kind: ')', .. }) => {
+                self.toks.next();
+                return Ok(Spanned {
+                    node: IntermediateValue::Value(HigherIntermediateValue::Literal(key.node)),
+                    span: key.span,
+                });
+            }
+            Some(..) | None => return Err(("expected \")\".", key.span).into()),
+        }
+
+        let val = self.parse_value(
+            true,
+            &|c| matches!(c.peek(), Some(Token { kind: ',', .. }) | Some(Token { kind: ')', .. })),
+        )?;
+
+        map.insert(key.node, val.node);
+
+        let mut span = key.span.merge(val.span);
+
+        match self.toks.next() {
+            Some(Token { kind: ',', .. }) => {}
+            Some(Token { kind: ')', .. }) => {
+                return Ok(Spanned {
+                    node: IntermediateValue::Value(HigherIntermediateValue::Literal(Value::Map(
+                        map,
+                    ))),
+                    span,
+                });
+            }
+            Some(..) | None => return Err(("expected \")\".", key.span).into()),
+        }
+
+        self.whitespace_or_comment();
+
+        while self.consume_char_if_exists(',') {
+            self.whitespace_or_comment();
+        }
+
+        if self.consume_char_if_exists(')') {
+            return Ok(Spanned {
+                node: IntermediateValue::Value(HigherIntermediateValue::Literal(Value::Map(map))),
+                span,
+            });
+        }
+
+        loop {
+            let key =
+                self.parse_value(true, &|c| matches!(c.peek(), Some(Token { kind: ':', .. })))?;
+
+            self.expect_char(':')?;
+
+            self.whitespace_or_comment();
+            let val =
+                self.parse_value(true, &|c| matches!(c.peek(), Some(Token { kind: ',', .. }) | Some(Token { kind: ')', .. })))?;
+
+            span = span.merge(val.span);
+
+            if map.insert(key.node.clone(), val.node) {
+                return Err(("Duplicate key.", key.span).into());
+            }
+
+            match self.toks.next() {
+                Some(Token { kind: ',', .. }) => {}
+                Some(Token { kind: ')', .. }) => {
+                    break;
+                }
+                Some(..) | None => return Err(("expected \")\".", val.span).into()),
+            }
+
+            self.whitespace_or_comment();
+
+            while self.consume_char_if_exists(',') {
+                self.whitespace_or_comment();
+            }
+        }
+        Ok(Spanned {
+            node: IntermediateValue::Value(HigherIntermediateValue::Literal(Value::Map(map))),
+            span,
+        })
+    }
+
     fn parse_intermediate_value(
         &mut self,
         predicate: &dyn Fn(&mut PeekMoreIterator<IntoIter<Token>>) -> bool,
@@ -591,20 +657,8 @@ impl<'a> Parser<'a> {
                 .span(span)
             }
             '(' => {
-                let mut span = self.toks.next().unwrap().pos();
-                let mut inner = match read_until_closing_paren(self.toks) {
-                    Ok(v) => v,
-                    Err(e) => return Some(Err(e)),
-                };
-                // todo: the above shouldn't eat the closing paren
-                if let Some(last_tok) = inner.pop() {
-                    // todo: we should remove this like we did for square braces
-                    if last_tok.kind != ')' {
-                        return Some(Err(("expected \")\".", span).into()));
-                    }
-                    span = span.merge(last_tok.pos());
-                }
-                IntermediateValue::Paren(inner).span(span)
+                self.toks.next();
+                return Some(self.parse_paren());
             }
             '&' => {
                 let span = self.toks.next().unwrap().pos();
@@ -1179,102 +1233,6 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
             IntermediateValue::Comma => {
                 return Err(("Expected expression.", self.parser.span_before).into())
             }
-            IntermediateValue::Paren(t) => {
-                let val = self.parse_paren(Spanned {
-                    node: t,
-                    span: next.span,
-                })?;
-                Spanned {
-                    node: HigherIntermediateValue::Paren(Box::new(val.node)),
-                    span: val.span,
-                }
-            }
-        })
-    }
-
-    fn parse_paren(
-        &mut self,
-        t: Spanned<Vec<Token>>,
-    ) -> SassResult<Spanned<HigherIntermediateValue>> {
-        if t.is_empty() {
-            return Ok(HigherIntermediateValue::Literal(Value::List(
-                Vec::new(),
-                ListSeparator::Space,
-                Brackets::None,
-            ))
-            .span(t.span));
-        }
-
-        let paren_toks = &mut t.node.into_iter().peekmore();
-
-        let mut map = SassMap::new();
-        let key = self.parser.parse_value_with_body(paren_toks, true, &|c| {
-            matches!(c.peek(), Some(Token { kind: ':', .. }))
-        })?;
-
-        if let Some(Token { kind: ':', .. }) = paren_toks.peek() {
-            paren_toks.next();
-        }
-
-        if paren_toks.peek().is_none() {
-            return Ok(Spanned {
-                node: HigherIntermediateValue::Paren(Box::new(HigherIntermediateValue::Literal(
-                    key.node,
-                ))),
-                span: key.span,
-            });
-        }
-
-        let val = self.parser.parse_value_with_body(paren_toks, true, &|c| {
-            matches!(c.peek(), Some(Token { kind: ',', .. }))
-        })?;
-
-        if let Some(Token { kind: ',', .. }) = paren_toks.peek() {
-            paren_toks.next();
-        }
-
-        map.insert(key.node, val.node);
-
-        devour_whitespace(paren_toks);
-
-        if paren_toks.peek().is_none() {
-            return Ok(Spanned {
-                node: HigherIntermediateValue::Literal(Value::Map(map)),
-                span: key.span.merge(val.span),
-            });
-        }
-
-        let mut span = key.span;
-
-        loop {
-            let key = self.parser.parse_value_with_body(paren_toks, true, &|c| {
-                matches!(c.peek(), Some(Token { kind: ':', .. }))
-            })?;
-
-            if let Some(Token { kind: ':', .. }) = paren_toks.peek() {
-                paren_toks.next();
-            }
-
-            devour_whitespace(paren_toks);
-            let val = self.parser.parse_value_with_body(paren_toks, true, &|c| {
-                matches!(c.peek(), Some(Token { kind: ',', .. }))
-            })?;
-
-            if let Some(Token { kind: ',', .. }) = paren_toks.peek() {
-                paren_toks.next();
-            }
-            span = span.merge(val.span);
-            devour_whitespace(paren_toks);
-            if map.insert(key.node.clone(), val.node) {
-                return Err(("Duplicate key.", key.span).into());
-            }
-            if paren_toks.peek().is_none() {
-                break;
-            }
-        }
-        Ok(Spanned {
-            node: HigherIntermediateValue::Literal(Value::Map(map)),
-            span,
         })
     }
 }
