@@ -8,10 +8,10 @@ use crate::{
 use super::Parser;
 
 #[derive(Debug)]
-struct VariableValue {
-    val_toks: Vec<Token>,
-    global: bool,
-    default: bool,
+pub(crate) struct VariableValue {
+    pub val_toks: Vec<Token>,
+    pub global: bool,
+    pub default: bool,
 }
 
 impl VariableValue {
@@ -88,7 +88,7 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    fn parse_variable_value(&mut self) -> SassResult<VariableValue> {
+    pub(super) fn parse_variable_value(&mut self) -> SassResult<VariableValue> {
         let mut default = false;
         let mut global = false;
 

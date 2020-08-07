@@ -111,43 +111,62 @@ impl<'a> Parser<'a> {
         let mut property = self.parse_identifier()?.node;
         let whitespace_after_property = self.whitespace();
 
-        if let Some(Token { kind: ':', .. }) = self.toks.peek() {
-            self.toks.next();
-            if let Some(Token { kind, .. }) = self.toks.peek() {
-                return Ok(match kind {
-                    ':' => {
-                        if whitespace_after_property {
-                            property.push(' ');
-                        }
-                        property.push(':');
-                        SelectorOrStyle::Selector(property)
-                    }
-                    c if is_name(*c) => {
-                        if let Some(toks) = self.parse_style_value_when_no_space_after_semicolon() {
-                            let len = toks.len();
-                            if let Ok(val) = self.parse_value_from_vec(toks, false) {
-                                self.toks.take(len).for_each(drop);
-                                return Ok(SelectorOrStyle::Style(
-                                    InternedString::get_or_intern(property),
-                                    Some(Box::new(val)),
-                                ));
+        match self.toks.peek() {
+            Some(Token { kind: ':', .. }) => {
+                self.toks.next();
+                if let Some(Token { kind, .. }) = self.toks.peek() {
+                    return Ok(match kind {
+                        ':' => {
+                            if whitespace_after_property {
+                                property.push(' ');
                             }
+                            property.push(':');
+                            SelectorOrStyle::Selector(property)
                         }
+                        c if is_name(*c) => {
+                            if let Some(toks) =
+                                self.parse_style_value_when_no_space_after_semicolon()
+                            {
+                                let len = toks.len();
+                                if let Ok(val) = self.parse_value_from_vec(toks, false) {
+                                    self.toks.take(len).for_each(drop);
+                                    return Ok(SelectorOrStyle::Style(
+                                        InternedString::get_or_intern(property),
+                                        Some(Box::new(val)),
+                                    ));
+                                }
+                            }
 
-                        if whitespace_after_property {
-                            property.push(' ');
+                            if whitespace_after_property {
+                                property.push(' ');
+                            }
+                            property.push(':');
+                            return Ok(SelectorOrStyle::Selector(property));
                         }
-                        property.push(':');
-                        return Ok(SelectorOrStyle::Selector(property));
+                        _ => SelectorOrStyle::Style(InternedString::get_or_intern(property), None),
+                    });
+                }
+            }
+            Some(Token { kind: '.', .. }) => {
+                if matches!(self.toks.peek_next(), Some(Token { kind: '$', .. })) {
+                    self.toks.next();
+                    self.toks.next();
+                    return Ok(SelectorOrStyle::ModuleVariableRedeclaration(
+                        property.into(),
+                    ));
+                } else {
+                    if whitespace_after_property {
+                        property.push(' ');
                     }
-                    _ => SelectorOrStyle::Style(InternedString::get_or_intern(property), None),
-                });
+                    return Ok(SelectorOrStyle::Selector(property));
+                }
             }
-        } else {
-            if whitespace_after_property {
-                property.push(' ');
+            _ => {
+                if whitespace_after_property {
+                    property.push(' ');
+                }
+                return Ok(SelectorOrStyle::Selector(property));
             }
-            return Ok(SelectorOrStyle::Selector(property));
         }
         Err(("expected \"{\".", self.span_before).into())
     }

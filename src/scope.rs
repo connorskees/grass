@@ -81,7 +81,7 @@ impl Scope {
     }
 
     pub fn merge_module(&mut self, other: Module) {
-        self.merge(other.0);
+        self.merge(other.scope);
     }
 }
 

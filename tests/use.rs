@@ -253,3 +253,66 @@ fn use_with_same_variable_multiple_times() {
         input
     );
 }
+
+#[test]
+fn use_variable_redeclaration_var_dne() {
+    let input = "@use \"use_variable_redeclaration_var_dne\" as mod;\nmod.$a: red;";
+    tempfile!("use_variable_redeclaration_var_dne.scss", "");
+
+    assert_err!("Error: Undefined variable.", input);
+}
+
+#[test]
+fn use_variable_redeclaration_global() {
+    let input = "@use \"use_variable_redeclaration_global\" as mod;\nmod.$a: red !global;";
+    tempfile!("use_variable_redeclaration_global.scss", "$a: green;");
+
+    assert_err!(
+        "Error: !global isn't allowed for variables in other modules.",
+        input
+    );
+}
+
+#[test]
+fn use_variable_redeclaration_simple() {
+    let input =
+        "@use \"use_variable_redeclaration_simple\" as mod;\nmod.$a: red; a { color: mod.$a; }";
+    tempfile!("use_variable_redeclaration_simple.scss", "$a: green;");
+
+    assert_eq!(
+        "a {\n  color: red;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default()).expect(input)
+    );
+}
+
+#[test]
+fn use_variable_redeclaration_default() {
+    let input = "@use \"use_variable_redeclaration_default\" as mod;\nmod.$a: 1 % red !default; a { color: mod.$a; }";
+    tempfile!("use_variable_redeclaration_default.scss", "$a: green;");
+
+    assert_eq!(
+        "a {\n  color: green;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default()).expect(input)
+    );
+}
+
+#[test]
+fn use_variable_redeclaration_private() {
+    let input = "@use \"use_variable_redeclaration_private\" as mod;\nmod.$-a: red;";
+    tempfile!("use_variable_redeclaration_private.scss", "$a: green;");
+
+    assert_err!(
+        "Error: Private members can't be accessed from outside their modules.",
+        input
+    );
+}
+
+#[test]
+fn use_variable_redeclaration_builtin() {
+    let input = "@use \"sass:math\";\nmath.$e: red;";
+
+    assert_err!(
+        "Error: Cannot modify built-in variable.",
+        input
+    );
+}

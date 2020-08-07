@@ -22,7 +22,13 @@ mod selector;
 mod string;
 
 #[derive(Debug, Default)]
-pub(crate) struct Module(pub Scope);
+pub(crate) struct Module {
+    pub scope: Scope,
+
+    /// Whether or not this module is builtin
+    /// e.g. `"sass:math"`
+    is_builtin: bool,
+}
 
 #[derive(Debug, Default)]
 pub(crate) struct Modules(BTreeMap<Identifier, Module>);
@@ -83,9 +89,27 @@ impl Modules {
                 .into()),
         }
     }
+
+    pub fn get_mut(&mut self, name: Identifier, span: Span) -> SassResult<&mut Module> {
+        match self.0.get_mut(&name) {
+            Some(v) => Ok(v),
+            None => Err((
+                format!(
+                    "There is no module with the namespace \"{}\".",
+                    name.as_str()
+                ),
+                span,
+            )
+                .into()),
+        }
+    }
 }
 
 impl Module {
+    pub fn new_builtin() -> Self {
+        Module { scope: Scope::default(), is_builtin: true }
+    }
+
     pub fn get_var(&self, name: Spanned<Identifier>) -> SassResult<&Value> {
         if name.node.as_str().starts_with('-') {
             return Err((
@@ -95,9 +119,33 @@ impl Module {
                 .into());
         }
 
-        match self.0.vars.get(&name.node) {
+        match self.scope.vars.get(&name.node) {
             Some(v) => Ok(v),
             None => Err(("Undefined variable.", name.span).into()),
+        }
+    }
+
+    pub fn update_var(&mut self, name: Spanned<Identifier>, value: Value) -> SassResult<()> {
+        if self.is_builtin {
+            return Err((
+                "Cannot modify built-in variable.",
+                name.span,
+            )
+                .into());
+        }
+
+        if name.node.as_str().starts_with('-') {
+            return Err((
+                "Private members can't be accessed from outside their modules.",
+                name.span,
+            )
+                .into());
+        }
+
+        if self.scope.insert_var(name.node, value).is_some() {
+            Ok(())
+        } else {
+            Err(("Undefined variable.", name.span).into())
         }
     }
 
@@ -110,18 +158,18 @@ impl Module {
                 .into());
         }
 
-        match self.0.mixins.get(&name.node) {
+        match self.scope.mixins.get(&name.node) {
             Some(v) => Ok(v.clone()),
             None => Err(("Undefined mixin.", name.span).into()),
         }
     }
 
     pub fn insert_builtin_mixin(&mut self, name: &'static str, mixin: BuiltinMixin) {
-        self.0.mixins.insert(name.into(), Mixin::Builtin(mixin));
+        self.scope.mixins.insert(name.into(), Mixin::Builtin(mixin));
     }
 
     pub fn insert_builtin_var(&mut self, name: &'static str, value: Value) {
-        self.0.vars.insert(name.into(), value);
+        self.scope.vars.insert(name.into(), value);
     }
 
     pub fn get_fn(&self, name: Spanned<Identifier>) -> SassResult<Option<SassFunction>> {
@@ -133,15 +181,15 @@ impl Module {
                 .into());
         }
 
-        Ok(self.0.functions.get(&name.node).cloned())
+        Ok(self.scope.functions.get(&name.node).cloned())
     }
 
     pub fn var_exists(&self, name: Identifier) -> bool {
-        !name.as_str().starts_with('-') && self.0.var_exists(name)
+        !name.as_str().starts_with('-') && self.scope.var_exists(name)
     }
 
     pub fn mixin_exists(&self, name: Identifier) -> bool {
-        !name.as_str().starts_with('-') && self.0.mixin_exists(name)
+        !name.as_str().starts_with('-') && self.scope.mixin_exists(name)
     }
 
     pub fn insert_builtin(
@@ -150,14 +198,14 @@ impl Module {
         function: fn(CallArgs, &mut Parser<'_>) -> SassResult<Value>,
     ) {
         let ident = name.into();
-        self.0
+        self.scope
             .functions
             .insert(ident, SassFunction::Builtin(Builtin::new(function), ident));
     }
 
     pub fn functions(&self) -> SassMap {
         SassMap::new_with(
-            self.0
+            self.scope
                 .functions
                 .iter()
                 .filter(|(key, _)| !key.as_str().starts_with('-'))
@@ -173,7 +221,7 @@ impl Module {
 
     pub fn variables(&self) -> SassMap {
         SassMap::new_with(
-            self.0
+            self.scope
                 .vars
                 .iter()
                 .filter(|(key, _)| !key.as_str().starts_with('-'))
@@ -187,49 +235,49 @@ impl Module {
         )
     }
 
-    pub const fn new_from_scope(scope: Scope) -> Self {
-        Module(scope)
+    pub const fn new_from_scope(scope: Scope, is_builtin: bool) -> Self {
+        Module { scope, is_builtin }
     }
 }
 
 pub(crate) fn declare_module_color() -> Module {
-    let mut module = Module::default();
+    let mut module = Module::new_builtin();
     color::declare(&mut module);
     module
 }
 
 pub(crate) fn declare_module_list() -> Module {
-    let mut module = Module::default();
+    let mut module = Module::new_builtin();
     list::declare(&mut module);
     module
 }
 
 pub(crate) fn declare_module_map() -> Module {
-    let mut module = Module::default();
+    let mut module = Module::new_builtin();
     map::declare(&mut module);
     module
 }
 
 pub(crate) fn declare_module_math() -> Module {
-    let mut module = Module::default();
+    let mut module = Module::new_builtin();
     math::declare(&mut module);
     module
 }
 
 pub(crate) fn declare_module_meta() -> Module {
-    let mut module = Module::default();
+    let mut module = Module::new_builtin();
     meta::declare(&mut module);
     module
 }
 
 pub(crate) fn declare_module_selector() -> Module {
-    let mut module = Module::default();
+    let mut module = Module::new_builtin();
     selector::declare(&mut module);
     module
 }
 
 pub(crate) fn declare_module_string() -> Module {
-    let mut module = Module::default();
+    let mut module = Module::new_builtin();
     string::declare(&mut module);
     module
 }

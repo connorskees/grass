@@ -11,6 +11,7 @@ use crate::{
         AtRuleKind, SupportsRule, UnknownAtRule,
     },
     builtin::modules::{ModuleConfig, Modules},
+    common::Identifier,
     error::SassResult,
     scope::{Scope, Scopes},
     selector::{
@@ -27,6 +28,7 @@ use crate::{
 
 use common::{Comment, ContextFlags, NeverEmptyVec, SelectorOrStyle};
 pub(crate) use value::{HigherIntermediateValue, ValueVisitor};
+use variable::VariableValue;
 
 mod args;
 pub mod common;
@@ -129,6 +131,41 @@ impl<'a> Parser<'a> {
                 self.toks.next();
             }
         }
+    }
+
+    fn parse_module_variable_redeclaration(&mut self, module: Identifier) -> SassResult<()> {
+        let variable = self
+            .parse_identifier_no_interpolation(false)?
+            .map_node(|n| n.into());
+
+        self.whitespace_or_comment();
+        self.expect_char(':')?;
+
+        let VariableValue {
+            val_toks,
+            global,
+            default,
+        } = self.parse_variable_value()?;
+
+        if global {
+            return Err((
+                "!global isn't allowed for variables in other modules.",
+                variable.span,
+            )
+                .into());
+        }
+
+        if default {
+            return Ok(());
+        }
+
+        let value = self.parse_value_from_vec(val_toks, true)?;
+
+        self.modules
+            .get_mut(module, variable.span)?
+            .update_var(variable, value.node)?;
+
+        Ok(())
     }
 
     fn parse_stmt(&mut self) -> SassResult<Vec<Stmt>> {
@@ -294,6 +331,9 @@ impl<'a> Parser<'a> {
                     }
                     if self.flags.in_keyframes() {
                         match self.is_selector_or_style()? {
+                            SelectorOrStyle::ModuleVariableRedeclaration(module) => {
+                                self.parse_module_variable_redeclaration(module)?
+                            }
                             SelectorOrStyle::Style(property, value) => {
                                 if let Some(value) = value {
                                     stmts.push(Stmt::Style(Style { property, value }));
@@ -321,6 +361,9 @@ impl<'a> Parser<'a> {
                     }
 
                     match self.is_selector_or_style()? {
+                        SelectorOrStyle::ModuleVariableRedeclaration(module) => {
+                            self.parse_module_variable_redeclaration(module)?
+                        }
                         SelectorOrStyle::Style(property, value) => {
                             if let Some(value) = value {
                                 stmts.push(Stmt::Style(Style { property, value }));

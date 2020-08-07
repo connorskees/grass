@@ -143,7 +143,7 @@ impl<'a> Parser<'a> {
                             .into());
                     }
 
-                    (Module::new_from_scope(global_scope), stmts)
+                    (Module::new_from_scope(global_scope, false), stmts)
                 } else {
                     return Err(("Can't find stylesheet to import.", self.span_before).into());
                 }
