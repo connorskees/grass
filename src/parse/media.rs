@@ -1,9 +1,6 @@
 use crate::{
     error::SassResult,
-    utils::{
-        is_name_start, peek_ident_no_interpolation, read_until_closing_paren,
-        read_until_closing_quote,
-    },
+    utils::{is_name_start, peek_ident_no_interpolation},
     {Cow, Token},
 };
 
@@ -35,38 +32,25 @@ impl<'a> Parser<'a> {
         false
     }
 
-    // todo: replace with predicate
     pub fn expression_until_comparison(&mut self) -> SassResult<Cow<'static, str>> {
-        let mut toks = Vec::new();
-        while let Some(tok) = self.toks.peek().cloned() {
-            match tok.kind {
-                '=' => {
-                    self.toks.advance_cursor();
-                    if matches!(self.toks.peek(), Some(Token { kind: '=', .. })) {
-                        self.toks.reset_cursor();
-                        break;
-                    }
-                    self.toks.reset_cursor();
-                    toks.push(tok);
-                    toks.push(tok);
-                    self.toks.next();
-                    self.toks.next();
-                }
-                '>' | '<' | ':' | ')' => {
-                    break;
-                }
-                '\'' | '"' => {
-                    toks.push(tok);
-                    self.toks.next();
-                    toks.append(&mut read_until_closing_quote(self.toks, tok.kind)?);
-                }
-                _ => {
-                    toks.push(tok);
-                    self.toks.next();
+        let value = self.parse_value(false, &|toks| match toks.peek() {
+            Some(Token { kind: '>', .. })
+            | Some(Token { kind: '<', .. })
+            | Some(Token { kind: ':', .. })
+            | Some(Token { kind: ')', .. }) => true,
+            Some(Token { kind: '=', .. }) => {
+                if matches!(toks.peek_next(), Some(Token { kind: '=', .. })) {
+                    toks.reset_cursor();
+                    true
+                } else {
+                    toks.reset_cursor();
+                    false
                 }
             }
-        }
-        self.parse_value_as_string_from_vec(toks, false)
+            _ => false,
+        })?;
+
+        value.node.unquote().to_css_string(value.span)
     }
 
     pub(super) fn parse_media_query_list(&mut self) -> SassResult<String> {
@@ -85,12 +69,9 @@ impl<'a> Parser<'a> {
 
     fn parse_media_feature(&mut self) -> SassResult<String> {
         if let Some(Token { kind: '#', .. }) = self.toks.peek() {
-            if let Some(Token { kind: '{', .. }) = self.toks.peek_forward(1) {
-                self.toks.next();
-                self.toks.next();
-                return Ok(self.parse_interpolation_as_string()?.into_owned());
-            }
-            todo!()
+            self.toks.next();
+            self.expect_char('{')?;
+            return Ok(self.parse_interpolation_as_string()?.into_owned());
         }
         let mut buf = String::with_capacity(2);
         self.expect_char('(')?;
@@ -105,13 +86,14 @@ impl<'a> Parser<'a> {
 
             buf.push(':');
             buf.push(' ');
-            let mut toks = read_until_closing_paren(self.toks)?;
-            if let Some(tok) = toks.pop() {
-                if tok.kind != ')' {
-                    todo!()
-                }
-            }
-            buf.push_str(&self.parse_value_as_string_from_vec(toks, true)?);
+
+            let value = self.parse_value(false, &|toks| match toks.peek() {
+                Some(Token { kind: ')', .. }) => true,
+                _ => false,
+            })?;
+            self.expect_char(')')?;
+
+            buf.push_str(&value.node.to_css_string(value.span)?);
 
             self.whitespace_or_comment();
             buf.push(')');

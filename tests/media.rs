@@ -72,3 +72,29 @@ test!(
     }",
     "@media foo and (bar) {\n  a {\n    color: red;\n  }\n}\n"
 );
+test!(
+    comparison_in_query,
+    "@media (100px < 400px) {
+        a {
+            interpolation: in-parens
+        }
+    }",
+    "@media (100px < 400px) {\n  a {\n    interpolation: in-parens;\n  }\n}\n"
+);
+test!(
+    interpolated_comparison_in_query,
+    "@media (#{100px < 400px}) {
+        a {
+            interpolation: in-parens
+        }
+    }",
+    "@media (true) {\n  a {\n    interpolation: in-parens;\n  }\n}\n"
+);
+error!(
+    media_feature_missing_closing_paren,
+    "@media foo and (bar:a", "Error: expected \")\"."
+);
+error!(
+    media_feature_missing_curly_brace_after_hash,
+    "@media foo and # {}", "Error: expected \"{\"."
+);
