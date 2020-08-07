@@ -1,3 +1,5 @@
+use codemap::Spanned;
+
 use crate::{
     args::CallArgs,
     builtin::{
@@ -5,7 +7,7 @@ use crate::{
             call, content_exists, feature_exists, function_exists, get_function,
             global_variable_exists, inspect, keywords, mixin_exists, type_of, variable_exists,
         },
-        modules::Module,
+        modules::{Module, ModuleConfig},
     },
     error::SassResult,
     parse::{Parser, Stmt},
@@ -15,13 +17,15 @@ use crate::{
 fn load_css(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Vec<Stmt>> {
     args.max_args(2)?;
 
+    let span = args.span();
+
     // todo: https://github.com/sass/dart-sass/issues/1054
     let url = match args.get_err(0, "module")? {
         Value::String(s, ..) => s,
         v => {
             return Err((
-                format!("$module: {} is not a string.", v.inspect(args.span())?),
-                args.span(),
+                format!("$module: {} is not a string.", v.inspect(span)?),
+                span,
             )
                 .into())
         }
@@ -30,19 +34,39 @@ fn load_css(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Vec<Stmt>
     let with = match args.default_arg(1, "with", Value::Null)? {
         Value::Map(map) => Some(map),
         Value::Null => None,
-        v => {
-            return Err((
-                format!("$with: {} is not a map.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
+        v => return Err((format!("$with: {} is not a map.", v.inspect(span)?), span).into()),
     };
 
-    if let Some(..) = with {
-        todo!("`$with` to `load-css` not yet implemented")
+    // todo: tests for `with`
+    if let Some(with) = with {
+        let mut config = ModuleConfig::default();
+
+        for (key, value) in with {
+            let key = match key {
+                Value::String(s, ..) => s,
+                v => {
+                    return Err((
+                        format!("$with key: {} is not a string.", v.inspect(span)?),
+                        span,
+                    )
+                        .into())
+                }
+            };
+
+            config.insert(
+                Spanned {
+                    node: key.into(),
+                    span,
+                },
+                value.span(span),
+            )?;
+        }
+
+        let (_, stmts) = parser.load_module(&url, &mut config)?;
+
+        Ok(stmts)
     } else {
-        parser.parse_single_import(&url, args.span())
+        parser.parse_single_import(&url, span)
     }
 }
 

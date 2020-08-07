@@ -208,6 +208,66 @@ impl<'a> Parser<'a> {
         Ok(config)
     }
 
+    pub fn load_module(
+        &mut self,
+        name: &str,
+        config: &mut ModuleConfig,
+    ) -> SassResult<(Module, Vec<Stmt>)> {
+        Ok(match name {
+            "sass:color" => (declare_module_color(), Vec::new()),
+            "sass:list" => (declare_module_list(), Vec::new()),
+            "sass:map" => (declare_module_map(), Vec::new()),
+            "sass:math" => (declare_module_math(), Vec::new()),
+            "sass:meta" => (declare_module_meta(), Vec::new()),
+            "sass:selector" => (declare_module_selector(), Vec::new()),
+            "sass:string" => (declare_module_string(), Vec::new()),
+            _ => {
+                if let Some(import) = self.find_import(name.as_ref()) {
+                    let mut global_scope = Scope::new();
+
+                    let file = self
+                        .map
+                        .add_file(name.to_owned(), String::from_utf8(fs::read(&import)?)?);
+
+                    let stmts = Parser {
+                        toks: &mut Lexer::new(&file)
+                            .collect::<Vec<Token>>()
+                            .into_iter()
+                            .peekmore(),
+                        map: self.map,
+                        path: &import,
+                        scopes: self.scopes,
+                        global_scope: &mut global_scope,
+                        super_selectors: self.super_selectors,
+                        span_before: file.span.subspan(0, 0),
+                        content: self.content,
+                        flags: self.flags,
+                        at_root: self.at_root,
+                        at_root_has_selector: self.at_root_has_selector,
+                        extender: self.extender,
+                        content_scopes: self.content_scopes,
+                        options: self.options,
+                        modules: self.modules,
+                        module_config: config,
+                    }
+                    .parse()?;
+
+                    if !config.is_empty() {
+                        return Err((
+                            "This variable was not declared with !default in the @used module.",
+                            self.span_before,
+                        )
+                            .into());
+                    }
+
+                    (Module::new_from_scope(global_scope), stmts)
+                } else {
+                    return Err(("Can't find stylesheet to import.", self.span_before).into());
+                }
+            }
+        })
+    }
+
     /// Returns any multiline comments that may have been found
     /// while loading modules
     #[allow(clippy::eval_order_dependence)]
@@ -260,58 +320,10 @@ impl<'a> Parser<'a> {
                     self.whitespace_or_comment();
                     self.expect_char(';')?;
 
-                    let module = match module_name.as_ref() {
-                        "sass:color" => declare_module_color(),
-                        "sass:list" => declare_module_list(),
-                        "sass:map" => declare_module_map(),
-                        "sass:math" => declare_module_math(),
-                        "sass:meta" => declare_module_meta(),
-                        "sass:selector" => declare_module_selector(),
-                        "sass:string" => declare_module_string(),
-                        _ => {
-                            if let Some(import) = self.find_import(module_name.as_ref().as_ref()) {
-                                let mut global_scope = Scope::new();
+                    let (module, mut stmts) =
+                        self.load_module(module_name.as_ref(), &mut config)?;
 
-                                let file = self.map.add_file(
-                                    module_name.clone().into_owned(),
-                                    String::from_utf8(fs::read(&import)?)?,
-                                );
-
-                                comments.append(
-                                    &mut Parser {
-                                        toks: &mut Lexer::new(&file)
-                                            .collect::<Vec<Token>>()
-                                            .into_iter()
-                                            .peekmore(),
-                                        map: self.map,
-                                        path: &import,
-                                        scopes: self.scopes,
-                                        global_scope: &mut global_scope,
-                                        super_selectors: self.super_selectors,
-                                        span_before: file.span.subspan(0, 0),
-                                        content: self.content,
-                                        flags: self.flags,
-                                        at_root: self.at_root,
-                                        at_root_has_selector: self.at_root_has_selector,
-                                        extender: self.extender,
-                                        content_scopes: self.content_scopes,
-                                        options: self.options,
-                                        modules: self.modules,
-                                        module_config: &mut config,
-                                    }
-                                    .parse()?,
-                                );
-
-                                if !config.is_empty() {
-                                    return Err(("This variable was not declared with !default in the @used module.", span).into());
-                                }
-
-                                Module::new_from_scope(global_scope)
-                            } else {
-                                return Err(("Can't find stylesheet to import.", span).into());
-                            }
-                        }
-                    };
+                    comments.append(&mut stmts);
 
                     // if the config isn't empty here, that means
                     // variables were passed to a builtin module
