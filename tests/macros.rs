@@ -51,3 +51,54 @@ macro_rules! error {
         }
     };
 }
+
+/// Create a temporary file with the given name
+/// and contents.
+///
+/// This must be a macro rather than a function
+/// because the tempfile will be deleted when it
+/// exits scope
+#[macro_export]
+macro_rules! tempfile {
+    ($name:literal, $content:literal) => {
+        let mut f = tempfile::Builder::new()
+            .rand_bytes(0)
+            .prefix("")
+            .suffix($name)
+            .tempfile_in("")
+            .unwrap();
+        write!(f, "{}", $content).unwrap();
+    };
+    ($name:literal, $content:literal, dir=$dir:literal) => {
+        let _d = tempfile::Builder::new()
+            .rand_bytes(0)
+            .prefix("")
+            .suffix($dir)
+            .tempdir_in("")
+            .unwrap();
+        let mut f = tempfile::Builder::new()
+            .rand_bytes(0)
+            .prefix("")
+            .suffix($name)
+            .tempfile_in($dir)
+            .unwrap();
+        write!(f, "{}", $content).unwrap();
+    };
+}
+
+#[macro_export]
+macro_rules! assert_err {
+    ($err:literal, $input:expr) => {
+        match grass::from_string($input.to_string(), &grass::Options::default()) {
+            Ok(..) => panic!("did not fail"),
+            Err(e) => assert_eq!(
+                $err,
+                e.to_string()
+                    .chars()
+                    .take_while(|c| *c != '\n')
+                    .collect::<String>()
+                    .as_str()
+            ),
+        }
+    };
+}

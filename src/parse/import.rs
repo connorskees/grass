@@ -13,60 +13,13 @@ use crate::{
 
 use super::{Parser, Stmt};
 
-/// Searches the current directory of the file then searches in `load_paths` directories
-/// if the import has not yet been found.
-/// <https://sass-lang.com/documentation/at-rules/import#finding-the-file>
-/// <https://sass-lang.com/documentation/at-rules/import#load-paths>
-fn find_import(file_path: &PathBuf, name: &OsStr, load_paths: &[&Path]) -> Option<PathBuf> {
-    let paths = [
-        file_path.with_file_name(name).with_extension("scss"),
-        file_path
-            .with_file_name(format!("_{}", name.to_str().unwrap()))
-            .with_extension("scss"),
-        file_path.clone(),
-        file_path.join("index.scss"),
-        file_path.join("_index.scss"),
-    ];
-
-    for name in &paths {
-        if name.is_file() {
-            return Some(name.to_path_buf());
-        }
-    }
-
-    for path in load_paths {
-        let paths: Vec<PathBuf> = if path.is_dir() {
-            vec![
-                path.join(format!("{}.scss", name.to_str().unwrap())),
-                path.join(format!("_{}.scss", name.to_str().unwrap())),
-                path.join("index.scss"),
-                path.join("_index.scss"),
-            ]
-        } else {
-            vec![
-                path.to_path_buf(),
-                path.with_file_name(name).with_extension("scss"),
-                path.with_file_name(format!("_{}", name.to_str().unwrap()))
-                    .with_extension("scss"),
-                path.join("index.scss"),
-                path.join("_index.scss"),
-            ]
-        };
-
-        for name in paths {
-            if name.is_file() {
-                return Some(name);
-            }
-        }
-    }
-
-    None
-}
-
 impl<'a> Parser<'a> {
-    fn parse_single_import(&mut self, file_name: &str, span: Span) -> SassResult<Vec<Stmt>> {
-        let path: &Path = file_name.as_ref();
-
+    /// Searches the current directory of the file then searches in `load_paths` directories
+    /// if the import has not yet been found.
+    ///
+    /// <https://sass-lang.com/documentation/at-rules/import#finding-the-file>
+    /// <https://sass-lang.com/documentation/at-rules/import#load-paths>
+    pub(super) fn find_import(&self, path: &Path) -> Option<PathBuf> {
         let path_buf = if path.is_absolute() {
             // todo: test for absolute path imports
             path.into()
@@ -79,7 +32,59 @@ impl<'a> Parser<'a> {
 
         let name = path_buf.file_name().unwrap_or_else(|| OsStr::new(".."));
 
-        if let Some(name) = find_import(&path_buf, name, &self.options.load_paths) {
+        let paths = [
+            path_buf.with_file_name(name).with_extension("scss"),
+            path_buf
+                .with_file_name(format!("_{}", name.to_str().unwrap()))
+                .with_extension("scss"),
+            path_buf.clone(),
+            path_buf.join("index.scss"),
+            path_buf.join("_index.scss"),
+        ];
+
+        for name in &paths {
+            if name.is_file() {
+                return Some(name.to_path_buf());
+            }
+        }
+
+        for path in &self.options.load_paths {
+            let paths: Vec<PathBuf> = if path.is_dir() {
+                vec![
+                    path.join(format!("{}.scss", name.to_str().unwrap())),
+                    path.join(format!("_{}.scss", name.to_str().unwrap())),
+                    path.join("index.scss"),
+                    path.join("_index.scss"),
+                ]
+            } else {
+                vec![
+                    path.to_path_buf(),
+                    path.with_file_name(name).with_extension("scss"),
+                    path.with_file_name(format!("_{}", name.to_str().unwrap()))
+                        .with_extension("scss"),
+                    path.join("index.scss"),
+                    path.join("_index.scss"),
+                ]
+            };
+
+            for name in paths {
+                if name.is_file() {
+                    return Some(name);
+                }
+            }
+        }
+
+        None
+    }
+
+    pub(crate) fn parse_single_import(
+        &mut self,
+        file_name: &str,
+        span: Span,
+    ) -> SassResult<Vec<Stmt>> {
+        let path: &Path = file_name.as_ref();
+
+        if let Some(name) = self.find_import(path) {
             let file = self.map.add_file(
                 name.to_string_lossy().into(),
                 String::from_utf8(fs::read(&name)?)?,
@@ -102,10 +107,11 @@ impl<'a> Parser<'a> {
                 extender: self.extender,
                 content_scopes: self.content_scopes,
                 options: self.options,
+                modules: self.modules,
+                module_config: self.module_config,
             }
             .parse();
         }
-        self.whitespace();
 
         Err(("Can't find stylesheet to import.", span).into())
     }

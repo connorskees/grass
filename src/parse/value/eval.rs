@@ -3,12 +3,13 @@
 use std::cmp::Ordering;
 
 use codemap::{Span, Spanned};
+use num_traits::Zero;
 
 use crate::{
     args::CallArgs,
     common::{Op, QuoteKind},
     error::SassResult,
-    unit::{Unit, UNIT_CONVERSION_TABLE},
+    unit::Unit,
     value::{SassFunction, Value},
 };
 
@@ -119,7 +120,11 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
 
     fn unary_minus(&self, val: Value) -> SassResult<Value> {
         Ok(match val {
-            Value::Dimension(n, u, should_divide) => Value::Dimension(-n, u, should_divide),
+            Value::Dimension(Some(n), u, should_divide) => {
+                Value::Dimension(Some(-n), u, should_divide)
+            }
+            // todo: NaN test
+            Value::Dimension(None, u, should_divide) => Value::Dimension(None, u, should_divide),
             v => Value::String(format!("-{}", v.to_css_string(self.span)?), QuoteKind::None),
         })
     }
@@ -205,8 +210,10 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
                     QuoteKind::None,
                 ),
             },
-            Value::Dimension(num, unit, _) => match right {
-                Value::Dimension(num2, unit2, _) => {
+            v @ Value::Dimension(None, ..) => v,
+            Value::Dimension(Some(num), unit, _) => match right {
+                v @ Value::Dimension(None, ..) => v,
+                Value::Dimension(Some(num2), unit2, _) => {
                     if !unit.comparable(&unit2) {
                         return Err((
                             format!("Incompatible units {} and {}.", unit2, unit),
@@ -215,20 +222,13 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
                             .into());
                     }
                     if unit == unit2 {
-                        Value::Dimension(num + num2, unit, true)
+                        Value::Dimension(Some(num + num2), unit, true)
                     } else if unit == Unit::None {
-                        Value::Dimension(num + num2, unit2, true)
+                        Value::Dimension(Some(num + num2), unit2, true)
                     } else if unit2 == Unit::None {
-                        Value::Dimension(num + num2, unit, true)
+                        Value::Dimension(Some(num + num2), unit, true)
                     } else {
-                        Value::Dimension(
-                            num + num2
-                                * UNIT_CONVERSION_TABLE[unit.to_string().as_str()]
-                                    [unit2.to_string().as_str()]
-                                .clone(),
-                            unit,
-                            true,
-                        )
+                        Value::Dimension(Some(num + num2.convert(&unit2, &unit)), unit, true)
                     }
                 }
                 Value::String(s, q) => Value::String(format!("{}{}{}", num, unit, s), q),
@@ -314,8 +314,10 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
                 format!("-{}", right.to_css_string(self.span)?),
                 QuoteKind::None,
             ),
-            Value::Dimension(num, unit, _) => match right {
-                Value::Dimension(num2, unit2, _) => {
+            Value::Dimension(None, ..) => todo!(),
+            Value::Dimension(Some(num), unit, _) => match right {
+                Value::Dimension(None, ..) => todo!(),
+                Value::Dimension(Some(num2), unit2, _) => {
                     if !unit.comparable(&unit2) {
                         return Err((
                             format!("Incompatible units {} and {}.", unit2, unit),
@@ -324,20 +326,13 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
                             .into());
                     }
                     if unit == unit2 {
-                        Value::Dimension(num - num2, unit, true)
+                        Value::Dimension(Some(num - num2), unit, true)
                     } else if unit == Unit::None {
-                        Value::Dimension(num - num2, unit2, true)
+                        Value::Dimension(Some(num - num2), unit2, true)
                     } else if unit2 == Unit::None {
-                        Value::Dimension(num - num2, unit, true)
+                        Value::Dimension(Some(num - num2), unit, true)
                     } else {
-                        Value::Dimension(
-                            num - num2
-                                * UNIT_CONVERSION_TABLE[unit.to_string().as_str()]
-                                    [unit2.to_string().as_str()]
-                                .clone(),
-                            unit,
-                            true,
-                        )
+                        Value::Dimension(Some(num - num2.convert(&unit2, &unit)), unit, true)
                     }
                 }
                 Value::List(..)
@@ -434,14 +429,16 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
             v => panic!("{:?}", v),
         };
         Ok(match left {
-            Value::Dimension(num, unit, _) => match right {
-                Value::Dimension(num2, unit2, _) => {
+            Value::Dimension(None, ..) => todo!(),
+            Value::Dimension(Some(num), unit, _) => match right {
+                Value::Dimension(None, ..) => todo!(),
+                Value::Dimension(Some(num2), unit2, _) => {
                     if unit == Unit::None {
-                        Value::Dimension(num * num2, unit2, true)
+                        Value::Dimension(Some(num * num2), unit2, true)
                     } else if unit2 == Unit::None {
-                        Value::Dimension(num * num2, unit, true)
+                        Value::Dimension(Some(num * num2), unit, true)
                     } else {
-                        Value::Dimension(num * num2, unit * unit2, true)
+                        Value::Dimension(Some(num * num2), unit * unit2, true)
                     }
                 }
                 _ => {
@@ -490,28 +487,31 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
                 format!("/{}", right.to_css_string(self.span)?),
                 QuoteKind::None,
             ),
-            Value::Dimension(num, unit, should_divide1) => match right {
-                Value::Dimension(num2, unit2, should_divide2) => {
+            Value::Dimension(None, ..) => todo!(),
+            Value::Dimension(Some(num), unit, should_divide1) => match right {
+                Value::Dimension(None, ..) => todo!(),
+                Value::Dimension(Some(num2), unit2, should_divide2) => {
                     if should_divide1 || should_divide2 || in_parens {
+                        if num.is_zero() && num2.is_zero() {
+                            return Ok(Value::Dimension(None, Unit::None, true));
+                        }
+
                         // `unit(1em / 1em)` => `""`
                         if unit == unit2 {
-                            Value::Dimension(num / num2, Unit::None, true)
+                            Value::Dimension(Some(num / num2), Unit::None, true)
 
                         // `unit(1 / 1em)` => `"em^-1"`
                         } else if unit == Unit::None {
-                            Value::Dimension(num / num2, Unit::None / unit2, true)
+                            Value::Dimension(Some(num / num2), Unit::None / unit2, true)
 
                         // `unit(1em / 1)` => `"em"`
                         } else if unit2 == Unit::None {
-                            Value::Dimension(num / num2, unit, true)
+                            Value::Dimension(Some(num / num2), unit, true)
 
                         // `unit(1in / 1px)` => `""`
                         } else if unit.comparable(&unit2) {
                             Value::Dimension(
-                                num / (num2
-                                    * UNIT_CONVERSION_TABLE[unit.to_string().as_str()]
-                                        [unit2.to_string().as_str()]
-                                    .clone()),
+                                Some(num / num2.convert(&unit2, &unit)),
                                 Unit::None,
                                 true,
                             )
@@ -630,28 +630,30 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
             v => panic!("{:?}", v),
         };
         Ok(match left {
-            Value::Dimension(n, u, _) => match right {
-                Value::Dimension(n2, u2, _) => {
+            Value::Dimension(None, ..) => todo!(),
+            Value::Dimension(Some(n), u, _) => match right {
+                Value::Dimension(None, ..) => todo!(),
+                Value::Dimension(Some(n2), u2, _) => {
                     if !u.comparable(&u2) {
                         return Err(
                             (format!("Incompatible units {} and {}.", u2, u), self.span).into()
                         );
                     }
                     if u == u2 {
-                        Value::Dimension(n % n2, u, true)
+                        Value::Dimension(Some(n % n2), u, true)
                     } else if u == Unit::None {
-                        Value::Dimension(n % n2, u2, true)
+                        Value::Dimension(Some(n % n2), u2, true)
                     } else if u2 == Unit::None {
-                        Value::Dimension(n % n2, u, true)
+                        Value::Dimension(Some(n % n2), u, true)
                     } else {
-                        Value::Dimension(n, u, true)
+                        Value::Dimension(Some(n), u, true)
                     }
                 }
                 _ => {
                     return Err((
                         format!(
                             "Undefined operation \"{} % {}\".",
-                            Value::Dimension(n, u, true).inspect(self.span)?,
+                            Value::Dimension(Some(n), u, true).inspect(self.span)?,
                             right.inspect(self.span)?
                         ),
                         self.span,
@@ -735,53 +737,9 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
             HigherIntermediateValue::Literal(v) => v,
             v => panic!("{:?}", v),
         };
-        let ordering = match left {
-            Value::Dimension(num, unit, _) => match &right {
-                Value::Dimension(num2, unit2, _) => {
-                    if !unit.comparable(unit2) {
-                        return Err((
-                            format!("Incompatible units {} and {}.", unit2, unit),
-                            self.span,
-                        )
-                            .into());
-                    }
-                    if &unit == unit2 || unit == Unit::None || unit2 == &Unit::None {
-                        num.cmp(num2)
-                    } else {
-                        num.cmp(
-                            &(num2.clone()
-                                * UNIT_CONVERSION_TABLE[unit.to_string().as_str()]
-                                    [unit2.to_string().as_str()]
-                                .clone()),
-                        )
-                    }
-                }
-                v => {
-                    return Err((
-                        format!(
-                            "Undefined operation \"{} {} {}\".",
-                            v.inspect(self.span)?,
-                            op,
-                            right.inspect(self.span)?
-                        ),
-                        self.span,
-                    )
-                        .into())
-                }
-            },
-            _ => {
-                return Err((
-                    format!(
-                        "Undefined operation \"{} {} {}\".",
-                        left.inspect(self.span)?,
-                        op,
-                        right.inspect(self.span)?
-                    ),
-                    self.span,
-                )
-                    .into())
-            }
-        };
+
+        let ordering = left.cmp(&right, self.span, op)?;
+
         Ok(match op {
             Op::GreaterThan => match ordering {
                 Ordering::Greater => Value::True,

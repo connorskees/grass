@@ -7,8 +7,10 @@ use crate::{
     atrule::{
         keyframes::{Keyframes, KeyframesRuleSet},
         media::MediaRule,
-        AtRuleKind, Content, SupportsRule, UnknownAtRule,
+        mixin::Content,
+        AtRuleKind, SupportsRule, UnknownAtRule,
     },
+    builtin::modules::{ModuleConfig, Modules},
     error::SassResult,
     scope::{Scope, Scopes},
     selector::{
@@ -25,6 +27,7 @@ use crate::{
 
 use common::{Comment, ContextFlags, NeverEmptyVec, SelectorOrStyle};
 pub(crate) use value::{HigherIntermediateValue, ValueVisitor};
+use variable::VariableValue;
 
 mod args;
 pub mod common;
@@ -35,6 +38,7 @@ mod import;
 mod keyframes;
 mod media;
 mod mixin;
+mod module;
 mod style;
 mod throw_away;
 mod value;
@@ -86,11 +90,18 @@ pub(crate) struct Parser<'a> {
     pub extender: &'a mut Extender,
 
     pub options: &'a Options<'a>,
+
+    pub modules: &'a mut Modules,
+    pub module_config: &'a mut ModuleConfig,
 }
 
 impl<'a> Parser<'a> {
     pub fn parse(&mut self) -> SassResult<Vec<Stmt>> {
         let mut stmts = Vec::new();
+
+        self.whitespace();
+        stmts.append(&mut self.load_modules()?);
+
         while self.toks.peek().is_some() {
             stmts.append(&mut self.parse_stmt()?);
             if self.flags.in_function() && !stmts.is_empty() {
@@ -99,6 +110,26 @@ impl<'a> Parser<'a> {
             self.at_root = true;
         }
         Ok(stmts)
+    }
+
+    pub fn expect_char(&mut self, c: char) -> SassResult<()> {
+        match self.toks.peek() {
+            Some(Token { kind, pos }) if *kind == c => {
+                self.span_before = *pos;
+                self.toks.next();
+                Ok(())
+            }
+            Some(Token { pos, .. }) => Err((format!("expected \"{}\".", c), *pos).into()),
+            None => Err((format!("expected \"{}\".", c), self.span_before).into()),
+        }
+    }
+
+    pub fn consume_char_if_exists(&mut self, c: char) {
+        if let Some(Token { kind, .. }) = self.toks.peek() {
+            if *kind == c {
+                self.toks.next();
+            }
+        }
     }
 
     fn parse_stmt(&mut self) -> SassResult<Vec<Stmt>> {
@@ -212,7 +243,13 @@ impl<'a> Parser<'a> {
                         AtRuleKind::Unknown(_) => {
                             stmts.push(self.parse_unknown_at_rule(kind_string.node)?)
                         }
-                        AtRuleKind::Use => todo!("@use not yet implemented"),
+                        AtRuleKind::Use => {
+                            return Err((
+                                "@use rules must be written before any other rules.",
+                                kind_string.span,
+                            )
+                                .into())
+                        }
                         AtRuleKind::Forward => todo!("@forward not yet implemented"),
                         AtRuleKind::Extend => self.parse_extend()?,
                         AtRuleKind::Supports => stmts.push(self.parse_supports()?),
@@ -258,6 +295,9 @@ impl<'a> Parser<'a> {
                     }
                     if self.flags.in_keyframes() {
                         match self.is_selector_or_style()? {
+                            SelectorOrStyle::ModuleVariableRedeclaration(module) => {
+                                self.parse_module_variable_redeclaration(module)?
+                            }
                             SelectorOrStyle::Style(property, value) => {
                                 if let Some(value) = value {
                                     stmts.push(Stmt::Style(Style { property, value }));
@@ -285,6 +325,9 @@ impl<'a> Parser<'a> {
                     }
 
                     match self.is_selector_or_style()? {
+                        SelectorOrStyle::ModuleVariableRedeclaration(module) => {
+                            self.parse_module_variable_redeclaration(module)?
+                        }
                         SelectorOrStyle::Style(property, value) => {
                             if let Some(value) = value {
                                 stmts.push(Stmt::Style(Style { property, value }));
@@ -412,6 +455,8 @@ impl<'a> Parser<'a> {
                 extender: self.extender,
                 content_scopes: self.content_scopes,
                 options: self.options,
+                modules: self.modules,
+                module_config: self.module_config,
             },
             allows_parent,
             true,
@@ -470,10 +515,11 @@ impl<'a> Parser<'a> {
 
     pub fn parse_interpolation(&mut self) -> SassResult<Spanned<Value>> {
         let val = self.parse_value(true, &|_| false)?;
-        match self.toks.next() {
-            Some(Token { kind: '}', .. }) => {}
-            Some(..) | None => return Err(("expected \"}\".", val.span).into()),
-        }
+
+        self.span_before = val.span;
+
+        self.expect_char('}')?;
+
         Ok(val.map_node(Value::unquote))
     }
 
@@ -640,9 +686,7 @@ impl<'a> Parser<'a> {
 
         self.whitespace();
 
-        if !matches!(self.toks.next(), Some(Token { kind: '{', .. })) {
-            return Err(("expected \"{\".", self.span_before).into());
-        }
+        self.expect_char('{')?;
 
         let raw_body = self.parse_stmt()?;
 
@@ -711,8 +755,10 @@ impl<'a> Parser<'a> {
             extender: self.extender,
             content_scopes: self.content_scopes,
             options: self.options,
+            modules: self.modules,
+            module_config: self.module_config,
         }
-        .parse()?
+        .parse_stmt()?
         .into_iter()
         .filter_map(|s| match s {
             Stmt::Style(..) => {
@@ -755,14 +801,15 @@ impl<'a> Parser<'a> {
             extender: self.extender,
             content_scopes: self.content_scopes,
             options: self.options,
+            modules: self.modules,
+            module_config: self.module_config,
         }
         .parse_selector(false, true, String::new())?;
 
+        // todo: this might be superfluous
         self.whitespace();
 
-        if let Some(Token { kind: ';', .. }) = self.toks.peek() {
-            self.toks.next();
-        }
+        self.consume_char_if_exists(';');
 
         let extend_rule = ExtendRule::new(value.clone(), is_optional, self.span_before);
 

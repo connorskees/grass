@@ -1,9 +1,9 @@
 use super::{Builtin, GlobalFunctionMap};
 
-mod hsl;
-mod opacity;
-mod other;
-mod rgb;
+pub mod hsl;
+pub mod opacity;
+pub mod other;
+pub mod rgb;
 
 pub(crate) fn declare(f: &mut GlobalFunctionMap) {
     hsl::declare(f);

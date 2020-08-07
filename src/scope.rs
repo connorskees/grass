@@ -3,18 +3,18 @@ use std::collections::BTreeMap;
 use codemap::Spanned;
 
 use crate::{
-    atrule::{Function, Mixin},
-    builtin::GLOBAL_FUNCTIONS,
+    atrule::mixin::Mixin,
+    builtin::{modules::Module, GLOBAL_FUNCTIONS},
     common::Identifier,
     error::SassResult,
-    value::Value,
+    value::{SassFunction, Value},
 };
 
 #[derive(Debug, Default)]
 pub(crate) struct Scope {
-    vars: BTreeMap<Identifier, Spanned<Value>>,
-    mixins: BTreeMap<Identifier, Mixin>,
-    functions: BTreeMap<Identifier, Function>,
+    pub vars: BTreeMap<Identifier, Value>,
+    pub mixins: BTreeMap<Identifier, Mixin>,
+    pub functions: BTreeMap<Identifier, SassFunction>,
 }
 
 impl Scope {
@@ -31,12 +31,12 @@ impl Scope {
 
     fn get_var(&self, name: Spanned<Identifier>) -> SassResult<&Value> {
         match self.vars.get(&name.node) {
-            Some(v) => Ok(&v.node),
+            Some(v) => Ok(v),
             None => Err(("Undefined variable.", name.span).into()),
         }
     }
 
-    pub fn insert_var(&mut self, s: Identifier, v: Spanned<Value>) -> Option<Spanned<Value>> {
+    pub fn insert_var(&mut self, s: Identifier, v: Value) -> Option<Value> {
         self.vars.insert(s, v)
     }
 
@@ -55,16 +55,16 @@ impl Scope {
         self.mixins.insert(s.into(), v)
     }
 
-    fn mixin_exists(&self, name: Identifier) -> bool {
+    pub fn mixin_exists(&self, name: Identifier) -> bool {
         self.mixins.contains_key(&name)
     }
 
-    fn get_fn(&self, name: Identifier) -> Option<Function> {
+    fn get_fn(&self, name: Identifier) -> Option<SassFunction> {
         self.functions.get(&name).cloned()
     }
 
-    pub fn insert_fn<T: Into<Identifier>>(&mut self, s: T, v: Function) -> Option<Function> {
-        self.functions.insert(s.into(), v)
+    pub fn insert_fn(&mut self, s: Identifier, v: SassFunction) -> Option<SassFunction> {
+        self.functions.insert(s, v)
     }
 
     fn fn_exists(&self, name: Identifier) -> bool {
@@ -72,6 +72,16 @@ impl Scope {
             return false;
         }
         self.functions.contains_key(&name)
+    }
+
+    fn merge(&mut self, other: Scope) {
+        self.vars.extend(other.vars);
+        self.mixins.extend(other.mixins);
+        self.functions.extend(other.functions);
+    }
+
+    pub fn merge_module(&mut self, other: Module) {
+        self.merge(other.scope);
     }
 }
 
@@ -111,7 +121,7 @@ impl Scopes {
 
 /// Variables
 impl Scopes {
-    pub fn insert_var(&mut self, s: Identifier, v: Spanned<Value>) -> Option<Spanned<Value>> {
+    pub fn insert_var(&mut self, s: Identifier, v: Value) -> Option<Value> {
         for scope in self.0.iter_mut().rev() {
             if scope.var_exists(s) {
                 return scope.insert_var(s, v);
@@ -130,7 +140,7 @@ impl Scopes {
     /// Always insert this variable into the innermost scope
     ///
     /// Used, for example, for variables from `@each` and `@for`
-    pub fn insert_var_last(&mut self, s: Identifier, v: Spanned<Value>) -> Option<Spanned<Value>> {
+    pub fn insert_var_last(&mut self, s: Identifier, v: Value) -> Option<Value> {
         if let Some(scope) = self.0.last_mut() {
             scope.insert_var(s, v)
         } else {
@@ -141,11 +151,7 @@ impl Scopes {
         }
     }
 
-    pub fn insert_default_var(
-        &mut self,
-        s: Identifier,
-        v: Spanned<Value>,
-    ) -> Option<Spanned<Value>> {
+    pub fn insert_default_var(&mut self, s: Identifier, v: Value) -> Option<Value> {
         if let Some(scope) = self.0.last_mut() {
             if scope.var_exists(s) {
                 None
@@ -218,7 +224,7 @@ impl Scopes {
 
 /// Functions
 impl Scopes {
-    pub fn insert_fn(&mut self, s: Identifier, v: Function) -> Option<Function> {
+    pub fn insert_fn(&mut self, s: Identifier, v: SassFunction) -> Option<SassFunction> {
         if let Some(scope) = self.0.last_mut() {
             scope.insert_fn(s, v)
         } else {
@@ -229,17 +235,13 @@ impl Scopes {
         }
     }
 
-    pub fn get_fn<'a>(
-        &'a self,
-        name: Spanned<Identifier>,
-        global_scope: &'a Scope,
-    ) -> Option<Function> {
+    pub fn get_fn<'a>(&'a self, name: Identifier, global_scope: &'a Scope) -> Option<SassFunction> {
         for scope in self.0.iter().rev() {
-            if scope.fn_exists(name.node) {
-                return scope.get_fn(name.node);
+            if scope.fn_exists(name) {
+                return scope.get_fn(name);
             }
         }
-        global_scope.get_fn(name.node)
+        global_scope.get_fn(name)
     }
 
     pub fn fn_exists(&self, name: Identifier, global_scope: &Scope) -> bool {

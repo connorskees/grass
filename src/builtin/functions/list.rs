@@ -11,20 +11,21 @@ use crate::{
     value::{Number, Value},
 };
 
-fn length(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn length(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     Ok(Value::Dimension(
-        Number::from(args.get_err(0, "list")?.as_list().len()),
+        Some(Number::from(args.get_err(0, "list")?.as_list().len())),
         Unit::None,
         true,
     ))
 }
 
-fn nth(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn nth(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;
     let mut list = args.get_err(0, "list")?.as_list();
     let n = match args.get_err(1, "n")? {
-        Value::Dimension(num, ..) => num,
+        Value::Dimension(Some(num), ..) => num,
+        Value::Dimension(None, ..) => todo!(),
         v => {
             return Err((
                 format!("$n: {} is not a number.", v.inspect(args.span())?),
@@ -61,7 +62,7 @@ fn nth(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     }))
 }
 
-fn list_separator(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn list_separator(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     Ok(Value::String(
         match args.get_err(0, "list")? {
@@ -73,7 +74,7 @@ fn list_separator(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Val
     ))
 }
 
-fn set_nth(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn set_nth(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(3)?;
     let (mut list, sep, brackets) = match args.get_err(0, "list")? {
         Value::List(v, sep, b) => (v, sep, b),
@@ -81,7 +82,8 @@ fn set_nth(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         v => (vec![v], ListSeparator::Space, Brackets::None),
     };
     let n = match args.get_err(1, "n")? {
-        Value::Dimension(num, ..) => num,
+        Value::Dimension(Some(num), ..) => num,
+        Value::Dimension(None, ..) => todo!(),
         v => {
             return Err((
                 format!("$n: {} is not a number.", v.inspect(args.span())?),
@@ -120,7 +122,7 @@ fn set_nth(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     Ok(Value::List(list, sep, brackets))
 }
 
-fn append(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn append(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(3)?;
     let (mut list, sep, brackets) = match args.get_err(0, "list")? {
         Value::List(v, sep, b) => (v, sep, b),
@@ -158,7 +160,7 @@ fn append(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     Ok(Value::List(list, sep, brackets))
 }
 
-fn join(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn join(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(4)?;
     let (mut list1, sep1, brackets) = match args.get_err(0, "list1")? {
         Value::List(v, sep, brackets) => (v, sep, brackets),
@@ -225,7 +227,7 @@ fn join(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     Ok(Value::List(list1, sep, brackets))
 }
 
-fn is_bracketed(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn is_bracketed(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     Ok(Value::bool(match args.get_err(0, "list")? {
         Value::List(.., brackets) => match brackets {
@@ -236,7 +238,7 @@ fn is_bracketed(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value
     }))
 }
 
-fn index(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn index(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;
     let list = args.get_err(0, "list")?.as_list();
     let value = args.get_err(1, "value")?;
@@ -244,10 +246,10 @@ fn index(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
         Some(v) => Number::from(v + 1),
         None => return Ok(Value::Null),
     };
-    Ok(Value::Dimension(index, Unit::None, true))
+    Ok(Value::Dimension(Some(index), Unit::None, true))
 }
 
-fn zip(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn zip(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     let lists = args
         .get_variadic()?
         .into_iter()

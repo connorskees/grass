@@ -198,6 +198,8 @@ impl<'a> Parser<'a> {
             extender: self.extender,
             content_scopes: self.content_scopes,
             options: self.options,
+            modules: self.modules,
+            module_config: self.module_config,
         }
         .parse_value(in_paren, predicate)
     }
@@ -222,11 +224,56 @@ impl<'a> Parser<'a> {
             extender: self.extender,
             content_scopes: self.content_scopes,
             options: self.options,
+            modules: self.modules,
+            module_config: self.module_config,
         }
         .parse_value(in_paren, &|_| false)
     }
 
-    fn parse_ident_value(&mut self) -> SassResult<Spanned<IntermediateValue>> {
+    #[allow(clippy::eval_order_dependence)]
+    fn parse_module_item(
+        &mut self,
+        module: &str,
+        mut module_span: Span,
+    ) -> SassResult<Spanned<IntermediateValue>> {
+        Ok(IntermediateValue::Value(
+            if matches!(self.toks.peek(), Some(Token { kind: '$', .. })) {
+                self.toks.next();
+                let var = self
+                    .parse_identifier_no_interpolation(false)?
+                    .map_node(|i| i.into());
+
+                module_span = module_span.merge(var.span);
+
+                let value = self.modules.get(module.into(), module_span)?.get_var(var)?;
+                HigherIntermediateValue::Literal(value.clone())
+            } else {
+                let fn_name = self
+                    .parse_identifier_no_interpolation(false)?
+                    .map_node(|i| i.into());
+
+                let function = self
+                    .modules
+                    .get(module.into(), module_span)?
+                    .get_fn(fn_name)?
+                    .ok_or(("Undefined function.", fn_name.span))?;
+
+                if !matches!(self.toks.next(), Some(Token { kind: '(', .. })) {
+                    todo!()
+                }
+
+                let call_args = self.parse_call_args()?;
+
+                HigherIntermediateValue::Function(function, call_args)
+            },
+        )
+        .span(module_span))
+    }
+
+    fn parse_ident_value(
+        &mut self,
+        predicate: &dyn Fn(&mut PeekMoreIterator<IntoIter<Token>>) -> bool,
+    ) -> SassResult<Spanned<IntermediateValue>> {
         let Spanned { node: mut s, span } = self.parse_identifier()?;
 
         self.span_before = span;
@@ -247,68 +294,72 @@ impl<'a> Parser<'a> {
             });
         }
 
-        if let Some(Token { kind: '(', .. }) = self.toks.peek() {
-            self.toks.next();
+        match self.toks.peek() {
+            Some(Token { kind: '(', .. }) => {
+                self.toks.next();
 
-            if lower == "min" || lower == "max" {
-                match self.try_parse_min_max(&lower, true)? {
-                    Some(val) => {
-                        self.toks.truncate_iterator_to_cursor();
-                        return Ok(IntermediateValue::Value(HigherIntermediateValue::Literal(
-                            Value::String(val, QuoteKind::None),
-                        ))
-                        .span(span));
+                if lower == "min" || lower == "max" {
+                    match self.try_parse_min_max(&lower, true)? {
+                        Some(val) => {
+                            self.toks.truncate_iterator_to_cursor();
+                            return Ok(IntermediateValue::Value(HigherIntermediateValue::Literal(
+                                Value::String(val, QuoteKind::None),
+                            ))
+                            .span(span));
+                        }
+                        None => {
+                            self.toks.reset_cursor();
+                        }
                     }
+                }
+
+                let as_ident = Identifier::from(&s);
+                let func = match self.scopes.get_fn(as_ident, self.global_scope) {
+                    Some(f) => f,
                     None => {
-                        self.toks.reset_cursor();
+                        if let Some(f) = GLOBAL_FUNCTIONS.get(as_ident.as_str()) {
+                            return Ok(IntermediateValue::Value(
+                                HigherIntermediateValue::Function(
+                                    SassFunction::Builtin(f.clone(), as_ident),
+                                    self.parse_call_args()?,
+                                ),
+                            )
+                            .span(span));
+                        } else {
+                            // check for special cased CSS functions
+                            match unvendor(&lower) {
+                                "calc" | "element" | "expression" => {
+                                    s = lower;
+                                    self.parse_calc_args(&mut s)?;
+                                }
+                                "url" => match self.try_parse_url()? {
+                                    Some(val) => s = val,
+                                    None => s.push_str(&self.parse_call_args()?.to_css_string()?),
+                                },
+                                _ => s.push_str(&self.parse_call_args()?.to_css_string()?),
+                            }
+
+                            return Ok(IntermediateValue::Value(HigherIntermediateValue::Literal(
+                                Value::String(s, QuoteKind::None),
+                            ))
+                            .span(span));
+                        }
                     }
+                };
+
+                let call_args = self.parse_call_args()?;
+                return Ok(IntermediateValue::Value(HigherIntermediateValue::Function(
+                    func, call_args,
+                ))
+                .span(span));
+            }
+            Some(Token { kind: '.', .. }) => {
+                if !predicate(self.toks) {
+                    self.toks.next();
+                    return self.parse_module_item(&s, span);
                 }
             }
-
-            let as_ident = Identifier::from(&s);
-            let func = match self.scopes.get_fn(
-                Spanned {
-                    node: as_ident,
-                    span,
-                },
-                self.global_scope,
-            ) {
-                Some(f) => f,
-                None => {
-                    if let Some(f) = GLOBAL_FUNCTIONS.get(as_ident.as_str()) {
-                        return Ok(IntermediateValue::Value(HigherIntermediateValue::Function(
-                            SassFunction::Builtin(f.clone(), as_ident),
-                            self.parse_call_args()?,
-                        ))
-                        .span(span));
-                    } else {
-                        // check for special cased CSS functions
-                        match unvendor(&lower) {
-                            "calc" | "element" | "expression" => {
-                                s = lower;
-                                self.parse_calc_args(&mut s)?;
-                            }
-                            "url" => match self.try_parse_url()? {
-                                Some(val) => s = val,
-                                None => s.push_str(&self.parse_call_args()?.to_css_string()?),
-                            },
-                            _ => s.push_str(&self.parse_call_args()?.to_css_string()?),
-                        }
-
-                        return Ok(IntermediateValue::Value(HigherIntermediateValue::Literal(
-                            Value::String(s, QuoteKind::None),
-                        ))
-                        .span(span));
-                    }
-                }
-            };
-
-            let call_args = self.parse_call_args()?;
-            return Ok(IntermediateValue::Value(HigherIntermediateValue::Function(
-                SassFunction::UserDefined(Box::new(func), as_ident),
-                call_args,
-            ))
-            .span(span));
+            _ => {}
         }
 
         // check for named colors
@@ -442,7 +493,7 @@ impl<'a> Parser<'a> {
                 || (!kind.is_ascii() && !kind.is_control())
                 || (kind == '-' && self.next_is_hypen()) =>
             {
-                return Some(self.parse_ident_value());
+                return Some(self.parse_ident_value(predicate));
             }
             '0'..='9' | '.' => {
                 let Spanned {
@@ -478,7 +529,7 @@ impl<'a> Parser<'a> {
                         let n = Rational64::new_raw(parse_i64(&val.num), 1);
                         return Some(Ok(IntermediateValue::Value(
                             HigherIntermediateValue::Literal(Value::Dimension(
-                                Number::new_small(n),
+                                Some(Number::new_small(n)),
                                 unit,
                                 false,
                             )),
@@ -491,7 +542,7 @@ impl<'a> Parser<'a> {
                         let n = Rational64::new(parse_i64(&val.num), pow(10, val.dec_len));
                         return Some(Ok(IntermediateValue::Value(
                             HigherIntermediateValue::Literal(Value::Dimension(
-                                Number::new_small(n),
+                                Some(Number::new_small(n)),
                                 unit,
                                 false,
                             )),
@@ -504,7 +555,7 @@ impl<'a> Parser<'a> {
                 if val.times_ten.is_empty() {
                     return Some(Ok(IntermediateValue::Value(
                         HigherIntermediateValue::Literal(Value::Dimension(
-                            Number::new_big(n),
+                            Some(Number::new_big(n)),
                             unit,
                             false,
                         )),
@@ -533,7 +584,7 @@ impl<'a> Parser<'a> {
                 };
 
                 IntermediateValue::Value(HigherIntermediateValue::Literal(Value::Dimension(
-                    Number::new_big(n * times_ten),
+                    Some(Number::new_big(n * times_ten)),
                     unit,
                     false,
                 )))
@@ -547,6 +598,7 @@ impl<'a> Parser<'a> {
                 };
                 // todo: the above shouldn't eat the closing paren
                 if let Some(last_tok) = inner.pop() {
+                    // todo: we should remove this like we did for square braces
                     if last_tok.kind != ')' {
                         return Some(Err(("expected \")\".", span).into()));
                     }
@@ -570,7 +622,7 @@ impl<'a> Parser<'a> {
                 if let Some(Token { kind: '{', pos }) = self.toks.peek_forward(1) {
                     self.span_before = *pos;
                     self.toks.reset_cursor();
-                    return Some(self.parse_ident_value());
+                    return Some(self.parse_ident_value(predicate));
                 }
                 self.toks.reset_cursor();
                 self.toks.next();

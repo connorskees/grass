@@ -1,14 +1,16 @@
+use std::cmp::Ordering;
+
 use peekmore::PeekMore;
 
 use codemap::{Span, Spanned};
 
 use crate::{
     color::Color,
-    common::{Brackets, ListSeparator, QuoteKind},
+    common::{Brackets, ListSeparator, Op, QuoteKind},
     error::SassResult,
     parse::Parser,
     selector::Selector,
-    unit::{Unit, UNIT_CONVERSION_TABLE},
+    unit::Unit,
     utils::hex_char_for,
     {Cow, Token},
 };
@@ -29,7 +31,8 @@ pub(crate) enum Value {
     True,
     False,
     Null,
-    Dimension(Number, Unit, bool),
+    /// A `None` value for `Number` indicates a `NaN` value
+    Dimension(Option<Number>, Unit, bool),
     List(Vec<Value>, ListSeparator, Brackets),
     Color(Box<Color>),
     String(String, QuoteKind),
@@ -46,8 +49,8 @@ impl PartialEq for Value {
                 Value::String(s2, ..) => s1 == s2,
                 _ => false,
             },
-            Value::Dimension(n, unit, _) => match other {
-                Value::Dimension(n2, unit2, _) => {
+            Value::Dimension(Some(n), unit, _) => match other {
+                Value::Dimension(Some(n2), unit2, _) => {
                     if !unit.comparable(unit2) {
                         false
                     } else if unit == unit2 {
@@ -55,14 +58,12 @@ impl PartialEq for Value {
                     } else if unit == &Unit::None || unit2 == &Unit::None {
                         false
                     } else {
-                        n == &(n2.clone()
-                            * UNIT_CONVERSION_TABLE[unit.to_string().as_str()]
-                                [unit2.to_string().as_str()]
-                            .clone())
+                        n == &n2.clone().convert(unit2, unit)
                     }
                 }
                 _ => false,
             },
+            Value::Dimension(None, ..) => false,
             Value::List(list1, sep1, brackets1) => match other {
                 Value::List(list2, sep2, brackets2) => {
                     if sep1 != sep2 || brackets1 != brackets2 || list1.len() != list2.len() {
@@ -200,9 +201,21 @@ impl Value {
             Value::Important => Cow::const_str("!important"),
             Value::Dimension(num, unit, _) => match unit {
                 Unit::Mul(..) | Unit::Div(..) => {
-                    return Err((format!("{}{} isn't a valid CSS value.", num, unit), span).into());
+                    if let Some(num) = num {
+                        return Err(
+                            (format!("{}{} isn't a valid CSS value.", num, unit), span).into()
+                        );
+                    } else {
+                        return Err((format!("NaN{} isn't a valid CSS value.", unit), span).into());
+                    }
                 }
-                _ => Cow::owned(format!("{}{}", num, unit)),
+                _ => {
+                    if let Some(num) = num {
+                        Cow::owned(format!("{}{}", num, unit))
+                    } else {
+                        Cow::owned(format!("NaN{}", unit))
+                    }
+                }
             },
             Value::Map(..) | Value::FunctionRef(..) => {
                 return Err((
@@ -322,14 +335,68 @@ impl Value {
         }
     }
 
+    pub fn cmp(&self, other: &Self, span: Span, op: Op) -> SassResult<Ordering> {
+        Ok(match self {
+            Value::Dimension(None, ..) => todo!(),
+            Value::Dimension(Some(num), unit, _) => match &other {
+                Value::Dimension(None, ..) => todo!(),
+                Value::Dimension(Some(num2), unit2, _) => {
+                    if !unit.comparable(unit2) {
+                        return Err(
+                            (format!("Incompatible units {} and {}.", unit2, unit), span).into(),
+                        );
+                    }
+                    if unit == unit2 || unit == &Unit::None || unit2 == &Unit::None {
+                        num.cmp(num2)
+                    } else {
+                        num.cmp(&num2.clone().convert(unit2, unit))
+                    }
+                }
+                v => {
+                    return Err((
+                        format!(
+                            "Undefined operation \"{} {} {}\".",
+                            v.inspect(span)?,
+                            op,
+                            other.inspect(span)?
+                        ),
+                        span,
+                    )
+                        .into())
+                }
+            },
+            _ => {
+                return Err((
+                    format!(
+                        "Undefined operation \"{} {} {}\".",
+                        self.inspect(span)?,
+                        op,
+                        other.inspect(span)?
+                    ),
+                    span,
+                )
+                    .into())
+            }
+        })
+    }
+
+    pub fn unitless(&self) -> bool {
+        #[allow(clippy::match_same_arms)]
+        match self {
+            Value::Dimension(_, Unit::None, _) => true,
+            Value::Dimension(..) => false,
+            _ => true,
+        }
+    }
+
     pub fn not_equals(&self, other: &Self) -> bool {
         match self {
             Value::String(s1, ..) => match other {
                 Value::String(s2, ..) => s1 != s2,
                 _ => true,
             },
-            Value::Dimension(n, unit, _) => match other {
-                Value::Dimension(n2, unit2, _) => {
+            Value::Dimension(Some(n), unit, _) => match other {
+                Value::Dimension(Some(n2), unit2, _) => {
                     if !unit.comparable(unit2) {
                         true
                     } else if unit == unit2 {
@@ -337,10 +404,7 @@ impl Value {
                     } else if unit == &Unit::None || unit2 == &Unit::None {
                         true
                     } else {
-                        n != &(n2.clone()
-                            * UNIT_CONVERSION_TABLE[unit.to_string().as_str()]
-                                [unit2.to_string().as_str()]
-                            .clone())
+                        n != &n2.clone().convert(unit2, unit)
                     }
                 }
                 _ => true,
@@ -405,7 +469,8 @@ impl Value {
                     .collect::<SassResult<Vec<String>>>()?
                     .join(", ")
             )),
-            Value::Dimension(num, unit, _) => Cow::owned(format!("{}{}", num, unit)),
+            Value::Dimension(Some(num), unit, _) => Cow::owned(format!("{}{}", num, unit)),
+            Value::Dimension(None, unit, ..) => Cow::owned(format!("NaN{}", unit)),
             Value::ArgList(args) if args.is_empty() => Cow::const_str("()"),
             Value::ArgList(args) if args.len() == 1 => Cow::owned(format!(
                 "({},)",
@@ -477,6 +542,8 @@ impl Value {
             extender: parser.extender,
             content_scopes: parser.content_scopes,
             options: parser.options,
+            modules: parser.modules,
+            module_config: parser.module_config,
         }
         .parse_selector(allows_parent, true, String::new())?
         .0)

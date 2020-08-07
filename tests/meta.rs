@@ -196,6 +196,11 @@ test!(
     "a {\n  color: number;\n}\n"
 );
 test!(
+    type_of_nan,
+    "a {\n  color: type-of((0 / 0))\n}\n",
+    "a {\n  color: number;\n}\n"
+);
+test!(
     type_of_arglist,
     "@mixin foo($a...) {color: type-of($a);}\na {@include foo(1, 2, 3, 4, 5);}",
     "a {\n  color: arglist;\n}\n"

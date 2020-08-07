@@ -4,11 +4,11 @@ use peekmore::PeekMore;
 use crate::{
     args::CallArgs,
     atrule::Function,
-    common::unvendor,
+    common::{unvendor, Identifier},
     error::SassResult,
     scope::Scopes,
     utils::{read_until_closing_curly_brace, read_until_semicolon_or_closing_curly_brace},
-    value::Value,
+    value::{SassFunction, Value},
     Token,
 };
 
@@ -40,11 +40,9 @@ impl<'a> Parser<'a> {
         }
 
         self.whitespace_or_comment();
-        let args = match self.toks.next() {
-            Some(Token { kind: '(', .. }) => self.parse_func_args()?,
-            Some(Token { pos, .. }) => return Err(("expected \"(\".", pos).into()),
-            None => return Err(("expected \"(\".", span).into()),
-        };
+        self.expect_char('(')?;
+
+        let args = self.parse_func_args()?;
 
         self.whitespace();
 
@@ -57,10 +55,18 @@ impl<'a> Parser<'a> {
 
         let function = Function::new(args, body, self.at_root, span);
 
+        let name_as_ident = Identifier::from(name);
+
         if self.at_root {
-            self.global_scope.insert_fn(name, function);
+            self.global_scope.insert_fn(
+                name_as_ident,
+                SassFunction::UserDefined(Box::new(function), name_as_ident),
+            );
         } else {
-            self.scopes.insert_fn(name.into(), function);
+            self.scopes.insert_fn(
+                name_as_ident,
+                SassFunction::UserDefined(Box::new(function), name_as_ident),
+            );
         }
         Ok(())
     }
@@ -112,8 +118,10 @@ impl<'a> Parser<'a> {
             extender: self.extender,
             content_scopes: self.content_scopes,
             options: self.options,
+            modules: self.modules,
+            module_config: self.module_config,
         }
-        .parse()?;
+        .parse_stmt()?;
 
         if entered_scope {
             self.scopes.exit_scope();

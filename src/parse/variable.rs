@@ -8,10 +8,10 @@ use crate::{
 use super::Parser;
 
 #[derive(Debug)]
-struct VariableValue {
-    val_toks: Vec<Token>,
-    global: bool,
-    default: bool,
+pub(crate) struct VariableValue {
+    pub val_toks: Vec<Token>,
+    pub global: bool,
+    pub default: bool,
 }
 
 impl VariableValue {
@@ -29,9 +29,9 @@ impl<'a> Parser<'a> {
         assert!(matches!(self.toks.next(), Some(Token { kind: '$', .. })));
         let ident: Identifier = self.parse_identifier_no_interpolation(false)?.node.into();
         self.whitespace();
-        if !matches!(self.toks.next(), Some(Token { kind: ':', .. })) {
-            return Err(("expected \":\".", self.span_before).into());
-        }
+
+        self.expect_char(':')?;
+
         let VariableValue {
             val_toks,
             global,
@@ -39,13 +39,24 @@ impl<'a> Parser<'a> {
         } = self.parse_variable_value()?;
 
         if default {
+            let config_val = self.module_config.get(ident);
             if self.at_root && !self.flags.in_control_flow() {
                 if !self.global_scope.var_exists(ident) {
-                    let value = self.parse_value_from_vec(val_toks, true)?;
+                    let value = if let Some(config_val) = config_val {
+                        config_val
+                    } else {
+                        self.parse_value_from_vec(val_toks, true)?.node
+                    };
+
                     self.global_scope.insert_var(ident, value);
                 }
             } else {
-                let value = self.parse_value_from_vec(val_toks, true)?;
+                let value = if let Some(config_val) = config_val {
+                    config_val
+                } else {
+                    self.parse_value_from_vec(val_toks, true)?.node
+                };
+
                 if global && !self.global_scope.var_exists(ident) {
                     self.global_scope.insert_var(ident, value.clone());
                 }
@@ -55,7 +66,7 @@ impl<'a> Parser<'a> {
             return Ok(());
         }
 
-        let value = self.parse_value_from_vec(val_toks, true)?;
+        let value = self.parse_value_from_vec(val_toks, true)?.node;
 
         if global {
             self.global_scope.insert_var(ident, value.clone());
@@ -77,7 +88,7 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    fn parse_variable_value(&mut self) -> SassResult<VariableValue> {
+    pub(super) fn parse_variable_value(&mut self) -> SassResult<VariableValue> {
         let mut default = false;
         let mut global = false;
 

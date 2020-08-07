@@ -1,42 +1,9 @@
 #![cfg(test)]
+
 use std::io::Write;
-use tempfile::Builder;
 
 #[macro_use]
 mod macros;
-
-/// Create a temporary file with the given name
-/// and contents.
-///
-/// This must be a macro rather than a function
-/// because the tempfile will be deleted when it
-/// exits scope
-macro_rules! tempfile {
-    ($name:literal, $content:literal) => {
-        let mut f = Builder::new()
-            .rand_bytes(0)
-            .prefix("")
-            .suffix($name)
-            .tempfile_in("")
-            .unwrap();
-        write!(f, "{}", $content).unwrap();
-    };
-    ($name:literal, $content:literal, dir=$dir:literal) => {
-        let _d = Builder::new()
-            .rand_bytes(0)
-            .prefix("")
-            .suffix($dir)
-            .tempdir_in("")
-            .unwrap();
-        let mut f = Builder::new()
-            .rand_bytes(0)
-            .prefix("")
-            .suffix($name)
-            .tempfile_in($dir)
-            .unwrap();
-        write!(f, "{}", $content).unwrap();
-    };
-}
 
 #[test]
 fn imports_variable() {
@@ -59,17 +26,8 @@ fn import_no_semicolon() {
 fn import_no_quotes() {
     let input = "@import import_no_quotes";
     tempfile!("import_no_quotes", "$a: red;");
-    match grass::from_string(input.to_string(), &grass::Options::default()) {
-        Ok(..) => panic!("did not fail"),
-        Err(e) => assert_eq!(
-            "Error: Expected string.",
-            e.to_string()
-                .chars()
-                .take_while(|c| *c != '\n')
-                .collect::<String>()
-                .as_str()
-        ),
-    }
+
+    assert_err!("Error: Expected string.", input);
 }
 
 #[test]

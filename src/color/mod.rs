@@ -264,7 +264,7 @@ impl Color {
             return h.saturation() * Number::from(100);
         }
 
-        let red = self.red() / Number::from(255);
+        let red: Number = self.red() / Number::from(255);
         let green = self.green() / Number::from(255);
         let blue = self.blue() / Number::from(255);
 
@@ -291,7 +291,7 @@ impl Color {
             return h.luminance() * Number::from(100);
         }
 
-        let red = self.red() / Number::from(255);
+        let red: Number = self.red() / Number::from(255);
         let green = self.green() / Number::from(255);
         let blue = self.blue() / Number::from(255);
         let min = min(&red, min(&green, &blue)).clone();

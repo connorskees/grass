@@ -25,7 +25,7 @@ The large features remaining are
 ```
 indented syntax
 css imports
-@use, @forward, and the module system
+@forward
 compressed output
 ```
 
@@ -76,6 +76,13 @@ cargo b --release
 ```
 
 These numbers come from a default run of the Sass specification as shown above.
+
+```
+2020-08-07
+PASSING: 3375
+FAILING: 1718
+TOTAL: 5093
+```
 
 ```
 2020-07-24

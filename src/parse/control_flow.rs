@@ -24,14 +24,10 @@ impl<'a> Parser<'a> {
 
         let init_cond = self.parse_value(true, &|_| false)?.node;
 
-        // consume the open curly brace
-        let span_before = match self.toks.next() {
-            Some(Token { kind: '{', pos }) => pos,
-            Some(..) | None => return Err(("expected \"{\".", self.span_before).into()),
-        };
+        self.expect_char('{')?;
 
         if self.toks.peek().is_none() {
-            return Err(("expected \"}\".", span_before).into());
+            return Err(("expected \"}\".", self.span_before).into());
         }
 
         self.whitespace_or_comment();
@@ -53,6 +49,8 @@ impl<'a> Parser<'a> {
                 extender: self.extender,
                 content_scopes: self.content_scopes,
                 options: self.options,
+                modules: self.modules,
+                module_config: self.module_config,
             }
             .parse_stmt()?;
         } else {
@@ -87,12 +85,7 @@ impl<'a> Parser<'a> {
                             false
                         } else {
                             let v = self.parse_value(true, &|_| false)?.node.is_true();
-                            match self.toks.next() {
-                                Some(Token { kind: '{', .. }) => {}
-                                Some(..) | None => {
-                                    return Err(("expected \"{\".", self.span_before).into())
-                                }
-                            }
+                            self.expect_char('{')?;
                             v
                         };
                         if cond {
@@ -112,6 +105,8 @@ impl<'a> Parser<'a> {
                                 extender: self.extender,
                                 content_scopes: self.content_scopes,
                                 options: self.options,
+                                modules: self.modules,
+                                module_config: self.module_config,
                             }
                             .parse_stmt()?;
                         } else {
@@ -140,6 +135,8 @@ impl<'a> Parser<'a> {
                                 extender: self.extender,
                                 content_scopes: self.content_scopes,
                                 options: self.options,
+                                modules: self.modules,
+                                module_config: self.module_config,
                             }
                             .parse_stmt();
                         }
@@ -158,17 +155,15 @@ impl<'a> Parser<'a> {
     }
 
     pub(super) fn parse_for(&mut self) -> SassResult<Vec<Stmt>> {
+        // todo: whitespace or comment
         self.whitespace();
-        let next = self
-            .toks
-            .next()
-            .ok_or(("expected \"$\".", self.span_before))?;
-        let var: Spanned<Identifier> = match next.kind {
-            '$' => self
-                .parse_identifier_no_interpolation(false)?
-                .map_node(|i| i.into()),
-            _ => return Err(("expected \"$\".", self.span_before).into()),
-        };
+        // todo: test for error here
+        self.expect_char('$')?;
+
+        let var = self
+            .parse_identifier_no_interpolation(false)?
+            .map_node(|n| n.into());
+
         self.whitespace();
         self.span_before = match self.toks.peek() {
             Some(tok) => tok.pos,
@@ -242,10 +237,11 @@ impl<'a> Parser<'a> {
         self.whitespace();
         let from_val = self.parse_value_from_vec(from_toks, true)?;
         let from = match from_val.node {
-            Value::Dimension(n, ..) => match n.to_integer().to_isize() {
+            Value::Dimension(Some(n), ..) => match n.to_integer().to_isize() {
                 Some(v) => v,
                 None => return Err((format!("{} is not a int.", n), from_val.span).into()),
             },
+            Value::Dimension(None, ..) => todo!(),
             v => {
                 return Err((
                     format!("{} is not an integer.", v.inspect(from_val.span)?),
@@ -257,10 +253,11 @@ impl<'a> Parser<'a> {
 
         let to_val = self.parse_value(true, &|_| false)?;
         let to = match to_val.node {
-            Value::Dimension(n, ..) => match n.to_integer().to_isize() {
+            Value::Dimension(Some(n), ..) => match n.to_integer().to_isize() {
                 Some(v) => v,
                 None => return Err((format!("{} is not a int.", n), to_val.span).into()),
             },
+            Value::Dimension(None, ..) => todo!(),
             v => {
                 return Err((
                     format!("{} is not an integer.", v.to_css_string(to_val.span)?),
@@ -270,11 +267,7 @@ impl<'a> Parser<'a> {
             }
         };
 
-        // consume the open curly brace
-        match self.toks.next() {
-            Some(Token { kind: '{', pos }) => pos,
-            Some(..) | None => return Err(("expected \"{\".", to_val.span).into()),
-        };
+        self.expect_char('{')?;
 
         let body = read_until_closing_curly_brace(self.toks)?;
         self.toks.next();
@@ -299,10 +292,7 @@ impl<'a> Parser<'a> {
         for i in iter {
             self.scopes.insert_var_last(
                 var.node,
-                Spanned {
-                    node: Value::Dimension(Number::from(i), Unit::None, true),
-                    span: var.span,
-                },
+                Value::Dimension(Some(Number::from(i)), Unit::None, true),
             );
             if self.flags.in_function() {
                 let these_stmts = Parser {
@@ -320,8 +310,10 @@ impl<'a> Parser<'a> {
                     extender: self.extender,
                     content_scopes: self.content_scopes,
                     options: self.options,
+                    modules: self.modules,
+                    module_config: self.module_config,
                 }
-                .parse()?;
+                .parse_stmt()?;
                 if !these_stmts.is_empty() {
                     return Ok(these_stmts);
                 }
@@ -342,8 +334,10 @@ impl<'a> Parser<'a> {
                         extender: self.extender,
                         content_scopes: self.content_scopes,
                         options: self.options,
+                        modules: self.modules,
+                        module_config: self.module_config,
                     }
-                    .parse()?,
+                    .parse_stmt()?,
                 );
             }
         }
@@ -392,8 +386,10 @@ impl<'a> Parser<'a> {
                     extender: self.extender,
                     content_scopes: self.content_scopes,
                     options: self.options,
+                    modules: self.modules,
+                    module_config: self.module_config,
                 }
-                .parse()?;
+                .parse_stmt()?;
                 if !these_stmts.is_empty() {
                     return Ok(these_stmts);
                 }
@@ -414,8 +410,10 @@ impl<'a> Parser<'a> {
                         extender: self.extender,
                         content_scopes: self.content_scopes,
                         options: self.options,
+                        modules: self.modules,
+                        module_config: self.module_config,
                     }
-                    .parse()?,
+                    .parse_stmt()?,
                 );
             }
             val = self.parse_value_from_vec(cond.clone(), true)?;
@@ -430,15 +428,11 @@ impl<'a> Parser<'a> {
         let mut vars: Vec<Spanned<Identifier>> = Vec::new();
 
         loop {
-            let next = self
-                .toks
-                .next()
-                .ok_or(("expected \"$\".", self.span_before))?;
+            self.expect_char('$')?;
 
-            match next.kind {
-                '$' => vars.push(self.parse_identifier()?.map_node(|i| i.into())),
-                _ => return Err(("expected \"$\".", next.pos()).into()),
-            }
+            vars.push(self.parse_identifier()?.map_node(|i| i.into()));
+
+            // todo: whitespace or comment
             self.whitespace();
             if self
                 .toks
@@ -478,26 +472,14 @@ impl<'a> Parser<'a> {
 
         for row in iter {
             if vars.len() == 1 {
-                self.scopes.insert_var_last(
-                    vars[0].node,
-                    Spanned {
-                        node: row,
-                        span: vars[0].span,
-                    },
-                );
+                self.scopes.insert_var_last(vars[0].node, row);
             } else {
                 for (var, val) in vars.iter().zip(
                     row.as_list()
                         .into_iter()
                         .chain(std::iter::once(Value::Null).cycle()),
                 ) {
-                    self.scopes.insert_var_last(
-                        var.node,
-                        Spanned {
-                            node: val,
-                            span: var.span,
-                        },
-                    );
+                    self.scopes.insert_var_last(var.node, val);
                 }
             }
 
@@ -517,8 +499,10 @@ impl<'a> Parser<'a> {
                     extender: self.extender,
                     content_scopes: self.content_scopes,
                     options: self.options,
+                    modules: self.modules,
+                    module_config: self.module_config,
                 }
-                .parse()?;
+                .parse_stmt()?;
                 if !these_stmts.is_empty() {
                     return Ok(these_stmts);
                 }
@@ -539,8 +523,10 @@ impl<'a> Parser<'a> {
                         extender: self.extender,
                         content_scopes: self.content_scopes,
                         options: self.options,
+                        modules: self.modules,
+                        module_config: self.module_config,
                     }
-                    .parse()?,
+                    .parse_stmt()?,
                 );
             }
         }

@@ -8,7 +8,11 @@ use std::{
 
 use num_bigint::BigInt;
 use num_rational::{BigRational, Rational64};
-use num_traits::{CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Num, One, Signed, Zero};
+use num_traits::{
+    CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Num, One, Signed, ToPrimitive, Zero,
+};
+
+use crate::unit::{Unit, UNIT_CONVERSION_TABLE};
 
 use integer::Integer;
 
@@ -16,7 +20,7 @@ mod integer;
 
 const PRECISION: usize = 10;
 
-#[derive(Clone, Eq, PartialEq, Ord)]
+#[derive(Clone, Eq, PartialEq)]
 pub(crate) enum Number {
     Small(Rational64),
     Big(Box<BigRational>),
@@ -106,6 +110,84 @@ impl Number {
 
         self
     }
+
+    #[allow(clippy::cast_precision_loss)]
+    fn as_float(self) -> Option<f64> {
+        Some(match self {
+            Number::Small(n) => ((*n.numer() as f64) / (*n.denom() as f64)),
+            Number::Big(n) => ((n.numer().to_f64()?) / (n.denom().to_f64()?)),
+        })
+    }
+
+    pub fn sqrt(self) -> Option<Self> {
+        Some(Number::Big(Box::new(BigRational::from_float(
+            self.as_float()?.sqrt(),
+        )?)))
+    }
+
+    pub fn ln(self) -> Option<Self> {
+        Some(Number::Big(Box::new(BigRational::from_float(
+            self.as_float()?.ln(),
+        )?)))
+    }
+
+    pub fn pow(self, exponent: Self) -> Option<Self> {
+        Some(Number::Big(Box::new(BigRational::from_float(
+            self.as_float()?.powf(exponent.as_float()?),
+        )?)))
+    }
+
+    pub fn pi() -> Self {
+        Number::from(std::f64::consts::PI)
+    }
+
+    pub fn atan2(self, other: Self) -> Option<Self> {
+        Some(Number::Big(Box::new(BigRational::from_float(
+            self.as_float()?.atan2(other.as_float()?),
+        )?)))
+    }
+
+    /// Invariants: `from.comparable(&to)` must be true
+    pub fn convert(self, from: &Unit, to: &Unit) -> Self {
+        self * UNIT_CONVERSION_TABLE[to][from].clone()
+    }
+}
+
+macro_rules! trig_fn(
+    ($name:ident, $name_deg:ident) => {
+        pub fn $name(self) -> Option<Self> {
+            Some(Number::Big(Box::new(BigRational::from_float(
+                self.as_float()?.$name(),
+            )?)))
+        }
+
+        pub fn $name_deg(self) -> Option<Self> {
+            Some(Number::Big(Box::new(BigRational::from_float(
+                self.as_float()?.to_radians().$name(),
+            )?)))
+        }
+    }
+);
+
+macro_rules! inverse_trig_fn(
+    ($name:ident) => {
+        pub fn $name(self) -> Option<Self> {
+            Some(Number::Big(Box::new(BigRational::from_float(
+                self.as_float()?.$name().to_degrees(),
+            )?)))
+        }
+    }
+);
+
+/// Trigonometry methods
+impl Number {
+    trig_fn!(cos, cos_deg);
+    trig_fn!(sin, sin_deg);
+    trig_fn!(tan, tan_deg);
+
+    inverse_trig_fn!(acos);
+    inverse_trig_fn!(asin);
+    inverse_trig_fn!(atan);
 }
 
 impl Default for Number {
@@ -316,6 +398,30 @@ impl PartialOrd for Number {
                     ))
                 }
                 Self::Big(val2) => val1.partial_cmp(val2),
+            },
+        }
+    }
+}
+
+impl Ord for Number {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self {
+            Self::Small(val1) => match other {
+                Self::Small(val2) => val1.cmp(val2),
+                Self::Big(val2) => {
+                    let tuple: (i64, i64) = (*val1).into();
+                    BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1)).cmp(val2)
+                }
+            },
+            Self::Big(val1) => match other {
+                Self::Small(val2) => {
+                    let tuple: (i64, i64) = (*val2).into();
+                    (**val1).cmp(&BigRational::new_raw(
+                        BigInt::from(tuple.0),
+                        BigInt::from(tuple.1),
+                    ))
+                }
+                Self::Big(val2) => val1.cmp(val2),
             },
         }
     }

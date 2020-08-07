@@ -63,9 +63,8 @@ impl<'a, 'b> KeyframesSelectorParser<'a, 'b> {
                         num.push_str(&eat_whole_number(self.parser.toks));
                     }
 
-                    if !matches!(self.parser.toks.next(), Some(Token { kind: '%', .. })) {
-                        return Err(("expected \"%\".", tok.pos).into());
-                    }
+                    self.parser.expect_char('%')?;
+
                     selectors.push(KeyframesSelector::Percent(num.into_boxed_str()));
                 }
                 '{' => break,
@@ -173,6 +172,8 @@ impl<'a> Parser<'a> {
                         extender: self.extender,
                         content_scopes: self.content_scopes,
                         options: self.options,
+                        modules: self.modules,
+                        module_config: self.module_config,
                     })
                     .parse_keyframes_selector()?;
 
@@ -208,6 +209,8 @@ impl<'a> Parser<'a> {
             extender: self.extender,
             content_scopes: self.content_scopes,
             options: self.options,
+            modules: self.modules,
+            module_config: self.module_config,
         }
         .parse_stmt()?;
 

@@ -63,3 +63,8 @@ test!(
     "a {\n  color: 0 < 1;\n}\n",
     "a {\n  color: true;\n}\n"
 );
+test!(
+    ord_the_same_as_partial_ord,
+    "a {\n  color: 2in > 1cm;\n}\n",
+    "a {\n  color: true;\n}\n"
+);

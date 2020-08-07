@@ -1,11 +1,11 @@
 /*! # grass
 An implementation of the Sass specification in pure rust.
 
-Spec progress as of 2020-07-24:
+Spec progress as of 2020-08-07:
 
 | Passing | Failing | Total |
 |---------|---------|-------|
-| 2935    | 2158    | 5093  |
+| 3375    | 1718    | 5093  |
 
 ## Use as library
 ```
@@ -50,6 +50,7 @@ grass input.scss
     clippy::unknown_clippy_lints,
     clippy::replace_consts,
     clippy::single_match,
+    clippy::float_arithmetic,
 
     // temporarily allowed while under heavy development.
     // eventually these allows should be refactored away
@@ -94,6 +95,7 @@ use peekmore::PeekMore;
 pub use crate::error::{SassError as Error, SassResult as Result};
 pub(crate) use crate::token::Token;
 use crate::{
+    builtin::modules::{ModuleConfig, Modules},
     lexer::Lexer,
     output::Css,
     parse::{
@@ -292,6 +294,8 @@ pub fn from_path(p: &str, options: &Options) -> Result<String> {
         extender: &mut Extender::new(empty_span),
         content_scopes: &mut Scopes::new(),
         options,
+        modules: &mut Modules::default(),
+        module_config: &mut ModuleConfig::default(),
     }
     .parse()
     .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages))?;
@@ -336,6 +340,8 @@ pub fn from_string(p: String, options: &Options) -> Result<String> {
         extender: &mut Extender::new(empty_span),
         content_scopes: &mut Scopes::new(),
         options,
+        modules: &mut Modules::default(),
+        module_config: &mut ModuleConfig::default(),
     }
     .parse()
     .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages))?;
@@ -371,6 +377,8 @@ pub fn from_string(p: String) -> std::result::Result<String, JsValue> {
         extender: &mut Extender::new(empty_span),
         content_scopes: &mut Scopes::new(),
         options: &Options::default(),
+        modules: &mut Modules::default(),
+        module_config: &mut ModuleConfig::default(),
     }
     .parse()
     .map_err(|e| raw_to_parse_error(&map, *e, true).to_string())?;

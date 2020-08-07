@@ -6,7 +6,7 @@ use peekmore::PeekMore;
 
 use crate::{
     args::{CallArgs, FuncArgs},
-    atrule::{Content, Mixin},
+    atrule::mixin::{Content, Mixin, UserDefinedMixin},
     error::SassResult,
     scope::Scopes,
     utils::read_until_closing_curly_brace,
@@ -55,7 +55,7 @@ impl<'a> Parser<'a> {
         // this is blocked on figuring out just how to check for this. presumably we could have a check
         // not when parsing initially, but rather when `@include`ing to see if an `@content` was found.
 
-        let mixin = Mixin::new(args, body, false, self.at_root);
+        let mixin = Mixin::new_user_defined(args, body, false, self.at_root);
 
         if self.at_root {
             self.global_scope.insert_mixin(name, mixin);
@@ -72,6 +72,19 @@ impl<'a> Parser<'a> {
 
         self.whitespace_or_comment();
         let name = self.parse_identifier()?.map_node(Into::into);
+
+        let mixin = if let Some(Token { kind: '.', .. }) = self.toks.peek() {
+            self.toks.next();
+
+            let module = name;
+            let name = self.parse_identifier()?.map_node(Into::into);
+
+            self.modules
+                .get(module.node, module.span)?
+                .get_mixin(name)?
+        } else {
+            self.scopes.get_mixin(name, self.global_scope)?
+        };
 
         self.whitespace_or_comment();
 
@@ -91,9 +104,7 @@ impl<'a> Parser<'a> {
             ident.node.make_ascii_lowercase();
             if ident.node == "using" {
                 self.whitespace_or_comment();
-                if !matches!(self.toks.next(), Some(Token { kind: '(', .. })) {
-                    return Err(("expected \"(\".", ident.span).into());
-                }
+                self.expect_char('(')?;
 
                 Some(self.parse_func_args()?)
             } else {
@@ -125,12 +136,17 @@ impl<'a> Parser<'a> {
             self.toks.next();
         }
 
-        let Mixin {
+        let UserDefinedMixin {
             body,
             args: fn_args,
             declared_at_root,
             ..
-        } = self.scopes.get_mixin(name, self.global_scope)?;
+        } = match mixin {
+            Mixin::UserDefined(u) => u,
+            Mixin::Builtin(b) => {
+                return b(args, self);
+            }
+        };
 
         let scope = self.eval_args(fn_args, args)?;
 
@@ -164,8 +180,10 @@ impl<'a> Parser<'a> {
             extender: self.extender,
             content_scopes: self.content_scopes,
             options: self.options,
+            modules: self.modules,
+            module_config: self.module_config,
         }
-        .parse()?;
+        .parse_stmt()?;
 
         self.content.pop();
         self.scopes.exit_scope();
@@ -225,8 +243,10 @@ impl<'a> Parser<'a> {
                     extender: self.extender,
                     content_scopes: self.scopes,
                     options: self.options,
+                    modules: self.modules,
+                    module_config: self.module_config,
                 }
-                .parse()?
+                .parse_stmt()?
             } else {
                 Vec::new()
             };

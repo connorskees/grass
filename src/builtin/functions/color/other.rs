@@ -15,7 +15,8 @@ use crate::{
 macro_rules! opt_rgba {
     ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal) => {
         let $name = match $args.default_named_arg($arg, Value::Null)? {
-            Value::Dimension(n, u, _) => Some(bound!($args, $arg, n, u, $low, $high)),
+            Value::Dimension(Some(n), u, _) => Some(bound!($args, $arg, n, u, $low, $high)),
+            Value::Dimension(None, ..) => todo!(),
             Value::Null => None,
             v => {
                 return Err((
@@ -31,9 +32,10 @@ macro_rules! opt_rgba {
 macro_rules! opt_hsl {
     ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal) => {
         let $name = match $args.default_named_arg($arg, Value::Null)? {
-            Value::Dimension(n, u, _) => {
+            Value::Dimension(Some(n), u, _) => {
                 Some(bound!($args, $arg, n, u, $low, $high) / Number::from(100))
             }
+            Value::Dimension(None, ..) => todo!(),
             Value::Null => None,
             v => {
                 return Err((
@@ -46,7 +48,7 @@ macro_rules! opt_hsl {
     };
 }
 
-fn change_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn change_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     if args.positional_arg(1).is_some() {
         return Err((
             "Only one positional argument is allowed. All other arguments must be passed by name.",
@@ -81,7 +83,8 @@ fn change_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value
     }
 
     let hue = match args.default_named_arg("hue", Value::Null)? {
-        Value::Dimension(n, ..) => Some(n),
+        Value::Dimension(Some(n), ..) => Some(n),
+        Value::Dimension(None, ..) => todo!(),
         Value::Null => None,
         v => {
             return Err((
@@ -113,7 +116,7 @@ fn change_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value
     }))
 }
 
-fn adjust_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn adjust_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,
         v => {
@@ -140,7 +143,8 @@ fn adjust_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value
     }
 
     let hue = match args.default_named_arg("hue", Value::Null)? {
-        Value::Dimension(n, ..) => Some(n),
+        Value::Dimension(Some(n), ..) => Some(n),
+        Value::Dimension(None, ..) => todo!(),
         Value::Null => None,
         v => {
             return Err((
@@ -175,8 +179,8 @@ fn adjust_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value
 
 #[allow(clippy::cognitive_complexity)]
 // todo: refactor into rgb and hsl?
-fn scale_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
-    fn scale(val: Number, by: Number, max: Number) -> Number {
+pub(crate) fn scale_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+    pub(crate) fn scale(val: Number, by: Number, max: Number) -> Number {
         if by.is_zero() {
             return val;
         }
@@ -198,9 +202,10 @@ fn scale_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value>
     macro_rules! opt_scale_arg {
         ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal) => {
             let $name = match $args.default_named_arg($arg, Value::Null)? {
-                Value::Dimension(n, Unit::Percent, _) => {
+                Value::Dimension(Some(n), Unit::Percent, _) => {
                     Some(bound!($args, $arg, n, Unit::Percent, $low, $high) / Number::from(100))
                 }
+                Value::Dimension(None, ..) => todo!(),
                 v @ Value::Dimension(..) => {
                     return Err((
                         format!(
@@ -288,7 +293,7 @@ fn scale_color(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value>
     }))
 }
 
-fn ie_hex_str(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn ie_hex_str(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,
