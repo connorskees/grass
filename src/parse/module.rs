@@ -241,6 +241,7 @@ impl<'a> Parser<'a> {
                         Comment::Loud(s) => comments.push(Stmt::Comment(s)),
                     }
                 }
+                Some(Token { kind: '$', .. }) => self.parse_variable_declaration()?,
                 Some(..) | None => break,
             }
         }

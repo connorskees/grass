@@ -311,8 +311,23 @@ fn use_variable_redeclaration_private() {
 fn use_variable_redeclaration_builtin() {
     let input = "@use \"sass:math\";\nmath.$e: red;";
 
-    assert_err!(
-        "Error: Cannot modify built-in variable.",
-        input
+    assert_err!("Error: Cannot modify built-in variable.", input);
+}
+
+#[test]
+fn use_variable_declaration_between_use() {
+    let input = r#"
+        $a: red;
+        $b: green;
+        @use "sass:math";
+        $b: red;
+        @use "sass:meta";
+        a {
+            color: $a $b;
+        }"#;
+
+    assert_eq!(
+        "a {\n  color: red red;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default()).expect(input)
     );
 }
