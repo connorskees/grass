@@ -1,3 +1,16 @@
+# TBD
+
+ - **implement `@use` and the module system**
+ - support the filter syntax for function arguments, e.g. `alpha(opacity=1)`
+ - disallow certain at-rules in functions, resolving several panics
+ - allow vendor-prefixed special CSS functions, e.g. `-webkit-calc(...)`
+ - allow decimal percent selectors inside `@keyframes`
+ - allow vendor-prefixed `@keyframes`
+ - resolve parsing bug for maps involving silent comments
+ - allow escaped `!` in selectors
+ - allow multiline comments in functions
+ - resolve several panics on malformed input when parsing bracketed lists
+
 # 0.10.0
 
  - bugfixes for `@media` query regressions
