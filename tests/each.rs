@@ -77,6 +77,17 @@ test!(
     }",
     "a {\n  color: a;\n  color: b;\n  color: 1;\n  color: b;\n}\n"
 );
+// todo: newlines are not correct
+test!(
+    multiline_comments_everywhere,
+    "  /**/  @each  /**/  $a  /**/  ,  /**/  $b  /**/  in  /**/  (  /**/  a  /**/  ,  /**/  b  /**/  )  /**/  {  /**/  
+        a {
+            color: $a;
+            color: $b;
+        }
+    }  /**/  ",
+    "/**/\n/**/\na {\n  color: a;\n}\n/**/\n\na {\n  color: b;\n}\n/**/\n"
+);
 error!(
     list_of_single_map,
     "a {

@@ -170,3 +170,8 @@ test!(
     "a {\n  color: unquote(\"foo  \");\n}\n",
     "a {\n  color: foo  ;\n}\n"
 );
+test!(
+    multiline_comment_after_style_property,
+    "a {\n  color  /**/  : red;\n}\n",
+    "a {\n  color: red;\n}\n"
+);

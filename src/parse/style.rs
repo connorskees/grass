@@ -109,7 +109,7 @@ impl<'a> Parser<'a> {
         }
 
         let mut property = self.parse_identifier()?.node;
-        let whitespace_after_property = self.whitespace();
+        let whitespace_after_property = self.whitespace_or_comment();
 
         match self.toks.peek() {
             Some(Token { kind: ':', .. }) => {

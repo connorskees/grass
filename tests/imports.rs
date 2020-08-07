@@ -188,6 +188,11 @@ test!(
     "@import url(#{1+1}..);",
     "@import url(2..);\n"
 );
+test!(
+    import_multiline_comments_everywhere,
+    "  /**/  @import  /**/  url(foo)  /**/  ;",
+    "/**/\n@import url(foo);\n"
+);
 
 // todo: test for calling paths, e.g. `grass b\index.scss`
 // todo: test for absolute paths (how?)

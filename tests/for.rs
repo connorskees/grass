@@ -113,3 +113,8 @@ test!(
     }",
     "a {\n  color: 1;\n  color: 2;\n  color: 1;\n  color: 2;\n}\n"
 );
+test!(
+    multiline_comments_everywhere,
+    "  /**/  @for  /**/  $i  /**/  from  /**/  0  /**/  to  /**/  2  /**/  {}  /**/  ",
+    "/**/\n/**/\n"
+);

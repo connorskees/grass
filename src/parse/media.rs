@@ -35,6 +35,7 @@ impl<'a> Parser<'a> {
         false
     }
 
+    // todo: replace with predicate
     pub fn expression_until_comparison(&mut self) -> SassResult<Cow<'static, str>> {
         let mut toks = Vec::new();
         while let Some(tok) = self.toks.peek().cloned() {
@@ -71,7 +72,7 @@ impl<'a> Parser<'a> {
     pub(super) fn parse_media_query_list(&mut self) -> SassResult<String> {
         let mut buf = String::new();
         loop {
-            self.whitespace();
+            self.whitespace_or_comment();
             buf.push_str(&self.parse_single_media_query()?);
             if !self.scan_char(',') {
                 break;
@@ -94,13 +95,13 @@ impl<'a> Parser<'a> {
         let mut buf = String::with_capacity(2);
         self.expect_char('(')?;
         buf.push('(');
-        self.whitespace();
+        self.whitespace_or_comment();
 
         buf.push_str(&self.expression_until_comparison()?);
 
         if let Some(Token { kind: ':', .. }) = self.toks.peek() {
             self.toks.next();
-            self.whitespace();
+            self.whitespace_or_comment();
 
             buf.push(':');
             buf.push(' ');
@@ -112,7 +113,7 @@ impl<'a> Parser<'a> {
             }
             buf.push_str(&self.parse_value_as_string_from_vec(toks, true)?);
 
-            self.whitespace();
+            self.whitespace_or_comment();
             buf.push(')');
             return Ok(buf);
         } else {
@@ -127,14 +128,14 @@ impl<'a> Parser<'a> {
                 }
                 buf.push(' ');
 
-                self.whitespace();
+                self.whitespace_or_comment();
 
                 buf.push_str(&self.expression_until_comparison()?);
             }
         }
 
         self.expect_char(')')?;
-        self.whitespace();
+        self.whitespace_or_comment();
         buf.push(')');
         Ok(buf)
     }
@@ -145,7 +146,7 @@ impl<'a> Parser<'a> {
         if !matches!(self.toks.peek(), Some(Token { kind: '(', .. })) {
             buf.push_str(&self.parse_identifier()?);
 
-            self.whitespace();
+            self.whitespace_or_comment();
 
             if let Some(tok) = self.toks.peek() {
                 if !is_name_start(tok.kind) {
@@ -156,7 +157,7 @@ impl<'a> Parser<'a> {
             buf.push(' ');
             let ident = self.parse_identifier()?;
 
-            self.whitespace();
+            self.whitespace_or_comment();
 
             if ident.to_ascii_lowercase() == "and" {
                 buf.push_str("and ");
@@ -164,7 +165,7 @@ impl<'a> Parser<'a> {
                 buf.push_str(&ident);
 
                 if self.scan_identifier("and")? {
-                    self.whitespace();
+                    self.whitespace_or_comment();
                     buf.push_str(" and ");
                 } else {
                     return Ok(buf);
@@ -173,9 +174,9 @@ impl<'a> Parser<'a> {
         }
 
         loop {
-            self.whitespace();
+            self.whitespace_or_comment();
             buf.push_str(&self.parse_media_feature()?);
-            self.whitespace();
+            self.whitespace_or_comment();
             if !self.scan_identifier("and")? {
                 break;
             }

@@ -149,6 +149,11 @@ test!(
     }",
     "a {\n  color: red;\n}\n"
 );
+test!(
+    multiline_comments_everywhere,
+    "  /**/  $a  /**/  :  /**/  red  /**/  ;  /**/  ",
+    "/**/\n/**/\n"
+);
 // https://github.com/Kixiron/lasso/issues/7
 test!(
     regression_test_for_lasso_0_3_0,

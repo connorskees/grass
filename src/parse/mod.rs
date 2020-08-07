@@ -616,7 +616,7 @@ impl<'a> Parser<'a> {
         }
 
         let mut params = String::new();
-        self.whitespace();
+        self.whitespace_or_comment();
         if let Some(Token { kind: ';', .. }) | None = self.toks.peek() {
             self.toks.next();
             return Ok(Stmt::UnknownAtRule(Box::new(UnknownAtRule {

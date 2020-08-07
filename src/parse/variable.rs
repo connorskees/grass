@@ -28,7 +28,7 @@ impl<'a> Parser<'a> {
     pub(super) fn parse_variable_declaration(&mut self) -> SassResult<()> {
         assert!(matches!(self.toks.next(), Some(Token { kind: '$', .. })));
         let ident: Identifier = self.parse_identifier_no_interpolation(false)?.node.into();
-        self.whitespace();
+        self.whitespace_or_comment();
 
         self.expect_char(':')?;
 

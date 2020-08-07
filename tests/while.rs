@@ -125,6 +125,11 @@ test!(
     }",
     "a {\n  color: red;\n}\n\na {\n  color: blue;\n}\n"
 );
+test!(
+    multiline_comments_everywhere,
+    "  /**/  @while  /**/  false  /**/  {}  /**/  ",
+    "/**/\n/**/\n"
+);
 error!(
     missing_closing_curly_brace,
     "@while true {", "Error: expected \"}\"."

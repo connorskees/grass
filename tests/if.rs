@@ -163,6 +163,16 @@ test!(
     }",
     "a {\n  a: \\}}}{{{#;\n  b: \\}}}{{{#;\n  c: \\}}}{{{#;\n}\n"
 );
+test!(
+    multiline_comments_everywhere,
+    "  /**/  @if  /**/  false  /**/  {}  /**/  
+    /**/  
+    /**/  @else  /**/  if  /**/  false  /**/  {}  /**/  
+    /**/  
+    /**/  @else  /**/  {}  /**/  
+      /**/  ",
+    "/**/\n/**/\n/**/\n"
+);
 error!(
     nothing_after_escape,
     "@if \\", "Error: Expected expression."

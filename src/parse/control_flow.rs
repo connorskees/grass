@@ -155,8 +155,7 @@ impl<'a> Parser<'a> {
     }
 
     pub(super) fn parse_for(&mut self) -> SassResult<Vec<Stmt>> {
-        // todo: whitespace or comment
-        self.whitespace();
+        self.whitespace_or_comment();
         // todo: test for error here
         self.expect_char('$')?;
 
@@ -164,7 +163,7 @@ impl<'a> Parser<'a> {
             .parse_identifier_no_interpolation(false)?
             .map_node(|n| n.into());
 
-        self.whitespace();
+        self.whitespace_or_comment();
         self.span_before = match self.toks.peek() {
             Some(tok) => tok.pos,
             None => return Err(("Expected \"from\".", var.span).into()),
@@ -172,7 +171,7 @@ impl<'a> Parser<'a> {
         if self.parse_identifier()?.node.to_ascii_lowercase() != "from" {
             return Err(("Expected \"from\".", var.span).into());
         }
-        self.whitespace();
+        self.whitespace_or_comment();
         let mut from_toks = Vec::new();
         let mut through = 0;
         while let Some(tok) = self.toks.peek().cloned() {
@@ -234,7 +233,7 @@ impl<'a> Parser<'a> {
                 }
             }
         }
-        self.whitespace();
+        self.whitespace_or_comment();
         let from_val = self.parse_value_from_vec(from_toks, true)?;
         let from = match from_val.node {
             Value::Dimension(Some(n), ..) => match n.to_integer().to_isize() {
@@ -271,8 +270,6 @@ impl<'a> Parser<'a> {
 
         let body = read_until_closing_curly_brace(self.toks)?;
         self.toks.next();
-
-        self.whitespace();
 
         let (mut x, mut y);
         // we can't use an inclusive range here
@@ -348,7 +345,10 @@ impl<'a> Parser<'a> {
     }
 
     pub(super) fn parse_while(&mut self) -> SassResult<Vec<Stmt>> {
-        self.whitespace();
+        // technically not necessary to eat whitespace here, but since we
+        // operate on raw tokens rather than an AST, it potentially saves a lot of
+        // time in re-parsing
+        self.whitespace_or_comment();
         let cond = read_until_open_curly_brace(self.toks)?;
 
         if cond.is_empty() {
@@ -363,8 +363,6 @@ impl<'a> Parser<'a> {
             Some(tok) => tok,
             None => return Err(("expected \"}\".", self.span_before).into()),
         });
-
-        self.whitespace();
 
         let mut stmts = Vec::new();
         let mut val = self.parse_value_from_vec(cond.clone(), true)?;
@@ -424,16 +422,15 @@ impl<'a> Parser<'a> {
     }
 
     pub(super) fn parse_each(&mut self) -> SassResult<Vec<Stmt>> {
-        self.whitespace();
         let mut vars: Vec<Spanned<Identifier>> = Vec::new();
 
+        self.whitespace_or_comment();
         loop {
             self.expect_char('$')?;
 
             vars.push(self.parse_identifier()?.map_node(|i| i.into()));
 
-            // todo: whitespace or comment
-            self.whitespace();
+            self.whitespace_or_comment();
             if self
                 .toks
                 .peek()
@@ -442,7 +439,7 @@ impl<'a> Parser<'a> {
                 == ','
             {
                 self.toks.next();
-                self.whitespace();
+                self.whitespace_or_comment();
             } else {
                 break;
             }
@@ -451,7 +448,7 @@ impl<'a> Parser<'a> {
         if i.node.to_ascii_lowercase() != "in" {
             return Err(("Expected \"in\".", i.span).into());
         }
-        self.whitespace();
+        self.whitespace_or_comment();
         let iter_val_toks = read_until_open_curly_brace(self.toks)?;
         let iter = self
             .parse_value_from_vec(iter_val_toks, true)?

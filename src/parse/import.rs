@@ -121,7 +121,7 @@ impl<'a> Parser<'a> {
             return Err(("This at-rule is not allowed here.", self.span_before).into());
         }
 
-        self.whitespace();
+        self.whitespace_or_comment();
 
         match self.toks.peek() {
             Some(Token { kind: '\'', .. })

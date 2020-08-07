@@ -63,3 +63,12 @@ test!(
     }",
     "@media screen and (:) {\n  a {\n    color: red;\n  }\n}\n"
 );
+test!(
+    multiline_comments_everywhere,
+    "@media/**/foo/**/and/**/(/**/bar/**/)/**/{
+        a {
+            color: red;
+        }
+    }",
+    "@media foo and (bar) {\n  a {\n    color: red;\n  }\n}\n"
+);
