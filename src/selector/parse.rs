@@ -317,14 +317,14 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
             if SELECTOR_PSEUDO_ELEMENTS.contains(&unvendored) {
                 selector = Some(Box::new(self.parse_selector_list()?));
                 self.parser.whitespace();
-                self.expect_closing_paren()?;
+                self.parser.expect_char(')')?;
             } else {
                 argument = Some(self.declaration_value()?.into_boxed_str());
             }
         } else if SELECTOR_PSEUDO_CLASSES.contains(&unvendored) {
             selector = Some(Box::new(self.parse_selector_list()?));
             self.parser.whitespace();
-            self.expect_closing_paren()?;
+            self.parser.expect_char(')')?;
         } else if unvendored == "nth-child" || unvendored == "nth-last-child" {
             let mut this_arg = self.parse_a_n_plus_b()?;
             let found_whitespace = self.parser.whitespace();
@@ -339,7 +339,7 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
                 }
                 _ => {}
             }
-            self.expect_closing_paren()?;
+            self.parser.expect_char(')')?;
             argument = Some(this_arg.into_boxed_str());
         } else {
             argument = Some(
@@ -539,14 +539,6 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
             Ok(())
         } else {
             Err((format!("Expected \"{}\".", s), self.span).into())
-        }
-    }
-
-    fn expect_closing_paren(&mut self) -> SassResult<()> {
-        if let Some(Token { kind: ')', .. }) = self.parser.toks.next() {
-            Ok(())
-        } else {
-            Err(("expected \")\".", self.span).into())
         }
     }
 }

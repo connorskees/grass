@@ -72,19 +72,12 @@ impl<'a> Parser<'a> {
                     }
                 }
                 '.' => {
-                    let next = self.toks.next().ok_or(("expected \".\".", span))?;
-                    if next.kind != '.' {
-                        return Err(("expected \".\".", next.pos()).into());
-                    }
-                    let next = self.toks.next().ok_or(("expected \".\".", next.pos()))?;
-                    if next.kind != '.' {
-                        return Err(("expected \".\".", next.pos()).into());
-                    }
+                    self.expect_char('.')?;
+                    self.expect_char('.')?;
+
                     self.whitespace_or_comment();
-                    let next = self.toks.next().ok_or(("expected \")\".", next.pos()))?;
-                    if next.kind != ')' {
-                        return Err(("expected \")\".", next.pos()).into());
-                    }
+
+                    self.expect_char(')')?;
 
                     is_variadic = true;
 
@@ -119,6 +112,7 @@ impl<'a> Parser<'a> {
         }
         self.whitespace_or_comment();
         // TODO: this should NOT eat the opening curly brace
+        // todo: self.expect_char('{')?;
         match self.toks.next() {
             Some(v) if v.kind == '{' => {}
             Some(..) | None => return Err(("expected \"{\".", close_paren_span).into()),
@@ -225,11 +219,7 @@ impl<'a> Parser<'a> {
                             return Err(("expected \")\".", pos).into());
                         }
                         self.toks.next();
-                        if let Some(Token { kind: '.', .. }) = self.toks.peek() {
-                            self.toks.next();
-                        } else {
-                            return Err(("expected \".\".", pos).into());
-                        }
+                        self.expect_char('.')?;
                     } else {
                         return Err(("expected \")\".", pos).into());
                     }
@@ -323,23 +313,16 @@ impl<'a> Parser<'a> {
                             self.whitespace_or_comment();
                             continue;
                         }
-                        Some(Token { kind: '.', pos }) => {
-                            let pos = *pos;
+                        Some(Token { kind: '.', .. }) => {
                             self.toks.next();
 
-                            if let Some(Token { kind: '.', pos }) = self.toks.peek().cloned() {
-                                if !name.is_empty() {
-                                    return Err(("expected \")\".", pos).into());
-                                }
-                                self.toks.next();
-                                if let Some(Token { kind: '.', .. }) = self.toks.peek() {
-                                    self.toks.next();
-                                } else {
-                                    return Err(("expected \".\".", pos).into());
-                                }
-                            } else {
-                                return Err(("expected \")\".", pos).into());
+                            self.expect_char('.')?;
+
+                            if !name.is_empty() {
+                                return Err(("expected \")\".", self.span_before).into());
                             }
+
+                            self.expect_char('.')?;
                         }
                         Some(Token { pos, .. }) => {
                             return Err(("expected \")\".", *pos).into());

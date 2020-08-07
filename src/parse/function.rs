@@ -40,11 +40,9 @@ impl<'a> Parser<'a> {
         }
 
         self.whitespace_or_comment();
-        let args = match self.toks.next() {
-            Some(Token { kind: '(', .. }) => self.parse_func_args()?,
-            Some(Token { pos, .. }) => return Err(("expected \"(\".", pos).into()),
-            None => return Err(("expected \"(\".", span).into()),
-        };
+        self.expect_char('(')?;
+
+        let args = self.parse_func_args()?;
 
         self.whitespace();
 

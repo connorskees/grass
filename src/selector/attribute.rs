@@ -5,7 +5,9 @@ use std::{
 
 use codemap::Span;
 
-use crate::{common::QuoteKind, error::SassResult, parse::Parser, utils::is_ident, value::Value};
+use crate::{
+    common::QuoteKind, error::SassResult, parse::Parser, utils::is_ident, value::Value, Token,
+};
 
 use super::{Namespace, QualifiedName};
 
@@ -41,13 +43,8 @@ impl Hash for Attribute {
 fn attribute_name(parser: &mut Parser<'_>, start: Span) -> SassResult<QualifiedName> {
     let next = parser.toks.peek().ok_or(("Expected identifier.", start))?;
     if next.kind == '*' {
-        let pos = next.pos;
         parser.toks.next();
-        if parser.toks.peek().ok_or(("expected \"|\".", pos))?.kind != '|' {
-            return Err(("expected \"|\".", pos).into());
-        }
-
-        parser.span_before = parser.toks.next().unwrap().pos();
+        parser.expect_char('|')?;
 
         let ident = parser.parse_identifier()?.node;
         return Ok(QualifiedName {
@@ -89,19 +86,18 @@ fn attribute_name(parser: &mut Parser<'_>, start: Span) -> SassResult<QualifiedN
 }
 
 fn attribute_operator(parser: &mut Parser<'_>) -> SassResult<AttributeOp> {
-    let start = parser.span_before;
-    let op = match parser.toks.next().ok_or(("Expected \"]\".", start))?.kind {
-        '=' => return Ok(AttributeOp::Equals),
-        '~' => AttributeOp::Include,
-        '|' => AttributeOp::Dash,
-        '^' => AttributeOp::Prefix,
-        '$' => AttributeOp::Suffix,
-        '*' => AttributeOp::Contains,
-        _ => return Err(("Expected \"]\".", start).into()),
+    let op = match parser.toks.next() {
+        Some(Token { kind: '=', .. }) => return Ok(AttributeOp::Equals),
+        Some(Token { kind: '~', .. }) => AttributeOp::Include,
+        Some(Token { kind: '|', .. }) => AttributeOp::Dash,
+        Some(Token { kind: '^', .. }) => AttributeOp::Prefix,
+        Some(Token { kind: '$', .. }) => AttributeOp::Suffix,
+        Some(Token { kind: '*', .. }) => AttributeOp::Contains,
+        Some(..) | None => return Err(("Expected \"]\".", parser.span_before).into()),
     };
-    if parser.toks.next().ok_or(("expected \"=\".", start))?.kind != '=' {
-        return Err(("expected \"=\".", start).into());
-    }
+
+    parser.expect_char('=')?;
+
     Ok(op)
 }
 impl Attribute {
@@ -145,25 +141,23 @@ impl Attribute {
         };
         parser.whitespace();
 
-        let peek = parser.toks.peek().ok_or(("expected more input.", start))?;
-
-        let modifier = match peek.kind {
-            c if c.is_alphabetic() => Some(c),
+        let modifier = match parser.toks.peek().cloned() {
+            Some(Token {
+                kind: c @ 'a'..='z',
+                ..
+            })
+            | Some(Token {
+                kind: c @ 'A'..='Z',
+                ..
+            }) => {
+                parser.toks.next();
+                parser.whitespace();
+                Some(c)
+            }
             _ => None,
         };
 
-        let pos = peek.pos();
-
-        if modifier.is_some() {
-            parser.toks.next();
-            parser.whitespace();
-        }
-
-        if parser.toks.peek().ok_or(("expected \"]\".", pos))?.kind != ']' {
-            return Err(("expected \"]\".", pos).into());
-        }
-
-        parser.toks.next();
+        parser.expect_char(']')?;
 
         Ok(Attribute {
             op,

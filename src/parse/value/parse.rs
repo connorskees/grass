@@ -598,6 +598,7 @@ impl<'a> Parser<'a> {
                 };
                 // todo: the above shouldn't eat the closing paren
                 if let Some(last_tok) = inner.pop() {
+                    // todo: we should remove this like we did for square braces
                     if last_tok.kind != ')' {
                         return Some(Err(("expected \")\".", span).into()));
                     }

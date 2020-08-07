@@ -24,14 +24,10 @@ impl<'a> Parser<'a> {
 
         let init_cond = self.parse_value(true, &|_| false)?.node;
 
-        // consume the open curly brace
-        let span_before = match self.toks.next() {
-            Some(Token { kind: '{', pos }) => pos,
-            Some(..) | None => return Err(("expected \"{\".", self.span_before).into()),
-        };
+        self.expect_char('{')?;
 
         if self.toks.peek().is_none() {
-            return Err(("expected \"}\".", span_before).into());
+            return Err(("expected \"}\".", self.span_before).into());
         }
 
         self.whitespace_or_comment();
@@ -89,12 +85,7 @@ impl<'a> Parser<'a> {
                             false
                         } else {
                             let v = self.parse_value(true, &|_| false)?.node.is_true();
-                            match self.toks.next() {
-                                Some(Token { kind: '{', .. }) => {}
-                                Some(..) | None => {
-                                    return Err(("expected \"{\".", self.span_before).into())
-                                }
-                            }
+                            self.expect_char('{')?;
                             v
                         };
                         if cond {
@@ -164,17 +155,15 @@ impl<'a> Parser<'a> {
     }
 
     pub(super) fn parse_for(&mut self) -> SassResult<Vec<Stmt>> {
+        // todo: whitespace or comment
         self.whitespace();
-        let next = self
-            .toks
-            .next()
-            .ok_or(("expected \"$\".", self.span_before))?;
-        let var: Spanned<Identifier> = match next.kind {
-            '$' => self
-                .parse_identifier_no_interpolation(false)?
-                .map_node(|i| i.into()),
-            _ => return Err(("expected \"$\".", self.span_before).into()),
-        };
+        // todo: test for error here
+        self.expect_char('$')?;
+
+        let var = self
+            .parse_identifier_no_interpolation(false)?
+            .map_node(|n| n.into());
+
         self.whitespace();
         self.span_before = match self.toks.peek() {
             Some(tok) => tok.pos,
@@ -278,11 +267,7 @@ impl<'a> Parser<'a> {
             }
         };
 
-        // consume the open curly brace
-        match self.toks.next() {
-            Some(Token { kind: '{', pos }) => pos,
-            Some(..) | None => return Err(("expected \"{\".", to_val.span).into()),
-        };
+        self.expect_char('{')?;
 
         let body = read_until_closing_curly_brace(self.toks)?;
         self.toks.next();
@@ -443,15 +428,11 @@ impl<'a> Parser<'a> {
         let mut vars: Vec<Spanned<Identifier>> = Vec::new();
 
         loop {
-            let next = self
-                .toks
-                .next()
-                .ok_or(("expected \"$\".", self.span_before))?;
+            self.expect_char('$')?;
 
-            match next.kind {
-                '$' => vars.push(self.parse_identifier()?.map_node(|i| i.into())),
-                _ => return Err(("expected \"$\".", next.pos()).into()),
-            }
+            vars.push(self.parse_identifier()?.map_node(|i| i.into()));
+
+            // todo: whitespace or comment
             self.whitespace();
             if self
                 .toks

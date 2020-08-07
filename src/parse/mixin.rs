@@ -104,9 +104,7 @@ impl<'a> Parser<'a> {
             ident.node.make_ascii_lowercase();
             if ident.node == "using" {
                 self.whitespace_or_comment();
-                if !matches!(self.toks.next(), Some(Token { kind: '(', .. })) {
-                    return Err(("expected \"(\".", ident.span).into());
-                }
+                self.expect_char('(')?;
 
                 Some(self.parse_func_args()?)
             } else {

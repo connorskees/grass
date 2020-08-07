@@ -903,9 +903,7 @@ impl<'a> Parser<'a> {
 
         self.whitespace();
 
-        if !matches!(self.toks.next(), Some(Token { kind: '{', .. })) {
-            return Err(("expected \"{\".", self.span_before).into());
-        }
+        self.expect_char('{')?;
 
         let raw_body = self.parse_stmt()?;
 
