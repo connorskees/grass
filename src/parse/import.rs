@@ -13,6 +13,17 @@ use crate::{
 
 use super::{Parser, Stmt};
 
+fn is_plain_css_import(url: &str) -> bool {
+    if url.len() < 5 {
+        return false;
+    }
+
+    url.ends_with(".css")
+        || url.starts_with("http://")
+        || url.starts_with("https://")
+        || url.starts_with("//")
+}
+
 impl<'a> Parser<'a> {
     /// Searches the current directory of the file then searches in `load_paths` directories
     /// if the import has not yet been found.
@@ -137,7 +148,7 @@ impl<'a> Parser<'a> {
 
         match file_name_as_value {
             Value::String(s, QuoteKind::Quoted) => {
-                if s.ends_with(".css") || s.starts_with("http://") || s.starts_with("https://") {
+                if is_plain_css_import(&s) {
                     Ok(vec![Stmt::Import(format!("\"{}\"", s))])
                 } else {
                     self.parse_single_import(&s, span)

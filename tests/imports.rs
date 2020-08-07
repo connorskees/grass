@@ -20,6 +20,8 @@ fn imports_variable() {
 fn import_no_semicolon() {
     let input = "@import \"import_no_semicolon\"\na {\n color: $a;\n}";
     tempfile!("import_no_semicolon", "$a: red;");
+
+    drop(input);
 }
 
 #[test]
@@ -192,6 +194,11 @@ test!(
     import_multiline_comments_everywhere,
     "  /**/  @import  /**/  url(foo)  /**/  ;",
     "/**/\n@import url(foo);\n"
+);
+test!(
+    plain_css_begins_with_two_slashes,
+    "@import \"//fonts.googleapis.com/css?family=Droid+Sans\";",
+    "@import \"//fonts.googleapis.com/css?family=Droid+Sans\";\n"
 );
 
 // todo: test for calling paths, e.g. `grass b\index.scss`
