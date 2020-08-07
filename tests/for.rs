@@ -166,3 +166,7 @@ error!(
     to_nan,
     "@for $i from 0 through (0/0) {}", "Error: NaN is not an int."
 );
+error!(
+    to_and_from_i32_min,
+    "@for $i from -2147483648 through -2147483648 {}", "Error: -2147483648 is not an int."
+);

@@ -236,7 +236,7 @@ impl<'a> Parser<'a> {
         let from_val = self.parse_value_from_vec(from_toks, true)?;
         let from = match from_val.node {
             Value::Dimension(Some(n), ..) => match n.to_i32() {
-                Some(std::i32::MAX) | None => {
+                Some(std::i32::MAX) | Some(std::i32::MIN) | None => {
                     return Err((format!("{} is not an int.", n), from_val.span).into())
                 }
                 Some(v) => v,
@@ -254,7 +254,7 @@ impl<'a> Parser<'a> {
         let to_val = self.parse_value(true, &|_| false)?;
         let to = match to_val.node {
             Value::Dimension(Some(n), ..) => match n.to_i32() {
-                Some(std::i32::MAX) | None => {
+                Some(std::i32::MAX) | Some(std::i32::MIN) | None => {
                     return Err((format!("{} is not an int.", n), to_val.span).into())
                 }
                 Some(v) => v,
