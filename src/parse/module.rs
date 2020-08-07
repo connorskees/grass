@@ -9,9 +9,10 @@ use crate::{
         declare_module_color, declare_module_list, declare_module_map, declare_module_math,
         declare_module_meta, declare_module_selector, declare_module_string, Module, ModuleConfig,
     },
+    common::Identifier,
     error::SassResult,
     lexer::Lexer,
-    parse::{common::Comment, Parser, Stmt},
+    parse::{common::Comment, Parser, Stmt, VariableValue},
     scope::Scope,
     utils::peek_ident_no_interpolation,
     Token,
@@ -247,5 +248,43 @@ impl<'a> Parser<'a> {
         self.toks.reset_cursor();
 
         Ok(comments)
+    }
+
+    pub(super) fn parse_module_variable_redeclaration(
+        &mut self,
+        module: Identifier,
+    ) -> SassResult<()> {
+        let variable = self
+            .parse_identifier_no_interpolation(false)?
+            .map_node(|n| n.into());
+
+        self.whitespace_or_comment();
+        self.expect_char(':')?;
+
+        let VariableValue {
+            val_toks,
+            global,
+            default,
+        } = self.parse_variable_value()?;
+
+        if global {
+            return Err((
+                "!global isn't allowed for variables in other modules.",
+                variable.span,
+            )
+                .into());
+        }
+
+        if default {
+            return Ok(());
+        }
+
+        let value = self.parse_value_from_vec(val_toks, true)?;
+
+        self.modules
+            .get_mut(module, variable.span)?
+            .update_var(variable, value.node)?;
+
+        Ok(())
     }
 }
