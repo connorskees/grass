@@ -199,9 +199,8 @@ impl<'a> Parser<'a> {
         module: &str,
         mut module_span: Span,
     ) -> SassResult<Spanned<IntermediateValue>> {
-        Ok(IntermediateValue::Value(
-            if matches!(self.toks.peek(), Some(Token { kind: '$', .. })) {
-                self.toks.next();
+        Ok(
+            IntermediateValue::Value(if self.consume_char_if_exists('$') {
                 let var = self
                     .parse_identifier_no_interpolation(false)?
                     .map_node(|i| i.into());
@@ -228,9 +227,9 @@ impl<'a> Parser<'a> {
                 let call_args = self.parse_call_args()?;
 
                 HigherIntermediateValue::Function(function, call_args)
-            },
+            })
+            .span(module_span),
         )
-        .span(module_span))
     }
 
     fn parse_ident_value(
@@ -243,9 +242,8 @@ impl<'a> Parser<'a> {
 
         let lower = s.to_ascii_lowercase();
 
-        if lower == "progid" && matches!(self.toks.peek(), Some(Token { kind: ':', .. })) {
+        if lower == "progid" && self.consume_char_if_exists(':') {
             s = lower;
-            self.toks.next();
             s.push(':');
             s.push_str(&self.parse_progid()?);
             return Ok(Spanned {

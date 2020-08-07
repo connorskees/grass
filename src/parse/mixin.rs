@@ -119,9 +119,8 @@ impl<'a> Parser<'a> {
         let content = if content_args.is_some()
             || matches!(self.toks.peek(), Some(Token { kind: '{', .. }))
         {
-            if matches!(self.toks.peek(), Some(Token { kind: '{', .. })) {
-                self.toks.next();
-            }
+            self.consume_char_if_exists('{');
+
             let mut toks = read_until_closing_curly_brace(self.toks)?;
             if let Some(tok) = self.toks.peek() {
                 toks.push(*tok);

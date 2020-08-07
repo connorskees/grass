@@ -134,8 +134,7 @@ impl<'a> Parser<'a> {
         loop {
             self.whitespace_or_comment();
 
-            if matches!(self.toks.peek(), Some(Token { kind: ')', .. })) {
-                self.toks.next();
+            if self.consume_char_if_exists(')') {
                 return Ok(CallArgs(args, span));
             }
 

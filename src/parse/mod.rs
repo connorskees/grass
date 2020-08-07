@@ -709,8 +709,7 @@ impl<'a> Parser<'a> {
     fn parse_at_root(&mut self) -> SassResult<Vec<Stmt>> {
         self.whitespace();
         let mut at_root_has_selector = false;
-        let at_rule_selector = if matches!(self.toks.peek(), Some(Token { kind: '{', .. })) {
-            self.toks.next();
+        let at_rule_selector = if self.consume_char_if_exists('{') {
             self.super_selectors.last().clone()
         } else {
             at_root_has_selector = true;
