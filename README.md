@@ -25,7 +25,7 @@ The large features remaining are
 ```
 indented syntax
 css imports
-@use, @forward, and the module system
+@forward
 compressed output
 ```
 
