@@ -1882,6 +1882,13 @@ test!(
     }",
     ":has(a >) b, :has(a >) :has(a >) :has(a >) b, :has(a >) :has(a >) :has(a >) b {\n  color: red;\n}\n"
 );
+error!(
+    extend_optional_keyword_not_complete,
+    "a {
+        @extend a !opt;
+    }",
+    "Error: Expected \"optional\"."
+);
 
 // todo: extend_loop (massive test)
 // todo: extend tests in folders

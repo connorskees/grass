@@ -712,3 +712,7 @@ error!(
     toplevel_parent_selector_after_element,
     "a&{}", "Error: \"&\" may only used at the beginning of a compound selector."
 );
+error!(
+    denies_optional_in_selector,
+    "a !optional {}", "Error: expected \"{\"."
+);

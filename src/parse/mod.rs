@@ -17,10 +17,7 @@ use crate::{
         ComplexSelectorComponent, ExtendRule, ExtendedSelector, Extender, Selector, SelectorParser,
     },
     style::Style,
-    utils::{
-        peek_ident_no_interpolation, read_until_closing_curly_brace,
-        read_until_semicolon_or_closing_curly_brace,
-    },
+    utils::{read_until_closing_curly_brace, read_until_semicolon_or_closing_curly_brace},
     value::Value,
     Options, {Cow, Token},
 };
@@ -132,6 +129,16 @@ impl<'a> Parser<'a> {
             }
         }
         false
+    }
+
+    pub fn expect_identifier(&mut self, ident: &'static str) -> SassResult<()> {
+        let this_ident = self.parse_identifier_no_interpolation(false)?;
+        self.span_before = this_ident.span;
+        if this_ident.node == ident {
+            return Ok(());
+        }
+
+        Err((format!("Expected \"{}\".", ident), self.span_before).into())
     }
 
     fn parse_stmt(&mut self) -> SassResult<Vec<Stmt>> {
@@ -420,13 +427,11 @@ impl<'a> Parser<'a> {
                     }
                 }
                 '!' => {
-                    if peek_ident_no_interpolation(self.toks, false, self.span_before)?.node
-                        == "optional"
-                    {
-                        self.toks.truncate_iterator_to_cursor();
+                    if from_fn {
+                        self.expect_identifier("optional")?;
                         optional = true;
                     } else {
-                        string.push('!');
+                        return Err(("expected \"{\".", tok.pos).into());
                     }
                 }
                 c => string.push(c),

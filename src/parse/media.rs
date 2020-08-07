@@ -7,7 +7,7 @@ use crate::{
 use super::Parser;
 
 impl<'a> Parser<'a> {
-    pub fn scan_identifier(&mut self, ident: &str) -> SassResult<bool> {
+    pub fn scan_identifier(&mut self, ident: &'static str) -> SassResult<bool> {
         let peeked_identifier =
             match peek_ident_no_interpolation(self.toks, false, self.span_before) {
                 Ok(v) => v.node,
