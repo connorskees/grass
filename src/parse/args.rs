@@ -7,7 +7,10 @@ use crate::{
     common::QuoteKind,
     error::SassResult,
     scope::Scope,
-    utils::{peek_ident_no_interpolation, peek_whitespace_or_comment, read_until_closing_paren},
+    utils::{
+        peek_ident_no_interpolation, peek_whitespace_or_comment, read_until_closing_paren,
+        read_until_closing_quote, read_until_newline,
+    },
     value::Value,
     Token,
 };
@@ -66,6 +69,27 @@ impl<'a> Parser<'a> {
                             '(' => {
                                 default.push(self.toks.next().unwrap());
                                 default.extend(read_until_closing_paren(self.toks)?);
+                            }
+                            '/' => {
+                                let next = self.toks.next().unwrap();
+                                match self.toks.peek() {
+                                    Some(Token { kind: '/', .. }) => read_until_newline(self.toks),
+                                    _ => default.push(next),
+                                };
+                                continue;
+                            }
+                            q @ '"' | q @ '\'' => {
+                                let q = *q;
+                                default.push(self.toks.next().unwrap());
+                                default.extend(read_until_closing_quote(self.toks, q)?);
+                                continue;
+                            }
+                            '\\' => {
+                                default.push(self.toks.next().unwrap());
+                                default.push(match self.toks.next() {
+                                    Some(tok) => tok,
+                                    None => continue,
+                                });
                             }
                             _ => default.push(self.toks.next().unwrap()),
                         }

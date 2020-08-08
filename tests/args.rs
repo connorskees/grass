@@ -187,3 +187,14 @@ test!(
     }",
     "a {\n  color: kwd-y;\n}\n"
 );
+test!(
+    quoted_string_as_default_argument_value,
+    r#"@function foo($font-family: 'Roboto, "Helvetica Neue", sans-serif') {
+        @return $font-family;
+    }
+
+    a {
+        color: foo();
+    }"#,
+    "a {\n  color: 'Roboto, \"Helvetica Neue\", sans-serif';\n}\n"
+);
