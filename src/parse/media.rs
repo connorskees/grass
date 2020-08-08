@@ -28,25 +28,22 @@ impl<'a> Parser<'a> {
     }
 
     pub fn expression_until_comparison(&mut self) -> SassResult<Cow<'static, str>> {
-        let value = self.parse_value(
-            false,
-            Some(&|toks| match toks.peek() {
-                Some(Token { kind: '>', .. })
-                | Some(Token { kind: '<', .. })
-                | Some(Token { kind: ':', .. })
-                | Some(Token { kind: ')', .. }) => true,
-                Some(Token { kind: '=', .. }) => {
-                    if matches!(toks.peek_next(), Some(Token { kind: '=', .. })) {
-                        toks.reset_cursor();
-                        true
-                    } else {
-                        toks.reset_cursor();
-                        false
-                    }
+        let value = self.parse_value(false, &|toks| match toks.peek() {
+            Some(Token { kind: '>', .. })
+            | Some(Token { kind: '<', .. })
+            | Some(Token { kind: ':', .. })
+            | Some(Token { kind: ')', .. }) => true,
+            Some(Token { kind: '=', .. }) => {
+                if matches!(toks.peek_next(), Some(Token { kind: '=', .. })) {
+                    toks.reset_cursor();
+                    true
+                } else {
+                    toks.reset_cursor();
+                    false
                 }
-                _ => false,
-            }),
-        )?;
+            }
+            _ => false,
+        })?;
 
         value.node.unquote().to_css_string(value.span)
     }
@@ -85,13 +82,10 @@ impl<'a> Parser<'a> {
             buf.push(':');
             buf.push(' ');
 
-            let value = self.parse_value(
-                false,
-                Some(&|toks| match toks.peek() {
-                    Some(Token { kind: ')', .. }) => true,
-                    _ => false,
-                }),
-            )?;
+            let value = self.parse_value(false, &|toks| match toks.peek() {
+                Some(Token { kind: ')', .. }) => true,
+                _ => false,
+            })?;
             self.expect_char(')')?;
 
             buf.push_str(&value.node.to_css_string(value.span)?);

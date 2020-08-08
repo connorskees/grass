@@ -21,7 +21,7 @@ impl<'a> Parser<'a> {
         let mut found_true = false;
         let mut body = Vec::new();
 
-        let init_cond = self.parse_value(true, None)?.node;
+        let init_cond = self.parse_value(true, &|_| false)?.node;
 
         self.expect_char('{')?;
 
@@ -83,7 +83,7 @@ impl<'a> Parser<'a> {
                             self.throw_away_until_open_curly_brace()?;
                             false
                         } else {
-                            let v = self.parse_value(true, None)?.node.is_true();
+                            let v = self.parse_value(true, &|_| false)?.node.is_true();
                             self.expect_char('{')?;
                             v
                         };
@@ -171,28 +171,25 @@ impl<'a> Parser<'a> {
         }
         self.whitespace_or_comment();
 
-        let from_val = self.parse_value(
-            false,
-            Some(&|toks| match toks.peek() {
-                Some(Token { kind: 't', pos })
-                | Some(Token { kind: 'T', pos })
-                | Some(Token { kind: '\\', pos }) => {
-                    let span = *pos;
-                    let mut ident = match peek_ident_no_interpolation(toks, false, span) {
-                        Ok(s) => s,
-                        Err(..) => return false,
-                    };
-                    ident.node.make_ascii_lowercase();
-                    let v = match ident.node.to_ascii_lowercase().as_str() {
-                        "to" | "through" => true,
-                        _ => false,
-                    };
-                    toks.reset_cursor();
-                    v
-                }
-                Some(..) | None => false,
-            }),
-        )?;
+        let from_val = self.parse_value(false, &|toks| match toks.peek() {
+            Some(Token { kind: 't', pos })
+            | Some(Token { kind: 'T', pos })
+            | Some(Token { kind: '\\', pos }) => {
+                let span = *pos;
+                let mut ident = match peek_ident_no_interpolation(toks, false, span) {
+                    Ok(s) => s,
+                    Err(..) => return false,
+                };
+                ident.node.make_ascii_lowercase();
+                let v = match ident.node.to_ascii_lowercase().as_str() {
+                    "to" | "through" => true,
+                    _ => false,
+                };
+                toks.reset_cursor();
+                v
+            }
+            Some(..) | None => false,
+        })?;
 
         let through = if self.scan_identifier("through")? {
             1
@@ -219,7 +216,7 @@ impl<'a> Parser<'a> {
             }
         };
 
-        let to_val = self.parse_value(true, None)?;
+        let to_val = self.parse_value(true, &|_| false)?;
         let to = match to_val.node {
             Value::Dimension(Some(n), ..) => match n.to_i32() {
                 Some(std::i32::MAX) | Some(std::i32::MIN) | None => {

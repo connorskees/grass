@@ -184,31 +184,28 @@ impl<'a> Parser<'a> {
 
             self.whitespace_or_comment();
 
-            let value = self.parse_value(
-                true,
-                Some(&|c| match c.peek() {
-                    Some(Token { kind: ')', .. }) | Some(Token { kind: ',', .. }) => true,
-                    Some(Token { kind: '.', .. }) => {
-                        if matches!(c.peek_next(), Some(Token { kind: '.', .. })) {
-                            c.reset_cursor();
-                            true
-                        } else {
-                            c.reset_cursor();
-                            false
-                        }
+            let value = self.parse_value(true, &|c| match c.peek() {
+                Some(Token { kind: ')', .. }) | Some(Token { kind: ',', .. }) => true,
+                Some(Token { kind: '.', .. }) => {
+                    if matches!(c.peek_next(), Some(Token { kind: '.', .. })) {
+                        c.reset_cursor();
+                        true
+                    } else {
+                        c.reset_cursor();
+                        false
                     }
-                    Some(Token { kind: '=', .. }) => {
-                        if matches!(c.peek_next(), Some(Token { kind: '=', .. })) {
-                            c.reset_cursor();
-                            false
-                        } else {
-                            c.reset_cursor();
-                            true
-                        }
+                }
+                Some(Token { kind: '=', .. }) => {
+                    if matches!(c.peek_next(), Some(Token { kind: '=', .. })) {
+                        c.reset_cursor();
+                        false
+                    } else {
+                        c.reset_cursor();
+                        true
                     }
-                    Some(..) | None => false,
-                }),
-            );
+                }
+                Some(..) | None => false,
+            });
 
             match self.toks.peek() {
                 Some(Token { kind: ')', .. }) => {
@@ -296,22 +293,19 @@ impl<'a> Parser<'a> {
                     self.toks.next();
                     let left = value?;
 
-                    let right = self.parse_value(
-                        true,
-                        Some(&|c| match c.peek() {
-                            Some(Token { kind: ')', .. }) | Some(Token { kind: ',', .. }) => true,
-                            Some(Token { kind: '.', .. }) => {
-                                if matches!(c.peek_next(), Some(Token { kind: '.', .. })) {
-                                    c.reset_cursor();
-                                    true
-                                } else {
-                                    c.reset_cursor();
-                                    false
-                                }
+                    let right = self.parse_value(true, &|c| match c.peek() {
+                        Some(Token { kind: ')', .. }) | Some(Token { kind: ',', .. }) => true,
+                        Some(Token { kind: '.', .. }) => {
+                            if matches!(c.peek_next(), Some(Token { kind: '.', .. })) {
+                                c.reset_cursor();
+                                true
+                            } else {
+                                c.reset_cursor();
+                                false
                             }
-                            Some(..) | None => false,
-                        }),
-                    )?;
+                        }
+                        Some(..) | None => false,
+                    })?;
 
                     let value_span = left.span.merge(right.span);
                     span = span.merge(value_span);
