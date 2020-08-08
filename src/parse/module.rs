@@ -68,10 +68,13 @@ impl<'a> Parser<'a> {
                 self.expect_char(':')?;
                 self.whitespace_or_comment();
 
-                let value = self.parse_value(false, &|toks| match toks.peek() {
-                    Some(Token { kind: ',', .. }) | Some(Token { kind: ')', .. }) => true,
-                    _ => false,
-                })?;
+                let value = self.parse_value(
+                    false,
+                    Some(&|toks| match toks.peek() {
+                        Some(Token { kind: ',', .. }) | Some(Token { kind: ')', .. }) => true,
+                        _ => false,
+                    }),
+                )?;
 
                 config.insert(name.map_node(|n| n.into()), value)?;
 
