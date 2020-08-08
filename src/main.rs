@@ -7,8 +7,9 @@ use std::{
 use clap::{arg_enum, App, AppSettings, Arg};
 
 #[cfg(not(feature = "wasm"))]
-use grass::{from_path, from_string, Options};
+use grass::{from_path, from_string, Options, OutputStyle};
 
+// TODO remove this
 arg_enum! {
     #[derive(PartialEq, Debug)]
     pub enum Style {
@@ -58,11 +59,10 @@ fn main() -> std::io::Result<()> {
         )
         .arg(
             Arg::with_name("STYLE")
-                .short("s")
                 // this is required for compatibility with ruby sass
-                .short("t")
+                .short("t") // FIXME change this to short_alias later
+                .short("s")
                 .long("style")
-                .hidden(true)
                 .help("Minified or expanded output")
                 .default_value("expanded")
                 .case_insensitive(true)
@@ -183,8 +183,15 @@ fn main() -> std::io::Result<()> {
         .values_of("LOAD_PATH")
         .map_or_else(Vec::new, |vals| vals.map(Path::new).collect());
 
+    let style = match matches.value_of("STYLE").unwrap() {
+        "expanded" => OutputStyle::Expanded,
+        "compressed" => OutputStyle::Compressed,
+        _ => unreachable!(),
+    };
+
     let options = &Options::default()
         .load_paths(&load_paths)
+        .style(style)
         .quiet(matches.is_present("QUIET"))
         .unicode_error_messages(!matches.is_present("NO_UNICODE"))
         .allows_charset(!matches.is_present("NO_CHARSET"));

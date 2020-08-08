@@ -11,8 +11,9 @@ use crate::{
     },
     error::SassResult,
     parse::Stmt,
-    selector::Selector,
+    selector::{ComplexSelector, ComplexSelectorComponent, Selector},
     style::Style,
+    OutputStyle,
 };
 
 #[derive(Debug, Clone)]
@@ -233,35 +234,224 @@ impl Css {
         Ok(self)
     }
 
-    pub fn pretty_print(mut self, map: &CodeMap) -> SassResult<String> {
-        let mut string = Vec::new();
+    pub fn pretty_print(self, map: &CodeMap, style: OutputStyle) -> SassResult<String> {
+        let mut buf = Vec::new();
         let allows_charset = self.allows_charset;
-        self._inner_pretty_print(&mut string, map, 0)?;
-        if allows_charset && string.iter().any(|s| !s.is_ascii()) {
-            return Ok(format!("@charset \"UTF-8\";\n{}", unsafe {
-                String::from_utf8_unchecked(string)
-            }));
+        match style {
+            OutputStyle::Compressed => {
+                CompressedFormatter::default().write_css(&mut buf, self, map)?;
+            }
+            OutputStyle::Expanded => ExpandedFormatter::default().write_css(&mut buf, self, map)?,
         }
-        Ok(unsafe { String::from_utf8_unchecked(string) })
+        // TODO: check for this before writing
+        let show_charset = allows_charset && buf.iter().any(|s| !s.is_ascii());
+        let out = unsafe { String::from_utf8_unchecked(buf) };
+        Ok(if show_charset {
+            match style {
+                OutputStyle::Compressed => format!("@charset \"UTF-8\";{}", out),
+                OutputStyle::Expanded => format!("@charset \"UTF-8\";\n{}", out),
+            }
+        } else {
+            out
+        })
+    }
+}
+
+trait Formatter {
+    fn write_css(&mut self, buf: &mut Vec<u8>, css: Css, map: &CodeMap) -> SassResult<()>;
+}
+
+#[derive(Debug, Default)]
+struct CompressedFormatter {}
+
+impl Formatter for CompressedFormatter {
+    fn write_css(&mut self, buf: &mut Vec<u8>, mut css: Css, map: &CodeMap) -> SassResult<()> {
+        for block in mem::take(&mut css.blocks) {
+            match block {
+                Toplevel::RuleSet(selector, styles) => {
+                    if styles.is_empty() {
+                        continue;
+                    }
+
+                    let mut complexes = selector.0.components.iter().filter(|c| !c.is_invisible());
+                    if let Some(complex) = complexes.next() {
+                        self.write_complex(buf, complex)?;
+                    }
+                    for complex in complexes {
+                        write!(buf, ",")?;
+                        self.write_complex(buf, complex)?;
+                    }
+
+                    write!(buf, "{{")?;
+                    self.write_block_entry(buf, &styles)?;
+                    write!(buf, "}}")?;
+                }
+                Toplevel::KeyframesRuleSet(selectors, styles) => {
+                    if styles.is_empty() {
+                        continue;
+                    }
+
+                    let mut selectors = selectors.iter();
+                    if let Some(selector) = selectors.next() {
+                        match selector {
+                            KeyframesSelector::To => write!(buf, "to")?,
+                            KeyframesSelector::From => write!(buf, "from")?,
+                            KeyframesSelector::Percent(p) => write!(buf, "{}%", p)?,
+                        }
+                    }
+                    for selector in selectors {
+                        match selector {
+                            KeyframesSelector::To => write!(buf, ",to")?,
+                            KeyframesSelector::From => write!(buf, ",from")?,
+                            KeyframesSelector::Percent(p) => write!(buf, ",{}%", p)?,
+                        }
+                    }
+
+                    write!(buf, "{{")?;
+                    self.write_block_entry(buf, &styles)?;
+                    write!(buf, "}}")?;
+                }
+                Toplevel::MultilineComment(s) => {
+                    write!(buf, "/*{}*/", s)?;
+                }
+                Toplevel::Import(s) => {
+                    write!(buf, "@import {};", s)?;
+                }
+                Toplevel::UnknownAtRule(u) => {
+                    let ToplevelUnknownAtRule { params, name, body } = *u;
+
+                    if params.is_empty() {
+                        write!(buf, "@{}", name)?;
+                    } else {
+                        write!(buf, "@{} {}", name, params)?;
+                    }
+
+                    if body.is_empty() {
+                        write!(buf, ";")?;
+                        continue;
+                    }
+
+                    write!(buf, "{{")?;
+                    let css = Css::from_stmts(body, true, css.allows_charset)?;
+                    self.write_css(buf, css, map)?;
+                    write!(buf, "}}")?;
+                }
+                Toplevel::Keyframes(k) => {
+                    let Keyframes { rule, name, body } = *k;
+
+                    write!(buf, "@{}", rule)?;
+
+                    if !name.is_empty() {
+                        write!(buf, " {}", name)?;
+                    }
+
+                    if body.is_empty() {
+                        write!(buf, "{{}}")?;
+                        continue;
+                    }
+
+                    write!(buf, "{{")?;
+                    let css = Css::from_stmts(body, true, css.allows_charset)?;
+                    self.write_css(buf, css, map)?;
+                    write!(buf, "}}")?;
+                }
+                Toplevel::Supports { params, body } => {
+                    if params.is_empty() {
+                        write!(buf, "@supports")?;
+                    } else {
+                        write!(buf, "@supports {}", params)?;
+                    }
+
+                    if body.is_empty() {
+                        write!(buf, ";")?;
+                        continue;
+                    }
+
+                    write!(buf, "{{")?;
+                    let css = Css::from_stmts(body, true, css.allows_charset)?;
+                    self.write_css(buf, css, map)?;
+                    write!(buf, "}}")?;
+                }
+                Toplevel::Media { query, body } => {
+                    if body.is_empty() {
+                        continue;
+                    }
+
+                    write!(buf, "@media {}{{", query)?;
+                    let css = Css::from_stmts(body, true, css.allows_charset)?;
+                    self.write_css(buf, css, map)?;
+                    write!(buf, "}}")?;
+                }
+                Toplevel::Style(style) => {
+                    let value = style.value.node.to_css_string(style.value.span)?;
+                    write!(buf, "{}:{};", style.property, value)?;
+                }
+                Toplevel::Newline => {}
+            }
+        }
+        Ok(())
+    }
+}
+
+// this could be a trait implemented on value itself
+#[allow(clippy::unused_self)]
+impl CompressedFormatter {
+    fn write_complex(&self, buf: &mut Vec<u8>, complex: &ComplexSelector) -> SassResult<()> {
+        let mut was_compound = false;
+        for component in &complex.components {
+            match component {
+                ComplexSelectorComponent::Compound(c) if was_compound => write!(buf, " {}", c)?,
+                ComplexSelectorComponent::Compound(c) => write!(buf, "{}", c)?,
+                ComplexSelectorComponent::Combinator(c) => write!(buf, "{}", c)?,
+            }
+            was_compound = matches!(component, ComplexSelectorComponent::Compound(_));
+        }
+        Ok(())
     }
 
-    fn _inner_pretty_print(
-        &mut self,
-        buf: &mut Vec<u8>,
-        map: &CodeMap,
-        nesting: usize,
-    ) -> SassResult<()> {
+    fn write_block_entry(&self, buf: &mut Vec<u8>, styles: &[BlockEntry]) -> SassResult<()> {
+        let mut styles = styles.iter();
+        if let Some(style) = styles.next() {
+            match style {
+                BlockEntry::Style(s) => {
+                    let value = s.value.node.to_css_string(s.value.span)?;
+                    write!(buf, "{}:{}", s.property, value)?;
+                }
+                BlockEntry::MultilineComment(s) => write!(buf, "/*{}*/", s)?,
+            }
+        }
+        for style in styles {
+            match style {
+                BlockEntry::Style(s) => {
+                    let value = s.value.node.to_css_string(s.value.span)?;
+                    write!(buf, ";{}:{}", s.property, value)?;
+                }
+                BlockEntry::MultilineComment(s) => write!(buf, "/*{}*/", s)?,
+            }
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug, Default)]
+struct ExpandedFormatter {
+    nesting: usize,
+}
+
+impl Formatter for ExpandedFormatter {
+    fn write_css(&mut self, buf: &mut Vec<u8>, mut css: Css, map: &CodeMap) -> SassResult<()> {
         let mut has_written = false;
-        let padding = vec![' '; nesting * 2].iter().collect::<String>();
+        let padding = "  ".repeat(self.nesting);
         let mut should_emit_newline = false;
-        for block in mem::take(&mut self.blocks) {
+        self.nesting += 1;
+        for block in mem::take(&mut css.blocks) {
             match block {
                 Toplevel::RuleSet(selector, styles) => {
                     if styles.is_empty() {
                         continue;
                     }
                     has_written = true;
-                    if should_emit_newline && !self.in_at_rule {
+                    if should_emit_newline && !css.in_at_rule {
                         should_emit_newline = false;
                         writeln!(buf)?;
                     }
@@ -319,12 +509,8 @@ impl Css {
                     }
 
                     writeln!(buf, " {{")?;
-
-                    Css::from_stmts(body, true, self.allows_charset)?._inner_pretty_print(
-                        buf,
-                        map,
-                        nesting + 1,
-                    )?;
+                    let css = Css::from_stmts(body, true, css.allows_charset)?;
+                    self.write_css(buf, css, map)?;
                     writeln!(buf, "{}}}", padding)?;
                 }
                 Toplevel::Keyframes(k) => {
@@ -346,12 +532,8 @@ impl Css {
                     }
 
                     writeln!(buf, " {{")?;
-
-                    Css::from_stmts(body, true, self.allows_charset)?._inner_pretty_print(
-                        buf,
-                        map,
-                        nesting + 1,
-                    )?;
+                    let css = Css::from_stmts(body, true, css.allows_charset)?;
+                    self.write_css(buf, css, map)?;
                     writeln!(buf, "{}}}", padding)?;
                 }
                 Toplevel::Supports { params, body } => {
@@ -372,12 +554,8 @@ impl Css {
                     }
 
                     writeln!(buf, " {{")?;
-
-                    Css::from_stmts(body, true, self.allows_charset)?._inner_pretty_print(
-                        buf,
-                        map,
-                        nesting + 1,
-                    )?;
+                    let css = Css::from_stmts(body, true, css.allows_charset)?;
+                    self.write_css(buf, css, map)?;
                     writeln!(buf, "{}}}", padding)?;
                 }
                 Toplevel::Media { query, body } => {
@@ -386,11 +564,8 @@ impl Css {
                     }
 
                     writeln!(buf, "{}@media {} {{", padding, query)?;
-                    Css::from_stmts(body, true, self.allows_charset)?._inner_pretty_print(
-                        buf,
-                        map,
-                        nesting + 1,
-                    )?;
+                    let css = Css::from_stmts(body, true, css.allows_charset)?;
+                    self.write_css(buf, css, map)?;
                     writeln!(buf, "{}}}", padding)?;
                 }
                 Toplevel::Style(s) => {
@@ -404,6 +579,7 @@ impl Css {
                 }
             }
         }
+        self.nesting -= 1;
         Ok(())
     }
 }
