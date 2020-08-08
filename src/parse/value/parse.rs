@@ -444,12 +444,9 @@ impl<'a> Parser<'a> {
             &|c| matches!(c.peek(), Some(Token { kind: ':', .. }) | Some(Token { kind: ')', .. })),
         )?;
 
-        match self.toks.peek() {
-            Some(Token { kind: ':', .. }) => {
-                self.toks.next();
-            }
+        match self.toks.next() {
+            Some(Token { kind: ':', .. }) => {}
             Some(Token { kind: ')', .. }) => {
-                self.toks.next();
                 return Ok(Spanned {
                     node: IntermediateValue::Value(HigherIntermediateValue::Literal(key.node)),
                     span: key.span,
@@ -509,18 +506,17 @@ impl<'a> Parser<'a> {
                 return Err(("Duplicate key.", key.span).into());
             }
 
-            match self.toks.next() {
-                Some(Token { kind: ',', .. }) => {}
-                Some(Token { kind: ')', .. }) => {
-                    break;
-                }
-                Some(..) | None => return Err(("expected \")\".", val.span).into()),
-            }
+            let found_comma = self.consume_char_if_exists(',');
 
             self.whitespace_or_comment();
 
-            while self.consume_char_if_exists(',') {
-                self.whitespace_or_comment();
+            match self.toks.peek() {
+                Some(Token { kind: ')', .. }) => {
+                    self.toks.next();
+                    break;
+                }
+                Some(..) if found_comma => continue,
+                Some(..) | None => return Err(("expected \")\".", val.span).into()),
             }
         }
         Ok(Spanned {

@@ -205,6 +205,16 @@ test!(
     }",
     "a {\n  color: ();\n}\n"
 );
+test!(
+    trailing_comma_in_doubly_nested_map,
+    r#"$a: (
+        foo: (
+            a: b,
+            c: d,
+        )
+    );"#,
+    ""
+);
 error!(
     second_map_value_missing_colon,
     "a {\n  color: (a: b, c", "Error: expected \":\"."
