@@ -107,6 +107,7 @@ impl<'a> Parser<'a> {
 
                     args.push(FuncArg {
                         name: name.node.into(),
+                        // todo: None if empty
                         default: Some(default),
                         is_variadic,
                     });

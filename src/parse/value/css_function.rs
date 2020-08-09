@@ -102,18 +102,13 @@ impl<'a> Parser<'a> {
             } else if kind == ')' {
                 buf.push(')');
                 self.toks.truncate_iterator_to_cursor();
-                self.toks.next();
                 return Ok(Some(buf));
             } else if kind.is_whitespace() {
                 peek_whitespace(self.toks);
-                let next = match self.toks.peek() {
-                    Some(v) => v,
-                    None => break,
-                };
-                if next.kind == ')' {
+                if let Some(Token { kind: ')', .. }) = self.toks.peek() {
+                    self.toks.advance_cursor();
                     buf.push(')');
                     self.toks.truncate_iterator_to_cursor();
-                    self.toks.next();
                     return Ok(Some(buf));
                 } else {
                     break;
