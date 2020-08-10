@@ -101,8 +101,3 @@ test!(
     "\u{feff}a {\n  color: red\n}\n",
     "a {\n  color: red;\n}\n"
 );
-test!(
-    file_begins_with_bom,
-    "\u{ef}\u{bb}\u{bf}a {\n  color: red\n}\n",
-    "a {\n  color: red;\n}\n"
-);

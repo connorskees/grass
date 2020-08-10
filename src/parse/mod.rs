@@ -96,6 +96,9 @@ impl<'a> Parser<'a> {
     pub fn parse(&mut self) -> SassResult<Vec<Stmt>> {
         let mut stmts = Vec::new();
 
+        // Allow a byte-order mark at the beginning of the document.
+        self.consume_char_if_exists('\u{feff}');
+
         self.whitespace();
         stmts.append(&mut self.load_modules()?);
 
