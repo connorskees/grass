@@ -26,12 +26,12 @@ arg_enum! {
     }
 }
 
-/// Identify if file is sass entrypoint.
+/// Identify if file is Sass entrypoint.
 fn is_entrypoint(entry: &DirEntry) -> bool {
     matches!(entry.file_name().to_str(), Some(s) if !s.starts_with('_') && is_xcssfile(s))
 }
 
-/// Check if string ends with sass or scss.
+/// Check if string ends with Sass or Scss.
 fn is_xcssfile(s: &str) -> bool {
     [".sass", ".scss"].iter().any(|ext| s.ends_with(ext))
 }
