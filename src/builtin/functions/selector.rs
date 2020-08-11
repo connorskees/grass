@@ -55,7 +55,8 @@ pub(crate) fn selector_parse(mut args: CallArgs, parser: &mut Parser<'_>) -> Sas
     args.max_args(1)?;
     Ok(args
         .get_err(0, "selector")?
-        .to_selector(parser, "selector", false)?
+        .to_selector(parser, "selector", false)
+        .map_err(|_| ("$selector: expected selector.", args.span()))?
         .into_value())
 }
 

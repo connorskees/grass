@@ -398,9 +398,9 @@ impl<'a> Parser<'a> {
         let mut optional = false;
 
         // we resolve interpolation and strip comments
-        while let Some(tok) = self.toks.next() {
-            span = span.merge(tok.pos());
-            match tok.kind {
+        while let Some(Token { kind, pos }) = self.toks.next() {
+            span = span.merge(pos);
+            match kind {
                 '#' => {
                     if let Some(Token { kind: '{', .. }) = self.toks.peek().cloned() {
                         self.toks.next();
@@ -411,14 +411,18 @@ impl<'a> Parser<'a> {
                 }
                 '/' => {
                     if self.toks.peek().is_none() {
-                        return Err(("Expected selector.", tok.pos()).into());
+                        return Err(("Expected selector.", pos).into());
                     }
                     self.parse_comment()?;
                     string.push(' ');
                 }
                 '{' => {
-                    found_curly = true;
-                    break;
+                    if from_fn {
+                        return Err(("Expected selector.", pos).into());
+                    } else {
+                        found_curly = true;
+                        break;
+                    }
                 }
                 '\\' => {
                     string.push('\\');
@@ -431,7 +435,7 @@ impl<'a> Parser<'a> {
                         self.expect_identifier("optional")?;
                         optional = true;
                     } else {
-                        return Err(("expected \"{\".", tok.pos).into());
+                        return Err(("expected \"{\".", pos).into());
                     }
                 }
                 c => string.push(c),

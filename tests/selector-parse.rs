@@ -98,3 +98,11 @@ test!(
     "a {\n  color: selector-parse(\"b c, d e, f g\");\n}\n",
     "a {\n  color: b c, d e, f g;\n}\n"
 );
+error!(
+    invalid_selector,
+    "a {\n  color: selector-parse(\"!!!!!!!!\");\n}\n", "Error: $selector: expected selector."
+);
+error!(
+    selector_contains_curly_brace,
+    "a {\n  color: selector-parse(\"a {\");\n}\n", "Error: $selector: expected selector."
+);
