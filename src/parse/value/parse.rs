@@ -534,8 +534,7 @@ impl<'a> Parser<'a> {
                 self.toks.reset_cursor();
                 next_is_curly
             }
-            Some(..) => false,
-            None => false,
+            Some(..) | None => false,
         }
     }
 

@@ -1,8 +1,6 @@
 //! Test cases adapted verbatim from the rsass issue tracker
 //! https://github.com/kaj/rsass/issues?q=is%3Aissue
 
-#![cfg(test)]
-
 #[macro_use]
 mod macros;
 

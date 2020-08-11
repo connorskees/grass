@@ -1,5 +1,3 @@
-#![cfg(test)]
-
 #[macro_export]
 macro_rules! test {
     ($( #[$attr:meta] ),*$func:ident, $input:expr) => {

@@ -1,5 +1,3 @@
-#![cfg(test)]
-
 use std::io::Write;
 
 #[macro_use]
