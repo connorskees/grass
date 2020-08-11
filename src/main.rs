@@ -231,7 +231,7 @@ fn main() -> io::Result<()> {
         stdin().read_to_string(&mut buffer)?;
         write_file(from_string(buffer, options), matches.value_of("OUTPUT"))
     } else if let Some(input) = matches.value_of("INPUT") {
-        if ["sass", "scss"].contains(&input.rsplitn(2, '.').next().unwrap()) {
+        if Path::new(input).is_file() {
             write_file(from_path(input, options), matches.value_of("OUTPUT"))
         } else {
             // input is a directory
