@@ -193,46 +193,6 @@ test!(
     "a {\n  color: rgba(251, 253, 254, 0.6);\n}\n"
 );
 test!(
-    color_plus_ident,
-    "a {\n  color: red + foo;\n}\n",
-    "a {\n  color: redfoo;\n}\n"
-);
-test!(
-    ident_plus_color,
-    "a {\n  color: foo + red;\n}\n",
-    "a {\n  color: foored;\n}\n"
-);
-test!(
-    color_minus_ident,
-    "a {\n  color: red - foo;\n}\n",
-    "a {\n  color: red-foo;\n}\n"
-);
-test!(
-    color_minus_dbl_quote_ident,
-    "a {\n  color: red - \"foo\";\n}\n",
-    "a {\n  color: red-\"foo\";\n}\n"
-);
-test!(
-    color_minus_sgl_quote_ident,
-    "a {\n  color: red - 'foo';\n}\n",
-    "a {\n  color: red-\"foo\";\n}\n"
-);
-test!(
-    color_minus_important,
-    "a {\n  color: red - !important;\n}\n",
-    "a {\n  color: red-!important;\n}\n"
-);
-test!(
-    color_minus_null,
-    "a {\n  color: red - null;\n}\n",
-    "a {\n  color: red-;\n}\n"
-);
-test!(
-    ident_minus_color,
-    "a {\n  color: foo - red;\n}\n",
-    "a {\n  color: foo-red;\n}\n"
-);
-test!(
     hue,
     "a {\n  color: hue(hsl(193, 67%, 28%));\n}\n",
     "a {\n  color: 193deg;\n}\n"

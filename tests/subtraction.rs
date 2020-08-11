@@ -255,6 +255,36 @@ test!(
     }",
     "a {\n  color: 1-a, b;\n}\n"
 );
+test!(
+    color_minus_unquoted,
+    "a {\n  color: red - foo;\n}\n",
+    "a {\n  color: red-foo;\n}\n"
+);
+test!(
+    color_minus_dblquoted,
+    "a {\n  color: red - \"foo\";\n}\n",
+    "a {\n  color: red-\"foo\";\n}\n"
+);
+test!(
+    color_minus_sglquoted,
+    "a {\n  color: red - 'foo';\n}\n",
+    "a {\n  color: red-\"foo\";\n}\n"
+);
+test!(
+    color_minus_important,
+    "a {\n  color: red - !important;\n}\n",
+    "a {\n  color: red-!important;\n}\n"
+);
+test!(
+    color_minus_null,
+    "a {\n  color: red - null;\n}\n",
+    "a {\n  color: red-;\n}\n"
+);
+test!(
+    ident_minus_color,
+    "a {\n  color: foo - red;\n}\n",
+    "a {\n  color: foo-red;\n}\n"
+);
 error!(
     number_minus_color,
     "a {\n  color: 1 - #abc;\n}\n", "Error: Undefined operation \"1 - #abc\"."

@@ -12,16 +12,6 @@ test!(
     "a {\n  foo: --webkit-bar-baz;\n}\n"
 );
 test!(ident_with_num, "el1 {\n  a: b;\n}\n");
-test!(keyword_important, "a {\n  height: 1 !important;\n}\n");
-test!(
-    keyword_important_uppercase,
-    "a {\n  height: 1 !IMPORTANT;\n}\n",
-    "a {\n  height: 1 !important;\n}\n"
-);
-test!(
-    keyword_important_not_at_end,
-    "a {\n  height: !important 1;\n}\n"
-);
 test!(
     emits_double_newline_between_unrelated_styles,
     "a {\n  color: red;\n}\n\nb {\n  color: blue;\n}\n"
@@ -87,15 +77,6 @@ test!(
     args_handles_arbitrary_number_of_parens,
     "a {\n  color: inspect((((((a))))));\n}\n",
     "a {\n  color: a;\n}\n"
-);
-test!(
-    allow_spaces_after_exclamation_point,
-    "a {\n  color: foo ! important;\n}\n",
-    "a {\n  color: foo !important;\n}\n"
-);
-test!(
-    values_after_important,
-    "a {\n  color: foo bar !important hux baz;\n}\n"
 );
 test!(
     no_space_between_colon_and_style_variable,

@@ -289,6 +289,16 @@ test!(
     }",
     "a {\n  color: a, b1;\n}\n"
 );
+test!(
+    color_plus_ident,
+    "a {\n  color: red + foo;\n}\n",
+    "a {\n  color: redfoo;\n}\n"
+);
+test!(
+    ident_plus_color,
+    "a {\n  color: foo + red;\n}\n",
+    "a {\n  color: foored;\n}\n"
+);
 error!(
     map_lhs_add,
     "a {color: (a: b) + 1;}", "Error: (a: b) isn't a valid CSS value."
