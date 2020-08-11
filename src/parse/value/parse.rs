@@ -14,7 +14,7 @@ use crate::{
     common::{unvendor, Brackets, Identifier, ListSeparator, Op, QuoteKind},
     error::SassResult,
     unit::Unit,
-    utils::{eat_whole_number, IsWhitespace, ParsedNumber},
+    utils::{eat_whole_number, is_name, IsWhitespace, ParsedNumber},
     value::{Number, SassFunction, SassMap, Value},
     Token,
 };
@@ -525,6 +525,102 @@ impl<'a> Parser<'a> {
         })
     }
 
+    fn in_interpolated_identifier_body(&mut self) -> bool {
+        match self.toks.peek() {
+            Some(Token { kind: '\\', .. }) => true,
+            Some(Token { kind, .. }) if is_name(*kind) => true,
+            Some(Token { kind: '#', .. }) => {
+                let next_is_curly = matches!(self.toks.peek_next(), Some(Token { kind: '{', .. }));
+                self.toks.reset_cursor();
+                next_is_curly
+            }
+            Some(..) => false,
+            None => false,
+        }
+    }
+
+    /// single codepoint: U+26
+    /// Codepoint range:  U+0-7F
+    /// Wildcard range:   U+4??
+    fn parse_unicode_range(&mut self, kind: char) -> SassResult<Spanned<IntermediateValue>> {
+        let mut buf = String::with_capacity(4);
+        let mut span = self.span_before;
+        buf.push(kind);
+        buf.push('+');
+
+        for _ in 0..6 {
+            if let Some(Token { kind, pos }) = self.toks.peek() {
+                if kind.is_ascii_hexdigit() {
+                    span = span.merge(*pos);
+                    self.span_before = *pos;
+                    buf.push(*kind);
+                    self.toks.next();
+                } else {
+                    break;
+                }
+            }
+        }
+
+        if self.consume_char_if_exists('?') {
+            buf.push('?');
+            for _ in 0..(8_usize.saturating_sub(buf.len())) {
+                if let Some(Token { kind: '?', pos }) = self.toks.peek() {
+                    span = span.merge(*pos);
+                    self.span_before = *pos;
+                    buf.push('?');
+                    self.toks.next();
+                } else {
+                    break;
+                }
+            }
+            return Ok(Spanned {
+                node: IntermediateValue::Value(HigherIntermediateValue::Literal(Value::String(
+                    buf,
+                    QuoteKind::None,
+                ))),
+                span,
+            });
+        }
+
+        if buf.len() == 2 {
+            return Err(("Expected hex digit or \"?\".", self.span_before).into());
+        }
+
+        if self.consume_char_if_exists('-') {
+            buf.push('-');
+            let mut found_hex_digit = false;
+            for _ in 0..6 {
+                found_hex_digit = true;
+                if let Some(Token { kind, pos }) = self.toks.peek() {
+                    if kind.is_ascii_hexdigit() {
+                        span = span.merge(*pos);
+                        self.span_before = *pos;
+                        buf.push(*kind);
+                        self.toks.next();
+                    } else {
+                        break;
+                    }
+                }
+            }
+
+            if !found_hex_digit {
+                return Err(("Expected hex digit.", self.span_before).into());
+            }
+        }
+
+        if self.in_interpolated_identifier_body() {
+            return Err(("Expected end of identifier.", self.span_before).into());
+        }
+
+        Ok(Spanned {
+            node: IntermediateValue::Value(HigherIntermediateValue::Literal(Value::String(
+                buf,
+                QuoteKind::None,
+            ))),
+            span,
+        })
+    }
+
     fn parse_intermediate_value(
         &mut self,
         predicate: &dyn Fn(&mut PeekMoreIterator<IntoIter<Token>>) -> bool,
@@ -553,6 +649,15 @@ impl<'a> Parser<'a> {
                 || (!kind.is_ascii() && !kind.is_control())
                 || (kind == '-' && self.next_is_hypen()) =>
             {
+                if kind == 'U' || kind == 'u' {
+                    if matches!(self.toks.peek_next(), Some(Token { kind: '+', .. })) {
+                        self.toks.next();
+                        self.toks.next();
+                        return Some(self.parse_unicode_range(kind));
+                    } else {
+                        self.toks.reset_cursor();
+                    }
+                }
                 return Some(self.parse_ident_value(predicate));
             }
             '0'..='9' | '.' => {
