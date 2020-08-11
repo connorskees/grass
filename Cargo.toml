@@ -66,12 +66,12 @@ phf = { version = "0.8.0", features = ["macros"] }
 criterion = { version = "0.3.3", optional = true }
 indexmap = "1.5.0"
 lasso = "0.3.1"
-walkdir = "2.3.1"
+walkdir = { version = "2.3.1", optional = true }
 
 [features]
 default = ["commandline", "random"]
 # Option (enabled by default): build a binary using clap
-commandline = ["clap"]
+commandline = ["clap", "walkdir"]
 # Option: enable nightly-only features (for right now, only the `track_caller` attribute) 
 nightly = []
 # Option (enabled by default): enable the builtin functions `random([$limit])` and `unique-id()`
