@@ -16,8 +16,8 @@ use crate::{
 pub(crate) fn percentage(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     let num = match args.get_err(0, "number")? {
-        Value::Dimension(Some(n), Unit::None, _) => n * Number::from(100),
-        Value::Dimension(None, ..) => todo!(),
+        Value::Dimension(Some(n), Unit::None, _) => Some(n * Number::from(100)),
+        Value::Dimension(None, ..) => None,
         v @ Value::Dimension(..) => {
             return Err((
                 format!(
@@ -36,14 +36,14 @@ pub(crate) fn percentage(mut args: CallArgs, parser: &mut Parser<'_>) -> SassRes
                 .into())
         }
     };
-    Ok(Value::Dimension(Some(num), Unit::Percent, true))
+    Ok(Value::Dimension(num, Unit::Percent, true))
 }
 
 pub(crate) fn round(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "number")? {
         Value::Dimension(Some(n), u, _) => Ok(Value::Dimension(Some(n.round()), u, true)),
-        Value::Dimension(None, ..) => todo!(),
+        Value::Dimension(None, ..) => Err(("Infinity or NaN toInt", args.span()).into()),
         v => Err((
             format!("$number: {} is not a number.", v.inspect(args.span())?),
             args.span(),
@@ -56,7 +56,7 @@ pub(crate) fn ceil(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Va
     args.max_args(1)?;
     match args.get_err(0, "number")? {
         Value::Dimension(Some(n), u, _) => Ok(Value::Dimension(Some(n.ceil()), u, true)),
-        Value::Dimension(None, ..) => todo!(),
+        Value::Dimension(None, ..) => Err(("Infinity or NaN toInt", args.span()).into()),
         v => Err((
             format!("$number: {} is not a number.", v.inspect(args.span())?),
             args.span(),
@@ -69,7 +69,7 @@ pub(crate) fn floor(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<V
     args.max_args(1)?;
     match args.get_err(0, "number")? {
         Value::Dimension(Some(n), u, _) => Ok(Value::Dimension(Some(n.floor()), u, true)),
-        Value::Dimension(None, ..) => todo!(),
+        Value::Dimension(None, ..) => Err(("Infinity or NaN toInt", args.span()).into()),
         v => Err((
             format!("$number: {} is not a number.", v.inspect(args.span())?),
             args.span(),
@@ -82,7 +82,7 @@ pub(crate) fn abs(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Val
     args.max_args(1)?;
     match args.get_err(0, "number")? {
         Value::Dimension(Some(n), u, _) => Ok(Value::Dimension(Some(n.abs()), u, true)),
-        Value::Dimension(None, ..) => todo!(),
+        Value::Dimension(None, u, ..) => Ok(Value::Dimension(None, u, true)),
         v => Err((
             format!("$number: {} is not a number.", v.inspect(args.span())?),
             args.span(),
@@ -123,7 +123,9 @@ pub(crate) fn random(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<
     args.max_args(1)?;
     let limit = match args.default_arg(0, "limit", Value::Null)? {
         Value::Dimension(Some(n), ..) => n,
-        Value::Dimension(None, ..) => todo!(),
+        Value::Dimension(None, u, ..) => {
+            return Err((format!("$limit: NaN{} is not an int.", u), args.span()).into())
+        }
         Value::Null => {
             let mut rng = rand::thread_rng();
             return Ok(Value::Dimension(
@@ -183,22 +185,29 @@ pub(crate) fn min(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
         .get_variadic()?
         .into_iter()
         .map(|val| match val.node {
-            Value::Dimension(Some(number), unit, _) => Ok((number, unit)),
-            Value::Dimension(None, ..) => todo!(),
+            Value::Dimension(number, unit, _) => Ok((number, unit)),
             v => Err((format!("{} is not a number.", v.inspect(span)?), span).into()),
         })
-        .collect::<SassResult<Vec<(Number, Unit)>>>()?
+        .collect::<SassResult<Vec<(Option<Number>, Unit)>>>()?
         .into_iter();
 
-    // we know that there *must* be at least one item
-    let mut min = nums.next().unwrap();
+    let mut min = match nums.next() {
+        Some((Some(n), u)) => (n, u),
+        Some((None, u)) => return Ok(Value::Dimension(None, u, true)),
+        None => unreachable!(),
+    };
 
-    for num in nums {
+    for (num, unit) in nums {
+        let num = match num {
+            Some(n) => n,
+            None => continue,
+        };
+
         if ValueVisitor::new(parser, span)
             .less_than(
                 HigherIntermediateValue::Literal(Value::Dimension(
-                    Some(num.0.clone()),
-                    num.1.clone(),
+                    Some(num.clone()),
+                    unit.clone(),
                     true,
                 )),
                 HigherIntermediateValue::Literal(Value::Dimension(
@@ -209,7 +218,7 @@ pub(crate) fn min(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
             )?
             .is_true()
         {
-            min = num;
+            min = (num, unit);
         }
     }
     Ok(Value::Dimension(Some(min.0), min.1, true))
@@ -222,22 +231,29 @@ pub(crate) fn max(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
         .get_variadic()?
         .into_iter()
         .map(|val| match val.node {
-            Value::Dimension(Some(number), unit, _) => Ok((number, unit)),
-            Value::Dimension(None, ..) => todo!(),
+            Value::Dimension(number, unit, _) => Ok((number, unit)),
             v => Err((format!("{} is not a number.", v.inspect(span)?), span).into()),
         })
-        .collect::<SassResult<Vec<(Number, Unit)>>>()?
+        .collect::<SassResult<Vec<(Option<Number>, Unit)>>>()?
         .into_iter();
 
-    // we know that there *must* be at least one item
-    let mut max = nums.next().unwrap();
+    let mut max = match nums.next() {
+        Some((Some(n), u)) => (n, u),
+        Some((None, u)) => return Ok(Value::Dimension(None, u, true)),
+        None => unreachable!(),
+    };
 
-    for num in nums {
+    for (num, unit) in nums {
+        let num = match num {
+            Some(n) => n,
+            None => continue,
+        };
+
         if ValueVisitor::new(parser, span)
             .greater_than(
                 HigherIntermediateValue::Literal(Value::Dimension(
-                    Some(num.0.clone()),
-                    num.1.clone(),
+                    Some(num.clone()),
+                    unit.clone(),
                     true,
                 )),
                 HigherIntermediateValue::Literal(Value::Dimension(
@@ -248,7 +264,7 @@ pub(crate) fn max(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
             )?
             .is_true()
         {
-            max = num;
+            max = (num, unit);
         }
     }
     Ok(Value::Dimension(Some(max.0), max.1, true))

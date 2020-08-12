@@ -25,7 +25,9 @@ pub(crate) fn nth(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Val
     let mut list = args.get_err(0, "list")?.as_list();
     let n = match args.get_err(1, "n")? {
         Value::Dimension(Some(num), ..) => num,
-        Value::Dimension(None, ..) => todo!(),
+        Value::Dimension(None, u, ..) => {
+            return Err((format!("$n: NaN{} is not an int.", u), args.span()).into())
+        }
         v => {
             return Err((
                 format!("$n: {} is not a number.", v.inspect(args.span())?),
@@ -83,7 +85,9 @@ pub(crate) fn set_nth(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult
     };
     let n = match args.get_err(1, "n")? {
         Value::Dimension(Some(num), ..) => num,
-        Value::Dimension(None, ..) => todo!(),
+        Value::Dimension(None, u, ..) => {
+            return Err((format!("$n: NaN{} is not an int.", u), args.span()).into())
+        }
         v => {
             return Err((
                 format!("$n: {} is not a number.", v.inspect(args.span())?),
