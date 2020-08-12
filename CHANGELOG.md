@@ -1,4 +1,4 @@
-# TBD
+# 0.10.1
 
  - **implement `@use` and the module system**
  - support the filter syntax for function arguments, e.g. `alpha(opacity=1)`
@@ -10,6 +10,11 @@
  - allow escaped `!` in selectors
  - allow multiline comments in functions
  - resolve several panics on malformed input when parsing bracketed lists
+ - support NaN in all contexts
+ - add support for unicode ranges
+ - recognize plain CSS imports beginning with `//`, e.g. `@import "//fonts.googleapis.com/css?family=Droid+Sans";`
+ - resolve integer overflows in `@for` when bounds were equal to `isize::MIN` and `isize::MAX`
+ - allow quoted strings in default function arguments
 
 # 0.10.0
 
