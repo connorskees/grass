@@ -123,6 +123,11 @@ test!(
     "a {\n  color: url(;);\n}\n"
 );
 test!(
+    begins_with_single_forward_slash,
+    "a {\n  color: url(/rust-logo.png);\n}\n",
+    "a {\n  color: url(/rust-logo.png);\n}\n"
+);
+test!(
     url_uppercase,
     "a {\n  color: URL(http://foo);\n}\n",
     "a {\n  color: url(http://foo);\n}\n"
