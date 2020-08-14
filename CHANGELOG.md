@@ -1,3 +1,7 @@
+# 0.10.2
+
+ - use `std::fs::OpenOptions` to open files ([#35](https://github.com/connorskees/grass/pull/35) by [@MidasLamb](https://github.com/MidasLamb))
+
 # 0.10.1
 
  - **implement `@use` and the module system**
