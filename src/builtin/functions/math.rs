@@ -17,7 +17,7 @@ pub(crate) fn percentage(mut args: CallArgs, parser: &mut Parser<'_>) -> SassRes
     args.max_args(1)?;
     let num = match args.get_err(0, "number")? {
         Value::Dimension(Some(n), Unit::None, _) => Some(n * Number::from(100)),
-        Value::Dimension(None, ..) => None,
+        Value::Dimension(None, Unit::None, _) => None,
         v @ Value::Dimension(..) => {
             return Err((
                 format!(

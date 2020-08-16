@@ -338,3 +338,12 @@ error!(
     invalid_item_in_comma_separated_list_inside_interpolation,
     "a {\n  color: #{red, color * #abc};\n}\n", "Error: Undefined operation \"color * #abc\"."
 );
+error!(
+    nth_invalid_index_message_contains_unit,
+    "a {\n  color: nth([], 1px);\n}\n", "Error: $n: Invalid index 1px for a list with 0 elements."
+);
+error!(
+    set_nth_invalid_index_message_contains_unit,
+    "a {\n  color: set-nth([], 1px, a);\n}\n",
+    "Error: $n: Invalid index 1px for a list with 0 elements."
+);

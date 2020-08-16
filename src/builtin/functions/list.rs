@@ -23,8 +23,8 @@ pub(crate) fn length(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<
 pub(crate) fn nth(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;
     let mut list = args.get_err(0, "list")?.as_list();
-    let n = match args.get_err(1, "n")? {
-        Value::Dimension(Some(num), ..) => num,
+    let (n, unit) = match args.get_err(1, "n")? {
+        Value::Dimension(Some(num), unit, ..) => (num, unit),
         Value::Dimension(None, u, ..) => {
             return Err((format!("$n: NaN{} is not an int.", u), args.span()).into())
         }
@@ -44,8 +44,9 @@ pub(crate) fn nth(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Val
     if n.abs() > Number::from(list.len()) {
         return Err((
             format!(
-                "$n: Invalid index {} for a list with {} elements.",
+                "$n: Invalid index {}{} for a list with {} elements.",
                 n,
+                unit,
                 list.len()
             ),
             args.span(),
@@ -83,8 +84,8 @@ pub(crate) fn set_nth(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult
         Value::Map(m) => (m.as_list(), ListSeparator::Comma, Brackets::None),
         v => (vec![v], ListSeparator::Space, Brackets::None),
     };
-    let n = match args.get_err(1, "n")? {
-        Value::Dimension(Some(num), ..) => num,
+    let (n, unit) = match args.get_err(1, "n")? {
+        Value::Dimension(Some(num), unit, ..) => (num, unit),
         Value::Dimension(None, u, ..) => {
             return Err((format!("$n: NaN{} is not an int.", u), args.span()).into())
         }
@@ -105,7 +106,10 @@ pub(crate) fn set_nth(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult
 
     if n.abs() > Number::from(len) {
         return Err((
-            format!("$n: Invalid index {} for a list with {} elements.", n, len),
+            format!(
+                "$n: Invalid index {}{} for a list with {} elements.",
+                n, unit, len
+            ),
             args.span(),
         )
             .into());

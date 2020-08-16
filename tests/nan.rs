@@ -77,3 +77,85 @@ test!(
     "$n: (0/0);\na {\n  color: max(1px, $n, 0);\n}\n",
     "a {\n  color: 1px;\n}\n"
 );
+error!(
+    unitful_nan_str_slice_start,
+    "@use \"sass:math\";\na {\n  color: str-slice(\"\", math.acos(2));\n}\n",
+    "Error: $start: Expected NaNdeg to have no units."
+);
+error!(
+    unitful_nan_str_slice_end,
+    "@use \"sass:math\";\na {\n  color: str-slice(\"\", 0, math.acos(2));\n}\n",
+    "Error: $end: Expected NaNdeg to have no units."
+);
+error!(
+    unitful_nan_str_insert_index,
+    "@use \"sass:math\";\na {\n  color: str-insert(\"\", \"\", math.acos(2));\n}\n",
+    "Error: $index: Expected NaNdeg to have no units."
+);
+error!(
+    unitful_nan_percentage,
+    "@use \"sass:math\";\na {\n  color: percentage(math.acos(2));\n}\n",
+    "Error: $number: Expected NaNdeg to have no units."
+);
+error!(
+    unitful_nan_round,
+    "@use \"sass:math\";\na {\n  color: round(math.acos(2));\n}\n", "Error: Infinity or NaN toInt"
+);
+error!(
+    unitful_nan_ceil,
+    "@use \"sass:math\";\na {\n  color: ceil(math.acos(2));\n}\n", "Error: Infinity or NaN toInt"
+);
+error!(
+    unitful_nan_floor,
+    "@use \"sass:math\";\na {\n  color: floor(math.acos(2));\n}\n", "Error: Infinity or NaN toInt"
+);
+test!(
+    unitful_nan_abs,
+    "@use \"sass:math\";\na {\n  color: abs(math.acos(2));\n}\n",
+    "a {\n  color: NaNdeg;\n}\n"
+);
+error!(
+    unitful_nan_random,
+    "@use \"sass:math\";\na {\n  color: random(math.acos(2));\n}\n",
+    "Error: $limit: NaNdeg is not an int."
+);
+test!(
+    unitful_nan_min_first_arg,
+    "@use \"sass:math\";\na {\n  color: min(math.acos(2), 1px);\n}\n",
+    "a {\n  color: NaNdeg;\n}\n"
+);
+test!(
+    unitful_nan_min_last_arg,
+    "@use \"sass:math\";\na {\n  color: min(1px, math.acos(2));\n}\n",
+    "a {\n  color: 1px;\n}\n"
+);
+test!(
+    unitful_nan_min_middle_arg,
+    "@use \"sass:math\";\na {\n  color: min(1px, math.acos(2), 0);\n}\n",
+    "a {\n  color: 0;\n}\n"
+);
+test!(
+    unitful_nan_max_first_arg,
+    "@use \"sass:math\";\na {\n  color: max(math.acos(2), 1px);\n}\n",
+    "a {\n  color: NaNdeg;\n}\n"
+);
+test!(
+    unitful_nan_max_last_arg,
+    "@use \"sass:math\";\na {\n  color: max(1px, math.acos(2));\n}\n",
+    "a {\n  color: 1px;\n}\n"
+);
+test!(
+    unitful_nan_max_middle_arg,
+    "@use \"sass:math\";\na {\n  color: max(1px, math.acos(2), 0);\n}\n",
+    "a {\n  color: 1px;\n}\n"
+);
+error!(
+    unitful_nan_nth_n,
+    "@use \"sass:math\";\na {\n  color: nth([a], math.acos(2));\n}\n",
+    "Error: $n: NaNdeg is not an int."
+);
+error!(
+    unitful_nan_set_nth_n,
+    "@use \"sass:math\";\na {\n  color: set-nth([a], math.acos(2), b);\n}\n",
+    "Error: $n: NaNdeg is not an int."
+);

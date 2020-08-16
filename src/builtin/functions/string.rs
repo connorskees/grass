@@ -110,8 +110,8 @@ pub(crate) fn str_slice(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResu
         Value::Dimension(Some(n), Unit::None, _) => (n.to_integer() + BigInt::from(str_len + 1))
             .to_usize()
             .unwrap(),
-        Value::Dimension(None, u, ..) => {
-            return Err((format!("NaN{} is not an int.", u), args.span()).into())
+        Value::Dimension(None, Unit::None, ..) => {
+            return Err(("NaN is not an int.", args.span()).into())
         }
         v @ Value::Dimension(..) => {
             return Err((
@@ -143,8 +143,8 @@ pub(crate) fn str_slice(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResu
         Value::Dimension(Some(n), Unit::None, _) => (n.to_integer() + BigInt::from(str_len + 1))
             .to_usize()
             .unwrap_or(str_len + 1),
-        Value::Dimension(None, u, ..) => {
-            return Err((format!("NaN{} is not an int.", u), args.span()).into())
+        Value::Dimension(None, Unit::None, ..) => {
+            return Err(("NaN is not an int.", args.span()).into())
         }
         v @ Value::Dimension(..) => {
             return Err((
@@ -243,8 +243,8 @@ pub(crate) fn str_insert(mut args: CallArgs, parser: &mut Parser<'_>) -> SassRes
             return Err((format!("$index: {} is not an int.", n), args.span()).into())
         }
         Value::Dimension(Some(n), Unit::None, _) => n,
-        Value::Dimension(None, u, ..) => {
-            return Err((format!("$index: NaN{} is not an int.", u), args.span()).into())
+        Value::Dimension(None, Unit::None, ..) => {
+            return Err(("$index: NaN is not an int.", args.span()).into())
         }
         v @ Value::Dimension(..) => {
             return Err((
