@@ -192,7 +192,6 @@ test!(
     "a {\n  color: 0;\n}\n"
 );
 test!(
-    #[ignore]
     sub_no_space_interpolation,
     "a {\n  color: 10-#{10};\n}\n",
     "a {\n  color: 10 -10;\n}\n"
@@ -286,6 +285,10 @@ test!(
 error!(
     number_minus_color,
     "a {\n  color: 1 - #abc;\n}\n", "Error: Undefined operation \"1 - #abc\"."
+);
+error!(
+    number_minus_hex_color_no_space,
+    "a {\n  color: 1-#abc;\n}\n", "Error: Undefined operation \"1 - #abc\"."
 );
 error!(
     null_minus_function,

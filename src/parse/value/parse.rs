@@ -850,6 +850,13 @@ impl<'a> Parser<'a> {
                 IntermediateValue::Op(Op::Plus).span(span)
             }
             '-' => {
+                if matches!(self.toks.peek(), Some(Token { kind: '#', .. }))
+                    && matches!(self.toks.peek_next(), Some(Token { kind: '{', .. }))
+                {
+                    self.toks.reset_cursor();
+                    return Some(self.parse_ident_value(predicate));
+                }
+                self.toks.reset_cursor();
                 let span = self.toks.next().unwrap().pos();
                 IntermediateValue::Op(Op::Minus).span(span)
             }
