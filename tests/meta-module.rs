@@ -18,6 +18,16 @@ test!(
     "@use 'sass:math';\na {\n  color: global-variable-exists(pi, $module: math);\n}\n",
     "a {\n  color: true;\n}\n"
 );
+test!(
+    fn_exists_builtin,
+    "@use 'sass:math';\na {\n  color: function-exists(acos, $module: math);\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+error!(
+    fn_exists_module_dne,
+    "a {\n  color: function-exists(c, d);\n}\n",
+    "Error: There is no module with the namespace \"d\"."
+);
 
 #[test]
 fn mixin_exists_module() {

@@ -173,16 +173,38 @@ pub(crate) fn mixin_exists(mut args: CallArgs, parser: &mut Parser<'_>) -> SassR
 
 pub(crate) fn function_exists(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;
-    match args.get_err(0, "name")? {
-        Value::String(s, _) => Ok(Value::bool(
-            parser.scopes.fn_exists(s.into(), parser.global_scope),
-        )),
-        v => Err((
-            format!("$name: {} is not a string.", v.inspect(args.span())?),
-            args.span(),
-        )
-            .into()),
-    }
+
+    let name: Identifier = match args.get_err(0, "name")? {
+        Value::String(s, _) => s.into(),
+        v => {
+            return Err((
+                format!("$name: {} is not a string.", v.inspect(args.span())?),
+                args.span(),
+            )
+                .into())
+        }
+    };
+
+    let module = match args.default_arg(1, "module", Value::Null)? {
+        Value::String(s, _) => Some(s),
+        Value::Null => None,
+        v => {
+            return Err((
+                format!("$module: {} is not a string.", v.inspect(args.span())?),
+                args.span(),
+            )
+                .into())
+        }
+    };
+
+    Ok(Value::bool(if let Some(module_name) = module {
+        parser
+            .modules
+            .get(module_name.into(), args.span())?
+            .fn_exists(name)
+    } else {
+        parser.scopes.fn_exists(name, parser.global_scope)
+    }))
 }
 
 pub(crate) fn get_function(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {

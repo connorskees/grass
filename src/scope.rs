@@ -67,7 +67,7 @@ impl Scope {
         self.functions.insert(s, v)
     }
 
-    fn fn_exists(&self, name: Identifier) -> bool {
+    pub fn fn_exists(&self, name: Identifier) -> bool {
         if self.functions.is_empty() {
             return false;
         }

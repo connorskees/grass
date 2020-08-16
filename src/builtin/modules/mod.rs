@@ -191,6 +191,10 @@ impl Module {
         !name.as_str().starts_with('-') && self.scope.mixin_exists(name)
     }
 
+    pub fn fn_exists(&self, name: Identifier) -> bool {
+        !name.as_str().starts_with('-') && self.scope.fn_exists(name)
+    }
+
     pub fn insert_builtin(
         &mut self,
         name: &'static str,
