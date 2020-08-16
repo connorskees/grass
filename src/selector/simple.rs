@@ -75,7 +75,7 @@ impl fmt::Display for SimpleSelector {
             Self::Pseudo(pseudo) => write!(f, "{}", pseudo),
             Self::Type(name) => write!(f, "{}", name),
             Self::Attribute(attr) => write!(f, "{}", attr),
-            Self::Parent(..) => todo!(),
+            Self::Parent(..) => unreachable!("It should not be possible to format `&`."),
         }
     }
 }

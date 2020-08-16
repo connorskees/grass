@@ -1887,6 +1887,13 @@ error!(
     }",
     "Error: Expected \"optional\"."
 );
+error!(
+    extend_contains_parent_in_compound_selector,
+    "a {
+        @extend &b:c; 
+    }",
+    "Error: Parent selectors aren't allowed here."
+);
 
 // todo: extend_loop (massive test)
 // todo: extend tests in folders

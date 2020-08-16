@@ -17,7 +17,7 @@ use crate::{
         ComplexSelectorComponent, ExtendRule, ExtendedSelector, Extender, Selector, SelectorParser,
     },
     style::Style,
-    utils::{read_until_closing_curly_brace, read_until_semicolon_or_closing_curly_brace},
+    utils::read_until_semicolon_or_closing_curly_brace,
     value::Value,
     Options, {Cow, Token},
 };
@@ -352,7 +352,7 @@ impl<'a> Parser<'a> {
                             let at_root = self.at_root;
                             self.at_root = false;
                             let selector = self
-                                .parse_selector(!self.super_selectors.is_empty(), false, init)?
+                                .parse_selector(true, false, init)?
                                 .0
                                 .resolve_parent_selectors(
                                     self.super_selectors.last(),
@@ -728,18 +728,10 @@ impl<'a> Parser<'a> {
 
         self.whitespace();
 
-        let mut body = read_until_closing_curly_brace(self.toks)?;
-        body.push(match self.toks.next() {
-            Some(tok) => tok,
-            None => return Err(("expected \"}\".", self.span_before).into()),
-        });
-
-        self.whitespace();
-
         let mut styles = Vec::new();
         #[allow(clippy::unnecessary_filter_map)]
         let raw_stmts = Parser {
-            toks: &mut body.into_iter().peekmore(),
+            toks: self.toks,
             map: self.map,
             path: self.path,
             scopes: self.scopes,
@@ -747,7 +739,7 @@ impl<'a> Parser<'a> {
             super_selectors: &mut NeverEmptyVec::new(at_rule_selector.clone()),
             span_before: self.span_before,
             content: self.content,
-            flags: self.flags,
+            flags: self.flags | ContextFlags::IN_AT_ROOT_RULE,
             at_root: true,
             at_root_has_selector,
             extender: self.extender,

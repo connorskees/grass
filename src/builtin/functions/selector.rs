@@ -90,14 +90,7 @@ pub(crate) fn selector_append(args: CallArgs, parser: &mut Parser<'_>) -> SassRe
 
     let mut parsed_selectors = selectors
         .into_iter()
-        .map(|s| {
-            let tmp = s.node.to_selector(parser, "selectors", false)?;
-            if tmp.contains_parent_selector() {
-                Err(("Parent selectors aren't allowed here.", span).into())
-            } else {
-                Ok(tmp)
-            }
-        })
+        .map(|s| s.node.to_selector(parser, "selectors", false))
         .collect::<SassResult<Vec<Selector>>>()?;
 
     let first = parsed_selectors.remove(0);
@@ -158,13 +151,13 @@ pub(crate) fn selector_replace(mut args: CallArgs, parser: &mut Parser<'_>) -> S
     args.max_args(3)?;
     let selector = args
         .get_err(0, "selector")?
-        .to_selector(parser, "selector", false)?;
+        .to_selector(parser, "selector", true)?;
     let target = args
         .get_err(1, "original")?
-        .to_selector(parser, "original", false)?;
+        .to_selector(parser, "original", true)?;
     let source = args
         .get_err(2, "replacement")?
-        .to_selector(parser, "replacement", false)?;
+        .to_selector(parser, "replacement", true)?;
     Ok(Extender::replace(selector.0, source.0, target.0, args.span())?.to_sass_list())
 }
 
@@ -172,7 +165,7 @@ pub(crate) fn selector_unify(mut args: CallArgs, parser: &mut Parser<'_>) -> Sas
     args.max_args(2)?;
     let selector1 = args
         .get_err(0, "selector1")?
-        .to_selector(parser, "selector1", false)?;
+        .to_selector(parser, "selector1", true)?;
 
     if selector1.contains_parent_selector() {
         return Err((
@@ -184,7 +177,7 @@ pub(crate) fn selector_unify(mut args: CallArgs, parser: &mut Parser<'_>) -> Sas
 
     let selector2 = args
         .get_err(1, "selector2")?
-        .to_selector(parser, "selector2", false)?;
+        .to_selector(parser, "selector2", true)?;
 
     if selector2.contains_parent_selector() {
         return Err((

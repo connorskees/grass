@@ -55,6 +55,7 @@ impl ContextFlags {
     pub const IN_FUNCTION: ContextFlag = ContextFlag(1 << 1);
     pub const IN_CONTROL_FLOW: ContextFlag = ContextFlag(1 << 2);
     pub const IN_KEYFRAMES: ContextFlag = ContextFlag(1 << 3);
+    pub const IN_AT_ROOT_RULE: ContextFlag = ContextFlag(1 << 4);
 
     pub const fn empty() -> Self {
         Self(0)
@@ -74,6 +75,11 @@ impl ContextFlags {
 
     pub fn in_keyframes(self) -> bool {
         (self.0 & Self::IN_KEYFRAMES) != 0
+    }
+
+    #[allow(dead_code)]
+    pub fn in_at_root_rule(self) -> bool {
+        (self.0 & Self::IN_AT_ROOT_RULE) != 0
     }
 }
 

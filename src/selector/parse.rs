@@ -194,14 +194,14 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
     }
 
     fn parse_compound_selector(&mut self) -> SassResult<CompoundSelector> {
-        let mut components = vec![self.parse_simple_selector(true)?];
+        let mut components = vec![self.parse_simple_selector(None)?];
 
         while let Some(Token { kind, .. }) = self.parser.toks.peek() {
             if !is_simple_selector_start(*kind) {
                 break;
             }
 
-            components.push(self.parse_simple_selector(false)?);
+            components.push(self.parse_simple_selector(Some(false))?);
         }
 
         Ok(CompoundSelector { components })
@@ -240,7 +240,10 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
     }
 
     /// Consumes a simple selector.
-    fn parse_simple_selector(&mut self, allow_parent: bool) -> SassResult<SimpleSelector> {
+    ///
+    /// If `allows_parent` is `Some`, this will override `self.allows_parent`. If `allows_parent`
+    /// is `None`, it will fallback to `self.allows_parent`.
+    fn parse_simple_selector(&mut self, allows_parent: Option<bool>) -> SassResult<SimpleSelector> {
         match self.parser.toks.peek() {
             Some(Token { kind: '[', .. }) => self.parse_attribute_selector(),
             Some(Token { kind: '.', .. }) => self.parse_class_selector(),
@@ -253,9 +256,11 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
             }
             Some(Token { kind: ':', .. }) => self.parse_pseudo_selector(),
             Some(Token { kind: '&', .. }) => {
-                if !allow_parent && !self.allows_parent {
+                let allows_parent = allows_parent.unwrap_or(self.allows_parent);
+                if !allows_parent {
                     return Err(("Parent selectors aren't allowed here.", self.span).into());
                 }
+
                 self.parse_parent_selector()
             }
             _ => self.parse_type_or_universal_selector(),
@@ -354,7 +359,6 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
             is_class: !element && !is_fake_pseudo_element(&name),
             name: name.node,
             selector,
-            // todo: we can store the reference to this
             is_syntactic_class: !element,
             argument,
             span: self.span,
