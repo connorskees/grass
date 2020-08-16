@@ -426,6 +426,118 @@ impl<'a> Parser<'a> {
         })
     }
 
+    fn parse_bracketed_list(&mut self) -> SassResult<Spanned<IntermediateValue>> {
+        let mut span = self.span_before;
+        self.toks.next();
+        self.whitespace_or_comment();
+
+        Ok(if let Some(Token { kind: ']', pos }) = self.toks.peek() {
+            span = span.merge(*pos);
+            self.toks.next();
+            IntermediateValue::Value(HigherIntermediateValue::Literal(Value::List(
+                Vec::new(),
+                ListSeparator::Space,
+                Brackets::Bracketed,
+            )))
+            .span(span)
+        } else {
+            // todo: we don't know if we're `in_paren` here
+            let inner = self.parse_value(false, &|toks| {
+                matches!(toks.peek(), Some(Token { kind: ']', .. }))
+            })?;
+
+            span = span.merge(inner.span);
+
+            if !matches!(self.toks.next(), Some(Token { kind: ']', .. })) {
+                return Err(("expected \"]\".", span).into());
+            }
+
+            IntermediateValue::Value(HigherIntermediateValue::Literal(match inner.node {
+                Value::List(els, sep, Brackets::None) => Value::List(els, sep, Brackets::Bracketed),
+                v => Value::List(vec![v], ListSeparator::Space, Brackets::Bracketed),
+            }))
+            .span(span)
+        })
+    }
+
+    fn parse_dimension(
+        &mut self,
+        predicate: &dyn Fn(&mut PeekMoreIterator<IntoIter<Token>>) -> bool,
+    ) -> SassResult<Spanned<IntermediateValue>> {
+        let Spanned {
+            node: val,
+            mut span,
+        } = self.parse_number(predicate)?;
+        let unit = if let Some(tok) = self.toks.peek() {
+            let Token { kind, .. } = *tok;
+            match kind {
+                'a'..='z' | 'A'..='Z' | '_' | '\\' | '\u{7f}'..=std::char::MAX => {
+                    let u = self.parse_identifier_no_interpolation(true)?;
+                    span = span.merge(u.span);
+                    Unit::from(u.node)
+                }
+                '%' => {
+                    span = span.merge(self.toks.next().unwrap().pos());
+                    Unit::Percent
+                }
+                _ => Unit::None,
+            }
+        } else {
+            Unit::None
+        };
+
+        let n = if val.dec_len == 0 {
+            if val.num.len() <= 18 && val.times_ten.is_empty() {
+                let n = Rational64::new_raw(parse_i64(&val.num), 1);
+                return Ok(IntermediateValue::Value(HigherIntermediateValue::Literal(
+                    Value::Dimension(Some(Number::new_small(n)), unit, false),
+                ))
+                .span(span));
+            }
+            BigRational::new_raw(val.num.parse::<BigInt>().unwrap(), BigInt::one())
+        } else {
+            if val.num.len() <= 18 && val.times_ten.is_empty() {
+                let n = Rational64::new(parse_i64(&val.num), pow(10, val.dec_len));
+                return Ok(IntermediateValue::Value(HigherIntermediateValue::Literal(
+                    Value::Dimension(Some(Number::new_small(n)), unit, false),
+                ))
+                .span(span));
+            }
+            BigRational::new(val.num.parse().unwrap(), pow(BigInt::from(10), val.dec_len))
+        };
+
+        if val.times_ten.is_empty() {
+            return Ok(IntermediateValue::Value(HigherIntermediateValue::Literal(
+                Value::Dimension(Some(Number::new_big(n)), unit, false),
+            ))
+            .span(span));
+        }
+
+        let times_ten = pow(
+            BigInt::from(10),
+            val.times_ten
+                .parse::<BigInt>()
+                .unwrap()
+                .to_usize()
+                .ok_or(("Exponent too large (expected usize).", span))?,
+        );
+
+        let times_ten = if val.times_ten_is_postive {
+            BigRational::new_raw(times_ten, BigInt::one())
+        } else {
+            BigRational::new(BigInt::one(), times_ten)
+        };
+
+        Ok(
+            IntermediateValue::Value(HigherIntermediateValue::Literal(Value::Dimension(
+                Some(Number::new_big(n * times_ten)),
+                unit,
+                false,
+            )))
+            .span(span),
+        )
+    }
+
     fn parse_paren(&mut self) -> SassResult<Spanned<IntermediateValue>> {
         if self.consume_char_if_exists(')') {
             return Ok(
@@ -659,101 +771,7 @@ impl<'a> Parser<'a> {
                 }
                 return Some(self.parse_ident_value(predicate));
             }
-            '0'..='9' | '.' => {
-                let Spanned {
-                    node: val,
-                    mut span,
-                } = match self.parse_number(predicate) {
-                    Ok(v) => v,
-                    Err(e) => return Some(Err(e)),
-                };
-                let unit = if let Some(tok) = self.toks.peek() {
-                    let Token { kind, .. } = *tok;
-                    match kind {
-                        'a'..='z' | 'A'..='Z' | '_' | '\\' | '\u{7f}'..=std::char::MAX => {
-                            let u = match self.parse_identifier_no_interpolation(true) {
-                                Ok(v) => v,
-                                Err(e) => return Some(Err(e)),
-                            };
-                            span = span.merge(u.span);
-                            Unit::from(u.node)
-                        }
-                        '%' => {
-                            span = span.merge(self.toks.next().unwrap().pos());
-                            Unit::Percent
-                        }
-                        _ => Unit::None,
-                    }
-                } else {
-                    Unit::None
-                };
-
-                let n = if val.dec_len == 0 {
-                    if val.num.len() <= 18 && val.times_ten.is_empty() {
-                        let n = Rational64::new_raw(parse_i64(&val.num), 1);
-                        return Some(Ok(IntermediateValue::Value(
-                            HigherIntermediateValue::Literal(Value::Dimension(
-                                Some(Number::new_small(n)),
-                                unit,
-                                false,
-                            )),
-                        )
-                        .span(span)));
-                    }
-                    BigRational::new_raw(val.num.parse::<BigInt>().unwrap(), BigInt::one())
-                } else {
-                    if val.num.len() <= 18 && val.times_ten.is_empty() {
-                        let n = Rational64::new(parse_i64(&val.num), pow(10, val.dec_len));
-                        return Some(Ok(IntermediateValue::Value(
-                            HigherIntermediateValue::Literal(Value::Dimension(
-                                Some(Number::new_small(n)),
-                                unit,
-                                false,
-                            )),
-                        )
-                        .span(span)));
-                    }
-                    BigRational::new(val.num.parse().unwrap(), pow(BigInt::from(10), val.dec_len))
-                };
-
-                if val.times_ten.is_empty() {
-                    return Some(Ok(IntermediateValue::Value(
-                        HigherIntermediateValue::Literal(Value::Dimension(
-                            Some(Number::new_big(n)),
-                            unit,
-                            false,
-                        )),
-                    )
-                    .span(span)));
-                }
-
-                let times_ten = pow(
-                    BigInt::from(10),
-                    match val
-                        .times_ten
-                        .parse::<BigInt>()
-                        .unwrap()
-                        .to_usize()
-                        .ok_or(("Exponent too large (expected usize).", span))
-                    {
-                        Ok(v) => v,
-                        Err(e) => return Some(Err(e.into())),
-                    },
-                );
-
-                let times_ten = if val.times_ten_is_postive {
-                    BigRational::new_raw(times_ten, BigInt::one())
-                } else {
-                    BigRational::new(BigInt::one(), times_ten)
-                };
-
-                IntermediateValue::Value(HigherIntermediateValue::Literal(Value::Dimension(
-                    Some(Number::new_big(n * times_ten)),
-                    unit,
-                    false,
-                )))
-                .span(span)
-            }
+            '0'..='9' | '.' => return Some(self.parse_dimension(predicate)),
             '(' => {
                 self.toks.next();
                 return Some(self.parse_paren());
@@ -793,44 +811,7 @@ impl<'a> Parser<'a> {
                 IntermediateValue::Value(HigherIntermediateValue::Literal(node))
                     .span(span_start.merge(span))
             }
-            '[' => {
-                let mut span = self.span_before;
-                self.toks.next();
-                self.whitespace_or_comment();
-
-                if let Some(Token { kind: ']', pos }) = self.toks.peek() {
-                    span = span.merge(*pos);
-                    self.toks.next();
-                    IntermediateValue::Value(HigherIntermediateValue::Literal(Value::List(
-                        Vec::new(),
-                        ListSeparator::Space,
-                        Brackets::Bracketed,
-                    )))
-                    .span(span)
-                } else {
-                    // todo: we don't know if we're `in_paren` here
-                    let inner = match self.parse_value(false, &|toks| {
-                        matches!(toks.peek(), Some(Token { kind: ']', .. }))
-                    }) {
-                        Ok(v) => v,
-                        Err(e) => return Some(Err(e)),
-                    };
-
-                    span = span.merge(inner.span);
-
-                    if !matches!(self.toks.next(), Some(Token { kind: ']', .. })) {
-                        return Some(Err(("expected \"]\".", span).into()));
-                    }
-
-                    IntermediateValue::Value(HigherIntermediateValue::Literal(match inner.node {
-                        Value::List(els, sep, Brackets::None) => {
-                            Value::List(els, sep, Brackets::Bracketed)
-                        }
-                        v => Value::List(vec![v], ListSeparator::Space, Brackets::Bracketed),
-                    }))
-                    .span(span)
-                }
-            }
+            '[' => return Some(self.parse_bracketed_list()),
             '$' => {
                 self.toks.next();
                 let val = match self.parse_identifier_no_interpolation(false) {
