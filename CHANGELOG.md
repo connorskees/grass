@@ -1,3 +1,9 @@
+# 0.10.3
+
+ - hyphen followed by interpolation is not treated as subtraction, e.g. `10-#{10}` => `10 -10` rather than `0`
+ - function arguments do not affect variables in outer scopes (fixes [#37](https://github.com/connorskees/grass/issues/37))
+ - improve error messages for NaN with units passed to builtin functions
+
 # 0.10.2
 
  - use `std::fs::OpenOptions` to open files ([#35](https://github.com/connorskees/grass/pull/35) by [@MidasLamb](https://github.com/MidasLamb))
