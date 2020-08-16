@@ -390,7 +390,7 @@ impl<'a> Parser<'a> {
                 },
             }?
             .node;
-            self.scopes.insert_var(arg.name, val.clone());
+            self.scopes.insert_var_last(arg.name, val.clone());
             scope.insert_var(arg.name, val);
         }
         self.scopes.exit_scope();

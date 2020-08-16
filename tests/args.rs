@@ -196,3 +196,20 @@ test!(
     }"#,
     "a {\n  color: 'Roboto, \"Helvetica Neue\", sans-serif';\n}\n"
 );
+test!(
+    args_do_not_affect_existing_outer_variables,
+    "@mixin mixin2($a) {
+        color: $a;
+    }
+
+    @mixin mixin1($a) {
+        color: $a;
+        @include mixin2(bar);
+        color: $a;
+    }
+
+    a {
+        @include mixin1(foo);
+    }",
+    "a {\n  color: foo;\n  color: bar;\n  color: foo;\n}\n"
+);
