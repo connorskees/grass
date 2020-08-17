@@ -62,6 +62,27 @@ test!(
     "a {\n  color: comma;\n}\n"
 );
 test!(
+    list_separator_map,
+    "a {\n  color: list-separator((a: b, c: d));\n}\n",
+    "a {\n  color: comma;\n}\n"
+);
+test!(
+    list_separator_arglist,
+    "@mixin foo($arg...) {
+        color: list-separator($arg);
+    }
+
+    a {
+        @include foo(1, 2, 3);
+    }",
+    "a {\n  color: comma;\n}\n"
+);
+test!(
+    list_separator_empty,
+    "a {\n  color: list-separator(());\n}\n",
+    "a {\n  color: space;\n}\n"
+);
+test!(
     set_nth_named_args,
     "a {\n  color: set-nth($list: 1 2 3, $n: 2, $value: foo);\n}\n",
     "a {\n  color: 1 foo 3;\n}\n"
@@ -126,11 +147,6 @@ test!(
     append_list_separator_space,
     "a {\n  color: append((a, b), c, space);\n}\n",
     "a {\n  color: a b c;\n}\n"
-);
-test!(
-    list_separator_empty,
-    "a {\n  color: list-separator(());\n}\n",
-    "a {\n  color: space;\n}\n"
 );
 test!(
     append_empty,

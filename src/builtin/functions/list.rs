@@ -70,6 +70,7 @@ pub(crate) fn list_separator(mut args: CallArgs, parser: &mut Parser<'_>) -> Sas
     Ok(Value::String(
         match args.get_err(0, "list")? {
             Value::List(_, sep, ..) => sep.name(),
+            Value::Map(..) | Value::ArgList(..) => ListSeparator::Comma.name(),
             _ => ListSeparator::Space.name(),
         }
         .to_owned(),
