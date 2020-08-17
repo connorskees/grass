@@ -248,7 +248,7 @@ impl<'a> Parser<'a> {
                     return Ok(Spanned {
                         node: Value::String(s, QuoteKind::Quoted),
                         span,
-                    })
+                    });
                 }
                 '\'' if q == '\'' => {
                     return Ok(Spanned {

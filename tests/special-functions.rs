@@ -50,6 +50,16 @@ test!(
     "a {\n  color: -webkit-calc(1 + 2);\n}\n"
 );
 test!(
+    calc_quoted_string,
+    r#"a { color: calc("\ "); }"#,
+    "a {\n  color: calc(\" \");\n}\n"
+);
+test!(
+    calc_quoted_string_single_quoted_paren,
+    "a {\n  color: calc(\")\");\n}\n",
+    "a {\n  color: calc(\")\");\n}\n"
+);
+test!(
     element_whitespace,
     "a {\n  color: element(       1      );\n}\n",
     "a {\n  color: element( 1 );\n}\n"

@@ -47,6 +47,14 @@ impl<'a> Parser<'a> {
                         buf.push(')');
                     }
                 }
+                q @ '\'' | q @ '"' => {
+                    buf.push(q);
+                    match self.parse_quoted_string(q)?.node {
+                        Value::String(ref s, ..) => buf.push_str(s),
+                        _ => unreachable!(),
+                    }
+                    buf.push(q);
+                }
                 c => buf.push(c),
             }
         }
