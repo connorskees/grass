@@ -213,10 +213,9 @@ test!(
     "a {\n  color: unitless(1)\n}\n",
     "a {\n  color: true;\n}\n"
 );
-test!(
+error!(
     unitless_string,
-    "a {\n  color: unitless(foo)\n}\n",
-    "a {\n  color: true;\n}\n"
+    "a {\n  color: unitless(foo)\n}\n", "Error: $number: foo is not a number."
 );
 test!(
     variable_does_exist,

@@ -7,6 +7,7 @@ use crate::{
     common::{Identifier, QuoteKind},
     error::SassResult,
     parse::Parser,
+    unit::Unit,
     value::{SassFunction, Value},
 };
 
@@ -72,7 +73,17 @@ pub(crate) fn type_of(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult
 
 pub(crate) fn unitless(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    Ok(Value::bool(args.get_err(0, "number")?.unitless()))
+    Ok(match args.get_err(0, "number")? {
+        Value::Dimension(_, Unit::None, _) => Value::True,
+        Value::Dimension(..) => Value::False,
+        v => {
+            return Err((
+                format!("$number: {} is not a number.", v.inspect(args.span())?),
+                args.span(),
+            )
+                .into())
+        }
+    })
 }
 
 pub(crate) fn inspect(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {

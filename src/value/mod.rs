@@ -380,15 +380,6 @@ impl Value {
         })
     }
 
-    pub fn unitless(&self) -> bool {
-        #[allow(clippy::match_same_arms)]
-        match self {
-            Value::Dimension(_, Unit::None, _) => true,
-            Value::Dimension(..) => false,
-            _ => true,
-        }
-    }
-
     pub fn not_equals(&self, other: &Self) -> bool {
         match self {
             Value::String(s1, ..) => match other {
