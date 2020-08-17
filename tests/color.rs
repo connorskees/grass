@@ -387,15 +387,20 @@ test!(
     "a {\n  color: gray;\n}\n"
 );
 test!(grayscale_number, "a {\n  color: grayscale(15%);\n}\n");
-// handle special functions better!
-// test!(
-//     grayscale_number_casing,
-//     "a {\n  color: grAyscaLe(15%);\n}\n"
-// );
+test!(
+    #[ignore]
+    grayscale_number_casing,
+    "a {\n  color: grAyscaLe(15%);\n}\n"
+);
 test!(
     complement,
     "a {\n  color: complement(red);\n}\n",
     "a {\n  color: aqua;\n}\n"
+);
+test!(
+    complement_hue_under_180,
+    "a {\n  color: complement(#abcdef);\n}\n",
+    "a {\n  color: #efcdab;\n}\n"
 );
 test!(
     mix_no_weight,

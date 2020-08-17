@@ -465,12 +465,8 @@ impl Color {
 
     pub fn complement(&self) -> Self {
         let (hue, saturation, luminance, alpha) = self.as_hsla();
-        let hue = if hue > Number::from(180) {
-            Number::from(360) - hue
-        } else {
-            hue + Number::from(180)
-        };
-        Color::from_hsla(hue, saturation, luminance, alpha)
+
+        Color::from_hsla(hue + Number::from(180), saturation, luminance, alpha)
     }
 }
 
