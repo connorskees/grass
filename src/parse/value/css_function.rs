@@ -48,12 +48,12 @@ impl<'a> Parser<'a> {
                     }
                 }
                 q @ '\'' | q @ '"' => {
-                    buf.push(q);
+                    buf.push('"');
                     match self.parse_quoted_string(q)?.node {
                         Value::String(ref s, ..) => buf.push_str(s),
                         _ => unreachable!(),
                     }
-                    buf.push(q);
+                    buf.push('"');
                 }
                 c => buf.push(c),
             }

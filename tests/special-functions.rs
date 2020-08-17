@@ -60,6 +60,11 @@ test!(
     "a {\n  color: calc(\")\");\n}\n"
 );
 test!(
+    calc_quoted_string_single_quotes,
+    "a {\n  color: calc('a');\n}\n",
+    "a {\n  color: calc(\"a\");\n}\n"
+);
+test!(
     element_whitespace,
     "a {\n  color: element(       1      );\n}\n",
     "a {\n  color: element( 1 );\n}\n"
