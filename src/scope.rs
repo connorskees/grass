@@ -90,11 +90,7 @@ impl Scope {
 
     pub fn default_var_exists(&mut self, s: Identifier) -> bool {
         if let Some(default_var) = self.get_var_no_err(s) {
-            if default_var.is_null() {
-                false
-            } else {
-                true
-            }
+            !default_var.is_null()
         } else {
             false
         }
