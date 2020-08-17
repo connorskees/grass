@@ -386,11 +386,10 @@ test!(
     "a {\n  color: grayscale(red);\n}\n",
     "a {\n  color: gray;\n}\n"
 );
-test!(grayscale_number, "a {\n  color: grayscale(15%);\n}\n");
 test!(
-    #[ignore]
-    grayscale_number_casing,
-    "a {\n  color: grAyscaLe(15%);\n}\n"
+    grayscale_number,
+    "a {\n  color: grayscale(15%);\n}\n",
+    "a {\n  color: grayscale(15%);\n}\n"
 );
 test!(
     complement,
