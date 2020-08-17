@@ -647,3 +647,9 @@ test!(
     "a {\n  color: rgba(1 2 max(3, 3));\n}\n",
     "a {\n  color: rgba(1, 2, max(3, 3));\n}\n"
 );
+test!(
+    #[ignore = "we do not check if interpolation occurred"]
+    interpolated_named_color_is_not_color,
+    "a {\n  color: type-of(r#{e}d);\n}\n",
+    "a {\n  color: string;\n}\n"
+);
