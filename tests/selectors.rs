@@ -681,6 +681,12 @@ test!(
     "#{inspect(&)}  {\n  color: &;\n}\n",
     "null {\n  color: null;\n}\n"
 );
+test!(
+    #[ignore = "we do not yet have a good way of consuming a string without converting \a to a newline"]
+    silent_comment_in_quoted_attribute_value,
+    ".foo bar[val=\"//\"] {\n  color: &;\n}\n",
+    ".foo bar[val=\"//\"] {\n  color: .foo bar[val=\"//\"];\n}\n"
+);
 error!(
     a_n_plus_b_n_invalid_odd,
     ":nth-child(ofdd) {\n  color: &;\n}\n", "Error: Expected \"odd\"."
