@@ -88,19 +88,11 @@ impl Scope {
         self.merge(other.scope);
     }
 
-    pub fn default_var_exists(&mut self, s: Identifier) -> bool {
+    pub fn default_var_exists(&self, s: Identifier) -> bool {
         if let Some(default_var) = self.get_var_no_err(s) {
             !default_var.is_null()
         } else {
             false
-        }
-    }
-
-    pub fn insert_default_var(&mut self, s: Identifier, v: Value) -> Option<Value> {
-        if self.default_var_exists(s) {
-            None
-        } else {
-            self.insert_var(s, v)
         }
     }
 }
@@ -171,12 +163,14 @@ impl Scopes {
         }
     }
 
-    pub fn insert_default_var(&mut self, s: Identifier, v: Value) -> Option<Value> {
-        if let Some(scope) = self.0.last_mut() {
-            scope.insert_default_var(s, v)
-        } else {
-            panic!()
+    pub fn default_var_exists(&self, name: Identifier) -> bool {
+        for scope in self.0.iter().rev() {
+            if scope.default_var_exists(name) {
+                return true;
+            }
         }
+
+        false
     }
 
     pub fn get_var<'a>(

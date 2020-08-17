@@ -39,29 +39,42 @@ impl<'a> Parser<'a> {
         } = self.parse_variable_value()?;
 
         if default {
-            let config_val = self.module_config.get(ident);
-            if self.at_root && !self.flags.in_control_flow() {
-                if !self.global_scope.default_var_exists(ident) {
-                    let value = if let Some(config_val) = config_val {
-                        config_val
-                    } else {
-                        self.parse_value_from_vec(val_toks, true)?.node
-                    };
+            let config_val = self.module_config.get(ident).filter(|v| !v.is_null());
 
-                    self.global_scope.insert_var(ident, value);
-                }
-            } else {
-                let value = if let Some(config_val) = config_val {
-                    config_val
+            let value = if (self.at_root && !self.flags.in_control_flow()) || global {
+                if self.global_scope.default_var_exists(ident) {
+                    return Ok(());
+                } else if let Some(value) = config_val {
+                    value
                 } else {
                     self.parse_value_from_vec(val_toks, true)?.node
-                };
-
-                if global && !self.global_scope.default_var_exists(ident) {
-                    self.global_scope.insert_var(ident, value.clone());
                 }
-                self.scopes.insert_default_var(ident, value);
+            } else if self.at_root && self.flags.in_control_flow() {
+                if self.global_scope.default_var_exists(ident) {
+                    return Ok(());
+                }
+
+                self.parse_value_from_vec(val_toks, true)?.node
+            } else if !self.at_root {
+                if self.scopes.default_var_exists(ident) {
+                    return Ok(());
+                }
+
+                self.parse_value_from_vec(val_toks, true)?.node
+            } else {
+                self.parse_value_from_vec(val_toks, true)?.node
+            };
+
+            if self.at_root && !self.flags.in_control_flow() {
+                self.global_scope.insert_var(ident, value);
+                return Ok(());
             }
+
+            if global {
+                self.global_scope.insert_var(ident, value.clone());
+            }
+
+            self.scopes.insert_var(ident, value);
 
             return Ok(());
         }

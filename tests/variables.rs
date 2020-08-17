@@ -182,6 +182,32 @@ test!(
     }",
     "a {\n  color: red;\n}\n"
 );
+test!(
+    default_at_root_inside_control_flow,
+    "$a: initial;
+
+    @if true {
+        $a: outer !default;
+    }
+
+    a {
+        color: $a;
+    }",
+    "a {\n  color: initial;\n}\n"
+);
+test!(
+    default_at_root_inside_control_flow_outer_is_null,
+    "$a: null;
+
+    @if true {
+        $a: outer !default;
+    }
+
+    a {
+        color: $a;
+    }",
+    "a {\n  color: outer;\n}\n"
+);
 // https://github.com/Kixiron/lasso/issues/7
 test!(
     regression_test_for_lasso_0_3_0,

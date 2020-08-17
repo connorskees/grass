@@ -682,7 +682,7 @@ test!(
     "null {\n  color: null;\n}\n"
 );
 test!(
-    #[ignore = "we do not yet have a good way of consuming a string without converting \a to a newline"]
+    #[ignore = "we do not yet have a good way of consuming a string without converting \\a to a newline"]
     silent_comment_in_quoted_attribute_value,
     ".foo bar[val=\"//\"] {\n  color: &;\n}\n",
     ".foo bar[val=\"//\"] {\n  color: .foo bar[val=\"//\"];\n}\n"
