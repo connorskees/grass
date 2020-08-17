@@ -152,6 +152,36 @@ test!(
     "  /**/  $a  /**/  :  /**/  red  /**/  ;  /**/  ",
     "/**/\n/**/\n"
 );
+test!(
+    default_var_overrides_when_null_declared_global,
+    "$a: null;
+    $a: red !default;
+    
+    a {
+        color: $a;
+    }",
+    "a {\n  color: red;\n}\n"
+);
+test!(
+    default_var_overrides_when_null_declared_local,
+    "a {
+        $a: null;
+        $a: red !default;
+
+        color: $a;
+    }",
+    "a {\n  color: red;\n}\n"
+);
+test!(
+    default_var_overrides_when_null_declared_local_with_global_flags,
+    "a {
+        $a: null !global;
+        $a: red !default !global;
+
+        color: $a;
+    }",
+    "a {\n  color: red;\n}\n"
+);
 // https://github.com/Kixiron/lasso/issues/7
 test!(
     regression_test_for_lasso_0_3_0,

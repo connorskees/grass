@@ -237,6 +237,16 @@ test!(
     "$a: red; a {\n  color: variable-exists('a')\n}\n",
     "a {\n  color: true;\n}\n"
 );
+test!(
+    variable_exists_local_is_null,
+    "a {\n  $a: null; color: variable-exists(a)\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    variable_exists_global_is_null,
+    "$a: null; a {\n  color: variable-exists(a)\n}\n",
+    "a {\n  color: true;\n}\n"
+);
 error!(
     variable_exists_not_string,
     "a {\n  color: variable-exists(12px)\n}\n", "Error: $name: 12px is not a string."

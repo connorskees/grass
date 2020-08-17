@@ -41,7 +41,7 @@ impl<'a> Parser<'a> {
         if default {
             let config_val = self.module_config.get(ident);
             if self.at_root && !self.flags.in_control_flow() {
-                if !self.global_scope.var_exists(ident) {
+                if !self.global_scope.default_var_exists(ident) {
                     let value = if let Some(config_val) = config_val {
                         config_val
                     } else {
@@ -57,7 +57,7 @@ impl<'a> Parser<'a> {
                     self.parse_value_from_vec(val_toks, true)?.node
                 };
 
-                if global && !self.global_scope.var_exists(ident) {
+                if global && !self.global_scope.default_var_exists(ident) {
                     self.global_scope.insert_var(ident, value.clone());
                 }
                 self.scopes.insert_default_var(ident, value);

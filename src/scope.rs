@@ -36,6 +36,10 @@ impl Scope {
         }
     }
 
+    fn get_var_no_err(&self, name: Identifier) -> Option<&Value> {
+        self.vars.get(&name)
+    }
+
     pub fn insert_var(&mut self, s: Identifier, v: Value) -> Option<Value> {
         self.vars.insert(s, v)
     }
@@ -82,6 +86,26 @@ impl Scope {
 
     pub fn merge_module(&mut self, other: Module) {
         self.merge(other.scope);
+    }
+
+    pub fn default_var_exists(&mut self, s: Identifier) -> bool {
+        if let Some(default_var) = self.get_var_no_err(s) {
+            if default_var.is_null() {
+                false
+            } else {
+                true
+            }
+        } else {
+            false
+        }
+    }
+
+    pub fn insert_default_var(&mut self, s: Identifier, v: Value) -> Option<Value> {
+        if self.default_var_exists(s) {
+            None
+        } else {
+            self.insert_var(s, v)
+        }
     }
 }
 
@@ -153,11 +177,7 @@ impl Scopes {
 
     pub fn insert_default_var(&mut self, s: Identifier, v: Value) -> Option<Value> {
         if let Some(scope) = self.0.last_mut() {
-            if scope.var_exists(s) {
-                None
-            } else {
-                scope.insert_var(s, v)
-            }
+            scope.insert_default_var(s, v)
         } else {
             panic!()
         }
