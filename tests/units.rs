@@ -127,6 +127,31 @@ test!(
     "a {\n  color: unit((1 / 1in) * 1in);\n}\n",
     "a {\n  color: \"\";\n}\n"
 );
+test!(
+    unit_begins_with_single_hyphen,
+    "a {\n  color: unit(1-em);\n}\n",
+    "a {\n  color: \"-em\";\n}\n"
+);
+test!(
+    unit_begins_with_two_hyphens,
+    "a {\n  color: 1--em;\n}\n",
+    "a {\n  color: 1 --em;\n}\n"
+);
+test!(
+    unit_begins_with_escape_sequence,
+    "a {\n  color: unit(1\\65);\n}\n",
+    "a {\n  color: \"e\";\n}\n"
+);
+test!(
+    unit_begins_with_escape_sequence_followed_by_space_and_hyphen,
+    "a {\n  color: unit(1\\65 -);\n}\n",
+    "a {\n  color: \"e-\";\n}\n"
+);
+test!(
+    unit_begins_with_single_hyphen_followed_by_escape_sequence,
+    "a {\n  color: unit(1-\\65);\n}\n",
+    "a {\n  color: \"-e\";\n}\n"
+);
 error!(
     display_single_div_with_none_numerator,
     "a {\n  color: (1 / 1em);\n}\n", "Error: 1em^-1 isn't a valid CSS value."

@@ -476,6 +476,22 @@ impl<'a> Parser<'a> {
                     span = span.merge(u.span);
                     Unit::from(u.node)
                 }
+                '-' => {
+                    if let Some(Token { kind, .. }) = self.toks.peek_next().cloned() {
+                        self.toks.reset_cursor();
+                        if matches!(kind, 'a'..='z' | 'A'..='Z' | '_' | '\\' | '\u{7f}'..=std::char::MAX)
+                        {
+                            let u = self.parse_identifier_no_interpolation(true)?;
+                            span = span.merge(u.span);
+                            Unit::from(u.node)
+                        } else {
+                            Unit::None
+                        }
+                    } else {
+                        self.toks.reset_cursor();
+                        Unit::None
+                    }
+                }
                 '%' => {
                     span = span.merge(self.toks.next().unwrap().pos());
                     Unit::Percent
