@@ -676,6 +676,11 @@ test!(
     ":a(a , b) {\n  color: &;\n}\n",
     ":a(a , b) {\n  color: :a(a , b);\n}\n"
 );
+test!(
+    parent_selector_is_null_at_root,
+    "#{inspect(&)}  {\n  color: &;\n}\n",
+    "null {\n  color: null;\n}\n"
+);
 error!(
     a_n_plus_b_n_invalid_odd,
     ":nth-child(ofdd) {\n  color: &;\n}\n", "Error: Expected \"odd\"."

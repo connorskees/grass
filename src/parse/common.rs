@@ -77,7 +77,6 @@ impl ContextFlags {
         (self.0 & Self::IN_KEYFRAMES) != 0
     }
 
-    #[allow(dead_code)]
     pub fn in_at_root_rule(self) -> bool {
         (self.0 & Self::IN_AT_ROOT_RULE) != 0
     }

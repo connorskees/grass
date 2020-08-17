@@ -171,6 +171,15 @@ test!(
       /**/  ",
     "/**/\n/**/\n/**/\n"
 );
+test!(
+    parent_selector_is_null_at_root,
+    "@if & {
+        a {
+            color: red;
+        }
+    }",
+    ""
+);
 error!(
     nothing_after_escape,
     "@if \\", "Error: Expected expression."

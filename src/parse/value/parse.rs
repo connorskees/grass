@@ -778,7 +778,10 @@ impl<'a> Parser<'a> {
             }
             '&' => {
                 let span = self.toks.next().unwrap().pos();
-                if self.super_selectors.is_empty() && !self.at_root_has_selector && !self.at_root {
+                if self.super_selectors.is_empty()
+                    && !self.at_root_has_selector
+                    && !self.flags.in_at_root_rule()
+                {
                     IntermediateValue::Value(HigherIntermediateValue::Literal(Value::Null))
                         .span(span)
                 } else {
