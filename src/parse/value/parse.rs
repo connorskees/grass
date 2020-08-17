@@ -604,7 +604,7 @@ impl<'a> Parser<'a> {
 
         loop {
             let key =
-                self.parse_value(true, &|c| matches!(c.peek(), Some(Token { kind: ':', .. })))?;
+                self.parse_value(true, &|c| matches!(c.peek(), Some(Token { kind: ':', .. }) | Some(Token { kind: ',', .. })))?;
 
             self.expect_char(':')?;
 

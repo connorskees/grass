@@ -225,3 +225,7 @@ error!(
     first_map_value_missing_closing_paren,
     "$a: (a: b", "Error: expected \")\"."
 );
+error!(
+    denies_comma_separated_list_without_parens_as_key,
+    "$map: (a: 1, b, c, d: e);", "Error: expected \":\"."
+);
