@@ -213,18 +213,20 @@ impl<'a> Parser<'a> {
 
             let mut entered_scope = false;
 
-            if let Some(Token { kind: '(', .. }) = self.toks.peek() {
-                self.toks.next();
-                let args = self.parse_call_args()?;
-                if let Some(ref content_args) = content.content_args {
-                    args.max_args(content_args.len())?;
+            let call_args = if self.consume_char_if_exists('(') {
+                self.parse_call_args()?
+            } else {
+                CallArgs::new(self.span_before)
+            };
 
-                    let scope = self.eval_args(content_args.clone(), args)?;
-                    scope_at_decl.enter_scope(scope);
-                    entered_scope = true;
-                } else {
-                    args.max_args(0)?;
-                }
+            if let Some(ref content_args) = content.content_args {
+                call_args.max_args(content_args.len())?;
+
+                let scope = self.eval_args(content_args.clone(), call_args)?;
+                scope_at_decl.enter_scope(scope);
+                entered_scope = true;
+            } else {
+                call_args.max_args(0)?;
             }
 
             let stmts = if let Some(body) = content.content.clone() {

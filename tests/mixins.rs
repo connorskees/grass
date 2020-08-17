@@ -525,6 +525,19 @@ test!(
     }",
     "a {\n  color: red;\n}\n"
 );
+test!(
+    content_default_arg_value_no_parens,
+    "a {
+        @mixin foo {
+            @content;
+        }
+
+        @include foo using ($a: red) {
+            color: $a;
+        }
+    }",
+    "a {\n  color: red;\n}\n"
+);
 error!(
     mixin_in_function,
     "@function foo() {
