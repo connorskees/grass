@@ -81,6 +81,11 @@ pub(crate) fn set_nth(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult
     args.max_args(3)?;
     let (mut list, sep, brackets) = match args.get_err(0, "list")? {
         Value::List(v, sep, b) => (v, sep, b),
+        Value::ArgList(v) => (
+            v.into_iter().map(|val| val.node).collect(),
+            ListSeparator::Comma,
+            Brackets::None,
+        ),
         Value::Map(m) => (m.as_list(), ListSeparator::Comma, Brackets::None),
         v => (vec![v], ListSeparator::Space, Brackets::None),
     };

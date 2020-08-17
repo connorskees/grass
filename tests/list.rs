@@ -92,6 +92,17 @@ test!(
     "a {\n  color: c d, i, g h;\n}\n"
 );
 test!(
+    set_nth_arglist,
+    "@mixin foo($args...) {
+        color: set-nth($args, 2, 0);
+    }
+
+    a {
+        @include foo(1, 2, 3, 4);
+    }",
+    "a {\n  color: 1, 0, 3, 4;\n}\n"
+);
+test!(
     append_space_separated,
     "a {\n  color: append(a b, c);\n}\n",
     "a {\n  color: a b c;\n}\n"
