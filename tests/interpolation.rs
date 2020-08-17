@@ -71,6 +71,12 @@ test!(
     "$f: foo;\na {\n  color: #{$f}(a, 1+2, c);\n}\n",
     "a {\n  color: foo(a, 3, c);\n}\n"
 );
+test!(
+    #[ignore = "we evaluate interpolation eagerly"]
+    interpolated_builtin_fn,
+    "a {\n  color: uni#{t}less(1px);\n}\n",
+    "a {\n  color: unitless(1px);\n}\n"
+);
 error!(
     error_message_when_at_start_of_value,
     "a {\n  color: #{2px*5px};\n}\n", "Error: 10px*px isn't a valid CSS value."
