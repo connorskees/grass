@@ -55,23 +55,33 @@ impl<'a> Parser<'a> {
                 }
 
                 self.parse_value_from_vec(val_toks, true)?.node
-            } else if !self.at_root {
+            } else if self.at_root {
+                self.parse_value_from_vec(val_toks, true)?.node
+            } else {
                 if self.scopes.default_var_exists(ident) {
                     return Ok(());
                 }
 
                 self.parse_value_from_vec(val_toks, true)?.node
-            } else {
-                self.parse_value_from_vec(val_toks, true)?.node
             };
 
-            if self.at_root && !self.flags.in_control_flow() {
-                self.global_scope.insert_var(ident, value);
-                return Ok(());
+            if self.at_root && self.global_scope.var_exists(ident) {
+                if !self.global_scope.default_var_exists(ident) {
+                    self.global_scope.insert_var(ident, value.clone());
+                }
+            } else if self.at_root
+                && !self.flags.in_control_flow()
+                && !self.global_scope.default_var_exists(ident)
+            {
+                self.global_scope.insert_var(ident, value.clone());
             }
 
             if global {
                 self.global_scope.insert_var(ident, value.clone());
+            }
+
+            if self.at_root && !self.flags.in_control_flow() {
+                return Ok(());
             }
 
             self.scopes.insert_var(ident, value);

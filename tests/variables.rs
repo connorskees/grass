@@ -156,7 +156,7 @@ test!(
     default_var_overrides_when_null_declared_global,
     "$a: null;
     $a: red !default;
-    
+
     a {
         color: $a;
     }",
@@ -207,6 +207,57 @@ test!(
         color: $a;
     }",
     "a {\n  color: outer;\n}\n"
+);
+test!(
+    variable_declared_at_root_inside_if,
+    "@if true {
+        $a: outer;
+    }
+
+    a {
+        color: variable-exists(a);
+    }",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    variable_declared_at_root_inside_if_default,
+    "@if true {
+        $a: outer !default;
+    }
+
+    a {
+        color: variable-exists(a);
+    }",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    variable_declared_at_root_inside_if_global,
+    "@if true {
+        $a: outer !global;
+    }
+
+    a {
+        color: variable-exists(a);
+    }",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    variable_declared_at_root_and_globally_inside_if_default,
+    "$a: null;
+
+    @if true {
+        $a: null;
+        $a: outer !default;
+
+        a {
+            color: $a;
+        }
+    }
+
+    a {
+        color: $a;
+    }",
+    "a {\n  color: outer;\n}\n\na {\n  color: outer;\n}\n"
 );
 // https://github.com/Kixiron/lasso/issues/7
 test!(
