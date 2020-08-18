@@ -220,9 +220,7 @@ impl<'a> Parser<'a> {
                     .get_fn(fn_name)?
                     .ok_or(("Undefined function.", fn_name.span))?;
 
-                if !matches!(self.toks.next(), Some(Token { kind: '(', .. })) {
-                    todo!()
-                }
+                self.expect_char('(')?;
 
                 let call_args = self.parse_call_args()?;
 

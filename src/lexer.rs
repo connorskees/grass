@@ -40,7 +40,12 @@ impl<'a> Iterator for Lexer<'a> {
 impl<'a> Lexer<'a> {
     pub fn new(file: &'a Arc<File>) -> Lexer<'a> {
         Lexer {
-            buf: file.source().trim_start_matches("\u{ef}\u{bb}\u{bf}").trim_start_matches("\u{feff}").chars().peekable(),
+            buf: file
+                .source()
+                .trim_start_matches("\u{ef}\u{bb}\u{bf}")
+                .trim_start_matches("\u{feff}")
+                .chars()
+                .peekable(),
             pos: 0,
             file,
         }

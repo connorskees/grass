@@ -34,6 +34,10 @@ error!(
     unknown_function,
     "@use \"sass:math\";\na { color: math.bar(); }", "Error: Undefined function."
 );
+error!(
+    module_function_missing_open_parens,
+    "@use \"sass:math\";\na { color: math.floor; }", "Error: expected \"(\"."
+);
 test!(
     use_as,
     "@use \"sass:math\" as foo;
