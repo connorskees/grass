@@ -259,6 +259,36 @@ test!(
     }",
     "a {\n  color: outer;\n}\n\na {\n  color: outer;\n}\n"
 );
+test!(
+    global_inside_style_inside_control_flow_declared_outer,
+    "$y: a;
+
+    a {
+        $y: b;
+
+        @if true {
+            $y: c !global;
+        }
+
+        color: $y;
+    }",
+    "a {\n  color: b;\n}\n"
+);
+test!(
+    inside_style_inside_control_flow_declared_outer,
+    "$y: a;
+
+    a {
+        $y: b;
+
+        @if true {
+            $y: c;
+        }
+
+        color: $y;
+    }",
+    "a {\n  color: c;\n}\n"
+);
 // https://github.com/Kixiron/lasso/issues/7
 test!(
     regression_test_for_lasso_0_3_0,
