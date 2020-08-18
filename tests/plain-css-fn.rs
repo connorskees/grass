@@ -41,3 +41,45 @@ test!(
     "a {\n  $primary: #f2ece4;\n  $accent: #e1d7d2;\n  color: radial-gradient($primary, $accent);\n}\n",
     "a {\n  color: radial-gradient(#f2ece4, #e1d7d2);\n}\n"
 );
+test!(
+    fn_named_not_is_evaluated_as_unary_op,
+    "a {\n  color: not(true);\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    fn_named_true_is_plain_css,
+    "a {\n  color: true(true);\n}\n",
+    "a {\n  color: true(true);\n}\n"
+);
+test!(
+    fn_named_false_is_plain_css,
+    "a {\n  color: false(true);\n}\n",
+    "a {\n  color: false(true);\n}\n"
+);
+test!(
+    fn_named_null_is_plain_css,
+    "a {\n  color: null(true);\n}\n",
+    "a {\n  color: null(true);\n}\n"
+);
+test!(
+    fn_named_and_is_evaluated_as_binop,
+    "a {\n  color: true and(foo);\n}\n",
+    "a {\n  color: foo;\n}\n"
+);
+test!(
+    fn_named_or_is_evaluated_as_binop,
+    "a {\n  color: true or(foo);\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    #[ignore = "this is not currently parsed correctly"]
+    fn_named_and_alone_is_not_evaluated_as_binop,
+    "a {\n  color: and(foo);\n}\n",
+    "a {\n  color: and(foo);\n}\n"
+);
+test!(
+    #[ignore = "this is not currently parsed correctly"]
+    fn_named_or_alone_is_not_evaluated_as_binop,
+    "a {\n  color: or(foo);\n}\n",
+    "a {\n  color: or(foo);\n}\n"
+);

@@ -232,6 +232,65 @@ impl<'a> Parser<'a> {
         )
     }
 
+    fn parse_fn_call(
+        &mut self,
+        mut s: String,
+        lower: String,
+    ) -> SassResult<Spanned<IntermediateValue>> {
+        if lower == "min" || lower == "max" {
+            match self.try_parse_min_max(&lower, true)? {
+                Some(val) => {
+                    self.toks.truncate_iterator_to_cursor();
+                    return Ok(IntermediateValue::Value(HigherIntermediateValue::Literal(
+                        Value::String(val, QuoteKind::None),
+                    ))
+                    .span(self.span_before));
+                }
+                None => {
+                    self.toks.reset_cursor();
+                }
+            }
+        }
+
+        let as_ident = Identifier::from(&s);
+        let func = match self.scopes.get_fn(as_ident, self.global_scope) {
+            Some(f) => f,
+            None => {
+                if let Some(f) = GLOBAL_FUNCTIONS.get(as_ident.as_str()) {
+                    return Ok(IntermediateValue::Value(HigherIntermediateValue::Function(
+                        SassFunction::Builtin(f.clone(), as_ident),
+                        self.parse_call_args()?,
+                    ))
+                    .span(self.span_before));
+                } else {
+                    // check for special cased CSS functions
+                    match unvendor(&lower) {
+                        "calc" | "element" | "expression" => {
+                            s = lower;
+                            self.parse_calc_args(&mut s)?;
+                        }
+                        "url" => match self.try_parse_url()? {
+                            Some(val) => s = val,
+                            None => s.push_str(&self.parse_call_args()?.to_css_string()?),
+                        },
+                        _ => s.push_str(&self.parse_call_args()?.to_css_string()?),
+                    }
+
+                    return Ok(IntermediateValue::Value(HigherIntermediateValue::Literal(
+                        Value::String(s, QuoteKind::None),
+                    ))
+                    .span(self.span_before));
+                }
+            }
+        };
+
+        let call_args = self.parse_call_args()?;
+        Ok(
+            IntermediateValue::Value(HigherIntermediateValue::Function(func, call_args))
+                .span(self.span_before),
+        )
+    }
+
     fn parse_ident_value(
         &mut self,
         predicate: &dyn Fn(&mut PeekMoreIterator<IntoIter<Token>>) -> bool,
@@ -255,72 +314,22 @@ impl<'a> Parser<'a> {
             });
         }
 
-        match self.toks.peek() {
-            Some(Token { kind: '(', .. }) => {
-                self.toks.next();
-
-                if lower == "min" || lower == "max" {
-                    match self.try_parse_min_max(&lower, true)? {
-                        Some(val) => {
-                            self.toks.truncate_iterator_to_cursor();
-                            return Ok(IntermediateValue::Value(HigherIntermediateValue::Literal(
-                                Value::String(val, QuoteKind::None),
-                            ))
-                            .span(span));
-                        }
-                        None => {
-                            self.toks.reset_cursor();
-                        }
-                    }
-                }
-
-                let as_ident = Identifier::from(&s);
-                let func = match self.scopes.get_fn(as_ident, self.global_scope) {
-                    Some(f) => f,
-                    None => {
-                        if let Some(f) = GLOBAL_FUNCTIONS.get(as_ident.as_str()) {
-                            return Ok(IntermediateValue::Value(
-                                HigherIntermediateValue::Function(
-                                    SassFunction::Builtin(f.clone(), as_ident),
-                                    self.parse_call_args()?,
-                                ),
-                            )
-                            .span(span));
-                        } else {
-                            // check for special cased CSS functions
-                            match unvendor(&lower) {
-                                "calc" | "element" | "expression" => {
-                                    s = lower;
-                                    self.parse_calc_args(&mut s)?;
-                                }
-                                "url" => match self.try_parse_url()? {
-                                    Some(val) => s = val,
-                                    None => s.push_str(&self.parse_call_args()?.to_css_string()?),
-                                },
-                                _ => s.push_str(&self.parse_call_args()?.to_css_string()?),
-                            }
-
-                            return Ok(IntermediateValue::Value(HigherIntermediateValue::Literal(
-                                Value::String(s, QuoteKind::None),
-                            ))
-                            .span(span));
-                        }
-                    }
-                };
-
-                let call_args = self.parse_call_args()?;
-                return Ok(IntermediateValue::Value(HigherIntermediateValue::Function(
-                    func, call_args,
-                ))
-                .span(span));
-            }
-            Some(Token { kind: '.', .. }) => {
-                if !predicate(self.toks) {
+        if !is_keyword_operator(&s) {
+            match self.toks.peek() {
+                Some(Token { kind: '(', .. }) => {
+                    self.span_before = span;
                     self.toks.next();
-                    return self.parse_module_item(&s, span);
+
+                    return self.parse_fn_call(s, lower);
                 }
+                Some(Token { kind: '.', .. }) => {
+                    if !predicate(self.toks) {
+                        self.toks.next();
+                        return self.parse_module_item(&s, span);
+                    }
+                }
+                _ => {}
             }
-            _ => {}
         }
 
         // check for named colors
@@ -1355,4 +1364,8 @@ fn parse_i64(s: &str) -> i64 {
     s.as_bytes()
         .iter()
         .fold(0, |total, this| total * 10 + i64::from(this - b'0'))
+}
+
+fn is_keyword_operator(s: &str) -> bool {
+    matches!(s, "and" | "or" | "not")
 }
