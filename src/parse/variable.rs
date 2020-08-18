@@ -105,12 +105,8 @@ impl<'a> Parser<'a> {
             } else {
                 self.global_scope.insert_var(ident, value);
             }
-        } else {
-            if self.flags.in_control_flow() && global {
-                self.scopes.insert_var_last(ident, value);
-            } else {
-                self.scopes.insert_var(ident, value);
-            }
+        } else if !(self.flags.in_control_flow() && global) {
+            self.scopes.insert_var(ident, value);
         }
         Ok(())
     }

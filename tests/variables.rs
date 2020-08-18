@@ -289,6 +289,23 @@ test!(
     }",
     "a {\n  color: c;\n}\n"
 );
+test!(
+    inside_style_inside_control_flow_declared_outer_global_comes_prior,
+    "$a: a;
+
+    a {
+        $a: b;
+
+        @if true {
+            $a: c !global;
+            color: $a;
+            $a: e;
+        }
+
+        color: $a;
+    }",
+    "a {\n  color: b;\n  color: e;\n}\n"
+);
 // https://github.com/Kixiron/lasso/issues/7
 test!(
     regression_test_for_lasso_0_3_0,
