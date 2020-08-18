@@ -96,3 +96,13 @@ test!(
     "a {\n  a: b\n}\n\nb {}\n",
     "a {\n  a: b;\n}\n"
 );
+test!(
+    file_begins_with_utf8_bom,
+    "\u{feff}a {\n  color: red\n}\n",
+    "a {\n  color: red;\n}\n"
+);
+test!(
+    file_begins_with_bom,
+    "\u{ef}\u{bb}\u{bf}a {\n  color: red\n}\n",
+    "a {\n  color: red;\n}\n"
+);
