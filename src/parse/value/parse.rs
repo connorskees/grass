@@ -455,9 +455,7 @@ impl<'a> Parser<'a> {
 
             span = span.merge(inner.span);
 
-            if !matches!(self.toks.next(), Some(Token { kind: ']', .. })) {
-                return Err(("expected \"]\".", span).into());
-            }
+            self.expect_char(']')?;
 
             IntermediateValue::Value(HigherIntermediateValue::Literal(match inner.node {
                 Value::List(els, sep, Brackets::None) => Value::List(els, sep, Brackets::Bracketed),

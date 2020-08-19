@@ -251,3 +251,7 @@ error!(
     nothing_after_escape_inside_brackets,
     "a { color: [\\", "Error: Expected expression."
 );
+error!(
+    unclosed_bracketed_list,
+    "a { color: [a", "Error: expected \"]\"."
+);
