@@ -174,14 +174,25 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
                 )
                     .into())
             }
-            Value::Important | Value::True | Value::False => match right {
+            Value::True | Value::False => match right {
                 Value::String(s, QuoteKind::Quoted) => Value::String(
                     format!("{}{}", left.to_css_string(self.span)?, s),
                     QuoteKind::Quoted,
                 ),
-                Value::Null => {
-                    Value::String(left.to_css_string(self.span)?.into_owned(), QuoteKind::None)
-                }
+                _ => Value::String(
+                    format!(
+                        "{}{}",
+                        left.to_css_string(self.span)?,
+                        right.to_css_string(self.span)?
+                    ),
+                    QuoteKind::None,
+                ),
+            },
+            Value::Important => match right {
+                Value::String(s, ..) => Value::String(
+                    format!("{}{}", left.to_css_string(self.span)?, s),
+                    QuoteKind::None,
+                ),
                 _ => Value::String(
                     format!(
                         "{}{}",

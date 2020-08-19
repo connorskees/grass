@@ -162,9 +162,39 @@ test!(
     "a {\n  color: truefalse;\n}\n"
 );
 test!(
+    true_plus_dblquoted,
+    "a {\n  color: true + \"foo\";\n}\n",
+    "a {\n  color: \"truefoo\";\n}\n"
+);
+test!(
+    false_plus_dblquoted,
+    "a {\n  color: false + \"foo\";\n}\n",
+    "a {\n  color: \"falsefoo\";\n}\n"
+);
+test!(
+    true_plus_unquoted,
+    "a {\n  color: true + foo;\n}\n",
+    "a {\n  color: truefoo;\n}\n"
+);
+test!(
+    false_plus_unquoted,
+    "a {\n  color: false + foo;\n}\n",
+    "a {\n  color: falsefoo;\n}\n"
+);
+test!(
+    true_plus_null,
+    "a {\n  color: true + null;\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
     false_plus_null,
     "a {\n  color: false + null;\n}\n",
     "a {\n  color: false;\n}\n"
+);
+test!(
+    true_plus_null_is_string,
+    "a {\n  color: type-of(true + null);\n}\n",
+    "a {\n  color: string;\n}\n"
 );
 test!(
     false_plus_null_is_string,
@@ -296,6 +326,21 @@ test!(
     ident_plus_color,
     "a {\n  color: foo + red;\n}\n",
     "a {\n  color: foored;\n}\n"
+);
+test!(
+    important_plus_dblquoted,
+    "a {\n  color: !important + \"foo\";\n}\n",
+    "a {\n  color: !importantfoo;\n}\n"
+);
+test!(
+    important_plus_null,
+    "a {\n  color: !important + null;\n}\n",
+    "a {\n  color: !important;\n}\n"
+);
+test!(
+    important_plus_unquoted,
+    "a {\n  color: !important + foo;\n}\n",
+    "a {\n  color: !importantfoo;\n}\n"
 );
 error!(
     map_lhs_add,
