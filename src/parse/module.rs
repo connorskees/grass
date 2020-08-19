@@ -186,7 +186,9 @@ impl<'a> Parser<'a> {
 
                     let quote = match self.toks.next() {
                         Some(Token { kind: q @ '"', .. }) | Some(Token { kind: q @ '\'', .. }) => q,
-                        Some(..) | None => todo!(),
+                        Some(..) | None => {
+                            return Err(("Expected string.", self.span_before).into())
+                        }
                     };
 
                     let Spanned { node: module, span } = self.parse_quoted_string(quote)?;

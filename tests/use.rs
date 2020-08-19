@@ -38,6 +38,10 @@ error!(
     module_function_missing_open_parens,
     "@use \"sass:math\";\na { color: math.floor; }", "Error: expected \"(\"."
 );
+error!(
+    module_not_quoted_string,
+    "@use a", "Error: Expected string."
+);
 test!(
     use_as,
     "@use \"sass:math\" as foo;
