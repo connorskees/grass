@@ -71,11 +71,10 @@ pub(crate) fn weave(
     let mut prefixes: Vec<Vec<ComplexSelectorComponent>> = vec![complexes.remove(0)];
 
     for mut complex in complexes {
-        if complex.is_empty() {
-            continue;
-        }
-
-        let target = complex.pop().unwrap();
+        let target = match complex.pop() {
+            Some(c) => c,
+            None => continue,
+        };
 
         if complex.is_empty() {
             for prefix in &mut prefixes {
@@ -311,7 +310,8 @@ fn longest_common_subsequence<T: PartialEq + Clone>(
         if i == -1 || j == -1 {
             return Vec::new();
         }
-        let selection = selections.get(i as usize).cloned().unwrap_or_else(Vec::new);
+
+        let selection = selections.get(i as usize).cloned().unwrap_or_default();
 
         if let Some(Some(selection)) = selection.get(j as usize) {
             let mut tmp = backtrack(i - 1, j - 1, lengths, selections);
@@ -393,17 +393,9 @@ fn merge_final_combinators(
         return Some(Vec::from(result));
     }
 
-    let combinator_one = if combinators_one.is_empty() {
-        None
-    } else {
-        combinators_one.first()
-    };
+    let combinator_one = combinators_one.first();
 
-    let combinator_two = if combinators_two.is_empty() {
-        None
-    } else {
-        combinators_two.first()
-    };
+    let combinator_two = combinators_two.first();
 
     // This code looks complicated, but it's actually just a bunch of special
     // cases for interactions between different combinators.
@@ -564,7 +556,7 @@ fn merge_final_combinators(
             ]]);
             merge_final_combinators(components_one, components_two, Some(result))
         }
-        (None, None) => todo!("the above, but we dont have access to combinator_two"),
+        (None, None) => unreachable!(),
     }
 }
 
