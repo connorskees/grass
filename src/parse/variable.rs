@@ -1,23 +1,20 @@
-use crate::{
-    common::Identifier,
-    error::SassResult,
-    utils::{peek_ident_no_interpolation, read_until_closing_paren, read_until_closing_quote},
-    Token,
-};
+use codemap::Spanned;
+
+use crate::{common::Identifier, error::SassResult, value::Value, Token};
 
 use super::Parser;
 
 #[derive(Debug)]
 pub(crate) struct VariableValue {
-    pub val_toks: Vec<Token>,
+    pub var_value: SassResult<Spanned<Value>>,
     pub global: bool,
     pub default: bool,
 }
 
 impl VariableValue {
-    pub const fn new(val_toks: Vec<Token>, global: bool, default: bool) -> Self {
+    pub const fn new(var_value: SassResult<Spanned<Value>>, global: bool, default: bool) -> Self {
         Self {
-            val_toks,
+            var_value,
             global,
             default,
         }
@@ -33,7 +30,7 @@ impl<'a> Parser<'a> {
         self.expect_char(':')?;
 
         let VariableValue {
-            val_toks,
+            var_value,
             global,
             default,
         } = self.parse_variable_value()?;
@@ -47,22 +44,22 @@ impl<'a> Parser<'a> {
                 } else if let Some(value) = config_val {
                     value
                 } else {
-                    self.parse_value_from_vec(val_toks, true)?.node
+                    var_value?.node
                 }
             } else if self.at_root && self.flags.in_control_flow() {
                 if self.global_scope.default_var_exists(ident) {
                     return Ok(());
                 }
 
-                self.parse_value_from_vec(val_toks, true)?.node
+                var_value?.node
             } else if self.at_root {
-                self.parse_value_from_vec(val_toks, true)?.node
+                var_value?.node
             } else {
                 if self.scopes.default_var_exists(ident) {
                     return Ok(());
                 }
 
-                self.parse_value_from_vec(val_toks, true)?.node
+                var_value?.node
             };
 
             if self.at_root && self.global_scope.var_exists(ident) {
@@ -89,7 +86,7 @@ impl<'a> Parser<'a> {
             return Ok(());
         }
 
-        let value = self.parse_value_from_vec(val_toks, true)?.node;
+        let value = var_value?.node;
 
         if global {
             self.global_scope.insert_var(ident, value.clone());
@@ -115,101 +112,49 @@ impl<'a> Parser<'a> {
         let mut default = false;
         let mut global = false;
 
-        let mut val_toks = Vec::new();
-        let mut nesting = 0;
-        while let Some(tok) = self.toks.peek() {
-            match tok.kind {
-                ';' => {
-                    self.toks.next();
-                    break;
+        let value = self.parse_value(true, &|toks| {
+            if matches!(toks.peek(), Some(Token { kind: '!', .. })) {
+                let is_important = matches!(toks.peek_next(), Some(Token { kind: 'i', .. }) | Some(Token { kind: 'I', .. }) | Some(Token { kind: '=', .. }));
+                toks.reset_cursor();
+                !is_important
+            } else {
+                false
+            }
+        });
+
+        // todo: it should not be possible to declare the same flag more than once
+        while self.consume_char_if_exists('!') {
+            let flag = self.parse_identifier_no_interpolation(false)?;
+
+            match flag.node.as_str() {
+                "global" => {
+                    self.toks.truncate_iterator_to_cursor();
+                    global = true;
                 }
-                '\\' => {
-                    val_toks.push(self.toks.next().unwrap());
-                    if self.toks.peek().is_some() {
-                        val_toks.push(self.toks.next().unwrap());
-                    }
+                "default" => {
+                    self.toks.truncate_iterator_to_cursor();
+                    default = true;
                 }
-                '"' | '\'' => {
-                    let quote = self.toks.next().unwrap();
-                    val_toks.push(quote);
-                    val_toks.extend(read_until_closing_quote(self.toks, quote.kind)?);
+                _ => {
+                    return Err(("Invalid flag name.", flag.span).into());
                 }
-                '#' => {
-                    val_toks.push(self.toks.next().unwrap());
-                    match self.toks.peek() {
-                        Some(Token { kind: '{', .. }) => nesting += 1,
-                        Some(Token { kind: ';', .. }) => break,
-                        Some(Token { kind: '}', .. }) => {
-                            if nesting == 0 {
-                                break;
-                            } else {
-                                nesting -= 1;
-                            }
-                        }
-                        Some(..) | None => {}
-                    }
-                    if let Some(tok) = self.toks.next() {
-                        val_toks.push(tok);
-                    }
-                }
-                '{' => break,
-                '}' => {
-                    if nesting == 0 {
-                        break;
-                    } else {
-                        nesting -= 1;
-                        val_toks.push(self.toks.next().unwrap());
-                    }
-                }
-                '/' => {
-                    let next = self.toks.next().unwrap();
-                    match self.toks.peek() {
-                        Some(Token { kind: '/', .. }) => self.read_until_newline(),
-                        Some(..) | None => val_toks.push(next),
-                    };
-                    continue;
-                }
-                '(' => {
-                    val_toks.push(self.toks.next().unwrap());
-                    val_toks.extend(read_until_closing_paren(self.toks)?);
-                }
-                '!' => {
-                    let pos = tok.pos();
-                    match self.toks.peek_forward(1) {
-                        Some(Token { kind: '=', .. }) => {
-                            self.toks.reset_cursor();
-                            val_toks.push(self.toks.next().unwrap());
-                            continue;
-                        }
-                        Some(..) => {}
-                        None => return Err(("Expected identifier.", pos).into()),
-                    }
-                    // todo: it should not be possible to declare the same flag more than once
-                    let mut ident = peek_ident_no_interpolation(self.toks, false, pos)?;
-                    ident.node.make_ascii_lowercase();
-                    match ident.node.as_str() {
-                        "global" => {
-                            self.toks.truncate_iterator_to_cursor();
-                            global = true;
-                        }
-                        "default" => {
-                            self.toks.truncate_iterator_to_cursor();
-                            default = true;
-                        }
-                        "important" => {
-                            self.toks.reset_cursor();
-                            val_toks.push(self.toks.next().unwrap());
-                            continue;
-                        }
-                        _ => {
-                            return Err(("Invalid flag name.", ident.span).into());
-                        }
-                    }
-                }
-                _ => val_toks.push(self.toks.next().unwrap()),
+            }
+
+            self.whitespace_or_comment();
+        }
+
+        match self.toks.peek() {
+            Some(Token { kind: ';', .. }) => {
+                self.toks.next();
+            }
+            Some(Token { kind: '}', .. }) => {}
+            Some(..) | None => {
+                value?;
+                self.expect_char(';')?;
+                unreachable!()
             }
         }
 
-        Ok(VariableValue::new(val_toks, global, default))
+        Ok(VariableValue::new(value, global, default))
     }
 }

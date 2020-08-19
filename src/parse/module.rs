@@ -265,7 +265,7 @@ impl<'a> Parser<'a> {
         self.expect_char(':')?;
 
         let VariableValue {
-            val_toks,
+            var_value,
             global,
             default,
         } = self.parse_variable_value()?;
@@ -282,7 +282,7 @@ impl<'a> Parser<'a> {
             return Ok(());
         }
 
-        let value = self.parse_value_from_vec(val_toks, true)?;
+        let value = var_value?;
 
         self.modules
             .get_mut(module, variable.span)?

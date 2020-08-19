@@ -377,6 +377,19 @@ test!(
 error!(ends_with_bang, "$a: red !;", "Error: Expected identifier.");
 error!(unknown_flag, "$a: red !foo;", "Error: Invalid flag name.");
 error!(
+    flag_in_middle_of_value,
+    "$a: a !default b;", "Error: expected \";\"."
+);
+// note: dart-sass expects !important
+error!(
+    no_value_only_flag,
+    "$a: !default;", "Error: Expected expression."
+);
+error!(
+    uppercase_flag,
+    "$a: 1 !GLOBAL;", "Error: Invalid flag name."
+);
+error!(
     undefined_variable,
     "a {color: $a;}", "Error: Undefined variable."
 );
@@ -387,4 +400,8 @@ error!(
 error!(
     nothing_after_hash_in_variable_decl,
     "$color: #", "Error: Expected identifier."
+);
+error!(
+    only_semicolon_after_hash_in_variable_decl,
+    "$color: #;", "Error: Expected identifier."
 );
