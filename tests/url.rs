@@ -142,6 +142,11 @@ test!(
     "a {\n  color: -webkit-url(https://google.com);\n}\n",
     "a {\n  color: url(https://google.com);\n}\n"
 );
+test!(
+    url_hash_no_interpolation,
+    "a {\n  color: url(#);\n}\n",
+    "a {\n  color: url(#);\n}\n"
+);
 error!(
     url_nothing_after_forward_slash_in_interpolation,
     "a { color: url(#{/", "Error: Expected expression."

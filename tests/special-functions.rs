@@ -65,6 +65,11 @@ test!(
     "a {\n  color: calc(\"a\");\n}\n"
 );
 test!(
+    calc_hash_no_interpolation,
+    "a {\n  color: calc(#);\n}\n",
+    "a {\n  color: calc(#);\n}\n"
+);
+test!(
     element_whitespace,
     "a {\n  color: element(       1      );\n}\n",
     "a {\n  color: element( 1 );\n}\n"
