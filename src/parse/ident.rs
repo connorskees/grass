@@ -95,16 +95,18 @@ impl<'a> Parser<'a> {
                     break;
                 }
                 value *= 16;
-                span = span.merge(next.pos());
-                value += as_hex(self.toks.next().unwrap().kind)
+                span = span.merge(next.pos);
+                value += as_hex(next.kind);
+                self.toks.next();
             }
-            if self.toks.peek().is_some() && self.toks.peek().unwrap().kind.is_whitespace() {
+            if matches!(self.toks.peek(), Some(Token { kind: ' ', .. }) | Some(Token { kind: '\n', .. }) | Some(Token { kind: '\t', .. }))
+            {
                 self.toks.next();
             }
         } else {
-            let next = self.toks.next().unwrap();
-            span = span.merge(next.pos());
-            value = next.kind as u32;
+            span = span.merge(first.pos);
+            value = first.kind as u32;
+            self.toks.next();
         }
 
         let c = std::char::from_u32(value).ok_or(("Invalid escape sequence.", span))?;

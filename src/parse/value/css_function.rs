@@ -372,7 +372,8 @@ impl<'a> Parser<'a> {
                 span = span.merge(next.pos);
                 self.toks.peek_forward(1);
             }
-            if self.toks.peek().is_some() && self.toks.peek().unwrap().kind.is_whitespace() {
+            if matches!(self.toks.peek(), Some(Token { kind: ' ', .. }) | Some(Token { kind: '\n', .. }) | Some(Token { kind: '\t', .. }))
+            {
                 self.toks.peek_forward(1);
             }
         } else {
