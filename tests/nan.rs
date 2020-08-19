@@ -159,3 +159,18 @@ error!(
     "@use \"sass:math\";\na {\n  color: set-nth([a], math.acos(2), b);\n}\n",
     "Error: $n: NaNdeg is not an int."
 );
+test!(
+    nan_unary_negative,
+    "a {\n  color: -(0/0);\n}\n",
+    "a {\n  color: NaN;\n}\n"
+);
+test!(
+    nan_unary_plus,
+    "a {\n  color: +(0/0);\n}\n",
+    "a {\n  color: NaN;\n}\n"
+);
+test!(
+    nan_unary_div,
+    "a {\n  color: /(0/0);\n}\n",
+    "a {\n  color: /NaN;\n}\n"
+);

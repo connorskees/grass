@@ -121,7 +121,6 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
             Value::Dimension(Some(n), u, should_divide) => {
                 Value::Dimension(Some(-n), u, should_divide)
             }
-            // todo: NaN test
             Value::Dimension(None, u, should_divide) => Value::Dimension(None, u, should_divide),
             v => Value::String(format!("-{}", v.to_css_string(self.span)?), QuoteKind::None),
         })
