@@ -51,6 +51,7 @@ grass input.scss
     clippy::replace_consts,
     clippy::single_match,
     clippy::float_arithmetic,
+    clippy::unimplemented,
 
     // temporarily allowed while under heavy development.
     // eventually these allows should be refactored away
