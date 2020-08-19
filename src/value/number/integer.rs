@@ -7,7 +7,6 @@ use std::{
 use num_bigint::BigInt;
 use num_traits::{Signed, ToPrimitive, Zero};
 
-#[derive(Eq, PartialEq)]
 pub(crate) enum Integer {
     Small(i64),
     Big(BigInt),
@@ -112,10 +111,6 @@ impl Zero for Integer {
             Self::Small(..) => false,
             Self::Big(v) => v.is_zero(),
         }
-    }
-
-    fn set_zero(&mut self) {
-        *self = Self::zero()
     }
 }
 

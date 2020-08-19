@@ -226,7 +226,7 @@ impl Num for Number {
     type FromStrRadixErr = ();
     #[cold]
     fn from_str_radix(_: &str, _: u32) -> Result<Self, Self::FromStrRadixErr> {
-        unreachable!()
+        unimplemented!()
     }
 }
 
@@ -237,7 +237,7 @@ impl Signed for Number {
 
     #[cold]
     fn abs_sub(&self, _: &Self) -> Self {
-        unreachable!()
+        unimplemented!()
     }
 
     #[cold]
