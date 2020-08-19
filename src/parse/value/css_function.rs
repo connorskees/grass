@@ -243,8 +243,6 @@ impl<'a> Parser<'a> {
                 ')' => {
                     self.toks.advance_cursor();
                     buf.push(')');
-                    // todo: https://github.com/foresterre/peekmore/issues/38
-                    self.toks.peek();
                     return Ok(Some(buf));
                 }
                 '+' | '-' | '*' | '/' => {
