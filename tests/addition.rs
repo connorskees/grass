@@ -212,7 +212,7 @@ test!(
     "a {\n  color: string;\n}\n"
 );
 test!(
-    num_plus_list,
+    number_plus_list,
     "a {\n  color: 1 + (2 3);\n}\n",
     "a {\n  color: 12 3;\n}\n"
 );
@@ -282,19 +282,39 @@ test!(
     "a {\n  color: foo#fff;\n}\n"
 );
 test!(
-    num_plus_true,
+    number_plus_true,
     "a {\n  color: 1 + true;\n}\n",
     "a {\n  color: 1true;\n}\n"
 );
 test!(
-    num_plus_false,
+    number_plus_false,
     "a {\n  color: 1 + false;\n}\n",
     "a {\n  color: 1false;\n}\n"
 );
 test!(
-    num_plus_unary_not,
+    number_plus_unary_not,
     "a {\n  color: 1 + not 2;\n}\n",
     "a {\n  color: 1false;\n}\n"
+);
+test!(
+    number_plus_important,
+    "a {\n  color: 1 + !important;\n}\n",
+    "a {\n  color: 1!important;\n}\n"
+);
+test!(
+    number_plus_arglist,
+    "@function foo($a...) {
+        @return 1+$a;
+    }
+
+    a {
+        color: foo(a, b, c);
+    }",
+    "a {\n  color: 1a, b, c;\n}\n"
+);
+error!(
+    number_plus_named_color,
+    "a {\n  color: 1 + red;\n}\n", "Error: Undefined operation \"1 + red\"."
 );
 test!(
     double_plus,

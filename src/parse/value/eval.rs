@@ -232,7 +232,11 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
                 }
                 Value::String(s, q) => Value::String(format!("{}{}{}", num, unit, s), q),
                 Value::Null => Value::String(format!("{}{}", num, unit), QuoteKind::None),
-                Value::True | Value::False | Value::List(..) => Value::String(
+                Value::True
+                | Value::False
+                | Value::List(..)
+                | Value::Important
+                | Value::ArgList(..) => Value::String(
                     format!("{}{}{}", num, unit, right.to_css_string(self.span)?),
                     QuoteKind::None,
                 ),
@@ -243,7 +247,7 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
                     )
                         .into())
                 }
-                _ => {
+                Value::Color(..) => {
                     return Err((
                         format!(
                             "Undefined operation \"{}{} + {}\".",
