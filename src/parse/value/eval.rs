@@ -499,6 +499,11 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
                             return Ok(Value::Dimension(None, Unit::None, true));
                         }
 
+                        if num2.is_zero() {
+                            // todo: Infinity and -Infinity
+                            return Err(("Infinity not yet implemented.", self.span).into());
+                        }
+
                         // `unit(1em / 1em)` => `""`
                         if unit == unit2 {
                             Value::Dimension(Some(num / num2), Unit::None, true)
@@ -523,7 +528,12 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
                         // within the `Value` enum
                         } else {
                             // todo: remember to account for `Mul` and `Div`
-                            todo!("non-comparable inverse units")
+                            // todo!("non-comparable inverse units")
+                            return Err((
+                                "Division of non-comparable units not yet supported.",
+                                self.span,
+                            )
+                                .into());
                         }
                     } else {
                         Value::String(
