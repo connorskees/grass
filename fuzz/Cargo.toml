@@ -1,0 +1,26 @@
+
+[package]
+authors = ["Automatically generated"]
+edition = "2018"
+name = "grass-fuzz"
+publish = false
+version = "0.0.0"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.3"
+
+[dependencies.grass]
+path = ".."
+
+# Prevent this from interfering with workspaces
+[workspace]
+members = ["."]
+
+[[bin]]
+doc = false
+name = "from_string_parsing"
+path = "fuzz_targets/from_string_parsing.rs"
+test = false
