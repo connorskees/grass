@@ -649,9 +649,18 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
                 Value::Dimension(Some(n2), u2, _) => {
                     if !u.comparable(&u2) {
                         return Err(
-                            (format!("Incompatible units {} and {}.", u2, u), self.span).into()
+                            (format!("Incompatible units {} and {}.", u, u2), self.span).into()
                         );
                     }
+
+                    if n2.is_zero() {
+                        return Ok(Value::Dimension(
+                            None,
+                            if u == Unit::None { u2 } else { u },
+                            true,
+                        ));
+                    }
+
                     if u == u2 {
                         Value::Dimension(Some(n % n2), u, true)
                     } else if u == Unit::None {
