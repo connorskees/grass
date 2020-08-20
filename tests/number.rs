@@ -154,3 +154,13 @@ test!(
     "a {\n  color: 999999999999999999 * 10;\n}\n",
     "a {\n  color: 9999999999999999990;\n}\n"
 );
+// we use arbitrary precision, so it is necessary to limit the size of exponents
+// in order to prevent hangs
+error!(
+    scientific_notation_too_positive,
+    "a {\n  color: 1e100;\n}\n", "Error: Exponent too large."
+);
+error!(
+    scientific_notation_too_negative,
+    "a {\n  color: 1e-100;\n}\n", "Error: Exponent too negative."
+);

@@ -407,6 +407,12 @@ impl<'a> Parser<'a> {
                         return Err(
                             ("Expected digit.", self.toks.peek().unwrap_or(&tok).pos).into()
                         );
+                    } else if times_ten.len() > 2 {
+                        return Err((
+                            "Exponent too negative.",
+                            self.toks.peek().unwrap_or(&tok).pos,
+                        )
+                            .into());
                     }
                 } else if matches!(tok.kind, '0'..='9') {
                     self.toks.next();
