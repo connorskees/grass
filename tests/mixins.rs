@@ -538,6 +538,20 @@ test!(
     }",
     "a {\n  color: red;\n}\n"
 );
+test!(
+    space_between_content_and_args,
+    "space-after-content {
+        @mixin mixin {
+            @content /**/ (value1, value2);
+        }
+
+        @include mixin using ($arg1, $arg2) {
+            arg1: $arg1;
+            arg2: $arg2;
+        }
+    }",
+    "space-after-content {\n  arg1: value1;\n  arg2: value2;\n}\n"
+);
 error!(
     mixin_in_function,
     "@function foo() {

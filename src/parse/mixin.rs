@@ -213,6 +213,8 @@ impl<'a> Parser<'a> {
 
             let mut entered_scope = false;
 
+            self.whitespace_or_comment();
+
             let call_args = if self.consume_char_if_exists('(') {
                 self.parse_call_args()?
             } else {
