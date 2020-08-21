@@ -328,3 +328,14 @@ test!(
     }",
     "a {\n  color: nul;\n}\n"
 );
+test!(
+    allows_multiline_comment_between_args,
+    "@function foo /**/ ()  /**/ {
+        @return red;
+    }
+
+    a {
+        color: foo();
+    }",
+    "a {\n  color: red;\n}\n"
+);
