@@ -32,7 +32,8 @@ impl<'a> Parser<'a> {
             return Err(("Mixins may not be declared in control directives.", span).into());
         }
 
-        self.whitespace();
+        self.whitespace_or_comment();
+
         let args = match self.toks.next() {
             Some(Token { kind: '(', .. }) => self.parse_func_args()?,
             Some(Token { kind: '{', .. }) => FuncArgs::new(),
