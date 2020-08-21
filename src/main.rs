@@ -237,7 +237,7 @@ fn main() -> io::Result<()> {
             // input is a directory
             let output = match matches.value_of("OUTPUT") {
                 Some(output) if is_xcssfile(output) => {
-                    eprintln!("output must be directory if input is directory");
+                    eprintln!("Output must be directory if input is directory.");
                     std::process::exit(1)
                 }
                 Some(output) => output,
