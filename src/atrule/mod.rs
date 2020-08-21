@@ -3,6 +3,7 @@ pub(crate) use kind::AtRuleKind;
 pub(crate) use supports::SupportsRule;
 pub(crate) use unknown::UnknownAtRule;
 
+pub mod ast;
 mod function;
 pub mod keyframes;
 mod kind;

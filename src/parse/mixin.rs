@@ -13,7 +13,7 @@ use crate::{
     Token,
 };
 
-use super::{common::ContextFlags, Parser, Stmt};
+use super::{common::ContextFlags, AstNode, Parser};
 
 impl<'a> Parser<'a> {
     pub(super) fn parse_mixin(&mut self) -> SassResult<()> {
@@ -65,7 +65,7 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    pub(super) fn parse_include(&mut self) -> SassResult<Vec<Stmt>> {
+    pub(super) fn parse_include(&mut self) -> SassResult<Vec<AstNode>> {
         if self.flags.in_function() {
             return Err(("This at-rule is not allowed here.", self.span_before).into());
         }
@@ -195,7 +195,7 @@ impl<'a> Parser<'a> {
         Ok(body)
     }
 
-    pub(super) fn parse_content_rule(&mut self) -> SassResult<Vec<Stmt>> {
+    pub(super) fn parse_content_rule(&mut self) -> SassResult<Vec<AstNode>> {
         if !self.flags.in_mixin() {
             return Err((
                 "@content is only allowed within mixin declarations.",

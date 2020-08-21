@@ -3,11 +3,11 @@ use std::fmt;
 use crate::{
     args::{CallArgs, FuncArgs},
     error::SassResult,
-    parse::{Parser, Stmt},
+    parse::{AstNode, Parser},
     Token,
 };
 
-pub(crate) type BuiltinMixin = fn(CallArgs, &mut Parser<'_>) -> SassResult<Vec<Stmt>>;
+pub(crate) type BuiltinMixin = fn(CallArgs, &mut Parser<'_>) -> SassResult<Vec<AstNode>>;
 
 #[derive(Clone)]
 pub(crate) enum Mixin {

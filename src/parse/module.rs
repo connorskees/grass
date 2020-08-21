@@ -12,7 +12,7 @@ use crate::{
     common::Identifier,
     error::SassResult,
     lexer::Lexer,
-    parse::{common::Comment, Parser, Stmt, VariableValue},
+    parse::{common::Comment, AstNode, Parser, VariableValue},
     scope::Scope,
     utils::peek_ident_no_interpolation,
     Token,
@@ -96,7 +96,7 @@ impl<'a> Parser<'a> {
         &mut self,
         name: &str,
         config: &mut ModuleConfig,
-    ) -> SassResult<(Module, Vec<Stmt>)> {
+    ) -> SassResult<(Module, Vec<AstNode>)> {
         Ok(match name {
             "sass:color" => (declare_module_color(), Vec::new()),
             "sass:list" => (declare_module_list(), Vec::new()),
@@ -154,7 +154,7 @@ impl<'a> Parser<'a> {
 
     /// Returns any multiline comments that may have been found
     /// while loading modules
-    pub(super) fn load_modules(&mut self) -> SassResult<Vec<Stmt>> {
+    pub(super) fn load_modules(&mut self) -> SassResult<Vec<AstNode>> {
         let mut comments = Vec::new();
 
         loop {
@@ -240,7 +240,7 @@ impl<'a> Parser<'a> {
                     self.toks.next();
                     match self.parse_comment()?.node {
                         Comment::Silent => continue,
-                        Comment::Loud(s) => comments.push(Stmt::Comment(s)),
+                        Comment::Loud(s) => comments.push(AstNode::Comment(s)),
                     }
                 }
                 Some(Token { kind: '$', .. }) => self.parse_variable_declaration()?,

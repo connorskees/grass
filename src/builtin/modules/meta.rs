@@ -10,11 +10,11 @@ use crate::{
         modules::{Module, ModuleConfig},
     },
     error::SassResult,
-    parse::{Parser, Stmt},
+    parse::{Parser, AstNode},
     value::Value,
 };
 
-fn load_css(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Vec<Stmt>> {
+fn load_css(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Vec<AstNode>> {
     args.max_args(2)?;
 
     let span = args.span();

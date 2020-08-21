@@ -22,6 +22,7 @@ use crate::{
     Options, {Cow, Token},
 };
 
+pub(crate) use crate::atrule::ast::AstNode;
 use common::{Comment, ContextFlags, NeverEmptyVec, SelectorOrStyle};
 pub(crate) use value::{HigherIntermediateValue, ValueVisitor};
 use variable::VariableValue;
@@ -41,27 +42,27 @@ mod throw_away;
 mod value;
 mod variable;
 
-#[derive(Debug, Clone)]
-pub(crate) enum Stmt {
-    RuleSet {
-        selector: ExtendedSelector,
-        body: Vec<Self>,
-    },
-    Style(Style),
-    Media(Box<MediaRule>),
-    UnknownAtRule(Box<UnknownAtRule>),
-    Supports(Box<SupportsRule>),
-    AtRoot {
-        body: Vec<Stmt>,
-    },
-    Comment(String),
-    Return(Box<Value>),
-    Keyframes(Box<Keyframes>),
-    KeyframesRuleSet(Box<KeyframesRuleSet>),
-    /// A plain import such as `@import "foo.css";` or
-    /// `@import url(https://fonts.google.com/foo?bar);`
-    Import(String),
-}
+// #[derive(Debug, Clone)]
+// pub(crate) enum AstNode {
+//     RuleSet {
+//         selector: ExtendedSelector,
+//         body: Vec<Self>,
+//     },
+//     Style(Style),
+//     Media(Box<MediaRule>),
+//     UnknownAtRule(Box<UnknownAtRule>),
+//     Supports(Box<SupportsRule>),
+//     AtRoot {
+//         body: Vec<AstNode>,
+//     },
+//     Comment(String),
+//     Return(Box<Value>),
+//     Keyframes(Box<Keyframes>),
+//     KeyframesRuleSet(Box<KeyframesRuleSet>),
+//     /// A plain import such as `@import "foo.css";` or
+//     /// `@import url(https://fonts.google.com/foo?bar);`
+//     Import(String),
+// }
 
 /// We could use a generic for the toks, but it makes the API
 /// much simpler to work with if it isn't generic. The performance
@@ -93,7 +94,7 @@ pub(crate) struct Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-    pub fn parse(&mut self) -> SassResult<Vec<Stmt>> {
+    pub fn parse(&mut self) -> SassResult<Vec<AstNode>> {
         let mut stmts = Vec::new();
 
         self.whitespace();
@@ -141,7 +142,7 @@ impl<'a> Parser<'a> {
         Err((format!("Expected \"{}\".", ident), self.span_before).into())
     }
 
-    fn parse_stmt(&mut self) -> SassResult<Vec<Stmt>> {
+    fn parse_stmt(&mut self) -> SassResult<Vec<AstNode>> {
         let mut stmts = Vec::new();
         while let Some(Token { kind, pos }) = self.toks.peek() {
             if self.flags.in_function() && !stmts.is_empty() {
@@ -161,7 +162,7 @@ impl<'a> Parser<'a> {
                         AtRuleKind::Function => self.parse_function()?,
                         AtRuleKind::Return => {
                             if self.flags.in_function() {
-                                return Ok(vec![Stmt::Return(self.parse_return()?)]);
+                                stmts.push(AstNode::Return(self.parse_return()?));
                             } else {
                                 return Err((
                                     "This at-rule is not allowed here.",
@@ -182,7 +183,7 @@ impl<'a> Parser<'a> {
                             if self.at_root {
                                 stmts.append(&mut self.parse_at_root()?);
                             } else {
-                                stmts.push(Stmt::AtRoot {
+                                stmts.push(AstNode::AtRoot {
                                     body: self.parse_at_root()?,
                                 });
                             }
@@ -280,7 +281,7 @@ impl<'a> Parser<'a> {
                         Comment::Silent => continue,
                         Comment::Loud(s) => {
                             if !self.flags.in_function() {
-                                stmts.push(Stmt::Comment(s));
+                                stmts.push(AstNode::Comment(s));
                             }
                         }
                     }
@@ -309,12 +310,12 @@ impl<'a> Parser<'a> {
                             }
                             SelectorOrStyle::Style(property, value) => {
                                 if let Some(value) = value {
-                                    stmts.push(Stmt::Style(Style { property, value }));
+                                    stmts.push(AstNode::Style(Style { property, value }));
                                 } else {
                                     stmts.extend(
                                         self.parse_style_group(property)?
                                             .into_iter()
-                                            .map(Stmt::Style),
+                                            .map(AstNode::Style),
                                     );
                                 }
                             }
@@ -324,7 +325,7 @@ impl<'a> Parser<'a> {
 
                                 let body = self.parse_stmt()?;
                                 self.scopes.exit_scope();
-                                stmts.push(Stmt::KeyframesRuleSet(Box::new(KeyframesRuleSet {
+                                stmts.push(AstNode::KeyframesRuleSet(Box::new(KeyframesRuleSet {
                                     selector,
                                     body,
                                 })));
@@ -339,12 +340,12 @@ impl<'a> Parser<'a> {
                         }
                         SelectorOrStyle::Style(property, value) => {
                             if let Some(value) = value {
-                                stmts.push(Stmt::Style(Style { property, value }));
+                                stmts.push(AstNode::Style(Style { property, value }));
                             } else {
                                 stmts.extend(
                                     self.parse_style_group(property)?
                                         .into_iter()
-                                        .map(Stmt::Style),
+                                        .map(AstNode::Style),
                                 );
                             }
                         }
@@ -367,7 +368,7 @@ impl<'a> Parser<'a> {
                             self.scopes.exit_scope();
                             self.super_selectors.pop();
                             self.at_root = self.super_selectors.is_empty();
-                            stmts.push(Stmt::RuleSet {
+                            stmts.push(AstNode::RuleSet {
                                 selector: extended_selector,
                                 body,
                             });
@@ -609,7 +610,7 @@ impl<'a> Parser<'a> {
 }
 
 impl<'a> Parser<'a> {
-    fn parse_unknown_at_rule(&mut self, name: String) -> SassResult<Stmt> {
+    fn parse_unknown_at_rule(&mut self, name: String) -> SassResult<AstNode> {
         if self.flags.in_function() {
             return Err(("This at-rule is not allowed here.", self.span_before).into());
         }
@@ -618,7 +619,7 @@ impl<'a> Parser<'a> {
         self.whitespace_or_comment();
         if let Some(Token { kind: ';', .. }) | None = self.toks.peek() {
             self.toks.next();
-            return Ok(Stmt::UnknownAtRule(Box::new(UnknownAtRule {
+            return Ok(AstNode::UnknownAtRule(Box::new(UnknownAtRule {
                 name,
                 super_selector: Selector::new(self.span_before),
                 params: String::new(),
@@ -654,13 +655,13 @@ impl<'a> Parser<'a> {
 
         for stmt in raw_body {
             match stmt {
-                Stmt::Style(..) => body.push(stmt),
+                AstNode::Style(..) => body.push(stmt),
                 _ => rules.push(stmt),
             }
         }
 
         if !self.super_selectors.last().is_empty() {
-            body = vec![Stmt::RuleSet {
+            body = vec![AstNode::RuleSet {
                 selector: ExtendedSelector::new(self.super_selectors.last().clone().0),
                 body,
             }];
@@ -668,7 +669,7 @@ impl<'a> Parser<'a> {
 
         body.append(&mut rules);
 
-        Ok(Stmt::UnknownAtRule(Box::new(UnknownAtRule {
+        Ok(AstNode::UnknownAtRule(Box::new(UnknownAtRule {
             name,
             super_selector: Selector::new(self.span_before),
             params: params.trim().to_owned(),
@@ -676,7 +677,7 @@ impl<'a> Parser<'a> {
         })))
     }
 
-    fn parse_media(&mut self) -> SassResult<Stmt> {
+    fn parse_media(&mut self) -> SassResult<AstNode> {
         if self.flags.in_function() {
             return Err(("This at-rule is not allowed here.", self.span_before).into());
         }
@@ -694,13 +695,13 @@ impl<'a> Parser<'a> {
 
         for stmt in raw_body {
             match stmt {
-                Stmt::Style(..) => body.push(stmt),
+                AstNode::Style(..) => body.push(stmt),
                 _ => rules.push(stmt),
             }
         }
 
         if !self.super_selectors.last().is_empty() {
-            body = vec![Stmt::RuleSet {
+            body = vec![AstNode::RuleSet {
                 selector: ExtendedSelector::new(self.super_selectors.last().clone().0),
                 body,
             }];
@@ -708,14 +709,14 @@ impl<'a> Parser<'a> {
 
         body.append(&mut rules);
 
-        Ok(Stmt::Media(Box::new(MediaRule {
+        Ok(AstNode::Media(Box::new(MediaRule {
             super_selector: Selector::new(self.span_before),
             query,
             body,
         })))
     }
 
-    fn parse_at_root(&mut self) -> SassResult<Vec<Stmt>> {
+    fn parse_at_root(&mut self) -> SassResult<Vec<AstNode>> {
         self.whitespace();
         let mut at_root_has_selector = false;
         let at_rule_selector = if self.consume_char_if_exists('{') {
@@ -751,14 +752,14 @@ impl<'a> Parser<'a> {
         .parse_stmt()?
         .into_iter()
         .filter_map(|s| match s {
-            Stmt::Style(..) => {
+            AstNode::Style(..) => {
                 styles.push(s);
                 None
             }
             _ => Some(Ok(s)),
         })
-        .collect::<SassResult<Vec<Stmt>>>()?;
-        let mut stmts = vec![Stmt::RuleSet {
+        .collect::<SassResult<Vec<AstNode>>>()?;
+        let mut stmts = vec![AstNode::RuleSet {
             selector: ExtendedSelector::new(at_rule_selector.0),
             body: styles,
         }];
@@ -837,7 +838,7 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    fn parse_supports(&mut self) -> SassResult<Stmt> {
+    fn parse_supports(&mut self) -> SassResult<AstNode> {
         if self.flags.in_function() {
             return Err(("This at-rule is not allowed here.", self.span_before).into());
         }
@@ -855,13 +856,13 @@ impl<'a> Parser<'a> {
 
         for stmt in raw_body {
             match stmt {
-                Stmt::Style(..) => body.push(stmt),
+                AstNode::Style(..) => body.push(stmt),
                 _ => rules.push(stmt),
             }
         }
 
         if !self.super_selectors.last().is_empty() {
-            body = vec![Stmt::RuleSet {
+            body = vec![AstNode::RuleSet {
                 selector: ExtendedSelector::new(self.super_selectors.last().clone().0),
                 body,
             }];
@@ -869,7 +870,7 @@ impl<'a> Parser<'a> {
 
         body.append(&mut rules);
 
-        Ok(Stmt::Supports(Box::new(SupportsRule {
+        Ok(AstNode::Supports(Box::new(SupportsRule {
             params: params.trim().to_owned(),
             body,
         })))

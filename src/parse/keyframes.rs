@@ -5,7 +5,7 @@ use peekmore::PeekMore;
 use crate::{
     atrule::keyframes::{Keyframes, KeyframesSelector},
     error::SassResult,
-    parse::Stmt,
+    parse::AstNode,
     utils::eat_whole_number,
     Token,
 };
@@ -185,7 +185,7 @@ impl<'a> Parser<'a> {
         Err(("expected \"{\".", span).into())
     }
 
-    pub(super) fn parse_keyframes(&mut self, rule: String) -> SassResult<Stmt> {
+    pub(super) fn parse_keyframes(&mut self, rule: String) -> SassResult<AstNode> {
         if self.flags.in_function() {
             return Err(("This at-rule is not allowed here.", self.span_before).into());
         }
@@ -214,6 +214,6 @@ impl<'a> Parser<'a> {
         }
         .parse_stmt()?;
 
-        Ok(Stmt::Keyframes(Box::new(Keyframes { rule, name, body })))
+        Ok(AstNode::Keyframes(Box::new(Keyframes { rule, name, body })))
     }
 }

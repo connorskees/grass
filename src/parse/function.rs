@@ -3,7 +3,7 @@ use peekmore::PeekMore;
 
 use crate::{
     args::CallArgs,
-    atrule::Function,
+    atrule::{ast::AstValue, Function},
     common::{unvendor, Identifier},
     error::SassResult,
     scope::Scopes,
@@ -12,7 +12,7 @@ use crate::{
     Token,
 };
 
-use super::{common::ContextFlags, Parser, Stmt};
+use super::{common::ContextFlags, AstNode, Parser};
 
 /// Names that functions are not allowed to have
 const RESERVED_IDENTIFIERS: [&str; 7] =
@@ -71,13 +71,14 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    pub(super) fn parse_return(&mut self) -> SassResult<Box<Value>> {
+    pub(super) fn parse_return(&mut self) -> SassResult<Box<AstValue>> {
         let toks = read_until_semicolon_or_closing_curly_brace(self.toks)?;
         let v = self.parse_value_from_vec(toks, true)?;
         if let Some(Token { kind: ';', .. }) = self.toks.peek() {
             self.toks.next();
         }
-        Ok(Box::new(v.node))
+        todo!()
+        // Ok(Box::new(v.node))
     }
 
     pub fn eval_function(&mut self, function: Function, args: CallArgs) -> SassResult<Value> {
@@ -132,7 +133,7 @@ impl<'a> Parser<'a> {
             .pop()
             .ok_or(("Function finished without @return.", self.span_before))?
         {
-            Stmt::Return(v) => Ok(*v),
+            AstNode::Return(v) => Ok(*v),
             _ => todo!("should be unreachable"),
         }
     }

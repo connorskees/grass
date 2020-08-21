@@ -11,7 +11,7 @@ use crate::{
     Token,
 };
 
-use super::{Parser, Stmt};
+use super::{AstNode, Parser};
 
 fn is_plain_css_import(url: &str) -> bool {
     if url.len() < 5 {
@@ -92,7 +92,7 @@ impl<'a> Parser<'a> {
         &mut self,
         file_name: &str,
         span: Span,
-    ) -> SassResult<Vec<Stmt>> {
+    ) -> SassResult<Vec<AstNode>> {
         let path: &Path = file_name.as_ref();
 
         if let Some(name) = self.find_import(path) {
@@ -127,7 +127,7 @@ impl<'a> Parser<'a> {
         Err(("Can't find stylesheet to import.", span).into())
     }
 
-    pub(super) fn import(&mut self) -> SassResult<Vec<Stmt>> {
+    pub(super) fn import(&mut self) -> SassResult<Vec<AstNode>> {
         if self.flags.in_function() {
             return Err(("This at-rule is not allowed here.", self.span_before).into());
         }
@@ -149,20 +149,20 @@ impl<'a> Parser<'a> {
         match file_name_as_value {
             Value::String(s, QuoteKind::Quoted) => {
                 if is_plain_css_import(&s) {
-                    Ok(vec![Stmt::Import(format!("\"{}\"", s))])
+                    Ok(vec![AstNode::Import(format!("\"{}\"", s))])
                 } else {
                     self.parse_single_import(&s, span)
                 }
             }
             Value::String(s, QuoteKind::None) => {
                 if s.starts_with("url(") {
-                    Ok(vec![Stmt::Import(s)])
+                    Ok(vec![AstNode::Import(s)])
                 } else {
                     self.parse_single_import(&s, span)
                 }
             }
             Value::List(v, Comma, _) => {
-                let mut list_of_imports: Vec<Stmt> = Vec::new();
+                let mut list_of_imports: Vec<AstNode> = Vec::new();
                 for file_name_element in v {
                     match file_name_element {
                         Value::String(s, QuoteKind::Quoted) => {
@@ -170,14 +170,14 @@ impl<'a> Parser<'a> {
                                 || s.starts_with("http://")
                                 || s.starts_with("https://")
                             {
-                                list_of_imports.push(Stmt::Import(format!("\"{}\"", s)));
+                                list_of_imports.push(AstNode::Import(format!("\"{}\"", s)));
                             } else {
                                 list_of_imports.append(&mut self.parse_single_import(&s, span)?);
                             }
                         }
                         Value::String(s, QuoteKind::None) => {
                             if s.starts_with("url(") {
-                                list_of_imports.push(Stmt::Import(s));
+                                list_of_imports.push(AstNode::Import(s));
                             } else {
                                 list_of_imports.append(&mut self.parse_single_import(&s, span)?);
                             }

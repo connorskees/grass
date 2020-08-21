@@ -1,4 +1,4 @@
-use crate::parse::Stmt;
+use crate::parse::AstNode;
 
 #[derive(Debug, Clone)]
 pub(crate) struct Keyframes {
@@ -7,13 +7,13 @@ pub(crate) struct Keyframes {
     /// we cannot be certain of the name of the at-rule
     pub rule: String,
     pub name: String,
-    pub body: Vec<Stmt>,
+    pub body: Vec<AstNode>,
 }
 
 #[derive(Debug, Clone)]
 pub(crate) struct KeyframesRuleSet {
     pub selector: Vec<KeyframesSelector>,
-    pub body: Vec<Stmt>,
+    pub body: Vec<AstNode>,
 }
 
 #[derive(Debug, Clone)]

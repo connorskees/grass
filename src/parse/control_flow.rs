@@ -5,7 +5,7 @@ use peekmore::PeekMore;
 use crate::{
     common::Identifier,
     error::SassResult,
-    parse::{ContextFlags, Parser, Stmt},
+    parse::{AstNode, ContextFlags, Parser},
     unit::Unit,
     utils::{
         peek_ident_no_interpolation, read_until_closing_curly_brace, read_until_open_curly_brace,
@@ -15,7 +15,7 @@ use crate::{
 };
 
 impl<'a> Parser<'a> {
-    pub(super) fn parse_if(&mut self) -> SassResult<Vec<Stmt>> {
+    pub(super) fn parse_if(&mut self) -> SassResult<Vec<AstNode>> {
         self.whitespace_or_comment();
 
         let mut found_true = false;
@@ -160,7 +160,7 @@ impl<'a> Parser<'a> {
         Ok(body)
     }
 
-    pub(super) fn parse_for(&mut self) -> SassResult<Vec<Stmt>> {
+    pub(super) fn parse_for(&mut self) -> SassResult<Vec<AstNode>> {
         self.whitespace_or_comment();
         self.expect_char('$')?;
 
@@ -320,7 +320,7 @@ impl<'a> Parser<'a> {
         Ok(stmts)
     }
 
-    pub(super) fn parse_while(&mut self) -> SassResult<Vec<Stmt>> {
+    pub(super) fn parse_while(&mut self) -> SassResult<Vec<AstNode>> {
         // technically not necessary to eat whitespace here, but since we
         // operate on raw tokens rather than an AST, it potentially saves a lot of
         // time in re-parsing
@@ -397,7 +397,7 @@ impl<'a> Parser<'a> {
         Ok(stmts)
     }
 
-    pub(super) fn parse_each(&mut self) -> SassResult<Vec<Stmt>> {
+    pub(super) fn parse_each(&mut self) -> SassResult<Vec<AstNode>> {
         let mut vars: Vec<Spanned<Identifier>> = Vec::new();
 
         self.whitespace_or_comment();
