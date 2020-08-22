@@ -88,6 +88,26 @@ test!(
     }",
     "@media (true) {\n  a {\n    interpolation: in-parens;\n  }\n}\n"
 );
+test!(
+    single_eq_in_query,
+    "@media (height=600px) {
+        a {
+            b: c
+        }
+    }
+    ",
+    "@media (height = 600px) {\n  a {\n    b: c;\n  }\n}\n"
+);
+test!(
+    double_eq_in_query,
+    "@media (height==600px) {
+        a {
+            b: c
+        }
+    }
+    ",
+    "@media (false) {\n  a {\n    b: c;\n  }\n}\n"
+);
 error!(
     media_feature_missing_closing_paren,
     "@media foo and (bar:a", "Error: expected \")\"."

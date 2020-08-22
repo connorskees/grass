@@ -36,10 +36,10 @@ impl<'a> Parser<'a> {
             Some(Token { kind: '=', .. }) => {
                 if matches!(toks.peek_next(), Some(Token { kind: '=', .. })) {
                     toks.reset_cursor();
-                    true
+                    false
                 } else {
                     toks.reset_cursor();
-                    false
+                    true
                 }
             }
             _ => false,
