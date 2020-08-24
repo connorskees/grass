@@ -50,20 +50,6 @@ macro_rules! error {
     };
 }
 
-/// Verify that the input does not cause a panic.
-/// Useful for when testing input found through fuzzing.
-#[macro_export]
-macro_rules! no_panic {
-    ($( #[$attr:meta] ),*$func:ident, $input:expr) => {
-        $(#[$attr])*
-        #[test]
-        #[allow(non_snake_case)]
-        fn $func() {
-            let _ = grass::from_string($input.to_string(), &grass::Options::default());
-        }
-    };
-}
-
 /// Create a temporary file with the given name
 /// and contents.
 ///

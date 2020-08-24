@@ -202,3 +202,7 @@ test!(
     "a {\n  color: PrOgId:foo(fff);\n}\n",
     "a {\n  color: progid:foo(fff);\n}\n"
 );
+error!(
+    progid_nothing_after,
+    "a { color: progid:", "Error: expected \"(\"."
+);

@@ -67,7 +67,7 @@ impl<'a> Parser<'a> {
         let mut span = match self.toks.peek() {
             Some(token) => token.pos(),
             None => {
-                return Err(("Unexpected end of tokenstream.", self.span_before).into());
+                return Err(("expected \"(\".", self.span_before).into());
             }
         };
         while let Some(tok) = self.toks.next() {
