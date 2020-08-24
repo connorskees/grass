@@ -34,13 +34,13 @@ impl<'a> Parser<'a> {
             | Some(Token { kind: ':', .. })
             | Some(Token { kind: ')', .. }) => true,
             Some(Token { kind: '=', .. }) => {
-                if matches!(toks.peek_next(), Some(Token { kind: '=', .. })) {
-                    toks.reset_cursor();
-                    false
-                } else {
-                    toks.reset_cursor();
-                    true
-                }
+                let is_double_eq = matches!(toks.peek_next(), Some(Token { kind: '=', .. }));
+                toks.reset_cursor();
+                // if it is a double eq, then parse as normal
+                //
+                // otherwise, it is a single eq and we should
+                // treat it as a comparison
+                !is_double_eq
             }
             _ => false,
         })?;
