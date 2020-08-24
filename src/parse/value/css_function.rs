@@ -64,7 +64,12 @@ impl<'a> Parser<'a> {
 
     pub(super) fn parse_progid(&mut self) -> SassResult<String> {
         let mut string = String::new();
-        let mut span = self.toks.peek().unwrap().pos();
+        let mut span = match self.toks.peek() {
+            Some(token) => token.pos(),
+            None => {
+                return Err(("expected \"(\".", self.span_before).into());
+            }
+        };
         while let Some(tok) = self.toks.next() {
             span = span.merge(tok.pos());
             match tok.kind {
