@@ -643,9 +643,9 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
             v => panic!("{:?}", v),
         };
         Ok(match left {
-            Value::Dimension(None, ..) => todo!(),
+            v @ Value::Dimension(None, ..) => v,
             Value::Dimension(Some(n), u, _) => match right {
-                Value::Dimension(None, ..) => todo!(),
+                v @ Value::Dimension(None, ..) => v,
                 Value::Dimension(Some(n2), u2, _) => {
                     if !u.comparable(&u2) {
                         return Err(
