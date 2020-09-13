@@ -282,6 +282,16 @@ test!(
     "a {\n  color: foo - red;\n}\n",
     "a {\n  color: foo-red;\n}\n"
 );
+test!(
+    sub_nan_left,
+    "a {\n  left:0/0-0;\n}\n",
+    "a {\n  left: NaN;\n}\n"
+);
+test!(
+    sub_nan_right,
+    "a {\n  left:0-0/0;\n}\n",
+    "a {\n  left: NaN;\n}\n"
+);
 error!(
     number_minus_color,
     "a {\n  color: 1 - #abc;\n}\n", "Error: Undefined operation \"1 - #abc\"."

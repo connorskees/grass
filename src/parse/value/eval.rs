@@ -317,9 +317,9 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
                 format!("-{}", right.to_css_string(self.span)?),
                 QuoteKind::None,
             ),
-            Value::Dimension(None, ..) => todo!(),
+            v @ Value::Dimension(None, ..) => v,
             Value::Dimension(Some(num), unit, _) => match right {
-                Value::Dimension(None, ..) => todo!(),
+                v @ Value::Dimension(None, ..) => v,
                 Value::Dimension(Some(num2), unit2, _) => {
                     if !unit.comparable(&unit2) {
                         return Err((
@@ -643,9 +643,9 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
             v => panic!("{:?}", v),
         };
         Ok(match left {
-            Value::Dimension(None, ..) => todo!(),
+            v @ Value::Dimension(None, ..) => v,
             Value::Dimension(Some(n), u, _) => match right {
-                Value::Dimension(None, ..) => todo!(),
+                v @ Value::Dimension(None, ..) => v,
                 Value::Dimension(Some(n2), u2, _) => {
                     if !u.comparable(&u2) {
                         return Err(
