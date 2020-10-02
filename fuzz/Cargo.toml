@@ -24,3 +24,9 @@ doc = false
 name = "from_string_parsing"
 path = "fuzz_targets/from_string_parsing.rs"
 test = false
+
+[[bin]]
+doc = false
+name = "compare_with_dart_sass"
+path = "fuzz_targets/compare_with_dart_sass.rs"
+test = false
