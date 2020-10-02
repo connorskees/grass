@@ -23,3 +23,13 @@ error!(
     null_mul_number,
     "a {color: null * 1;}", "Error: Undefined operation \"null * 1\"."
 );
+test!(
+    lhs_nan_mul,
+    "a {\n  color: 0 / 0 * 0;\n}\n",
+    "a {\n  color: NaN;\n}\n"
+);
+test!(
+    rhs_nan_mul,
+    "a {\n  color: 0 * (0 / 0);\n}\n",
+    "a {\n  color: NaN;\n}\n"
+);

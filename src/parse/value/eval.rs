@@ -432,9 +432,9 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
             v => panic!("{:?}", v),
         };
         Ok(match left {
-            Value::Dimension(None, ..) => todo!(),
+            v @ Value::Dimension(None, ..) => v,
             Value::Dimension(Some(num), unit, _) => match right {
-                Value::Dimension(None, ..) => todo!(),
+                v @ Value::Dimension(None, ..) => v,
                 Value::Dimension(Some(num2), unit2, _) => {
                     if unit == Unit::None {
                         Value::Dimension(Some(num * num2), unit2, true)
