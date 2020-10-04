@@ -77,7 +77,7 @@ cargo b --release
 Note: you will have to install [ruby](https://www.ruby-lang.org/en/downloads/),
 [bundler](https://bundler.io/) and run `bundle install` in `./sass-spec/`.
 This might also require you to install the requirements separately
-for [curses](https://github.com/ruby/curses)
+for [curses](https://github.com/ruby/curses).
 
 These numbers come from a default run of the Sass specification as shown above.
 
