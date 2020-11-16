@@ -1,5 +1,6 @@
 use super::{Builtin, GlobalFunctionMap};
 
+use codemap::Spanned;
 use num_traits::One;
 
 use crate::{
@@ -455,14 +456,18 @@ pub(crate) fn complement(mut args: CallArgs, parser: &mut Parser<'_>) -> SassRes
 
 pub(crate) fn invert(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(2)?;
-    let weight = match args.default_arg(
-        1,
-        "weight",
-        Value::Dimension(Some(Number::from(100)), Unit::Percent, true),
-    )? {
-        Value::Dimension(Some(n), u, _) => bound!(args, "weight", n, u, 0, 100) / Number::from(100),
-        Value::Dimension(None, ..) => todo!(),
-        v => {
+    let weight = match args.get(1, "weight") {
+        Some(Err(e)) => return Err(e),
+        Some(Ok(Spanned {
+            node: Value::Dimension(Some(n), u, _),
+            ..
+        })) => Some(bound!(args, "weight", n, u, 0, 100) / Number::from(100)),
+        Some(Ok(Spanned {
+            node: Value::Dimension(None, ..),
+            ..
+        })) => todo!(),
+        None => None,
+        Some(Ok(v)) => {
             return Err((
                 format!(
                     "$weight: {} is not a number.",
@@ -474,16 +479,24 @@ pub(crate) fn invert(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<
         }
     };
     match args.get_err(0, "color")? {
-        Value::Color(c) => Ok(Value::Color(Box::new(c.invert(weight)))),
-        Value::Dimension(Some(n), Unit::Percent, _) => {
-            Ok(Value::String(format!("invert({}%)", n), QuoteKind::None))
+        Value::Color(c) => Ok(Value::Color(Box::new(
+            c.invert(weight.unwrap_or(Number::one())),
+        ))),
+        Value::Dimension(Some(n), u, _) => {
+            if weight.is_some() {
+                Err((
+                    "Only one argument may be passed to the plain-CSS invert() function.",
+                    args.span(),
+                ))?;
+            }
+            Ok(Value::String(
+                format!("invert({}{})", n, u),
+                QuoteKind::None,
+            ))
         }
-        Value::Dimension(None, ..) => todo!(),
-        Value::Dimension(..) => Err((
-            "Only one argument may be passed to the plain-CSS invert() function.",
-            args.span(),
-        )
-            .into()),
+        Value::Dimension(None, u, _) => {
+            Ok(Value::String(format!("invert(NaN{})", u), QuoteKind::None))
+        }
         v => Err((
             format!("$color: {} is not a color.", v.inspect(args.span())?),
             args.span(),

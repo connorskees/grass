@@ -245,8 +245,46 @@ test!(
     "a {\n  color: invert(white);\n}\n",
     "a {\n  color: black;\n}\n"
 );
-test!(invert_number, "a {\n  color: invert(10%);\n}\n");
-test!(invert_number_casing, "a {\n  color: iNveRt(10%);\n}\n");
+test!(
+    plain_invert_no_unit,
+    "a {\n  color: invert(1);\n}\n",
+    "a {\n  color: invert(1);\n}\n"
+);
+test!(
+    plain_invert_unit_percent,
+    "a {\n  color: invert(10%);\n}\n",
+    "a {\n  color: invert(10%);\n}\n"
+);
+test!(
+    plain_invert_unit_deg,
+    "a {\n  color: invert(1deg);\n}\n",
+    "a {\n  color: invert(1deg);\n}\n"
+);
+test!(
+    plain_invert_negative,
+    "a {\n  color: invert(-1);\n}\n",
+    "a {\n  color: invert(-1);\n}\n"
+);
+test!(
+    plain_invert_float,
+    "a {\n  color: invert(1.5);\n}\n",
+    "a {\n  color: invert(1.5);\n}\n"
+);
+test!(
+    plain_invert_arithmetic,
+    "a {\n  color: invert(1 + 1);\n}\n",
+    "a {\n  color: invert(2);\n}\n"
+);
+test!(
+    plain_invert_nan,
+    "a {\n  color: invert((0 / 0));\n}\n",
+    "a {\n  color: invert(NaN);\n}\n"
+);
+error!(
+    plain_invert_two_args,
+    "a {\n  color: invert(1, 50%);\n}\n",
+    "Error: Only one argument may be passed to the plain-CSS invert() function."
+);
 test!(
     invert_weight_percent,
     "a {\n  color: invert(white, 20%);\n}\n",
