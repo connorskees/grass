@@ -95,7 +95,7 @@ impl<'a> Parser<'a> {
             if kind == '!'
                 || kind == '%'
                 || kind == '&'
-                || (kind >= '*' && kind <= '~')
+                || ('*'..='~').contains(&kind)
                 || kind as u32 >= 0x0080
             {
                 buf.push(kind);

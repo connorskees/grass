@@ -307,9 +307,7 @@ impl<'a> Parser<'a> {
                             self.toks.next();
                         }
 
-                        if value == 0
-                            || (value >= 0xD800 && value <= 0xDFFF)
-                            || value >= 0x0010_FFFF
+                        if value == 0 || (0xD800..=0xDFFF).contains(&value) || value >= 0x0010_FFFF
                         {
                             s.push('\u{FFFD}');
                         } else {

@@ -560,10 +560,10 @@ fn is_fake_pseudo_element(name: &str) -> bool {
     match name.as_bytes().first() {
         Some(b'a') | Some(b'A') => name.to_ascii_lowercase() == "after",
         Some(b'b') | Some(b'B') => name.to_ascii_lowercase() == "before",
-        Some(b'f') | Some(b'F') => match name.to_ascii_lowercase().as_str() {
-            "first-line" | "first-letter" => true,
-            _ => false,
-        },
+        Some(b'f') | Some(b'F') => matches!(
+            name.to_ascii_lowercase().as_str(),
+            "first-line" | "first-letter"
+        ),
         _ => false,
     }
 }

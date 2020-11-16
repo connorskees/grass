@@ -188,10 +188,7 @@ impl<'a> Parser<'a> {
                     Err(..) => return false,
                 };
                 ident.node.make_ascii_lowercase();
-                let v = match ident.node.to_ascii_lowercase().as_str() {
-                    "to" | "through" => true,
-                    _ => false,
-                };
+                let v = matches!(ident.node.to_ascii_lowercase().as_str(), "to" | "through");
                 toks.reset_cursor();
                 v
             }

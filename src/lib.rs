@@ -52,6 +52,12 @@ grass input.scss
     clippy::single_match,
     clippy::float_arithmetic,
     clippy::unimplemented,
+    clippy::pattern_type_mismatch,
+    clippy::blanket_clippy_restriction_lints,
+    clippy::option_if_let_else,
+    clippy::panic_in_result_fn,
+    clippy::unwrap_in_result,
+    clippy::map_err_ignore,
 
     // temporarily allowed while under heavy development.
     // eventually these allows should be refactored away
@@ -69,6 +75,7 @@ grass input.scss
     clippy::redundant_pub_crate,
     // the api is changing too often to allot this
     clippy::missing_errors_doc,
+    clippy::missing_const_for_fn,
 
     clippy::integer_arithmetic,
     clippy::string_add,

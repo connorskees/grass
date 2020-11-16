@@ -82,9 +82,8 @@ impl<'a> Parser<'a> {
             buf.push(':');
             buf.push(' ');
 
-            let value = self.parse_value(false, &|toks| match toks.peek() {
-                Some(Token { kind: ')', .. }) => true,
-                _ => false,
+            let value = self.parse_value(false, &|toks| {
+                matches!(toks.peek(), Some(Token { kind: ')', .. }))
             })?;
             self.expect_char(')')?;
 

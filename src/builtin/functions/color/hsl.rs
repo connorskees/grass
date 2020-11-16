@@ -480,14 +480,15 @@ pub(crate) fn invert(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<
     };
     match args.get_err(0, "color")? {
         Value::Color(c) => Ok(Value::Color(Box::new(
-            c.invert(weight.unwrap_or(Number::one())),
+            c.invert(weight.unwrap_or_else(Number::one)),
         ))),
         Value::Dimension(Some(n), u, _) => {
             if weight.is_some() {
-                Err((
+                return Err((
                     "Only one argument may be passed to the plain-CSS invert() function.",
                     args.span(),
-                ))?;
+                )
+                    .into());
             }
             Ok(Value::String(
                 format!("invert({}{})", n, u),

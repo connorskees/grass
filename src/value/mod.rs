@@ -286,10 +286,7 @@ impl Value {
     }
 
     pub fn is_true(&self) -> bool {
-        match self {
-            Value::Null | Value::False => false,
-            _ => true,
-        }
+        !matches!(self, Value::Null | Value::False)
     }
 
     pub fn unquote(self) -> Self {
