@@ -1,3 +1,8 @@
+# 0.10.4
+
+ - plain css `invert(..)` accepts numbers with any unit
+ - plain css imports (e.g. `@import url(foo)` or `@import "foo.css"`) are now emitted at the top of documents
+
 # 0.10.3
 
  - hyphen followed by interpolation is not treated as subtraction, e.g. `10-#{10}` => `10 -10` rather than `0`
