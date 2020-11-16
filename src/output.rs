@@ -1,5 +1,5 @@
 //! # Convert from SCSS AST to CSS
-use std::io::Write;
+use std::{io::Write, mem};
 
 use codemap::CodeMap;
 
@@ -41,7 +41,6 @@ enum Toplevel {
 enum BlockEntry {
     Style(Style),
     MultilineComment(String),
-    Import(String),
 }
 
 impl BlockEntry {
@@ -49,7 +48,6 @@ impl BlockEntry {
         match self {
             BlockEntry::Style(s) => s.to_string(),
             BlockEntry::MultilineComment(s) => Ok(format!("/*{}*/", s)),
-            BlockEntry::Import(s) => Ok(format!("@import {};", s)),
         }
     }
 }
@@ -81,14 +79,6 @@ impl Toplevel {
             panic!()
         }
     }
-
-    fn push_import(&mut self, s: String) {
-        if let Toplevel::RuleSet(_, entries) | Toplevel::KeyframesRuleSet(_, entries) = self {
-            entries.push(BlockEntry::Import(s));
-        } else {
-            panic!()
-        }
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -96,6 +86,7 @@ pub(crate) struct Css {
     blocks: Vec<Toplevel>,
     in_at_rule: bool,
     allows_charset: bool,
+    plain_imports: Vec<Toplevel>,
 }
 
 impl Css {
@@ -104,6 +95,7 @@ impl Css {
             blocks: Vec::new(),
             in_at_rule,
             allows_charset,
+            plain_imports: Vec::new(),
         }
     }
 
@@ -167,13 +159,16 @@ impl Css {
                         k @ Stmt::KeyframesRuleSet(..) => {
                             unreachable!("@keyframes ruleset {:?}", k)
                         }
-                        Stmt::Import(s) => vals.first_mut().unwrap().push_import(s),
+                        Stmt::Import(s) => self.plain_imports.push(Toplevel::Import(s)),
                     };
                 }
                 vals
             }
             Stmt::Comment(s) => vec![Toplevel::MultilineComment(s)],
-            Stmt::Import(s) => vec![Toplevel::Import(s)],
+            Stmt::Import(s) => {
+                self.plain_imports.push(Toplevel::Import(s));
+                Vec::new()
+            }
             Stmt::Style(s) => vec![Toplevel::Style(s)],
             Stmt::Media(m) => {
                 let MediaRule { query, body, .. } = *m;
@@ -230,10 +225,15 @@ impl Css {
                 self.blocks.extend(v);
             }
         }
+
+        // move plain imports to top of file
+        self.plain_imports.append(&mut self.blocks);
+        mem::swap(&mut self.plain_imports, &mut self.blocks);
+
         Ok(self)
     }
 
-    pub fn pretty_print(self, map: &CodeMap) -> SassResult<String> {
+    pub fn pretty_print(mut self, map: &CodeMap) -> SassResult<String> {
         let mut string = Vec::new();
         let allows_charset = self.allows_charset;
         self._inner_pretty_print(&mut string, map, 0)?;
@@ -246,7 +246,7 @@ impl Css {
     }
 
     fn _inner_pretty_print(
-        self,
+        &mut self,
         buf: &mut Vec<u8>,
         map: &CodeMap,
         nesting: usize,
@@ -254,7 +254,7 @@ impl Css {
         let mut has_written = false;
         let padding = vec![' '; nesting * 2].iter().collect::<String>();
         let mut should_emit_newline = false;
-        for block in self.blocks {
+        for block in mem::take(&mut self.blocks) {
             match block {
                 Toplevel::RuleSet(selector, styles) => {
                     if styles.is_empty() {
