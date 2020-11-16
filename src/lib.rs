@@ -76,6 +76,7 @@ grass input.scss
     // the api is changing too often to allot this
     clippy::missing_errors_doc,
     clippy::missing_const_for_fn,
+    clippy::multiple_crate_versions,
 
     clippy::integer_arithmetic,
     clippy::string_add,
