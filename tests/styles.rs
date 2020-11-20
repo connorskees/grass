@@ -1,8 +1,16 @@
 #[macro_use]
 mod macros;
 
-test!(basic_style, "a {\n  color: red;\n}\n");
-test!(two_styles, "a {\n  color: red;\n  color: blue;\n}\n");
+test!(
+    basic_style,
+    "a {\n  color: red;\n}\n",
+    "a {\n  color: red;\n}\n"
+);
+test!(
+    two_styles,
+    "a {\n  color: red;\n  color: blue;\n}\n",
+    "a {\n  color: red;\n  color: blue;\n}\n"
+);
 test!(
     two_inner_rulesets,
     "a {\n  b {\n  color: red;\n}\n  c {\n  color: white;\n}\n}\n",
@@ -10,6 +18,7 @@ test!(
 );
 test!(
     two_rulesets,
+    "a {\n  color: red;\n}\n\nc {\n  color: white;\n}\n",
     "a {\n  color: red;\n}\n\nc {\n  color: white;\n}\n"
 );
 test!(
@@ -38,10 +47,19 @@ test!(
     "a {\n  color: red\n  blue;\n}\n",
     "a {\n  color: red blue;\n}\n"
 );
-test!(hyphenated_style_property, "a {\n  font-family: Arial;\n}\n");
-test!(hyphenated_style_value, "a {\n  color: Open-Sans;\n}\n");
+test!(
+    hyphenated_style_property,
+    "a {\n  font-family: Arial;\n}\n",
+    "a {\n  font-family: Arial;\n}\n"
+);
+test!(
+    hyphenated_style_value,
+    "a {\n  color: Open-Sans;\n}\n",
+    "a {\n  color: Open-Sans;\n}\n"
+);
 test!(
     space_separated_style_value,
+    "a {\n  border: solid red;\n}\n",
     "a {\n  border: solid red;\n}\n"
 );
 test!(
@@ -51,10 +69,12 @@ test!(
 );
 test!(
     double_quoted_style_value,
+    "a {\n  font: \"Open-Sans\";\n}\n",
     "a {\n  font: \"Open-Sans\";\n}\n"
 );
 test!(
     comma_style_value,
+    "a {\n  font: Open-Sans, sans-serif;\n}\n",
     "a {\n  font: Open-Sans, sans-serif;\n}\n"
 );
 test!(
@@ -148,7 +168,11 @@ test!(
     "foo {\n  a: b {\n    c: d {\n      e: f;\n    }\n  }\n}\n",
     "foo {\n  a: b;\n  a-c: d;\n  a-c-e: f;\n}\n"
 );
-test!(curly_braces_in_quotes, "a {\n  color: \"{foo}\";\n}\n");
+test!(
+    curly_braces_in_quotes,
+    "a {\n  color: \"{foo}\";\n}\n",
+    "a {\n  color: \"{foo}\";\n}\n"
+);
 test!(
     escaped_interpolation,
     "a {\n  color: \"\\#{foo}\";\n}\n",
@@ -156,6 +180,7 @@ test!(
 );
 test!(
     styles_after_quoted,
+    "a {\n  color: \"red\";\n  color: blue;\n}\n",
     "a {\n  color: \"red\";\n  color: blue;\n}\n"
 );
 test!(

@@ -3,15 +3,18 @@ mod macros;
 
 test!(
     ident_starts_with_hyphen,
+    "a {\n  foo: -webkit-bar-baz;\n}\n",
     "a {\n  foo: -webkit-bar-baz;\n}\n"
 );
 test!(
     ident_starts_with_double_hyphen,
+    "a {\n  foo: --webkit-bar-baz;\n}\n",
     "a {\n  foo: --webkit-bar-baz;\n}\n"
 );
-test!(ident_with_num, "el1 {\n  a: b;\n}\n");
+test!(ident_with_num, "el1 {\n  a: b;\n}\n", "el1 {\n  a: b;\n}\n");
 test!(
     emits_double_newline_between_unrelated_styles,
+    "a {\n  color: red;\n}\n\nb {\n  color: blue;\n}\n",
     "a {\n  color: red;\n}\n\nb {\n  color: blue;\n}\n"
 );
 test!(
@@ -61,14 +64,17 @@ test!(
 );
 test!(
     does_not_combine_idents_with_leading_hyphen,
+    "a {\n  color: a -b;\n}\n",
     "a {\n  color: a -b;\n}\n"
 );
 test!(
     does_not_combine_idents_with_leading_hyphen_list,
+    "a {\n  color: a -b c;\n}\n",
     "a {\n  color: a -b c;\n}\n"
 );
 test!(
     does_not_combine_idents_with_leading_hyphen_all,
+    "a {\n  color: -a -b -c;\n}\n",
     "a {\n  color: -a -b -c;\n}\n"
 );
 test!(

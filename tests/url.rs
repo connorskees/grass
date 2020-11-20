@@ -43,13 +43,19 @@ test!(
 );
 test!(
     silent_comment,
+    "a {\n  color: url(//some/absolute/path);\n}\n",
     "a {\n  color: url(//some/absolute/path);\n}\n"
 );
 test!(
     multiline_comment,
+    "a {\n  color: url(/*looks-like-a*/comment);\n}\n",
     "a {\n  color: url(/*looks-like-a*/comment);\n}\n"
 );
-test!(plain_css_function, "a {\n  color: url(fn(\"s\"));\n}\n");
+test!(
+    plain_css_function,
+    "a {\n  color: url(fn(\"s\"));\n}\n",
+    "a {\n  color: url(fn(\"s\"));\n}\n"
+);
 test!(
     builtin_function,
     "a {\n  color: url(if(true, \"red.png\", \"blue.png\"));\n}\n",
@@ -70,10 +76,19 @@ test!(
     "a {\n  color: url(\"hello-#{world}.png\");\n}\n",
     "a {\n  color: url(\"hello-world.png\");\n}\n"
 );
-test!(simple_forward_slash, "a {\n  color: url(foo/bar.css);\n}\n");
-test!(http_url, "a {\n  color: url(http://foo.bar.com);\n}\n");
+test!(
+    simple_forward_slash,
+    "a {\n  color: url(foo/bar.css);\n}\n",
+    "a {\n  color: url(foo/bar.css);\n}\n"
+);
+test!(
+    http_url,
+    "a {\n  color: url(http://foo.bar.com);\n}\n",
+    "a {\n  color: url(http://foo.bar.com);\n}\n"
+);
 test!(
     google_fonts_url,
+    "a {\n  color: url(http://fonts.googleapis.com/css?family=Karla:400,700,400italic|Anonymous+Pro:400,700,400italic);\n}\n",
     "a {\n  color: url(http://fonts.googleapis.com/css?family=Karla:400,700,400italic|Anonymous+Pro:400,700,400italic);\n}\n"
 );
 test!(
@@ -83,6 +98,7 @@ test!(
 );
 test!(
     many_forward_slashes,
+    "a {\n  color: url(http://box_////fudge.css);\n}\n",
     "a {\n  color: url(http://box_////fudge.css);\n}\n"
 );
 test!(
@@ -95,7 +111,11 @@ test!(
     "a {\n  color: url(\n);\n}\n",
     "a {\n  color: url();\n}\n"
 );
-test!(url_comma_list, "a {\n  color: url(1, 2, a, b, c);\n}\n");
+test!(
+    url_comma_list,
+    "a {\n  color: url(1, 2, a, b, c);\n}\n",
+    "a {\n  color: url(1, 2, a, b, c);\n}\n"
+);
 test!(
     url_contains_only_interpolation,
     "a {\n  color: url(#{1 + 2});\n}\n",
@@ -106,7 +126,11 @@ test!(
     "a {\n  color: url(#{http}://foo);\n}\n",
     "a {\n  color: url(http://foo);\n}\n"
 );
-test!(url_dot_dot, "a {\n  color: url(../foo/bar/..baz/);\n}\n");
+test!(
+    url_dot_dot,
+    "a {\n  color: url(../foo/bar/..baz/);\n}\n",
+    "a {\n  color: url(../foo/bar/..baz/);\n}\n"
+);
 test!(
     silent_comment_in_interpolation,
     "$roboto-font-path: \"../fonts/roboto\";\n\na {\n  color: url(#{//}\n  $roboto-font-path});\n}\n",

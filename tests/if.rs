@@ -111,7 +111,11 @@ test!(
     "@if false {}\n\n@Else {\n  a {\n    color: red;\n  }\n}\n",
     "@Else {\n  a {\n    color: red;\n  }\n}\n"
 );
-test!(uppercase_if, "@If true {\n  a {\n    color: red;\n  }\n}\n");
+test!(
+    uppercase_if,
+    "@If true {\n  a {\n    color: red;\n  }\n}\n",
+    "@If true {\n  a {\n    color: red;\n  }\n}\n"
+);
 error!(nothing_after_if, "@if", "Error: Expected expression.");
 error!(
     nothing_after_dollar,

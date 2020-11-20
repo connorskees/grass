@@ -13,22 +13,27 @@ test!(
 );
 test!(
     preserves_outer_comments_before,
+    "a {\n  /* hi */\n  color: red;\n}\n",
     "a {\n  /* hi */\n  color: red;\n}\n"
 );
 test!(
     preserves_outer_comments_after,
+    "a {\n  color: red;\n  /* hi */\n}\n",
     "a {\n  color: red;\n  /* hi */\n}\n"
 );
 test!(
     preserves_outer_comments_two,
+    "a {\n  /* foo */\n  /* bar */\n  color: red;\n}\n",
     "a {\n  /* foo */\n  /* bar */\n  color: red;\n}\n"
 );
 test!(
     preserves_toplevel_comment_before,
+    "/* foo */\na {\n  color: red;\n}\n",
     "/* foo */\na {\n  color: red;\n}\n"
 );
 test!(
     preserves_toplevel_comment_after,
+    "a {\n  color: red;\n}\n/* foo */\n",
     "a {\n  color: red;\n}\n/* foo */\n"
 );
 test!(

@@ -6,30 +6,70 @@ test!(
     "a, b {\n  a, b {\n  color: red\n}\n}\n",
     "a a, a b, b a, b b {\n  color: red;\n}\n"
 );
-test!(selector_element, "a {\n  color: red;\n}\n");
-test!(selector_id, "#id {\n  color: red;\n}\n");
-test!(selector_class, ".class {\n  color: red;\n}\n");
-test!(selector_el_descendant, "a a {\n  color: red;\n}\n");
-test!(selector_universal, "* {\n  color: red;\n}\n");
-test!(selector_el_class_and, "a.class {\n  color: red;\n}\n");
-test!(selector_el_id_and, "a#class {\n  color: red;\n}\n");
+test!(
+    selector_element,
+    "a {\n  color: red;\n}\n",
+    "a {\n  color: red;\n}\n"
+);
+test!(
+    selector_id,
+    "#id {\n  color: red;\n}\n",
+    "#id {\n  color: red;\n}\n"
+);
+test!(
+    selector_class,
+    ".class {\n  color: red;\n}\n",
+    ".class {\n  color: red;\n}\n"
+);
+test!(
+    selector_el_descendant,
+    "a a {\n  color: red;\n}\n",
+    "a a {\n  color: red;\n}\n"
+);
+test!(
+    selector_universal,
+    "* {\n  color: red;\n}\n",
+    "* {\n  color: red;\n}\n"
+);
+test!(
+    selector_el_class_and,
+    "a.class {\n  color: red;\n}\n",
+    "a.class {\n  color: red;\n}\n"
+);
+test!(
+    selector_el_id_and,
+    "a#class {\n  color: red;\n}\n",
+    "a#class {\n  color: red;\n}\n"
+);
 test!(
     selector_el_class_descendant,
+    "a .class {\n  color: red;\n}\n",
     "a .class {\n  color: red;\n}\n"
 );
-test!(selector_el_id_descendant, "a #class {\n  color: red;\n}\n");
+test!(
+    selector_el_id_descendant,
+    "a #class {\n  color: red;\n}\n",
+    "a #class {\n  color: red;\n}\n"
+);
 test!(
     selector_el_universal_descendant,
+    "a * {\n  color: red;\n}\n",
     "a * {\n  color: red;\n}\n"
 );
 test!(
     selector_universal_el_descendant,
+    "* a {\n  color: red;\n}\n",
     "* a {\n  color: red;\n}\n"
 );
 
-test!(selector_attribute_any, "[attr] {\n  color: red;\n}\n");
+test!(
+    selector_attribute_any,
+    "[attr] {\n  color: red;\n}\n",
+    "[attr] {\n  color: red;\n}\n"
+);
 test!(
     selector_attribute_any_lower_case_insensitive,
+    "[attr=val i] {\n  color: red;\n}\n",
     "[attr=val i] {\n  color: red;\n}\n"
 );
 test!(
@@ -39,18 +79,22 @@ test!(
 );
 test!(
     selector_attribute_any_upper_case_insensitive,
+    "[attr=val I] {\n  color: red;\n}\n",
     "[attr=val I] {\n  color: red;\n}\n"
 );
 test!(
     selector_attribute_arbitrary_modifier,
+    "[attr=val c] {\n  color: red;\n}\n",
     "[attr=val c] {\n  color: red;\n}\n"
 );
 test!(
     selector_attribute_i_in_attr,
+    "[atitr=val] {\n  color: red;\n}\n",
     "[atitr=val] {\n  color: red;\n}\n"
 );
 test!(
     selector_attribute_i_in_val,
+    "[attr=vail] {\n  color: red;\n}\n",
     "[attr=vail] {\n  color: red;\n}\n"
 );
 test!(
@@ -60,6 +104,7 @@ test!(
 );
 test!(
     selector_attribute_equals,
+    "[attr=val] {\n  color: red;\n}\n",
     "[attr=val] {\n  color: red;\n}\n"
 );
 test!(
@@ -74,10 +119,12 @@ test!(
 );
 test!(
     selector_attribute_quotes_non_ident,
+    "[attr=\"1\"] {\n  color: red;\n}\n",
     "[attr=\"1\"] {\n  color: red;\n}\n"
 );
 test!(
     selector_attribute_quotes_custom_property,
+    "[attr=\"--foo\"] {\n  color: red;\n}\n",
     "[attr=\"--foo\"] {\n  color: red;\n}\n"
 );
 test!(
@@ -87,10 +134,12 @@ test!(
 );
 test!(
     selector_attribute_quoted_escape,
+    "[attr=\"v\\al\"] {\n  color: red;\n}\n",
     "[attr=\"v\\al\"] {\n  color: red;\n}\n"
 );
 test!(
     selector_attribute_namespace,
+    "[*|foo] {\n  color: red;\n}\n",
     "[*|foo] {\n  color: red;\n}\n"
 );
 error!(
@@ -99,32 +148,46 @@ error!(
 );
 test!(
     selector_attribute_maintains_quotes_around_invalid_identifier,
+    "[attr=\"val.\"] {\n  color: red;\n}\n",
     "[attr=\"val.\"] {\n  color: red;\n}\n"
 );
 error!(
     attribute_attr_quoted,
     "[\"attr\"=val] {\n  color: red;\n}\n", "Error: Expected identifier."
 );
-test!(selector_attribute_in, "[attr~=val] {\n  color: red;\n}\n");
+test!(
+    selector_attribute_in,
+    "[attr~=val] {\n  color: red;\n}\n",
+    "[attr~=val] {\n  color: red;\n}\n"
+);
 test!(
     selector_attribute_begins_hyphen_or_exact,
+    "[attr|=val] {\n  color: red;\n}\n",
     "[attr|=val] {\n  color: red;\n}\n"
 );
 test!(
     selector_attribute_starts_with,
+    "[attr^=val] {\n  color: red;\n}\n",
     "[attr^=val] {\n  color: red;\n}\n"
 );
 test!(
     selector_attribute_ends_with,
+    "[attr$=val] {\n  color: red;\n}\n",
     "[attr$=val] {\n  color: red;\n}\n"
 );
 test!(
     selector_attribute_contains,
+    "[attr*=val] {\n  color: red;\n}\n",
     "[attr*=val] {\n  color: red;\n}\n"
 );
-test!(selector_el_attribute_and, "a[attr] {\n  color: red;\n}\n");
+test!(
+    selector_el_attribute_and,
+    "a[attr] {\n  color: red;\n}\n",
+    "a[attr] {\n  color: red;\n}\n"
+);
 test!(
     selector_el_attribute_descendant,
+    "a [attr] {\n  color: red;\n}\n",
     "a [attr] {\n  color: red;\n}\n"
 );
 test!(
@@ -132,42 +195,74 @@ test!(
     "a {\n  [#{&}] {\n    color: red;\n  }\n}\n",
     "a [a] {\n  color: red;\n}\n"
 );
-test!(selector_el_mul_el, "a, b {\n  color: red;\n}\n");
+test!(
+    selector_el_mul_el,
+    "a, b {\n  color: red;\n}\n",
+    "a, b {\n  color: red;\n}\n"
+);
 test!(
     selector_el_immediate_child_el,
+    "a > b {\n  color: red;\n}\n",
     "a > b {\n  color: red;\n}\n"
 );
-test!(selector_el_following_el, "a + b {\n  color: red;\n}\n");
-test!(selector_el_preceding_el, "a ~ b {\n  color: red;\n}\n");
-test!(selector_pseudo, ":pseudo {\n  color: red;\n}\n");
-test!(selector_el_and_pseudo, "a:pseudo {\n  color: red;\n}\n");
+test!(
+    selector_el_following_el,
+    "a + b {\n  color: red;\n}\n",
+    "a + b {\n  color: red;\n}\n"
+);
+test!(
+    selector_el_preceding_el,
+    "a ~ b {\n  color: red;\n}\n",
+    "a ~ b {\n  color: red;\n}\n"
+);
+test!(
+    selector_pseudo,
+    ":pseudo {\n  color: red;\n}\n",
+    ":pseudo {\n  color: red;\n}\n"
+);
+test!(
+    selector_el_and_pseudo,
+    "a:pseudo {\n  color: red;\n}\n",
+    "a:pseudo {\n  color: red;\n}\n"
+);
 test!(
     selector_el_pseudo_descendant,
+    "a :pseudo {\n  color: red;\n}\n",
     "a :pseudo {\n  color: red;\n}\n"
 );
 test!(
     selector_pseudo_el_descendant,
+    ":pseudo a {\n  color: red;\n}\n",
     ":pseudo a {\n  color: red;\n}\n"
 );
-test!(selector_pseudoelement, "::before {\n  color: red;\n}\n");
+test!(
+    selector_pseudoelement,
+    "::before {\n  color: red;\n}\n",
+    "::before {\n  color: red;\n}\n"
+);
 test!(
     selector_el_and_pseudoelement,
+    "a::before {\n  color: red;\n}\n",
     "a::before {\n  color: red;\n}\n"
 );
 test!(
     selector_el_pseudoelement_descendant,
+    "a ::before {\n  color: red;\n}\n",
     "a ::before {\n  color: red;\n}\n"
 );
 test!(
     selector_pseudoelement_el_descendant,
+    "::before a {\n  color: red;\n}\n",
     "::before a {\n  color: red;\n}\n"
 );
 test!(
     selector_pseudo_paren_comma,
+    ":pseudo(a, b, c) {\n  color: red;\n}\n",
     ":pseudo(a, b, c) {\n  color: red;\n}\n"
 );
 test!(
     selector_pseudo_paren_space,
+    ":pseudo(a b c) {\n  color: red;\n}\n",
     ":pseudo(a b c) {\n  color: red;\n}\n"
 );
 test!(
@@ -177,14 +272,17 @@ test!(
 );
 test!(
     selector_el_pseudo_paren_and,
+    "a:pseudo(a, b, c) {\n  color: red;\n}\n",
     "a:pseudo(a, b, c) {\n  color: red;\n}\n"
 );
 test!(
     selector_el_pseudo_paren_descendant,
+    "a :pseudo(a, b, c) {\n  color: red;\n}\n",
     "a :pseudo(a, b, c) {\n  color: red;\n}\n"
 );
 test!(
     selector_pseudo_paren_el_descendant,
+    ":pseudo(a, b, c) a {\n  color: red;\n}\n",
     ":pseudo(a, b, c) a {\n  color: red;\n}\n"
 );
 test!(
@@ -192,7 +290,11 @@ test!(
     "a {\n  :pseudo(a, b, c) {\n  color: red;\n  }\n}\n",
     "a :pseudo(a, b, c) {\n  color: red;\n}\n"
 );
-test!(selector_mul, "a, b {\n  color: red;\n}\n");
+test!(
+    selector_mul,
+    "a, b {\n  color: red;\n}\n",
+    "a, b {\n  color: red;\n}\n"
+);
 test!(
     outer_ampersand,
     "a, b {\n& c {\n  color: red;\n}\n}\n",
@@ -298,7 +400,11 @@ test!(
     "a {\n  + {\n    b {\n      color: red;\n  }\n}\n",
     "a + b {\n  color: red;\n}\n"
 );
-test!(simple_multiple_newline, "a,\nb {\n  color: red;\n}\n");
+test!(
+    simple_multiple_newline,
+    "a,\nb {\n  color: red;\n}\n",
+    "a,\nb {\n  color: red;\n}\n"
+);
 test!(
     nested_multiple_newline,
     "a,\nb {\n  c {\n    color: blue;\n  }\n  color: red;\n}\n",
@@ -335,8 +441,16 @@ test!(
     "#{&} a {\n  color: red;\n}\n",
     "a {\n  color: red;\n}\n"
 );
-test!(allows_id_start_with_number, "#2foo {\n  color: red;\n}\n");
-test!(allows_id_only_number, "#2 {\n  color: red;\n}\n");
+test!(
+    allows_id_start_with_number,
+    "#2foo {\n  color: red;\n}\n",
+    "#2foo {\n  color: red;\n}\n"
+);
+test!(
+    allows_id_only_number,
+    "#2 {\n  color: red;\n}\n",
+    "#2 {\n  color: red;\n}\n"
+);
 test!(
     id_interpolation,
     "$zzz: zzz;\n##{$zzz} {\n  a: b;\n}\n",
@@ -347,7 +461,11 @@ test!(
     "$bar: \"#foo\";\nul li#{$bar} {\n  foo: bar;\n}\n",
     "ul li#foo {\n  foo: bar;\n}\n"
 );
-test!(escaped_space, "a\\ b {\n  color: foo;\n}\n");
+test!(
+    escaped_space,
+    "a\\ b {\n  color: foo;\n}\n",
+    "a\\ b {\n  color: foo;\n}\n"
+);
 test!(
     escaped_bang,
     "\\! {\n  color: red;\n}\n",
@@ -355,6 +473,7 @@ test!(
 );
 test!(
     multiple_consecutive_immediate_child,
+    "> > foo {\n  color: foo;\n}\n",
     "> > foo {\n  color: foo;\n}\n"
 );
 error!(
@@ -418,6 +537,7 @@ test!(
 );
 test!(
     touching_universal_stays_the_same,
+    "a* {\n  color: red;\n}\n",
     "a* {\n  color: red;\n}\n"
 );
 test!(

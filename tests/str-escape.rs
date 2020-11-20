@@ -76,8 +76,16 @@ test!(
     "a {\n  color: blu\\65;\n}\n",
     "a {\n  color: blue;\n}\n"
 );
-test!(double_escape_is_preserved, "a {\n  color: r\\\\65;\n}\n");
-test!(semicolon_in_string, "a {\n  color: \";\";\n}\n");
+test!(
+    double_escape_is_preserved,
+    "a {\n  color: r\\\\65;\n}\n",
+    "a {\n  color: r\\\\65;\n}\n"
+);
+test!(
+    semicolon_in_string,
+    "a {\n  color: \";\";\n}\n",
+    "a {\n  color: \";\";\n}\n"
+);
 test!(
     single_character_escape_sequence_has_space,
     "a {\n  color: \\fg1;\n}\n",
@@ -133,7 +141,11 @@ test!(
     "a {\n  color: quote(\\b);\n}\n",
     "a {\n  color: \"\\\\b \";\n}\n"
 );
-test!(escaped_backslash, "a {\n  color: \"\\\\\";\n}\n");
+test!(
+    escaped_backslash,
+    "a {\n  color: \"\\\\\";\n}\n",
+    "a {\n  color: \"\\\\\";\n}\n"
+);
 test!(
     double_quotes_when_containing_single_quote,
     "a {\n  color: '\\\'';\n}\n",
@@ -141,14 +153,17 @@ test!(
 );
 test!(
     allows_escaped_quote_at_start_of_ident,
+    "a {\n  color: \\\"c\\\";\n}\n",
     "a {\n  color: \\\"c\\\";\n}\n"
 );
 test!(
     quoted_escaped_newline_unchanged,
+    "a {\n  color: \"\\a\";\n}\n",
     "a {\n  color: \"\\a\";\n}\n"
 );
 test!(
     unquoted_escape_minus_unquoted,
+    "a {\n  color: \\a - foo;\n}\n",
     "a {\n  color: \\a - foo;\n}\n"
 );
 test!(

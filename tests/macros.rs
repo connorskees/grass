@@ -1,18 +1,5 @@
 #[macro_export]
 macro_rules! test {
-    ($( #[$attr:meta] ),*$func:ident, $input:expr) => {
-        $(#[$attr])*
-        #[test]
-        #[allow(non_snake_case)]
-        fn $func() {
-            let sass = grass::from_string($input.to_string(), &grass::Options::default())
-                .expect(concat!("failed to parse on ", $input));
-            assert_eq!(
-                String::from($input),
-                sass
-            );
-        }
-    };
     ($( #[$attr:meta] ),*$func:ident, $input:expr, $output:expr) => {
         $(#[$attr])*
         #[test]

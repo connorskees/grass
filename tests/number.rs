@@ -33,9 +33,21 @@ test!(
     "a {\n  color: 1.0000;\n}\n",
     "a {\n  color: 1;\n}\n"
 );
-test!(many_nines_not_rounded, "a {\n  color: 0.999999;\n}\n");
-test!(positive_integer, "a {\n  color: 1;\n}\n");
-test!(negative_integer, "a {\n  color: -1;\n}\n");
+test!(
+    many_nines_not_rounded,
+    "a {\n  color: 0.999999;\n}\n",
+    "a {\n  color: 0.999999;\n}\n"
+);
+test!(
+    positive_integer,
+    "a {\n  color: 1;\n}\n",
+    "a {\n  color: 1;\n}\n"
+);
+test!(
+    negative_integer,
+    "a {\n  color: -1;\n}\n",
+    "a {\n  color: -1;\n}\n"
+);
 test!(
     positive_float_no_leading_zero,
     "a {\n  color: .1;\n}\n",
@@ -46,8 +58,16 @@ test!(
     "a {\n  color: -.1;\n}\n",
     "a {\n  color: -0.1;\n}\n"
 );
-test!(positive_float_leading_zero, "a {\n  color: 0.1;\n}\n");
-test!(negative_float_leading_zero, "a {\n  color: -0.1;\n}\n");
+test!(
+    positive_float_leading_zero,
+    "a {\n  color: 0.1;\n}\n",
+    "a {\n  color: 0.1;\n}\n"
+);
+test!(
+    negative_float_leading_zero,
+    "a {\n  color: -0.1;\n}\n",
+    "a {\n  color: -0.1;\n}\n"
+);
 test!(
     negative_near_zero_no_sign,
     "a {\n  color: -0.000000000001;\n}\n",
@@ -98,7 +118,7 @@ test!(
     "a {\n  color: 1.2e-5;\n}\n",
     "a {\n  color: 0.000012;\n}\n"
 );
-test!(unit_e, "a {\n  color: 1e;\n}\n");
+test!(unit_e, "a {\n  color: 1e;\n}\n", "a {\n  color: 1e;\n}\n");
 test!(
     positive_scientific_notation_zero,
     "a {\n  color: 1e0;\n}\n",

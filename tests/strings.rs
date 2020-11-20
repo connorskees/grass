@@ -234,4 +234,8 @@ test!(
     "a {\n  color: str-insert($string: \"foo\", $insert: \"X\", $index: -99999999999999999999);\n}\n",
     "a {\n  color: \"Xfoo\";\n}\n"
 );
-test!(hash_in_string, "a {\n  color: \"#foo\";\n}\n");
+test!(
+    hash_in_string,
+    "a {\n  color: \"#foo\";\n}\n",
+    "a {\n  color: \"#foo\";\n}\n"
+);
