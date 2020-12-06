@@ -332,18 +332,16 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
             self.parser.expect_char(')')?;
         } else if unvendored == "nth-child" || unvendored == "nth-last-child" {
             let mut this_arg = self.parse_a_n_plus_b()?;
-            let found_whitespace = self.parser.whitespace();
-            #[allow(clippy::match_same_arms)]
-            match (found_whitespace, self.parser.toks.peek()) {
-                (_, Some(Token { kind: ')', .. })) => {}
-                (true, _) => {
-                    self.expect_identifier("of")?;
-                    this_arg.push_str(" of");
-                    self.parser.whitespace();
-                    selector = Some(Box::new(self.parse_selector_list()?));
-                }
-                _ => {}
+
+            self.parser.whitespace();
+
+            if !matches!(self.parser.toks.peek(), Some(Token { kind: ')', .. })) {
+                self.expect_identifier("of")?;
+                this_arg.push_str(" of");
+                self.parser.whitespace();
+                selector = Some(Box::new(self.parse_selector_list()?));
             }
+
             self.parser.expect_char(')')?;
             argument = Some(this_arg.into_boxed_str());
         } else {

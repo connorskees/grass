@@ -657,6 +657,11 @@ test!(
     ":nth-child(odd) {\n  color: :nth-child(odd);\n}\n"
 );
 test!(
+    a_n_plus_b_n_alone_of,
+    ":nth-child(n of a) {\n  color: &;\n}\n",
+    ":nth-child(n of a) {\n  color: :nth-child(n of a);\n}\n"
+);
+test!(
     escaped_space_at_end_of_selector_immediately_after_pseudo_color,
     "a color:\\  {\n  color: &;\n}\n",
     "a color:\\  {\n  color: a color:\\ ;\n}\n"
@@ -698,6 +703,10 @@ error!(
 error!(
     a_n_plus_b_n_nothing_after_open_paren,
     ":nth-child({\n  color: &;\n}\n", "Error: expected more input."
+);
+error!(
+    a_n_plus_b_n_nothing_after_plus,
+    ":nth-child:nth-child(n+{}", "Error: Expected a number."
 );
 error!(
     a_n_plus_b_n_invalid_char_after_even,
