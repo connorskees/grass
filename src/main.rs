@@ -1,13 +1,14 @@
 use std::{
-    fs::OpenOptions,
-    io::{stdin, stdout, BufWriter, Read, Write},
+    fs::{self, File, OpenOptions},
+    io::{self, stdin, stdout, BufWriter, Read, Write},
     path::Path,
 };
 
 use clap::{arg_enum, App, AppSettings, Arg};
+use walkdir::{DirEntry, WalkDir};
 
 #[cfg(not(feature = "wasm"))]
-use grass::{from_path, from_string, Options};
+use grass::{from_path, from_string, Options, Result};
 
 arg_enum! {
     #[derive(PartialEq, Debug)]
@@ -25,12 +26,46 @@ arg_enum! {
     }
 }
 
+/// Identify if file is Sass entrypoint.
+fn is_entrypoint(entry: &DirEntry) -> bool {
+    matches!(entry.file_name().to_str(), Some(s) if !s.starts_with('_') && is_xcssfile(s))
+}
+
+/// Check if string ends with Sass or Scss.
+fn is_xcssfile(s: &str) -> bool {
+    [".sass", ".scss"].iter().any(|ext| s.ends_with(ext))
+}
+
+/// Write output result to file or standard output or send error to standard error.
+fn write_file(result: Result<String>, output: Option<&str>) -> io::Result<()> {
+    let (mut stdout_write, mut file_write);
+    let buf_out: &mut dyn Write = if let Some(path) = output {
+        file_write = BufWriter::new(
+            OpenOptions::new()
+                .create(true)
+                .write(true)
+                .truncate(true)
+                .open(path)?,
+        );
+        &mut file_write
+    } else {
+        stdout_write = BufWriter::new(stdout());
+        &mut stdout_write
+    };
+
+    let output = result.unwrap_or_else(|e| {
+        eprintln!("{}", e);
+        std::process::exit(1)
+    });
+    buf_out.write_all(output.as_bytes())
+}
+
 #[cfg(feature = "wasm")]
 fn main() {}
 
 #[cfg(not(feature = "wasm"))]
 #[cfg_attr(feature = "profiling", inline(never))]
-fn main() -> std::io::Result<()> {
+fn main() -> io::Result<()> {
     let matches = App::new("grass")
         .setting(AppSettings::ColoredHelp)
         .version(env!("CARGO_PKG_VERSION"))
@@ -39,6 +74,7 @@ fn main() -> std::io::Result<()> {
         .arg(
             Arg::with_name("STDIN")
                 .long("stdin")
+                .conflicts_with_all(&["INPUT", "UPDATE", "WATCH"])
                 .help("Read the stylesheet from stdin"),
         )
         .arg(
@@ -163,11 +199,12 @@ fn main() -> std::io::Result<()> {
         .arg(
             Arg::with_name("INPUT")
                 .required_unless("STDIN")
-                .help("SCSS files"),
+                .help("Input SCSS file / directory"),
         )
         .arg(
             Arg::with_name("OUTPUT")
-                .help("Output SCSS file")
+                .conflicts_with_all(&["UPDATE", "WATCH"])
+                .help("Output SCSS file / directory")
         )
 
         // Hidden, legacy arguments
@@ -189,41 +226,47 @@ fn main() -> std::io::Result<()> {
         .unicode_error_messages(!matches.is_present("NO_UNICODE"))
         .allows_charset(!matches.is_present("NO_CHARSET"));
 
-    let (mut stdout_write, mut file_write);
-    let buf_out: &mut dyn Write = if let Some(path) = matches.value_of("OUTPUT") {
-        file_write = BufWriter::new(
-            OpenOptions::new()
-                .create(true)
-                .write(true)
-                .truncate(true)
-                .open(path)?,
-        );
-        &mut file_write
-    } else {
-        stdout_write = BufWriter::new(stdout());
-        &mut stdout_write
-    };
-
-    buf_out.write_all(
-        if let Some(name) = matches.value_of("INPUT") {
-            from_path(name, &options)
-        } else if matches.is_present("STDIN") {
-            from_string(
-                {
-                    let mut buffer = String::new();
-                    stdin().read_to_string(&mut buffer)?;
-                    buffer
-                },
-                options,
-            )
+    if matches.value_of("INPUT") == Some("-") || matches.is_present("STDIN") {
+        let mut buffer = String::new();
+        stdin().read_to_string(&mut buffer)?;
+        write_file(from_string(buffer, options), matches.value_of("OUTPUT"))
+    } else if let Some(input) = matches.value_of("INPUT") {
+        if Path::new(input).is_file() {
+            write_file(from_path(input, options), matches.value_of("OUTPUT"))
         } else {
-            unreachable!()
+            // input is a directory
+            let output = match matches.value_of("OUTPUT") {
+                Some(output) if is_xcssfile(output) => {
+                    eprintln!("Output must be directory if input is directory.");
+                    std::process::exit(1)
+                }
+                Some(output) => output,
+                None => input,
+            };
+
+            for entry in WalkDir::new(input)
+                .into_iter()
+                .filter_entry(|e| e.file_type().is_dir() || is_entrypoint(e))
+                .filter_map(|e| e.ok().filter(|e| e.file_type().is_file()))
+            {
+                let mut output = Path::new(output).join(entry.path().strip_prefix(input).unwrap());
+                output.set_extension("css");
+                let parent = output.parent().unwrap();
+                fs::create_dir_all(parent).ok();
+
+                // TODO prevent failure on invalid utf8 file name
+                let input = entry.path().to_str().unwrap();
+                let output = output.to_str().unwrap();
+
+                let mut buffer = BufWriter::new(File::create(output)?);
+                match from_path(input, options) {
+                    Ok(output) => buffer.write_all(output.as_bytes())?,
+                    Err(e) => eprintln!("{}", e),
+                }
+            }
+            Ok(())
         }
-        .unwrap_or_else(|e| {
-            eprintln!("{}", e);
-            std::process::exit(1)
-        })
-        .as_bytes(),
-    )?;
-    Ok(())
+    } else {
+        unreachable!()
+    }
 }
