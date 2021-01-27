@@ -4,6 +4,25 @@ use std::io::Write;
 mod macros;
 
 #[test]
+fn null_fs_cannot_import() {
+    let input = "@import \"foo\";";
+    tempfile!("foo.scss", "");
+    match grass::from_string(
+        input.to_string(),
+        &grass::Options::default().fs(&grass::NullFs),
+    ) {
+        Err(e)
+            if e.to_string()
+                .starts_with("Error: Can't find stylesheet to import.\n") =>
+        {
+            ()
+        }
+        Ok(..) => panic!("did not fail"),
+        Err(e) => panic!("failed in the wrong way: {}", e),
+    }
+}
+
+#[test]
 fn imports_variable() {
     let input = "@import \"imports_variable\";\na {\n color: $a;\n}";
     tempfile!("imports_variable", "$a: red;");

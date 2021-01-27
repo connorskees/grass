@@ -92,7 +92,8 @@ grass input.scss
 )]
 #![cfg_attr(feature = "nightly", feature(track_caller))]
 #![cfg_attr(feature = "profiling", inline(never))]
-use std::{fs, path::Path};
+
+use std::path::Path;
 
 #[cfg(feature = "wasm")]
 use wasm_bindgen::prelude::*;
@@ -102,6 +103,7 @@ pub(crate) use beef::lean::Cow;
 use codemap::CodeMap;
 
 pub use crate::error::{SassError as Error, SassResult as Result};
+pub use crate::fs::{Fs, NullFs, StdFs};
 pub(crate) use crate::token::Token;
 use crate::{
     builtin::modules::{ModuleConfig, Modules},
@@ -121,6 +123,7 @@ mod builtin;
 mod color;
 mod common;
 mod error;
+mod fs;
 mod interner;
 mod lexer;
 mod output;
@@ -152,6 +155,7 @@ pub enum OutputStyle {
 /// more control.
 #[derive(Debug)]
 pub struct Options<'a> {
+    fs: &'a dyn Fs,
     style: OutputStyle,
     load_paths: Vec<&'a Path>,
     allows_charset: bool,
@@ -163,6 +167,7 @@ impl Default for Options<'_> {
     #[inline]
     fn default() -> Self {
         Self {
+            fs: &StdFs,
             style: OutputStyle::Expanded,
             load_paths: Vec::new(),
             allows_charset: true,
@@ -173,6 +178,17 @@ impl Default for Options<'_> {
 }
 
 impl<'a> Options<'a> {
+    /// This option allows you to control the file system that Sass will see.
+    ///
+    /// By default, it uses [`StdFs`], which is backed by [`std::fs`],
+    /// allowing direct, unfettered access to the local file system.
+    #[must_use]
+    #[inline]
+    pub fn fs(mut self, fs: &'a dyn Fs) -> Self {
+        self.fs = fs;
+        self
+    }
+
     /// `grass` currently offers 2 different output styles
     ///
     ///  - `OutputStyle::Expanded` writes each selector and declaration on its own line.
@@ -319,7 +335,7 @@ fn from_string_with_file_name(input: String, file_name: &str, options: &Options)
 #[cfg_attr(not(feature = "profiling"), inline)]
 #[cfg(not(feature = "wasm"))]
 pub fn from_path(p: &str, options: &Options) -> Result<String> {
-    from_string_with_file_name(String::from_utf8(fs::read(p)?)?, p, options)
+    from_string_with_file_name(String::from_utf8(options.fs.read(Path::new(p))?)?, p, options)
 }
 
 /// Compile CSS from a string

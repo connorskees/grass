@@ -1,3 +1,7 @@
+# 0.11.0
+
+- `fs` option added to allow interception and reimplementation of all file system operations (such as imports)
+
 # 0.10.8
 
 - bugfix: properly emit the number `0` in compressed mode (#53)

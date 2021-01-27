@@ -1,4 +1,4 @@
-use std::{ffi::OsStr, fs, path::Path, path::PathBuf};
+use std::{ffi::OsStr, path::Path, path::PathBuf};
 
 use codemap::{Span, Spanned};
 
@@ -48,7 +48,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         macro_rules! try_path {
             ($name:expr) => {
                 let name = $name;
-                if name.is_file() {
+                if self.options.fs.is_file(&name) {
                     return Some(name);
                 }
             };
@@ -63,7 +63,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         try_path!(path_buf.join("_index.scss"));
 
         for path in &self.options.load_paths {
-            if path.is_dir() {
+            if self.options.fs.is_dir(path) {
                 try_path!(path.join(&path_buf)
                          .with_file_name(name)
                          .with_extension("scss"));
@@ -96,7 +96,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         if let Some(name) = self.find_import(path) {
             let file = self.map.add_file(
                 name.to_string_lossy().into(),
-                String::from_utf8(fs::read(&name)?)?,
+                String::from_utf8(self.options.fs.read(&name)?)?,
             );
             return Parser {
                 toks: &mut Lexer::new_from_file(&file),
