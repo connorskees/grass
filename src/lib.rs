@@ -333,7 +333,6 @@ fn from_string_with_file_name(input: String, file_name: &str, options: &Options)
 /// ```
 #[cfg_attr(feature = "profiling", inline(never))]
 #[cfg_attr(not(feature = "profiling"), inline)]
-#[cfg(not(feature = "wasm"))]
 pub fn from_path(p: &str, options: &Options) -> Result<String> {
     from_string_with_file_name(String::from_utf8(options.fs.read(Path::new(p))?)?, p, options)
 }
@@ -349,41 +348,12 @@ pub fn from_path(p: &str, options: &Options) -> Result<String> {
 /// ```
 #[cfg_attr(feature = "profiling", inline(never))]
 #[cfg_attr(not(feature = "profiling"), inline)]
-#[cfg(not(feature = "wasm"))]
 pub fn from_string(input: String, options: &Options) -> Result<String> {
     from_string_with_file_name(input, "stdin", options)
 }
 
 #[cfg(feature = "wasm")]
-#[wasm_bindgen]
-pub fn from_string(p: String) -> std::result::Result<String, JsValue> {
-    let mut map = CodeMap::new();
-    let file = map.add_file("stdin".into(), p);
-    let empty_span = file.span.subspan(0, 0);
-
-    let stmts = Parser {
-        toks: &mut Lexer::new_from_file(&file),
-        map: &mut map,
-        path: Path::new(""),
-        scopes: &mut Scopes::new(),
-        global_scope: &mut Scope::new(),
-        super_selectors: &mut NeverEmptyVec::new(Selector::new(empty_span)),
-        span_before: empty_span,
-        content: &mut Vec::new(),
-        flags: ContextFlags::empty(),
-        at_root: true,
-        at_root_has_selector: false,
-        extender: &mut Extender::new(empty_span),
-        content_scopes: &mut Scopes::new(),
-        options: &Options::default(),
-        modules: &mut Modules::default(),
-        module_config: &mut ModuleConfig::default(),
-    }
-    .parse()
-    .map_err(|e| raw_to_parse_error(&map, *e, true).to_string())?;
-
-    Ok(Css::from_stmts(stmts, false, true)
-        .map_err(|e| raw_to_parse_error(&map, *e, true).to_string())?
-        .pretty_print(&map, options.style)
-        .map_err(|e| raw_to_parse_error(&map, *e, true).to_string())?)
+#[wasm_bindgen(js_name = from_string)]
+pub fn from_string_js(p: String) -> std::result::Result<String, JsValue> {
+    from_string(Options::default()).map_err(|e| e.to_string())
 }

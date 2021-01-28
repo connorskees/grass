@@ -1,6 +1,7 @@
 # 0.11.0
 
 - `fs` option added to allow interception and reimplementation of all file system operations (such as imports)
+- With the wasm feature enabled, the API on the Rust side of the code is no longer materially altered: `from_path` is reinstated, and `from_string` once again returns the full error type; the WASM export `from_string` (which returns a string error) is now a new function `from_string_js`. It is worth noting here that the wasm feature is solely to get this `from_string` export; if you’re writing Rust code that uses grass, you don’t need the wasm feature.
 
 # 0.10.8
 
