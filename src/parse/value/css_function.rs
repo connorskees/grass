@@ -205,16 +205,20 @@ impl<'a> Parser<'a> {
                     match self.toks.peek() {
                         Some(Token { kind: 'i', .. }) | Some(Token { kind: 'I', .. }) => {
                             self.toks.advance_cursor();
-                            if !matches!(self.toks.peek(), Some(Token { kind: 'n', .. }) | Some(Token { kind: 'N', .. }))
-                            {
+                            if !matches!(
+                                self.toks.peek(),
+                                Some(Token { kind: 'n', .. }) | Some(Token { kind: 'N', .. })
+                            ) {
                                 return Ok(None);
                             }
                             buf.push_str("min(")
                         }
                         Some(Token { kind: 'a', .. }) | Some(Token { kind: 'A', .. }) => {
                             self.toks.advance_cursor();
-                            if !matches!(self.toks.peek(), Some(Token { kind: 'x', .. }) | Some(Token { kind: 'X', .. }))
-                            {
+                            if !matches!(
+                                self.toks.peek(),
+                                Some(Token { kind: 'x', .. }) | Some(Token { kind: 'X', .. })
+                            ) {
                                 return Ok(None);
                             }
                             buf.push_str("max(")
@@ -377,8 +381,12 @@ impl<'a> Parser<'a> {
                 span = span.merge(next.pos);
                 self.toks.peek_forward(1);
             }
-            if matches!(self.toks.peek(), Some(Token { kind: ' ', .. }) | Some(Token { kind: '\n', .. }) | Some(Token { kind: '\t', .. }))
-            {
+            if matches!(
+                self.toks.peek(),
+                Some(Token { kind: ' ', .. })
+                    | Some(Token { kind: '\n', .. })
+                    | Some(Token { kind: '\t', .. })
+            ) {
                 self.toks.peek_forward(1);
             }
         } else {

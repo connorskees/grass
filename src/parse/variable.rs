@@ -115,7 +115,12 @@ impl<'a> Parser<'a> {
 
         let value = self.parse_value(true, &|toks| {
             if matches!(toks.peek(), Some(Token { kind: '!', .. })) {
-                let is_important = matches!(toks.peek_next(), Some(Token { kind: 'i', .. }) | Some(Token { kind: 'I', .. }) | Some(Token { kind: '=', .. }));
+                let is_important = matches!(
+                    toks.peek_next(),
+                    Some(Token { kind: 'i', .. })
+                        | Some(Token { kind: 'I', .. })
+                        | Some(Token { kind: '=', .. })
+                );
                 toks.reset_cursor();
                 !is_important
             } else {

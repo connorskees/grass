@@ -761,5 +761,12 @@ fn must_unify(
 /// Returns whether a `CompoundSelector` may contain only one simple selector of
 /// the same type as `simple`.
 fn is_unique(simple: &SimpleSelector) -> bool {
-    matches!(simple, SimpleSelector::Id(..) | SimpleSelector::Pseudo(Pseudo { is_class: false, .. }))
+    matches!(
+        simple,
+        SimpleSelector::Id(..)
+            | SimpleSelector::Pseudo(Pseudo {
+                is_class: false,
+                ..
+            })
+    )
 }

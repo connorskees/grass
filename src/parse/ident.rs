@@ -99,8 +99,12 @@ impl<'a> Parser<'a> {
                 value += as_hex(next.kind);
                 self.toks.next();
             }
-            if matches!(self.toks.peek(), Some(Token { kind: ' ', .. }) | Some(Token { kind: '\n', .. }) | Some(Token { kind: '\t', .. }))
-            {
+            if matches!(
+                self.toks.peek(),
+                Some(Token { kind: ' ', .. })
+                    | Some(Token { kind: '\n', .. })
+                    | Some(Token { kind: '\t', .. })
+            ) {
                 self.toks.next();
             }
         } else {
