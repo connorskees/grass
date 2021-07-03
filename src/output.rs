@@ -68,7 +68,7 @@ impl Toplevel {
         if let Toplevel::RuleSet(_, entries) | Toplevel::KeyframesRuleSet(_, entries) = self {
             entries.push(BlockEntry::Style(s));
         } else {
-            panic!()
+            panic!();
         }
     }
 
@@ -76,7 +76,7 @@ impl Toplevel {
         if let Toplevel::RuleSet(_, entries) | Toplevel::KeyframesRuleSet(_, entries) = self {
             entries.push(BlockEntry::MultilineComment(s));
         } else {
-            panic!()
+            panic!();
         }
     }
 }
@@ -125,28 +125,28 @@ impl Css {
                         Stmt::Comment(s) => vals.first_mut().unwrap().push_comment(s),
                         Stmt::Media(m) => {
                             let MediaRule { query, body, .. } = *m;
-                            vals.push(Toplevel::Media { query, body })
+                            vals.push(Toplevel::Media { query, body });
                         }
                         Stmt::Supports(s) => {
                             let SupportsRule { params, body } = *s;
-                            vals.push(Toplevel::Supports { params, body })
+                            vals.push(Toplevel::Supports { params, body });
                         }
                         Stmt::UnknownAtRule(u) => {
                             let UnknownAtRule {
                                 params, body, name, ..
                             } = *u;
                             vals.push(Toplevel::UnknownAtRule(Box::new(ToplevelUnknownAtRule {
+                                name,
                                 params,
                                 body,
-                                name,
-                            })))
+                            })));
                         }
                         Stmt::Return(..) => unreachable!(),
                         Stmt::AtRoot { body } => {
                             body.into_iter().try_for_each(|r| -> SassResult<()> {
                                 vals.append(&mut self.parse_stmt(r)?);
                                 Ok(())
-                            })?
+                            })?;
                         }
                         Stmt::Keyframes(k) => {
                             let Keyframes { rule, name, body } = *k;
@@ -154,10 +154,10 @@ impl Css {
                                 rule,
                                 name,
                                 body,
-                            })))
+                            })));
                         }
                         k @ Stmt::KeyframesRuleSet(..) => {
-                            unreachable!("@keyframes ruleset {:?}", k)
+                            unreachable!("@keyframes ruleset {:?}", k);
                         }
                         Stmt::Import(s) => self.plain_imports.push(Toplevel::Import(s)),
                     };
@@ -183,8 +183,8 @@ impl Css {
                     params, body, name, ..
                 } = *u;
                 vec![Toplevel::UnknownAtRule(Box::new(ToplevelUnknownAtRule {
-                    params,
                     name,
+                    params,
                     body,
                 }))]
             }
@@ -316,9 +316,9 @@ impl Css {
                     if body.is_empty() {
                         writeln!(buf, ";")?;
                         continue;
-                    } else {
-                        writeln!(buf, " {{")?;
                     }
+
+                    writeln!(buf, " {{")?;
 
                     Css::from_stmts(body, true, self.allows_charset)?._inner_pretty_print(
                         buf,
@@ -343,9 +343,9 @@ impl Css {
                     if body.is_empty() {
                         writeln!(buf, " {{}}")?;
                         continue;
-                    } else {
-                        writeln!(buf, " {{")?;
                     }
+
+                    writeln!(buf, " {{")?;
 
                     Css::from_stmts(body, true, self.allows_charset)?._inner_pretty_print(
                         buf,
@@ -369,9 +369,9 @@ impl Css {
                     if body.is_empty() {
                         writeln!(buf, ";")?;
                         continue;
-                    } else {
-                        writeln!(buf, " {{")?;
                     }
+
+                    writeln!(buf, " {{")?;
 
                     Css::from_stmts(body, true, self.allows_charset)?._inner_pretty_print(
                         buf,

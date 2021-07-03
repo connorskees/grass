@@ -92,22 +92,22 @@ impl<'a> Parser<'a> {
             self.whitespace_or_comment();
             buf.push(')');
             return Ok(buf);
-        } else {
-            let next_tok = self.toks.peek().cloned();
-            let is_angle = next_tok.map_or(false, |t| t.kind == '<' || t.kind == '>');
-            if is_angle || matches!(next_tok, Some(Token { kind: '=', .. })) {
-                buf.push(' ');
-                // todo: remove this unwrap
-                buf.push(self.toks.next().unwrap().kind);
-                if is_angle && self.consume_char_if_exists('=') {
-                    buf.push('=');
-                }
-                buf.push(' ');
+        }
 
-                self.whitespace_or_comment();
-
-                buf.push_str(&self.expression_until_comparison()?);
+        let next_tok = self.toks.peek().cloned();
+        let is_angle = next_tok.map_or(false, |t| t.kind == '<' || t.kind == '>');
+        if is_angle || matches!(next_tok, Some(Token { kind: '=', .. })) {
+            buf.push(' ');
+            // todo: remove this unwrap
+            buf.push(self.toks.next().unwrap().kind);
+            if is_angle && self.consume_char_if_exists('=') {
+                buf.push('=');
             }
+            buf.push(' ');
+
+            self.whitespace_or_comment();
+
+            buf.push_str(&self.expression_until_comparison()?);
         }
 
         self.expect_char(')')?;

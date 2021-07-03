@@ -272,10 +272,10 @@ impl<'a> Parser<'a> {
                             v => s.push_str(v.to_css_string(interpolation.span)?.borrow()),
                         };
                         continue;
-                    } else {
-                        s.push('#');
-                        continue;
                     }
+
+                    s.push('#');
+                    continue;
                 }
                 '\n' => return Err(("Expected \".", tok.pos()).into()),
                 '\\' => {

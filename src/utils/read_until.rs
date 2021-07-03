@@ -67,10 +67,10 @@ pub(crate) fn read_until_closing_curly_brace(
             '}' => {
                 if nesting == 0 {
                     break;
-                } else {
-                    nesting -= 1;
-                    buf.push(toks.next().unwrap());
                 }
+
+                nesting -= 1;
+                buf.push(toks.next().unwrap());
             }
             '/' => {
                 let next = toks.next().unwrap();
@@ -179,10 +179,10 @@ pub(crate) fn read_until_semicolon_or_closing_curly_brace(
             '}' => {
                 if nesting == 0 {
                     break;
-                } else {
-                    nesting -= 1;
-                    t.push(toks.next().unwrap());
                 }
+
+                nesting -= 1;
+                t.push(toks.next().unwrap());
             }
             '/' => {
                 let next = toks.next().unwrap();
@@ -213,9 +213,9 @@ pub(crate) fn read_until_closing_paren(
                 if scope < 1 {
                     t.push(tok);
                     return Ok(t);
-                } else {
-                    scope -= 1;
                 }
+
+                scope -= 1;
             }
             '(' => scope += 1,
             '"' | '\'' => {
@@ -231,7 +231,7 @@ pub(crate) fn read_until_closing_paren(
             }
             _ => {}
         }
-        t.push(tok)
+        t.push(tok);
     }
     Ok(t)
 }

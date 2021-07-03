@@ -416,12 +416,12 @@ fn merge_final_combinators(
                         result.push_front(vec![vec![
                             ComplexSelectorComponent::Compound(compound_two),
                             ComplexSelectorComponent::Combinator(Combinator::FollowingSibling),
-                        ]])
+                        ]]);
                     } else if compound_two.is_super_selector(&compound_one, &None) {
                         result.push_front(vec![vec![
                             ComplexSelectorComponent::Compound(compound_one),
                             ComplexSelectorComponent::Combinator(Combinator::FollowingSibling),
-                        ]])
+                        ]]);
                     } else {
                         let mut choices = vec![
                             vec![
@@ -442,7 +442,7 @@ fn merge_final_combinators(
                             choices.push(vec![
                                 ComplexSelectorComponent::Compound(unified),
                                 ComplexSelectorComponent::Combinator(Combinator::FollowingSibling),
-                            ])
+                            ]);
                         }
 
                         result.push_front(choices);

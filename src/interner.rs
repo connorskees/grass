@@ -15,7 +15,7 @@ impl InternedString {
 
     #[allow(dead_code)]
     pub fn resolve(self) -> String {
-        STRINGS.with(|interner| interner.borrow().resolve(&self.0).to_string())
+        STRINGS.with(|interner| interner.borrow().resolve(&self.0).to_owned())
     }
 
     #[allow(dead_code)]

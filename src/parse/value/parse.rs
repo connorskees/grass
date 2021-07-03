@@ -78,7 +78,7 @@ impl<'a> Parser<'a> {
             match val.node {
                 IntermediateValue::Value(v) => {
                     last_was_whitespace = false;
-                    space_separated.push(v.span(val.span))
+                    space_separated.push(v.span(val.span));
                 }
                 IntermediateValue::Op(op) => {
                     iter.parse_op(
@@ -260,25 +260,25 @@ impl<'a> Parser<'a> {
                         self.parse_call_args()?,
                     ))
                     .span(self.span_before));
-                } else {
-                    // check for special cased CSS functions
-                    match unvendor(&lower) {
-                        "calc" | "element" | "expression" => {
-                            s = lower;
-                            self.parse_calc_args(&mut s)?;
-                        }
-                        "url" => match self.try_parse_url()? {
-                            Some(val) => s = val,
-                            None => s.push_str(&self.parse_call_args()?.to_css_string()?),
-                        },
-                        _ => s.push_str(&self.parse_call_args()?.to_css_string()?),
-                    }
-
-                    return Ok(IntermediateValue::Value(HigherIntermediateValue::Literal(
-                        Value::String(s, QuoteKind::None),
-                    ))
-                    .span(self.span_before));
                 }
+
+                // check for special cased CSS functions
+                match unvendor(&lower) {
+                    "calc" | "element" | "expression" => {
+                        s = lower;
+                        self.parse_calc_args(&mut s)?;
+                    }
+                    "url" => match self.try_parse_url()? {
+                        Some(val) => s = val,
+                        None => s.push_str(&self.parse_call_args()?.to_css_string()?),
+                    },
+                    _ => s.push_str(&self.parse_call_args()?.to_css_string()?),
+                }
+
+                return Ok(IntermediateValue::Value(HigherIntermediateValue::Literal(
+                    Value::String(s, QuoteKind::None),
+                ))
+                .span(self.span_before));
             }
         };
 
@@ -804,9 +804,9 @@ impl<'a> Parser<'a> {
                         self.toks.next();
                         self.toks.next();
                         return Some(self.parse_unicode_range(kind));
-                    } else {
-                        self.toks.reset_cursor();
                     }
+
+                    self.toks.reset_cursor();
                 }
                 return Some(self.parse_ident_value(predicate));
             }
@@ -1157,8 +1157,10 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
                 }
             }
             Op::Minus => {
-                if self.whitespace() || !last_was_whitespace {
-                    let right = self.single_value(in_paren)?;
+                let may_be_subtraction = self.whitespace() || !last_was_whitespace;
+                let right = self.single_value(in_paren)?;
+
+                if may_be_subtraction {
                     if let Some(left) = space_separated.pop() {
                         space_separated.push(Spanned {
                             node: HigherIntermediateValue::BinaryOp(
@@ -1176,7 +1178,6 @@ impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
                         );
                     }
                 } else {
-                    let right = self.single_value(in_paren)?;
                     space_separated.push(
                         right.map_node(|n| HigherIntermediateValue::UnaryOp(op.node, Box::new(n))),
                     );

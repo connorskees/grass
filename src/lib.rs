@@ -58,6 +58,8 @@ grass input.scss
     clippy::panic_in_result_fn,
     clippy::unwrap_in_result,
     clippy::map_err_ignore,
+    clippy::default_numeric_fallback,
+    clippy::if_then_some_else_none,
 
     // temporarily allowed while under heavy development.
     // eventually these allows should be refactored away

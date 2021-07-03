@@ -40,7 +40,7 @@ impl<'a, 'b> KeyframesSelectorParser<'a, 'b> {
                     let mut ident = self.parser.parse_identifier()?;
                     ident.node.make_ascii_lowercase();
                     if ident.node == "to" {
-                        selectors.push(KeyframesSelector::To)
+                        selectors.push(KeyframesSelector::To);
                     } else {
                         return Err(("Expected \"to\" or \"from\".", tok.pos).into());
                     }
@@ -49,7 +49,7 @@ impl<'a, 'b> KeyframesSelectorParser<'a, 'b> {
                     let mut ident = self.parser.parse_identifier()?;
                     ident.node.make_ascii_lowercase();
                     if ident.node == "from" {
-                        selectors.push(KeyframesSelector::From)
+                        selectors.push(KeyframesSelector::From);
                     } else {
                         return Err(("Expected \"to\" or \"from\".", tok.pos).into());
                     }
@@ -104,7 +104,7 @@ impl<'a> Parser<'a> {
                 '{' => {
                     // todo: we can avoid the reallocation by trimming before emitting
                     // (in `output.rs`)
-                    return Ok(name.trim().to_string());
+                    return Ok(name.trim().to_owned());
                 }
                 _ => name.push(tok.kind),
             }

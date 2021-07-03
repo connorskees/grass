@@ -100,7 +100,7 @@ impl TryFrom<&Spanned<String>> for AtRuleKind {
 
         Ok(match unvendor(&c.node) {
             "keyframes" => Self::Keyframes,
-            _ => Self::Unknown(c.node.to_owned()),
+            _ => Self::Unknown(c.node.clone()),
         })
     }
 }

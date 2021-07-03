@@ -33,7 +33,7 @@ impl<'a> Iterator for Lexer<'a> {
             .span
             .subspan(self.pos as u64, (self.pos + len) as u64);
         self.pos += len;
-        Some(Token { kind, pos })
+        Some(Token { pos, kind })
     }
 }
 

@@ -71,7 +71,7 @@ impl CallArgs {
 
         if self.is_empty() {
             return Ok(Spanned {
-                node: "()".to_string(),
+                node: "()".to_owned(),
                 span,
             });
         }
@@ -181,9 +181,9 @@ impl CallArgs {
             err.push_str(&len.to_string());
             err.push(' ');
             if len == 1 {
-                err.push_str("was passed.")
+                err.push_str("was passed.");
             } else {
-                err.push_str("were passed.")
+                err.push_str("were passed.");
             }
             return Err((err, self.span()).into());
         }

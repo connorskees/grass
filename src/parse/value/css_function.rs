@@ -42,10 +42,10 @@ impl<'a> Parser<'a> {
                 ')' => {
                     if nesting == 0 {
                         break;
-                    } else {
-                        nesting -= 1;
-                        buf.push(')');
                     }
+
+                    nesting -= 1;
+                    buf.push(')');
                 }
                 q @ '\'' | q @ '"' => {
                     buf.push('"');
@@ -123,9 +123,9 @@ impl<'a> Parser<'a> {
                     buf.push(')');
                     self.toks.truncate_iterator_to_cursor();
                     return Ok(Some(buf));
-                } else {
-                    break;
                 }
+
+                break;
             } else {
                 break;
             }
@@ -211,7 +211,7 @@ impl<'a> Parser<'a> {
                             ) {
                                 return Ok(None);
                             }
-                            buf.push_str("min(")
+                            buf.push_str("min(");
                         }
                         Some(Token { kind: 'a', .. }) | Some(Token { kind: 'A', .. }) => {
                             self.toks.advance_cursor();
@@ -221,7 +221,7 @@ impl<'a> Parser<'a> {
                             ) {
                                 return Ok(None);
                             }
-                            buf.push_str("max(")
+                            buf.push_str("max(");
                         }
                         _ => return Ok(None),
                     }

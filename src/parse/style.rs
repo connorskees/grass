@@ -37,11 +37,11 @@ impl<'a> Parser<'a> {
                                     toks.push(*tok);
                                     self.toks.peek_forward(1);
                                     break;
-                                } else {
-                                    scope -= 1;
-                                    toks.push(*tok);
-                                    self.toks.peek_forward(1);
                                 }
+
+                                scope -= 1;
+                                toks.push(*tok);
+                                self.toks.peek_forward(1);
                             }
                             '(' => {
                                 toks.push(*tok);
@@ -154,12 +154,12 @@ impl<'a> Parser<'a> {
                     return Ok(SelectorOrStyle::ModuleVariableRedeclaration(
                         property.into(),
                     ));
-                } else {
-                    if whitespace_after_property {
-                        property.push(' ');
-                    }
-                    return Ok(SelectorOrStyle::Selector(property));
                 }
+
+                if whitespace_after_property {
+                    property.push(' ');
+                }
+                return Ok(SelectorOrStyle::Selector(property));
             }
             _ => {
                 if whitespace_after_property {
@@ -219,9 +219,9 @@ impl<'a> Parser<'a> {
                                         self.toks.next();
                                         self.whitespace();
                                         return Ok(styles);
-                                    } else {
-                                        continue;
                                     }
+
+                                    continue;
                                 }
                                 continue;
                             }

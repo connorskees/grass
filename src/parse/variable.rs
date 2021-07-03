@@ -157,7 +157,7 @@ impl<'a> Parser<'a> {
             Some(..) | None => {
                 value?;
                 self.expect_char(';')?;
-                unreachable!()
+                unreachable!();
             }
         }
 

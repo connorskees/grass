@@ -13,15 +13,18 @@ use crate::{
 
 use super::{Parser, Stmt};
 
+#[allow(clippy::case_sensitive_file_extension_comparisons)]
 fn is_plain_css_import(url: &str) -> bool {
     if url.len() < 5 {
         return false;
     }
 
-    url.ends_with(".css")
-        || url.starts_with("http://")
-        || url.starts_with("https://")
-        || url.starts_with("//")
+    let lower = url.to_ascii_lowercase();
+
+    lower.ends_with(".css")
+        || lower.starts_with("http://")
+        || lower.starts_with("https://")
+        || lower.starts_with("//")
 }
 
 impl<'a> Parser<'a> {
@@ -55,7 +58,7 @@ impl<'a> Parser<'a> {
 
         for name in &paths {
             if name.is_file() {
-                return Some(name.to_path_buf());
+                return Some(name.clone());
             }
         }
 
@@ -165,10 +168,12 @@ impl<'a> Parser<'a> {
                 let mut list_of_imports: Vec<Stmt> = Vec::new();
                 for file_name_element in v {
                     match file_name_element {
+                        #[allow(clippy::case_sensitive_file_extension_comparisons)]
                         Value::String(s, QuoteKind::Quoted) => {
-                            if s.ends_with(".css")
-                                || s.starts_with("http://")
-                                || s.starts_with("https://")
+                            let lower = s.to_ascii_lowercase();
+                            if lower.ends_with(".css")
+                                || lower.starts_with("http://")
+                                || lower.starts_with("https://")
                             {
                                 list_of_imports.push(Stmt::Import(format!("\"{}\"", s)));
                             } else {

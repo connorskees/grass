@@ -78,9 +78,9 @@ impl<'a> Parser<'a> {
                 '}' => {
                     if nesting == 0 {
                         return Ok(());
-                    } else {
-                        nesting -= 1;
                     }
+
+                    nesting -= 1;
                 }
                 '/' => match self.toks.peek() {
                     Some(Token { kind: '/', .. }) => {
@@ -107,9 +107,9 @@ impl<'a> Parser<'a> {
                 ')' => {
                     if scope < 1 {
                         return Ok(());
-                    } else {
-                        scope -= 1;
                     }
+
+                    scope -= 1;
                 }
                 '(' => scope += 1,
                 '"' | '\'' => {

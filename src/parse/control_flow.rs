@@ -122,30 +122,30 @@ impl<'a> Parser<'a> {
                         if found_true {
                             self.throw_away_until_closing_curly_brace()?;
                             break;
-                        } else {
-                            self.scopes.enter_new_scope();
-                            let tmp = Parser {
-                                toks: self.toks,
-                                map: self.map,
-                                path: self.path,
-                                scopes: self.scopes,
-                                global_scope: self.global_scope,
-                                super_selectors: self.super_selectors,
-                                span_before: self.span_before,
-                                content: self.content,
-                                flags: self.flags | ContextFlags::IN_CONTROL_FLOW,
-                                at_root: self.at_root,
-                                at_root_has_selector: self.at_root_has_selector,
-                                extender: self.extender,
-                                content_scopes: self.content_scopes,
-                                options: self.options,
-                                modules: self.modules,
-                                module_config: self.module_config,
-                            }
-                            .parse_stmt();
-                            self.scopes.exit_scope();
-                            return tmp;
                         }
+
+                        self.scopes.enter_new_scope();
+                        let tmp = Parser {
+                            toks: self.toks,
+                            map: self.map,
+                            path: self.path,
+                            scopes: self.scopes,
+                            global_scope: self.global_scope,
+                            super_selectors: self.super_selectors,
+                            span_before: self.span_before,
+                            content: self.content,
+                            flags: self.flags | ContextFlags::IN_CONTROL_FLOW,
+                            at_root: self.at_root,
+                            at_root_has_selector: self.at_root_has_selector,
+                            extender: self.extender,
+                            content_scopes: self.content_scopes,
+                            options: self.options,
+                            modules: self.modules,
+                            module_config: self.module_config,
+                        }
+                        .parse_stmt();
+                        self.scopes.exit_scope();
+                        return tmp;
                     }
                     _ => {
                         return Err(("expected \"{\".", tok.pos()).into());

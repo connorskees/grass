@@ -165,13 +165,11 @@ impl<'a> Parser<'a> {
                         AtRuleKind::Return => {
                             if self.flags.in_function() {
                                 return Ok(vec![Stmt::Return(self.parse_return()?)]);
-                            } else {
-                                return Err((
-                                    "This at-rule is not allowed here.",
-                                    kind_string.span,
-                                )
-                                    .into());
                             }
+
+                            return Err(
+                                ("This at-rule is not allowed here.", kind_string.span).into()
+                            );
                         }
                         AtRuleKind::AtRoot => {
                             if self.flags.in_function() {
@@ -215,7 +213,7 @@ impl<'a> Parser<'a> {
                             self.warn(&Spanned {
                                 node: message.to_css_string(span)?,
                                 span,
-                            })
+                            });
                         }
                         AtRuleKind::Debug => {
                             let Spanned {
@@ -230,7 +228,7 @@ impl<'a> Parser<'a> {
                             self.debug(&Spanned {
                                 node: message.inspect(span)?,
                                 span,
-                            })
+                            });
                         }
                         AtRuleKind::If => stmts.append(&mut self.parse_if()?),
                         AtRuleKind::Each => stmts.append(&mut self.parse_each()?),
@@ -253,7 +251,7 @@ impl<'a> Parser<'a> {
                         }
                         AtRuleKind::Media => stmts.push(self.parse_media()?),
                         AtRuleKind::Unknown(_) => {
-                            stmts.push(self.parse_unknown_at_rule(kind_string.node)?)
+                            stmts.push(self.parse_unknown_at_rule(kind_string.node)?);
                         }
                         AtRuleKind::Use => {
                             return Err((
@@ -266,7 +264,7 @@ impl<'a> Parser<'a> {
                         AtRuleKind::Extend => self.parse_extend()?,
                         AtRuleKind::Supports => stmts.push(self.parse_supports()?),
                         AtRuleKind::Keyframes => {
-                            stmts.push(self.parse_keyframes(kind_string.node)?)
+                            stmts.push(self.parse_keyframes(kind_string.node)?);
                         }
                     }
                 }
@@ -308,7 +306,7 @@ impl<'a> Parser<'a> {
                     if self.flags.in_keyframes() {
                         match self.is_selector_or_style()? {
                             SelectorOrStyle::ModuleVariableRedeclaration(module) => {
-                                self.parse_module_variable_redeclaration(module)?
+                                self.parse_module_variable_redeclaration(module)?;
                             }
                             SelectorOrStyle::Style(property, value) => {
                                 if let Some(value) = value {
@@ -338,7 +336,7 @@ impl<'a> Parser<'a> {
 
                     match self.is_selector_or_style()? {
                         SelectorOrStyle::ModuleVariableRedeclaration(module) => {
-                            self.parse_module_variable_redeclaration(module)?
+                            self.parse_module_variable_redeclaration(module)?;
                         }
                         SelectorOrStyle::Style(property, value) => {
                             if let Some(value) = value {
@@ -422,10 +420,10 @@ impl<'a> Parser<'a> {
                 '{' => {
                     if from_fn {
                         return Err(("Expected selector.", pos).into());
-                    } else {
-                        found_curly = true;
-                        break;
                     }
+
+                    found_curly = true;
+                    break;
                 }
                 '\\' => {
                     string.push('\\');
@@ -835,7 +833,7 @@ impl<'a> Parser<'a> {
                 &extend_rule,
                 &None,
                 self.span_before,
-            )
+            );
         }
 
         Ok(())
@@ -893,9 +891,9 @@ impl<'a> Parser<'a> {
                         let interpolation = self.parse_interpolation()?;
                         params.push_str(&interpolation.node.to_css_string(interpolation.span)?);
                         continue;
-                    } else {
-                        params.push(tok.kind);
                     }
+
+                    params.push(tok.kind);
                 }
                 '\n' | ' ' | '\t' => {
                     self.whitespace();

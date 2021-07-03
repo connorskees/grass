@@ -170,6 +170,7 @@ impl Attribute {
 }
 
 impl Display for Attribute {
+    #[allow(clippy::branches_sharing_code)]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_char('[')?;
         write!(f, "{}", self.attr)?;
@@ -249,16 +250,17 @@ enum AttributeOp {
     Contains,
 }
 
-impl Into<&'static str> for AttributeOp {
-    fn into(self) -> &'static str {
-        match self {
-            Self::Any => "",
-            Self::Equals => "=",
-            Self::Include => "~=",
-            Self::Dash => "|=",
-            Self::Prefix => "^=",
-            Self::Suffix => "$=",
-            Self::Contains => "*=",
+impl From<AttributeOp> for &'static str {
+    #[inline]
+    fn from(op: AttributeOp) -> Self {
+        match op {
+            AttributeOp::Any => "",
+            AttributeOp::Equals => "=",
+            AttributeOp::Include => "~=",
+            AttributeOp::Dash => "|=",
+            AttributeOp::Prefix => "^=",
+            AttributeOp::Suffix => "$=",
+            AttributeOp::Contains => "*=",
         }
     }
 }

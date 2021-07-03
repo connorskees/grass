@@ -59,6 +59,7 @@ impl Extension {
     // todo: this should return a `Result`. it currently does not because the cascade effect
     // from this returning a `Result` will make some code returning `Option`s much uglier (we can't
     // use `?` to return both `Option` and `Result` from the same function)
+    #[allow(clippy::needless_return)]
     pub fn assert_compatible_media_context(&self, media_context: &Option<Vec<CssMediaQuery>>) {
         if &self.media_context == media_context {
             return;

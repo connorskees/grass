@@ -527,13 +527,7 @@ impl Extender {
             })
             .collect();
 
-        Some(
-            unified_paths
-                .into_iter()
-                .filter_map(|complexes| complexes)
-                .flatten()
-                .collect(),
-        )
+        Some(unified_paths.into_iter().flatten().flatten().collect())
     }
 
     fn extend_simple(
@@ -837,7 +831,7 @@ impl Extender {
             let mut max_specificity = 0;
             for component in &complex1.components {
                 if let ComplexSelectorComponent::Compound(compound) = component {
-                    max_specificity = max_specificity.max(self.source_specificity_for(compound))
+                    max_specificity = max_specificity.max(self.source_specificity_for(compound));
                 }
             }
 
@@ -920,7 +914,7 @@ impl Extender {
                         // clone in cases where we have already seen a simple selector (common in
                         // scenarios in which there is a lot of nesting)
                         if let Some(entry) = self.selectors.get_mut(&simple) {
-                            entry.insert(selector.clone())
+                            entry.insert(selector.clone());
                         } else {
                             self.selectors
                                 .entry(simple.clone())
@@ -1146,7 +1140,7 @@ impl Extender {
         selectors: SelectorHashSet,
         new_extensions: &HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>>,
     ) {
-        for mut selector in selectors.into_iter() {
+        for mut selector in selectors {
             let old_value = selector.clone().into_selector().0;
             selector.set_inner(self.extend_list(
                 old_value.clone(),
@@ -1193,7 +1187,7 @@ fn map_add_all_2<K1: Hash + Eq, K2: Hash + Eq, V>(
     destination: &mut HashMap<K1, IndexMap<K2, V>>,
     source: HashMap<K1, IndexMap<K2, V>>,
 ) {
-    source.into_iter().for_each(|(key, mut inner)| {
+    for (key, mut inner) in source {
         if destination.contains_key(&key) {
             destination
                 .get_mut(&key)
@@ -1202,5 +1196,5 @@ fn map_add_all_2<K1: Hash + Eq, K2: Hash + Eq, V>(
         } else {
             destination.get_mut(&key).replace(&mut inner);
         }
-    })
+    }
 }

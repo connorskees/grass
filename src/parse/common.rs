@@ -23,7 +23,7 @@ impl<T> NeverEmptyVec<T> {
     }
 
     pub fn push(&mut self, value: T) {
-        self.rest.push(value)
+        self.rest.push(value);
     }
 
     pub fn pop(&mut self) -> Option<T> {

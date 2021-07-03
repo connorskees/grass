@@ -14,7 +14,7 @@ pub(crate) struct Function {
 
 impl Hash for Function {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        self.pos.hash(state)
+        self.pos.hash(state);
     }
 }
 
@@ -31,8 +31,8 @@ impl Function {
         Function {
             args,
             body,
-            pos,
             declared_at_root,
+            pos,
         }
     }
 }

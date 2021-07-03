@@ -279,7 +279,7 @@ pub(crate) fn str_insert(mut args: CallArgs, parser: &mut Parser<'_>) -> SassRes
                 if i + 1 == idx {
                     c.to_string() + s2
                 } else if idx == 0 && i == 0 {
-                    s2.to_string() + &c.to_string()
+                    s2.to_owned() + &c.to_string()
                 } else {
                     c.to_string()
                 }

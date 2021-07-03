@@ -28,11 +28,11 @@ pub(crate) fn peek_until_closing_curly_brace(
             '}' => {
                 if nesting == 0 {
                     break;
-                } else {
-                    nesting -= 1;
-                    t.push(tok);
-                    toks.advance_cursor();
                 }
+
+                nesting -= 1;
+                t.push(tok);
+                toks.advance_cursor();
             }
             '/' => {
                 let next = *toks

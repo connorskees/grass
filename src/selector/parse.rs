@@ -69,9 +69,9 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
         span: Span,
     ) -> Self {
         Self {
-            parser,
             allows_parent,
             allows_placeholder,
+            parser,
             span,
         }
     }
@@ -144,7 +144,7 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
                 }
                 Some(Token { kind: '>', .. }) => {
                     self.parser.toks.next();
-                    components.push(ComplexSelectorComponent::Combinator(Combinator::Child))
+                    components.push(ComplexSelectorComponent::Combinator(Combinator::Child));
                 }
                 Some(Token { kind: '~', .. }) => {
                     self.parser.toks.next();
@@ -350,7 +350,7 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
             argument = Some(
                 self.declaration_value()?
                     .trim_end()
-                    .to_string()
+                    .to_owned()
                     .into_boxed_str(),
             );
         }
@@ -397,15 +397,15 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
                     if let Some(Token { kind: '*', .. }) = self.parser.toks.peek() {
                         self.parser.toks.next();
                         return Ok(SimpleSelector::Universal(Namespace::Asterisk));
-                    } else {
-                        return Ok(SimpleSelector::Type(QualifiedName {
-                            ident: self.parser.parse_identifier()?.node,
-                            namespace: Namespace::Asterisk,
-                        }));
                     }
-                } else {
-                    return Ok(SimpleSelector::Universal(Namespace::None));
+
+                    return Ok(SimpleSelector::Type(QualifiedName {
+                        ident: self.parser.parse_identifier()?.node,
+                        namespace: Namespace::Asterisk,
+                    }));
                 }
+
+                return Ok(SimpleSelector::Universal(Namespace::None));
             }
             Some(Token { kind: '|', pos }) => {
                 self.parser.span_before = self.parser.span_before.merge(*pos);
@@ -457,11 +457,11 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
         match self.parser.toks.peek() {
             Some(Token { kind: 'e', .. }) | Some(Token { kind: 'E', .. }) => {
                 self.expect_identifier("even")?;
-                return Ok("even".to_string());
+                return Ok("even".to_owned());
             }
             Some(Token { kind: 'o', .. }) | Some(Token { kind: 'O', .. }) => {
                 self.expect_identifier("odd")?;
-                return Ok("odd".to_string());
+                return Ok("odd".to_owned());
             }
             Some(t @ Token { kind: '+', .. }) | Some(t @ Token { kind: '-', .. }) => {
                 buf.push(t.kind);

@@ -25,7 +25,7 @@ impl Hash for ExtendedSelector {
     // but I haven't managed to find a test case
     // that exhibits it.
     fn hash<H: Hasher>(&self, state: &mut H) {
-        ptr::hash(&*self.0, state)
+        ptr::hash(&*self.0, state);
         // in case we need to hash the actual value:
         // self.0.borrow().hash(state);
     }
@@ -66,8 +66,13 @@ impl SelectorHashSet {
     pub fn insert(&mut self, selector: ExtendedSelector) {
         self.0.insert(selector);
     }
+}
 
-    pub fn into_iter(self) -> IntoIter<ExtendedSelector> {
+impl IntoIterator for SelectorHashSet {
+    type Item = ExtendedSelector;
+    type IntoIter = IntoIter<ExtendedSelector>;
+
+    fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
     }
 }

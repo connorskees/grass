@@ -188,22 +188,16 @@ impl<'a> Parser<'a> {
             let value = self.parse_value(true, &|c| match c.peek() {
                 Some(Token { kind: ')', .. }) | Some(Token { kind: ',', .. }) => true,
                 Some(Token { kind: '.', .. }) => {
-                    if matches!(c.peek_next(), Some(Token { kind: '.', .. })) {
-                        c.reset_cursor();
-                        true
-                    } else {
-                        c.reset_cursor();
-                        false
-                    }
+                    let next_is_dot = matches!(c.peek_next(), Some(Token { kind: '.', .. }));
+                    c.reset_cursor();
+
+                    next_is_dot
                 }
                 Some(Token { kind: '=', .. }) => {
-                    if matches!(c.peek_next(), Some(Token { kind: '=', .. })) {
-                        c.reset_cursor();
-                        false
-                    } else {
-                        c.reset_cursor();
-                        true
-                    }
+                    let next_is_eq = matches!(c.peek_next(), Some(Token { kind: '=', .. }));
+                    c.reset_cursor();
+
+                    !next_is_eq
                 }
                 Some(..) | None => false,
             });
@@ -297,13 +291,11 @@ impl<'a> Parser<'a> {
                     let right = self.parse_value(true, &|c| match c.peek() {
                         Some(Token { kind: ')', .. }) | Some(Token { kind: ',', .. }) => true,
                         Some(Token { kind: '.', .. }) => {
-                            if matches!(c.peek_next(), Some(Token { kind: '.', .. })) {
-                                c.reset_cursor();
-                                true
-                            } else {
-                                c.reset_cursor();
-                                false
-                            }
+                            let next_is_dot =
+                                matches!(c.peek_next(), Some(Token { kind: '.', .. }));
+                            c.reset_cursor();
+
+                            next_is_dot
                         }
                         Some(..) | None => false,
                     })?;

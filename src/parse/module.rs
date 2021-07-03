@@ -32,11 +32,11 @@ impl<'a> Parser<'a> {
             if let Some(Token { kind: '*', .. }) = self.toks.peek() {
                 self.toks.next();
                 return Ok(Some('*'.to_string()));
-            } else {
-                let name = self.parse_identifier_no_interpolation(false)?;
-
-                return Ok(Some(name.node));
             }
+
+            let name = self.parse_identifier_no_interpolation(false)?;
+
+            return Ok(Some(name.node));
         }
 
         Ok(None)

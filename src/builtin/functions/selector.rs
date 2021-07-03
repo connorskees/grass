@@ -75,7 +75,7 @@ pub(crate) fn selector_nest(args: CallArgs, parser: &mut Parser<'_>) -> SassResu
         .try_fold(
             Selector::new(span),
             |parent, child| -> SassResult<Selector> {
-                Ok(child.resolve_parent_selectors(&parent, true)?)
+                child.resolve_parent_selectors(&parent, true)
             },
         )?
         .into_value())
@@ -97,7 +97,7 @@ pub(crate) fn selector_append(args: CallArgs, parser: &mut Parser<'_>) -> SassRe
     Ok(parsed_selectors
         .into_iter()
         .try_fold(first, |parent, child| -> SassResult<Selector> {
-            Ok(Selector(SelectorList {
+            Selector(SelectorList {
                 components: child
                     .0
                     .components
@@ -127,7 +127,7 @@ pub(crate) fn selector_append(args: CallArgs, parser: &mut Parser<'_>) -> SassRe
                     .collect::<SassResult<Vec<ComplexSelector>>>()?,
                 span,
             })
-            .resolve_parent_selectors(&parent, false)?)
+            .resolve_parent_selectors(&parent, false)
         })?
         .into_value())
 }

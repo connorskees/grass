@@ -89,8 +89,8 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
             Op::Mul => self.mul(val1, val2)?,
             Op::Div => self.div(val1, val2, in_parens)?,
             Op::Rem => self.rem(val1, val2)?,
-            Op::And => Self::and(val1, val2)?,
-            Op::Or => Self::or(val1, val2)?,
+            Op::And => Self::and(val1, val2),
+            Op::Or => Self::or(val1, val2),
             Op::Equal => Self::equal(val1, val2),
             Op::NotEqual => Self::not_equal(val1, val2),
             Op::GreaterThan => self.greater_than(val1, val2)?,
@@ -110,7 +110,7 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
         let val = self.eval(val, in_parens)?;
         match op {
             Op::Minus => self.unary_minus(val),
-            Op::Not => Self::unary_not(&val),
+            Op::Not => Ok(Self::unary_not(&val)),
             Op::Plus => self.unary_plus(val),
             _ => unreachable!(),
         }
@@ -133,8 +133,8 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
         })
     }
 
-    fn unary_not(val: &Value) -> SassResult<Value> {
-        Ok(Value::bool(!val.is_true()))
+    fn unary_not(val: &Value) -> Value {
+        Value::bool(!val.is_true())
     }
 
     fn unary(
@@ -697,7 +697,7 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
         })
     }
 
-    fn and(left: HigherIntermediateValue, right: HigherIntermediateValue) -> SassResult<Value> {
+    fn and(left: HigherIntermediateValue, right: HigherIntermediateValue) -> Value {
         let left = match left {
             HigherIntermediateValue::Literal(v) => v,
             v => panic!("{:?}", v),
@@ -706,10 +706,14 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
             HigherIntermediateValue::Literal(v) => v,
             v => panic!("{:?}", v),
         };
-        Ok(if left.is_true() { right } else { left })
+        if left.is_true() {
+            right
+        } else {
+            left
+        }
     }
 
-    fn or(left: HigherIntermediateValue, right: HigherIntermediateValue) -> SassResult<Value> {
+    fn or(left: HigherIntermediateValue, right: HigherIntermediateValue) -> Value {
         let left = match left {
             HigherIntermediateValue::Literal(v) => v,
             v => panic!("{:?}", v),
@@ -718,7 +722,11 @@ impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
             HigherIntermediateValue::Literal(v) => v,
             v => panic!("{:?}", v),
         };
-        Ok(if left.is_true() { left } else { right })
+        if left.is_true() {
+            left
+        } else {
+            right
+        }
     }
 
     pub fn equal(left: HigherIntermediateValue, right: HigherIntermediateValue) -> Value {
