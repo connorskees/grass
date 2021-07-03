@@ -578,10 +578,12 @@ impl<'a> Parser<'a> {
         }
 
         let mut map = SassMap::new();
-        let key = self.parse_value(
-            true,
-            &|c| matches!(c.peek(), Some(Token { kind: ':', .. }) | Some(Token { kind: ')', .. })),
-        )?;
+        let key = self.parse_value(true, &|c| {
+            matches!(
+                c.peek(),
+                Some(Token { kind: ':', .. }) | Some(Token { kind: ')', .. })
+            )
+        })?;
 
         match self.toks.next() {
             Some(Token { kind: ':', .. }) => {}
@@ -594,10 +596,12 @@ impl<'a> Parser<'a> {
             Some(..) | None => return Err(("expected \")\".", key.span).into()),
         }
 
-        let val = self.parse_value(
-            true,
-            &|c| matches!(c.peek(), Some(Token { kind: ',', .. }) | Some(Token { kind: ')', .. })),
-        )?;
+        let val = self.parse_value(true, &|c| {
+            matches!(
+                c.peek(),
+                Some(Token { kind: ',', .. }) | Some(Token { kind: ')', .. })
+            )
+        })?;
 
         map.insert(key.node, val.node);
 
@@ -630,14 +634,22 @@ impl<'a> Parser<'a> {
         }
 
         loop {
-            let key =
-                self.parse_value(true, &|c| matches!(c.peek(), Some(Token { kind: ':', .. }) | Some(Token { kind: ',', .. })))?;
+            let key = self.parse_value(true, &|c| {
+                matches!(
+                    c.peek(),
+                    Some(Token { kind: ':', .. }) | Some(Token { kind: ',', .. })
+                )
+            })?;
 
             self.expect_char(':')?;
 
             self.whitespace_or_comment();
-            let val =
-                self.parse_value(true, &|c| matches!(c.peek(), Some(Token { kind: ',', .. }) | Some(Token { kind: ')', .. })))?;
+            let val = self.parse_value(true, &|c| {
+                matches!(
+                    c.peek(),
+                    Some(Token { kind: ',', .. }) | Some(Token { kind: ')', .. })
+                )
+            })?;
 
             span = span.merge(val.span);
 

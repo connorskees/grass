@@ -66,3 +66,16 @@ test!(
     "$a: foo;/* interpolation #{1 + 1} in #{$a} comments */",
     "/* interpolation 2 in foo comments */\n"
 );
+test!(
+    triple_star_in_selector,
+    "a/***/ {x: y} b { color: red; }",
+    "a {\n  x: y;\n}\n\nb {\n  color: red;\n}\n"
+);
+test!(
+    sass_spec__css_comments_multiple_stars,
+    "a /***/ b {x: y}
+    a /****/ b {x: y}
+    a /* **/ b {x: y}
+    a /** */ b {x: y}",
+    "a b {\n  x: y;\n}\n\na b {\n  x: y;\n}\n\na b {\n  x: y;\n}\n\na b {\n  x: y;\n}\n"
+);

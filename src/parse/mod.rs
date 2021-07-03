@@ -589,7 +589,8 @@ impl<'a> Parser<'a> {
                         self.toks.next();
                         while let Some(tok) = self.toks.next() {
                             if tok.kind == '*' {
-                                if let Some(Token { kind: '/', .. }) = self.toks.next() {
+                                if let Some(Token { kind: '/', .. }) = self.toks.peek() {
+                                    self.toks.next();
                                     break;
                                 }
                             }
