@@ -6,7 +6,7 @@ use crate::{
     value::Value,
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub(crate) struct SassMap(Vec<(Value, Value)>);
 
 impl PartialEq for SassMap {
@@ -49,6 +49,16 @@ impl SassMap {
             }
         }
         Ok(None)
+    }
+
+    pub fn get_mut(&mut self, key: &Value) -> Option<&mut Value> {
+        for (k, v) in &mut self.0 {
+            if k == key {
+                return Some(v);
+            }
+        }
+
+        None
     }
 
     pub fn remove(&mut self, key: &Value) {

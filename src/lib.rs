@@ -43,7 +43,7 @@ grass input.scss
     // it is sometimes useful to break up `impl`s
     clippy::multiple_inherent_impl,
     // filter isn't fallible
-    clippy::filter_map,
+    clippy::manual_filter_map,
     clippy::else_if_without_else,
     clippy::new_ret_no_self,
     renamed_and_removed_lints,

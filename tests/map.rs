@@ -95,6 +95,31 @@ test!(
     "a {\n  color: inspect(map-merge((c: d, e: f), (c: 1, e: 2)));\n}\n",
     "a {\n  color: (c: 1, e: 2);\n}\n"
 );
+test!(
+    map_merge_nested_empty,
+    "a {b: inspect(map-merge((c: ()), c, ()))}",
+    "a {\n  b: (c: ());\n}\n"
+);
+test!(
+    map_merge_nested_overlapping_keys,
+    "a {b: inspect(map-merge((c: (d: e, f: g, h: i)), c, (j: 1, f: 2, k: 3)))}",
+    "a {\n  b: (c: (d: e, f: 2, h: i, j: 1, k: 3));\n}\n"
+);
+test!(
+    map_merge_nested_intermediate_is_not_map,
+    "a {b: inspect(map-merge((c: 1), c, d, (e: f)))}",
+    "a {\n  b: (c: (d: (e: f)));\n}\n"
+);
+test!(
+    map_merge_nested_leaf_is_not_map,
+    "a {b: inspect(map-merge((c: 1), c, (d: e)))}",
+    "a {\n  b: (c: (d: e));\n}\n"
+);
+test!(
+    map_merge_nested_multiple_keys,
+    "a {b: inspect(map-merge((c: (d: (e: (f: (g: h))))), c, d, e, f, (g: 1)))}",
+    "a {\n  b: (c: (d: (e: (f: (g: 1)))));\n}\n"
+);
 error!(
     map_merge_map1_non_map,
     "a {\n  color: map-merge(foo, (a: b));\n}\n", "Error: $map1: foo is not a map."

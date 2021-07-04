@@ -1,3 +1,5 @@
+use std::mem;
+
 use super::{Builtin, GlobalFunctionMap};
 
 use crate::{
@@ -87,7 +89,12 @@ pub(crate) fn map_values(mut args: CallArgs, parser: &mut Parser<'_>) -> SassRes
 }
 
 pub(crate) fn map_merge(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
-    args.max_args(2)?;
+    if args.len() == 1 {
+        return Err(("Expected $args to contain a key.", args.span()).into());
+    }
+
+    let last_position = args.len().saturating_sub(1);
+
     let mut map1 = match args.get_err(0, "map1")? {
         Value::Map(m) => m,
         Value::List(v, ..) if v.is_empty() => SassMap::new(),
@@ -100,7 +107,8 @@ pub(crate) fn map_merge(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResu
                 .into())
         }
     };
-    let map2 = match args.get_err(1, "map2")? {
+
+    let mut map2 = match args.get_err(last_position, "map2")? {
         Value::Map(m) => m,
         Value::List(v, ..) if v.is_empty() => SassMap::new(),
         Value::ArgList(v) if v.is_empty() => SassMap::new(),
@@ -112,7 +120,28 @@ pub(crate) fn map_merge(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResu
                 .into())
         }
     };
-    map1.merge(map2);
+
+    let mut keys = args.get_variadic()?;
+
+    if keys.is_empty() {
+        map1.merge(map2);
+    } else {
+        while let Some(key) = keys.pop() {
+            let mut new_map = SassMap::new();
+            new_map.insert(key.node, Value::Map(mem::take(&mut map2)));
+            map2 = new_map;
+        }
+
+        for (key, value) in map2 {
+            // if they are two maps sharing a key, merge the keys
+            if let (Some(Value::Map(map1)), Value::Map(map2)) = (map1.get_mut(&key), &value) {
+                map1.merge(map2.clone());
+            } else {
+                map1.insert(key, value);
+            }
+        }
+    }
+
     Ok(Value::Map(map1))
 }
 
