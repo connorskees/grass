@@ -547,14 +547,13 @@ impl Color {
             }
 
             if hue < Number::small_ratio(1, 6) {
-                return m1.clone() + (m2 - m1) * hue * Number::from(6);
+                m1.clone() + (m2 - m1) * hue * Number::from(6)
             } else if hue < Number::small_ratio(1, 2) {
-                return m2;
+                m2
             } else if hue < Number::small_ratio(2, 3) {
-                return m1.clone()
-                    + (m2 - m1) * (Number::small_ratio(2, 3) - hue) * Number::from(6);
+                m1.clone() + (m2 - m1) * (Number::small_ratio(2, 3) - hue) * Number::from(6)
             } else {
-                return m1;
+                m1
             }
         }
 

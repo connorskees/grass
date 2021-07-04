@@ -1,5 +1,3 @@
-use std::mem;
-
 use super::{Builtin, GlobalFunctionMap};
 
 use crate::{
@@ -93,7 +91,7 @@ pub(crate) fn map_merge(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResu
         return Err(("Expected $args to contain a key.", args.span()).into());
     }
 
-    let last_position = args.len().saturating_sub(1);
+    let map2_position = args.len().saturating_sub(1);
 
     let mut map1 = match args.get_err(0, "map1")? {
         Value::Map(m) => m,
@@ -108,7 +106,7 @@ pub(crate) fn map_merge(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResu
         }
     };
 
-    let mut map2 = match args.get_err(last_position, "map2")? {
+    let map2 = match args.get_err(map2_position, "map2")? {
         Value::Map(m) => m,
         Value::List(v, ..) if v.is_empty() => SassMap::new(),
         Value::ArgList(v) if v.is_empty() => SassMap::new(),
@@ -121,23 +119,43 @@ pub(crate) fn map_merge(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResu
         }
     };
 
-    let mut keys = args.get_variadic()?;
+    let keys = args.get_variadic()?;
 
     if keys.is_empty() {
         map1.merge(map2);
     } else {
-        while let Some(key) = keys.pop() {
-            let mut new_map = SassMap::new();
-            new_map.insert(key.node, Value::Map(mem::take(&mut map2)));
-            map2 = new_map;
+        let mut current_map = map1.clone();
+        let mut map_queue = Vec::new();
+
+        for key in keys {
+            match current_map.get(&key) {
+                Some(Value::Map(m1)) => {
+                    current_map = m1.clone();
+                    map_queue.push((key, m1));
+                }
+                Some(..) | None => {
+                    current_map = SassMap::new();
+                    map_queue.push((key, SassMap::new()));
+                }
+            }
         }
 
-        for (key, value) in map2 {
-            // if they are two maps sharing a key, merge the keys
-            if let (Some(Value::Map(map1)), Value::Map(map2)) = (map1.get_mut(&key), &value) {
-                map1.merge(map2.clone());
-            } else {
-                map1.insert(key, value);
+        match map_queue.last_mut() {
+            Some((_, m)) => {
+                m.merge(map2);
+            }
+            None => unreachable!(),
+        };
+
+        while let Some((key, queued_map)) = map_queue.pop() {
+            match map_queue.last_mut() {
+                Some((_, map)) => {
+                    map.insert(key.node, Value::Map(queued_map));
+                }
+                None => {
+                    map1.insert(key.node, Value::Map(queued_map));
+                    break;
+                }
             }
         }
     }
@@ -162,6 +180,68 @@ pub(crate) fn map_remove(mut args: CallArgs, parser: &mut Parser<'_>) -> SassRes
     for key in keys {
         map.remove(&key);
     }
+    Ok(Value::Map(map))
+}
+
+pub(crate) fn map_set(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+    let key_position = args.len().saturating_sub(2);
+    let value_position = args.len().saturating_sub(1);
+
+    let mut map = match args.get_err(0, "map")? {
+        Value::Map(m) => m,
+        Value::List(v, ..) if v.is_empty() => SassMap::new(),
+        Value::ArgList(v) if v.is_empty() => SassMap::new(),
+        v => {
+            return Err((
+                format!("$map: {} is not a map.", v.inspect(args.span())?),
+                args.span(),
+            )
+                .into())
+        }
+    };
+
+    let key = args.get_err(key_position, "key")?;
+    let value = args.get_err(value_position, "value")?;
+
+    let keys = args.get_variadic()?;
+
+    if keys.is_empty() {
+        map.insert(key, value);
+    } else {
+        let mut current_map = map.clone();
+        let mut map_queue = Vec::new();
+
+        for key in keys {
+            match current_map.get(&key) {
+                Some(Value::Map(m1)) => {
+                    current_map = m1.clone();
+                    map_queue.push((key, m1));
+                }
+                Some(..) | None => {
+                    current_map = SassMap::new();
+                    map_queue.push((key, SassMap::new()));
+                }
+            }
+        }
+
+        match map_queue.last_mut() {
+            Some((_, m)) => m.insert(key, value),
+            None => unreachable!(),
+        };
+
+        while let Some((key, queued_map)) = map_queue.pop() {
+            match map_queue.last_mut() {
+                Some((_, next_map)) => {
+                    next_map.insert(key.node, Value::Map(queued_map));
+                }
+                None => {
+                    map.insert(key.node, Value::Map(queued_map));
+                    break;
+                }
+            }
+        }
+    }
+
     Ok(Value::Map(map))
 }
 
