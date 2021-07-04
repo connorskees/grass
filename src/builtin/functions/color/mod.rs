@@ -1,6 +1,7 @@
 use super::{Builtin, GlobalFunctionMap};
 
 pub mod hsl;
+pub mod hwb;
 pub mod opacity;
 pub mod other;
 pub mod rgb;

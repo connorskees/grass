@@ -514,6 +514,66 @@ impl Color {
     }
 }
 
+/// HWB color functions
+impl Color {
+    pub fn from_hwb(
+        mut hue: Number,
+        mut white: Number,
+        mut black: Number,
+        mut alpha: Number,
+    ) -> Color {
+        hue %= Number::from(360);
+        hue /= Number::from(360);
+        white /= Number::from(100);
+        black /= Number::from(100);
+        alpha = alpha.clamp(Number::zero(), Number::one());
+
+        let white_black_sum = white.clone() + black.clone();
+
+        if white_black_sum > Number::one() {
+            white /= white_black_sum.clone();
+            black /= white_black_sum;
+        }
+
+        let factor = Number::one() - white.clone() - black;
+
+        fn channel(m1: Number, m2: Number, mut hue: Number) -> Number {
+            if hue < Number::zero() {
+                hue += Number::one();
+            }
+
+            if hue > Number::one() {
+                hue -= Number::one();
+            }
+
+            if hue < Number::small_ratio(1, 6) {
+                return m1.clone() + (m2 - m1) * hue * Number::from(6);
+            } else if hue < Number::small_ratio(1, 2) {
+                return m2;
+            } else if hue < Number::small_ratio(2, 3) {
+                return m1.clone()
+                    + (m2 - m1) * (Number::small_ratio(2, 3) - hue) * Number::from(6);
+            } else {
+                return m1;
+            }
+        }
+
+        let to_rgb = |hue: Number| -> Number {
+            let channel =
+                channel(Number::zero(), Number::one(), hue) * factor.clone() + white.clone();
+            channel * Number::from(255)
+        };
+
+        let red = to_rgb(hue.clone() + Number::small_ratio(1, 3));
+        let green = to_rgb(hue.clone());
+        let blue = to_rgb(hue - Number::small_ratio(1, 3));
+
+        let repr = repr(&red, &green, &blue, &alpha);
+
+        Color::new_rgba(red, green, blue, alpha, repr)
+    }
+}
+
 /// Get the proper representation from RGBA values
 fn repr(red: &Number, green: &Number, blue: &Number, alpha: &Number) -> String {
     fn into_u8(channel: &Number) -> u8 {
