@@ -37,14 +37,24 @@ test!(
     "a {\n  color: e c d.f;\n}\n"
 );
 test!(
-    nest_parent_in_special_pseudo,
+    nest_parent_in_special_pseudo_matches,
     "a {\n  color: selector-nest(\"c\", \":matches(&)\");\n}\n",
     "a {\n  color: :matches(c);\n}\n"
 );
 test!(
-    nest_complex_super_parent_in_special_pseudo,
+    nest_complex_super_parent_in_special_pseudo_matches,
     "a {\n  color: selector-nest(\"c d\", \":matches(&)\");\n}\n",
     "a {\n  color: :matches(c d);\n}\n"
+);
+test!(
+    nest_parent_in_special_pseudo_is,
+    "a {\n  color: selector-nest(\"c\", \":is(&)\");\n}\n",
+    "a {\n  color: :is(c);\n}\n"
+);
+test!(
+    nest_complex_super_parent_in_special_pseudo_is,
+    "a {\n  color: selector-nest(\"c d\", \":is(&)\");\n}\n",
+    "a {\n  color: :is(c d);\n}\n"
 );
 test!(
     nest_multiple_parent,
@@ -92,9 +102,14 @@ test!(
     "a {\n  color: e c.f, e d.f;\n}\n"
 );
 test!(
-    nest_super_list_parent_inside_pseudo,
+    nest_super_list_parent_inside_pseudo_matches,
     "a {\n  color: selector-nest(\"c, d\", \":matches(&)\");\n}\n",
     "a {\n  color: :matches(c, d);\n}\n"
+);
+test!(
+    nest_super_list_parent_inside_pseudo_is,
+    "a {\n  color: selector-nest(\"c, d\", \":is(&)\");\n}\n",
+    "a {\n  color: :is(c, d);\n}\n"
 );
 test!(
     nest_super_list_multiple_parent,

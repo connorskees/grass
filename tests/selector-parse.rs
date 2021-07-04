@@ -47,6 +47,11 @@ test!(
     "a {\n  color: :matches(b, c);\n}\n"
 );
 test!(
+    pseudo_is_with_list_args,
+    "a {\n  color: selector-parse(\":is(b, c)\");\n}\n",
+    "a {\n  color: :is(b, c);\n}\n"
+);
+test!(
     pseudo_element,
     "a {\n  color: selector-parse(\"::c\");\n}\n",
     "a {\n  color: ::c;\n}\n"

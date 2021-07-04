@@ -656,13 +656,14 @@ impl Extender {
                         // become `.foo:not(.bar)`. However, this is a narrow edge case and
                         // supporting it properly would make this code and the code calling it
                         // a lot more complicated, so it's not supported for now.
-                        if inner_pseudo.normalized_name() == "matches" {
+                        let inner_pseudo_normalized = inner_pseudo.normalized_name();
+                        if inner_pseudo_normalized == "matches" || inner_pseudo_normalized == "is" {
                             inner_pseudo.selector.clone().unwrap().components
                         } else {
                             Vec::new()
                         }
                     }
-                    "matches" | "any" | "current" | "nth-child" | "nth-last-child" => {
+                    "matches" | "is" | "any" | "current" | "nth-child" | "nth-last-child" => {
                         // As above, we could theoretically support :not within :matches, but
                         // doing so would require this method and its callers to handle much
                         // more complex cases that likely aren't worth the pain.

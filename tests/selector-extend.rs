@@ -297,6 +297,21 @@ test!(
     "a {\n  color: :not(.c):not(.d:matches(.e, .f));\n}\n"
 );
 test!(
+    simple_pseudo_idempotent_not_and_is_list,
+    "a {\n  color: selector-extend(\":not(.c)\", \".c\", \":is(.d, .e)\");\n}\n",
+    "a {\n  color: :not(.c):not(.d):not(.e);\n}\n"
+);
+test!(
+    simple_pseudo_idempotent_not_and_is_list_of_complex,
+    "a {\n  color: selector-extend(\":not(.c)\", \".c\", \":is(.d .e, .f .g)\");\n}\n",
+    "a {\n  color: :not(.c):not(.d .e):not(.f .g);\n}\n"
+);
+test!(
+    simple_pseudo_idempotent_not_and_is_in_compound,
+    "a {\n  color: selector-extend(\":not(.c)\", \".c\", \".d:is(.e, .f)\");\n}\n",
+    "a {\n  color: :not(.c):not(.d:is(.e, .f));\n}\n"
+);
+test!(
     simple_pseudo_idempotent_not_and_not_in_extender,
     "a {\n  color: selector-extend(\":not(.c)\", \".c\", \":not(.d)\");\n}\n",
     "a {\n  color: :not(.c);\n}\n"

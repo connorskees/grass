@@ -22,6 +22,11 @@ test!(
     "a {\n  color: :matches(d);\n}\n"
 );
 test!(
+    psuedo_is,
+    "a {\n  color: selector-replace(\":is(c)\", \"c\", \"d\");\n}\n",
+    "a {\n  color: :is(d);\n}\n"
+);
+test!(
     psuedo_not,
     "a {\n  color: selector-replace(\":not(c)\", \"c\", \"d\");\n}\n",
     "a {\n  color: :not(d);\n}\n"

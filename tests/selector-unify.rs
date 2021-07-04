@@ -668,3 +668,13 @@ test!(
     "a {\n  color: selector-unify(\":matches(.c)\", \":matches(.d)\");\n}\n",
     "a {\n  color: :matches(.c):matches(.d);\n}\n"
 );
+test!(
+    simple_pseudo_arg_is_same_selector_arg,
+    "a {\n  color: selector-unify(\":is(.c)\", \":is(.c)\");\n}\n",
+    "a {\n  color: :is(.c);\n}\n"
+);
+test!(
+    simple_pseudo_arg_is_different_selector_arg,
+    "a {\n  color: selector-unify(\":is(.c)\", \":is(.d)\");\n}\n",
+    "a {\n  color: :is(.c):is(.d);\n}\n"
+);

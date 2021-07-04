@@ -36,9 +36,10 @@ impl DevouredWhitespace {
 }
 
 /// Pseudo-class selectors that take unadorned selectors as arguments.
-const SELECTOR_PSEUDO_CLASSES: [&str; 7] = [
+const SELECTOR_PSEUDO_CLASSES: [&str; 8] = [
     "not",
     "matches",
+    "is",
     "current",
     "any",
     "has",

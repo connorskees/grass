@@ -526,15 +526,21 @@ test!(
     "a:not(c) {\n  x: y;\n}\n"
 );
 test!(
-    psuedo_paren_removes_inner_placeholder,
+    psuedo_paren_removes_inner_placeholder_matches,
     "a:matches(%b, c) {x: y}",
     "a:matches(c) {\n  x: y;\n}\n"
 );
 test!(
-    matches_placeholder_removes_everything,
+    matches_placeholder_removes_everything_matches,
     "a:matches(%b) {x: y}",
     ""
 );
+test!(
+    psuedo_paren_removes_inner_placeholder_is,
+    "a:is(%b, c) {x: y}",
+    "a:is(c) {\n  x: y;\n}\n"
+);
+test!(is_placeholder_removes_everything_is, "a:is(%b) {x: y}", "");
 test!(
     touching_universal_stays_the_same,
     "a* {\n  color: red;\n}\n",
