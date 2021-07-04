@@ -711,6 +711,10 @@ impl DivAssign for Number {
     }
 }
 
+fn modulo(n1: BigRational, n2: BigRational) -> BigRational {
+    (n1 % n2.clone() + n2.clone()) % n2
+}
+
 impl Rem for Number {
     type Output = Self;
 
@@ -721,25 +725,29 @@ impl Rem for Number {
                 Self::Small(val2) => {
                     let tuple1: (i64, i64) = val1.into();
                     let tuple2: (i64, i64) = val2.into();
-                    Self::Big(Box::new(
-                        BigRational::new_raw(BigInt::from(tuple1.0), BigInt::from(tuple1.1))
-                            % BigRational::new_raw(BigInt::from(tuple2.0), BigInt::from(tuple2.1)),
-                    ))
+
+                    Self::Big(Box::new(modulo(
+                        BigRational::new_raw(BigInt::from(tuple1.0), BigInt::from(tuple1.1)),
+                        BigRational::new_raw(BigInt::from(tuple2.0), BigInt::from(tuple2.1)),
+                    )))
                 }
                 Self::Big(val2) => {
                     let tuple: (i64, i64) = val1.into();
-                    Self::Big(Box::new(
-                        BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1)) % *val2,
-                    ))
+
+                    Self::Big(Box::new(modulo(
+                        BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1)),
+                        *val2,
+                    )))
                 }
             },
             Self::Big(val1) => match other {
-                Self::Big(val2) => Self::Big(Box::new(*val1 % *val2)),
+                Self::Big(val2) => Self::Big(Box::new(modulo(*val1, *val2))),
                 Self::Small(val2) => {
                     let tuple: (i64, i64) = val2.into();
-                    Self::Big(Box::new(
-                        *val1 % BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1)),
-                    ))
+                    Self::Big(Box::new(modulo(
+                        *val1,
+                        BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1)),
+                    )))
                 }
             },
         }

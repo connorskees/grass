@@ -65,3 +65,23 @@ error!(
     positive_unit_mod_zero_unit_incompatible_units,
     "a {\n  color: 1rem % 0px;\n}\n", "Error: Incompatible units rem and px."
 );
+test!(
+    positive_mod_negative,
+    "a {\n  color: 1 % -4;\n}\n",
+    "a {\n  color: -3;\n}\n"
+);
+test!(
+    negative_mod_positive,
+    "a {\n  color: -4 % 3;\n}\n",
+    "a {\n  color: 2;\n}\n"
+);
+test!(
+    negative_mod_negative,
+    "a {\n  color: -4 % -3;\n}\n",
+    "a {\n  color: -1;\n}\n"
+);
+test!(
+    big_negative_mod_positive,
+    "a {\n  color: -99999990000099999999999999 % 2;\n}\n",
+    "a {\n  color: 1;\n}\n"
+);

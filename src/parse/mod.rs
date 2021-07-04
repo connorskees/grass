@@ -915,7 +915,7 @@ impl<'a> Parser<'a> {
         }
         let loc = self.map.look_up_span(message.span);
         eprintln!(
-            "{}:{} Debug: {}",
+            "{}:{} DEBUG: {}",
             loc.file.name(),
             loc.begin.line + 1,
             message.node
