@@ -403,7 +403,7 @@ impl<'a> Parser<'a> {
             span = span.merge(pos);
             match kind {
                 '#' => {
-                    if let Some(Token { kind: '{', .. }) = self.toks.peek().cloned() {
+                    if let Some(Token { kind: '{', .. }) = self.toks.peek().copied() {
                         self.toks.next();
                         string.push_str(&self.parse_interpolation()?.to_css_string(span)?);
                     } else {
@@ -447,6 +447,8 @@ impl<'a> Parser<'a> {
             return Err(("expected \"{\".", span).into());
         }
 
+        // we must collect here because the parser isn't generic over the iterator
+        #[allow(clippy::needless_collect)]
         let sel_toks: Vec<Token> = string.chars().map(|x| Token::new(span, x)).collect();
 
         let mut iter = sel_toks.into_iter().peekmore();
@@ -565,7 +567,7 @@ impl<'a> Parser<'a> {
     ///
     /// The newline is consumed
     pub fn read_until_newline(&mut self) {
-        while let Some(tok) = self.toks.next() {
+        for tok in &mut self.toks {
             if tok.kind == '\n' {
                 break;
             }
@@ -585,6 +587,7 @@ impl<'a> Parser<'a> {
                         found_whitespace = true;
                         self.toks.next();
                         self.toks.next();
+                        #[allow(clippy::while_let_on_iterator)]
                         while let Some(tok) = self.toks.next() {
                             if tok.kind == '*' {
                                 if let Some(Token { kind: '/', .. }) = self.toks.peek() {
@@ -885,7 +888,7 @@ impl<'a> Parser<'a> {
             match tok.kind {
                 '{' => break,
                 '#' => {
-                    if let Some(Token { kind: '{', pos }) = self.toks.peek().cloned() {
+                    if let Some(Token { kind: '{', pos }) = self.toks.peek().copied() {
                         self.toks.next();
                         self.span_before = pos;
                         let interpolation = self.parse_interpolation()?;

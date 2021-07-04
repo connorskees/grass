@@ -461,73 +461,70 @@ impl Extender {
         //     ]
         let mut first = self.mode != ExtendMode::Replace;
 
-        let unified_paths: Vec<Option<Vec<ComplexSelector>>> = paths(options)
-            .into_iter()
-            .map(|path| {
-                let complexes: Vec<Vec<ComplexSelectorComponent>> = if first {
-                    // The first path is always the original selector. We can't just
-                    // return `compound` directly because pseudo selectors may be
-                    // modified, but we don't have to do any unification.
-                    first = false;
+        let unified_paths = paths(options).into_iter().map(|path| {
+            let complexes: Vec<Vec<ComplexSelectorComponent>> = if first {
+                // The first path is always the original selector. We can't just
+                // return `compound` directly because pseudo selectors may be
+                // modified, but we don't have to do any unification.
+                first = false;
 
-                    vec![vec![ComplexSelectorComponent::Compound(CompoundSelector {
-                        components: path
-                            .clone()
-                            .into_iter()
-                            .flat_map(|state| {
-                                debug_assert!(state.extender.components.len() == 1);
-                                match state.extender.components.last().cloned() {
-                                    Some(ComplexSelectorComponent::Compound(c)) => c.components,
-                                    Some(..) | None => unreachable!(),
-                                }
-                            })
-                            .collect(),
-                    })]]
-                } else {
-                    let mut to_unify: VecDeque<Vec<ComplexSelectorComponent>> = VecDeque::new();
-                    let mut originals: Vec<SimpleSelector> = Vec::new();
-
-                    for state in path.clone() {
-                        if state.is_original {
-                            originals.extend(match state.extender.components.last().cloned() {
+                vec![vec![ComplexSelectorComponent::Compound(CompoundSelector {
+                    components: path
+                        .clone()
+                        .into_iter()
+                        .flat_map(|state| {
+                            debug_assert!(state.extender.components.len() == 1);
+                            match state.extender.components.last().cloned() {
                                 Some(ComplexSelectorComponent::Compound(c)) => c.components,
                                 Some(..) | None => unreachable!(),
-                            });
-                        } else {
-                            to_unify.push_back(state.extender.components.clone());
-                        }
-                    }
-                    if !originals.is_empty() {
-                        to_unify.push_front(vec![ComplexSelectorComponent::Compound(
-                            CompoundSelector {
-                                components: originals,
-                            },
-                        )]);
-                    }
-
-                    unify_complex(Vec::from(to_unify))?
-                };
-
-                let mut line_break = false;
-
-                for state in path {
-                    state.assert_compatible_media_context(media_query_context);
-                    line_break = line_break || state.extender.line_break;
-                }
-
-                Some(
-                    complexes
-                        .into_iter()
-                        .map(|components| ComplexSelector {
-                            components,
-                            line_break,
+                            }
                         })
                         .collect(),
-                )
-            })
-            .collect();
+                })]]
+            } else {
+                let mut to_unify: VecDeque<Vec<ComplexSelectorComponent>> = VecDeque::new();
+                let mut originals: Vec<SimpleSelector> = Vec::new();
 
-        Some(unified_paths.into_iter().flatten().flatten().collect())
+                for state in path.clone() {
+                    if state.is_original {
+                        originals.extend(match state.extender.components.last().cloned() {
+                            Some(ComplexSelectorComponent::Compound(c)) => c.components,
+                            Some(..) | None => unreachable!(),
+                        });
+                    } else {
+                        to_unify.push_back(state.extender.components.clone());
+                    }
+                }
+                if !originals.is_empty() {
+                    to_unify.push_front(vec![ComplexSelectorComponent::Compound(
+                        CompoundSelector {
+                            components: originals,
+                        },
+                    )]);
+                }
+
+                unify_complex(Vec::from(to_unify))?
+            };
+
+            let mut line_break = false;
+
+            for state in path {
+                state.assert_compatible_media_context(media_query_context);
+                line_break = line_break || state.extender.line_break;
+            }
+
+            Some(
+                complexes
+                    .into_iter()
+                    .map(|components| ComplexSelector {
+                        components,
+                        line_break,
+                    })
+                    .collect::<Vec<ComplexSelector>>(),
+            )
+        });
+
+        Some(unified_paths.flatten().flatten().collect())
     }
 
     fn extend_simple(

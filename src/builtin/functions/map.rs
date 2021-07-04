@@ -25,7 +25,7 @@ pub(crate) fn map_get(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult
                 .into())
         }
     };
-    Ok(map.get(&key)?.unwrap_or(Value::Null))
+    Ok(map.get(&key).unwrap_or(Value::Null))
 }
 
 pub(crate) fn map_has_key(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
@@ -43,7 +43,7 @@ pub(crate) fn map_has_key(mut args: CallArgs, parser: &mut Parser<'_>) -> SassRe
                 .into())
         }
     };
-    Ok(Value::bool(map.get(&key)?.is_some()))
+    Ok(Value::bool(map.get(&key).is_some()))
 }
 
 pub(crate) fn map_keys(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {

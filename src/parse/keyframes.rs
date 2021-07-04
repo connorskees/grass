@@ -34,7 +34,7 @@ impl<'a, 'b> KeyframesSelectorParser<'a, 'b> {
     fn parse_keyframes_selector(&mut self) -> SassResult<Vec<KeyframesSelector>> {
         let mut selectors = Vec::new();
         self.parser.whitespace_or_comment();
-        while let Some(tok) = self.parser.toks.peek().cloned() {
+        while let Some(tok) = self.parser.toks.peek().copied() {
             match tok.kind {
                 't' | 'T' => {
                     let mut ident = self.parser.parse_identifier()?;
@@ -128,7 +128,7 @@ impl<'a> Parser<'a> {
             span = span.merge(tok.pos());
             match tok.kind {
                 '#' => {
-                    if let Some(Token { kind: '{', .. }) = self.toks.peek().cloned() {
+                    if let Some(Token { kind: '{', .. }) = self.toks.peek().copied() {
                         self.toks.next();
                         string.push_str(&self.parse_interpolation()?.to_css_string(span)?);
                     } else {
@@ -154,6 +154,8 @@ impl<'a> Parser<'a> {
                     string.push(' ');
                 }
                 '{' => {
+                    // we must collect here because the parser is not generic over iterator
+                    #[allow(clippy::needless_collect)]
                     let sel_toks: Vec<Token> =
                         string.chars().map(|x| Token::new(span, x)).collect();
 

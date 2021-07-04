@@ -59,7 +59,7 @@ impl<'a> Parser<'a> {
                     buf.push_str(&self.escape(false)?);
                 }
                 '#' => {
-                    if let Some(Token { kind: '{', .. }) = self.toks.peek_forward(1).cloned() {
+                    if let Some(Token { kind: '{', .. }) = self.toks.peek_forward(1).copied() {
                         self.toks.next();
                         self.toks.next();
                         // TODO: if ident, interpolate literally
@@ -136,7 +136,7 @@ impl<'a> Parser<'a> {
         let Token { kind, pos } = self
             .toks
             .peek()
-            .cloned()
+            .copied()
             .ok_or(("Expected identifier.", self.span_before))?;
         let mut text = String::new();
         if kind == '-' {

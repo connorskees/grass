@@ -13,7 +13,7 @@ pub(crate) fn peek_until_closing_curly_brace(
 ) -> SassResult<Vec<Token>> {
     let mut t = Vec::new();
     let mut nesting = 0;
-    while let Some(tok) = toks.peek().cloned() {
+    while let Some(tok) = toks.peek().copied() {
         match tok.kind {
             q @ '"' | q @ '\'' => {
                 t.push(tok);
@@ -59,7 +59,7 @@ fn peek_until_closing_quote(
     q: char,
 ) -> SassResult<Vec<Token>> {
     let mut t = Vec::new();
-    while let Some(tok) = toks.peek().cloned() {
+    while let Some(tok) = toks.peek().copied() {
         match tok.kind {
             '"' if q == '"' => {
                 t.push(tok);

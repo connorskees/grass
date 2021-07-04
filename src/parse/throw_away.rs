@@ -6,7 +6,7 @@ use super::Parser;
 
 impl<'a> Parser<'a> {
     pub(super) fn throw_away_until_newline(&mut self) {
-        while let Some(tok) = self.toks.next() {
+        for tok in &mut self.toks {
             if tok.kind == '\n' {
                 break;
             }

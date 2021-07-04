@@ -201,7 +201,7 @@ impl<'a> Parser<'a> {
     ) -> SassResult<Vec<Style>> {
         let mut styles = Vec::new();
         self.whitespace();
-        while let Some(tok) = self.toks.peek().cloned() {
+        while let Some(tok) = self.toks.peek().copied() {
             match tok.kind {
                 '{' => {
                     self.toks.next();

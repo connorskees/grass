@@ -2,7 +2,6 @@ use std::{slice::Iter, vec::IntoIter};
 
 use crate::{
     common::{Brackets, ListSeparator},
-    error::SassResult,
     value::Value,
 };
 
@@ -42,13 +41,14 @@ impl SassMap {
     /// save a clone of the value, since the only place this
     /// should be called is in a builtin function, which throws
     /// away the map immediately anyway
-    pub fn get(self, key: &Value) -> SassResult<Option<Value>> {
+    pub fn get(self, key: &Value) -> Option<Value> {
         for (k, v) in self.0 {
             if &k == key {
-                return Ok(Some(v));
+                return Some(v);
             }
         }
-        Ok(None)
+
+        None
     }
 
     pub fn get_mut(&mut self, key: &Value) -> Option<&mut Value> {

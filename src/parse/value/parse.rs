@@ -488,7 +488,7 @@ impl<'a> Parser<'a> {
                     Unit::from(u.node)
                 }
                 '-' => {
-                    if let Some(Token { kind, .. }) = self.toks.peek_next().cloned() {
+                    if let Some(Token { kind, .. }) = self.toks.peek_next().copied() {
                         self.toks.reset_cursor();
                         if matches!(kind, 'a'..='z' | 'A'..='Z' | '_' | '\\' | '\u{7f}'..=std::char::MAX)
                         {

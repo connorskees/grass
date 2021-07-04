@@ -206,7 +206,7 @@ fn main() -> std::io::Result<()> {
 
     buf_out.write_all(
         if let Some(name) = matches.value_of("INPUT") {
-            from_path(name, &options)
+            from_path(name, options)
         } else if matches.is_present("STDIN") {
             from_string(
                 {

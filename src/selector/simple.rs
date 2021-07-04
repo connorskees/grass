@@ -477,7 +477,7 @@ impl Pseudo {
     ///
     /// This assumes that `pseudo1`'s `selector` argument is not `None`.
     ///
-    /// If `parents is passed, it represents the parents of `compound`. This is
+    /// If `parents` is passed, it represents the parents of `compound`. This is
     /// relevant for pseudo selectors with selector arguments, where we may need to
     /// know if the parent selectors in the selector argument match `parents`.
     pub fn is_super_selector(

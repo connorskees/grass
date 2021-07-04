@@ -11,20 +11,24 @@ impl<'a> Parser<'a> {
     /// consume the identifier
     ///
     /// This method is case insensitive
-    pub fn scan_identifier(&mut self, ident: &'static str) -> SassResult<bool> {
+    pub fn scan_identifier(&mut self, ident: &'static str) -> bool {
         let mut peeked_identifier =
             match peek_ident_no_interpolation(self.toks, false, self.span_before) {
                 Ok(v) => v.node,
-                Err(..) => return Ok(false),
+                Err(..) => return false,
             };
+
         peeked_identifier.make_ascii_lowercase();
+
         if peeked_identifier == ident {
             self.toks.truncate_iterator_to_cursor();
             self.toks.next();
-            return Ok(true);
+            return true;
         }
+
         self.toks.reset_cursor();
-        Ok(false)
+
+        false
     }
 
     pub fn expression_until_comparison(&mut self) -> SassResult<Cow<'static, str>> {
@@ -94,7 +98,7 @@ impl<'a> Parser<'a> {
             return Ok(buf);
         }
 
-        let next_tok = self.toks.peek().cloned();
+        let next_tok = self.toks.peek().copied();
         let is_angle = next_tok.map_or(false, |t| t.kind == '<' || t.kind == '>');
         if is_angle || matches!(next_tok, Some(Token { kind: '=', .. })) {
             buf.push(' ');
@@ -140,7 +144,7 @@ impl<'a> Parser<'a> {
             } else {
                 buf.push_str(&ident);
 
-                if self.scan_identifier("and")? {
+                if self.scan_identifier("and") {
                     self.whitespace_or_comment();
                     buf.push_str(" and ");
                 } else {
@@ -153,7 +157,7 @@ impl<'a> Parser<'a> {
             self.whitespace_or_comment();
             buf.push_str(&self.parse_media_feature()?);
             self.whitespace_or_comment();
-            if !self.scan_identifier("and")? {
+            if !self.scan_identifier("and") {
                 break;
             }
             buf.push_str(" and ");

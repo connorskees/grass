@@ -232,7 +232,7 @@ impl<'a> Parser<'a> {
                     let pos = *pos;
                     self.toks.next();
 
-                    if let Some(Token { kind: '.', pos }) = self.toks.peek().cloned() {
+                    if let Some(Token { kind: '.', pos }) = self.toks.peek().copied() {
                         if !name.is_empty() {
                             return Err(("expected \")\".", pos).into());
                         }
