@@ -1880,6 +1880,23 @@ test!(
     }",
     ":has(a >) b, :has(a >) :has(a >) :has(a >) b, :has(a >) :has(a >) :has(a >) b {\n  color: red;\n}\n"
 );
+test!(
+    extend_after_target,
+    ".a .b {
+        c: d;
+      }
+      
+      .a.mod1, .a.mod2 {
+        @extend .a, .b;
+      }
+      .a.mod3, .a.mod4 {
+        @extend .a, .b;
+      }
+      .a.mod5, .a.mod6 {
+        @extend .a, .b;
+      }",
+    ".a .b, .a .a.mod5, .a .a.mod6, .a .a.mod3, .a .a.mod4, .a .a.mod1, .a .a.mod2 {\n  c: d;\n}\n"
+);
 error!(
     extend_optional_keyword_not_complete,
     "a {

@@ -239,7 +239,7 @@ impl Extender {
         };
 
         SelectorList {
-            components: self.trim(extended, |complex| self.originals.contains(complex)),
+            components: self.trim(extended, &|complex| self.originals.contains(complex)),
             span: self.span,
         }
     }
@@ -273,10 +273,12 @@ impl Extender {
 
         let complex_has_line_break = complex.line_break;
 
+        let is_original = self.originals.contains(&complex);
+
         for (i, component) in complex.components.iter().enumerate() {
             if let ComplexSelectorComponent::Compound(component) = component {
                 if let Some(extended) =
-                    self.extend_compound(component, extensions, media_query_context)
+                    self.extend_compound(component, extensions, media_query_context, is_original)
                 {
                     if extended_not_expanded.is_none() {
                         extended_not_expanded = Some(
@@ -361,13 +363,12 @@ impl Extender {
     ///
     /// The `in_original` parameter indicates whether this is in an original
     /// complex selector, meaning that `compound` should not be trimmed out.
-    // todo: `in_original` is actually obsolete and we should upstream its removal
-    // to dart-sass
     fn extend_compound(
         &mut self,
         compound: &CompoundSelector,
         extensions: Option<&HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>>>,
         media_query_context: &Option<Vec<CssMediaQuery>>,
+        in_original: bool,
     ) -> Option<Vec<ComplexSelector>> {
         // If there's more than one target and they all need to match, we track
         // which targets are actually extended.
@@ -524,7 +525,14 @@ impl Extender {
             )
         });
 
-        Some(unified_paths.flatten().flatten().collect())
+        let unified_paths: Vec<ComplexSelector> = unified_paths.flatten().flatten().collect();
+
+        Some(if in_original && self.mode != ExtendMode::Replace {
+            let original = unified_paths.first().cloned();
+            self.trim(unified_paths, &|complex| Some(complex) == original.as_ref())
+        } else {
+            self.trim(unified_paths, &|_| false)
+        })
     }
 
     fn extend_simple(
@@ -781,7 +789,7 @@ impl Extender {
     fn trim(
         &self,
         selectors: Vec<ComplexSelector>,
-        is_original: impl Fn(&ComplexSelector) -> bool,
+        is_original: &dyn Fn(&ComplexSelector) -> bool,
     ) -> Vec<ComplexSelector> {
         // Avoid truly horrific quadratic behavior.
         //
