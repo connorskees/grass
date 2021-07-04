@@ -7,6 +7,7 @@ use rand::Rng;
 
 use crate::{
     args::CallArgs,
+    common::Op,
     error::SassResult,
     parse::{HigherIntermediateValue, Parser, ValueVisitor},
     unit::Unit,
@@ -268,6 +269,22 @@ pub(crate) fn max(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
         }
     }
     Ok(Value::Dimension(Some(max.0), max.1, true))
+}
+
+pub(crate) fn divide(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+    args.max_args(2)?;
+
+    let number1 = args.get_err(0, "number1")?;
+    let number2 = args.get_err(1, "number2")?;
+
+    ValueVisitor::new(parser, args.span()).eval(
+        HigherIntermediateValue::BinaryOp(
+            Box::new(HigherIntermediateValue::Literal(number1)),
+            Op::Div,
+            Box::new(HigherIntermediateValue::Literal(number2)),
+        ),
+        true,
+    )
 }
 
 pub(crate) fn declare(f: &mut GlobalFunctionMap) {

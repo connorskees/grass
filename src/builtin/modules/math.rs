@@ -5,7 +5,7 @@ use num_traits::{One, Signed, Zero};
 use crate::{
     args::CallArgs,
     builtin::{
-        math::{abs, ceil, comparable, floor, max, min, percentage, round},
+        math::{abs, ceil, comparable, divide, floor, max, min, percentage, round},
         meta::{unit, unitless},
         modules::Module,
     },
@@ -607,6 +607,7 @@ pub(crate) fn declare(f: &mut Module) {
     f.insert_builtin("log", log);
     f.insert_builtin("pow", pow);
     f.insert_builtin("hypot", hypot);
+    f.insert_builtin("div", divide);
     f.insert_builtin("atan2", atan2);
     #[cfg(feature = "random")]
     f.insert_builtin("random", random);

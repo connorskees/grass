@@ -588,3 +588,13 @@ test!(
     "@use 'sass:math';\na {\n  color: math.atan2(math.acos(2), 3deg);\n}\n",
     "a {\n  color: NaNdeg;\n}\n"
 );
+test!(
+    div_two_integers,
+    "@use 'sass:math';\na {\n  color: math.div(1, 2);\n}\n",
+    "a {\n  color: 0.5;\n}\n"
+);
+test!(
+    div_two_strings,
+    "@use 'sass:math';\na {\n  color: math.div(\"1\",\"2\");\n}\n",
+    "a {\n  color: \"1\"/\"2\";\n}\n"
+);
