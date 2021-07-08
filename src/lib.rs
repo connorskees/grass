@@ -136,7 +136,7 @@ mod utils;
 mod value;
 
 #[non_exhaustive]
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum OutputStyle {
     /// The default style, this mode writes each
     /// selector and declaration on its own line.
@@ -313,7 +313,7 @@ pub fn from_path(p: &str, options: &Options) -> Result<String> {
 
     Css::from_stmts(stmts, false, options.allows_charset)
         .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages))?
-        .pretty_print(&map)
+        .pretty_print(&map, options.style)
         .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages))
 }
 
@@ -359,7 +359,7 @@ pub fn from_string(p: String, options: &Options) -> Result<String> {
 
     Css::from_stmts(stmts, false, options.allows_charset)
         .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages))?
-        .pretty_print(&map)
+        .pretty_print(&map, options.style)
         .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages))
 }
 
@@ -396,6 +396,6 @@ pub fn from_string(p: String) -> std::result::Result<String, JsValue> {
 
     Ok(Css::from_stmts(stmts, false, true)
         .map_err(|e| raw_to_parse_error(&map, *e, true).to_string())?
-        .pretty_print(&map)
+        .pretty_print(&map, options.style)
         .map_err(|e| raw_to_parse_error(&map, *e, true).to_string())?)
 }
