@@ -248,7 +248,7 @@ impl Css {
         let out = unsafe { String::from_utf8_unchecked(buf) };
         Ok(if show_charset {
             match style {
-                OutputStyle::Compressed => format!("@charset \"UTF-8\";{}", out),
+                OutputStyle::Compressed => format!("\u{FEFF}{}", out),
                 OutputStyle::Expanded => format!("@charset \"UTF-8\";\n{}", out),
             }
         } else {
@@ -311,9 +311,7 @@ impl Formatter for CompressedFormatter {
                     self.write_block_entry(buf, &styles)?;
                     write!(buf, "}}")?;
                 }
-                Toplevel::MultilineComment(s) => {
-                    write!(buf, "/*{}*/", s)?;
-                }
+                Toplevel::MultilineComment(..) => continue,
                 Toplevel::Import(s) => {
                     write!(buf, "@import {};", s)?;
                 }
@@ -411,22 +409,26 @@ impl CompressedFormatter {
 
     fn write_block_entry(&self, buf: &mut Vec<u8>, styles: &[BlockEntry]) -> SassResult<()> {
         let mut styles = styles.iter();
-        if let Some(style) = styles.next() {
+
+        while let Some(style) = styles.next() {
             match style {
                 BlockEntry::Style(s) => {
                     let value = s.value.node.to_css_string(s.value.span)?;
                     write!(buf, "{}:{}", s.property, value)?;
+                    break;
                 }
-                BlockEntry::MultilineComment(s) => write!(buf, "/*{}*/", s)?,
+                BlockEntry::MultilineComment(..) => continue,
             }
         }
+
         for style in styles {
             match style {
                 BlockEntry::Style(s) => {
                     let value = s.value.node.to_css_string(s.value.span)?;
+
                     write!(buf, ";{}:{}", s.property, value)?;
                 }
-                BlockEntry::MultilineComment(s) => write!(buf, "/*{}*/", s)?,
+                BlockEntry::MultilineComment(..) => continue,
             }
         }
         Ok(())
