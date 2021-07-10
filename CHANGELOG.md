@@ -1,58 +1,69 @@
+# 0.10.5
+
+- support compressed output
+- support new builtin functions `math.div`, `map.set`
+- support the HWB colorspace and builtin functions `color.hwb`, `color.blackness`, `color.whiteness`
+- `:is` pseudo selector is now considered an alias of `:matches` in `@extend`
+- support `$keys...` argument in `map.merge`
+- `%` now implements the modulo operation, rather than finding the remainder. this mainly affects negative numbers
+- fix parsing bug in which `/***/` in a selector would miss the closing `/`
+
 # 0.10.4
 
- - plain css `invert(..)` accepts numbers with any unit
- - plain css imports (e.g. `@import url(foo)` or `@import "foo.css"`) are now emitted at the top of documents
+- plain css `invert(..)` accepts numbers with any unit
+- plain css imports (e.g. `@import url(foo)` or `@import "foo.css"`) are now emitted at the top of documents
 
 # 0.10.3
 
- - hyphen followed by interpolation is not treated as subtraction, e.g. `10-#{10}` => `10 -10` rather than `0`
- - function arguments do not affect variables in outer scopes (fixes [#37](https://github.com/connorskees/grass/issues/37))
- - improve error messages for NaN with units passed to builtin functions
+- hyphen followed by interpolation is not treated as subtraction, e.g. `10-#{10}` => `10 -10` rather than `0`
+- function arguments do not affect variables in outer scopes (fixes [#37](https://github.com/connorskees/grass/issues/37))
+- improve error messages for NaN with units passed to builtin functions
 
 # 0.10.2
 
- - use `std::fs::OpenOptions` to open files ([#35](https://github.com/connorskees/grass/pull/35) by [@MidasLamb](https://github.com/MidasLamb))
+- use `std::fs::OpenOptions` to open files ([#35](https://github.com/connorskees/grass/pull/35) by [@MidasLamb](https://github.com/MidasLamb))
 
 # 0.10.1
 
- - **implement `@use` and the module system**
- - support the filter syntax for function arguments, e.g. `alpha(opacity=1)`
- - disallow certain at-rules in functions, resolving several panics
- - allow vendor-prefixed special CSS functions, e.g. `-webkit-calc(...)`
- - allow decimal percent selectors inside `@keyframes`
- - allow vendor-prefixed `@keyframes`
- - resolve parsing bug for maps involving silent comments
- - allow escaped `!` in selectors
- - allow multiline comments in functions
- - resolve several panics on malformed input when parsing bracketed lists
- - support NaN in all contexts
- - add support for unicode ranges
- - recognize plain CSS imports beginning with `//`, e.g. `@import "//fonts.googleapis.com/css?family=Droid+Sans";`
- - resolve integer overflows in `@for` when bounds were equal to `isize::MIN` and `isize::MAX`
- - allow quoted strings in default function arguments
+- **implement `@use` and the module system**
+- support the filter syntax for function arguments, e.g. `alpha(opacity=1)`
+- disallow certain at-rules in functions, resolving several panics
+- allow vendor-prefixed special CSS functions, e.g. `-webkit-calc(...)`
+- allow decimal percent selectors inside `@keyframes`
+- allow vendor-prefixed `@keyframes`
+- resolve parsing bug for maps involving silent comments
+- allow escaped `!` in selectors
+- allow multiline comments in functions
+- resolve several panics on malformed input when parsing bracketed lists
+- support NaN in all contexts
+- add support for unicode ranges
+- recognize plain CSS imports beginning with `//`, e.g. `@import "//fonts.googleapis.com/css?family=Droid+Sans";`
+- resolve integer overflows in `@for` when bounds were equal to `isize::MIN` and `isize::MAX`
+- allow quoted strings in default function arguments
 
 # 0.10.0
 
- - bugfixes for `@media` query regressions
- - bugfixes for maps, arglists, and `@each`
- - implement string interning for identifiers and style properties
- - implement spec-compliant variable scoping
- - emit `@import` when importing `url(...)` or `*.css`
- - resolve all panics for malformed `@import`
- - various optimizations that now allow us to compile bootstrap 10% faster than `libsass`
- - errors inside builtin functions use `inspect` to print values
- - bugfixes for color and map equality (e.g. `red` == `#ff0000`)
- - hide unimplemented command line flags
- - implement CLI options for `--quiet`, `--load-path` ([#22](https://github.com/connorskees/grass/pull/22) by @JosephLing), `--no-charset`, `--stdin`, and `--no-unicode`
- - use unicode characters in error messages by default
- - allow comma separated `@import` statements ([#23](https://github.com/connorskees/grass/pull/23) by @JosephLing)
- - implement and correctly parse `!optional` in `@extend`
- - lazily evaluate `!default` variable values
- - disallow interpolation in mixin and function names
- - improve parsing for `@supports` and unknown at-rules
+- bugfixes for `@media` query regressions
+- bugfixes for maps, arglists, and `@each`
+- implement string interning for identifiers and style properties
+- implement spec-compliant variable scoping
+- emit `@import` when importing `url(...)` or `*.css`
+- resolve all panics for malformed `@import`
+- various optimizations that now allow us to compile bootstrap 10% faster than `libsass`
+- errors inside builtin functions use `inspect` to print values
+- bugfixes for color and map equality (e.g. `red` == `#ff0000`)
+- hide unimplemented command line flags
+- implement CLI options for `--quiet`, `--load-path` ([#22](https://github.com/connorskees/grass/pull/22) by @JosephLing), `--no-charset`, `--stdin`, and `--no-unicode`
+- use unicode characters in error messages by default
+- allow comma separated `@import` statements ([#23](https://github.com/connorskees/grass/pull/23) by @JosephLing)
+- implement and correctly parse `!optional` in `@extend`
+- lazily evaluate `!default` variable values
+- disallow interpolation in mixin and function names
+- improve parsing for `@supports` and unknown at-rules
 
 ## Breaking
- - functions now take an `Options` struct
+
+- functions now take an `Options` struct
 
 # 0.9.5
 

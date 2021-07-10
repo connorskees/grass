@@ -26,7 +26,6 @@ The large features remaining are
 indented syntax
 css imports
 @forward
-compressed output
 ```
 
 This is in addition to dozens of smaller features, edge cases, and miscompilations.
@@ -74,6 +73,7 @@ cd grass
 cargo b --release
 ./sass-spec/sass-spec.rb -c './target/release/grass'
 ```
+
 Note: you will have to install [ruby](https://www.ruby-lang.org/en/downloads/),
 [bundler](https://bundler.io/) and run `bundle install` in `./sass-spec/`.
 This might also require you to install the requirements separately
@@ -129,7 +129,6 @@ PASSING: 1442
 FAILING: 3651
 TOTAL: 5093
 ```
-
 
 ```
 2020-02-03
