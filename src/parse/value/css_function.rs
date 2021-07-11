@@ -202,7 +202,7 @@ impl<'a> Parser<'a> {
                 }
                 'm' | 'M' => {
                     self.toks.advance_cursor();
-                    match self.toks.peek() {
+                    let inner_fn_name = match self.toks.peek() {
                         Some(Token { kind: 'i', .. }) | Some(Token { kind: 'I', .. }) => {
                             self.toks.advance_cursor();
                             if !matches!(
@@ -211,7 +211,8 @@ impl<'a> Parser<'a> {
                             ) {
                                 return Ok(None);
                             }
-                            buf.push_str("min(");
+
+                            "min"
                         }
                         Some(Token { kind: 'a', .. }) | Some(Token { kind: 'A', .. }) => {
                             self.toks.advance_cursor();
@@ -221,10 +222,11 @@ impl<'a> Parser<'a> {
                             ) {
                                 return Ok(None);
                             }
-                            buf.push_str("max(");
+
+                            "max"
                         }
                         _ => return Ok(None),
-                    }
+                    };
 
                     self.toks.advance_cursor();
 
@@ -232,7 +234,9 @@ impl<'a> Parser<'a> {
                         return Ok(None);
                     }
 
-                    if let Some(val) = self.try_parse_min_max(fn_name, false)? {
+                    self.toks.advance_cursor();
+
+                    if let Some(val) = self.try_parse_min_max(inner_fn_name, true)? {
                         buf.push_str(&val);
                     } else {
                         return Ok(None);

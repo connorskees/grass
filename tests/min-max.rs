@@ -105,3 +105,28 @@ error!(
     "$a: 1px;\n$b: 2%;\na {\n  color: max($a, $b);\n}\n", "Error: Incompatible units px and %."
 );
 // todo: special functions, min(calc(1), $b);
+test!(
+    min_containing_max,
+    "a {\n  color: min(1, max(2));\n}\n",
+    "a {\n  color: min(1, max(2));\n}\n"
+);
+test!(
+    max_containing_min,
+    "a {\n  color: max(1, min(2));\n}\n",
+    "a {\n  color: max(1, min(2));\n}\n"
+);
+test!(
+    min_containing_max_as_only_arg,
+    "a {\n  color: min(max(1px, 2px));\n}\n",
+    "a {\n  color: min(max(1px, 2px));\n}\n"
+);
+test!(
+    max_containing_min_as_only_arg,
+    "a {\n  color: max(min(1px, 2px));\n}\n",
+    "a {\n  color: max(min(1px, 2px));\n}\n"
+);
+test!(
+    extremely_nested_min_and_max,
+    "a {\n  color: min(max(min(max(min(min(1), max(2))))), min(max(min(3))));\n}\n",
+    "a {\n  color: min(max(min(max(min(min(1), max(2))))), min(max(min(3))));\n}\n"
+);
