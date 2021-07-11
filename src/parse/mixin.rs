@@ -2,12 +2,11 @@ use std::mem;
 
 use codemap::Spanned;
 
-use peekmore::PeekMore;
-
 use crate::{
     args::{CallArgs, FuncArgs},
     atrule::mixin::{Content, Mixin, UserDefinedMixin},
     error::SassResult,
+    lexer::Lexer,
     scope::Scopes,
     utils::read_until_closing_curly_brace,
     Token,
@@ -124,7 +123,7 @@ impl<'a> Parser<'a> {
 
             let mut toks = read_until_closing_curly_brace(self.toks)?;
             if let Some(tok) = self.toks.peek() {
-                toks.push(*tok);
+                toks.push(tok);
                 self.toks.next();
             }
             Some(toks)
@@ -167,7 +166,7 @@ impl<'a> Parser<'a> {
         });
 
         let body = Parser {
-            toks: &mut body.into_iter().peekmore(),
+            toks: &mut Lexer::new(body),
             map: self.map,
             path: self.path,
             scopes: self.scopes,
@@ -234,7 +233,7 @@ impl<'a> Parser<'a> {
 
             let stmts = if let Some(body) = content.content.clone() {
                 Parser {
-                    toks: &mut body.into_iter().peekmore(),
+                    toks: &mut Lexer::new(body),
                     map: self.map,
                     path: self.path,
                     scopes: &mut scope_at_decl,

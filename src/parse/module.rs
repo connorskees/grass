@@ -1,7 +1,6 @@
 use std::{convert::TryFrom, fs};
 
 use codemap::Spanned;
-use peekmore::PeekMore;
 
 use crate::{
     atrule::AtRuleKind,
@@ -116,10 +115,7 @@ impl<'a> Parser<'a> {
                         .add_file(name.to_owned(), String::from_utf8(fs::read(&import)?)?);
 
                     let stmts = Parser {
-                        toks: &mut Lexer::new(&file)
-                            .collect::<Vec<Token>>()
-                            .into_iter()
-                            .peekmore(),
+                        toks: &mut Lexer::new_from_file(&file),
                         map: self.map,
                         path: &import,
                         scopes: self.scopes,

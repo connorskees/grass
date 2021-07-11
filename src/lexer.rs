@@ -7,20 +7,87 @@ use crate::Token;
 const FORM_FEED: char = '\x0C';
 
 #[derive(Debug, Clone)]
-pub(crate) struct Lexer<'a> {
-    buf: Peekable<Chars<'a>>,
-    pos: usize,
-    file: &'a Arc<File>,
+pub(crate) struct Lexer {
+    buf: Vec<Token>,
+    cursor: usize,
+    amt_peeked: usize,
 }
 
-impl<'a> Iterator for Lexer<'a> {
+impl Lexer {
+    fn peek_cursor(&self) -> usize {
+        self.cursor + self.amt_peeked
+    }
+
+    pub fn peek(&self) -> Option<Token> {
+        self.buf.get(self.peek_cursor()).copied()
+    }
+
+    pub fn reset_cursor(&mut self) {
+        self.amt_peeked = 0;
+    }
+
+    pub fn advance_cursor(&mut self) {
+        self.amt_peeked += 1;
+    }
+
+    pub fn move_cursor_back(&mut self) {
+        self.amt_peeked = self.amt_peeked.saturating_sub(1);
+    }
+
+    pub fn peek_next(&mut self) -> Option<Token> {
+        self.amt_peeked += 1;
+
+        self.peek()
+    }
+
+    pub fn peek_previous(&mut self) -> Option<Token> {
+        self.buf.get(self.peek_cursor() - 1).copied()
+    }
+
+    pub fn peek_forward(&mut self, n: usize) -> Option<Token> {
+        self.amt_peeked += n;
+
+        self.peek()
+    }
+
+    pub fn peek_backward(&mut self, n: usize) -> Option<Token> {
+        self.amt_peeked = self.amt_peeked.checked_sub(n)?;
+
+        self.peek()
+    }
+
+    pub fn truncate_iterator_to_cursor(&mut self) {
+        self.cursor += self.amt_peeked;
+        self.amt_peeked = 0;
+    }
+}
+
+impl Iterator for Lexer {
+    type Item = Token;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.buf.get(self.cursor).copied().map(|tok| {
+            self.cursor += 1;
+            self.amt_peeked = self.amt_peeked.saturating_sub(1);
+            tok
+        })
+    }
+}
+
+struct TokenLexer<'a> {
+    buf: Peekable<Chars<'a>>,
+    cursor: usize,
+    file: Arc<File>,
+}
+
+impl<'a> Iterator for TokenLexer<'a> {
     type Item = Token;
     fn next(&mut self) -> Option<Self::Item> {
         let kind = match self.buf.next()? {
             FORM_FEED => '\n',
             '\r' => {
                 if self.buf.peek() == Some(&'\n') {
-                    self.pos += 1;
+                    self.cursor += 1;
                     self.buf.next();
                 }
                 '\n'
@@ -31,18 +98,29 @@ impl<'a> Iterator for Lexer<'a> {
         let pos = self
             .file
             .span
-            .subspan(self.pos as u64, (self.pos + len) as u64);
-        self.pos += len;
+            .subspan(self.cursor as u64, (self.cursor + len) as u64);
+        self.cursor += len;
         Some(Token { pos, kind })
     }
 }
 
-impl<'a> Lexer<'a> {
-    pub fn new(file: &'a Arc<File>) -> Lexer<'a> {
-        Lexer {
+impl Lexer {
+    pub fn new_from_file(file: &Arc<File>) -> Self {
+        let buf = TokenLexer {
+            file: Arc::clone(file),
             buf: file.source().chars().peekable(),
-            pos: 0,
-            file,
+            cursor: 0,
+        }
+        .collect();
+
+        Self::new(buf)
+    }
+
+    pub fn new(buf: Vec<Token>) -> Lexer {
+        Lexer {
+            buf,
+            cursor: 0,
+            amt_peeked: 0,
         }
     }
 }

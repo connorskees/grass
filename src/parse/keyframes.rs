@@ -1,10 +1,9 @@
 use std::fmt;
 
-use peekmore::PeekMore;
-
 use crate::{
     atrule::keyframes::{Keyframes, KeyframesSelector},
     error::SassResult,
+    lexer::Lexer,
     parse::Stmt,
     utils::eat_whole_number,
     Token,
@@ -34,7 +33,7 @@ impl<'a, 'b> KeyframesSelectorParser<'a, 'b> {
     fn parse_keyframes_selector(&mut self) -> SassResult<Vec<KeyframesSelector>> {
         let mut selectors = Vec::new();
         self.parser.whitespace_or_comment();
-        while let Some(tok) = self.parser.toks.peek().copied() {
+        while let Some(tok) = self.parser.toks.peek() {
             match tok.kind {
                 't' | 'T' => {
                     let mut ident = self.parser.parse_identifier()?;
@@ -128,7 +127,7 @@ impl<'a> Parser<'a> {
             span = span.merge(tok.pos());
             match tok.kind {
                 '#' => {
-                    if let Some(Token { kind: '{', .. }) = self.toks.peek().copied() {
+                    if let Some(Token { kind: '{', .. }) = self.toks.peek() {
                         self.toks.next();
                         string.push_str(&self.parse_interpolation()?.to_css_string(span)?);
                     } else {
@@ -154,13 +153,11 @@ impl<'a> Parser<'a> {
                     string.push(' ');
                 }
                 '{' => {
-                    // we must collect here because the parser is not generic over iterator
-                    #[allow(clippy::needless_collect)]
                     let sel_toks: Vec<Token> =
                         string.chars().map(|x| Token::new(span, x)).collect();
 
                     let selector = KeyframesSelectorParser::new(&mut Parser {
-                        toks: &mut sel_toks.into_iter().peekmore(),
+                        toks: &mut Lexer::new(sel_toks),
                         map: self.map,
                         path: self.path,
                         scopes: self.scopes,

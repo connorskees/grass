@@ -21,7 +21,7 @@ impl<'a> Parser<'a> {
     pub(super) fn parse_func_args(&mut self) -> SassResult<FuncArgs> {
         let mut args: Vec<FuncArg> = Vec::new();
         let mut close_paren_span: Span = match self.toks.peek() {
-            Some(Token { pos, .. }) => *pos,
+            Some(Token { pos, .. }) => pos,
             None => return Err(("expected \")\".", self.span_before).into()),
         };
 
@@ -164,7 +164,7 @@ impl<'a> Parser<'a> {
             }
 
             if let Some(Token { kind: '$', pos }) = self.toks.peek() {
-                span = span.merge(*pos);
+                span = span.merge(pos);
                 self.toks.advance_cursor();
 
                 let v = peek_ident_no_interpolation(self.toks, false, self.span_before)?;
@@ -229,10 +229,9 @@ impl<'a> Parser<'a> {
                     continue;
                 }
                 Some(Token { kind: '.', pos }) => {
-                    let pos = *pos;
                     self.toks.next();
 
-                    if let Some(Token { kind: '.', pos }) = self.toks.peek().copied() {
+                    if let Some(Token { kind: '.', pos }) = self.toks.peek() {
                         if !name.is_empty() {
                             return Err(("expected \")\".", pos).into());
                         }
@@ -324,7 +323,7 @@ impl<'a> Parser<'a> {
                             return Ok(CallArgs(args, span));
                         }
                         Some(Token { kind: ',', pos }) => {
-                            span = span.merge(*pos);
+                            span = span.merge(pos);
                             self.toks.next();
                             self.whitespace_or_comment();
                             continue;
@@ -341,14 +340,14 @@ impl<'a> Parser<'a> {
                             self.expect_char('.')?;
                         }
                         Some(Token { pos, .. }) => {
-                            return Err(("expected \")\".", *pos).into());
+                            return Err(("expected \")\".", pos).into());
                         }
                         None => return Err(("expected \")\".", span).into()),
                     }
                 }
                 Some(Token { pos, .. }) => {
                     value?;
-                    return Err(("expected \")\".", *pos).into());
+                    return Err(("expected \")\".", pos).into());
                 }
                 None => return Err(("expected \")\".", span).into()),
             }

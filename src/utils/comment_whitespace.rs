@@ -1,8 +1,4 @@
-use std::vec::IntoIter;
-
-use peekmore::PeekMoreIterator;
-
-use crate::Token;
+use crate::{lexer::Lexer, Token};
 
 use super::peek_until_newline;
 
@@ -16,9 +12,7 @@ impl IsWhitespace for char {
     }
 }
 
-pub(crate) fn devour_whitespace<I: Iterator<Item = W>, W: IsWhitespace>(
-    s: &mut PeekMoreIterator<I>,
-) -> bool {
+pub(crate) fn devour_whitespace(s: &mut Lexer) -> bool {
     let mut found_whitespace = false;
     while let Some(w) = s.peek() {
         if !w.is_whitespace() {
@@ -30,7 +24,7 @@ pub(crate) fn devour_whitespace<I: Iterator<Item = W>, W: IsWhitespace>(
     found_whitespace
 }
 
-pub(crate) fn peek_whitespace(s: &mut PeekMoreIterator<IntoIter<Token>>) -> bool {
+pub(crate) fn peek_whitespace(s: &mut Lexer) -> bool {
     let mut found_whitespace = false;
     while let Some(w) = s.peek() {
         if !w.is_whitespace() {
@@ -42,7 +36,7 @@ pub(crate) fn peek_whitespace(s: &mut PeekMoreIterator<IntoIter<Token>>) -> bool
     found_whitespace
 }
 
-pub(crate) fn peek_whitespace_or_comment(s: &mut PeekMoreIterator<IntoIter<Token>>) -> bool {
+pub(crate) fn peek_whitespace_or_comment(s: &mut Lexer) -> bool {
     let mut found_whitespace = false;
     while let Some(w) = s.peek() {
         match w.kind {
@@ -83,7 +77,7 @@ pub(crate) fn peek_whitespace_or_comment(s: &mut PeekMoreIterator<IntoIter<Token
 /// We only have to check for \n as the lexing step normalizes all newline characters
 ///
 /// The newline is consumed
-pub(crate) fn read_until_newline<I: Iterator<Item = Token>>(toks: &mut PeekMoreIterator<I>) {
+pub(crate) fn read_until_newline(toks: &mut Lexer) {
     for tok in toks {
         if tok.kind == '\n' {
             return;

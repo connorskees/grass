@@ -27,7 +27,7 @@ impl<'a> Parser<'a> {
                 }
                 '#' => {
                     if let Some(Token { kind: '{', pos }) = self.toks.peek() {
-                        self.span_before = *pos;
+                        self.span_before = pos;
                         self.toks.next();
                         let interpolation = self.parse_interpolation()?;
                         buf.push_str(&interpolation.node.to_css_string(interpolation.span)?);
@@ -315,7 +315,7 @@ impl<'a> Parser<'a> {
             }
             buf.push_str(&num);
         } else {
-            self.toks.move_cursor_back().unwrap();
+            self.toks.move_cursor_back();
         }
 
         let next = match self.toks.peek() {
@@ -365,7 +365,7 @@ impl<'a> Parser<'a> {
     fn peek_escape(&mut self) -> SassResult<String> {
         let mut value = 0;
         let first = match self.toks.peek() {
-            Some(t) => *t,
+            Some(t) => t,
             None => return Ok(String::new()),
         };
         let mut span = first.pos;

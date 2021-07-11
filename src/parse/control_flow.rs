@@ -1,10 +1,10 @@
 use codemap::Spanned;
 use num_traits::cast::ToPrimitive;
-use peekmore::PeekMore;
 
 use crate::{
     common::Identifier,
     error::SassResult,
+    lexer::Lexer,
     parse::{ContextFlags, Parser, Stmt},
     unit::Unit,
     utils::{
@@ -60,7 +60,7 @@ impl<'a> Parser<'a> {
 
         loop {
             self.whitespace_or_comment();
-            if let Some(Token { kind: '@', pos }) = self.toks.peek().copied() {
+            if let Some(Token { kind: '@', pos }) = self.toks.peek() {
                 self.toks.peek_forward(1);
                 let ident = peek_ident_no_interpolation(self.toks, false, pos)?;
                 if ident.as_str() != "else" {
@@ -72,7 +72,7 @@ impl<'a> Parser<'a> {
                 break;
             }
             self.whitespace_or_comment();
-            if let Some(tok) = self.toks.peek().copied() {
+            if let Some(tok) = self.toks.peek() {
                 match tok.kind {
                     'i' if matches!(
                         self.toks.peek_forward(1),
@@ -182,7 +182,7 @@ impl<'a> Parser<'a> {
             Some(Token { kind: 't', pos })
             | Some(Token { kind: 'T', pos })
             | Some(Token { kind: '\\', pos }) => {
-                let span = *pos;
+                let span = pos;
                 let mut ident = match peek_ident_no_interpolation(toks, false, span) {
                     Ok(s) => s,
                     Err(..) => return false,
@@ -266,7 +266,7 @@ impl<'a> Parser<'a> {
             );
             if self.flags.in_function() {
                 let these_stmts = Parser {
-                    toks: &mut body.clone().into_iter().peekmore(),
+                    toks: &mut Lexer::new(body.clone()),
                     map: self.map,
                     path: self.path,
                     scopes: self.scopes,
@@ -290,7 +290,7 @@ impl<'a> Parser<'a> {
             } else {
                 stmts.append(
                     &mut Parser {
-                        toks: &mut body.clone().into_iter().peekmore(),
+                        toks: &mut Lexer::new(body.clone()),
                         map: self.map,
                         path: self.path,
                         scopes: self.scopes,
@@ -343,7 +343,7 @@ impl<'a> Parser<'a> {
         while val.node.is_true() {
             if self.flags.in_function() {
                 let these_stmts = Parser {
-                    toks: &mut body.clone().into_iter().peekmore(),
+                    toks: &mut Lexer::new(body.clone()),
                     map: self.map,
                     path: self.path,
                     scopes: self.scopes,
@@ -367,7 +367,7 @@ impl<'a> Parser<'a> {
             } else {
                 stmts.append(
                     &mut Parser {
-                        toks: &mut body.clone().into_iter().peekmore(),
+                        toks: &mut Lexer::new(body.clone()),
                         map: self.map,
                         path: self.path,
                         scopes: self.scopes,
@@ -455,7 +455,7 @@ impl<'a> Parser<'a> {
 
             if self.flags.in_function() {
                 let these_stmts = Parser {
-                    toks: &mut body.clone().into_iter().peekmore(),
+                    toks: &mut Lexer::new(body.clone()),
                     map: self.map,
                     path: self.path,
                     scopes: self.scopes,
@@ -479,7 +479,7 @@ impl<'a> Parser<'a> {
             } else {
                 stmts.append(
                     &mut Parser {
-                        toks: &mut body.clone().into_iter().peekmore(),
+                        toks: &mut Lexer::new(body.clone()),
                         map: self.map,
                         path: self.path,
                         scopes: self.scopes,

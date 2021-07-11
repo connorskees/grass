@@ -1,7 +1,6 @@
-use std::{convert::TryFrom, path::Path, vec::IntoIter};
+use std::{convert::TryFrom, path::Path};
 
 use codemap::{CodeMap, Span, Spanned};
-use peekmore::{PeekMore, PeekMoreIterator};
 
 use crate::{
     atrule::{
@@ -12,6 +11,7 @@ use crate::{
     },
     builtin::modules::{ModuleConfig, Modules},
     error::SassResult,
+    lexer::Lexer,
     scope::{Scope, Scopes},
     selector::{
         ComplexSelectorComponent, ExtendRule, ExtendedSelector, Extender, Selector, SelectorParser,
@@ -68,7 +68,7 @@ pub(crate) enum Stmt {
 /// hit (if there is one) is not important for now.
 // todo: merge at_root and at_root_has_selector into an enum
 pub(crate) struct Parser<'a> {
-    pub toks: &'a mut PeekMoreIterator<IntoIter<Token>>,
+    pub toks: &'a mut Lexer,
     pub map: &'a mut CodeMap,
     pub path: &'a Path,
     pub global_scope: &'a mut Scope,
@@ -114,19 +114,19 @@ impl<'a> Parser<'a> {
 
     pub fn expect_char(&mut self, c: char) -> SassResult<()> {
         match self.toks.peek() {
-            Some(Token { kind, pos }) if *kind == c => {
-                self.span_before = *pos;
+            Some(Token { kind, pos }) if kind == c => {
+                self.span_before = pos;
                 self.toks.next();
                 Ok(())
             }
-            Some(Token { pos, .. }) => Err((format!("expected \"{}\".", c), *pos).into()),
+            Some(Token { pos, .. }) => Err((format!("expected \"{}\".", c), pos).into()),
             None => Err((format!("expected \"{}\".", c), self.span_before).into()),
         }
     }
 
     pub fn consume_char_if_exists(&mut self, c: char) -> bool {
         if let Some(Token { kind, .. }) = self.toks.peek() {
-            if *kind == c {
+            if kind == c {
                 self.toks.next();
                 return true;
             }
@@ -150,7 +150,7 @@ impl<'a> Parser<'a> {
             if self.flags.in_function() && !stmts.is_empty() {
                 return Ok(stmts);
             }
-            self.span_before = *pos;
+            self.span_before = pos;
             match kind {
                 '@' => {
                     self.toks.next();
@@ -207,7 +207,7 @@ impl<'a> Parser<'a> {
                             } = self.parse_value(false, &|_| false)?;
                             span.merge(kind_string.span);
                             if let Some(Token { kind: ';', pos }) = self.toks.peek() {
-                                kind_string.span.merge(*pos);
+                                kind_string.span.merge(pos);
                                 self.toks.next();
                             }
                             self.warn(&Spanned {
@@ -222,7 +222,7 @@ impl<'a> Parser<'a> {
                             } = self.parse_value(false, &|_| false)?;
                             span.merge(kind_string.span);
                             if let Some(Token { kind: ';', pos }) = self.toks.peek() {
-                                kind_string.span.merge(*pos);
+                                kind_string.span.merge(pos);
                                 self.toks.next();
                             }
                             self.debug(&Spanned {
@@ -287,14 +287,14 @@ impl<'a> Parser<'a> {
                     }
                 }
                 '\u{0}'..='\u{8}' | '\u{b}'..='\u{1f}' => {
-                    return Err(("expected selector.", *pos).into())
+                    return Err(("expected selector.", pos).into())
                 }
                 '}' => {
                     self.toks.next();
                     break;
                 }
                 // dart-sass seems to special-case the error message here?
-                '!' | '{' => return Err(("expected \"}\".", *pos).into()),
+                '!' | '{' => return Err(("expected \"}\".", pos).into()),
                 _ => {
                     if self.flags.in_function() {
                         return Err((
@@ -403,7 +403,7 @@ impl<'a> Parser<'a> {
             span = span.merge(pos);
             match kind {
                 '#' => {
-                    if let Some(Token { kind: '{', .. }) = self.toks.peek().copied() {
+                    if let Some(Token { kind: '{', .. }) = self.toks.peek() {
                         self.toks.next();
                         string.push_str(&self.parse_interpolation()?.to_css_string(span)?);
                     } else {
@@ -447,15 +447,13 @@ impl<'a> Parser<'a> {
             return Err(("expected \"{\".", span).into());
         }
 
-        // we must collect here because the parser isn't generic over the iterator
-        #[allow(clippy::needless_collect)]
         let sel_toks: Vec<Token> = string.chars().map(|x| Token::new(span, x)).collect();
 
-        let mut iter = sel_toks.into_iter().peekmore();
+        let mut lexer = Lexer::new(sel_toks);
 
         let selector = SelectorParser::new(
             &mut Parser {
-                toks: &mut iter,
+                toks: &mut lexer,
                 map: self.map,
                 path: self.path,
                 scopes: self.scopes,
@@ -635,7 +633,7 @@ impl<'a> Parser<'a> {
                 '{' => break,
                 '#' => {
                     if let Some(Token { kind: '{', pos }) = self.toks.peek() {
-                        self.span_before = self.span_before.merge(*pos);
+                        self.span_before = self.span_before.merge(pos);
                         self.toks.next();
                         params.push_str(&self.parse_interpolation_as_string()?);
                     } else {
@@ -780,9 +778,7 @@ impl<'a> Parser<'a> {
         //     return Err(("@extend may only be used within style rules.", self.span_before).into());
         // }
         let (value, is_optional) = Parser {
-            toks: &mut read_until_semicolon_or_closing_curly_brace(self.toks)?
-                .into_iter()
-                .peekmore(),
+            toks: &mut Lexer::new(read_until_semicolon_or_closing_curly_brace(self.toks)?),
             map: self.map,
             path: self.path,
             scopes: self.scopes,
@@ -888,7 +884,7 @@ impl<'a> Parser<'a> {
             match tok.kind {
                 '{' => break,
                 '#' => {
-                    if let Some(Token { kind: '{', pos }) = self.toks.peek().copied() {
+                    if let Some(Token { kind: '{', pos }) = self.toks.peek() {
                         self.toks.next();
                         self.span_before = pos;
                         let interpolation = self.parse_interpolation()?;

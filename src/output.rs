@@ -410,7 +410,7 @@ impl CompressedFormatter {
     fn write_block_entry(&self, buf: &mut Vec<u8>, styles: &[BlockEntry]) -> SassResult<()> {
         let mut styles = styles.iter();
 
-        while let Some(style) = styles.next() {
+        for style in &mut styles {
             match style {
                 BlockEntry::Style(s) => {
                     let value = s.value.node.to_css_string(s.value.span)?;

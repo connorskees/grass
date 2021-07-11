@@ -98,7 +98,7 @@ impl<'a> Parser<'a> {
             return Ok(buf);
         }
 
-        let next_tok = self.toks.peek().copied();
+        let next_tok = self.toks.peek();
         let is_angle = next_tok.map_or(false, |t| t.kind == '<' || t.kind == '>');
         if is_angle || matches!(next_tok, Some(Token { kind: '=', .. })) {
             buf.push(' ');

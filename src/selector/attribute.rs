@@ -141,7 +141,7 @@ impl Attribute {
         };
         parser.whitespace();
 
-        let modifier = match parser.toks.peek().copied() {
+        let modifier = match parser.toks.peek() {
             Some(Token {
                 kind: c @ 'a'..='z',
                 ..

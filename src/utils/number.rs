@@ -1,8 +1,4 @@
-use std::vec::IntoIter;
-
-use peekmore::PeekMoreIterator;
-
-use crate::Token;
+use crate::lexer::Lexer;
 
 #[derive(Debug)]
 pub(crate) struct ParsedNumber {
@@ -46,7 +42,7 @@ impl ParsedNumber {
     }
 }
 
-pub(crate) fn eat_whole_number(toks: &mut PeekMoreIterator<IntoIter<Token>>) -> String {
+pub(crate) fn eat_whole_number(toks: &mut Lexer) -> String {
     let mut buf = String::new();
     while let Some(c) = toks.peek() {
         if !c.kind.is_ascii_digit() {

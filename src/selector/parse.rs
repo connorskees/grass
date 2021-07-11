@@ -198,7 +198,7 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
         let mut components = vec![self.parse_simple_selector(None)?];
 
         while let Some(Token { kind, .. }) = self.parser.toks.peek() {
-            if !is_simple_selector_start(*kind) {
+            if !is_simple_selector_start(kind) {
                 break;
             }
 
@@ -219,13 +219,13 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
     /// [the CSS algorithm]: https://drafts.csswg.org/css-syntax-3/#would-start-an-identifier
     fn looking_at_identifier(&mut self) -> bool {
         match self.parser.toks.peek() {
-            Some(Token { kind, .. }) if is_name_start(*kind) || kind == &'\\' => return true,
+            Some(Token { kind, .. }) if is_name_start(kind) || kind == '\\' => return true,
             Some(Token { kind: '-', .. }) => {}
             Some(..) | None => return false,
         }
 
         match self.parser.toks.peek_forward(1) {
-            Some(Token { kind, .. }) if is_name_start(*kind) || kind == &'-' || kind == &'\\' => {
+            Some(Token { kind, .. }) if is_name_start(kind) || kind == '-' || kind == '\\' => {
                 self.parser.toks.reset_cursor();
                 true
             }
@@ -391,7 +391,7 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
 
         match self.parser.toks.peek() {
             Some(Token { kind: '*', pos }) => {
-                self.parser.span_before = self.parser.span_before.merge(*pos);
+                self.parser.span_before = self.parser.span_before.merge(pos);
                 self.parser.toks.next();
                 if let Some(Token { kind: '|', .. }) = self.parser.toks.peek() {
                     self.parser.toks.next();
@@ -409,7 +409,7 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
                 return Ok(SimpleSelector::Universal(Namespace::None));
             }
             Some(Token { kind: '|', pos }) => {
-                self.parser.span_before = self.parser.span_before.merge(*pos);
+                self.parser.span_before = self.parser.span_before.merge(pos);
                 self.parser.toks.next();
                 match self.parser.toks.peek() {
                     Some(Token { kind: '*', .. }) => {

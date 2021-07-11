@@ -27,36 +27,36 @@ impl<'a> Parser<'a> {
                     return None;
                 }
                 '(' => {
-                    toks.push(*tok);
+                    toks.push(tok);
                     self.toks.peek_forward(1);
                     let mut scope = 0;
                     while let Some(tok) = self.toks.peek() {
                         match tok.kind {
                             ')' => {
                                 if scope == 0 {
-                                    toks.push(*tok);
+                                    toks.push(tok);
                                     self.toks.peek_forward(1);
                                     break;
                                 }
 
                                 scope -= 1;
-                                toks.push(*tok);
+                                toks.push(tok);
                                 self.toks.peek_forward(1);
                             }
                             '(' => {
-                                toks.push(*tok);
+                                toks.push(tok);
                                 self.toks.peek_forward(1);
                                 scope += 1;
                             }
                             _ => {
-                                toks.push(*tok);
+                                toks.push(tok);
                                 self.toks.peek_forward(1);
                             }
                         }
                     }
                 }
                 _ => {
-                    toks.push(*tok);
+                    toks.push(tok);
                     self.toks.peek_forward(1);
                 }
             }
@@ -123,7 +123,7 @@ impl<'a> Parser<'a> {
                             property.push(':');
                             SelectorOrStyle::Selector(property)
                         }
-                        c if is_name(*c) => {
+                        c if is_name(c) => {
                             if let Some(toks) =
                                 self.parse_style_value_when_no_space_after_semicolon()
                             {
@@ -201,7 +201,7 @@ impl<'a> Parser<'a> {
     ) -> SassResult<Vec<Style>> {
         let mut styles = Vec::new();
         self.whitespace();
-        while let Some(tok) = self.toks.peek().copied() {
+        while let Some(tok) = self.toks.peek() {
             match tok.kind {
                 '{' => {
                     self.toks.next();

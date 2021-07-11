@@ -101,8 +101,6 @@ pub(crate) use beef::lean::Cow;
 
 use codemap::CodeMap;
 
-use peekmore::PeekMore;
-
 pub use crate::error::{SassError as Error, SassResult as Result};
 pub(crate) use crate::token::Token;
 use crate::{
@@ -288,10 +286,7 @@ pub fn from_path(p: &str, options: &Options) -> Result<String> {
     let empty_span = file.span.subspan(0, 0);
 
     let stmts = Parser {
-        toks: &mut Lexer::new(&file)
-            .collect::<Vec<Token>>()
-            .into_iter()
-            .peekmore(),
+        toks: &mut Lexer::new_from_file(&file),
         map: &mut map,
         path: p.as_ref(),
         scopes: &mut Scopes::new(),
@@ -334,10 +329,7 @@ pub fn from_string(p: String, options: &Options) -> Result<String> {
     let file = map.add_file("stdin".into(), p);
     let empty_span = file.span.subspan(0, 0);
     let stmts = Parser {
-        toks: &mut Lexer::new(&file)
-            .collect::<Vec<Token>>()
-            .into_iter()
-            .peekmore(),
+        toks: &mut Lexer::new_from_file(&file),
         map: &mut map,
         path: Path::new(""),
         scopes: &mut Scopes::new(),
@@ -371,10 +363,7 @@ pub fn from_string(p: String) -> std::result::Result<String, JsValue> {
     let empty_span = file.span.subspan(0, 0);
 
     let stmts = Parser {
-        toks: &mut Lexer::new(&file)
-            .collect::<Vec<Token>>()
-            .into_iter()
-            .peekmore(),
+        toks: &mut Lexer::new_from_file(&file),
         map: &mut map,
         path: Path::new(""),
         scopes: &mut Scopes::new(),

@@ -1,19 +1,13 @@
-use std::vec::IntoIter;
-
 use codemap::{Span, Spanned};
 
-use peekmore::PeekMoreIterator;
-
-use crate::{error::SassResult, Token};
+use crate::{error::SassResult, lexer::Lexer, Token};
 
 use super::{as_hex, hex_char_for, is_name, is_name_start, peek_whitespace};
 
-pub(crate) fn peek_until_closing_curly_brace(
-    toks: &mut PeekMoreIterator<IntoIter<Token>>,
-) -> SassResult<Vec<Token>> {
+pub(crate) fn peek_until_closing_curly_brace(toks: &mut Lexer) -> SassResult<Vec<Token>> {
     let mut t = Vec::new();
     let mut nesting = 0;
-    while let Some(tok) = toks.peek().copied() {
+    while let Some(tok) = toks.peek() {
         match tok.kind {
             q @ '"' | q @ '\'' => {
                 t.push(tok);
@@ -35,7 +29,7 @@ pub(crate) fn peek_until_closing_curly_brace(
                 toks.advance_cursor();
             }
             '/' => {
-                let next = *toks
+                let next = toks
                     .peek_forward(1)
                     .ok_or(("Expected expression.", tok.pos))?;
                 match toks.peek() {
@@ -54,12 +48,9 @@ pub(crate) fn peek_until_closing_curly_brace(
     Ok(t)
 }
 
-fn peek_until_closing_quote(
-    toks: &mut PeekMoreIterator<IntoIter<Token>>,
-    q: char,
-) -> SassResult<Vec<Token>> {
+fn peek_until_closing_quote(toks: &mut Lexer, q: char) -> SassResult<Vec<Token>> {
     let mut t = Vec::new();
-    while let Some(tok) = toks.peek().copied() {
+    while let Some(tok) = toks.peek() {
         match tok.kind {
             '"' if q == '"' => {
                 t.push(tok);
@@ -74,7 +65,7 @@ fn peek_until_closing_quote(
             '\\' => {
                 t.push(tok);
                 t.push(match toks.peek_forward(1) {
-                    Some(tok) => *tok,
+                    Some(tok) => tok,
                     None => return Err((format!("Expected {}.", q), tok.pos).into()),
                 });
             }
@@ -85,7 +76,7 @@ fn peek_until_closing_quote(
                     None => return Err((format!("Expected {}.", q), tok.pos).into()),
                 };
                 if next.kind == '{' {
-                    t.push(*next);
+                    t.push(next);
                     toks.peek_forward(1);
                     t.append(&mut peek_until_closing_curly_brace(toks)?);
                 }
@@ -97,7 +88,7 @@ fn peek_until_closing_quote(
     Ok(t)
 }
 
-pub(crate) fn peek_until_newline(toks: &mut PeekMoreIterator<IntoIter<Token>>) {
+pub(crate) fn peek_until_newline(toks: &mut Lexer) {
     while let Some(tok) = toks.peek() {
         if tok.kind == '\n' {
             break;
@@ -106,10 +97,10 @@ pub(crate) fn peek_until_newline(toks: &mut PeekMoreIterator<IntoIter<Token>>) {
     }
 }
 
-pub(crate) fn peek_escape(toks: &mut PeekMoreIterator<IntoIter<Token>>) -> SassResult<String> {
+pub(crate) fn peek_escape(toks: &mut Lexer) -> SassResult<String> {
     let mut value = 0;
     let first = match toks.peek() {
-        Some(t) => *t,
+        Some(t) => t,
         None => return Ok(String::new()),
     };
     let mut span = first.pos;
@@ -155,7 +146,7 @@ pub(crate) fn peek_escape(toks: &mut PeekMoreIterator<IntoIter<Token>>) -> SassR
 }
 
 pub(crate) fn peek_ident_no_interpolation(
-    toks: &mut PeekMoreIterator<IntoIter<Token>>,
+    toks: &mut Lexer,
     unit: bool,
     span_before: Span,
 ) -> SassResult<Spanned<String>> {
@@ -200,7 +191,7 @@ pub(crate) fn peek_ident_no_interpolation(
 }
 
 fn peek_ident_body_no_interpolation(
-    toks: &mut PeekMoreIterator<IntoIter<Token>>,
+    toks: &mut Lexer,
     unit: bool,
     mut span: Span,
 ) -> SassResult<Spanned<String>> {
@@ -210,7 +201,7 @@ fn peek_ident_body_no_interpolation(
         if unit && tok.kind == '-' {
             // Disallow `-` followed by a dot or a digit digit in units.
             let second = match toks.peek_forward(1) {
-                Some(v) => *v,
+                Some(v) => v,
                 None => break,
             };
 

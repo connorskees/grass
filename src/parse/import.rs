@@ -1,7 +1,6 @@
 use std::{ffi::OsStr, fs, path::Path, path::PathBuf};
 
 use codemap::{Span, Spanned};
-use peekmore::PeekMore;
 
 use crate::{
     common::{ListSeparator::Comma, QuoteKind},
@@ -104,10 +103,7 @@ impl<'a> Parser<'a> {
                 String::from_utf8(fs::read(&name)?)?,
             );
             return Parser {
-                toks: &mut Lexer::new(&file)
-                    .collect::<Vec<Token>>()
-                    .into_iter()
-                    .peekmore(),
+                toks: &mut Lexer::new_from_file(&file),
                 map: self.map,
                 path: &name,
                 scopes: self.scopes,
@@ -141,7 +137,7 @@ impl<'a> Parser<'a> {
             Some(Token { kind: '\'', .. })
             | Some(Token { kind: '"', .. })
             | Some(Token { kind: 'u', .. }) => {}
-            Some(Token { pos, .. }) => return Err(("Expected string.", *pos).into()),
+            Some(Token { pos, .. }) => return Err(("Expected string.", pos).into()),
             None => return Err(("expected more input.", self.span_before).into()),
         };
         let Spanned {

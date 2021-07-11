@@ -20,7 +20,7 @@ impl<'a> Parser<'a> {
             if unit && tok.kind == '-' {
                 // Disallow `-` followed by a dot or a digit digit in units.
                 let second = match self.toks.peek_forward(1) {
-                    Some(v) => *v,
+                    Some(v) => v,
                     None => break,
                 };
 
@@ -59,7 +59,7 @@ impl<'a> Parser<'a> {
                     buf.push_str(&self.escape(false)?);
                 }
                 '#' => {
-                    if let Some(Token { kind: '{', .. }) = self.toks.peek_forward(1).copied() {
+                    if let Some(Token { kind: '{', .. }) = self.toks.peek_forward(1) {
                         self.toks.next();
                         self.toks.next();
                         // TODO: if ident, interpolate literally
@@ -136,7 +136,6 @@ impl<'a> Parser<'a> {
         let Token { kind, pos } = self
             .toks
             .peek()
-            .copied()
             .ok_or(("Expected identifier.", self.span_before))?;
         let mut text = String::new();
         if kind == '-' {
@@ -163,7 +162,7 @@ impl<'a> Parser<'a> {
         }
 
         let Token { kind: first, pos } = match self.toks.peek() {
-            Some(v) => *v,
+            Some(v) => v,
             None => return Err(("Expected identifier.", self.span_before).into()),
         };
 
@@ -205,7 +204,7 @@ impl<'a> Parser<'a> {
             .peek()
             .ok_or(("Expected identifier.", self.span_before))?;
         let mut text = String::new();
-        if kind == &'-' {
+        if kind == '-' {
             self.toks.next();
             text.push('-');
 
@@ -264,7 +263,7 @@ impl<'a> Parser<'a> {
                 }
                 '#' => {
                     if let Some(Token { kind: '{', pos }) = self.toks.peek() {
-                        self.span_before = self.span_before.merge(*pos);
+                        self.span_before = self.span_before.merge(pos);
                         self.toks.next();
                         let interpolation = self.parse_interpolation()?;
                         match interpolation.node {

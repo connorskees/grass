@@ -1,4 +1,4 @@
-use std::{iter::Iterator, mem, vec::IntoIter};
+use std::{iter::Iterator, mem};
 
 use num_bigint::BigInt;
 use num_rational::{BigRational, Rational64};
@@ -6,13 +6,12 @@ use num_traits::{pow, One, ToPrimitive};
 
 use codemap::{Span, Spanned};
 
-use peekmore::{PeekMore, PeekMoreIterator};
-
 use crate::{
     builtin::GLOBAL_FUNCTIONS,
     color::{Color, NAMED_COLORS},
     common::{unvendor, Brackets, Identifier, ListSeparator, Op, QuoteKind},
     error::SassResult,
+    lexer::Lexer,
     unit::Unit,
     utils::{eat_whole_number, is_name, IsWhitespace, ParsedNumber},
     value::{Number, SassFunction, SassMap, Value},
@@ -53,7 +52,7 @@ impl<'a> Parser<'a> {
     pub(crate) fn parse_value(
         &mut self,
         in_paren: bool,
-        predicate: &dyn Fn(&mut PeekMoreIterator<IntoIter<Token>>) -> bool,
+        predicate: &dyn Fn(&mut Lexer) -> bool,
     ) -> SassResult<Spanned<Value>> {
         self.whitespace();
 
@@ -62,7 +61,7 @@ impl<'a> Parser<'a> {
             | Some(Token { kind: ';', .. })
             | Some(Token { kind: '{', .. })
             | None => return Err(("Expected expression.", self.span_before).into()),
-            Some(Token { pos, .. }) => *pos,
+            Some(Token { pos, .. }) => pos,
         };
 
         if predicate(self.toks) {
@@ -173,7 +172,7 @@ impl<'a> Parser<'a> {
         in_paren: bool,
     ) -> SassResult<Spanned<Value>> {
         Parser {
-            toks: &mut toks.into_iter().peekmore(),
+            toks: &mut Lexer::new(toks),
             map: self.map,
             path: self.path,
             scopes: self.scopes,
@@ -291,7 +290,7 @@ impl<'a> Parser<'a> {
 
     fn parse_ident_value(
         &mut self,
-        predicate: &dyn Fn(&mut PeekMoreIterator<IntoIter<Token>>) -> bool,
+        predicate: &dyn Fn(&mut Lexer) -> bool,
     ) -> SassResult<Spanned<IntermediateValue>> {
         let Spanned { node: mut s, span } = self.parse_identifier()?;
 
@@ -363,7 +362,7 @@ impl<'a> Parser<'a> {
 
     fn parse_number(
         &mut self,
-        predicate: &dyn Fn(&mut PeekMoreIterator<IntoIter<Token>>) -> bool,
+        predicate: &dyn Fn(&mut Lexer) -> bool,
     ) -> SassResult<Spanned<ParsedNumber>> {
         let mut span = self.toks.peek().unwrap().pos;
         let mut whole = eat_whole_number(self.toks);
@@ -375,7 +374,7 @@ impl<'a> Parser<'a> {
             });
         }
 
-        let next_tok = *self.toks.peek().unwrap();
+        let next_tok = self.toks.peek().unwrap();
 
         let dec_len = if next_tok.kind == '.' {
             self.toks.next();
@@ -395,7 +394,7 @@ impl<'a> Parser<'a> {
         let mut times_ten = String::new();
         let mut times_ten_is_postive = true;
         if let Some(Token { kind: 'e', .. }) | Some(Token { kind: 'E', .. }) = self.toks.peek() {
-            if let Some(&tok) = self.toks.peek_next() {
+            if let Some(tok) = self.toks.peek_next() {
                 if tok.kind == '-' {
                     self.toks.next();
                     times_ten_is_postive = false;
@@ -404,13 +403,11 @@ impl<'a> Parser<'a> {
                     times_ten = eat_whole_number(self.toks);
 
                     if times_ten.is_empty() {
-                        return Err(
-                            ("Expected digit.", self.toks.peek().unwrap_or(&tok).pos).into()
-                        );
+                        return Err(("Expected digit.", self.toks.peek().unwrap_or(tok).pos).into());
                     } else if times_ten.len() > 2 {
                         return Err((
                             "Exponent too negative.",
-                            self.toks.peek().unwrap_or(&tok).pos,
+                            self.toks.peek().unwrap_or(tok).pos,
                         )
                             .into());
                     }
@@ -420,15 +417,15 @@ impl<'a> Parser<'a> {
 
                     if times_ten.len() > 2 {
                         return Err(
-                            ("Exponent too large.", self.toks.peek().unwrap_or(&tok).pos).into(),
+                            ("Exponent too large.", self.toks.peek().unwrap_or(tok).pos).into()
                         );
                     }
                 }
             }
         }
 
-        if let Ok(Some(Token { pos, .. })) = self.toks.peek_previous() {
-            span = span.merge(*pos);
+        if let Some(Token { pos, .. }) = self.toks.peek_previous() {
+            span = span.merge(pos);
         }
 
         self.toks.reset_cursor();
@@ -445,7 +442,7 @@ impl<'a> Parser<'a> {
         self.whitespace_or_comment();
 
         Ok(if let Some(Token { kind: ']', pos }) = self.toks.peek() {
-            span = span.merge(*pos);
+            span = span.merge(pos);
             self.toks.next();
             IntermediateValue::Value(HigherIntermediateValue::Literal(Value::List(
                 Vec::new(),
@@ -473,14 +470,14 @@ impl<'a> Parser<'a> {
 
     fn parse_dimension(
         &mut self,
-        predicate: &dyn Fn(&mut PeekMoreIterator<IntoIter<Token>>) -> bool,
+        predicate: &dyn Fn(&mut Lexer) -> bool,
     ) -> SassResult<Spanned<IntermediateValue>> {
         let Spanned {
             node: val,
             mut span,
         } = self.parse_number(predicate)?;
         let unit = if let Some(tok) = self.toks.peek() {
-            let Token { kind, .. } = *tok;
+            let Token { kind, .. } = tok;
             match kind {
                 'a'..='z' | 'A'..='Z' | '_' | '\\' | '\u{7f}'..=std::char::MAX => {
                     let u = self.parse_identifier_no_interpolation(true)?;
@@ -488,7 +485,7 @@ impl<'a> Parser<'a> {
                     Unit::from(u.node)
                 }
                 '-' => {
-                    if let Some(Token { kind, .. }) = self.toks.peek_next().copied() {
+                    if let Some(Token { kind, .. }) = self.toks.peek_next() {
                         self.toks.reset_cursor();
                         if matches!(kind, 'a'..='z' | 'A'..='Z' | '_' | '\\' | '\u{7f}'..=std::char::MAX)
                         {
@@ -679,7 +676,7 @@ impl<'a> Parser<'a> {
     fn in_interpolated_identifier_body(&mut self) -> bool {
         match self.toks.peek() {
             Some(Token { kind: '\\', .. }) => true,
-            Some(Token { kind, .. }) if is_name(*kind) => true,
+            Some(Token { kind, .. }) if is_name(kind) => true,
             Some(Token { kind: '#', .. }) => {
                 let next_is_curly = matches!(self.toks.peek_next(), Some(Token { kind: '{', .. }));
                 self.toks.reset_cursor();
@@ -701,9 +698,9 @@ impl<'a> Parser<'a> {
         for _ in 0..6 {
             if let Some(Token { kind, pos }) = self.toks.peek() {
                 if kind.is_ascii_hexdigit() {
-                    span = span.merge(*pos);
-                    self.span_before = *pos;
-                    buf.push(*kind);
+                    span = span.merge(pos);
+                    self.span_before = pos;
+                    buf.push(kind);
                     self.toks.next();
                 } else {
                     break;
@@ -715,8 +712,8 @@ impl<'a> Parser<'a> {
             buf.push('?');
             for _ in 0..(8_usize.saturating_sub(buf.len())) {
                 if let Some(Token { kind: '?', pos }) = self.toks.peek() {
-                    span = span.merge(*pos);
-                    self.span_before = *pos;
+                    span = span.merge(pos);
+                    self.span_before = pos;
                     buf.push('?');
                     self.toks.next();
                 } else {
@@ -743,9 +740,9 @@ impl<'a> Parser<'a> {
                 found_hex_digit = true;
                 if let Some(Token { kind, pos }) = self.toks.peek() {
                     if kind.is_ascii_hexdigit() {
-                        span = span.merge(*pos);
-                        self.span_before = *pos;
-                        buf.push(*kind);
+                        span = span.merge(pos);
+                        self.span_before = pos;
+                        buf.push(kind);
                         self.toks.next();
                     } else {
                         break;
@@ -773,7 +770,7 @@ impl<'a> Parser<'a> {
 
     fn parse_intermediate_value(
         &mut self,
-        predicate: &dyn Fn(&mut PeekMoreIterator<IntoIter<Token>>) -> bool,
+        predicate: &dyn Fn(&mut Lexer) -> bool,
     ) -> Option<SassResult<Spanned<IntermediateValue>>> {
         if predicate(self.toks) {
             return None;
@@ -832,7 +829,7 @@ impl<'a> Parser<'a> {
             }
             '#' => {
                 if let Some(Token { kind: '{', pos }) = self.toks.peek_forward(1) {
-                    self.span_before = *pos;
+                    self.span_before = pos;
                     self.toks.reset_cursor();
                     return Some(self.parse_ident_value(predicate));
                 }
@@ -1048,7 +1045,7 @@ impl<'a> Parser<'a> {
 struct IntermediateValueIterator<'a, 'b: 'a> {
     parser: &'a mut Parser<'b>,
     peek: Option<SassResult<Spanned<IntermediateValue>>>,
-    predicate: &'a dyn Fn(&mut PeekMoreIterator<IntoIter<Token>>) -> bool,
+    predicate: &'a dyn Fn(&mut Lexer) -> bool,
 }
 
 impl<'a, 'b: 'a> Iterator for IntermediateValueIterator<'a, 'b> {
@@ -1063,10 +1060,7 @@ impl<'a, 'b: 'a> Iterator for IntermediateValueIterator<'a, 'b> {
 }
 
 impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
-    pub fn new(
-        parser: &'a mut Parser<'b>,
-        predicate: &'a dyn Fn(&mut PeekMoreIterator<IntoIter<Token>>) -> bool,
-    ) -> Self {
+    pub fn new(parser: &'a mut Parser<'b>, predicate: &'a dyn Fn(&mut Lexer) -> bool) -> Self {
         Self {
             parser,
             peek: None,

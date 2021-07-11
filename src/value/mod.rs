@@ -1,13 +1,12 @@
 use std::cmp::Ordering;
 
-use peekmore::PeekMore;
-
 use codemap::{Span, Spanned};
 
 use crate::{
     color::Color,
     common::{Brackets, ListSeparator, Op, QuoteKind},
     error::SassResult,
+    lexer::Lexer,
     parse::Parser,
     selector::Selector,
     unit::Unit,
@@ -511,12 +510,12 @@ impl Value {
             None => return Err((format!("${}: {} is not a valid selector: it must be a string, a list of strings, or a list of lists of strings.", name, self.inspect(parser.span_before)?), parser.span_before).into()),
         };
         Ok(Parser {
-            toks: &mut string
-                .chars()
-                .map(|c| Token::new(parser.span_before, c))
-                .collect::<Vec<Token>>()
-                .into_iter()
-                .peekmore(),
+            toks: &mut Lexer::new(
+                string
+                    .chars()
+                    .map(|c| Token::new(parser.span_before, c))
+                    .collect::<Vec<Token>>(),
+            ),
             map: parser.map,
             path: parser.path,
             scopes: parser.scopes,

@@ -1,11 +1,11 @@
 use codemap::Spanned;
-use peekmore::PeekMore;
 
 use crate::{
     args::CallArgs,
     atrule::Function,
     common::{unvendor, Identifier},
     error::SassResult,
+    lexer::Lexer,
     scope::Scopes,
     utils::{read_until_closing_curly_brace, read_until_semicolon_or_closing_curly_brace},
     value::{SassFunction, Value},
@@ -100,7 +100,7 @@ impl<'a> Parser<'a> {
         };
 
         let mut return_value = Parser {
-            toks: &mut body.into_iter().peekmore(),
+            toks: &mut Lexer::new(body),
             map: self.map,
             path: self.path,
             scopes: if declared_at_root {
