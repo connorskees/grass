@@ -172,7 +172,6 @@ impl Default for Options<'_> {
     }
 }
 
-#[allow(clippy::missing_const_for_fn)]
 impl<'a> Options<'a> {
     /// `grass` currently offers 2 different output styles
     ///
@@ -183,7 +182,7 @@ impl<'a> Options<'a> {
     /// By default, output is expanded.
     #[must_use]
     #[inline]
-    pub fn style(mut self, style: OutputStyle) -> Self {
+    pub const fn style(mut self, style: OutputStyle) -> Self {
         self.style = style;
         self
     }
@@ -197,7 +196,7 @@ impl<'a> Options<'a> {
     /// By default, this value is `false` and warnings are emitted.
     #[must_use]
     #[inline]
-    pub fn quiet(mut self, quiet: bool) -> Self {
+    pub const fn quiet(mut self, quiet: bool) -> Self {
         self.quiet = quiet;
         self
     }
@@ -243,7 +242,7 @@ impl<'a> Options<'a> {
     /// contains any non-ASCII characters.
     #[must_use]
     #[inline]
-    pub fn allows_charset(mut self, allows_charset: bool) -> Self {
+    pub const fn allows_charset(mut self, allows_charset: bool) -> Self {
         self.allows_charset = allows_charset;
         self
     }
@@ -257,7 +256,7 @@ impl<'a> Options<'a> {
     /// This flag does not affect the CSS output.
     #[must_use]
     #[inline]
-    pub fn unicode_error_messages(mut self, unicode_error_messages: bool) -> Self {
+    pub const fn unicode_error_messages(mut self, unicode_error_messages: bool) -> Self {
         self.unicode_error_messages = unicode_error_messages;
         self
     }
