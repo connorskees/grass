@@ -319,6 +319,7 @@ pub(crate) fn unique_id(args: CallArgs, _: &mut Parser<'_>) -> SassResult<Value>
     let mut rng = thread_rng();
     let string = std::iter::repeat(())
         .map(|()| rng.sample(Alphanumeric))
+        .map(char::from)
         .take(7)
         .collect();
     Ok(Value::String(string, QuoteKind::None))
