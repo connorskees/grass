@@ -130,7 +130,7 @@ pub(crate) fn random(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<
         Value::Null => {
             let mut rng = rand::thread_rng();
             return Ok(Value::Dimension(
-                Some(Number::from(rng.gen_range(0.0, 1.0))),
+                Some(Number::from(rng.gen_range(0.0..1.0))),
                 Unit::None,
                 true,
             ));
@@ -173,7 +173,7 @@ pub(crate) fn random(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<
 
     let mut rng = rand::thread_rng();
     Ok(Value::Dimension(
-        Some(Number::from(rng.gen_range(0, limit) + 1)),
+        Some(Number::from(rng.gen_range(0..limit) + 1)),
         Unit::None,
         true,
     ))
