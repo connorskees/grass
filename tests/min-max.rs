@@ -130,3 +130,43 @@ test!(
     "a {\n  color: min(max(min(max(min(min(1), max(2))))), min(max(min(3))));\n}\n",
     "a {\n  color: min(max(min(max(min(min(1), max(2))))), min(max(min(3))));\n}\n"
 );
+test!(
+    decimal_without_leading_integer_is_evaluated,
+    "a {\n  color: min(.2, .4);\n}\n",
+    "a {\n  color: 0.2;\n}\n"
+);
+test!(
+    decimal_with_leading_integer_is_not_evaluated,
+    "a {\n  color: min(0.2, 0.4);\n}\n",
+    "a {\n  color: min(0.2, 0.4);\n}\n"
+);
+test!(
+    min_conains_special_fn_env,
+    "a {\n  color: min(env(\"foo\"));\n}\n",
+    "a {\n  color: min(env(\"foo\"));\n}\n"
+);
+test!(
+    min_conains_special_fn_calc_with_div_and_spaces,
+    "a {\n  color: min(calc(1 / 2));\n}\n",
+    "a {\n  color: min(calc(1 / 2));\n}\n"
+);
+test!(
+    min_conains_special_fn_calc_with_div_without_spaces,
+    "a {\n  color: min(calc(1/2));\n}\n",
+    "a {\n  color: min(calc(1/2));\n}\n"
+);
+test!(
+    min_conains_special_fn_calc_with_plus_only,
+    "a {\n  color: min(calc(+));\n}\n",
+    "a {\n  color: min(calc(+));\n}\n"
+);
+test!(
+    min_conains_special_fn_calc_space_separated_list,
+    "a {\n  color: min(calc(1  2));\n}\n",
+    "a {\n  color: min(calc(1 2));\n}\n"
+);
+test!(
+    min_conains_special_fn_var,
+    "a {\n  color: min(1, var(--foo));\n}\n",
+    "a {\n  color: min(1, var(--foo));\n}\n"
+);

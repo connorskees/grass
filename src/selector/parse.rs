@@ -1,12 +1,6 @@
 use codemap::Span;
 
-use crate::{
-    common::unvendor,
-    error::SassResult,
-    parse::Parser,
-    utils::{is_name, is_name_start, read_until_closing_paren},
-    Token,
-};
+use crate::{common::unvendor, error::SassResult, parse::Parser, utils::is_name, Token};
 
 use super::{
     Attribute, Combinator, ComplexSelector, ComplexSelectorComponent, CompoundSelector, Namespace,
@@ -170,7 +164,7 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
                     }
                 }
                 Some(..) => {
-                    if !self.looking_at_identifier() {
+                    if !self.parser.looking_at_identifier() {
                         break;
                     }
                     components.push(ComplexSelectorComponent::Compound(
@@ -206,34 +200,6 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
         }
 
         Ok(CompoundSelector { components })
-    }
-
-    /// Returns whether the scanner is immediately before a plain CSS identifier.
-    ///
-    // todo: foward arg
-    /// If `forward` is passed, this looks that many characters forward instead.
-    ///
-    /// This is based on [the CSS algorithm][], but it assumes all backslashes
-    /// start escapes.
-    ///
-    /// [the CSS algorithm]: https://drafts.csswg.org/css-syntax-3/#would-start-an-identifier
-    fn looking_at_identifier(&mut self) -> bool {
-        match self.parser.toks.peek() {
-            Some(Token { kind, .. }) if is_name_start(kind) || kind == '\\' => return true,
-            Some(Token { kind: '-', .. }) => {}
-            Some(..) | None => return false,
-        }
-
-        match self.parser.toks.peek_forward(1) {
-            Some(Token { kind, .. }) if is_name_start(kind) || kind == '-' || kind == '\\' => {
-                self.parser.toks.reset_cursor();
-                true
-            }
-            Some(..) | None => {
-                self.parser.toks.reset_cursor();
-                false
-            }
-        }
     }
 
     fn looking_at_identifier_body(&mut self) -> bool {
@@ -323,10 +289,15 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
             if SELECTOR_PSEUDO_ELEMENTS.contains(&unvendored) {
                 selector = Some(Box::new(self.parse_selector_list()?));
                 self.parser.whitespace();
-                self.parser.expect_char(')')?;
             } else {
-                argument = Some(self.declaration_value()?.into_boxed_str());
+                argument = Some(
+                    self.parser
+                        .declaration_value(true, false, true)?
+                        .into_boxed_str(),
+                );
             }
+
+            self.parser.expect_char(')')?;
         } else if SELECTOR_PSEUDO_CLASSES.contains(&unvendored) {
             selector = Some(Box::new(self.parse_selector_list()?));
             self.parser.whitespace();
@@ -349,11 +320,14 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
             argument = Some(this_arg.into_boxed_str());
         } else {
             argument = Some(
-                self.declaration_value()?
+                self.parser
+                    .declaration_value(true, false, true)?
                     .trim_end()
                     .to_owned()
                     .into_boxed_str(),
             );
+
+            self.parser.expect_char(')')?;
         }
 
         Ok(SimpleSelector::Pseudo(Pseudo {
@@ -525,16 +499,6 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
             }
         }
         Ok(buf)
-    }
-
-    fn declaration_value(&mut self) -> SassResult<String> {
-        // todo: this consumes the closing paren
-        let mut tmp = read_until_closing_paren(self.parser.toks)?;
-        if let Some(Token { kind: ')', .. }) = tmp.pop() {
-        } else {
-            return Err(("expected \")\".", self.span).into());
-        }
-        Ok(tmp.into_iter().map(|t| t.kind).collect::<String>())
     }
 
     fn expect_identifier(&mut self, s: &str) -> SassResult<()> {

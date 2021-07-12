@@ -5,8 +5,8 @@ use codemap::Spanned;
 use crate::{
     error::SassResult,
     utils::{
-        as_hex, hex_char_for, is_name, peek_ident_no_interpolation, peek_until_closing_curly_brace,
-        peek_whitespace,
+        as_hex, hex_char_for, is_name, peek_until_closing_curly_brace, peek_whitespace,
+        IsWhitespace,
     },
     value::Value,
     Token,
@@ -144,28 +144,23 @@ impl<'a> Parser<'a> {
         } else {
             String::new()
         };
-        peek_whitespace(self.toks);
+
+        self.whitespace();
+
         while let Some(tok) = self.toks.peek() {
             let kind = tok.kind;
             match kind {
                 '+' | '-' | '0'..='9' => {
-                    self.toks.advance_cursor();
-                    if let Some(number) = self.peek_number()? {
-                        buf.push(kind);
-                        buf.push_str(&number);
-                    } else {
-                        return Ok(None);
-                    }
+                    let number = self.parse_dimension(&|_| false)?;
+                    buf.push_str(&number.node.to_css_string(number.span)?);
                 }
                 '#' => {
-                    self.toks.advance_cursor();
+                    self.toks.next();
                     if let Some(Token { kind: '{', .. }) = self.toks.peek() {
-                        self.toks.advance_cursor();
-                        let interpolation = self.peek_interpolation()?;
-                        match interpolation.node {
-                            Value::String(ref s, ..) => buf.push_str(s),
-                            v => buf.push_str(v.to_css_string(interpolation.span)?.borrow()),
-                        };
+                        self.toks.next();
+                        let interpolation = self.parse_interpolation_as_string()?;
+
+                        buf.push_str(&interpolation);
                     } else {
                         return Ok(None);
                     }
@@ -192,7 +187,7 @@ impl<'a> Parser<'a> {
                     }
                 }
                 '(' => {
-                    self.toks.advance_cursor();
+                    self.toks.next();
                     buf.push('(');
                     if let Some(val) = self.try_parse_min_max(fn_name, false)? {
                         buf.push_str(&val);
@@ -201,10 +196,10 @@ impl<'a> Parser<'a> {
                     }
                 }
                 'm' | 'M' => {
-                    self.toks.advance_cursor();
+                    self.toks.next();
                     let inner_fn_name = match self.toks.peek() {
                         Some(Token { kind: 'i', .. }) | Some(Token { kind: 'I', .. }) => {
-                            self.toks.advance_cursor();
+                            self.toks.next();
                             if !matches!(
                                 self.toks.peek(),
                                 Some(Token { kind: 'n', .. }) | Some(Token { kind: 'N', .. })
@@ -215,7 +210,7 @@ impl<'a> Parser<'a> {
                             "min"
                         }
                         Some(Token { kind: 'a', .. }) | Some(Token { kind: 'A', .. }) => {
-                            self.toks.advance_cursor();
+                            self.toks.next();
                             if !matches!(
                                 self.toks.peek(),
                                 Some(Token { kind: 'x', .. }) | Some(Token { kind: 'X', .. })
@@ -228,13 +223,13 @@ impl<'a> Parser<'a> {
                         _ => return Ok(None),
                     };
 
-                    self.toks.advance_cursor();
+                    self.toks.next();
 
                     if !matches!(self.toks.peek(), Some(Token { kind: '(', .. })) {
                         return Ok(None);
                     }
 
-                    self.toks.advance_cursor();
+                    self.toks.next();
 
                     if let Some(val) = self.try_parse_min_max(inner_fn_name, true)? {
                         buf.push_str(&val);
@@ -245,7 +240,7 @@ impl<'a> Parser<'a> {
                 _ => return Ok(None),
             }
 
-            peek_whitespace(self.toks);
+            self.whitespace();
 
             let next = match self.toks.peek() {
                 Some(tok) => tok,
@@ -254,104 +249,218 @@ impl<'a> Parser<'a> {
 
             match next.kind {
                 ')' => {
-                    self.toks.advance_cursor();
+                    self.toks.next();
                     buf.push(')');
                     return Ok(Some(buf));
                 }
                 '+' | '-' | '*' | '/' => {
+                    self.toks.next();
                     buf.push(' ');
                     buf.push(next.kind);
                     buf.push(' ');
-                    self.toks.advance_cursor();
                 }
                 ',' => {
                     if !allow_comma {
                         return Ok(None);
                     }
-                    self.toks.advance_cursor();
+                    self.toks.next();
                     buf.push(',');
                     buf.push(' ');
                 }
                 _ => return Ok(None),
             }
 
-            peek_whitespace(self.toks);
+            self.whitespace();
         }
 
         Ok(Some(buf))
     }
 
-    #[allow(dead_code, unused_mut, unused_variables, unused_assignments)]
     fn try_parse_min_max_function(&mut self, fn_name: &'static str) -> SassResult<Option<String>> {
-        let mut ident = peek_ident_no_interpolation(self.toks, false, self.span_before)?.node;
+        let mut ident = self.parse_identifier_no_interpolation(false)?.node;
         ident.make_ascii_lowercase();
+
         if ident != fn_name {
             return Ok(None);
         }
+
         if !matches!(self.toks.peek(), Some(Token { kind: '(', .. })) {
             return Ok(None);
         }
-        self.toks.advance_cursor();
+
+        self.toks.next();
         ident.push('(');
-        todo!("special functions inside `min()` or `max()`")
+
+        let value = self.declaration_value(true, false, true)?;
+
+        if !matches!(self.toks.peek(), Some(Token { kind: ')', .. })) {
+            return Ok(None);
+        }
+
+        self.toks.next();
+
+        ident.push_str(&value);
+
+        ident.push(')');
+
+        Ok(Some(ident))
+    }
+
+    pub(crate) fn declaration_value(
+        &mut self,
+        allow_empty: bool,
+        allow_semicolon: bool,
+        allow_colon: bool,
+    ) -> SassResult<String> {
+        let mut buffer = String::new();
+
+        let mut brackets = Vec::new();
+        let mut wrote_newline = false;
+
+        while let Some(tok) = self.toks.peek() {
+            match tok.kind {
+                '\\' => {
+                    self.toks.next();
+                    buffer.push_str(&self.parse_escape(true)?);
+                    wrote_newline = false;
+                }
+                q @ ('"' | '\'') => {
+                    self.toks.next();
+                    let s = self.parse_quoted_string(q)?;
+                    buffer.push_str(&s.node.to_css_string(s.span)?);
+                    wrote_newline = false;
+                }
+                '/' => {
+                    if matches!(self.toks.peek_n(1), Some(Token { kind: '*', .. })) {
+                        todo!()
+                    } else {
+                        buffer.push('/');
+                        self.toks.next();
+                    }
+
+                    wrote_newline = false;
+                }
+                '#' => {
+                    if matches!(self.toks.peek_n(1), Some(Token { kind: '{', .. })) {
+                        let s = self.parse_identifier()?;
+                        buffer.push_str(&s.node);
+                    } else {
+                        buffer.push('#');
+                        self.toks.next();
+                    }
+
+                    wrote_newline = false;
+                }
+                c @ (' ' | '\t') => {
+                    if wrote_newline
+                        || !self
+                            .toks
+                            .peek_n(1)
+                            .map_or(false, |tok| tok.is_whitespace())
+                    {
+                        buffer.push(c);
+                    }
+
+                    self.toks.next();
+                }
+                '\n' | '\r' => {
+                    if !wrote_newline {
+                        buffer.push('\n');
+                    }
+
+                    wrote_newline = true;
+
+                    self.toks.next();
+                }
+
+                '[' | '(' | '{' => {
+                    buffer.push(tok.kind);
+
+                    self.toks.next();
+
+                    match tok.kind {
+                        '[' => brackets.push(']'),
+                        '(' => brackets.push(')'),
+                        '{' => brackets.push('}'),
+                        _ => unreachable!(),
+                    }
+
+                    wrote_newline = false;
+                }
+                ']' | ')' | '}' => {
+                    if let Some(end) = brackets.pop() {
+                        self.expect_char(end)?;
+                    } else {
+                        break;
+                    }
+
+                    wrote_newline = false;
+                }
+                ';' => {
+                    if !allow_semicolon && brackets.is_empty() {
+                        break;
+                    }
+
+                    self.toks.next();
+                    buffer.push(';');
+                    wrote_newline = false;
+                }
+                ':' => {
+                    if !allow_colon && brackets.is_empty() {
+                        break;
+                    }
+
+                    self.toks.next();
+                    buffer.push(':');
+                    wrote_newline = false;
+                }
+                'u' | 'U' => {
+                    let before_url = self.toks.cursor();
+
+                    if !self.scan_identifier("url") {
+                        buffer.push(tok.kind);
+                        self.toks.next();
+                        wrote_newline = false;
+                        continue;
+                    }
+
+                    if let Some(contents) = self.try_parse_url()? {
+                        buffer.push_str(&contents);
+                    } else {
+                        self.toks.set_cursor(before_url);
+                        buffer.push(tok.kind);
+                        self.toks.next();
+                    }
+
+                    wrote_newline = false;
+                }
+                c => {
+                    if self.looking_at_identifier() {
+                        buffer.push_str(&self.parse_identifier()?.node);
+                    } else {
+                        self.toks.next();
+                        buffer.push(c);
+                    }
+
+                    wrote_newline = false;
+                }
+            }
+        }
+
+        if let Some(last) = brackets.pop() {
+            self.expect_char(last)?;
+        }
+
+        if !allow_empty && buffer.is_empty() {
+            return Err(("Expected token.", self.span_before).into());
+        }
+
+        Ok(buffer)
     }
 }
 
 /// Methods required to do arbitrary lookahead
 impl<'a> Parser<'a> {
-    fn peek_number(&mut self) -> SassResult<Option<String>> {
-        let mut buf = String::new();
-
-        let num = self.peek_whole_number();
-        buf.push_str(&num);
-
-        self.toks.advance_cursor();
-
-        if let Some(Token { kind: '.', .. }) = self.toks.peek() {
-            self.toks.advance_cursor();
-            let num = self.peek_whole_number();
-            if num.is_empty() {
-                return Ok(None);
-            }
-            buf.push_str(&num);
-        } else {
-            self.toks.move_cursor_back();
-        }
-
-        let next = match self.toks.peek() {
-            Some(tok) => tok,
-            None => return Ok(Some(buf)),
-        };
-
-        match next.kind {
-            'a'..='z' | 'A'..='Z' | '-' | '_' | '\\' => {
-                let unit = peek_ident_no_interpolation(self.toks, true, self.span_before)?.node;
-
-                buf.push_str(&unit);
-            }
-            '%' => {
-                self.toks.advance_cursor();
-                buf.push('%');
-            }
-            _ => {}
-        }
-
-        Ok(Some(buf))
-    }
-
-    fn peek_whole_number(&mut self) -> String {
-        let mut buf = String::new();
-        while let Some(tok) = self.toks.peek() {
-            if tok.kind.is_ascii_digit() {
-                buf.push(tok.kind);
-                self.toks.advance_cursor();
-            } else {
-                return buf;
-            }
-        }
-        buf
-    }
-
     fn peek_interpolation(&mut self) -> SassResult<Spanned<Value>> {
         let vec = peek_until_closing_curly_brace(self.toks)?;
         self.toks.advance_cursor();

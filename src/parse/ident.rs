@@ -36,7 +36,7 @@ impl<'a> Parser<'a> {
                 text.push(self.toks.next().unwrap().kind);
             } else if tok.kind == '\\' {
                 self.toks.next();
-                text.push_str(&self.escape(false)?);
+                text.push_str(&self.parse_escape(false)?);
             } else {
                 break;
             }
@@ -56,7 +56,7 @@ impl<'a> Parser<'a> {
                 }
                 '\\' => {
                     self.toks.next();
-                    buf.push_str(&self.escape(false)?);
+                    buf.push_str(&self.parse_escape(false)?);
                 }
                 '#' => {
                     if let Some(Token { kind: '{', .. }) = self.toks.peek_forward(1) {
@@ -76,7 +76,7 @@ impl<'a> Parser<'a> {
         Ok(())
     }
 
-    fn escape(&mut self, identifier_start: bool) -> SassResult<String> {
+    pub(crate) fn parse_escape(&mut self, identifier_start: bool) -> SassResult<String> {
         let mut value = 0;
         let first = match self.toks.peek() {
             Some(t) => t,
@@ -172,7 +172,7 @@ impl<'a> Parser<'a> {
             }
             '\\' => {
                 self.toks.next();
-                text.push_str(&self.escape(true)?);
+                text.push_str(&self.parse_escape(true)?);
             }
             '#' if matches!(self.toks.peek_forward(1), Some(Token { kind: '{', .. })) => {
                 self.toks.next();
@@ -228,7 +228,7 @@ impl<'a> Parser<'a> {
         if is_name_start(first.kind) {
             text.push(first.kind);
         } else if first.kind == '\\' {
-            text.push_str(&self.escape(true)?);
+            text.push_str(&self.parse_escape(true)?);
         } else {
             return Err(("Expected identifier.", first.pos).into());
         }
@@ -324,5 +324,33 @@ impl<'a> Parser<'a> {
             }
         }
         Err((format!("Expected {}.", q), span).into())
+    }
+
+    /// Returns whether the scanner is immediately before a plain CSS identifier.
+    ///
+    // todo: foward arg
+    /// If `forward` is passed, this looks that many characters forward instead.
+    ///
+    /// This is based on [the CSS algorithm][], but it assumes all backslashes
+    /// start escapes.
+    ///
+    /// [the CSS algorithm]: https://drafts.csswg.org/css-syntax-3/#would-start-an-identifier
+    pub fn looking_at_identifier(&mut self) -> bool {
+        match self.toks.peek() {
+            Some(Token { kind, .. }) if is_name_start(kind) || kind == '\\' => return true,
+            Some(Token { kind: '-', .. }) => {}
+            Some(..) | None => return false,
+        }
+
+        match self.toks.peek_forward(1) {
+            Some(Token { kind, .. }) if is_name_start(kind) || kind == '-' || kind == '\\' => {
+                self.toks.reset_cursor();
+                true
+            }
+            Some(..) | None => {
+                self.toks.reset_cursor();
+                false
+            }
+        }
     }
 }

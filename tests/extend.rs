@@ -1897,6 +1897,17 @@ test!(
       }",
     ".a .b, .a .a.mod5, .a .a.mod6, .a .a.mod3, .a .a.mod4, .a .a.mod1, .a .a.mod2 {\n  c: d;\n}\n"
 );
+test!(
+    parent_selector_as_value_ignores_extend,
+    "a {
+      color: &;
+    }
+
+    b {
+      @extend a;
+    }",
+    "a, b {\n  color: a;\n}\n"
+);
 error!(
     extend_optional_keyword_not_complete,
     "a {

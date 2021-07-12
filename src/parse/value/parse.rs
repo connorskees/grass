@@ -235,16 +235,16 @@ impl<'a> Parser<'a> {
         lower: String,
     ) -> SassResult<Spanned<IntermediateValue>> {
         if lower == "min" || lower == "max" {
+            let start = self.toks.cursor();
             match self.try_parse_min_max(&lower, true)? {
                 Some(val) => {
-                    self.toks.truncate_iterator_to_cursor();
                     return Ok(IntermediateValue::Value(HigherIntermediateValue::Literal(
                         Value::String(val, QuoteKind::None),
                     ))
                     .span(self.span_before));
                 }
                 None => {
-                    self.toks.reset_cursor();
+                    self.toks.set_cursor(start);
                 }
             }
         }
@@ -468,10 +468,19 @@ impl<'a> Parser<'a> {
         })
     }
 
-    fn parse_dimension(
+    fn parse_intermediate_value_dimension(
         &mut self,
         predicate: &dyn Fn(&mut Lexer) -> bool,
     ) -> SassResult<Spanned<IntermediateValue>> {
+        let Spanned { node, span } = self.parse_dimension(predicate)?;
+
+        Ok(IntermediateValue::Value(HigherIntermediateValue::Literal(node)).span(span))
+    }
+
+    pub(crate) fn parse_dimension(
+        &mut self,
+        predicate: &dyn Fn(&mut Lexer) -> bool,
+    ) -> SassResult<Spanned<Value>> {
         let Spanned {
             node: val,
             mut span,
@@ -513,28 +522,19 @@ impl<'a> Parser<'a> {
         let n = if val.dec_len == 0 {
             if val.num.len() <= 18 && val.times_ten.is_empty() {
                 let n = Rational64::new_raw(parse_i64(&val.num), 1);
-                return Ok(IntermediateValue::Value(HigherIntermediateValue::Literal(
-                    Value::Dimension(Some(Number::new_small(n)), unit, false),
-                ))
-                .span(span));
+                return Ok(Value::Dimension(Some(Number::new_small(n)), unit, false).span(span));
             }
             BigRational::new_raw(val.num.parse::<BigInt>().unwrap(), BigInt::one())
         } else {
             if val.num.len() <= 18 && val.times_ten.is_empty() {
                 let n = Rational64::new(parse_i64(&val.num), pow(10, val.dec_len));
-                return Ok(IntermediateValue::Value(HigherIntermediateValue::Literal(
-                    Value::Dimension(Some(Number::new_small(n)), unit, false),
-                ))
-                .span(span));
+                return Ok(Value::Dimension(Some(Number::new_small(n)), unit, false).span(span));
             }
             BigRational::new(val.num.parse().unwrap(), pow(BigInt::from(10), val.dec_len))
         };
 
         if val.times_ten.is_empty() {
-            return Ok(IntermediateValue::Value(HigherIntermediateValue::Literal(
-                Value::Dimension(Some(Number::new_big(n)), unit, false),
-            ))
-            .span(span));
+            return Ok(Value::Dimension(Some(Number::new_big(n)), unit, false).span(span));
         }
 
         let times_ten = pow(
@@ -552,14 +552,7 @@ impl<'a> Parser<'a> {
             BigRational::new(BigInt::one(), times_ten)
         };
 
-        Ok(
-            IntermediateValue::Value(HigherIntermediateValue::Literal(Value::Dimension(
-                Some(Number::new_big(n * times_ten)),
-                unit,
-                false,
-            )))
-            .span(span),
-        )
+        Ok(Value::Dimension(Some(Number::new_big(n * times_ten)), unit, false).span(span))
     }
 
     fn parse_paren(&mut self) -> SassResult<Spanned<IntermediateValue>> {
@@ -807,7 +800,7 @@ impl<'a> Parser<'a> {
                 }
                 return Some(self.parse_ident_value(predicate));
             }
-            '0'..='9' | '.' => return Some(self.parse_dimension(predicate)),
+            '0'..='9' | '.' => return Some(self.parse_intermediate_value_dimension(predicate)),
             '(' => {
                 self.toks.next();
                 return Some(self.parse_paren());

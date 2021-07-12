@@ -30,10 +30,6 @@ impl Lexer {
         self.amt_peeked += 1;
     }
 
-    pub fn move_cursor_back(&mut self) {
-        self.amt_peeked = self.amt_peeked.saturating_sub(1);
-    }
-
     pub fn peek_next(&mut self) -> Option<Token> {
         self.amt_peeked += 1;
 
@@ -41,13 +37,18 @@ impl Lexer {
     }
 
     pub fn peek_previous(&mut self) -> Option<Token> {
-        self.buf.get(self.peek_cursor() - 1).copied()
+        self.buf.get(self.peek_cursor().checked_sub(1)?).copied()
     }
 
     pub fn peek_forward(&mut self, n: usize) -> Option<Token> {
         self.amt_peeked += n;
 
         self.peek()
+    }
+
+    /// Peeks `n` from current peeked position without modifying cursor
+    pub fn peek_n(&self, n: usize) -> Option<Token> {
+        self.buf.get(self.peek_cursor() + n).copied()
     }
 
     pub fn peek_backward(&mut self, n: usize) -> Option<Token> {
@@ -59,6 +60,16 @@ impl Lexer {
     pub fn truncate_iterator_to_cursor(&mut self) {
         self.cursor += self.amt_peeked;
         self.amt_peeked = 0;
+    }
+
+    /// Set cursor to position and reset peek
+    pub fn set_cursor(&mut self, cursor: usize) {
+        self.cursor = cursor;
+        self.amt_peeked = 0;
+    }
+
+    pub fn cursor(&self) -> usize {
+        self.cursor
     }
 }
 

@@ -808,6 +808,11 @@ test!(
     "null {\n  color: null;\n}\n"
 );
 test!(
+    nth_of_type_mutliple_spaces_inside_parens_are_collapsed,
+    ":nth-of-type(2  n  -  --1) {\n  color: red;\n}\n",
+    ":nth-of-type(2 n - --1) {\n  color: red;\n}\n"
+);
+test!(
     #[ignore = "we do not yet have a good way of consuming a string without converting \\a to a newline"]
     silent_comment_in_quoted_attribute_value,
     ".foo bar[val=\"//\"] {\n  color: &;\n}\n",
