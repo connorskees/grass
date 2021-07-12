@@ -170,3 +170,19 @@ test!(
     "a {\n  color: min(1, var(--foo));\n}\n",
     "a {\n  color: min(1, var(--foo));\n}\n"
 );
+test!(
+    min_conains_multiline_comment,
+    "a {\n  color: min(1/**/);\n}\n",
+    "a {\n  color: min(1);\n}\n"
+);
+test!(
+    min_conains_calc_contains_multiline_comment,
+    "a {\n  color: min(calc(1 /**/ 2));\n}\n",
+    "a {\n  color: min(calc(1 /**/ 2));\n}\n"
+);
+test!(
+    #[ignore = "we currently resolve interpolation eagerly inside loud comments"]
+    min_conains_calc_contains_multiline_comment_with_interpolation,
+    "a {\n  color: min(calc(1 /* #{5} */ 2));\n}\n",
+    "a {\n  color: min(calc(1 /* #{5} */ 2));\n}\n"
+);

@@ -4,6 +4,7 @@ use codemap::Spanned;
 
 use crate::{
     error::SassResult,
+    parse::common::Comment,
     utils::{
         as_hex, hex_char_for, is_name, peek_until_closing_curly_brace, peek_whitespace,
         IsWhitespace,
@@ -145,7 +146,7 @@ impl<'a> Parser<'a> {
             String::new()
         };
 
-        self.whitespace();
+        self.whitespace_or_comment();
 
         while let Some(tok) = self.toks.peek() {
             let kind = tok.kind;
@@ -240,7 +241,7 @@ impl<'a> Parser<'a> {
                 _ => return Ok(None),
             }
 
-            self.whitespace();
+            self.whitespace_or_comment();
 
             let next = match self.toks.peek() {
                 Some(tok) => tok,
@@ -270,7 +271,7 @@ impl<'a> Parser<'a> {
                 _ => return Ok(None),
             }
 
-            self.whitespace();
+            self.whitespace_or_comment();
         }
 
         Ok(Some(buf))
@@ -332,7 +333,16 @@ impl<'a> Parser<'a> {
                 }
                 '/' => {
                     if matches!(self.toks.peek_n(1), Some(Token { kind: '*', .. })) {
-                        todo!()
+                        self.toks.next();
+
+                        let comment = match self.parse_comment()?.node {
+                            Comment::Loud(s) => s,
+                            Comment::Silent => continue,
+                        };
+
+                        buffer.push_str("/*");
+                        buffer.push_str(&comment);
+                        buffer.push_str("*/");
                     } else {
                         buffer.push('/');
                         self.toks.next();
@@ -353,10 +363,7 @@ impl<'a> Parser<'a> {
                 }
                 c @ (' ' | '\t') => {
                     if wrote_newline
-                        || !self
-                            .toks
-                            .peek_n(1)
-                            .map_or(false, |tok| tok.is_whitespace())
+                        || !self.toks.peek_n(1).map_or(false, |tok| tok.is_whitespace())
                     {
                         buffer.push(c);
                     }
