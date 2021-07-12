@@ -1,17 +1,6 @@
 use std::{borrow::Borrow, iter::Iterator};
 
-use codemap::Spanned;
-
-use crate::{
-    error::SassResult,
-    parse::common::Comment,
-    utils::{
-        as_hex, hex_char_for, is_name, peek_until_closing_curly_brace, peek_whitespace,
-        IsWhitespace,
-    },
-    value::Value,
-    Token,
-};
+use crate::{error::SassResult, parse::common::Comment, utils::IsWhitespace, value::Value, Token};
 
 use super::super::Parser;
 
@@ -89,10 +78,14 @@ impl<'a> Parser<'a> {
 
     pub(super) fn try_parse_url(&mut self) -> SassResult<Option<String>> {
         let mut buf = String::from("url(");
-        peek_whitespace(self.toks);
-        while let Some(tok) = self.toks.peek() {
+
+        let start = self.toks.cursor();
+
+        self.whitespace();
+
+        while let Some(tok) = self.toks.next() {
             let kind = tok.kind;
-            self.toks.advance_cursor();
+
             if kind == '!'
                 || kind == '%'
                 || kind == '&'
@@ -101,11 +94,11 @@ impl<'a> Parser<'a> {
             {
                 buf.push(kind);
             } else if kind == '\\' {
-                buf.push_str(&self.peek_escape()?);
+                buf.push_str(&self.parse_escape(false)?);
             } else if kind == '#' {
                 if let Some(Token { kind: '{', .. }) = self.toks.peek() {
-                    self.toks.advance_cursor();
-                    let interpolation = self.peek_interpolation()?;
+                    self.toks.next();
+                    let interpolation = self.parse_interpolation()?;
                     match interpolation.node {
                         Value::String(ref s, ..) => buf.push_str(s),
                         v => buf.push_str(v.to_css_string(interpolation.span)?.borrow()),
@@ -115,14 +108,15 @@ impl<'a> Parser<'a> {
                 }
             } else if kind == ')' {
                 buf.push(')');
-                self.toks.truncate_iterator_to_cursor();
+
                 return Ok(Some(buf));
             } else if kind.is_whitespace() {
-                peek_whitespace(self.toks);
+                self.whitespace();
+
                 if let Some(Token { kind: ')', .. }) = self.toks.peek() {
-                    self.toks.advance_cursor();
+                    self.toks.next();
                     buf.push(')');
-                    self.toks.truncate_iterator_to_cursor();
+
                     return Ok(Some(buf));
                 }
 
@@ -131,7 +125,9 @@ impl<'a> Parser<'a> {
                 break;
             }
         }
-        self.toks.reset_cursor();
+
+        self.toks.set_cursor(start);
+
         Ok(None)
     }
 
@@ -463,70 +459,5 @@ impl<'a> Parser<'a> {
         }
 
         Ok(buffer)
-    }
-}
-
-/// Methods required to do arbitrary lookahead
-impl<'a> Parser<'a> {
-    fn peek_interpolation(&mut self) -> SassResult<Spanned<Value>> {
-        let vec = peek_until_closing_curly_brace(self.toks)?;
-        self.toks.advance_cursor();
-        let val = self.parse_value_from_vec(vec, false)?;
-        Ok(Spanned {
-            node: val.node.unquote(),
-            span: val.span,
-        })
-    }
-
-    fn peek_escape(&mut self) -> SassResult<String> {
-        let mut value = 0;
-        let first = match self.toks.peek() {
-            Some(t) => t,
-            None => return Ok(String::new()),
-        };
-        let mut span = first.pos;
-        if first.kind == '\n' {
-            return Err(("Expected escape sequence.", first.pos()).into());
-        } else if first.kind.is_ascii_hexdigit() {
-            for _ in 0..6 {
-                let next = match self.toks.peek() {
-                    Some(t) => t,
-                    None => break,
-                };
-                if !next.kind.is_ascii_hexdigit() {
-                    break;
-                }
-                value *= 16;
-                value += as_hex(next.kind);
-                span = span.merge(next.pos);
-                self.toks.peek_forward(1);
-            }
-            if matches!(
-                self.toks.peek(),
-                Some(Token { kind: ' ', .. })
-                    | Some(Token { kind: '\n', .. })
-                    | Some(Token { kind: '\t', .. })
-            ) {
-                self.toks.peek_forward(1);
-            }
-        } else {
-            value = self.toks.peek_forward(1).unwrap().kind as u32;
-        }
-
-        let c = std::char::from_u32(value).ok_or(("Invalid escape sequence.", span))?;
-        if is_name(c) {
-            Ok(c.to_string())
-        } else if value <= 0x1F || value == 0x7F {
-            let mut buf = String::with_capacity(4);
-            buf.push('\\');
-            if value > 0xF {
-                buf.push(hex_char_for(value >> 4));
-            }
-            buf.push(hex_char_for(value & 0xF));
-            buf.push(' ');
-            Ok(buf)
-        } else {
-            Ok(format!("\\{}", c))
-        }
     }
 }

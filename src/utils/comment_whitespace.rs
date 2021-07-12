@@ -24,18 +24,6 @@ pub(crate) fn devour_whitespace(s: &mut Lexer) -> bool {
     found_whitespace
 }
 
-pub(crate) fn peek_whitespace(s: &mut Lexer) -> bool {
-    let mut found_whitespace = false;
-    while let Some(w) = s.peek() {
-        if !w.is_whitespace() {
-            break;
-        }
-        found_whitespace = true;
-        s.advance_cursor();
-    }
-    found_whitespace
-}
-
 pub(crate) fn peek_whitespace_or_comment(s: &mut Lexer) -> bool {
     let mut found_whitespace = false;
     while let Some(w) = s.peek() {
