@@ -4,15 +4,6 @@ use crate::{error::SassResult, lexer::Lexer, Token};
 
 use super::{as_hex, hex_char_for, is_name, is_name_start};
 
-pub(crate) fn peek_until_newline(toks: &mut Lexer) {
-    while let Some(tok) = toks.peek() {
-        if tok.kind == '\n' {
-            break;
-        }
-        toks.advance_cursor();
-    }
-}
-
 pub(crate) fn peek_escape(toks: &mut Lexer) -> SassResult<String> {
     let mut value = 0;
     let first = match toks.peek() {

@@ -7,10 +7,7 @@ use crate::{
     common::QuoteKind,
     error::SassResult,
     scope::Scope,
-    utils::{
-        peek_ident_no_interpolation, peek_whitespace_or_comment, read_until_closing_paren,
-        read_until_closing_quote, read_until_newline,
-    },
+    utils::{read_until_closing_paren, read_until_closing_quote, read_until_newline},
     value::Value,
     Token,
 };
@@ -164,19 +161,20 @@ impl<'a> Parser<'a> {
             }
 
             if let Some(Token { kind: '$', pos }) = self.toks.peek() {
+                let start = self.toks.cursor();
+
                 span = span.merge(pos);
-                self.toks.advance_cursor();
+                self.toks.next();
 
-                let v = peek_ident_no_interpolation(self.toks, false, self.span_before)?;
+                let v = self.parse_identifier_no_interpolation(false)?;
 
-                peek_whitespace_or_comment(self.toks);
+                self.whitespace_or_comment();
 
                 if let Some(Token { kind: ':', .. }) = self.toks.peek() {
-                    self.toks.truncate_iterator_to_cursor();
                     self.toks.next();
                     name = v.node;
                 } else {
-                    self.toks.reset_cursor();
+                    self.toks.set_cursor(start);
                     name.clear();
                 }
             } else {
@@ -188,14 +186,12 @@ impl<'a> Parser<'a> {
             let value = self.parse_value(true, &|c| match c.peek() {
                 Some(Token { kind: ')', .. }) | Some(Token { kind: ',', .. }) => true,
                 Some(Token { kind: '.', .. }) => {
-                    let next_is_dot = matches!(c.peek_next(), Some(Token { kind: '.', .. }));
-                    c.reset_cursor();
+                    let next_is_dot = matches!(c.peek_n(1), Some(Token { kind: '.', .. }));
 
                     next_is_dot
                 }
                 Some(Token { kind: '=', .. }) => {
-                    let next_is_eq = matches!(c.peek_next(), Some(Token { kind: '=', .. }));
-                    c.reset_cursor();
+                    let next_is_eq = matches!(c.peek_n(1), Some(Token { kind: '=', .. }));
 
                     !next_is_eq
                 }
@@ -290,9 +286,7 @@ impl<'a> Parser<'a> {
                     let right = self.parse_value(true, &|c| match c.peek() {
                         Some(Token { kind: ')', .. }) | Some(Token { kind: ',', .. }) => true,
                         Some(Token { kind: '.', .. }) => {
-                            let next_is_dot =
-                                matches!(c.peek_next(), Some(Token { kind: '.', .. }));
-                            c.reset_cursor();
+                            let next_is_dot = matches!(c.peek_n(1), Some(Token { kind: '.', .. }));
 
                             next_is_dot
                         }

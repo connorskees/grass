@@ -1,6 +1,4 @@
-use crate::{lexer::Lexer, Token};
-
-use super::peek_until_newline;
+use crate::lexer::Lexer;
 
 pub(crate) trait IsWhitespace {
     fn is_whitespace(&self) -> bool;
@@ -20,41 +18,6 @@ pub(crate) fn devour_whitespace(s: &mut Lexer) -> bool {
         }
         found_whitespace = true;
         s.next();
-    }
-    found_whitespace
-}
-
-pub(crate) fn peek_whitespace_or_comment(s: &mut Lexer) -> bool {
-    let mut found_whitespace = false;
-    while let Some(w) = s.peek() {
-        match w.kind {
-            ' ' | '\t' | '\n' => {
-                found_whitespace = true;
-                s.advance_cursor();
-            }
-            '/' => match s.peek_next() {
-                Some(Token { kind: '/', .. }) => {
-                    peek_until_newline(s);
-                    found_whitespace = true;
-                }
-                Some(Token { kind: '*', .. }) => {
-                    found_whitespace = true;
-                    while let Some(tok) = s.peek_next() {
-                        match tok.kind {
-                            '*' => {
-                                if matches!(s.peek_next(), Some(Token { kind: '/', .. })) {
-                                    s.advance_cursor();
-                                    break;
-                                }
-                            }
-                            _ => continue,
-                        }
-                    }
-                }
-                _ => return found_whitespace,
-            },
-            _ => return found_whitespace,
-        }
     }
     found_whitespace
 }
