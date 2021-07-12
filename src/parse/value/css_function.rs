@@ -420,7 +420,7 @@ impl<'a> Parser<'a> {
                 'u' | 'U' => {
                     let before_url = self.toks.cursor();
 
-                    if !self.scan_identifier("url") {
+                    if !self.scan_identifier("url", true) {
                         buffer.push(tok.kind);
                         self.toks.next();
                         wrote_newline = false;

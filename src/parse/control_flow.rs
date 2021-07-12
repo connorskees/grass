@@ -60,17 +60,14 @@ impl<'a> Parser<'a> {
 
         loop {
             self.whitespace_or_comment();
-            if let Some(Token { kind: '@', pos }) = self.toks.peek() {
-                self.toks.peek_forward(1);
-                let ident = peek_ident_no_interpolation(self.toks, false, pos)?;
-                if ident.as_str() != "else" {
-                    self.toks.reset_cursor();
-                    break;
-                }
-                self.toks.truncate_iterator_to_cursor();
-            } else {
+
+            let start = self.toks.cursor();
+
+            if !self.consume_char_if_exists('@') || !self.scan_identifier("else", false) {
+                self.toks.set_cursor(start);
                 break;
             }
+
             self.whitespace_or_comment();
             if let Some(tok) = self.toks.peek() {
                 match tok.kind {
@@ -195,9 +192,9 @@ impl<'a> Parser<'a> {
             Some(..) | None => false,
         })?;
 
-        let through = if self.scan_identifier("through") {
+        let through = if self.scan_identifier("through", true) {
             1
-        } else if self.scan_identifier("to") {
+        } else if self.scan_identifier("to", true) {
             0
         } else {
             return Err(("Expected \"to\" or \"through\".", self.span_before).into());
