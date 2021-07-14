@@ -1,7 +1,6 @@
 #[macro_use]
 mod macros;
 
-// @content inside keyframes
 test!(
     content_inside_keyframes,
     "@mixin foo {
@@ -136,4 +135,43 @@ test!(
         }
     }",
     "@keyframes foo {\n  12.5% {\n    color: red;\n  }\n}\n"
+);
+test!(
+    keyframes_hash_in_name,
+    "@keyframes #identifier {
+      to {
+        color: red;
+      }
+    }",
+    "@keyframes #identifier {\n  to {\n    color: red;\n  }\n}\n"
+);
+test!(
+    keyframes_interpolated_selector,
+    "@keyframes foo {
+      #{t}o {
+        color: red;
+      }
+    }",
+    "@keyframes foo {\n  to {\n    color: red;\n  }\n}\n"
+);
+error!(
+    keyframes_denies_selector_with_hash,
+    "@keyframes foo {
+      #to {
+        color: red;
+      }
+    }",
+    "Error: Expected \"to\" or \"from\"."
+);
+error!(
+    keyframes_nothing_after_forward_slash_in_selector,
+    "@keyframes foo { a/", "Error: Expected selector."
+);
+error!(
+    keyframes_no_ident_after_forward_slash_in_selector,
+    "@keyframes foo { a/ {} }", "Error: expected selector."
+);
+error!(
+    keyframes_nothing_after_selector,
+    "@keyframes foo { a", "Error: expected \"{\"."
 );

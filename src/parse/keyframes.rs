@@ -181,6 +181,7 @@ impl<'a> Parser<'a> {
                 c => string.push(c),
             }
         }
+
         Err(("expected \"{\".", span).into())
     }
 

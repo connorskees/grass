@@ -743,3 +743,48 @@ test!(
     "a {\n  color: type-of(r#{e}d);\n}\n",
     "a {\n  color: string;\n}\n"
 );
+test!(
+    color_equality_differ_in_green_channel,
+    "a {\n  color: rgb(1, 1, 1) == rgb(1, 2, 1);\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    color_equality_differ_in_blue_channel,
+    "a {\n  color: rgb(1, 1, 1) == rgb(1, 1, 2);\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    color_equality_differ_in_alpha_channel,
+    "a {\n  color: rgba(1, 1, 1, 1.0) == rgba(1, 1, 1, 0.5);\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    hue_of_rgb_is_negative,
+    "a {\n  color: hue(rgb(255, 0, 1));\n}\n",
+    "a {\n  color: 359.7647058824deg;\n}\n"
+);
+test!(
+    saturation_of_rgb_all_channels_equal,
+    "a {\n  color: saturation(rgb(125, 125, 125));\n}\n",
+    "a {\n  color: 0%;\n}\n"
+);
+test!(
+    saturation_of_rgb_min_and_max_above_1,
+    "a {\n  color: saturation(rgb(255, 248, 248));\n}\n",
+    "a {\n  color: 100%;\n}\n"
+);
+test!(
+    saturation_of_rgb_min_and_max_below_1,
+    "a {\n  color: saturation(rgb(88, 88, 87));\n}\n",
+    "a {\n  color: 0.5714285714%;\n}\n"
+);
+test!(
+    invert_weight_zero_is_nop,
+    "a {\n  color: invert(#0f0f0f, 0);\n}\n",
+    "a {\n  color: #0f0f0f;\n}\n"
+);
+test!(
+    mix_combined_weight_is_normalized_weight,
+    "a {\n  color: mix(rgba(255, 20, 0, 0), rgba(0, 20, 255, 1), 100);\n}\n",
+    "a {\n  color: rgba(255, 20, 0, 0);\n}\n"
+);

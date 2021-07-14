@@ -405,3 +405,22 @@ error!(
     only_semicolon_after_hash_in_variable_decl,
     "$color: #;", "Error: Expected identifier."
 );
+
+test!(
+    variable_name_begins_with_escape,
+    "$\\69: red;
+
+    a {
+        color: $\\69;
+    }",
+    "a {\n  color: red;\n}\n"
+);
+test!(
+    variable_name_contains_escape,
+    "$a\\69: red;
+
+    a {
+        color: $a\\69;
+    }",
+    "a {\n  color: red;\n}\n"
+);

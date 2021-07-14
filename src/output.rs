@@ -293,18 +293,10 @@ impl Formatter for CompressedFormatter {
 
                     let mut selectors = selectors.iter();
                     if let Some(selector) = selectors.next() {
-                        match selector {
-                            KeyframesSelector::To => write!(buf, "to")?,
-                            KeyframesSelector::From => write!(buf, "from")?,
-                            KeyframesSelector::Percent(p) => write!(buf, "{}%", p)?,
-                        }
+                        write!(buf, "{}", selector)?;
                     }
                     for selector in selectors {
-                        match selector {
-                            KeyframesSelector::To => write!(buf, ",to")?,
-                            KeyframesSelector::From => write!(buf, ",from")?,
-                            KeyframesSelector::Percent(p) => write!(buf, ",{}%", p)?,
-                        }
+                        write!(buf, ",{}", selector)?;
                     }
 
                     write!(buf, "{{")?;

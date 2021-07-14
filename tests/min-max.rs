@@ -186,3 +186,64 @@ test!(
     "a {\n  color: min(calc(1 /* #{5} */ 2));\n}\n",
     "a {\n  color: min(calc(1 /* #{5} */ 2));\n}\n"
 );
+test!(
+    min_uppercase,
+    "a {\n  color: MIN(1);\n}\n",
+    "a {\n  color: min(1);\n}\n"
+);
+test!(
+    max_uppercase,
+    "a {\n  color: MAX(1);\n}\n",
+    "a {\n  color: max(1);\n}\n"
+);
+
+test!(
+    min_parenthesis_around_arg,
+    "a {\n  color: min((1));\n}\n",
+    "a {\n  color: min((1));\n}\n"
+);
+error!(
+    min_parenthesis_around_arg_with_comma,
+    "a {\n  color: min((1, 1));\n}\n", "Error: 1, 1 is not a number."
+);
+error!(
+    min_hash_without_interpolation,
+    "a {\n  color: min(#a);\n}\n", "Error: #a is not a number."
+);
+error!(
+    min_calc_no_parens,
+    "a {\n  color: min(calc);\n}\n", "Error: calc is not a number."
+);
+error!(
+    min_env_no_parens,
+    "a {\n  color: min(env);\n}\n", "Error: env is not a number."
+);
+error!(
+    min_var_no_parens,
+    "a {\n  color: min(var);\n}\n", "Error: var is not a number."
+);
+error!(
+    min_min_unfinished,
+    "a {\n  color: min(mi);\n}\n", "Error: mi is not a number."
+);
+error!(
+    min_max_unfinished,
+    "a {\n  color: min(ma);\n}\n", "Error: ma is not a number."
+);
+error!(
+    min_min_no_parens,
+    "a {\n  color: min(min);\n}\n", "Error: min is not a number."
+);
+error!(
+    min_max_no_parens,
+    "a {\n  color: min(max);\n}\n", "Error: max is not a number."
+);
+error!(
+    min_min_invalid,
+    "a {\n  color: min(min(#));\n}\n", "Error: Expected identifier."
+);
+test!(
+    min_calc_parens_no_args,
+    "a {\n  color: min(calc());\n}\n",
+    "a {\n  color: min(calc());\n}\n"
+);

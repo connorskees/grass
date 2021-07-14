@@ -60,6 +60,7 @@ impl<'a> Parser<'a> {
                 return Err(("expected \"(\".", self.span_before).into());
             }
         };
+
         while let Some(tok) = self.toks.next() {
             span = span.merge(tok.pos());
             match tok.kind {
@@ -73,6 +74,7 @@ impl<'a> Parser<'a> {
                 _ => return Err(("expected \"(\".", span).into()),
             }
         }
+
         Ok(string)
     }
 
@@ -84,45 +86,36 @@ impl<'a> Parser<'a> {
         self.whitespace();
 
         while let Some(tok) = self.toks.next() {
-            let kind = tok.kind;
-
-            if kind == '!'
-                || kind == '%'
-                || kind == '&'
-                || ('*'..='~').contains(&kind)
-                || kind as u32 >= 0x0080
-            {
-                buf.push(kind);
-            } else if kind == '\\' {
-                buf.push_str(&self.parse_escape(false)?);
-            } else if kind == '#' {
-                if let Some(Token { kind: '{', .. }) = self.toks.peek() {
-                    self.toks.next();
-                    let interpolation = self.parse_interpolation()?;
-                    match interpolation.node {
-                        Value::String(ref s, ..) => buf.push_str(s),
-                        v => buf.push_str(v.to_css_string(interpolation.span)?.borrow()),
-                    };
-                } else {
-                    buf.push('#');
+            match tok.kind {
+                '!' | '%' | '&' | '*'..='~' | '\u{80}'..=char::MAX => buf.push(tok.kind),
+                '#' => {
+                    if self.consume_char_if_exists('{') {
+                        let interpolation = self.parse_interpolation()?;
+                        match interpolation.node {
+                            Value::String(ref s, ..) => buf.push_str(s),
+                            v => buf.push_str(v.to_css_string(interpolation.span)?.borrow()),
+                        };
+                    } else {
+                        buf.push('#');
+                    }
                 }
-            } else if kind == ')' {
-                buf.push(')');
-
-                return Ok(Some(buf));
-            } else if kind.is_whitespace() {
-                self.whitespace();
-
-                if let Some(Token { kind: ')', .. }) = self.toks.peek() {
-                    self.toks.next();
+                ')' => {
                     buf.push(')');
 
                     return Ok(Some(buf));
                 }
+                ' ' | '\t' | '\n' | '\r' => {
+                    self.whitespace();
 
-                break;
-            } else {
-                break;
+                    if self.consume_char_if_exists(')') {
+                        buf.push(')');
+
+                        return Ok(Some(buf));
+                    }
+
+                    break;
+                }
+                _ => break,
             }
         }
 

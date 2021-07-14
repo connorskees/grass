@@ -286,6 +286,14 @@ test!(
     "@function a(){} a {\n  color: function-exists($name: a)\n}\n",
     "a {\n  color: true;\n}\n"
 );
+test!(
+    function_exists_not_global,
+    "a {
+      @function foo () {}
+      color: function-exists($name: 'foo');
+    }",
+    "a {\n  color: true;\n}\n"
+);
 error!(
     function_exists_non_string,
     "a {color: function-exists(12px)}", "Error: $name: 12px is not a string."

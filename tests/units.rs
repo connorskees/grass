@@ -176,6 +176,16 @@ test!(
     "a {\n  color: unit(1-\\65);\n}\n",
     "a {\n  color: \"-e\";\n}\n"
 );
+test!(
+    viewport_relative_comparable_same,
+    "a {\n  color: comparable(1vw, 2vw);\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    viewport_relative_comparable_different,
+    "a {\n  color: comparable(1vw, 1vh);\n}\n",
+    "a {\n  color: false;\n}\n"
+);
 error!(
     display_single_div_with_none_numerator,
     "a {\n  color: (1 / 1em);\n}\n", "Error: 1em^-1 isn't a valid CSS value."

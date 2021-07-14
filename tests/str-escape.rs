@@ -185,3 +185,7 @@ test!(
     "a {\n  color: \"foo\\\nbar\";\n}\n",
     "a {\n  color: \"foobar\";\n}\n"
 );
+error!(
+    newline_after_escape,
+    "a {\n  color: \\\n", "Error: Expected escape sequence."
+);

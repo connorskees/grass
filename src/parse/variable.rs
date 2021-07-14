@@ -53,8 +53,6 @@ impl<'a> Parser<'a> {
                 }
 
                 var_value?.node
-            } else if self.at_root {
-                var_value?.node
             } else {
                 if self.scopes.default_var_exists(ident) {
                     return Ok(());

@@ -237,25 +237,23 @@ impl Color {
         let red = self.red() / Number::from(255);
         let green = self.green() / Number::from(255);
         let blue = self.blue() / Number::from(255);
+
         let min = min(&red, min(&green, &blue)).clone();
         let max = max(&red, max(&green, &blue)).clone();
-        if min == max {
-            return Number::zero();
-        }
 
-        let mut hue = if blue == max {
-            Number::from(4) + (red - green) / (max - min)
-        } else if green == max {
-            Number::from(2) + (blue - red) / (max - min)
+        let delta = max.clone() - min.clone();
+
+        let hue = if min == max {
+            Number::zero()
+        } else if max == red {
+            Number::from(60_u8) * (green - blue) / delta
+        } else if max == green {
+            Number::from(120_u8) + Number::from(60_u8) * (blue - red) / delta
         } else {
-            (green - blue) / (max - min)
+            Number::from(240_u8) + Number::from(60_u8) * (red - green) / delta
         };
 
-        if hue.is_negative() {
-            hue += Number::from(360);
-        }
-
-        (hue * Number::from(60)).round()
+        hue % Number::from(360)
     }
 
     /// Calculate saturation from RGBA values
@@ -275,14 +273,18 @@ impl Color {
             return Number::zero();
         }
 
-        let d = max.clone() - min.clone();
-        let mm = max + min;
-        let s = d / if mm > Number::one() {
-            Number::from(2) - mm
-        } else {
-            mm
-        };
-        (s * Number::from(100)).round()
+        let delta = max.clone() - min.clone();
+
+        let sum = max + min;
+
+        let s = delta
+            / if sum > Number::one() {
+                Number::from(2) - sum
+            } else {
+                sum
+            };
+
+        s * Number::from(100)
     }
 
     /// Calculate luminance from RGBA values
@@ -392,11 +394,6 @@ impl Color {
         );
 
         if saturation.is_zero() {
-            let luminance = if luminance > Number::from(100) {
-                Number::from(100)
-            } else {
-                luminance
-            };
             let val = luminance * Number::from(255);
             let repr = repr(&val, &val, &val, &alpha);
             return Color::new_hsla(val.clone(), val.clone(), val, alpha, hsla, repr);
@@ -455,11 +452,14 @@ impl Color {
         if weight.is_zero() {
             return self.clone();
         }
+
         let red = Number::from(u8::max_value()) - self.red();
         let green = Number::from(u8::max_value()) - self.green();
         let blue = Number::from(u8::max_value()) - self.blue();
         let repr = repr(&red, &green, &blue, &self.alpha());
+
         let inverse = Color::new_rgba(red, green, blue, self.alpha(), repr);
+
         inverse.mix(self, weight)
     }
 
