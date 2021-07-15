@@ -109,6 +109,59 @@ test!(
     ",
     "@media (false) {\n  a {\n    b: c;\n  }\n}\n"
 );
+test!(
+    newline_emitted_for_different_toplevel_rulesets,
+    "@media print {
+      a {
+        color: red;
+      }
+    
+      b {
+        color: green;
+      }
+    }",
+    "@media print {\n  a {\n    color: red;\n  }\n\n  b {\n    color: green;\n  }\n}\n"
+);
+test!(
+    newline_emitted_before_media_when_following_ruleset,
+    "a {
+      color: red;
+    }
+    @media print {
+      a {
+        color: red;
+      }
+    }",
+    "a {\n  color: red;\n}\n\n@media print {\n  a {\n    color: red;\n  }\n}\n"
+);
+test!(
+    no_newline_emitted_between_two_media_rules,
+    "@media print {
+      a {
+        color: red;
+      }
+    }
+    @media print {
+      a {
+        color: red;
+      }
+    }",
+    "@media print {\n  a {\n    color: red;\n  }\n}\n@media print {\n  a {\n    color: red;\n  }\n}\n"
+);
+test!(
+    no_newline_emitted_between_two_media_rules_when_in_same_ruleset,
+    "a {
+      @media foo {
+        color: red;
+      }
+    
+      @media bar {
+        color: green;
+      }
+    }",
+    "@media foo {\n  a {\n    color: red;\n  }\n}\n@media bar {\n  a {\n    color: green;\n  }\n}\n"
+);
+
 error!(
     media_feature_missing_closing_paren,
     "@media foo and (bar:a", "Error: expected \")\"."

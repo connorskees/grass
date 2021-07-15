@@ -23,6 +23,7 @@ impl IsWhitespace for Token {
         if self.kind.is_whitespace() {
             return true;
         }
+
         false
     }
 }
