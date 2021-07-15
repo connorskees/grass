@@ -184,6 +184,33 @@ test!(
     }",
     ""
 );
+test!(
+    comment_inside_if_body,
+    "@if true {
+      /* a */
+    }",
+    "/* a */\n"
+);
+test!(
+    comment_inside_if_else_body,
+    "@if false {
+      /* a */
+    } @else if true {
+      /* b */
+    }",
+    "/* b */\n"
+);
+test!(
+    comment_inside_else_body,
+    "@if false {
+      /* a */
+    } @else if false {
+      /* b */
+    } @else {
+      /* c */
+    }",
+    "/* c */\n"
+);
 error!(
     nothing_after_escape,
     "@if \\", "Error: Expected expression."

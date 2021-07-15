@@ -29,11 +29,10 @@ impl<'a> Parser<'a> {
             return Err(("expected \"}\".", self.span_before).into());
         }
 
-        self.whitespace_or_comment();
-
         if init_cond.is_true() {
             self.scopes.enter_new_scope();
             found_true = true;
+
             body = Parser {
                 toks: self.toks,
                 map: self.map,
@@ -53,6 +52,7 @@ impl<'a> Parser<'a> {
                 module_config: self.module_config,
             }
             .parse_stmt()?;
+
             self.scopes.exit_scope();
         } else {
             self.throw_away_until_closing_curly_brace()?;
@@ -108,6 +108,7 @@ impl<'a> Parser<'a> {
                                 module_config: self.module_config,
                             }
                             .parse_stmt()?;
+
                             self.scopes.exit_scope();
                         } else {
                             self.throw_away_until_closing_curly_brace()?;
