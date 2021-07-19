@@ -1,3 +1,12 @@
+# TBD
+
+- feature complete `min`/`max` support -- special functions and `min`/`max` are now allowed as arguments
+- removed dependency on `peekmore`, which sped up parsing and simplified lookahead
+- emit comments inside the `@if` rule body
+- fix bug in `hue(...)` function in which the value would be incorrect in when the `red` channel was the highest and the green channel was lower than the blue channel
+- no longer round output from `saturation(...)` function
+- improve handling of newlines inside and around `@media`
+
 # 0.10.5
 
 - support compressed output
