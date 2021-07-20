@@ -13,79 +13,89 @@ use crate::{
     lexer::Lexer,
     parse::{common::Comment, Parser, Stmt, VariableValue},
     scope::Scope,
-    utils::peek_ident_no_interpolation,
     Token,
 };
 
 impl<'a> Parser<'a> {
     fn parse_module_alias(&mut self) -> SassResult<Option<String>> {
-        if let Some(Token { kind: 'a', .. }) | Some(Token { kind: 'A', .. }) = self.toks.peek() {
-            let mut ident = peek_ident_no_interpolation(self.toks, false, self.span_before)?;
-            ident.node.make_ascii_lowercase();
-            if ident.node != "as" {
-                return Err(("expected \";\".", ident.span).into());
-            }
-
-            self.whitespace_or_comment();
-
-            if let Some(Token { kind: '*', .. }) = self.toks.peek() {
-                self.toks.next();
-                return Ok(Some('*'.to_string()));
-            }
-
-            let name = self.parse_identifier_no_interpolation(false)?;
-
-            return Ok(Some(name.node));
+        if !matches!(
+            self.toks.peek(),
+            Some(Token { kind: 'a', .. }) | Some(Token { kind: 'A', .. })
+        ) {
+            return Ok(None);
         }
 
-        Ok(None)
+        let mut ident = self.parse_identifier_no_interpolation(false)?;
+
+        ident.node.make_ascii_lowercase();
+
+        if ident.node != "as" {
+            return Err(("expected \";\".", ident.span).into());
+        }
+
+        self.whitespace_or_comment();
+
+        if let Some(Token { kind: '*', .. }) = self.toks.peek() {
+            self.toks.next();
+            return Ok(Some('*'.to_string()));
+        }
+
+        let name = self.parse_identifier_no_interpolation(false)?;
+
+        Ok(Some(name.node))
     }
 
     fn parse_module_config(&mut self) -> SassResult<ModuleConfig> {
         let mut config = ModuleConfig::default();
 
-        if let Some(Token { kind: 'w', .. }) | Some(Token { kind: 'W', .. }) = self.toks.peek() {
-            let mut ident = peek_ident_no_interpolation(self.toks, false, self.span_before)?;
-            ident.node.make_ascii_lowercase();
-            if ident.node != "with" {
-                return Err(("expected \";\".", ident.span).into());
-            }
+        if !matches!(
+            self.toks.peek(),
+            Some(Token { kind: 'w', .. }) | Some(Token { kind: 'W', .. })
+        ) {
+            return Ok(config);
+        }
+
+        let mut ident = self.parse_identifier_no_interpolation(false)?;
+
+        ident.node.make_ascii_lowercase();
+        if ident.node != "with" {
+            return Err(("expected \";\".", ident.span).into());
+        }
+
+        self.whitespace_or_comment();
+
+        self.span_before = ident.span;
+
+        self.expect_char('(')?;
+
+        loop {
+            self.whitespace_or_comment();
+            self.expect_char('$')?;
+
+            let name = self.parse_identifier_no_interpolation(false)?;
 
             self.whitespace_or_comment();
+            self.expect_char(':')?;
+            self.whitespace_or_comment();
 
-            self.span_before = ident.span;
+            let value = self.parse_value(false, &|toks| {
+                matches!(
+                    toks.peek(),
+                    Some(Token { kind: ',', .. }) | Some(Token { kind: ')', .. })
+                )
+            })?;
 
-            self.expect_char('(')?;
+            config.insert(name.map_node(|n| n.into()), value)?;
 
-            loop {
-                self.whitespace_or_comment();
-                self.expect_char('$')?;
-
-                let name = self.parse_identifier_no_interpolation(false)?;
-
-                self.whitespace_or_comment();
-                self.expect_char(':')?;
-                self.whitespace_or_comment();
-
-                let value = self.parse_value(false, &|toks| {
-                    matches!(
-                        toks.peek(),
-                        Some(Token { kind: ',', .. }) | Some(Token { kind: ')', .. })
-                    )
-                })?;
-
-                config.insert(name.map_node(|n| n.into()), value)?;
-
-                match self.toks.next() {
-                    Some(Token { kind: ',', .. }) => {
-                        continue;
-                    }
-                    Some(Token { kind: ')', .. }) => {
-                        break;
-                    }
-                    Some(..) | None => {
-                        return Err(("expected \")\".", self.span_before).into());
-                    }
+            match self.toks.next() {
+                Some(Token { kind: ',', .. }) => {
+                    continue;
+                }
+                Some(Token { kind: ')', .. }) => {
+                    break;
+                }
+                Some(..) | None => {
+                    return Err(("expected \")\".", self.span_before).into());
                 }
             }
         }
@@ -157,27 +167,25 @@ impl<'a> Parser<'a> {
 
         loop {
             self.whitespace();
+
             match self.toks.peek() {
                 Some(Token { kind: '@', .. }) => {
-                    self.toks.advance_cursor();
+                    let start = self.toks.cursor();
+
+                    self.toks.next();
 
                     if let Some(Token { kind, .. }) = self.toks.peek() {
-                        if !matches!(kind, 'a'..='z' | 'A'..='Z' | '\\') {
+                        if !matches!(kind, 'u' | 'U' | '\\') {
+                            self.toks.set_cursor(start);
                             break;
                         }
                     }
 
-                    match AtRuleKind::try_from(&peek_ident_no_interpolation(
-                        self.toks,
-                        false,
-                        self.span_before,
-                    )?)? {
-                        AtRuleKind::Use => {
-                            self.toks.truncate_iterator_to_cursor();
-                        }
-                        _ => {
-                            break;
-                        }
+                    let ident = self.parse_identifier_no_interpolation(false)?;
+
+                    if AtRuleKind::try_from(&ident)? != AtRuleKind::Use {
+                        self.toks.set_cursor(start);
+                        break;
                     }
 
                     self.whitespace_or_comment();

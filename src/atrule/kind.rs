@@ -4,7 +4,7 @@ use codemap::Spanned;
 
 use crate::{common::unvendor, error::SassError};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum AtRuleKind {
     // Sass specific @rules
     /// Loads mixins, functions, and variables from other Sass

@@ -1,6 +1,6 @@
 use crate::{
     error::SassResult,
-    utils::{is_name_start, peek_ident_no_interpolation},
+    utils::is_name_start,
     {Cow, Token},
 };
 
@@ -10,23 +10,25 @@ impl<'a> Parser<'a> {
     /// Peeks to see if the `ident` is at the current position. If it is,
     /// consume the identifier
     pub fn scan_identifier(&mut self, ident: &'static str, case_insensitive: bool) -> bool {
-        let mut peeked_identifier =
-            match peek_ident_no_interpolation(self.toks, false, self.span_before) {
-                Ok(v) => v.node,
-                Err(..) => return false,
-            };
+        let start = self.toks.cursor();
+
+        let mut peeked_identifier = match self.parse_identifier_no_interpolation(false) {
+            Ok(v) => v.node,
+            Err(..) => {
+                self.toks.set_cursor(start);
+                return false;
+            }
+        };
 
         if case_insensitive {
             peeked_identifier.make_ascii_lowercase();
         }
 
         if peeked_identifier == ident {
-            self.toks.truncate_iterator_to_cursor();
-            self.toks.next();
             return true;
         }
 
-        self.toks.reset_cursor();
+        self.toks.set_cursor(start);
 
         false
     }

@@ -161,6 +161,15 @@ test!(
     }",
     "@media foo {\n  a {\n    color: red;\n  }\n}\n@media bar {\n  a {\n    color: green;\n  }\n}\n"
 );
+test!(
+    allows_interpolated_at_rule,
+    "@#{media} (true) {
+      a {
+        color: red;
+      }
+    }",
+    "@media (true) {\n  a {\n    color: red;\n  }\n}\n"
+);
 
 error!(
     media_feature_missing_closing_paren,

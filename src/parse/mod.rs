@@ -136,12 +136,14 @@ impl<'a> Parser<'a> {
 
     pub fn expect_identifier(&mut self, ident: &'static str) -> SassResult<()> {
         let this_ident = self.parse_identifier_no_interpolation(false)?;
+
         self.span_before = this_ident.span;
+
         if this_ident.node == ident {
             return Ok(());
         }
 
-        Err((format!("Expected \"{}\".", ident), self.span_before).into())
+        Err((format!("Expected \"{}\".", ident), this_ident.span).into())
     }
 
     fn parse_stmt(&mut self) -> SassResult<Vec<Stmt>> {

@@ -231,3 +231,8 @@ error!(
     invalid_toplevel_selector,
     "@if true { & { } }", "Error: Top-level selectors may not contain the parent selector \"&\"."
 );
+error!(
+    #[ignore = "unsure what the exact rule is here wrt denying interpolation (@media allows this)"]
+    denies_interpolated_at_rule,
+    "@#{if} true { a {   color: red; } }", "Error: expected \"(\"."
+);
