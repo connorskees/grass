@@ -53,11 +53,6 @@ impl Lexer {
         self.peek()
     }
 
-    pub fn truncate_iterator_to_cursor(&mut self) {
-        self.cursor += self.amt_peeked;
-        self.amt_peeked = 0;
-    }
-
     /// Set cursor to position and reset peek
     pub fn set_cursor(&mut self, cursor: usize) {
         self.cursor = cursor;

@@ -386,6 +386,10 @@ error!(
     "$a: !default;", "Error: Expected expression."
 );
 error!(
+    variable_value_after_flag,
+    "$a: !default red;", "Error: Expected expression."
+);
+error!(
     uppercase_flag,
     "$a: 1 !GLOBAL;", "Error: Invalid flag name."
 );

@@ -132,11 +132,9 @@ impl<'a> Parser<'a> {
 
             match flag.node.as_str() {
                 "global" => {
-                    self.toks.truncate_iterator_to_cursor();
                     global = true;
                 }
                 "default" => {
-                    self.toks.truncate_iterator_to_cursor();
                     default = true;
                 }
                 _ => {
