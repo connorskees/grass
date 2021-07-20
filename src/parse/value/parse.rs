@@ -13,7 +13,7 @@ use crate::{
     error::SassResult,
     lexer::Lexer,
     unit::Unit,
-    utils::{eat_whole_number, is_name, IsWhitespace, ParsedNumber},
+    utils::{is_name, IsWhitespace, ParsedNumber},
     value::{Number, SassFunction, SassMap, Value},
     Token,
 };
@@ -363,9 +363,24 @@ impl<'a> Parser<'a> {
         }
     }
 
+    pub(crate) fn parse_whole_number(&mut self) -> String {
+        let mut buf = String::new();
+
+        while let Some(c) = self.toks.peek() {
+            if !c.kind.is_ascii_digit() {
+                break;
+            }
+
+            let tok = self.toks.next().unwrap();
+            buf.push(tok.kind);
+        }
+
+        buf
+    }
+
     fn parse_number(&mut self, predicate: Predicate<'_>) -> SassResult<Spanned<ParsedNumber>> {
         let mut span = self.toks.peek().unwrap().pos;
-        let mut whole = eat_whole_number(self.toks);
+        let mut whole = self.parse_whole_number();
 
         if self.toks.peek().is_none() || predicate(self) {
             return Ok(Spanned {
@@ -379,7 +394,7 @@ impl<'a> Parser<'a> {
         let dec_len = if next_tok.kind == '.' {
             self.toks.next();
 
-            let dec = eat_whole_number(self.toks);
+            let dec = self.parse_whole_number();
             if dec.is_empty() {
                 return Err(("Expected digit.", next_tok.pos()).into());
             }
@@ -393,33 +408,42 @@ impl<'a> Parser<'a> {
 
         let mut times_ten = String::new();
         let mut times_ten_is_postive = true;
+
         if let Some(Token { kind: 'e', .. }) | Some(Token { kind: 'E', .. }) = self.toks.peek() {
             if let Some(tok) = self.toks.peek_next() {
-                if tok.kind == '-' {
-                    self.toks.next();
-                    times_ten_is_postive = false;
+                match tok.kind {
+                    '-' => {
+                        self.toks.next();
+                        self.toks.next();
+                        times_ten_is_postive = false;
 
-                    self.toks.next();
-                    times_ten = eat_whole_number(self.toks);
+                        times_ten = self.parse_whole_number();
 
-                    if times_ten.is_empty() {
-                        return Err(("Expected digit.", self.toks.peek().unwrap_or(tok).pos).into());
-                    } else if times_ten.len() > 2 {
-                        return Err((
-                            "Exponent too negative.",
-                            self.toks.peek().unwrap_or(tok).pos,
-                        )
-                            .into());
+                        if times_ten.is_empty() {
+                            return Err(
+                                ("Expected digit.", self.toks.peek().unwrap_or(tok).pos).into()
+                            );
+                        } else if times_ten.len() > 2 {
+                            return Err((
+                                "Exponent too negative.",
+                                self.toks.peek().unwrap_or(tok).pos,
+                            )
+                                .into());
+                        }
                     }
-                } else if matches!(tok.kind, '0'..='9') {
-                    self.toks.next();
-                    times_ten = eat_whole_number(self.toks);
+                    '0'..='9' => {
+                        self.toks.next();
+                        times_ten = self.parse_whole_number();
 
-                    if times_ten.len() > 2 {
-                        return Err(
-                            ("Exponent too large.", self.toks.peek().unwrap_or(tok).pos).into()
-                        );
+                        if times_ten.len() > 2 {
+                            return Err((
+                                "Exponent too large.",
+                                self.toks.peek().unwrap_or(tok).pos,
+                            )
+                                .into());
+                        }
                     }
+                    _ => {}
                 }
             }
         }

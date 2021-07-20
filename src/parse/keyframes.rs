@@ -5,7 +5,6 @@ use crate::{
     error::SassResult,
     lexer::Lexer,
     parse::Stmt,
-    utils::eat_whole_number,
     Token,
 };
 
@@ -54,12 +53,12 @@ impl<'a, 'b> KeyframesSelectorParser<'a, 'b> {
                     }
                 }
                 '0'..='9' => {
-                    let mut num = eat_whole_number(self.parser.toks);
+                    let mut num = self.parser.parse_whole_number();
 
                     if let Some(Token { kind: '.', .. }) = self.parser.toks.peek() {
                         self.parser.toks.next();
                         num.push('.');
-                        num.push_str(&eat_whole_number(self.parser.toks));
+                        num.push_str(&self.parser.parse_whole_number());
                     }
 
                     self.parser.expect_char('%')?;
