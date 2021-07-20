@@ -123,6 +123,52 @@ test!(
     }",
     "@foo;\n@foo;\n"
 );
+test!(
+    escaped_keyword_through,
+    r"@for $i from 0 \74 hrough 0 {
+      a {
+        color: \74;
+      }
+    }",
+    "a {\n  color: t;\n}\n"
+);
+test!(
+    escaped_keyword_to,
+    r"@for $i from 0 \74 o 1 {
+      a {
+        color: \74;
+      }
+    }",
+    "a {\n  color: t;\n}\n"
+);
+test!(
+    escaped_keyword_from_lower,
+    r"@for $i \66rom 0 to 1 {
+      a {
+        color: \74;
+      }
+    }",
+    "a {\n  color: t;\n}\n"
+);
+test!(
+    escaped_keyword_from_upper,
+    r"@for $i \46rom 0 to 1 {
+      a {
+        color: \74;
+      }
+    }",
+    "a {\n  color: t;\n}\n"
+);
+test!(
+    variable_name_is_keyword,
+    r"$to: 0;
+    @for $from from $to to 1 {
+      a {
+        color: red;
+      }
+    }",
+    "a {\n  color: red;\n}\n"
+);
 error!(
     missing_keyword_from,
     "@for $i fro", "Error: Expected \"from\"."

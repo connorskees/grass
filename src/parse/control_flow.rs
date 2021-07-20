@@ -7,9 +7,7 @@ use crate::{
     lexer::Lexer,
     parse::{ContextFlags, Parser, Stmt},
     unit::Unit,
-    utils::{
-        peek_ident_no_interpolation, read_until_closing_curly_brace, read_until_open_curly_brace,
-    },
+    utils::{read_until_closing_curly_brace, read_until_open_curly_brace},
     value::{Number, Value},
     Token,
 };
@@ -177,17 +175,22 @@ impl<'a> Parser<'a> {
         self.whitespace_or_comment();
 
         let from_val = self.parse_value(false, &|parser| match parser.toks.peek() {
-            Some(Token { kind: 't', pos })
-            | Some(Token { kind: 'T', pos })
-            | Some(Token { kind: '\\', pos }) => {
-                let span = pos;
-                let mut ident = match peek_ident_no_interpolation(parser.toks, false, span) {
+            Some(Token { kind: 't', .. })
+            | Some(Token { kind: 'T', .. })
+            | Some(Token { kind: '\\', .. }) => {
+                let start = parser.toks.cursor();
+
+                let mut ident = match parser.parse_identifier_no_interpolation(false) {
                     Ok(s) => s,
                     Err(..) => return false,
                 };
+
                 ident.node.make_ascii_lowercase();
+
                 let v = matches!(ident.node.to_ascii_lowercase().as_str(), "to" | "through");
-                parser.toks.reset_cursor();
+
+                parser.toks.set_cursor(start);
+
                 v
             }
             Some(..) | None => false,

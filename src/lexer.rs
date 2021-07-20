@@ -26,10 +26,6 @@ impl Lexer {
         self.amt_peeked = 0;
     }
 
-    pub fn advance_cursor(&mut self) {
-        self.amt_peeked += 1;
-    }
-
     pub fn peek_next(&mut self) -> Option<Token> {
         self.amt_peeked += 1;
 
