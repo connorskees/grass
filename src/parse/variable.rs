@@ -111,15 +111,15 @@ impl<'a> Parser<'a> {
         let mut default = false;
         let mut global = false;
 
-        let value = self.parse_value(true, &|toks| {
-            if matches!(toks.peek(), Some(Token { kind: '!', .. })) {
+        let value = self.parse_value(true, &|parser| {
+            if matches!(parser.toks.peek(), Some(Token { kind: '!', .. })) {
                 let is_important = matches!(
-                    toks.peek_next(),
+                    parser.toks.peek_next(),
                     Some(Token { kind: 'i', .. })
                         | Some(Token { kind: 'I', .. })
                         | Some(Token { kind: '=', .. })
                 );
-                toks.reset_cursor();
+                parser.toks.reset_cursor();
                 !is_important
             } else {
                 false

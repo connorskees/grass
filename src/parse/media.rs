@@ -34,14 +34,14 @@ impl<'a> Parser<'a> {
     }
 
     pub fn expression_until_comparison(&mut self) -> SassResult<Cow<'static, str>> {
-        let value = self.parse_value(false, &|toks| match toks.peek() {
+        let value = self.parse_value(false, &|parser| match parser.toks.peek() {
             Some(Token { kind: '>', .. })
             | Some(Token { kind: '<', .. })
             | Some(Token { kind: ':', .. })
             | Some(Token { kind: ')', .. }) => true,
             Some(Token { kind: '=', .. }) => {
-                let is_double_eq = matches!(toks.peek_next(), Some(Token { kind: '=', .. }));
-                toks.reset_cursor();
+                let is_double_eq = matches!(parser.toks.peek_next(), Some(Token { kind: '=', .. }));
+                parser.toks.reset_cursor();
                 // if it is a double eq, then parse as normal
                 //
                 // otherwise, it is a single eq and we should
@@ -88,8 +88,8 @@ impl<'a> Parser<'a> {
             buf.push(':');
             buf.push(' ');
 
-            let value = self.parse_value(false, &|toks| {
-                matches!(toks.peek(), Some(Token { kind: ')', .. }))
+            let value = self.parse_value(false, &|parser| {
+                matches!(parser.toks.peek(), Some(Token { kind: ')', .. }))
             })?;
             self.expect_char(')')?;
 

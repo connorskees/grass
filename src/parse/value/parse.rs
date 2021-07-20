@@ -45,6 +45,9 @@ impl IsWhitespace for IntermediateValue {
     }
 }
 
+/// We parse a value until the predicate returns true
+type Predicate<'a> = &'a dyn Fn(&mut Parser<'_>) -> bool;
+
 impl<'a> Parser<'a> {
     /// Parse a value from a stream of tokens
     ///
@@ -52,7 +55,7 @@ impl<'a> Parser<'a> {
     pub(crate) fn parse_value(
         &mut self,
         in_paren: bool,
-        predicate: &dyn Fn(&mut Lexer) -> bool,
+        predicate: Predicate<'_>,
     ) -> SassResult<Spanned<Value>> {
         self.whitespace();
 
@@ -64,7 +67,7 @@ impl<'a> Parser<'a> {
             Some(Token { pos, .. }) => pos,
         };
 
-        if predicate(self.toks) {
+        if predicate(self) {
             return Err(("Expected expression.", span).into());
         }
 
@@ -290,7 +293,7 @@ impl<'a> Parser<'a> {
 
     fn parse_ident_value(
         &mut self,
-        predicate: &dyn Fn(&mut Lexer) -> bool,
+        predicate: Predicate<'_>,
     ) -> SassResult<Spanned<IntermediateValue>> {
         let Spanned { node: mut s, span } = self.parse_identifier()?;
 
@@ -320,7 +323,7 @@ impl<'a> Parser<'a> {
                     return self.parse_fn_call(s, lower);
                 }
                 Some(Token { kind: '.', .. }) => {
-                    if !predicate(self.toks) {
+                    if !predicate(self) {
                         self.toks.next();
                         return self.parse_module_item(&s, span);
                     }
@@ -360,14 +363,11 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_number(
-        &mut self,
-        predicate: &dyn Fn(&mut Lexer) -> bool,
-    ) -> SassResult<Spanned<ParsedNumber>> {
+    fn parse_number(&mut self, predicate: Predicate<'_>) -> SassResult<Spanned<ParsedNumber>> {
         let mut span = self.toks.peek().unwrap().pos;
         let mut whole = eat_whole_number(self.toks);
 
-        if self.toks.peek().is_none() || predicate(self.toks) {
+        if self.toks.peek().is_none() || predicate(self) {
             return Ok(Spanned {
                 node: ParsedNumber::new(whole, 0, String::new(), true),
                 span,
@@ -452,8 +452,8 @@ impl<'a> Parser<'a> {
             .span(span)
         } else {
             // todo: we don't know if we're `in_paren` here
-            let inner = self.parse_value(false, &|toks| {
-                matches!(toks.peek(), Some(Token { kind: ']', .. }))
+            let inner = self.parse_value(false, &|parser| {
+                matches!(parser.toks.peek(), Some(Token { kind: ']', .. }))
             })?;
 
             span = span.merge(inner.span);
@@ -470,7 +470,7 @@ impl<'a> Parser<'a> {
 
     fn parse_intermediate_value_dimension(
         &mut self,
-        predicate: &dyn Fn(&mut Lexer) -> bool,
+        predicate: Predicate<'_>,
     ) -> SassResult<Spanned<IntermediateValue>> {
         let Spanned { node, span } = self.parse_dimension(predicate)?;
 
@@ -479,7 +479,7 @@ impl<'a> Parser<'a> {
 
     pub(crate) fn parse_dimension(
         &mut self,
-        predicate: &dyn Fn(&mut Lexer) -> bool,
+        predicate: Predicate<'_>,
     ) -> SassResult<Spanned<Value>> {
         let Spanned {
             node: val,
@@ -568,9 +568,9 @@ impl<'a> Parser<'a> {
         }
 
         let mut map = SassMap::new();
-        let key = self.parse_value(true, &|c| {
+        let key = self.parse_value(true, &|parser| {
             matches!(
-                c.peek(),
+                parser.toks.peek(),
                 Some(Token { kind: ':', .. }) | Some(Token { kind: ')', .. })
             )
         })?;
@@ -586,9 +586,9 @@ impl<'a> Parser<'a> {
             Some(..) | None => return Err(("expected \")\".", key.span).into()),
         }
 
-        let val = self.parse_value(true, &|c| {
+        let val = self.parse_value(true, &|parser| {
             matches!(
-                c.peek(),
+                parser.toks.peek(),
                 Some(Token { kind: ',', .. }) | Some(Token { kind: ')', .. })
             )
         })?;
@@ -624,9 +624,9 @@ impl<'a> Parser<'a> {
         }
 
         loop {
-            let key = self.parse_value(true, &|c| {
+            let key = self.parse_value(true, &|parser| {
                 matches!(
-                    c.peek(),
+                    parser.toks.peek(),
                     Some(Token { kind: ':', .. }) | Some(Token { kind: ',', .. })
                 )
             })?;
@@ -634,9 +634,9 @@ impl<'a> Parser<'a> {
             self.expect_char(':')?;
 
             self.whitespace_or_comment();
-            let val = self.parse_value(true, &|c| {
+            let val = self.parse_value(true, &|parser| {
                 matches!(
-                    c.peek(),
+                    parser.toks.peek(),
                     Some(Token { kind: ',', .. }) | Some(Token { kind: ')', .. })
                 )
             })?;
@@ -763,9 +763,9 @@ impl<'a> Parser<'a> {
 
     fn parse_intermediate_value(
         &mut self,
-        predicate: &dyn Fn(&mut Lexer) -> bool,
+        predicate: Predicate<'_>,
     ) -> Option<SassResult<Spanned<IntermediateValue>>> {
-        if predicate(self.toks) {
+        if predicate(self) {
             return None;
         }
         let (kind, span) = match self.toks.peek() {
@@ -1038,7 +1038,7 @@ impl<'a> Parser<'a> {
 struct IntermediateValueIterator<'a, 'b: 'a> {
     parser: &'a mut Parser<'b>,
     peek: Option<SassResult<Spanned<IntermediateValue>>>,
-    predicate: &'a dyn Fn(&mut Lexer) -> bool,
+    predicate: Predicate<'a>,
 }
 
 impl<'a, 'b: 'a> Iterator for IntermediateValueIterator<'a, 'b> {
@@ -1053,7 +1053,7 @@ impl<'a, 'b: 'a> Iterator for IntermediateValueIterator<'a, 'b> {
 }
 
 impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
-    pub fn new(parser: &'a mut Parser<'b>, predicate: &'a dyn Fn(&mut Lexer) -> bool) -> Self {
+    pub fn new(parser: &'a mut Parser<'b>, predicate: Predicate<'a>) -> Self {
         Self {
             parser,
             peek: None,

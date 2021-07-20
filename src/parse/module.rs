@@ -78,9 +78,9 @@ impl<'a> Parser<'a> {
             self.expect_char(':')?;
             self.whitespace_or_comment();
 
-            let value = self.parse_value(false, &|toks| {
+            let value = self.parse_value(false, &|parser| {
                 matches!(
-                    toks.peek(),
+                    parser.toks.peek(),
                     Some(Token { kind: ',', .. }) | Some(Token { kind: ')', .. })
                 )
             })?;

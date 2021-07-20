@@ -176,18 +176,18 @@ impl<'a> Parser<'a> {
         }
         self.whitespace_or_comment();
 
-        let from_val = self.parse_value(false, &|toks| match toks.peek() {
+        let from_val = self.parse_value(false, &|parser| match parser.toks.peek() {
             Some(Token { kind: 't', pos })
             | Some(Token { kind: 'T', pos })
             | Some(Token { kind: '\\', pos }) => {
                 let span = pos;
-                let mut ident = match peek_ident_no_interpolation(toks, false, span) {
+                let mut ident = match peek_ident_no_interpolation(parser.toks, false, span) {
                     Ok(s) => s,
                     Err(..) => return false,
                 };
                 ident.node.make_ascii_lowercase();
                 let v = matches!(ident.node.to_ascii_lowercase().as_str(), "to" | "through");
-                toks.reset_cursor();
+                parser.toks.reset_cursor();
                 v
             }
             Some(..) | None => false,

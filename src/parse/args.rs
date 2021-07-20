@@ -183,15 +183,16 @@ impl<'a> Parser<'a> {
 
             self.whitespace_or_comment();
 
-            let value = self.parse_value(true, &|c| match c.peek() {
+            let value = self.parse_value(true, &|parser| match parser.toks.peek() {
                 Some(Token { kind: ')', .. }) | Some(Token { kind: ',', .. }) => true,
                 Some(Token { kind: '.', .. }) => {
-                    let next_is_dot = matches!(c.peek_n(1), Some(Token { kind: '.', .. }));
+                    let next_is_dot =
+                        matches!(parser.toks.peek_n(1), Some(Token { kind: '.', .. }));
 
                     next_is_dot
                 }
                 Some(Token { kind: '=', .. }) => {
-                    let next_is_eq = matches!(c.peek_n(1), Some(Token { kind: '=', .. }));
+                    let next_is_eq = matches!(parser.toks.peek_n(1), Some(Token { kind: '=', .. }));
 
                     !next_is_eq
                 }
@@ -283,10 +284,11 @@ impl<'a> Parser<'a> {
                     self.toks.next();
                     let left = value?;
 
-                    let right = self.parse_value(true, &|c| match c.peek() {
+                    let right = self.parse_value(true, &|parser| match parser.toks.peek() {
                         Some(Token { kind: ')', .. }) | Some(Token { kind: ',', .. }) => true,
                         Some(Token { kind: '.', .. }) => {
-                            let next_is_dot = matches!(c.peek_n(1), Some(Token { kind: '.', .. }));
+                            let next_is_dot =
+                                matches!(parser.toks.peek_n(1), Some(Token { kind: '.', .. }));
 
                             next_is_dot
                         }
