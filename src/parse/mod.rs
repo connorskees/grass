@@ -63,9 +63,6 @@ pub(crate) enum Stmt {
     Import(String),
 }
 
-/// We could use a generic for the toks, but it makes the API
-/// much simpler to work with if it isn't generic. The performance
-/// hit (if there is one) is not important for now.
 // todo: merge at_root and at_root_has_selector into an enum
 pub(crate) struct Parser<'a> {
     pub toks: &'a mut Lexer,

@@ -10,6 +10,9 @@ use crate::{
     value::{SassFunction, Value},
 };
 
+/// A singular scope
+///
+/// Contains variables, functions, and mixins
 #[derive(Debug, Default)]
 pub(crate) struct Scope {
     pub vars: BTreeMap<Identifier, Value>,
