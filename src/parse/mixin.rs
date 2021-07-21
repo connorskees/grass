@@ -73,9 +73,7 @@ impl<'a> Parser<'a> {
         self.whitespace_or_comment();
         let name = self.parse_identifier()?.map_node(Into::into);
 
-        let mixin = if let Some(Token { kind: '.', .. }) = self.toks.peek() {
-            self.toks.next();
-
+        let mixin = if self.consume_char_if_exists('.') {
             let module = name;
             let name = self.parse_identifier()?.map_node(Into::into);
 
@@ -88,8 +86,7 @@ impl<'a> Parser<'a> {
 
         self.whitespace_or_comment();
 
-        let args = if let Some(Token { kind: '(', .. }) = self.toks.peek() {
-            self.toks.next();
+        let args = if self.consume_char_if_exists('(') {
             self.parse_call_args()?
         } else {
             CallArgs::new(name.span)
@@ -132,7 +129,7 @@ impl<'a> Parser<'a> {
         };
 
         self.consume_char_if_exists(';');
- 
+
         let UserDefinedMixin {
             body,
             args: fn_args,

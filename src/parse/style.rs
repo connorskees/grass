@@ -174,8 +174,8 @@ impl<'a> Parser<'a> {
     fn parse_property(&mut self, mut super_property: String) -> SassResult<String> {
         let property = self.parse_identifier()?;
         self.whitespace_or_comment();
-        if let Some(Token { kind: ':', .. }) = self.toks.peek() {
-            self.toks.next();
+        // todo: expect_char(':')?;
+        if self.consume_char_if_exists(':') {
             self.whitespace_or_comment();
         } else {
             return Err(("Expected \":\".", property.span).into());

@@ -131,6 +131,7 @@ impl<'a> Parser<'a> {
                 return true;
             }
         }
+
         false
     }
 
@@ -208,10 +209,9 @@ impl<'a> Parser<'a> {
                                 span,
                             } = self.parse_value(false, &|_| false)?;
                             span.merge(kind_string.span);
-                            if let Some(Token { kind: ';', pos }) = self.toks.peek() {
-                                kind_string.span.merge(pos);
-                                self.toks.next();
-                            }
+
+                            self.consume_char_if_exists(';');
+
                             self.warn(&Spanned {
                                 node: message.to_css_string(span)?,
                                 span,
@@ -223,10 +223,9 @@ impl<'a> Parser<'a> {
                                 span,
                             } = self.parse_value(false, &|_| false)?;
                             span.merge(kind_string.span);
-                            if let Some(Token { kind: ';', pos }) = self.toks.peek() {
-                                kind_string.span.merge(pos);
-                                self.toks.next();
-                            }
+
+                            self.consume_char_if_exists(';');
+
                             self.debug(&Spanned {
                                 node: message.inspect(span)?,
                                 span,
@@ -248,7 +247,7 @@ impl<'a> Parser<'a> {
                             let val = self.parse_value(false, &|_| false)?;
 
                             self.consume_char_if_exists(';');
-                            
+
                             if !val.node.is_quoted_string() {
                                 return Err(("Expected string.", val.span).into());
                             }
@@ -409,8 +408,7 @@ impl<'a> Parser<'a> {
             span = span.merge(pos);
             match kind {
                 '#' => {
-                    if let Some(Token { kind: '{', .. }) = self.toks.peek() {
-                        self.toks.next();
+                    if self.consume_char_if_exists('{') {
                         string.push_str(&self.parse_interpolation()?.to_css_string(span)?);
                     } else {
                         string.push('#');
@@ -594,8 +592,7 @@ impl<'a> Parser<'a> {
                         #[allow(clippy::while_let_on_iterator)]
                         while let Some(tok) = self.toks.next() {
                             if tok.kind == '*' {
-                                if let Some(Token { kind: '/', .. }) = self.toks.peek() {
-                                    self.toks.next();
+                                if self.consume_char_if_exists('/') {
                                     break;
                                 }
                             }

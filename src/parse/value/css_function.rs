@@ -146,8 +146,7 @@ impl<'a> Parser<'a> {
                 }
                 '#' => {
                     self.toks.next();
-                    if let Some(Token { kind: '{', .. }) = self.toks.peek() {
-                        self.toks.next();
+                    if self.consume_char_if_exists('{') {
                         let interpolation = self.parse_interpolation_as_string()?;
 
                         buf.push_str(&interpolation);

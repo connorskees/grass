@@ -88,8 +88,7 @@ impl<'a> Parser<'a> {
         while let Some(tok) = self.toks.next() {
             match tok.kind {
                 '#' => {
-                    if let Some(Token { kind: '{', .. }) = self.toks.peek() {
-                        self.toks.next();
+                    if self.consume_char_if_exists('{') {
                         name.push_str(&self.parse_interpolation_as_string()?);
                     } else {
                         name.push('#');
@@ -126,8 +125,7 @@ impl<'a> Parser<'a> {
             span = span.merge(tok.pos());
             match tok.kind {
                 '#' => {
-                    if let Some(Token { kind: '{', .. }) = self.toks.peek() {
-                        self.toks.next();
+                    if self.consume_char_if_exists('{') {
                         string.push_str(&self.parse_interpolation()?.to_css_string(span)?);
                     } else {
                         string.push('#');

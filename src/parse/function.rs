@@ -7,7 +7,7 @@ use crate::{
     error::SassResult,
     lexer::Lexer,
     scope::Scopes,
-    utils::{read_until_closing_curly_brace},
+    utils::read_until_closing_curly_brace,
     value::{SassFunction, Value},
 };
 
@@ -125,7 +125,10 @@ impl<'a> Parser<'a> {
             self.scopes.exit_scope();
         }
 
-        debug_assert!(return_value.len() <= 1);
+        debug_assert!(
+            return_value.len() <= 1,
+            "we expect there to be only one return value"
+        );
         match return_value
             .pop()
             .ok_or(("Function finished without @return.", self.span_before))?

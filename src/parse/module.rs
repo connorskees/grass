@@ -35,8 +35,7 @@ impl<'a> Parser<'a> {
 
         self.whitespace_or_comment();
 
-        if let Some(Token { kind: '*', .. }) = self.toks.peek() {
-            self.toks.next();
+        if self.consume_char_if_exists('*') {
             return Ok(Some('*'.to_string()));
         }
 

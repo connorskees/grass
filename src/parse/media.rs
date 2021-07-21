@@ -69,11 +69,11 @@ impl<'a> Parser<'a> {
     }
 
     fn parse_media_feature(&mut self) -> SassResult<String> {
-        if let Some(Token { kind: '#', .. }) = self.toks.peek() {
-            self.toks.next();
+        if self.consume_char_if_exists('#') {
             self.expect_char('{')?;
             return Ok(self.parse_interpolation_as_string()?.into_owned());
         }
+
         let mut buf = String::with_capacity(2);
         self.expect_char('(')?;
         buf.push('(');
@@ -81,8 +81,7 @@ impl<'a> Parser<'a> {
 
         buf.push_str(&self.expression_until_comparison()?);
 
-        if let Some(Token { kind: ':', .. }) = self.toks.peek() {
-            self.toks.next();
+        if self.consume_char_if_exists(':') {
             self.whitespace_or_comment();
 
             buf.push(':');
