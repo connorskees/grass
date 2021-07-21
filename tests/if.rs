@@ -236,3 +236,27 @@ error!(
     denies_interpolated_at_rule,
     "@#{if} true { a {   color: red; } }", "Error: expected \"(\"."
 );
+test!(
+    else_if_escaped_lower_i,
+    r"@if false {
+    } @else \69 f true {
+      /**/
+    }",
+    "/**/\n"
+);
+test!(
+    else_if_escaped_lower_both,
+    r"@if false {
+    } @else \69 \66  true {
+      /**/
+    }",
+    "/**/\n"
+);
+test!(
+    else_if_uppercase,
+    r"@if false {
+    } @else IF true {
+      /**/
+    }",
+    "/**/\n"
+);

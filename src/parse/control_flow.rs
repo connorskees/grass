@@ -69,13 +69,16 @@ impl<'a> Parser<'a> {
             self.whitespace_or_comment();
             if let Some(tok) = self.toks.peek() {
                 match tok.kind {
-                    'i' if matches!(
-                        self.toks.peek_forward(1),
-                        Some(Token { kind: 'f', .. }) | Some(Token { kind: 'F', .. })
-                    ) =>
-                    {
-                        self.toks.next();
-                        self.toks.next();
+                    'i' | 'I' | '\\' => {
+                        self.span_before = tok.pos;
+                        let mut ident = self.parse_identifier_no_interpolation(false)?;
+
+                        ident.node.make_ascii_lowercase();
+
+                        if ident.node != "if" {
+                            return Err(("expected \"{\".", ident.span).into());
+                        }
+
                         let cond = if found_true {
                             self.throw_away_until_open_curly_brace()?;
                             false
@@ -84,6 +87,7 @@ impl<'a> Parser<'a> {
                             self.expect_char('{')?;
                             v
                         };
+
                         if cond {
                             found_true = true;
                             self.scopes.enter_new_scope();

@@ -18,11 +18,9 @@ test!(
 );
 error!(
     invalid_charset_value,
-    "@charset 1;",
-    "Error: Expected string."
+    "@charset 1;", "Error: Expected string."
 );
 error!(
     invalid_charset_value_unquoted_string,
-    "@charset a;",
-    "Error: Expected string."
+    "@charset a;", "Error: Expected string."
 );
