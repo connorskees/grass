@@ -66,3 +66,11 @@ test!(
     "a {\n  color: 2in > 1cm;\n}\n",
     "a {\n  color: true;\n}\n"
 );
+error!(
+    strings_not_comparable,
+    "a {\n  color: a > b;\n}\n", "Error: Undefined operation \"a > b\"."
+);
+error!(
+    number_and_string_not_comparable,
+    "a {\n  color: 1 > b;\n}\n", "Error: Undefined operation \"1 > b\"."
+);

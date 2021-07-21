@@ -818,6 +818,17 @@ test!(
     ".foo bar[val=\"//\"] {\n  color: &;\n}\n",
     ".foo bar[val=\"//\"] {\n  color: .foo bar[val=\"//\"];\n}\n"
 );
+test!(
+    attribute_value_escape_ends_before_non_hex_char,
+    "[a=\"a\\\\66\"] {\n  color: &;\n}\n",
+    "[a=a\\66] {\n  color: [a=a\\66];\n}\n"
+);
+test!(
+    #[ignore = "we have to rewrite quoted attribute value parsing somewhat"]
+    attribute_value_escape_ends_with_whitespace,
+    "[a=\"a\\\\66  \"] {\n  color: &;\n}\n",
+    "[a=\"a\\\\66  \"] {\n  color: [a=\"a\\\\66  \"];\n}\n"
+);
 error!(
     a_n_plus_b_n_invalid_odd,
     ":nth-child(ofdd) {\n  color: &;\n}\n", "Error: Expected \"odd\"."

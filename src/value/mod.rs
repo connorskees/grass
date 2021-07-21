@@ -103,13 +103,23 @@ impl PartialEq for Value {
                     false
                 }
             }
-            Value::ArgList(list1) => {
-                if let Value::ArgList(list2) = other {
-                    list1 == list2
-                } else {
-                    false
+            Value::ArgList(list1) => match other {
+                Value::ArgList(list2) => list1 == list2,
+                Value::List(list2, ListSeparator::Comma, ..) => {
+                    if list1.len() != list2.len() {
+                        return false;
+                    }
+
+                    for (el1, el2) in list1.iter().zip(list2) {
+                        if &el1.node != el2 {
+                            return false;
+                        }
+                    }
+
+                    true
                 }
-            }
+                _ => false,
+            },
         }
     }
 }
@@ -348,11 +358,11 @@ impl Value {
                         num.cmp(&num2.clone().convert(unit2, unit))
                     }
                 }
-                v => {
+                _ => {
                     return Err((
                         format!(
                             "Undefined operation \"{} {} {}\".",
-                            v.inspect(span)?,
+                            self.inspect(span)?,
                             op,
                             other.inspect(span)?
                         ),
@@ -371,7 +381,7 @@ impl Value {
                     ),
                     span,
                 )
-                    .into())
+                    .into());
             }
         })
     }

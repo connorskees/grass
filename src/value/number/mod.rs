@@ -149,6 +149,7 @@ impl Number {
 
     /// Invariants: `from.comparable(&to)` must be true
     pub fn convert(self, from: &Unit, to: &Unit) -> Self {
+        debug_assert!(from.comparable(to));
         self * UNIT_CONVERSION_TABLE[to][from].clone()
     }
 }

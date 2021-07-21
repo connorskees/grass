@@ -229,10 +229,13 @@ impl CallArgs {
             Ok(v) => v,
             Err(e) => return Err((format!("No argument named ${}.", e), self.1).into()),
         };
+
         args.sort_by(|(a1, _), (a2, _)| a1.cmp(a2));
-        for arg in args {
-            vals.push(arg.1?);
+
+        for (_, arg) in args {
+            vals.push(arg?);
         }
+
         Ok(vals)
     }
 }

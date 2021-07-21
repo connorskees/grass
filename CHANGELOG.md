@@ -6,6 +6,7 @@
 - fix bug in `hue(...)` function in which the value would be incorrect in when the `red` channel was the highest and the green channel was lower than the blue channel
 - no longer round output from `saturation(...)` function
 - improve handling of newlines inside and around `@media`
+- arglists can be equal to comma separated lists
 
 # 0.10.5
 

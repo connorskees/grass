@@ -591,10 +591,8 @@ impl<'a> Parser<'a> {
                         self.toks.next();
                         #[allow(clippy::while_let_on_iterator)]
                         while let Some(tok) = self.toks.next() {
-                            if tok.kind == '*' {
-                                if self.consume_char_if_exists('/') {
-                                    break;
-                                }
+                            if tok.kind == '*' && self.consume_char_if_exists('/') {
+                                break;
                             }
                         }
                     }

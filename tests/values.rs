@@ -111,11 +111,6 @@ test!(
     "a {\n  color: \"'foo' \\\"bar\\\"\";\n}\n"
 );
 test!(
-    whitespace_space_list_number,
-    "a {\n  color:  1  2  3  ;\n}\n",
-    "a {\n  color: 1 2 3;\n}\n"
-);
-test!(
     whitespace_comma_list_number,
     "a {\n  color:  1 ,  2 ,  3  ;\n}\n",
     "a {\n  color: 1, 2, 3;\n}\n"

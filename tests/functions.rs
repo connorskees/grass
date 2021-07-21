@@ -316,6 +316,28 @@ error!(
     }",
     "Error: Functions can only contain variable declarations and control directives."
 );
+error!(
+    pass_one_arg_to_fn_that_accepts_zero,
+    "@function foo() {
+      @return red;
+    }
+    
+    a {
+      color: foo(1);
+    }",
+    "Error: Only 0 arguments allowed, but 1 was passed."
+);
+error!(
+    pass_two_args_to_fn_that_accepts_one,
+    "@function foo($a) {
+      @return red;
+    }
+    
+    a {
+      color: foo(1, 2);
+    }",
+    "Error: Only 1 argument allowed, but 2 were passed."
+);
 test!(
     allows_multiline_comment,
     "@function foo($a) {

@@ -357,6 +357,11 @@ impl<'a> Parser<'a> {
             args.max_args(0)?;
             return Ok(scope);
         }
+
+        if !fn_args.0.iter().any(|arg| arg.is_variadic) {
+            args.max_args(fn_args.len())?;
+        }
+
         self.scopes.enter_new_scope();
         for (idx, mut arg) in fn_args.0.into_iter().enumerate() {
             if arg.is_variadic {
@@ -364,6 +369,7 @@ impl<'a> Parser<'a> {
                 scope.insert_var(arg.name, arg_list);
                 break;
             }
+
             let val = match args.get(idx, arg.name) {
                 Some(v) => v,
                 None => match arg.default.as_mut() {

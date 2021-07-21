@@ -6,6 +6,10 @@ error!(
     "@function foo($a..., $b) {\n  @return $a;\n}\n", "Error: expected \")\"."
 );
 error!(
+    two_varargs,
+    "@function foo($a..., $b...) {\n  @return $a;\n}\n", "Error: expected \")\"."
+);
+error!(
     varargs_one_period,
     "@function foo($a.) {\n  @return $a;\n}\n", "Error: expected \".\"."
 );
@@ -46,6 +50,20 @@ test!(
 test!(
     arg_errors_are_lazy_for_if,
     "a {\n  color: if(false, unit(foo), red);\n}\n",
+    "a {\n  color: red;\n}\n"
+);
+test!(
+    silent_comments_in_arg_with_default_val,
+    "@function foo($a//
+    ://
+    red//
+    ) {
+      @return $a;
+    }
+    
+    a {
+      color: foo();
+    }",
     "a {\n  color: red;\n}\n"
 );
 error!(

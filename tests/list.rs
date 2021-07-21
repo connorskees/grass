@@ -372,6 +372,21 @@ test!(
     "a {\n  color: [ /**/ ];\n}\n",
     "a {\n  color: [];\n}\n"
 );
+test!(
+    space_separated_inside_comma_separated,
+    "$a: 1 2 3 == 1, 2, 3;
+    a {
+        color: $a;
+        color: nth($a, 1);
+        color: nth($a, 2);
+    }",
+    "a {\n  color: 1 2 false, 2, 3;\n  color: 1 2 false;\n  color: 2;\n}\n"
+);
+test!(
+    whitespace_space_list_number,
+    "a {\n  color:  1  2  3  ;\n}\n",
+    "a {\n  color: 1 2 3;\n}\n"
+);
 error!(
     invalid_item_in_space_separated_list,
     "a {\n  color: red color * #abc;\n}\n", "Error: Undefined operation \"color * #abc\"."

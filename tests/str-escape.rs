@@ -185,6 +185,16 @@ test!(
     "a {\n  color: \"foo\\\nbar\";\n}\n",
     "a {\n  color: \"foobar\";\n}\n"
 );
+test!(
+    escaped_value_over_0xf_in_quoted_string,
+    "a {\n  color: \"#{\"\\1f\"}\";\n}\n",
+    "a {\n  color: \"\\1f\";\n}\n"
+);
+test!(
+    escaped_value_over_0xf_in_quoted_string_with_trailing_space,
+    "a {\n  color: \"#{\"\\1f\"} \";\n}\n",
+    "a {\n  color: \"\\1f  \";\n}\n"
+);
 error!(
     newline_after_escape,
     "a {\n  color: \\\n", "Error: Expected escape sequence."

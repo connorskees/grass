@@ -304,11 +304,15 @@ pub(crate) fn content_exists(args: CallArgs, parser: &mut Parser<'_>) -> SassRes
     ))
 }
 
-#[allow(unused_variables)]
+#[allow(unused_variables, clippy::needless_pass_by_value)]
 pub(crate) fn keywords(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     args.max_args(1)?;
-    drop(args);
-    todo!("builtin function `keywords` blocked on better handling of call args")
+
+    Err((
+        "Builtin function `keywords` is not yet implemented",
+        args.span(),
+    )
+        .into())
 }
 
 pub(crate) fn declare(f: &mut GlobalFunctionMap) {

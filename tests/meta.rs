@@ -302,3 +302,11 @@ error!(
     mixin_exists_non_string,
     "a {color: mixin-exists(12px)}", "Error: $name: 12px is not a string."
 );
+test!(
+    local_mixin_exists,
+    "a {
+      @mixin a {}
+      color: mixin-exists($name: a);
+    }",
+    "a {\n  color: true;\n}\n"
+);

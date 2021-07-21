@@ -61,3 +61,192 @@ test!(
     "a {\n  color: (0mm: a)==(0cm: a);\n}\n",
     "a {\n  color: true;\n}\n"
 );
+test!(
+    true_true_eq,
+    "a {\n  color: true == true;\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    false_false_eq,
+    "a {\n  color: false == false;\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    true_false_eq,
+    "a {\n  color: true == false;\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    false_true_eq,
+    "a {\n  color: false == true;\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    true_true_ne,
+    "a {\n  color: true != true;\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    false_false_ne,
+    "a {\n  color: false != false;\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    true_false_ne,
+    "a {\n  color: true != false;\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    false_true_ne,
+    "a {\n  color: true != false;\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    important_important_eq,
+    "a {\n  color: !important == !important;\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    important_important_ne,
+    "a {\n  color: !important != !important;\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    map_color_eq,
+    "a {\n  color: (a: b) == red;\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    map_color_ne,
+    "a {\n  color: (a: b) != red;\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    bracketed_list_color_eq,
+    "a {\n  color: [] == red;\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    bracketed_list_color_ne,
+    "a {\n  color: [] != red;\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    function_ref_color_eq,
+    "a {\n  color: get-function(\"red\") == red;\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    function_ref_color_ne,
+    "a {\n  color: get-function(\"red\") != red;\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    nan_nan_eq,
+    "a {\n  color: (0/0) == (0/0);\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    nan_nan_ne,
+    "a {\n  color: (0/0) != (0/0);\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    string_bool_ne,
+    "a {\n  color: hi != false;\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    lists_differ_only_in_separator_eq,
+    "a {\n  color: (1 2 3) == (1, 2, 3);\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    lists_differ_only_in_separator_ne,
+    "a {\n  color: (1 2 3) != (1, 2, 3);\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    maps_differ_in_length_eq,
+    "a {\n  color: (a: b) == (a: b, c: d);\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    maps_differ_in_length_ne,
+    "a {\n  color: (a: b) != (a: b, c: d);\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    arglist_unquoted_string_eq,
+    "@function foo($a...) {
+      @return $a == bar;
+    }
+    
+    a {
+      color: foo(1, 2, 3);
+    }",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    arglist_equals_self,
+    "@function foo($a...) {
+      @return $a == $a;
+    }
+    
+    a {
+      color: foo(1, 2, 3);
+    }",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    arglist_equals_self_when_splat_through_other_function,
+    "@function bar($a, $b...) {
+      @return $a == $b;
+    }
+    
+    @function foo($a...) {
+      @return bar($a, $a...);
+    }
+    
+    a {
+      color: foo(1, 2, 3);
+    }",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    arglist_equals_does_not_equal_self_when_not_splat,
+    "@function bar($a, $b...) {
+      @return $a == $b;
+    }
+    
+    @function foo($a...) {
+      @return bar($a, $a);
+    }
+    
+    a {
+      color: foo(1, 2, 3);
+    }",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    arglist_equals_comma_separated_list,
+    "@function foo($a...) {
+      @return $a == (1, 2, 3);
+    }
+    
+    a {
+      color: foo(1, 2, 3);
+    }",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    arglist_does_not_equal_space_separated_list,
+    "@function foo($a...) {
+      @return $a == (1 2 3);
+    }
+    
+    a {
+      color: foo(1, 2, 3);
+    }",
+    "a {\n  color: false;\n}\n"
+);
