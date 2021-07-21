@@ -131,11 +131,8 @@ impl<'a> Parser<'a> {
             None
         };
 
-        // todo: self.consume_if_exists
-        if let Some(Token { kind: ';', .. }) = self.toks.peek() {
-            self.toks.next();
-        }
-
+        self.consume_char_if_exists(';');
+ 
         let UserDefinedMixin {
             body,
             args: fn_args,

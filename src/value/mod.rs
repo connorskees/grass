@@ -572,4 +572,8 @@ impl Value {
             _ => return Ok(None),
         }))
     }
+
+    pub fn is_quoted_string(&self) -> bool {
+        matches!(self, Value::String(_, QuoteKind::Quoted))
+    }
 }

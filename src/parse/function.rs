@@ -7,9 +7,8 @@ use crate::{
     error::SassResult,
     lexer::Lexer,
     scope::Scopes,
-    utils::{read_until_closing_curly_brace, read_until_semicolon_or_closing_curly_brace},
+    utils::{read_until_closing_curly_brace},
     value::{SassFunction, Value},
-    Token,
 };
 
 use super::{common::ContextFlags, Parser, Stmt};
@@ -72,11 +71,10 @@ impl<'a> Parser<'a> {
     }
 
     pub(super) fn parse_return(&mut self) -> SassResult<Box<Value>> {
-        let toks = read_until_semicolon_or_closing_curly_brace(self.toks)?;
-        let v = self.parse_value_from_vec(toks, true)?;
-        if let Some(Token { kind: ';', .. }) = self.toks.peek() {
-            self.toks.next();
-        }
+        let v = self.parse_value(true, &|_| false)?;
+
+        self.consume_char_if_exists(';');
+
         Ok(Box::new(v.node))
     }
 

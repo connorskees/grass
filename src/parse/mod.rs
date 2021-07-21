@@ -245,10 +245,14 @@ impl<'a> Parser<'a> {
                                     .into());
                             }
 
-                            read_until_semicolon_or_closing_curly_brace(self.toks)?;
-                            if let Some(Token { kind: ';', .. }) = self.toks.peek() {
-                                self.toks.next();
+                            let val = self.parse_value(false, &|_| false)?;
+
+                            self.consume_char_if_exists(';');
+                            
+                            if !val.node.is_quoted_string() {
+                                return Err(("Expected string.", val.span).into());
                             }
+
                             continue;
                         }
                         AtRuleKind::Media => stmts.push(self.parse_media()?),
