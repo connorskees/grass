@@ -788,3 +788,8 @@ test!(
     "a {\n  color: mix(rgba(255, 20, 0, 0), rgba(0, 20, 255, 1), 100);\n}\n",
     "a {\n  color: rgba(255, 20, 0, 0);\n}\n"
 );
+test!(
+    hue_largest_channel_is_blue,
+    "a {\n  color: hue(rgb(1, 2, 5));\n}\n",
+    "a {\n  color: 225deg;\n}\n"
+);

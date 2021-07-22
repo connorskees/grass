@@ -47,6 +47,7 @@ impl MediaQuery {
         }
     }
 
+    #[allow(clippy::if_not_else)]
     fn merge(&self, other: &Self) -> MediaQueryMergeResult {
         let this_modifier = self.modifier.as_ref().map(|m| m.to_ascii_lowercase());
         let this_type = self.media_type.as_ref().map(|m| m.to_ascii_lowercase());
@@ -91,12 +92,12 @@ impl MediaQuery {
 
                 if negative_features
                     .iter()
-                    .all(|feat| positive_features.contains(&feat))
+                    .all(|feat| positive_features.contains(feat))
                 {
                     return MediaQueryMergeResult::Empty;
-                } else {
-                    return MediaQueryMergeResult::Unrepresentable;
                 }
+
+                return MediaQueryMergeResult::Unrepresentable;
             } else if self.matches_all_types() || other.matches_all_types() {
                 return MediaQueryMergeResult::Unrepresentable;
             }
@@ -173,7 +174,7 @@ impl MediaQuery {
             return MediaQueryMergeResult::Empty;
         } else {
             if this_modifier.is_some() {
-                modifier = &this_modifier
+                modifier = &this_modifier;
             } else {
                 modifier = &other_modifier;
             }
