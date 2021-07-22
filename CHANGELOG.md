@@ -7,6 +7,8 @@
 - no longer round output from `saturation(...)` function
 - improve handling of newlines inside and around `@media`
 - arglists can be equal to comma separated lists
+- throw error for invalid uses of `@charset`
+- more robustly parse `@else if`, allowing escaped and uppercase characters
 
 # 0.10.5
 
@@ -15,7 +17,7 @@
 - support the HWB colorspace and builtin functions `color.hwb`, `color.blackness`, `color.whiteness`
 - `:is` pseudo selector is now considered an alias of `:matches` in `@extend`
 - support `$keys...` argument in `map.merge`
-- `%` now implements the modulo operation, rather than finding the remainder. this mainly affects negative numbers
+- `%` now implements the modulo operation, rather than finding the remainder. this largely affects negative numbers
 - fix parsing bug in which `/***/` in a selector would miss the closing `/`
 
 # 0.10.4
@@ -48,7 +50,7 @@
 - support NaN in all contexts
 - add support for unicode ranges
 - recognize plain CSS imports beginning with `//`, e.g. `@import "//fonts.googleapis.com/css?family=Droid+Sans";`
-- resolve integer overflows in `@for` when bounds were equal to `isize::MIN` and `isize::MAX`
+- resolve integer overflows in `@for` when bounds were equal to `i32::MIN` and `i32::MAX`
 - allow quoted strings in default function arguments
 
 # 0.10.0

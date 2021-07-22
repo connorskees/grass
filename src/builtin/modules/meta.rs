@@ -19,7 +19,6 @@ fn load_css(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Vec<Stmt>
 
     let span = args.span();
 
-    // todo: https://github.com/sass/dart-sass/issues/1054
     let url = match args.get_err(0, "module")? {
         Value::String(s, ..) => s,
         v => {

@@ -722,7 +722,6 @@ impl Rem for Number {
     fn rem(self, other: Self) -> Self {
         match self {
             Self::Small(val1) => match other {
-                // todo: checked_rem for ratio?
                 Self::Small(val2) => {
                     let tuple1: (i64, i64) = val1.into();
                     let tuple2: (i64, i64) = val2.into();
