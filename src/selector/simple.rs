@@ -488,12 +488,11 @@ impl Pseudo {
         debug_assert!(self.selector.is_some());
         match self.normalized_name() {
             "matches" | "is" | "any" => {
-                let pseudos = selector_pseudos_named(compound.clone(), &self.name, true);
-                pseudos.iter().any(move |pseudo2| {
+                selector_pseudos_named(compound.clone(), &self.name, true).any(move |pseudo2| {
                     self.selector
                         .as_ref()
                         .unwrap()
-                        .is_superselector(&pseudo2.selector.clone().unwrap())
+                        .is_superselector(&pseudo2.selector.unwrap())
                 }) || self
                     .selector
                     .as_ref()
@@ -510,23 +509,21 @@ impl Pseudo {
                     })
             }
             "has" | "host" | "host-context" => {
-                selector_pseudos_named(compound.clone(), &self.name, true)
-                    .iter()
-                    .any(|pseudo2| {
-                        self.selector
-                            .as_ref()
-                            .unwrap()
-                            .is_superselector(&pseudo2.selector.clone().unwrap())
-                    })
+                selector_pseudos_named(compound.clone(), &self.name, true).any(|pseudo2| {
+                    self.selector
+                        .as_ref()
+                        .unwrap()
+                        .is_superselector(&pseudo2.selector.unwrap())
+                })
             }
-            "slotted" => selector_pseudos_named(compound.clone(), &self.name, false)
-                .iter()
-                .any(|pseudo2| {
+            "slotted" => {
+                selector_pseudos_named(compound.clone(), &self.name, false).any(|pseudo2| {
                     self.selector
                         .as_ref()
                         .unwrap()
                         .is_superselector(pseudo2.selector.as_ref().unwrap())
-                }),
+                })
+            }
             "not" => self
                 .selector
                 .as_ref()
@@ -572,7 +569,6 @@ impl Pseudo {
                     })
                 }),
             "current" => selector_pseudos_named(compound.clone(), &self.name, self.is_class)
-                .iter()
                 .any(|pseudo2| self.selector == pseudo2.selector),
             "nth-child" | "nth-last-child" => compound.components.iter().any(|pseudo2| {
                 if let SimpleSelector::Pseudo(
@@ -653,8 +649,11 @@ impl Pseudo {
 
 /// Returns all pseudo selectors in `compound` that have a selector argument,
 /// and that have the given `name`.
-// todo: return `impl Iterator<Item = Pseudo>`
-fn selector_pseudos_named(compound: CompoundSelector, name: &str, is_class: bool) -> Vec<Pseudo> {
+fn selector_pseudos_named(
+    compound: CompoundSelector,
+    name: &str,
+    is_class: bool,
+) -> impl Iterator<Item = Pseudo> + '_ {
     compound
         .components
         .into_iter()
@@ -665,6 +664,5 @@ fn selector_pseudos_named(compound: CompoundSelector, name: &str, is_class: bool
                 None
             }
         })
-        .filter(|p| p.is_class == is_class && p.selector.is_some() && p.name == name)
-        .collect()
+        .filter(move |p| p.is_class == is_class && p.selector.is_some() && p.name == name)
 }
