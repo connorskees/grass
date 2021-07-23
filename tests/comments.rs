@@ -34,7 +34,7 @@ test!(
 test!(
     preserves_toplevel_comment_after,
     "a {\n  color: red;\n}\n/* foo */\n",
-    "a {\n  color: red;\n}\n/* foo */\n"
+    "a {\n  color: red;\n}\n\n/* foo */\n"
 );
 test!(
     removes_single_line_comment,
@@ -78,4 +78,23 @@ test!(
     a /* **/ b {x: y}
     a /** */ b {x: y}",
     "a b {\n  x: y;\n}\n\na b {\n  x: y;\n}\n\na b {\n  x: y;\n}\n\na b {\n  x: y;\n}\n"
+);
+test!(
+    comment_has_newline_above_and_not_below_when_between_two_rulesets,
+    r"a {
+      color: red;
+    }
+    
+    /**/
+    
+    a {
+      color: green;
+    }",
+    "a {\n  color: red;\n}\n\n/**/\na {\n  color: green;\n}\n"
+);
+test!(
+    no_extra_newline_between_two_comments,
+    r"/**/
+      /**/",
+    "/**/\n/**/\n"
 );

@@ -231,17 +231,28 @@ impl Css {
 
     fn parse_stylesheet(mut self, stmts: Vec<Stmt>) -> SassResult<Css> {
         let mut is_first = true;
+        let mut last_was_comment = false;
         for stmt in stmts {
             let v = self.parse_stmt(stmt)?;
             // this is how we print newlines between unrelated styles
             // it could probably be refactored
             if !v.is_empty() {
-                if let Some(Toplevel::MultilineComment(..)) = v.first() {
+                if matches!(v.first(), Some(Toplevel::MultilineComment(..))) {
+                    if !last_was_comment && !is_first {
+                        self.blocks.push(Toplevel::Newline);
+                    }
+
+                    last_was_comment = true;
                 } else if is_first {
-                    is_first = false;
+                    last_was_comment = false;
                 } else {
-                    self.blocks.push(Toplevel::Newline);
+                    if !last_was_comment {
+                        self.blocks.push(Toplevel::Newline);
+                    }
+
+                    last_was_comment = false;
                 }
+                is_first = false;
                 self.blocks.extend(v);
             }
         }
@@ -502,7 +513,14 @@ impl Formatter for ExpandedFormatter {
                     writeln!(buf, "{}}}", padding)?;
                 }
                 Toplevel::MultilineComment(s) => {
+                    if has_written && should_emit_newline {
+                        writeln!(buf)?;
+                    }
+
                     has_written = true;
+
+                    should_emit_newline = false;
+
                     writeln!(buf, "{}/*{}*/", padding, s)?;
                 }
                 Toplevel::Import(s) => {

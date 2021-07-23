@@ -84,7 +84,7 @@ test!(
             color: $b;
         }
     }  /**/  ",
-    "/**/\n/**/\na {\n  color: a;\n}\n/**/\n\na {\n  color: b;\n}\n/**/\n"
+    "/**/\n/**/\na {\n  color: a;\n}\n\n/**/\na {\n  color: b;\n}\n\n/**/\n"
 );
 error!(
     list_of_single_map,
