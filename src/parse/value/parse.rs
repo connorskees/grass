@@ -839,7 +839,11 @@ impl<'a> Parser<'a> {
                         .span(span)
                 } else {
                     IntermediateValue::Value(HigherIntermediateValue::Literal(
-                        self.super_selectors.last().clone().into_value(),
+                        self.super_selectors
+                            .last()
+                            .clone()
+                            .into_selector()
+                            .into_value(),
                     ))
                     .span(span)
                 }

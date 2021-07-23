@@ -71,7 +71,7 @@ pub(crate) struct Parser<'a> {
     pub global_scope: &'a mut Scope,
     pub scopes: &'a mut Scopes,
     pub content_scopes: &'a mut Scopes,
-    pub super_selectors: &'a mut NeverEmptyVec<Selector>,
+    pub super_selectors: &'a mut NeverEmptyVec<ExtendedSelector>,
     pub span_before: Span,
     pub content: &'a mut Vec<Content>,
     pub flags: ContextFlags,
@@ -106,6 +106,7 @@ impl<'a> Parser<'a> {
             }
             self.at_root = true;
         }
+
         Ok(stmts)
     }
 
@@ -358,13 +359,14 @@ impl<'a> Parser<'a> {
                                 .parse_selector(true, false, init)?
                                 .0
                                 .resolve_parent_selectors(
-                                    self.super_selectors.last(),
+                                    &self.super_selectors.last().clone().into_selector(),
                                     !at_root || self.at_root_has_selector,
                                 )?;
                             self.scopes.enter_new_scope();
-                            self.super_selectors.push(selector.clone());
 
                             let extended_selector = self.extender.add_selector(selector.0, None);
+
+                            self.super_selectors.push(extended_selector.clone());
 
                             let body = self.parse_stmt()?;
                             self.scopes.exit_scope();
@@ -660,9 +662,15 @@ impl<'a> Parser<'a> {
             }
         }
 
-        if !self.super_selectors.last().is_empty() {
+        if !self
+            .super_selectors
+            .last()
+            .clone()
+            .into_selector()
+            .is_empty()
+        {
             body = vec![Stmt::RuleSet {
-                selector: ExtendedSelector::new(self.super_selectors.last().clone().0),
+                selector: self.super_selectors.last().clone(),
                 body,
             }];
         }
@@ -700,9 +708,15 @@ impl<'a> Parser<'a> {
             }
         }
 
-        if !self.super_selectors.last().is_empty() {
+        if !self
+            .super_selectors
+            .last()
+            .clone()
+            .into_selector()
+            .is_empty()
+        {
             body = vec![Stmt::RuleSet {
-                selector: ExtendedSelector::new(self.super_selectors.last().clone().0),
+                selector: self.super_selectors.last().clone(),
                 body,
             }];
         }
@@ -723,9 +737,16 @@ impl<'a> Parser<'a> {
             self.super_selectors.last().clone()
         } else {
             at_root_has_selector = true;
-            self.parse_selector(true, false, String::new())?.0
-        }
-        .resolve_parent_selectors(self.super_selectors.last(), false)?;
+            let selector = self
+                .parse_selector(true, false, String::new())?
+                .0
+                .resolve_parent_selectors(
+                    &self.super_selectors.last().clone().into_selector(),
+                    false,
+                )?;
+
+            self.extender.add_selector(selector.0, None)
+        };
 
         self.whitespace();
 
@@ -760,7 +781,7 @@ impl<'a> Parser<'a> {
         })
         .collect::<SassResult<Vec<Stmt>>>()?;
         let mut stmts = vec![Stmt::RuleSet {
-            selector: ExtendedSelector::new(at_rule_selector.0),
+            selector: at_rule_selector,
             body: styles,
         }];
         stmts.extend(raw_stmts);
@@ -825,7 +846,7 @@ impl<'a> Parser<'a> {
             }
 
             self.extender.add_extension(
-                super_selector.clone().0,
+                super_selector.clone().into_selector().0,
                 compound.components.first().unwrap(),
                 &extend_rule,
                 &None,
@@ -859,9 +880,15 @@ impl<'a> Parser<'a> {
             }
         }
 
-        if !self.super_selectors.last().is_empty() {
+        if !self
+            .super_selectors
+            .last()
+            .clone()
+            .into_selector()
+            .is_empty()
+        {
             body = vec![Stmt::RuleSet {
-                selector: ExtendedSelector::new(self.super_selectors.last().clone().0),
+                selector: self.super_selectors.last().clone(),
                 body,
             }];
         }

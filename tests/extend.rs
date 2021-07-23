@@ -1239,7 +1239,6 @@ test!(
     ".foo, .bar {\n  a: b;\n}\n\n.bar, .foo {\n  c: d;\n}\n"
 );
 test!(
-    #[ignore = "Rc<RefCell<Selector>>"]
     three_level_extend_loop,
     ".foo {a: b; @extend .bar}
     .bar {c: d; @extend .baz}
@@ -1413,8 +1412,7 @@ test!(
     #[ignore = "media queries are not yet parsed correctly"]
     extend_within_separate_nested_at_rules,
     "@media screen {@flooblehoof {.foo {a: b}}}
-    @media screen {@flooblehoof {.bar {@extend .foo}}}
-    ",
+     @media screen {@flooblehoof {.bar {@extend .foo}}}",
     "@media screen {\n  @flooblehoof {\n    .foo, .bar {\n      a: b;\n    }\n  }\n}\n@media screen {\n  @flooblehoof {}\n}\n"
 );
 test!(
@@ -1771,7 +1769,7 @@ test!(
     // extending rules that contain their own extends needs special handling.
     .b {@extend .a}
     .c {@extend .b}
-    .a {x: y}      
+    .a {x: y}
     ",
     ".a, .b, .c {\n  x: y;\n}\n"
 );
