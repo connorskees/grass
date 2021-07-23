@@ -125,7 +125,7 @@ impl Css {
                 let selector = selector.into_selector().remove_placeholders();
 
                 if selector.is_empty() {
-                    return Ok(Vec::new());
+                    return Ok(vec![Toplevel::new_rule(selector)]);
                 }
 
                 let mut vals = vec![Toplevel::new_rule(selector)];
@@ -494,6 +494,11 @@ impl Formatter for ExpandedFormatter {
         for block in css.blocks {
             match block {
                 Toplevel::RuleSet(selector, styles) => {
+                    if selector.is_empty() {
+                        has_written = false;
+                        continue;
+                    }
+
                     if styles.is_empty() {
                         continue;
                     }

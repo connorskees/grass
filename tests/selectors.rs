@@ -829,6 +829,21 @@ test!(
     "[a=\"a\\\\66  \"] {\n  color: &;\n}\n",
     "[a=\"a\\\\66  \"] {\n  color: [a=\"a\\\\66  \"];\n}\n"
 );
+test!(
+    no_newline_between_styles_when_last_style_was_placeholder,
+    "a {
+      color: red;
+    
+      %b {
+        color: red;
+      }
+    }
+    
+    c {
+      color: red;
+    }",
+    "a {\n  color: red;\n}\nc {\n  color: red;\n}\n"
+);
 error!(
     a_n_plus_b_n_invalid_odd,
     ":nth-child(ofdd) {\n  color: &;\n}\n", "Error: Expected \"odd\"."

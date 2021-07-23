@@ -98,3 +98,45 @@ test!(
       /**/",
     "/**/\n/**/\n"
 );
+test!(
+    no_extra_newline_when_after_placeholder_selector,
+    r"a {
+      color: red;
+    
+      %b {
+        color: red;
+      }
+    }
+    
+    /**/
+    
+    c {
+      color: red;
+    }
+    
+    /**/",
+    "a {\n  color: red;\n}\n/**/\nc {\n  color: red;\n}\n\n/**/\n"
+);
+test!(
+    extra_newline_when_after_regular_selector_after_placeholder_selector,
+    r"a {
+      color: red;
+    
+      %b {
+        color: red;
+      }
+    
+      d {
+        color: red;
+      }
+    }
+    
+    /**/
+    
+    c {
+      color: red;
+    }
+    
+    /**/",
+    "a {\n  color: red;\n}\na d {\n  color: red;\n}\n\n/**/\nc {\n  color: red;\n}\n\n/**/\n"
+);
