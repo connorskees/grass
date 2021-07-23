@@ -230,28 +230,48 @@ impl Css {
     }
 
     fn parse_stylesheet(mut self, stmts: Vec<Stmt>) -> SassResult<Css> {
+        #[derive(PartialEq, Eq, Clone, Copy, Debug)]
+        enum ToplevelKind {
+            Comment,
+            Media,
+            Other,
+        }
+
         let mut is_first = true;
-        let mut last_was_comment = false;
+        let mut last_toplevel = ToplevelKind::Other;
+
         for stmt in stmts {
             let v = self.parse_stmt(stmt)?;
             // this is how we print newlines between unrelated styles
             // it could probably be refactored
             if !v.is_empty() {
-                if matches!(v.first(), Some(Toplevel::MultilineComment(..))) {
-                    if !last_was_comment && !is_first {
-                        self.blocks.push(Toplevel::Newline);
-                    }
+                match v.first() {
+                    Some(Toplevel::MultilineComment(..)) => {
+                        if last_toplevel != ToplevelKind::Comment && !is_first {
+                            self.blocks.push(Toplevel::Newline);
+                        }
 
-                    last_was_comment = true;
-                } else if is_first {
-                    last_was_comment = false;
-                } else {
-                    if !last_was_comment {
-                        self.blocks.push(Toplevel::Newline);
+                        last_toplevel = ToplevelKind::Comment;
                     }
+                    Some(Toplevel::Media { .. }) => {
+                        if last_toplevel != ToplevelKind::Media && !is_first {
+                            self.blocks.push(Toplevel::Newline);
+                        }
 
-                    last_was_comment = false;
+                        last_toplevel = ToplevelKind::Media;
+                    }
+                    _ if is_first => {
+                        last_toplevel = ToplevelKind::Other;
+                    }
+                    _ => {
+                        if last_toplevel != ToplevelKind::Comment {
+                            self.blocks.push(Toplevel::Newline);
+                        }
+
+                        last_toplevel = ToplevelKind::Other;
+                    }
                 }
+
                 is_first = false;
                 self.blocks.extend(v);
             }

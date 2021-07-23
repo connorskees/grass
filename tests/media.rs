@@ -170,6 +170,25 @@ test!(
     }",
     "@media (true) {\n  a {\n    color: red;\n  }\n}\n"
 );
+test!(
+    no_newline_between_two_media_following_ruleset,
+    "a {
+      color: red;
+    }
+    
+    @media (min-width: 0px) {
+      a {
+        color: red;
+      }
+    }
+    
+    @media (min-width: 0px) {
+      a {
+        color: red;
+      }
+    }",
+    "a {\n  color: red;\n}\n\n@media (min-width: 0px) {\n  a {\n    color: red;\n  }\n}\n@media (min-width: 0px) {\n  a {\n    color: red;\n  }\n}\n"
+);
 
 error!(
     media_feature_missing_closing_paren,
