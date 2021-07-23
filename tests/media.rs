@@ -189,6 +189,36 @@ test!(
     }",
     "a {\n  color: red;\n}\n\n@media (min-width: 0px) {\n  a {\n    color: red;\n  }\n}\n@media (min-width: 0px) {\n  a {\n    color: red;\n  }\n}\n"
 );
+test!(
+    no_newline_after_media_after_ruleset,
+    "a {
+      color: red;
+    }
+    
+    @media (min-width: 0px) {
+      b {
+        color: red;
+      }
+    }
+    
+    d {
+      color: red;
+    }",
+    "a {\n  color: red;\n}\n\n@media (min-width: 0px) {\n  b {\n    color: red;\n  }\n}\nd {\n  color: red;\n}\n"
+);
+test!(
+    no_newline_after_media,
+    "@media (min-width: 0px) {
+      b {
+        color: red;
+      }
+    }
+    
+    d {
+      color: red;
+    }",
+    "@media (min-width: 0px) {\n  b {\n    color: red;\n  }\n}\nd {\n  color: red;\n}\n"
+);
 
 error!(
     media_feature_missing_closing_paren,

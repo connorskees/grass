@@ -264,7 +264,9 @@ impl Css {
                         last_toplevel = ToplevelKind::Other;
                     }
                     _ => {
-                        if last_toplevel != ToplevelKind::Comment {
+                        if last_toplevel != ToplevelKind::Comment
+                            && last_toplevel != ToplevelKind::Media
+                        {
                             self.blocks.push(Toplevel::Newline);
                         }
 
@@ -624,7 +626,7 @@ impl Formatter for ExpandedFormatter {
                         continue;
                     }
 
-                    if should_emit_newline {
+                    if should_emit_newline && has_written {
                         should_emit_newline = false;
                         writeln!(buf)?;
                     }
