@@ -25,7 +25,11 @@ struct ToplevelUnknownAtRule {
 
 #[derive(Debug, Clone)]
 enum Toplevel {
-    RuleSet(Selector, Vec<BlockEntry>),
+    RuleSet {
+        selector: Selector,
+        body: Vec<BlockEntry>,
+        is_group_end: bool,
+    },
     MultilineComment(String),
     UnknownAtRule(Box<ToplevelUnknownAtRule>),
     Keyframes(Box<Keyframes>),
@@ -34,15 +38,39 @@ enum Toplevel {
         query: String,
         body: Vec<Stmt>,
         inside_rule: bool,
+        is_group_end: bool,
     },
     Supports {
         params: String,
         body: Vec<Stmt>,
     },
-    Newline,
     // todo: do we actually need a toplevel style variant?
     Style(Style),
     Import(String),
+    Empty,
+}
+
+impl Toplevel {
+    pub fn is_invisible(&self) -> bool {
+        match self {
+            Toplevel::RuleSet { selector, body, .. } => selector.is_empty() || body.is_empty(),
+            Toplevel::Media { body, .. } => body.is_empty(),
+            Toplevel::Empty => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_group_end(&self) -> bool {
+        match self {
+            Toplevel::RuleSet { is_group_end, .. } => *is_group_end,
+            Toplevel::Media {
+                inside_rule,
+                is_group_end,
+                ..
+            } => *inside_rule && *is_group_end,
+            _ => false,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -61,8 +89,12 @@ impl BlockEntry {
 }
 
 impl Toplevel {
-    const fn new_rule(selector: Selector) -> Self {
-        Toplevel::RuleSet(selector, Vec::new())
+    const fn new_rule(selector: Selector, is_group_end: bool) -> Self {
+        Toplevel::RuleSet {
+            selector,
+            is_group_end,
+            body: Vec::new(),
+        }
     }
 
     fn new_keyframes_rule(selector: Vec<KeyframesSelector>) -> Self {
@@ -73,16 +105,17 @@ impl Toplevel {
         if s.value.is_null() {
             return;
         }
-        if let Toplevel::RuleSet(_, entries) | Toplevel::KeyframesRuleSet(_, entries) = self {
-            entries.push(BlockEntry::Style(s));
+
+        if let Toplevel::RuleSet { body, .. } | Toplevel::KeyframesRuleSet(_, body) = self {
+            body.push(BlockEntry::Style(s));
         } else {
             panic!();
         }
     }
 
     fn push_comment(&mut self, s: String) {
-        if let Toplevel::RuleSet(_, entries) | Toplevel::KeyframesRuleSet(_, entries) = self {
-            entries.push(BlockEntry::MultilineComment(s));
+        if let Toplevel::RuleSet { body, .. } | Toplevel::KeyframesRuleSet(_, body) = self {
+            body.push(BlockEntry::MultilineComment(s));
         } else {
             panic!();
         }
@@ -119,16 +152,16 @@ impl Css {
         Ok(match stmt {
             Stmt::RuleSet { selector, body } => {
                 if body.is_empty() {
-                    return Ok(Vec::new());
+                    return Ok(vec![Toplevel::Empty]);
                 }
 
                 let selector = selector.into_selector().remove_placeholders();
 
                 if selector.is_empty() {
-                    return Ok(vec![Toplevel::new_rule(selector)]);
+                    return Ok(vec![Toplevel::Empty]);
                 }
 
-                let mut vals = vec![Toplevel::new_rule(selector)];
+                let mut vals = vec![Toplevel::new_rule(selector, false)];
 
                 for rule in body {
                     match rule {
@@ -141,6 +174,7 @@ impl Css {
                                 query,
                                 body,
                                 inside_rule: true,
+                                is_group_end: false,
                             });
                         }
                         Stmt::Supports(s) => {
@@ -192,6 +226,7 @@ impl Css {
                     query,
                     body,
                     inside_rule: false,
+                    is_group_end: false,
                 }]
             }
             Stmt::Supports(s) => {
@@ -230,53 +265,18 @@ impl Css {
     }
 
     fn parse_stylesheet(mut self, stmts: Vec<Stmt>) -> SassResult<Css> {
-        #[derive(PartialEq, Eq, Clone, Copy, Debug)]
-        enum ToplevelKind {
-            Comment,
-            Media,
-            Other,
-        }
-
-        let mut is_first = true;
-        let mut last_toplevel = ToplevelKind::Other;
-
         for stmt in stmts {
-            let v = self.parse_stmt(stmt)?;
-            // this is how we print newlines between unrelated styles
-            // it could probably be refactored
-            if !v.is_empty() {
-                match v.first() {
-                    Some(Toplevel::MultilineComment(..)) => {
-                        if last_toplevel != ToplevelKind::Comment && !is_first {
-                            self.blocks.push(Toplevel::Newline);
-                        }
+            let mut v = self.parse_stmt(stmt)?;
 
-                        last_toplevel = ToplevelKind::Comment;
-                    }
-                    Some(Toplevel::Media { .. }) => {
-                        if last_toplevel != ToplevelKind::Media && !is_first {
-                            self.blocks.push(Toplevel::Newline);
-                        }
-
-                        last_toplevel = ToplevelKind::Media;
-                    }
-                    _ if is_first => {
-                        last_toplevel = ToplevelKind::Other;
-                    }
-                    _ => {
-                        if last_toplevel != ToplevelKind::Comment
-                            && last_toplevel != ToplevelKind::Media
-                        {
-                            self.blocks.push(Toplevel::Newline);
-                        }
-
-                        last_toplevel = ToplevelKind::Other;
-                    }
+            match v.last_mut() {
+                Some(Toplevel::RuleSet { is_group_end, .. })
+                | Some(Toplevel::Media { is_group_end, .. }) => {
+                    *is_group_end = true;
                 }
-
-                is_first = false;
-                self.blocks.extend(v);
+                _ => {}
             }
+
+            self.blocks.extend(v);
         }
 
         // move plain imports to top of file
@@ -293,8 +293,15 @@ impl Css {
             OutputStyle::Compressed => {
                 CompressedFormatter::default().write_css(&mut buf, self, map)?;
             }
-            OutputStyle::Expanded => ExpandedFormatter::default().write_css(&mut buf, self, map)?,
+            OutputStyle::Expanded => {
+                ExpandedFormatter::default().write_css(&mut buf, self, map)?;
+
+                if !buf.is_empty() {
+                    writeln!(buf)?;
+                }
+            }
         }
+
         // TODO: check for this before writing
         let show_charset = allows_charset && buf.iter().any(|s| !s.is_ascii());
         let out = unsafe { String::from_utf8_unchecked(buf) };
@@ -320,8 +327,8 @@ impl Formatter for CompressedFormatter {
     fn write_css(&mut self, buf: &mut Vec<u8>, css: Css, map: &CodeMap) -> SassResult<()> {
         for block in css.blocks {
             match block {
-                Toplevel::RuleSet(selector, styles) => {
-                    if styles.is_empty() {
+                Toplevel::RuleSet { selector, body, .. } => {
+                    if body.is_empty() {
                         continue;
                     }
 
@@ -335,7 +342,7 @@ impl Formatter for CompressedFormatter {
                     }
 
                     write!(buf, "{{")?;
-                    self.write_block_entry(buf, &styles)?;
+                    self.write_block_entry(buf, &body)?;
                     write!(buf, "}}")?;
                 }
                 Toplevel::KeyframesRuleSet(selectors, styles) => {
@@ -355,7 +362,7 @@ impl Formatter for CompressedFormatter {
                     self.write_block_entry(buf, &styles)?;
                     write!(buf, "}}")?;
                 }
-                Toplevel::MultilineComment(..) => continue,
+                Toplevel::Empty | Toplevel::MultilineComment(..) => continue,
                 Toplevel::Import(s) => {
                     write!(buf, "@import {};", s)?;
                 }
@@ -428,7 +435,6 @@ impl Formatter for CompressedFormatter {
                     let value = style.value.node.to_css_string(style.value.span)?;
                     write!(buf, "{}:{};", style.property, value)?;
                 }
-                Toplevel::Newline => {}
             }
         }
         Ok(())
@@ -484,45 +490,48 @@ struct ExpandedFormatter {
     nesting: usize,
 }
 
+#[derive(Clone, Copy)]
+struct Previous {
+    is_group_end: bool,
+}
+
 impl Formatter for ExpandedFormatter {
     fn write_css(&mut self, buf: &mut Vec<u8>, css: Css, map: &CodeMap) -> SassResult<()> {
-        let mut has_written = false;
         let padding = "  ".repeat(self.nesting);
-        let mut should_emit_newline = false;
         self.nesting += 1;
 
+        let mut prev: Option<Previous> = None;
+
         for block in css.blocks {
+            if block.is_invisible() {
+                continue;
+            }
+
+            let is_group_end = block.is_group_end();
+
+            if let Some(prev) = prev {
+                writeln!(buf)?;
+
+                if prev.is_group_end && !css.in_at_rule {
+                    writeln!(buf)?;
+                }
+            }
+
             match block {
-                Toplevel::RuleSet(selector, styles) => {
-                    if selector.is_empty() {
-                        has_written = false;
-                        continue;
-                    }
-
-                    if styles.is_empty() {
-                        continue;
-                    }
-
-                    has_written = true;
-                    if should_emit_newline && !css.in_at_rule {
-                        should_emit_newline = false;
-                        writeln!(buf)?;
-                    }
-
+                Toplevel::Empty => continue,
+                Toplevel::RuleSet { selector, body, .. } => {
                     writeln!(buf, "{}{} {{", padding, selector)?;
 
-                    for style in styles {
+                    for style in body {
                         writeln!(buf, "{}  {}", padding, style.to_string()?)?;
                     }
 
-                    writeln!(buf, "{}}}", padding)?;
+                    write!(buf, "{}}}", padding)?;
                 }
                 Toplevel::KeyframesRuleSet(selector, body) => {
                     if body.is_empty() {
                         continue;
                     }
-
-                    has_written = true;
 
                     writeln!(
                         buf,
@@ -537,29 +546,16 @@ impl Formatter for ExpandedFormatter {
                     for style in body {
                         writeln!(buf, "{}  {}", padding, style.to_string()?)?;
                     }
-                    writeln!(buf, "{}}}", padding)?;
+                    write!(buf, "{}}}", padding)?;
                 }
                 Toplevel::MultilineComment(s) => {
-                    if has_written && should_emit_newline {
-                        writeln!(buf)?;
-                    }
-
-                    has_written = true;
-
-                    should_emit_newline = false;
-
-                    writeln!(buf, "{}/*{}*/", padding, s)?;
+                    write!(buf, "{}/*{}*/", padding, s)?;
                 }
                 Toplevel::Import(s) => {
-                    has_written = true;
-                    writeln!(buf, "{}@import {};", padding, s)?;
+                    write!(buf, "{}@import {};", padding, s)?;
                 }
                 Toplevel::UnknownAtRule(u) => {
                     let ToplevelUnknownAtRule { params, name, body } = *u;
-                    if should_emit_newline {
-                        should_emit_newline = false;
-                        writeln!(buf)?;
-                    }
 
                     if params.is_empty() {
                         write!(buf, "{}@{}", padding, name)?;
@@ -568,21 +564,18 @@ impl Formatter for ExpandedFormatter {
                     }
 
                     if body.is_empty() {
-                        writeln!(buf, ";")?;
+                        write!(buf, ";")?;
+                        prev = Some(Previous { is_group_end });
                         continue;
                     }
 
                     writeln!(buf, " {{")?;
                     let css = Css::from_stmts(body, true, css.allows_charset)?;
                     self.write_css(buf, css, map)?;
-                    writeln!(buf, "{}}}", padding)?;
+                    write!(buf, "\n{}}}", padding)?;
                 }
                 Toplevel::Keyframes(k) => {
                     let Keyframes { rule, name, body } = *k;
-                    if should_emit_newline {
-                        should_emit_newline = false;
-                        writeln!(buf)?;
-                    }
 
                     write!(buf, "{}@{}", padding, rule)?;
 
@@ -591,21 +584,17 @@ impl Formatter for ExpandedFormatter {
                     }
 
                     if body.is_empty() {
-                        writeln!(buf, " {{}}")?;
+                        write!(buf, " {{}}")?;
+                        prev = Some(Previous { is_group_end });
                         continue;
                     }
 
                     writeln!(buf, " {{")?;
                     let css = Css::from_stmts(body, true, css.allows_charset)?;
                     self.write_css(buf, css, map)?;
-                    writeln!(buf, "{}}}", padding)?;
+                    write!(buf, "\n{}}}", padding)?;
                 }
                 Toplevel::Supports { params, body } => {
-                    if should_emit_newline {
-                        should_emit_newline = false;
-                        writeln!(buf)?;
-                    }
-
                     if params.is_empty() {
                         write!(buf, "{}@supports", padding)?;
                     } else {
@@ -613,44 +602,33 @@ impl Formatter for ExpandedFormatter {
                     }
 
                     if body.is_empty() {
-                        writeln!(buf, ";")?;
+                        write!(buf, ";")?;
+                        prev = Some(Previous { is_group_end });
                         continue;
                     }
 
                     writeln!(buf, " {{")?;
                     let css = Css::from_stmts(body, true, css.allows_charset)?;
                     self.write_css(buf, css, map)?;
-                    writeln!(buf, "{}}}", padding)?;
+                    write!(buf, "\n{}}}", padding)?;
                 }
                 Toplevel::Media {
                     query,
                     body,
                     inside_rule,
+                    ..
                 } => {
-                    if body.is_empty() {
-                        continue;
-                    }
-
-                    if should_emit_newline && has_written {
-                        should_emit_newline = false;
-                        writeln!(buf)?;
-                    }
-
                     writeln!(buf, "{}@media {} {{", padding, query)?;
                     let css = Css::from_stmts(body, inside_rule, css.allows_charset)?;
                     self.write_css(buf, css, map)?;
-                    writeln!(buf, "{}}}", padding)?;
+                    write!(buf, "\n{}}}", padding)?;
                 }
                 Toplevel::Style(s) => {
-                    writeln!(buf, "{}{}", padding, s.to_string()?)?;
-                }
-                Toplevel::Newline => {
-                    if has_written {
-                        should_emit_newline = true;
-                    }
-                    continue;
+                    write!(buf, "{}{}", padding, s.to_string()?)?;
                 }
             }
+
+            prev = Some(Previous { is_group_end });
         }
 
         self.nesting -= 1;

@@ -207,7 +207,7 @@ test!(
     "a {\n  color: red;\n}\n\n@media (min-width: 0px) {\n  b {\n    color: red;\n  }\n}\nd {\n  color: red;\n}\n"
 );
 test!(
-    no_newline_after_media,
+    no_newline_after_media_when_outer,
     "@media (min-width: 0px) {
       b {
         color: red;
@@ -218,6 +218,19 @@ test!(
       color: red;
     }",
     "@media (min-width: 0px) {\n  b {\n    color: red;\n  }\n}\nd {\n  color: red;\n}\n"
+);
+test!(
+    newline_after_media_when_inner,
+    "a {
+      @media (max-width: 0px) {
+        color: red;
+      }
+    }
+    
+    a {
+      color: red;
+    }",
+    "@media (max-width: 0px) {\n  a {\n    color: red;\n  }\n}\n\na {\n  color: red;\n}\n"
 );
 
 error!(
