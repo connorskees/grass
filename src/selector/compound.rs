@@ -155,12 +155,12 @@ impl CompoundSelector {
                 return Ok(Some(parent.components));
             }
         } else {
-            return Ok(Some(vec![ComplexSelector {
-                components: vec![ComplexSelectorComponent::Compound(CompoundSelector {
+            return Ok(Some(vec![ComplexSelector::new(
+                vec![ComplexSelectorComponent::Compound(CompoundSelector {
                     components: resolved_members,
                 })],
-                line_break: false,
-            }]));
+                false,
+            )]));
         }
 
         let span = parent.span;
@@ -201,10 +201,7 @@ impl CompoundSelector {
                     let mut components = complex.components;
                     components.push(ComplexSelectorComponent::Compound(last));
 
-                    Ok(ComplexSelector {
-                        components,
-                        line_break: complex.line_break,
-                    })
+                    Ok(ComplexSelector::new(components, complex.line_break))
                 })
                 .collect::<SassResult<Vec<ComplexSelector>>>()?,
         ))

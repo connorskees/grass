@@ -692,14 +692,8 @@ fn complex_is_parent_superselector(
     complex_one.push(ComplexSelectorComponent::Compound(base.clone()));
     complex_two.push(ComplexSelectorComponent::Compound(base));
 
-    ComplexSelector {
-        components: complex_one,
-        line_break: false,
-    }
-    .is_super_selector(&ComplexSelector {
-        components: complex_two,
-        line_break: false,
-    })
+    ComplexSelector::new(complex_one, false)
+        .is_super_selector(&ComplexSelector::new(complex_two, false))
 }
 
 /// Returns a list of all possible paths through the given lists.

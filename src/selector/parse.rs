@@ -182,10 +182,7 @@ impl<'a, 'b> SelectorParser<'a, 'b> {
             return Err(("expected selector.", self.span).into());
         }
 
-        Ok(ComplexSelector {
-            components,
-            line_break,
-        })
+        Ok(ComplexSelector::new(components, line_break))
     }
 
     fn parse_compound_selector(&mut self) -> SassResult<CompoundSelector> {

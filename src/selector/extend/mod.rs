@@ -10,8 +10,8 @@ use indexmap::IndexMap;
 use crate::error::SassResult;
 
 use super::{
-    ComplexSelector, ComplexSelectorComponent, CompoundSelector, Pseudo, SelectorList,
-    SimpleSelector,
+    ComplexSelector, ComplexSelectorComponent, ComplexSelectorHashSet, CompoundSelector, Pseudo,
+    SelectorList, SimpleSelector,
 };
 
 pub(crate) use extended_selector::ExtendedSelector;
@@ -99,7 +99,7 @@ pub(crate) struct Extender {
     /// exist to satisfy the [first law of extend][].
     ///
     /// [first law of extend]: https://github.com/sass/sass/issues/324#issuecomment-4607184
-    originals: HashSet<ComplexSelector>,
+    originals: ComplexSelectorHashSet,
 
     /// The mode that controls this extender's behavior.
     mode: ExtendMode,
@@ -129,7 +129,7 @@ impl Extender {
             extensions_by_extender: HashMap::new(),
             media_contexts: HashMap::new(),
             source_specificity: HashMap::new(),
-            originals: HashSet::new(),
+            originals: ComplexSelectorHashSet::new(),
             mode: ExtendMode::Normal,
             span,
         }
@@ -188,9 +188,7 @@ impl Extender {
         let mut extender = Extender::with_mode(mode, span);
 
         if !selector.is_invisible() {
-            extender
-                .originals
-                .extend(selector.components.iter().cloned());
+            extender.originals.extend(selector.components.iter());
         }
 
         Ok(extender.extend_list(selector, Some(&extensions), &None))
@@ -288,10 +286,7 @@ impl Extender {
                                 .into_iter()
                                 .take(i)
                                 .map(|component| {
-                                    vec![ComplexSelector {
-                                        components: vec![component],
-                                        line_break: complex.line_break,
-                                    }]
+                                    vec![ComplexSelector::new(vec![component], complex.line_break)]
                                 })
                                 .collect(),
                         );
@@ -302,19 +297,16 @@ impl Extender {
                     }
                 } else {
                     match extended_not_expanded.as_mut() {
-                        Some(v) => v.push(vec![ComplexSelector {
-                            components: vec![ComplexSelectorComponent::Compound(component.clone())],
-                            line_break: false,
-                        }]),
+                        Some(v) => v.push(vec![ComplexSelector::new(
+                            vec![ComplexSelectorComponent::Compound(component.clone())],
+                            false,
+                        )]),
                         None => {}
                     }
                 }
             } else if component.is_combinator() {
                 match extended_not_expanded.as_mut() {
-                    Some(v) => v.push(vec![ComplexSelector {
-                        components: vec![component.clone()],
-                        line_break: false,
-                    }]),
+                    Some(v) => v.push(vec![ComplexSelector::new(vec![component.clone()], false)]),
                     None => {}
                 }
             }
@@ -336,17 +328,17 @@ impl Extender {
                     )
                     .into_iter()
                     .map(|components| {
-                        let output_complex = ComplexSelector {
+                        let output_complex = ComplexSelector::new(
                             components,
-                            line_break: complex_has_line_break
+                            complex_has_line_break
                                 || path.iter().any(|input_complex| input_complex.line_break),
-                        };
+                        );
 
                         // Make sure that copies of `complex` retain their status as "original"
                         // selectors. This includes selectors that are modified because a :not()
                         // was extended into.
-                        if first && self.originals.contains(&complex.clone()) {
-                            self.originals.insert(output_complex.clone());
+                        if first && self.originals.contains(&complex) {
+                            self.originals.insert(&output_complex);
                         }
                         first = false;
 
@@ -517,10 +509,7 @@ impl Extender {
             Some(
                 complexes
                     .into_iter()
-                    .map(|components| ComplexSelector {
-                        components,
-                        line_break,
-                    })
+                    .map(|components| ComplexSelector::new(components, line_break))
                     .collect::<Vec<ComplexSelector>>(),
             )
         });
@@ -742,12 +731,12 @@ impl Extender {
     fn extension_for_simple(&self, simple: SimpleSelector) -> Extension {
         let specificity = Some(*self.source_specificity.get(&simple).unwrap_or(&0_i32));
         Extension::one_off(
-            ComplexSelector {
-                components: vec![ComplexSelectorComponent::Compound(CompoundSelector {
+            ComplexSelector::new(
+                vec![ComplexSelectorComponent::Compound(CompoundSelector {
                     components: vec![simple],
                 })],
-                line_break: false,
-            },
+                false,
+            ),
             specificity,
             true,
             self.span,
@@ -762,10 +751,7 @@ impl Extender {
         };
         let specificity = Some(self.source_specificity_for(&compound));
         Extension::one_off(
-            ComplexSelector {
-                components: vec![ComplexSelectorComponent::Compound(compound)],
-                line_break: false,
-            },
+            ComplexSelector::new(vec![ComplexSelectorComponent::Compound(compound)], false),
             specificity,
             true,
             self.span,
@@ -883,7 +869,7 @@ impl Extender {
     ) -> ExtendedSelector {
         if !selector.is_invisible() {
             for complex in selector.components.clone() {
-                self.originals.insert(complex);
+                self.originals.insert(&complex);
             }
         }
 

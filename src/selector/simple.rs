@@ -502,10 +502,7 @@ impl Pseudo {
                     .any(move |complex1| {
                         let mut components = parents.clone().unwrap_or_default();
                         components.push(ComplexSelectorComponent::Compound(compound.clone()));
-                        complex1.is_super_selector(&ComplexSelector {
-                            components,
-                            line_break: false,
-                        })
+                        complex1.is_super_selector(&ComplexSelector::new(components, false))
                     })
             }
             "has" | "host" | "host-context" => {

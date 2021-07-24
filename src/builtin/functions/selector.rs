@@ -116,10 +116,7 @@ pub(crate) fn selector_append(args: CallArgs, parser: &mut Parser<'_>) -> SassRe
                                 }
                             }];
                             components.extend(complex.components.into_iter().skip(1));
-                            Ok(ComplexSelector {
-                                components,
-                                line_break: false,
-                            })
+                            Ok(ComplexSelector::new(components, false))
                         } else {
                             Err((format!("Can't append {} to {}.", complex, parent), span).into())
                         }

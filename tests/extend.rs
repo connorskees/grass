@@ -1906,6 +1906,22 @@ test!(
     }",
     "a, b {\n  color: a;\n}\n"
 );
+test!(
+    complex_selector_with_combinator_removed_by_complex_selector_without_combinator,
+    "c b {
+      @extend %d;
+    }
+    
+    c > b {
+      @extend %d;
+    }
+    
+    %d {
+      color: red;
+    }",
+    "c b {\n  color: red;\n}\n"
+);
+
 error!(
     extend_optional_keyword_not_complete,
     "a {

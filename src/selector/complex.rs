@@ -1,11 +1,36 @@
 use std::{
+    collections::HashSet,
     fmt::{self, Display, Write},
     hash::{Hash, Hasher},
+    sync::atomic::{AtomicU32, Ordering as AtomicOrdering},
 };
 
 use crate::error::SassResult;
 
 use super::{CompoundSelector, Pseudo, SelectorList, SimpleSelector, Specificity};
+
+pub(crate) static COMPLEX_SELECTOR_UNIQUE_ID: AtomicU32 = AtomicU32::new(0);
+
+#[derive(Clone, Debug)]
+pub(crate) struct ComplexSelectorHashSet(HashSet<u32>);
+
+impl ComplexSelectorHashSet {
+    pub fn new() -> Self {
+        Self(HashSet::new())
+    }
+
+    pub fn insert(&mut self, complex: &ComplexSelector) -> bool {
+        self.0.insert(complex.unique_id)
+    }
+
+    pub fn contains(&self, complex: &ComplexSelector) -> bool {
+        self.0.contains(&complex.unique_id)
+    }
+
+    pub fn extend<'a>(&mut self, complexes: impl Iterator<Item = &'a ComplexSelector>) {
+        self.0.extend(complexes.map(|complex| complex.unique_id));
+    }
+}
 
 /// A complex selector.
 ///
@@ -27,6 +52,11 @@ pub(crate) struct ComplexSelector {
 
     /// Whether a line break should be emitted *before* this selector.
     pub line_break: bool,
+
+    /// A unique identifier for this complex selector. Used to perform a pointer
+    /// equality check, like would be done for objects in a language like JavaScript
+    /// or dart
+    unique_id: u32,
 }
 
 impl PartialEq for ComplexSelector {
@@ -68,6 +98,14 @@ fn omit_spaces_around(component: &ComplexSelectorComponent) -> bool {
 }
 
 impl ComplexSelector {
+    pub fn new(components: Vec<ComplexSelectorComponent>, line_break: bool) -> Self {
+        Self {
+            components,
+            line_break,
+            unique_id: COMPLEX_SELECTOR_UNIQUE_ID.fetch_add(1, AtomicOrdering::Relaxed),
+        }
+    }
+
     pub fn max_specificity(&self) -> i32 {
         self.specificity().min
     }

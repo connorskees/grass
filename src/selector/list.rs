@@ -128,10 +128,7 @@ impl SelectorList {
                         unify_complex(vec![c1.components.clone(), c2.components]);
                     if let Some(u) = unified {
                         u.into_iter()
-                            .map(|c| ComplexSelector {
-                                components: c,
-                                line_break: false,
-                            })
+                            .map(|c| ComplexSelector::new(c, false))
                             .collect()
                     } else {
                         Vec::new()
@@ -193,10 +190,10 @@ impl SelectorList {
                                 .map(move |parent_complex| {
                                     let mut components = parent_complex.components;
                                     components.append(&mut complex.components.clone());
-                                    ComplexSelector {
+                                    ComplexSelector::new(
                                         components,
-                                        line_break: complex.line_break || parent_complex.line_break,
-                                    }
+                                        complex.line_break || parent_complex.line_break,
+                                    )
                                 })
                                 .collect());
                         }
@@ -245,10 +242,7 @@ impl SelectorList {
                             .into_iter()
                             .map(|new_complex| {
                                 i += 1;
-                                ComplexSelector {
-                                    components: new_complex,
-                                    line_break: line_breaks[i - 1],
-                                }
+                                ComplexSelector::new(new_complex, line_breaks[i - 1])
                             })
                             .collect())
                     })
