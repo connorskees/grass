@@ -79,7 +79,7 @@ jobs:
           tar -xzvf dart-sass-1.36.0-linux-x64.tar.gz
 
       - name: Install bootstrap
-        run: git clone --depth=1 --branch 2bdbb42dcf6bfb99b5e9e5444d9e64589eb8c08f https://github.com/twbs/bootstrap.git
+        run: git clone --depth=1 --branch v5.0.2 https://github.com/twbs/bootstrap.git
 
       - name: Verify unchanged output
         run: |
