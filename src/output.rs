@@ -43,6 +43,8 @@ enum Toplevel {
     Supports {
         params: String,
         body: Vec<Stmt>,
+        inside_rule: bool,
+        is_group_end: bool,
     },
     // todo: do we actually need a toplevel style variant?
     Style(Style),
@@ -64,6 +66,11 @@ impl Toplevel {
         match self {
             Toplevel::RuleSet { is_group_end, .. } => *is_group_end,
             Toplevel::Media {
+                inside_rule,
+                is_group_end,
+                ..
+            } => *inside_rule && *is_group_end,
+            Toplevel::Supports {
                 inside_rule,
                 is_group_end,
                 ..
@@ -179,7 +186,12 @@ impl Css {
                         }
                         Stmt::Supports(s) => {
                             let SupportsRule { params, body } = *s;
-                            vals.push(Toplevel::Supports { params, body });
+                            vals.push(Toplevel::Supports {
+                                params,
+                                body,
+                                inside_rule: true,
+                                is_group_end: false,
+                            });
                         }
                         Stmt::UnknownAtRule(u) => {
                             let UnknownAtRule {
@@ -231,7 +243,12 @@ impl Css {
             }
             Stmt::Supports(s) => {
                 let SupportsRule { params, body } = *s;
-                vec![Toplevel::Supports { params, body }]
+                vec![Toplevel::Supports {
+                    params,
+                    body,
+                    inside_rule: false,
+                    is_group_end: false,
+                }]
             }
             Stmt::UnknownAtRule(u) => {
                 let UnknownAtRule {
@@ -270,6 +287,7 @@ impl Css {
 
             match v.last_mut() {
                 Some(Toplevel::RuleSet { is_group_end, .. })
+                | Some(Toplevel::Supports { is_group_end, .. })
                 | Some(Toplevel::Media { is_group_end, .. }) => {
                     *is_group_end = true;
                 }
@@ -404,7 +422,7 @@ impl Formatter for CompressedFormatter {
                     self.write_css(buf, css, map)?;
                     write!(buf, "}}")?;
                 }
-                Toplevel::Supports { params, body } => {
+                Toplevel::Supports { params, body, .. } => {
                     if params.is_empty() {
                         write!(buf, "@supports")?;
                     } else {
@@ -606,7 +624,12 @@ impl Formatter for ExpandedFormatter {
                     self.write_css(buf, css, map)?;
                     write!(buf, "\n{}}}", padding)?;
                 }
-                Toplevel::Supports { params, body } => {
+                Toplevel::Supports {
+                    params,
+                    body,
+                    inside_rule,
+                    ..
+                } => {
                     if params.is_empty() {
                         write!(buf, "{}@supports", padding)?;
                     } else {
@@ -620,7 +643,15 @@ impl Formatter for ExpandedFormatter {
                     }
 
                     writeln!(buf, " {{")?;
-                    let css = Css::from_stmts(body, AtRuleContext::None, css.allows_charset)?;
+                    let css = Css::from_stmts(
+                        body,
+                        if inside_rule {
+                            AtRuleContext::Supports
+                        } else {
+                            AtRuleContext::None
+                        },
+                        css.allows_charset,
+                    )?;
                     self.write_css(buf, css, map)?;
                     write!(buf, "\n{}}}", padding)?;
                 }
