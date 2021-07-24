@@ -80,6 +80,17 @@ impl Toplevel {
     }
 }
 
+fn set_group_end(group: &mut [Toplevel]) {
+    match group.last_mut() {
+        Some(Toplevel::RuleSet { is_group_end, .. })
+        | Some(Toplevel::Supports { is_group_end, .. })
+        | Some(Toplevel::Media { is_group_end, .. }) => {
+            *is_group_end = true;
+        }
+        _ => {}
+    }
+}
+
 #[derive(Debug, Clone)]
 enum BlockEntry {
     Style(Style),
@@ -206,7 +217,11 @@ impl Css {
                         Stmt::Return(..) => unreachable!(),
                         Stmt::AtRoot { body } => {
                             body.into_iter().try_for_each(|r| -> SassResult<()> {
-                                vals.append(&mut self.parse_stmt(r)?);
+                                let mut stmts = self.parse_stmt(r)?;
+
+                                set_group_end(&mut stmts);
+
+                                vals.append(&mut stmts);
                                 Ok(())
                             })?;
                         }
@@ -285,14 +300,7 @@ impl Css {
         for stmt in stmts {
             let mut v = self.parse_stmt(stmt)?;
 
-            match v.last_mut() {
-                Some(Toplevel::RuleSet { is_group_end, .. })
-                | Some(Toplevel::Supports { is_group_end, .. })
-                | Some(Toplevel::Media { is_group_end, .. }) => {
-                    *is_group_end = true;
-                }
-                _ => {}
-            }
+            set_group_end(&mut v);
 
             self.blocks.extend(v);
         }

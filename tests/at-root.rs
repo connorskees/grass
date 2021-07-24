@@ -66,8 +66,53 @@ test!(
     "a {}\n\n@at-root {\n    @-ms-viewport { width: device-width; }\n}\n",
     "@-ms-viewport {\n  width: device-width;\n}\n"
 );
+test!(
+    newline_between_style_rules_with_same_parent_but_first_is_in_at_root,
+    "a {
+      @at-root {
+        b {
+          color: red;
+        }
+      }
+    
+      b {
+        color: red;
+      }
+    }",
+    "b {\n  color: red;\n}\n\na b {\n  color: red;\n}\n"
+);
+test!(
+    no_newline_between_style_rules_when_there_exists_a_selector,
+    "@at-root a {
+      a {
+        color: red;
+      }
+    
+      a {
+        color: red;
+      }
+    }",
+    "a a {\n  color: red;\n}\na a {\n  color: red;\n}\n"
+);
+test!(
+    newline_between_style_rules_when_there_does_not_exist_a_selector,
+    "@at-root {
+      a {
+        color: red;
+      }
+    
+      a {
+        color: red;
+      }
+    }",
+    "a {\n  color: red;\n}\n\na {\n  color: red;\n}\n"
+);
 error!(
     #[ignore = "we do not currently validate missing closing curly braces"]
     missing_closing_curly_brace,
     "@at-root {", "Error: expected \"}\"."
+);
+error!(
+    style_at_toplevel_without_selector,
+    "@at-root { color: red; }", "Error: Found style at the toplevel inside @at-root."
 );

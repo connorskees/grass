@@ -184,9 +184,8 @@ impl<'a> Parser<'a> {
                             if self.at_root {
                                 stmts.append(&mut self.parse_at_root()?);
                             } else {
-                                stmts.push(Stmt::AtRoot {
-                                    body: self.parse_at_root()?,
-                                });
+                                let body = self.parse_at_root()?;
+                                stmts.push(Stmt::AtRoot { body });
                             }
                         }
                         AtRuleKind::Error => {
@@ -780,11 +779,27 @@ impl<'a> Parser<'a> {
             _ => Some(Ok(s)),
         })
         .collect::<SassResult<Vec<Stmt>>>()?;
-        let mut stmts = vec![Stmt::RuleSet {
-            selector: at_rule_selector,
-            body: styles,
-        }];
-        stmts.extend(raw_stmts);
+
+        let stmts = if at_root_has_selector {
+            let mut body = styles;
+            body.extend(raw_stmts);
+
+            vec![Stmt::RuleSet {
+                body,
+                selector: at_rule_selector,
+            }]
+        } else {
+            if !styles.is_empty() {
+                return Err((
+                    "Found style at the toplevel inside @at-root.",
+                    self.span_before,
+                )
+                    .into());
+            }
+
+            raw_stmts
+        };
+
         Ok(stmts)
     }
 
