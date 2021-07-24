@@ -106,7 +106,7 @@ pub(crate) use crate::token::Token;
 use crate::{
     builtin::modules::{ModuleConfig, Modules},
     lexer::Lexer,
-    output::Css,
+    output::{AtRuleContext, Css},
     parse::{
         common::{ContextFlags, NeverEmptyVec},
         Parser,
@@ -295,7 +295,7 @@ fn from_string_with_file_name(input: String, file_name: &str, options: &Options)
     .parse()
     .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages))?;
 
-    Css::from_stmts(stmts, false, options.allows_charset)
+    Css::from_stmts(stmts, AtRuleContext::None, options.allows_charset)
         .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages))?
         .pretty_print(&map, options.style)
         .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages))

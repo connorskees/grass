@@ -125,16 +125,16 @@ impl Toplevel {
 #[derive(Debug, Clone)]
 pub(crate) struct Css {
     blocks: Vec<Toplevel>,
-    in_at_rule: bool,
+    at_rule_context: AtRuleContext,
     allows_charset: bool,
     plain_imports: Vec<Toplevel>,
 }
 
 impl Css {
-    pub const fn new(in_at_rule: bool, allows_charset: bool) -> Self {
+    pub const fn new(at_rule_context: AtRuleContext, allows_charset: bool) -> Self {
         Css {
             blocks: Vec::new(),
-            in_at_rule,
+            at_rule_context,
             allows_charset,
             plain_imports: Vec::new(),
         }
@@ -142,10 +142,10 @@ impl Css {
 
     pub(crate) fn from_stmts(
         s: Vec<Stmt>,
-        in_at_rule: bool,
+        at_rule_context: AtRuleContext,
         allows_charset: bool,
     ) -> SassResult<Self> {
-        Css::new(in_at_rule, allows_charset).parse_stylesheet(s)
+        Css::new(at_rule_context, allows_charset).parse_stylesheet(s)
     }
 
     fn parse_stmt(&mut self, stmt: Stmt) -> SassResult<Vec<Toplevel>> {
@@ -381,7 +381,7 @@ impl Formatter for CompressedFormatter {
                     }
 
                     write!(buf, "{{")?;
-                    let css = Css::from_stmts(body, true, css.allows_charset)?;
+                    let css = Css::from_stmts(body, AtRuleContext::Unknown, css.allows_charset)?;
                     self.write_css(buf, css, map)?;
                     write!(buf, "}}")?;
                 }
@@ -400,7 +400,7 @@ impl Formatter for CompressedFormatter {
                     }
 
                     write!(buf, "{{")?;
-                    let css = Css::from_stmts(body, true, css.allows_charset)?;
+                    let css = Css::from_stmts(body, AtRuleContext::Keyframes, css.allows_charset)?;
                     self.write_css(buf, css, map)?;
                     write!(buf, "}}")?;
                 }
@@ -417,7 +417,7 @@ impl Formatter for CompressedFormatter {
                     }
 
                     write!(buf, "{{")?;
-                    let css = Css::from_stmts(body, true, css.allows_charset)?;
+                    let css = Css::from_stmts(body, AtRuleContext::Supports, css.allows_charset)?;
                     self.write_css(buf, css, map)?;
                     write!(buf, "}}")?;
                 }
@@ -427,7 +427,7 @@ impl Formatter for CompressedFormatter {
                     }
 
                     write!(buf, "@media {}{{", query)?;
-                    let css = Css::from_stmts(body, true, css.allows_charset)?;
+                    let css = Css::from_stmts(body, AtRuleContext::Media, css.allows_charset)?;
                     self.write_css(buf, css, map)?;
                     write!(buf, "}}")?;
                 }
@@ -495,6 +495,16 @@ struct Previous {
     is_group_end: bool,
 }
 
+/// What kind of @-rule are we currently inside
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum AtRuleContext {
+    Media,
+    Supports,
+    Keyframes,
+    Unknown,
+    None,
+}
+
 impl Formatter for ExpandedFormatter {
     fn write_css(&mut self, buf: &mut Vec<u8>, css: Css, map: &CodeMap) -> SassResult<()> {
         let padding = "  ".repeat(self.nesting);
@@ -512,7 +522,9 @@ impl Formatter for ExpandedFormatter {
             if let Some(prev) = prev {
                 writeln!(buf)?;
 
-                if prev.is_group_end && !css.in_at_rule {
+                if (prev.is_group_end && css.at_rule_context == AtRuleContext::None)
+                    || css.at_rule_context == AtRuleContext::Supports
+                {
                     writeln!(buf)?;
                 }
             }
@@ -570,7 +582,7 @@ impl Formatter for ExpandedFormatter {
                     }
 
                     writeln!(buf, " {{")?;
-                    let css = Css::from_stmts(body, true, css.allows_charset)?;
+                    let css = Css::from_stmts(body, AtRuleContext::Unknown, css.allows_charset)?;
                     self.write_css(buf, css, map)?;
                     write!(buf, "\n{}}}", padding)?;
                 }
@@ -590,7 +602,7 @@ impl Formatter for ExpandedFormatter {
                     }
 
                     writeln!(buf, " {{")?;
-                    let css = Css::from_stmts(body, true, css.allows_charset)?;
+                    let css = Css::from_stmts(body, AtRuleContext::Keyframes, css.allows_charset)?;
                     self.write_css(buf, css, map)?;
                     write!(buf, "\n{}}}", padding)?;
                 }
@@ -608,7 +620,7 @@ impl Formatter for ExpandedFormatter {
                     }
 
                     writeln!(buf, " {{")?;
-                    let css = Css::from_stmts(body, true, css.allows_charset)?;
+                    let css = Css::from_stmts(body, AtRuleContext::Supports, css.allows_charset)?;
                     self.write_css(buf, css, map)?;
                     write!(buf, "\n{}}}", padding)?;
                 }
@@ -619,7 +631,15 @@ impl Formatter for ExpandedFormatter {
                     ..
                 } => {
                     writeln!(buf, "{}@media {} {{", padding, query)?;
-                    let css = Css::from_stmts(body, inside_rule, css.allows_charset)?;
+                    let css = Css::from_stmts(
+                        body,
+                        if inside_rule {
+                            AtRuleContext::Media
+                        } else {
+                            AtRuleContext::None
+                        },
+                        css.allows_charset,
+                    )?;
                     self.write_css(buf, css, map)?;
                     write!(buf, "\n{}}}", padding)?;
                 }
