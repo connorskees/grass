@@ -27,3 +27,26 @@ test!(
     }",
     "@supports (-ms-ime-align: auto) {\n  a {\n    color: red;\n  }\n\n  b {\n    color: green;\n  }\n}\n"
 );
+test!(
+    no_newline_after_media,
+    "@supports (position: sticky) {
+      a {
+        color: red;
+      }
+    
+      @media (min-width: 576px) {
+        a {
+          color: red;
+        }
+    
+        a {
+          color: red;
+        }
+      }
+    
+      a {
+        color: red;
+      }
+    }",
+    "@supports (position: sticky) {\n  a {\n    color: red;\n  }\n\n  @media (min-width: 576px) {\n    a {\n      color: red;\n    }\n\n    a {\n      color: red;\n    }\n  }\n  a {\n    color: red;\n  }\n}\n"
+);

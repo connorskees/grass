@@ -620,7 +620,7 @@ impl Formatter for ExpandedFormatter {
                     }
 
                     writeln!(buf, " {{")?;
-                    let css = Css::from_stmts(body, AtRuleContext::Supports, css.allows_charset)?;
+                    let css = Css::from_stmts(body, AtRuleContext::None, css.allows_charset)?;
                     self.write_css(buf, css, map)?;
                     write!(buf, "\n{}}}", padding)?;
                 }
