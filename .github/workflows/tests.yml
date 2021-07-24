@@ -57,6 +57,43 @@ jobs:
         with:
           command: clippy
           args: -- -D warnings
+
+  boostrap:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@master
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Build
+        run: cargo build
+
+      - name: Install dart-sass 1.36.0
+        run: |
+          wget https://github.com/sass/dart-sass/releases/download/1.36.0/dart-sass-1.36.0-linux-x64.tar.gz
+          tar -xzvf dart-sass-1.36.0-linux-x64.tar.gz
+
+      - name: Install bootstrap
+        run: git clone --depth=1 --branch 2bdbb42dcf6bfb99b5e9e5444d9e64589eb8c08f https://github.com/twbs/bootstrap.git
+
+      - name: Verify unchanged output
+        run: |
+          ./target/debug/grass bootstrap/scss/bootstrap.scss > grass-output.css
+          ./dart-sass/sass bootstrap/scss/bootstrap.scss > dart-sass-output.css
+
+          if [[ $(diff -u grass-output.css dart-sass-output.css) ]]; then
+              echo "Differences found"
+              diff -u grass-output.css dart-sass-output.css
+              exit 1
+          else
+              echo "No differences found"
+          fi
+
   # sass-spec:
   #   continue-on-error: true
   #   runs-on: ubuntu-latest
