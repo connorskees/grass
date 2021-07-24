@@ -1,14 +1,18 @@
 # TBD
 
+- **feature complete, byte-for-byte support for bootstrap**
+  - add bootstrap v5.0.2 to ci
+  - run script to verify output against the last 2,500 commits to bootstrap
 - feature complete `min`/`max` support -- special functions and `min`/`max` are now allowed as arguments
 - removed dependency on `peekmore`, which sped up parsing and simplified lookahead
 - emit comments inside the `@if` rule body
 - fix bug in `hue(...)` function in which the value would be incorrect in when the `red` channel was the highest and the green channel was lower than the blue channel
 - no longer round output from `saturation(...)` function
-- improve handling of newlines inside and around `@media`
+- improve handling of newlines for `@media`, `@supports`, `@at-root`, placeholder selectors, unrelated style rules, and unknown @-rules
 - arglists can be equal to comma separated lists
 - throw error for invalid uses of `@charset`
 - more robustly parse `@else if`, allowing escaped and uppercase characters
+- resolve two `@extend` bugs -- one in which we would incorrectly emit `a b, a > b` as a selector, even though `a b` is a superselector of `a > b`, and a feature called "three-level extend loop", in which a stylesheet where `a` extends `b`, `b` extends `c`, and `c` extends `a` would fail to include all 3 selectors in certain places
 
 # 0.10.5
 

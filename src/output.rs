@@ -69,8 +69,8 @@ impl Toplevel {
                 inside_rule,
                 is_group_end,
                 ..
-            } => *inside_rule && *is_group_end,
-            Toplevel::Supports {
+            }
+            | Toplevel::Supports {
                 inside_rule,
                 is_group_end,
                 ..

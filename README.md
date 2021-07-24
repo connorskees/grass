@@ -20,19 +20,25 @@ a bug except for in the following situations:
 
 ## Status
 
-The large features remaining are
+`grass` has reached a stage where one can be quite confident in its output. For the average user there should not be perceptible differences from `dart-sass`.
+
+Every commit of `grass` is tested against bootstrap v5.0.2, and every release is tested against the last 2,500 commits of bootstrap's `main` branch.
+
+That said, there are a number of known missing features and bugs. The notable features remaining are
 
 ```
 indented syntax
-css imports
-@forward
+@forward and more complex uses of @use
+complex uses of @at-root
+@media query merging
+media queries with @import
+/ as a separator in color functions, e.g. rgba(255, 255, 255 / 0)
+Infinity and -Infinity
 ```
 
-This is in addition to dozens of smaller features, edge cases, and miscompilations.
+All known missing features and bugs are tracked in [#19](https://github.com/connorskees/grass/issues/19).
 
-Starting from `grass v0.9.4`, it is possible to compile Twitter Bootstrap 4 as well as bulma-scss.
-
-The output is not exact byte-for-byte, and the remaining differences in output are tracked [here](https://github.com/connorskees/grass/issues/4).
+`grass` is not a drop-in replacement for `libsass` and does not intend to be. If you are upgrading to `grass` from `libsass`, you may have to make modifications to your stylesheets, though these changes should not differ from those you would have to make if upgrading to `dart-sass`.
 
 ## Web Assembly
 
@@ -82,64 +88,8 @@ for [curses](https://github.com/ruby/curses).
 These numbers come from a default run of the Sass specification as shown above.
 
 ```
-2020-11-16
-PASSING: 3415
-FAILING: 1678
-TOTAL: 5093
-```
-
-```
-2020-08-15
-PASSING: 3384
-FAILING: 1703
-TOTAL: 5093
-```
-
-```
-2020-07-24
-PASSING: 2935
-FAILING: 2158
-TOTAL: 5093
-```
-
-```
-2020-06-07
-PASSING: 2442
-FAILING: 2651
-TOTAL: 5093
-```
-
-```
-2020-05-01
-PASSING: 2193
-FAILING: 2900
-TOTAL: 5093
-```
-
-```
-2020-04-01
-PASSING: 1711
-FAILING: 3382
-TOTAL: 5093
-```
-
-```
-2020-03-22
-PASSING: 1442
-FAILING: 3651
-TOTAL: 5093
-```
-
-```
-2020-02-03
-PASSING: 242
-FAILING: 4851
-TOTAL: 5093
-```
-
-```
-2020-01-20
-PASSING: 143
-FAILING: 4950
-TOTAL: 5093
+2021-07-24
+PASSING: 4018
+FAILING: 2238
+TOTAL: 6256
 ```
