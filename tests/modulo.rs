@@ -85,3 +85,8 @@ test!(
     "a {\n  color: -99999990000099999999999999 % 2;\n}\n",
     "a {\n  color: 1;\n}\n"
 );
+test!(
+    big_int_result_is_equal_to_small_int,
+    "a {\n  color: (6 % 2) == 0;\n}\n",
+    "a {\n  color: true;\n}\n"
+);

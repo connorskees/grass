@@ -179,6 +179,16 @@ test!(
     "a {\n  color: (999999999999999999 / .1);\n}\n",
     "a {\n  color: 9999999999999999990;\n}\n"
 );
+test!(
+    bigint_is_equal_to_smallint,
+    "$a: 99999990000099999999999999 - 99999990000099999999999999;
+
+    a {
+      color: $a;
+      color: $a == 0;
+    }",
+    "a {\n  color: 0;\n  color: true;\n}\n"
+);
 // we use arbitrary precision, so it is necessary to limit the size of exponents
 // in order to prevent hangs
 error!(

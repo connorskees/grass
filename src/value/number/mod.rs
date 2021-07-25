@@ -19,11 +19,24 @@ mod integer;
 
 const PRECISION: usize = 10;
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone)]
 pub(crate) enum Number {
     Small(Rational64),
     Big(Box<BigRational>),
 }
+
+impl PartialEq for Number {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Number::Small(val1), Number::Small(val2)) => val1 == val2,
+            (Number::Big(val1), val2 @ Number::Small(..)) => **val1 == val2.clone().into_big_rational(),
+            (val1 @ Number::Small(..), Number::Big(val2)) => val1.clone().into_big_rational() == **val2,
+            (Number::Big(val1), Number::Big(val2)) => val1 == val2,
+        }
+    }
+}
+
+impl Eq for Number {}
 
 impl Number {
     pub const fn new_small(val: Rational64) -> Number {
@@ -32,6 +45,17 @@ impl Number {
 
     pub fn new_big(val: BigRational) -> Number {
         Number::Big(Box::new(val))
+    }
+
+    fn into_big_rational(self) -> BigRational {
+        match self {
+            Number::Small(small) => {
+                let tuple: (i64, i64) = small.into();
+
+                BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1))
+            }
+            Number::Big(big) => *big,
+        }
     }
 
     pub fn to_integer(&self) -> Integer {
