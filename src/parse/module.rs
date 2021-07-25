@@ -16,7 +16,7 @@ use crate::{
     Token,
 };
 
-impl<'a> Parser<'a> {
+impl<'a, 'b> Parser<'a, 'b> {
     fn parse_module_alias(&mut self) -> SassResult<Option<String>> {
         if !matches!(
             self.toks.peek(),

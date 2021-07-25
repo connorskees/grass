@@ -7,7 +7,7 @@ use crate::{
     Token,
 };
 
-pub(crate) type BuiltinMixin = fn(CallArgs, &mut Parser<'_>) -> SassResult<Vec<Stmt>>;
+pub(crate) type BuiltinMixin = fn(CallArgs, &mut Parser) -> SassResult<Vec<Stmt>>;
 
 #[derive(Clone)]
 pub(crate) enum Mixin {

@@ -21,7 +21,7 @@ impl VariableValue {
     }
 }
 
-impl<'a> Parser<'a> {
+impl<'a, 'b> Parser<'a, 'b> {
     pub(super) fn parse_variable_declaration(&mut self) -> SassResult<()> {
         let next = self.toks.next();
         assert!(matches!(next, Some(Token { kind: '$', .. })));

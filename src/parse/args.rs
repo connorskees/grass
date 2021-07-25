@@ -14,7 +14,7 @@ use crate::{
 
 use super::Parser;
 
-impl<'a> Parser<'a> {
+impl<'a, 'b> Parser<'a, 'b> {
     pub(super) fn parse_func_args(&mut self) -> SassResult<FuncArgs> {
         let mut args: Vec<FuncArg> = Vec::new();
         let mut close_paren_span: Span = match self.toks.peek() {
@@ -350,8 +350,12 @@ impl<'a> Parser<'a> {
     }
 }
 
-impl<'a> Parser<'a> {
-    pub(super) fn eval_args(&mut self, fn_args: FuncArgs, mut args: CallArgs) -> SassResult<Scope> {
+impl<'a, 'b> Parser<'a, 'b> {
+    pub(super) fn eval_args(
+        &mut self,
+        fn_args: &FuncArgs,
+        mut args: CallArgs,
+    ) -> SassResult<Scope> {
         let mut scope = Scope::new();
         if fn_args.0.is_empty() {
             args.max_args(0)?;
@@ -363,7 +367,7 @@ impl<'a> Parser<'a> {
         }
 
         self.scopes.enter_new_scope();
-        for (idx, mut arg) in fn_args.0.into_iter().enumerate() {
+        for (idx, arg) in fn_args.0.iter().enumerate() {
             if arg.is_variadic {
                 let arg_list = Value::ArgList(args.get_variadic()?);
                 scope.insert_var(arg.name, arg_list);
@@ -372,8 +376,8 @@ impl<'a> Parser<'a> {
 
             let val = match args.get(idx, arg.name) {
                 Some(v) => v,
-                None => match arg.default.as_mut() {
-                    Some(v) => self.parse_value_from_vec(mem::take(v), true),
+                None => match arg.default.as_ref() {
+                    Some(v) => self.parse_value_from_vec(v, true),
                     None => {
                         return Err(
                             (format!("Missing argument ${}.", &arg.name), args.span()).into()

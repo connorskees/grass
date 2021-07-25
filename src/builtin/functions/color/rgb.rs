@@ -15,7 +15,7 @@ use crate::{
 /// name: Either `rgb` or `rgba` depending on the caller
 // todo: refactor into smaller functions
 #[allow(clippy::cognitive_complexity)]
-fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     if args.is_empty() {
         return Err(("Missing argument $channels.", args.span()).into());
     }
@@ -350,15 +350,15 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser<'_>) ->
     }
 }
 
-pub(crate) fn rgb(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn rgb(args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     inner_rgb("rgb", args, parser)
 }
 
-pub(crate) fn rgba(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn rgba(args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     inner_rgb("rgba", args, parser)
 }
 
-pub(crate) fn red(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn red(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "color")? {
         Value::Color(c) => Ok(Value::Dimension(Some(c.red()), Unit::None, true)),
@@ -370,7 +370,7 @@ pub(crate) fn red(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Val
     }
 }
 
-pub(crate) fn green(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn green(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "color")? {
         Value::Color(c) => Ok(Value::Dimension(Some(c.green()), Unit::None, true)),
@@ -382,7 +382,7 @@ pub(crate) fn green(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<V
     }
 }
 
-pub(crate) fn blue(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn blue(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "color")? {
         Value::Color(c) => Ok(Value::Dimension(Some(c.blue()), Unit::None, true)),
@@ -394,7 +394,7 @@ pub(crate) fn blue(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Va
     }
 }
 
-pub(crate) fn mix(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn mix(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(3)?;
     let color1 = match args.get_err(0, "color1")? {
         Value::Color(c) => c,

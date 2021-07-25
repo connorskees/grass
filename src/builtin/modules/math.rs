@@ -19,7 +19,7 @@ use crate::{
 #[cfg(feature = "random")]
 use crate::builtin::math::random;
 
-fn clamp(mut args: CallArgs, _: &mut Parser<'_>) -> SassResult<Value> {
+fn clamp(mut args: CallArgs, _: &mut Parser) -> SassResult<Value> {
     args.max_args(3)?;
     let span = args.span();
 
@@ -101,7 +101,7 @@ fn clamp(mut args: CallArgs, _: &mut Parser<'_>) -> SassResult<Value> {
     Ok(number)
 }
 
-fn hypot(args: CallArgs, _: &mut Parser<'_>) -> SassResult<Value> {
+fn hypot(args: CallArgs, _: &mut Parser) -> SassResult<Value> {
     args.min_args(1)?;
 
     let span = args.span();
@@ -172,7 +172,7 @@ fn hypot(args: CallArgs, _: &mut Parser<'_>) -> SassResult<Value> {
     Ok(Value::Dimension(sum.sqrt(), first.1, true))
 }
 
-fn log(mut args: CallArgs, _: &mut Parser<'_>) -> SassResult<Value> {
+fn log(mut args: CallArgs, _: &mut Parser) -> SassResult<Value> {
     args.max_args(2)?;
 
     let number = match args.get_err(0, "number")? {
@@ -239,7 +239,7 @@ fn log(mut args: CallArgs, _: &mut Parser<'_>) -> SassResult<Value> {
     ))
 }
 
-fn pow(mut args: CallArgs, _: &mut Parser<'_>) -> SassResult<Value> {
+fn pow(mut args: CallArgs, _: &mut Parser) -> SassResult<Value> {
     args.max_args(2)?;
 
     let base = match args.get_err(0, "base")? {
@@ -289,7 +289,7 @@ fn pow(mut args: CallArgs, _: &mut Parser<'_>) -> SassResult<Value> {
     Ok(Value::Dimension(base.pow(exponent), Unit::None, true))
 }
 
-fn sqrt(mut args: CallArgs, _: &mut Parser<'_>) -> SassResult<Value> {
+fn sqrt(mut args: CallArgs, _: &mut Parser) -> SassResult<Value> {
     args.max_args(1)?;
     let number = args.get_err(0, "number")?;
 
@@ -318,7 +318,7 @@ fn sqrt(mut args: CallArgs, _: &mut Parser<'_>) -> SassResult<Value> {
 
 macro_rules! trig_fn {
     ($name:ident, $name_deg:ident) => {
-        fn $name(mut args: CallArgs, _: &mut Parser<'_>) -> SassResult<Value> {
+        fn $name(mut args: CallArgs, _: &mut Parser) -> SassResult<Value> {
             args.max_args(1)?;
             let number = args.get_err(0, "number")?;
 
@@ -357,7 +357,7 @@ trig_fn!(cos, cos_deg);
 trig_fn!(sin, sin_deg);
 trig_fn!(tan, tan_deg);
 
-fn acos(mut args: CallArgs, _: &mut Parser<'_>) -> SassResult<Value> {
+fn acos(mut args: CallArgs, _: &mut Parser) -> SassResult<Value> {
     args.max_args(1)?;
     let number = args.get_err(0, "number")?;
 
@@ -394,7 +394,7 @@ fn acos(mut args: CallArgs, _: &mut Parser<'_>) -> SassResult<Value> {
     })
 }
 
-fn asin(mut args: CallArgs, _: &mut Parser<'_>) -> SassResult<Value> {
+fn asin(mut args: CallArgs, _: &mut Parser) -> SassResult<Value> {
     args.max_args(1)?;
     let number = args.get_err(0, "number")?;
 
@@ -429,7 +429,7 @@ fn asin(mut args: CallArgs, _: &mut Parser<'_>) -> SassResult<Value> {
     })
 }
 
-fn atan(mut args: CallArgs, _: &mut Parser<'_>) -> SassResult<Value> {
+fn atan(mut args: CallArgs, _: &mut Parser) -> SassResult<Value> {
     args.max_args(1)?;
     let number = args.get_err(0, "number")?;
 
@@ -462,7 +462,7 @@ fn atan(mut args: CallArgs, _: &mut Parser<'_>) -> SassResult<Value> {
     })
 }
 
-fn atan2(mut args: CallArgs, _: &mut Parser<'_>) -> SassResult<Value> {
+fn atan2(mut args: CallArgs, _: &mut Parser) -> SassResult<Value> {
     args.max_args(2)?;
     let (y_num, y_unit) = match args.get_err(0, "y")? {
         Value::Dimension(n, u, ..) => (n, u),

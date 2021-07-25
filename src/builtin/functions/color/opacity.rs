@@ -35,7 +35,7 @@ mod test {
     }
 }
 
-pub(crate) fn alpha(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn alpha(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     if args.len() <= 1 {
         match args.get_err(0, "color")? {
             Value::Color(c) => Ok(Value::Dimension(Some(c.alpha()), Unit::None, true)),
@@ -69,7 +69,7 @@ pub(crate) fn alpha(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<V
     }
 }
 
-pub(crate) fn opacity(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn opacity(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "color")? {
         Value::Color(c) => Ok(Value::Dimension(Some(c.alpha()), Unit::None, true)),
@@ -87,7 +87,7 @@ pub(crate) fn opacity(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult
 }
 
 // todo: unify `opacify` and `fade_in`
-fn opacify(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+fn opacify(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(2)?;
     let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,
@@ -113,7 +113,7 @@ fn opacify(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     Ok(Value::Color(Box::new(color.fade_in(amount))))
 }
 
-fn fade_in(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+fn fade_in(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(2)?;
     let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,
@@ -140,7 +140,7 @@ fn fade_in(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
 }
 
 // todo: unify with `fade_out`
-fn transparentize(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+fn transparentize(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(2)?;
     let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,
@@ -166,7 +166,7 @@ fn transparentize(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Val
     Ok(Value::Color(Box::new(color.fade_out(amount))))
 }
 
-fn fade_out(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+fn fade_out(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(2)?;
     let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,

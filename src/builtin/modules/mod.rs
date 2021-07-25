@@ -198,7 +198,7 @@ impl Module {
     pub fn insert_builtin(
         &mut self,
         name: &'static str,
-        function: fn(CallArgs, &mut Parser<'_>) -> SassResult<Value>,
+        function: fn(CallArgs, &mut Parser) -> SassResult<Value>,
     ) {
         let ident = name.into();
         self.scope

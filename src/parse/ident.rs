@@ -12,7 +12,7 @@ use crate::{
 
 use super::Parser;
 
-impl<'a> Parser<'a> {
+impl<'a, 'b> Parser<'a, 'b> {
     fn ident_body_no_interpolation(&mut self, unit: bool) -> SassResult<Spanned<String>> {
         let mut text = String::new();
         while let Some(tok) = self.toks.peek() {

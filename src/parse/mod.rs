@@ -64,8 +64,8 @@ pub(crate) enum Stmt {
 }
 
 // todo: merge at_root and at_root_has_selector into an enum
-pub(crate) struct Parser<'a> {
-    pub toks: &'a mut Lexer,
+pub(crate) struct Parser<'a, 'b> {
+    pub toks: &'a mut Lexer<'b>,
     pub map: &'a mut CodeMap,
     pub path: &'a Path,
     pub global_scope: &'a mut Scope,
@@ -89,7 +89,7 @@ pub(crate) struct Parser<'a> {
     pub module_config: &'a mut ModuleConfig,
 }
 
-impl<'a> Parser<'a> {
+impl<'a, 'b> Parser<'a, 'b> {
     pub fn parse(&mut self) -> SassResult<Vec<Stmt>> {
         let mut stmts = Vec::new();
 
@@ -610,7 +610,7 @@ impl<'a> Parser<'a> {
     }
 }
 
-impl<'a> Parser<'a> {
+impl<'a, 'b> Parser<'a, 'b> {
     fn parse_unknown_at_rule(&mut self, name: String) -> SassResult<Stmt> {
         if self.flags.in_function() {
             return Err(("This at-rule is not allowed here.", self.span_before).into());
@@ -947,7 +947,7 @@ impl<'a> Parser<'a> {
     }
 }
 
-impl<'a> Parser<'a> {
+impl<'a, 'b> Parser<'a, 'b> {
     fn debug(&self, message: &Spanned<Cow<'a, str>>) {
         if self.options.quiet {
             return;

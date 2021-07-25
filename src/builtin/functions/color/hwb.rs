@@ -9,7 +9,7 @@ use crate::{
     value::{Number, Value},
 };
 
-pub(crate) fn blackness(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn blackness(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(1)?;
 
     let color = match args.get_err(0, "color")? {
@@ -29,7 +29,7 @@ pub(crate) fn blackness(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResu
     Ok(Value::Dimension(Some(blackness * 100), Unit::Percent, true))
 }
 
-pub(crate) fn whiteness(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn whiteness(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(1)?;
 
     let color = match args.get_err(0, "color")? {
@@ -48,7 +48,7 @@ pub(crate) fn whiteness(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResu
     Ok(Value::Dimension(Some(whiteness * 100), Unit::Percent, true))
 }
 
-pub(crate) fn hwb(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn hwb(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(4)?;
 
     if args.is_empty() {

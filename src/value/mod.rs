@@ -511,7 +511,7 @@ impl Value {
     /// `name` is the argument name. It's used for error reporting.
     pub fn to_selector(
         self,
-        parser: &mut Parser<'_>,
+        parser: &mut Parser,
         name: &str,
         allows_parent: bool,
     ) -> SassResult<Selector> {

@@ -4,7 +4,7 @@ use crate::{error::SassResult, Token};
 
 use super::Parser;
 
-impl<'a> Parser<'a> {
+impl<'a, 'b> Parser<'a, 'b> {
     pub(super) fn throw_away_until_newline(&mut self) {
         for tok in &mut self.toks {
             if tok.kind == '\n' {

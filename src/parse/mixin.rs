@@ -14,7 +14,7 @@ use crate::{
 
 use super::{common::ContextFlags, Parser, Stmt};
 
-impl<'a> Parser<'a> {
+impl<'a, 'b> Parser<'a, 'b> {
     pub(super) fn parse_mixin(&mut self) -> SassResult<()> {
         self.whitespace();
         let Spanned { node: name, span } = self.parse_identifier_no_interpolation(false)?;
@@ -142,7 +142,7 @@ impl<'a> Parser<'a> {
             }
         };
 
-        let scope = self.eval_args(fn_args, args)?;
+        let scope = self.eval_args(&fn_args, args)?;
 
         let scope_len = self.scopes.len();
 
@@ -218,16 +218,16 @@ impl<'a> Parser<'a> {
             if let Some(ref content_args) = content.content_args {
                 call_args.max_args(content_args.len())?;
 
-                let scope = self.eval_args(content_args.clone(), call_args)?;
+                let scope = self.eval_args(&content_args, call_args)?;
                 scope_at_decl.enter_scope(scope);
                 entered_scope = true;
             } else {
                 call_args.max_args(0)?;
             }
 
-            let stmts = if let Some(body) = content.content.clone() {
+            let stmts = if let Some(body) = &content.content {
                 Parser {
-                    toks: &mut Lexer::new(body),
+                    toks: &mut Lexer::new_ref(body),
                     map: self.map,
                     path: self.path,
                     scopes: &mut scope_at_decl,

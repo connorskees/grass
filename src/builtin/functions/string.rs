@@ -15,7 +15,7 @@ use crate::{
     value::{Number, Value},
 };
 
-pub(crate) fn to_upper_case(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn to_upper_case(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "string")? {
         Value::String(mut i, q) => {
@@ -30,7 +30,7 @@ pub(crate) fn to_upper_case(mut args: CallArgs, parser: &mut Parser<'_>) -> Sass
     }
 }
 
-pub(crate) fn to_lower_case(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn to_lower_case(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "string")? {
         Value::String(mut i, q) => {
@@ -45,7 +45,7 @@ pub(crate) fn to_lower_case(mut args: CallArgs, parser: &mut Parser<'_>) -> Sass
     }
 }
 
-pub(crate) fn str_length(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn str_length(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "string")? {
         Value::String(i, _) => Ok(Value::Dimension(
@@ -61,7 +61,7 @@ pub(crate) fn str_length(mut args: CallArgs, parser: &mut Parser<'_>) -> SassRes
     }
 }
 
-pub(crate) fn quote(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn quote(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "string")? {
         Value::String(i, _) => Ok(Value::String(i, QuoteKind::Quoted)),
@@ -73,7 +73,7 @@ pub(crate) fn quote(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<V
     }
 }
 
-pub(crate) fn unquote(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn unquote(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "string")? {
         i @ Value::String(..) => Ok(i.unquote()),
@@ -85,7 +85,7 @@ pub(crate) fn unquote(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult
     }
 }
 
-pub(crate) fn str_slice(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn str_slice(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(3)?;
     let (string, quotes) = match args.get_err(0, "string")? {
         Value::String(s, q) => (s, q),
@@ -184,7 +184,7 @@ pub(crate) fn str_slice(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResu
     }
 }
 
-pub(crate) fn str_index(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn str_index(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(2)?;
     let s1 = match args.get_err(0, "string")? {
         Value::String(i, _) => i,
@@ -214,7 +214,7 @@ pub(crate) fn str_index(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResu
     })
 }
 
-pub(crate) fn str_insert(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn str_insert(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(3)?;
     let (s1, quotes) = match args.get_err(0, "string")? {
         Value::String(i, q) => (i, q),
@@ -314,7 +314,7 @@ pub(crate) fn str_insert(mut args: CallArgs, parser: &mut Parser<'_>) -> SassRes
 
 #[cfg(feature = "random")]
 #[allow(clippy::needless_pass_by_value)]
-pub(crate) fn unique_id(args: CallArgs, _: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn unique_id(args: CallArgs, _: &mut Parser) -> SassResult<Value> {
     args.max_args(0)?;
     let mut rng = thread_rng();
     let string = std::iter::repeat(())

@@ -30,19 +30,19 @@ impl HigherIntermediateValue {
     }
 }
 
-impl<'a> Parser<'a> {
+impl<'a, 'b> Parser<'a, 'b> {
     fn call_function(&mut self, function: SassFunction, args: CallArgs) -> SassResult<Value> {
         function.call(args, self)
     }
 }
 
-pub(crate) struct ValueVisitor<'a, 'b: 'a> {
-    parser: &'a mut Parser<'b>,
+pub(crate) struct ValueVisitor<'a, 'b: 'a, 'c> {
+    parser: &'a mut Parser<'b, 'c>,
     span: Span,
 }
 
-impl<'a, 'b: 'a> ValueVisitor<'a, 'b> {
-    pub fn new(parser: &'a mut Parser<'b>, span: Span) -> Self {
+impl<'a, 'b: 'a, 'c> ValueVisitor<'a, 'b, 'c> {
+    pub fn new(parser: &'a mut Parser<'b, 'c>, span: Span) -> Self {
         Self { parser, span }
     }
 

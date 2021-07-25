@@ -13,7 +13,7 @@ use super::common::SelectorOrStyle;
 
 use super::Parser;
 
-impl<'a> Parser<'a> {
+impl<'a, 'b> Parser<'a, 'b> {
     fn parse_style_value_when_no_space_after_semicolon(&mut self) -> Option<Vec<Token>> {
         let mut toks = Vec::new();
         while let Some(tok) = self.toks.peek() {
@@ -128,7 +128,7 @@ impl<'a> Parser<'a> {
                                 self.parse_style_value_when_no_space_after_semicolon()
                             {
                                 let len = toks.len();
-                                if let Ok(val) = self.parse_value_from_vec(toks, false) {
+                                if let Ok(val) = self.parse_value_from_vec(&toks, false) {
                                     self.toks.take(len).for_each(drop);
                                     return Ok(SelectorOrStyle::Style(
                                         InternedString::get_or_intern(property),

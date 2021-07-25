@@ -26,7 +26,7 @@ fn is_plain_css_import(url: &str) -> bool {
         || lower.starts_with("//")
 }
 
-impl<'a> Parser<'a> {
+impl<'a, 'b> Parser<'a, 'b> {
     /// Searches the current directory of the file then searches in `load_paths` directories
     /// if the import has not yet been found.
     ///

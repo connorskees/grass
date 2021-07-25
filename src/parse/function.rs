@@ -17,7 +17,7 @@ use super::{common::ContextFlags, Parser, Stmt};
 const RESERVED_IDENTIFIERS: [&str; 7] =
     ["calc", "element", "expression", "url", "and", "or", "not"];
 
-impl<'a> Parser<'a> {
+impl<'a, 'b> Parser<'a, 'b> {
     pub(super) fn parse_function(&mut self) -> SassResult<()> {
         self.whitespace_or_comment();
         let Spanned { node: name, span } = self.parse_identifier()?;
@@ -86,7 +86,7 @@ impl<'a> Parser<'a> {
             ..
         } = function;
 
-        let scope = self.eval_args(fn_args, args)?;
+        let scope = self.eval_args(&fn_args, args)?;
 
         let mut new_scope = Scopes::new();
         let mut entered_scope = false;

@@ -12,7 +12,7 @@ use crate::{
     Token,
 };
 
-impl<'a> Parser<'a> {
+impl<'a, 'b> Parser<'a, 'b> {
     pub(super) fn parse_if(&mut self) -> SassResult<Vec<Stmt>> {
         self.whitespace_or_comment();
 
@@ -271,7 +271,7 @@ impl<'a> Parser<'a> {
             );
             if self.flags.in_function() {
                 let these_stmts = Parser {
-                    toks: &mut Lexer::new(body.clone()),
+                    toks: &mut Lexer::new_ref(&body),
                     map: self.map,
                     path: self.path,
                     scopes: self.scopes,
@@ -295,7 +295,7 @@ impl<'a> Parser<'a> {
             } else {
                 stmts.append(
                     &mut Parser {
-                        toks: &mut Lexer::new(body.clone()),
+                        toks: &mut Lexer::new_ref(&body),
                         map: self.map,
                         path: self.path,
                         scopes: self.scopes,
@@ -343,12 +343,12 @@ impl<'a> Parser<'a> {
         });
 
         let mut stmts = Vec::new();
-        let mut val = self.parse_value_from_vec(cond.clone(), true)?;
+        let mut val = self.parse_value_from_vec(&cond, true)?;
         self.scopes.enter_new_scope();
         while val.node.is_true() {
             if self.flags.in_function() {
                 let these_stmts = Parser {
-                    toks: &mut Lexer::new(body.clone()),
+                    toks: &mut Lexer::new_ref(&body),
                     map: self.map,
                     path: self.path,
                     scopes: self.scopes,
@@ -372,7 +372,7 @@ impl<'a> Parser<'a> {
             } else {
                 stmts.append(
                     &mut Parser {
-                        toks: &mut Lexer::new(body.clone()),
+                        toks: &mut Lexer::new_ref(&body),
                         map: self.map,
                         path: self.path,
                         scopes: self.scopes,
@@ -392,7 +392,7 @@ impl<'a> Parser<'a> {
                     .parse_stmt()?,
                 );
             }
-            val = self.parse_value_from_vec(cond.clone(), true)?;
+            val = self.parse_value_from_vec(&cond, true)?;
         }
         self.scopes.exit_scope();
 
@@ -429,7 +429,7 @@ impl<'a> Parser<'a> {
         self.whitespace_or_comment();
         let iter_val_toks = read_until_open_curly_brace(self.toks)?;
         let iter = self
-            .parse_value_from_vec(iter_val_toks, true)?
+            .parse_value_from_vec(&iter_val_toks, true)?
             .node
             .as_list();
         self.toks.next();
@@ -460,7 +460,7 @@ impl<'a> Parser<'a> {
 
             if self.flags.in_function() {
                 let these_stmts = Parser {
-                    toks: &mut Lexer::new(body.clone()),
+                    toks: &mut Lexer::new_ref(&body),
                     map: self.map,
                     path: self.path,
                     scopes: self.scopes,
@@ -484,7 +484,7 @@ impl<'a> Parser<'a> {
             } else {
                 stmts.append(
                     &mut Parser {
-                        toks: &mut Lexer::new(body.clone()),
+                        toks: &mut Lexer::new_ref(&body),
                         map: self.map,
                         path: self.path,
                         scopes: self.scopes,

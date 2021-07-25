@@ -14,7 +14,7 @@ use crate::{
     value::Value,
 };
 
-fn load_css(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Vec<Stmt>> {
+fn load_css(mut args: CallArgs, parser: &mut Parser) -> SassResult<Vec<Stmt>> {
     args.max_args(2)?;
 
     let span = args.span();
@@ -69,7 +69,7 @@ fn load_css(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Vec<Stmt>
     }
 }
 
-fn module_functions(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+fn module_functions(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(1)?;
 
     let module = match args.get_err(0, "module")? {
@@ -88,7 +88,7 @@ fn module_functions(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<V
     ))
 }
 
-fn module_variables(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+fn module_variables(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(1)?;
 
     let module = match args.get_err(0, "module")? {

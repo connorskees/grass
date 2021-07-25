@@ -14,7 +14,7 @@ use crate::{
     value::{Number, Value},
 };
 
-pub(crate) fn percentage(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn percentage(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(1)?;
     let num = match args.get_err(0, "number")? {
         Value::Dimension(Some(n), Unit::None, _) => Some(n * Number::from(100)),
@@ -40,7 +40,7 @@ pub(crate) fn percentage(mut args: CallArgs, parser: &mut Parser<'_>) -> SassRes
     Ok(Value::Dimension(num, Unit::Percent, true))
 }
 
-pub(crate) fn round(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn round(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "number")? {
         Value::Dimension(Some(n), u, _) => Ok(Value::Dimension(Some(n.round()), u, true)),
@@ -53,7 +53,7 @@ pub(crate) fn round(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<V
     }
 }
 
-pub(crate) fn ceil(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn ceil(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "number")? {
         Value::Dimension(Some(n), u, _) => Ok(Value::Dimension(Some(n.ceil()), u, true)),
@@ -66,7 +66,7 @@ pub(crate) fn ceil(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Va
     }
 }
 
-pub(crate) fn floor(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn floor(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "number")? {
         Value::Dimension(Some(n), u, _) => Ok(Value::Dimension(Some(n.floor()), u, true)),
@@ -79,7 +79,7 @@ pub(crate) fn floor(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<V
     }
 }
 
-pub(crate) fn abs(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn abs(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "number")? {
         Value::Dimension(Some(n), u, _) => Ok(Value::Dimension(Some(n.abs()), u, true)),
@@ -92,7 +92,7 @@ pub(crate) fn abs(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Val
     }
 }
 
-pub(crate) fn comparable(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn comparable(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(2)?;
     let unit1 = match args.get_err(0, "number1")? {
         Value::Dimension(_, u, _) => u,
@@ -120,7 +120,7 @@ pub(crate) fn comparable(mut args: CallArgs, parser: &mut Parser<'_>) -> SassRes
 
 // TODO: write tests for this
 #[cfg(feature = "random")]
-pub(crate) fn random(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn random(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(1)?;
     let limit = match args.default_arg(0, "limit", Value::Null)? {
         Value::Dimension(Some(n), ..) => n,
@@ -179,7 +179,7 @@ pub(crate) fn random(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<
     ))
 }
 
-pub(crate) fn min(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn min(args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.min_args(1)?;
     let span = args.span();
     let mut nums = args
@@ -225,7 +225,7 @@ pub(crate) fn min(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
     Ok(Value::Dimension(Some(min.0), min.1, true))
 }
 
-pub(crate) fn max(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn max(args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.min_args(1)?;
     let span = args.span();
     let mut nums = args
@@ -271,7 +271,7 @@ pub(crate) fn max(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> 
     Ok(Value::Dimension(Some(max.0), max.1, true))
 }
 
-pub(crate) fn divide(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn divide(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(2)?;
 
     let number1 = args.get_err(0, "number1")?;

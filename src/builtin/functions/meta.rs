@@ -11,7 +11,7 @@ use crate::{
     value::{SassFunction, Value},
 };
 
-fn if_(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+fn if_(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(3)?;
     if args.get_err(0, "condition")?.is_true() {
         Ok(args.get_err(1, "if-true")?)
@@ -20,7 +20,7 @@ fn if_(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
     }
 }
 
-pub(crate) fn feature_exists(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn feature_exists(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "feature")? {
         #[allow(clippy::match_same_arms)]
@@ -50,7 +50,7 @@ pub(crate) fn feature_exists(mut args: CallArgs, parser: &mut Parser<'_>) -> Sas
     }
 }
 
-pub(crate) fn unit(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn unit(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(1)?;
     let unit = match args.get_err(0, "number")? {
         Value::Dimension(_, u, _) => u.to_string(),
@@ -65,13 +65,13 @@ pub(crate) fn unit(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Va
     Ok(Value::String(unit, QuoteKind::Quoted))
 }
 
-pub(crate) fn type_of(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn type_of(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(1)?;
     let value = args.get_err(0, "value")?;
     Ok(Value::String(value.kind().to_owned(), QuoteKind::None))
 }
 
-pub(crate) fn unitless(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn unitless(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(1)?;
     Ok(match args.get_err(0, "number")? {
         Value::Dimension(_, Unit::None, _) => Value::True,
@@ -86,7 +86,7 @@ pub(crate) fn unitless(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResul
     })
 }
 
-pub(crate) fn inspect(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn inspect(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(1)?;
     Ok(Value::String(
         args.get_err(0, "value")?.inspect(args.span())?.into_owned(),
@@ -94,7 +94,7 @@ pub(crate) fn inspect(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult
     ))
 }
 
-pub(crate) fn variable_exists(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn variable_exists(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "name")? {
         Value::String(s, _) => Ok(Value::bool(
@@ -108,10 +108,7 @@ pub(crate) fn variable_exists(mut args: CallArgs, parser: &mut Parser<'_>) -> Sa
     }
 }
 
-pub(crate) fn global_variable_exists(
-    mut args: CallArgs,
-    parser: &mut Parser<'_>,
-) -> SassResult<Value> {
+pub(crate) fn global_variable_exists(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(2)?;
 
     let name: Identifier = match args.get_err(0, "name")? {
@@ -147,7 +144,7 @@ pub(crate) fn global_variable_exists(
     }))
 }
 
-pub(crate) fn mixin_exists(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn mixin_exists(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(2)?;
     let name: Identifier = match args.get_err(0, "name")? {
         Value::String(s, _) => s.into(),
@@ -182,7 +179,7 @@ pub(crate) fn mixin_exists(mut args: CallArgs, parser: &mut Parser<'_>) -> SassR
     }))
 }
 
-pub(crate) fn function_exists(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn function_exists(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(2)?;
 
     let name: Identifier = match args.get_err(0, "name")? {
@@ -218,7 +215,7 @@ pub(crate) fn function_exists(mut args: CallArgs, parser: &mut Parser<'_>) -> Sa
     }))
 }
 
-pub(crate) fn get_function(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn get_function(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(3)?;
     let name: Identifier = match args.get_err(0, "name")? {
         Value::String(s, _) => s.into(),
@@ -272,7 +269,7 @@ pub(crate) fn get_function(mut args: CallArgs, parser: &mut Parser<'_>) -> SassR
     Ok(Value::FunctionRef(func))
 }
 
-pub(crate) fn call(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn call(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     let func = match args.get_err(0, "function")? {
         Value::FunctionRef(f) => f,
         v => {
@@ -290,7 +287,7 @@ pub(crate) fn call(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Va
 }
 
 #[allow(clippy::needless_pass_by_value)]
-pub(crate) fn content_exists(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn content_exists(args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(0)?;
     if !parser.flags.in_mixin() {
         return Err((
@@ -305,7 +302,7 @@ pub(crate) fn content_exists(args: CallArgs, parser: &mut Parser<'_>) -> SassRes
 }
 
 #[allow(unused_variables, clippy::needless_pass_by_value)]
-pub(crate) fn keywords(args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn keywords(args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(1)?;
 
     Err((

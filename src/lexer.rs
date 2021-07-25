@@ -1,4 +1,4 @@
-use std::{iter::Peekable, str::Chars, sync::Arc};
+use std::{borrow::Cow, iter::Peekable, str::Chars, sync::Arc};
 
 use codemap::File;
 
@@ -7,13 +7,13 @@ use crate::Token;
 const FORM_FEED: char = '\x0C';
 
 #[derive(Debug, Clone)]
-pub(crate) struct Lexer {
-    buf: Vec<Token>,
+pub(crate) struct Lexer<'a> {
+    buf: Cow<'a, [Token]>,
     cursor: usize,
     amt_peeked: usize,
 }
 
-impl Lexer {
+impl<'a> Lexer<'a> {
     fn peek_cursor(&self) -> usize {
         self.cursor + self.amt_peeked
     }
@@ -64,7 +64,7 @@ impl Lexer {
     }
 }
 
-impl Iterator for Lexer {
+impl<'a> Iterator for Lexer<'a> {
     type Item = Token;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -106,7 +106,7 @@ impl<'a> Iterator for TokenLexer<'a> {
     }
 }
 
-impl Lexer {
+impl<'a> Lexer<'a> {
     pub fn new_from_file(file: &Arc<File>) -> Self {
         let buf = TokenLexer {
             file: Arc::clone(file),
@@ -118,9 +118,17 @@ impl Lexer {
         Self::new(buf)
     }
 
-    pub fn new(buf: Vec<Token>) -> Lexer {
+    pub fn new(buf: Vec<Token>) -> Self {
         Lexer {
-            buf,
+            buf: Cow::Owned(buf),
+            cursor: 0,
+            amt_peeked: 0,
+        }
+    }
+
+    pub fn new_ref(buf: &'a [Token]) -> Lexer<'a> {
+        Lexer {
+            buf: Cow::Borrowed(buf),
             cursor: 0,
             amt_peeked: 0,
         }

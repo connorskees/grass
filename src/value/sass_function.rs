@@ -48,7 +48,7 @@ impl SassFunction {
         }
     }
 
-    pub fn call(self, args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+    pub fn call(self, args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
         match self {
             Self::Builtin(f, ..) => f.0(args, parser),
             Self::UserDefined(f, ..) => parser.eval_function(*f, args),

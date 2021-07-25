@@ -46,9 +46,9 @@ impl IsWhitespace for IntermediateValue {
 }
 
 /// We parse a value until the predicate returns true
-type Predicate<'a> = &'a dyn Fn(&mut Parser<'_>) -> bool;
+type Predicate<'a> = &'a dyn Fn(&mut Parser<'_, '_>) -> bool;
 
-impl<'a> Parser<'a> {
+impl<'a, 'b> Parser<'a, 'b> {
     /// Parse a value from a stream of tokens
     ///
     /// This function will cease parsing if the predicate returns true.
@@ -171,11 +171,11 @@ impl<'a> Parser<'a> {
 
     pub(crate) fn parse_value_from_vec(
         &mut self,
-        toks: Vec<Token>,
+        toks: &[Token],
         in_paren: bool,
     ) -> SassResult<Spanned<Value>> {
         Parser {
-            toks: &mut Lexer::new(toks),
+            toks: &mut Lexer::new_ref(toks),
             map: self.map,
             path: self.path,
             scopes: self.scopes,
@@ -1063,13 +1063,13 @@ impl<'a> Parser<'a> {
     }
 }
 
-struct IntermediateValueIterator<'a, 'b: 'a> {
-    parser: &'a mut Parser<'b>,
+struct IntermediateValueIterator<'a, 'b: 'a, 'c> {
+    parser: &'a mut Parser<'b, 'c>,
     peek: Option<SassResult<Spanned<IntermediateValue>>>,
     predicate: Predicate<'a>,
 }
 
-impl<'a, 'b: 'a> Iterator for IntermediateValueIterator<'a, 'b> {
+impl<'a, 'b: 'a, 'c> Iterator for IntermediateValueIterator<'a, 'b, 'c> {
     type Item = SassResult<Spanned<IntermediateValue>>;
     fn next(&mut self) -> Option<Self::Item> {
         if self.peek.is_some() {
@@ -1080,8 +1080,8 @@ impl<'a, 'b: 'a> Iterator for IntermediateValueIterator<'a, 'b> {
     }
 }
 
-impl<'a, 'b: 'a> IntermediateValueIterator<'a, 'b> {
-    pub fn new(parser: &'a mut Parser<'b>, predicate: Predicate<'a>) -> Self {
+impl<'a, 'b: 'a, 'c> IntermediateValueIterator<'a, 'b, 'c> {
+    pub fn new(parser: &'a mut Parser<'b, 'c>, predicate: Predicate<'a>) -> Self {
         Self {
             parser,
             peek: None,

@@ -40,7 +40,7 @@ impl Hash for Attribute {
     }
 }
 
-fn attribute_name(parser: &mut Parser<'_>, start: Span) -> SassResult<QualifiedName> {
+fn attribute_name(parser: &mut Parser, start: Span) -> SassResult<QualifiedName> {
     let next = parser.toks.peek().ok_or(("Expected identifier.", start))?;
     if next.kind == '*' {
         parser.toks.next();
@@ -85,7 +85,7 @@ fn attribute_name(parser: &mut Parser<'_>, start: Span) -> SassResult<QualifiedN
     })
 }
 
-fn attribute_operator(parser: &mut Parser<'_>) -> SassResult<AttributeOp> {
+fn attribute_operator(parser: &mut Parser) -> SassResult<AttributeOp> {
     let op = match parser.toks.next() {
         Some(Token { kind: '=', .. }) => return Ok(AttributeOp::Equals),
         Some(Token { kind: '~', .. }) => AttributeOp::Include,
@@ -101,7 +101,7 @@ fn attribute_operator(parser: &mut Parser<'_>) -> SassResult<AttributeOp> {
     Ok(op)
 }
 impl Attribute {
-    pub fn from_tokens(parser: &mut Parser<'_>) -> SassResult<Attribute> {
+    pub fn from_tokens(parser: &mut Parser) -> SassResult<Attribute> {
         let start = parser.span_before;
         parser.whitespace();
         let attr = attribute_name(parser, start)?;

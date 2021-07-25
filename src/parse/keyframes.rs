@@ -20,12 +20,12 @@ impl fmt::Display for KeyframesSelector {
     }
 }
 
-struct KeyframesSelectorParser<'a, 'b> {
-    parser: &'a mut Parser<'b>,
+struct KeyframesSelectorParser<'a, 'b, 'c> {
+    parser: &'a mut Parser<'b, 'c>,
 }
 
-impl<'a, 'b> KeyframesSelectorParser<'a, 'b> {
-    pub fn new(parser: &'a mut Parser<'b>) -> Self {
+impl<'a, 'b, 'c> KeyframesSelectorParser<'a, 'b, 'c> {
+    pub fn new(parser: &'a mut Parser<'b, 'c>) -> Self {
         Self { parser }
     }
 
@@ -81,7 +81,7 @@ impl<'a, 'b> KeyframesSelectorParser<'a, 'b> {
     }
 }
 
-impl<'a> Parser<'a> {
+impl<'a, 'b> Parser<'a, 'b> {
     fn parse_keyframes_name(&mut self) -> SassResult<String> {
         let mut name = String::new();
         self.whitespace_or_comment();

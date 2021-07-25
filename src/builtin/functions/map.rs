@@ -8,7 +8,7 @@ use crate::{
     value::{SassMap, Value},
 };
 
-pub(crate) fn map_get(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn map_get(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(2)?;
     let key = args.get_err(1, "key")?;
     let map = match args.get_err(0, "map")? {
@@ -26,7 +26,7 @@ pub(crate) fn map_get(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult
     Ok(map.get(&key).unwrap_or(Value::Null))
 }
 
-pub(crate) fn map_has_key(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn map_has_key(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(2)?;
     let key = args.get_err(1, "key")?;
     let map = match args.get_err(0, "map")? {
@@ -44,7 +44,7 @@ pub(crate) fn map_has_key(mut args: CallArgs, parser: &mut Parser<'_>) -> SassRe
     Ok(Value::bool(map.get(&key).is_some()))
 }
 
-pub(crate) fn map_keys(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn map_keys(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(1)?;
     let map = match args.get_err(0, "map")? {
         Value::Map(m) => m,
@@ -65,7 +65,7 @@ pub(crate) fn map_keys(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResul
     ))
 }
 
-pub(crate) fn map_values(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn map_values(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     args.max_args(1)?;
     let map = match args.get_err(0, "map")? {
         Value::Map(m) => m,
@@ -86,7 +86,7 @@ pub(crate) fn map_values(mut args: CallArgs, parser: &mut Parser<'_>) -> SassRes
     ))
 }
 
-pub(crate) fn map_merge(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn map_merge(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     if args.len() == 1 {
         return Err(("Expected $args to contain a key.", args.span()).into());
     }
@@ -163,7 +163,7 @@ pub(crate) fn map_merge(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResu
     Ok(Value::Map(map1))
 }
 
-pub(crate) fn map_remove(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn map_remove(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     let mut map = match args.get_err(0, "map")? {
         Value::Map(m) => m,
         Value::List(v, ..) if v.is_empty() => SassMap::new(),
@@ -183,7 +183,7 @@ pub(crate) fn map_remove(mut args: CallArgs, parser: &mut Parser<'_>) -> SassRes
     Ok(Value::Map(map))
 }
 
-pub(crate) fn map_set(mut args: CallArgs, parser: &mut Parser<'_>) -> SassResult<Value> {
+pub(crate) fn map_set(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
     let key_position = args.len().saturating_sub(2);
     let value_position = args.len().saturating_sub(1);
 

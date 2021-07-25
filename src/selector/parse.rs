@@ -44,21 +44,21 @@ const SELECTOR_PSEUDO_CLASSES: [&str; 8] = [
 /// Pseudo-element selectors that take unadorned selectors as arguments.
 const SELECTOR_PSEUDO_ELEMENTS: [&str; 1] = ["slotted"];
 
-pub(crate) struct SelectorParser<'a, 'b> {
+pub(crate) struct SelectorParser<'a, 'b, 'c> {
     /// Whether this parser allows the parent selector `&`.
     allows_parent: bool,
 
     /// Whether this parser allows placeholder selectors beginning with `%`.
     allows_placeholder: bool,
 
-    parser: &'a mut Parser<'b>,
+    parser: &'a mut Parser<'b, 'c>,
 
     span: Span,
 }
 
-impl<'a, 'b> SelectorParser<'a, 'b> {
+impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
     pub fn new(
-        parser: &'a mut Parser<'b>,
+        parser: &'a mut Parser<'b, 'c>,
         allows_parent: bool,
         allows_placeholder: bool,
         span: Span,

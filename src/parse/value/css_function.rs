@@ -4,7 +4,7 @@ use crate::{error::SassResult, parse::common::Comment, utils::IsWhitespace, valu
 
 use super::super::Parser;
 
-impl<'a> Parser<'a> {
+impl<'a, 'b> Parser<'a, 'b> {
     pub(super) fn parse_calc_args(&mut self, buf: &mut String) -> SassResult<()> {
         buf.reserve(2);
         buf.push('(');

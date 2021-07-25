@@ -6,7 +6,7 @@ use crate::{
 
 use super::Parser;
 
-impl<'a> Parser<'a> {
+impl<'a, 'b> Parser<'a, 'b> {
     /// Peeks to see if the `ident` is at the current position. If it is,
     /// consume the identifier
     pub fn scan_identifier(&mut self, ident: &'static str, case_insensitive: bool) -> bool {
