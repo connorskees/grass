@@ -260,6 +260,10 @@ impl<'a> Options<'a> {
         self.unicode_error_messages = unicode_error_messages;
         self
     }
+
+    pub(crate) fn is_compressed(&self) -> bool {
+        matches!(self.style, OutputStyle::Compressed)
+    }
 }
 
 fn raw_to_parse_error(map: &CodeMap, err: Error, unicode: bool) -> Box<Error> {

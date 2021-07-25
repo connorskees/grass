@@ -189,7 +189,7 @@ impl Display for Attribute {
                 // (also avoids the clone because we can consume/modify self)
                 f.write_str(
                     &Value::String(self.value.clone(), QuoteKind::Quoted)
-                        .to_css_string(self.span)
+                        .to_css_string(self.span, false)
                         .unwrap(),
                 )?;
                 // todo: this space is not emitted when `compressed` output

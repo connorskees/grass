@@ -50,9 +50,9 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                     format!(
                         "{}({}, {}, {})",
                         name,
-                        red.to_css_string(args.span())?,
-                        green.to_css_string(args.span())?,
-                        v.to_css_string(args.span())?
+                        red.to_css_string(args.span(), parser.options.is_compressed())?,
+                        green.to_css_string(args.span(), parser.options.is_compressed())?,
+                        v.to_css_string(args.span(), parser.options.is_compressed())?
                     ),
                     QuoteKind::None,
                 ));
@@ -78,11 +78,16 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                     Some(red) => format!(
                         "{}({}, {}, {})",
                         name,
-                        red.to_css_string(args.span())?,
-                        v.to_css_string(args.span())?,
-                        blue
+                        red.to_css_string(args.span(), parser.options.is_compressed())?,
+                        v.to_css_string(args.span(), parser.options.is_compressed())?,
+                        blue.to_string(parser.options.is_compressed())
                     ),
-                    None => format!("{}({} {})", name, v.to_css_string(args.span())?, blue),
+                    None => format!(
+                        "{}({} {})",
+                        name,
+                        v.to_css_string(args.span(), parser.options.is_compressed())?,
+                        blue.to_string(parser.options.is_compressed())
+                    ),
                 };
                 return Ok(Value::String(string, QuoteKind::None));
             }
@@ -107,9 +112,9 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                     format!(
                         "{}({}, {}, {})",
                         name,
-                        v.to_css_string(args.span())?,
-                        green,
-                        blue
+                        v.to_css_string(args.span(), parser.options.is_compressed())?,
+                        green.to_string(parser.options.is_compressed()),
+                        blue.to_string(parser.options.is_compressed())
                     ),
                     QuoteKind::None,
                 ));
@@ -136,8 +141,8 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                     format!(
                         "{}({}, {})",
                         name,
-                        v.to_css_string(args.span())?,
-                        alpha.to_css_string(args.span())?
+                        v.to_css_string(args.span(), parser.options.is_compressed())?,
+                        alpha.to_css_string(args.span(), parser.options.is_compressed())?
                     ),
                     QuoteKind::None,
                 ));
@@ -158,7 +163,7 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                 return Err((
                     format!(
                         "$alpha: Expected {} to have no units or \"%\".",
-                        v.to_css_string(args.span())?
+                        v.to_css_string(args.span(), parser.options.is_compressed())?
                     ),
                     args.span(),
                 )
@@ -169,10 +174,10 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                     format!(
                         "{}({}, {}, {}, {})",
                         name,
-                        color.red(),
-                        color.green(),
-                        color.blue(),
-                        v.to_css_string(args.span())?
+                        color.red().to_string(parser.options.is_compressed()),
+                        color.green().to_string(parser.options.is_compressed()),
+                        color.blue().to_string(parser.options.is_compressed()),
+                        v.to_css_string(args.span(), parser.options.is_compressed())?
                     ),
                     QuoteKind::None,
                 ));
@@ -197,7 +202,7 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                 return Err((
                     format!(
                         "$red: Expected {} to have no units or \"%\".",
-                        v.to_css_string(args.span())?
+                        v.to_css_string(args.span(), parser.options.is_compressed())?
                     ),
                     args.span(),
                 )
@@ -209,13 +214,17 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                 let mut string = format!(
                     "{}({}, {}, {}",
                     name,
-                    v.to_css_string(args.span())?,
-                    green.to_css_string(args.span())?,
-                    blue.to_css_string(args.span())?
+                    v.to_css_string(args.span(), parser.options.is_compressed())?,
+                    green.to_css_string(args.span(), parser.options.is_compressed())?,
+                    blue.to_css_string(args.span(), parser.options.is_compressed())?
                 );
                 if !args.is_empty() {
                     string.push_str(", ");
-                    string.push_str(&args.get_err(3, "alpha")?.to_css_string(args.span())?);
+                    string.push_str(
+                        &args
+                            .get_err(3, "alpha")?
+                            .to_css_string(args.span(), parser.options.is_compressed())?,
+                    );
                 }
                 string.push(')');
                 return Ok(Value::String(string, QuoteKind::None));
@@ -238,7 +247,7 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                 return Err((
                     format!(
                         "$green: Expected {} to have no units or \"%\".",
-                        v.to_css_string(args.span())?
+                        v.to_css_string(args.span(), parser.options.is_compressed())?
                     ),
                     args.span(),
                 )
@@ -249,13 +258,17 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                 let mut string = format!(
                     "{}({}, {}, {}",
                     name,
-                    red,
-                    v.to_css_string(args.span())?,
-                    blue.to_css_string(args.span())?
+                    red.to_string(parser.options.is_compressed()),
+                    v.to_css_string(args.span(), parser.options.is_compressed())?,
+                    blue.to_css_string(args.span(), parser.options.is_compressed())?
                 );
                 if !args.is_empty() {
                     string.push_str(", ");
-                    string.push_str(&args.get_err(3, "alpha")?.to_css_string(args.span())?);
+                    string.push_str(
+                        &args
+                            .get_err(3, "alpha")?
+                            .to_css_string(args.span(), parser.options.is_compressed())?,
+                    );
                 }
                 string.push(')');
                 return Ok(Value::String(string, QuoteKind::None));
@@ -278,7 +291,7 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                 return Err((
                     format!(
                         "$blue: Expected {} to have no units or \"%\".",
-                        v.to_css_string(args.span())?
+                        v.to_css_string(args.span(), parser.options.is_compressed())?
                     ),
                     args.span(),
                 )
@@ -288,13 +301,17 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                 let mut string = format!(
                     "{}({}, {}, {}",
                     name,
-                    red,
-                    green,
-                    v.to_css_string(args.span())?
+                    red.to_string(parser.options.is_compressed()),
+                    green.to_string(parser.options.is_compressed()),
+                    v.to_css_string(args.span(), parser.options.is_compressed())?
                 );
                 if !args.is_empty() {
                     string.push_str(", ");
-                    string.push_str(&args.get_err(3, "alpha")?.to_css_string(args.span())?);
+                    string.push_str(
+                        &args
+                            .get_err(3, "alpha")?
+                            .to_css_string(args.span(), parser.options.is_compressed())?,
+                    );
                 }
                 string.push(')');
                 return Ok(Value::String(string, QuoteKind::None));
@@ -319,7 +336,7 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                 return Err((
                     format!(
                         "$alpha: Expected {} to have no units or \"%\".",
-                        v.to_css_string(args.span())?
+                        v.to_css_string(args.span(), parser.options.is_compressed())?
                     ),
                     args.span(),
                 )
@@ -329,10 +346,10 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                 let string = format!(
                     "{}({}, {}, {}, {})",
                     name,
-                    red,
-                    green,
-                    blue,
-                    v.to_css_string(args.span())?
+                    red.to_string(parser.options.is_compressed()),
+                    green.to_string(parser.options.is_compressed()),
+                    blue.to_string(parser.options.is_compressed()),
+                    v.to_css_string(args.span(), parser.options.is_compressed())?
                 );
                 return Ok(Value::String(string, QuoteKind::None));
             }
@@ -429,7 +446,7 @@ pub(crate) fn mix(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> 
             return Err((
                 format!(
                     "$weight: {} is not a number.",
-                    v.to_css_string(args.span())?
+                    v.to_css_string(args.span(), parser.options.is_compressed())?
                 ),
                 args.span(),
             )

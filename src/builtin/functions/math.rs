@@ -149,12 +149,16 @@ pub(crate) fn random(mut args: CallArgs, parser: &mut Parser) -> SassResult<Valu
     }
 
     if limit.is_decimal() {
-        return Err((format!("$limit: {} is not an int.", limit), args.span()).into());
+        return Err((
+            format!("$limit: {} is not an int.", limit.inspect()),
+            args.span(),
+        )
+            .into());
     }
 
     if limit.is_zero() || limit.is_negative() {
         return Err((
-            format!("$limit: Must be greater than 0, was {}.", limit),
+            format!("$limit: Must be greater than 0, was {}.", limit.inspect()),
             args.span(),
         )
             .into());
@@ -164,7 +168,10 @@ pub(crate) fn random(mut args: CallArgs, parser: &mut Parser) -> SassResult<Valu
         Some(n) => n,
         None => {
             return Err((
-                format!("max must be in range 0 < max \u{2264} 2^32, was {}", limit),
+                format!(
+                    "max must be in range 0 < max \u{2264} 2^32, was {}",
+                    limit.inspect()
+                ),
                 args.span(),
             )
                 .into())

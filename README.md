@@ -34,6 +34,7 @@ complex uses of @at-root
 media queries with @import
 / as a separator in color functions, e.g. rgba(255, 255, 255 / 0)
 Infinity and -Infinity
+builtin meta function keywords
 ```
 
 All known missing features and bugs are tracked in [#19](https://github.com/connorskees/grass/issues/19).

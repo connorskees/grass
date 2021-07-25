@@ -299,8 +299,11 @@ impl<'a, 'b> Parser<'a, 'b> {
 
                     let value = format!(
                         "{}={}",
-                        left.node.to_css_string(left.span)?,
-                        right.node.to_css_string(right.span)?
+                        left.node
+                            .to_css_string(left.span, self.options.is_compressed())?,
+                        right
+                            .node
+                            .to_css_string(right.span, self.options.is_compressed())?
                     );
 
                     args.insert(

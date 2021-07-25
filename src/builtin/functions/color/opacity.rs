@@ -74,7 +74,7 @@ pub(crate) fn opacity(mut args: CallArgs, parser: &mut Parser) -> SassResult<Val
     match args.get_err(0, "color")? {
         Value::Color(c) => Ok(Value::Dimension(Some(c.alpha()), Unit::None, true)),
         Value::Dimension(Some(num), unit, _) => Ok(Value::String(
-            format!("opacity({}{})", num, unit),
+            format!("opacity({}{})", num.inspect(), unit),
             QuoteKind::None,
         )),
         Value::Dimension(None, ..) => todo!(),

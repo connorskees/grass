@@ -90,13 +90,17 @@ fn inner_hsl(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                 let mut string = format!(
                     "{}({}, {}, {}",
                     name,
-                    v.to_css_string(args.span())?,
-                    saturation.to_css_string(args.span())?,
-                    lightness.to_css_string(args.span())?
+                    v.to_css_string(args.span(), parser.options.is_compressed())?,
+                    saturation.to_css_string(args.span(), parser.options.is_compressed())?,
+                    lightness.to_css_string(args.span(), parser.options.is_compressed())?
                 );
                 if !args.is_empty() {
                     string.push_str(", ");
-                    string.push_str(&args.get_err(3, "alpha")?.to_css_string(args.span())?);
+                    string.push_str(
+                        &args
+                            .get_err(3, "alpha")?
+                            .to_css_string(args.span(), parser.options.is_compressed())?,
+                    );
                 }
                 string.push(')');
                 return Ok(Value::String(string, QuoteKind::None));
@@ -117,13 +121,17 @@ fn inner_hsl(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                 let mut string = format!(
                     "{}({}, {}, {}",
                     name,
-                    hue,
-                    v.to_css_string(args.span())?,
-                    lightness.to_css_string(args.span())?
+                    hue.to_string(parser.options.is_compressed()),
+                    v.to_css_string(args.span(), parser.options.is_compressed())?,
+                    lightness.to_css_string(args.span(), parser.options.is_compressed())?
                 );
                 if !args.is_empty() {
                     string.push_str(", ");
-                    string.push_str(&args.get_err(3, "alpha")?.to_css_string(args.span())?);
+                    string.push_str(
+                        &args
+                            .get_err(3, "alpha")?
+                            .to_css_string(args.span(), parser.options.is_compressed())?,
+                    );
                 }
                 string.push(')');
                 return Ok(Value::String(string, QuoteKind::None));
@@ -132,7 +140,7 @@ fn inner_hsl(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                 return Err((
                     format!(
                         "$saturation: {} is not a number.",
-                        v.to_css_string(args.span())?
+                        v.to_css_string(args.span(), parser.options.is_compressed())?
                     ),
                     args.span(),
                 )
@@ -146,13 +154,17 @@ fn inner_hsl(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                 let mut string = format!(
                     "{}({}, {}, {}",
                     name,
-                    hue,
-                    saturation,
-                    v.to_css_string(args.span())?
+                    hue.to_string(parser.options.is_compressed()),
+                    saturation.to_string(parser.options.is_compressed()),
+                    v.to_css_string(args.span(), parser.options.is_compressed())?
                 );
                 if !args.is_empty() {
                     string.push_str(", ");
-                    string.push_str(&args.get_err(3, "alpha")?.to_css_string(args.span())?);
+                    string.push_str(
+                        &args
+                            .get_err(3, "alpha")?
+                            .to_css_string(args.span(), parser.options.is_compressed())?,
+                    );
                 }
                 string.push(')');
                 return Ok(Value::String(string, QuoteKind::None));
@@ -161,7 +173,7 @@ fn inner_hsl(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                 return Err((
                     format!(
                         "$lightness: {} is not a number.",
-                        v.to_css_string(args.span())?
+                        v.to_css_string(args.span(), parser.options.is_compressed())?
                     ),
                     args.span(),
                 )
@@ -180,7 +192,7 @@ fn inner_hsl(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                 return Err((
                     format!(
                         "$alpha: Expected {} to have no units or \"%\".",
-                        v.to_css_string(args.span())?
+                        v.to_css_string(args.span(), parser.options.is_compressed())?
                     ),
                     args.span(),
                 )
@@ -191,10 +203,10 @@ fn inner_hsl(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                     format!(
                         "{}({}, {}, {}, {})",
                         name,
-                        hue,
-                        saturation,
-                        lightness,
-                        v.to_css_string(args.span())?
+                        hue.to_string(parser.options.is_compressed()),
+                        saturation.to_string(parser.options.is_compressed()),
+                        lightness.to_string(parser.options.is_compressed()),
+                        v.to_css_string(args.span(), parser.options.is_compressed())?
                     ),
                     QuoteKind::None,
                 ));
@@ -276,7 +288,7 @@ pub(crate) fn adjust_hue(mut args: CallArgs, parser: &mut Parser) -> SassResult<
             return Err((
                 format!(
                     "$degrees: {} is not a number.",
-                    v.to_css_string(args.span())?
+                    v.to_css_string(args.span(), parser.options.is_compressed())?
                 ),
                 args.span(),
             )
@@ -305,7 +317,7 @@ fn lighten(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
             return Err((
                 format!(
                     "$amount: {} is not a number.",
-                    v.to_css_string(args.span())?
+                    v.to_css_string(args.span(), false)?
                 ),
                 args.span(),
             )
@@ -334,7 +346,7 @@ fn darken(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
             return Err((
                 format!(
                     "$amount: {} is not a number.",
-                    v.to_css_string(args.span())?
+                    v.to_css_string(args.span(), false)?
                 ),
                 args.span(),
             )
@@ -350,7 +362,8 @@ fn saturate(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
         return Ok(Value::String(
             format!(
                 "saturate({})",
-                args.get_err(0, "amount")?.to_css_string(args.span())?
+                args.get_err(0, "amount")?
+                    .to_css_string(args.span(), false)?
             ),
             QuoteKind::None,
         ));
@@ -363,7 +376,7 @@ fn saturate(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
             return Err((
                 format!(
                     "$amount: {} is not a number.",
-                    v.to_css_string(args.span())?
+                    v.to_css_string(args.span(), false)?
                 ),
                 args.span(),
             )
@@ -374,7 +387,7 @@ fn saturate(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
         Value::Color(c) => c,
         Value::Dimension(Some(n), u, _) => {
             return Ok(Value::String(
-                format!("saturate({}{})", n, u),
+                format!("saturate({}{})", n.inspect(), u),
                 QuoteKind::None,
             ))
         }
@@ -408,7 +421,7 @@ fn desaturate(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
             return Err((
                 format!(
                     "$amount: {} is not a number.",
-                    v.to_css_string(args.span())?
+                    v.to_css_string(args.span(), parser.options.is_compressed())?
                 ),
                 args.span(),
             )
@@ -424,7 +437,7 @@ pub(crate) fn grayscale(mut args: CallArgs, parser: &mut Parser) -> SassResult<V
         Value::Color(c) => c,
         Value::Dimension(Some(n), u, _) => {
             return Ok(Value::String(
-                format!("grayscale({}{})", n, u),
+                format!("grayscale({}{})", n.inspect(), u),
                 QuoteKind::None,
             ))
         }
@@ -471,7 +484,7 @@ pub(crate) fn invert(mut args: CallArgs, parser: &mut Parser) -> SassResult<Valu
             return Err((
                 format!(
                     "$weight: {} is not a number.",
-                    v.to_css_string(args.span())?
+                    v.to_css_string(args.span(), parser.options.is_compressed())?
                 ),
                 args.span(),
             )
@@ -491,7 +504,7 @@ pub(crate) fn invert(mut args: CallArgs, parser: &mut Parser) -> SassResult<Valu
                     .into());
             }
             Ok(Value::String(
-                format!("invert({}{})", n, u),
+                format!("invert({}{})", n.inspect(), u),
                 QuoteKind::None,
             ))
         }

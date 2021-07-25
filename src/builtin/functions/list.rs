@@ -45,7 +45,7 @@ pub(crate) fn nth(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> 
         return Err((
             format!(
                 "$n: Invalid index {}{} for a list with {} elements.",
-                n,
+                n.inspect(),
                 unit,
                 list.len()
             ),
@@ -55,7 +55,7 @@ pub(crate) fn nth(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> 
     }
 
     if n.is_decimal() {
-        return Err((format!("$n: {} is not an int.", n), args.span()).into());
+        return Err((format!("$n: {} is not an int.", n.inspect()), args.span()).into());
     }
 
     Ok(list.remove(if n.is_positive() {
@@ -114,7 +114,9 @@ pub(crate) fn set_nth(mut args: CallArgs, parser: &mut Parser) -> SassResult<Val
         return Err((
             format!(
                 "$n: Invalid index {}{} for a list with {} elements.",
-                n, unit, len
+                n.inspect(),
+                unit,
+                len
             ),
             args.span(),
         )
@@ -122,7 +124,7 @@ pub(crate) fn set_nth(mut args: CallArgs, parser: &mut Parser) -> SassResult<Val
     }
 
     if n.is_decimal() {
-        return Err((format!("$n: {} is not an int.", n), args.span()).into());
+        return Err((format!("$n: {} is not an int.", n.inspect()), args.span()).into());
     }
 
     let val = args.get_err(2, "value")?;

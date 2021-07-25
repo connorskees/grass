@@ -51,7 +51,10 @@ impl<'a, 'b> Parser<'a, 'b> {
             _ => false,
         })?;
 
-        value.node.unquote().to_css_string(value.span)
+        value
+            .node
+            .unquote()
+            .to_css_string(value.span, self.options.is_compressed())
     }
 
     pub(super) fn parse_media_query_list(&mut self) -> SassResult<String> {
@@ -92,7 +95,11 @@ impl<'a, 'b> Parser<'a, 'b> {
             })?;
             self.expect_char(')')?;
 
-            buf.push_str(&value.node.to_css_string(value.span)?);
+            buf.push_str(
+                &value
+                    .node
+                    .to_css_string(value.span, self.options.is_compressed())?,
+            );
 
             self.whitespace_or_comment();
             buf.push(')');

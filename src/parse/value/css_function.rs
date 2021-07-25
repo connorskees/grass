@@ -20,7 +20,11 @@ impl<'a, 'b> Parser<'a, 'b> {
                         self.span_before = pos;
                         self.toks.next();
                         let interpolation = self.parse_interpolation()?;
-                        buf.push_str(&interpolation.node.to_css_string(interpolation.span)?);
+                        buf.push_str(
+                            &interpolation
+                                .node
+                                .to_css_string(interpolation.span, self.options.is_compressed())?,
+                        );
                     } else {
                         buf.push('#');
                     }
@@ -93,7 +97,10 @@ impl<'a, 'b> Parser<'a, 'b> {
                         let interpolation = self.parse_interpolation()?;
                         match interpolation.node {
                             Value::String(ref s, ..) => buf.push_str(s),
-                            v => buf.push_str(v.to_css_string(interpolation.span)?.borrow()),
+                            v => buf.push_str(
+                                v.to_css_string(interpolation.span, self.options.is_compressed())?
+                                    .borrow(),
+                            ),
                         };
                     } else {
                         buf.push('#');
@@ -142,7 +149,11 @@ impl<'a, 'b> Parser<'a, 'b> {
             match kind {
                 '+' | '-' | '0'..='9' => {
                     let number = self.parse_dimension(&|_| false)?;
-                    buf.push_str(&number.node.to_css_string(number.span)?);
+                    buf.push_str(
+                        &number
+                            .node
+                            .to_css_string(number.span, self.options.is_compressed())?,
+                    );
                 }
                 '#' => {
                     self.toks.next();
@@ -316,7 +327,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                 q @ ('"' | '\'') => {
                     self.toks.next();
                     let s = self.parse_quoted_string(q)?;
-                    buffer.push_str(&s.node.to_css_string(s.span)?);
+                    buffer.push_str(&s.node.to_css_string(s.span, self.options.is_compressed())?);
                     wrote_newline = false;
                 }
                 '/' => {

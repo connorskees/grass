@@ -210,7 +210,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                             self.consume_char_if_exists(';');
 
                             self.warn(&Spanned {
-                                node: message.to_css_string(span)?,
+                                node: message.to_css_string(span, false)?,
                                 span,
                             });
                         }
@@ -407,7 +407,11 @@ impl<'a, 'b> Parser<'a, 'b> {
             match kind {
                 '#' => {
                     if self.consume_char_if_exists('{') {
-                        string.push_str(&self.parse_interpolation()?.to_css_string(span)?);
+                        string.push_str(
+                            &self
+                                .parse_interpolation()?
+                                .to_css_string(span, self.options.is_compressed())?,
+                        );
                     } else {
                         string.push('#');
                     }
@@ -513,7 +517,11 @@ impl<'a, 'b> Parser<'a, 'b> {
                             }
                             ('#', Some(Token { kind: '{', .. })) => {
                                 self.toks.next();
-                                comment.push_str(&self.parse_interpolation()?.to_css_string(span)?);
+                                comment.push_str(
+                                    &self
+                                        .parse_interpolation()?
+                                        .to_css_string(span, self.options.is_compressed())?,
+                                );
                                 continue;
                             }
                             (..) => comment.push(tok.kind),
@@ -541,7 +549,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         let interpolation = self.parse_interpolation()?;
         Ok(match interpolation.node {
             Value::String(v, ..) => Cow::owned(v),
-            v => v.to_css_string(interpolation.span)?,
+            v => v.to_css_string(interpolation.span, self.options.is_compressed())?,
         })
     }
 
@@ -855,7 +863,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                 return Err((
                     format!(
                         "compound selectors may no longer be extended.\nConsider `@extend {}` instead.\nSee http://bit.ly/ExtendCompound for details.\n",
-                        compound.components.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(", ")
+                        compound.components.iter().map(ToString::to_string).collect::<Vec<String>>().join(", ")
                     )
                 , self.span_before).into());
             }
@@ -922,7 +930,11 @@ impl<'a, 'b> Parser<'a, 'b> {
                         self.toks.next();
                         self.span_before = pos;
                         let interpolation = self.parse_interpolation()?;
-                        params.push_str(&interpolation.node.to_css_string(interpolation.span)?);
+                        params.push_str(
+                            &interpolation
+                                .node
+                                .to_css_string(interpolation.span, self.options.is_compressed())?,
+                        );
                         continue;
                     }
 

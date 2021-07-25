@@ -272,9 +272,17 @@ impl<'a, 'b> Parser<'a, 'b> {
                     }
                     "url" => match self.try_parse_url()? {
                         Some(val) => s = val,
-                        None => s.push_str(&self.parse_call_args()?.to_css_string()?),
+                        None => s.push_str(
+                            &self
+                                .parse_call_args()?
+                                .to_css_string(self.options.is_compressed())?,
+                        ),
                     },
-                    _ => s.push_str(&self.parse_call_args()?.to_css_string()?),
+                    _ => s.push_str(
+                        &self
+                            .parse_call_args()?
+                            .to_css_string(self.options.is_compressed())?,
+                    ),
                 }
 
                 return Ok(IntermediateValue::Value(HigherIntermediateValue::Literal(
@@ -1142,7 +1150,10 @@ impl<'a, 'b: 'a, 'c> IntermediateValueIterator<'a, 'b, 'c> {
                                 "/{}",
                                 ValueVisitor::new(self.parser, right.span)
                                     .eval(right.node, false)?
-                                    .to_css_string(right.span)?
+                                    .to_css_string(
+                                        right.span,
+                                        self.parser.options.is_compressed()
+                                    )?
                             ),
                             QuoteKind::None,
                         )),
@@ -1348,7 +1359,7 @@ impl<'a, 'b: 'a, 'c> IntermediateValueIterator<'a, 'b, 'c> {
                                 "/{}",
                                 ValueVisitor::new(self.parser, val.span)
                                     .eval(val.node, false)?
-                                    .to_css_string(val.span)?
+                                    .to_css_string(val.span, self.parser.options.is_compressed())?
                             ),
                             QuoteKind::None,
                         )),

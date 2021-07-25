@@ -197,7 +197,9 @@ impl<'a, 'b> Parser<'a, 'b> {
                     };
 
                     let Spanned { node: module, span } = self.parse_quoted_string(quote)?;
-                    let module_name = module.unquote().to_css_string(span)?;
+                    let module_name = module
+                        .unquote()
+                        .to_css_string(span, self.options.is_compressed())?;
 
                     self.whitespace_or_comment();
 

@@ -64,7 +64,7 @@ impl CallArgs {
         CallArgs(HashMap::new(), span)
     }
 
-    pub fn to_css_string(self) -> SassResult<Spanned<String>> {
+    pub fn to_css_string(self, is_compressed: bool) -> SassResult<Spanned<String>> {
         let mut string = String::with_capacity(2 + self.len() * 10);
         string.push('(');
         let mut span = self.1;
@@ -88,7 +88,7 @@ impl CallArgs {
                 .iter()
                 .map(|a| {
                     span = span.merge(a.span);
-                    a.node.to_css_string(a.span)
+                    a.node.to_css_string(a.span, is_compressed)
                 })
                 .collect::<SassResult<Vec<Cow<'static, str>>>>()?
                 .join(", "),

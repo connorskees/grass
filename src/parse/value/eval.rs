@@ -122,14 +122,26 @@ impl<'a, 'b: 'a, 'c> ValueVisitor<'a, 'b, 'c> {
                 Value::Dimension(Some(-n), u, should_divide)
             }
             Value::Dimension(None, u, should_divide) => Value::Dimension(None, u, should_divide),
-            v => Value::String(format!("-{}", v.to_css_string(self.span)?), QuoteKind::None),
+            v => Value::String(
+                format!(
+                    "-{}",
+                    v.to_css_string(self.span, self.parser.options.is_compressed())?
+                ),
+                QuoteKind::None,
+            ),
         })
     }
 
     fn unary_plus(&self, val: Value) -> SassResult<Value> {
         Ok(match val {
             v @ Value::Dimension(..) => v,
-            v => Value::String(format!("+{}", v.to_css_string(self.span)?), QuoteKind::None),
+            v => Value::String(
+                format!(
+                    "+{}",
+                    v.to_css_string(self.span, self.parser.options.is_compressed())?
+                ),
+                QuoteKind::None,
+            ),
         })
     }
 
@@ -176,28 +188,36 @@ impl<'a, 'b: 'a, 'c> ValueVisitor<'a, 'b, 'c> {
             }
             Value::True | Value::False => match right {
                 Value::String(s, QuoteKind::Quoted) => Value::String(
-                    format!("{}{}", left.to_css_string(self.span)?, s),
+                    format!(
+                        "{}{}",
+                        left.to_css_string(self.span, self.parser.options.is_compressed())?,
+                        s
+                    ),
                     QuoteKind::Quoted,
                 ),
                 _ => Value::String(
                     format!(
                         "{}{}",
-                        left.to_css_string(self.span)?,
-                        right.to_css_string(self.span)?
+                        left.to_css_string(self.span, self.parser.options.is_compressed())?,
+                        right.to_css_string(self.span, self.parser.options.is_compressed())?
                     ),
                     QuoteKind::None,
                 ),
             },
             Value::Important => match right {
                 Value::String(s, ..) => Value::String(
-                    format!("{}{}", left.to_css_string(self.span)?, s),
+                    format!(
+                        "{}{}",
+                        left.to_css_string(self.span, self.parser.options.is_compressed())?,
+                        s
+                    ),
                     QuoteKind::None,
                 ),
                 _ => Value::String(
                     format!(
                         "{}{}",
-                        left.to_css_string(self.span)?,
-                        right.to_css_string(self.span)?
+                        left.to_css_string(self.span, self.parser.options.is_compressed())?,
+                        right.to_css_string(self.span, self.parser.options.is_compressed())?
                     ),
                     QuoteKind::None,
                 ),
@@ -205,7 +225,9 @@ impl<'a, 'b: 'a, 'c> ValueVisitor<'a, 'b, 'c> {
             Value::Null => match right {
                 Value::Null => Value::Null,
                 _ => Value::String(
-                    right.to_css_string(self.span)?.into_owned(),
+                    right
+                        .to_css_string(self.span, self.parser.options.is_compressed())?
+                        .into_owned(),
                     QuoteKind::None,
                 ),
             },
@@ -230,14 +252,34 @@ impl<'a, 'b: 'a, 'c> ValueVisitor<'a, 'b, 'c> {
                         Value::Dimension(Some(num + num2.convert(&unit2, &unit)), unit, true)
                     }
                 }
-                Value::String(s, q) => Value::String(format!("{}{}{}", num, unit, s), q),
-                Value::Null => Value::String(format!("{}{}", num, unit), QuoteKind::None),
+                Value::String(s, q) => Value::String(
+                    format!(
+                        "{}{}{}",
+                        num.to_string(self.parser.options.is_compressed()),
+                        unit,
+                        s
+                    ),
+                    q,
+                ),
+                Value::Null => Value::String(
+                    format!(
+                        "{}{}",
+                        num.to_string(self.parser.options.is_compressed()),
+                        unit
+                    ),
+                    QuoteKind::None,
+                ),
                 Value::True
                 | Value::False
                 | Value::List(..)
                 | Value::Important
                 | Value::ArgList(..) => Value::String(
-                    format!("{}{}{}", num, unit, right.to_css_string(self.span)?),
+                    format!(
+                        "{}{}{}",
+                        num.to_string(self.parser.options.is_compressed()),
+                        unit,
+                        right.to_css_string(self.span, self.parser.options.is_compressed())?
+                    ),
                     QuoteKind::None,
                 ),
                 Value::Map(..) | Value::FunctionRef(..) => {
@@ -251,7 +293,7 @@ impl<'a, 'b: 'a, 'c> ValueVisitor<'a, 'b, 'c> {
                     return Err((
                         format!(
                             "Undefined operation \"{}{} + {}\".",
-                            num,
+                            num.inspect(),
                             unit,
                             right.inspect(self.span)?
                         ),
@@ -264,7 +306,11 @@ impl<'a, 'b: 'a, 'c> ValueVisitor<'a, 'b, 'c> {
                 Value::String(s, q) => Value::String(format!("{}{}", c, s), q),
                 Value::Null => Value::String(c.to_string(), QuoteKind::None),
                 Value::List(..) => Value::String(
-                    format!("{}{}", c, right.to_css_string(self.span)?),
+                    format!(
+                        "{}{}",
+                        c,
+                        right.to_css_string(self.span, self.parser.options.is_compressed())?
+                    ),
                     QuoteKind::None,
                 ),
                 _ => {
@@ -281,17 +327,25 @@ impl<'a, 'b: 'a, 'c> ValueVisitor<'a, 'b, 'c> {
             },
             Value::String(text, quotes) => match right {
                 Value::String(text2, ..) => Value::String(text + &text2, quotes),
-                _ => Value::String(text + &right.to_css_string(self.span)?, quotes),
+                _ => Value::String(
+                    text + &right.to_css_string(self.span, self.parser.options.is_compressed())?,
+                    quotes,
+                ),
             },
             Value::List(..) | Value::ArgList(..) => match right {
-                Value::String(s, q) => {
-                    Value::String(format!("{}{}", left.to_css_string(self.span)?, s), q)
-                }
+                Value::String(s, q) => Value::String(
+                    format!(
+                        "{}{}",
+                        left.to_css_string(self.span, self.parser.options.is_compressed())?,
+                        s
+                    ),
+                    q,
+                ),
                 _ => Value::String(
                     format!(
                         "{}{}",
-                        left.to_css_string(self.span)?,
-                        right.to_css_string(self.span)?
+                        left.to_css_string(self.span, self.parser.options.is_compressed())?,
+                        right.to_css_string(self.span, self.parser.options.is_compressed())?
                     ),
                     QuoteKind::None,
                 ),
@@ -314,7 +368,10 @@ impl<'a, 'b: 'a, 'c> ValueVisitor<'a, 'b, 'c> {
         };
         Ok(match left {
             Value::Null => Value::String(
-                format!("-{}", right.to_css_string(self.span)?),
+                format!(
+                    "-{}",
+                    right.to_css_string(self.span, self.parser.options.is_compressed())?
+                ),
                 QuoteKind::None,
             ),
             v @ Value::Dimension(None, ..) => v,
@@ -344,7 +401,12 @@ impl<'a, 'b: 'a, 'c> ValueVisitor<'a, 'b, 'c> {
                 | Value::True
                 | Value::False
                 | Value::ArgList(..) => Value::String(
-                    format!("{}{}-{}", num, unit, right.to_css_string(self.span)?),
+                    format!(
+                        "{}{}-{}",
+                        num.to_string(self.parser.options.is_compressed()),
+                        unit,
+                        right.to_css_string(self.span, self.parser.options.is_compressed())?
+                    ),
                     QuoteKind::None,
                 ),
                 Value::Map(..) | Value::FunctionRef(..) => {
@@ -358,7 +420,7 @@ impl<'a, 'b: 'a, 'c> ValueVisitor<'a, 'b, 'c> {
                     return Err((
                         format!(
                             "Undefined operation \"{}{} - {}\".",
-                            num,
+                            num.inspect(),
                             unit,
                             right.inspect(self.span)?
                         ),
@@ -366,7 +428,14 @@ impl<'a, 'b: 'a, 'c> ValueVisitor<'a, 'b, 'c> {
                     )
                         .into())
                 }
-                Value::Null => Value::String(format!("{}{}-", num, unit), QuoteKind::None),
+                Value::Null => Value::String(
+                    format!(
+                        "{}{}-",
+                        num.to_string(self.parser.options.is_compressed()),
+                        unit
+                    ),
+                    QuoteKind::None,
+                ),
             },
             Value::Color(c) => match right {
                 Value::String(s, q) => {
@@ -385,32 +454,45 @@ impl<'a, 'b: 'a, 'c> ValueVisitor<'a, 'b, 'c> {
                         .into())
                 }
                 _ => Value::String(
-                    format!("{}-{}", c, right.to_css_string(self.span)?),
+                    format!(
+                        "{}-{}",
+                        c,
+                        right.to_css_string(self.span, self.parser.options.is_compressed())?
+                    ),
                     QuoteKind::None,
                 ),
             },
             Value::String(..) => Value::String(
                 format!(
                     "{}-{}",
-                    left.to_css_string(self.span)?,
-                    right.to_css_string(self.span)?
+                    left.to_css_string(self.span, self.parser.options.is_compressed())?,
+                    right.to_css_string(self.span, self.parser.options.is_compressed())?
                 ),
                 QuoteKind::None,
             ),
             _ => match right {
                 Value::String(s, q) => Value::String(
-                    format!("{}-{}{}{}", left.to_css_string(self.span)?, q, s, q),
+                    format!(
+                        "{}-{}{}{}",
+                        left.to_css_string(self.span, self.parser.options.is_compressed())?,
+                        q,
+                        s,
+                        q
+                    ),
                     QuoteKind::None,
                 ),
                 Value::Null => Value::String(
-                    format!("{}-", left.to_css_string(self.span)?),
+                    format!(
+                        "{}-",
+                        left.to_css_string(self.span, self.parser.options.is_compressed())?
+                    ),
                     QuoteKind::None,
                 ),
                 _ => Value::String(
                     format!(
                         "{}-{}",
-                        left.to_css_string(self.span)?,
-                        right.to_css_string(self.span)?
+                        left.to_css_string(self.span, self.parser.options.is_compressed())?,
+                        right.to_css_string(self.span, self.parser.options.is_compressed())?
                     ),
                     QuoteKind::None,
                 ),
@@ -448,7 +530,7 @@ impl<'a, 'b: 'a, 'c> ValueVisitor<'a, 'b, 'c> {
                     return Err((
                         format!(
                             "Undefined operation \"{}{} * {}\".",
-                            num,
+                            num.inspect(),
                             unit,
                             right.inspect(self.span)?
                         ),
@@ -487,7 +569,10 @@ impl<'a, 'b: 'a, 'c> ValueVisitor<'a, 'b, 'c> {
         };
         Ok(match left {
             Value::Null => Value::String(
-                format!("/{}", right.to_css_string(self.span)?),
+                format!(
+                    "/{}",
+                    right.to_css_string(self.span, self.parser.options.is_compressed())?
+                ),
                 QuoteKind::None,
             ),
             Value::Dimension(None, ..) => todo!(),
@@ -537,24 +622,50 @@ impl<'a, 'b: 'a, 'c> ValueVisitor<'a, 'b, 'c> {
                         }
                     } else {
                         Value::String(
-                            format!("{}{}/{}{}", num, unit, num2, unit2),
+                            format!(
+                                "{}{}/{}{}",
+                                num.to_string(self.parser.options.is_compressed()),
+                                unit,
+                                num2.to_string(self.parser.options.is_compressed()),
+                                unit2
+                            ),
                             QuoteKind::None,
                         )
                     }
                 }
-                Value::String(s, q) => {
-                    Value::String(format!("{}{}/{}{}{}", num, unit, q, s, q), QuoteKind::None)
-                }
+                Value::String(s, q) => Value::String(
+                    format!(
+                        "{}{}/{}{}{}",
+                        num.to_string(self.parser.options.is_compressed()),
+                        unit,
+                        q,
+                        s,
+                        q
+                    ),
+                    QuoteKind::None,
+                ),
                 Value::List(..)
                 | Value::True
                 | Value::False
                 | Value::Important
                 | Value::Color(..)
                 | Value::ArgList(..) => Value::String(
-                    format!("{}{}/{}", num, unit, right.to_css_string(self.span)?),
+                    format!(
+                        "{}{}/{}",
+                        num.to_string(self.parser.options.is_compressed()),
+                        unit,
+                        right.to_css_string(self.span, self.parser.options.is_compressed())?
+                    ),
                     QuoteKind::None,
                 ),
-                Value::Null => Value::String(format!("{}{}/", num, unit), QuoteKind::None),
+                Value::Null => Value::String(
+                    format!(
+                        "{}{}/",
+                        num.to_string(self.parser.options.is_compressed()),
+                        unit
+                    ),
+                    QuoteKind::None,
+                ),
                 Value::Map(..) | Value::FunctionRef(..) => {
                     return Err((
                         format!("{} isn't a valid CSS value.", right.inspect(self.span)?),
@@ -580,7 +691,11 @@ impl<'a, 'b: 'a, 'c> ValueVisitor<'a, 'b, 'c> {
                         .into())
                 }
                 _ => Value::String(
-                    format!("{}/{}", c, right.to_css_string(self.span)?),
+                    format!(
+                        "{}/{}",
+                        c,
+                        right.to_css_string(self.span, self.parser.options.is_compressed())?
+                    ),
                     QuoteKind::None,
                 ),
             },
@@ -596,7 +711,13 @@ impl<'a, 'b: 'a, 'c> ValueVisitor<'a, 'b, 'c> {
                 | Value::Color(..)
                 | Value::List(..)
                 | Value::ArgList(..) => Value::String(
-                    format!("{}{}{}/{}", q1, s1, q1, right.to_css_string(self.span)?),
+                    format!(
+                        "{}{}{}/{}",
+                        q1,
+                        s1,
+                        q1,
+                        right.to_css_string(self.span, self.parser.options.is_compressed())?
+                    ),
                     QuoteKind::None,
                 ),
                 Value::Null => Value::String(format!("{}{}{}/", q1, s1, q1), QuoteKind::None),
@@ -610,18 +731,27 @@ impl<'a, 'b: 'a, 'c> ValueVisitor<'a, 'b, 'c> {
             },
             _ => match right {
                 Value::String(s, q) => Value::String(
-                    format!("{}/{}{}{}", left.to_css_string(self.span)?, q, s, q),
+                    format!(
+                        "{}/{}{}{}",
+                        left.to_css_string(self.span, self.parser.options.is_compressed())?,
+                        q,
+                        s,
+                        q
+                    ),
                     QuoteKind::None,
                 ),
                 Value::Null => Value::String(
-                    format!("{}/", left.to_css_string(self.span)?),
+                    format!(
+                        "{}/",
+                        left.to_css_string(self.span, self.parser.options.is_compressed())?
+                    ),
                     QuoteKind::None,
                 ),
                 _ => Value::String(
                     format!(
                         "{}/{}",
-                        left.to_css_string(self.span)?,
-                        right.to_css_string(self.span)?
+                        left.to_css_string(self.span, self.parser.options.is_compressed())?,
+                        right.to_css_string(self.span, self.parser.options.is_compressed())?
                     ),
                     QuoteKind::None,
                 ),

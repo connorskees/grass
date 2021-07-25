@@ -126,7 +126,11 @@ impl<'a, 'b> Parser<'a, 'b> {
             match tok.kind {
                 '#' => {
                     if self.consume_char_if_exists('{') {
-                        string.push_str(&self.parse_interpolation()?.to_css_string(span)?);
+                        string.push_str(
+                            &self
+                                .parse_interpolation()?
+                                .to_css_string(span, self.options.is_compressed())?,
+                        );
                     } else {
                         string.push('#');
                     }

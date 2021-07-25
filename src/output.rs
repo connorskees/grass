@@ -511,7 +511,7 @@ impl Formatter for CompressedFormatter {
                     write!(buf, "}}")?;
                 }
                 Toplevel::Style(style) => {
-                    let value = style.value.node.to_css_string(style.value.span)?;
+                    let value = style.value.node.to_css_string(style.value.span, true)?;
                     write!(buf, "{}:{};", style.property, value)?;
                 }
             }
@@ -542,7 +542,7 @@ impl CompressedFormatter {
         for style in &mut styles {
             match style {
                 BlockEntry::Style(s) => {
-                    let value = s.value.node.to_css_string(s.value.span)?;
+                    let value = s.value.node.to_css_string(s.value.span, true)?;
                     write!(buf, "{}:{}", s.property, value)?;
                     break;
                 }
@@ -554,7 +554,7 @@ impl CompressedFormatter {
         for style in styles {
             match style {
                 BlockEntry::Style(s) => {
-                    let value = s.value.node.to_css_string(s.value.span)?;
+                    let value = s.value.node.to_css_string(s.value.span, true)?;
 
                     write!(buf, ";{}:{}", s.property, value)?;
                 }

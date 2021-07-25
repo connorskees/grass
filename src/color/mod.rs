@@ -590,7 +590,14 @@ fn repr(red: &Number, green: &Number, blue: &Number, alpha: &Number) -> String {
     let blue_u8 = into_u8(blue);
 
     if alpha < &Number::one() {
-        format!("rgba({}, {}, {}, {})", red_u8, green_u8, blue_u8, alpha)
+        format!(
+            "rgba({}, {}, {}, {})",
+            red_u8,
+            green_u8,
+            blue_u8,
+            // todo: is_compressed
+            alpha.inspect()
+        )
     } else if let Some(c) = NAMED_COLORS.get_by_rgba([red_u8, green_u8, blue_u8]) {
         (*c).to_owned()
     } else {

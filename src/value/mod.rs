@@ -205,22 +205,28 @@ impl Value {
         }
     }
 
-    pub fn to_css_string(&self, span: Span) -> SassResult<Cow<'static, str>> {
+    pub fn to_css_string(&self, span: Span, is_compressed: bool) -> SassResult<Cow<'static, str>> {
         Ok(match self {
             Value::Important => Cow::const_str("!important"),
             Value::Dimension(num, unit, _) => match unit {
                 Unit::Mul(..) | Unit::Div(..) => {
                     if let Some(num) = num {
-                        return Err(
-                            (format!("{}{} isn't a valid CSS value.", num, unit), span).into()
-                        );
+                        return Err((
+                            format!(
+                                "{}{} isn't a valid CSS value.",
+                                num.to_string(is_compressed),
+                                unit
+                            ),
+                            span,
+                        )
+                            .into());
                     }
 
                     return Err((format!("NaN{} isn't a valid CSS value.", unit), span).into());
                 }
                 _ => {
                     if let Some(num) = num {
-                        Cow::owned(format!("{}{}", num, unit))
+                        Cow::owned(format!("{}{}", num.to_string(is_compressed), unit))
                     } else {
                         Cow::owned(format!("NaN{}", unit))
                     }
@@ -237,17 +243,25 @@ impl Value {
                 Brackets::None => Cow::owned(
                     vals.iter()
                         .filter(|x| !x.is_null())
-                        .map(|x| x.to_css_string(span))
+                        .map(|x| x.to_css_string(span, is_compressed))
                         .collect::<SassResult<Vec<Cow<'static, str>>>>()?
-                        .join(sep.as_str()),
+                        .join(if is_compressed {
+                            sep.as_compressed_str()
+                        } else {
+                            sep.as_str()
+                        }),
                 ),
                 Brackets::Bracketed => Cow::owned(format!(
                     "[{}]",
                     vals.iter()
                         .filter(|x| !x.is_null())
-                        .map(|x| x.to_css_string(span))
+                        .map(|x| x.to_css_string(span, is_compressed))
                         .collect::<SassResult<Vec<Cow<'static, str>>>>()?
-                        .join(sep.as_str()),
+                        .join(if is_compressed {
+                            sep.as_compressed_str()
+                        } else {
+                            sep.as_str()
+                        }),
                 )),
             },
             Value::Color(c) => Cow::owned(c.to_string()),
@@ -287,9 +301,13 @@ impl Value {
             Value::ArgList(args) => Cow::owned(
                 args.iter()
                     .filter(|x| !x.is_null())
-                    .map(|a| a.node.to_css_string(span))
+                    .map(|a| a.node.to_css_string(span, is_compressed))
                     .collect::<SassResult<Vec<Cow<'static, str>>>>()?
-                    .join(", "),
+                    .join(if is_compressed {
+                        ListSeparator::Comma.as_compressed_str()
+                    } else {
+                        ListSeparator::Comma.as_str()
+                    }),
             ),
         })
     }
@@ -466,7 +484,9 @@ impl Value {
                     .collect::<SassResult<Vec<String>>>()?
                     .join(", ")
             )),
-            Value::Dimension(Some(num), unit, _) => Cow::owned(format!("{}{}", num, unit)),
+            Value::Dimension(Some(num), unit, _) => {
+                Cow::owned(format!("{}{}", num.inspect(), unit))
+            }
             Value::Dimension(None, unit, ..) => Cow::owned(format!("NaN{}", unit)),
             Value::ArgList(args) if args.is_empty() => Cow::const_str("()"),
             Value::ArgList(args) if args.len() == 1 => Cow::owned(format!(
@@ -488,7 +508,7 @@ impl Value {
             | Value::True
             | Value::False
             | Value::Color(..)
-            | Value::String(..) => self.to_css_string(span)?,
+            | Value::String(..) => self.to_css_string(span, false)?,
         })
     }
 

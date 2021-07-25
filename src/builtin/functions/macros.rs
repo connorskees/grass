@@ -4,7 +4,13 @@ macro_rules! bound {
             return Err((
                 format!(
                     "${}: Expected {}{} to be within {}{} and {}{}.",
-                    $name, $arg, $unit, $low, $unit, $high, $unit,
+                    $name,
+                    $arg.inspect(),
+                    $unit,
+                    $low,
+                    $unit,
+                    $high,
+                    $unit,
                 ),
                 $args.span(),
             )
@@ -18,7 +24,13 @@ macro_rules! bound {
             return Err((
                 format!(
                     "${}: Expected {}{} to be within {}{} and {}{}.",
-                    $name, $arg, $unit, $low, $unit, $high, $unit,
+                    $name,
+                    $arg.inspect(),
+                    $unit,
+                    $low,
+                    $unit,
+                    $high,
+                    $unit,
                 ),
                 $args.span(),
             )

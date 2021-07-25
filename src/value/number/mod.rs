@@ -1,8 +1,7 @@
 use std::{
     cmp::Ordering,
     convert::{From, TryFrom},
-    fmt::{self, Display, Write},
-    mem,
+    fmt, mem,
     ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign},
 };
 
@@ -313,8 +312,8 @@ from_smaller_integer!(u8);
 impl fmt::Debug for Number {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Small(..) => write!(f, "Number::Small( {} )", self),
-            Self::Big(..) => write!(f, "Number::Big( {} )", self),
+            Self::Small(..) => write!(f, "Number::Small( {} )", self.to_string(false)),
+            Self::Big(..) => write!(f, "Number::Big( {} )", self.to_string(false)),
         }
     }
 }
@@ -355,16 +354,24 @@ impl ToPrimitive for Number {
     }
 }
 
-impl Display for Number {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl Number {
+    pub(crate) fn inspect(&self) -> String {
+        self.to_string(false)
+    }
+
+    pub(crate) fn to_string(&self, is_compressed: bool) -> String {
         let mut whole = self.to_integer().abs();
         let has_decimal = self.is_decimal();
         let mut frac = self.abs().fract();
         let mut dec = String::with_capacity(if has_decimal { PRECISION } else { 0 });
+
+        let mut buf = String::new();
+
         if has_decimal {
             for _ in 0..(PRECISION - 1) {
                 frac *= 10_i64;
-                write!(dec, "{}", frac.to_integer())?;
+                dec.push_str(&frac.to_integer().to_string());
+
                 frac = frac.fract();
                 if frac.is_zero() {
                     break;
@@ -398,20 +405,25 @@ impl Display for Number {
                         }
                     }
                 } else {
-                    write!(dec, "{}", end)?;
+                    dec.push_str(&end.to_string());
                 }
             }
         }
 
         if self.is_negative() && (!whole.is_zero() || !dec.is_empty()) {
-            f.write_char('-')?;
+            buf.push('-');
         }
-        write!(f, "{}", whole)?;
+
+        if !(whole.is_zero() && is_compressed) {
+            buf.push_str(&whole.to_string());
+        }
+
         if !dec.is_empty() {
-            f.write_char('.')?;
-            write!(f, "{}", dec)?;
+            buf.push('.');
+            buf.push_str(&dec);
         }
-        Ok(())
+
+        buf
     }
 }
 

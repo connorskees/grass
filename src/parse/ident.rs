@@ -64,7 +64,11 @@ impl<'a, 'b> Parser<'a, 'b> {
                         self.toks.next();
                         // TODO: if ident, interpolate literally
                         let interpolation = self.parse_interpolation()?;
-                        buf.push_str(&interpolation.node.to_css_string(interpolation.span)?);
+                        buf.push_str(
+                            &interpolation
+                                .node
+                                .to_css_string(interpolation.span, self.options.is_compressed())?,
+                        );
                     } else {
                         self.toks.reset_cursor();
                         break;
@@ -179,7 +183,10 @@ impl<'a, 'b> Parser<'a, 'b> {
                 self.toks.next();
                 match self.parse_interpolation()?.node {
                     Value::String(ref s, ..) => text.push_str(s),
-                    v => text.push_str(v.to_css_string(self.span_before)?.borrow()),
+                    v => text.push_str(
+                        v.to_css_string(self.span_before, self.options.is_compressed())?
+                            .borrow(),
+                    ),
                 }
             }
             _ => return Err(("Expected identifier.", pos).into()),
@@ -268,7 +275,10 @@ impl<'a, 'b> Parser<'a, 'b> {
                         let interpolation = self.parse_interpolation()?;
                         match interpolation.node {
                             Value::String(ref v, ..) => s.push_str(v),
-                            v => s.push_str(v.to_css_string(interpolation.span)?.borrow()),
+                            v => s.push_str(
+                                v.to_css_string(interpolation.span, self.options.is_compressed())?
+                                    .borrow(),
+                            ),
                         };
                         continue;
                     }

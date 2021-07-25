@@ -100,7 +100,7 @@ pub(crate) fn str_slice(mut args: CallArgs, parser: &mut Parser) -> SassResult<V
     let str_len = string.chars().count();
     let start = match args.get_err(1, "start-at")? {
         Value::Dimension(Some(n), Unit::None, _) if n.is_decimal() => {
-            return Err((format!("{} is not an int.", n), args.span()).into())
+            return Err((format!("{} is not an int.", n.inspect()), args.span()).into())
         }
         Value::Dimension(Some(n), Unit::None, _) if n.is_positive() => {
             n.to_integer().to_usize().unwrap_or(str_len + 1)
@@ -133,7 +133,7 @@ pub(crate) fn str_slice(mut args: CallArgs, parser: &mut Parser) -> SassResult<V
     };
     let mut end = match args.default_arg(2, "end-at", Value::Null)? {
         Value::Dimension(Some(n), Unit::None, _) if n.is_decimal() => {
-            return Err((format!("{} is not an int.", n), args.span()).into())
+            return Err((format!("{} is not an int.", n.inspect()), args.span()).into())
         }
         Value::Dimension(Some(n), Unit::None, _) if n.is_positive() => {
             n.to_integer().to_usize().unwrap_or(str_len + 1)
@@ -240,7 +240,11 @@ pub(crate) fn str_insert(mut args: CallArgs, parser: &mut Parser) -> SassResult<
 
     let index = match args.get_err(2, "index")? {
         Value::Dimension(Some(n), Unit::None, _) if n.is_decimal() => {
-            return Err((format!("$index: {} is not an int.", n), args.span()).into())
+            return Err((
+                format!("$index: {} is not an int.", n.inspect()),
+                args.span(),
+            )
+                .into())
         }
         Value::Dimension(Some(n), Unit::None, _) => n,
         Value::Dimension(None, Unit::None, ..) => {

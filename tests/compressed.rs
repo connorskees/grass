@@ -14,13 +14,6 @@ test!(
     grass::Options::default().style(grass::OutputStyle::Compressed)
 );
 test!(
-    #[ignore = "we don't support compressed values"]
-    strips_the_leading_zero,
-    "a {\n  color: 0.5;\n}\n",
-    "a{color:.5}",
-    grass::Options::default().style(grass::OutputStyle::Compressed)
-);
-test!(
     compresses_media_rule,
     "@media foo {\n  a {\n    color: red;\n  }\n}\n",
     "@media foo{a{color:red}}",
@@ -84,5 +77,42 @@ test!(
     removes_multiline_comment_between_rulesets,
     "a {\n  color: red;\n}\n/* abc */b {\n  color: green;\n}\n",
     "a{color:red}b{color:green}",
+    grass::Options::default().style(grass::OutputStyle::Compressed)
+);
+test!(
+    removes_spaces_in_comma_separated_list,
+    "a {\n  color: a, b, c;\n}\n",
+    "a{color:a,b,c}",
+    grass::Options::default().style(grass::OutputStyle::Compressed)
+);
+test!(
+    removes_leading_zero_in_number_under_1,
+    "a {\n  color: 0.5;\n}\n",
+    "a{color:.5}",
+    grass::Options::default().style(grass::OutputStyle::Compressed)
+);
+test!(
+    #[ignore = "we do not support compressed colors"]
+    removes_leading_zero_in_number_under_1_in_rgba_alpha_channel,
+    "a {\n  color: rgba(1, 1, 1, 0.5);\n}\n",
+    "a{color:rgba(1,1,1,.5)}",
+    grass::Options::default().style(grass::OutputStyle::Compressed)
+);
+test!(
+    retains_leading_zero_in_opacity,
+    "a {\n  color: opacity(0.5);\n}\n",
+    "a{color:opacity(0.5)}",
+    grass::Options::default().style(grass::OutputStyle::Compressed)
+);
+test!(
+    retains_leading_zero_in_saturate,
+    "a {\n  color: saturate(0.5);\n}\n",
+    "a{color:saturate(0.5)}",
+    grass::Options::default().style(grass::OutputStyle::Compressed)
+);
+test!(
+    retains_leading_zero_in_grayscale,
+    "a {\n  color: grayscale(0.5);\n}\n",
+    "a{color:grayscale(0.5)}",
     grass::Options::default().style(grass::OutputStyle::Compressed)
 );

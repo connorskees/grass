@@ -14,7 +14,7 @@ impl Style {
         Ok(format!(
             "{}: {};",
             self.property,
-            self.value.node.to_css_string(self.value.span)?
+            self.value.node.to_css_string(self.value.span, false)?
         ))
     }
 }
