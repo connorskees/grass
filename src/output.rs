@@ -21,6 +21,15 @@ struct ToplevelUnknownAtRule {
     name: String,
     params: String,
     body: Vec<Stmt>,
+    has_body: bool,
+    is_group_end: bool,
+    inside_rule: bool,
+}
+
+#[derive(Debug, Clone)]
+struct BlockEntryUnknownAtRule {
+    name: String,
+    params: String,
 }
 
 #[derive(Debug, Clone)]
@@ -65,6 +74,7 @@ impl Toplevel {
     pub fn is_group_end(&self) -> bool {
         match self {
             Toplevel::RuleSet { is_group_end, .. } => *is_group_end,
+            Toplevel::UnknownAtRule(t) => t.is_group_end && t.inside_rule,
             Toplevel::Media {
                 inside_rule,
                 is_group_end,
@@ -87,6 +97,7 @@ fn set_group_end(group: &mut [Toplevel]) {
         | Some(Toplevel::Media { is_group_end, .. }) => {
             *is_group_end = true;
         }
+        Some(Toplevel::UnknownAtRule(t)) => t.is_group_end = true,
         _ => {}
     }
 }
@@ -95,6 +106,7 @@ fn set_group_end(group: &mut [Toplevel]) {
 enum BlockEntry {
     Style(Style),
     MultilineComment(String),
+    UnknownAtRule(BlockEntryUnknownAtRule),
 }
 
 impl BlockEntry {
@@ -102,6 +114,13 @@ impl BlockEntry {
         match self {
             BlockEntry::Style(s) => s.to_string(),
             BlockEntry::MultilineComment(s) => Ok(format!("/*{}*/", s)),
+            BlockEntry::UnknownAtRule(BlockEntryUnknownAtRule { name, params }) => {
+                Ok(if params.is_empty() {
+                    format!("@{};", name)
+                } else {
+                    format!("@{} {};", name, params)
+                })
+            }
         }
     }
 }
@@ -134,6 +153,17 @@ impl Toplevel {
     fn push_comment(&mut self, s: String) {
         if let Toplevel::RuleSet { body, .. } | Toplevel::KeyframesRuleSet(_, body) = self {
             body.push(BlockEntry::MultilineComment(s));
+        } else {
+            panic!();
+        }
+    }
+
+    fn push_unknown_at_rule(&mut self, at_rule: ToplevelUnknownAtRule) {
+        if let Toplevel::RuleSet { body, .. } = self {
+            body.push(BlockEntry::UnknownAtRule(BlockEntryUnknownAtRule {
+                name: at_rule.name,
+                params: at_rule.params,
+            }));
         } else {
             panic!();
         }
@@ -206,13 +236,27 @@ impl Css {
                         }
                         Stmt::UnknownAtRule(u) => {
                             let UnknownAtRule {
-                                params, body, name, ..
+                                params,
+                                body,
+                                name,
+                                has_body,
+                                ..
                             } = *u;
-                            vals.push(Toplevel::UnknownAtRule(Box::new(ToplevelUnknownAtRule {
+
+                            let at_rule = ToplevelUnknownAtRule {
                                 name,
                                 params,
                                 body,
-                            })));
+                                has_body,
+                                inside_rule: true,
+                                is_group_end: false,
+                            };
+
+                            if has_body {
+                                vals.push(Toplevel::UnknownAtRule(Box::new(at_rule)));
+                            } else {
+                                vals.first_mut().unwrap().push_unknown_at_rule(at_rule);
+                            }
                         }
                         Stmt::Return(..) => unreachable!(),
                         Stmt::AtRoot { body } => {
@@ -267,12 +311,19 @@ impl Css {
             }
             Stmt::UnknownAtRule(u) => {
                 let UnknownAtRule {
-                    params, body, name, ..
+                    params,
+                    body,
+                    name,
+                    has_body,
+                    ..
                 } = *u;
                 vec![Toplevel::UnknownAtRule(Box::new(ToplevelUnknownAtRule {
                     name,
                     params,
                     body,
+                    has_body,
+                    inside_rule: false,
+                    is_group_end: false,
                 }))]
             }
             Stmt::Return(..) => unreachable!("@return: {:?}", stmt),
@@ -393,7 +444,9 @@ impl Formatter for CompressedFormatter {
                     write!(buf, "@import {};", s)?;
                 }
                 Toplevel::UnknownAtRule(u) => {
-                    let ToplevelUnknownAtRule { params, name, body } = *u;
+                    let ToplevelUnknownAtRule {
+                        params, name, body, ..
+                    } = *u;
 
                     if params.is_empty() {
                         write!(buf, "@{}", name)?;
@@ -494,6 +547,7 @@ impl CompressedFormatter {
                     break;
                 }
                 BlockEntry::MultilineComment(..) => continue,
+                b @ BlockEntry::UnknownAtRule(_) => write!(buf, "{}", b.to_string()?)?,
             }
         }
 
@@ -505,6 +559,7 @@ impl CompressedFormatter {
                     write!(buf, ";{}:{}", s.property, value)?;
                 }
                 BlockEntry::MultilineComment(..) => continue,
+                b @ BlockEntry::UnknownAtRule(_) => write!(buf, "{}", b.to_string()?)?,
             }
         }
         Ok(())
@@ -593,7 +648,14 @@ impl Formatter for ExpandedFormatter {
                     write!(buf, "{}@import {};", padding, s)?;
                 }
                 Toplevel::UnknownAtRule(u) => {
-                    let ToplevelUnknownAtRule { params, name, body } = *u;
+                    let ToplevelUnknownAtRule {
+                        params,
+                        name,
+                        body,
+                        has_body,
+                        inside_rule,
+                        ..
+                    } = *u;
 
                     if params.is_empty() {
                         write!(buf, "{}@{}", padding, name)?;
@@ -601,14 +663,29 @@ impl Formatter for ExpandedFormatter {
                         write!(buf, "{}@{} {}", padding, name, params)?;
                     }
 
-                    if body.is_empty() {
+                    let css = Css::from_stmts(
+                        body,
+                        if inside_rule {
+                            AtRuleContext::Unknown
+                        } else {
+                            AtRuleContext::None
+                        },
+                        css.allows_charset,
+                    )?;
+
+                    if !has_body {
                         write!(buf, ";")?;
                         prev = Some(Previous { is_group_end });
                         continue;
                     }
 
+                    if css.blocks.iter().all(Toplevel::is_invisible) {
+                        write!(buf, " {{}}")?;
+                        prev = Some(Previous { is_group_end });
+                        continue;
+                    }
+
                     writeln!(buf, " {{")?;
-                    let css = Css::from_stmts(body, AtRuleContext::Unknown, css.allows_charset)?;
                     self.write_css(buf, css, map)?;
                     write!(buf, "\n{}}}", padding)?;
                 }

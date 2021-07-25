@@ -218,7 +218,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             if let Some(ref content_args) = content.content_args {
                 call_args.max_args(content_args.len())?;
 
-                let scope = self.eval_args(&content_args, call_args)?;
+                let scope = self.eval_args(content_args, call_args)?;
                 scope_at_decl.enter_scope(scope);
                 entered_scope = true;
             } else {

@@ -618,36 +618,47 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         let mut params = String::new();
         self.whitespace_or_comment();
-        if let Some(Token { kind: ';', .. }) | None = self.toks.peek() {
-            self.toks.next();
-            return Ok(Stmt::UnknownAtRule(Box::new(UnknownAtRule {
-                name,
-                super_selector: Selector::new(self.span_before),
-                params: String::new(),
-                body: Vec::new(),
-            })));
-        }
-        while let Some(tok) = self.toks.next() {
-            match tok.kind {
-                '{' => break,
-                '#' => {
+
+        loop {
+            match self.toks.peek() {
+                Some(Token { kind: '{', .. }) => {
+                    self.toks.next();
+                    break;
+                }
+                Some(Token { kind: ';', .. }) | Some(Token { kind: '}', .. }) | None => {
+                    self.consume_char_if_exists(';');
+                    return Ok(Stmt::UnknownAtRule(Box::new(UnknownAtRule {
+                        name,
+                        super_selector: Selector::new(self.span_before),
+                        has_body: false,
+                        params: params.trim().to_owned(),
+                        body: Vec::new(),
+                    })));
+                }
+                Some(Token { kind: '#', .. }) => {
+                    self.toks.next();
+
                     if let Some(Token { kind: '{', pos }) = self.toks.peek() {
                         self.span_before = self.span_before.merge(pos);
                         self.toks.next();
                         params.push_str(&self.parse_interpolation_as_string()?);
                     } else {
-                        params.push(tok.kind);
+                        params.push('#');
                     }
                     continue;
                 }
-                '\n' | ' ' | '\t' => {
+                Some(Token { kind: '\n', .. })
+                | Some(Token { kind: ' ', .. })
+                | Some(Token { kind: '\t', .. }) => {
                     self.whitespace();
                     params.push(' ');
                     continue;
                 }
-                _ => {}
+                Some(Token { kind, .. }) => {
+                    self.toks.next();
+                    params.push(kind);
+                }
             }
-            params.push(tok.kind);
         }
 
         let raw_body = self.parse_stmt()?;
@@ -680,6 +691,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             name,
             super_selector: Selector::new(self.span_before),
             params: params.trim().to_owned(),
+            has_body: true,
             body,
         })))
     }

@@ -6,4 +6,8 @@ pub(crate) struct UnknownAtRule {
     pub super_selector: Selector,
     pub params: String,
     pub body: Vec<Stmt>,
+
+    /// Whether or not this @-rule was declared with curly
+    /// braces. A body may not necessarily have contents
+    pub has_body: bool,
 }

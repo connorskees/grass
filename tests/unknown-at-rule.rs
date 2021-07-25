@@ -12,6 +12,7 @@ test!(
     "@foo {\n  color: red;\n}\n"
 );
 test!(unknown_at_rule_no_body, "@foo;\n", "@foo;\n");
+test!(unknown_at_rule_empty_body, "@foo {}\n", "@foo {}\n");
 test!(unknown_at_rule_no_body_eof, "@foo", "@foo;\n");
 test!(
     unknown_at_rule_interpolated_eof_no_body,
@@ -31,5 +32,57 @@ test!(
         color: green;
     }",
     "@foo (a: b) {\n  a {\n    color: red;\n  }\n}\na {\n  color: green;\n}\n"
+);
+test!(
+    no_semicolon_no_params_no_body,
+    "a {
+      @b
+    }
+    
+    a {
+      color: red;
+    }",
+    "a {\n  @b;\n}\n\na {\n  color: red;\n}\n"
+);
+test!(
+    no_semicolon_has_params_no_body,
+    "a {
+      @foo bar
+    }
+
+    a {
+      color: red;
+    }",
+    "a {\n  @foo bar;\n}\n\na {\n  color: red;\n}\n"
+);
+test!(
+    no_body_remains_inside_style_rule,
+    "a {
+      @box-shadow: $btn-focus-box-shadow, $btn-active-box-shadow;
+    }
+    
+    a {
+      color: red;
+    }",
+    "a {\n  @box-shadow : $btn-focus-box-shadow, $btn-active-box-shadow;\n}\n\na {\n  color: red;\n}\n"
+);
+test!(
+    empty_body_moves_outside_style_rule,
+    "a {
+      @b {}
+    }
+    
+    a {
+      color: red;
+    }",
+    "@b {}\n\na {\n  color: red;\n}\n"
+);
+test!(
+    #[ignore = "not sure how dart-sass is parsing this to include the semicolon in the params"]
+    params_contain_silent_comment_and_semicolon,
+    "a {
+      @box-shadow: $btn-focus-box-shadow, // $btn-active-box-shadow;
+    }",
+    "a {\n  @box-shadow : $btn-focus-box-shadow, / $btn-active-box-shadow;\n}\n"
 );
 test!(contains_multiline_comment, "@foo /**/;\n", "@foo;\n");
