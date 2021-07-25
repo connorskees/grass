@@ -672,13 +672,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             }
         }
 
-        if !self
-            .super_selectors
-            .last()
-            .clone()
-            .into_selector()
-            .is_empty()
-        {
+        if !self.super_selectors.last().as_selector_list().is_empty() {
             body = vec![Stmt::RuleSet {
                 selector: self.super_selectors.last().clone(),
                 body,
@@ -719,13 +713,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             }
         }
 
-        if !self
-            .super_selectors
-            .last()
-            .clone()
-            .into_selector()
-            .is_empty()
-        {
+        if !self.super_selectors.last().as_selector_list().is_empty() {
             body = vec![Stmt::RuleSet {
                 selector: self.super_selectors.last().clone(),
                 body,
@@ -860,14 +848,14 @@ impl<'a, 'b> Parser<'a, 'b> {
             }
 
             let compound = match complex.components.first() {
-                Some(ComplexSelectorComponent::Compound(c)) => c.clone(),
+                Some(ComplexSelectorComponent::Compound(c)) => c,
                 Some(..) | None => todo!(),
             };
             if compound.components.len() != 1 {
                 return Err((
                     format!(
                         "compound selectors may no longer be extended.\nConsider `@extend {}` instead.\nSee http://bit.ly/ExtendCompound for details.\n",
-                        compound.components.into_iter().map(|x| x.to_string()).collect::<Vec<String>>().join(", ")
+                        compound.components.iter().map(|x| x.to_string()).collect::<Vec<String>>().join(", ")
                     )
                 , self.span_before).into());
             }
@@ -907,13 +895,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             }
         }
 
-        if !self
-            .super_selectors
-            .last()
-            .clone()
-            .into_selector()
-            .is_empty()
-        {
+        if !self.super_selectors.last().as_selector_list().is_empty() {
             body = vec![Stmt::RuleSet {
                 selector: self.super_selectors.last().clone(),
                 body,

@@ -2,6 +2,7 @@ use std::{
     cell::RefCell,
     collections::{hash_set::IntoIter, HashSet},
     hash::{Hash, Hasher},
+    ops::Deref,
     ptr,
     rc::Rc,
 };
@@ -41,6 +42,10 @@ impl ExtendedSelector {
             Ok(v) => v.into_inner(),
             Err(v) => v.borrow().clone(),
         })
+    }
+
+    pub fn as_selector_list(&self) -> impl Deref<Target = SelectorList> + '_ {
+        self.0.borrow()
     }
 
     pub fn set_inner(&mut self, selector: SelectorList) {

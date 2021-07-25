@@ -115,33 +115,31 @@ impl ListSeparator {
 #[derive(Debug, Clone, Eq, PartialEq, Hash, PartialOrd, Ord, Copy)]
 pub(crate) struct Identifier(InternedString);
 
+impl Identifier {
+    fn from_str(s: &str) -> Self {
+        if s.contains('_') {
+            Identifier(InternedString::get_or_intern(s.replace('_', "-")))
+        } else {
+            Identifier(InternedString::get_or_intern(s))
+        }
+    }
+}
+
 impl From<String> for Identifier {
     fn from(s: String) -> Identifier {
-        Identifier(InternedString::get_or_intern(if s.contains('_') {
-            s.replace('_', "-")
-        } else {
-            s
-        }))
+        Self::from_str(&s)
     }
 }
 
 impl From<&String> for Identifier {
     fn from(s: &String) -> Identifier {
-        if s.contains('_') {
-            Identifier(InternedString::get_or_intern(s.replace('_', "-")))
-        } else {
-            Identifier(InternedString::get_or_intern(s))
-        }
+        Self::from_str(s)
     }
 }
 
 impl From<&str> for Identifier {
     fn from(s: &str) -> Identifier {
-        if s.contains('_') {
-            Identifier(InternedString::get_or_intern(s.replace('_', "-")))
-        } else {
-            Identifier(InternedString::get_or_intern(s))
-        }
+        Self::from_str(s)
     }
 }
 
