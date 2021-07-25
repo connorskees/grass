@@ -598,3 +598,12 @@ test!(
     "@use 'sass:math';\na {\n  color: math.div(\"1\",\"2\");\n}\n",
     "a {\n  color: \"1\"/\"2\";\n}\n"
 );
+test!(
+    log_returns_whole_number_for_simple_base,
+    "@use 'sass:math';
+    a {
+      color: math.log(8, 2);
+      color: math.floor(math.log(8, 2));
+    }",
+    "a {\n  color: 3;\n  color: 3;\n}\n"
+);

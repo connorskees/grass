@@ -225,7 +225,7 @@ fn log(mut args: CallArgs, _: &mut Parser) -> SassResult<Value> {
             if base.is_zero() {
                 Some(Number::zero())
             } else {
-                (|| Some(number.ln()? / base.ln()?))()
+                number.log(base)
             }
         } else if number.is_negative() {
             None

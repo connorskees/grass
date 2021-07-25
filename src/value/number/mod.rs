@@ -29,8 +29,12 @@ impl PartialEq for Number {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Number::Small(val1), Number::Small(val2)) => val1 == val2,
-            (Number::Big(val1), val2 @ Number::Small(..)) => **val1 == val2.clone().into_big_rational(),
-            (val1 @ Number::Small(..), Number::Big(val2)) => val1.clone().into_big_rational() == **val2,
+            (Number::Big(val1), val2 @ Number::Small(..)) => {
+                **val1 == val2.clone().into_big_rational()
+            }
+            (val1 @ Number::Small(..), Number::Big(val2)) => {
+                val1.clone().into_big_rational() == **val2
+            }
             (Number::Big(val1), Number::Big(val2)) => val1 == val2,
         }
     }
@@ -135,7 +139,7 @@ impl Number {
     }
 
     #[allow(clippy::cast_precision_loss)]
-    fn as_float(self) -> Option<f64> {
+    pub fn as_float(self) -> Option<f64> {
         Some(match self {
             Number::Small(n) => ((*n.numer() as f64) / (*n.denom() as f64)),
             Number::Big(n) => ((n.numer().to_f64()?) / (n.denom().to_f64()?)),
@@ -151,6 +155,12 @@ impl Number {
     pub fn ln(self) -> Option<Self> {
         Some(Number::Big(Box::new(BigRational::from_float(
             self.as_float()?.ln(),
+        )?)))
+    }
+
+    pub fn log(self, base: Number) -> Option<Self> {
+        Some(Number::Big(Box::new(BigRational::from_float(
+            self.as_float()?.log(base.as_float()?),
         )?)))
     }
 
