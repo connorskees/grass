@@ -1,4 +1,4 @@
-# TBD
+# 0.10.6
 
 - **feature complete, byte-for-byte support for bootstrap**
   - add bootstrap v5.0.2 to ci
@@ -13,6 +13,8 @@
 - throw error for invalid uses of `@charset`
 - more robustly parse `@else if`, allowing escaped and uppercase characters
 - resolve two `@extend` bugs -- one in which we would incorrectly emit `a b, a > b` as a selector, even though `a b` is a superselector of `a > b`, and a feature called "three-level extend loop", in which a stylesheet where `a` extends `b`, `b` extends `c`, and `c` extends `a` would fail to include all 3 selectors in certain places
+- support compressed values for comma separated lists and numbers
+- more robustly parse unknown @-rules
 
 # 0.10.5
 

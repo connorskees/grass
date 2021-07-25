@@ -1,11 +1,11 @@
 /*! # grass
-An implementation of the Sass specification in pure rust.
+An implementation of Sass in pure rust.
 
-Spec progress as of 2020-11-16:
+Spec progress as of 2021-07-25:
 
 | Passing | Failing | Total |
 |---------|---------|-------|
-| 3415    | 1678    | 5093  |
+| 4018    | 2238    | 6256  |
 
 ## Use as library
 ```
@@ -307,13 +307,14 @@ fn from_string_with_file_name(input: String, file_name: &str, options: &Options)
 
 /// Compile CSS from a path
 ///
+/// n.b. grass does not currently support files or paths that are not valid UTF-8
+///
 /// ```
 /// fn main() -> Result<(), Box<grass::Error>> {
 ///     let sass = grass::from_path("input.scss", &grass::Options::default())?;
 ///     Ok(())
 /// }
 /// ```
-/// (grass does not currently allow files or paths that are not valid UTF-8)
 #[cfg_attr(feature = "profiling", inline(never))]
 #[cfg_attr(not(feature = "profiling"), inline)]
 #[cfg(not(feature = "wasm"))]
