@@ -60,6 +60,65 @@ impl<'a, 'b: 'a, 'c> ValueVisitor<'a, 'b, 'c> {
         }
     }
 
+    fn bin_op_one_level(
+        &mut self,
+        val1: HigherIntermediateValue,
+        op: Op,
+        val2: HigherIntermediateValue,
+        in_parens: bool,
+    ) -> SassResult<HigherIntermediateValue> {
+        let val1 = self.unary(val1, in_parens)?;
+        let val2 = self.unary(val2, in_parens)?;
+
+        let val1 = match val1 {
+            HigherIntermediateValue::Literal(val1) => val1,
+            HigherIntermediateValue::BinaryOp(val1_1, val1_op, val1_2) => {
+                if val1_op.precedence() >= op.precedence() {
+                    return Ok(HigherIntermediateValue::BinaryOp(
+                        Box::new(self.bin_op_one_level(*val1_1, val1_op, *val1_2, in_parens)?),
+                        op,
+                        Box::new(val2),
+                    ));
+                } else {
+                    return Ok(HigherIntermediateValue::BinaryOp(
+                        val1_1,
+                        val1_op,
+                        Box::new(self.bin_op_one_level(*val1_2, op, val2, in_parens)?),
+                    ));
+                }
+            }
+            _ => unreachable!(),
+        };
+
+        let val2 = match val2 {
+            HigherIntermediateValue::Literal(val2) => val2,
+            HigherIntermediateValue::BinaryOp(val2_1, val2_op, val2_2) => {
+                todo!()
+            }
+            _ => unreachable!(),
+        };
+
+        let val1 = HigherIntermediateValue::Literal(val1);
+        let val2 = HigherIntermediateValue::Literal(val2);
+
+        Ok(HigherIntermediateValue::Literal(match op {
+            Op::Plus => self.add(val1, val2)?,
+            Op::Minus => self.sub(val1, val2)?,
+            Op::Mul => self.mul(val1, val2)?,
+            Op::Div => self.div(val1, val2, in_parens)?,
+            Op::Rem => self.rem(val1, val2)?,
+            Op::And => Self::and(val1, val2),
+            Op::Or => Self::or(val1, val2),
+            Op::Equal => Self::equal(val1, val2),
+            Op::NotEqual => Self::not_equal(val1, val2),
+            Op::GreaterThan => self.greater_than(val1, val2)?,
+            Op::GreaterThanEqual => self.greater_than_or_equal(val1, val2)?,
+            Op::LessThan => self.less_than(val1, val2)?,
+            Op::LessThanEqual => self.less_than_or_equal(val1, val2)?,
+            Op::Not => unreachable!(),
+        }))
+    }
+
     fn bin_op(
         &mut self,
         val1: HigherIntermediateValue,
@@ -68,18 +127,17 @@ impl<'a, 'b: 'a, 'c> ValueVisitor<'a, 'b, 'c> {
         in_parens: bool,
     ) -> SassResult<Value> {
         let mut val1 = self.unary(val1, in_parens)?;
-        let val2 = self.unary(val2, in_parens)?;
+        let mut val2 = self.unary(val2, in_parens)?;
 
-        if let HigherIntermediateValue::BinaryOp(val1_1, op2, val1_2) = val1 {
-            let in_parens = op != Op::Div || op2 != Op::Div;
-            if op2.precedence() >= op.precedence() {
-                val1 = HigherIntermediateValue::Literal(
-                    self.bin_op(*val1_1, op2, *val1_2, in_parens)?,
-                );
+        if let HigherIntermediateValue::BinaryOp(val1_1, val1_op, val1_2) = val1 {
+            let in_parens = op != Op::Div || val1_op != Op::Div;
+
+            if val1_op.precedence() >= op.precedence() {
+                val1 = self.bin_op_one_level(*val1_1, val1_op, *val1_2, in_parens)?;
+                return self.bin_op(val1, op, val2, in_parens);
             } else {
-                let val2 =
-                    HigherIntermediateValue::Literal(self.bin_op(*val1_2, op, val2, in_parens)?);
-                return self.bin_op(*val1_1, op2, val2, in_parens);
+                val2 = self.bin_op_one_level(*val1_2, op, val2, in_parens)?;
+                return self.bin_op(*val1_1, val1_op, val2, in_parens);
             }
         }
 
@@ -243,6 +301,7 @@ impl<'a, 'b: 'a, 'c> ValueVisitor<'a, 'b, 'c> {
                             .into());
                     }
                     if unit == unit2 {
+                        // dbg!(&num, &num2, num.clone() + num2.clone(), unit.clone(), unit2.clone());
                         Value::Dimension(Some(num + num2), unit, true)
                     } else if unit == Unit::None {
                         Value::Dimension(Some(num + num2), unit2, true)

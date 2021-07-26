@@ -41,3 +41,8 @@ test!(
     "a {\n  color: 1 / 2 * 1em;\n}\n",
     "a {\n  color: 0.5em;\n}\n"
 );
+test!(
+    triple_bin_op_first_is_lower_precendence,
+    "a {\n  color: 8 + 1 * 2 * 0;\n}\n",
+    "a {\n  color: 8;\n}\n"
+);
