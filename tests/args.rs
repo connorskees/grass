@@ -231,3 +231,47 @@ test!(
     }",
     "a {\n  color: foo;\n  color: bar;\n  color: foo;\n}\n"
 );
+test!(
+    splat_ends_with_comma,
+    "@function foo($arg1) {
+      @return $arg1;
+    }    
+
+    a {
+        color: foo(a...,);
+    }",
+    "a {\n  color: a;\n}\n"
+);
+test!(
+    two_splat_ends_with_comma,
+    "@function foo($arg1, $arg2) {
+      @return $arg1 $arg2;
+    }    
+
+    a {
+        color: foo((value1,)..., (arg2: value2)...);
+    }",
+    "a {\n  color: value1 value2;\n}\n"
+);
+error!(
+    splat_ends_with_two_commas,
+    "@function foo($arg1) {
+      @return $arg1;
+    }    
+
+    a {
+        color: foo(a...,,);
+    }",
+    "Error: expected \")\"."
+);
+error!(
+    arg_ends_with_two_commas,
+    "@function foo($arg1) {
+      @return $arg1;
+    }    
+
+    a {
+        color: foo(a,,);
+    }",
+    "Error: expected \")\"."
+);

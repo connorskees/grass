@@ -160,6 +160,16 @@ impl<'a, 'b> Parser<'a, 'b> {
                 return Ok(CallArgs(args, span));
             }
 
+            if self.consume_char_if_exists(',') {
+                self.whitespace_or_comment();
+
+                if self.consume_char_if_exists(',') {
+                    return Err(("expected \")\".", self.span_before).into());
+                }
+
+                continue;
+            }
+
             if let Some(Token { kind: '$', pos }) = self.toks.peek() {
                 let start = self.toks.cursor();
 
@@ -222,6 +232,9 @@ impl<'a, 'b> Parser<'a, 'b> {
                         value,
                     );
                     self.whitespace_or_comment();
+                    if self.consume_char_if_exists(',') {
+                        return Err(("expected \")\".", self.span_before).into());
+                    }
                     continue;
                 }
                 Some(Token { kind: '.', pos }) => {

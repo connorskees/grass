@@ -79,13 +79,13 @@ impl<'a, 'b: 'a, 'c> ValueVisitor<'a, 'b, 'c> {
                         op,
                         Box::new(val2),
                     ));
-                } else {
-                    return Ok(HigherIntermediateValue::BinaryOp(
-                        val1_1,
-                        val1_op,
-                        Box::new(self.bin_op_one_level(*val1_2, op, val2, in_parens)?),
-                    ));
                 }
+
+                return Ok(HigherIntermediateValue::BinaryOp(
+                    val1_1,
+                    val1_op,
+                    Box::new(self.bin_op_one_level(*val1_2, op, val2, in_parens)?),
+                ));
             }
             _ => unreachable!(),
         };
@@ -132,13 +132,13 @@ impl<'a, 'b: 'a, 'c> ValueVisitor<'a, 'b, 'c> {
         if let HigherIntermediateValue::BinaryOp(val1_1, val1_op, val1_2) = val1 {
             let in_parens = op != Op::Div || val1_op != Op::Div;
 
-            if val1_op.precedence() >= op.precedence() {
+            return if val1_op.precedence() >= op.precedence() {
                 val1 = self.bin_op_one_level(*val1_1, val1_op, *val1_2, in_parens)?;
-                return self.bin_op(val1, op, val2, in_parens);
+                self.bin_op(val1, op, val2, in_parens)
             } else {
                 val2 = self.bin_op_one_level(*val1_2, op, val2, in_parens)?;
-                return self.bin_op(*val1_1, val1_op, val2, in_parens);
-            }
+                self.bin_op(*val1_1, val1_op, val2, in_parens)
+            };
         }
 
         Ok(match op {
