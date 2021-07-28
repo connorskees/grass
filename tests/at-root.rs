@@ -107,6 +107,26 @@ test!(
     }",
     "a {\n  color: red;\n}\n\na {\n  color: red;\n}\n"
 );
+test!(
+    at_root_inside_media,
+    "@media screen {
+      @at-root a {
+        color: red;
+      }
+    }",
+    "@media screen {\n  a {\n    color: red;\n  }\n}\n"
+);
+test!(
+    at_root_inside_media_inside_style_rule,
+    "b {
+      @media screen {
+        @at-root a {
+          color: red;
+        }
+      }
+    }",
+    "@media screen {\n  a {\n    color: red;\n  }\n}\n"
+);
 error!(
     #[ignore = "we do not currently validate missing closing curly braces"]
     missing_closing_curly_brace,

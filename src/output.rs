@@ -327,7 +327,13 @@ impl Css {
                 }))]
             }
             Stmt::Return(..) => unreachable!("@return: {:?}", stmt),
-            Stmt::AtRoot { .. } => unreachable!("@at-root: {:?}", stmt),
+            Stmt::AtRoot { body } => body
+                .into_iter()
+                .map(|r| self.parse_stmt(r))
+                .collect::<SassResult<Vec<Vec<Toplevel>>>>()?
+                .into_iter()
+                .flatten()
+                .collect(),
             Stmt::Keyframes(k) => vec![Toplevel::Keyframes(k)],
             Stmt::KeyframesRuleSet(k) => {
                 let KeyframesRuleSet { body, selector } = *k;

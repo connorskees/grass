@@ -29,7 +29,7 @@ That said, there are a number of known missing features and bugs. The notable fe
 ```
 indented syntax
 @forward and more complex uses of @use
-complex uses of @at-root
+media queries with @at-root
 @media query merging
 media queries with @import
 / as a separator in color functions, e.g. rgba(255, 255, 255 / 0)
