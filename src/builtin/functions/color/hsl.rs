@@ -6,7 +6,7 @@ use num_traits::One;
 use crate::{
     args::CallArgs,
     color::Color,
-    common::QuoteKind,
+    common::{Brackets, ListSeparator, QuoteKind},
     error::SassResult,
     parse::Parser,
     unit::Unit,
@@ -33,6 +33,24 @@ fn inner_hsl(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                 args.span(),
             )
                 .into());
+        }
+
+        if channels.iter().any(Value::is_special_function) {
+            let channel_sep = if channels.len() < 3 {
+                ListSeparator::Space
+            } else {
+                ListSeparator::Comma
+            };
+
+            return Ok(Value::String(
+                format!(
+                    "{}({})",
+                    name,
+                    Value::List(channels, channel_sep, Brackets::None)
+                        .to_css_string(args.span(), false)?
+                ),
+                QuoteKind::None,
+            ));
         }
 
         let lightness = match channels.pop() {

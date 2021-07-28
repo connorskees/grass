@@ -233,7 +233,7 @@ test!(
     "@media (max-width: 0px) {\n  a {\n    color: red;\n  }\n}\n\na {\n  color: red;\n}\n"
 );
 test!(
-  #[ignore = "we move to top of media"]
+    #[ignore = "we move to top of media"]
     plain_import_inside_media_is_not_moved_to_top,
     r#"@media foo {
       a {
