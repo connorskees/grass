@@ -20,7 +20,9 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
         return Err(("Missing argument $channels.", args.span()).into());
     }
 
-    if args.len() == 1 {
+    let len = args.len();
+
+    if len == 1 {
         let mut channels = match args.get_err(0, "channels")? {
             Value::List(v, ..) => v,
             _ => return Err(("Missing argument $channels.", args.span()).into()),
@@ -150,7 +152,7 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
         let color = Color::from_rgba(red, green, blue, Number::one());
 
         Ok(Value::Color(Box::new(color)))
-    } else if args.len() == 2 {
+    } else if len == 2 {
         let color = match args.get_err(0, "color")? {
             Value::Color(c) => c,
             v if v.is_special_function() => {
@@ -210,7 +212,40 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
         };
         Ok(Value::Color(Box::new(color.with_alpha(alpha))))
     } else {
-        let red = match args.get_err(0, "red")? {
+        let red = args.get_err(0, "red")?;
+        let green = args.get_err(1, "green")?;
+        let blue = args.get_err(2, "blue")?;
+        let alpha = args.default_arg(
+            3,
+            "alpha",
+            Value::Dimension(Some(Number::one()), Unit::None, true),
+        )?;
+
+        if [&red, &green, &blue, &alpha]
+            .iter()
+            .copied()
+            .any(Value::is_special_function)
+        {
+            return Ok(Value::String(
+                format!(
+                    "{}({})",
+                    name,
+                    Value::List(
+                        if len == 4 {
+                            vec![red, green, blue, alpha]
+                        } else {
+                            vec![red, green, blue]
+                        },
+                        ListSeparator::Comma,
+                        Brackets::None
+                    )
+                    .to_css_string(args.span(), false)?
+                ),
+                QuoteKind::None,
+            ));
+        }
+
+        let red = match red {
             Value::Dimension(Some(n), Unit::None, _) => n,
             Value::Dimension(Some(n), Unit::Percent, _) => {
                 (n / Number::from(100)) * Number::from(255)
@@ -226,27 +261,6 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                 )
                     .into())
             }
-            v if v.is_special_function() => {
-                let green = args.get_err(1, "green")?;
-                let blue = args.get_err(2, "blue")?;
-                let mut string = format!(
-                    "{}({}, {}, {}",
-                    name,
-                    v.to_css_string(args.span(), parser.options.is_compressed())?,
-                    green.to_css_string(args.span(), parser.options.is_compressed())?,
-                    blue.to_css_string(args.span(), parser.options.is_compressed())?
-                );
-                if !args.is_empty() {
-                    string.push_str(", ");
-                    string.push_str(
-                        &args
-                            .get_err(3, "alpha")?
-                            .to_css_string(args.span(), parser.options.is_compressed())?,
-                    );
-                }
-                string.push(')');
-                return Ok(Value::String(string, QuoteKind::None));
-            }
             v => {
                 return Err((
                     format!("$red: {} is not a number.", v.inspect(args.span())?),
@@ -255,7 +269,7 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                     .into())
             }
         };
-        let green = match args.get_err(1, "green")? {
+        let green = match green {
             Value::Dimension(Some(n), Unit::None, _) => n,
             Value::Dimension(Some(n), Unit::Percent, _) => {
                 (n / Number::from(100)) * Number::from(255)
@@ -271,26 +285,6 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                 )
                     .into())
             }
-            v if v.is_special_function() => {
-                let blue = args.get_err(2, "blue")?;
-                let mut string = format!(
-                    "{}({}, {}, {}",
-                    name,
-                    red.to_string(parser.options.is_compressed()),
-                    v.to_css_string(args.span(), parser.options.is_compressed())?,
-                    blue.to_css_string(args.span(), parser.options.is_compressed())?
-                );
-                if !args.is_empty() {
-                    string.push_str(", ");
-                    string.push_str(
-                        &args
-                            .get_err(3, "alpha")?
-                            .to_css_string(args.span(), parser.options.is_compressed())?,
-                    );
-                }
-                string.push(')');
-                return Ok(Value::String(string, QuoteKind::None));
-            }
             v => {
                 return Err((
                     format!("$green: {} is not a number.", v.inspect(args.span())?),
@@ -299,7 +293,7 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                     .into())
             }
         };
-        let blue = match args.get_err(2, "blue")? {
+        let blue = match blue {
             Value::Dimension(Some(n), Unit::None, _) => n,
             Value::Dimension(Some(n), Unit::Percent, _) => {
                 (n / Number::from(100)) * Number::from(255)
@@ -315,25 +309,6 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                 )
                     .into())
             }
-            v if v.is_special_function() => {
-                let mut string = format!(
-                    "{}({}, {}, {}",
-                    name,
-                    red.to_string(parser.options.is_compressed()),
-                    green.to_string(parser.options.is_compressed()),
-                    v.to_css_string(args.span(), parser.options.is_compressed())?
-                );
-                if !args.is_empty() {
-                    string.push_str(", ");
-                    string.push_str(
-                        &args
-                            .get_err(3, "alpha")?
-                            .to_css_string(args.span(), parser.options.is_compressed())?,
-                    );
-                }
-                string.push(')');
-                return Ok(Value::String(string, QuoteKind::None));
-            }
             v => {
                 return Err((
                     format!("$blue: {} is not a number.", v.inspect(args.span())?),
@@ -342,11 +317,7 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                     .into())
             }
         };
-        let alpha = match args.default_arg(
-            3,
-            "alpha",
-            Value::Dimension(Some(Number::one()), Unit::None, true),
-        )? {
+        let alpha = match alpha {
             Value::Dimension(Some(n), Unit::None, _) => n,
             Value::Dimension(Some(n), Unit::Percent, _) => n / Number::from(100),
             Value::Dimension(None, ..) => todo!(),
@@ -359,17 +330,6 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                     args.span(),
                 )
                     .into())
-            }
-            v if v.is_special_function() => {
-                let string = format!(
-                    "{}({}, {}, {}, {})",
-                    name,
-                    red.to_string(parser.options.is_compressed()),
-                    green.to_string(parser.options.is_compressed()),
-                    blue.to_string(parser.options.is_compressed()),
-                    v.to_css_string(args.span(), parser.options.is_compressed())?
-                );
-                return Ok(Value::String(string, QuoteKind::None));
             }
             v => {
                 return Err((

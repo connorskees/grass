@@ -18,7 +18,9 @@ fn inner_hsl(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
         return Err(("Missing argument $channels.", args.span()).into());
     }
 
-    if args.len() == 1 {
+    let len = args.len();
+
+    if len == 1 {
         let mut channels = match args.get_err(0, "channels")? {
             Value::List(v, ..) => v,
             _ => return Err(("Missing argument $channels.", args.span()).into()),
@@ -99,30 +101,42 @@ fn inner_hsl(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
             Number::one(),
         ))))
     } else {
-        let hue = match args.get_err(0, "hue")? {
+        let hue = args.get_err(0, "hue")?;
+        let saturation = args.get_err(1, "saturation")?;
+        let lightness = args.get_err(2, "lightness")?;
+        let alpha = args.default_arg(
+            3,
+            "alpha",
+            Value::Dimension(Some(Number::one()), Unit::None, true),
+        )?;
+
+        if [&hue, &saturation, &lightness, &alpha]
+            .iter()
+            .copied()
+            .any(Value::is_special_function)
+        {
+            return Ok(Value::String(
+                format!(
+                    "{}({})",
+                    name,
+                    Value::List(
+                        if len == 4 {
+                            vec![hue, saturation, lightness, alpha]
+                        } else {
+                            vec![hue, saturation, lightness]
+                        },
+                        ListSeparator::Comma,
+                        Brackets::None
+                    )
+                    .to_css_string(args.span(), false)?
+                ),
+                QuoteKind::None,
+            ));
+        }
+
+        let hue = match hue {
             Value::Dimension(Some(n), ..) => n,
             Value::Dimension(None, ..) => todo!(),
-            v if v.is_special_function() => {
-                let saturation = args.get_err(1, "saturation")?;
-                let lightness = args.get_err(2, "lightness")?;
-                let mut string = format!(
-                    "{}({}, {}, {}",
-                    name,
-                    v.to_css_string(args.span(), parser.options.is_compressed())?,
-                    saturation.to_css_string(args.span(), parser.options.is_compressed())?,
-                    lightness.to_css_string(args.span(), parser.options.is_compressed())?
-                );
-                if !args.is_empty() {
-                    string.push_str(", ");
-                    string.push_str(
-                        &args
-                            .get_err(3, "alpha")?
-                            .to_css_string(args.span(), parser.options.is_compressed())?,
-                    );
-                }
-                string.push(')');
-                return Ok(Value::String(string, QuoteKind::None));
-            }
             v => {
                 return Err((
                     format!("$hue: {} is not a number.", v.inspect(args.span())?),
@@ -131,29 +145,9 @@ fn inner_hsl(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                     .into())
             }
         };
-        let saturation = match args.get_err(1, "saturation")? {
+        let saturation = match saturation {
             Value::Dimension(Some(n), ..) => n / Number::from(100),
             Value::Dimension(None, ..) => todo!(),
-            v if v.is_special_function() => {
-                let lightness = args.get_err(2, "lightness")?;
-                let mut string = format!(
-                    "{}({}, {}, {}",
-                    name,
-                    hue.to_string(parser.options.is_compressed()),
-                    v.to_css_string(args.span(), parser.options.is_compressed())?,
-                    lightness.to_css_string(args.span(), parser.options.is_compressed())?
-                );
-                if !args.is_empty() {
-                    string.push_str(", ");
-                    string.push_str(
-                        &args
-                            .get_err(3, "alpha")?
-                            .to_css_string(args.span(), parser.options.is_compressed())?,
-                    );
-                }
-                string.push(')');
-                return Ok(Value::String(string, QuoteKind::None));
-            }
             v => {
                 return Err((
                     format!(
@@ -165,28 +159,9 @@ fn inner_hsl(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                     .into())
             }
         };
-        let lightness = match args.get_err(2, "lightness")? {
+        let lightness = match lightness {
             Value::Dimension(Some(n), ..) => n / Number::from(100),
             Value::Dimension(None, ..) => todo!(),
-            v if v.is_special_function() => {
-                let mut string = format!(
-                    "{}({}, {}, {}",
-                    name,
-                    hue.to_string(parser.options.is_compressed()),
-                    saturation.to_string(parser.options.is_compressed()),
-                    v.to_css_string(args.span(), parser.options.is_compressed())?
-                );
-                if !args.is_empty() {
-                    string.push_str(", ");
-                    string.push_str(
-                        &args
-                            .get_err(3, "alpha")?
-                            .to_css_string(args.span(), parser.options.is_compressed())?,
-                    );
-                }
-                string.push(')');
-                return Ok(Value::String(string, QuoteKind::None));
-            }
             v => {
                 return Err((
                     format!(
@@ -198,11 +173,7 @@ fn inner_hsl(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                     .into())
             }
         };
-        let alpha = match args.default_arg(
-            3,
-            "alpha",
-            Value::Dimension(Some(Number::one()), Unit::None, true),
-        )? {
+        let alpha = match alpha {
             Value::Dimension(Some(n), Unit::None, _) => n,
             Value::Dimension(Some(n), Unit::Percent, _) => n / Number::from(100),
             Value::Dimension(None, ..) => todo!(),
@@ -215,19 +186,6 @@ fn inner_hsl(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                     args.span(),
                 )
                     .into())
-            }
-            v if v.is_special_function() => {
-                return Ok(Value::String(
-                    format!(
-                        "{}({}, {}, {}, {})",
-                        name,
-                        hue.to_string(parser.options.is_compressed()),
-                        saturation.to_string(parser.options.is_compressed()),
-                        lightness.to_string(parser.options.is_compressed()),
-                        v.to_css_string(args.span(), parser.options.is_compressed())?
-                    ),
-                    QuoteKind::None,
-                ));
             }
             v => {
                 return Err((

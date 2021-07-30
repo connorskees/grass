@@ -738,6 +738,26 @@ test!(
     "a {\n  color: rgba(1, 2, max(3, 3));\n}\n"
 );
 test!(
+    rgb_special_fn_4_arg_maintains_units,
+    "a {\n  color: rgb(1, 0.02, 3%, max(0.4));\n}\n",
+    "a {\n  color: rgb(1, 0.02, 3%, max(0.4));\n}\n"
+);
+test!(
+    rgb_special_fn_3_arg_maintains_units,
+    "a {\n  color: rgb(1, 0.02, max(0.4));\n}\n",
+    "a {\n  color: rgb(1, 0.02, max(0.4));\n}\n"
+);
+test!(
+    hsl_special_fn_4_arg_maintains_units,
+    "a {\n  color: hsl(1, 0.02, 3%, max(0.4));\n}\n",
+    "a {\n  color: hsl(1, 0.02, 3%, max(0.4));\n}\n"
+);
+test!(
+    hsl_special_fn_3_arg_maintains_units,
+    "a {\n  color: hsl(1, 0.02, max(0.4));\n}\n",
+    "a {\n  color: hsl(1, 0.02, max(0.4));\n}\n"
+);
+test!(
     #[ignore = "we do not check if interpolation occurred"]
     interpolated_named_color_is_not_color,
     "a {\n  color: type-of(r#{e}d);\n}\n",
