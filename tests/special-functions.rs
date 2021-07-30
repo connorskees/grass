@@ -234,3 +234,23 @@ error!(
     progid_nothing_after,
     "a { color: progid:", "Error: expected \"(\"."
 );
+test!(
+    clamp_empty_args,
+    "a {\n  color: clamp();\n}\n",
+    "a {\n  color: clamp();\n}\n"
+);
+test!(
+    clamp_parens_in_args,
+    "a {\n  color: clamp((()));\n}\n",
+    "a {\n  color: clamp((()));\n}\n"
+);
+test!(
+    clamp_single_arg,
+    "a {\n  color: clamp(1);\n}\n",
+    "a {\n  color: clamp(1);\n}\n"
+);
+test!(
+    clamp_many_args,
+    "a {\n  color: clamp(1, 2, 3);\n}\n",
+    "a {\n  color: clamp(1, 2, 3);\n}\n"
+);

@@ -278,6 +278,9 @@ impl<'a, 'b> Parser<'a, 'b> {
                                 .to_css_string(self.options.is_compressed())?,
                         ),
                     },
+                    "clamp" if lower == "clamp" => {
+                        self.parse_calc_args(&mut s)?;
+                    }
                     _ => s.push_str(
                         &self
                             .parse_call_args()?
