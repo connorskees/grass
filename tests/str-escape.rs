@@ -178,7 +178,7 @@ test!(
 );
 error!(
     escape_sequence_does_not_fit_inside_char,
-    "a {\n  color: \\110000;\n}\n", "Error: Invalid escape sequence."
+    "a {\n  color: \\110000;\n}\n", "Error: Invalid Unicode code point."
 );
 test!(
     escaped_newline_in_quoted_string,

@@ -399,7 +399,7 @@ error!(
 );
 error!(
     invalid_escape,
-    "$\\110000: red;", "Error: Invalid escape sequence."
+    "$\\110000: red;", "Error: Invalid Unicode code point."
 );
 error!(
     nothing_after_hash_in_variable_decl,

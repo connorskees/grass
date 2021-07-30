@@ -117,7 +117,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             self.toks.next();
         }
 
-        let c = std::char::from_u32(value).ok_or(("Invalid escape sequence.", span))?;
+        let c = std::char::from_u32(value).ok_or(("Invalid Unicode code point.", span))?;
         if (identifier_start && is_name_start(c) && !c.is_digit(10))
             || (!identifier_start && is_name(c))
         {
