@@ -344,6 +344,10 @@ impl Value {
         }
     }
 
+    pub fn is_color(&self) -> bool {
+        matches!(self, Value::Color(..))
+    }
+
     pub fn is_special_function(&self) -> bool {
         match self {
             Value::String(s, QuoteKind::None) => is_special_function(s),

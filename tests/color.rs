@@ -763,6 +763,16 @@ test!(
     "a {\n  color: hsla(var(--foo));\n}\n"
 );
 test!(
+    rgb_special_fn_2_arg_first_non_color,
+    "a {\n  color: rgb(1, var(--foo));\n}\n",
+    "a {\n  color: rgb(1, var(--foo));\n}\n"
+);
+test!(
+    rgb_special_fn_2_arg_first_is_color,
+    "a {\n  color: rgb(rgb(1%, 1, 1), var(--foo));;\n}\n",
+    "a {\n  color: rgb(3, 1, 1, var(--foo));\n}\n"
+);
+test!(
     #[ignore = "we do not check if interpolation occurred"]
     interpolated_named_color_is_not_color,
     "a {\n  color: type-of(r#{e}d);\n}\n",

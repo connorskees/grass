@@ -154,20 +154,23 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
 
         Ok(Value::Color(Box::new(color)))
     } else if len == 2 {
-        let color = match args.get_err(0, "color")? {
+        let color = args.get_err(0, "color")?;
+        let alpha = args.get_err(1, "alpha")?;
+
+        if color.is_special_function() || (alpha.is_special_function() && !color.is_color()) {
+            return Ok(Value::String(
+                format!(
+                    "{}({})",
+                    name,
+                    Value::List(vec![color, alpha], ListSeparator::Comma, Brackets::None)
+                        .to_css_string(args.span(), false)?
+                ),
+                QuoteKind::None,
+            ));
+        }
+
+        let color = match color {
             Value::Color(c) => c,
-            v if v.is_special_function() => {
-                let alpha = args.get_err(1, "alpha")?;
-                return Ok(Value::String(
-                    format!(
-                        "{}({}, {})",
-                        name,
-                        v.to_css_string(args.span(), parser.options.is_compressed())?,
-                        alpha.to_css_string(args.span(), parser.options.is_compressed())?
-                    ),
-                    QuoteKind::None,
-                ));
-            }
             v => {
                 return Err((
                     format!("$color: {} is not a color.", v.inspect(args.span())?),
@@ -176,7 +179,22 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                     .into())
             }
         };
-        let alpha = match args.get_err(1, "alpha")? {
+
+        if alpha.is_special_function() {
+            return Ok(Value::String(
+                format!(
+                    "{}({}, {}, {}, {})",
+                    name,
+                    color.red().to_string(false),
+                    color.green().to_string(false),
+                    color.blue().to_string(false),
+                    alpha.to_css_string(args.span(), false)?,
+                ),
+                QuoteKind::None,
+            ));
+        }
+
+        let alpha = match alpha {
             Value::Dimension(Some(n), Unit::None, _) => n,
             Value::Dimension(Some(n), Unit::Percent, _) => n / Number::from(100),
             Value::Dimension(None, ..) => todo!(),
@@ -189,19 +207,6 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                     args.span(),
                 )
                     .into())
-            }
-            v if v.is_special_function() => {
-                return Ok(Value::String(
-                    format!(
-                        "{}({}, {}, {}, {})",
-                        name,
-                        color.red().to_string(parser.options.is_compressed()),
-                        color.green().to_string(parser.options.is_compressed()),
-                        color.blue().to_string(parser.options.is_compressed()),
-                        v.to_css_string(args.span(), parser.options.is_compressed())?
-                    ),
-                    QuoteKind::None,
-                ));
             }
             v => {
                 return Err((

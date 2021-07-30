@@ -90,7 +90,7 @@ These numbers come from a default run of the Sass specification as shown above.
 
 ```
 2021-07-24
-PASSING: 4018
-FAILING: 2238
+PASSING: 4177
+FAILING: 2079
 TOTAL: 6256
 ```
