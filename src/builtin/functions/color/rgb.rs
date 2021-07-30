@@ -25,6 +25,7 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
     if len == 1 {
         let mut channels = match args.get_err(0, "channels")? {
             Value::List(v, ..) => v,
+            v if v.is_special_function() => vec![v],
             _ => return Err(("Missing argument $channels.", args.span()).into()),
         };
 

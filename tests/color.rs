@@ -758,6 +758,11 @@ test!(
     "a {\n  color: hsl(1, 0.02, max(0.4));\n}\n"
 );
 test!(
+    hsla_special_fn_1_arg_is_not_list,
+    "a {\n  color: hsla(var(--foo));\n}\n",
+    "a {\n  color: hsla(var(--foo));\n}\n"
+);
+test!(
     #[ignore = "we do not check if interpolation occurred"]
     interpolated_named_color_is_not_color,
     "a {\n  color: type-of(r#{e}d);\n}\n",
