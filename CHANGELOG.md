@@ -1,3 +1,9 @@
+# TBD
+
+- special case plain CSS fn `clamp`
+- support more uses of plain CSS fns inside `rgb`/`rgba`/`hsl`/`hsla`
+- better support for `@at-root` at the toplevel and inside media queries
+
 # 0.10.6
 
 - **feature complete, byte-for-byte support for bootstrap**
@@ -6,7 +12,7 @@
 - feature complete `min`/`max` support -- special functions and `min`/`max` are now allowed as arguments
 - removed dependency on `peekmore`, which sped up parsing and simplified lookahead
 - emit comments inside the `@if` rule body
-- fix bug in `hue(...)` function in which the value would be incorrect in when the `red` channel was the highest and the green channel was lower than the blue channel
+- fix bug in `hue(...)` function in which the value would be incorrect when the `red` channel was the highest and the green channel was lower than the blue channel
 - no longer round output from `saturation(...)` function
 - improve handling of newlines for `@media`, `@supports`, `@at-root`, placeholder selectors, unrelated style rules, and unknown @-rules
 - arglists can be equal to comma separated lists

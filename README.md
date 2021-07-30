@@ -29,12 +29,11 @@ That said, there are a number of known missing features and bugs. The notable fe
 ```
 indented syntax
 @forward and more complex uses of @use
-media queries with @at-root
+@at-root and @import media queries
 @media query merging
-media queries with @import
 / as a separator in color functions, e.g. rgba(255, 255, 255 / 0)
 Infinity and -Infinity
-builtin meta function keywords
+builtin meta function `keywords`
 ```
 
 All known missing features and bugs are tracked in [#19](https://github.com/connorskees/grass/issues/19).
