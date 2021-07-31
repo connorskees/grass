@@ -824,6 +824,13 @@ test!(
     "[a=a\\66] {\n  color: [a=a\\66];\n}\n"
 );
 test!(
+    attribute_value_contains_escaped_slash_in_quotes,
+    r#"[data-key="\\"] {
+        color: &;
+    }"#,
+    "[data-key=\"\\\\\"] {\n  color: [data-key=\"\\\\\"];\n}\n"
+);
+test!(
     #[ignore = "we have to rewrite quoted attribute value parsing somewhat"]
     attribute_value_escape_ends_with_whitespace,
     "[a=\"a\\\\66  \"] {\n  color: &;\n}\n",
