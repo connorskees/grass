@@ -330,6 +330,23 @@ fn use_cannot_see_modules_imported_by_other_modules() {
 
     assert_err!("Error: There is no module with the namespace \"a\".", input);
 }
+#[test]
+fn use_can_see_modules_imported_by_other_modules_when_aliased_as_star() {
+    let input = r#"
+       @use "use_can_see_modules_imported_by_other_modules_when_aliased_as_star__a" as *;
+       a { color: math.$e; }
+    "#;
+
+    tempfile!(
+        "use_can_see_modules_imported_by_other_modules_when_aliased_as_star__a.scss",
+        "@use \"sass:math\";"
+    );
+
+    assert_eq!(
+        "a {\n  color: 2.7182818285;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default()).expect(input)
+    );
+}
 
 #[test]
 fn use_modules_imported_by_other_modules_does_not_cause_conflict() {

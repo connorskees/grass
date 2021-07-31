@@ -124,6 +124,8 @@ impl<'a, 'b> Parser<'a, 'b> {
                         .map
                         .add_file(name.to_owned(), String::from_utf8(fs::read(&import)?)?);
 
+                    let mut modules = Modules::default();
+
                     let stmts = Parser {
                         toks: &mut Lexer::new_from_file(&file),
                         map: self.map,
@@ -139,7 +141,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                         extender: self.extender,
                         content_scopes: self.content_scopes,
                         options: self.options,
-                        modules: &mut Modules::default(),
+                        modules: &mut modules,
                         module_config: config,
                     }
                     .parse()?;
@@ -152,7 +154,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                             .into());
                     }
 
-                    (Module::new_from_scope(global_scope, false), stmts)
+                    (Module::new_from_scope(global_scope, modules, false), stmts)
                 } else {
                     return Err(("Can't find stylesheet to import.", self.span_before).into());
                 }
@@ -226,7 +228,8 @@ impl<'a, 'b> Parser<'a, 'b> {
 
                     let module_name = match module_alias.as_deref() {
                         Some("*") => {
-                            self.global_scope.merge_module(module);
+                            self.modules.merge(module.modules);
+                            self.global_scope.merge_module_scope(module.scope);
                             continue;
                         }
                         Some(..) => module_alias.unwrap(),

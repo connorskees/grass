@@ -4,7 +4,7 @@ use codemap::Spanned;
 
 use crate::{
     atrule::mixin::Mixin,
-    builtin::{modules::Module, GLOBAL_FUNCTIONS},
+    builtin::GLOBAL_FUNCTIONS,
     common::Identifier,
     error::SassResult,
     value::{SassFunction, Value},
@@ -87,8 +87,8 @@ impl Scope {
         self.functions.extend(other.functions);
     }
 
-    pub fn merge_module(&mut self, other: Module) {
-        self.merge(other.scope);
+    pub fn merge_module_scope(&mut self, other: Scope) {
+        self.merge(other);
     }
 
     pub fn default_var_exists(&self, s: Identifier) -> bool {

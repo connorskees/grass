@@ -25,6 +25,9 @@ mod string;
 pub(crate) struct Module {
     pub scope: Scope,
 
+    /// A module can itself import other modules
+    pub modules: Modules,
+
     /// Whether or not this module is builtin
     /// e.g. `"sass:math"`
     is_builtin: bool,
@@ -103,12 +106,17 @@ impl Modules {
                 .into()),
         }
     }
+
+    pub fn merge(&mut self, other: Self) {
+        self.0.extend(other.0);
+    }
 }
 
 impl Module {
     pub fn new_builtin() -> Self {
         Module {
             scope: Scope::default(),
+            modules: Modules::default(),
             is_builtin: true,
         }
     }
@@ -238,8 +246,12 @@ impl Module {
         )
     }
 
-    pub const fn new_from_scope(scope: Scope, is_builtin: bool) -> Self {
-        Module { scope, is_builtin }
+    pub const fn new_from_scope(scope: Scope, modules: Modules, is_builtin: bool) -> Self {
+        Module {
+            scope,
+            modules,
+            is_builtin,
+        }
     }
 }
 
