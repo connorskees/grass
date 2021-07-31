@@ -73,15 +73,18 @@ impl<'a, 'b> Parser<'a, 'b> {
         self.whitespace_or_comment();
         let name = self.parse_identifier()?.map_node(Into::into);
 
-        let mixin = if self.consume_char_if_exists('.') {
+        let (mixin, module) = if self.consume_char_if_exists('.') {
             let module = name;
             let name = self.parse_identifier()?.map_node(Into::into);
 
-            self.modules
-                .get(module.node, module.span)?
-                .get_mixin(name)?
+            (
+                self.modules
+                    .get(module.node, module.span)?
+                    .get_mixin(name)?,
+                Some(module),
+            )
         } else {
-            self.scopes.get_mixin(name, self.global_scope)?
+            (self.scopes.get_mixin(name, self.global_scope)?, None)
         };
 
         self.whitespace_or_comment();
@@ -152,6 +155,11 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         self.scopes.enter_scope(scope);
 
+        if let Some(module) = module {
+            let module = self.modules.get(module.node, module.span)?;
+            self.scopes.enter_scope(module.scope.clone());
+        }
+
         self.content.push(Content {
             content,
             content_args,
@@ -180,6 +188,11 @@ impl<'a, 'b> Parser<'a, 'b> {
         .parse_stmt()?;
 
         self.content.pop();
+
+        if module.is_some() {
+            self.scopes.exit_scope();
+        }
+
         self.scopes.exit_scope();
 
         if declared_at_root {

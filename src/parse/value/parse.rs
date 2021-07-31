@@ -198,8 +198,7 @@ impl<'a, 'b> Parser<'a, 'b> {
     #[allow(clippy::eval_order_dependence)]
     fn parse_module_item(
         &mut self,
-        module: &str,
-        mut module_span: Span,
+        mut module: Spanned<Identifier>,
     ) -> SassResult<Spanned<IntermediateValue>> {
         Ok(
             IntermediateValue::Value(if self.consume_char_if_exists('$') {
@@ -207,9 +206,9 @@ impl<'a, 'b> Parser<'a, 'b> {
                     .parse_identifier_no_interpolation(false)?
                     .map_node(|i| i.into());
 
-                module_span = module_span.merge(var.span);
+                module.span = module.span.merge(var.span);
 
-                let value = self.modules.get(module.into(), module_span)?.get_var(var)?;
+                let value = self.modules.get(module.node, module.span)?.get_var(var)?;
                 HigherIntermediateValue::Literal(value.clone())
             } else {
                 let fn_name = self
@@ -218,7 +217,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
                 let function = self
                     .modules
-                    .get(module.into(), module_span)?
+                    .get(module.node, module.span)?
                     .get_fn(fn_name)?
                     .ok_or(("Undefined function.", fn_name.span))?;
 
@@ -226,9 +225,9 @@ impl<'a, 'b> Parser<'a, 'b> {
 
                 let call_args = self.parse_call_args()?;
 
-                HigherIntermediateValue::Function(function, call_args)
+                HigherIntermediateValue::Function(function, call_args, Some(module))
             })
-            .span(module_span),
+            .span(module.span),
         )
     }
 
@@ -260,6 +259,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                     return Ok(IntermediateValue::Value(HigherIntermediateValue::Function(
                         SassFunction::Builtin(f.clone(), as_ident),
                         self.parse_call_args()?,
+                        None,
                     ))
                     .span(self.span_before));
                 }
@@ -297,7 +297,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         let call_args = self.parse_call_args()?;
         Ok(
-            IntermediateValue::Value(HigherIntermediateValue::Function(func, call_args))
+            IntermediateValue::Value(HigherIntermediateValue::Function(func, call_args, None))
                 .span(self.span_before),
         )
     }
@@ -336,7 +336,10 @@ impl<'a, 'b> Parser<'a, 'b> {
                 Some(Token { kind: '.', .. }) => {
                     if !predicate(self) {
                         self.toks.next();
-                        return self.parse_module_item(&s, span);
+                        return self.parse_module_item(Spanned {
+                            node: s.into(),
+                            span,
+                        });
                     }
                 }
                 _ => {}

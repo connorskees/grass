@@ -14,8 +14,16 @@ use crate::{
 use super::{common::ContextFlags, Parser, Stmt};
 
 /// Names that functions are not allowed to have
-const RESERVED_IDENTIFIERS: [&str; 7] =
-    ["calc", "element", "expression", "url", "and", "or", "not"];
+const RESERVED_IDENTIFIERS: [&str; 8] = [
+    "calc",
+    "element",
+    "expression",
+    "url",
+    "and",
+    "or",
+    "not",
+    "clamp",
+];
 
 impl<'a, 'b> Parser<'a, 'b> {
     pub(super) fn parse_function(&mut self) -> SassResult<()> {
@@ -56,16 +64,15 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         let name_as_ident = Identifier::from(name);
 
+        let sass_function = SassFunction::UserDefined {
+            function: Box::new(function),
+            name: name_as_ident,
+        };
+
         if self.at_root {
-            self.global_scope.insert_fn(
-                name_as_ident,
-                SassFunction::UserDefined(Box::new(function), name_as_ident),
-            );
+            self.global_scope.insert_fn(name_as_ident, sass_function);
         } else {
-            self.scopes.insert_fn(
-                name_as_ident,
-                SassFunction::UserDefined(Box::new(function), name_as_ident),
-            );
+            self.scopes.insert_fn(name_as_ident, sass_function);
         }
         Ok(())
     }
@@ -78,7 +85,12 @@ impl<'a, 'b> Parser<'a, 'b> {
         Ok(Box::new(v.node))
     }
 
-    pub fn eval_function(&mut self, function: Function, args: CallArgs) -> SassResult<Value> {
+    pub fn eval_function(
+        &mut self,
+        function: Function,
+        args: CallArgs,
+        module: Option<Spanned<Identifier>>,
+    ) -> SassResult<Value> {
         let Function {
             body,
             args: fn_args,
@@ -96,6 +108,16 @@ impl<'a, 'b> Parser<'a, 'b> {
             entered_scope = true;
             self.scopes.enter_scope(scope);
         };
+
+        if let Some(module) = module {
+            let module = self.modules.get(module.node, module.span)?;
+
+            if declared_at_root {
+                new_scope.enter_scope(module.scope.clone());
+            } else {
+                self.scopes.enter_scope(module.scope.clone());
+            }
+        }
 
         let mut return_value = Parser {
             toks: &mut Lexer::new(body),
@@ -122,6 +144,10 @@ impl<'a, 'b> Parser<'a, 'b> {
         .parse_stmt()?;
 
         if entered_scope {
+            self.scopes.exit_scope();
+        }
+
+        if module.is_some() {
             self.scopes.exit_scope();
         }
 

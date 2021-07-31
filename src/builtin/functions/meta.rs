@@ -283,7 +283,7 @@ pub(crate) fn call(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value>
                 .into())
         }
     };
-    func.call(args.decrement(), parser)
+    func.call(args.decrement(), None, parser)
 }
 
 #[allow(clippy::needless_pass_by_value)]

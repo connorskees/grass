@@ -7,7 +7,7 @@ use num_traits::Zero;
 
 use crate::{
     args::CallArgs,
-    common::{Op, QuoteKind},
+    common::{Identifier, Op, QuoteKind},
     error::SassResult,
     unit::Unit,
     value::{SassFunction, Value},
@@ -19,7 +19,7 @@ use super::super::Parser;
 pub(crate) enum HigherIntermediateValue {
     Literal(Value),
     /// A function that hasn't yet been evaluated
-    Function(SassFunction, CallArgs),
+    Function(SassFunction, CallArgs, Option<Spanned<Identifier>>),
     BinaryOp(Box<Self>, Op, Box<Self>),
     UnaryOp(Op, Box<Self>),
 }
@@ -31,8 +31,13 @@ impl HigherIntermediateValue {
 }
 
 impl<'a, 'b> Parser<'a, 'b> {
-    fn call_function(&mut self, function: SassFunction, args: CallArgs) -> SassResult<Value> {
-        function.call(args, self)
+    fn call_function(
+        &mut self,
+        function: SassFunction,
+        args: CallArgs,
+        module: Option<Spanned<Identifier>>,
+    ) -> SassResult<Value> {
+        function.call(args, module, self)
     }
 }
 
@@ -54,8 +59,8 @@ impl<'a, 'b: 'a, 'c> ValueVisitor<'a, 'b, 'c> {
             HigherIntermediateValue::Literal(v) => Ok(v),
             HigherIntermediateValue::BinaryOp(v1, op, v2) => self.bin_op(*v1, op, *v2, in_parens),
             HigherIntermediateValue::UnaryOp(op, val) => self.unary_op(op, *val, in_parens),
-            HigherIntermediateValue::Function(function, args) => {
-                self.parser.call_function(function, args)
+            HigherIntermediateValue::Function(function, args, module) => {
+                self.parser.call_function(function, args, module)
             }
         }
     }
@@ -216,8 +221,8 @@ impl<'a, 'b: 'a, 'c> ValueVisitor<'a, 'b, 'c> {
             HigherIntermediateValue::UnaryOp(op, val) => {
                 HigherIntermediateValue::Literal(self.unary_op(op, *val, in_parens)?)
             }
-            HigherIntermediateValue::Function(function, args) => {
-                HigherIntermediateValue::Literal(self.parser.call_function(function, args)?)
+            HigherIntermediateValue::Function(function, args, module) => {
+                HigherIntermediateValue::Literal(self.parser.call_function(function, args, module)?)
             }
             val => val,
         })
@@ -301,7 +306,6 @@ impl<'a, 'b: 'a, 'c> ValueVisitor<'a, 'b, 'c> {
                             .into());
                     }
                     if unit == unit2 {
-                        // dbg!(&num, &num2, num.clone() + num2.clone(), unit.clone(), unit2.clone());
                         Value::Dimension(Some(num + num2), unit, true)
                     } else if unit == Unit::None {
                         Value::Dimension(Some(num + num2), unit2, true)

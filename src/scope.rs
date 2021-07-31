@@ -13,7 +13,7 @@ use crate::{
 /// A singular scope
 ///
 /// Contains variables, functions, and mixins
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub(crate) struct Scope {
     pub vars: BTreeMap<Identifier, Value>,
     pub mixins: BTreeMap<Identifier, Mixin>,

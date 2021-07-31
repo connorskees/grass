@@ -11,6 +11,8 @@
 
 use std::fmt;
 
+use codemap::Spanned;
+
 use crate::{
     args::CallArgs, atrule::Function, builtin::Builtin, common::Identifier, error::SassResult,
     parse::Parser, value::Value,
@@ -25,7 +27,10 @@ use crate::{
 #[derive(Clone, Eq, PartialEq)]
 pub(crate) enum SassFunction {
     Builtin(Builtin, Identifier),
-    UserDefined(Box<Function>, Identifier),
+    UserDefined {
+        function: Box<Function>,
+        name: Identifier,
+    },
 }
 
 impl SassFunction {
@@ -34,7 +39,7 @@ impl SassFunction {
     /// Used mainly in debugging and `inspect()`
     pub fn name(&self) -> &Identifier {
         match self {
-            Self::Builtin(_, name) | Self::UserDefined(_, name) => name,
+            Self::Builtin(_, name) | Self::UserDefined { name, .. } => name,
         }
     }
 
@@ -44,14 +49,19 @@ impl SassFunction {
     fn kind(&self) -> &'static str {
         match &self {
             Self::Builtin(..) => "Builtin",
-            Self::UserDefined(..) => "UserDefined",
+            Self::UserDefined { .. } => "UserDefined",
         }
     }
 
-    pub fn call(self, args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+    pub fn call(
+        self,
+        args: CallArgs,
+        module: Option<Spanned<Identifier>>,
+        parser: &mut Parser,
+    ) -> SassResult<Value> {
         match self {
             Self::Builtin(f, ..) => f.0(args, parser),
-            Self::UserDefined(f, ..) => parser.eval_function(*f, args),
+            Self::UserDefined { function, .. } => parser.eval_function(*function, args, module),
         }
     }
 }

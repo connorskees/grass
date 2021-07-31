@@ -370,6 +370,55 @@ fn use_modules_imported_by_other_modules_does_not_cause_conflict() {
 }
 
 #[test]
+fn use_mixin_can_use_scope_from_own_module() {
+    let input = r#"
+        @use "use_mixin_can_use_scope_from_own_module__a" as a;
+        @include a.foo();
+    "#;
+
+    tempfile!(
+        "use_mixin_can_use_scope_from_own_module__a.scss",
+        "$a: red;
+
+        @mixin foo() {
+          a {
+            color: $a;
+          }
+        }"
+    );
+
+    assert_eq!(
+        "a {\n  color: red;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default()).expect(input)
+    );
+}
+
+#[test]
+fn use_function_can_use_scope_from_own_module() {
+    let input = r#"
+        @use "use_function_can_use_scope_from_own_module__a" as a;
+
+        a {
+            color: a.foo();
+        }
+    "#;
+
+    tempfile!(
+        "use_function_can_use_scope_from_own_module__a.scss",
+        "$a: red;
+
+        @function foo() {
+            @return $a;
+        }"
+    );
+
+    assert_eq!(
+        "a {\n  color: red;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default()).expect(input)
+    );
+}
+
+#[test]
 fn use_variable_redeclaration_builtin() {
     let input = "@use \"sass:math\";\nmath.$e: red;";
 
