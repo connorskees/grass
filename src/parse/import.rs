@@ -64,10 +64,14 @@ impl<'a, 'b> Parser<'a, 'b> {
         for path in &self.options.load_paths {
             let paths: Vec<PathBuf> = if path.is_dir() {
                 vec![
-                    path.join(format!("{}.scss", name.to_str().unwrap())),
-                    path.join(format!("_{}.scss", name.to_str().unwrap())),
-                    path.join("index.scss"),
-                    path.join("_index.scss"),
+                    path.join(&path_buf)
+                        .with_file_name(name)
+                        .with_extension("scss"),
+                    path.join(&path_buf)
+                        .with_file_name(format!("_{}", name.to_str().unwrap()))
+                        .with_extension("scss"),
+                    path.join(&path_buf).join("index.scss"),
+                    path.join(&path_buf).join("_index.scss"),
                 ]
             } else {
                 vec![
