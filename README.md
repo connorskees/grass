@@ -85,11 +85,21 @@ Note: you will have to install [ruby](https://www.ruby-lang.org/en/downloads/),
 This might also require you to install the requirements separately
 for [curses](https://github.com/ruby/curses).
 
+Alternatively, it is possible to use nodejs to run the spec,
+
+```bash
+# This script expects node >=v14.14.0. Check version with `node --version`
+git clone https://github.com/connorskees/grass --recursive
+cd grass && cargo b --release
+cd sass-spec && npm install
+npm run sass-spec -- --command '../target/release/grass'
+```
+
 These numbers come from a default run of the Sass specification as shown above.
 
 ```
 2021-07-24
-PASSING: 4177
-FAILING: 2079
+PASSING: 4178
+FAILING: 2078
 TOTAL: 6256
 ```
