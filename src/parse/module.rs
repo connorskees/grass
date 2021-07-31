@@ -7,6 +7,7 @@ use crate::{
     builtin::modules::{
         declare_module_color, declare_module_list, declare_module_map, declare_module_math,
         declare_module_meta, declare_module_selector, declare_module_string, Module, ModuleConfig,
+        Modules,
     },
     common::Identifier,
     error::SassResult,
@@ -138,7 +139,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                         extender: self.extender,
                         content_scopes: self.content_scopes,
                         options: self.options,
-                        modules: self.modules,
+                        modules: &mut Modules::default(),
                         module_config: config,
                     }
                     .parse()?;

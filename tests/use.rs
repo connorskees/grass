@@ -314,6 +314,45 @@ fn use_variable_redeclaration_private() {
 }
 
 #[test]
+fn use_cannot_see_modules_imported_by_other_modules() {
+    let input = r#"
+       @use "use_cannot_see_modules_imported_by_other_modules__a" as a;
+       @use "use_cannot_see_modules_imported_by_other_modules__b" as b;"#;
+
+    tempfile!(
+        "use_cannot_see_modules_imported_by_other_modules__a.scss",
+        "$a: green;"
+    );
+    tempfile!(
+        "use_cannot_see_modules_imported_by_other_modules__b.scss",
+        "a { color: a.$a; }"
+    );
+
+    assert_err!("Error: There is no module with the namespace \"a\".", input);
+}
+
+#[test]
+fn use_modules_imported_by_other_modules_does_not_cause_conflict() {
+    let input = r#"
+       @use "use_modules_imported_by_other_modules_does_not_cause_conflict__a" as a;
+       @use "use_modules_imported_by_other_modules_does_not_cause_conflict__b" as b;"#;
+
+    tempfile!(
+        "use_modules_imported_by_other_modules_does_not_cause_conflict__a.scss",
+        "$a: red;"
+    );
+    tempfile!(
+        "use_modules_imported_by_other_modules_does_not_cause_conflict__b.scss",
+        "@use \"use_modules_imported_by_other_modules_does_not_cause_conflict__a\" as a; a { color: a.$a; }"
+    );
+
+    assert_eq!(
+        "a {\n  color: red;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default()).expect(input)
+    );
+}
+
+#[test]
 fn use_variable_redeclaration_builtin() {
     let input = "@use \"sass:math\";\nmath.$e: red;";
 
