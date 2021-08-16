@@ -1,11 +1,11 @@
 /*! # grass
 An implementation of Sass in pure rust.
 
-Spec progress as of 2021-07-25:
+Spec progress as of 0.10.7, released on 2021-08-15:
 
 | Passing | Failing | Total |
 |---------|---------|-------|
-| 4018    | 2238    | 6256  |
+| 4205    | 2051    | 6256  |
 
 ## Use as library
 ```

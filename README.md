@@ -98,8 +98,8 @@ npm run sass-spec -- --command '../target/release/grass'
 These numbers come from a default run of the Sass specification as shown above.
 
 ```
-2021-07-24
-PASSING: 4178
-FAILING: 2078
+2021-08-15
+PASSING: 4205
+FAILING: 2051
 TOTAL: 6256
 ```

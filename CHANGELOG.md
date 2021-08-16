@@ -1,8 +1,10 @@
-# TBD
+# 0.10.7
 
 - special case plain CSS fn `clamp`
 - support more uses of plain CSS fns inside `rgb`/`rgba`/`hsl`/`hsla`
 - better support for `@at-root` at the toplevel and inside media queries
+- bugfixes for the module system
+- more robust handling of load paths that are directories
 
 # 0.10.6
 
