@@ -183,7 +183,7 @@ fn main() -> std::io::Result<()> {
         .values_of("LOAD_PATH")
         .map_or_else(Vec::new, |vals| vals.map(Path::new).collect());
 
-    let style = match matches.value_of("STYLE").unwrap() {
+    let style = match &matches.value_of("STYLE").unwrap().to_lowercase() as &str {
         "expanded" => OutputStyle::Expanded,
         "compressed" => OutputStyle::Compressed,
         _ => unreachable!(),
