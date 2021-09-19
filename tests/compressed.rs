@@ -116,3 +116,9 @@ test!(
     "a{color:grayscale(0.5)}",
     grass::Options::default().style(grass::OutputStyle::Compressed)
 );
+test!(
+    retains_zero_without_decimal,
+    "a {\n  color: 0.0;\n  color: 0;\n}\n",
+    "a{color:0;color:0}",
+    grass::Options::default().style(grass::OutputStyle::Compressed)
+);

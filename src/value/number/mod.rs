@@ -444,15 +444,24 @@ impl Number {
             }
         }
 
-        if self.is_negative() && (!whole.is_zero() || !dec.is_empty()) {
+        let has_decimal = !dec.is_empty();
+
+        if self.is_negative() && (!whole.is_zero() || has_decimal) {
             buf.push('-');
         }
 
-        if !(whole.is_zero() && is_compressed) {
+        // if the entire number is just zero, we always want to emit it
+        if whole.is_zero() && !has_decimal {
+            return "0".to_owned();
+
+        // otherwise, if the number is not 0, or the number before the decimal
+        // _is_ 0 and we aren't in compressed mode, emit the number before the
+        // decimal
+        } else if !(whole.is_zero() && is_compressed) {
             buf.push_str(&whole.to_string());
         }
 
-        if !dec.is_empty() {
+        if has_decimal {
             buf.push('.');
             buf.push_str(&dec);
         }
