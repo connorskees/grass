@@ -1,3 +1,7 @@
+# 0.10.8
+
+- bugfix: properly emit the number `0` in compressed mode (#53)
+
 # 0.10.7
 
 - special case plain CSS fn `clamp`
