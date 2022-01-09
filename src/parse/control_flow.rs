@@ -13,6 +13,48 @@ use crate::{
 };
 
 impl<'a, 'b> Parser<'a, 'b> {
+    fn subparser_with_in_control_flow_flag<'c>(&'c mut self) -> Parser<'c, 'b> {
+        Parser {
+            toks: self.toks,
+            map: self.map,
+            path: self.path,
+            scopes: self.scopes,
+            global_scope: self.global_scope,
+            super_selectors: self.super_selectors,
+            span_before: self.span_before,
+            content: self.content,
+            flags: self.flags | ContextFlags::IN_CONTROL_FLOW,
+            at_root: self.at_root,
+            at_root_has_selector: self.at_root_has_selector,
+            extender: self.extender,
+            content_scopes: self.content_scopes,
+            options: self.options,
+            modules: self.modules,
+            module_config: self.module_config,
+        }
+    }
+
+    fn with_toks<'d>(self, toks: &'a mut Lexer<'d>) -> Parser<'a, 'd> {
+        Parser {
+            toks,
+            map: self.map,
+            path: self.path,
+            scopes: self.scopes,
+            global_scope: self.global_scope,
+            super_selectors: self.super_selectors,
+            span_before: self.span_before,
+            content: self.content,
+            flags: self.flags,
+            at_root: self.at_root,
+            at_root_has_selector: self.at_root_has_selector,
+            extender: self.extender,
+            content_scopes: self.content_scopes,
+            options: self.options,
+            modules: self.modules,
+            module_config: self.module_config,
+        }
+    }
+
     pub(super) fn parse_if(&mut self) -> SassResult<Vec<Stmt>> {
         self.whitespace_or_comment();
 
@@ -28,29 +70,9 @@ impl<'a, 'b> Parser<'a, 'b> {
         }
 
         if init_cond.is_true() {
-            self.scopes.enter_new_scope();
             found_true = true;
-
-            body = Parser {
-                toks: self.toks,
-                map: self.map,
-                path: self.path,
-                scopes: self.scopes,
-                global_scope: self.global_scope,
-                super_selectors: self.super_selectors,
-                span_before: self.span_before,
-                content: self.content,
-                flags: self.flags | ContextFlags::IN_CONTROL_FLOW,
-                at_root: self.at_root,
-                at_root_has_selector: self.at_root_has_selector,
-                extender: self.extender,
-                content_scopes: self.content_scopes,
-                options: self.options,
-                modules: self.modules,
-                module_config: self.module_config,
-            }
-            .parse_stmt()?;
-
+            self.scopes.enter_new_scope();
+            body = self.subparser_with_in_control_flow_flag().parse_stmt()?;
             self.scopes.exit_scope();
         } else {
             self.throw_away_until_closing_curly_brace()?;
@@ -91,26 +113,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                         if cond {
                             found_true = true;
                             self.scopes.enter_new_scope();
-                            body = Parser {
-                                toks: self.toks,
-                                map: self.map,
-                                path: self.path,
-                                scopes: self.scopes,
-                                global_scope: self.global_scope,
-                                super_selectors: self.super_selectors,
-                                span_before: self.span_before,
-                                content: self.content,
-                                flags: self.flags | ContextFlags::IN_CONTROL_FLOW,
-                                at_root: self.at_root,
-                                at_root_has_selector: self.at_root_has_selector,
-                                extender: self.extender,
-                                content_scopes: self.content_scopes,
-                                options: self.options,
-                                modules: self.modules,
-                                module_config: self.module_config,
-                            }
-                            .parse_stmt()?;
-
+                            body = self.subparser_with_in_control_flow_flag().parse_stmt()?;
                             self.scopes.exit_scope();
                         } else {
                             self.throw_away_until_closing_curly_brace()?;
@@ -125,25 +128,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                         }
 
                         self.scopes.enter_new_scope();
-                        let tmp = Parser {
-                            toks: self.toks,
-                            map: self.map,
-                            path: self.path,
-                            scopes: self.scopes,
-                            global_scope: self.global_scope,
-                            super_selectors: self.super_selectors,
-                            span_before: self.span_before,
-                            content: self.content,
-                            flags: self.flags | ContextFlags::IN_CONTROL_FLOW,
-                            at_root: self.at_root,
-                            at_root_has_selector: self.at_root_has_selector,
-                            extender: self.extender,
-                            content_scopes: self.content_scopes,
-                            options: self.options,
-                            modules: self.modules,
-                            module_config: self.module_config,
-                        }
-                        .parse_stmt();
+                        let tmp = self.subparser_with_in_control_flow_flag().parse_stmt();
                         self.scopes.exit_scope();
                         return tmp;
                     }
@@ -272,51 +257,15 @@ impl<'a, 'b> Parser<'a, 'b> {
                 var.node,
                 Value::Dimension(Some(Number::from(i)), Unit::None, true),
             );
-            if self.flags.in_function() {
-                let these_stmts = Parser {
-                    toks: &mut Lexer::new_ref(&body),
-                    map: self.map,
-                    path: self.path,
-                    scopes: self.scopes,
-                    global_scope: self.global_scope,
-                    super_selectors: self.super_selectors,
-                    span_before: self.span_before,
-                    content: self.content,
-                    flags: self.flags | ContextFlags::IN_CONTROL_FLOW,
-                    at_root: self.at_root,
-                    at_root_has_selector: self.at_root_has_selector,
-                    extender: self.extender,
-                    content_scopes: self.content_scopes,
-                    options: self.options,
-                    modules: self.modules,
-                    module_config: self.module_config,
-                }
+            let mut these_stmts = self.subparser_with_in_control_flow_flag()
+                .with_toks(&mut Lexer::new_ref(&body))
                 .parse_stmt()?;
+            if self.flags.in_function() {
                 if !these_stmts.is_empty() {
                     return Ok(these_stmts);
                 }
             } else {
-                stmts.append(
-                    &mut Parser {
-                        toks: &mut Lexer::new_ref(&body),
-                        map: self.map,
-                        path: self.path,
-                        scopes: self.scopes,
-                        global_scope: self.global_scope,
-                        super_selectors: self.super_selectors,
-                        span_before: self.span_before,
-                        content: self.content,
-                        flags: self.flags | ContextFlags::IN_CONTROL_FLOW,
-                        at_root: self.at_root,
-                        at_root_has_selector: self.at_root_has_selector,
-                        extender: self.extender,
-                        content_scopes: self.content_scopes,
-                        options: self.options,
-                        modules: self.modules,
-                        module_config: self.module_config,
-                    }
-                    .parse_stmt()?,
-                );
+                stmts.append(&mut these_stmts);
             }
         }
 
@@ -349,51 +298,15 @@ impl<'a, 'b> Parser<'a, 'b> {
         let mut val = self.parse_value_from_vec(&cond, true)?;
         self.scopes.enter_new_scope();
         while val.node.is_true() {
-            if self.flags.in_function() {
-                let these_stmts = Parser {
-                    toks: &mut Lexer::new_ref(&body),
-                    map: self.map,
-                    path: self.path,
-                    scopes: self.scopes,
-                    global_scope: self.global_scope,
-                    super_selectors: self.super_selectors,
-                    span_before: self.span_before,
-                    content: self.content,
-                    flags: self.flags | ContextFlags::IN_CONTROL_FLOW,
-                    at_root: self.at_root,
-                    at_root_has_selector: self.at_root_has_selector,
-                    extender: self.extender,
-                    content_scopes: self.content_scopes,
-                    options: self.options,
-                    modules: self.modules,
-                    module_config: self.module_config,
-                }
+            let mut these_stmts = self.subparser_with_in_control_flow_flag()
+                .with_toks(&mut Lexer::new_ref(&body))
                 .parse_stmt()?;
+            if self.flags.in_function() {
                 if !these_stmts.is_empty() {
                     return Ok(these_stmts);
                 }
             } else {
-                stmts.append(
-                    &mut Parser {
-                        toks: &mut Lexer::new_ref(&body),
-                        map: self.map,
-                        path: self.path,
-                        scopes: self.scopes,
-                        global_scope: self.global_scope,
-                        super_selectors: self.super_selectors,
-                        span_before: self.span_before,
-                        content: self.content,
-                        flags: self.flags | ContextFlags::IN_CONTROL_FLOW,
-                        at_root: self.at_root,
-                        at_root_has_selector: self.at_root_has_selector,
-                        extender: self.extender,
-                        content_scopes: self.content_scopes,
-                        options: self.options,
-                        modules: self.modules,
-                        module_config: self.module_config,
-                    }
-                    .parse_stmt()?,
-                );
+                stmts.append(&mut these_stmts);
             }
             val = self.parse_value_from_vec(&cond, true)?;
         }
@@ -461,51 +374,15 @@ impl<'a, 'b> Parser<'a, 'b> {
                 }
             }
 
-            if self.flags.in_function() {
-                let these_stmts = Parser {
-                    toks: &mut Lexer::new_ref(&body),
-                    map: self.map,
-                    path: self.path,
-                    scopes: self.scopes,
-                    global_scope: self.global_scope,
-                    super_selectors: self.super_selectors,
-                    span_before: self.span_before,
-                    content: self.content,
-                    flags: self.flags | ContextFlags::IN_CONTROL_FLOW,
-                    at_root: self.at_root,
-                    at_root_has_selector: self.at_root_has_selector,
-                    extender: self.extender,
-                    content_scopes: self.content_scopes,
-                    options: self.options,
-                    modules: self.modules,
-                    module_config: self.module_config,
-                }
+            let mut these_stmts = self.subparser_with_in_control_flow_flag()
+                .with_toks(&mut Lexer::new_ref(&body))
                 .parse_stmt()?;
+            if self.flags.in_function() {
                 if !these_stmts.is_empty() {
                     return Ok(these_stmts);
                 }
             } else {
-                stmts.append(
-                    &mut Parser {
-                        toks: &mut Lexer::new_ref(&body),
-                        map: self.map,
-                        path: self.path,
-                        scopes: self.scopes,
-                        global_scope: self.global_scope,
-                        super_selectors: self.super_selectors,
-                        span_before: self.span_before,
-                        content: self.content,
-                        flags: self.flags | ContextFlags::IN_CONTROL_FLOW,
-                        at_root: self.at_root,
-                        at_root_has_selector: self.at_root_has_selector,
-                        extender: self.extender,
-                        content_scopes: self.content_scopes,
-                        options: self.options,
-                        modules: self.modules,
-                        module_config: self.module_config,
-                    }
-                    .parse_stmt()?,
-                );
+                stmts.append(&mut these_stmts);
             }
         }
 
