@@ -92,9 +92,10 @@ grass input.scss
 )]
 #![cfg_attr(feature = "nightly", feature(track_caller))]
 #![cfg_attr(feature = "profiling", inline(never))]
-use std::{fs, path::Path};
 
-#[cfg(feature = "wasm")]
+use std::path::Path;
+
+#[cfg(feature = "wasm-exports")]
 use wasm_bindgen::prelude::*;
 
 pub(crate) use beef::lean::Cow;
@@ -102,6 +103,7 @@ pub(crate) use beef::lean::Cow;
 use codemap::CodeMap;
 
 pub use crate::error::{SassError as Error, SassResult as Result};
+pub use crate::fs::{Fs, NullFs, StdFs};
 pub(crate) use crate::token::Token;
 use crate::{
     builtin::modules::{ModuleConfig, Modules},
@@ -121,6 +123,7 @@ mod builtin;
 mod color;
 mod common;
 mod error;
+mod fs;
 mod interner;
 mod lexer;
 mod output;
@@ -152,6 +155,7 @@ pub enum OutputStyle {
 /// more control.
 #[derive(Debug)]
 pub struct Options<'a> {
+    fs: &'a dyn Fs,
     style: OutputStyle,
     load_paths: Vec<&'a Path>,
     allows_charset: bool,
@@ -163,6 +167,7 @@ impl Default for Options<'_> {
     #[inline]
     fn default() -> Self {
         Self {
+            fs: &StdFs,
             style: OutputStyle::Expanded,
             load_paths: Vec::new(),
             allows_charset: true,
@@ -173,6 +178,17 @@ impl Default for Options<'_> {
 }
 
 impl<'a> Options<'a> {
+    /// This option allows you to control the file system that Sass will see.
+    ///
+    /// By default, it uses [`StdFs`], which is backed by [`std::fs`],
+    /// allowing direct, unfettered access to the local file system.
+    #[must_use]
+    #[inline]
+    pub fn fs(mut self, fs: &'a dyn Fs) -> Self {
+        self.fs = fs;
+        self
+    }
+
     /// `grass` currently offers 2 different output styles
     ///
     ///  - `OutputStyle::Expanded` writes each selector and declaration on its own line.
@@ -317,9 +333,8 @@ fn from_string_with_file_name(input: String, file_name: &str, options: &Options)
 /// ```
 #[cfg_attr(feature = "profiling", inline(never))]
 #[cfg_attr(not(feature = "profiling"), inline)]
-#[cfg(not(feature = "wasm"))]
 pub fn from_path(p: &str, options: &Options) -> Result<String> {
-    from_string_with_file_name(String::from_utf8(fs::read(p)?)?, p, options)
+    from_string_with_file_name(String::from_utf8(options.fs.read(Path::new(p))?)?, p, options)
 }
 
 /// Compile CSS from a string
@@ -333,41 +348,12 @@ pub fn from_path(p: &str, options: &Options) -> Result<String> {
 /// ```
 #[cfg_attr(feature = "profiling", inline(never))]
 #[cfg_attr(not(feature = "profiling"), inline)]
-#[cfg(not(feature = "wasm"))]
 pub fn from_string(input: String, options: &Options) -> Result<String> {
     from_string_with_file_name(input, "stdin", options)
 }
 
-#[cfg(feature = "wasm")]
-#[wasm_bindgen]
-pub fn from_string(p: String) -> std::result::Result<String, JsValue> {
-    let mut map = CodeMap::new();
-    let file = map.add_file("stdin".into(), p);
-    let empty_span = file.span.subspan(0, 0);
-
-    let stmts = Parser {
-        toks: &mut Lexer::new_from_file(&file),
-        map: &mut map,
-        path: Path::new(""),
-        scopes: &mut Scopes::new(),
-        global_scope: &mut Scope::new(),
-        super_selectors: &mut NeverEmptyVec::new(Selector::new(empty_span)),
-        span_before: empty_span,
-        content: &mut Vec::new(),
-        flags: ContextFlags::empty(),
-        at_root: true,
-        at_root_has_selector: false,
-        extender: &mut Extender::new(empty_span),
-        content_scopes: &mut Scopes::new(),
-        options: &Options::default(),
-        modules: &mut Modules::default(),
-        module_config: &mut ModuleConfig::default(),
-    }
-    .parse()
-    .map_err(|e| raw_to_parse_error(&map, *e, true).to_string())?;
-
-    Ok(Css::from_stmts(stmts, false, true)
-        .map_err(|e| raw_to_parse_error(&map, *e, true).to_string())?
-        .pretty_print(&map, options.style)
-        .map_err(|e| raw_to_parse_error(&map, *e, true).to_string())?)
+#[cfg(feature = "wasm-exports")]
+#[wasm_bindgen(js_name = from_string)]
+pub fn from_string_js(p: String) -> std::result::Result<String, JsValue> {
+    from_string(Options::default()).map_err(|e| e.to_string())
 }

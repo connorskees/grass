@@ -569,8 +569,7 @@ impl Pseudo {
                 .any(|pseudo2| self.selector == pseudo2.selector),
             "nth-child" | "nth-last-child" => compound.components.iter().any(|pseudo2| {
                 if let SimpleSelector::Pseudo(
-                    pseudo
-                    @ Pseudo {
+                    pseudo @ Pseudo {
                         selector: Some(..), ..
                     },
                 ) = pseudo2

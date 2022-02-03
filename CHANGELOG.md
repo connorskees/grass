@@ -1,3 +1,8 @@
+# 0.11.0
+
+- `fs` option added to allow interception and reimplementation of all file system operations (such as imports)
+- `wasm` feature renamed to/replaced with `wasm-exports`, which no longer materially alters the API: `from_path` is reinstated, and `from_string` once again returns the full error type; but the WASM export `from_string` (which returns a string error) is now a new function `from_string_js`. (It was renamed from `wasm` to `wasm-exports` because the name was misleading; Rust code that uses grass doesn’t need this feature, it’s solely to get this `from_string` WASM export.)
+
 # 0.10.8
 
 - bugfix: properly emit the number `0` in compressed mode (#53)

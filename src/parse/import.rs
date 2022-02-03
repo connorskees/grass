@@ -1,4 +1,4 @@
-use std::{ffi::OsStr, fs, path::Path, path::PathBuf};
+use std::{ffi::OsStr, path::Path, path::PathBuf};
 
 use codemap::{Span, Spanned};
 
@@ -45,49 +45,41 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         let name = path_buf.file_name().unwrap_or_else(|| OsStr::new(".."));
 
-        let paths = [
-            path_buf.with_file_name(name).with_extension("scss"),
-            path_buf
-                .with_file_name(format!("_{}", name.to_str().unwrap()))
-                .with_extension("scss"),
-            path_buf.clone(),
-            path_buf.join("index.scss"),
-            path_buf.join("_index.scss"),
-        ];
-
-        for name in &paths {
-            if name.is_file() {
-                return Some(name.clone());
-            }
-        }
-
-        for path in &self.options.load_paths {
-            let paths: Vec<PathBuf> = if path.is_dir() {
-                vec![
-                    path.join(&path_buf)
-                        .with_file_name(name)
-                        .with_extension("scss"),
-                    path.join(&path_buf)
-                        .with_file_name(format!("_{}", name.to_str().unwrap()))
-                        .with_extension("scss"),
-                    path.join(&path_buf).join("index.scss"),
-                    path.join(&path_buf).join("_index.scss"),
-                ]
-            } else {
-                vec![
-                    path.to_path_buf(),
-                    path.with_file_name(name).with_extension("scss"),
-                    path.with_file_name(format!("_{}", name.to_str().unwrap()))
-                        .with_extension("scss"),
-                    path.join("index.scss"),
-                    path.join("_index.scss"),
-                ]
-            };
-
-            for name in paths {
-                if name.is_file() {
+        macro_rules! try_path {
+            ($name:expr) => {
+                let name = $name;
+                if self.options.fs.is_file(&name) {
                     return Some(name);
                 }
+            };
+        }
+
+        try_path!(path_buf.with_file_name(name).with_extension("scss"));
+        try_path!(path_buf
+            .with_file_name(format!("_{}", name.to_str().unwrap()))
+            .with_extension("scss"));
+        try_path!(path_buf.clone());
+        try_path!(path_buf.join("index.scss"));
+        try_path!(path_buf.join("_index.scss"));
+
+        for path in &self.options.load_paths {
+            if self.options.fs.is_dir(path) {
+                try_path!(path.join(&path_buf)
+                         .with_file_name(name)
+                         .with_extension("scss"));
+                try_path!(path.join(&path_buf)
+                         .with_file_name(format!("_{}", name.to_str().unwrap()))
+                         .with_extension("scss"));
+                try_path!(path.join(&path_buf).join("index.scss"));
+                try_path!(path.join(&path_buf).join("_index.scss"));
+            } else {
+                try_path!(path.to_path_buf());
+                try_path!(path.with_file_name(name).with_extension("scss"));
+                try_path!(path
+                    .with_file_name(format!("_{}", name.to_str().unwrap()))
+                    .with_extension("scss"));
+                try_path!(path.join("index.scss"));
+                try_path!(path.join("_index.scss"));
             }
         }
 
@@ -104,7 +96,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         if let Some(name) = self.find_import(path) {
             let file = self.map.add_file(
                 name.to_string_lossy().into(),
-                String::from_utf8(fs::read(&name)?)?,
+                String::from_utf8(self.options.fs.read(&name)?)?,
             );
             return Parser {
                 toks: &mut Lexer::new_from_file(&file),

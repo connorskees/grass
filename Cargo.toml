@@ -74,8 +74,8 @@ commandline = ["clap"]
 nightly = []
 # Option (enabled by default): enable the builtin functions `random([$limit])` and `unique-id()`
 random = ["rand"]
-# Option: compile to web assembly
-wasm = ["wasm-bindgen"]
+# Option: expose JavaScript-friendly WebAssembly exports
+wasm-exports = ["wasm-bindgen"]
 # Option: enable features that assist in profiling (e.g. inline(never))
 profiling = []
 # Option: enable criterion for benchmarking
