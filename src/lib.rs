@@ -48,7 +48,6 @@ grass input.scss
     clippy::new_ret_no_self,
     renamed_and_removed_lints,
     clippy::unknown_clippy_lints,
-    clippy::replace_consts,
     clippy::single_match,
     clippy::float_arithmetic,
     clippy::unimplemented,
@@ -60,6 +59,12 @@ grass input.scss
     clippy::map_err_ignore,
     clippy::default_numeric_fallback,
     clippy::if_then_some_else_none,
+    clippy::string_slice,
+    clippy::separated_literal_suffix,
+    clippy::non_ascii_literal,
+    clippy::same_name_method,
+    clippy::undocumented_unsafe_blocks,
+    clippy::exhaustive_structs,
 
     // temporarily allowed while under heavy development.
     // eventually these allows should be refactored away
@@ -69,8 +74,7 @@ grass input.scss
     clippy::too_many_lines,
     clippy::panic,
     clippy::unwrap_used,
-    clippy::option_unwrap_used,
-    clippy::result_unwrap_used,
+    clippy::unwrap_used,
     clippy::cast_possible_truncation,
     clippy::single_match_else,
     clippy::indexing_slicing,
@@ -334,7 +338,11 @@ fn from_string_with_file_name(input: String, file_name: &str, options: &Options)
 #[cfg_attr(feature = "profiling", inline(never))]
 #[cfg_attr(not(feature = "profiling"), inline)]
 pub fn from_path(p: &str, options: &Options) -> Result<String> {
-    from_string_with_file_name(String::from_utf8(options.fs.read(Path::new(p))?)?, p, options)
+    from_string_with_file_name(
+        String::from_utf8(options.fs.read(Path::new(p))?)?,
+        p,
+        options,
+    )
 }
 
 /// Compile CSS from a string

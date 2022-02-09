@@ -134,13 +134,13 @@ impl CompoundSelector {
                             if !sel.contains_parent_selector() {
                                 return Ok(SimpleSelector::Pseudo(pseudo));
                             }
+
                             pseudo.selector = Some(Box::new(
                                 sel.resolve_parent_selectors(Some(parent.clone()), false)?,
                             ));
-                            Ok(SimpleSelector::Pseudo(pseudo))
-                        } else {
-                            Ok(SimpleSelector::Pseudo(pseudo))
                         }
+
+                        Ok(SimpleSelector::Pseudo(pseudo))
                     } else {
                         Ok(simple)
                     }
@@ -181,20 +181,17 @@ impl CompoundSelector {
                             .into());
                     };
 
-                    let last = if let Some(SimpleSelector::Parent(Some(suffix))) =
-                        self.components.first()
-                    {
-                        let mut components = last.components;
+                    let mut components = last.components;
+
+                    if let Some(SimpleSelector::Parent(Some(suffix))) = self.components.first() {
                         let mut end = components.pop().unwrap();
                         end.add_suffix(suffix, span)?;
                         components.push(end);
-                        components.extend(resolved_members.clone().into_iter().skip(1));
-                        CompoundSelector { components }
-                    } else {
-                        let mut components = last.components;
-                        components.extend(resolved_members.clone().into_iter().skip(1));
-                        CompoundSelector { components }
-                    };
+                    }
+
+                    components.extend(resolved_members.clone().into_iter().skip(1));
+
+                    let last = CompoundSelector { components };
 
                     complex.components.pop();
 

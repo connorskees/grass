@@ -224,7 +224,7 @@ impl<'a, 'b: 'a, 'c> ValueVisitor<'a, 'b, 'c> {
             HigherIntermediateValue::Function(function, args, module) => {
                 HigherIntermediateValue::Literal(self.parser.call_function(function, args, module)?)
             }
-            val => val,
+            _ => val,
         })
     }
 

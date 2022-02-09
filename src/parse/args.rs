@@ -75,8 +75,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                                 };
                                 continue;
                             }
-                            q @ '"' | q @ '\'' => {
-                                let q = *q;
+                            &q @ '"' | &q @ '\'' => {
                                 default.push(self.toks.next().unwrap());
                                 default.extend(read_until_closing_quote(self.toks, q)?);
                                 continue;

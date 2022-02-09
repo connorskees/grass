@@ -107,7 +107,7 @@ pub(crate) enum Unit {
 
     /// Units multiplied together
     /// Boxed under the assumption that mul units are exceedingly rare
-    #[allow(clippy::box_vec)]
+    #[allow(clippy::box_collection)]
     Mul(Box<Vec<Unit>>),
 
     /// Units divided by each other
@@ -222,6 +222,7 @@ impl Mul<Unit> for Unit {
 
 impl Div<Unit> for Unit {
     type Output = Unit;
+    #[allow(clippy::if_same_then_else)]
     fn div(self, rhs: Unit) -> Self::Output {
         if let Unit::Div(..) = self {
             todo!()

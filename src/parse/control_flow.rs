@@ -151,7 +151,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         let var = self
             .parse_identifier_no_interpolation(false)?
-            .map_node(|n| n.into());
+            .map_node(Into::into);
 
         self.whitespace_or_comment();
         self.span_before = match self.toks.peek() {
@@ -257,7 +257,8 @@ impl<'a, 'b> Parser<'a, 'b> {
                 var.node,
                 Value::Dimension(Some(Number::from(i)), Unit::None, true),
             );
-            let mut these_stmts = self.subparser_with_in_control_flow_flag()
+            let mut these_stmts = self
+                .subparser_with_in_control_flow_flag()
                 .with_toks(&mut Lexer::new_ref(&body))
                 .parse_stmt()?;
             if self.flags.in_function() {
@@ -298,7 +299,8 @@ impl<'a, 'b> Parser<'a, 'b> {
         let mut val = self.parse_value_from_vec(&cond, true)?;
         self.scopes.enter_new_scope();
         while val.node.is_true() {
-            let mut these_stmts = self.subparser_with_in_control_flow_flag()
+            let mut these_stmts = self
+                .subparser_with_in_control_flow_flag()
                 .with_toks(&mut Lexer::new_ref(&body))
                 .parse_stmt()?;
             if self.flags.in_function() {
@@ -322,7 +324,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         loop {
             self.expect_char('$')?;
 
-            vars.push(self.parse_identifier()?.map_node(|i| i.into()));
+            vars.push(self.parse_identifier()?.map_node(Into::into));
 
             self.whitespace_or_comment();
             if self
@@ -374,7 +376,8 @@ impl<'a, 'b> Parser<'a, 'b> {
                 }
             }
 
-            let mut these_stmts = self.subparser_with_in_control_flow_flag()
+            let mut these_stmts = self
+                .subparser_with_in_control_flow_flag()
                 .with_toks(&mut Lexer::new_ref(&body))
                 .parse_stmt()?;
             if self.flags.in_function() {

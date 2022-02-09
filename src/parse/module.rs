@@ -85,7 +85,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                 )
             })?;
 
-            config.insert(name.map_node(|n| n.into()), value)?;
+            config.insert(name.map_node(Into::into), value)?;
 
             match self.toks.next() {
                 Some(Token { kind: ',', .. }) => {
@@ -271,7 +271,7 @@ impl<'a, 'b> Parser<'a, 'b> {
     ) -> SassResult<()> {
         let variable = self
             .parse_identifier_no_interpolation(false)?
-            .map_node(|n| n.into());
+            .map_node(Into::into);
 
         self.whitespace_or_comment();
         self.expect_char(':')?;

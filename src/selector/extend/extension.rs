@@ -30,7 +30,10 @@ pub(crate) struct Extension {
     /// The span in which `extender` was defined.
     pub span: Span,
 
+    #[allow(dead_code)]
     pub left: Option<Box<Extension>>,
+
+    #[allow(dead_code)]
     pub right: Option<Box<Extension>>,
 }
 

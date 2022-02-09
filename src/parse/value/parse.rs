@@ -200,35 +200,36 @@ impl<'a, 'b> Parser<'a, 'b> {
         &mut self,
         mut module: Spanned<Identifier>,
     ) -> SassResult<Spanned<IntermediateValue>> {
-        Ok(
-            IntermediateValue::Value(if self.consume_char_if_exists('$') {
-                let var = self
-                    .parse_identifier_no_interpolation(false)?
-                    .map_node(|i| i.into());
+        let is_var_start = self.consume_char_if_exists('$');
 
-                module.span = module.span.merge(var.span);
+        let var_or_fn_name = self
+            .parse_identifier_no_interpolation(false)?
+            .map_node(Into::into);
 
-                let value = self.modules.get(module.node, module.span)?.get_var(var)?;
-                HigherIntermediateValue::Literal(value.clone())
-            } else {
-                let fn_name = self
-                    .parse_identifier_no_interpolation(false)?
-                    .map_node(|i| i.into());
+        let value = if is_var_start {
+            module.span = module.span.merge(var_or_fn_name.span);
 
-                let function = self
-                    .modules
-                    .get(module.node, module.span)?
-                    .get_fn(fn_name)?
-                    .ok_or(("Undefined function.", fn_name.span))?;
+            let value = self
+                .modules
+                .get(module.node, module.span)?
+                .get_var(var_or_fn_name)?;
 
-                self.expect_char('(')?;
+            HigherIntermediateValue::Literal(value.clone())
+        } else {
+            let function = self
+                .modules
+                .get(module.node, module.span)?
+                .get_fn(var_or_fn_name)?
+                .ok_or(("Undefined function.", var_or_fn_name.span))?;
 
-                let call_args = self.parse_call_args()?;
+            self.expect_char('(')?;
 
-                HigherIntermediateValue::Function(function, call_args, Some(module))
-            })
-            .span(module.span),
-        )
+            let call_args = self.parse_call_args()?;
+
+            HigherIntermediateValue::Function(function, call_args, Some(module))
+        };
+
+        Ok(IntermediateValue::Value(value).span(module.span))
     }
 
     fn parse_fn_call(
@@ -532,8 +533,10 @@ impl<'a, 'b> Parser<'a, 'b> {
                     Unit::from(u.node)
                 }
                 '-' => {
-                    if let Some(Token { kind, .. }) = self.toks.peek_next() {
-                        self.toks.reset_cursor();
+                    let next_token = self.toks.peek_next();
+                    self.toks.reset_cursor();
+
+                    if let Some(Token { kind, .. }) = next_token {
                         if matches!(kind, 'a'..='z' | 'A'..='Z' | '_' | '\\' | '\u{7f}'..=std::char::MAX)
                         {
                             let u = self.parse_identifier_no_interpolation(true)?;
@@ -543,7 +546,6 @@ impl<'a, 'b> Parser<'a, 'b> {
                             Unit::None
                         }
                     } else {
-                        self.toks.reset_cursor();
                         Unit::None
                     }
                 }
@@ -889,7 +891,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             '$' => {
                 self.toks.next();
                 let val = match self.parse_identifier_no_interpolation(false) {
-                    Ok(v) => v.map_node(|i| i.into()),
+                    Ok(v) => v.map_node(Into::into),
                     Err(e) => return Some(Err(e)),
                 };
                 IntermediateValue::Value(HigherIntermediateValue::Literal(
@@ -1168,9 +1170,10 @@ impl<'a, 'b: 'a, 'c> IntermediateValueIterator<'a, 'b, 'c> {
                 }
             }
             Op::Plus => {
+                self.whitespace();
+                let right = self.single_value(in_paren)?;
+
                 if let Some(left) = space_separated.pop() {
-                    self.whitespace();
-                    let right = self.single_value(in_paren)?;
                     space_separated.push(Spanned {
                         node: HigherIntermediateValue::BinaryOp(
                             Box::new(left.node),
@@ -1180,8 +1183,6 @@ impl<'a, 'b: 'a, 'c> IntermediateValueIterator<'a, 'b, 'c> {
                         span: left.span.merge(right.span),
                     });
                 } else {
-                    self.whitespace();
-                    let right = self.single_value(in_paren)?;
                     space_separated.push(Spanned {
                         node: HigherIntermediateValue::UnaryOp(op.node, Box::new(right.node)),
                         span: right.span,

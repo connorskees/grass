@@ -1,6 +1,7 @@
 use crate::{parse::Stmt, selector::Selector};
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub(crate) struct UnknownAtRule {
     pub name: String,
     pub super_selector: Selector,
