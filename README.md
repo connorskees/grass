@@ -45,7 +45,7 @@ All known missing features and bugs are tracked in [#19](https://github.com/conn
 `grass` experimentally releases a
 [WASM version of the library to npm](https://www.npmjs.com/package/@connorskees/grass),
 compiled using wasm-bindgen. To use `grass` in your JavaScript projects, just run
-`npm install @connorskees/grass` to your package.json. Better documentation
+`npm install @connorskees/grass` to add it to your package.json. Better documentation
 for this version will be provided when the library becomes more stable.
 
 ## Features
