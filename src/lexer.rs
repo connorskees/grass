@@ -1,6 +1,6 @@
 use std::{borrow::Cow, iter::Peekable, str::Chars, sync::Arc};
 
-use codemap::File;
+use codemap::{File, Span};
 
 use crate::Token;
 
@@ -16,6 +16,18 @@ pub(crate) struct Lexer<'a> {
 impl<'a> Lexer<'a> {
     fn peek_cursor(&self) -> usize {
         self.cursor + self.amt_peeked
+    }
+
+    pub fn next_char_is(&self, c: char) -> bool {
+        matches!(self.peek(), Some(Token { kind: c, .. }))
+    }
+
+    pub fn current_span(&self) -> Span {
+        self.buf
+            .get(self.cursor)
+            .copied()
+            .unwrap_or(self.buf.last().copied().unwrap())
+            .pos
     }
 
     pub fn peek(&self) -> Option<Token> {

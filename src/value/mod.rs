@@ -457,11 +457,13 @@ impl Value {
             },
             Value::List(v, sep, brackets) if v.len() == 1 => match brackets {
                 Brackets::None => match sep {
-                    ListSeparator::Space => v[0].inspect(span)?,
+                    ListSeparator::Space | ListSeparator::Undecided => v[0].inspect(span)?,
                     ListSeparator::Comma => Cow::owned(format!("({},)", v[0].inspect(span)?)),
                 },
                 Brackets::Bracketed => match sep {
-                    ListSeparator::Space => Cow::owned(format!("[{}]", v[0].inspect(span)?)),
+                    ListSeparator::Space | ListSeparator::Undecided => {
+                        Cow::owned(format!("[{}]", v[0].inspect(span)?))
+                    }
                     ListSeparator::Comma => Cow::owned(format!("[{},]", v[0].inspect(span)?)),
                 },
             },
@@ -580,6 +582,7 @@ impl Value {
                         for complex in list {
                             if let Value::String(text, ..) = complex {
                                 result.push(text);
+                                // todo: undecided
                             } else if let Value::List(_, ListSeparator::Space, ..) = complex {
                                 result.push(match complex.selector_string(span)? {
                                     Some(v) => v,
@@ -590,7 +593,7 @@ impl Value {
                             }
                         }
                     }
-                    ListSeparator::Space => {
+                    ListSeparator::Space | ListSeparator::Undecided => {
                         for compound in list {
                             if let Value::String(text, ..) = compound {
                                 result.push(text);

@@ -1,172 +1,236 @@
-use std::{iter::Iterator, mem};
-
-use num_bigint::BigInt;
-use num_rational::{BigRational, Rational64};
-use num_traits::{pow, One, ToPrimitive};
+use std::collections::BTreeMap;
 
 use codemap::{Span, Spanned};
 
 use crate::{
-    builtin::GLOBAL_FUNCTIONS,
     color::{Color, NAMED_COLORS},
-    common::{unvendor, Brackets, Identifier, ListSeparator, Op, QuoteKind},
+    common::{BinaryOp, Brackets, Identifier, ListSeparator, Op, QuoteKind, UnaryOp},
     error::SassResult,
-    lexer::Lexer,
+    parse::Parser,
+    token::Token,
     unit::Unit,
-    utils::{is_name, IsWhitespace, ParsedNumber},
     value::{Number, SassFunction, SassMap, Value},
-    Token,
 };
 
-use super::eval::{HigherIntermediateValue, ValueVisitor};
+// use std::{iter::Iterator, mem};
 
-use super::super::Parser;
+// use num_bigint::BigInt;
+// use num_rational::{BigRational, Rational64};
+// use num_traits::{pow, One, ToPrimitive};
 
-#[derive(Clone, Debug)]
-enum IntermediateValue {
-    Value(HigherIntermediateValue),
-    Op(Op),
-    Comma,
-    Whitespace,
+// use codemap::{Span, Spanned};
+
+// use crate::{
+//     args::CallArgs,
+//     builtin::GLOBAL_FUNCTIONS,
+//     color::{Color, NAMED_COLORS},
+//     common::{unvendor, Brackets, Identifier, ListSeparator, Op, QuoteKind},
+//     error::SassResult,
+//     lexer::Lexer,
+//     unit::Unit,
+//     utils::{is_name, IsWhitespace, ParsedNumber},
+//     value::{Number, SassFunction, SassMap, Value},
+//     Token,
+// };
+
+// use super::eval::{HigherIntermediateValue, ValueVisitor};
+
+// use super::super::Parser;
+
+#[derive(Debug, Clone, Copy)]
+enum Calculation {
+    Calc,
+    Min,
+    Max,
+    Clamp,
 }
 
-impl IntermediateValue {
+/// Represented by the `if` function
+#[derive(Debug)]
+struct Ternary(CallArgs);
+
+#[derive(Debug)]
+struct Interpolation {
+    parts: Vec<InterpolationPart>,
+}
+
+impl Interpolation {
+    pub fn as_plain(&self) -> Option<&str> {
+        if self.parts.is_empty() {
+            Some("")
+        } else if self.parts.len() > 1 {
+            None
+        } else {
+            match self.parts.first()? {
+                InterpolationPart::String(s) => Some(s),
+                InterpolationPart::Value(..) => None,
+            }
+        }
+    }
+}
+
+#[derive(Debug)]
+enum InterpolationPart {
+    String(String),
+    Value(AstValue),
+}
+
+#[derive(Debug)]
+enum AstValue {
+    BinaryOp {
+        lhs: Box<Self>,
+        op: BinaryOp,
+        rhs: Box<Self>,
+        allows_slash: bool,
+    },
+    True,
+    False,
+    Calculation {
+        name: Calculation,
+        args: Vec<Self>,
+    },
+    Color(Box<Color>),
+    FunctionRef(SassFunction),
+    FunctionCall {
+        namespace: Option<String>,
+        name: Identifier,
+        arguments: Box<CallArgs>,
+    },
+    If(Box<Ternary>),
+    InterpolatedFunction {
+        name: Interpolation,
+        arguments: Box<CallArgs>,
+    },
+    List {
+        elems: Vec<Spanned<Self>>,
+        separator: ListSeparator,
+        brackets: Brackets,
+    },
+    Map(SassMap),
+    Null,
+    Number {
+        n: Number,
+        unit: Unit,
+    },
+    Paren(Box<Self>),
+    ParentSelector,
+    String(Interpolation, QuoteKind),
+    UnaryOp(UnaryOp, Box<Self>),
+    Value(Value),
+    Variable {
+        name: Identifier,
+        namespace: Option<String>,
+    },
+}
+
+impl AstValue {
+    pub fn is_slash_operand(&self) -> bool {
+        match self {
+            Self::Number { .. } | Self::Calculation { .. } => true,
+            Self::BinaryOp { allows_slash, .. } => *allows_slash,
+            _ => false,
+        }
+    }
+
+    pub fn slash(left: Self, right: Self) -> Self {
+        Self::BinaryOp {
+            lhs: Box::new(left),
+            op: BinaryOp::Div,
+            rhs: Box::new(right),
+            allows_slash: true,
+        }
+    }
+}
+
+#[derive(Debug)]
+struct FuncArg {
+    name: Identifier,
+    default: Option<AstValue>,
+}
+
+#[derive(Debug)]
+struct FuncArgs {
+    args: Vec<FuncArg>,
+    rest: Option<Identifier>,
+}
+
+#[derive(Debug)]
+struct CallArgs {
+    positional: Vec<AstValue>,
+    named: BTreeMap<Identifier, AstValue>,
+    rest: Option<AstValue>,
+    keyword_rest: Option<AstValue>,
+}
+
+// #[derive(Clone, Debug)]
+// pub(crate) enum AstValue {
+//     Important,
+//     True,
+//     False,
+//     Null,
+
+//     /// A `None` value for `Number` indicates a `NaN` value
+//     Dimension(Option<Number>, Unit, bool),
+//     List(Vec<Self>, ListSeparator, Brackets),
+//     Color(Box<Color>),
+//     String(String, QuoteKind),
+//     Map(SassMap),
+//     ArgList(Vec<Spanned<Value>>),
+
+//     /// Returned by `get-function()`
+//     FunctionRef(SassFunction),
+
+//     Variable(Identifier),
+
+//     ParentSelector,
+//     Paren(Box<Self>),
+
+//     /// A function that hasn't yet been evaluated
+//     Function(SassFunction, CallArgs, Option<Spanned<Identifier>>),
+//     BinaryOp(Box<Self>, Op, Box<Self>),
+//     UnaryOp(Op, Box<Self>),
+// }
+
+impl AstValue {
     const fn span(self, span: Span) -> Spanned<Self> {
         Spanned { node: self, span }
     }
 }
 
-impl IsWhitespace for IntermediateValue {
-    fn is_whitespace(&self) -> bool {
-        if let IntermediateValue::Whitespace = self {
-            return true;
-        }
-        false
-    }
-}
+// #[derive(Clone, Debug)]
+// enum IntermediateValue {
+//     Value(AstValue),
+//     Op(Op),
+//     Comma,
+//     Whitespace,
+// }
+
+// impl IsWhitespace for IntermediateValue {
+//     fn is_whitespace(&self) -> bool {
+//         if let IntermediateValue::Whitespace = self {
+//             return true;
+//         }
+//         false
+//     }
+// }
 
 /// We parse a value until the predicate returns true
 type Predicate<'a> = &'a dyn Fn(&mut Parser<'_, '_>) -> bool;
 
 impl<'a, 'b> Parser<'a, 'b> {
-    /// Parse a value from a stream of tokens
-    ///
-    /// This function will cease parsing if the predicate returns true.
     pub(crate) fn parse_value(
         &mut self,
-        in_paren: bool,
+        _: bool,
         predicate: Predicate<'_>,
     ) -> SassResult<Spanned<Value>> {
-        self.whitespace();
-
-        let span = match self.toks.peek() {
-            Some(Token { kind: '}', .. })
-            | Some(Token { kind: ';', .. })
-            | Some(Token { kind: '{', .. })
-            | None => return Err(("Expected expression.", self.span_before).into()),
-            Some(Token { pos, .. }) => pos,
-        };
-
-        if predicate(self) {
-            return Err(("Expected expression.", span).into());
-        }
-
-        let mut last_was_whitespace = false;
-        let mut space_separated = Vec::new();
-        let mut comma_separated = Vec::new();
-        let mut iter = IntermediateValueIterator::new(self, &predicate);
-        while let Some(val) = iter.next() {
-            let val = val?;
-            match val.node {
-                IntermediateValue::Value(v) => {
-                    last_was_whitespace = false;
-                    space_separated.push(v.span(val.span));
-                }
-                IntermediateValue::Op(op) => {
-                    iter.parse_op(
-                        Spanned {
-                            node: op,
-                            span: val.span,
-                        },
-                        &mut space_separated,
-                        last_was_whitespace,
-                        in_paren,
-                    )?;
-                }
-                IntermediateValue::Whitespace => {
-                    last_was_whitespace = true;
-                    continue;
-                }
-                IntermediateValue::Comma => {
-                    last_was_whitespace = false;
-
-                    if space_separated.len() == 1 {
-                        comma_separated.push(space_separated.pop().unwrap());
-                    } else {
-                        let mut span = space_separated
-                            .first()
-                            .ok_or(("Expected expression.", val.span))?
-                            .span;
-                        comma_separated.push(
-                            HigherIntermediateValue::Literal(Value::List(
-                                mem::take(&mut space_separated)
-                                    .into_iter()
-                                    .map(move |a| {
-                                        span = span.merge(a.span);
-                                        a.node
-                                    })
-                                    .map(|a| ValueVisitor::new(iter.parser, span).eval(a, in_paren))
-                                    .collect::<SassResult<Vec<Value>>>()?,
-                                ListSeparator::Space,
-                                Brackets::None,
-                            ))
-                            .span(span),
-                        );
-                    }
-                }
-            }
-        }
-
-        Ok(if !comma_separated.is_empty() {
-            if space_separated.len() == 1 {
-                comma_separated.push(space_separated.pop().unwrap());
-            } else if !space_separated.is_empty() {
-                comma_separated.push(
-                    HigherIntermediateValue::Literal(Value::List(
-                        space_separated
-                            .into_iter()
-                            .map(|a| ValueVisitor::new(self, span).eval(a.node, in_paren))
-                            .collect::<SassResult<Vec<Value>>>()?,
-                        ListSeparator::Space,
-                        Brackets::None,
-                    ))
-                    .span(span),
-                );
-            }
-            Value::List(
-                comma_separated
-                    .into_iter()
-                    .map(|a| ValueVisitor::new(self, span).eval(a.node, in_paren))
-                    .collect::<SassResult<Vec<Value>>>()?,
-                ListSeparator::Comma,
-                Brackets::None,
-            )
-            .span(span)
-        } else if space_separated.len() == 1 {
-            ValueVisitor::new(self, span)
-                .eval(space_separated.pop().unwrap().node, in_paren)?
-                .span(span)
-        } else {
-            Value::List(
-                space_separated
-                    .into_iter()
-                    .map(|a| ValueVisitor::new(self, span).eval(a.node, in_paren))
-                    .collect::<SassResult<Vec<Value>>>()?,
-                ListSeparator::Space,
-                Brackets::None,
-            )
-            .span(span)
-        })
+        dbg!(ValueParser::parse_expression(
+            self,
+            Some(predicate),
+            false,
+            false
+        ))
+        .unwrap();
+        todo!()
     }
 
     pub(crate) fn parse_value_from_vec(
@@ -174,1245 +238,1976 @@ impl<'a, 'b> Parser<'a, 'b> {
         toks: &[Token],
         in_paren: bool,
     ) -> SassResult<Spanned<Value>> {
-        Parser {
-            toks: &mut Lexer::new_ref(toks),
-            map: self.map,
-            path: self.path,
-            scopes: self.scopes,
-            global_scope: self.global_scope,
-            super_selectors: self.super_selectors,
-            span_before: self.span_before,
-            content: self.content,
-            flags: self.flags,
-            at_root: self.at_root,
-            at_root_has_selector: self.at_root_has_selector,
-            extender: self.extender,
-            content_scopes: self.content_scopes,
-            options: self.options,
-            modules: self.modules,
-            module_config: self.module_config,
-        }
-        .parse_value(in_paren, &|_| false)
-    }
-
-    #[allow(clippy::eval_order_dependence)]
-    fn parse_module_item(
-        &mut self,
-        mut module: Spanned<Identifier>,
-    ) -> SassResult<Spanned<IntermediateValue>> {
-        Ok(
-            IntermediateValue::Value(if self.consume_char_if_exists('$') {
-                let var = self
-                    .parse_identifier_no_interpolation(false)?
-                    .map_node(|i| i.into());
-
-                module.span = module.span.merge(var.span);
-
-                let value = self.modules.get(module.node, module.span)?.get_var(var)?;
-                HigherIntermediateValue::Literal(value.clone())
-            } else {
-                let fn_name = self
-                    .parse_identifier_no_interpolation(false)?
-                    .map_node(|i| i.into());
-
-                let function = self
-                    .modules
-                    .get(module.node, module.span)?
-                    .get_fn(fn_name)?
-                    .ok_or(("Undefined function.", fn_name.span))?;
-
-                self.expect_char('(')?;
-
-                let call_args = self.parse_call_args()?;
-
-                HigherIntermediateValue::Function(function, call_args, Some(module))
-            })
-            .span(module.span),
-        )
-    }
-
-    fn parse_fn_call(
-        &mut self,
-        mut s: String,
-        lower: String,
-    ) -> SassResult<Spanned<IntermediateValue>> {
-        if lower == "min" || lower == "max" {
-            let start = self.toks.cursor();
-            match self.try_parse_min_max(&lower, true)? {
-                Some(val) => {
-                    return Ok(IntermediateValue::Value(HigherIntermediateValue::Literal(
-                        Value::String(val, QuoteKind::None),
-                    ))
-                    .span(self.span_before));
-                }
-                None => {
-                    self.toks.set_cursor(start);
-                }
-            }
-        }
-
-        let as_ident = Identifier::from(&s);
-        let func = match self.scopes.get_fn(as_ident, self.global_scope) {
-            Some(f) => f,
-            None => {
-                if let Some(f) = GLOBAL_FUNCTIONS.get(as_ident.as_str()) {
-                    return Ok(IntermediateValue::Value(HigherIntermediateValue::Function(
-                        SassFunction::Builtin(f.clone(), as_ident),
-                        self.parse_call_args()?,
-                        None,
-                    ))
-                    .span(self.span_before));
-                }
-
-                // check for special cased CSS functions
-                match unvendor(&lower) {
-                    "calc" | "element" | "expression" => {
-                        s = lower;
-                        self.parse_calc_args(&mut s)?;
-                    }
-                    "url" => match self.try_parse_url()? {
-                        Some(val) => s = val,
-                        None => s.push_str(
-                            &self
-                                .parse_call_args()?
-                                .to_css_string(self.options.is_compressed())?,
-                        ),
-                    },
-                    "clamp" if lower == "clamp" => {
-                        self.parse_calc_args(&mut s)?;
-                    }
-                    _ => s.push_str(
-                        &self
-                            .parse_call_args()?
-                            .to_css_string(self.options.is_compressed())?,
-                    ),
-                }
-
-                return Ok(IntermediateValue::Value(HigherIntermediateValue::Literal(
-                    Value::String(s, QuoteKind::None),
-                ))
-                .span(self.span_before));
-            }
-        };
-
-        let call_args = self.parse_call_args()?;
-        Ok(
-            IntermediateValue::Value(HigherIntermediateValue::Function(func, call_args, None))
-                .span(self.span_before),
-        )
-    }
-
-    fn parse_ident_value(
-        &mut self,
-        predicate: Predicate<'_>,
-    ) -> SassResult<Spanned<IntermediateValue>> {
-        let Spanned { node: mut s, span } = self.parse_identifier()?;
-
-        self.span_before = span;
-
-        let lower = s.to_ascii_lowercase();
-
-        if lower == "progid" && self.consume_char_if_exists(':') {
-            s = lower;
-            s.push(':');
-            s.push_str(&self.parse_progid()?);
-            return Ok(Spanned {
-                node: IntermediateValue::Value(HigherIntermediateValue::Literal(Value::String(
-                    s,
-                    QuoteKind::None,
-                ))),
-                span,
-            });
-        }
-
-        if !is_keyword_operator(&s) {
-            match self.toks.peek() {
-                Some(Token { kind: '(', .. }) => {
-                    self.span_before = span;
-                    self.toks.next();
-
-                    return self.parse_fn_call(s, lower);
-                }
-                Some(Token { kind: '.', .. }) => {
-                    if !predicate(self) {
-                        self.toks.next();
-                        return self.parse_module_item(Spanned {
-                            node: s.into(),
-                            span,
-                        });
-                    }
-                }
-                _ => {}
-            }
-        }
-
-        // check for named colors
-        Ok(if let Some(c) = NAMED_COLORS.get_by_name(lower.as_str()) {
-            IntermediateValue::Value(HigherIntermediateValue::Literal(Value::Color(Box::new(
-                Color::new(c[0], c[1], c[2], c[3], s),
-            ))))
-        } else {
-            // check for keywords
-            match s.as_str() {
-                "true" => IntermediateValue::Value(HigherIntermediateValue::Literal(Value::True)),
-                "false" => IntermediateValue::Value(HigherIntermediateValue::Literal(Value::False)),
-                "null" => IntermediateValue::Value(HigherIntermediateValue::Literal(Value::Null)),
-                "not" => IntermediateValue::Op(Op::Not),
-                "and" => IntermediateValue::Op(Op::And),
-                "or" => IntermediateValue::Op(Op::Or),
-                _ => IntermediateValue::Value(HigherIntermediateValue::Literal(Value::String(
-                    s,
-                    QuoteKind::None,
-                ))),
-            }
-        }
-        .span(span))
-    }
-
-    fn next_is_hypen(&mut self) -> bool {
-        if let Some(Token { kind, .. }) = self.toks.peek_forward(1) {
-            matches!(kind, '-' | '_' | 'a'..='z' | 'A'..='Z')
-        } else {
-            false
-        }
+        todo!()
     }
 
     pub(crate) fn parse_whole_number(&mut self) -> String {
-        let mut buf = String::new();
-
-        while let Some(c) = self.toks.peek() {
-            if !c.kind.is_ascii_digit() {
-                break;
-            }
-
-            let tok = self.toks.next().unwrap();
-            buf.push(tok.kind);
-        }
-
-        buf
-    }
-
-    fn parse_number(&mut self, predicate: Predicate<'_>) -> SassResult<Spanned<ParsedNumber>> {
-        let mut span = self.toks.peek().unwrap().pos;
-        let mut whole = self.parse_whole_number();
-
-        if self.toks.peek().is_none() || predicate(self) {
-            return Ok(Spanned {
-                node: ParsedNumber::new(whole, 0, String::new(), true),
-                span,
-            });
-        }
-
-        let next_tok = self.toks.peek().unwrap();
-
-        let dec_len = if next_tok.kind == '.' {
-            self.toks.next();
-
-            let dec = self.parse_whole_number();
-            if dec.is_empty() {
-                return Err(("Expected digit.", next_tok.pos()).into());
-            }
-
-            whole.push_str(&dec);
-
-            dec.len()
-        } else {
-            0
-        };
-
-        let mut times_ten = String::new();
-        let mut times_ten_is_postive = true;
-
-        if let Some(Token { kind: 'e', .. }) | Some(Token { kind: 'E', .. }) = self.toks.peek() {
-            if let Some(tok) = self.toks.peek_next() {
-                match tok.kind {
-                    '-' => {
-                        self.toks.next();
-                        self.toks.next();
-                        times_ten_is_postive = false;
-
-                        times_ten = self.parse_whole_number();
-
-                        if times_ten.is_empty() {
-                            return Err(
-                                ("Expected digit.", self.toks.peek().unwrap_or(tok).pos).into()
-                            );
-                        } else if times_ten.len() > 2 {
-                            return Err((
-                                "Exponent too negative.",
-                                self.toks.peek().unwrap_or(tok).pos,
-                            )
-                                .into());
-                        }
-                    }
-                    '0'..='9' => {
-                        self.toks.next();
-                        times_ten = self.parse_whole_number();
-
-                        if times_ten.len() > 2 {
-                            return Err((
-                                "Exponent too large.",
-                                self.toks.peek().unwrap_or(tok).pos,
-                            )
-                                .into());
-                        }
-                    }
-                    _ => {}
-                }
-            }
-        }
-
-        if let Some(Token { pos, .. }) = self.toks.peek_previous() {
-            span = span.merge(pos);
-        }
-
-        self.toks.reset_cursor();
-
-        Ok(Spanned {
-            node: ParsedNumber::new(whole, dec_len, times_ten, times_ten_is_postive),
-            span,
-        })
-    }
-
-    fn parse_bracketed_list(&mut self) -> SassResult<Spanned<IntermediateValue>> {
-        let mut span = self.span_before;
-        self.toks.next();
-        self.whitespace_or_comment();
-
-        Ok(if let Some(Token { kind: ']', pos }) = self.toks.peek() {
-            span = span.merge(pos);
-            self.toks.next();
-            IntermediateValue::Value(HigherIntermediateValue::Literal(Value::List(
-                Vec::new(),
-                ListSeparator::Space,
-                Brackets::Bracketed,
-            )))
-            .span(span)
-        } else {
-            // todo: we don't know if we're `in_paren` here
-            let inner = self.parse_value(false, &|parser| {
-                matches!(parser.toks.peek(), Some(Token { kind: ']', .. }))
-            })?;
-
-            span = span.merge(inner.span);
-
-            self.expect_char(']')?;
-
-            IntermediateValue::Value(HigherIntermediateValue::Literal(match inner.node {
-                Value::List(els, sep, Brackets::None) => Value::List(els, sep, Brackets::Bracketed),
-                v => Value::List(vec![v], ListSeparator::Space, Brackets::Bracketed),
-            }))
-            .span(span)
-        })
-    }
-
-    fn parse_intermediate_value_dimension(
-        &mut self,
-        predicate: Predicate<'_>,
-    ) -> SassResult<Spanned<IntermediateValue>> {
-        let Spanned { node, span } = self.parse_dimension(predicate)?;
-
-        Ok(IntermediateValue::Value(HigherIntermediateValue::Literal(node)).span(span))
+        todo!()
     }
 
     pub(crate) fn parse_dimension(
         &mut self,
         predicate: Predicate<'_>,
     ) -> SassResult<Spanned<Value>> {
-        let Spanned {
-            node: val,
-            mut span,
-        } = self.parse_number(predicate)?;
-        let unit = if let Some(tok) = self.toks.peek() {
-            let Token { kind, .. } = tok;
-            match kind {
-                'a'..='z' | 'A'..='Z' | '_' | '\\' | '\u{7f}'..=std::char::MAX => {
-                    let u = self.parse_identifier_no_interpolation(true)?;
-                    span = span.merge(u.span);
-                    Unit::from(u.node)
-                }
-                '-' => {
-                    if let Some(Token { kind, .. }) = self.toks.peek_next() {
-                        self.toks.reset_cursor();
-                        if matches!(kind, 'a'..='z' | 'A'..='Z' | '_' | '\\' | '\u{7f}'..=std::char::MAX)
-                        {
-                            let u = self.parse_identifier_no_interpolation(true)?;
-                            span = span.merge(u.span);
-                            Unit::from(u.node)
-                        } else {
-                            Unit::None
-                        }
-                    } else {
-                        self.toks.reset_cursor();
-                        Unit::None
-                    }
-                }
-                '%' => {
-                    span = span.merge(self.toks.next().unwrap().pos());
-                    Unit::Percent
-                }
-                _ => Unit::None,
-            }
-        } else {
-            Unit::None
-        };
-
-        let n = if val.dec_len == 0 {
-            if val.num.len() <= 18 && val.times_ten.is_empty() {
-                let n = Rational64::new_raw(parse_i64(&val.num), 1);
-                return Ok(Value::Dimension(Some(Number::new_small(n)), unit, false).span(span));
-            }
-            BigRational::new_raw(val.num.parse::<BigInt>().unwrap(), BigInt::one())
-        } else {
-            if val.num.len() <= 18 && val.times_ten.is_empty() {
-                let n = Rational64::new(parse_i64(&val.num), pow(10, val.dec_len));
-                return Ok(Value::Dimension(Some(Number::new_small(n)), unit, false).span(span));
-            }
-            BigRational::new(val.num.parse().unwrap(), pow(BigInt::from(10), val.dec_len))
-        };
-
-        if val.times_ten.is_empty() {
-            return Ok(Value::Dimension(Some(Number::new_big(n)), unit, false).span(span));
-        }
-
-        let times_ten = pow(
-            BigInt::from(10),
-            val.times_ten
-                .parse::<BigInt>()
-                .unwrap()
-                .to_usize()
-                .ok_or(("Exponent too large (expected usize).", span))?,
-        );
-
-        let times_ten = if val.times_ten_is_postive {
-            BigRational::new_raw(times_ten, BigInt::one())
-        } else {
-            BigRational::new(BigInt::one(), times_ten)
-        };
-
-        Ok(Value::Dimension(Some(Number::new_big(n * times_ten)), unit, false).span(span))
+        todo!()
     }
 
-    fn parse_paren(&mut self) -> SassResult<Spanned<IntermediateValue>> {
-        if self.consume_char_if_exists(')') {
-            return Ok(
-                IntermediateValue::Value(HigherIntermediateValue::Literal(Value::List(
-                    Vec::new(),
-                    ListSeparator::Space,
-                    Brackets::None,
-                )))
-                .span(self.span_before),
-            );
-        }
+    // pub(crate) fn parse_value(
+    //     &mut self,
+    //     inside_bracketed_list: bool,
+    //     single_equals: bool,
+    //     predicate: Predicate<'_>,
+    // ) -> SassResult<Spanned<AstValue>> {
+    //     ValueParser::new(self)?.parse_value(inside_bracketed_list, single_equals, predicate)
+    // }
+}
 
-        let mut map = SassMap::new();
-        let key = self.parse_value(true, &|parser| {
-            matches!(
-                parser.toks.peek(),
-                Some(Token { kind: ':', .. }) | Some(Token { kind: ')', .. })
-            )
-        })?;
+struct ValueParser<'c> {
+    comma_expressions: Option<Vec<Spanned<AstValue>>>,
+    space_expressions: Option<Vec<Spanned<AstValue>>>,
+    binary_operators: Option<Vec<BinaryOp>>,
+    operands: Option<Vec<Spanned<AstValue>>>,
+    allow_slash: bool,
+    single_expression: Option<Spanned<AstValue>>,
+    in_parentheses: bool,
+    inside_bracketed_list: bool,
+    single_equals: bool,
+    parse_until: Option<Predicate<'c>>,
+}
 
-        match self.toks.next() {
-            Some(Token { kind: ':', .. }) => {}
-            Some(Token { kind: ')', .. }) => {
-                return Ok(Spanned {
-                    node: IntermediateValue::Value(HigherIntermediateValue::Literal(key.node)),
-                    span: key.span,
-                });
+impl<'c> ValueParser<'c> {
+    pub fn parse_expression(
+        parser: &mut Parser,
+        parse_until: Option<Predicate<'c>>,
+        inside_bracketed_list: bool,
+        single_equals: bool,
+    ) -> SassResult<Spanned<AstValue>> {
+        Self::new(parser, parse_until, inside_bracketed_list, single_equals)?.parse_value(parser)
+    }
+
+    pub fn new(
+        parser: &mut Parser,
+        parse_until: Option<Predicate<'c>>,
+        inside_bracketed_list: bool,
+        single_equals: bool,
+    ) -> SassResult<Self> {
+        let mut v = Self {
+            comma_expressions: None,
+            space_expressions: None,
+            binary_operators: None,
+            operands: None,
+            allow_slash: true,
+            in_parentheses: false,
+            single_expression: None,
+            parse_until,
+            inside_bracketed_list,
+            single_equals,
+        };
+
+        v.single_expression = Some(v.parse_single_ast_value(parser)?);
+
+        Ok(v)
+    }
+
+    /// Parse a value from a stream of tokens
+    ///
+    /// This function will cease parsing if the predicate returns true.
+    pub(crate) fn parse_value(&mut self, parser: &mut Parser) -> SassResult<Spanned<AstValue>> {
+        parser.whitespace();
+
+        let span = match parser.toks.peek() {
+            Some(Token { pos, .. }) => pos,
+            None => return Err(("Expected expression.", parser.span_before).into()),
+        };
+
+        if let Some(parse_until) = self.parse_until {
+            if parse_until(parser) {
+                return Err(("Expected expression.", span).into());
             }
-            Some(..) | None => return Err(("expected \")\".", key.span).into()),
         }
 
-        let val = self.parse_value(true, &|parser| {
-            matches!(
-                parser.toks.peek(),
-                Some(Token { kind: ',', .. }) | Some(Token { kind: ')', .. })
-            )
-        })?;
+        let before_bracket = if self.inside_bracketed_list {
+            let start = parser.toks.cursor();
 
-        map.insert(key.node, val.node);
+            parser.expect_char('[')?;
+            parser.whitespace_or_comment();
 
-        let mut span = key.span.merge(val.span);
-
-        match self.toks.next() {
-            Some(Token { kind: ',', .. }) => {}
-            Some(Token { kind: ')', .. }) => {
-                return Ok(Spanned {
-                    node: IntermediateValue::Value(HigherIntermediateValue::Literal(Value::Map(
-                        map,
-                    ))),
-                    span,
-                });
+            if parser.consume_char_if_exists(']') {
+                return Ok(AstValue::List {
+                    elems: Vec::new(),
+                    separator: ListSeparator::Undecided,
+                    brackets: Brackets::Bracketed,
+                }
+                // todo: lexer.span_from(span)
+                .span(span));
             }
-            Some(..) | None => return Err(("expected \")\".", key.span).into()),
-        }
 
-        self.whitespace_or_comment();
+            Some(start)
+        } else {
+            None
+        };
 
-        while self.consume_char_if_exists(',') {
-            self.whitespace_or_comment();
-        }
+        let start = parser.toks.cursor();
 
-        if self.consume_char_if_exists(')') {
-            return Ok(Spanned {
-                node: IntermediateValue::Value(HigherIntermediateValue::Literal(Value::Map(map))),
-                span,
-            });
-        }
+        let was_in_parens = parser.flags.in_parens();
 
         loop {
-            let key = self.parse_value(true, &|parser| {
-                matches!(
-                    parser.toks.peek(),
-                    Some(Token { kind: ':', .. }) | Some(Token { kind: ',', .. })
-                )
-            })?;
+            parser.whitespace_or_comment();
 
-            self.expect_char(':')?;
-
-            self.whitespace_or_comment();
-            let val = self.parse_value(true, &|parser| {
-                matches!(
-                    parser.toks.peek(),
-                    Some(Token { kind: ',', .. }) | Some(Token { kind: ')', .. })
-                )
-            })?;
-
-            span = span.merge(val.span);
-
-            if map.insert(key.node.clone(), val.node) {
-                return Err(("Duplicate key.", key.span).into());
-            }
-
-            let found_comma = self.consume_char_if_exists(',');
-
-            self.whitespace_or_comment();
-
-            match self.toks.peek() {
-                Some(Token { kind: ')', .. }) => {
-                    self.toks.next();
-                    break;
-                }
-                Some(..) if found_comma => continue,
-                Some(..) | None => return Err(("expected \")\".", val.span).into()),
-            }
-        }
-        Ok(Spanned {
-            node: IntermediateValue::Value(HigherIntermediateValue::Literal(Value::Map(map))),
-            span,
-        })
-    }
-
-    fn in_interpolated_identifier_body(&mut self) -> bool {
-        match self.toks.peek() {
-            Some(Token { kind: '\\', .. }) => true,
-            Some(Token { kind, .. }) if is_name(kind) => true,
-            Some(Token { kind: '#', .. }) => {
-                let next_is_curly = matches!(self.toks.peek_next(), Some(Token { kind: '{', .. }));
-                self.toks.reset_cursor();
-                next_is_curly
-            }
-            Some(..) | None => false,
-        }
-    }
-
-    /// single codepoint: U+26
-    /// Codepoint range:  U+0-7F
-    /// Wildcard range:   U+4??
-    fn parse_unicode_range(&mut self, kind: char) -> SassResult<Spanned<IntermediateValue>> {
-        let mut buf = String::with_capacity(4);
-        let mut span = self.span_before;
-        buf.push(kind);
-        buf.push('+');
-
-        for _ in 0..6 {
-            if let Some(Token { kind, pos }) = self.toks.peek() {
-                if kind.is_ascii_hexdigit() {
-                    span = span.merge(pos);
-                    self.span_before = pos;
-                    buf.push(kind);
-                    self.toks.next();
-                } else {
+            if let Some(parse_until) = self.parse_until {
+                if parse_until(parser) {
                     break;
                 }
             }
-        }
 
-        if self.consume_char_if_exists('?') {
-            buf.push('?');
-            for _ in 0..(8_usize.saturating_sub(buf.len())) {
-                if let Some(Token { kind: '?', pos }) = self.toks.peek() {
-                    span = span.merge(pos);
-                    self.span_before = pos;
-                    buf.push('?');
-                    self.toks.next();
-                } else {
-                    break;
+            let first = parser.toks.peek();
+
+            match first {
+                Some(Token { kind: '(', .. }) => {
+                    let expr = self.parse_paren_expr()?;
+                    self.add_single_expression(expr, parser)?;
                 }
-            }
-            return Ok(Spanned {
-                node: IntermediateValue::Value(HigherIntermediateValue::Literal(Value::String(
-                    buf,
-                    QuoteKind::None,
-                ))),
-                span,
-            });
-        }
-
-        if buf.len() == 2 {
-            return Err(("Expected hex digit or \"?\".", self.span_before).into());
-        }
-
-        if self.consume_char_if_exists('-') {
-            buf.push('-');
-            let mut found_hex_digit = false;
-            for _ in 0..6 {
-                found_hex_digit = true;
-                if let Some(Token { kind, pos }) = self.toks.peek() {
-                    if kind.is_ascii_hexdigit() {
-                        span = span.merge(pos);
-                        self.span_before = pos;
-                        buf.push(kind);
-                        self.toks.next();
-                    } else {
-                        break;
-                    }
+                Some(Token { kind: '[', .. }) => {
+                    self.add_single_expression(todo!(), parser)?;
                 }
-            }
-
-            if !found_hex_digit {
-                return Err(("Expected hex digit.", self.span_before).into());
-            }
-        }
-
-        if self.in_interpolated_identifier_body() {
-            return Err(("Expected end of identifier.", self.span_before).into());
-        }
-
-        Ok(Spanned {
-            node: IntermediateValue::Value(HigherIntermediateValue::Literal(Value::String(
-                buf,
-                QuoteKind::None,
-            ))),
-            span,
-        })
-    }
-
-    fn parse_intermediate_value(
-        &mut self,
-        predicate: Predicate<'_>,
-    ) -> Option<SassResult<Spanned<IntermediateValue>>> {
-        if predicate(self) {
-            return None;
-        }
-        let (kind, span) = match self.toks.peek() {
-            Some(v) => (v.kind, v.pos()),
-            None => return None,
-        };
-
-        self.span_before = span;
-
-        if self.whitespace() {
-            return Some(Ok(Spanned {
-                node: IntermediateValue::Whitespace,
-                span,
-            }));
-        }
-
-        Some(Ok(match kind {
-            _ if kind.is_ascii_alphabetic()
-                || kind == '_'
-                || kind == '\\'
-                || (!kind.is_ascii() && !kind.is_control())
-                || (kind == '-' && self.next_is_hypen()) =>
-            {
-                if kind == 'U' || kind == 'u' {
-                    if matches!(self.toks.peek_next(), Some(Token { kind: '+', .. })) {
-                        self.toks.next();
-                        self.toks.next();
-                        return Some(self.parse_unicode_range(kind));
-                    }
-
-                    self.toks.reset_cursor();
+                Some(Token { kind: '$', .. }) => {
+                    let expr = self.parse_variable()?;
+                    self.add_single_expression(expr, parser)?;
                 }
-                return Some(self.parse_ident_value(predicate));
-            }
-            '0'..='9' | '.' => return Some(self.parse_intermediate_value_dimension(predicate)),
-            '(' => {
-                self.toks.next();
-                return Some(self.parse_paren());
-            }
-            '&' => {
-                let span = self.toks.next().unwrap().pos();
-                if self.super_selectors.is_empty()
-                    && !self.at_root_has_selector
-                    && !self.flags.in_at_root_rule()
-                {
-                    IntermediateValue::Value(HigherIntermediateValue::Literal(Value::Null))
-                        .span(span)
-                } else {
-                    IntermediateValue::Value(HigherIntermediateValue::Literal(
-                        self.super_selectors
-                            .last()
-                            .clone()
-                            .into_selector()
-                            .into_value(),
-                    ))
-                    .span(span)
+                Some(Token { kind: '&', .. }) => {
+                    let expr = self.parse_selector()?;
+                    self.add_single_expression(expr, parser)?;
                 }
-            }
-            '#' => {
-                if let Some(Token { kind: '{', pos }) = self.toks.peek_forward(1) {
-                    self.span_before = pos;
-                    self.toks.reset_cursor();
-                    return Some(self.parse_ident_value(predicate));
+                Some(Token { kind: '"', .. }) | Some(Token { kind: '\'', .. }) => {
+                    let expr = self.parse_interpolated_string()?;
+                    self.add_single_expression(expr, parser)?;
                 }
-                self.toks.reset_cursor();
-                self.toks.next();
-                let hex = match self.parse_hex() {
-                    Ok(v) => v,
-                    Err(e) => return Some(Err(e)),
-                };
-                IntermediateValue::Value(HigherIntermediateValue::Literal(hex.node)).span(hex.span)
-            }
-            q @ '"' | q @ '\'' => {
-                let span_start = self.toks.next().unwrap().pos();
-                let Spanned { node, span } = match self.parse_quoted_string(q) {
-                    Ok(v) => v,
-                    Err(e) => return Some(Err(e)),
-                };
-                IntermediateValue::Value(HigherIntermediateValue::Literal(node))
-                    .span(span_start.merge(span))
-            }
-            '[' => return Some(self.parse_bracketed_list()),
-            '$' => {
-                self.toks.next();
-                let val = match self.parse_identifier_no_interpolation(false) {
-                    Ok(v) => v.map_node(|i| i.into()),
-                    Err(e) => return Some(Err(e)),
-                };
-                IntermediateValue::Value(HigherIntermediateValue::Literal(
-                    match self.scopes.get_var(val, self.global_scope) {
-                        Ok(v) => v.clone(),
-                        Err(e) => return Some(Err(e)),
-                    },
-                ))
-                .span(val.span)
-            }
-            '+' => {
-                let span = self.toks.next().unwrap().pos();
-                IntermediateValue::Op(Op::Plus).span(span)
-            }
-            '-' => {
-                if matches!(self.toks.peek(), Some(Token { kind: '#', .. }))
-                    && matches!(self.toks.peek_next(), Some(Token { kind: '{', .. }))
-                {
-                    self.toks.reset_cursor();
-                    return Some(self.parse_ident_value(predicate));
+                Some(Token { kind: '#', .. }) => {
+                    let expr = self.parse_hash()?;
+                    self.add_single_expression(expr, parser)?;
                 }
-                self.toks.reset_cursor();
-                let span = self.toks.next().unwrap().pos();
-                IntermediateValue::Op(Op::Minus).span(span)
-            }
-            '*' => {
-                let span = self.toks.next().unwrap().pos();
-                IntermediateValue::Op(Op::Mul).span(span)
-            }
-            '%' => {
-                let span = self.toks.next().unwrap().pos();
-                IntermediateValue::Op(Op::Rem).span(span)
-            }
-            ',' => {
-                self.toks.next();
-                IntermediateValue::Comma.span(span)
-            }
-            q @ '>' | q @ '<' => {
-                let mut span = self.toks.next().unwrap().pos;
-                #[allow(clippy::eval_order_dependence)]
-                IntermediateValue::Op(if let Some(Token { kind: '=', .. }) = self.toks.peek() {
-                    span = span.merge(self.toks.next().unwrap().pos);
-                    match q {
-                        '>' => Op::GreaterThanEqual,
-                        '<' => Op::LessThanEqual,
-                        _ => unreachable!(),
-                    }
-                } else {
-                    match q {
-                        '>' => Op::GreaterThan,
-                        '<' => Op::LessThan,
-                        _ => unreachable!(),
-                    }
+                Some(Token { kind: '=', .. }) => {
+                    todo!()
+                }
+                Some(Token { kind: '!', .. }) => {
+                    todo!()
+                }
+                Some(Token { kind: '<', .. }) => {
+                    todo!()
+                }
+                Some(Token { kind: '>', .. }) => {
+                    todo!()
+                }
+                Some(Token { kind: '*', pos }) => {
+                    parser.toks.next();
+                    self.add_operator(
+                        Spanned {
+                            node: BinaryOp::Mul,
+                            span: pos,
+                        },
+                        parser,
+                    )?;
+                }
+                Some(Token { kind: '+', .. }) => {
+                    todo!()
+                }
+                Some(Token { kind: '-', .. }) => {
+                    todo!()
+                }
+                Some(Token { kind: '/', .. }) => {
+                    todo!()
+                }
+                Some(Token { kind: '%', pos }) => {
+                    parser.toks.next();
+                    self.add_operator(
+                        Spanned {
+                            node: BinaryOp::Rem,
+                            span: pos,
+                        },
+                        parser,
+                    )?;
+                }
+                Some(Token {
+                    kind: '0'..='9', ..
+                }) => {
+                    todo!()
+                }
+                Some(Token { kind: '.', .. }) => {
+                    todo!()
+                }
+                Some(Token { kind: 'a', .. }) => {
+                    todo!()
+                }
+                Some(Token { kind: 'o', .. }) => {
+                    todo!()
+                }
+                Some(Token { kind: 'u', .. }) | Some(Token { kind: 'U', .. }) => {
+                    todo!()
+                }
+                Some(Token {
+                    kind: 'b'..='z', ..
                 })
-                .span(span)
-            }
-            '=' => {
-                let mut span = self.toks.next().unwrap().pos();
-                if let Some(Token { kind: '=', pos }) = self.toks.next() {
-                    span = span.merge(pos);
-                    IntermediateValue::Op(Op::Equal).span(span)
-                } else {
-                    return Some(Err(("expected \"=\".", span).into()));
+                | Some(Token {
+                    kind: 'B'..='Z', ..
+                })
+                | Some(Token { kind: '_', .. })
+                | Some(Token { kind: '\\', .. }) => {
+                    todo!()
                 }
-            }
-            '!' => {
-                let mut span = self.toks.next().unwrap().pos();
-                if let Some(Token { kind: '=', .. }) = self.toks.peek() {
-                    span = span.merge(self.toks.next().unwrap().pos());
-                    return Some(Ok(IntermediateValue::Op(Op::NotEqual).span(span)));
+                Some(Token { kind: ',', .. }) => {
+                    todo!()
                 }
-                self.whitespace();
-                let v = match self.parse_identifier() {
-                    Ok(v) => v,
-                    Err(e) => return Some(Err(e)),
-                };
-                span = span.merge(v.span);
-                match v.node.to_ascii_lowercase().as_str() {
-                    "important" => {
-                        IntermediateValue::Value(HigherIntermediateValue::Literal(Value::Important))
-                            .span(span)
-                    }
-                    _ => return Some(Err(("Expected \"important\".", span).into())),
-                }
-            }
-            '/' => {
-                let span = self.toks.next().unwrap().pos();
-                match self.toks.peek() {
-                    Some(Token { kind: '/', .. }) | Some(Token { kind: '*', .. }) => {
-                        let span = match self.parse_comment() {
-                            Ok(c) => c.span,
-                            Err(e) => return Some(Err(e)),
-                        };
-                        IntermediateValue::Whitespace.span(span)
-                    }
-                    Some(..) => IntermediateValue::Op(Op::Div).span(span),
-                    None => return Some(Err(("Expected expression.", span).into())),
-                }
-            }
-            ';' | '}' | '{' => return None,
-            ':' | '?' | ')' | '@' | '^' | ']' | '|' => {
-                self.toks.next();
-                return Some(Err(("expected \";\".", span).into()));
-            }
-            '\u{0}'..='\u{8}' | '\u{b}'..='\u{1f}' | '\u{7f}'..=std::char::MAX | '`' | '~' => {
-                self.toks.next();
-                return Some(Err(("Expected expression.", span).into()));
-            }
-            ' ' | '\n' | '\t' => unreachable!("whitespace is checked prior to this match"),
-            'A'..='Z' | 'a'..='z' | '_' | '\\' => {
-                unreachable!("these chars are checked in an if stmt")
-            }
-        }))
-    }
-
-    fn parse_hex(&mut self) -> SassResult<Spanned<Value>> {
-        let mut s = String::with_capacity(7);
-        s.push('#');
-        let first_char = self
-            .toks
-            .peek()
-            .ok_or(("Expected identifier.", self.span_before))?
-            .kind;
-        let first_is_digit = first_char.is_ascii_digit();
-        let first_is_hexdigit = first_char.is_ascii_hexdigit();
-        if first_is_digit {
-            while let Some(c) = self.toks.peek() {
-                if !c.kind.is_ascii_hexdigit() || s.len() == 9 {
+                Some(Token {
+                    kind: '\u{80}'..=std::char::MAX,
+                    ..
+                }) => {
+                    let expr = self.parse_expression_like()?;
+                    self.add_single_expression(expr, parser)?;
                     break;
                 }
-                let tok = self.toks.next().unwrap();
-                self.span_before = self.span_before.merge(tok.pos());
-                s.push(tok.kind);
+                Some(..) | None => break,
             }
-        // this branch exists so that we can emit `#` combined with
-        // identifiers. e.g. `#ooobar` should be emitted exactly as written;
-        // that is, `#ooobar`.
+        }
+
+        if self.inside_bracketed_list {
+            parser.expect_char(']')?;
+        }
+
+        if self.comma_expressions.is_some() {
+            self.resolve_space_expressions(parser)?;
+
+            self.in_parentheses = was_in_parens;
+
+            if let Some(single_expression) = self.single_expression.take() {
+                self.comma_expressions
+                    .as_mut()
+                    .unwrap()
+                    .push(single_expression);
+            }
+
+            return Ok(AstValue::List {
+                elems: self.comma_expressions.take().unwrap(),
+                separator: ListSeparator::Comma,
+                brackets: if self.inside_bracketed_list {
+                    Brackets::Bracketed
+                } else {
+                    Brackets::None
+                },
+            }
+            .span(span));
+        } else if self.inside_bracketed_list && self.space_expressions.is_some() {
+            self.resolve_operations()?;
+
+            self.space_expressions
+                .as_mut()
+                .unwrap()
+                .push(self.single_expression.take().unwrap());
+
+            return Ok(AstValue::List {
+                elems: self.space_expressions.take().unwrap(),
+                separator: ListSeparator::Space,
+                brackets: Brackets::Bracketed,
+            }
+            .span(span));
         } else {
-            let ident = self.parse_identifier()?;
-            if first_is_hexdigit
-                && ident.node.chars().all(|c| c.is_ascii_hexdigit())
-                && matches!(ident.node.len(), 3 | 4 | 6 | 8)
-            {
-                s.push_str(&ident.node);
-            } else {
-                return Ok(Spanned {
-                    node: Value::String(format!("#{}", ident.node), QuoteKind::None),
-                    span: ident.span,
-                });
+            self.resolve_space_expressions(parser)?;
+
+            if self.inside_bracketed_list {
+                return Ok(AstValue::List {
+                    elems: vec![self.single_expression.take().unwrap()],
+                    separator: ListSeparator::Undecided,
+                    brackets: Brackets::Bracketed,
+                }
+                .span(span));
+            }
+
+            return Ok(self.single_expression.take().unwrap());
+        }
+    }
+
+    fn parse_single_ast_value(&mut self, parser: &mut Parser) -> SassResult<Spanned<AstValue>> {
+        let first = parser.toks.peek();
+
+        match first {
+            Some(Token { kind: '(', .. }) => self.parse_paren_expr(),
+            Some(Token { kind: '/', .. }) => self.parse_unary_operation(),
+            Some(Token { kind: '[', .. }) => Self::parse_expression(parser, None, true, false),
+            Some(Token { kind: '$', .. }) => self.parse_variable(),
+            Some(Token { kind: '&', .. }) => self.parse_selector(),
+            Some(Token { kind: '"', .. }) | Some(Token { kind: '\'', .. }) => {
+                self.parse_interpolated_string()
+            }
+            Some(Token { kind: '#', .. }) => self.parse_hash(),
+            Some(Token { kind: '-', .. }) => self.parse_minus_expr(),
+            Some(Token { kind: '!', .. }) => self.parse_important_expr(),
+            Some(Token { kind: 'u', .. }) | Some(Token { kind: 'U', .. }) => {
+                todo!()
+            }
+            Some(Token {
+                kind: '0'..='9', ..
+            })
+            | Some(Token { kind: '.', .. }) => self.parse_number(),
+            Some(Token { kind: 'a', .. }) => {
+                todo!()
+            }
+            Some(Token { kind: 'o', .. }) => {
+                todo!()
+            }
+
+            Some(Token {
+                kind: 'a'..='z', ..
+            })
+            | Some(Token {
+                kind: 'A'..='Z', ..
+            })
+            | Some(Token { kind: '_', .. })
+            | Some(Token { kind: '\\', .. }) => self.parse_identifier_like(parser),
+            Some(Token {
+                kind: '\u{80}'..=std::char::MAX,
+                ..
+            }) => self.parse_expression_like(),
+            Some(..) | None => {
+                return Err(("Expected expression.", parser.toks.current_span()).into())
             }
         }
-        let v = match u32::from_str_radix(&s[1..], 16) {
-            Ok(a) => a,
-            Err(_) => return Ok(Value::String(s, QuoteKind::None).span(self.span_before)),
-        };
-        let (red, green, blue, alpha) = match s.len().saturating_sub(1) {
-            3 => (
-                (((v & 0x0f00) >> 8) * 0x11) as u8,
-                (((v & 0x00f0) >> 4) * 0x11) as u8,
-                ((v & 0x000f) * 0x11) as u8,
-                1,
-            ),
-            4 => (
-                (((v & 0xf000) >> 12) * 0x11) as u8,
-                (((v & 0x0f00) >> 8) * 0x11) as u8,
-                (((v & 0x00f0) >> 4) * 0x11) as u8,
-                ((v & 0x000f) * 0x11) as u8,
-            ),
-            6 => (
-                ((v & 0x00ff_0000) >> 16) as u8,
-                ((v & 0x0000_ff00) >> 8) as u8,
-                (v & 0x0000_00ff) as u8,
-                1,
-            ),
-            8 => (
-                ((v & 0xff00_0000) >> 24) as u8,
-                ((v & 0x00ff_0000) >> 16) as u8,
-                ((v & 0x0000_ff00) >> 8) as u8,
-                (v & 0x0000_00ff) as u8,
-            ),
-            _ => return Err(("Expected hex digit.", self.span_before).into()),
-        };
-        let color = Color::new(red, green, blue, alpha, s);
-        Ok(Value::Color(Box::new(color)).span(self.span_before))
     }
-}
 
-struct IntermediateValueIterator<'a, 'b: 'a, 'c> {
-    parser: &'a mut Parser<'b, 'c>,
-    peek: Option<SassResult<Spanned<IntermediateValue>>>,
-    predicate: Predicate<'a>,
-}
+    fn resolve_one_operation(&mut self) -> SassResult<()> {
+        let operator = self.binary_operators.as_mut().unwrap().pop().unwrap();
+        let operands = self.operands.as_mut().unwrap();
 
-impl<'a, 'b: 'a, 'c> Iterator for IntermediateValueIterator<'a, 'b, 'c> {
-    type Item = SassResult<Spanned<IntermediateValue>>;
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.peek.is_some() {
-            self.peek.take()
+        let left = operands.pop().unwrap();
+        let right = match self.single_expression.take() {
+            Some(val) => val,
+            None => return Err(("Expected expression.", left.span).into()),
+        };
+
+        let span = left.span.merge(right.span);
+
+        if self.allow_slash
+            && !self.in_parentheses
+            && operator == BinaryOp::Div
+            && left.node.is_slash_operand()
+            && right.node.is_slash_operand()
+        {
+            self.single_expression = Some(AstValue::slash(left.node, right.node).span(span))
         } else {
-            self.parser.parse_intermediate_value(self.predicate)
+            self.single_expression = Some(
+                AstValue::BinaryOp {
+                    lhs: Box::new(left.node),
+                    op: operator,
+                    rhs: Box::new(right.node),
+                    allows_slash: false,
+                }
+                .span(span),
+            );
+            self.allow_slash = false
         }
-    }
-}
 
-impl<'a, 'b: 'a, 'c> IntermediateValueIterator<'a, 'b, 'c> {
-    pub fn new(parser: &'a mut Parser<'b, 'c>, predicate: Predicate<'a>) -> Self {
-        Self {
-            parser,
-            peek: None,
-            predicate,
-        }
-    }
-
-    fn peek(&mut self) -> &Option<SassResult<Spanned<IntermediateValue>>> {
-        self.peek = self.next();
-        &self.peek
-    }
-
-    fn whitespace(&mut self) -> bool {
-        let mut found_whitespace = false;
-        while let Some(w) = self.peek() {
-            if !w.is_whitespace() {
-                break;
-            }
-            found_whitespace = true;
-            self.next();
-        }
-        found_whitespace
-    }
-
-    fn parse_op(
-        &mut self,
-        op: Spanned<Op>,
-        space_separated: &mut Vec<Spanned<HigherIntermediateValue>>,
-        last_was_whitespace: bool,
-        in_paren: bool,
-    ) -> SassResult<()> {
-        match op.node {
-            Op::Not => {
-                self.whitespace();
-                let right = self.single_value(in_paren)?;
-                space_separated.push(Spanned {
-                    node: HigherIntermediateValue::UnaryOp(op.node, Box::new(right.node)),
-                    span: right.span,
-                });
-            }
-            Op::Div => {
-                self.whitespace();
-                let right = self.single_value(in_paren)?;
-                if let Some(left) = space_separated.pop() {
-                    space_separated.push(Spanned {
-                        node: HigherIntermediateValue::BinaryOp(
-                            Box::new(left.node),
-                            op.node,
-                            Box::new(right.node),
-                        ),
-                        span: left.span.merge(right.span),
-                    });
-                } else {
-                    self.whitespace();
-                    space_separated.push(Spanned {
-                        node: HigherIntermediateValue::Literal(Value::String(
-                            format!(
-                                "/{}",
-                                ValueVisitor::new(self.parser, right.span)
-                                    .eval(right.node, false)?
-                                    .to_css_string(
-                                        right.span,
-                                        self.parser.options.is_compressed()
-                                    )?
-                            ),
-                            QuoteKind::None,
-                        )),
-                        span: op.span.merge(right.span),
-                    });
-                }
-            }
-            Op::Plus => {
-                if let Some(left) = space_separated.pop() {
-                    self.whitespace();
-                    let right = self.single_value(in_paren)?;
-                    space_separated.push(Spanned {
-                        node: HigherIntermediateValue::BinaryOp(
-                            Box::new(left.node),
-                            op.node,
-                            Box::new(right.node),
-                        ),
-                        span: left.span.merge(right.span),
-                    });
-                } else {
-                    self.whitespace();
-                    let right = self.single_value(in_paren)?;
-                    space_separated.push(Spanned {
-                        node: HigherIntermediateValue::UnaryOp(op.node, Box::new(right.node)),
-                        span: right.span,
-                    });
-                }
-            }
-            Op::Minus => {
-                let may_be_subtraction = self.whitespace() || !last_was_whitespace;
-                let right = self.single_value(in_paren)?;
-
-                if may_be_subtraction {
-                    if let Some(left) = space_separated.pop() {
-                        space_separated.push(Spanned {
-                            node: HigherIntermediateValue::BinaryOp(
-                                Box::new(left.node),
-                                op.node,
-                                Box::new(right.node),
-                            ),
-                            span: left.span.merge(right.span),
-                        });
-                    } else {
-                        space_separated.push(
-                            right.map_node(|n| {
-                                HigherIntermediateValue::UnaryOp(op.node, Box::new(n))
-                            }),
-                        );
-                    }
-                } else {
-                    space_separated.push(
-                        right.map_node(|n| HigherIntermediateValue::UnaryOp(op.node, Box::new(n))),
-                    );
-                }
-            }
-            Op::And => {
-                self.whitespace();
-                // special case when the value is literally "and"
-                if self.peek().is_none() {
-                    space_separated.push(
-                        HigherIntermediateValue::Literal(Value::String(
-                            op.to_string(),
-                            QuoteKind::None,
-                        ))
-                        .span(op.span),
-                    );
-                } else if let Some(left) = space_separated.pop() {
-                    self.whitespace();
-                    if ValueVisitor::new(self.parser, left.span)
-                        .eval(left.node.clone(), false)?
-                        .is_true()
-                    {
-                        let right = self.single_value(in_paren)?;
-                        space_separated.push(
-                            HigherIntermediateValue::BinaryOp(
-                                Box::new(left.node),
-                                op.node,
-                                Box::new(right.node),
-                            )
-                            .span(left.span.merge(right.span)),
-                        );
-                    } else {
-                        // we explicitly ignore errors here as a workaround for short circuiting
-                        while let Some(value) = self.peek() {
-                            if let Ok(Spanned {
-                                node: IntermediateValue::Comma,
-                                ..
-                            }) = value
-                            {
-                                break;
-                            }
-                            self.next();
-                        }
-                        space_separated.push(left);
-                    }
-                } else {
-                    return Err(("Expected expression.", op.span).into());
-                }
-            }
-            Op::Or => {
-                self.whitespace();
-                // special case when the value is literally "or"
-                if self.peek().is_none() {
-                    space_separated.push(
-                        HigherIntermediateValue::Literal(Value::String(
-                            op.to_string(),
-                            QuoteKind::None,
-                        ))
-                        .span(op.span),
-                    );
-                } else if let Some(left) = space_separated.pop() {
-                    self.whitespace();
-                    if ValueVisitor::new(self.parser, left.span)
-                        .eval(left.node.clone(), false)?
-                        .is_true()
-                    {
-                        // we explicitly ignore errors here as a workaround for short circuiting
-                        while let Some(value) = self.peek() {
-                            match value {
-                                Ok(Spanned {
-                                    node: IntermediateValue::Comma,
-                                    ..
-                                }) => break,
-                                Ok(..) => {
-                                    self.next();
-                                }
-                                Err(..) => {
-                                    if let Some(v) = self.next() {
-                                        v?;
-                                    }
-                                }
-                            }
-                        }
-                        space_separated.push(left);
-                    } else {
-                        let right = self.single_value(in_paren)?;
-                        space_separated.push(
-                            HigherIntermediateValue::BinaryOp(
-                                Box::new(left.node),
-                                op.node,
-                                Box::new(right.node),
-                            )
-                            .span(left.span.merge(right.span)),
-                        );
-                    }
-                } else {
-                    return Err(("Expected expression.", op.span).into());
-                }
-            }
-            _ => {
-                if let Some(left) = space_separated.pop() {
-                    self.whitespace();
-                    let right = self.single_value(in_paren)?;
-                    space_separated.push(
-                        HigherIntermediateValue::BinaryOp(
-                            Box::new(left.node),
-                            op.node,
-                            Box::new(right.node),
-                        )
-                        .span(left.span.merge(right.span)),
-                    );
-                } else {
-                    return Err(("Expected expression.", op.span).into());
-                }
-            }
-        }
         Ok(())
     }
 
-    fn single_value(&mut self, in_paren: bool) -> SassResult<Spanned<HigherIntermediateValue>> {
-        let next = self
-            .next()
-            .ok_or(("Expected expression.", self.parser.span_before))??;
-        Ok(match next.node {
-            IntermediateValue::Value(v) => v.span(next.span),
-            IntermediateValue::Op(op) => match op {
-                Op::Minus => {
-                    self.whitespace();
-                    let val = self.single_value(in_paren)?;
-                    Spanned {
-                        node: HigherIntermediateValue::UnaryOp(Op::Minus, Box::new(val.node)),
-                        span: next.span.merge(val.span),
-                    }
-                }
-                Op::Not => {
-                    self.whitespace();
-                    let val = self.single_value(in_paren)?;
-                    Spanned {
-                        node: HigherIntermediateValue::UnaryOp(Op::Not, Box::new(val.node)),
-                        span: next.span.merge(val.span),
-                    }
-                }
-                Op::Plus => {
-                    self.whitespace();
-                    self.single_value(in_paren)?
-                }
-                Op::Div => {
-                    self.whitespace();
-                    let val = self.single_value(in_paren)?;
-                    Spanned {
-                        node: HigherIntermediateValue::Literal(Value::String(
-                            format!(
-                                "/{}",
-                                ValueVisitor::new(self.parser, val.span)
-                                    .eval(val.node, false)?
-                                    .to_css_string(val.span, self.parser.options.is_compressed())?
-                            ),
-                            QuoteKind::None,
-                        )),
-                        span: next.span.merge(val.span),
-                    }
-                }
-                Op::And => Spanned {
-                    node: HigherIntermediateValue::Literal(Value::String(
-                        "and".into(),
-                        QuoteKind::None,
-                    )),
-                    span: next.span,
-                },
-                Op::Or => Spanned {
-                    node: HigherIntermediateValue::Literal(Value::String(
-                        "or".into(),
-                        QuoteKind::None,
-                    )),
-                    span: next.span,
-                },
-                _ => {
-                    return Err(("Expected expression.", next.span).into());
-                }
-            },
-            IntermediateValue::Whitespace => unreachable!(),
-            IntermediateValue::Comma => {
-                return Err(("Expected expression.", self.parser.span_before).into())
+    fn resolve_operations(&mut self) -> SassResult<()> {
+        loop {
+            let should_break = match self.binary_operators.as_ref() {
+                Some(bin) => bin.is_empty(),
+                None => true,
+            };
+
+            if should_break {
+                break;
             }
-        })
-    }
-}
 
-impl IsWhitespace for SassResult<Spanned<IntermediateValue>> {
-    fn is_whitespace(&self) -> bool {
-        match self {
-            Ok(v) => v.node.is_whitespace(),
-            _ => false,
+            self.resolve_one_operation()?;
         }
+
+        Ok(())
+    }
+
+    fn add_single_expression(
+        &mut self,
+        expression: Spanned<AstValue>,
+        parser: &mut Parser,
+    ) -> SassResult<()> {
+        if self.single_expression.is_some() {
+            if self.in_parentheses {
+                self.in_parentheses = false;
+
+                if self.allow_slash {
+                    self.reset_state(parser)?;
+
+                    return Ok(());
+                }
+            }
+
+            if self.space_expressions.is_none() {
+                self.space_expressions = Some(Vec::new());
+            }
+
+            self.resolve_operations()?;
+
+            self.space_expressions
+                .as_mut()
+                .unwrap()
+                .push(self.single_expression.take().unwrap());
+
+            self.allow_slash = true;
+        }
+
+        self.single_expression = Some(expression);
+
+        Ok(())
+    }
+
+    fn add_operator(&mut self, op: Spanned<BinaryOp>, parser: &mut Parser) -> SassResult<()> {
+        if parser.flags.in_plain_css() && op.node != BinaryOp::Div && op.node != BinaryOp::SingleEq
+        {
+            return Err(("Operators aren't allowed in plain CSS.", op.span).into());
+        }
+
+        self.allow_slash = self.allow_slash && op.node == BinaryOp::Div;
+
+        if self.binary_operators.is_none() {
+            self.binary_operators = Some(Vec::new());
+        }
+
+        if self.operands.is_none() {
+            self.operands = Some(Vec::new());
+        }
+
+        while let Some(last_op) = self.binary_operators.as_ref().unwrap_or(&Vec::new()).last() {
+            if last_op.precedence() < op.precedence() {
+                break;
+            }
+
+            self.resolve_one_operation()?;
+        }
+
+        match self.single_expression.take() {
+            Some(expr) => {
+                self.operands.get_or_insert_with(Vec::new).push(expr);
+            }
+            None => return Err(("Expected expression.", op.span).into()),
+        }
+
+        parser.whitespace_or_comment();
+
+        self.single_expression = Some(self.parse_single_ast_value(parser)?);
+
+        Ok(())
+    }
+
+    fn resolve_space_expressions(&mut self, parser: &mut Parser) -> SassResult<()> {
+        self.resolve_operations()?;
+
+        if let Some(mut space_expressions) = self.space_expressions.take() {
+            let single_expression = match self.single_expression.take() {
+                Some(val) => val,
+                None => return Err(("Expected expression.", parser.toks.current_span()).into()),
+            };
+
+            let span = single_expression.span;
+
+            space_expressions.push(single_expression);
+
+            self.single_expression = Some(
+                AstValue::List {
+                    elems: space_expressions,
+                    separator: ListSeparator::Space,
+                    brackets: Brackets::None,
+                }
+                .span(span),
+            );
+        }
+
+        Ok(())
+    }
+
+    fn parse_paren_expr(&mut self) -> SassResult<Spanned<AstValue>> {
+        todo!()
+    }
+
+    fn parse_variable(&mut self) -> SassResult<Spanned<AstValue>> {
+        todo!()
+    }
+
+    fn parse_selector(&mut self) -> SassResult<Spanned<AstValue>> {
+        todo!()
+    }
+
+    fn parse_interpolated_string(&mut self) -> SassResult<Spanned<AstValue>> {
+        todo!()
+    }
+
+    fn parse_hash(&mut self) -> SassResult<Spanned<AstValue>> {
+        todo!()
+    }
+
+    fn parse_expression_like(&mut self) -> SassResult<Spanned<AstValue>> {
+        todo!()
+    }
+
+    fn parse_unary_operation(&mut self) -> SassResult<Spanned<AstValue>> {
+        todo!()
+    }
+
+    fn parse_number(&mut self) -> SassResult<Spanned<AstValue>> {
+        todo!()
+    }
+
+    fn parse_minus_expr(&mut self) -> SassResult<Spanned<AstValue>> {
+        todo!()
+    }
+
+    fn parse_important_expr(&mut self) -> SassResult<Spanned<AstValue>> {
+        todo!()
+    }
+
+    // todo: belongs on parser proper
+    fn parse_argument_invocation(&mut self) -> SassResult<Spanned<CallArgs>> {
+        todo!()
+    }
+
+    fn parse_identifier_like(&mut self, parser: &mut Parser) -> SassResult<Spanned<AstValue>> {
+        let start = parser.toks.cursor();
+
+        let _identifier = parser.parse_identifier()?;
+        // todo: parse_identifier returns `Interpolation`
+        let identifier = Interpolation {
+            parts: vec![InterpolationPart::String(_identifier.node)],
+        };
+
+        let plain = identifier.as_plain();
+
+        if let Some(plain) = plain {
+            if plain == "if" && parser.toks.next_char_is('(') {
+                let call_args = self.parse_argument_invocation()?;
+                return Ok(AstValue::If(Box::new(Ternary(call_args.node))).span(call_args.span));
+            } else if plain == "not" {
+                parser.whitespace_or_comment();
+
+                let value = self.parse_single_ast_value(parser)?;
+
+                let span = _identifier.span.merge(value.span);
+
+                return Ok(AstValue::UnaryOp(UnaryOp::Not, Box::new(value.node)).span(span));
+            }
+
+            let lower = plain.to_ascii_lowercase();
+
+            if !parser.toks.next_char_is('(') {
+                match lower.as_str() {
+                    "null" => return Ok(AstValue::Null.span(_identifier.span)),
+                    "true" => return Ok(AstValue::True.span(_identifier.span)),
+                    "false" => return Ok(AstValue::False.span(_identifier.span)),
+                    _ => {}
+                }
+
+                if let Some(color) = NAMED_COLORS.get_by_name(lower.as_str()) {
+                    return Ok(AstValue::Color(Box::new(Color::new(
+                        color[0], color[1], color[2], color[3], lower,
+                    )))
+                    .span(_identifier.span));
+                }
+
+                if let Some(_) = self.try_parse_special_function()? {
+                    todo!()
+                }
+            }
+        }
+
+        match parser.toks.peek() {
+            Some(Token { kind: '.', .. }) => {
+                if matches!(parser.toks.peek_n(1), Some(Token { kind: '.', .. })) {
+                    return Ok(AstValue::String(identifier, QuoteKind::None));
+                }
+
+                match plain {
+                    Some(s) => 
+                }
+            }
+        }
+
+        todo!()
+    }
+
+    fn namespaced_expression(namespace: &str, span: Span) -> SassResult<Spanned<>>
+
+    fn try_parse_special_function(&mut self) -> SassResult<Option<Spanned<AstValue>>> {
+        todo!()
+    }
+
+    fn reset_state(&mut self, parser: &mut Parser) -> SassResult<()> {
+        self.comma_expressions = None;
+        self.space_expressions = None;
+        self.binary_operators = None;
+        self.operands = None;
+        self.allow_slash = true;
+        self.single_expression = Some(self.parse_single_ast_value(parser)?);
+
+        Ok(())
     }
 }
 
-fn parse_i64(s: &str) -> i64 {
-    s.as_bytes()
-        .iter()
-        .fold(0, |total, this| total * 10 + i64::from(this - b'0'))
-}
+// impl<'a, 'b> Parser<'a, 'b> {
+//     /// Parse a value from a stream of tokens
+//     ///
+//     /// This function will cease parsing if the predicate returns true.
+//     pub(crate) fn parse_value(
+//         &mut self,
+//         in_paren: bool,
+//         predicate: Predicate<'_>,
+//     ) -> SassResult<Spanned<Value>> {
+//         self.whitespace();
 
-fn is_keyword_operator(s: &str) -> bool {
-    matches!(s, "and" | "or" | "not")
-}
+//         let span = match self.toks.peek() {
+//             Some(Token { kind: '}', .. })
+//             | Some(Token { kind: ';', .. })
+//             | Some(Token { kind: '{', .. })
+//             | None => return Err(("Expected expression.", self.span_before).into()),
+//             Some(Token { pos, .. }) => pos,
+//         };
+
+//         if predicate(self) {
+//             return Err(("Expected expression.", span).into());
+//         }
+
+//         let mut last_was_whitespace = false;
+//         let mut space_separated = Vec::new();
+//         let mut comma_separated = Vec::new();
+//         let mut iter = IntermediateValueIterator::new(self, &predicate);
+//         while let Some(val) = iter.next() {
+//             let val = val?;
+//             match val.node {
+//                 IntermediateValue::Value(v) => {
+//                     last_was_whitespace = false;
+//                     space_separated.push(v.span(val.span));
+//                 }
+//                 IntermediateValue::Op(op) => {
+//                     iter.parse_op(
+//                         Spanned {
+//                             node: op,
+//                             span: val.span,
+//                         },
+//                         &mut space_separated,
+//                         last_was_whitespace,
+//                         in_paren,
+//                     )?;
+//                 }
+//                 IntermediateValue::Whitespace => {
+//                     last_was_whitespace = true;
+//                     continue;
+//                 }
+//                 IntermediateValue::Comma => {
+//                     last_was_whitespace = false;
+
+//                     if space_separated.len() == 1 {
+//                         comma_separated.push(space_separated.pop().unwrap());
+//                     } else {
+//                         let mut span = space_separated
+//                             .first()
+//                             .ok_or(("Expected expression.", val.span))?
+//                             .span;
+//                         comma_separated.push(
+//                             HigherIntermediateValue::Literal(Value::List(
+//                                 mem::take(&mut space_separated)
+//                                     .into_iter()
+//                                     .map(move |a| {
+//                                         span = span.merge(a.span);
+//                                         a.node
+//                                     })
+//                                     .map(|a| ValueVisitor::new(iter.parser, span).eval(a, in_paren))
+//                                     .collect::<SassResult<Vec<Value>>>()?,
+//                                 ListSeparator::Space,
+//                                 Brackets::None,
+//                             ))
+//                             .span(span),
+//                         );
+//                     }
+//                 }
+//             }
+//         }
+
+//         Ok(if !comma_separated.is_empty() {
+//             if space_separated.len() == 1 {
+//                 comma_separated.push(space_separated.pop().unwrap());
+//             } else if !space_separated.is_empty() {
+//                 comma_separated.push(
+//                     HigherIntermediateValue::Literal(Value::List(
+//                         space_separated
+//                             .into_iter()
+//                             .map(|a| ValueVisitor::new(self, span).eval(a.node, in_paren))
+//                             .collect::<SassResult<Vec<Value>>>()?,
+//                         ListSeparator::Space,
+//                         Brackets::None,
+//                     ))
+//                     .span(span),
+//                 );
+//             }
+//             Value::List(
+//                 comma_separated
+//                     .into_iter()
+//                     .map(|a| ValueVisitor::new(self, span).eval(a.node, in_paren))
+//                     .collect::<SassResult<Vec<Value>>>()?,
+//                 ListSeparator::Comma,
+//                 Brackets::None,
+//             )
+//             .span(span)
+//         } else if space_separated.len() == 1 {
+//             ValueVisitor::new(self, span)
+//                 .eval(space_separated.pop().unwrap().node, in_paren)?
+//                 .span(span)
+//         } else {
+//             Value::List(
+//                 space_separated
+//                     .into_iter()
+//                     .map(|a| ValueVisitor::new(self, span).eval(a.node, in_paren))
+//                     .collect::<SassResult<Vec<Value>>>()?,
+//                 ListSeparator::Space,
+//                 Brackets::None,
+//             )
+//             .span(span)
+//         })
+//     }
+
+//     pub(crate) fn parse_value_from_vec(
+//         &mut self,
+//         toks: &[Token],
+//         in_paren: bool,
+//     ) -> SassResult<Spanned<Value>> {
+//         Parser {
+//             toks: &mut Lexer::new_ref(toks),
+//             map: self.map,
+//             path: self.path,
+//             scopes: self.scopes,
+//             global_scope: self.global_scope,
+//             super_selectors: self.super_selectors,
+//             span_before: self.span_before,
+//             content: self.content,
+//             flags: self.flags,
+//             at_root: self.at_root,
+//             at_root_has_selector: self.at_root_has_selector,
+//             extender: self.extender,
+//             content_scopes: self.content_scopes,
+//             options: self.options,
+//             modules: self.modules,
+//             module_config: self.module_config,
+//         }
+//         .parse_value(in_paren, &|_| false)
+//     }
+
+//     #[allow(clippy::eval_order_dependence)]
+//     fn parse_module_item(
+//         &mut self,
+//         mut module: Spanned<Identifier>,
+//     ) -> SassResult<Spanned<IntermediateValue>> {
+//         Ok(
+//             IntermediateValue::Value(if self.consume_char_if_exists('$') {
+//                 let var = self
+//                     .parse_identifier_no_interpolation(false)?
+//                     .map_node(|i| i.into());
+
+//                 module.span = module.span.merge(var.span);
+
+//                 let value = self.modules.get(module.node, module.span)?.get_var(var)?;
+//                 HigherIntermediateValue::Literal(value.clone())
+//             } else {
+//                 let fn_name = self
+//                     .parse_identifier_no_interpolation(false)?
+//                     .map_node(|i| i.into());
+
+//                 let function = self
+//                     .modules
+//                     .get(module.node, module.span)?
+//                     .get_fn(fn_name)?
+//                     .ok_or(("Undefined function.", fn_name.span))?;
+
+//                 self.expect_char('(')?;
+
+//                 let call_args = self.parse_call_args()?;
+
+//                 HigherIntermediateValue::Function(function, call_args, Some(module))
+//             })
+//             .span(module.span),
+//         )
+//     }
+
+//     fn parse_fn_call(
+//         &mut self,
+//         mut s: String,
+//         lower: String,
+//     ) -> SassResult<Spanned<IntermediateValue>> {
+//         if lower == "min" || lower == "max" {
+//             let start = self.toks.cursor();
+//             match self.try_parse_min_max(&lower, true)? {
+//                 Some(val) => {
+//                     return Ok(IntermediateValue::Value(HigherIntermediateValue::Literal(
+//                         Value::String(val, QuoteKind::None),
+//                     ))
+//                     .span(self.span_before));
+//                 }
+//                 None => {
+//                     self.toks.set_cursor(start);
+//                 }
+//             }
+//         }
+
+//         let as_ident = Identifier::from(&s);
+//         let func = match self.scopes.get_fn(as_ident, self.global_scope) {
+//             Some(f) => f,
+//             None => {
+//                 if let Some(f) = GLOBAL_FUNCTIONS.get(as_ident.as_str()) {
+//                     return Ok(IntermediateValue::Value(HigherIntermediateValue::Function(
+//                         SassFunction::Builtin(f.clone(), as_ident),
+//                         self.parse_call_args()?,
+//                         None,
+//                     ))
+//                     .span(self.span_before));
+//                 }
+
+//                 // check for special cased CSS functions
+//                 match unvendor(&lower) {
+//                     "calc" | "element" | "expression" => {
+//                         s = lower;
+//                         self.parse_calc_args(&mut s)?;
+//                     }
+//                     "url" => match self.try_parse_url()? {
+//                         Some(val) => s = val,
+//                         None => s.push_str(
+//                             &self
+//                                 .parse_call_args()?
+//                                 .to_css_string(self.options.is_compressed())?,
+//                         ),
+//                     },
+//                     "clamp" if lower == "clamp" => {
+//                         self.parse_calc_args(&mut s)?;
+//                     }
+//                     _ => s.push_str(
+//                         &self
+//                             .parse_call_args()?
+//                             .to_css_string(self.options.is_compressed())?,
+//                     ),
+//                 }
+
+//                 return Ok(IntermediateValue::Value(HigherIntermediateValue::Literal(
+//                     Value::String(s, QuoteKind::None),
+//                 ))
+//                 .span(self.span_before));
+//             }
+//         };
+
+//         let call_args = self.parse_call_args()?;
+//         Ok(
+//             IntermediateValue::Value(HigherIntermediateValue::Function(func, call_args, None))
+//                 .span(self.span_before),
+//         )
+//     }
+
+//     fn parse_ident_value(
+//         &mut self,
+//         predicate: Predicate<'_>,
+//     ) -> SassResult<Spanned<IntermediateValue>> {
+//         let Spanned { node: mut s, span } = self.parse_identifier()?;
+
+//         self.span_before = span;
+
+//         let lower = s.to_ascii_lowercase();
+
+//         if lower == "progid" && self.consume_char_if_exists(':') {
+//             s = lower;
+//             s.push(':');
+//             s.push_str(&self.parse_progid()?);
+//             return Ok(Spanned {
+//                 node: IntermediateValue::Value(HigherIntermediateValue::Literal(Value::String(
+//                     s,
+//                     QuoteKind::None,
+//                 ))),
+//                 span,
+//             });
+//         }
+
+//         if !is_keyword_operator(&s) {
+//             match self.toks.peek() {
+//                 Some(Token { kind: '(', .. }) => {
+//                     self.span_before = span;
+//                     self.toks.next();
+
+//                     return self.parse_fn_call(s, lower);
+//                 }
+//                 Some(Token { kind: '.', .. }) => {
+//                     if !predicate(self) {
+//                         self.toks.next();
+//                         return self.parse_module_item(Spanned {
+//                             node: s.into(),
+//                             span,
+//                         });
+//                     }
+//                 }
+//                 _ => {}
+//             }
+//         }
+
+//         // check for named colors
+//         Ok(if let Some(c) = NAMED_COLORS.get_by_name(lower.as_str()) {
+//             IntermediateValue::Value(HigherIntermediateValue::Literal(Value::Color(Box::new(
+//                 Color::new(c[0], c[1], c[2], c[3], s),
+//             ))))
+//         } else {
+//             // check for keywords
+//             match s.as_str() {
+//                 "true" => IntermediateValue::Value(HigherIntermediateValue::Literal(Value::True)),
+//                 "false" => IntermediateValue::Value(HigherIntermediateValue::Literal(Value::False)),
+//                 "null" => IntermediateValue::Value(HigherIntermediateValue::Literal(Value::Null)),
+//                 "not" => IntermediateValue::Op(Op::Not),
+//                 "and" => IntermediateValue::Op(Op::And),
+//                 "or" => IntermediateValue::Op(Op::Or),
+//                 _ => IntermediateValue::Value(HigherIntermediateValue::Literal(Value::String(
+//                     s,
+//                     QuoteKind::None,
+//                 ))),
+//             }
+//         }
+//         .span(span))
+//     }
+
+//     fn next_is_hypen(&mut self) -> bool {
+//         if let Some(Token { kind, .. }) = self.toks.peek_forward(1) {
+//             matches!(kind, '-' | '_' | 'a'..='z' | 'A'..='Z')
+//         } else {
+//             false
+//         }
+//     }
+
+//     pub(crate) fn parse_whole_number(&mut self) -> String {
+//         let mut buf = String::new();
+
+//         while let Some(c) = self.toks.peek() {
+//             if !c.kind.is_ascii_digit() {
+//                 break;
+//             }
+
+//             let tok = self.toks.next().unwrap();
+//             buf.push(tok.kind);
+//         }
+
+//         buf
+//     }
+
+//     fn parse_number(&mut self, predicate: Predicate<'_>) -> SassResult<Spanned<ParsedNumber>> {
+//         let mut span = self.toks.peek().unwrap().pos;
+//         let mut whole = self.parse_whole_number();
+
+//         if self.toks.peek().is_none() || predicate(self) {
+//             return Ok(Spanned {
+//                 node: ParsedNumber::new(whole, 0, String::new(), true),
+//                 span,
+//             });
+//         }
+
+//         let next_tok = self.toks.peek().unwrap();
+
+//         let dec_len = if next_tok.kind == '.' {
+//             self.toks.next();
+
+//             let dec = self.parse_whole_number();
+//             if dec.is_empty() {
+//                 return Err(("Expected digit.", next_tok.pos()).into());
+//             }
+
+//             whole.push_str(&dec);
+
+//             dec.len()
+//         } else {
+//             0
+//         };
+
+//         let mut times_ten = String::new();
+//         let mut times_ten_is_postive = true;
+
+//         if let Some(Token { kind: 'e', .. }) | Some(Token { kind: 'E', .. }) = self.toks.peek() {
+//             if let Some(tok) = self.toks.peek_next() {
+//                 match tok.kind {
+//                     '-' => {
+//                         self.toks.next();
+//                         self.toks.next();
+//                         times_ten_is_postive = false;
+
+//                         times_ten = self.parse_whole_number();
+
+//                         if times_ten.is_empty() {
+//                             return Err(
+//                                 ("Expected digit.", self.toks.peek().unwrap_or(tok).pos).into()
+//                             );
+//                         } else if times_ten.len() > 2 {
+//                             return Err((
+//                                 "Exponent too negative.",
+//                                 self.toks.peek().unwrap_or(tok).pos,
+//                             )
+//                                 .into());
+//                         }
+//                     }
+//                     '0'..='9' => {
+//                         self.toks.next();
+//                         times_ten = self.parse_whole_number();
+
+//                         if times_ten.len() > 2 {
+//                             return Err((
+//                                 "Exponent too large.",
+//                                 self.toks.peek().unwrap_or(tok).pos,
+//                             )
+//                                 .into());
+//                         }
+//                     }
+//                     _ => {}
+//                 }
+//             }
+//         }
+
+//         if let Some(Token { pos, .. }) = self.toks.peek_previous() {
+//             span = span.merge(pos);
+//         }
+
+//         self.toks.reset_cursor();
+
+//         Ok(Spanned {
+//             node: ParsedNumber::new(whole, dec_len, times_ten, times_ten_is_postive),
+//             span,
+//         })
+//     }
+
+//     fn parse_bracketed_list(&mut self) -> SassResult<Spanned<IntermediateValue>> {
+//         let mut span = self.span_before;
+//         self.toks.next();
+//         self.whitespace_or_comment();
+
+//         Ok(if let Some(Token { kind: ']', pos }) = self.toks.peek() {
+//             span = span.merge(pos);
+//             self.toks.next();
+//             IntermediateValue::Value(HigherIntermediateValue::Literal(Value::List(
+//                 Vec::new(),
+//                 ListSeparator::Space,
+//                 Brackets::Bracketed,
+//             )))
+//             .span(span)
+//         } else {
+//             // todo: we don't know if we're `in_paren` here
+//             let inner = self.parse_value(false, &|parser| {
+//                 matches!(parser.toks.peek(), Some(Token { kind: ']', .. }))
+//             })?;
+
+//             span = span.merge(inner.span);
+
+//             self.expect_char(']')?;
+
+//             IntermediateValue::Value(HigherIntermediateValue::Literal(match inner.node {
+//                 Value::List(els, sep, Brackets::None) => Value::List(els, sep, Brackets::Bracketed),
+//                 v => Value::List(vec![v], ListSeparator::Space, Brackets::Bracketed),
+//             }))
+//             .span(span)
+//         })
+//     }
+
+//     fn parse_intermediate_value_dimension(
+//         &mut self,
+//         predicate: Predicate<'_>,
+//     ) -> SassResult<Spanned<IntermediateValue>> {
+//         let Spanned { node, span } = self.parse_dimension(predicate)?;
+
+//         Ok(IntermediateValue::Value(HigherIntermediateValue::Literal(node)).span(span))
+//     }
+
+//     pub(crate) fn parse_dimension(
+//         &mut self,
+//         predicate: Predicate<'_>,
+//     ) -> SassResult<Spanned<Value>> {
+//         let Spanned {
+//             node: val,
+//             mut span,
+//         } = self.parse_number(predicate)?;
+//         let unit = if let Some(tok) = self.toks.peek() {
+//             let Token { kind, .. } = tok;
+//             match kind {
+//                 'a'..='z' | 'A'..='Z' | '_' | '\\' | '\u{7f}'..=std::char::MAX => {
+//                     let u = self.parse_identifier_no_interpolation(true)?;
+//                     span = span.merge(u.span);
+//                     Unit::from(u.node)
+//                 }
+//                 '-' => {
+//                     if let Some(Token { kind, .. }) = self.toks.peek_next() {
+//                         self.toks.reset_cursor();
+//                         if matches!(kind, 'a'..='z' | 'A'..='Z' | '_' | '\\' | '\u{7f}'..=std::char::MAX)
+//                         {
+//                             let u = self.parse_identifier_no_interpolation(true)?;
+//                             span = span.merge(u.span);
+//                             Unit::from(u.node)
+//                         } else {
+//                             Unit::None
+//                         }
+//                     } else {
+//                         self.toks.reset_cursor();
+//                         Unit::None
+//                     }
+//                 }
+//                 '%' => {
+//                     span = span.merge(self.toks.next().unwrap().pos());
+//                     Unit::Percent
+//                 }
+//                 _ => Unit::None,
+//             }
+//         } else {
+//             Unit::None
+//         };
+
+//         let n = if val.dec_len == 0 {
+//             if val.num.len() <= 18 && val.times_ten.is_empty() {
+//                 let n = Rational64::new_raw(parse_i64(&val.num), 1);
+//                 return Ok(Value::Dimension(Some(Number::new_small(n)), unit, false).span(span));
+//             }
+//             BigRational::new_raw(val.num.parse::<BigInt>().unwrap(), BigInt::one())
+//         } else {
+//             if val.num.len() <= 18 && val.times_ten.is_empty() {
+//                 let n = Rational64::new(parse_i64(&val.num), pow(10, val.dec_len));
+//                 return Ok(Value::Dimension(Some(Number::new_small(n)), unit, false).span(span));
+//             }
+//             BigRational::new(val.num.parse().unwrap(), pow(BigInt::from(10), val.dec_len))
+//         };
+
+//         if val.times_ten.is_empty() {
+//             return Ok(Value::Dimension(Some(Number::new_big(n)), unit, false).span(span));
+//         }
+
+//         let times_ten = pow(
+//             BigInt::from(10),
+//             val.times_ten
+//                 .parse::<BigInt>()
+//                 .unwrap()
+//                 .to_usize()
+//                 .ok_or(("Exponent too large (expected usize).", span))?,
+//         );
+
+//         let times_ten = if val.times_ten_is_postive {
+//             BigRational::new_raw(times_ten, BigInt::one())
+//         } else {
+//             BigRational::new(BigInt::one(), times_ten)
+//         };
+
+//         Ok(Value::Dimension(Some(Number::new_big(n * times_ten)), unit, false).span(span))
+//     }
+
+//     fn parse_paren(&mut self) -> SassResult<Spanned<IntermediateValue>> {
+//         if self.consume_char_if_exists(')') {
+//             return Ok(
+//                 IntermediateValue::Value(HigherIntermediateValue::Literal(Value::List(
+//                     Vec::new(),
+//                     ListSeparator::Space,
+//                     Brackets::None,
+//                 )))
+//                 .span(self.span_before),
+//             );
+//         }
+
+//         let mut map = SassMap::new();
+//         let key = self.parse_value(true, &|parser| {
+//             matches!(
+//                 parser.toks.peek(),
+//                 Some(Token { kind: ':', .. }) | Some(Token { kind: ')', .. })
+//             )
+//         })?;
+
+//         match self.toks.next() {
+//             Some(Token { kind: ':', .. }) => {}
+//             Some(Token { kind: ')', .. }) => {
+//                 return Ok(Spanned {
+//                     node: IntermediateValue::Value(HigherIntermediateValue::Literal(key.node)),
+//                     span: key.span,
+//                 });
+//             }
+//             Some(..) | None => return Err(("expected \")\".", key.span).into()),
+//         }
+
+//         let val = self.parse_value(true, &|parser| {
+//             matches!(
+//                 parser.toks.peek(),
+//                 Some(Token { kind: ',', .. }) | Some(Token { kind: ')', .. })
+//             )
+//         })?;
+
+//         map.insert(key.node, val.node);
+
+//         let mut span = key.span.merge(val.span);
+
+//         match self.toks.next() {
+//             Some(Token { kind: ',', .. }) => {}
+//             Some(Token { kind: ')', .. }) => {
+//                 return Ok(Spanned {
+//                     node: IntermediateValue::Value(HigherIntermediateValue::Literal(Value::Map(
+//                         map,
+//                     ))),
+//                     span,
+//                 });
+//             }
+//             Some(..) | None => return Err(("expected \")\".", key.span).into()),
+//         }
+
+//         self.whitespace_or_comment();
+
+//         while self.consume_char_if_exists(',') {
+//             self.whitespace_or_comment();
+//         }
+
+//         if self.consume_char_if_exists(')') {
+//             return Ok(Spanned {
+//                 node: IntermediateValue::Value(HigherIntermediateValue::Literal(Value::Map(map))),
+//                 span,
+//             });
+//         }
+
+//         loop {
+//             let key = self.parse_value(true, &|parser| {
+//                 matches!(
+//                     parser.toks.peek(),
+//                     Some(Token { kind: ':', .. }) | Some(Token { kind: ',', .. })
+//                 )
+//             })?;
+
+//             self.expect_char(':')?;
+
+//             self.whitespace_or_comment();
+//             let val = self.parse_value(true, &|parser| {
+//                 matches!(
+//                     parser.toks.peek(),
+//                     Some(Token { kind: ',', .. }) | Some(Token { kind: ')', .. })
+//                 )
+//             })?;
+
+//             span = span.merge(val.span);
+
+//             if map.insert(key.node.clone(), val.node) {
+//                 return Err(("Duplicate key.", key.span).into());
+//             }
+
+//             let found_comma = self.consume_char_if_exists(',');
+
+//             self.whitespace_or_comment();
+
+//             match self.toks.peek() {
+//                 Some(Token { kind: ')', .. }) => {
+//                     self.toks.next();
+//                     break;
+//                 }
+//                 Some(..) if found_comma => continue,
+//                 Some(..) | None => return Err(("expected \")\".", val.span).into()),
+//             }
+//         }
+//         Ok(Spanned {
+//             node: IntermediateValue::Value(HigherIntermediateValue::Literal(Value::Map(map))),
+//             span,
+//         })
+//     }
+
+//     fn in_interpolated_identifier_body(&mut self) -> bool {
+//         match self.toks.peek() {
+//             Some(Token { kind: '\\', .. }) => true,
+//             Some(Token { kind, .. }) if is_name(kind) => true,
+//             Some(Token { kind: '#', .. }) => {
+//                 let next_is_curly = matches!(self.toks.peek_next(), Some(Token { kind: '{', .. }));
+//                 self.toks.reset_cursor();
+//                 next_is_curly
+//             }
+//             Some(..) | None => false,
+//         }
+//     }
+
+//     /// single codepoint: U+26
+//     /// Codepoint range:  U+0-7F
+//     /// Wildcard range:   U+4??
+//     fn parse_unicode_range(&mut self, kind: char) -> SassResult<Spanned<IntermediateValue>> {
+//         let mut buf = String::with_capacity(4);
+//         let mut span = self.span_before;
+//         buf.push(kind);
+//         buf.push('+');
+
+//         for _ in 0..6 {
+//             if let Some(Token { kind, pos }) = self.toks.peek() {
+//                 if kind.is_ascii_hexdigit() {
+//                     span = span.merge(pos);
+//                     self.span_before = pos;
+//                     buf.push(kind);
+//                     self.toks.next();
+//                 } else {
+//                     break;
+//                 }
+//             }
+//         }
+
+//         if self.consume_char_if_exists('?') {
+//             buf.push('?');
+//             for _ in 0..(8_usize.saturating_sub(buf.len())) {
+//                 if let Some(Token { kind: '?', pos }) = self.toks.peek() {
+//                     span = span.merge(pos);
+//                     self.span_before = pos;
+//                     buf.push('?');
+//                     self.toks.next();
+//                 } else {
+//                     break;
+//                 }
+//             }
+//             return Ok(Spanned {
+//                 node: IntermediateValue::Value(HigherIntermediateValue::Literal(Value::String(
+//                     buf,
+//                     QuoteKind::None,
+//                 ))),
+//                 span,
+//             });
+//         }
+
+//         if buf.len() == 2 {
+//             return Err(("Expected hex digit or \"?\".", self.span_before).into());
+//         }
+
+//         if self.consume_char_if_exists('-') {
+//             buf.push('-');
+//             let mut found_hex_digit = false;
+//             for _ in 0..6 {
+//                 found_hex_digit = true;
+//                 if let Some(Token { kind, pos }) = self.toks.peek() {
+//                     if kind.is_ascii_hexdigit() {
+//                         span = span.merge(pos);
+//                         self.span_before = pos;
+//                         buf.push(kind);
+//                         self.toks.next();
+//                     } else {
+//                         break;
+//                     }
+//                 }
+//             }
+
+//             if !found_hex_digit {
+//                 return Err(("Expected hex digit.", self.span_before).into());
+//             }
+//         }
+
+//         if self.in_interpolated_identifier_body() {
+//             return Err(("Expected end of identifier.", self.span_before).into());
+//         }
+
+//         Ok(Spanned {
+//             node: IntermediateValue::Value(HigherIntermediateValue::Literal(Value::String(
+//                 buf,
+//                 QuoteKind::None,
+//             ))),
+//             span,
+//         })
+//     }
+
+//     fn parse_intermediate_value(
+//         &mut self,
+//         predicate: Predicate<'_>,
+//     ) -> Option<SassResult<Spanned<IntermediateValue>>> {
+//         if predicate(self) {
+//             return None;
+//         }
+//         let (kind, span) = match self.toks.peek() {
+//             Some(v) => (v.kind, v.pos()),
+//             None => return None,
+//         };
+
+//         self.span_before = span;
+
+//         if self.whitespace() {
+//             return Some(Ok(Spanned {
+//                 node: IntermediateValue::Whitespace,
+//                 span,
+//             }));
+//         }
+
+//         Some(Ok(match kind {
+//             _ if kind.is_ascii_alphabetic()
+//                 || kind == '_'
+//                 || kind == '\\'
+//                 || (!kind.is_ascii() && !kind.is_control())
+//                 || (kind == '-' && self.next_is_hypen()) =>
+//             {
+//                 if kind == 'U' || kind == 'u' {
+//                     if matches!(self.toks.peek_next(), Some(Token { kind: '+', .. })) {
+//                         self.toks.next();
+//                         self.toks.next();
+//                         return Some(self.parse_unicode_range(kind));
+//                     }
+
+//                     self.toks.reset_cursor();
+//                 }
+//                 return Some(self.parse_ident_value(predicate));
+//             }
+//             '0'..='9' | '.' => return Some(self.parse_intermediate_value_dimension(predicate)),
+//             '(' => {
+//                 self.toks.next();
+//                 return Some(self.parse_paren());
+//             }
+//             '&' => {
+//                 let span = self.toks.next().unwrap().pos();
+//                 if self.super_selectors.is_empty()
+//                     && !self.at_root_has_selector
+//                     && !self.flags.in_at_root_rule()
+//                 {
+//                     IntermediateValue::Value(HigherIntermediateValue::Literal(Value::Null))
+//                         .span(span)
+//                 } else {
+//                     IntermediateValue::Value(HigherIntermediateValue::Literal(
+//                         self.super_selectors
+//                             .last()
+//                             .clone()
+//                             .into_selector()
+//                             .into_value(),
+//                     ))
+//                     .span(span)
+//                 }
+//             }
+//             '#' => {
+//                 if let Some(Token { kind: '{', pos }) = self.toks.peek_forward(1) {
+//                     self.span_before = pos;
+//                     self.toks.reset_cursor();
+//                     return Some(self.parse_ident_value(predicate));
+//                 }
+//                 self.toks.reset_cursor();
+//                 self.toks.next();
+//                 let hex = match self.parse_hex() {
+//                     Ok(v) => v,
+//                     Err(e) => return Some(Err(e)),
+//                 };
+//                 IntermediateValue::Value(HigherIntermediateValue::Literal(hex.node)).span(hex.span)
+//             }
+//             q @ '"' | q @ '\'' => {
+//                 let span_start = self.toks.next().unwrap().pos();
+//                 let Spanned { node, span } = match self.parse_quoted_string(q) {
+//                     Ok(v) => v,
+//                     Err(e) => return Some(Err(e)),
+//                 };
+//                 IntermediateValue::Value(HigherIntermediateValue::Literal(node))
+//                     .span(span_start.merge(span))
+//             }
+//             '[' => return Some(self.parse_bracketed_list()),
+//             '$' => {
+//                 self.toks.next();
+//                 let val = match self.parse_identifier_no_interpolation(false) {
+//                     Ok(v) => v.map_node(|i| i.into()),
+//                     Err(e) => return Some(Err(e)),
+//                 };
+//                 IntermediateValue::Value(HigherIntermediateValue::Literal(
+//                     match self.scopes.get_var(val, self.global_scope) {
+//                         Ok(v) => v.clone(),
+//                         Err(e) => return Some(Err(e)),
+//                     },
+//                 ))
+//                 .span(val.span)
+//             }
+//             '+' => {
+//                 let span = self.toks.next().unwrap().pos();
+//                 IntermediateValue::Op(Op::Plus).span(span)
+//             }
+//             '-' => {
+//                 if matches!(self.toks.peek(), Some(Token { kind: '#', .. }))
+//                     && matches!(self.toks.peek_next(), Some(Token { kind: '{', .. }))
+//                 {
+//                     self.toks.reset_cursor();
+//                     return Some(self.parse_ident_value(predicate));
+//                 }
+//                 self.toks.reset_cursor();
+//                 let span = self.toks.next().unwrap().pos();
+//                 IntermediateValue::Op(Op::Minus).span(span)
+//             }
+//             '*' => {
+//                 let span = self.toks.next().unwrap().pos();
+//                 IntermediateValue::Op(Op::Mul).span(span)
+//             }
+//             '%' => {
+//                 let span = self.toks.next().unwrap().pos();
+//                 IntermediateValue::Op(Op::Rem).span(span)
+//             }
+//             ',' => {
+//                 self.toks.next();
+//                 IntermediateValue::Comma.span(span)
+//             }
+//             q @ '>' | q @ '<' => {
+//                 let mut span = self.toks.next().unwrap().pos;
+//                 #[allow(clippy::eval_order_dependence)]
+//                 IntermediateValue::Op(if let Some(Token { kind: '=', .. }) = self.toks.peek() {
+//                     span = span.merge(self.toks.next().unwrap().pos);
+//                     match q {
+//                         '>' => Op::GreaterThanEqual,
+//                         '<' => Op::LessThanEqual,
+//                         _ => unreachable!(),
+//                     }
+//                 } else {
+//                     match q {
+//                         '>' => Op::GreaterThan,
+//                         '<' => Op::LessThan,
+//                         _ => unreachable!(),
+//                     }
+//                 })
+//                 .span(span)
+//             }
+//             '=' => {
+//                 let mut span = self.toks.next().unwrap().pos();
+//                 if let Some(Token { kind: '=', pos }) = self.toks.next() {
+//                     span = span.merge(pos);
+//                     IntermediateValue::Op(Op::Equal).span(span)
+//                 } else {
+//                     return Some(Err(("expected \"=\".", span).into()));
+//                 }
+//             }
+//             '!' => {
+//                 let mut span = self.toks.next().unwrap().pos();
+//                 if let Some(Token { kind: '=', .. }) = self.toks.peek() {
+//                     span = span.merge(self.toks.next().unwrap().pos());
+//                     return Some(Ok(IntermediateValue::Op(Op::NotEqual).span(span)));
+//                 }
+//                 self.whitespace();
+//                 let v = match self.parse_identifier() {
+//                     Ok(v) => v,
+//                     Err(e) => return Some(Err(e)),
+//                 };
+//                 span = span.merge(v.span);
+//                 match v.node.to_ascii_lowercase().as_str() {
+//                     "important" => {
+//                         IntermediateValue::Value(HigherIntermediateValue::Literal(Value::Important))
+//                             .span(span)
+//                     }
+//                     _ => return Some(Err(("Expected \"important\".", span).into())),
+//                 }
+//             }
+//             '/' => {
+//                 let span = self.toks.next().unwrap().pos();
+//                 match self.toks.peek() {
+//                     Some(Token { kind: '/', .. }) | Some(Token { kind: '*', .. }) => {
+//                         let span = match self.parse_comment() {
+//                             Ok(c) => c.span,
+//                             Err(e) => return Some(Err(e)),
+//                         };
+//                         IntermediateValue::Whitespace.span(span)
+//                     }
+//                     Some(..) => IntermediateValue::Op(Op::Div).span(span),
+//                     None => return Some(Err(("Expected expression.", span).into())),
+//                 }
+//             }
+//             ';' | '}' | '{' => return None,
+//             ':' | '?' | ')' | '@' | '^' | ']' | '|' => {
+//                 self.toks.next();
+//                 return Some(Err(("expected \";\".", span).into()));
+//             }
+//             '\u{0}'..='\u{8}' | '\u{b}'..='\u{1f}' | '\u{7f}'..=std::char::MAX | '`' | '~' => {
+//                 self.toks.next();
+//                 return Some(Err(("Expected expression.", span).into()));
+//             }
+//             ' ' | '\n' | '\t' => unreachable!("whitespace is checked prior to this match"),
+//             'A'..='Z' | 'a'..='z' | '_' | '\\' => {
+//                 unreachable!("these chars are checked in an if stmt")
+//             }
+//         }))
+//     }
+
+//     fn parse_hex(&mut self) -> SassResult<Spanned<Value>> {
+//         let mut s = String::with_capacity(7);
+//         s.push('#');
+//         let first_char = self
+//             .toks
+//             .peek()
+//             .ok_or(("Expected identifier.", self.span_before))?
+//             .kind;
+//         let first_is_digit = first_char.is_ascii_digit();
+//         let first_is_hexdigit = first_char.is_ascii_hexdigit();
+//         if first_is_digit {
+//             while let Some(c) = self.toks.peek() {
+//                 if !c.kind.is_ascii_hexdigit() || s.len() == 9 {
+//                     break;
+//                 }
+//                 let tok = self.toks.next().unwrap();
+//                 self.span_before = self.span_before.merge(tok.pos());
+//                 s.push(tok.kind);
+//             }
+//         // this branch exists so that we can emit `#` combined with
+//         // identifiers. e.g. `#ooobar` should be emitted exactly as written;
+//         // that is, `#ooobar`.
+//         } else {
+//             let ident = self.parse_identifier()?;
+//             if first_is_hexdigit
+//                 && ident.node.chars().all(|c| c.is_ascii_hexdigit())
+//                 && matches!(ident.node.len(), 3 | 4 | 6 | 8)
+//             {
+//                 s.push_str(&ident.node);
+//             } else {
+//                 return Ok(Spanned {
+//                     node: Value::String(format!("#{}", ident.node), QuoteKind::None),
+//                     span: ident.span,
+//                 });
+//             }
+//         }
+//         let v = match u32::from_str_radix(&s[1..], 16) {
+//             Ok(a) => a,
+//             Err(_) => return Ok(Value::String(s, QuoteKind::None).span(self.span_before)),
+//         };
+//         let (red, green, blue, alpha) = match s.len().saturating_sub(1) {
+//             3 => (
+//                 (((v & 0x0f00) >> 8) * 0x11) as u8,
+//                 (((v & 0x00f0) >> 4) * 0x11) as u8,
+//                 ((v & 0x000f) * 0x11) as u8,
+//                 1,
+//             ),
+//             4 => (
+//                 (((v & 0xf000) >> 12) * 0x11) as u8,
+//                 (((v & 0x0f00) >> 8) * 0x11) as u8,
+//                 (((v & 0x00f0) >> 4) * 0x11) as u8,
+//                 ((v & 0x000f) * 0x11) as u8,
+//             ),
+//             6 => (
+//                 ((v & 0x00ff_0000) >> 16) as u8,
+//                 ((v & 0x0000_ff00) >> 8) as u8,
+//                 (v & 0x0000_00ff) as u8,
+//                 1,
+//             ),
+//             8 => (
+//                 ((v & 0xff00_0000) >> 24) as u8,
+//                 ((v & 0x00ff_0000) >> 16) as u8,
+//                 ((v & 0x0000_ff00) >> 8) as u8,
+//                 (v & 0x0000_00ff) as u8,
+//             ),
+//             _ => return Err(("Expected hex digit.", self.span_before).into()),
+//         };
+//         let color = Color::new(red, green, blue, alpha, s);
+//         Ok(Value::Color(Box::new(color)).span(self.span_before))
+//     }
+// }
+
+// struct IntermediateValueIterator<'a, 'b: 'a, 'c> {
+//     parser: &'a mut Parser<'b, 'c>,
+//     peek: Option<SassResult<Spanned<IntermediateValue>>>,
+//     predicate: Predicate<'a>,
+// }
+
+// impl<'a, 'b: 'a, 'c> Iterator for IntermediateValueIterator<'a, 'b, 'c> {
+//     type Item = SassResult<Spanned<IntermediateValue>>;
+//     fn next(&mut self) -> Option<Self::Item> {
+//         if self.peek.is_some() {
+//             self.peek.take()
+//         } else {
+//             self.parser.parse_intermediate_value(self.predicate)
+//         }
+//     }
+// }
+
+// impl<'a, 'b: 'a, 'c> IntermediateValueIterator<'a, 'b, 'c> {
+//     pub fn new(parser: &'a mut Parser<'b, 'c>, predicate: Predicate<'a>) -> Self {
+//         Self {
+//             parser,
+//             peek: None,
+//             predicate,
+//         }
+//     }
+
+//     fn peek(&mut self) -> &Option<SassResult<Spanned<IntermediateValue>>> {
+//         self.peek = self.next();
+//         &self.peek
+//     }
+
+//     fn whitespace(&mut self) -> bool {
+//         let mut found_whitespace = false;
+//         while let Some(w) = self.peek() {
+//             if !w.is_whitespace() {
+//                 break;
+//             }
+//             found_whitespace = true;
+//             self.next();
+//         }
+//         found_whitespace
+//     }
+
+//     fn parse_op(
+//         &mut self,
+//         op: Spanned<Op>,
+//         space_separated: &mut Vec<Spanned<HigherIntermediateValue>>,
+//         last_was_whitespace: bool,
+//         in_paren: bool,
+//     ) -> SassResult<()> {
+//         match op.node {
+//             Op::Not => {
+//                 self.whitespace();
+//                 let right = self.single_value(in_paren)?;
+//                 space_separated.push(Spanned {
+//                     node: HigherIntermediateValue::UnaryOp(op.node, Box::new(right.node)),
+//                     span: right.span,
+//                 });
+//             }
+//             Op::Div => {
+//                 self.whitespace();
+//                 let right = self.single_value(in_paren)?;
+//                 if let Some(left) = space_separated.pop() {
+//                     space_separated.push(Spanned {
+//                         node: HigherIntermediateValue::BinaryOp(
+//                             Box::new(left.node),
+//                             op.node,
+//                             Box::new(right.node),
+//                         ),
+//                         span: left.span.merge(right.span),
+//                     });
+//                 } else {
+//                     self.whitespace();
+//                     space_separated.push(Spanned {
+//                         node: HigherIntermediateValue::Literal(Value::String(
+//                             format!(
+//                                 "/{}",
+//                                 ValueVisitor::new(self.parser, right.span)
+//                                     .eval(right.node, false)?
+//                                     .to_css_string(
+//                                         right.span,
+//                                         self.parser.options.is_compressed()
+//                                     )?
+//                             ),
+//                             QuoteKind::None,
+//                         )),
+//                         span: op.span.merge(right.span),
+//                     });
+//                 }
+//             }
+//             Op::Plus => {
+//                 if let Some(left) = space_separated.pop() {
+//                     self.whitespace();
+//                     let right = self.single_value(in_paren)?;
+//                     space_separated.push(Spanned {
+//                         node: HigherIntermediateValue::BinaryOp(
+//                             Box::new(left.node),
+//                             op.node,
+//                             Box::new(right.node),
+//                         ),
+//                         span: left.span.merge(right.span),
+//                     });
+//                 } else {
+//                     self.whitespace();
+//                     let right = self.single_value(in_paren)?;
+//                     space_separated.push(Spanned {
+//                         node: HigherIntermediateValue::UnaryOp(op.node, Box::new(right.node)),
+//                         span: right.span,
+//                     });
+//                 }
+//             }
+//             Op::Minus => {
+//                 let may_be_subtraction = self.whitespace() || !last_was_whitespace;
+//                 let right = self.single_value(in_paren)?;
+
+//                 if may_be_subtraction {
+//                     if let Some(left) = space_separated.pop() {
+//                         space_separated.push(Spanned {
+//                             node: HigherIntermediateValue::BinaryOp(
+//                                 Box::new(left.node),
+//                                 op.node,
+//                                 Box::new(right.node),
+//                             ),
+//                             span: left.span.merge(right.span),
+//                         });
+//                     } else {
+//                         space_separated.push(
+//                             right.map_node(|n| {
+//                                 HigherIntermediateValue::UnaryOp(op.node, Box::new(n))
+//                             }),
+//                         );
+//                     }
+//                 } else {
+//                     space_separated.push(
+//                         right.map_node(|n| HigherIntermediateValue::UnaryOp(op.node, Box::new(n))),
+//                     );
+//                 }
+//             }
+//             Op::And => {
+//                 self.whitespace();
+//                 // special case when the value is literally "and"
+//                 if self.peek().is_none() {
+//                     space_separated.push(
+//                         HigherIntermediateValue::Literal(Value::String(
+//                             op.to_string(),
+//                             QuoteKind::None,
+//                         ))
+//                         .span(op.span),
+//                     );
+//                 } else if let Some(left) = space_separated.pop() {
+//                     self.whitespace();
+//                     if ValueVisitor::new(self.parser, left.span)
+//                         .eval(left.node.clone(), false)?
+//                         .is_true()
+//                     {
+//                         let right = self.single_value(in_paren)?;
+//                         space_separated.push(
+//                             HigherIntermediateValue::BinaryOp(
+//                                 Box::new(left.node),
+//                                 op.node,
+//                                 Box::new(right.node),
+//                             )
+//                             .span(left.span.merge(right.span)),
+//                         );
+//                     } else {
+//                         // we explicitly ignore errors here as a workaround for short circuiting
+//                         while let Some(value) = self.peek() {
+//                             if let Ok(Spanned {
+//                                 node: IntermediateValue::Comma,
+//                                 ..
+//                             }) = value
+//                             {
+//                                 break;
+//                             }
+//                             self.next();
+//                         }
+//                         space_separated.push(left);
+//                     }
+//                 } else {
+//                     return Err(("Expected expression.", op.span).into());
+//                 }
+//             }
+//             Op::Or => {
+//                 self.whitespace();
+//                 // special case when the value is literally "or"
+//                 if self.peek().is_none() {
+//                     space_separated.push(
+//                         HigherIntermediateValue::Literal(Value::String(
+//                             op.to_string(),
+//                             QuoteKind::None,
+//                         ))
+//                         .span(op.span),
+//                     );
+//                 } else if let Some(left) = space_separated.pop() {
+//                     self.whitespace();
+//                     if ValueVisitor::new(self.parser, left.span)
+//                         .eval(left.node.clone(), false)?
+//                         .is_true()
+//                     {
+//                         // we explicitly ignore errors here as a workaround for short circuiting
+//                         while let Some(value) = self.peek() {
+//                             match value {
+//                                 Ok(Spanned {
+//                                     node: IntermediateValue::Comma,
+//                                     ..
+//                                 }) => break,
+//                                 Ok(..) => {
+//                                     self.next();
+//                                 }
+//                                 Err(..) => {
+//                                     if let Some(v) = self.next() {
+//                                         v?;
+//                                     }
+//                                 }
+//                             }
+//                         }
+//                         space_separated.push(left);
+//                     } else {
+//                         let right = self.single_value(in_paren)?;
+//                         space_separated.push(
+//                             HigherIntermediateValue::BinaryOp(
+//                                 Box::new(left.node),
+//                                 op.node,
+//                                 Box::new(right.node),
+//                             )
+//                             .span(left.span.merge(right.span)),
+//                         );
+//                     }
+//                 } else {
+//                     return Err(("Expected expression.", op.span).into());
+//                 }
+//             }
+//             _ => {
+//                 if let Some(left) = space_separated.pop() {
+//                     self.whitespace();
+//                     let right = self.single_value(in_paren)?;
+//                     space_separated.push(
+//                         HigherIntermediateValue::BinaryOp(
+//                             Box::new(left.node),
+//                             op.node,
+//                             Box::new(right.node),
+//                         )
+//                         .span(left.span.merge(right.span)),
+//                     );
+//                 } else {
+//                     return Err(("Expected expression.", op.span).into());
+//                 }
+//             }
+//         }
+//         Ok(())
+//     }
+
+//     fn single_value(&mut self, in_paren: bool) -> SassResult<Spanned<AstValue>> {
+//         let next = self
+//             .next()
+//             .ok_or(("Expected expression.", self.parser.span_before))??;
+//         Ok(match next.node {
+//             IntermediateValue::Value(v) => v.span(next.span),
+//             IntermediateValue::Op(op) => match op {
+//                 Op::Minus => {
+//                     self.whitespace();
+//                     let val = self.single_value(in_paren)?;
+//                     Spanned {
+//                         node: AstValue::UnaryOp(Op::Minus, Box::new(val.node)),
+//                         span: next.span.merge(val.span),
+//                     }
+//                 }
+//                 Op::Not => {
+//                     self.whitespace();
+//                     let val = self.single_value(in_paren)?;
+//                     Spanned {
+//                         node: AstValue::UnaryOp(Op::Not, Box::new(val.node)),
+//                         span: next.span.merge(val.span),
+//                     }
+//                 }
+//                 Op::Plus => {
+//                     self.whitespace();
+//                     self.single_value(in_paren)?
+//                 }
+//                 Op::Div => {
+//                     self.whitespace();
+//                     let val = self.single_value(in_paren)?;
+//                     Spanned {
+//                         node: AstValue::String(
+//                             format!(
+//                                 "/{}",
+//                                 ValueVisitor::new(self.parser, val.span)
+//                                     .eval(val.node, false)?
+//                                     .to_css_string(val.span, self.parser.options.is_compressed())?
+//                             ),
+//                             QuoteKind::None,
+//                         ),
+//                         span: next.span.merge(val.span),
+//                     }
+//                 }
+//                 Op::And => Spanned {
+//                     node: AstValue::String("and".to_owned(), QuoteKind::None),
+//                     span: next.span,
+//                 },
+//                 Op::Or => Spanned {
+//                     node: AstValue::String("or".to_owned(), QuoteKind::None),
+//                     span: next.span,
+//                 },
+//                 _ => {
+//                     return Err(("Expected expression.", next.span).into());
+//                 }
+//             },
+//             IntermediateValue::Whitespace => unreachable!(),
+//             IntermediateValue::Comma => {
+//                 return Err(("Expected expression.", self.parser.span_before).into())
+//             }
+//         })
+//     }
+// }
+
+// impl IsWhitespace for SassResult<Spanned<IntermediateValue>> {
+//     fn is_whitespace(&self) -> bool {
+//         match self {
+//             Ok(v) => v.node.is_whitespace(),
+//             _ => false,
+//         }
+//     }
+// }
+
+// fn parse_i64(s: &str) -> i64 {
+//     s.as_bytes()
+//         .iter()
+//         .fold(0, |total, this| total * 10 + i64::from(this - b'0'))
+// }
+
+// fn is_keyword_operator(s: &str) -> bool {
+//     matches!(s, "and" | "or" | "not")
+// }

@@ -20,6 +20,55 @@ pub enum Op {
     Not,
 }
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum UnaryOp {
+    Plus,
+    Neg,
+    Div,
+    Not,
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum BinaryOp {
+    SingleEq,
+    Equal,
+    NotEqual,
+    GreaterThan,
+    GreaterThanEqual,
+    LessThan,
+    LessThanEqual,
+    Plus,
+    Minus,
+    Mul,
+    Div,
+    Rem,
+    And,
+    Or,
+}
+
+impl BinaryOp {
+    /// Get order of precedence for an operator
+    ///
+    /// Higher numbers are evaluated first.
+    /// Do not rely on the number itself, but rather the size relative to other numbers
+    ///
+    /// If precedence is equal, the leftmost operation is evaluated first
+    pub fn precedence(self) -> usize {
+        match self {
+            Self::And | Self::Or => 0,
+            Self::Equal
+            | Self::NotEqual
+            | Self::GreaterThan
+            | Self::GreaterThanEqual
+            | Self::LessThan
+            | Self::LessThanEqual
+            | Self::SingleEq => 1,
+            Self::Plus | Self::Minus => 2,
+            Self::Mul | Self::Div | Self::Rem => 3,
+        }
+    }
+}
+
 impl Display for Op {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -89,26 +138,27 @@ pub(crate) enum Brackets {
 pub(crate) enum ListSeparator {
     Space,
     Comma,
+    Undecided,
 }
 
 impl ListSeparator {
     pub fn as_str(self) -> &'static str {
         match self {
-            Self::Space => " ",
+            Self::Space | Self::Undecided => " ",
             Self::Comma => ", ",
         }
     }
 
     pub fn as_compressed_str(self) -> &'static str {
         match self {
-            Self::Space => " ",
+            Self::Space | Self::Undecided => " ",
             Self::Comma => ",",
         }
     }
 
     pub fn name(self) -> &'static str {
         match self {
-            Self::Space => "space",
+            Self::Space | Self::Undecided => "space",
             Self::Comma => "comma",
         }
     }

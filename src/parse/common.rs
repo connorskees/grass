@@ -56,6 +56,8 @@ impl ContextFlags {
     pub const IN_CONTROL_FLOW: ContextFlag = ContextFlag(1 << 2);
     pub const IN_KEYFRAMES: ContextFlag = ContextFlag(1 << 3);
     pub const IN_AT_ROOT_RULE: ContextFlag = ContextFlag(1 << 4);
+    pub const IN_PLAIN_CSS: ContextFlag = ContextFlag(1 << 5);
+    pub const IN_PARENS: ContextFlag = ContextFlag(1 << 6);
 
     pub const fn empty() -> Self {
         Self(0)
@@ -79,6 +81,14 @@ impl ContextFlags {
 
     pub fn in_at_root_rule(self) -> bool {
         (self.0 & Self::IN_AT_ROOT_RULE) != 0
+    }
+
+    pub fn in_plain_css(self) -> bool {
+        (self.0 & Self::IN_PLAIN_CSS) != 0
+    }
+
+    pub fn in_parens(self) -> bool {
+        (self.0 & Self::IN_PARENS) != 0
     }
 }
 
