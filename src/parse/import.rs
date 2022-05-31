@@ -64,16 +64,12 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         for path in &self.options.load_paths {
             if self.options.fs.is_dir(path) {
+                try_path!(path.join(name).with_extension("scss"));
                 try_path!(path
-                    .join(&path_buf)
-                    .with_file_name(name)
+                    .join(format!("_{}", name.to_str().unwrap()))
                     .with_extension("scss"));
-                try_path!(path
-                    .join(&path_buf)
-                    .with_file_name(format!("_{}", name.to_str().unwrap()))
-                    .with_extension("scss"));
-                try_path!(path.join(&path_buf).join("index.scss"));
-                try_path!(path.join(&path_buf).join("_index.scss"));
+                try_path!(path.join("index.scss"));
+                try_path!(path.join("_index.scss"));
             } else {
                 try_path!(path.to_path_buf());
                 try_path!(path.with_file_name(name).with_extension("scss"));

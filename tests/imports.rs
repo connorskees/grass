@@ -95,6 +95,29 @@ fn comma_separated_import_order_css() {
 }
 
 #[test]
+fn basic_load_path() {
+    tempfile!(
+        "basic_load_path__a.scss",
+        "@import \"basic_load_path__b\";\na {\n color: $a;\n}",
+        dir = "dir-basic_load_path__a"
+    );
+    tempfile!(
+        "basic_load_path__b.scss",
+        "$a: red;",
+        dir = "dir-basic_load_path__b"
+    );
+
+    assert_eq!(
+        "a {\n  color: red;\n}\n",
+        grass::from_path(
+            "dir-basic_load_path__a/basic_load_path__a.scss",
+            &grass::Options::default().load_path(std::path::Path::new("dir-basic_load_path__b"))
+        )
+        .unwrap()
+    );
+}
+
+#[test]
 fn comma_separated_import_trailing() {
     let input =
         "@import 'comma_separated_import_trailing1', 'comma_separated_import_trailing2', url(third),,,,,,,,;";
