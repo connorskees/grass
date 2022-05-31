@@ -65,6 +65,8 @@ grass input.scss
     clippy::same_name_method,
     clippy::undocumented_unsafe_blocks,
     clippy::exhaustive_structs,
+    clippy::single_char_lifetime_names,
+    clippy::branches_sharing_code,
 
     // temporarily allowed while under heavy development.
     // eventually these allows should be refactored away
