@@ -1,3 +1,7 @@
+# 0.11.1
+
+ - fix load path bug in which paths were searched for relative to the SCSS file, not the executable (#57)
+
 # 0.11.0
 
 - `fs` option added to allow interception and reimplementation of all file system operations (such as imports)

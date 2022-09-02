@@ -1,6 +1,6 @@
 [package]
 name = "grass"
-version = "0.11.0"
+version = "0.11.1"
 description = "A near-feature-complete Sass compiler written purely in Rust"
 readme = "README.md"
 license = "MIT"
