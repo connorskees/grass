@@ -173,6 +173,7 @@ impl CallArgs {
         let len = self.len();
         if len > max {
             let mut err = String::with_capacity(50);
+            #[allow(clippy::format_push_string)]
             err.push_str(&format!("Only {} argument", max));
             if max != 1 {
                 err.push('s');

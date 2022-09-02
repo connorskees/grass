@@ -24,9 +24,7 @@ impl InternedString {
     }
 
     pub fn resolve_ref<'a>(self) -> &'a str {
-        unsafe {
-            STRINGS.with(|interner| &(*(interner.as_ptr()).as_ref().unwrap().resolve(&self.0)))
-        }
+        unsafe { STRINGS.with(|interner| interner.as_ptr().as_ref().unwrap().resolve(&self.0)) }
     }
 }
 

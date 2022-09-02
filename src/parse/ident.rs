@@ -118,11 +118,11 @@ impl<'a, 'b> Parser<'a, 'b> {
         }
 
         let c = std::char::from_u32(value).ok_or(("Invalid Unicode code point.", span))?;
-        if (identifier_start && is_name_start(c) && !c.is_digit(10))
+        if (identifier_start && is_name_start(c) && !c.is_ascii_digit())
             || (!identifier_start && is_name(c))
         {
             Ok(c.to_string())
-        } else if value <= 0x1F || value == 0x7F || (identifier_start && c.is_digit(10)) {
+        } else if value <= 0x1F || value == 0x7F || (identifier_start && c.is_ascii_digit()) {
             let mut buf = String::with_capacity(4);
             buf.push('\\');
             if value > 0xF {

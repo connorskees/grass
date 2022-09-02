@@ -404,9 +404,10 @@ trait Formatter {
 }
 
 #[derive(Debug, Default)]
-struct CompressedFormatter {}
+struct CompressedFormatter;
 
 impl Formatter for CompressedFormatter {
+    #[allow(clippy::only_used_in_recursion)]
     fn write_css(&mut self, buf: &mut Vec<u8>, css: Css, map: &CodeMap) -> SassResult<()> {
         for block in css.blocks {
             match block {
@@ -593,6 +594,7 @@ pub(crate) enum AtRuleContext {
 }
 
 impl Formatter for ExpandedFormatter {
+    #[allow(clippy::only_used_in_recursion)]
     fn write_css(&mut self, buf: &mut Vec<u8>, css: Css, map: &CodeMap) -> SassResult<()> {
         let padding = "  ".repeat(self.nesting);
         self.nesting += 1;

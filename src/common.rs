@@ -172,7 +172,7 @@ pub(crate) fn unvendor(name: &str) -> &str {
         return name;
     }
 
-    if bytes.get(0_usize) != Some(&b'-') || bytes.get(1_usize) == Some(&b'-') {
+    if bytes.first() != Some(&b'-') || bytes.get(1_usize) == Some(&b'-') {
         return name;
     }
 

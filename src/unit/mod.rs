@@ -196,7 +196,7 @@ impl Mul<Unit> for Unit {
             Unit::Mul(u) => match rhs {
                 Unit::Mul(u2) => {
                     let mut unit1 = *u;
-                    unit1.extend_from_slice(&*u2);
+                    unit1.extend_from_slice(&u2);
                     Unit::Mul(Box::new(unit1))
                 }
                 Unit::Div(..) => todo!(),
@@ -210,7 +210,7 @@ impl Mul<Unit> for Unit {
             _ => match rhs {
                 Unit::Mul(u2) => {
                     let mut unit1 = vec![self];
-                    unit1.extend_from_slice(&*u2);
+                    unit1.extend_from_slice(&u2);
                     Unit::Mul(Box::new(unit1))
                 }
                 Unit::Div(..) => todo!(),

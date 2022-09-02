@@ -570,6 +570,7 @@ impl Value {
         .0)
     }
 
+    #[allow(clippy::only_used_in_recursion)]
     fn selector_string(self, span: Span) -> SassResult<Option<String>> {
         Ok(Some(match self {
             Value::String(text, ..) => text,

@@ -10,7 +10,7 @@ use grass::{from_path, from_string, Options, OutputStyle};
 
 // TODO remove this
 arg_enum! {
-    #[derive(PartialEq, Debug)]
+    #[derive(Eq, PartialEq, Debug)]
     pub enum Style {
         Expanded,
         Compressed,
@@ -18,7 +18,7 @@ arg_enum! {
 }
 
 arg_enum! {
-    #[derive(PartialEq, Debug)]
+    #[derive(Eq, PartialEq, Debug)]
     pub enum SourceMapUrls {
         Relative,
         Absolute,

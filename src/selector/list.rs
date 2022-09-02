@@ -274,10 +274,7 @@ fn flatten_vertically<A: std::fmt::Debug>(iterable: Vec<Vec<A>>) -> Vec<A> {
             result.push(queue.pop_front().unwrap());
         }
 
-        queues = queues
-            .into_iter()
-            .filter(|queue| !queue.is_empty())
-            .collect();
+        queues.retain(|queue| !queue.is_empty());
     }
 
     result

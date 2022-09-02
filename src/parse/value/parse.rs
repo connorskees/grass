@@ -1330,6 +1330,7 @@ impl<'a, 'b: 'a, 'c> IntermediateValueIterator<'a, 'b, 'c> {
         Ok(())
     }
 
+    #[allow(clippy::only_used_in_recursion)]
     fn single_value(&mut self, in_paren: bool) -> SassResult<Spanned<HigherIntermediateValue>> {
         let next = self
             .next()

@@ -141,8 +141,8 @@ impl Number {
     #[allow(clippy::cast_precision_loss)]
     pub fn as_float(self) -> Option<f64> {
         Some(match self {
-            Number::Small(n) => ((*n.numer() as f64) / (*n.denom() as f64)),
-            Number::Big(n) => ((n.numer().to_f64()?) / (n.denom().to_f64()?)),
+            Number::Small(n) => (*n.numer() as f64) / (*n.denom() as f64),
+            Number::Big(n) => (n.numer().to_f64()?) / (n.denom().to_f64()?),
         })
     }
 

@@ -23,76 +23,38 @@ grass input.scss
 ```
 */
 
-#![warn(
-    clippy::all,
-    clippy::restriction,
-    clippy::pedantic,
-    clippy::nursery,
-    clippy::cargo
-)]
+#![warn(clippy::all, clippy::pedantic, clippy::nursery, clippy::cargo)]
 #![deny(missing_debug_implementations)]
 #![allow(
-    // explicit return makes some things look ugly
-    clippy::implicit_return,
     clippy::use_self,
     clippy::missing_docs_in_private_items,
     clippy::unreachable,
-    // this disallows binding as well, e.g. `v => ...`
-    clippy::wildcard_enum_match_arm,
     clippy::module_name_repetitions,
-    // it is sometimes useful to break up `impl`s
-    clippy::multiple_inherent_impl,
     // filter isn't fallible
     clippy::manual_filter_map,
-    clippy::else_if_without_else,
     clippy::new_ret_no_self,
     renamed_and_removed_lints,
     clippy::unknown_clippy_lints,
     clippy::single_match,
-    clippy::float_arithmetic,
     clippy::unimplemented,
-    clippy::pattern_type_mismatch,
-    clippy::blanket_clippy_restriction_lints,
     clippy::option_if_let_else,
-    clippy::panic_in_result_fn,
-    clippy::unwrap_in_result,
-    clippy::map_err_ignore,
-    clippy::default_numeric_fallback,
-    clippy::if_then_some_else_none,
-    clippy::string_slice,
-    clippy::separated_literal_suffix,
-    clippy::non_ascii_literal,
-    clippy::same_name_method,
-    clippy::undocumented_unsafe_blocks,
-    clippy::exhaustive_structs,
-    clippy::single_char_lifetime_names,
     clippy::branches_sharing_code,
+    clippy::derive_partial_eq_without_eq,
 
     // temporarily allowed while under heavy development.
     // eventually these allows should be refactored away
     // to no longer be necessary
-    clippy::as_conversions,
-    clippy::todo,
     clippy::too_many_lines,
-    clippy::panic,
-    clippy::unwrap_used,
-    clippy::unwrap_used,
     clippy::cast_possible_truncation,
     clippy::single_match_else,
-    clippy::indexing_slicing,
     clippy::redundant_pub_crate,
     // the api is changing too often to allot this
     clippy::missing_errors_doc,
     clippy::missing_const_for_fn,
     clippy::multiple_crate_versions,
 
-    clippy::integer_arithmetic,
-    clippy::string_add,
-    clippy::get_unwrap,
     clippy::wrong_self_convention,
     clippy::items_after_statements,
-    clippy::shadow_reuse,
-    clippy::shadow_unrelated,
     // this is only available on nightly
     clippy::unnested_or_patterns,
 )]
