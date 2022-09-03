@@ -1,3 +1,9 @@
+# 0.11.2
+
+- make `grass::Error` a `Send` type
+- expose more internals of `grass::Error`, allowing for custom formatting
+- fix WASM builds
+
 # 0.11.1
 
  - fix load path bug in which paths were searched for relative to the SCSS file, not the executable (#57)

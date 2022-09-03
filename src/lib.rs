@@ -1,7 +1,7 @@
 /*! # grass
 An implementation of Sass in pure rust.
 
-Spec progress as of 0.11.1, released on 2022-09-02:
+Spec progress as of 0.11.2, released on 2022-09-03:
 
 | Passing | Failing | Total |
 |---------|---------|-------|
@@ -327,6 +327,6 @@ pub fn from_string(input: String, options: &Options) -> Result<String> {
 
 #[cfg(feature = "wasm-exports")]
 #[wasm_bindgen(js_name = from_string)]
-pub fn from_string_js(p: String) -> std::result::Result<String, JsValue> {
-    from_string(Options::default()).map_err(|e| e.to_string())
+pub fn from_string_js(input: String) -> std::result::Result<String, String> {
+    from_string(input, &Options::default()).map_err(|e| e.to_string())
 }
