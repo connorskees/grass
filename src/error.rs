@@ -2,8 +2,8 @@ use std::{
     error::Error,
     fmt::{self, Display},
     io,
-    rc::Rc,
     string::FromUtf8Error,
+    sync::Arc,
 };
 
 use codemap::{Span, SpanLoc};
@@ -37,6 +37,24 @@ pub struct SassError {
 }
 
 impl SassError {
+    #[must_use]
+    pub fn kind(self) -> PublicSassErrorKind {
+        match self.kind {
+            SassErrorKind::ParseError {
+                message,
+                loc,
+                unicode,
+            } => PublicSassErrorKind::ParseError {
+                message,
+                loc,
+                unicode,
+            },
+            SassErrorKind::FromUtf8Error(s) => PublicSassErrorKind::FromUtf8Error(s),
+            SassErrorKind::IoError(io) => PublicSassErrorKind::IoError(io),
+            SassErrorKind::Raw(..) => unreachable!("raw errors should not be accessible by users"),
+        }
+    }
+
     pub(crate) fn raw(self) -> (String, Span) {
         match self.kind {
             SassErrorKind::Raw(string, span) => (string, span),
@@ -55,6 +73,18 @@ impl SassError {
     }
 }
 
+#[non_exhaustive]
+#[derive(Debug, Clone)]
+pub enum PublicSassErrorKind {
+    ParseError {
+        message: String,
+        loc: SpanLoc,
+        unicode: bool,
+    },
+    IoError(Arc<io::Error>),
+    FromUtf8Error(String),
+}
+
 #[derive(Debug, Clone)]
 enum SassErrorKind {
     /// A raw error with no additional metadata
@@ -66,9 +96,8 @@ enum SassErrorKind {
         loc: SpanLoc,
         unicode: bool,
     },
-    // we put IoErrors in an `Rc` to allow it to be
-    // cloneable
-    IoError(Rc<io::Error>),
+    // we put `IoError`s in an `Arc` to allow them to be cloneable
+    IoError(Arc<io::Error>),
     FromUtf8Error(String),
 }
 
@@ -86,7 +115,7 @@ impl Display for SassError {
             } => (message, loc, *unicode),
             SassErrorKind::FromUtf8Error(s) => return writeln!(f, "Error: {}", s),
             SassErrorKind::IoError(s) => return writeln!(f, "Error: {}", s),
-            SassErrorKind::Raw(..) => todo!(),
+            SassErrorKind::Raw(..) => unreachable!(),
         };
 
         let first_bar = if unicode { '╷' } else { '|' };
@@ -128,7 +157,7 @@ impl From<io::Error> for Box<SassError> {
     #[inline]
     fn from(error: io::Error) -> Box<SassError> {
         Box::new(SassError {
-            kind: SassErrorKind::IoError(Rc::new(error)),
+            kind: SassErrorKind::IoError(Arc::new(error)),
         })
     }
 }

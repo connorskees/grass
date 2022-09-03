@@ -58,7 +58,6 @@ grass input.scss
     // this is only available on nightly
     clippy::unnested_or_patterns,
 )]
-#![cfg_attr(feature = "nightly", feature(track_caller))]
 #![cfg_attr(feature = "profiling", inline(never))]
 
 use std::path::Path;
@@ -70,7 +69,9 @@ pub(crate) use beef::lean::Cow;
 
 use codemap::CodeMap;
 
-pub use crate::error::{SassError as Error, SassResult as Result};
+pub use crate::error::{
+    PublicSassErrorKind as ErrorKind, SassError as Error, SassResult as Result,
+};
 pub use crate::fs::{Fs, NullFs, StdFs};
 pub(crate) use crate::token::Token;
 use crate::{

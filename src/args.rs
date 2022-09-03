@@ -207,11 +207,6 @@ impl CallArgs {
         self.get_positional(position)
     }
 
-    #[allow(dead_code, clippy::unused_self)]
-    fn named_arg(&mut self, name: &'static str) -> Option<SassResult<Spanned<Value>>> {
-        self.get_named(name)
-    }
-
     pub fn default_named_arg(&mut self, name: &'static str, default: Value) -> SassResult<Value> {
         Ok(match self.get_named(name) {
             Some(val) => val?.node,
