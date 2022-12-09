@@ -552,7 +552,6 @@ test!(
     "a {\n  color: rgb(3, 1, 1, var(--foo));\n}\n"
 );
 test!(
-    #[ignore = "we do not check if interpolation occurred"]
     interpolated_named_color_is_not_color,
     "a {\n  color: type-of(r#{e}d);\n}\n",
     "a {\n  color: string;\n}\n"
@@ -587,3 +586,8 @@ test!(
     "a {\n  color: hue(rgb(1, 2, 5));\n}\n",
     "a {\n  color: 225deg;\n}\n"
 );
+
+// todo:
+// a {
+//     color: red(r#{e}d)
+// }

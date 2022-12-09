@@ -19,6 +19,7 @@ mod integer;
 
 const PRECISION: usize = 10;
 
+// todo: let's just use doubles here
 #[derive(Clone)]
 pub(crate) enum Number {
     Small(Rational64),
@@ -183,6 +184,11 @@ impl Number {
     /// Invariants: `from.comparable(&to)` must be true
     pub fn convert(self, from: &Unit, to: &Unit) -> Self {
         debug_assert!(from.comparable(to));
+
+        if from == &Unit::None && to == &Unit::None {
+            return self;
+        }
+
         self * UNIT_CONVERSION_TABLE[to][from].clone()
     }
 }

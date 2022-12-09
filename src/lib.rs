@@ -23,6 +23,7 @@ grass input.scss
 ```
 */
 
+#![allow(warnings)]
 #![warn(clippy::all, clippy::pedantic, clippy::nursery, clippy::cargo)]
 #![deny(missing_debug_implementations)]
 #![allow(
@@ -57,6 +58,7 @@ grass input.scss
     clippy::items_after_statements,
     // this is only available on nightly
     clippy::unnested_or_patterns,
+    clippy::uninlined_format_args,
 )]
 #![cfg_attr(feature = "profiling", inline(never))]
 
@@ -80,6 +82,7 @@ use crate::{
     output::{AtRuleContext, Css},
     parse::{
         common::{ContextFlags, NeverEmptyVec},
+        visitor::Visitor,
         Parser,
     },
     scope::{Scope, Scopes},
@@ -261,28 +264,37 @@ fn from_string_with_file_name(input: String, file_name: &str, options: &Options)
     let file = map.add_file(file_name.to_owned(), input);
     let empty_span = file.span.subspan(0, 0);
 
-    let stmts = Parser {
+    let mut parser = Parser {
         toks: &mut Lexer::new_from_file(&file),
         map: &mut map,
         path: file_name.as_ref(),
         scopes: &mut Scopes::new(),
-        global_scope: &mut Scope::new(),
-        super_selectors: &mut NeverEmptyVec::new(ExtendedSelector::new(SelectorList::new(
-            empty_span,
-        ))),
+        // global_scope: &mut Scope::new(),
+        // super_selectors: &mut NeverEmptyVec::new(ExtendedSelector::new(SelectorList::new(
+        //     empty_span,
+        // ))),
         span_before: empty_span,
         content: &mut Vec::new(),
         flags: ContextFlags::empty(),
         at_root: true,
         at_root_has_selector: false,
-        extender: &mut Extender::new(empty_span),
+        // extender: &mut Extender::new(empty_span),
         content_scopes: &mut Scopes::new(),
         options,
         modules: &mut Modules::default(),
         module_config: &mut ModuleConfig::default(),
-    }
-    .parse()
-    .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages))?;
+    };
+
+    let stmts = match parser.__parse() {
+        Ok(v) => v,
+        Err(e) => return Err(raw_to_parse_error(&map, *e, options.unicode_error_messages)),
+    };
+
+    let mut visitor = Visitor::new(&mut parser);
+    let stmts = match visitor.visit_stylesheet(stmts) {
+        Ok(v) => v,
+        Err(e) => return Err(raw_to_parse_error(&map, *e, options.unicode_error_messages)),
+    };
 
     Css::from_stmts(stmts, AtRuleContext::None, options.allows_charset)
         .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages))?

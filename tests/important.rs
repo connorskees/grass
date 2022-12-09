@@ -31,3 +31,5 @@ test!(
     "a {\n  color: !    important;\n}\n",
     "a {\n  color: !important;\n}\n"
 );
+
+// todo: loud comment between !<>i, silent comment between !<>i

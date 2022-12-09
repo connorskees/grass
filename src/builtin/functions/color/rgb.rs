@@ -3,11 +3,10 @@ use super::{Builtin, GlobalFunctionMap};
 use num_traits::One;
 
 use crate::{
-    args::CallArgs,
     color::Color,
     common::{Brackets, ListSeparator, QuoteKind},
     error::SassResult,
-    parse::Parser,
+    parse::{ArgumentResult, Parser, visitor::Visitor},
     unit::Unit,
     value::{Number, Value},
 };
@@ -15,7 +14,11 @@ use crate::{
 /// name: Either `rgb` or `rgba` depending on the caller
 // todo: refactor into smaller functions
 #[allow(clippy::cognitive_complexity)]
-fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+fn inner_rgb(
+    name: &'static str,
+    mut args: ArgumentResult,
+    parser: &mut Visitor,
+) -> SassResult<Value> {
     if args.is_empty() {
         return Err(("Missing argument $channels.", args.span()).into());
     }
@@ -71,9 +74,9 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                     format!(
                         "{}({}, {}, {})",
                         name,
-                        red.to_css_string(args.span(), parser.options.is_compressed())?,
-                        green.to_css_string(args.span(), parser.options.is_compressed())?,
-                        v.to_css_string(args.span(), parser.options.is_compressed())?
+                        red.to_css_string(args.span(), parser.parser.options.is_compressed())?,
+                        green.to_css_string(args.span(), parser.parser.options.is_compressed())?,
+                        v.to_css_string(args.span(), parser.parser.options.is_compressed())?
                     ),
                     QuoteKind::None,
                 ));
@@ -99,15 +102,15 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                     Some(red) => format!(
                         "{}({}, {}, {})",
                         name,
-                        red.to_css_string(args.span(), parser.options.is_compressed())?,
-                        v.to_css_string(args.span(), parser.options.is_compressed())?,
-                        blue.to_string(parser.options.is_compressed())
+                        red.to_css_string(args.span(), parser.parser.options.is_compressed())?,
+                        v.to_css_string(args.span(), parser.parser.options.is_compressed())?,
+                        blue.to_string(parser.parser.options.is_compressed())
                     ),
                     None => format!(
                         "{}({} {})",
                         name,
-                        v.to_css_string(args.span(), parser.options.is_compressed())?,
-                        blue.to_string(parser.options.is_compressed())
+                        v.to_css_string(args.span(), parser.parser.options.is_compressed())?,
+                        blue.to_string(parser.parser.options.is_compressed())
                     ),
                 };
                 return Ok(Value::String(string, QuoteKind::None));
@@ -133,9 +136,9 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                     format!(
                         "{}({}, {}, {})",
                         name,
-                        v.to_css_string(args.span(), parser.options.is_compressed())?,
-                        green.to_string(parser.options.is_compressed()),
-                        blue.to_string(parser.options.is_compressed())
+                        v.to_css_string(args.span(), parser.parser.options.is_compressed())?,
+                        green.to_string(parser.parser.options.is_compressed()),
+                        blue.to_string(parser.parser.options.is_compressed())
                     ),
                     QuoteKind::None,
                 ));
@@ -202,7 +205,7 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                 return Err((
                     format!(
                         "$alpha: Expected {} to have no units or \"%\".",
-                        v.to_css_string(args.span(), parser.options.is_compressed())?
+                        v.to_css_string(args.span(), parser.parser.options.is_compressed())?
                     ),
                     args.span(),
                 )
@@ -225,7 +228,7 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
             3,
             "alpha",
             Value::Dimension(Some(Number::one()), Unit::None, true),
-        )?;
+        );
 
         if [&red, &green, &blue, &alpha]
             .iter()
@@ -261,7 +264,7 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                 return Err((
                     format!(
                         "$red: Expected {} to have no units or \"%\".",
-                        v.to_css_string(args.span(), parser.options.is_compressed())?
+                        v.to_css_string(args.span(), parser.parser.options.is_compressed())?
                     ),
                     args.span(),
                 )
@@ -285,7 +288,7 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                 return Err((
                     format!(
                         "$green: Expected {} to have no units or \"%\".",
-                        v.to_css_string(args.span(), parser.options.is_compressed())?
+                        v.to_css_string(args.span(), parser.parser.options.is_compressed())?
                     ),
                     args.span(),
                 )
@@ -309,7 +312,7 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                 return Err((
                     format!(
                         "$blue: Expected {} to have no units or \"%\".",
-                        v.to_css_string(args.span(), parser.options.is_compressed())?
+                        v.to_css_string(args.span(), parser.parser.options.is_compressed())?
                     ),
                     args.span(),
                 )
@@ -331,7 +334,7 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
                 return Err((
                     format!(
                         "$alpha: Expected {} to have no units or \"%\".",
-                        v.to_css_string(args.span(), parser.options.is_compressed())?
+                        v.to_css_string(args.span(), parser.parser.options.is_compressed())?
                     ),
                     args.span(),
                 )
@@ -351,15 +354,15 @@ fn inner_rgb(name: &'static str, mut args: CallArgs, parser: &mut Parser) -> Sas
     }
 }
 
-pub(crate) fn rgb(args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+pub(crate) fn rgb(args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     inner_rgb("rgb", args, parser)
 }
 
-pub(crate) fn rgba(args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+pub(crate) fn rgba(args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     inner_rgb("rgba", args, parser)
 }
 
-pub(crate) fn red(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+pub(crate) fn red(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "color")? {
         Value::Color(c) => Ok(Value::Dimension(Some(c.red()), Unit::None, true)),
@@ -371,7 +374,7 @@ pub(crate) fn red(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> 
     }
 }
 
-pub(crate) fn green(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+pub(crate) fn green(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "color")? {
         Value::Color(c) => Ok(Value::Dimension(Some(c.green()), Unit::None, true)),
@@ -383,7 +386,7 @@ pub(crate) fn green(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value
     }
 }
 
-pub(crate) fn blue(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+pub(crate) fn blue(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "color")? {
         Value::Color(c) => Ok(Value::Dimension(Some(c.blue()), Unit::None, true)),
@@ -395,7 +398,7 @@ pub(crate) fn blue(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value>
     }
 }
 
-pub(crate) fn mix(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+pub(crate) fn mix(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(3)?;
     let color1 = match args.get_err(0, "color1")? {
         Value::Color(c) => c,
@@ -423,14 +426,14 @@ pub(crate) fn mix(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> 
         2,
         "weight",
         Value::Dimension(Some(Number::from(50)), Unit::None, true),
-    )? {
+    ) {
         Value::Dimension(Some(n), u, _) => bound!(args, "weight", n, u, 0, 100) / Number::from(100),
         Value::Dimension(None, ..) => todo!(),
         v => {
             return Err((
                 format!(
                     "$weight: {} is not a number.",
-                    v.to_css_string(args.span(), parser.options.is_compressed())?
+                    v.to_css_string(args.span(), parser.parser.options.is_compressed())?
                 ),
                 args.span(),
             )

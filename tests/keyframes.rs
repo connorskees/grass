@@ -128,6 +128,33 @@ test!(
     "@-webkit-keyframes foo {\n  0% {\n    color: red;\n  }\n}\n"
 );
 test!(
+    keyframes_percent_has_e,
+    "@keyframes foo {
+        1e2% {
+            color: red;
+        }
+    }",
+    "@keyframes foo {\n  1e2% {\n    color: red;\n  }\n}\n"
+);
+test!(
+    keyframes_percent_has_plus_e,
+    "@keyframes foo {
+        1e+2% {
+            color: red;
+        }
+    }",
+    "@keyframes foo {\n  1e+2% {\n    color: red;\n  }\n}\n"
+);
+test!(
+    keyframes_percent_has_negative_e,
+    "@keyframes foo {
+        1e-2% {
+            color: red;
+        }
+    }",
+    "@keyframes foo {\n  1e-2% {\n    color: red;\n  }\n}\n"
+);
+test!(
     keyframes_allow_decimal_selector,
     "@keyframes foo {
         12.5% {
@@ -175,3 +202,5 @@ error!(
     keyframes_nothing_after_selector,
     "@keyframes foo { a", "Error: expected \"{\"."
 );
+
+// todo: `e` in keyframes selector

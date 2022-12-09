@@ -195,10 +195,12 @@ error!(
     "@for $i from 0 to red {}", "Error: red is not a number."
 );
 error!(
+    #[ignore = "no longer limited to i32::MAX"]
     through_i32_max,
     "@for $i from 0 through 2147483647 {}", "Error: 2147483647 is not an int."
 );
 error!(
+    #[ignore = "no longer limited to i32::MAX"]
     from_i32_max,
     "@for $i from 2147483647 through 0 {}", "Error: 2147483647 is not an int."
 );

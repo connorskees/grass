@@ -113,7 +113,7 @@ impl BlockEntry {
     pub fn to_string(&self) -> SassResult<String> {
         match self {
             BlockEntry::Style(s) => s.to_string(),
-            BlockEntry::MultilineComment(s) => Ok(format!("/*{}*/", s)),
+            BlockEntry::MultilineComment(s) => Ok(format!("{}", s)),
             BlockEntry::UnknownAtRule(BlockEntryUnknownAtRule { name, params }) => {
                 Ok(if params.is_empty() {
                     format!("@{};", name)
@@ -650,7 +650,7 @@ impl Formatter for ExpandedFormatter {
                     write!(buf, "{}}}", padding)?;
                 }
                 Toplevel::MultilineComment(s) => {
-                    write!(buf, "{}/*{}*/", padding, s)?;
+                    write!(buf, "{}{}", padding, s)?;
                 }
                 Toplevel::Import(s) => {
                     write!(buf, "{}@import {};", padding, s)?;

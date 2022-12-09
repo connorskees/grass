@@ -46,42 +46,42 @@ fn attribute_name(parser: &mut Parser, start: Span) -> SassResult<QualifiedName>
         parser.toks.next();
         parser.expect_char('|')?;
 
-        let ident = parser.parse_identifier()?.node;
+        let ident = parser.__parse_identifier(false, false)?;
         return Ok(QualifiedName {
             ident,
             namespace: Namespace::Asterisk,
         });
     }
     parser.span_before = next.pos;
-    let name_or_namespace = parser.parse_identifier()?;
+    let name_or_namespace = parser.__parse_identifier(false, false)?;
     match parser.toks.peek() {
         Some(v) if v.kind != '|' => {
             return Ok(QualifiedName {
-                ident: name_or_namespace.node,
+                ident: name_or_namespace,
                 namespace: Namespace::None,
             });
         }
         Some(..) => {}
-        None => return Err(("expected more input.", name_or_namespace.span).into()),
+        None => return Err(("expected more input.", parser.span_before).into()),
     }
     match parser.toks.peek_forward(1) {
         Some(v) if v.kind == '=' => {
             parser.toks.reset_cursor();
             return Ok(QualifiedName {
-                ident: name_or_namespace.node,
+                ident: name_or_namespace,
                 namespace: Namespace::None,
             });
         }
         Some(..) => {
             parser.toks.reset_cursor();
         }
-        None => return Err(("expected more input.", name_or_namespace.span).into()),
+        None => return Err(("expected more input.", parser.span_before).into()),
     }
     parser.span_before = parser.toks.next().unwrap().pos();
-    let ident = parser.parse_identifier()?.node;
+    let ident = parser.__parse_identifier(false, false)?;
     Ok(QualifiedName {
         ident,
-        namespace: Namespace::Other(name_or_namespace.node.into_boxed_str()),
+        namespace: Namespace::Other(name_or_namespace.into_boxed_str()),
     })
 }
 
@@ -130,14 +130,8 @@ impl Attribute {
         let peek = parser.toks.peek().ok_or(("expected more input.", start))?;
         parser.span_before = peek.pos;
         let value = match peek.kind {
-            q @ '\'' | q @ '"' => {
-                parser.toks.next();
-                match parser.parse_quoted_string(q)?.node {
-                    Value::String(s, ..) => s,
-                    _ => unreachable!(),
-                }
-            }
-            _ => parser.parse_identifier()?.node,
+            '\'' | '"' => parser.parse_string()?,
+            _ => parser.__parse_identifier(false, false)?,
         };
         parser.whitespace();
 

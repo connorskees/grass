@@ -82,12 +82,11 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
     fn parse_selector_list(&mut self) -> SassResult<SelectorList> {
         let mut components = vec![self.parse_complex_selector(false)?];
 
-        self.parser.whitespace();
+        self.parser.whitespace_or_comment();
 
         let mut line_break = false;
 
-        while let Some(Token { kind: ',', .. }) = self.parser.toks.peek() {
-            self.parser.toks.next();
+        while self.parser.consume_char_if_exists(',') {
             line_break = self.eat_whitespace() == DevouredWhitespace::Newline || line_break;
             match self.parser.toks.peek() {
                 Some(Token { kind: ',', .. }) => continue,
@@ -111,6 +110,9 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
             match tok.kind {
                 ' ' | '\t' => whitespace_devoured.found_whitespace(),
                 '\n' => whitespace_devoured.found_newline(),
+                '/' => {
+                    todo!()
+                }
                 _ => break,
             }
             self.parser.toks.next();
@@ -127,7 +129,7 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
         let mut components = Vec::new();
 
         loop {
-            self.parser.whitespace();
+            self.parser.whitespace_or_comment();
 
             // todo: can we do while let Some(..) = self.parser.toks.peek() ?
             match self.parser.toks.peek() {
@@ -240,12 +242,16 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
 
     fn parse_class_selector(&mut self) -> SassResult<SimpleSelector> {
         self.parser.toks.next();
-        Ok(SimpleSelector::Class(self.parser.parse_identifier()?.node))
+        Ok(SimpleSelector::Class(
+            self.parser.__parse_identifier(false, false)?,
+        ))
     }
 
     fn parse_id_selector(&mut self) -> SassResult<SimpleSelector> {
         self.parser.toks.next();
-        Ok(SimpleSelector::Id(self.parser.parse_identifier()?.node))
+        Ok(SimpleSelector::Id(
+            self.parser.__parse_identifier(false, false)?,
+        ))
     }
 
     fn parse_pseudo_selector(&mut self) -> SassResult<SimpleSelector> {
@@ -258,14 +264,14 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
             _ => false,
         };
 
-        let name = self.parser.parse_identifier()?;
+        let name = self.parser.__parse_identifier(false, false)?;
 
         match self.parser.toks.peek() {
             Some(Token { kind: '(', .. }) => self.parser.toks.next(),
             _ => {
                 return Ok(SimpleSelector::Pseudo(Pseudo {
                     is_class: !element && !is_fake_pseudo_element(&name),
-                    name: name.node,
+                    name,
                     selector: None,
                     is_syntactic_class: !element,
                     argument: None,
@@ -274,7 +280,7 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
             }
         };
 
-        self.parser.whitespace();
+        self.parser.whitespace_or_comment();
 
         let unvendored = unvendor(&name);
 
@@ -285,7 +291,7 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
             // todo: lowercase?
             if SELECTOR_PSEUDO_ELEMENTS.contains(&unvendored) {
                 selector = Some(Box::new(self.parse_selector_list()?));
-                self.parser.whitespace();
+                self.parser.whitespace_or_comment();
             } else {
                 argument = Some(
                     self.parser
@@ -297,18 +303,18 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
             self.parser.expect_char(')')?;
         } else if SELECTOR_PSEUDO_CLASSES.contains(&unvendored) {
             selector = Some(Box::new(self.parse_selector_list()?));
-            self.parser.whitespace();
+            self.parser.whitespace_or_comment();
             self.parser.expect_char(')')?;
         } else if unvendored == "nth-child" || unvendored == "nth-last-child" {
             let mut this_arg = self.parse_a_n_plus_b()?;
-            let found_whitespace = self.parser.whitespace();
+            let found_whitespace = self.parser.whitespace_or_comment();
             #[allow(clippy::match_same_arms)]
             match (found_whitespace, self.parser.toks.peek()) {
                 (_, Some(Token { kind: ')', .. })) => {}
                 (true, _) => {
-                    self.expect_identifier("of")?;
+                    self.parser.expect_identifier("of", true)?;
                     this_arg.push_str(" of");
-                    self.parser.whitespace();
+                    self.parser.whitespace_or_comment();
                     selector = Some(Box::new(self.parse_selector_list()?));
                 }
                 _ => {}
@@ -329,7 +335,7 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
 
         Ok(SimpleSelector::Pseudo(Pseudo {
             is_class: !element && !is_fake_pseudo_element(&name),
-            name: name.node,
+            name,
             selector,
             is_syntactic_class: !element,
             argument,
@@ -340,7 +346,10 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
     fn parse_parent_selector(&mut self) -> SassResult<SimpleSelector> {
         self.parser.toks.next();
         let suffix = if self.looking_at_identifier_body() {
-            Some(self.parser.parse_identifier()?.node)
+            let mut buffer = String::new();
+            self.parser
+                .parse_identifier_body(&mut buffer, false, false)?;
+            Some(buffer)
         } else {
             None
         };
@@ -350,7 +359,7 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
     fn parse_placeholder_selector(&mut self) -> SassResult<SimpleSelector> {
         self.parser.toks.next();
         Ok(SimpleSelector::Placeholder(
-            self.parser.parse_identifier()?.node,
+            self.parser.__parse_identifier(false, false)?,
         ))
     }
 
@@ -372,7 +381,7 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
                     }
 
                     return Ok(SimpleSelector::Type(QualifiedName {
-                        ident: self.parser.parse_identifier()?.node,
+                        ident: self.parser.__parse_identifier(false, false)?,
                         namespace: Namespace::Asterisk,
                     }));
                 }
@@ -389,7 +398,7 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
                     }
                     _ => {
                         return Ok(SimpleSelector::Type(QualifiedName {
-                            ident: self.parser.parse_identifier()?.node,
+                            ident: self.parser.__parse_identifier(false, false)?,
                             namespace: Namespace::Empty,
                         }));
                     }
@@ -398,7 +407,7 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
             _ => {}
         }
 
-        let name_or_namespace = self.parser.parse_identifier()?.node;
+        let name_or_namespace = self.parser.__parse_identifier(false, false)?;
 
         Ok(match self.parser.toks.peek() {
             Some(Token { kind: '|', .. }) => {
@@ -408,7 +417,7 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
                     SimpleSelector::Universal(Namespace::Other(name_or_namespace.into_boxed_str()))
                 } else {
                     SimpleSelector::Type(QualifiedName {
-                        ident: self.parser.parse_identifier()?.node,
+                        ident: self.parser.__parse_identifier(false, false)?,
                         namespace: Namespace::Other(name_or_namespace.into_boxed_str()),
                     })
                 }
@@ -428,11 +437,11 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
 
         match self.parser.toks.peek() {
             Some(Token { kind: 'e', .. }) | Some(Token { kind: 'E', .. }) => {
-                self.expect_identifier("even")?;
+                self.parser.expect_identifier("even", true)?;
                 return Ok("even".to_owned());
             }
             Some(Token { kind: 'o', .. }) | Some(Token { kind: 'O', .. }) => {
-                self.expect_identifier("odd")?;
+                self.parser.expect_identifier("odd", true)?;
                 return Ok("odd".to_owned());
             }
             Some(t @ Token { kind: '+', .. }) | Some(t @ Token { kind: '-', .. }) => {
@@ -451,7 +460,7 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
                     buf.push(t.kind);
                     self.parser.toks.next();
                 }
-                self.parser.whitespace();
+                self.parser.whitespace_or_comment();
                 if let Some(t) = self.parser.toks.peek() {
                     if t.kind != 'n' && t.kind != 'N' {
                         return Ok(buf);
@@ -471,14 +480,14 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
 
         buf.push('n');
 
-        self.parser.whitespace();
+        self.parser.whitespace_or_comment();
 
         if let Some(t @ Token { kind: '+', .. }) | Some(t @ Token { kind: '-', .. }) =
             self.parser.toks.peek()
         {
             buf.push(t.kind);
             self.parser.toks.next();
-            self.parser.whitespace();
+            self.parser.whitespace_or_comment();
             match self.parser.toks.peek() {
                 Some(t) if !t.kind.is_ascii_digit() => {
                     return Err(("Expected a number.", self.span).into())
@@ -496,16 +505,6 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
             }
         }
         Ok(buf)
-    }
-
-    fn expect_identifier(&mut self, s: &str) -> SassResult<()> {
-        let mut ident = self.parser.parse_identifier_no_interpolation(false)?.node;
-        ident.make_ascii_lowercase();
-        if ident == s {
-            Ok(())
-        } else {
-            Err((format!("Expected \"{}\".", s), self.span).into())
-        }
     }
 }
 

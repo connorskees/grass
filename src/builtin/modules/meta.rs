@@ -1,7 +1,6 @@
 use codemap::Spanned;
 
 use crate::{
-    args::CallArgs,
     builtin::{
         meta::{
             call, content_exists, feature_exists, function_exists, get_function,
@@ -10,11 +9,11 @@ use crate::{
         modules::{Module, ModuleConfig},
     },
     error::SassResult,
-    parse::{Parser, Stmt},
+    parse::{visitor::Visitor, ArgumentResult, Parser, Stmt},
     value::Value,
 };
 
-fn load_css(mut args: CallArgs, parser: &mut Parser) -> SassResult<Vec<Stmt>> {
+fn load_css(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Vec<Stmt>> {
     args.max_args(2)?;
 
     let span = args.span();
@@ -30,7 +29,7 @@ fn load_css(mut args: CallArgs, parser: &mut Parser) -> SassResult<Vec<Stmt>> {
         }
     };
 
-    let with = match args.default_arg(1, "with", Value::Null)? {
+    let with = match args.default_arg(1, "with", Value::Null) {
         Value::Map(map) => Some(map),
         Value::Null => None,
         v => return Err((format!("$with: {} is not a map.", v.inspect(span)?), span).into()),
@@ -61,15 +60,15 @@ fn load_css(mut args: CallArgs, parser: &mut Parser) -> SassResult<Vec<Stmt>> {
             )?;
         }
 
-        let (_, stmts) = parser.load_module(&url, &mut config)?;
+        let (_, stmts) = parser.parser.load_module(&url, &mut config)?;
 
         Ok(stmts)
     } else {
-        parser.parse_single_import(&url, span)
+        parser.parser.parse_single_import(&url, span)
     }
 }
 
-fn module_functions(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+fn module_functions(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
 
     let module = match args.get_err(0, "module")? {
@@ -84,11 +83,15 @@ fn module_functions(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value
     };
 
     Ok(Value::Map(
-        parser.modules.get(module.into(), args.span())?.functions(),
+        parser
+            .env
+            .modules
+            .get(module.into(), args.span())?
+            .functions(),
     ))
 }
 
-fn module_variables(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+fn module_variables(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
 
     let module = match args.get_err(0, "module")? {
@@ -103,7 +106,11 @@ fn module_variables(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value
     };
 
     Ok(Value::Map(
-        parser.modules.get(module.into(), args.span())?.variables(),
+        parser
+            .env
+            .modules
+            .get(module.into(), args.span())?
+            .variables(),
     ))
 }
 

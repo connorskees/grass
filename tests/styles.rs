@@ -200,19 +200,16 @@ test!(
 );
 // todo: many other strange edge cases like `.style: val` (dealing with ambiguity is hard for very little gain)
 test!(
-    #[ignore = "strange edge case"]
     style_begins_with_asterisk_without_whitespace,
     "a {\n  *zoom: 1;\n}\n",
     "a {\n  *zoom: 1;\n}\n"
 );
 test!(
-    #[ignore = "strange edge case"]
     style_begins_with_asterisk_with_whitespace,
     "a {\n  *   zoom: 1;\n}\n",
     "a {\n  *   zoom: 1;\n}\n"
 );
 test!(
-    #[ignore = "strange edge case"]
     style_begins_with_asterisk_with_newline,
     "a {\n  * \n  zoom: 1;\n}\n",
     "a {\n  * \n  zoom: 1;\n}\n"

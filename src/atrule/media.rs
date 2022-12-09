@@ -1,11 +1,17 @@
 #![allow(dead_code)]
 use std::fmt;
 
-use crate::{parse::Stmt, selector::Selector};
+use crate::{
+    error::SassResult,
+    lexer::Lexer,
+    parse::{Parser, Stmt},
+    selector::Selector,
+    token::Token,
+};
 
 #[derive(Debug, Clone)]
 pub(crate) struct MediaRule {
-    pub super_selector: Selector,
+    // pub super_selector: Selector,
     pub query: String,
     pub body: Vec<Stmt>,
 }
@@ -24,6 +30,160 @@ pub(crate) struct MediaQuery {
 
     /// Feature queries, including parentheses.
     pub features: Vec<String>,
+}
+
+struct MediaQueryParser<'a> {
+    parser: &'a mut Parser<'a, 'a>,
+}
+
+impl<'a> MediaQueryParser<'a> {
+    pub fn new(parser: &'a mut Parser<'a, 'a>) -> MediaQueryParser<'a> {
+        MediaQueryParser { parser }
+    }
+
+    pub fn parse(&mut self) -> SassResult<Vec<MediaQuery>> {
+        let mut queries = Vec::new();
+        loop {
+            self.parser.whitespace_or_comment();
+            queries.push(self.parse_media_query()?);
+            self.parser.whitespace_or_comment();
+
+            if !self.parser.consume_char_if_exists(',') {
+                break;
+            }
+        }
+
+        debug_assert!(self.parser.toks.next().is_none());
+
+        Ok(queries)
+    }
+
+    fn parse_media_query(&mut self) -> SassResult<MediaQuery> {
+        if self.parser.toks.next_char_is('(') {
+            let mut conditions = vec![self.parse_media_in_parens()?];
+            self.parser.whitespace_or_comment();
+
+            let mut conjunction = true;
+
+            if self.parser.scan_identifier("and", false) {
+                self.expect_whitespace()?;
+                conditions.append(&mut self.parse_media_logic_sequence("and")?);
+            } else if self.parser.scan_identifier("or", false) {
+                self.expect_whitespace()?;
+                conjunction = false;
+                conditions.append(&mut self.parse_media_logic_sequence("or")?);
+            }
+
+            return Ok(MediaQuery::condition(conditions));
+        }
+
+        let mut modifier: Option<String> = None;
+        let mut media_type: Option<String> = None;
+        let identifier1 = self.parser.__parse_identifier(false, false)?;
+
+        if identifier1.to_ascii_lowercase() == "not" {
+            self.expect_whitespace()?;
+            if !self.parser.looking_at_identifier() {
+                return Ok(MediaQuery::condition(vec![format!(
+                    "(not ${})",
+                    self.parse_media_in_parens()?
+                )]));
+            }
+        }
+
+        self.parser.whitespace_or_comment();
+
+        if !self.parser.looking_at_identifier() {
+            return Ok(MediaQuery::media_type(Some(identifier1), None, None));
+        }
+
+        let identifier2 = self.parser.__parse_identifier(false, false)?;
+
+        if identifier2.to_ascii_lowercase() == "and" {
+            self.expect_whitespace()?;
+            media_type = Some(identifier1);
+        } else {
+            self.parser.whitespace_or_comment();
+            modifier = Some(identifier1);
+            media_type = Some(identifier2);
+            if self.parser.scan_identifier("and", false) {
+                // For example, "@media only screen and ..."
+                self.expect_whitespace();
+            } else {
+                // For example, "@media only screen {"
+                return Ok(MediaQuery::media_type(media_type, modifier, None));
+            }
+        }
+
+        // We've consumed either `IDENTIFIER "and"` or
+        // `IDENTIFIER IDENTIFIER "and"`.
+
+        if self.parser.scan_identifier("not", false) {
+            // For example, "@media screen and not (...) {"
+            self.expect_whitespace()?;
+            return Ok(MediaQuery::media_type(
+                media_type,
+                modifier,
+                Some(vec![format!("(not {})", self.parse_media_in_parens()?)]),
+            ));
+        }
+
+        Ok(MediaQuery::media_type(
+            media_type,
+            modifier,
+            Some(self.parse_media_logic_sequence("and")?),
+        ))
+    }
+
+    fn scan_comment(&self) -> bool {
+        todo!()
+    }
+
+    fn expect_whitespace(&mut self) -> SassResult<()> {
+        match self.parser.toks.peek() {
+            Some(Token {
+                kind: ' ' | '\t' | '\n' | '\r',
+                ..
+            })
+            | None => {}
+            Some(Token { kind: '/', .. }) => {
+                if self.scan_comment() {
+                    // todo!(),
+                }
+            }
+            _ => todo!(),
+        }
+        // if self.parser.toks.peek().is_none() || !
+        //      if (scanner.isDone ||
+        //     !(isWhitespace(scanner.peekChar()) || scanComment())) {
+        //   scanner.error("Expected whitespace.");
+        // }
+
+        // whitespace();
+        // todo!()
+        self.parser.whitespace_or_comment();
+
+        Ok(())
+    }
+
+    fn parse_media_in_parens(&mut self) -> SassResult<String> {
+        self.parser.expect_char('(')?;
+        let result = format!("({})", self.parser.declaration_value(false, false, false)?);
+        self.parser.expect_char(')')?;
+        Ok(result)
+    }
+
+    fn parse_media_logic_sequence(&mut self, operator: &'static str) -> SassResult<Vec<String>> {
+        let mut result = Vec::new();
+        loop {
+            result.push(self.parse_media_in_parens()?);
+            self.parser.whitespace_or_comment();
+            if !self.parser.scan_identifier(operator, false) {
+                return Ok(result);
+            }
+            self.expect_whitespace()?;
+        }
+    }
 }
 
 impl MediaQuery {
@@ -47,8 +207,50 @@ impl MediaQuery {
         }
     }
 
+    pub fn media_type(
+        media_type: Option<String>,
+        modifier: Option<String>,
+        conditions: Option<Vec<String>>,
+    ) -> Self {
+        // todo: conjunction = true
+        Self {
+            modifier,
+            media_type,
+            features: conditions.unwrap_or_default(),
+        }
+    }
+
+    pub fn parse_list(list: String, parser: &mut Parser) -> SassResult<Vec<Self>> {
+        let mut toks = Lexer::new(
+            list.chars()
+                .map(|x| Token::new(parser.span_before, x))
+                .collect(),
+        );
+
+        let mut parser = Parser {
+            toks: &mut toks,
+            map: parser.map,
+            path: parser.path,
+            scopes: parser.scopes,
+            // global_scope: parser.global_scope,
+            // super_selectors: parser.super_selectors,
+            span_before: parser.span_before,
+            content: parser.content,
+            flags: parser.flags,
+            at_root: parser.at_root,
+            at_root_has_selector: parser.at_root_has_selector,
+            // extender: parser.extender,
+            content_scopes: parser.content_scopes,
+            options: parser.options,
+            modules: parser.modules,
+            module_config: parser.module_config,
+        };
+
+        MediaQueryParser::new(&mut parser).parse()
+    }
+
     #[allow(clippy::if_not_else)]
-    fn merge(&self, other: &Self) -> MediaQueryMergeResult {
+    pub fn merge(&self, other: &Self) -> MediaQueryMergeResult {
         let this_modifier = self.modifier.as_ref().map(|m| m.to_ascii_lowercase());
         let this_type = self.media_type.as_ref().map(|m| m.to_ascii_lowercase());
         let other_modifier = other.modifier.as_ref().map(|m| m.to_ascii_lowercase());
@@ -220,7 +422,7 @@ impl fmt::Display for MediaQuery {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
-enum MediaQueryMergeResult {
+pub(crate) enum MediaQueryMergeResult {
     Empty,
     Unrepresentable,
     Success(MediaQuery),

@@ -3,15 +3,14 @@ use super::{Builtin, GlobalFunctionMap};
 use num_traits::{Signed, ToPrimitive, Zero};
 
 use crate::{
-    args::CallArgs,
     common::{Brackets, ListSeparator, QuoteKind},
     error::SassResult,
-    parse::Parser,
+    parse::{visitor::Visitor, ArgumentResult, Parser},
     unit::Unit,
     value::{Number, Value},
 };
 
-pub(crate) fn length(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+pub(crate) fn length(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     Ok(Value::Dimension(
         Some(Number::from(args.get_err(0, "list")?.as_list().len())),
@@ -20,7 +19,7 @@ pub(crate) fn length(mut args: CallArgs, parser: &mut Parser) -> SassResult<Valu
     ))
 }
 
-pub(crate) fn nth(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+pub(crate) fn nth(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(2)?;
     let mut list = args.get_err(0, "list")?.as_list();
     let (n, unit) = match args.get_err(1, "n")? {
@@ -65,7 +64,7 @@ pub(crate) fn nth(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> 
     }))
 }
 
-pub(crate) fn list_separator(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+pub(crate) fn list_separator(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     Ok(Value::String(
         match args.get_err(0, "list")? {
@@ -78,12 +77,12 @@ pub(crate) fn list_separator(mut args: CallArgs, parser: &mut Parser) -> SassRes
     ))
 }
 
-pub(crate) fn set_nth(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+pub(crate) fn set_nth(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(3)?;
     let (mut list, sep, brackets) = match args.get_err(0, "list")? {
         Value::List(v, sep, b) => (v, sep, b),
         Value::ArgList(v) => (
-            v.into_iter().map(|val| val.node).collect(),
+            v.elems.into_iter().collect(),
             ListSeparator::Comma,
             Brackets::None,
         ),
@@ -138,7 +137,7 @@ pub(crate) fn set_nth(mut args: CallArgs, parser: &mut Parser) -> SassResult<Val
     Ok(Value::List(list, sep, brackets))
 }
 
-pub(crate) fn append(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+pub(crate) fn append(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(3)?;
     let (mut list, sep, brackets) = match args.get_err(0, "list")? {
         Value::List(v, sep, b) => (v, sep, b),
@@ -149,7 +148,7 @@ pub(crate) fn append(mut args: CallArgs, parser: &mut Parser) -> SassResult<Valu
         2,
         "separator",
         Value::String("auto".to_owned(), QuoteKind::None),
-    )? {
+    ) {
         Value::String(s, ..) => match s.as_str() {
             "auto" => sep,
             "comma" => ListSeparator::Comma,
@@ -176,7 +175,7 @@ pub(crate) fn append(mut args: CallArgs, parser: &mut Parser) -> SassResult<Valu
     Ok(Value::List(list, sep, brackets))
 }
 
-pub(crate) fn join(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+pub(crate) fn join(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(4)?;
     let (mut list1, sep1, brackets) = match args.get_err(0, "list1")? {
         Value::List(v, sep, brackets) => (v, sep, brackets),
@@ -192,7 +191,7 @@ pub(crate) fn join(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value>
         2,
         "separator",
         Value::String("auto".to_owned(), QuoteKind::None),
-    )? {
+    ) {
         Value::String(s, ..) => match s.as_str() {
             "auto" => {
                 if list1.is_empty() || (list1.len() == 1 && sep1 == ListSeparator::Space) {
@@ -224,7 +223,7 @@ pub(crate) fn join(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value>
         3,
         "bracketed",
         Value::String("auto".to_owned(), QuoteKind::None),
-    )? {
+    ) {
         Value::String(s, ..) => match s.as_str() {
             "auto" => brackets,
             _ => Brackets::Bracketed,
@@ -243,7 +242,7 @@ pub(crate) fn join(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value>
     Ok(Value::List(list1, sep, brackets))
 }
 
-pub(crate) fn is_bracketed(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+pub(crate) fn is_bracketed(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     Ok(Value::bool(match args.get_err(0, "list")? {
         Value::List(.., brackets) => match brackets {
@@ -254,7 +253,7 @@ pub(crate) fn is_bracketed(mut args: CallArgs, parser: &mut Parser) -> SassResul
     }))
 }
 
-pub(crate) fn index(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+pub(crate) fn index(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(2)?;
     let list = args.get_err(0, "list")?.as_list();
     let value = args.get_err(1, "value")?;
@@ -265,7 +264,7 @@ pub(crate) fn index(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value
     Ok(Value::Dimension(Some(index), Unit::None, true))
 }
 
-pub(crate) fn zip(args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+pub(crate) fn zip(args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     let lists = args
         .get_variadic()?
         .into_iter()

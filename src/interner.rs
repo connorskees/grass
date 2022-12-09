@@ -23,6 +23,7 @@ impl InternedString {
         self.resolve_ref() == ""
     }
 
+    // todo: no need for unsafe here
     pub fn resolve_ref<'a>(self) -> &'a str {
         unsafe { STRINGS.with(|interner| interner.as_ptr().as_ref().unwrap().resolve(&self.0)) }
     }

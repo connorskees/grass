@@ -387,6 +387,16 @@ test!(
     "a {\n  color:  1  2  3  ;\n}\n",
     "a {\n  color: 1 2 3;\n}\n"
 );
+test!(
+    bracketed_list_with_only_null_elements,
+    "a {\n  color: [null, null, null];\n}\n",
+    "a {\n  color: [];\n}\n"
+);
+test!(
+    bracketed_list_with_single_null_element,
+    "a {\n  color: [null];\n}\n",
+    "a {\n  color: [];\n}\n"
+);
 error!(
     invalid_item_in_space_separated_list,
     "a {\n  color: red color * #abc;\n}\n", "Error: Undefined operation \"color * #abc\"."

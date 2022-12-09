@@ -1,6 +1,6 @@
-use crate::utils::IsWhitespace;
-
 use codemap::Span;
+
+// todo: remove span from tokens
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Token {
@@ -18,12 +18,12 @@ impl Token {
     }
 }
 
-impl IsWhitespace for Token {
-    fn is_whitespace(&self) -> bool {
-        if self.kind.is_whitespace() {
-            return true;
-        }
+// impl IsWhitespace for Token {
+//     fn is_whitespace(&self) -> bool {
+//         if self.kind.is_whitespace() {
+//             return true;
+//         }
 
-        false
-    }
-}
+//         false
+//     }
+// }

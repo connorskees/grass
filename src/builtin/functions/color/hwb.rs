@@ -1,15 +1,14 @@
 use num_traits::One;
 
 use crate::{
-    args::CallArgs,
     color::Color,
     error::SassResult,
-    parse::Parser,
+    parse::{ArgumentResult, Parser, visitor::Visitor},
     unit::Unit,
     value::{Number, Value},
 };
 
-pub(crate) fn blackness(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+pub(crate) fn blackness(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
 
     let color = match args.get_err(0, "color")? {
@@ -29,7 +28,7 @@ pub(crate) fn blackness(mut args: CallArgs, parser: &mut Parser) -> SassResult<V
     Ok(Value::Dimension(Some(blackness * 100), Unit::Percent, true))
 }
 
-pub(crate) fn whiteness(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+pub(crate) fn whiteness(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
 
     let color = match args.get_err(0, "color")? {
@@ -48,7 +47,7 @@ pub(crate) fn whiteness(mut args: CallArgs, parser: &mut Parser) -> SassResult<V
     Ok(Value::Dimension(Some(whiteness * 100), Unit::Percent, true))
 }
 
-pub(crate) fn hwb(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+pub(crate) fn hwb(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(4)?;
 
     if args.is_empty() {
@@ -56,7 +55,7 @@ pub(crate) fn hwb(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> 
     }
 
     let hue = match args.get(0, "hue") {
-        Some(Ok(v)) => match v.node {
+        Some(v) => match v.node {
             Value::Dimension(Some(n), ..) => n,
             Value::Dimension(None, ..) => todo!(),
             v => {
@@ -67,12 +66,11 @@ pub(crate) fn hwb(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> 
                     .into())
             }
         },
-        Some(Err(e)) => return Err(e),
         None => return Err(("Missing element $hue.", args.span()).into()),
     };
 
     let whiteness = match args.get(1, "whiteness") {
-        Some(Ok(v)) => match v.node {
+        Some(v) => match v.node {
             Value::Dimension(Some(n), Unit::Percent, ..) => n,
             v @ Value::Dimension(Some(..), ..) => {
                 return Err((
@@ -93,12 +91,11 @@ pub(crate) fn hwb(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> 
                     .into())
             }
         },
-        Some(Err(e)) => return Err(e),
         None => return Err(("Missing element $whiteness.", args.span()).into()),
     };
 
     let blackness = match args.get(2, "blackness") {
-        Some(Ok(v)) => match v.node {
+        Some(v) => match v.node {
             Value::Dimension(Some(n), ..) => n,
             Value::Dimension(None, ..) => todo!(),
             v => {
@@ -109,12 +106,11 @@ pub(crate) fn hwb(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> 
                     .into())
             }
         },
-        Some(Err(e)) => return Err(e),
         None => return Err(("Missing element $blackness.", args.span()).into()),
     };
 
     let alpha = match args.get(3, "alpha") {
-        Some(Ok(v)) => match v.node {
+        Some(v) => match v.node {
             Value::Dimension(Some(n), Unit::Percent, ..) => n / Number::from(100),
             Value::Dimension(Some(n), ..) => n,
             Value::Dimension(None, ..) => todo!(),
@@ -126,7 +122,6 @@ pub(crate) fn hwb(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> 
                     .into())
             }
         },
-        Some(Err(e)) => return Err(e),
         None => Number::one(),
     };
 

@@ -3,18 +3,17 @@ use super::{Builtin, GlobalFunctionMap};
 use num_traits::{One, Signed, Zero};
 
 use crate::{
-    args::CallArgs,
     color::Color,
     common::QuoteKind,
     error::SassResult,
-    parse::Parser,
+    parse::{ArgumentResult, Parser, visitor::Visitor},
     unit::Unit,
     value::{Number, Value},
 };
 
 macro_rules! opt_rgba {
     ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal) => {
-        let $name = match $args.default_named_arg($arg, Value::Null)? {
+        let $name = match $args.default_named_arg($arg, Value::Null) {
             Value::Dimension(Some(n), u, _) => Some(bound!($args, $arg, n, u, $low, $high)),
             Value::Dimension(None, ..) => todo!(),
             Value::Null => None,
@@ -31,7 +30,7 @@ macro_rules! opt_rgba {
 
 macro_rules! opt_hsl {
     ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal) => {
-        let $name = match $args.default_named_arg($arg, Value::Null)? {
+        let $name = match $args.default_named_arg($arg, Value::Null) {
             Value::Dimension(Some(n), u, _) => {
                 Some(bound!($args, $arg, n, u, $low, $high) / Number::from(100))
             }
@@ -48,7 +47,7 @@ macro_rules! opt_hsl {
     };
 }
 
-pub(crate) fn change_color(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+pub(crate) fn change_color(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     if args.positional_arg(1).is_some() {
         return Err((
             "Only one positional argument is allowed. All other arguments must be passed by name.",
@@ -82,7 +81,7 @@ pub(crate) fn change_color(mut args: CallArgs, parser: &mut Parser) -> SassResul
         ))));
     }
 
-    let hue = match args.default_named_arg("hue", Value::Null)? {
+    let hue = match args.default_named_arg("hue", Value::Null) {
         Value::Dimension(Some(n), ..) => Some(n),
         Value::Dimension(None, ..) => todo!(),
         Value::Null => None,
@@ -116,7 +115,7 @@ pub(crate) fn change_color(mut args: CallArgs, parser: &mut Parser) -> SassResul
     }))
 }
 
-pub(crate) fn adjust_color(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+pub(crate) fn adjust_color(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,
         v => {
@@ -142,7 +141,7 @@ pub(crate) fn adjust_color(mut args: CallArgs, parser: &mut Parser) -> SassResul
         ))));
     }
 
-    let hue = match args.default_named_arg("hue", Value::Null)? {
+    let hue = match args.default_named_arg("hue", Value::Null) {
         Value::Dimension(Some(n), ..) => Some(n),
         Value::Dimension(None, ..) => todo!(),
         Value::Null => None,
@@ -179,7 +178,7 @@ pub(crate) fn adjust_color(mut args: CallArgs, parser: &mut Parser) -> SassResul
 
 #[allow(clippy::cognitive_complexity)]
 // todo: refactor into rgb and hsl?
-pub(crate) fn scale_color(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+pub(crate) fn scale_color(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     pub(crate) fn scale(val: Number, by: Number, max: Number) -> Number {
         if by.is_zero() {
             return val;
@@ -201,7 +200,7 @@ pub(crate) fn scale_color(mut args: CallArgs, parser: &mut Parser) -> SassResult
 
     macro_rules! opt_scale_arg {
         ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal) => {
-            let $name = match $args.default_named_arg($arg, Value::Null)? {
+            let $name = match $args.default_named_arg($arg, Value::Null) {
                 Value::Dimension(Some(n), Unit::Percent, _) => {
                     Some(bound!($args, $arg, n, Unit::Percent, $low, $high) / Number::from(100))
                 }
@@ -293,7 +292,7 @@ pub(crate) fn scale_color(mut args: CallArgs, parser: &mut Parser) -> SassResult
     }))
 }
 
-pub(crate) fn ie_hex_str(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+pub(crate) fn ie_hex_str(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,

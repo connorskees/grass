@@ -3,12 +3,11 @@ use std::collections::BTreeMap;
 use codemap::{Span, Spanned};
 
 use crate::{
-    args::CallArgs,
     atrule::mixin::{BuiltinMixin, Mixin},
     builtin::Builtin,
     common::{Identifier, QuoteKind},
     error::SassResult,
-    parse::Parser,
+    parse::{visitor::Visitor, ArgumentResult, Parser},
     scope::Scope,
     value::{SassFunction, SassMap, Value},
 };
@@ -21,7 +20,7 @@ mod meta;
 mod selector;
 mod string;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub(crate) struct Module {
     pub scope: Scope,
 
@@ -33,7 +32,7 @@ pub(crate) struct Module {
     is_builtin: bool,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub(crate) struct Modules(BTreeMap<Identifier, Module>);
 
 #[derive(Debug, Default)]
@@ -172,7 +171,8 @@ impl Module {
     }
 
     pub fn insert_builtin_mixin(&mut self, name: &'static str, mixin: BuiltinMixin) {
-        self.scope.mixins.insert(name.into(), Mixin::Builtin(mixin));
+        // self.scope.mixins.insert(name.into(), Mixin::Builtin(mixin));
+        todo!()
     }
 
     pub fn insert_builtin_var(&mut self, name: &'static str, value: Value) {
@@ -206,7 +206,7 @@ impl Module {
     pub fn insert_builtin(
         &mut self,
         name: &'static str,
-        function: fn(CallArgs, &mut Parser) -> SassResult<Value>,
+        function: fn(ArgumentResult, &mut Visitor) -> SassResult<Value>,
     ) {
         let ident = name.into();
         self.scope

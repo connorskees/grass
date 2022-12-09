@@ -1,4 +1,9 @@
-use std::collections::BTreeMap;
+use std::{
+    borrow::{Borrow, BorrowMut},
+    cell::{Ref, RefCell, RefMut},
+    collections::BTreeMap,
+    ops::Deref,
+};
 
 use codemap::Spanned;
 
@@ -9,6 +14,21 @@ use crate::{
     error::SassResult,
     value::{SassFunction, Value},
 };
+
+pub(crate) enum RefWrapper<'a, T> {
+    X(Ref<'a, T>),
+    Y(&'a T),
+}
+
+impl<'a, T> Deref for RefWrapper<'a, T> {
+    type Target = T;
+    fn deref(&self) -> &Self::Target {
+        match self {
+            Self::X(x) => x.borrow(),
+            Self::Y(y) => y,
+        }
+    }
+}
 
 /// A singular scope
 ///
@@ -32,9 +52,9 @@ impl Scope {
         }
     }
 
-    fn get_var(&self, name: Spanned<Identifier>) -> SassResult<&Value> {
+    fn get_var<'a>(&'a self, name: Spanned<Identifier>) -> SassResult<RefWrapper<'a, Value>> {
         match self.vars.get(&name.node) {
-            Some(v) => Ok(v),
+            Some(v) => Ok(RefWrapper::Y(v)),
             None => Err(("Undefined variable.", name.span).into()),
         }
     }
@@ -100,7 +120,7 @@ impl Scope {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub(crate) struct Scopes(Vec<Scope>);
 
 impl Scopes {
@@ -110,6 +130,10 @@ impl Scopes {
 
     pub fn len(&self) -> usize {
         self.0.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     pub fn split_off(mut self, len: usize) -> (Scopes, Scopes) {
@@ -135,7 +159,27 @@ impl Scopes {
 }
 
 /// Variables
-impl Scopes {
+impl<'a> Scopes {
+    pub fn __insert_var(
+        &mut self,
+        name: Identifier,
+        v: Value,
+        mut global_scope: &RefCell<Scope>,
+        in_semi_global_scope: bool,
+    ) -> Option<Value> {
+        for scope in self.0.iter_mut().rev() {
+            if scope.var_exists(name) {
+                return scope.insert_var(name, v);
+            }
+        }
+
+        if in_semi_global_scope && global_scope.borrow().var_exists(name) {
+            global_scope.borrow_mut().insert_var(name, v)
+        } else {
+            self.insert_var_last(name, v)
+        }
+    }
+
     pub fn insert_var(&mut self, s: Identifier, v: Value) -> Option<Value> {
         for scope in self.0.iter_mut().rev() {
             if scope.var_exists(s) {
@@ -176,20 +220,30 @@ impl Scopes {
         false
     }
 
-    pub fn get_var<'a>(
+    pub fn get_var(
         &'a self,
         name: Spanned<Identifier>,
-        global_scope: &'a Scope,
-    ) -> SassResult<&Value> {
+        global_scope: Ref<'a, Scope>,
+    ) -> SassResult<RefWrapper<'a, Value>> {
         for scope in self.0.iter().rev() {
             if scope.var_exists(name.node) {
                 return scope.get_var(name);
             }
         }
-        global_scope.get_var(name)
+
+        Ok(RefWrapper::X(Ref::map(
+            global_scope,
+            |global_scope| match global_scope.get_var(name).unwrap() {
+                RefWrapper::Y(y) => y,
+                RefWrapper::X(x) => todo!(),
+            },
+        )))
+        // Ok(&*Ref::map(global_scope, |global_scope| {
+        //     global_scope.get_var(name).unwrap()
+        // }))
     }
 
-    pub fn var_exists(&self, name: Identifier, global_scope: &Scope) -> bool {
+    pub fn var_exists(&self, name: Identifier, global_scope: Ref<'a, Scope>) -> bool {
         for scope in &self.0 {
             if scope.var_exists(name) {
                 return true;
@@ -200,7 +254,7 @@ impl Scopes {
 }
 
 /// Mixins
-impl Scopes {
+impl<'a> Scopes {
     pub fn insert_mixin(&mut self, s: Identifier, v: Mixin) -> Option<Mixin> {
         if let Some(scope) = self.0.last_mut() {
             scope.insert_mixin(s, v)
@@ -212,10 +266,10 @@ impl Scopes {
         }
     }
 
-    pub fn get_mixin<'a>(
+    pub fn get_mixin(
         &'a self,
         name: Spanned<Identifier>,
-        global_scope: &'a Scope,
+        global_scope: Ref<'a, Scope>,
     ) -> SassResult<Mixin> {
         for scope in self.0.iter().rev() {
             if scope.mixin_exists(name.node) {
@@ -225,7 +279,7 @@ impl Scopes {
         global_scope.get_mixin(name)
     }
 
-    pub fn mixin_exists(&self, name: Identifier, global_scope: &Scope) -> bool {
+    pub fn mixin_exists(&self, name: Identifier, global_scope: Ref<'a, Scope>) -> bool {
         for scope in &self.0 {
             if scope.mixin_exists(name) {
                 return true;
@@ -236,7 +290,7 @@ impl Scopes {
 }
 
 /// Functions
-impl Scopes {
+impl<'a> Scopes {
     pub fn insert_fn(&mut self, s: Identifier, v: SassFunction) -> Option<SassFunction> {
         if let Some(scope) = self.0.last_mut() {
             scope.insert_fn(s, v)
@@ -248,7 +302,7 @@ impl Scopes {
         }
     }
 
-    pub fn get_fn<'a>(&'a self, name: Identifier, global_scope: &'a Scope) -> Option<SassFunction> {
+    pub fn get_fn(&self, name: Identifier, global_scope: Ref<'a, Scope>) -> Option<SassFunction> {
         for scope in self.0.iter().rev() {
             if scope.fn_exists(name) {
                 return scope.get_fn(name);
@@ -257,7 +311,7 @@ impl Scopes {
         global_scope.get_fn(name)
     }
 
-    pub fn fn_exists(&self, name: Identifier, global_scope: &Scope) -> bool {
+    pub fn fn_exists(&self, name: Identifier, global_scope: Ref<'a, Scope>) -> bool {
         for scope in &self.0 {
             if scope.fn_exists(name) {
                 return true;

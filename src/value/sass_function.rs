@@ -14,8 +14,14 @@ use std::fmt;
 use codemap::Spanned;
 
 use crate::{
-    args::CallArgs, atrule::Function, builtin::Builtin, common::Identifier, error::SassResult,
-    parse::Parser, value::Value,
+    builtin::Builtin,
+    common::Identifier,
+    error::SassResult,
+    parse::{
+        visitor::{Environment, Visitor},
+        AstFunctionDecl, Parser,
+    },
+    value::Value,
 };
 
 /// A Sass function
@@ -26,12 +32,26 @@ use crate::{
 /// for use in the builtin function `inspect()`
 #[derive(Clone, Eq, PartialEq)]
 pub(crate) enum SassFunction {
+    // todo: Cow<'static>?
     Builtin(Builtin, Identifier),
-    UserDefined {
-        function: Box<Function>,
-        name: Identifier,
-    },
+    UserDefined(UserDefinedFunction),
+    Plain { name: Identifier },
 }
+
+#[derive(Debug, Clone)]
+pub(crate) struct UserDefinedFunction {
+    pub function: Box<AstFunctionDecl>,
+    pub name: Identifier,
+    pub env: Environment,
+}
+
+impl PartialEq for UserDefinedFunction {
+    fn eq(&self, other: &Self) -> bool {
+        self.function == other.function && self.name == other.name
+    }
+}
+
+impl Eq for UserDefinedFunction {}
 
 impl SassFunction {
     /// Get the name of the function referenced
@@ -39,7 +59,9 @@ impl SassFunction {
     /// Used mainly in debugging and `inspect()`
     pub fn name(&self) -> &Identifier {
         match self {
-            Self::Builtin(_, name) | Self::UserDefined { name, .. } => name,
+            Self::Builtin(_, name)
+            | Self::UserDefined(UserDefinedFunction { name, .. })
+            | Self::Plain { name } => name,
         }
     }
 
@@ -48,22 +70,25 @@ impl SassFunction {
     /// Used only in `std::fmt::Debug` for `SassFunction`
     fn kind(&self) -> &'static str {
         match &self {
+            Self::Plain { .. } => "Plain",
             Self::Builtin(..) => "Builtin",
             Self::UserDefined { .. } => "UserDefined",
         }
     }
 
-    pub fn call(
-        self,
-        args: CallArgs,
-        module: Option<Spanned<Identifier>>,
-        parser: &mut Parser,
-    ) -> SassResult<Value> {
-        match self {
-            Self::Builtin(f, ..) => f.0(args, parser),
-            Self::UserDefined { function, .. } => parser.eval_function(*function, args, module),
-        }
-    }
+    // pub fn call(
+    //     self,
+    //     args: CallArgs,
+    //     module: Option<Spanned<Identifier>>,
+    //     parser: &mut Visitor,
+    // ) -> SassResult<Value> {
+    //     match self {
+    //         Self::Builtin(f, ..) => todo!(), //f.0(args, parser),
+    //         Self::UserDefined { function, .. } => todo!(),
+    //         // parser.eval_function(*function, args, module),
+    //         Self::Plain { .. } => todo!(),
+    //     }
+    // }
 }
 
 impl fmt::Debug for SassFunction {

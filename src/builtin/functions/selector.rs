@@ -1,15 +1,17 @@
 use super::{Builtin, GlobalFunctionMap};
 
 use crate::{
-    args::CallArgs,
     common::{Brackets, ListSeparator, QuoteKind},
     error::SassResult,
-    parse::Parser,
+    parse::{visitor::Visitor, ArgumentResult, Parser},
     selector::{ComplexSelector, ComplexSelectorComponent, Extender, Selector, SelectorList},
     value::Value,
 };
 
-pub(crate) fn is_superselector(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+pub(crate) fn is_superselector(
+    mut args: ArgumentResult,
+    parser: &mut Visitor,
+) -> SassResult<Value> {
     args.max_args(2)?;
     let parent_selector = args
         .get_err(0, "super")?
@@ -21,7 +23,10 @@ pub(crate) fn is_superselector(mut args: CallArgs, parser: &mut Parser) -> SassR
     ))
 }
 
-pub(crate) fn simple_selectors(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+pub(crate) fn simple_selectors(
+    mut args: ArgumentResult,
+    parser: &mut Visitor,
+) -> SassResult<Value> {
     args.max_args(1)?;
     // todo: Value::to_compound_selector
     let selector = args
@@ -51,7 +56,7 @@ pub(crate) fn simple_selectors(mut args: CallArgs, parser: &mut Parser) -> SassR
     ))
 }
 
-pub(crate) fn selector_parse(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+pub(crate) fn selector_parse(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     Ok(args
         .get_err(0, "selector")?
@@ -60,7 +65,7 @@ pub(crate) fn selector_parse(mut args: CallArgs, parser: &mut Parser) -> SassRes
         .into_value())
 }
 
-pub(crate) fn selector_nest(args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+pub(crate) fn selector_nest(args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     let span = args.span();
     let selectors = args.get_variadic()?;
     if selectors.is_empty() {
@@ -81,7 +86,7 @@ pub(crate) fn selector_nest(args: CallArgs, parser: &mut Parser) -> SassResult<V
         .into_value())
 }
 
-pub(crate) fn selector_append(args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+pub(crate) fn selector_append(args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     let span = args.span();
     let selectors = args.get_variadic()?;
     if selectors.is_empty() {
@@ -129,7 +134,7 @@ pub(crate) fn selector_append(args: CallArgs, parser: &mut Parser) -> SassResult
         .into_value())
 }
 
-pub(crate) fn selector_extend(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+pub(crate) fn selector_extend(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(3)?;
     let selector = args
         .get_err(0, "selector")?
@@ -144,7 +149,10 @@ pub(crate) fn selector_extend(mut args: CallArgs, parser: &mut Parser) -> SassRe
     Ok(Extender::extend(selector.0, source.0, target.0, args.span())?.to_sass_list())
 }
 
-pub(crate) fn selector_replace(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+pub(crate) fn selector_replace(
+    mut args: ArgumentResult,
+    parser: &mut Visitor,
+) -> SassResult<Value> {
     args.max_args(3)?;
     let selector = args
         .get_err(0, "selector")?
@@ -158,7 +166,7 @@ pub(crate) fn selector_replace(mut args: CallArgs, parser: &mut Parser) -> SassR
     Ok(Extender::replace(selector.0, source.0, target.0, args.span())?.to_sass_list())
 }
 
-pub(crate) fn selector_unify(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+pub(crate) fn selector_unify(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(2)?;
     let selector1 = args
         .get_err(0, "selector1")?

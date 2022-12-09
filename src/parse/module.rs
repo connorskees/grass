@@ -132,14 +132,14 @@ impl<'a, 'b> Parser<'a, 'b> {
                         map: self.map,
                         path: &import,
                         scopes: self.scopes,
-                        global_scope: &mut global_scope,
-                        super_selectors: self.super_selectors,
+                        // global_scope: &mut global_scope,
+                        // super_selectors: self.super_selectors,
                         span_before: file.span.subspan(0, 0),
                         content: self.content,
                         flags: self.flags,
                         at_root: self.at_root,
                         at_root_has_selector: self.at_root_has_selector,
-                        extender: self.extender,
+                        // extender: self.extender,
                         content_scopes: self.content_scopes,
                         options: self.options,
                         modules: &mut modules,
@@ -230,7 +230,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                     let module_name = match module_alias.as_deref() {
                         Some("*") => {
                             self.modules.merge(module.modules);
-                            self.global_scope.merge_module_scope(module.scope);
+                            // self.global_scope.merge_module_scope(module.scope);
                             continue;
                         }
                         Some(..) => module_alias.unwrap(),

@@ -78,6 +78,26 @@ test!(
     "@b {}\n\na {\n  color: red;\n}\n"
 );
 test!(
+    parent_selector_moves_inside_rule,
+    "a {
+     @foo {
+       b: c
+     }
+    }",
+    "@foo {\n  a {\n    b: c;\n  }\n}\n"
+);
+test!(
+    parent_selector_moves_inside_rule_and_is_parent_to_inner_selector,
+    "a {
+     @foo {
+       f {
+         b: c
+       }
+     }
+    }",
+    "@foo {\n  a f {\n    b: c;\n  }\n}\n"
+);
+test!(
     #[ignore = "not sure how dart-sass is parsing this to include the semicolon in the params"]
     params_contain_silent_comment_and_semicolon,
     "a {
@@ -86,3 +106,5 @@ test!(
     "a {\n  @box-shadow : $btn-focus-box-shadow, / $btn-active-box-shadow;\n}\n"
 );
 test!(contains_multiline_comment, "@foo /**/;\n", "@foo;\n");
+
+// todo: test scoping in rule

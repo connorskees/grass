@@ -7,7 +7,7 @@ use codemap::Span;
 
 use indexmap::IndexMap;
 
-use crate::error::SassResult;
+use crate::{error::SassResult, parse::CssMediaQuery};
 
 use super::{
     ComplexSelector, ComplexSelectorComponent, ComplexSelectorHashSet, CompoundSelector, Pseudo,
@@ -27,9 +27,6 @@ mod extension;
 mod functions;
 mod merged;
 mod rule;
-
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
-pub(crate) struct CssMediaQuery;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 /// Different modes in which extension can run.

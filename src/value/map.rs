@@ -51,6 +51,16 @@ impl SassMap {
         None
     }
 
+    pub fn get_ref(&self, key: &Value) -> Option<&Value> {
+        for (k, v) in &self.0 {
+            if k == key {
+                return Some(v);
+            }
+        }
+
+        None
+    }
+
     pub fn remove(&mut self, key: &Value) {
         self.0.retain(|(ref k, ..)| k.not_equals(key));
     }

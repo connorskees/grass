@@ -428,3 +428,5 @@ test!(
     }",
     "a {\n  color: red;\n}\n"
 );
+
+// todo: test that all scopes can affect global vars

@@ -1,6 +1,6 @@
 use std::{borrow::Cow, iter::Peekable, str::Chars, sync::Arc};
 
-use codemap::File;
+use codemap::{File, Span};
 
 use crate::Token;
 
@@ -14,6 +14,25 @@ pub(crate) struct Lexer<'a> {
 }
 
 impl<'a> Lexer<'a> {
+    pub fn raw_text(&self, start: usize) -> String {
+        self.buf[start..self.cursor]
+            .iter()
+            .map(|t| t.kind)
+            .collect()
+    }
+
+    pub fn next_char_is(&self, c: char) -> bool {
+        matches!(self.peek(), Some(Token { kind, .. }) if kind == c)
+    }
+
+    pub fn current_span(&self) -> Span {
+        self.buf
+            .get(self.cursor)
+            .copied()
+            .unwrap_or(self.buf.last().copied().unwrap())
+            .pos
+    }
+
     fn peek_cursor(&self) -> usize {
         self.cursor + self.amt_peeked
     }
@@ -32,10 +51,12 @@ impl<'a> Lexer<'a> {
         self.peek()
     }
 
+    /// Peeks the previous token without modifying the peek cursor
     pub fn peek_previous(&mut self) -> Option<Token> {
         self.buf.get(self.peek_cursor().checked_sub(1)?).copied()
     }
 
+    /// Peeks `n` from current peeked position, modifying the peek cursor
     pub fn peek_forward(&mut self, n: usize) -> Option<Token> {
         self.amt_peeked += n;
 

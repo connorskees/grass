@@ -22,6 +22,7 @@ mod list;
 mod parse;
 mod simple;
 
+// todo: delete this selector wrapper
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Selector(pub SelectorList);
 

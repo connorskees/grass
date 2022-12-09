@@ -55,10 +55,16 @@ num-rational = "0.4"
 num-bigint = "0.4"
 num-traits = "0.2.14"
 once_cell = "1.5.2"
+# todo: use xorshift for random numbers
 rand = { version = "0.8", optional = true }
+# todo: update to use asref<path>
+# todo: update to expose more info (for eww)
+# todo: update to use text_size::TextRange
 codemap = "0.1.3"
 wasm-bindgen = { version = "0.2.68", optional = true }
+# todo: use std-lib cow
 beef = "0.5"
+# todo: use phf for unit conversions and global functions
 phf = { version = "0.9", features = ["macros"] }
 # criterion is not a dev-dependency because it makes tests take too
 # long to compile, and you cannot make dev-dependencies optional
@@ -67,11 +73,10 @@ indexmap = "1.6.0"
 lasso = "0.5"
 
 [features]
+# todo: no commandline by default
 default = ["commandline", "random"]
 # Option (enabled by default): build a binary using clap
 commandline = ["clap"]
-# Option: enable nightly-only features (for right now, only the `track_caller` attribute) 
-nightly = []
 # Option (enabled by default): enable the builtin functions `random([$limit])` and `unique-id()`
 random = ["rand"]
 # Option: expose JavaScript-friendly WebAssembly exports
