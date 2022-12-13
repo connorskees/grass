@@ -358,13 +358,11 @@ impl<'a, 'b> Parser<'a, 'b> {
             Some(..) | None => return false,
         }
 
-        match self.toks.peek_forward(1) {
+        match self.toks.peek_n(1) {
             Some(Token { kind, .. }) if is_name_start(kind) || kind == '-' || kind == '\\' => {
-                self.toks.reset_cursor();
                 true
             }
             Some(..) | None => {
-                self.toks.reset_cursor();
                 false
             }
         }

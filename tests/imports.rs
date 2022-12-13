@@ -254,3 +254,5 @@ test!(
 // todo: edge case tests for plain css imports moved to top
 // todo: test for calling paths, e.g. `grass b\index.scss`
 // todo: test for absolute paths (how?)
+// todo: test for @import accessing things declared beforehand
+// e.g. b { @import } | $a: red; @import

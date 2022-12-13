@@ -199,6 +199,11 @@ test!(
     "a {\n  color: number;\n}\n"
 );
 test!(
+    type_of_calculation,
+    "a {\n  color: type-of(calc(var(--bs-border-width) * 2))\n}\n",
+    "a {\n  color: calculation;\n}\n"
+);
+test!(
     type_of_arglist,
     "@mixin foo($a...) {color: type-of($a);}\na {@include foo(1, 2, 3, 4, 5);}",
     "a {\n  color: arglist;\n}\n"

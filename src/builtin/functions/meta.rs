@@ -8,7 +8,10 @@ use once_cell::unsync::Lazy;
 use crate::{
     common::{Identifier, QuoteKind},
     error::SassResult,
-    parse::{visitor::Visitor, Argument, ArgumentDeclaration, ArgumentResult, Parser},
+    parse::{
+        visitor::Visitor, Argument, ArgumentDeclaration, ArgumentResult, MaybeEvaledArguments,
+        Parser,
+    },
     unit::Unit,
     value::{SassFunction, Value},
 };
@@ -141,7 +144,7 @@ pub(crate) fn variable_exists(mut args: ArgumentResult, parser: &mut Visitor) ->
         Value::String(s, _) => Ok(Value::bool(
             parser
                 .env
-                .scopes
+                .scopes()
                 .var_exists(s.into(), parser.env.global_scope()),
         )),
         v => Err((
@@ -226,7 +229,7 @@ pub(crate) fn mixin_exists(mut args: ArgumentResult, parser: &mut Visitor) -> Sa
     } else {
         parser
             .env
-            .scopes
+            .scopes()
             .mixin_exists(name, parser.env.global_scope())
     }))
 }
@@ -264,7 +267,10 @@ pub(crate) fn function_exists(mut args: ArgumentResult, parser: &mut Visitor) ->
             .get(module_name.into(), args.span())?
             .fn_exists(name)
     } else {
-        parser.env.scopes.fn_exists(name, parser.env.global_scope())
+        parser
+            .env
+            .scopes()
+            .fn_exists(name, parser.env.global_scope())
     }))
 }
 
@@ -311,7 +317,7 @@ pub(crate) fn get_function(mut args: ArgumentResult, parser: &mut Visitor) -> Sa
                 span: args.span(),
             })?
     } else {
-        parser.env.scopes.get_fn(name, parser.env.global_scope())
+        parser.env.scopes().get_fn(name, parser.env.global_scope())
     } {
         Some(f) => f,
         None => match GLOBAL_FUNCTIONS.get(name.as_str()) {
@@ -337,7 +343,11 @@ pub(crate) fn call(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult
                 .into())
         }
     };
-    todo!()
+
+    args.remove_positional(0).unwrap();
+
+    parser.run_function_callable_with_maybe_evaled(func, MaybeEvaledArguments::Evaled(args))
+    // todo!()
     // func.call(args.decrement(), None, parser)
 }
 
@@ -351,7 +361,7 @@ pub(crate) fn content_exists(args: ArgumentResult, parser: &mut Visitor) -> Sass
         )
             .into());
     }
-    Ok(Value::bool(parser.content.is_some()))
+    Ok(Value::bool(parser.env.content.is_some()))
 }
 
 #[allow(unused_variables, clippy::needless_pass_by_value)]

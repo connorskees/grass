@@ -13,7 +13,7 @@ use crate::{
 use super::{Parser, Stmt};
 
 #[allow(clippy::case_sensitive_file_extension_comparisons)]
-fn is_plain_css_import(url: &str) -> bool {
+pub(crate) fn is_plain_css_import(url: &str) -> bool {
     if url.len() < 5 {
         return false;
     }
@@ -100,16 +100,17 @@ impl<'a, 'b> Parser<'a, 'b> {
                 toks: &mut Lexer::new_from_file(&file),
                 map: self.map,
                 path: &name,
-                scopes: self.scopes,
+                is_plain_css: false,
+                // scopes: self.scopes,
                 // global_scope: self.global_scope,
                 // super_selectors: self.super_selectors,
                 span_before: file.span.subspan(0, 0),
-                content: self.content,
+                // content: self.content,
                 flags: self.flags,
-                at_root: self.at_root,
-                at_root_has_selector: self.at_root_has_selector,
+                // at_root: self.at_root,
+                // at_root_has_selector: self.at_root_has_selector,
                 // extender: self.extender,
-                content_scopes: self.content_scopes,
+                // content_scopes: self.content_scopes,
                 options: self.options,
                 modules: self.modules,
                 module_config: self.module_config,

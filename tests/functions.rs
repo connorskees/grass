@@ -361,3 +361,18 @@ test!(
     }",
     "a {\n  color: red;\n}\n"
 );
+test!(
+    return_inside_each,
+    "@function foo() {
+        @each $i in 0 {
+            @return $i;
+        }
+    }
+
+    a {
+        color: foo();
+    }",
+    "a {\n  color: 0;\n}\n"
+);
+
+// todo: return inside if, return inside while, return inside for

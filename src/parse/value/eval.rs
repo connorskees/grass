@@ -44,6 +44,7 @@ use super::super::Parser;
 
 pub(crate) fn add(left: Value, right: Value, options: &Options, span: Span) -> SassResult<Value> {
     Ok(match left {
+        Value::Calculation(..) => todo!(),
         Value::Map(..) | Value::FunctionRef(..) => {
             return Err((
                 format!("{} isn't a valid CSS value.", left.inspect(span)?),
@@ -96,23 +97,24 @@ pub(crate) fn add(left: Value, right: Value, options: &Options, span: Span) -> S
                 QuoteKind::None,
             ),
         },
-        v @ Value::Dimension(None, ..) => v,
-        Value::Dimension(Some(num), unit, _) => match right {
-            v @ Value::Dimension(None, ..) => v,
-            Value::Dimension(Some(num2), unit2, _) => {
+        Value::Dimension(n, ..) if n.is_nan() => todo!(),
+        Value::Dimension(num, unit, _) => match right {
+            Value::Calculation(..) => todo!(),
+            Value::Dimension(n, ..) if n.is_nan() => todo!(),
+            Value::Dimension(num2, unit2, _) => {
                 if !unit.comparable(&unit2) {
                     return Err(
                         (format!("Incompatible units {} and {}.", unit2, unit), span).into(),
                     );
                 }
                 if unit == unit2 {
-                    Value::Dimension(Some(num + num2), unit, true)
+                    Value::Dimension(num + num2, unit, None)
                 } else if unit == Unit::None {
-                    Value::Dimension(Some(num + num2), unit2, true)
+                    Value::Dimension(num + num2, unit2, None)
                 } else if unit2 == Unit::None {
-                    Value::Dimension(Some(num + num2), unit, true)
+                    Value::Dimension(num + num2, unit, None)
                 } else {
-                    Value::Dimension(Some(num + num2.convert(&unit2, &unit)), unit, true)
+                    Value::Dimension(num + num2.convert(&unit2, &unit), unit, None)
                 }
             }
             Value::String(s, q) => Value::String(
@@ -205,27 +207,29 @@ pub(crate) fn add(left: Value, right: Value, options: &Options, span: Span) -> S
 
 pub(crate) fn sub(left: Value, right: Value, options: &Options, span: Span) -> SassResult<Value> {
     Ok(match left {
+        Value::Calculation(..) => todo!(),
         Value::Null => Value::String(
             format!("-{}", right.to_css_string(span, options.is_compressed())?),
             QuoteKind::None,
         ),
-        v @ Value::Dimension(None, ..) => v,
-        Value::Dimension(Some(num), unit, _) => match right {
-            v @ Value::Dimension(None, ..) => v,
-            Value::Dimension(Some(num2), unit2, _) => {
+        Value::Dimension(n, ..) if n.is_nan() => todo!(),
+        Value::Dimension(num, unit, _) => match right {
+            Value::Calculation(..) => todo!(),
+            Value::Dimension(n, ..) if n.is_nan() => todo!(),
+            Value::Dimension(num2, unit2, _) => {
                 if !unit.comparable(&unit2) {
                     return Err(
                         (format!("Incompatible units {} and {}.", unit2, unit), span).into(),
                     );
                 }
                 if unit == unit2 {
-                    Value::Dimension(Some(num - num2), unit, true)
+                    Value::Dimension(num - num2, unit, None)
                 } else if unit == Unit::None {
-                    Value::Dimension(Some(num - num2), unit2, true)
+                    Value::Dimension(num - num2, unit2, None)
                 } else if unit2 == Unit::None {
-                    Value::Dimension(Some(num - num2), unit, true)
+                    Value::Dimension(num - num2, unit, None)
                 } else {
-                    Value::Dimension(Some(num - num2.convert(&unit2, &unit)), unit, true)
+                    Value::Dimension(num - num2.convert(&unit2, &unit), unit, None)
                 }
             }
             Value::List(..)
@@ -323,16 +327,16 @@ pub(crate) fn sub(left: Value, right: Value, options: &Options, span: Span) -> S
 
 pub(crate) fn mul(left: Value, right: Value, options: &Options, span: Span) -> SassResult<Value> {
     Ok(match left {
-        Value::Dimension(None, ..) => todo!(),
-        Value::Dimension(Some(num), unit, _) => match right {
-            Value::Dimension(None, ..) => todo!(),
-            Value::Dimension(Some(num2), unit2, _) => {
+        Value::Dimension(n, ..) if n.is_nan() => todo!(),
+        Value::Dimension(num, unit, _) => match right {
+            Value::Dimension(n, ..) if n.is_nan() => todo!(),
+            Value::Dimension(num2, unit2, _) => {
                 if unit == Unit::None {
-                    Value::Dimension(Some(num * num2), unit2, true)
+                    Value::Dimension(num * num2, unit2, None)
                 } else if unit2 == Unit::None {
-                    Value::Dimension(Some(num * num2), unit, true)
+                    Value::Dimension(num * num2, unit, None)
                 } else {
-                    Value::Dimension(Some(num * num2), unit * unit2, true)
+                    Value::Dimension(num * num2, unit * unit2, None)
                 }
             }
             _ => {
@@ -410,234 +414,218 @@ pub(crate) fn single_eq(
     })
 }
 
-
 pub(crate) fn div(left: Value, right: Value, options: &Options, span: Span) -> SassResult<Value> {
     Ok(match left {
-            Value::Null => Value::String(
+        Value::Calculation(..) => todo!(),
+        Value::Null => Value::String(
+            format!("/{}", right.to_css_string(span, options.is_compressed())?),
+            QuoteKind::None,
+        ),
+        Value::Dimension(n, ..) if n.is_nan() => todo!(),
+        Value::Dimension(num, unit, should_divide1) => match right {
+            Value::Calculation(..) => todo!(),
+            Value::Dimension(n, ..) if n.is_nan() => todo!(),
+            Value::Dimension(num2, unit2, should_divide2) => {
+                // todo!()
+                // if should_divide1 || should_divide2 {
+                if num.is_zero() && num2.is_zero() {
+                    // todo: nan
+                    todo!()
+                    // return Ok(Value::Dimension(None, Unit::None, true));
+                }
+
+                if num2.is_zero() {
+                    // todo: Infinity and -Infinity
+                    return Err(("Infinity not yet implemented.", span).into());
+                }
+
+                // `unit(1em / 1em)` => `""`
+                if unit == unit2 {
+                    Value::Dimension(num / num2, Unit::None, None)
+
+                // `unit(1 / 1em)` => `"em^-1"`
+                } else if unit == Unit::None {
+                    Value::Dimension(num / num2, Unit::None / unit2, None)
+
+                // `unit(1em / 1)` => `"em"`
+                } else if unit2 == Unit::None {
+                    Value::Dimension(num / num2, unit, None)
+
+                // `unit(1in / 1px)` => `""`
+                } else if unit.comparable(&unit2) {
+                    Value::Dimension(num / num2.convert(&unit2, &unit), Unit::None, None)
+                // `unit(1em / 1px)` => `"em/px"`
+                // todo: this should probably be its own variant
+                // within the `Value` enum
+                } else {
+                    // todo: remember to account for `Mul` and `Div`
+                    // todo!("non-comparable inverse units")
+                    return Err(
+                        ("Division of non-comparable units not yet supported.", span).into(),
+                    );
+                }
+                // } else {
+                //     Value::String(
+                //         format!(
+                //             "{}{}/{}{}",
+                //             num.to_string(options.is_compressed()),
+                //             unit,
+                //             num2.to_string(options.is_compressed()),
+                //             unit2
+                //         ),
+                //         QuoteKind::None,
+                //     )
+                // }
+            }
+            Value::String(s, q) => Value::String(
                 format!(
-                    "/{}",
+                    "{}{}/{}{}{}",
+                    num.to_string(options.is_compressed()),
+                    unit,
+                    q,
+                    s,
+                    q
+                ),
+                QuoteKind::None,
+            ),
+            Value::List(..)
+            | Value::True
+            | Value::False
+            | Value::Important
+            | Value::Color(..)
+            | Value::ArgList(..) => Value::String(
+                format!(
+                    "{}{}/{}",
+                    num.to_string(options.is_compressed()),
+                    unit,
                     right.to_css_string(span, options.is_compressed())?
                 ),
                 QuoteKind::None,
             ),
-            Value::Dimension(None, ..) => todo!(),
-            Value::Dimension(Some(num), unit, should_divide1) => match right {
-                Value::Dimension(None, ..) => todo!(),
-                Value::Dimension(Some(num2), unit2, should_divide2) => {
-                    if should_divide1 || should_divide2 {
-                        if num.is_zero() && num2.is_zero() {
-                            return Ok(Value::Dimension(None, Unit::None, true));
-                        }
-
-                        if num2.is_zero() {
-                            // todo: Infinity and -Infinity
-                            return Err(("Infinity not yet implemented.", span).into());
-                        }
-
-                        // `unit(1em / 1em)` => `""`
-                        if unit == unit2 {
-                            Value::Dimension(Some(num / num2), Unit::None, true)
-
-                        // `unit(1 / 1em)` => `"em^-1"`
-                        } else if unit == Unit::None {
-                            Value::Dimension(Some(num / num2), Unit::None / unit2, true)
-
-                        // `unit(1em / 1)` => `"em"`
-                        } else if unit2 == Unit::None {
-                            Value::Dimension(Some(num / num2), unit, true)
-
-                        // `unit(1in / 1px)` => `""`
-                        } else if unit.comparable(&unit2) {
-                            Value::Dimension(
-                                Some(num / num2.convert(&unit2, &unit)),
-                                Unit::None,
-                                true,
-                            )
-                        // `unit(1em / 1px)` => `"em/px"`
-                        // todo: this should probably be its own variant
-                        // within the `Value` enum
-                        } else {
-                            // todo: remember to account for `Mul` and `Div`
-                            // todo!("non-comparable inverse units")
-                            return Err((
-                                "Division of non-comparable units not yet supported.",
-                                span,
-                            )
-                                .into());
-                        }
-                    } else {
-                        Value::String(
-                            format!(
-                                "{}{}/{}{}",
-                                num.to_string(options.is_compressed()),
-                                unit,
-                                num2.to_string(options.is_compressed()),
-                                unit2
-                            ),
-                            QuoteKind::None,
-                        )
-                    }
-                }
-                Value::String(s, q) => Value::String(
-                    format!(
-                        "{}{}/{}{}{}",
-                        num.to_string(options.is_compressed()),
-                        unit,
-                        q,
-                        s,
-                        q
-                    ),
-                    QuoteKind::None,
+            Value::Null => Value::String(
+                format!("{}{}/", num.to_string(options.is_compressed()), unit),
+                QuoteKind::None,
+            ),
+            Value::Map(..) | Value::FunctionRef(..) => {
+                return Err((
+                    format!("{} isn't a valid CSS value.", right.inspect(span)?),
+                    span,
+                )
+                    .into())
+            }
+        },
+        Value::Color(c) => match right {
+            Value::String(s, q) => Value::String(format!("{}/{}{}{}", c, q, s, q), QuoteKind::None),
+            Value::Null => Value::String(format!("{}/", c), QuoteKind::None),
+            Value::Dimension(..) | Value::Color(..) => {
+                return Err((
+                    format!("Undefined operation \"{} / {}\".", c, right.inspect(span)?),
+                    span,
+                )
+                    .into())
+            }
+            _ => Value::String(
+                format!(
+                    "{}/{}",
+                    c,
+                    right.to_css_string(span, options.is_compressed())?
                 ),
-                Value::List(..)
-                | Value::True
-                | Value::False
-                | Value::Important
-                | Value::Color(..)
-                | Value::ArgList(..) => Value::String(
-                    format!(
-                        "{}{}/{}",
-                        num.to_string(options.is_compressed()),
-                        unit,
-                        right.to_css_string(span, options.is_compressed())?
-                    ),
-                    QuoteKind::None,
+                QuoteKind::None,
+            ),
+        },
+        Value::String(s1, q1) => match right {
+            Value::Calculation(..) => todo!(),
+            Value::String(s2, q2) => Value::String(
+                format!("{}{}{}/{}{}{}", q1, s1, q1, q2, s2, q2),
+                QuoteKind::None,
+            ),
+            Value::Important
+            | Value::True
+            | Value::False
+            | Value::Dimension(..)
+            | Value::Color(..)
+            | Value::List(..)
+            | Value::ArgList(..) => Value::String(
+                format!(
+                    "{}{}{}/{}",
+                    q1,
+                    s1,
+                    q1,
+                    right.to_css_string(span, options.is_compressed())?
                 ),
-                Value::Null => Value::String(
-                    format!(
-                        "{}{}/",
-                        num.to_string(options.is_compressed()),
-                        unit
-                    ),
-                    QuoteKind::None,
+                QuoteKind::None,
+            ),
+            Value::Null => Value::String(format!("{}{}{}/", q1, s1, q1), QuoteKind::None),
+            Value::Map(..) | Value::FunctionRef(..) => {
+                return Err((
+                    format!("{} isn't a valid CSS value.", right.inspect(span)?),
+                    span,
+                )
+                    .into())
+            }
+        },
+        _ => match right {
+            Value::String(s, q) => Value::String(
+                format!(
+                    "{}/{}{}{}",
+                    left.to_css_string(span, options.is_compressed())?,
+                    q,
+                    s,
+                    q
                 ),
-                Value::Map(..) | Value::FunctionRef(..) => {
-                    return Err((
-                        format!("{} isn't a valid CSS value.", right.inspect(span)?),
-                        span,
-                    )
-                        .into())
-                }
-            },
-            Value::Color(c) => match right {
-                Value::String(s, q) => {
-                    Value::String(format!("{}/{}{}{}", c, q, s, q), QuoteKind::None)
-                }
-                Value::Null => Value::String(format!("{}/", c), QuoteKind::None),
-                Value::Dimension(..) | Value::Color(..) => {
-                    return Err((
-                        format!(
-                            "Undefined operation \"{} / {}\".",
-                            c,
-                            right.inspect(span)?
-                        ),
-                        span,
-                    )
-                        .into())
-                }
-                _ => Value::String(
-                    format!(
-                        "{}/{}",
-                        c,
-                        right.to_css_string(span, options.is_compressed())?
-                    ),
-                    QuoteKind::None,
+                QuoteKind::None,
+            ),
+            Value::Null => Value::String(
+                format!("{}/", left.to_css_string(span, options.is_compressed())?),
+                QuoteKind::None,
+            ),
+            _ => Value::String(
+                format!(
+                    "{}/{}",
+                    left.to_css_string(span, options.is_compressed())?,
+                    right.to_css_string(span, options.is_compressed())?
                 ),
-            },
-            Value::String(s1, q1) => match right {
-                Value::String(s2, q2) => Value::String(
-                    format!("{}{}{}/{}{}{}", q1, s1, q1, q2, s2, q2),
-                    QuoteKind::None,
-                ),
-                Value::Important
-                | Value::True
-                | Value::False
-                | Value::Dimension(..)
-                | Value::Color(..)
-                | Value::List(..)
-                | Value::ArgList(..) => Value::String(
-                    format!(
-                        "{}{}{}/{}",
-                        q1,
-                        s1,
-                        q1,
-                        right.to_css_string(span, options.is_compressed())?
-                    ),
-                    QuoteKind::None,
-                ),
-                Value::Null => Value::String(format!("{}{}{}/", q1, s1, q1), QuoteKind::None),
-                Value::Map(..) | Value::FunctionRef(..) => {
-                    return Err((
-                        format!("{} isn't a valid CSS value.", right.inspect(span)?),
-                        span,
-                    )
-                        .into())
-                }
-            },
-            _ => match right {
-                Value::String(s, q) => Value::String(
-                    format!(
-                        "{}/{}{}{}",
-                        left.to_css_string(span, options.is_compressed())?,
-                        q,
-                        s,
-                        q
-                    ),
-                    QuoteKind::None,
-                ),
-                Value::Null => Value::String(
-                    format!(
-                        "{}/",
-                        left.to_css_string(span, options.is_compressed())?
-                    ),
-                    QuoteKind::None,
-                ),
-                _ => Value::String(
-                    format!(
-                        "{}/{}",
-                        left.to_css_string(span, options.is_compressed())?,
-                        right.to_css_string(span, options.is_compressed())?
-                    ),
-                    QuoteKind::None,
-                ),
-            },
-        })
+                QuoteKind::None,
+            ),
+        },
+    })
 }
-
 
 pub(crate) fn rem(left: Value, right: Value, options: &Options, span: Span) -> SassResult<Value> {
     Ok(match left {
-        v @ Value::Dimension(None, ..) => v,
-        Value::Dimension(Some(n), u, _) => match right {
-            v @ Value::Dimension(None, ..) => v,
-            Value::Dimension(Some(n2), u2, _) => {
+        Value::Dimension(n, ..) if n.is_nan() => todo!(),
+        Value::Dimension(n, u, _) => match right {
+            Value::Dimension(n, ..) if n.is_nan() => todo!(),
+            Value::Dimension(n2, u2, _) => {
                 if !u.comparable(&u2) {
                     return Err((format!("Incompatible units {} and {}.", u, u2), span).into());
                 }
 
                 if n2.is_zero() {
-                    return Ok(Value::Dimension(
-                        None,
-                        if u == Unit::None { u2 } else { u },
-                        true,
-                    ));
+                    // todo: NaN
+                    todo!()
+                    // return Ok(Value::Dimension(
+                    //     None,
+                    //     if u == Unit::None { u2 } else { u },
+                    //     true,
+                    // ));
                 }
 
                 if u == u2 {
-                    Value::Dimension(Some(n % n2), u, true)
+                    Value::Dimension(n % n2, u, None)
                 } else if u == Unit::None {
-                    Value::Dimension(Some(n % n2), u2, true)
+                    Value::Dimension(n % n2, u2, None)
                 } else if u2 == Unit::None {
-                    Value::Dimension(Some(n % n2), u, true)
+                    Value::Dimension(n % n2, u, None)
                 } else {
-                    Value::Dimension(Some(n), u, true)
+                    Value::Dimension(n, u, None)
                 }
             }
             _ => {
                 return Err((
                     format!(
                         "Undefined operation \"{} % {}\".",
-                        Value::Dimension(Some(n), u, true).inspect(span)?,
+                        Value::Dimension(n, u, None).inspect(span)?,
                         right.inspect(span)?
                     ),
                     span,
@@ -797,38 +785,35 @@ impl<'a, 'b: 'a, 'c> ValueVisitor<'a, 'b, 'c> {
     //     }
     // }
 
-    fn unary_minus(&self, val: Value) -> SassResult<Value> {
-        Ok(match val {
-            Value::Dimension(Some(n), u, should_divide) => {
-                Value::Dimension(Some(-n), u, should_divide)
-            }
-            Value::Dimension(None, u, should_divide) => Value::Dimension(None, u, should_divide),
-            v => Value::String(
-                format!(
-                    "-{}",
-                    v.to_css_string(self.span, self.parser.options.is_compressed())?
-                ),
-                QuoteKind::None,
-            ),
-        })
-    }
+    // fn unary_minus(&self, val: Value) -> SassResult<Value> {
+    //     Ok(match val {
+    //         Value::Dimension(n, u, should_divide) => Value::Dimension(-n, u, should_divide),
+    //         v => Value::String(
+    //             format!(
+    //                 "-{}",
+    //                 v.to_css_string(self.span, self.parser.options.is_compressed())?
+    //             ),
+    //             QuoteKind::None,
+    //         ),
+    //     })
+    // }
 
-    fn unary_plus(&self, val: Value) -> SassResult<Value> {
-        Ok(match val {
-            v @ Value::Dimension(..) => v,
-            v => Value::String(
-                format!(
-                    "+{}",
-                    v.to_css_string(self.span, self.parser.options.is_compressed())?
-                ),
-                QuoteKind::None,
-            ),
-        })
-    }
+    // fn unary_plus(&self, val: Value) -> SassResult<Value> {
+    //     Ok(match val {
+    //         v @ Value::Dimension(..) => v,
+    //         v => Value::String(
+    //             format!(
+    //                 "+{}",
+    //                 v.to_css_string(self.span, self.parser.options.is_compressed())?
+    //             ),
+    //             QuoteKind::None,
+    //         ),
+    //     })
+    // }
 
-    fn unary_not(val: &Value) -> Value {
-        Value::bool(!val.is_true())
-    }
+    // fn unary_not(val: &Value) -> Value {
+    //     Value::bool(!val.is_true())
+    // }
 
     // fn unary(
     //     &mut self,

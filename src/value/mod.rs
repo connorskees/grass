@@ -10,9 +10,9 @@ use crate::{
     common::{BinaryOp, Brackets, Identifier, ListSeparator, QuoteKind},
     error::SassResult,
     lexer::Lexer,
-    parse::{visitor::Visitor, Parser},
+    parse::{visitor::Visitor, Parser, SassCalculation},
     selector::Selector,
-    unit::Unit,
+    unit::{Unit, UNIT_CONVERSION_TABLE},
     utils::hex_char_for,
     {Cow, Token},
 };
@@ -80,9 +80,7 @@ pub(crate) enum Value {
     True,
     False,
     Null,
-    /// A `None` value for `Number` indicates a `NaN` value
-    // todo: as_slash
-    Dimension(Option<Number>, Unit, bool),
+    Dimension(Number, Unit, Option<Box<(SassNumber, SassNumber)>>),
     List(Vec<Value>, ListSeparator, Brackets),
     Color(Box<Color>),
     String(String, QuoteKind),
@@ -90,19 +88,22 @@ pub(crate) enum Value {
     ArgList(ArgList),
     /// Returned by `get-function()`
     FunctionRef(SassFunction),
-    // todo: calculation
-    // Calculation(),
+    Calculation(SassCalculation),
 }
 
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
         match self {
+            Value::Calculation(calc1) => match other {
+                Value::Calculation(calc2) => calc1 == calc2,
+                _ => false,
+            },
             Value::String(s1, ..) => match other {
                 Value::String(s2, ..) => s1 == s2,
                 _ => false,
             },
-            Value::Dimension(Some(n), unit, _) => match other {
-                Value::Dimension(Some(n2), unit2, _) => {
+            Value::Dimension(n, unit, _) if !n.is_nan() => match other {
+                Value::Dimension(n2, unit2, _) if !n.is_nan() => {
                     if !unit.comparable(unit2) {
                         false
                     } else if unit == unit2 {
@@ -115,7 +116,10 @@ impl PartialEq for Value {
                 }
                 _ => false,
             },
-            Value::Dimension(None, ..) => false,
+            Value::Dimension(n, ..) => {
+                debug_assert!(n.is_nan());
+                false
+            }
             Value::List(list1, sep1, brackets1) => match other {
                 Value::List(list2, sep2, brackets2) => {
                     if sep1 != sep2 || brackets1 != brackets2 || list1.len() != list2.len() {
@@ -245,21 +249,73 @@ fn visit_quoted_string(buf: &mut String, force_double_quote: bool, string: &str)
     buf.push_str(&buffer);
 }
 
+// num, uit, as_slash
+// todo: is as_slash included in eq
 #[derive(Debug, Clone)]
-pub(crate) struct SassNumber {
-    pub num: Number,
-    pub unit: Unit,
-    pub computed: bool,
+pub(crate) struct SassNumber(pub Number, pub Unit, pub Option<Box<(Self, Self)>>);
+//  {
+//     // todo: f64
+//     pub num: Number,
+//     pub unit: Unit,
+//     pub computed: bool,
+//     pub as_slash: Option<Box<(Self, Self)>>,
+// }
+
+impl PartialEq for SassNumber {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0 && self.1 == other.1
+    }
+}
+
+impl Eq for SassNumber {}
+
+impl SassNumber {
+    pub fn is_comparable_to(&self, other: &Self) -> bool {
+        self.1.comparable(&other.1)
+    }
+
+    pub fn num(&self) -> &Number {
+        &self.0
+    }
+
+    pub fn unit(&self) -> &Unit {
+        &self.1
+    }
+
+    pub fn as_slash(&self) -> &Option<Box<(Self, Self)>> {
+        &self.2
+    }
+
+    /// Invariants: `from.comparable(&to)` must be true
+    pub fn convert(mut self, to: &Unit) -> Self {
+        let from = &self.1;
+        debug_assert!(from.comparable(to));
+
+        if from == &Unit::None && to == &Unit::None {
+            self.1 = self.1 * to.clone();
+            return self;
+        }
+
+        self.0 *= UNIT_CONVERSION_TABLE[to][from].clone();
+        self.1 = self.1 * to.clone();
+
+        self
+    }
 }
 
 impl Value {
+    pub fn with_slash(mut self, numerator: SassNumber, denom: SassNumber) -> SassResult<Self> {
+        let number = self.assert_number()?;
+        Ok(Value::Dimension(
+            number.0,
+            number.1,
+            Some(Box::new((numerator, denom))),
+        ))
+    }
+
     pub fn assert_number(self) -> SassResult<SassNumber> {
         match self {
-            Value::Dimension(num, unit, computed) => Ok(SassNumber {
-                num: num.unwrap(),
-                unit,
-                computed,
-            }),
+            Value::Dimension(num, unit, computed) => Ok(SassNumber(num, unit, None)),
             _ => todo!(),
         }
     }
@@ -268,38 +324,63 @@ impl Value {
         match self {
             Value::Null => true,
             Value::String(i, QuoteKind::None) if i.is_empty() => true,
-            Value::List(v, _, Brackets::Bracketed) if v.is_empty() => false,
+            Value::List(v, _, Brackets::Bracketed) => false,
             Value::List(v, ..) => v.iter().map(Value::is_null).all(|f| f),
             Value::ArgList(v, ..) => v.is_null(),
             _ => false,
         }
     }
 
+    pub fn is_empty_list(&self) -> bool {
+        match self {
+            Value::List(v, ..) => v.is_empty(),
+            Value::Map(m) => m.is_empty(),
+            Value::ArgList(v) => v.elems.is_empty(),
+            _ => false,
+        }
+    }
+
     pub fn to_css_string(&self, span: Span, is_compressed: bool) -> SassResult<Cow<'static, str>> {
         Ok(match self {
+            Value::Calculation(calc) => Cow::owned(format!(
+                "{}({})",
+                calc.name,
+                calc.args
+                    .iter()
+                    .map(|a| a.to_css_string(span, is_compressed))
+                    .collect::<SassResult<Vec<String>>>()?
+                    .join(if is_compressed {
+                        ListSeparator::Comma.as_compressed_str()
+                    } else {
+                        ListSeparator::Comma.as_str()
+                    }),
+            )),
             Value::Important => Cow::const_str("!important"),
-            Value::Dimension(num, unit, _) => match unit {
+            Value::Dimension(num, unit, as_slash) => match unit {
                 Unit::Mul(..) | Unit::Div(..) => {
-                    if let Some(num) = num {
-                        return Err((
-                            format!(
-                                "{}{} isn't a valid CSS value.",
-                                num.to_string(is_compressed),
-                                unit
-                            ),
-                            span,
-                        )
-                            .into());
-                    }
-
-                    return Err((format!("NaN{} isn't a valid CSS value.", unit), span).into());
+                    return Err((
+                        format!(
+                            "{}{} isn't a valid CSS value.",
+                            num.to_string(is_compressed),
+                            unit
+                        ),
+                        span,
+                    )
+                        .into());
                 }
                 _ => {
-                    if let Some(num) = num {
-                        Cow::owned(format!("{}{}", num.to_string(is_compressed), unit))
-                    } else {
-                        Cow::owned(format!("NaN{}", unit))
+                    if let Some(as_slash) = as_slash {
+                        let numer = &as_slash.0;
+                        let denom = &as_slash.1;
+
+                        return Ok(Cow::owned(format!(
+                            "{}/{}",
+                            numer.num().to_string(is_compressed),
+                            denom.num().to_string(is_compressed)
+                        )));
                     }
+
+                    Cow::owned(format!("{}{}", num.to_string(is_compressed), unit))
                 }
             },
             Value::Map(..) | Value::FunctionRef(..) => {
@@ -405,6 +486,7 @@ impl Value {
         match self {
             Value::Color(..) => "color",
             Value::String(..) | Value::Important => "string",
+            Value::Calculation(..) => "calculation",
             Value::Dimension(..) => "number",
             Value::List(..) => "list",
             Value::FunctionRef(..) => "function",
@@ -415,13 +497,16 @@ impl Value {
         }
     }
 
-    pub fn as_slash(&self) -> Option<(Number, Number)> {
-        None
+    pub fn as_slash(&self) -> Option<Box<(SassNumber, SassNumber)>> {
+        match self {
+            Value::Dimension(_, _, as_slash) => as_slash.clone(),
+            _ => None,
+        }
     }
 
-    // todo: removes as_slash from number
     pub fn without_slash(self) -> Self {
         match self {
+            Value::Dimension(num, unit, _) => Value::Dimension(num, unit, None),
             _ => self,
         }
     }
@@ -447,10 +532,10 @@ impl Value {
 
     pub fn cmp(&self, other: &Self, span: Span, op: BinaryOp) -> SassResult<Ordering> {
         Ok(match self {
-            Value::Dimension(None, ..) => todo!(),
-            Value::Dimension(Some(num), unit, _) => match &other {
-                Value::Dimension(None, ..) => todo!(),
-                Value::Dimension(Some(num2), unit2, _) => {
+            Value::Dimension(n, ..) if n.is_nan() => todo!(),
+            Value::Dimension(num, unit, _) => match &other {
+                Value::Dimension(n, ..) if n.is_nan() => todo!(),
+                Value::Dimension(num2, unit2, _) => {
                     if !unit.comparable(unit2) {
                         return Err(
                             (format!("Incompatible units {} and {}.", unit2, unit), span).into(),
@@ -496,8 +581,8 @@ impl Value {
                 Value::String(s2, ..) => s1 != s2,
                 _ => true,
             },
-            Value::Dimension(Some(n), unit, _) => match other {
-                Value::Dimension(Some(n2), unit2, _) => {
+            Value::Dimension(n, unit, _) if !n.is_nan() => match other {
+                Value::Dimension(n2, unit2, _) if !n2.is_nan() => {
                     if !unit.comparable(unit2) {
                         true
                     } else if unit == unit2 {
@@ -533,6 +618,7 @@ impl Value {
     // https://github.com/sass/dart-sass/blob/d4adea7569832f10e3a26d0e420ae51640740cfb/lib/src/ast/sass/expression/list.dart#L39
     pub fn inspect(&self, span: Span) -> SassResult<Cow<'static, str>> {
         Ok(match self {
+            Value::Calculation(..) => todo!(),
             Value::List(v, _, brackets) if v.is_empty() => match brackets {
                 Brackets::None => Cow::const_str("()"),
                 Brackets::Bracketed => Cow::const_str("[]"),
@@ -572,10 +658,7 @@ impl Value {
                     .collect::<SassResult<Vec<String>>>()?
                     .join(", ")
             )),
-            Value::Dimension(Some(num), unit, _) => {
-                Cow::owned(format!("{}{}", num.inspect(), unit))
-            }
-            Value::Dimension(None, unit, ..) => Cow::owned(format!("NaN{}", unit)),
+            Value::Dimension(num, unit, _) => Cow::owned(format!("{}{}", num.inspect(), unit)),
             Value::ArgList(args) if args.is_empty() => Cow::const_str("()"),
             Value::ArgList(args) if args.len() == 1 => Cow::owned(format!(
                 "({},)",
@@ -638,16 +721,17 @@ impl Value {
             ),
             map: visitor.parser.map,
             path: visitor.parser.path,
-            scopes: visitor.parser.scopes,
+            is_plain_css: false,
+            // scopes: visitor.parser.scopes,
             // global_scope: visitor.parser.global_scope,
             // super_selectors: visitor.parser.super_selectors,
             span_before: visitor.parser.span_before,
-            content: visitor.parser.content,
+            // content: visitor.parser.content,
             flags: visitor.parser.flags,
-            at_root: visitor.parser.at_root,
-            at_root_has_selector: visitor.parser.at_root_has_selector,
+            // at_root: visitor.parser.at_root,
+            // at_root_has_selector: visitor.parser.at_root_has_selector,
             // extender: visitor.parser.extender,
-            content_scopes: visitor.parser.content_scopes,
+            // content_scopes: visitor.parser.content_scopes,
             options: visitor.parser.options,
             modules: visitor.parser.modules,
             module_config: visitor.parser.module_config,
@@ -724,10 +808,7 @@ impl Value {
     pub fn unary_neg(self, visitor: &mut Visitor) -> SassResult<Self> {
         Ok(match self {
             // Self::Calculation => todo!(),
-            Self::Dimension(Some(n), unit, is_calculated) => {
-                Self::Dimension(Some(-n), unit, is_calculated)
-            }
-            Self::Dimension(None, ..) => todo!(),
+            Self::Dimension(n, unit, is_calculated) => Self::Dimension(-n, unit, is_calculated),
             _ => Self::String(
                 format!(
                     "-{}",

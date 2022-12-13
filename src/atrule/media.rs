@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use std::fmt;
+use std::fmt::{self, Write};
 
 use crate::{
     error::SassResult,
@@ -168,7 +168,7 @@ impl<'a> MediaQueryParser<'a> {
 
     fn parse_media_in_parens(&mut self) -> SassResult<String> {
         self.parser.expect_char('(')?;
-        let result = format!("({})", self.parser.declaration_value(false, false, false)?);
+        let result = format!("({})", self.parser.declaration_value(false)?);
         self.parser.expect_char(')')?;
         Ok(result)
     }
@@ -231,16 +231,17 @@ impl MediaQuery {
             toks: &mut toks,
             map: parser.map,
             path: parser.path,
-            scopes: parser.scopes,
+            is_plain_css: false,
+            // scopes: parser.scopes,
             // global_scope: parser.global_scope,
             // super_selectors: parser.super_selectors,
             span_before: parser.span_before,
-            content: parser.content,
+            // content: parser.content,
             flags: parser.flags,
-            at_root: parser.at_root,
-            at_root_has_selector: parser.at_root_has_selector,
+            // at_root: parser.at_root,
+            // at_root_has_selector: parser.at_root_has_selector,
             // extender: parser.extender,
-            content_scopes: parser.content_scopes,
+            // content_scopes: parser.content_scopes,
             options: parser.options,
             modules: parser.modules,
             module_config: parser.module_config,
@@ -410,13 +411,16 @@ impl fmt::Display for MediaQuery {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Some(modifier) = &self.modifier {
             f.write_str(modifier)?;
+            f.write_char(' ')?;
         }
+
         if let Some(media_type) = &self.media_type {
             f.write_str(media_type)?;
             if !&self.features.is_empty() {
                 f.write_str(" and ")?;
             }
         }
+
         f.write_str(&self.features.join(" and "))
     }
 }

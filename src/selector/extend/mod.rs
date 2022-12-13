@@ -862,7 +862,7 @@ impl Extender {
         &mut self,
         mut selector: SelectorList,
         // span: Span,
-        media_query_context: Option<Vec<CssMediaQuery>>,
+        media_query_context: &Option<Vec<CssMediaQuery>>,
     ) -> ExtendedSelector {
         if !selector.is_invisible() {
             for complex in selector.components.clone() {
@@ -871,7 +871,7 @@ impl Extender {
         }
 
         if !self.extensions.is_empty() {
-            selector = self.extend_list(selector, None, &media_query_context);
+            selector = self.extend_list(selector, None, media_query_context);
             /*
               todo: when we have error handling
                   } on SassException catch (error) {
@@ -882,7 +882,7 @@ impl Extender {
             }
               */
         }
-        if let Some(mut media_query_context) = media_query_context {
+        if let Some(mut media_query_context) = media_query_context.clone() {
             self.media_contexts
                 .get_mut(&selector)
                 .replace(&mut media_query_context);

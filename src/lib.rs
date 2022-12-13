@@ -102,6 +102,7 @@ mod output;
 mod parse;
 mod scope;
 mod selector;
+mod serializer;
 mod style;
 mod token;
 mod unit;
@@ -268,18 +269,19 @@ fn from_string_with_file_name(input: String, file_name: &str, options: &Options)
         toks: &mut Lexer::new_from_file(&file),
         map: &mut map,
         path: file_name.as_ref(),
-        scopes: &mut Scopes::new(),
+        is_plain_css: false,
+        // scopes: &mut Scopes::new(),
         // global_scope: &mut Scope::new(),
         // super_selectors: &mut NeverEmptyVec::new(ExtendedSelector::new(SelectorList::new(
         //     empty_span,
         // ))),
         span_before: empty_span,
-        content: &mut Vec::new(),
+        // content: &mut Vec::new(),
         flags: ContextFlags::empty(),
-        at_root: true,
-        at_root_has_selector: false,
+        // at_root: true,
+        // at_root_has_selector: false,
         // extender: &mut Extender::new(empty_span),
-        content_scopes: &mut Scopes::new(),
+        // content_scopes: &mut Scopes::new(),
         options,
         modules: &mut Modules::default(),
         module_config: &mut ModuleConfig::default(),
@@ -291,7 +293,11 @@ fn from_string_with_file_name(input: String, file_name: &str, options: &Options)
     };
 
     let mut visitor = Visitor::new(&mut parser);
-    let stmts = match visitor.visit_stylesheet(stmts) {
+    match visitor.visit_stylesheet(stmts) {
+        Ok(_) => {}
+        Err(e) => return Err(raw_to_parse_error(&map, *e, options.unicode_error_messages)),
+    }
+    let stmts = match visitor.finish() {
         Ok(v) => v,
         Err(e) => return Err(raw_to_parse_error(&map, *e, options.unicode_error_messages)),
     };

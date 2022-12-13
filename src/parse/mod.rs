@@ -4,6 +4,7 @@ use std::{
     convert::TryFrom,
     path::Path,
     rc::Rc,
+    sync::Arc,
 };
 
 use codemap::{CodeMap, Span, Spanned};
@@ -30,7 +31,10 @@ use crate::{
 };
 
 use common::{Comment, ContextFlags, NeverEmptyVec, SelectorOrStyle};
-pub(crate) use value_new::{Argument, ArgumentDeclaration, ArgumentInvocation, ArgumentResult};
+pub(crate) use value_new::{
+    Argument, ArgumentDeclaration, ArgumentInvocation, ArgumentResult, CalculationArg,
+    CalculationName, MaybeEvaledArguments, SassCalculation,
+};
 
 pub(crate) use value::{add, cmp, mul, sub};
 
@@ -38,7 +42,8 @@ use variable::VariableValue;
 
 use self::{
     function::RESERVED_IDENTIFIERS,
-    value_new::{AstExpr, Predicate, StringExpr, ValueParser},
+    import::is_plain_css_import,
+    value_new::{opposite_bracket, AstExpr, Predicate, StringExpr, ValueParser},
     visitor::Environment,
 };
 
@@ -69,6 +74,13 @@ impl Interpolation {
     pub fn new(span: Span) -> Self {
         Self {
             contents: Vec::new(),
+            span,
+        }
+    }
+
+    pub fn new_with_expr(e: AstExpr, span: Span) -> Self {
+        Self {
+            contents: vec![InterpolationPart::Expr(e)],
             span,
         }
     }
@@ -207,6 +219,12 @@ pub(crate) struct AstStyle {
     span: Span,
 }
 
+impl AstStyle {
+    pub fn is_custom_property(&self) -> bool {
+        self.name.initial_plain().starts_with("--")
+    }
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct AstEach {
     variables: Vec<Identifier>,
@@ -236,8 +254,8 @@ impl AstWhile {
                 AstStmt::VariableDecl(..)
                     | AstStmt::FunctionDecl(..)
                     | AstStmt::Mixin(..)
-                    // todo: read imports in this case
-                    | AstStmt::AstSassImport(..)
+                    // todo: read imports in this case (only counts if dynamic)
+                    | AstStmt::ImportRule(..)
             )
         })
     }
@@ -258,6 +276,12 @@ pub(crate) struct AstFunctionDecl {
     name: Identifier,
     arguments: ArgumentDeclaration,
     children: Vec<AstStmt>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct AstDebugRule {
+    value: AstExpr,
+    span: Span,
 }
 
 #[derive(Debug, Clone)]
@@ -342,7 +366,7 @@ pub(crate) struct AstContentBlock {
 #[derive(Debug, Clone)]
 pub(crate) struct AstInclude {
     namespace: Option<Identifier>,
-    name: Identifier,
+    name: Spanned<Identifier>,
     args: ArgumentInvocation,
     content: Option<AstContentBlock>,
 }
@@ -377,6 +401,30 @@ pub(crate) struct AtRootQuery {
     rule: bool,
 }
 
+impl AtRootQuery {
+    pub fn excludes_name(&self, name: &str) -> bool {
+        (self.all || self.names.contains(name)) != self.include
+    }
+
+    pub fn excludes_style_rules(&self) -> bool {
+        (self.all || self.rule) != self.include
+    }
+
+    pub fn excludes(&self, stmt: &Stmt) -> bool {
+        if self.all {
+            return !self.include;
+        }
+
+        match stmt {
+            Stmt::RuleSet { .. } => self.excludes_style_rules(),
+            Stmt::Media(..) => self.excludes_name("media"),
+            Stmt::Supports(..) => self.excludes_name("supports"),
+            Stmt::UnknownAtRule(rule) => self.excludes_name(&rule.name.to_ascii_lowercase()),
+            _ => false,
+        }
+    }
+}
+
 impl Default for AtRootQuery {
     fn default() -> Self {
         Self {
@@ -385,6 +433,23 @@ impl Default for AtRootQuery {
             all: false,
             rule: true,
         }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct AstImportRule {
+    imports: Vec<AstImport>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) enum AstImport {
+    Plain(AstPlainCssImport),
+    Sass(AstSassImport),
+}
+
+impl AstImport {
+    pub fn is_dynamic(&self) -> bool {
+        matches!(self, AstImport::Sass(..))
     }
 }
 
@@ -410,6 +475,7 @@ pub(crate) enum AstStmt {
     ErrorRule(AstErrorRule),
     Extend(AstExtendRule),
     AtRootRule(AstAtRootRule),
+    Debug(AstDebugRule),
     // RuleSet {
     //     selector: ExtendedSelector,
     //     body: Vec<Self>,
@@ -427,8 +493,9 @@ pub(crate) enum AstStmt {
     // KeyframesRuleSet(Box<KeyframesRuleSet>),
     /// A plain import such as `@import "foo.css";` or
     /// `@import url(https://fonts.google.com/foo?bar);`
-    PlainCssImport(AstPlainCssImport),
-    AstSassImport(AstSassImport),
+    // PlainCssImport(AstPlainCssImport),
+    // AstSassImport(AstSassImport),
+    ImportRule(AstImportRule),
 }
 
 #[derive(Debug, Clone)]
@@ -453,6 +520,7 @@ pub(crate) enum Stmt {
     Import(String),
 }
 
+#[derive(Debug, Clone)]
 enum DeclarationOrBuffer {
     Stmt(AstStmt),
     Buffer(Interpolation),
@@ -461,21 +529,23 @@ enum DeclarationOrBuffer {
 // todo: merge at_root and at_root_has_selector into an enum
 pub(crate) struct Parser<'a, 'b> {
     pub toks: &'a mut Lexer<'b>,
+    // todo: likely superfluous
     pub map: &'a mut CodeMap,
     pub path: &'a Path,
+    pub is_plain_css: bool,
     // pub global_scope: &'a mut Scope,
-    pub scopes: &'a mut Scopes,
-    pub content_scopes: &'a mut Scopes,
+    // pub scopes: &'a mut Scopes,
+    // pub content_scopes: &'a mut Scopes,
     // pub super_selectors: &'a mut NeverEmptyVec<ExtendedSelector>,
     pub span_before: Span,
-    pub content: &'a mut Vec<Content>,
+    // pub content: &'a mut Vec<Content>,
     pub flags: ContextFlags,
     /// Whether this parser is at the root of the document
     /// E.g. not inside a style, mixin, or function
-    pub at_root: bool,
+    // pub at_root: bool,
     /// If this parser is inside an `@at-rule` block, this is whether or
     /// not the `@at-rule` block has a super selector
-    pub at_root_has_selector: bool,
+    // pub at_root_has_selector: bool,
     // pub extender: &'a mut Extender,
     pub options: &'a Options<'a>,
 
@@ -490,8 +560,28 @@ enum VariableDeclOrInterpolation {
 }
 
 #[derive(Debug, Clone)]
+struct AstUseRule {}
+
+#[derive(Debug, Clone)]
+struct AstForwardRule {}
+
+#[derive(Debug, Clone)]
 pub struct StyleSheet {
     body: Vec<AstStmt>,
+    is_plain_css: bool,
+    uses: Vec<AstUseRule>,
+    forwards: Vec<AstForwardRule>,
+}
+
+impl StyleSheet {
+    pub fn new() -> Self {
+        Self {
+            body: Vec::new(),
+            is_plain_css: false,
+            uses: Vec::new(),
+            forwards: Vec::new(),
+        }
+    }
 }
 
 impl<'a, 'b> Parser<'a, 'b> {
@@ -500,7 +590,7 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     pub fn __parse(&mut self) -> SassResult<StyleSheet> {
-        let mut style_sheet = StyleSheet { body: Vec::new() };
+        let mut style_sheet = StyleSheet::new();
 
         // Allow a byte-order mark at the beginning of the document.
         self.consume_char_if_exists('\u{feff}');
@@ -658,6 +748,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         todo!()
     }
 
+    // todo: return span
     pub fn __parse_identifier(
         &mut self,
         // default=false
@@ -803,10 +894,33 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     fn parse_content_rule(&mut self) -> SassResult<AstStmt> {
-        todo!()
+        if !self.flags.in_mixin() {
+            todo!("@content is only allowed within mixin declarations.")
+        }
+
+        self.whitespace_or_comment();
+
+        let args = if self.toks.next_char_is('(') {
+            self.parse_argument_invocation(true, false)?
+        } else {
+            ArgumentInvocation::empty(self.toks.current_span())
+        };
+
+        self.expect_statement_separator(Some("@content rule"))?;
+
+        self.flags.set(ContextFlags::FOUND_CONTENT_RULE, true);
+
+        Ok(AstStmt::ContentRule(AstContentRule { args }))
     }
+
     fn parse_debug_rule(&mut self) -> SassResult<AstStmt> {
-        todo!()
+        let value = self.parse_expression(None, None, None)?;
+        self.expect_statement_separator(Some("@debug rule"))?;
+
+        Ok(AstStmt::Debug(AstDebugRule {
+            value: value.node,
+            span: value.span,
+        }))
     }
 
     fn parse_each_rule(
@@ -1190,8 +1304,182 @@ impl<'a, 'b> Parser<'a, 'b> {
             else_clause: last_clause,
         }))
     }
-    fn parse_import_rule(&mut self) -> SassResult<AstStmt> {
+
+    fn try_import_modifiers(&mut self) -> SassResult<Option<Interpolation>> {
+        // Exit before allocating anything if we're not looking at any modifiers, as
+        // is the most common case.
+        if !self.looking_at_interpolated_identifier() && !self.toks.next_char_is('(') {
+            return Ok(None);
+        }
+
+        // var start = scanner.state;
+        // var buffer = InterpolationBuffer();
+        // while (true) {
+        //   if (_lookingAtInterpolatedIdentifier()) {
+        //     if (!buffer.isEmpty) buffer.writeCharCode($space);
+
+        //     var identifier = interpolatedIdentifier();
+        //     buffer.addInterpolation(identifier);
+
+        //     var name = identifier.asPlain?.toLowerCase();
+        //     if (name != "and" && scanner.scanChar($lparen)) {
+        //       if (name == "supports") {
+        //         var query = _importSupportsQuery();
+        //         if (query is! SupportsDeclaration) buffer.writeCharCode($lparen);
+        //         buffer.add(SupportsExpression(query));
+        //         if (query is! SupportsDeclaration) buffer.writeCharCode($rparen);
+        //       } else {
+        //         buffer.writeCharCode($lparen);
+        //         buffer.addInterpolation(_interpolatedDeclarationValue(
+        //             allowEmpty: true, allowSemicolon: true));
+        //         buffer.writeCharCode($rparen);
+        //       }
+
+        //       scanner.expectChar($rparen);
+        //       whitespace();
+        //     } else {
+        //       whitespace();
+        //       if (scanner.scanChar($comma)) {
+        //         buffer.write(", ");
+        //         buffer.addInterpolation(_mediaQueryList());
+        //         return buffer.interpolation(scanner.spanFrom(start));
+        //       }
+        //     }
+        //   } else if (scanner.peekChar() == $lparen) {
+        //     if (!buffer.isEmpty) buffer.writeCharCode($space);
+        //     buffer.addInterpolation(_mediaQueryList());
+        //     return buffer.interpolation(scanner.spanFrom(start));
+        //   } else {
+        //     return buffer.interpolation(scanner.spanFrom(start));
+        //   }
+        // }
         todo!()
+    }
+
+    fn try_url_contents(&mut self, name: Option<&str>) -> SassResult<Option<Interpolation>> {
+        // NOTE: this logic is largely duplicated in Parser.tryUrl. Most changes
+        // here should be mirrored there.
+
+        let start = self.toks.cursor();
+        if !self.consume_char_if_exists('(') {
+            return Ok(None);
+        }
+        self.whitespace();
+
+        // Match Ruby Sass's behavior: parse a raw URL() if possible, and if not
+        // backtrack and re-parse as a function expression.
+        let mut buffer = Interpolation::new(self.span_before);
+        buffer.add_string(Spanned {
+            node: name.unwrap_or_else(|| "url").to_owned(),
+            span: self.span_before,
+        });
+        buffer.add_char('(');
+
+        while let Some(next) = self.toks.peek() {
+            match next.kind {
+                '\\' => buffer.add_string(Spanned {
+                    node: self.parse_escape(false)?,
+                    span: self.span_before,
+                }),
+                '!' | '%' | '&' | '*'..='~' | '\u{80}'..=char::MAX => {
+                    self.toks.next();
+                    buffer.add_char(next.kind)
+                }
+                '#' => {
+                    if matches!(self.toks.peek_n(1), Some(Token { kind: '{', .. })) {
+                        let interpolation = self.parse_single_interpolation()?;
+                        buffer.add_interpolation(interpolation);
+                    } else {
+                        self.toks.next();
+                        buffer.add_char(next.kind)
+                    }
+                }
+                ')' => {
+                    self.toks.next();
+                    buffer.add_char(next.kind);
+                    return Ok(Some(buffer));
+                }
+                ' ' | '\t' | '\n' | '\r' => {
+                    self.whitespace();
+                    if !self.toks.next_char_is(')') {
+                        break;
+                    }
+                }
+                _ => break,
+            }
+        }
+
+        self.toks.set_cursor(start);
+
+        Ok(None)
+    }
+
+    fn parse_dynamic_url(&mut self) -> SassResult<AstExpr> {
+        self.expect_identifier("url", false)?;
+
+        Ok(match self.try_url_contents(None)? {
+            Some(contents) => AstExpr::String(StringExpr(contents, QuoteKind::None)),
+            None => AstExpr::InterpolatedFunction {
+                name: Interpolation::new_plain("url".to_owned(), self.span_before),
+                arguments: Box::new(self.parse_argument_invocation(false, false)?),
+            },
+        })
+    }
+
+    fn parse_import_argument(&mut self) -> SassResult<AstImport> {
+        if self.toks.next_char_is('u') || self.toks.next_char_is('U') {
+            let url = self.parse_dynamic_url()?;
+            self.whitespace_or_comment();
+            let modifiers = self.try_import_modifiers()?;
+            return Ok(AstImport::Plain(AstPlainCssImport {
+                url: Interpolation::new_with_expr(url, self.span_before),
+                modifiers,
+                span: self.span_before,
+            }));
+        }
+
+        let start = self.toks.cursor();
+        let url = self.parse_string()?;
+        let raw_url = self.toks.raw_text(start);
+        self.whitespace_or_comment();
+        let modifiers = self.try_import_modifiers()?;
+
+        if is_plain_css_import(&url) || modifiers.is_some() {
+            Ok(AstImport::Plain(AstPlainCssImport {
+                url: Interpolation::new_plain(raw_url, self.span_before),
+                modifiers,
+                span: self.span_before,
+            }))
+        } else {
+            // todo: try parseImportUrl
+            Ok(AstImport::Sass(AstSassImport {
+                url,
+                span: self.span_before,
+            }))
+        }
+    }
+
+    fn parse_import_rule(&mut self) -> SassResult<AstStmt> {
+        let mut imports = Vec::new();
+
+        loop {
+            self.whitespace_or_comment();
+            let argument = self.parse_import_argument()?;
+
+            // todo: _inControlDirective
+            if (self.flags.in_control_flow() || self.flags.in_mixin()) && argument.is_dynamic() {
+                self.parse_disallowed_at_rule()?;
+            }
+
+            imports.push(argument);
+            self.whitespace_or_comment();
+
+            if !self.consume_char_if_exists(',') {
+                break;
+            }
+        }
+
+        Ok(AstStmt::ImportRule(AstImportRule { imports }))
     }
 
     fn parse_public_identifier(&mut self) -> SassResult<String> {
@@ -1201,6 +1489,7 @@ impl<'a, 'b> Parser<'a, 'b> {
     fn parse_include_rule(&mut self) -> SassResult<AstStmt> {
         let mut namespace: Option<Identifier> = None;
 
+        let name_start = self.toks.cursor();
         let mut name = self.__parse_identifier(false, false)?;
 
         if self.consume_char_if_exists('.') {
@@ -1211,13 +1500,14 @@ impl<'a, 'b> Parser<'a, 'b> {
         }
 
         let name = Identifier::from(name);
+        let name_span = self.toks.span_from(name_start);
 
         self.whitespace_or_comment();
 
         let args = if self.toks.next_char_is('(') {
-            self.parse_argument_invocation(true, false)?.node
+            self.parse_argument_invocation(true, false)?
         } else {
-            ArgumentInvocation::empty()
+            ArgumentInvocation::empty(self.toks.current_span())
         };
 
         self.whitespace_or_comment();
@@ -1231,25 +1521,29 @@ impl<'a, 'b> Parser<'a, 'b> {
             None
         };
 
-        let content_block: Option<AstContentBlock> = None;
+        let mut content_block: Option<AstContentBlock> = None;
 
         if content_args.is_some() || self.looking_at_children() {
-            //   var contentArguments_ =
-            //       contentArguments ?? ArgumentDeclaration.empty(scanner.emptySpan);
-            //   var wasInContentBlock = _inContentBlock;
-            //   _inContentBlock = true;
-            //   content = _withChildren(_statement, start,
-            //       (children, span) => ContentBlock(contentArguments_, children, span));
-            //   _inContentBlock = wasInContentBlock;
-
-            todo!()
+            let content_args = content_args.unwrap_or_else(ArgumentDeclaration::empty);
+            let was_in_content_block = self.flags.in_content_block();
+            self.flags.set(ContextFlags::IN_CONTENT_BLOCK, true);
+            let body = self.with_children(Self::__parse_stmt)?;
+            content_block = Some(AstContentBlock {
+                args: content_args,
+                body,
+            });
+            self.flags
+                .set(ContextFlags::IN_CONTENT_BLOCK, was_in_content_block);
         } else {
             self.expect_statement_separator(None)?;
         }
 
         Ok(AstStmt::Include(AstInclude {
             namespace,
-            name,
+            name: Spanned {
+                node: name,
+                span: name_span,
+            },
             args,
             content: content_block,
         }))
@@ -1357,17 +1651,23 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         self.whitespace_or_comment();
 
+        let old_found_content_rule = self.flags.found_content_rule();
+        self.flags.set(ContextFlags::FOUND_CONTENT_RULE, false);
         self.flags.set(ContextFlags::IN_MIXIN, true);
 
         let body = self.with_children(Self::__parse_stmt)?;
 
+        let has_content = self.flags.found_content_rule();
+
+        self.flags
+            .set(ContextFlags::FOUND_CONTENT_RULE, old_found_content_rule);
         self.flags.set(ContextFlags::IN_MIXIN, false);
 
         Ok(AstStmt::Mixin(AstMixin {
             name,
             args,
             body,
-            has_content: false,
+            has_content,
         }))
     }
 
@@ -1426,6 +1726,9 @@ impl<'a, 'b> Parser<'a, 'b> {
         let condition = self.parse_expression(None, None, None)?.node;
 
         let body = self.with_children(child)?;
+
+        self.flags
+            .set(ContextFlags::IN_CONTROL_FLOW, was_in_control_directive);
 
         Ok(AstStmt::While(AstWhile { condition, body }))
     }
@@ -1519,7 +1822,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             && self.flags.in_style_rule()
             && !self.flags.in_unknown_at_rule()
         {
-            return self.parse_property_or_variable_declaration();
+            return self.parse_property_or_variable_declaration(true);
         }
 
         match self.parse_declaration_or_buffer()? {
@@ -1530,8 +1833,102 @@ impl<'a, 'b> Parser<'a, 'b> {
         }
     }
 
-    fn parse_property_or_variable_declaration(&mut self) -> SassResult<AstStmt> {
-        todo!()
+    fn parse_property_or_variable_declaration(
+        &mut self,
+        // default=true
+        parse_custom_properties: bool,
+    ) -> SassResult<AstStmt> {
+        // let mut name = Interpolation::new(self.span_before);
+        //     var start = scanner.state;
+        let start = self.toks.cursor();
+
+        let name = if matches!(
+            self.toks.peek(),
+            Some(Token {
+                kind: ':' | '*' | '.',
+                ..
+            })
+        ) || (matches!(self.toks.peek(), Some(Token { kind: '#', .. }))
+            && !matches!(self.toks.peek_n(1), Some(Token { kind: '{', .. })))
+        {
+            // Allow the "*prop: val", ":prop: val", "#prop: val", and ".prop: val"
+            // hacks.
+            let mut name_buffer = Interpolation::new(self.toks.current_span());
+            name_buffer.add_token(self.toks.next().unwrap());
+            name_buffer.add_string(Spanned {
+                node: self.raw_text(Self::whitespace_or_comment),
+                span: self.span_before,
+            });
+            name_buffer.add_interpolation(self.parse_interpolated_identifier()?);
+            name_buffer
+        } else if !self.is_plain_css {
+            match self.parse_variable_declaration_or_interpolation()? {
+                VariableDeclOrInterpolation::Interpolation(interpolation) => interpolation,
+                VariableDeclOrInterpolation::VariableDecl(decl) => {
+                    return Ok(AstStmt::VariableDecl(decl))
+                }
+            }
+        } else {
+            self.parse_interpolated_identifier()?
+        };
+
+        self.whitespace_or_comment();
+        self.expect_char(':')?;
+
+        if parse_custom_properties && name.initial_plain().starts_with("--") {
+            let value = AstExpr::String(StringExpr(
+                self.parse_interpolated_declaration_value(false, false, true)?,
+                QuoteKind::None,
+            ));
+            self.expect_statement_separator(Some("custom property"))?;
+            return Ok(AstStmt::Style(AstStyle {
+                name,
+                value: Some(value),
+                body: Vec::new(),
+                span: self.toks.span_from(start),
+            }));
+        }
+
+        self.whitespace_or_comment();
+
+        if self.looking_at_children() {
+            if self.is_plain_css {
+                todo!("Nested declarations aren't allowed in plain CSS.")
+            }
+            //   return _withChildren(_declarationChild, start,
+            //       (children, span) => Declaration.nested(name, children, span));
+            todo!()
+        }
+
+        let value = self.parse_expression(None, None, None)?;
+        if self.looking_at_children() {
+            if self.is_plain_css {
+                todo!("Nested declarations aren't allowed in plain CSS.")
+            }
+
+            let children = self.with_children(Self::parse_declaration_child)?;
+
+            assert!(
+                !(name.initial_plain().starts_with("--")
+                    && !matches!(value.node, AstExpr::String(..))),
+                "todo: Declarations whose names begin with \"--\" may not be nested"
+            );
+
+            Ok(AstStmt::Style(AstStyle {
+                name,
+                value: Some(value.node),
+                body: children,
+                span: self.toks.span_from(start),
+            }))
+        } else {
+            self.expect_statement_separator(None);
+            Ok(AstStmt::Style(AstStyle {
+                name,
+                value: Some(value.node),
+                body: Vec::new(),
+                span: self.toks.span_from(start),
+            }))
+        }
     }
 
     fn parse_single_interpolation(&mut self) -> SassResult<Interpolation> {
@@ -1628,7 +2025,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         Ok(self.toks.raw_text(start))
     }
 
-    fn raw_text<T>(&mut self, func: impl Fn(&mut Self) -> T) -> String {
+    pub(crate) fn raw_text<T>(&mut self, func: impl Fn(&mut Self) -> T) -> String {
         let start = self.toks.cursor();
         func(self);
         self.toks.raw_text(start)
@@ -1703,7 +2100,6 @@ impl<'a, 'b> Parser<'a, 'b> {
                     buffer.add_token(tok);
 
                     if self.consume_char_if_exists('/') {
-                        self.toks.next();
                         buffer.add_token(Token {
                             kind: '/',
                             pos: self.span_before,
@@ -1762,28 +2158,134 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         while let Some(tok) = self.toks.peek() {
             match tok.kind {
-                '\\' => todo!(),
-                '"' | '\'' => todo!(),
-                '/' => todo!(),
-                '#' => todo!(),
-                ' ' | '\t' => todo!(),
-                '\n' | '\r' => todo!(),
-                '(' | '{' | '[' => todo!(),
-                ')' | '}' | ']' => todo!(),
+                '\\' => {
+                    buffer.add_string(Spanned {
+                        node: self.parse_escape(true)?,
+                        span: self.span_before,
+                    });
+                    wrote_newline = false;
+                }
+                '"' | '\'' => {
+                    buffer.add_interpolation(
+                        self.parse_interpolated_string()?
+                            .node
+                            .as_interpolation(self.span_before, false),
+                    );
+                    wrote_newline = false;
+                }
+                '/' => {
+                    if matches!(self.toks.peek_n(1), Some(Token { kind: '*', .. })) {
+                        let comment = self.fallible_raw_text(Self::skip_loud_comment)?;
+                        buffer.add_string(Spanned {
+                            node: comment,
+                            span: self.span_before,
+                        })
+                    } else {
+                        self.toks.next();
+                        buffer.add_token(tok);
+                    }
+
+                    wrote_newline = false;
+                }
+                '#' => {
+                    if matches!(self.toks.peek_n(1), Some(Token { kind: '{', .. })) {
+                        // Add a full interpolated identifier to handle cases like
+                        // "#{...}--1", since "--1" isn't a valid identifier on its own.
+                        buffer.add_interpolation(self.parse_interpolated_identifier()?);
+                    } else {
+                        self.toks.next();
+                        buffer.add_token(tok);
+                    }
+
+                    wrote_newline = false;
+                }
+                ' ' | '\t' => {
+                    if wrote_newline
+                        || !matches!(
+                            self.toks.peek_n(1),
+                            Some(Token {
+                                kind: ' ' | '\r' | '\t' | '\n',
+                                ..
+                            })
+                        )
+                    {
+                        self.toks.next();
+                        buffer.add_token(tok);
+                    } else {
+                        self.toks.next();
+                    }
+                }
+                '\n' | '\r' => {
+                    if !matches!(
+                        self.toks.peek_n_backwards(1),
+                        Some(Token {
+                            kind: '\r' | '\n',
+                            ..
+                        })
+                    ) {
+                        buffer.add_char('\n');
+                    }
+                    self.toks.next();
+                    wrote_newline = true;
+                }
+                '(' | '{' | '[' => {
+                    self.toks.next();
+                    buffer.add_token(tok);
+                    brackets.push(opposite_bracket(tok.kind));
+                    wrote_newline = false;
+                }
+                ')' | '}' | ']' => {
+                    if brackets.is_empty() {
+                        break;
+                    }
+                    buffer.add_token(tok);
+                    self.expect_char(brackets.pop().unwrap());
+                    wrote_newline = false;
+                }
                 ';' => {
                     if !allow_semicolon && brackets.is_empty() {
                         break;
                     }
                     buffer.add_token(tok);
+                    self.toks.next();
                     wrote_newline = false;
                 }
-                ':' => todo!(),
-                'u' | 'U' => todo!(),
+                ':' => {
+                    if !allow_colon && brackets.is_empty() {
+                        break;
+                    }
+                    buffer.add_token(tok);
+                    self.toks.next();
+                    wrote_newline = false;
+                }
+                'u' | 'U' => {
+                    //       var beforeUrl = scanner.state;
+                    //       if (!scanIdentifier("url")) {
+                    //         buffer.writeCharCode(scanner.readChar());
+                    //         wroteNewline = false;
+                    //         break;
+                    //       }
+
+                    //       var contents = _tryUrlContents(beforeUrl);
+                    //       if (contents == null) {
+                    //         scanner.state = beforeUrl;
+                    //         buffer.writeCharCode(scanner.readChar());
+                    //       } else {
+                    //         buffer.addInterpolation(contents);
+                    //       }
+                    //       wroteNewline = false;
+
+                    todo!()
+                }
                 _ => {
                     if self.looking_at_identifier() {
-                        buffer.add_string(self.parse_identifier()?);
+                        buffer.add_string(Spanned {
+                            node: self.__parse_identifier(false, false)?,
+                            span: self.span_before,
+                        });
                     } else {
                         buffer.add_token(tok);
+                        self.toks.next();
                     }
                     wrote_newline = false;
                 }
@@ -1799,128 +2301,6 @@ impl<'a, 'b> Parser<'a, 'b> {
         }
 
         Ok(buffer)
-        //     var start = scanner.state;
-        // var buffer = InterpolationBuffer();
-
-        // var brackets = <int>[];
-        // var wroteNewline = false;
-        // loop:
-        // while (true) {
-        //   var next = scanner.peekChar();
-        //   switch (next) {
-        //     case $backslash:
-        //       buffer.write(escape(identifierStart: true));
-        //       wroteNewline = false;
-        //       break;
-
-        //     case $double_quote:
-        //     case $single_quote:
-        //       buffer.addInterpolation(interpolatedString().asInterpolation());
-        //       wroteNewline = false;
-        //       break;
-
-        //     case $slash:
-        //       if (scanner.peekChar(1) == $asterisk) {
-        //         buffer.write(rawText(loudComment));
-        //       } else {
-        //         buffer.writeCharCode(scanner.readChar());
-        //       }
-        //       wroteNewline = false;
-        //       break;
-
-        //     case $hash:
-        //       if (scanner.peekChar(1) == $lbrace) {
-        //         // Add a full interpolated identifier to handle cases like
-        //         // "#{...}--1", since "--1" isn't a valid identifier on its own.
-        //         buffer.addInterpolation(interpolatedIdentifier());
-        //       } else {
-        //         buffer.writeCharCode(scanner.readChar());
-        //       }
-        //       wroteNewline = false;
-        //       break;
-
-        //     case $space:
-        //     case $tab:
-        //       if (wroteNewline || !isWhitespace(scanner.peekChar(1))) {
-        //         buffer.writeCharCode(scanner.readChar());
-        //       } else {
-        //         scanner.readChar();
-        //       }
-        //       break;
-
-        //     case $lf:
-        //     case $cr:
-        //     case $ff:
-        //       if (indented) break loop;
-        //       if (!isNewline(scanner.peekChar(-1))) buffer.writeln();
-        //       scanner.readChar();
-        //       wroteNewline = true;
-        //       break;
-
-        //     case $lparen:
-        //     case $lbrace:
-        //     case $lbracket:
-        //       buffer.writeCharCode(next!); // dart-lang/sdk#45357
-        //       brackets.add(opposite(scanner.readChar()));
-        //       wroteNewline = false;
-        //       break;
-
-        //     case $rparen:
-        //     case $rbrace:
-        //     case $rbracket:
-        //       if (brackets.isEmpty) break loop;
-        //       buffer.writeCharCode(next!); // dart-lang/sdk#45357
-        //       scanner.expectChar(brackets.removeLast());
-        //       wroteNewline = false;
-        //       break;
-
-        //     case $semicolon:
-        //       if (!allowSemicolon && brackets.isEmpty) break loop;
-        //       buffer.writeCharCode(scanner.readChar());
-        //       wroteNewline = false;
-        //       break;
-
-        //     case $colon:
-        //       if (!allowColon && brackets.isEmpty) break loop;
-        //       buffer.writeCharCode(scanner.readChar());
-        //       wroteNewline = false;
-        //       break;
-
-        //     case $u:
-        //     case $U:
-        //       var beforeUrl = scanner.state;
-        //       if (!scanIdentifier("url")) {
-        //         buffer.writeCharCode(scanner.readChar());
-        //         wroteNewline = false;
-        //         break;
-        //       }
-
-        //       var contents = _tryUrlContents(beforeUrl);
-        //       if (contents == null) {
-        //         scanner.state = beforeUrl;
-        //         buffer.writeCharCode(scanner.readChar());
-        //       } else {
-        //         buffer.addInterpolation(contents);
-        //       }
-        //       wroteNewline = false;
-        //       break;
-
-        //     default:
-        //       if (next == null) break loop;
-
-        //       if (lookingAtIdentifier()) {
-        //         buffer.write(identifier());
-        //       } else {
-        //         buffer.writeCharCode(scanner.readChar());
-        //       }
-        //       wroteNewline = false;
-        //       break;
-        //   }
-        // }
-
-        // if (brackets.isNotEmpty) scanner.expectChar(brackets.last);
-        // if (!allowEmpty && buffer.isEmpty) scanner.error("Expected token.");
-        // return buffer.interpolation(scanner.spanFrom(start));
     }
 
     fn looking_at_children(&self) -> bool {
@@ -1944,7 +2324,9 @@ impl<'a, 'b> Parser<'a, 'b> {
         &mut self,
         for_mixin: bool,
         allow_empty_second_arg: bool,
-    ) -> SassResult<Spanned<ArgumentInvocation>> {
+    ) -> SassResult<ArgumentInvocation> {
+        let start = self.toks.cursor();
+
         self.expect_char('(')?;
         self.whitespace_or_comment();
 
@@ -1965,11 +2347,14 @@ impl<'a, 'b> Parser<'a, 'b> {
                 };
 
                 self.whitespace_or_comment();
-                if named.contains_key(&name) {
+                if named.contains_key(&name.node) {
                     todo!("Duplicate argument.");
                 }
 
-                named.insert(name, self.parse_expression_until_comma(!for_mixin)?.node);
+                named.insert(
+                    name.node,
+                    self.parse_expression_until_comma(!for_mixin)?.node,
+                );
             } else if self.consume_char_if_exists('.') {
                 self.expect_char('.')?;
                 self.expect_char('.')?;
@@ -2000,7 +2385,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                 && matches!(self.toks.peek(), Some(Token { kind: ')', .. }))
             {
                 positional.push(AstExpr::String(StringExpr(
-                    Interpolation::new(self.span_before),
+                    Interpolation::new(self.toks.current_span()),
                     QuoteKind::None,
                 )));
                 break;
@@ -2009,14 +2394,12 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         self.expect_char(')')?;
 
-        Ok(Spanned {
-            node: ArgumentInvocation {
-                positional,
-                named,
-                rest,
-                keyword_rest,
-            },
-            span: self.span_before,
+        Ok(ArgumentInvocation {
+            positional,
+            named,
+            rest,
+            keyword_rest,
+            span: self.toks.span_from(start),
         })
     }
 
@@ -2136,53 +2519,101 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         let post_colon_whitespace = self.raw_text(Self::whitespace);
         if self.looking_at_children() {
-            todo!()
+            let body = self.with_children(Self::parse_declaration_child)?;
+            return Ok(DeclarationOrBuffer::Stmt(AstStmt::Style(AstStyle {
+                name: name_buffer,
+                value: None,
+                span: self.span_before,
+                body,
+            })));
         }
 
         mid_buffer.push_str(&post_colon_whitespace);
         let could_be_selector =
             post_colon_whitespace.is_empty() && self.looking_at_interpolated_identifier();
 
-        let value = self.parse_expression(None, None, None).unwrap();
+        let before_decl = self.toks.cursor();
+        let value = loop {
+            let value = self.parse_expression(None, None, None);
 
-        if self.looking_at_children() {
-            // Properties that are ambiguous with selectors can't have additional
-            // properties nested beneath them, so we force an error. This will be
-            // caught below and cause the text to be reparsed as a selector.
-            if could_be_selector {
-                self.expect_statement_separator(None).unwrap();
-                todo!()
-            } else if !self.at_end_of_statement() {
+            if self.looking_at_children() {
+                // Properties that are ambiguous with selectors can't have additional
+                // properties nested beneath them, so we force an error. This will be
+                // caught below and cause the text to be reparsed as a selector.
+                if !could_be_selector {
+                    break value?;
+                }
+            } else if self.at_end_of_statement() {
                 // Force an exception if there isn't a valid end-of-property character
                 // but don't consume that character. This will also cause the text to be
                 // reparsed.
-                self.expect_statement_separator(None).unwrap();
-                todo!()
+                break value?;
             }
-        }
 
-        // catch
-        if false {
-            //   if (!couldBeSelector) rethrow;
+            self.expect_statement_separator(None).unwrap();
 
-            //   // If the value would be followed by a semicolon, it's definitely supposed
-            //   // to be a property, not a selector.
-            //   scanner.state = beforeDeclaration;
-            //   var additional = almostAnyValue();
-            //   if (!indented && scanner.peekChar() == $semicolon) rethrow;
+            if !could_be_selector {
+                break value?;
+            }
 
-            //   nameBuffer.write(midBuffer);
-            //   nameBuffer.addInterpolation(additional);
-            //   return nameBuffer;
-        }
+            self.toks.set_cursor(before_decl);
+            let additional = self.almost_any_value(false)?;
+            if self.toks.next_char_is(';') {
+                break value?;
+            }
+
+            name_buffer.add_string(Spanned {
+                node: mid_buffer,
+                span: self.span_before,
+            });
+            name_buffer.add_interpolation(additional);
+            return Ok(DeclarationOrBuffer::Buffer(name_buffer));
+        };
+
+        // = match self.parse_expression(None, None, None) {
+        //     Ok(value) => {
+        //         if self.looking_at_children() {
+        //             // Properties that are ambiguous with selectors can't have additional
+        //             // properties nested beneath them, so we force an error. This will be
+        //             // caught below and cause the text to be reparsed as a selector.
+        //             if could_be_selector {
+        //                 self.expect_statement_separator(None).unwrap();
+        //             } else if !self.at_end_of_statement() {
+        //                 // Force an exception if there isn't a valid end-of-property character
+        //                 // but don't consume that character. This will also cause the text to be
+        //                 // reparsed.
+        //                 // todo: unwrap here is invalid
+        //                 self.expect_statement_separator(None).unwrap();
+        //             }
+        //         }
+        //         value
+        //     }
+        //     Err(e) => {
+        //         if !could_be_selector {
+        //             return Err(e);
+        //         }
+
+        //         //   // If the value would be followed by a semicolon, it's definitely supposed
+        //         //   // to be a property, not a selector.
+        //         //   scanner.state = beforeDeclaration;
+        //         //   var additional = almostAnyValue();
+        //         //   if (!indented && scanner.peekChar() == $semicolon) rethrow;
+
+        //         //   nameBuffer.write(midBuffer);
+        //         //   nameBuffer.addInterpolation(additional);
+        //         //   return nameBuffer;
+        //         todo!()
+        //     }
+        // };
 
         if self.looking_at_children() {
-            //   return _withChildren(
-            //       _declarationChild,
-            //       start,
-            //       (children, span) =>
-            //           Declaration.nested(name, children, span, value: value));
-            todo!()
+            let body = self.with_children(Self::parse_declaration_child)?;
+            Ok(DeclarationOrBuffer::Stmt(AstStmt::Style(AstStyle {
+                name: name_buffer,
+                value: Some(value.node),
+                span: self.span_before,
+                body,
+            })))
         } else {
             self.expect_statement_separator(None)?;
             Ok(DeclarationOrBuffer::Stmt(AstStmt::Style(AstStyle {
@@ -2191,6 +2622,39 @@ impl<'a, 'b> Parser<'a, 'b> {
                 span: self.span_before,
                 body: Vec::new(),
             })))
+        }
+    }
+
+    fn parse_declaration_child(&mut self) -> SassResult<AstStmt> {
+        if self.toks.next_char_is('@') {
+            self.parse_declaration_at_rule()
+        } else {
+            self.parse_property_or_variable_declaration(false)
+        }
+    }
+
+    fn parse_plain_at_rule_name(&mut self) -> SassResult<String> {
+        self.expect_char('@')?;
+        let name = self.__parse_identifier(false, false)?;
+        self.whitespace_or_comment();
+        Ok(name)
+    }
+
+    fn parse_declaration_at_rule(&mut self) -> SassResult<AstStmt> {
+        let name = self.parse_plain_at_rule_name()?;
+
+        match name.as_str() {
+            "content" => self.parse_content_rule(),
+            "debug" => self.parse_debug_rule(),
+            "each" => self.parse_each_rule(Self::parse_declaration_child),
+            "else" => self.parse_disallowed_at_rule(),
+            "error" => self.parse_error_rule(),
+            "for" => self.parse_for_rule(Self::parse_declaration_child),
+            "if" => self.parse_if_rule(Self::parse_declaration_child),
+            "include" => self.parse_include_rule(),
+            "warn" => self.parse_warn_rule(),
+            "while" => self.parse_while_rule(Self::parse_declaration_child),
+            _ => self.disallowed_at_rule(),
         }
     }
 
@@ -2476,21 +2940,21 @@ impl<'a, 'b> Parser<'a, 'b> {
                 '\r' | '\n' => buffer.add_token(self.toks.next().unwrap()),
                 '!' | ';' | '{' | '}' => break,
                 'u' | 'U' => {
-                    //           var beforeUrl = scanner.state;
-                    //           if (!scanIdentifier("url")) {
-                    //             buffer.writeCharCode(scanner.readChar());
-                    //             break;
-                    //           }
+                    let before_url = self.toks.cursor();
+                    if !self.scan_identifier("url", false) {
+                        self.toks.next();
+                        buffer.add_token(tok);
+                        continue;
+                    }
 
-                    //           var contents = _tryUrlContents(beforeUrl);
-                    //           if (contents == null) {
-                    //             scanner.state = beforeUrl;
-                    //             buffer.writeCharCode(scanner.readChar());
-                    //           } else {
-                    //             buffer.addInterpolation(contents);
-                    //           }
-
-                    todo!()
+                    match self.try_url_contents(None)? {
+                        Some(contents) => buffer.add_interpolation(contents),
+                        None => {
+                            self.toks.set_cursor(before_url);
+                            self.toks.next();
+                            buffer.add_token(tok);
+                        }
+                    }
                 }
                 _ => {
                     if self.looking_at_identifier() {
@@ -2586,7 +3050,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                 Ok(tok)
             }
             Some(Token { pos, .. }) => Err((format!("expected \"{}\".", c), pos).into()),
-            None => Err((format!("expected \"{}\".", c), self.span_before).into()),
+            None => Err((format!("expected \"{}\".", c), self.toks.current_span()).into()),
         }
     }
 
@@ -3117,85 +3581,85 @@ impl<'a, 'b> Parser<'a, 'b> {
 }
 
 impl<'a, 'b> Parser<'a, 'b> {
-    fn parse_unknown_at_rule(&mut self, name: String) -> SassResult<Stmt> {
-        // if self.flags.in_function() {
-        //     return Err(("This at-rule is not allowed here.", self.span_before).into());
-        // }
+    // fn parse_unknown_at_rule(&mut self, name: String) -> SassResult<Stmt> {
+    // if self.flags.in_function() {
+    //     return Err(("This at-rule is not allowed here.", self.span_before).into());
+    // }
 
-        // let mut params = String::new();
-        // self.whitespace_or_comment();
+    // let mut params = String::new();
+    // self.whitespace_or_comment();
 
-        // loop {
-        //     match self.toks.peek() {
-        //         Some(Token { kind: '{', .. }) => {
-        //             self.toks.next();
-        //             break;
-        //         }
-        //         Some(Token { kind: ';', .. }) | Some(Token { kind: '}', .. }) | None => {
-        //             self.consume_char_if_exists(';');
-        //             return Ok(Stmt::UnknownAtRule(Box::new(UnknownAtRule {
-        //                 name,
-        //                 super_selector: Selector::new(self.span_before),
-        //                 has_body: false,
-        //                 params: params.trim().to_owned(),
-        //                 body: Vec::new(),
-        //             })));
-        //         }
-        //         Some(Token { kind: '#', .. }) => {
-        //             self.toks.next();
+    // loop {
+    //     match self.toks.peek() {
+    //         Some(Token { kind: '{', .. }) => {
+    //             self.toks.next();
+    //             break;
+    //         }
+    //         Some(Token { kind: ';', .. }) | Some(Token { kind: '}', .. }) | None => {
+    //             self.consume_char_if_exists(';');
+    //             return Ok(Stmt::UnknownAtRule(Box::new(UnknownAtRule {
+    //                 name,
+    //                 super_selector: Selector::new(self.span_before),
+    //                 has_body: false,
+    //                 params: params.trim().to_owned(),
+    //                 body: Vec::new(),
+    //             })));
+    //         }
+    //         Some(Token { kind: '#', .. }) => {
+    //             self.toks.next();
 
-        //             if let Some(Token { kind: '{', pos }) = self.toks.peek() {
-        //                 self.span_before = self.span_before.merge(pos);
-        //                 self.toks.next();
-        //                 params.push_str(&self.parse_interpolation_as_string()?);
-        //             } else {
-        //                 params.push('#');
-        //             }
-        //             continue;
-        //         }
-        //         Some(Token { kind: '\n', .. })
-        //         | Some(Token { kind: ' ', .. })
-        //         | Some(Token { kind: '\t', .. }) => {
-        //             self.whitespace();
-        //             params.push(' ');
-        //             continue;
-        //         }
-        //         Some(Token { kind, .. }) => {
-        //             self.toks.next();
-        //             params.push(kind);
-        //         }
-        //     }
-        // }
+    //             if let Some(Token { kind: '{', pos }) = self.toks.peek() {
+    //                 self.span_before = self.span_before.merge(pos);
+    //                 self.toks.next();
+    //                 params.push_str(&self.parse_interpolation_as_string()?);
+    //             } else {
+    //                 params.push('#');
+    //             }
+    //             continue;
+    //         }
+    //         Some(Token { kind: '\n', .. })
+    //         | Some(Token { kind: ' ', .. })
+    //         | Some(Token { kind: '\t', .. }) => {
+    //             self.whitespace();
+    //             params.push(' ');
+    //             continue;
+    //         }
+    //         Some(Token { kind, .. }) => {
+    //             self.toks.next();
+    //             params.push(kind);
+    //         }
+    //     }
+    // }
 
-        // let raw_body = self.parse_stmt()?;
-        // let mut rules = Vec::with_capacity(raw_body.len());
-        // let mut body = Vec::new();
+    // let raw_body = self.parse_stmt()?;
+    // let mut rules = Vec::with_capacity(raw_body.len());
+    // let mut body = Vec::new();
 
-        // for stmt in raw_body {
-        //     match stmt {
-        //         Stmt::Style(..) => body.push(stmt),
-        //         _ => rules.push(stmt),
-        //     }
-        // }
+    // for stmt in raw_body {
+    //     match stmt {
+    //         Stmt::Style(..) => body.push(stmt),
+    //         _ => rules.push(stmt),
+    //     }
+    // }
 
-        // if !self.super_selectors.last().as_selector_list().is_empty() {
-        //     body = vec![Stmt::RuleSet {
-        //         selector: self.super_selectors.last().clone(),
-        //         body,
-        //     }];
-        // }
+    // if !self.super_selectors.last().as_selector_list().is_empty() {
+    //     body = vec![Stmt::RuleSet {
+    //         selector: self.super_selectors.last().clone(),
+    //         body,
+    //     }];
+    // }
 
-        // body.append(&mut rules);
+    // body.append(&mut rules);
 
-        // Ok(Stmt::UnknownAtRule(Box::new(UnknownAtRule {
-        //     name,
-        //     super_selector: Selector::new(self.span_before),
-        //     params: params.trim().to_owned(),
-        //     has_body: true,
-        //     body,
-        // })))
-        todo!()
-    }
+    // Ok(Stmt::UnknownAtRule(Box::new(UnknownAtRule {
+    //     name,
+    //     super_selector: Selector::new(self.span_before),
+    //     params: params.trim().to_owned(),
+    //     has_body: true,
+    //     body,
+    // })))
+    // todo!()
+    // }
 
     // fn parse_media(&mut self) -> SassResult<Stmt> {
     //     if self.flags.in_function() {
@@ -3310,75 +3774,75 @@ impl<'a, 'b> Parser<'a, 'b> {
     //     Ok(stmts)
     // }
 
-    fn parse_extend(&mut self) -> SassResult<()> {
-        // if self.flags.in_function() {
-        //     return Err(("This at-rule is not allowed here.", self.span_before).into());
-        // }
-        // // todo: track when inside ruleset or `@content`
-        // // if !self.in_style_rule && !self.in_mixin && !self.in_content_block {
-        // //     return Err(("@extend may only be used within style rules.", self.span_before).into());
-        // // }
-        // let (value, is_optional) = Parser {
-        //     toks: &mut Lexer::new(read_until_semicolon_or_closing_curly_brace(self.toks)?),
-        //     map: self.map,
-        //     path: self.path,
-        //     scopes: self.scopes,
-        //     global_scope: self.global_scope,
-        //     super_selectors: self.super_selectors,
-        //     span_before: self.span_before,
-        //     content: self.content,
-        //     flags: self.flags,
-        //     at_root: self.at_root,
-        //     at_root_has_selector: self.at_root_has_selector,
-        //     extender: self.extender,
-        //     content_scopes: self.content_scopes,
-        //     options: self.options,
-        //     modules: self.modules,
-        //     module_config: self.module_config,
-        // }
-        // .parse_selector(false, true, String::new())?;
+    // fn parse_extend(&mut self) -> SassResult<()> {
+    // if self.flags.in_function() {
+    //     return Err(("This at-rule is not allowed here.", self.span_before).into());
+    // }
+    // // todo: track when inside ruleset or `@content`
+    // // if !self.in_style_rule && !self.in_mixin && !self.in_content_block {
+    // //     return Err(("@extend may only be used within style rules.", self.span_before).into());
+    // // }
+    // let (value, is_optional) = Parser {
+    //     toks: &mut Lexer::new(read_until_semicolon_or_closing_curly_brace(self.toks)?),
+    //     map: self.map,
+    //     path: self.path,
+    //     scopes: self.scopes,
+    //     global_scope: self.global_scope,
+    //     super_selectors: self.super_selectors,
+    //     span_before: self.span_before,
+    //     content: self.content,
+    //     flags: self.flags,
+    //     at_root: self.at_root,
+    //     at_root_has_selector: self.at_root_has_selector,
+    //     extender: self.extender,
+    //     content_scopes: self.content_scopes,
+    //     options: self.options,
+    //     modules: self.modules,
+    //     module_config: self.module_config,
+    // }
+    // .parse_selector(false, true, String::new())?;
 
-        // // todo: this might be superfluous
-        // self.whitespace();
+    // // todo: this might be superfluous
+    // self.whitespace();
 
-        // self.consume_char_if_exists(';');
+    // self.consume_char_if_exists(';');
 
-        // let extend_rule = ExtendRule::new(value.clone(), is_optional, self.span_before);
+    // let extend_rule = ExtendRule::new(value.clone(), is_optional, self.span_before);
 
-        // let super_selector = self.super_selectors.last();
+    // let super_selector = self.super_selectors.last();
 
-        // for complex in value.0.components {
-        //     if complex.components.len() != 1 || !complex.components.first().unwrap().is_compound() {
-        //         // If the selector was a compound selector but not a simple
-        //         // selector, emit a more explicit error.
-        //         return Err(("complex selectors may not be extended.", self.span_before).into());
-        //     }
+    // for complex in value.0.components {
+    //     if complex.components.len() != 1 || !complex.components.first().unwrap().is_compound() {
+    //         // If the selector was a compound selector but not a simple
+    //         // selector, emit a more explicit error.
+    //         return Err(("complex selectors may not be extended.", self.span_before).into());
+    //     }
 
-        //     let compound = match complex.components.first() {
-        //         Some(ComplexSelectorComponent::Compound(c)) => c,
-        //         Some(..) | None => todo!(),
-        //     };
-        //     if compound.components.len() != 1 {
-        //         return Err((
-        //             format!(
-        //                 "compound selectors may no longer be extended.\nConsider `@extend {}` instead.\nSee http://bit.ly/ExtendCompound for details.\n",
-        //                 compound.components.iter().map(ToString::to_string).collect::<Vec<String>>().join(", ")
-        //             )
-        //         , self.span_before).into());
-        //     }
+    //     let compound = match complex.components.first() {
+    //         Some(ComplexSelectorComponent::Compound(c)) => c,
+    //         Some(..) | None => todo!(),
+    //     };
+    //     if compound.components.len() != 1 {
+    //         return Err((
+    //             format!(
+    //                 "compound selectors may no longer be extended.\nConsider `@extend {}` instead.\nSee http://bit.ly/ExtendCompound for details.\n",
+    //                 compound.components.iter().map(ToString::to_string).collect::<Vec<String>>().join(", ")
+    //             )
+    //         , self.span_before).into());
+    //     }
 
-        //     self.extender.add_extension(
-        //         super_selector.clone().into_selector().0,
-        //         compound.components.first().unwrap(),
-        //         &extend_rule,
-        //         &None,
-        //         self.span_before,
-        //     );
-        // }
+    //     self.extender.add_extension(
+    //         super_selector.clone().into_selector().0,
+    //         compound.components.first().unwrap(),
+    //         &extend_rule,
+    //         &None,
+    //         self.span_before,
+    //     );
+    // }
 
-        // Ok(())
-        todo!()
-    }
+    // Ok(())
+    // todo!()
+    // }
 
     // fn parse_supports(&mut self) -> SassResult<Stmt> {
     //     if self.flags.in_function() {
@@ -3419,65 +3883,65 @@ impl<'a, 'b> Parser<'a, 'b> {
     // }
 
     // todo: we should use a specialized struct to represent these
-    fn parse_media_args(&mut self) -> SassResult<String> {
-        let mut params = String::new();
-        self.whitespace();
-        while let Some(tok) = self.toks.next() {
-            match tok.kind {
-                '{' => break,
-                '#' => {
-                    if let Some(Token { kind: '{', pos }) = self.toks.peek() {
-                        self.toks.next();
-                        self.span_before = pos;
-                        let interpolation = self.parse_interpolation()?;
-                        params.push_str(
-                            &interpolation
-                                .node
-                                .to_css_string(interpolation.span, self.options.is_compressed())?,
-                        );
-                        continue;
-                    }
+    // fn parse_media_args(&mut self) -> SassResult<String> {
+    //     let mut params = String::new();
+    //     self.whitespace();
+    //     while let Some(tok) = self.toks.next() {
+    //         match tok.kind {
+    //             '{' => break,
+    //             '#' => {
+    //                 if let Some(Token { kind: '{', pos }) = self.toks.peek() {
+    //                     self.toks.next();
+    //                     self.span_before = pos;
+    //                     let interpolation = self.parse_interpolation()?;
+    //                     params.push_str(
+    //                         &interpolation
+    //                             .node
+    //                             .to_css_string(interpolation.span, self.options.is_compressed())?,
+    //                     );
+    //                     continue;
+    //                 }
 
-                    params.push(tok.kind);
-                }
-                '\n' | ' ' | '\t' => {
-                    self.whitespace();
-                    params.push(' ');
-                    continue;
-                }
-                _ => {}
-            }
-            params.push(tok.kind);
-        }
-        Ok(params)
-    }
+    //                 params.push(tok.kind);
+    //             }
+    //             '\n' | ' ' | '\t' => {
+    //                 self.whitespace();
+    //                 params.push(' ');
+    //                 continue;
+    //             }
+    //             _ => {}
+    //         }
+    //         params.push(tok.kind);
+    //     }
+    //     Ok(params)
+    // }
 }
 
-impl<'a, 'b> Parser<'a, 'b> {
-    fn debug(&self, message: &Spanned<Cow<'a, str>>) {
-        if self.options.quiet {
-            return;
-        }
-        let loc = self.map.look_up_span(message.span);
-        eprintln!(
-            "{}:{} DEBUG: {}",
-            loc.file.name(),
-            loc.begin.line + 1,
-            message.node
-        );
-    }
+// impl<'a, 'b> Parser<'a, 'b> {
+//     fn debug(&self, message: &Spanned<Cow<'a, str>>) {
+//         if self.options.quiet {
+//             return;
+//         }
+//         let loc = self.map.look_up_span(message.span);
+//         eprintln!(
+//             "{}:{} DEBUG: {}",
+//             loc.file.name(),
+//             loc.begin.line + 1,
+//             message.node
+//         );
+//     }
 
-    fn warn(&self, message: &Spanned<Cow<'a, str>>) {
-        if self.options.quiet {
-            return;
-        }
-        let loc = self.map.look_up_span(message.span);
-        eprintln!(
-            "Warning: {}\n    {} {}:{}  root stylesheet",
-            message.node,
-            loc.file.name(),
-            loc.begin.line + 1,
-            loc.begin.column + 1
-        );
-    }
-}
+//     fn warn(&self, message: &Spanned<Cow<'a, str>>) {
+//         if self.options.quiet {
+//             return;
+//         }
+//         let loc = self.map.look_up_span(message.span);
+//         eprintln!(
+//             "Warning: {}\n    {} {}:{}  root stylesheet",
+//             message.node,
+//             loc.file.name(),
+//             loc.begin.line + 1,
+//             loc.begin.column + 1
+//         );
+//     }
+// }

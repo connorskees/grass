@@ -22,6 +22,11 @@ test!(
     "a {\n  color: calc(1 + 2);\n}\n"
 );
 test!(
+    calc_mul_negative_number,
+    "a {\n  color: calc(var(--bs-border-width) * -1);\n}\n",
+    "a {\n  color: calc(var(--bs-border-width) * -1);\n}\n"
+);
+test!(
     calc_evaluates_interpolated_arithmetic,
     "a {\n  color: calc(#{1 + 2});\n}\n",
     "a {\n  color: calc(3);\n}\n"

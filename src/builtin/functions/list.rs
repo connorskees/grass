@@ -13,9 +13,9 @@ use crate::{
 pub(crate) fn length(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     Ok(Value::Dimension(
-        Some(Number::from(args.get_err(0, "list")?.as_list().len())),
+        (Number::from(args.get_err(0, "list")?.as_list().len())),
         Unit::None,
-        true,
+        None,
     ))
 }
 
@@ -23,10 +23,10 @@ pub(crate) fn nth(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<
     args.max_args(2)?;
     let mut list = args.get_err(0, "list")?.as_list();
     let (n, unit) = match args.get_err(1, "n")? {
-        Value::Dimension(Some(num), unit, ..) => (num, unit),
-        Value::Dimension(None, u, ..) => {
+        Value::Dimension(n, u, ..) if n.is_nan() => {
             return Err((format!("$n: NaN{} is not an int.", u), args.span()).into())
         }
+        Value::Dimension((num), unit, ..) => (num, unit),
         v => {
             return Err((
                 format!("$n: {} is not a number.", v.inspect(args.span())?),
@@ -90,10 +90,10 @@ pub(crate) fn set_nth(mut args: ArgumentResult, parser: &mut Visitor) -> SassRes
         v => (vec![v], ListSeparator::Space, Brackets::None),
     };
     let (n, unit) = match args.get_err(1, "n")? {
-        Value::Dimension(Some(num), unit, ..) => (num, unit),
-        Value::Dimension(None, u, ..) => {
+        Value::Dimension(n, u, ..) if n.is_nan() => {
             return Err((format!("$n: NaN{} is not an int.", u), args.span()).into())
         }
+        Value::Dimension((num), unit, ..) => (num, unit),
         v => {
             return Err((
                 format!("$n: {} is not a number.", v.inspect(args.span())?),
@@ -261,7 +261,7 @@ pub(crate) fn index(mut args: ArgumentResult, parser: &mut Visitor) -> SassResul
         Some(v) => Number::from(v + 1),
         None => return Ok(Value::Null),
     };
-    Ok(Value::Dimension(Some(index), Unit::None, true))
+    Ok(Value::Dimension((index), Unit::None, None))
 }
 
 pub(crate) fn zip(args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {

@@ -105,20 +105,15 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
     }
 
     fn eat_whitespace(&mut self) -> DevouredWhitespace {
-        let mut whitespace_devoured = DevouredWhitespace::None;
-        while let Some(tok) = self.parser.toks.peek() {
-            match tok.kind {
-                ' ' | '\t' => whitespace_devoured.found_whitespace(),
-                '\n' => whitespace_devoured.found_newline(),
-                '/' => {
-                    todo!()
-                }
-                _ => break,
-            }
-            self.parser.toks.next();
-        }
+        let text = self.parser.raw_text(Parser::whitespace_or_comment);
 
-        whitespace_devoured
+        if text.contains('\n') {
+            DevouredWhitespace::Newline
+        } else if !text.is_empty() {
+            DevouredWhitespace::Whitespace
+        } else {
+            DevouredWhitespace::None
+        }
     }
 
     /// Consumes a complex selector.
@@ -295,7 +290,7 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
             } else {
                 argument = Some(
                     self.parser
-                        .declaration_value(true, false, true)?
+                        .declaration_value(true)?
                         .into_boxed_str(),
                 );
             }
@@ -324,7 +319,7 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
         } else {
             argument = Some(
                 self.parser
-                    .declaration_value(true, false, true)?
+                    .declaration_value(true)?
                     .trim_end()
                     .to_owned()
                     .into_boxed_str(),

@@ -15,19 +15,21 @@ pub(crate) use crate::parse::AstMixin as UserDefinedMixin;
 
 #[derive(Clone)]
 pub(crate) enum Mixin {
-    UserDefined(UserDefinedMixin, Environment),
+    // todo: env is superfluous?
+    UserDefined(UserDefinedMixin, Environment, usize),
     Builtin(BuiltinMixin),
 }
 
 impl fmt::Debug for Mixin {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::UserDefined(u, env) => f
+            Self::UserDefined(u, env, scope_idx) => f
                 .debug_struct("AstMixin")
                 .field("name", &u.name)
                 .field("args", &u.args)
                 .field("body", &u.body)
                 .field("has_content", &u.has_content)
+                .field("scope_idx", &scope_idx)
                 .finish(),
             Self::Builtin(..) => f.debug_struct("BuiltinMixin").finish(),
         }

@@ -760,7 +760,7 @@ impl Formatter for ExpandedFormatter {
                         if inside_rule {
                             AtRuleContext::Media
                         } else {
-                            AtRuleContext::None
+                            AtRuleContext::Media
                         },
                         css.allows_charset,
                     )?;

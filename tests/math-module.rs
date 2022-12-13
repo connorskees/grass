@@ -607,3 +607,5 @@ test!(
     }",
     "a {\n  color: 3;\n  color: 3;\n}\n"
 );
+
+// todo: atan+asin with unitful NaN

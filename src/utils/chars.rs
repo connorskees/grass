@@ -13,12 +13,7 @@ pub(crate) fn is_name(c: char) -> bool {
 }
 
 pub(crate) fn is_name_start(c: char) -> bool {
-    // NOTE: in the dart-sass implementation, identifiers cannot start
-    // with numbers. We explicitly differentiate from the reference
-    // implementation here in order to support selectors beginning with numbers.
-    // This can be considered a hack and in the future it would be nice to refactor
-    // how this is handled.
-    c == '_' || c.is_alphanumeric() || c as u32 >= 0x0080
+    c == '_' || c.is_alphabetic() || c as u32 >= 0x0080
 }
 
 pub(crate) fn as_hex(c: char) -> u32 {

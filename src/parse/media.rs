@@ -8,6 +8,19 @@ use crate::{
 
 use super::{value_new::AstExpr, Interpolation, Parser};
 
+
+pub(crate) struct MediaQueryParser<'a, 'b, 'c> {
+    parser: &'a mut Parser<'b, 'c>,
+}
+
+impl<'a, 'b, 'c> MediaQueryParser<'a, 'b, 'c> {
+    pub fn new(parser: &'a mut Parser<'b, 'c>) -> Self {
+        Self { parser }
+    }
+
+
+}
+
 impl<'a, 'b> Parser<'a, 'b> {
     fn consume_identifier(&mut self, ident: &str, case_insensitive: bool) -> bool {
         let start = self.toks.cursor();

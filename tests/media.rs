@@ -120,7 +120,7 @@ test!(
         color: green;
       }
     }",
-    "@media print {\n  a {\n    color: red;\n  }\n\n  b {\n    color: green;\n  }\n}\n"
+    "@media print {\n  a {\n    color: red;\n  }\n  b {\n    color: green;\n  }\n}\n"
 );
 test!(
     newline_emitted_before_media_when_following_ruleset,

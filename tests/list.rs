@@ -397,6 +397,11 @@ test!(
     "a {\n  color: [null];\n}\n",
     "a {\n  color: [];\n}\n"
 );
+test!(
+    comma_separated_list_has_element_beginning_with_capital_A,
+    "a {\n  color: a, A, \"Noto Color Emoji\";\n}\n",
+    "a {\n  color: a, A, \"Noto Color Emoji\";\n}\n"
+);
 error!(
     invalid_item_in_space_separated_list,
     "a {\n  color: red color * #abc;\n}\n", "Error: Undefined operation \"color * #abc\"."

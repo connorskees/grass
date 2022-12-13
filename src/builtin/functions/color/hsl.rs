@@ -60,8 +60,8 @@ fn inner_hsl(
         }
 
         let lightness = match channels.pop() {
-            Some(Value::Dimension(Some(n), ..)) => n / Number::from(100),
-            Some(Value::Dimension(None, ..)) => todo!(),
+            Some(Value::Dimension(n, ..)) if n.is_nan() => todo!(),
+            Some(Value::Dimension((n), ..)) => n / Number::from(100),
             Some(v) => {
                 return Err((
                     format!("$lightness: {} is not a number.", v.inspect(args.span())?),
@@ -73,8 +73,8 @@ fn inner_hsl(
         };
 
         let saturation = match channels.pop() {
-            Some(Value::Dimension(Some(n), ..)) => n / Number::from(100),
-            Some(Value::Dimension(None, ..)) => todo!(),
+            Some(Value::Dimension(n, ..)) if n.is_nan() => todo!(),
+            Some(Value::Dimension((n), ..)) => n / Number::from(100),
             Some(v) => {
                 return Err((
                     format!("$saturation: {} is not a number.", v.inspect(args.span())?),
@@ -86,8 +86,8 @@ fn inner_hsl(
         };
 
         let hue = match channels.pop() {
-            Some(Value::Dimension(Some(n), ..)) => n,
-            Some(Value::Dimension(None, ..)) => todo!(),
+            Some(Value::Dimension(n, ..)) if n.is_nan() => todo!(),
+            Some(Value::Dimension((n), ..)) => n,
             Some(v) => {
                 return Err((
                     format!("$hue: {} is not a number.", v.inspect(args.span())?),
@@ -111,7 +111,7 @@ fn inner_hsl(
         let alpha = args.default_arg(
             3,
             "alpha",
-            Value::Dimension(Some(Number::one()), Unit::None, true),
+            Value::Dimension((Number::one()), Unit::None, None),
         );
 
         if [&hue, &saturation, &lightness, &alpha]
@@ -139,8 +139,8 @@ fn inner_hsl(
         }
 
         let hue = match hue {
-            Value::Dimension(Some(n), ..) => n,
-            Value::Dimension(None, ..) => todo!(),
+            Value::Dimension(n, ..) if n.is_nan() => todo!(),
+            Value::Dimension((n), ..) => n,
             v => {
                 return Err((
                     format!("$hue: {} is not a number.", v.inspect(args.span())?),
@@ -150,8 +150,8 @@ fn inner_hsl(
             }
         };
         let saturation = match saturation {
-            Value::Dimension(Some(n), ..) => n / Number::from(100),
-            Value::Dimension(None, ..) => todo!(),
+            Value::Dimension(n, ..) if n.is_nan() => todo!(),
+            Value::Dimension((n), ..) => n / Number::from(100),
             v => {
                 return Err((
                     format!(
@@ -164,8 +164,8 @@ fn inner_hsl(
             }
         };
         let lightness = match lightness {
-            Value::Dimension(Some(n), ..) => n / Number::from(100),
-            Value::Dimension(None, ..) => todo!(),
+            Value::Dimension(n, ..) if n.is_nan() => todo!(),
+            Value::Dimension((n), ..) => n / Number::from(100),
             v => {
                 return Err((
                     format!(
@@ -178,9 +178,9 @@ fn inner_hsl(
             }
         };
         let alpha = match alpha {
-            Value::Dimension(Some(n), Unit::None, _) => n,
-            Value::Dimension(Some(n), Unit::Percent, _) => n / Number::from(100),
-            Value::Dimension(None, ..) => todo!(),
+            Value::Dimension(n, ..) if n.is_nan() => todo!(),
+            Value::Dimension((n), Unit::None, _) => n,
+            Value::Dimension((n), Unit::Percent, _) => n / Number::from(100),
             v @ Value::Dimension(..) => {
                 return Err((
                     format!(
@@ -216,7 +216,7 @@ pub(crate) fn hsla(args: ArgumentResult, parser: &mut Visitor) -> SassResult<Val
 pub(crate) fn hue(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "color")? {
-        Value::Color(c) => Ok(Value::Dimension(Some(c.hue()), Unit::Deg, true)),
+        Value::Color(c) => Ok(Value::Dimension((c.hue()), Unit::Deg, None)),
         v => Err((
             format!("$color: {} is not a color.", v.inspect(args.span())?),
             args.span(),
@@ -228,7 +228,7 @@ pub(crate) fn hue(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<
 pub(crate) fn saturation(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "color")? {
-        Value::Color(c) => Ok(Value::Dimension(Some(c.saturation()), Unit::Percent, true)),
+        Value::Color(c) => Ok(Value::Dimension((c.saturation()), Unit::Percent, None)),
         v => Err((
             format!("$color: {} is not a color.", v.inspect(args.span())?),
             args.span(),
@@ -240,7 +240,7 @@ pub(crate) fn saturation(mut args: ArgumentResult, parser: &mut Visitor) -> Sass
 pub(crate) fn lightness(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "color")? {
-        Value::Color(c) => Ok(Value::Dimension(Some(c.lightness()), Unit::Percent, true)),
+        Value::Color(c) => Ok(Value::Dimension((c.lightness()), Unit::Percent, None)),
         v => Err((
             format!("$color: {} is not a color.", v.inspect(args.span())?),
             args.span(),
@@ -262,8 +262,8 @@ pub(crate) fn adjust_hue(mut args: ArgumentResult, parser: &mut Visitor) -> Sass
         }
     };
     let degrees = match args.get_err(1, "degrees")? {
-        Value::Dimension(Some(n), ..) => n,
-        Value::Dimension(None, ..) => todo!(),
+        Value::Dimension(n, ..) if n.is_nan() => todo!(),
+        Value::Dimension((n), ..) => n,
         v => {
             return Err((
                 format!(
@@ -291,8 +291,8 @@ fn lighten(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> 
         }
     };
     let amount = match args.get_err(1, "amount")? {
-        Value::Dimension(Some(n), u, _) => bound!(args, "amount", n, u, 0, 100) / Number::from(100),
-        Value::Dimension(None, ..) => todo!(),
+        Value::Dimension(n, ..) if n.is_nan() => todo!(),
+        Value::Dimension((n), u, _) => bound!(args, "amount", n, u, 0, 100) / Number::from(100),
         v => {
             return Err((
                 format!(
@@ -320,8 +320,8 @@ fn darken(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
         }
     };
     let amount = match args.get_err(1, "amount")? {
-        Value::Dimension(Some(n), u, _) => bound!(args, "amount", n, u, 0, 100) / Number::from(100),
-        Value::Dimension(None, ..) => todo!(),
+        Value::Dimension(n, ..) if n.is_nan() => todo!(),
+        Value::Dimension((n), u, _) => bound!(args, "amount", n, u, 0, 100) / Number::from(100),
         v => {
             return Err((
                 format!(
@@ -350,8 +350,8 @@ fn saturate(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value>
     }
 
     let amount = match args.get_err(1, "amount")? {
-        Value::Dimension(Some(n), u, _) => bound!(args, "amount", n, u, 0, 100) / Number::from(100),
-        Value::Dimension(None, ..) => todo!(),
+        Value::Dimension(n, ..) if n.is_nan() => todo!(),
+        Value::Dimension((n), u, _) => bound!(args, "amount", n, u, 0, 100) / Number::from(100),
         v => {
             return Err((
                 format!(
@@ -365,7 +365,7 @@ fn saturate(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value>
     };
     let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,
-        Value::Dimension(Some(n), u, _) => {
+        Value::Dimension((n), u, _) => {
             return Ok(Value::String(
                 format!("saturate({}{})", n.inspect(), u),
                 QuoteKind::None,
@@ -395,8 +395,8 @@ fn desaturate(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Valu
         }
     };
     let amount = match args.get_err(1, "amount")? {
-        Value::Dimension(Some(n), u, _) => bound!(args, "amount", n, u, 0, 100) / Number::from(100),
-        Value::Dimension(None, ..) => todo!(),
+        Value::Dimension(n, ..) if n.is_nan() => todo!(),
+        Value::Dimension((n), u, _) => bound!(args, "amount", n, u, 0, 100) / Number::from(100),
         v => {
             return Err((
                 format!(
@@ -415,7 +415,7 @@ pub(crate) fn grayscale(mut args: ArgumentResult, parser: &mut Visitor) -> SassR
     args.max_args(1)?;
     let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,
-        Value::Dimension(Some(n), u, _) => {
+        Value::Dimension((n), u, _) => {
             return Ok(Value::String(
                 format!("grayscale({}{})", n.inspect(), u),
                 QuoteKind::None,
@@ -451,13 +451,13 @@ pub(crate) fn invert(mut args: ArgumentResult, parser: &mut Visitor) -> SassResu
     args.max_args(2)?;
     let weight = match args.get(1, "weight") {
         Some(Spanned {
-            node: Value::Dimension(Some(n), u, _),
+            node: Value::Dimension((n), u, _),
             ..
         }) => Some(bound!(args, "weight", n, u, 0, 100) / Number::from(100)),
         Some(Spanned {
-            node: Value::Dimension(None, ..),
+            node: Value::Dimension(n, ..),
             ..
-        }) => todo!(),
+        }) if n.is_nan() => todo!(),
         None => None,
         Some(v) => {
             return Err((
@@ -474,7 +474,7 @@ pub(crate) fn invert(mut args: ArgumentResult, parser: &mut Visitor) -> SassResu
         Value::Color(c) => Ok(Value::Color(Box::new(
             c.invert(weight.unwrap_or_else(Number::one)),
         ))),
-        Value::Dimension(Some(n), u, _) => {
+        Value::Dimension((n), u, _) => {
             if weight.is_some() {
                 return Err((
                     "Only one argument may be passed to the plain-CSS invert() function.",
@@ -486,9 +486,6 @@ pub(crate) fn invert(mut args: ArgumentResult, parser: &mut Visitor) -> SassResu
                 format!("invert({}{})", n.inspect(), u),
                 QuoteKind::None,
             ))
-        }
-        Value::Dimension(None, u, _) => {
-            Ok(Value::String(format!("invert(NaN{})", u), QuoteKind::None))
         }
         v => Err((
             format!("$color: {} is not a color.", v.inspect(args.span())?),

@@ -1,6 +1,6 @@
 use std::{borrow::Borrow, iter::Iterator};
 
-use crate::{error::SassResult, parse::common::Comment, value::Value, Token};
+use crate::{error::SassResult, parse::{common::Comment, value_new::opposite_bracket}, value::Value, Token};
 
 use super::super::Parser;
 
@@ -311,8 +311,6 @@ impl<'a, 'b> Parser<'a, 'b> {
     pub(crate) fn declaration_value(
         &mut self,
         allow_empty: bool,
-        allow_semicolon: bool,
-        allow_colon: bool,
     ) -> SassResult<String> {
         let mut buffer = String::new();
 
@@ -326,24 +324,13 @@ impl<'a, 'b> Parser<'a, 'b> {
                     buffer.push_str(&self.parse_escape(true)?);
                     wrote_newline = false;
                 }
-                q @ ('"' | '\'') => {
-                    self.toks.next();
-                    let s = self.parse_quoted_string(q)?;
-                    buffer.push_str(&s.node.to_css_string(s.span, self.options.is_compressed())?);
+                '"' | '\'' => {
+                    buffer.push_str(&self.fallible_raw_text(Self::parse_string)?);
                     wrote_newline = false;
                 }
                 '/' => {
                     if matches!(self.toks.peek_n(1), Some(Token { kind: '*', .. })) {
-                        self.toks.next();
-
-                        let comment = match self.parse_comment()?.node {
-                            Comment::Loud(s) => s,
-                            Comment::Silent => continue,
-                        };
-
-                        buffer.push_str("/*");
-                        buffer.push_str(&comment);
-                        buffer.push_str("*/");
+                        buffer.push_str(&self.fallible_raw_text(Self::skip_loud_comment)?);
                     } else {
                         buffer.push('/');
                         self.toks.next();
@@ -389,13 +376,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
                     self.toks.next();
 
-                    match tok.kind {
-                        '[' => brackets.push(']'),
-                        '(' => brackets.push(')'),
-                        '{' => brackets.push('}'),
-                        _ => unreachable!(),
-                    }
-
+                    brackets.push(opposite_bracket(tok.kind));
                     wrote_newline = false;
                 }
                 ']' | ')' | '}' => {
@@ -408,21 +389,12 @@ impl<'a, 'b> Parser<'a, 'b> {
                     wrote_newline = false;
                 }
                 ';' => {
-                    if !allow_semicolon && brackets.is_empty() {
+                    if brackets.is_empty() {
                         break;
                     }
 
                     self.toks.next();
                     buffer.push(';');
-                    wrote_newline = false;
-                }
-                ':' => {
-                    if !allow_colon && brackets.is_empty() {
-                        break;
-                    }
-
-                    self.toks.next();
-                    buffer.push(':');
                     wrote_newline = false;
                 }
                 'u' | 'U' => {

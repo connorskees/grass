@@ -363,7 +363,7 @@ error!(
     "Error: Missing argument $a."
 );
 test!(
-    inner_mixin_can_modify_scope,
+    inner_mixin_can_have_scope_modified,
     "a {
         $a: red;
         @mixin foo {

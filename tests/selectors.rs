@@ -856,6 +856,15 @@ test!(
     }",
     "a {\n  color: red;\n}\nc {\n  color: red;\n}\n"
 );
+test!(
+    ambiguous_colon,
+    ".btn {
+        a:b {
+            color: red;
+        }
+    }",
+    ".btn a:b {\n  color: red;\n}\n"
+);
 error!(
     a_n_plus_b_n_invalid_odd,
     ":nth-child(ofdd) {\n  color: &;\n}\n", "Error: Expected \"odd\"."

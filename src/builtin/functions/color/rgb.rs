@@ -6,7 +6,7 @@ use crate::{
     color::Color,
     common::{Brackets, ListSeparator, QuoteKind},
     error::SassResult,
-    parse::{ArgumentResult, Parser, visitor::Visitor},
+    parse::{visitor::Visitor, ArgumentResult, Parser},
     unit::Unit,
     value::{Number, Value},
 };
@@ -62,11 +62,11 @@ fn inner_rgb(
         }
 
         let blue = match channels.pop() {
-            Some(Value::Dimension(Some(n), Unit::None, _)) => n,
-            Some(Value::Dimension(Some(n), Unit::Percent, _)) => {
+            Some(Value::Dimension(n, ..)) if n.is_nan() => todo!(),
+            Some(Value::Dimension((n), Unit::None, _)) => n,
+            Some(Value::Dimension((n), Unit::Percent, _)) => {
                 (n / Number::from(100)) * Number::from(255)
             }
-            Some(Value::Dimension(None, ..)) => todo!(),
             Some(v) if v.is_special_function() => {
                 let green = channels.pop().unwrap();
                 let red = channels.pop().unwrap();
@@ -92,11 +92,11 @@ fn inner_rgb(
         };
 
         let green = match channels.pop() {
-            Some(Value::Dimension(Some(n), Unit::None, _)) => n,
-            Some(Value::Dimension(Some(n), Unit::Percent, _)) => {
+            Some(Value::Dimension(n, ..)) if n.is_nan() => todo!(),
+            Some(Value::Dimension((n), Unit::None, _)) => n,
+            Some(Value::Dimension((n), Unit::Percent, _)) => {
                 (n / Number::from(100)) * Number::from(255)
             }
-            Some(Value::Dimension(None, ..)) => todo!(),
             Some(v) if v.is_special_function() => {
                 let string = match channels.pop() {
                     Some(red) => format!(
@@ -126,11 +126,11 @@ fn inner_rgb(
         };
 
         let red = match channels.pop() {
-            Some(Value::Dimension(Some(n), Unit::None, _)) => n,
-            Some(Value::Dimension(Some(n), Unit::Percent, _)) => {
+            Some(Value::Dimension(n, ..)) if n.is_nan() => todo!(),
+            Some(Value::Dimension((n), Unit::None, _)) => n,
+            Some(Value::Dimension((n), Unit::Percent, _)) => {
                 (n / Number::from(100)) * Number::from(255)
             }
-            Some(Value::Dimension(None, ..)) => todo!(),
             Some(v) if v.is_special_function() => {
                 return Ok(Value::String(
                     format!(
@@ -198,9 +198,9 @@ fn inner_rgb(
         }
 
         let alpha = match alpha {
-            Value::Dimension(Some(n), Unit::None, _) => n,
-            Value::Dimension(Some(n), Unit::Percent, _) => n / Number::from(100),
-            Value::Dimension(None, ..) => todo!(),
+            Value::Dimension(n, ..) if n.is_nan() => todo!(),
+            Value::Dimension((n), Unit::None, _) => n,
+            Value::Dimension((n), Unit::Percent, _) => n / Number::from(100),
             v @ Value::Dimension(..) => {
                 return Err((
                     format!(
@@ -227,7 +227,7 @@ fn inner_rgb(
         let alpha = args.default_arg(
             3,
             "alpha",
-            Value::Dimension(Some(Number::one()), Unit::None, true),
+            Value::Dimension((Number::one()), Unit::None, None),
         );
 
         if [&red, &green, &blue, &alpha]
@@ -255,11 +255,9 @@ fn inner_rgb(
         }
 
         let red = match red {
-            Value::Dimension(Some(n), Unit::None, _) => n,
-            Value::Dimension(Some(n), Unit::Percent, _) => {
-                (n / Number::from(100)) * Number::from(255)
-            }
-            Value::Dimension(None, ..) => todo!(),
+            Value::Dimension(n, ..) if n.is_nan() => todo!(),
+            Value::Dimension((n), Unit::None, _) => n,
+            Value::Dimension((n), Unit::Percent, _) => (n / Number::from(100)) * Number::from(255),
             v @ Value::Dimension(..) => {
                 return Err((
                     format!(
@@ -279,11 +277,9 @@ fn inner_rgb(
             }
         };
         let green = match green {
-            Value::Dimension(Some(n), Unit::None, _) => n,
-            Value::Dimension(Some(n), Unit::Percent, _) => {
-                (n / Number::from(100)) * Number::from(255)
-            }
-            Value::Dimension(None, ..) => todo!(),
+            Value::Dimension(n, ..) if n.is_nan() => todo!(),
+            Value::Dimension((n), Unit::None, _) => n,
+            Value::Dimension((n), Unit::Percent, _) => (n / Number::from(100)) * Number::from(255),
             v @ Value::Dimension(..) => {
                 return Err((
                     format!(
@@ -303,11 +299,9 @@ fn inner_rgb(
             }
         };
         let blue = match blue {
-            Value::Dimension(Some(n), Unit::None, _) => n,
-            Value::Dimension(Some(n), Unit::Percent, _) => {
-                (n / Number::from(100)) * Number::from(255)
-            }
-            Value::Dimension(None, ..) => todo!(),
+            Value::Dimension(n, ..) if n.is_nan() => todo!(),
+            Value::Dimension((n), Unit::None, _) => n,
+            Value::Dimension((n), Unit::Percent, _) => (n / Number::from(100)) * Number::from(255),
             v @ Value::Dimension(..) => {
                 return Err((
                     format!(
@@ -327,9 +321,9 @@ fn inner_rgb(
             }
         };
         let alpha = match alpha {
-            Value::Dimension(Some(n), Unit::None, _) => n,
-            Value::Dimension(Some(n), Unit::Percent, _) => n / Number::from(100),
-            Value::Dimension(None, ..) => todo!(),
+            Value::Dimension(n, ..) if n.is_nan() => todo!(),
+            Value::Dimension((n), Unit::None, _) => n,
+            Value::Dimension((n), Unit::Percent, _) => n / Number::from(100),
             v @ Value::Dimension(..) => {
                 return Err((
                     format!(
@@ -365,7 +359,7 @@ pub(crate) fn rgba(args: ArgumentResult, parser: &mut Visitor) -> SassResult<Val
 pub(crate) fn red(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "color")? {
-        Value::Color(c) => Ok(Value::Dimension(Some(c.red()), Unit::None, true)),
+        Value::Color(c) => Ok(Value::Dimension((c.red()), Unit::None, None)),
         v => Err((
             format!("$color: {} is not a color.", v.inspect(args.span())?),
             args.span(),
@@ -377,7 +371,7 @@ pub(crate) fn red(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<
 pub(crate) fn green(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "color")? {
-        Value::Color(c) => Ok(Value::Dimension(Some(c.green()), Unit::None, true)),
+        Value::Color(c) => Ok(Value::Dimension((c.green()), Unit::None, None)),
         v => Err((
             format!("$color: {} is not a color.", v.inspect(args.span())?),
             args.span(),
@@ -389,7 +383,7 @@ pub(crate) fn green(mut args: ArgumentResult, parser: &mut Visitor) -> SassResul
 pub(crate) fn blue(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "color")? {
-        Value::Color(c) => Ok(Value::Dimension(Some(c.blue()), Unit::None, true)),
+        Value::Color(c) => Ok(Value::Dimension((c.blue()), Unit::None, None)),
         v => Err((
             format!("$color: {} is not a color.", v.inspect(args.span())?),
             args.span(),
@@ -425,10 +419,10 @@ pub(crate) fn mix(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<
     let weight = match args.default_arg(
         2,
         "weight",
-        Value::Dimension(Some(Number::from(50)), Unit::None, true),
+        Value::Dimension((Number::from(50)), Unit::None, None),
     ) {
-        Value::Dimension(Some(n), u, _) => bound!(args, "weight", n, u, 0, 100) / Number::from(100),
-        Value::Dimension(None, ..) => todo!(),
+        Value::Dimension(n, ..) if n.is_nan() => todo!(),
+        Value::Dimension((n), u, _) => bound!(args, "weight", n, u, 0, 100) / Number::from(100),
         v => {
             return Err((
                 format!(

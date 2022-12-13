@@ -29,6 +29,36 @@ impl<'a, 'b, 'c> KeyframesSelectorParser<'a, 'b, 'c> {
         Self { parser }
     }
 
+    pub fn parse(&mut self) -> SassResult<Vec<KeyframesSelector>> {
+        // let mut selectors = Vec::new();
+
+        // loop {
+        //     self.parser.whitespace_or_comment();
+        //     if self.parser.looking_at_identifier() {
+
+        //     }
+        // }
+    //     do {
+    //     whitespace();
+    //     if (lookingAtIdentifier()) {
+    //       if (scanIdentifier("from")) {
+    //         selectors.add("from");
+    //       } else {
+    //         expectIdentifier("to", name: '"to" or "from"');
+    //         selectors.add("to");
+    //       }
+    //     } else {
+    //       selectors.add(_percentage());
+    //     }
+    //     whitespace();
+    //   } while (scanner.scanChar($comma));
+    //   scanner.expectDone();
+
+    //   return selectors;
+    // });
+    todo!()
+    }
+
     pub fn parse_keyframes_selector(&mut self) -> SassResult<Vec<KeyframesSelector>> {
         let mut selectors = Vec::new();
         loop {
@@ -39,7 +69,7 @@ impl<'a, 'b, 'c> KeyframesSelectorParser<'a, 'b, 'c> {
                 } else if self.parser.scan_identifier("from", true) {
                     selectors.push(KeyframesSelector::From);
                 } else {
-                    return Err(("Expected \"to\" or \"from\".", self.parser.span_before).into());
+                    return Err(("Expected \"to\" or \"from\".", self.parser.toks.current_span()).into());
                 }
             } else {
                 selectors.push(self.parse_percentage_selector()?);

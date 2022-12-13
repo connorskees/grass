@@ -26,6 +26,12 @@ pub(crate) enum Number {
     Big(Box<BigRational>),
 }
 
+impl Number {
+    pub fn is_nan(&self) -> bool {
+        false
+    }
+}
+
 impl PartialEq for Number {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
@@ -140,45 +146,45 @@ impl Number {
     }
 
     #[allow(clippy::cast_precision_loss)]
-    pub fn as_float(self) -> Option<f64> {
-        Some(match self {
+    pub fn as_float(self) -> f64 {
+        match self {
             Number::Small(n) => (*n.numer() as f64) / (*n.denom() as f64),
-            Number::Big(n) => (n.numer().to_f64()?) / (n.denom().to_f64()?),
-        })
+            Number::Big(n) => (n.numer().to_f64().unwrap()) / (n.denom().to_f64().unwrap()),
+        }
     }
 
-    pub fn sqrt(self) -> Option<Self> {
-        Some(Number::Big(Box::new(BigRational::from_float(
-            self.as_float()?.sqrt(),
-        )?)))
+    pub fn sqrt(self) -> Self {
+        Number::Big(Box::new(
+            BigRational::from_float(self.as_float().sqrt()).unwrap(),
+        ))
     }
 
-    pub fn ln(self) -> Option<Self> {
-        Some(Number::Big(Box::new(BigRational::from_float(
-            self.as_float()?.ln(),
-        )?)))
+    pub fn ln(self) -> Self {
+        Number::Big(Box::new(
+            BigRational::from_float(self.as_float().ln()).unwrap(),
+        ))
     }
 
-    pub fn log(self, base: Number) -> Option<Self> {
-        Some(Number::Big(Box::new(BigRational::from_float(
-            self.as_float()?.log(base.as_float()?),
-        )?)))
+    pub fn log(self, base: Number) -> Self {
+        Number::Big(Box::new(
+            BigRational::from_float(self.as_float().log(base.as_float())).unwrap(),
+        ))
     }
 
-    pub fn pow(self, exponent: Self) -> Option<Self> {
-        Some(Number::Big(Box::new(BigRational::from_float(
-            self.as_float()?.powf(exponent.as_float()?),
-        )?)))
+    pub fn pow(self, exponent: Self) -> Self {
+        Number::Big(Box::new(
+            BigRational::from_float(self.as_float().powf(exponent.as_float())).unwrap(),
+        ))
     }
 
     pub fn pi() -> Self {
         Number::from(std::f64::consts::PI)
     }
 
-    pub fn atan2(self, other: Self) -> Option<Self> {
-        Some(Number::Big(Box::new(BigRational::from_float(
-            self.as_float()?.atan2(other.as_float()?),
-        )?)))
+    pub fn atan2(self, other: Self) -> Self {
+        Number::Big(Box::new(
+            BigRational::from_float(self.as_float().atan2(other.as_float())).unwrap(),
+        ))
     }
 
     /// Invariants: `from.comparable(&to)` must be true
@@ -195,26 +201,26 @@ impl Number {
 
 macro_rules! trig_fn(
     ($name:ident, $name_deg:ident) => {
-        pub fn $name(self) -> Option<Self> {
-            Some(Number::Big(Box::new(BigRational::from_float(
-                self.as_float()?.$name(),
-            )?)))
+        pub fn $name(self) -> Self {
+            Number::Big(Box::new(BigRational::from_float(
+                self.as_float().$name(),
+            ).unwrap()))
         }
 
-        pub fn $name_deg(self) -> Option<Self> {
-            Some(Number::Big(Box::new(BigRational::from_float(
-                self.as_float()?.to_radians().$name(),
-            )?)))
+        pub fn $name_deg(self) -> Self {
+            Number::Big(Box::new(BigRational::from_float(
+                self.as_float().to_radians().$name(),
+            ).unwrap()))
         }
     }
 );
 
 macro_rules! inverse_trig_fn(
     ($name:ident) => {
-        pub fn $name(self) -> Option<Self> {
-            Some(Number::Big(Box::new(BigRational::from_float(
-                self.as_float()?.$name().to_degrees(),
-            )?)))
+        pub fn $name(self) -> Self {
+            Number::Big(Box::new(BigRational::from_float(
+                self.as_float().$name().to_degrees(),
+            ).unwrap()))
         }
     }
 );

@@ -30,24 +30,15 @@ pub enum BinaryOp {
 }
 
 impl BinaryOp {
-    /// Get order of precedence for an operator
-    ///
-    /// Higher numbers are evaluated first.
-    /// Do not rely on the number itself, but rather the size relative to other numbers
-    ///
-    /// If precedence is equal, the leftmost operation is evaluated first
-    pub fn precedence(self) -> usize {
+    pub fn precedence(self) -> u8 {
         match self {
-            Self::And | Self::Or => 0,
-            Self::Equal
-            | Self::NotEqual
-            | Self::GreaterThan
-            | Self::GreaterThanEqual
-            | Self::LessThan
-            | Self::LessThanEqual
-            | Self::SingleEq => 1,
-            Self::Plus | Self::Minus => 2,
-            Self::Mul | Self::Div | Self::Rem => 3,
+            Self::SingleEq => 0,
+            Self::Or => 1,
+            Self::And => 2,
+            Self::Equal | Self::NotEqual => 3,
+            Self::GreaterThan | Self::GreaterThanEqual | Self::LessThan | Self::LessThanEqual => 4,
+            Self::Plus | Self::Minus => 5,
+            Self::Mul | Self::Div | Self::Rem => 6,
         }
     }
 }

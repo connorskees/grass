@@ -42,7 +42,8 @@ pub(crate) enum SassFunction {
 pub(crate) struct UserDefinedFunction {
     pub function: Box<AstFunctionDecl>,
     pub name: Identifier,
-    pub env: Environment,
+    // pub env: Environment,
+    pub scope_idx: usize,
 }
 
 impl PartialEq for UserDefinedFunction {

@@ -136,6 +136,10 @@ impl Scopes {
         self.len() == 0
     }
 
+    pub fn slice(&self, scope_idx: usize) -> Self {
+        Self(self.0[..scope_idx].to_vec())
+    }
+
     pub fn split_off(mut self, len: usize) -> (Scopes, Scopes) {
         let split = self.0.split_off(len);
         (self, Scopes(split))
@@ -231,17 +235,28 @@ impl<'a> Scopes {
             }
         }
 
+        global_scope.get_var(name)?;
+
         Ok(RefWrapper::X(Ref::map(
             global_scope,
+            // todo: bad unwrap
             |global_scope| match global_scope.get_var(name).unwrap() {
                 RefWrapper::Y(y) => y,
                 RefWrapper::X(x) => todo!(),
             },
         )))
-        // Ok(&*Ref::map(global_scope, |global_scope| {
-        //     global_scope.get_var(name).unwrap()
-        // }))
     }
+
+    // ./target/debug/grass bootstrap/scss/bootstrap.scss > grass-output.css
+    //       ./dart-sass/sass bootstrap/scss/bootstrap.scss > dart-sass-output.css
+
+    //       if [[ $(diff -u grass-output.css dart-sass-output.css) ]]; then
+    //           echo "Differences found"
+    //           diff -u grass-output.css dart-sass-output.css
+    //           exit 1
+    //       else
+    //           echo "No differences found"
+    //       fi
 
     pub fn var_exists(&self, name: Identifier, global_scope: Ref<'a, Scope>) -> bool {
         for scope in &self.0 {

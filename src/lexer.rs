@@ -25,6 +25,13 @@ impl<'a> Lexer<'a> {
         matches!(self.peek(), Some(Token { kind, .. }) if kind == c)
     }
 
+    pub fn span_from(&self, start: usize) -> Span {
+        let start = self.buf[start].pos;
+        let end = self.current_span();
+
+        start.merge(end)
+    }
+
     pub fn current_span(&self) -> Span {
         self.buf
             .get(self.cursor)
@@ -66,6 +73,11 @@ impl<'a> Lexer<'a> {
     /// Peeks `n` from current peeked position without modifying cursor
     pub fn peek_n(&self, n: usize) -> Option<Token> {
         self.buf.get(self.peek_cursor() + n).copied()
+    }
+
+    /// Peeks `n` behind current peeked position without modifying cursor
+    pub fn peek_n_backwards(&self, n: usize) -> Option<Token> {
+        self.buf.get(self.peek_cursor().checked_sub(n)?).copied()
     }
 
     pub fn peek_backward(&mut self, n: usize) -> Option<Token> {
