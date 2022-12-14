@@ -9,7 +9,7 @@ use crate::{
     common::{BinaryOp, QuoteKind},
     error::SassResult,
     unit::Unit,
-    value::Value,
+    value::{Value, SassNumber},
     Options,
 };
 
@@ -399,11 +399,10 @@ pub(crate) fn div(left: Value, right: Value, options: &Options, span: Span) -> S
             QuoteKind::None,
         ),
         Value::Dimension(n, ..) if n.is_nan() => todo!(),
-        Value::Dimension(num, unit, should_divide1) => match right {
+        Value::Dimension(num, unit, as_slash1) => match right {
             Value::Calculation(..) => todo!(),
             Value::Dimension(n, ..) if n.is_nan() => todo!(),
-            Value::Dimension(num2, unit2, should_divide2) => {
-                // todo!()
+            Value::Dimension(num2, unit2, as_slash2) => {
                 // if should_divide1 || should_divide2 {
                 if num.is_zero() && num2.is_zero() {
                     // todo: nan
@@ -430,7 +429,10 @@ pub(crate) fn div(left: Value, right: Value, options: &Options, span: Span) -> S
 
                 // `unit(1in / 1px)` => `""`
                 } else if unit.comparable(&unit2) {
+                    // let sass_num_1 = SassNumber(num.0, unit.clone(), as_slash1);
+                    // let sass_num_2 = SassNumber(num2.0, unit2.clone(), as_slash2);
                     Value::Dimension(num / num2.convert(&unit2, &unit), Unit::None, None)
+                    // Value::Dimension(num / num2.convert(&unit2, &unit), Unit::None, Some(Box::new((sass_num_1, sass_num_2))))
                 // `unit(1em / 1px)` => `"em/px"`
                 // todo: this should probably be its own variant
                 // within the `Value` enum

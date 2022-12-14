@@ -123,6 +123,28 @@ test!(
     "@media print {\n  a {\n    color: red;\n  }\n  b {\n    color: green;\n  }\n}\n"
 );
 test!(
+    removes_media_if_all_children_are_blank,
+    "@media foo {
+      a {}
+    }",
+    ""
+);
+test!(
+    correct_order_of_children_when_merging,
+    "@media (foo) {
+      @media (bar) {
+        a {
+          color: red;
+        }
+      }
+
+      a {
+        color: red;
+      }
+    }",
+    "@media (foo) and (bar) {\n  a {\n    color: red;\n  }\n}\n@media (foo) {\n  a {\n    color: red;\n  }\n}\n"
+);
+test!(
     newline_emitted_before_media_when_following_ruleset,
     "a {
       color: red;

@@ -812,7 +812,9 @@ pub(crate) struct ValueParser<'c> {
     operands: Option<Vec<Spanned<AstExpr>>>,
     allow_slash: bool,
     single_expression: Option<Spanned<AstExpr>>,
-    in_parentheses: bool,
+    start: usize,
+    // in_parentheses: bool,
+    // was_in_parens: bool,
     inside_bracketed_list: bool,
     single_equals: bool,
     parse_until: Option<Predicate<'c>>,
@@ -830,7 +832,7 @@ impl<'c> ValueParser<'c> {
 
         if let Some(parse_until) = value_parser.parse_until {
             if parse_until(parser) {
-                return Err(("Expected expression.", parser.span_before).into());
+                return Err(("Expected expression.", parser.toks.current_span()).into());
             }
         }
 
@@ -875,7 +877,8 @@ impl<'c> ValueParser<'c> {
             binary_operators: None,
             operands: None,
             allow_slash: true,
-            in_parentheses: false,
+            start: parser.toks.cursor(),
+            // was_in_parens: parser.flags.in_parens(),
             single_expression: None,
             parse_until,
             inside_bracketed_list,
@@ -888,11 +891,6 @@ impl<'c> ValueParser<'c> {
     /// This function will cease parsing if the predicate returns true.
     pub(crate) fn parse_value(&mut self, parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
         parser.whitespace();
-
-        let span = match parser.toks.peek() {
-            Some(Token { pos, .. }) => pos,
-            None => return Err(("Expected expression.", parser.span_before).into()),
-        };
 
         let start = parser.toks.cursor();
 
@@ -1198,7 +1196,7 @@ impl<'c> ValueParser<'c> {
         if self.comma_expressions.is_some() {
             self.resolve_space_expressions(parser)?;
 
-            self.in_parentheses = was_in_parens;
+            parser.flags.set(ContextFlags::IN_PARENS, was_in_parens);
 
             if let Some(single_expression) = self.single_expression.take() {
                 self.comma_expressions
@@ -1216,9 +1214,9 @@ impl<'c> ValueParser<'c> {
                     Brackets::None
                 },
             }
-            .span(span));
+            .span(parser.span_before));
         } else if self.inside_bracketed_list && self.space_expressions.is_some() {
-            self.resolve_operations()?;
+            self.resolve_operations(parser)?;
 
             self.space_expressions
                 .as_mut()
@@ -1230,7 +1228,7 @@ impl<'c> ValueParser<'c> {
                 separator: ListSeparator::Space,
                 brackets: Brackets::Bracketed,
             }
-            .span(span));
+            .span(parser.span_before));
         } else {
             self.resolve_space_expressions(parser)?;
 
@@ -1240,7 +1238,7 @@ impl<'c> ValueParser<'c> {
                     separator: ListSeparator::Undecided,
                     brackets: Brackets::Bracketed,
                 }
-                .span(span));
+                .span(parser.span_before));
             }
 
             return Ok(self.single_expression.take().unwrap());
@@ -1292,7 +1290,7 @@ impl<'c> ValueParser<'c> {
         }
     }
 
-    fn resolve_one_operation(&mut self) -> SassResult<()> {
+    fn resolve_one_operation(&mut self, parser: &mut Parser) -> SassResult<()> {
         let operator = self.binary_operators.as_mut().unwrap().pop().unwrap();
         let operands = self.operands.as_mut().unwrap();
 
@@ -1305,7 +1303,7 @@ impl<'c> ValueParser<'c> {
         let span = left.span.merge(right.span);
 
         if self.allow_slash
-            && !self.in_parentheses
+            && !parser.flags.in_parens()
             && operator == BinaryOp::Div
             && left.node.is_slash_operand()
             && right.node.is_slash_operand()
@@ -1327,7 +1325,7 @@ impl<'c> ValueParser<'c> {
         Ok(())
     }
 
-    fn resolve_operations(&mut self) -> SassResult<()> {
+    fn resolve_operations(&mut self, parser: &mut Parser) -> SassResult<()> {
         loop {
             let should_break = match self.binary_operators.as_ref() {
                 Some(bin) => bin.is_empty(),
@@ -1338,7 +1336,7 @@ impl<'c> ValueParser<'c> {
                 break;
             }
 
-            self.resolve_one_operation()?;
+            self.resolve_one_operation(parser)?;
         }
 
         Ok(())
@@ -1350,8 +1348,12 @@ impl<'c> ValueParser<'c> {
         parser: &mut Parser,
     ) -> SassResult<()> {
         if self.single_expression.is_some() {
-            if self.in_parentheses {
-                self.in_parentheses = false;
+            // If we discover we're parsing a list whose first element is a division
+            // operation, and we're in parentheses, reparse outside of a paren
+            // context. This ensures that `(1/2 1)` doesn't perform division on its
+            // first element.
+            if parser.flags.in_parens() {
+                parser.flags.set(ContextFlags::IN_PARENS, false);
 
                 if self.allow_slash {
                     self.reset_state(parser)?;
@@ -1364,7 +1366,7 @@ impl<'c> ValueParser<'c> {
                 self.space_expressions = Some(Vec::new());
             }
 
-            self.resolve_operations()?;
+            self.resolve_operations(parser)?;
 
             self.space_expressions
                 .as_mut()
@@ -1400,7 +1402,7 @@ impl<'c> ValueParser<'c> {
                 break;
             }
 
-            self.resolve_one_operation()?;
+            self.resolve_one_operation(parser)?;
         }
         self.binary_operators
             .get_or_insert_with(Default::default)
@@ -1421,7 +1423,7 @@ impl<'c> ValueParser<'c> {
     }
 
     fn resolve_space_expressions(&mut self, parser: &mut Parser) -> SassResult<()> {
-        self.resolve_operations()?;
+        self.resolve_operations(parser)?;
 
         if let Some(mut space_expressions) = self.space_expressions.take() {
             let single_expression = match self.single_expression.take() {
@@ -2402,6 +2404,7 @@ impl<'c> ValueParser<'c> {
         self.space_expressions = None;
         self.binary_operators = None;
         self.operands = None;
+        parser.toks.set_cursor(self.start);
         self.allow_slash = true;
         self.single_expression = Some(self.parse_single_expression(parser)?);
 

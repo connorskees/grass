@@ -200,7 +200,7 @@ impl Number {
             return self;
         }
 
-        self * UNIT_CONVERSION_TABLE[to][from]
+        Number(self.0 * UNIT_CONVERSION_TABLE[to][from])
     }
 }
 

@@ -60,7 +60,6 @@ grass input.scss
     clippy::unnested_or_patterns,
     clippy::uninlined_format_args,
 )]
-#![cfg_attr(feature = "profiling", inline(never))]
 
 use std::path::Path;
 
@@ -254,6 +253,7 @@ fn raw_to_parse_error(map: &CodeMap, err: Error, unicode: bool) -> Box<Error> {
     Box::new(Error::from_loc(message, map.look_up_span(span), unicode))
 }
 
+#[cfg_attr(feature = "profiling", inline(never))]
 fn from_string_with_file_name(input: String, file_name: &str, options: &Options) -> Result<String> {
     let mut map = CodeMap::new();
     let file = map.add_file(file_name.to_owned(), input);

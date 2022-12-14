@@ -262,7 +262,7 @@ pub(crate) struct AstVariableDecl {
 
 #[derive(Debug, Clone)]
 pub(crate) struct AstFunctionDecl {
-    name: Identifier,
+    name: Spanned<Identifier>,
     arguments: ArgumentDeclaration,
     children: Vec<AstStmt>,
 }
@@ -287,7 +287,7 @@ pub(crate) struct AstErrorRule {
 
 impl PartialEq for AstFunctionDecl {
     fn eq(&self, other: &Self) -> bool {
-        todo!()
+        self.name == other.name
     }
 }
 
@@ -588,7 +588,17 @@ impl<'a, 'b> Parser<'a, 'b> {
         // self.whitespace();
         // stmts.append(&mut self.load_modules()?);
 
-        style_sheet.body = self.parse_statements()?;
+        style_sheet.body = self.parse_statements(|parser| {
+            if parser.next_matches("@charset") {
+                parser.expect_char('@')?;
+                parser.expect_identifier("charset", false)?;
+                parser.whitespace_or_comment();
+                parser.parse_string()?;
+                return Ok(None);
+            }
+
+            Ok(Some(parser.__parse_stmt()?))
+        })?;
 
         // while self.toks.peek().is_some() {
         //     style_sheet.body.push(self.__parse_stmt()?);
@@ -624,7 +634,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         }
     }
 
-    fn parse_statements(&mut self) -> SassResult<Vec<AstStmt>> {
+    fn parse_statements(&mut self, statement: fn(&mut Self) -> SassResult<Option<AstStmt>>) -> SassResult<Vec<AstStmt>> {
         let mut stmts = Vec::new();
         self.whitespace();
         while let Some(tok) = self.toks.peek() {
@@ -639,13 +649,13 @@ impl<'a, 'b> Parser<'a, 'b> {
                         stmts.push(AstStmt::LoudComment(self.parse_loud_comment()?));
                         self.whitespace();
                     }
-                    _ => stmts.push(self.__parse_stmt()?),
+                    _ => if let Some(stmt) = statement(self)? { stmts.push(stmt);},
                 },
                 ';' => {
                     self.toks.next();
                     self.whitespace();
                 }
-                _ => stmts.push(self.__parse_stmt()?),
+                _ => if let Some(stmt) = statement(self)? { stmts.push(stmt);},
             }
         }
 
@@ -1096,7 +1106,9 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     fn parse_function_rule(&mut self) -> SassResult<AstStmt> {
+        let start = self.toks.cursor();
         let name = self.__parse_identifier(true, false)?;
+        let name_span = self.toks.span_from(start);
         self.whitespace_or_comment();
         let arguments = self.parse_argument_declaration()?;
 
@@ -1115,7 +1127,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         let mut children = self.with_children(Self::function_child)?;
 
         Ok(AstStmt::FunctionDecl(AstFunctionDecl {
-            name: Identifier::from(name),
+            name: Spanned { node: Identifier::from(name), span: name_span },
             arguments,
             children,
         }))
@@ -2982,20 +2994,13 @@ impl<'a, 'b> Parser<'a, 'b> {
     fn next_matches(&mut self, s: &str) -> bool {
         let mut chars = s.chars();
 
-        if chars.next() != self.toks.peek().map(|t| t.kind) {
-            return false;
-        }
-
-        for c in s.chars() {
-            if let Some(Token { kind, .. }) = self.toks.peek_forward(1) {
-                if kind != c {
-                    self.toks.reset_cursor();
-                    return false;
-                }
+        for (idx, c) in s.chars().enumerate() {
+            match self.toks.peek_n(idx) {
+                Some(Token { kind, .. }) if kind == c => {},
+                _ => return false,
             }
         }
 
-        self.toks.reset_cursor();
         true
     }
 
@@ -3301,13 +3306,13 @@ impl<'a, 'b> Parser<'a, 'b> {
     //     Ok(stmts)
     // }
 
-    pub fn parse_selector(
-        &mut self,
-        allows_parent: bool,
-        from_fn: bool,
-        mut string: String,
-    ) -> SassResult<(Selector, bool)> {
-        todo!()
+    // pub fn parse_selector(
+    //     &mut self,
+    //     allows_parent: bool,
+    //     from_fn: bool,
+    //     mut string: String,
+    // ) -> SassResult<(Selector, bool)> {
+    //     todo!()
         // let mut span = if let Some(tok) = self.toks.peek() {
         //     tok.pos()
         // } else {
@@ -3402,7 +3407,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         // .parse()?;
 
         // Ok((Selector(selector), optional))
-    }
+    // }
 
     // /// Eat and return the contents of a comment.
     // ///

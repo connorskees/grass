@@ -290,7 +290,7 @@ impl SassNumber {
             return self;
         }
 
-        self.0 *= UNIT_CONVERSION_TABLE[to][from].0;
+        self.0 *= UNIT_CONVERSION_TABLE[to][from];
         self.1 = self.1 * to.clone();
 
         self
@@ -703,32 +703,35 @@ impl Value {
             Some(v) => v,
             None => return Err((format!("${}: {} is not a valid selector: it must be a string, a list of strings, or a list of lists of strings.", name, self.inspect(visitor.parser.span_before)?), visitor.parser.span_before).into()),
         };
-        Ok(Parser {
-            toks: &mut Lexer::new(
-                string
-                    .chars()
-                    .map(|c| Token::new(visitor.parser.span_before, c))
-                    .collect::<Vec<Token>>(),
-            ),
-            map: visitor.parser.map,
-            path: visitor.parser.path,
-            is_plain_css: false,
-            // scopes: visitor.parser.scopes,
-            // global_scope: visitor.parser.global_scope,
-            // super_selectors: visitor.parser.super_selectors,
-            span_before: visitor.parser.span_before,
-            // content: visitor.parser.content,
-            flags: visitor.parser.flags,
-            // at_root: visitor.parser.at_root,
-            // at_root_has_selector: visitor.parser.at_root_has_selector,
-            // extender: visitor.parser.extender,
-            // content_scopes: visitor.parser.content_scopes,
-            options: visitor.parser.options,
-            modules: visitor.parser.modules,
-            module_config: visitor.parser.module_config,
-        }
-        .parse_selector(allows_parent, true, String::new())?
-        .0)
+        Ok(Selector(visitor.parse_selector_from_string(&string)?))
+        // Ok(
+        //     Parser {
+        //     toks: &mut Lexer::new(
+        //         string
+        //             .chars()
+        //             .map(|c| Token::new(visitor.parser.span_before, c))
+        //             .collect::<Vec<Token>>(),
+        //     ),
+        //     map: visitor.parser.map,
+        //     path: visitor.parser.path,
+        //     is_plain_css: false,
+        //     // scopes: visitor.parser.scopes,
+        //     // global_scope: visitor.parser.global_scope,
+        //     // super_selectors: visitor.parser.super_selectors,
+        //     span_before: visitor.parser.span_before,
+        //     // content: visitor.parser.content,
+        //     flags: visitor.parser.flags,
+        //     // at_root: visitor.parser.at_root,
+        //     // at_root_has_selector: visitor.parser.at_root_has_selector,
+        //     // extender: visitor.parser.extender,
+        //     // content_scopes: visitor.parser.content_scopes,
+        //     options: visitor.parser.options,
+        //     modules: visitor.parser.modules,
+        //     module_config: visitor.parser.module_config,
+        // }
+        // .parse_selector(allows_parent, true, String::new())?
+        // .0
+    // )
     }
 
     #[allow(clippy::only_used_in_recursion)]

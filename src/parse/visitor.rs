@@ -188,7 +188,7 @@ trait UserDefinedCallable {
 
 impl UserDefinedCallable for AstFunctionDecl {
     fn name(&self) -> Identifier {
-        self.name
+        self.name.node
     }
 
     fn arguments(&self) -> &ArgumentDeclaration {
@@ -964,7 +964,7 @@ impl<'a> Visitor<'a> {
     }
 
     fn visit_function_decl(&mut self, fn_decl: AstFunctionDecl) {
-        let name = fn_decl.name;
+        let name = fn_decl.name.node;
         // todo: independency
         let scope_idx = self.env.scopes().len();
 
@@ -982,7 +982,7 @@ impl<'a> Visitor<'a> {
         }
     }
 
-    fn parse_selector_from_string(&mut self, selector_text: &str) -> SassResult<SelectorList> {
+    pub fn parse_selector_from_string(&mut self, selector_text: &str) -> SassResult<SelectorList> {
         let mut sel_toks = Lexer::new(
             selector_text
                 .chars()
@@ -2267,6 +2267,8 @@ impl<'a> Visitor<'a> {
                     }
                     buffer.push_str(&self.serialize(rest, QuoteKind::None)?);
                 }
+
+                buffer.push(')');
 
                 Value::String(buffer, QuoteKind::None)
             }
