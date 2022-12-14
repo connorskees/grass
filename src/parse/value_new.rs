@@ -6,7 +6,7 @@ use std::{
 };
 
 use num_bigint::BigInt;
-use num_rational::{BigRational, Rational64};
+// use num_rational::{BigRational, Rational64};
 use num_traits::{pow, One, Signed, ToPrimitive, Zero};
 
 use codemap::{Span, Spanned};
@@ -18,7 +18,7 @@ use crate::{
     error::SassResult,
     lexer::Lexer,
     unit::Unit,
-    utils::{as_hex, is_name, ParsedNumber},
+    utils::{as_hex, is_name},
     value::{Number, SassFunction, SassMap, SassNumber, Value},
     Token,
 };
@@ -61,7 +61,9 @@ impl CalculationArg {
             CalculationArg::Number(n) => {
                 // todo: superfluous clone
                 let n = n.clone();
-                buf.push_str(&Value::Dimension(n.0, n.1, n.2).to_css_string(span, is_compressed)?);
+                buf.push_str(
+                    &Value::Dimension(Number(n.0), n.1, n.2).to_css_string(span, is_compressed)?,
+                );
             }
             CalculationArg::Calculation(calc) => {
                 buf.push_str(&Value::Calculation(calc.clone()).to_css_string(span, is_compressed)?);
@@ -171,7 +173,7 @@ impl SassCalculation {
     pub fn calc(arg: CalculationArg) -> SassResult<Value> {
         let arg = Self::simplify(arg)?;
         match arg {
-            CalculationArg::Number(n) => Ok(Value::Dimension(n.0, n.1, n.2)),
+            CalculationArg::Number(n) => Ok(Value::Dimension(Number(n.0), n.1, n.2)),
             CalculationArg::Calculation(c) => Ok(Value::Calculation(c)),
             _ => Ok(Value::Calculation(SassCalculation {
                 name: CalculationName::Calc,
@@ -190,12 +192,16 @@ impl SassCalculation {
 
         for arg in args.iter() {
             match arg {
-                CalculationArg::Number(n) if minimum.is_some() && !minimum.as_ref().unwrap().is_comparable_to(&n) => {
+                CalculationArg::Number(n)
+                    if minimum.is_some() && !minimum.as_ref().unwrap().is_comparable_to(&n) =>
+                {
                     minimum = None;
                     break;
                 }
                 // todo: units
-                CalculationArg::Number(n) if minimum.is_none() || minimum.as_ref().unwrap().num() > n.num() => {
+                CalculationArg::Number(n)
+                    if minimum.is_none() || minimum.as_ref().unwrap().num() > n.num() =>
+                {
                     minimum = Some(n.clone());
                 }
                 _ => break,
@@ -203,10 +209,13 @@ impl SassCalculation {
         }
 
         Ok(match minimum {
-            Some(min) => Value::Dimension(min.0, min.1, min.2),
+            Some(min) => Value::Dimension(Number(min.0), min.1, min.2),
             None => {
                 // _verifyCompatibleNumbers(args);
-                Value::Calculation(SassCalculation { name: CalculationName::Min, args })
+                Value::Calculation(SassCalculation {
+                    name: CalculationName::Min,
+                    args,
+                })
             }
         })
     }
@@ -221,12 +230,16 @@ impl SassCalculation {
 
         for arg in args.iter() {
             match arg {
-                CalculationArg::Number(n) if maximum.is_some() && !maximum.as_ref().unwrap().is_comparable_to(&n) => {
+                CalculationArg::Number(n)
+                    if maximum.is_some() && !maximum.as_ref().unwrap().is_comparable_to(&n) =>
+                {
                     maximum = None;
                     break;
                 }
                 // todo: units
-                CalculationArg::Number(n) if maximum.is_none() || maximum.as_ref().unwrap().num() < n.num() => {
+                CalculationArg::Number(n)
+                    if maximum.is_none() || maximum.as_ref().unwrap().num() < n.num() =>
+                {
                     maximum = Some(n.clone());
                 }
                 _ => break,
@@ -234,15 +247,22 @@ impl SassCalculation {
         }
 
         Ok(match maximum {
-            Some(max) => Value::Dimension(max.0, max.1, max.2),
+            Some(max) => Value::Dimension(Number(max.0), max.1, max.2),
             None => {
                 // _verifyCompatibleNumbers(args);
-                Value::Calculation(SassCalculation { name: CalculationName::Max, args })
+                Value::Calculation(SassCalculation {
+                    name: CalculationName::Max,
+                    args,
+                })
             }
         })
     }
 
-    pub fn clamp(min: CalculationArg, value: Option<CalculationArg>, max: Option<CalculationArg>) -> SassResult<Value> {
+    pub fn clamp(
+        min: CalculationArg,
+        value: Option<CalculationArg>,
+        max: Option<CalculationArg>,
+    ) -> SassResult<Value> {
         todo!()
     }
 
@@ -286,7 +306,7 @@ impl SassCalculation {
 
             if let CalculationArg::Number(mut n) = right {
                 if n.num().is_negative() {
-                    n.0 *= -1;
+                    n.0 *= -1.0;
                     op = if op == BinaryOp::Plus {
                         BinaryOp::Minus
                     } else {
@@ -299,7 +319,6 @@ impl SassCalculation {
         }
 
         //   _verifyCompatibleNumbers([left, right]);
-
 
         Ok(CalculationArg::Operation {
             lhs: Box::new(left),
@@ -954,11 +973,11 @@ impl<'c> ValueParser<'c> {
                     Some(Token { kind, .. })
                         if kind.is_ascii_whitespace() || kind == 'i' || kind == 'I' =>
                     {
-                        let expr = self.parse_important_expr(parser)?;
+                        let expr = Self::parse_important_expr(parser)?;
                         self.add_single_expression(expr, parser)?;
                     }
                     None => {
-                        let expr = self.parse_important_expr(parser)?;
+                        let expr = Self::parse_important_expr(parser)?;
                         self.add_single_expression(expr, parser)?;
                     }
                     Some(..) => break,
@@ -1243,7 +1262,7 @@ impl<'c> ValueParser<'c> {
             Some(Token { kind: '#', .. }) => self.parse_hash(parser),
             Some(Token { kind: '+', .. }) => self.parse_plus_expr(parser),
             Some(Token { kind: '-', .. }) => self.parse_minus_expr(parser),
-            Some(Token { kind: '!', .. }) => self.parse_important_expr(parser),
+            Some(Token { kind: '!', .. }) => Self::parse_important_expr(parser),
             Some(Token { kind: 'u', .. }) | Some(Token { kind: 'U', .. }) => {
                 if matches!(parser.toks.peek_n(1), Some(Token { kind: '+', .. })) {
                     self.parse_unicode_range(parser)
@@ -1291,7 +1310,7 @@ impl<'c> ValueParser<'c> {
             && left.node.is_slash_operand()
             && right.node.is_slash_operand()
         {
-            self.single_expression = Some(AstExpr::slash(left.node, right.node).span(span))
+            self.single_expression = Some(AstExpr::slash(left.node, right.node).span(span));
         } else {
             self.single_expression = Some(
                 AstExpr::BinaryOp {
@@ -1302,7 +1321,7 @@ impl<'c> ValueParser<'c> {
                 }
                 .span(span),
             );
-            self.allow_slash = false
+            self.allow_slash = false;
         }
 
         Ok(())
@@ -1527,7 +1546,10 @@ impl<'c> ValueParser<'c> {
         }
 
         Ok(AstExpr::Variable {
-            name: Spanned { node: Identifier::from(name), span: parser.toks.span_from(start) },
+            name: Spanned {
+                node: Identifier::from(name),
+                span: parser.toks.span_from(start),
+            },
             namespace: None,
         }
         .span(parser.span_before))
@@ -1717,7 +1739,7 @@ impl<'c> ValueParser<'c> {
         let mut number = String::new();
 
         if !parser.consume_char_if_exists('+') && parser.consume_char_if_exists('-') {
-            number.push('-')
+            number.push('-');
         }
 
         number.push_str(&parser.parse_whole_number());
@@ -1861,7 +1883,7 @@ impl<'c> ValueParser<'c> {
         self.parse_unary_operation(parser)
     }
 
-    fn parse_important_expr(&mut self, parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
+    fn parse_important_expr(parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
         parser.expect_char('!')?;
         parser.whitespace_or_comment();
         parser.expect_identifier("important", true)?;
@@ -1879,7 +1901,7 @@ impl<'c> ValueParser<'c> {
         let identifier = parser.parse_interpolated_identifier()?;
 
         let plain = identifier.as_plain();
-        let lower = plain.map(|s| s.to_ascii_lowercase());
+        let lower = plain.map(str::to_ascii_lowercase);
 
         if let Some(plain) = plain {
             if plain == "if" && parser.toks.next_char_is('(') {
@@ -1932,7 +1954,7 @@ impl<'c> ValueParser<'c> {
                 parser.toks.next();
 
                 match plain {
-                    Some(s) => return self.namespaced_expression(s),
+                    Some(s) => self.namespaced_expression(s),
                     None => todo!("Interpolation isn't allowed in namespaces."),
                 }
             }
@@ -2097,7 +2119,7 @@ impl<'c> ValueParser<'c> {
         ))
     }
 
-    fn contains_calculation_interpolation(&mut self, parser: &mut Parser) -> SassResult<bool> {
+    fn contains_calculation_interpolation(parser: &mut Parser) -> SassResult<bool> {
         let mut parens = 0;
         let mut brackets = Vec::new();
 
@@ -2157,7 +2179,7 @@ impl<'c> ValueParser<'c> {
         &mut self,
         parser: &mut Parser,
     ) -> SassResult<Option<AstExpr>> {
-        Ok(if self.contains_calculation_interpolation(parser)? {
+        Ok(if Self::contains_calculation_interpolation(parser)? {
             Some(AstExpr::String(StringExpr(
                 parser.parse_interpolated_declaration_value(false, false, true)?,
                 QuoteKind::None,

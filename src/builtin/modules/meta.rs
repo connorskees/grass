@@ -14,58 +14,59 @@ use crate::{
 };
 
 fn load_css(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Vec<Stmt>> {
-    args.max_args(2)?;
+    // args.max_args(2)?;
 
-    let span = args.span();
+    // let span = args.span();
 
-    let url = match args.get_err(0, "module")? {
-        Value::String(s, ..) => s,
-        v => {
-            return Err((
-                format!("$module: {} is not a string.", v.inspect(span)?),
-                span,
-            )
-                .into())
-        }
-    };
+    // let url = match args.get_err(0, "module")? {
+    //     Value::String(s, ..) => s,
+    //     v => {
+    //         return Err((
+    //             format!("$module: {} is not a string.", v.inspect(span)?),
+    //             span,
+    //         )
+    //             .into())
+    //     }
+    // };
 
-    let with = match args.default_arg(1, "with", Value::Null) {
-        Value::Map(map) => Some(map),
-        Value::Null => None,
-        v => return Err((format!("$with: {} is not a map.", v.inspect(span)?), span).into()),
-    };
+    // let with = match args.default_arg(1, "with", Value::Null) {
+    //     Value::Map(map) => Some(map),
+    //     Value::Null => None,
+    //     v => return Err((format!("$with: {} is not a map.", v.inspect(span)?), span).into()),
+    // };
 
-    // todo: tests for `with`
-    if let Some(with) = with {
-        let mut config = ModuleConfig::default();
+    // // todo: tests for `with`
+    // if let Some(with) = with {
+    //     let mut config = ModuleConfig::default();
 
-        for (key, value) in with {
-            let key = match key {
-                Value::String(s, ..) => s,
-                v => {
-                    return Err((
-                        format!("$with key: {} is not a string.", v.inspect(span)?),
-                        span,
-                    )
-                        .into())
-                }
-            };
+    //     for (key, value) in with {
+    //         let key = match key {
+    //             Value::String(s, ..) => s,
+    //             v => {
+    //                 return Err((
+    //                     format!("$with key: {} is not a string.", v.inspect(span)?),
+    //                     span,
+    //                 )
+    //                     .into())
+    //             }
+    //         };
 
-            config.insert(
-                Spanned {
-                    node: key.into(),
-                    span,
-                },
-                value.span(span),
-            )?;
-        }
+    //         config.insert(
+    //             Spanned {
+    //                 node: key.into(),
+    //                 span,
+    //             },
+    //             value.span(span),
+    //         )?;
+    //     }
 
-        let (_, stmts) = parser.parser.load_module(&url, &mut config)?;
+    //     let (_, stmts) = parser.parser.load_module(&url, &mut config)?;
 
-        Ok(stmts)
-    } else {
-        parser.parser.parse_single_import(&url, span)
-    }
+    //     Ok(stmts)
+    // } else {
+    //     parser.parser.parse_single_import(&url, span)
+    // }
+    todo!()
 }
 
 fn module_functions(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {

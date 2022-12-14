@@ -1,10 +1,7 @@
 use std::{
-    cell::{Cell, RefCell},
-    collections::{BTreeMap, BTreeSet, HashMap, HashSet},
-    convert::TryFrom,
+    cell::Cell,
+    collections::{BTreeMap, HashSet},
     path::Path,
-    rc::Rc,
-    sync::Arc,
 };
 
 use codemap::{CodeMap, Span, Spanned};
@@ -13,38 +10,30 @@ use crate::{
     atrule::{
         keyframes::{Keyframes, KeyframesRuleSet},
         media::{MediaQuery, MediaRule},
-        mixin::Content,
-        AtRuleKind, SupportsRule, UnknownAtRule,
+        SupportsRule, UnknownAtRule,
     },
     builtin::modules::{ModuleConfig, Modules},
     common::{unvendor, Identifier, QuoteKind},
     error::SassResult,
     lexer::Lexer,
-    scope::{Scope, Scopes},
-    selector::{
-        ComplexSelectorComponent, ExtendRule, ExtendedSelector, Extender, Selector, SelectorParser,
-    },
+    selector::{ExtendedSelector, Selector},
     style::Style,
     utils::{as_hex, is_name, is_name_start},
-    value::Value,
-    Options, {Cow, Token},
+    Options, Token,
 };
 
-use common::{Comment, ContextFlags, NeverEmptyVec, SelectorOrStyle};
+use common::ContextFlags;
 pub(crate) use value_new::{
-    Argument, ArgumentDeclaration, ArgumentInvocation, ArgumentResult, CalculationArg,
-    CalculationName, MaybeEvaledArguments, SassCalculation,
+    Argument, ArgumentDeclaration, ArgumentInvocation, ArgumentResult, MaybeEvaledArguments,
+    SassCalculation,
 };
 
 pub(crate) use value::{add, cmp, mul, sub};
-
-use variable::VariableValue;
 
 use self::{
     function::RESERVED_IDENTIFIERS,
     import::is_plain_css_import,
     value_new::{opposite_bracket, AstExpr, Predicate, StringExpr, ValueParser},
-    visitor::Environment,
 };
 
 // mod args;
@@ -341,6 +330,7 @@ impl ArgumentDeclaration {
 #[derive(Debug, Clone)]
 pub(crate) struct AstLoudComment {
     text: Interpolation,
+    span: Span,
 }
 
 #[derive(Debug, Clone)]
@@ -505,14 +495,14 @@ pub(crate) enum Stmt {
         body: Vec<Self>,
     },
     Style(Style),
-    Media(Box<MediaRule>),
+    Media(Box<MediaRule>, bool),
     UnknownAtRule(Box<UnknownAtRule>),
     Supports(Box<SupportsRule>),
-    AtRoot {
-        body: Vec<Stmt>,
-    },
-    Comment(String),
-    Return(Box<Value>),
+    // AtRoot {
+    //     body: Vec<Stmt>,
+    // },
+    Comment(String, Span),
+    // Return(Box<Value>),
     Keyframes(Box<Keyframes>),
     KeyframesRuleSet(Box<KeyframesRuleSet>),
     /// A plain import such as `@import "foo.css";` or
@@ -585,9 +575,9 @@ impl StyleSheet {
 }
 
 impl<'a, 'b> Parser<'a, 'b> {
-    pub fn parse(&mut self) -> SassResult<Vec<Stmt>> {
-        todo!()
-    }
+    // pub fn parse(&mut self) -> SassResult<Vec<Stmt>> {
+    //     todo!()
+    // }
 
     pub fn __parse(&mut self) -> SassResult<StyleSheet> {
         let mut style_sheet = StyleSheet::new();
@@ -1129,40 +1119,6 @@ impl<'a, 'b> Parser<'a, 'b> {
             arguments,
             children,
         }))
-
-        //     var precedingComment = lastSilentComment;
-        // lastSilentComment = null;
-        // var name = identifier(normalize: true);
-        // whitespace();
-        // var arguments = _argumentDeclaration();
-
-        // if (_inMixin || _inContentBlock) {
-        //   error("Mixins may not contain function declarations.",
-        //       scanner.spanFrom(start));
-        // } else if (_inControlDirective) {
-        //   error("Functions may not be declared in control directives.",
-        //       scanner.spanFrom(start));
-        // }
-
-        // switch (unvendor(name)) {
-        //   case "calc":
-        //   case "element":
-        //   case "expression":
-        //   case "url":
-        //   case "and":
-        //   case "or":
-        //   case "not":
-        //   case "clamp":
-        //     error("Invalid function name.", scanner.spanFrom(start));
-        // }
-
-        // whitespace();
-        // return _withChildren(
-        //     _functionChild,
-        //     start,
-        //     (children, span) => FunctionRule(name, arguments, children, span,
-        //         comment: precedingComment));
-        // todo!()
     }
 
     fn function_child(&mut self) -> SassResult<AstStmt> {
@@ -1370,7 +1326,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         // backtrack and re-parse as a function expression.
         let mut buffer = Interpolation::new(self.span_before);
         buffer.add_string(Spanned {
-            node: name.unwrap_or_else(|| "url").to_owned(),
+            node: name.unwrap_or("url").to_owned(),
             span: self.span_before,
         });
         buffer.add_char('(');
@@ -1383,7 +1339,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                 }),
                 '!' | '%' | '&' | '*'..='~' | '\u{80}'..=char::MAX => {
                     self.toks.next();
-                    buffer.add_char(next.kind)
+                    buffer.add_char(next.kind);
                 }
                 '#' => {
                     if matches!(self.toks.peek_n(1), Some(Token { kind: '{', .. })) {
@@ -1391,7 +1347,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                         buffer.add_interpolation(interpolation);
                     } else {
                         self.toks.next();
-                        buffer.add_char(next.kind)
+                        buffer.add_char(next.kind);
                     }
                 }
                 ')' => {
@@ -1679,11 +1635,12 @@ impl<'a, 'b> Parser<'a, 'b> {
         let was_in_unknown_at_rule = self.flags.in_unknown_at_rule();
         self.flags.set(ContextFlags::IN_UNKNOWN_AT_RULE, true);
 
-        let mut value: Option<Interpolation> = None;
-
-        if !self.toks.next_char_is('!') && !self.at_end_of_statement() {
-            value = Some(self.almost_any_value(false)?);
-        }
+        let mut value: Option<Interpolation> =
+            if !self.toks.next_char_is('!') && !self.at_end_of_statement() {
+                Some(self.almost_any_value(false)?)
+            } else {
+                None
+            };
 
         let children = if self.looking_at_children() {
             Some(self.with_children(Self::__parse_stmt)?)
@@ -1709,7 +1666,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
     fn parse_warn_rule(&mut self) -> SassResult<AstStmt> {
         let value = self.parse_expression(None, None, None)?;
-        self.expect_statement_separator(Some("@warn rule"));
+        self.expect_statement_separator(Some("@warn rule"))?;
         Ok(AstStmt::Warn(AstWarn {
             value: value.node,
             span: value.span,
@@ -1762,7 +1719,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             Some("content") => self.parse_content_rule(),
             Some("debug") => self.parse_debug_rule(),
             Some("each") => self.parse_each_rule(child),
-            Some("else") => self.parse_disallowed_at_rule(),
+            Some("else") | Some("return") => self.parse_disallowed_at_rule(),
             Some("error") => self.parse_error_rule(),
             Some("extend") => self.parse_extend_rule(),
             Some("for") => self.parse_for_rule(child),
@@ -1780,7 +1737,6 @@ impl<'a, 'b> Parser<'a, 'b> {
             Some("media") => self.parse_media_rule(),
             Some("mixin") => self.parse_mixin_rule(),
             Some("-moz-document") => self.parse_moz_document_rule(name),
-            Some("return") => self.parse_disallowed_at_rule(),
             Some("supports") => self.parse_supports_rule(),
             Some("use") => {
                 // _isUseAllowed = wasUseAllowed;
@@ -1921,7 +1877,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                 span: self.toks.span_from(start),
             }))
         } else {
-            self.expect_statement_separator(None);
+            self.expect_statement_separator(None)?;
             Ok(AstStmt::Style(AstStyle {
                 name,
                 value: Some(value.node),
@@ -2062,8 +2018,6 @@ impl<'a, 'b> Parser<'a, 'b> {
         self.expect_char('/')?;
         self.expect_char('*')?;
 
-        let mut prev_was_star = false;
-
         while let Some(next) = self.toks.next() {
             if next.kind != '*' {
                 continue;
@@ -2080,6 +2034,7 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     fn parse_loud_comment(&mut self) -> SassResult<AstLoudComment> {
+        let start = self.toks.cursor();
         self.expect_char('/')?;
         self.expect_char('*')?;
 
@@ -2105,7 +2060,10 @@ impl<'a, 'b> Parser<'a, 'b> {
                             pos: self.span_before,
                         });
 
-                        return Ok(AstLoudComment { text: buffer });
+                        return Ok(AstLoudComment {
+                            text: buffer,
+                            span: self.toks.span_from(start),
+                        });
                     }
                 }
                 '\r' => {
@@ -2134,9 +2092,9 @@ impl<'a, 'b> Parser<'a, 'b> {
             Some(Token {
                 kind: ';' | '}', ..
             })
-            | None => return Ok(()),
+            | None => Ok(()),
             _ => {
-                self.expect_char(';');
+                self.expect_char(';')?;
                 Ok(())
             }
         }
@@ -2179,7 +2137,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                         buffer.add_string(Spanned {
                             node: comment,
                             span: self.span_before,
-                        })
+                        });
                     } else {
                         self.toks.next();
                         buffer.add_token(tok);
@@ -2239,7 +2197,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                         break;
                     }
                     buffer.add_token(tok);
-                    self.expect_char(brackets.pop().unwrap());
+                    self.expect_char(brackets.pop().unwrap())?;
                     wrote_newline = false;
                 }
                 ';' => {
@@ -2403,9 +2361,9 @@ impl<'a, 'b> Parser<'a, 'b> {
         })
     }
 
-    fn parse_expression<'c>(
+    fn parse_expression(
         &mut self,
-        parse_until: Option<Predicate<'c>>,
+        parse_until: Option<Predicate>,
         inside_bracketed_list: Option<bool>,
         single_equals: Option<bool>,
     ) -> SassResult<Spanned<AstExpr>> {
@@ -2550,7 +2508,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                 break value?;
             }
 
-            self.expect_statement_separator(None).unwrap();
+            self.expect_statement_separator(None);
 
             if !could_be_selector {
                 break value?;
@@ -3446,74 +3404,74 @@ impl<'a, 'b> Parser<'a, 'b> {
         // Ok((Selector(selector), optional))
     }
 
-    /// Eat and return the contents of a comment.
-    ///
-    /// This function assumes that the starting "/" has already been consumed
-    /// The entirety of the comment, including the ending "*/" for multiline comments,
-    /// is consumed. Note that the ending "*/" is not included in the output.
-    #[allow(clippy::eval_order_dependence)]
-    pub fn parse_comment(&mut self) -> SassResult<Spanned<Comment>> {
-        let mut span = self.span_before;
-        Ok(Spanned {
-            node: match self.toks.next() {
-                Some(Token { kind: '/', .. }) => {
-                    while let Some(tok) = self.toks.peek() {
-                        if tok.kind == '\n' {
-                            break;
-                        }
-                        span = span.merge(tok.pos);
-                        self.toks.next();
-                    }
+    // /// Eat and return the contents of a comment.
+    // ///
+    // /// This function assumes that the starting "/" has already been consumed
+    // /// The entirety of the comment, including the ending "*/" for multiline comments,
+    // /// is consumed. Note that the ending "*/" is not included in the output.
+    // #[allow(clippy::eval_order_dependence)]
+    // pub fn parse_comment(&mut self) -> SassResult<Spanned<Comment>> {
+    //     let mut span = self.span_before;
+    //     Ok(Spanned {
+    //         node: match self.toks.next() {
+    //             Some(Token { kind: '/', .. }) => {
+    //                 while let Some(tok) = self.toks.peek() {
+    //                     if tok.kind == '\n' {
+    //                         break;
+    //                     }
+    //                     span = span.merge(tok.pos);
+    //                     self.toks.next();
+    //                 }
 
-                    Comment::Silent
-                }
-                Some(Token { kind: '*', .. }) => {
-                    let mut comment = String::new();
-                    while let Some(tok) = self.toks.next() {
-                        span = span.merge(tok.pos());
-                        match (tok.kind, self.toks.peek()) {
-                            ('*', Some(Token { kind: '/', .. })) => {
-                                self.toks.next();
-                                break;
-                            }
-                            ('#', Some(Token { kind: '{', .. })) => {
-                                self.toks.next();
-                                comment.push_str(
-                                    &self
-                                        .parse_interpolation()?
-                                        .to_css_string(span, self.options.is_compressed())?,
-                                );
-                                continue;
-                            }
-                            (..) => comment.push(tok.kind),
-                        }
-                    }
-                    Comment::Loud(comment)
-                }
-                Some(..) | None => return Err(("expected selector.", self.span_before).into()),
-            },
-            span,
-        })
-    }
+    //                 Comment::Silent
+    //             }
+    //             Some(Token { kind: '*', .. }) => {
+    //                 let mut comment = String::new();
+    //                 while let Some(tok) = self.toks.next() {
+    //                     span = span.merge(tok.pos());
+    //                     match (tok.kind, self.toks.peek()) {
+    //                         ('*', Some(Token { kind: '/', .. })) => {
+    //                             self.toks.next();
+    //                             break;
+    //                         }
+    //                         ('#', Some(Token { kind: '{', .. })) => {
+    //                             self.toks.next();
+    //                             comment.push_str(
+    //                                 &self
+    //                                     .parse_interpolation()?
+    //                                     .to_css_string(span, self.options.is_compressed())?,
+    //                             );
+    //                             continue;
+    //                         }
+    //                         (..) => comment.push(tok.kind),
+    //                     }
+    //                 }
+    //                 Comment::Loud(comment)
+    //             }
+    //             Some(..) | None => return Err(("expected selector.", self.span_before).into()),
+    //         },
+    //         span,
+    //     })
+    // }
 
-    #[track_caller]
-    pub fn parse_interpolation(&mut self) -> SassResult<Spanned<Value>> {
-        let val = self.parse_value(true, &|_| false)?;
+    // #[track_caller]
+    // pub fn parse_interpolation(&mut self) -> SassResult<Spanned<Value>> {
+    //     let val = self.parse_value(true, &|_| false)?;
 
-        self.span_before = val.span;
+    //     self.span_before = val.span;
 
-        self.expect_char('}')?;
+    //     self.expect_char('}')?;
 
-        Ok(val.map_node(Value::unquote))
-    }
+    //     Ok(val.map_node(Value::unquote))
+    // }
 
-    pub fn parse_interpolation_as_string(&mut self) -> SassResult<Cow<'static, str>> {
-        let interpolation = self.parse_interpolation()?;
-        Ok(match interpolation.node {
-            Value::String(v, ..) => Cow::owned(v),
-            v => v.to_css_string(interpolation.span, self.options.is_compressed())?,
-        })
-    }
+    // pub fn parse_interpolation_as_string(&mut self) -> SassResult<Cow<'static, str>> {
+    //     let interpolation = self.parse_interpolation()?;
+    //     Ok(match interpolation.node {
+    //         Value::String(v, ..) => Cow::owned(v),
+    //         v => v.to_css_string(interpolation.span, self.options.is_compressed())?,
+    //     })
+    // }
 
     // todo: this should also consume silent comments
     pub fn whitespace(&mut self) -> bool {

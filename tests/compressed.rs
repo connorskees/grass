@@ -68,6 +68,12 @@ test!(
     grass::Options::default().style(grass::OutputStyle::Compressed)
 );
 test!(
+    keeps_preserved_multiline_comment_before_ruleset,
+    "/*! abc */a {\n  color: red;\n}\n",
+    "/*! abc */a{color:red}",
+    grass::Options::default().style(grass::OutputStyle::Compressed)
+);
+test!(
     removes_multiline_comment_after_ruleset,
     "a {\n  color: red;\n}\n/* abc */",
     "a{color:red}",

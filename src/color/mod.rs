@@ -120,7 +120,7 @@ impl Rgba {
     }
 
     pub fn alpha(&self) -> Number {
-        self.alpha.clone()
+        self.alpha
     }
 }
 
@@ -143,19 +143,19 @@ impl Hsla {
     }
 
     pub fn hue(&self) -> Number {
-        self.hue.clone()
+        self.hue
     }
 
     pub fn saturation(&self) -> Number {
-        self.saturation.clone()
+        self.saturation
     }
 
     pub fn luminance(&self) -> Number {
-        self.luminance.clone()
+        self.luminance
     }
 
     pub fn alpha(&self) -> Number {
-        self.alpha.clone()
+        self.alpha
     }
 }
 
@@ -182,20 +182,20 @@ impl Color {
         blue = blue.clamp(0, 255);
         alpha = alpha.clamp(0, 1);
 
-        let repr = repr(&red, &green, &blue, &alpha);
+        let repr = repr(red, green, blue, alpha);
         Color::new_rgba(red, green, blue, alpha, repr)
     }
 
     pub fn red(&self) -> Number {
-        self.rgba.red.clone().round()
+        self.rgba.red.round()
     }
 
     pub fn blue(&self) -> Number {
-        self.rgba.blue.clone().round()
+        self.rgba.blue.round()
     }
 
     pub fn green(&self) -> Number {
-        self.rgba.green.clone().round()
+        self.rgba.green.round()
     }
 
     /// Mix two colors together with weight
@@ -203,24 +203,23 @@ impl Color {
     /// <https://github.com/sass/dart-sass/blob/0d0270cb12a9ac5cce73a4d0785fecb00735feee/lib/src/functions/color.dart#L718>
     pub fn mix(self, other: &Color, weight: Number) -> Self {
         let weight = weight.clamp(0, 100);
-        let normalized_weight = weight.clone() * Number::from(2) - Number::one();
+        let normalized_weight = weight * Number::from(2) - Number::one();
         let alpha_distance = self.alpha() - other.alpha();
 
-        let combined_weight1 =
-            if normalized_weight.clone() * alpha_distance.clone() == Number::from(-1) {
-                normalized_weight
-            } else {
-                (normalized_weight.clone() + alpha_distance.clone())
-                    / (Number::one() + normalized_weight * alpha_distance)
-            };
+        let combined_weight1 = if normalized_weight * alpha_distance == Number::from(-1) {
+            normalized_weight
+        } else {
+            (normalized_weight + alpha_distance)
+                / (Number::one() + normalized_weight * alpha_distance)
+        };
         let weight1 = (combined_weight1 + Number::one()) / Number::from(2);
-        let weight2 = Number::one() - weight1.clone();
+        let weight2 = Number::one() - weight1;
 
         Color::from_rgba(
-            self.red() * weight1.clone() + other.red() * weight2.clone(),
-            self.green() * weight1.clone() + other.green() * weight2.clone(),
+            self.red() * weight1 + other.red() * weight2,
+            self.green() * weight1 + other.green() * weight2,
             self.blue() * weight1 + other.blue() * weight2,
-            self.alpha() * weight.clone() + other.alpha() * (Number::one() - weight),
+            self.alpha() * weight + other.alpha() * (Number::one() - weight),
         )
     }
 }
@@ -238,10 +237,10 @@ impl Color {
         let green = self.green() / Number::from(255);
         let blue = self.blue() / Number::from(255);
 
-        let min = min(&red, min(&green, &blue)).clone();
-        let max = max(&red, max(&green, &blue)).clone();
+        let min = min(red, min(green, blue));
+        let max = max(red, max(green, blue));
 
-        let delta = max.clone() - min.clone();
+        let delta = max - min;
 
         let hue = if min == max {
             Number::zero()
@@ -266,14 +265,14 @@ impl Color {
         let green = self.green() / Number::from(255);
         let blue = self.blue() / Number::from(255);
 
-        let min = min(&red, min(&green, &blue)).clone();
+        let min = min(red, min(green, blue));
         let max = red.max(green.max(blue));
 
         if min == max {
             return Number::zero();
         }
 
-        let delta = max.clone() - min.clone();
+        let delta = max - min;
 
         let sum = max + min;
 
@@ -296,7 +295,7 @@ impl Color {
         let red: Number = self.red() / Number::from(255);
         let green = self.green() / Number::from(255);
         let blue = self.blue() / Number::from(255);
-        let min = min(&red, min(&green, &blue)).clone();
+        let min = min(red, min(green, blue));
         let max = red.max(green.max(blue));
         (((min + max) / Number::from(2)) * Number::from(100)).round()
     }
@@ -309,16 +308,16 @@ impl Color {
         let red = self.red() / Number::from(255);
         let green = self.green() / Number::from(255);
         let blue = self.blue() / Number::from(255);
-        let min = min(&red, min(&green, &blue)).clone();
-        let max = max(&red, max(&green, &blue)).clone();
+        let min = min(red, min(green, blue));
+        let max = max(red, max(green, blue));
 
-        let lightness = (min.clone() + max.clone()) / Number::from(2);
+        let lightness = (min + max) / Number::from(2);
 
         let saturation = if min == max {
             Number::zero()
         } else {
-            let d = max.clone() - min.clone();
-            let mm = max.clone() + min.clone();
+            let d = max - min;
+            let mm = max + min;
             d / if mm > Number::one() {
                 Number::from(2) - mm
             } else {
@@ -386,28 +385,23 @@ impl Color {
         let luminance = luminance.clamp(0, 1);
         let alpha = alpha.clamp(0, 1);
 
-        let hsla = Hsla::new(
-            hue.clone(),
-            saturation.clone(),
-            luminance.clone(),
-            alpha.clone(),
-        );
+        let hsla = Hsla::new(hue, saturation, luminance, alpha);
 
         if saturation.is_zero() {
             let val = luminance * Number::from(255);
-            let repr = repr(&val, &val, &val, &alpha);
-            return Color::new_hsla(val.clone(), val.clone(), val, alpha, hsla, repr);
+            let repr = repr(val, val, val, alpha);
+            return Color::new_hsla(val, val, val, alpha, hsla, repr);
         }
 
         let temporary_1 = if luminance < Number::small_ratio(1, 2) {
-            luminance.clone() * (Number::one() + saturation)
+            luminance * (Number::one() + saturation)
         } else {
-            luminance.clone() + saturation.clone() - luminance.clone() * saturation
+            luminance + saturation - luminance * saturation
         };
-        let temporary_2 = Number::from(2) * luminance - temporary_1.clone();
+        let temporary_2 = Number::from(2) * luminance - temporary_1;
         hue /= Number::from(360);
-        let mut temporary_r = hue.clone() + Number::small_ratio(1, 3);
-        let mut temporary_g = hue.clone();
+        let mut temporary_r = hue + Number::small_ratio(1, 3);
+        let mut temporary_g = hue;
         let mut temporary_b = hue - Number::small_ratio(1, 3);
 
         macro_rules! clamp_temp {
@@ -424,27 +418,24 @@ impl Color {
         clamp_temp!(temporary_g);
         clamp_temp!(temporary_b);
 
-        fn channel(temp: Number, temp1: &Number, temp2: &Number) -> Number {
+        fn channel(temp: Number, temp1: Number, temp2: Number) -> Number {
             Number::from(255)
-                * if Number::from(6) * temp.clone() < Number::one() {
-                    temp2.clone() + (temp1.clone() - temp2.clone()) * Number::from(6) * temp
-                } else if Number::from(2) * temp.clone() < Number::one() {
-                    temp1.clone()
-                } else if Number::from(3) * temp.clone() < Number::from(2) {
-                    temp2.clone()
-                        + (temp1.clone() - temp2.clone())
-                            * (Number::small_ratio(2, 3) - temp)
-                            * Number::from(6)
+                * if Number::from(6) * temp < Number::one() {
+                    temp2 + (temp1 - temp2) * Number::from(6) * temp
+                } else if Number::from(2) * temp < Number::one() {
+                    temp1
+                } else if Number::from(3) * temp < Number::from(2) {
+                    temp2 + (temp1 - temp2) * (Number::small_ratio(2, 3) - temp) * Number::from(6)
                 } else {
-                    temp2.clone()
+                    temp2
                 }
         }
 
-        let red = channel(temporary_r, &temporary_1, &temporary_2);
-        let green = channel(temporary_g, &temporary_1, &temporary_2);
-        let blue = channel(temporary_b, &temporary_1, &temporary_2);
+        let red = channel(temporary_r, temporary_1, temporary_2);
+        let green = channel(temporary_g, temporary_1, temporary_2);
+        let blue = channel(temporary_b, temporary_1, temporary_2);
 
-        let repr = repr(&red, &green, &blue, &alpha);
+        let repr = repr(red, green, blue, alpha);
         Color::new_hsla(red, green, blue, alpha, hsla, repr)
     }
 
@@ -456,7 +447,7 @@ impl Color {
         let red = Number::from(u8::max_value()) - self.red();
         let green = Number::from(u8::max_value()) - self.green();
         let blue = Number::from(u8::max_value()) - self.blue();
-        let repr = repr(&red, &green, &blue, &self.alpha());
+        let repr = repr(red, green, blue, self.alpha());
 
         let inverse = Color::new_rgba(red, green, blue, self.alpha(), repr);
 
@@ -528,14 +519,14 @@ impl Color {
         black /= Number::from(100);
         alpha = alpha.clamp(Number::zero(), Number::one());
 
-        let white_black_sum = white.clone() + black.clone();
+        let white_black_sum = white + black;
 
         if white_black_sum > Number::one() {
-            white /= white_black_sum.clone();
+            white /= white_black_sum;
             black /= white_black_sum;
         }
 
-        let factor = Number::one() - white.clone() - black;
+        let factor = Number::one() - white - black;
 
         fn channel(m1: Number, m2: Number, mut hue: Number) -> Number {
             if hue < Number::zero() {
@@ -547,36 +538,35 @@ impl Color {
             }
 
             if hue < Number::small_ratio(1, 6) {
-                m1.clone() + (m2 - m1) * hue * Number::from(6)
+                m1 + (m2 - m1) * hue * Number::from(6)
             } else if hue < Number::small_ratio(1, 2) {
                 m2
             } else if hue < Number::small_ratio(2, 3) {
-                m1.clone() + (m2 - m1) * (Number::small_ratio(2, 3) - hue) * Number::from(6)
+                m1 + (m2 - m1) * (Number::small_ratio(2, 3) - hue) * Number::from(6)
             } else {
                 m1
             }
         }
 
         let to_rgb = |hue: Number| -> Number {
-            let channel =
-                channel(Number::zero(), Number::one(), hue) * factor.clone() + white.clone();
+            let channel = channel(Number::zero(), Number::one(), hue) * factor + white;
             channel * Number::from(255)
         };
 
-        let red = to_rgb(hue.clone() + Number::small_ratio(1, 3));
-        let green = to_rgb(hue.clone());
+        let red = to_rgb(hue + Number::small_ratio(1, 3));
+        let green = to_rgb(hue);
         let blue = to_rgb(hue - Number::small_ratio(1, 3));
 
-        let repr = repr(&red, &green, &blue, &alpha);
+        let repr = repr(red, green, blue, alpha);
 
         Color::new_rgba(red, green, blue, alpha, repr)
     }
 }
 
 /// Get the proper representation from RGBA values
-fn repr(red: &Number, green: &Number, blue: &Number, alpha: &Number) -> String {
-    fn into_u8(channel: &Number) -> u8 {
-        if channel > &Number::from(255) {
+fn repr(red: Number, green: Number, blue: Number, alpha: Number) -> String {
+    fn into_u8(channel: Number) -> u8 {
+        if channel > Number::from(255) {
             255_u8
         } else if channel.is_negative() {
             0_u8
@@ -589,7 +579,7 @@ fn repr(red: &Number, green: &Number, blue: &Number, alpha: &Number) -> String {
     let green_u8 = into_u8(green);
     let blue_u8 = into_u8(blue);
 
-    if alpha < &Number::one() {
+    if alpha < Number::one() {
         format!(
             "rgba({}, {}, {}, {})",
             red_u8,

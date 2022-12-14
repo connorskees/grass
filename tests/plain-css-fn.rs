@@ -82,5 +82,4 @@ test!(
     "a {\n  color: or(foo);\n}\n"
 );
 
-
 // todo: @function and($a) {} a { color: and(foo) }

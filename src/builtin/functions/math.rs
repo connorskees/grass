@@ -208,8 +208,8 @@ pub(crate) fn min(args: ArgumentResult, parser: &mut Visitor) -> SassResult<Valu
     };
 
     for (num, unit) in nums {
-        let lhs = Value::Dimension((num.clone()), unit.clone(), None);
-        let rhs = Value::Dimension((min.0.clone()), min.1.clone(), None);
+        let lhs = Value::Dimension((num), unit.clone(), None);
+        let rhs = Value::Dimension((min.0), min.1.clone(), None);
 
         if crate::parse::cmp(
             lhs,
@@ -245,8 +245,8 @@ pub(crate) fn max(args: ArgumentResult, parser: &mut Visitor) -> SassResult<Valu
     };
 
     for (num, unit) in nums {
-        let lhs = Value::Dimension((num.clone()), unit.clone(), None);
-        let rhs = Value::Dimension((max.0.clone()), max.1.clone(), None);
+        let lhs = Value::Dimension((num), unit.clone(), None);
+        let rhs = Value::Dimension((max.0), max.1.clone(), None);
 
         if crate::parse::cmp(
             lhs,

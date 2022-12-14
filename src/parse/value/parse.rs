@@ -1,25 +1,25 @@
-use std::{iter::Iterator, mem};
+use std::iter::Iterator;
 
-use num_bigint::BigInt;
-use num_rational::{BigRational, Rational64};
-use num_traits::{pow, One, ToPrimitive};
+// use num_bigint::BigInt;
+// use num_rational::{BigRational, Rational64};
+// use num_traits::{pow, One, ToPrimitive};
 
-use codemap::{Span, Spanned};
+// use codemap::Spanned;
 
-use crate::{
-    builtin::GLOBAL_FUNCTIONS,
-    color::{Color, NAMED_COLORS},
-    common::{unvendor, Brackets, Identifier, ListSeparator, QuoteKind},
-    error::SassResult,
-    lexer::Lexer,
-    parse::value_new::Predicate,
-    unit::Unit,
-    utils::{is_name, ParsedNumber},
-    value::{Number, SassFunction, SassMap, Value},
-    Token,
-};
+// use crate::{
+// builtin::GLOBAL_FUNCTIONS,
+// color::{Color, NAMED_COLORS},
+// common::{unvendor, Brackets, Identifier, ListSeparator, QuoteKind},
+// error::SassResult,
+// lexer::Lexer,
+// parse::value_new::Predicate,
+// unit::Unit,
+// utils::is_name,
+// value::Value,
+// Token,
+// };
 
-use super::eval::ValueVisitor;
+// use super::eval::ValueVisitor;
 
 use super::super::Parser;
 
@@ -53,124 +53,124 @@ impl<'a, 'b> Parser<'a, 'b> {
     /// Parse a value from a stream of tokens
     ///
     /// This function will cease parsing if the predicate returns true.
-    #[track_caller]
-    pub(crate) fn parse_value(
-        &mut self,
-        in_paren: bool,
-        predicate: Predicate<'_>,
-    ) -> SassResult<Spanned<Value>> {
-        todo!()
-        // self.whitespace();
+    // #[track_caller]
+    // pub(crate) fn parse_value(
+    //     &mut self,
+    //     in_paren: bool,
+    //     predicate: Predicate<'_>,
+    // ) -> SassResult<Spanned<Value>> {
+    //     todo!()
+    //     // self.whitespace();
 
-        // let span = match self.toks.peek() {
-        //     Some(Token { kind: '}', .. })
-        //     | Some(Token { kind: ';', .. })
-        //     | Some(Token { kind: '{', .. })
-        //     | None => return Err(("Expected expression.", self.span_before).into()),
-        //     Some(Token { pos, .. }) => pos,
-        // };
+    //     // let span = match self.toks.peek() {
+    //     //     Some(Token { kind: '}', .. })
+    //     //     | Some(Token { kind: ';', .. })
+    //     //     | Some(Token { kind: '{', .. })
+    //     //     | None => return Err(("Expected expression.", self.span_before).into()),
+    //     //     Some(Token { pos, .. }) => pos,
+    //     // };
 
-        // if predicate(self) {
-        //     return Err(("Expected expression.", span).into());
-        // }
+    //     // if predicate(self) {
+    //     //     return Err(("Expected expression.", span).into());
+    //     // }
 
-        // let mut last_was_whitespace = false;
-        // let mut space_separated = Vec::new();
-        // let mut comma_separated = Vec::new();
-        // let mut iter = IntermediateValueIterator::new(self, &predicate);
-        // while let Some(val) = iter.next() {
-        //     let val = val?;
-        //     match val.node {
-        //         IntermediateValue::Value(v) => {
-        //             last_was_whitespace = false;
-        //             space_separated.push(v.span(val.span));
-        //         }
-        //         IntermediateValue::Op(op) => {
-        //             iter.parse_op(
-        //                 Spanned {
-        //                     node: op,
-        //                     span: val.span,
-        //                 },
-        //                 &mut space_separated,
-        //                 last_was_whitespace,
-        //                 in_paren,
-        //             )?;
-        //         }
-        //         IntermediateValue::Whitespace => {
-        //             last_was_whitespace = true;
-        //             continue;
-        //         }
-        //         IntermediateValue::Comma => {
-        //             last_was_whitespace = false;
+    //     // let mut last_was_whitespace = false;
+    //     // let mut space_separated = Vec::new();
+    //     // let mut comma_separated = Vec::new();
+    //     // let mut iter = IntermediateValueIterator::new(self, &predicate);
+    //     // while let Some(val) = iter.next() {
+    //     //     let val = val?;
+    //     //     match val.node {
+    //     //         IntermediateValue::Value(v) => {
+    //     //             last_was_whitespace = false;
+    //     //             space_separated.push(v.span(val.span));
+    //     //         }
+    //     //         IntermediateValue::Op(op) => {
+    //     //             iter.parse_op(
+    //     //                 Spanned {
+    //     //                     node: op,
+    //     //                     span: val.span,
+    //     //                 },
+    //     //                 &mut space_separated,
+    //     //                 last_was_whitespace,
+    //     //                 in_paren,
+    //     //             )?;
+    //     //         }
+    //     //         IntermediateValue::Whitespace => {
+    //     //             last_was_whitespace = true;
+    //     //             continue;
+    //     //         }
+    //     //         IntermediateValue::Comma => {
+    //     //             last_was_whitespace = false;
 
-        //             if space_separated.len() == 1 {
-        //                 comma_separated.push(space_separated.pop().unwrap());
-        //             } else {
-        //                 let mut span = space_separated
-        //                     .first()
-        //                     .ok_or(("Expected expression.", val.span))?
-        //                     .span;
-        //                 comma_separated.push(
-        //                     HigherIntermediateValue::Literal(Value::List(
-        //                         mem::take(&mut space_separated)
-        //                             .into_iter()
-        //                             .map(move |a| {
-        //                                 span = span.merge(a.span);
-        //                                 a.node
-        //                             })
-        //                             .map(|a| ValueVisitor::new(iter.parser, span).eval(a, in_paren))
-        //                             .collect::<SassResult<Vec<Value>>>()?,
-        //                         ListSeparator::Space,
-        //                         Brackets::None,
-        //                     ))
-        //                     .span(span),
-        //                 );
-        //             }
-        //         }
-        //     }
-        // }
+    //     //             if space_separated.len() == 1 {
+    //     //                 comma_separated.push(space_separated.pop().unwrap());
+    //     //             } else {
+    //     //                 let mut span = space_separated
+    //     //                     .first()
+    //     //                     .ok_or(("Expected expression.", val.span))?
+    //     //                     .span;
+    //     //                 comma_separated.push(
+    //     //                     HigherIntermediateValue::Literal(Value::List(
+    //     //                         mem::take(&mut space_separated)
+    //     //                             .into_iter()
+    //     //                             .map(move |a| {
+    //     //                                 span = span.merge(a.span);
+    //     //                                 a.node
+    //     //                             })
+    //     //                             .map(|a| ValueVisitor::new(iter.parser, span).eval(a, in_paren))
+    //     //                             .collect::<SassResult<Vec<Value>>>()?,
+    //     //                         ListSeparator::Space,
+    //     //                         Brackets::None,
+    //     //                     ))
+    //     //                     .span(span),
+    //     //                 );
+    //     //             }
+    //     //         }
+    //     //     }
+    //     // }
 
-        // Ok(if !comma_separated.is_empty() {
-        //     if space_separated.len() == 1 {
-        //         comma_separated.push(space_separated.pop().unwrap());
-        //     } else if !space_separated.is_empty() {
-        //         comma_separated.push(
-        //             HigherIntermediateValue::Literal(Value::List(
-        //                 space_separated
-        //                     .into_iter()
-        //                     .map(|a| ValueVisitor::new(self, span).eval(a.node, in_paren))
-        //                     .collect::<SassResult<Vec<Value>>>()?,
-        //                 ListSeparator::Space,
-        //                 Brackets::None,
-        //             ))
-        //             .span(span),
-        //         );
-        //     }
-        //     Value::List(
-        //         comma_separated
-        //             .into_iter()
-        //             .map(|a| ValueVisitor::new(self, span).eval(a.node, in_paren))
-        //             .collect::<SassResult<Vec<Value>>>()?,
-        //         ListSeparator::Comma,
-        //         Brackets::None,
-        //     )
-        //     .span(span)
-        // } else if space_separated.len() == 1 {
-        //     ValueVisitor::new(self, span)
-        //         .eval(space_separated.pop().unwrap().node, in_paren)?
-        //         .span(span)
-        // } else {
-        //     Value::List(
-        //         space_separated
-        //             .into_iter()
-        //             .map(|a| ValueVisitor::new(self, span).eval(a.node, in_paren))
-        //             .collect::<SassResult<Vec<Value>>>()?,
-        //         ListSeparator::Space,
-        //         Brackets::None,
-        //     )
-        //     .span(span)
-        // })
-    }
+    //     // Ok(if !comma_separated.is_empty() {
+    //     //     if space_separated.len() == 1 {
+    //     //         comma_separated.push(space_separated.pop().unwrap());
+    //     //     } else if !space_separated.is_empty() {
+    //     //         comma_separated.push(
+    //     //             HigherIntermediateValue::Literal(Value::List(
+    //     //                 space_separated
+    //     //                     .into_iter()
+    //     //                     .map(|a| ValueVisitor::new(self, span).eval(a.node, in_paren))
+    //     //                     .collect::<SassResult<Vec<Value>>>()?,
+    //     //                 ListSeparator::Space,
+    //     //                 Brackets::None,
+    //     //             ))
+    //     //             .span(span),
+    //     //         );
+    //     //     }
+    //     //     Value::List(
+    //     //         comma_separated
+    //     //             .into_iter()
+    //     //             .map(|a| ValueVisitor::new(self, span).eval(a.node, in_paren))
+    //     //             .collect::<SassResult<Vec<Value>>>()?,
+    //     //         ListSeparator::Comma,
+    //     //         Brackets::None,
+    //     //     )
+    //     //     .span(span)
+    //     // } else if space_separated.len() == 1 {
+    //     //     ValueVisitor::new(self, span)
+    //     //         .eval(space_separated.pop().unwrap().node, in_paren)?
+    //     //         .span(span)
+    //     // } else {
+    //     //     Value::List(
+    //     //         space_separated
+    //     //             .into_iter()
+    //     //             .map(|a| ValueVisitor::new(self, span).eval(a.node, in_paren))
+    //     //             .collect::<SassResult<Vec<Value>>>()?,
+    //     //         ListSeparator::Space,
+    //     //         Brackets::None,
+    //     //     )
+    //     //     .span(span)
+    //     // })
+    // }
 
     // pub(crate) fn parse_value_from_vec(
     //     &mut self,
@@ -396,87 +396,87 @@ impl<'a, 'b> Parser<'a, 'b> {
         buf
     }
 
-    pub fn parse_number(&mut self, predicate: Predicate<'_>) -> SassResult<Spanned<ParsedNumber>> {
-        let mut span = self.toks.peek().unwrap().pos;
-        let mut whole = self.parse_whole_number();
+    // pub fn parse_number(&mut self, predicate: Predicate<'_>) -> SassResult<Spanned<ParsedNumber>> {
+    //     let mut span = self.toks.peek().unwrap().pos;
+    //     let mut whole = self.parse_whole_number();
 
-        if self.toks.peek().is_none() || predicate(self) {
-            return Ok(Spanned {
-                node: ParsedNumber::new(whole, 0, String::new(), true),
-                span,
-            });
-        }
+    //     if self.toks.peek().is_none() || predicate(self) {
+    //         return Ok(Spanned {
+    //             node: ParsedNumber::new(whole, 0, String::new(), true),
+    //             span,
+    //         });
+    //     }
 
-        let next_tok = self.toks.peek().unwrap();
+    //     let next_tok = self.toks.peek().unwrap();
 
-        let dec_len = if next_tok.kind == '.' {
-            self.toks.next();
+    //     let dec_len = if next_tok.kind == '.' {
+    //         self.toks.next();
 
-            let dec = self.parse_whole_number();
-            if dec.is_empty() {
-                return Err(("Expected digit.", next_tok.pos()).into());
-            }
+    //         let dec = self.parse_whole_number();
+    //         if dec.is_empty() {
+    //             return Err(("Expected digit.", next_tok.pos()).into());
+    //         }
 
-            whole.push_str(&dec);
+    //         whole.push_str(&dec);
 
-            dec.len()
-        } else {
-            0
-        };
+    //         dec.len()
+    //     } else {
+    //         0
+    //     };
 
-        let mut times_ten = String::new();
-        let mut times_ten_is_postive = true;
+    //     let mut times_ten = String::new();
+    //     let mut times_ten_is_postive = true;
 
-        if let Some(Token { kind: 'e', .. }) | Some(Token { kind: 'E', .. }) = self.toks.peek() {
-            if let Some(tok) = self.toks.peek_next() {
-                match tok.kind {
-                    '-' => {
-                        self.toks.next();
-                        self.toks.next();
-                        times_ten_is_postive = false;
+    //     if let Some(Token { kind: 'e', .. }) | Some(Token { kind: 'E', .. }) = self.toks.peek() {
+    //         if let Some(tok) = self.toks.peek_next() {
+    //             match tok.kind {
+    //                 '-' => {
+    //                     self.toks.next();
+    //                     self.toks.next();
+    //                     times_ten_is_postive = false;
 
-                        times_ten = self.parse_whole_number();
+    //                     times_ten = self.parse_whole_number();
 
-                        if times_ten.is_empty() {
-                            return Err(
-                                ("Expected digit.", self.toks.peek().unwrap_or(tok).pos).into()
-                            );
-                        } else if times_ten.len() > 2 {
-                            return Err((
-                                "Exponent too negative.",
-                                self.toks.peek().unwrap_or(tok).pos,
-                            )
-                                .into());
-                        }
-                    }
-                    '0'..='9' => {
-                        self.toks.next();
-                        times_ten = self.parse_whole_number();
+    //                     if times_ten.is_empty() {
+    //                         return Err(
+    //                             ("Expected digit.", self.toks.peek().unwrap_or(tok).pos).into()
+    //                         );
+    //                     } else if times_ten.len() > 2 {
+    //                         return Err((
+    //                             "Exponent too negative.",
+    //                             self.toks.peek().unwrap_or(tok).pos,
+    //                         )
+    //                             .into());
+    //                     }
+    //                 }
+    //                 '0'..='9' => {
+    //                     self.toks.next();
+    //                     times_ten = self.parse_whole_number();
 
-                        if times_ten.len() > 2 {
-                            return Err((
-                                "Exponent too large.",
-                                self.toks.peek().unwrap_or(tok).pos,
-                            )
-                                .into());
-                        }
-                    }
-                    _ => {}
-                }
-            }
-        }
+    //                     if times_ten.len() > 2 {
+    //                         return Err((
+    //                             "Exponent too large.",
+    //                             self.toks.peek().unwrap_or(tok).pos,
+    //                         )
+    //                             .into());
+    //                     }
+    //                 }
+    //                 _ => {}
+    //             }
+    //         }
+    //     }
 
-        if let Some(Token { pos, .. }) = self.toks.peek_previous() {
-            span = span.merge(pos);
-        }
+    //     if let Some(Token { pos, .. }) = self.toks.peek_previous() {
+    //         span = span.merge(pos);
+    //     }
 
-        self.toks.reset_cursor();
+    //     self.toks.reset_cursor();
 
-        Ok(Spanned {
-            node: ParsedNumber::new(whole, dec_len, times_ten, times_ten_is_postive),
-            span,
-        })
-    }
+    //     Ok(Spanned {
+    //         node: ParsedNumber::new(whole, dec_len, times_ten, times_ten_is_postive),
+    //         span,
+    //     })
+    // }
 
     // fn parse_bracketed_list(&mut self) -> SassResult<Spanned<IntermediateValue>> {
     //     let mut span = self.span_before;
@@ -709,18 +709,18 @@ impl<'a, 'b> Parser<'a, 'b> {
     //     })
     // }
 
-    fn in_interpolated_identifier_body(&mut self) -> bool {
-        match self.toks.peek() {
-            Some(Token { kind: '\\', .. }) => true,
-            Some(Token { kind, .. }) if is_name(kind) => true,
-            Some(Token { kind: '#', .. }) => {
-                let next_is_curly = matches!(self.toks.peek_next(), Some(Token { kind: '{', .. }));
-                self.toks.reset_cursor();
-                next_is_curly
-            }
-            Some(..) | None => false,
-        }
-    }
+    // fn in_interpolated_identifier_body(&mut self) -> bool {
+    //     match self.toks.peek() {
+    //         Some(Token { kind: '\\', .. }) => true,
+    //         Some(Token { kind, .. }) if is_name(kind) => true,
+    //         Some(Token { kind: '#', .. }) => {
+    //             let next_is_curly = matches!(self.toks.peek_next(), Some(Token { kind: '{', .. }));
+    //             self.toks.reset_cursor();
+    //             next_is_curly
+    //         }
+    //         Some(..) | None => false,
+    //     }
+    // }
 
     // fn parse_intermediate_value(
     //     &mut self,
@@ -928,76 +928,76 @@ impl<'a, 'b> Parser<'a, 'b> {
     //     }))
     // }
 
-    fn parse_hex(&mut self) -> SassResult<Spanned<Value>> {
-        let mut s = String::with_capacity(7);
-        s.push('#');
-        let first_char = self
-            .toks
-            .peek()
-            .ok_or(("Expected identifier.", self.span_before))?
-            .kind;
-        let first_is_digit = first_char.is_ascii_digit();
-        let first_is_hexdigit = first_char.is_ascii_hexdigit();
-        if first_is_digit {
-            while let Some(c) = self.toks.peek() {
-                if !c.kind.is_ascii_hexdigit() || s.len() == 9 {
-                    break;
-                }
-                let tok = self.toks.next().unwrap();
-                self.span_before = self.span_before.merge(tok.pos());
-                s.push(tok.kind);
-            }
-        // this branch exists so that we can emit `#` combined with
-        // identifiers. e.g. `#ooobar` should be emitted exactly as written;
-        // that is, `#ooobar`.
-        } else {
-            let ident = self.parse_identifier()?;
-            if first_is_hexdigit
-                && ident.node.chars().all(|c| c.is_ascii_hexdigit())
-                && matches!(ident.node.len(), 3 | 4 | 6 | 8)
-            {
-                s.push_str(&ident.node);
-            } else {
-                return Ok(Spanned {
-                    node: Value::String(format!("#{}", ident.node), QuoteKind::None),
-                    span: ident.span,
-                });
-            }
-        }
-        let v = match u32::from_str_radix(&s[1..], 16) {
-            Ok(a) => a,
-            Err(_) => return Ok(Value::String(s, QuoteKind::None).span(self.span_before)),
-        };
-        let (red, green, blue, alpha) = match s.len().saturating_sub(1) {
-            3 => (
-                (((v & 0x0f00) >> 8) * 0x11) as u8,
-                (((v & 0x00f0) >> 4) * 0x11) as u8,
-                ((v & 0x000f) * 0x11) as u8,
-                1,
-            ),
-            4 => (
-                (((v & 0xf000) >> 12) * 0x11) as u8,
-                (((v & 0x0f00) >> 8) * 0x11) as u8,
-                (((v & 0x00f0) >> 4) * 0x11) as u8,
-                ((v & 0x000f) * 0x11) as u8,
-            ),
-            6 => (
-                ((v & 0x00ff_0000) >> 16) as u8,
-                ((v & 0x0000_ff00) >> 8) as u8,
-                (v & 0x0000_00ff) as u8,
-                1,
-            ),
-            8 => (
-                ((v & 0xff00_0000) >> 24) as u8,
-                ((v & 0x00ff_0000) >> 16) as u8,
-                ((v & 0x0000_ff00) >> 8) as u8,
-                (v & 0x0000_00ff) as u8,
-            ),
-            _ => return Err(("Expected hex digit.", self.span_before).into()),
-        };
-        let color = Color::new(red, green, blue, alpha, s);
-        Ok(Value::Color(Box::new(color)).span(self.span_before))
-    }
+    // fn parse_hex(&mut self) -> SassResult<Spanned<Value>> {
+    //     let mut s = String::with_capacity(7);
+    //     s.push('#');
+    //     let first_char = self
+    //         .toks
+    //         .peek()
+    //         .ok_or(("Expected identifier.", self.span_before))?
+    //         .kind;
+    //     let first_is_digit = first_char.is_ascii_digit();
+    //     let first_is_hexdigit = first_char.is_ascii_hexdigit();
+    //     if first_is_digit {
+    //         while let Some(c) = self.toks.peek() {
+    //             if !c.kind.is_ascii_hexdigit() || s.len() == 9 {
+    //                 break;
+    //             }
+    //             let tok = self.toks.next().unwrap();
+    //             self.span_before = self.span_before.merge(tok.pos());
+    //             s.push(tok.kind);
+    //         }
+    //     // this branch exists so that we can emit `#` combined with
+    //     // identifiers. e.g. `#ooobar` should be emitted exactly as written;
+    //     // that is, `#ooobar`.
+    //     } else {
+    //         let ident = self.parse_identifier()?;
+    //         if first_is_hexdigit
+    //             && ident.node.chars().all(|c| c.is_ascii_hexdigit())
+    //             && matches!(ident.node.len(), 3 | 4 | 6 | 8)
+    //         {
+    //             s.push_str(&ident.node);
+    //         } else {
+    //             return Ok(Spanned {
+    //                 node: Value::String(format!("#{}", ident.node), QuoteKind::None),
+    //                 span: ident.span,
+    //             });
+    //         }
+    //     }
+    //     let v = match u32::from_str_radix(&s[1..], 16) {
+    //         Ok(a) => a,
+    //         Err(_) => return Ok(Value::String(s, QuoteKind::None).span(self.span_before)),
+    //     };
+    //     let (red, green, blue, alpha) = match s.len().saturating_sub(1) {
+    //         3 => (
+    //             (((v & 0x0f00) >> 8) * 0x11) as u8,
+    //             (((v & 0x00f0) >> 4) * 0x11) as u8,
+    //             ((v & 0x000f) * 0x11) as u8,
+    //             1,
+    //         ),
+    //         4 => (
+    //             (((v & 0xf000) >> 12) * 0x11) as u8,
+    //             (((v & 0x0f00) >> 8) * 0x11) as u8,
+    //             (((v & 0x00f0) >> 4) * 0x11) as u8,
+    //             ((v & 0x000f) * 0x11) as u8,
+    //         ),
+    //         6 => (
+    //             ((v & 0x00ff_0000) >> 16) as u8,
+    //             ((v & 0x0000_ff00) >> 8) as u8,
+    //             (v & 0x0000_00ff) as u8,
+    //             1,
+    //         ),
+    //         8 => (
+    //             ((v & 0xff00_0000) >> 24) as u8,
+    //             ((v & 0x00ff_0000) >> 16) as u8,
+    //             ((v & 0x0000_ff00) >> 8) as u8,
+    //             (v & 0x0000_00ff) as u8,
+    //         ),
+    //         _ => return Err(("Expected hex digit.", self.span_before).into()),
+    //     };
+    //     let color = Color::new(red, green, blue, alpha, s);
+    //     Ok(Value::Color(Box::new(color)).span(self.span_before))
+    // }
 }
 
 // struct IntermediateValueIterator<'a, 'b: 'a, 'c> {
@@ -1330,12 +1330,12 @@ impl<'a, 'b> Parser<'a, 'b> {
 //     }
 // }
 
-fn parse_i64(s: &str) -> i64 {
-    s.as_bytes()
-        .iter()
-        .fold(0, |total, this| total * 10 + i64::from(this - b'0'))
-}
+// fn parse_i64(s: &str) -> i64 {
+//     s.as_bytes()
+//         .iter()
+//         .fold(0, |total, this| total * 10 + i64::from(this - b'0'))
+// }
 
-fn is_keyword_operator(s: &str) -> bool {
-    matches!(s, "and" | "or" | "not")
-}
+// fn is_keyword_operator(s: &str) -> bool {
+//     matches!(s, "and" | "or" | "not")
+// }

@@ -1,4 +1,4 @@
-pub(crate) use eval::{add, cmp, mul, div, rem, single_eq, sub, ValueVisitor};
+pub(crate) use eval::{add, cmp, div, mul, rem, single_eq, sub};
 
 mod css_function;
 mod eval;

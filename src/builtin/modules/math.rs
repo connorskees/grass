@@ -113,7 +113,7 @@ fn hypot(args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
     });
 
     let first: (Number, Unit) = match numbers.next().unwrap()? {
-        ((n), u) => (n.clone() * n, u),
+        ((n), u) => (n * n, u),
     };
 
     let rest = numbers
@@ -122,7 +122,7 @@ fn hypot(args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
             let (number, unit) = val?;
             if first.1 == Unit::None {
                 if unit == Unit::None {
-                    Ok(number.clone() * number)
+                    Ok(number * number)
                 } else {
                     Err((
                         format!(
@@ -148,7 +148,7 @@ fn hypot(args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
                     .into())
             } else if first.1.comparable(&unit) {
                 let n = number.convert(&unit, &first.1);
-                Ok(n.clone() * n)
+                Ok(n * n)
             } else {
                 Err((
                     format!("Incompatible units {} and {}.", first.1, unit),

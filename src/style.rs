@@ -12,11 +12,14 @@ pub(crate) struct Style {
 
 impl Style {
     pub fn to_string(&self) -> SassResult<String> {
-        
         Ok(format!(
             "{}:{}{};",
             self.property,
-            if self.declared_as_custom_property { "" } else { " " },
+            if self.declared_as_custom_property {
+                ""
+            } else {
+                " "
+            },
             self.value.node.to_css_string(self.value.span, false)?
         ))
     }

@@ -1,3 +1,4 @@
+#![allow(unused)]
 mod functions;
 pub(crate) mod modules;
 

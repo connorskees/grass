@@ -1,15 +1,13 @@
 use std::{
     cmp::Ordering,
-    convert::{From, TryFrom},
+    convert::From,
     fmt, mem,
     ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign},
 };
 
-use num_bigint::BigInt;
-use num_rational::{BigRational, Rational64};
-use num_traits::{
-    CheckedAdd, CheckedDiv, CheckedMul, CheckedSub, Num, One, Signed, ToPrimitive, Zero,
-};
+// use num_bigint::BigInt;
+// use num_rational::{BigRational, Rational64};
+use num_traits::{Num, One, Signed, ToPrimitive, Zero};
 
 use crate::unit::{Unit, UNIT_CONVERSION_TABLE};
 
@@ -19,111 +17,113 @@ mod integer;
 
 const PRECISION: usize = 10;
 
-// todo: let's just use doubles here
-#[derive(Clone)]
-pub(crate) enum Number {
-    Small(Rational64),
-    Big(Box<BigRational>),
-}
+#[derive(Clone, Copy)]
+pub(crate) struct Number(pub f64);
+//  {
+//     Small(f64),
+//     // Big(Box<BigRational>),
+// }
 
 impl Number {
-    pub fn is_nan(&self) -> bool {
-        false
+    pub fn is_nan(self) -> bool {
+        self.0.is_nan()
     }
 }
 
 impl PartialEq for Number {
     fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Number::Small(val1), Number::Small(val2)) => val1 == val2,
-            (Number::Big(val1), val2 @ Number::Small(..)) => {
-                **val1 == val2.clone().into_big_rational()
-            }
-            (val1 @ Number::Small(..), Number::Big(val2)) => {
-                val1.clone().into_big_rational() == **val2
-            }
-            (Number::Big(val1), Number::Big(val2)) => val1 == val2,
-        }
+        self.0 == other.0
+        // match (self, other) {
+        //     (Number(val1), Number(val2)) => val1 == val2,
+        //     // (Number::Big(val1), val2 @ Number(..)) => {
+        //     //     **val1 == val2.clone().into_big_rational()
+        //     // }
+        //     // (val1 @ Number(..), Number::Big(val2)) => {
+        //     //     val1.clone().into_big_rational() == **val2
+        //     // }
+        //     // (Number::Big(val1), Number::Big(val2)) => val1 == val2,
+        // }
     }
 }
 
 impl Eq for Number {}
 
 impl Number {
-    pub const fn new_small(val: Rational64) -> Number {
-        Number::Small(val)
-    }
+    // pub const fn new_small(val: f64) -> Number {
+    //     Number(val)
+    // }
 
-    pub fn new_big(val: BigRational) -> Number {
-        Number::Big(Box::new(val))
-    }
+    // pub fn new_big(val: BigRational) -> Number {
+    //     Number::Big(Box::new(val))
+    // }
 
-    fn into_big_rational(self) -> BigRational {
+    // fn into_big_rational(self) -> BigRational {
+    //     match self {
+    //         Number(small) => {
+    //             let tuple: (i64, i64) = small.into();
+
+    //             BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1))
+    //         }
+    //         Number::Big(big) => *big,
+    //     }
+    // }
+
+    pub fn to_integer(self) -> Integer {
         match self {
-            Number::Small(small) => {
-                let tuple: (i64, i64) = small.into();
-
-                BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1))
-            }
-            Number::Big(big) => *big,
-        }
-    }
-
-    pub fn to_integer(&self) -> Integer {
-        match self {
-            Self::Small(val) => Integer::Small(val.to_integer()),
-            Self::Big(val) => Integer::Big(val.to_integer()),
+            Self(val) => Integer::Small(val as i64),
+            // Self::Big(val) => Integer::Big(val.to_integer()),
         }
     }
 
     pub fn small_ratio<A: Into<i64>, B: Into<i64>>(a: A, b: B) -> Self {
-        Number::new_small(Rational64::new(a.into(), b.into()))
+        Self(a.into() as f64 / b.into() as f64)
+        // Number::new_small(Rational64::new(a.into(), b.into()))
     }
 
-    #[allow(dead_code)]
-    pub fn big_ratio<A: Into<BigInt>, B: Into<BigInt>>(a: A, b: B) -> Self {
-        Number::new_big(BigRational::new(a.into(), b.into()))
-    }
+    // #[allow(dead_code)]
+    // pub fn big_ratio<A: Into<BigInt>, B: Into<BigInt>>(a: A, b: B) -> Self {
+    //     Number::new_big(BigRational::new(a.into(), b.into()))
+    // }
 
-    pub fn round(&self) -> Self {
+    pub fn round(self) -> Self {
         match self {
-            Self::Small(val) => Self::Small(val.round()),
-            Self::Big(val) => Self::Big(Box::new(val.round())),
+            Self(val) => Self(val.round()),
+            // Self::Big(val) => Self::Big(Box::new(val.round())),
         }
     }
 
-    pub fn ceil(&self) -> Self {
+    pub fn ceil(self) -> Self {
         match self {
-            Self::Small(val) => Self::Small(val.ceil()),
-            Self::Big(val) => Self::Big(Box::new(val.ceil())),
+            Self(val) => Self(val.ceil()),
+            // Self::Big(val) => Self::Big(Box::new(val.ceil())),
         }
     }
 
-    pub fn floor(&self) -> Self {
+    pub fn floor(self) -> Self {
         match self {
-            Self::Small(val) => Self::Small(val.floor()),
-            Self::Big(val) => Self::Big(Box::new(val.floor())),
+            Self(val) => Self(val.floor()),
+            // Self::Big(val) => Self::Big(Box::new(val.floor())),
         }
     }
 
-    pub fn abs(&self) -> Self {
+    pub fn abs(self) -> Self {
         match self {
-            Self::Small(val) => Self::Small(val.abs()),
-            Self::Big(val) => Self::Big(Box::new(val.abs())),
+            Self(val) => Self(val.abs()),
+            // Self::Big(val) => Self::Big(Box::new(val.abs())),
         }
     }
 
-    pub fn is_decimal(&self) -> bool {
+    pub fn is_decimal(self) -> bool {
         match self {
-            Self::Small(v) => !v.is_integer(),
-            Self::Big(v) => !v.is_integer(),
+            Self(v) => v.fract() != 0.0,
+            // Self::Big(v) => !v.is_integer(),
         }
     }
 
-    pub fn fract(&mut self) -> Number {
+    pub fn fract(self) -> Number {
         match self {
-            Self::Small(v) => Number::new_small(v.fract()),
-            Self::Big(v) => Number::new_big(v.fract()),
+            Self(v) => Number(v.fract()),
+            // Self::Big(v) => Number::new_big(v.fract()),
         }
     }
 
@@ -148,33 +148,37 @@ impl Number {
     #[allow(clippy::cast_precision_loss)]
     pub fn as_float(self) -> f64 {
         match self {
-            Number::Small(n) => (*n.numer() as f64) / (*n.denom() as f64),
-            Number::Big(n) => (n.numer().to_f64().unwrap()) / (n.denom().to_f64().unwrap()),
+            Number(n) => n,
+            // Number::Big(n) => (n.numer().to_f64().unwrap()) / (n.denom().to_f64().unwrap()),
         }
     }
 
     pub fn sqrt(self) -> Self {
-        Number::Big(Box::new(
-            BigRational::from_float(self.as_float().sqrt()).unwrap(),
-        ))
+        Self(self.as_float().sqrt())
+        // Number::Big(Box::new(
+        //     BigRational::from_float(self.as_float().sqrt()).unwrap(),
+        // ))
     }
 
     pub fn ln(self) -> Self {
-        Number::Big(Box::new(
-            BigRational::from_float(self.as_float().ln()).unwrap(),
-        ))
+        Self(self.as_float().ln())
+        // Number::Big(Box::new(
+        //     BigRational::from_float(self.as_float().ln()).unwrap(),
+        // ))
     }
 
     pub fn log(self, base: Number) -> Self {
-        Number::Big(Box::new(
-            BigRational::from_float(self.as_float().log(base.as_float())).unwrap(),
-        ))
+        Self(self.as_float().log(base.as_float()))
+        // Number::Big(Box::new(
+        //     BigRational::from_float(self.as_float().log(base.as_float())).unwrap(),
+        // ))
     }
 
     pub fn pow(self, exponent: Self) -> Self {
-        Number::Big(Box::new(
-            BigRational::from_float(self.as_float().powf(exponent.as_float())).unwrap(),
-        ))
+        Self(self.as_float().powf(exponent.as_float()))
+        // Number::Big(Box::new(
+        //     BigRational::from_float(self.as_float().powf(exponent.as_float())).unwrap(),
+        // ))
     }
 
     pub fn pi() -> Self {
@@ -182,9 +186,10 @@ impl Number {
     }
 
     pub fn atan2(self, other: Self) -> Self {
-        Number::Big(Box::new(
-            BigRational::from_float(self.as_float().atan2(other.as_float())).unwrap(),
-        ))
+        Self(self.as_float().atan2(other.as_float()))
+        // Number::Big(Box::new(
+        //     BigRational::from_float(self.as_float().atan2(other.as_float())).unwrap(),
+        // ))
     }
 
     /// Invariants: `from.comparable(&to)` must be true
@@ -195,22 +200,24 @@ impl Number {
             return self;
         }
 
-        self * UNIT_CONVERSION_TABLE[to][from].clone()
+        self * UNIT_CONVERSION_TABLE[to][from]
     }
 }
 
 macro_rules! trig_fn(
     ($name:ident, $name_deg:ident) => {
         pub fn $name(self) -> Self {
-            Number::Big(Box::new(BigRational::from_float(
-                self.as_float().$name(),
-            ).unwrap()))
+            Self(self.as_float().$name())
+            // Number::Big(Box::new(BigRational::from_float(
+            //     self.as_float().$name(),
+            // ).unwrap()))
         }
 
         pub fn $name_deg(self) -> Self {
-            Number::Big(Box::new(BigRational::from_float(
-                self.as_float().to_radians().$name(),
-            ).unwrap()))
+            Self(self.as_float().to_radians().$name())
+            // Number::Big(Box::new(BigRational::from_float(
+            //     self.as_float().to_radians().$name(),
+            // ).unwrap()))
         }
     }
 );
@@ -218,9 +225,10 @@ macro_rules! trig_fn(
 macro_rules! inverse_trig_fn(
     ($name:ident) => {
         pub fn $name(self) -> Self {
-            Number::Big(Box::new(BigRational::from_float(
-                self.as_float().$name().to_degrees(),
-            ).unwrap()))
+            Self(self.as_float().$name().to_degrees())
+            // Number::Big(Box::new(BigRational::from_float(
+            //     self.as_float().$name().to_degrees(),
+            // ).unwrap()))
         }
     }
 );
@@ -244,26 +252,28 @@ impl Default for Number {
 
 impl Zero for Number {
     fn zero() -> Self {
-        Number::new_small(Rational64::from_integer(0))
+        Self(0.0)
+        // Number::new_small(Rational64::from_integer(0))
     }
 
     fn is_zero(&self) -> bool {
         match self {
-            Self::Small(v) => v.is_zero(),
-            Self::Big(v) => v.is_zero(),
+            Self(v) => v.is_zero(),
+            // Self::Big(v) => v.is_zero(),
         }
     }
 }
 
 impl One for Number {
     fn one() -> Self {
-        Number::new_small(Rational64::from_integer(1))
+        Self(1.0)
+        // Number::new_small(Rational64::from_integer(1))
     }
 
     fn is_one(&self) -> bool {
         match self {
-            Self::Small(v) => v.is_one(),
-            Self::Big(v) => v.is_one(),
+            Self(v) => v.is_one(),
+            // Self::Big(v) => v.is_one(),
         }
     }
 }
@@ -278,7 +288,7 @@ impl Num for Number {
 
 impl Signed for Number {
     fn abs(&self) -> Self {
-        self.abs()
+        Self(self.0.abs())
     }
 
     #[cold]
@@ -299,15 +309,15 @@ impl Signed for Number {
 
     fn is_positive(&self) -> bool {
         match self {
-            Self::Small(v) => v.is_positive(),
-            Self::Big(v) => v.is_positive(),
+            Self(v) => v.is_positive(),
+            // Self::Big(v) => v.is_positive(),
         }
     }
 
     fn is_negative(&self) -> bool {
         match self {
-            Self::Small(v) => v.is_negative(),
-            Self::Big(v) => v.is_negative(),
+            Self(v) => v.is_negative(),
+            // Self::Big(v) => v.is_negative(),
         }
     }
 }
@@ -316,11 +326,11 @@ macro_rules! from_integer {
     ($ty:ty) => {
         impl From<$ty> for Number {
             fn from(b: $ty) -> Self {
-                if let Ok(v) = i64::try_from(b) {
-                    Number::Small(Rational64::from_integer(v))
-                } else {
-                    Number::Big(Box::new(BigRational::from_integer(BigInt::from(b))))
-                }
+                Number(b as f64)
+                // if let Ok(v) = i64::try_from(b) {
+                // } else {
+                //     Number::Big(Box::new(BigRational::from_integer(BigInt::from(b))))
+                // }
             }
         }
     };
@@ -330,7 +340,8 @@ macro_rules! from_smaller_integer {
     ($ty:ty) => {
         impl From<$ty> for Number {
             fn from(val: $ty) -> Self {
-                Number::new_small(Rational64::from_integer(val as i64))
+                Self(f64::from(val))
+                // Number::new_small(Rational64::from_integer(val as i64))
             }
         }
     };
@@ -338,14 +349,16 @@ macro_rules! from_smaller_integer {
 
 impl From<i64> for Number {
     fn from(val: i64) -> Self {
-        Number::new_small(Rational64::from_integer(val))
+        Self(val as f64)
+        // Number::new_small(Rational64::from_integer(val))
     }
 }
 
 #[allow(clippy::fallible_impl_from)]
 impl From<f64> for Number {
     fn from(b: f64) -> Self {
-        Number::Big(Box::new(BigRational::from_float(b).unwrap()))
+        Self(b)
+        // Number::Big(Box::new(BigRational::from_float(b).unwrap()))
     }
 }
 
@@ -358,8 +371,8 @@ from_smaller_integer!(u8);
 impl fmt::Debug for Number {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Small(..) => write!(f, "Number::Small( {} )", self.to_string(false)),
-            Self::Big(..) => write!(f, "Number::Big( {} )", self.to_string(false)),
+            Self(..) => write!(f, "Number( {} )", self.to_string(false)),
+            // Self::Big(..) => write!(f, "Number::Big( {} )", self.to_string(false)),
         }
     }
 }
@@ -367,45 +380,43 @@ impl fmt::Debug for Number {
 impl ToPrimitive for Number {
     fn to_u64(&self) -> Option<u64> {
         match self {
-            Self::Small(n) => {
-                if !n.denom().is_one() {
-                    return None;
-                }
+            Self(n) => {
+                // if !n.denom().is_one() {
+                //     return None;
+                // }
                 n.to_u64()
-            }
-            Self::Big(n) => {
-                if !n.denom().is_one() {
-                    return None;
-                }
-                n.to_u64()
-            }
+            } // Self::Big(n) => {
+              //     if !n.denom().is_one() {
+              //         return None;
+              //     }
+              //     n.to_u64()
+              // }
         }
     }
 
     fn to_i64(&self) -> Option<i64> {
         match self {
-            Self::Small(n) => {
-                if !n.denom().is_one() {
-                    return None;
-                }
+            Self(n) => {
+                // if !n.denom().is_one() {
+                //     return None;
+                // }
                 n.to_i64()
-            }
-            Self::Big(n) => {
-                if !n.denom().is_one() {
-                    return None;
-                }
-                n.to_i64()
-            }
+            } // Self::Big(n) => {
+              //     if !n.denom().is_one() {
+              //         return None;
+              //     }
+              //     n.to_i64()
+              // }
         }
     }
 }
 
 impl Number {
-    pub(crate) fn inspect(&self) -> String {
+    pub(crate) fn inspect(self) -> String {
         self.to_string(false)
     }
 
-    pub(crate) fn to_string(&self, is_compressed: bool) -> String {
+    pub(crate) fn to_string(self, is_compressed: bool) -> String {
         let mut whole = self.to_integer().abs();
         let has_decimal = self.is_decimal();
         let mut frac = self.abs().fract();
@@ -485,24 +496,24 @@ impl Number {
 impl PartialOrd for Number {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         match self {
-            Self::Small(val1) => match other {
-                Self::Small(val2) => val1.partial_cmp(val2),
-                Self::Big(val2) => {
-                    let tuple: (i64, i64) = (*val1).into();
-                    BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1))
-                        .partial_cmp(val2)
-                }
+            Self(val1) => match other {
+                Self(val2) => val1.partial_cmp(val2),
+                // Self::Big(val2) => {
+                //     let tuple: (i64, i64) = (*val1).into();
+                //     BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1))
+                //         .partial_cmp(val2)
+                // }
             },
-            Self::Big(val1) => match other {
-                Self::Small(val2) => {
-                    let tuple: (i64, i64) = (*val2).into();
-                    (**val1).partial_cmp(&BigRational::new_raw(
-                        BigInt::from(tuple.0),
-                        BigInt::from(tuple.1),
-                    ))
-                }
-                Self::Big(val2) => val1.partial_cmp(val2),
-            },
+            // Self::Big(val1) => match other {
+            //     Self(val2) => {
+            //         let tuple: (i64, i64) = (*val2).into();
+            //         (**val1).partial_cmp(&BigRational::new_raw(
+            //             BigInt::from(tuple.0),
+            //             BigInt::from(tuple.1),
+            //         ))
+            //     }
+            //     Self::Big(val2) => val1.partial_cmp(val2),
+            // },
         }
     }
 }
@@ -510,23 +521,28 @@ impl PartialOrd for Number {
 impl Ord for Number {
     fn cmp(&self, other: &Self) -> Ordering {
         match self {
-            Self::Small(val1) => match other {
-                Self::Small(val2) => val1.cmp(val2),
-                Self::Big(val2) => {
-                    let tuple: (i64, i64) = (*val1).into();
-                    BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1)).cmp(val2)
-                }
+            Self(val1) => match other {
+                Self(val2) => {
+                    if !val1.is_finite() || !val2.is_finite() {
+                        todo!()
+                    }
+                    val1.partial_cmp(val2).unwrap()
+                } //val1.cmp(val2),
+                  // Self::Big(val2) => {
+                  //     let tuple: (i64, i64) = (*val1).into();
+                  //     BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1)).cmp(val2)
+                  // }
             },
-            Self::Big(val1) => match other {
-                Self::Small(val2) => {
-                    let tuple: (i64, i64) = (*val2).into();
-                    (**val1).cmp(&BigRational::new_raw(
-                        BigInt::from(tuple.0),
-                        BigInt::from(tuple.1),
-                    ))
-                }
-                Self::Big(val2) => val1.cmp(val2),
-            },
+            // Self::Big(val1) => match other {
+            //     Self(val2) => {
+            //         let tuple: (i64, i64) = (*val2).into();
+            //         (**val1).cmp(&BigRational::new_raw(
+            //             BigInt::from(tuple.0),
+            //             BigInt::from(tuple.1),
+            //         ))
+            //     }
+            //     Self::Big(val2) => val1.cmp(val2),
+            // },
         }
     }
 }
@@ -536,82 +552,83 @@ impl Add for Number {
 
     fn add(self, other: Self) -> Self {
         match self {
-            Self::Small(val1) => match other {
-                Self::Small(val2) => match val1.checked_add(&val2) {
-                    Some(v) => Self::Small(v),
-                    None => {
-                        let tuple1: (i64, i64) = val1.into();
-                        let tuple2: (i64, i64) = val2.into();
-                        Self::Big(Box::new(
-                            BigRational::new_raw(BigInt::from(tuple1.0), BigInt::from(tuple1.1))
-                                + BigRational::new_raw(
-                                    BigInt::from(tuple2.0),
-                                    BigInt::from(tuple2.1),
-                                ),
-                        ))
-                    }
-                },
-                Self::Big(val2) => {
-                    let tuple: (i64, i64) = val1.into();
-                    Self::Big(Box::new(
-                        BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1)) + *val2,
-                    ))
-                }
+            Self(val1) => match other {
+                Self(val2) => Self(val1 + val2),
+                // match val1.checked_add(&val2) {
+                //     Some(v) => Self(v),
+                //     None => {
+                //         let tuple1: (i64, i64) = val1.into();
+                //         let tuple2: (i64, i64) = val2.into();
+                //         Self::Big(Box::new(
+                //             BigRational::new_raw(BigInt::from(tuple1.0), BigInt::from(tuple1.1))
+                //                 + BigRational::new_raw(
+                //                     BigInt::from(tuple2.0),
+                //                     BigInt::from(tuple2.1),
+                //                 ),
+                //         ))
+                //     }
+                // },
+                // Self::Big(val2) => {
+                //     let tuple: (i64, i64) = val1.into();
+                //     Self::Big(Box::new(
+                //         BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1)) + *val2,
+                //     ))
+                // }
             },
-            Self::Big(val1) => match other {
-                Self::Big(val2) => Self::Big(Box::new(*val1 + *val2)),
-                Self::Small(val2) => {
-                    let tuple: (i64, i64) = val2.into();
-                    Self::Big(Box::new(
-                        (*val1)
-                            + BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1)),
-                    ))
-                }
-            },
+            // Self::Big(val1) => match other {
+            //     Self::Big(val2) => Self::Big(Box::new(*val1 + *val2)),
+            //     Self(val2) => {
+            //         let tuple: (i64, i64) = val2.into();
+            //         Self::Big(Box::new(
+            //             (*val1)
+            //                 + BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1)),
+            //         ))
+            //     }
+            // },
         }
     }
 }
 
-impl Add<&Self> for Number {
-    type Output = Self;
+// impl Add<&Self> for Number {
+//     type Output = Self;
 
-    fn add(self, other: &Self) -> Self {
-        match self {
-            Self::Small(val1) => match other {
-                Self::Small(val2) => match val1.checked_add(val2) {
-                    Some(v) => Self::Small(v),
-                    None => {
-                        let tuple1: (i64, i64) = val1.into();
-                        let tuple2: (i64, i64) = (*val2).into();
-                        Self::Big(Box::new(
-                            BigRational::new_raw(BigInt::from(tuple1.0), BigInt::from(tuple1.1))
-                                + BigRational::new_raw(
-                                    BigInt::from(tuple2.0),
-                                    BigInt::from(tuple2.1),
-                                ),
-                        ))
-                    }
-                },
-                Self::Big(val2) => {
-                    let tuple: (i64, i64) = val1.into();
-                    Self::Big(Box::new(
-                        BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1))
-                            + *val2.clone(),
-                    ))
-                }
-            },
-            Self::Big(val1) => match other {
-                Self::Big(val2) => Self::Big(Box::new(*val1 + *val2.clone())),
-                Self::Small(val2) => {
-                    let tuple: (i64, i64) = (*val2).into();
-                    Self::Big(Box::new(
-                        *val1 + BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1)),
-                    ))
-                }
-            },
-        }
-    }
-}
+//     fn add(self, other: &Self) -> Self {
+//         match self {
+//             Self(val1) => match other {
+//                 Self(val2) => match val1.checked_add(val2) {
+//                     Some(v) => Self(v),
+//                     None => {
+//                         let tuple1: (i64, i64) = val1.into();
+//                         let tuple2: (i64, i64) = (*val2).into();
+//                         Self::Big(Box::new(
+//                             BigRational::new_raw(BigInt::from(tuple1.0), BigInt::from(tuple1.1))
+//                                 + BigRational::new_raw(
+//                                     BigInt::from(tuple2.0),
+//                                     BigInt::from(tuple2.1),
+//                                 ),
+//                         ))
+//                     }
+//                 },
+//                 Self::Big(val2) => {
+//                     let tuple: (i64, i64) = val1.into();
+//                     Self::Big(Box::new(
+//                         BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1))
+//                             + *val2.clone(),
+//                     ))
+//                 }
+//             },
+//             Self::Big(val1) => match other {
+//                 Self::Big(val2) => Self::Big(Box::new(*val1 + *val2.clone())),
+//                 Self(val2) => {
+//                     let tuple: (i64, i64) = (*val2).into();
+//                     Self::Big(Box::new(
+//                         *val1 + BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1)),
+//                     ))
+//                 }
+//             },
+//         }
+//     }
+// }
 
 impl AddAssign for Number {
     fn add_assign(&mut self, other: Self) {
@@ -625,37 +642,38 @@ impl Sub for Number {
 
     fn sub(self, other: Self) -> Self {
         match self {
-            Self::Small(val1) => match other {
-                Self::Small(val2) => match val1.checked_sub(&val2) {
-                    Some(v) => Self::Small(v),
-                    None => {
-                        let tuple1: (i64, i64) = val1.into();
-                        let tuple2: (i64, i64) = val2.into();
-                        Self::Big(Box::new(
-                            BigRational::new_raw(BigInt::from(tuple1.0), BigInt::from(tuple1.1))
-                                - BigRational::new_raw(
-                                    BigInt::from(tuple2.0),
-                                    BigInt::from(tuple2.1),
-                                ),
-                        ))
-                    }
-                },
-                Self::Big(val2) => {
-                    let tuple: (i64, i64) = val1.into();
-                    Self::Big(Box::new(
-                        BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1)) - *val2,
-                    ))
-                }
+            Self(val1) => match other {
+                Self(val2) => Self(val1 - val2),
+                // match val1.checked_sub(&val2) {
+                //     Some(v) => Self(v),
+                //     None => {
+                //         let tuple1: (i64, i64) = val1.into();
+                //         let tuple2: (i64, i64) = val2.into();
+                //         Self::Big(Box::new(
+                //             BigRational::new_raw(BigInt::from(tuple1.0), BigInt::from(tuple1.1))
+                //                 - BigRational::new_raw(
+                //                     BigInt::from(tuple2.0),
+                //                     BigInt::from(tuple2.1),
+                //                 ),
+                //         ))
+                //     }
+                // },
+                // Self::Big(val2) => {
+                //     let tuple: (i64, i64) = val1.into();
+                //     Self::Big(Box::new(
+                //         BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1)) - *val2,
+                //     ))
+                // }
             },
-            Self::Big(val1) => match other {
-                Self::Big(val2) => Self::Big(Box::new(*val1 - *val2)),
-                Self::Small(val2) => {
-                    let tuple: (i64, i64) = val2.into();
-                    Self::Big(Box::new(
-                        *val1 - BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1)),
-                    ))
-                }
-            },
+            // Self::Big(val1) => match other {
+            //     Self::Big(val2) => Self::Big(Box::new(*val1 - *val2)),
+            //     Self(val2) => {
+            //         let tuple: (i64, i64) = val2.into();
+            //         Self::Big(Box::new(
+            //             *val1 - BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1)),
+            //         ))
+            //     }
+            // },
         }
     }
 }
@@ -672,37 +690,38 @@ impl Mul for Number {
 
     fn mul(self, other: Self) -> Self {
         match self {
-            Self::Small(val1) => match other {
-                Self::Small(val2) => match val1.checked_mul(&val2) {
-                    Some(v) => Self::Small(v),
-                    None => {
-                        let tuple1: (i64, i64) = val1.into();
-                        let tuple2: (i64, i64) = val2.into();
-                        Self::Big(Box::new(
-                            BigRational::new_raw(BigInt::from(tuple1.0), BigInt::from(tuple1.1))
-                                * BigRational::new_raw(
-                                    BigInt::from(tuple2.0),
-                                    BigInt::from(tuple2.1),
-                                ),
-                        ))
-                    }
-                },
-                Self::Big(val2) => {
-                    let tuple: (i64, i64) = val1.into();
-                    Self::Big(Box::new(
-                        BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1)) * *val2,
-                    ))
-                }
+            Self(val1) => match other {
+                Self(val2) => Self(val1 * val2),
+                // match val1.checked_mul(&val2) {
+                //     Some(v) => Self(v),
+                //     None => {
+                //         let tuple1: (i64, i64) = val1.into();
+                //         let tuple2: (i64, i64) = val2.into();
+                //         Self::Big(Box::new(
+                //             BigRational::new_raw(BigInt::from(tuple1.0), BigInt::from(tuple1.1))
+                //                 * BigRational::new_raw(
+                //                     BigInt::from(tuple2.0),
+                //                     BigInt::from(tuple2.1),
+                //                 ),
+                //         ))
+                //     }
+                // },
+                // Self::Big(val2) => {
+                //     let tuple: (i64, i64) = val1.into();
+                //     Self::Big(Box::new(
+                //         BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1)) * *val2,
+                //     ))
+                // }
             },
-            Self::Big(val1) => match other {
-                Self::Big(val2) => Self::Big(Box::new(*val1 * *val2)),
-                Self::Small(val2) => {
-                    let tuple: (i64, i64) = val2.into();
-                    Self::Big(Box::new(
-                        *val1 * BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1)),
-                    ))
-                }
-            },
+            // Self::Big(val1) => match other {
+            //     Self::Big(val2) => Self::Big(Box::new(*val1 * *val2)),
+            //     Self(val2) => {
+            //         let tuple: (i64, i64) = val2.into();
+            //         Self::Big(Box::new(
+            //             *val1 * BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1)),
+            //         ))
+            //     }
+            // },
         }
     }
 }
@@ -712,8 +731,8 @@ impl Mul<i64> for Number {
 
     fn mul(self, other: i64) -> Self {
         match self {
-            Self::Small(val1) => Self::Small(val1 * other),
-            Self::Big(val1) => Self::Big(Box::new(*val1 * BigInt::from(other))),
+            Self(val1) => Self(val1 * other as f64),
+            // Self::Big(val1) => Self::Big(Box::new(*val1 * BigInt::from(other))),
         }
     }
 }
@@ -737,37 +756,38 @@ impl Div for Number {
 
     fn div(self, other: Self) -> Self {
         match self {
-            Self::Small(val1) => match other {
-                Self::Small(val2) => match val1.checked_div(&val2) {
-                    Some(v) => Self::Small(v),
-                    None => {
-                        let tuple1: (i64, i64) = val1.into();
-                        let tuple2: (i64, i64) = val2.into();
-                        Self::Big(Box::new(
-                            BigRational::new_raw(BigInt::from(tuple1.0), BigInt::from(tuple1.1))
-                                / BigRational::new_raw(
-                                    BigInt::from(tuple2.0),
-                                    BigInt::from(tuple2.1),
-                                ),
-                        ))
-                    }
-                },
-                Self::Big(val2) => {
-                    let tuple: (i64, i64) = val1.into();
-                    Self::Big(Box::new(
-                        BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1)) / *val2,
-                    ))
-                }
+            Self(val1) => match other {
+                Self(val2) => Self(val1 / val2),
+                // match val1.checked_div(&val2) {
+                //     Some(v) => Self(v),
+                //     None => {
+                //         let tuple1: (i64, i64) = val1.into();
+                //         let tuple2: (i64, i64) = val2.into();
+                //         Self::Big(Box::new(
+                //             BigRational::new_raw(BigInt::from(tuple1.0), BigInt::from(tuple1.1))
+                //                 / BigRational::new_raw(
+                //                     BigInt::from(tuple2.0),
+                //                     BigInt::from(tuple2.1),
+                //                 ),
+                //         ))
+                //     }
+                // },
+                // Self::Big(val2) => {
+                //     let tuple: (i64, i64) = val1.into();
+                //     Self::Big(Box::new(
+                //         BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1)) / *val2,
+                //     ))
+                // }
             },
-            Self::Big(val1) => match other {
-                Self::Big(val2) => Self::Big(Box::new(*val1 / *val2)),
-                Self::Small(val2) => {
-                    let tuple: (i64, i64) = val2.into();
-                    Self::Big(Box::new(
-                        *val1 / BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1)),
-                    ))
-                }
-            },
+            // Self::Big(val1) => match other {
+            //     Self::Big(val2) => Self::Big(Box::new(*val1 / *val2)),
+            //     Self(val2) => {
+            //         let tuple: (i64, i64) = val2.into();
+            //         Self::Big(Box::new(
+            //             *val1 / BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1)),
+            //         ))
+            //     }
+            // },
         }
     }
 }
@@ -779,8 +799,8 @@ impl DivAssign for Number {
     }
 }
 
-fn modulo(n1: BigRational, n2: BigRational) -> BigRational {
-    (n1 % n2.clone() + n2.clone()) % n2
+fn modulo(n1: f64, n2: f64) -> f64 {
+    (n1 % n2 + n2) % n2
 }
 
 impl Rem for Number {
@@ -788,35 +808,36 @@ impl Rem for Number {
 
     fn rem(self, other: Self) -> Self {
         match self {
-            Self::Small(val1) => match other {
-                Self::Small(val2) => {
-                    let tuple1: (i64, i64) = val1.into();
-                    let tuple2: (i64, i64) = val2.into();
+            Self(val1) => match other {
+                Self(val2) => Self(modulo(val1, val2)),
+                // {
+                //     let tuple1: (i64, i64) = val1.into();
+                //     let tuple2: (i64, i64) = val2.into();
 
-                    Self::Big(Box::new(modulo(
-                        BigRational::new_raw(BigInt::from(tuple1.0), BigInt::from(tuple1.1)),
-                        BigRational::new_raw(BigInt::from(tuple2.0), BigInt::from(tuple2.1)),
-                    )))
-                }
-                Self::Big(val2) => {
-                    let tuple: (i64, i64) = val1.into();
+                //     Self::Big(Box::new(modulo(
+                //         BigRational::new_raw(BigInt::from(tuple1.0), BigInt::from(tuple1.1)),
+                //         BigRational::new_raw(BigInt::from(tuple2.0), BigInt::from(tuple2.1)),
+                //     )))
+                // }
+                // Self::Big(val2) => {
+                //     let tuple: (i64, i64) = val1.into();
 
-                    Self::Big(Box::new(modulo(
-                        BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1)),
-                        *val2,
-                    )))
-                }
+                //     Self::Big(Box::new(modulo(
+                //         BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1)),
+                //         *val2,
+                //     )))
+                // }
             },
-            Self::Big(val1) => match other {
-                Self::Big(val2) => Self::Big(Box::new(modulo(*val1, *val2))),
-                Self::Small(val2) => {
-                    let tuple: (i64, i64) = val2.into();
-                    Self::Big(Box::new(modulo(
-                        *val1,
-                        BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1)),
-                    )))
-                }
-            },
+            // Self::Big(val1) => match other {
+            //     Self::Big(val2) => Self::Big(Box::new(modulo(*val1, *val2))),
+            //     Self(val2) => {
+            //         let tuple: (i64, i64) = val2.into();
+            //         Self::Big(Box::new(modulo(
+            //             *val1,
+            //             BigRational::new_raw(BigInt::from(tuple.0), BigInt::from(tuple.1)),
+            //         )))
+            //     }
+            // },
         }
     }
 }
@@ -833,8 +854,8 @@ impl Neg for Number {
 
     fn neg(self) -> Self {
         match self {
-            Self::Small(v) => Self::Small(-v),
-            Self::Big(v) => Self::Big(Box::new(-*v)),
+            Self(v) => Self(-v),
+            // Self::Big(v) => Self::Big(Box::new(-*v)),
         }
     }
 }

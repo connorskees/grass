@@ -288,11 +288,7 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
                 selector = Some(Box::new(self.parse_selector_list()?));
                 self.parser.whitespace_or_comment();
             } else {
-                argument = Some(
-                    self.parser
-                        .declaration_value(true)?
-                        .into_boxed_str(),
-                );
+                argument = Some(self.parser.declaration_value(true)?.into_boxed_str());
             }
 
             self.parser.expect_char(')')?;

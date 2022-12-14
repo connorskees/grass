@@ -33,6 +33,5 @@ test!(
 );
 error!(
     nothing_after_colon,
-    "a {\n  --btn-font-family:;\n}\n",
-    "Error: Expected token."
+    "a {\n  --btn-font-family:;\n}\n", "Error: Expected token."
 );

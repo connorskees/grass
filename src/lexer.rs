@@ -80,11 +80,11 @@ impl<'a> Lexer<'a> {
         self.buf.get(self.peek_cursor().checked_sub(n)?).copied()
     }
 
-    pub fn peek_backward(&mut self, n: usize) -> Option<Token> {
-        self.amt_peeked = self.amt_peeked.checked_sub(n)?;
+    // pub fn peek_backward(&mut self, n: usize) -> Option<Token> {
+    //     self.amt_peeked = self.amt_peeked.checked_sub(n)?;
 
-        self.peek()
-    }
+    //     self.peek()
+    // }
 
     /// Set cursor to position and reset peek
     pub fn set_cursor(&mut self, cursor: usize) {
@@ -159,11 +159,11 @@ impl<'a> Lexer<'a> {
         }
     }
 
-    pub fn new_ref(buf: &'a [Token]) -> Lexer<'a> {
-        Lexer {
-            buf: Cow::Borrowed(buf),
-            cursor: 0,
-            amt_peeked: 0,
-        }
-    }
+    // pub fn new_ref(buf: &'a [Token]) -> Lexer<'a> {
+    //     Lexer {
+    //         buf: Cow::Borrowed(buf),
+    //         cursor: 0,
+    //         amt_peeked: 0,
+    //     }
+    // }
 }

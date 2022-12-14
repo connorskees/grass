@@ -1,7 +1,4 @@
-use std::{
-    cmp::Ordering,
-    collections::{BTreeMap, HashMap},
-};
+use std::{cmp::Ordering, collections::BTreeMap};
 
 use codemap::{Span, Spanned};
 
@@ -75,8 +72,6 @@ impl ArgList {
 
 #[derive(Debug, Clone)]
 pub(crate) enum Value {
-    // todo: remove
-    Important,
     True,
     False,
     Null,
@@ -111,7 +106,7 @@ impl PartialEq for Value {
                     } else if unit == &Unit::None || unit2 == &Unit::None {
                         false
                     } else {
-                        n == &n2.clone().convert(unit2, unit)
+                        *n == n2.convert(unit2, unit)
                     }
                 }
                 _ => false,
@@ -138,7 +133,6 @@ impl PartialEq for Value {
             Value::Null => matches!(other, Value::Null),
             Value::True => matches!(other, Value::True),
             Value::False => matches!(other, Value::False),
-            Value::Important => matches!(other, Value::Important),
             Value::FunctionRef(fn1) => {
                 if let Value::FunctionRef(fn2) = other {
                     fn1 == fn2
@@ -252,7 +246,7 @@ fn visit_quoted_string(buf: &mut String, force_double_quote: bool, string: &str)
 // num, uit, as_slash
 // todo: is as_slash included in eq
 #[derive(Debug, Clone)]
-pub(crate) struct SassNumber(pub Number, pub Unit, pub Option<Box<(Self, Self)>>);
+pub(crate) struct SassNumber(pub f64, pub Unit, pub Option<Box<(Self, Self)>>);
 //  {
 //     // todo: f64
 //     pub num: Number,
@@ -274,8 +268,8 @@ impl SassNumber {
         self.1.comparable(&other.1)
     }
 
-    pub fn num(&self) -> &Number {
-        &self.0
+    pub fn num(&self) -> Number {
+        Number(self.0)
     }
 
     pub fn unit(&self) -> &Unit {
@@ -296,7 +290,7 @@ impl SassNumber {
             return self;
         }
 
-        self.0 *= UNIT_CONVERSION_TABLE[to][from].clone();
+        self.0 *= UNIT_CONVERSION_TABLE[to][from].0;
         self.1 = self.1 * to.clone();
 
         self
@@ -304,10 +298,10 @@ impl SassNumber {
 }
 
 impl Value {
-    pub fn with_slash(mut self, numerator: SassNumber, denom: SassNumber) -> SassResult<Self> {
+    pub fn with_slash(self, numerator: SassNumber, denom: SassNumber) -> SassResult<Self> {
         let number = self.assert_number()?;
         Ok(Value::Dimension(
-            number.0,
+            Number(number.0),
             number.1,
             Some(Box::new((numerator, denom))),
         ))
@@ -315,7 +309,7 @@ impl Value {
 
     pub fn assert_number(self) -> SassResult<SassNumber> {
         match self {
-            Value::Dimension(num, unit, computed) => Ok(SassNumber(num, unit, None)),
+            Value::Dimension(num, unit, as_slash) => Ok(SassNumber(num.0, unit, as_slash)),
             _ => todo!(),
         }
     }
@@ -355,7 +349,6 @@ impl Value {
                         ListSeparator::Comma.as_str()
                     }),
             )),
-            Value::Important => Cow::const_str("!important"),
             Value::Dimension(num, unit, as_slash) => match unit {
                 Unit::Mul(..) | Unit::Div(..) => {
                     return Err((
@@ -485,7 +478,7 @@ impl Value {
     pub fn kind(&self) -> &'static str {
         match self {
             Value::Color(..) => "color",
-            Value::String(..) | Value::Important => "string",
+            Value::String(..) => "string",
             Value::Calculation(..) => "calculation",
             Value::Dimension(..) => "number",
             Value::List(..) => "list",
@@ -544,7 +537,7 @@ impl Value {
                     if unit == unit2 || unit == &Unit::None || unit2 == &Unit::None {
                         num.cmp(num2)
                     } else {
-                        num.cmp(&num2.clone().convert(unit2, unit))
+                        num.cmp(&num2.convert(unit2, unit))
                     }
                 }
                 _ => {
@@ -590,7 +583,7 @@ impl Value {
                     } else if unit == &Unit::None || unit2 == &Unit::None {
                         true
                     } else {
-                        n != &n2.clone().convert(unit2, unit)
+                        n != &n2.convert(unit2, unit)
                     }
                 }
                 _ => true,
@@ -677,11 +670,9 @@ impl Value {
                     .collect::<SassResult<Vec<Cow<'static, str>>>>()?
                     .join(", "),
             ),
-            Value::Important
-            | Value::True
-            | Value::False
-            | Value::Color(..)
-            | Value::String(..) => self.to_css_string(span, false)?,
+            Value::True | Value::False | Value::Color(..) | Value::String(..) => {
+                self.to_css_string(span, false)?
+            }
         })
     }
 

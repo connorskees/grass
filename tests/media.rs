@@ -233,6 +233,28 @@ test!(
     "@media (max-width: 0px) {\n  a {\n    color: red;\n  }\n}\n\na {\n  color: red;\n}\n"
 );
 test!(
+    nested_media_with_compatible_queries,
+    "@media (foo) {
+      @media (bar) {
+        a {
+          color: red;
+        }
+      }
+    }",
+    "@media (foo) and (bar) {\n  a {\n    color: red;\n  }\n}\n"
+);
+test!(
+    nested_media_with_incompatible_queries,
+    "@media foo {
+      @media bar {
+        a {
+          color: red;
+        }
+      }
+    }",
+    ""
+);
+test!(
     #[ignore = "we move to top of media"]
     plain_import_inside_media_is_not_moved_to_top,
     r#"@media foo {

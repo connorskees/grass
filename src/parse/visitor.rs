@@ -2,17 +2,15 @@ use std::{
     borrow::Borrow,
     cell::{Ref, RefCell, RefMut},
     collections::{BTreeMap, BTreeSet, HashSet},
-    convert::identity,
     ffi::OsStr,
-    fmt,
-    iter::FromIterator,
-    mem,
-    ops::{Deref, Index, IndexMut},
+    fmt, mem,
+    ops::Deref,
     path::{Path, PathBuf},
     sync::Arc,
 };
 
 use codemap::{Span, Spanned};
+use indexmap::IndexSet;
 use num_traits::ToPrimitive;
 
 use crate::{
@@ -27,7 +25,6 @@ use crate::{
         modules::{ModuleConfig, Modules},
         Builtin, GLOBAL_FUNCTIONS,
     },
-    color::Color,
     common::{unvendor, BinaryOp, Identifier, ListSeparator, QuoteKind, UnaryOp},
     error::SassError,
     interner::InternedString,
@@ -41,7 +38,6 @@ use crate::{
     style::Style,
     token::Token,
     value::{ArgList, Number, SassFunction, SassMap, SassNumber, UserDefinedFunction, Value},
-    Options,
 };
 
 use super::{
@@ -49,7 +45,7 @@ use super::{
     keyframes::KeyframesSelectorParser,
     value::{add, cmp, div, mul, rem, single_eq, sub},
     value_new::{
-        Argument, ArgumentDeclaration, ArgumentInvocation, ArgumentResult, AstExpr, AstSassMap,
+        ArgumentDeclaration, ArgumentInvocation, ArgumentResult, AstExpr, AstSassMap,
         CalculationArg, CalculationName, MaybeEvaledArguments, StringExpr, Ternary,
     },
     AstAtRootRule, AstContentBlock, AstContentRule, AstDebugRule, AstEach, AstErrorRule,
@@ -58,14 +54,6 @@ use super::{
     AstStmt, AstStyle, AstUnknownAtRule, AstVariableDecl, AstWarn, AstWhile, AtRootQuery,
     CssMediaQuery, Interpolation, InterpolationPart, Parser, SassCalculation, Stmt, StyleSheet,
 };
-
-#[derive(Debug, Clone)]
-pub(crate) enum AstStmtEvalResult {
-    // todo: single stmt result to avoid superfluous allocation
-    // Stmt(Stmt),
-    Stmts(Vec<Stmt>),
-    Return(Value),
-}
 
 #[derive(Debug, Clone)]
 struct CssTree {
@@ -98,37 +86,37 @@ impl CssTree {
         let mut idx = 1;
 
         while idx < self.stmts.len() - 1 {
-            if self.stmts[idx].borrow().is_none() || !self.has_children(&CssTreeIdx(idx)) {
+            if self.stmts[idx].borrow().is_none() || !self.has_children(CssTreeIdx(idx)) {
                 idx += 1;
                 continue;
             }
 
-            self.apply_children(&CssTreeIdx(idx));
+            self.apply_children(CssTreeIdx(idx));
 
             idx += 1;
         }
 
         self.stmts
             .into_iter()
-            .filter_map(|x| x.into_inner())
+            .filter_map(RefCell::into_inner)
             .collect()
     }
 
-    fn apply_children(&self, parent: &CssTreeIdx) {
-        for child in &self.parent_to_child[parent] {
+    fn apply_children(&self, parent: CssTreeIdx) {
+        for &child in &self.parent_to_child[&parent] {
             if self.has_children(child) {
                 self.apply_children(child);
             }
 
             match self.stmts[child.0].borrow_mut().take() {
-                Some(child) => self.add_child_to_parent(child, *parent),
+                Some(child) => self.add_child_to_parent(child, parent),
                 None => continue,
             };
         }
     }
 
-    fn has_children(&self, parent: &CssTreeIdx) -> bool {
-        self.parent_to_child.contains_key(parent)
+    fn has_children(&self, parent: CssTreeIdx) -> bool {
+        self.parent_to_child.contains_key(&parent)
     }
 
     fn add_child_to_parent(&self, child: Stmt, parent_idx: CssTreeIdx) {
@@ -138,11 +126,11 @@ impl CssTree {
             Some(
                 Stmt::Style(..)
                 | Stmt::Comment(..)
-                | Stmt::Return(..)
+                // | Stmt::Return(..)
                 | Stmt::Import(..)
-                | Stmt::AtRoot { .. },
+                // | Stmt::AtRoot { .. },
             ) => unreachable!(),
-            Some(Stmt::Media(media)) => {
+            Some(Stmt::Media(media, ..)) => {
                 media.body.push(child);
             }
             Some(Stmt::UnknownAtRule(at_rule)) => {
@@ -321,7 +309,7 @@ pub(crate) struct Visitor<'a> {
     // avoid emitting duplicate warnings for the same span
     pub warnings_emitted: HashSet<Span>,
     pub media_queries: Option<Vec<MediaQuery>>,
-    pub media_query_sources: Option<HashSet<MediaQuery>>,
+    pub media_query_sources: Option<IndexSet<MediaQuery>>,
     pub extender: Extender,
     pub current_import_path: PathBuf,
     pub module_config: ModuleConfig,
@@ -371,7 +359,7 @@ impl<'a> Visitor<'a> {
     fn visit_return_rule(&mut self, ret: AstReturn) -> SassResult<Option<Value>> {
         let val = self.visit_expr(ret.val)?;
 
-        Ok(Some(self.without_slash(val)?))
+        Ok(Some(self.without_slash(val)))
     }
 
     // todo: we really don't have to return Option<Value> from all of these children
@@ -391,8 +379,14 @@ impl<'a> Visitor<'a> {
             AstStmt::VariableDecl(decl) => self.visit_variable_decl(decl),
             AstStmt::LoudComment(comment) => self.visit_loud_comment(comment),
             AstStmt::ImportRule(import_rule) => self.visit_import_rule(import_rule),
-            AstStmt::FunctionDecl(func) => self.visit_function_decl(func),
-            AstStmt::Mixin(mixin) => self.visit_mixin(mixin),
+            AstStmt::FunctionDecl(func) => {
+                self.visit_function_decl(func);
+                Ok(None)
+            }
+            AstStmt::Mixin(mixin) => {
+                self.visit_mixin_decl(mixin);
+                Ok(None)
+            }
             AstStmt::ContentRule(content_rule) => self.visit_content_rule(content_rule),
             AstStmt::Warn(warn_rule) => {
                 self.visit_warn_rule(warn_rule)?;
@@ -410,7 +404,7 @@ impl<'a> Visitor<'a> {
         for import in import_rule.imports {
             match import {
                 AstImport::Sass(dynamic_import) => {
-                    self.visit_dynamic_import_rule(dynamic_import)?
+                    self.visit_dynamic_import_rule(dynamic_import)?;
                 }
                 AstImport::Plain(static_import) => self.visit_static_import_rule(static_import)?,
             }
@@ -763,7 +757,7 @@ impl<'a> Visitor<'a> {
 
                     Ok(())
                 },
-            );
+            )?;
         }
 
         Ok(None)
@@ -969,7 +963,7 @@ impl<'a> Visitor<'a> {
         res
     }
 
-    fn visit_function_decl(&mut self, fn_decl: AstFunctionDecl) -> SassResult<Option<Value>> {
+    fn visit_function_decl(&mut self, fn_decl: AstFunctionDecl) {
         let name = fn_decl.name;
         // todo: independency
         let scope_idx = self.env.scopes().len();
@@ -986,11 +980,9 @@ impl<'a> Visitor<'a> {
         } else {
             self.env.scopes_mut().insert_fn(name, func);
         }
-
-        Ok(None)
     }
 
-    fn parse_selector_from_string(&mut self, selector_text: String) -> SassResult<SelectorList> {
+    fn parse_selector_from_string(&mut self, selector_text: &str) -> SassResult<SelectorList> {
         let mut sel_toks = Lexer::new(
             selector_text
                 .chars()
@@ -1034,7 +1026,7 @@ impl<'a> Visitor<'a> {
 
         let target_text = self.interpolation_to_value(extend_rule.value, false, true)?;
 
-        let list = self.parse_selector_from_string(target_text)?;
+        let list = self.parse_selector_from_string(&target_text)?;
 
         let extend_rule = ExtendRule {
             selector: Selector(list.clone()),
@@ -1088,7 +1080,6 @@ impl<'a> Visitor<'a> {
     }
 
     fn merge_media_queries(
-        &mut self,
         queries1: &[MediaQuery],
         queries2: &[MediaQuery],
     ) -> Option<Vec<MediaQuery>> {
@@ -1121,10 +1112,11 @@ impl<'a> Visitor<'a> {
         }
 
         let queries1 = self.visit_media_queries(media_rule.query)?;
-        let queries2 = self.media_queries.take();
+        // todo: superfluous clone?
+        let queries2 = self.media_queries.clone();
         let merged_queries = queries2
             .as_ref()
-            .and_then(|queries2| self.merge_media_queries(&queries1, queries2));
+            .and_then(|queries2| Self::merge_media_queries(queries2, &queries1));
 
         // if let Some(merged_queries) = merged_queries {
         //     if merged_queries.is_empty() {
@@ -1135,15 +1127,16 @@ impl<'a> Visitor<'a> {
         let merged_sources = match &merged_queries {
             Some(merged_queries) if merged_queries.is_empty() => return Ok(None),
             Some(merged_queries) => {
-                let mut set = HashSet::new();
+                let mut set = IndexSet::new();
                 set.extend(self.media_query_sources.clone().unwrap().into_iter());
                 set.extend(self.media_queries.clone().unwrap().into_iter());
                 set.extend(queries1.clone().into_iter());
                 set
             }
-            None => HashSet::new(),
+            None => IndexSet::new(),
         };
 
+        // dbg!(&merged_queries, &queries1);
         //     through: (node) =>
         //         node is CssStyleRule ||
         //         (mergedSources.isNotEmpty &&
@@ -1155,18 +1148,21 @@ impl<'a> Visitor<'a> {
 
         let query = merged_queries.clone().unwrap_or_else(|| queries1.clone());
 
-        let media_rule = Stmt::Media(Box::new(MediaRule {
-            query: query
-                .into_iter()
-                .map(|query| query.to_string())
-                .collect::<Vec<String>>()
-                .join(", "),
-            body: Vec::new(),
-        }));
+        let media_rule = Stmt::Media(
+            Box::new(MediaRule {
+                query: query
+                    .into_iter()
+                    .map(|query| query.to_string())
+                    .collect::<Vec<String>>()
+                    .join(", "),
+                body: Vec::new(),
+            }),
+            self.style_rule_exists(),
+        );
 
-        let parent_idx = self.css_tree.add_stmt(media_rule, self.parent);
+        let parent_idx = self.css_tree.add_stmt(media_rule, None);
 
-        self.with_parent::<SassResult<()>>(parent_idx, false, true, |visitor| {
+        self.with_parent::<SassResult<()>>(parent_idx, true, |visitor| {
             visitor.with_media_queries(
                 Some(merged_queries.unwrap_or(queries1)),
                 Some(merged_sources),
@@ -1190,19 +1186,14 @@ impl<'a> Visitor<'a> {
 
                         let parent_idx = visitor.css_tree.add_stmt(ruleset, visitor.parent);
 
-                        visitor.with_parent::<SassResult<()>>(
-                            parent_idx,
-                            false,
-                            false,
-                            |visitor| {
-                                for stmt in children {
-                                    let result = visitor.visit_stmt(stmt)?;
-                                    assert!(result.is_none());
-                                }
+                        visitor.with_parent::<SassResult<()>>(parent_idx, false, |visitor| {
+                            for stmt in children {
+                                let result = visitor.visit_stmt(stmt)?;
+                                assert!(result.is_none());
+                            }
 
-                                Ok(())
-                            },
-                        )?;
+                            Ok(())
+                        })?;
                     }
 
                     Ok(())
@@ -1299,7 +1290,7 @@ impl<'a> Visitor<'a> {
 
         let parent_idx = self.css_tree.add_stmt(stmt, self.parent);
 
-        self.with_parent::<SassResult<()>>(parent_idx, true, true, |visitor| {
+        self.with_parent::<SassResult<()>>(parent_idx, true, |visitor| {
             if !visitor.style_rule_exists() || visitor.flags.in_keyframes() {
                 for stmt in children {
                     let result = visitor.visit_stmt(stmt)?;
@@ -1319,7 +1310,7 @@ impl<'a> Visitor<'a> {
 
                 let parent_idx = visitor.css_tree.add_stmt(style_rule, visitor.parent);
 
-                visitor.with_parent::<SassResult<()>>(parent_idx, false, false, |visitor| {
+                visitor.with_parent::<SassResult<()>>(parent_idx, false, |visitor| {
                     for stmt in children {
                         let result = visitor.visit_stmt(stmt)?;
                         assert!(result.is_none());
@@ -1375,7 +1366,7 @@ impl<'a> Visitor<'a> {
     fn with_media_queries<T>(
         &mut self,
         queries: Option<Vec<MediaQuery>>,
-        sources: Option<HashSet<MediaQuery>>,
+        sources: Option<IndexSet<MediaQuery>>,
         callback: impl FnOnce(&mut Self) -> T,
     ) -> T {
         let old_media_queries = self.media_queries.take();
@@ -1403,8 +1394,6 @@ impl<'a> Visitor<'a> {
     fn with_parent<T>(
         &mut self,
         parent: CssTreeIdx,
-        // default=false
-        semi_global: bool,
         // default=true
         scope_when: bool,
         callback: impl FnOnce(&mut Self) -> T,
@@ -1528,7 +1517,7 @@ impl<'a> Visitor<'a> {
         }
     }
 
-    fn visit_mixin(&mut self, mixin: AstMixin) -> SassResult<Option<Value>> {
+    fn visit_mixin_decl(&mut self, mixin: AstMixin) {
         let scope_idx = self.env.scopes().len();
         if self.style_rule_exists() {
             let scope = self.env.new_closure();
@@ -1541,7 +1530,6 @@ impl<'a> Visitor<'a> {
                 Mixin::UserDefined(mixin, self.env.new_closure(), scope_idx),
             );
         }
-        Ok(None)
     }
 
     fn visit_each_stmt(&mut self, each_stmt: AstEach) -> SassResult<Option<Value>> {
@@ -1605,8 +1593,7 @@ impl<'a> Visitor<'a> {
         let from = from_number.num().to_i64().unwrap();
         let mut to = to_number
             .num()
-            .clone()
-            .convert(&to_number.unit(), &from_number.unit())
+            .convert(to_number.unit(), from_number.unit())
             .to_i64()
             .unwrap();
 
@@ -1710,7 +1697,10 @@ impl<'a> Visitor<'a> {
         //   _endOfImports++;
         // }
 
-        let comment = Stmt::Comment(self.perform_interpolation(comment.text, false)?);
+        let comment = Stmt::Comment(
+            self.perform_interpolation(comment.text, false)?,
+            comment.span,
+        );
         self.css_tree.add_stmt(comment, self.parent);
 
         Ok(None)
@@ -1742,7 +1732,7 @@ impl<'a> Visitor<'a> {
                     )
                     .unwrap();
 
-                if value.deref() != &Value::Null {
+                if *value != Value::Null {
                     return Ok(None);
                 }
             }
@@ -1758,7 +1748,7 @@ impl<'a> Visitor<'a> {
         }
 
         let value = self.visit_expr(decl.value)?;
-        let value = self.without_slash(value)?;
+        let value = self.without_slash(value);
 
         if decl.is_global || self.env.at_root() {
             self.env.global_scope_mut().insert_var(decl.name, value);
@@ -1768,7 +1758,7 @@ impl<'a> Visitor<'a> {
             self.env.scopes.borrow_mut().__insert_var(
                 decl.name,
                 value,
-                &&*self.env.global_scope,
+                &self.env.global_scope,
                 self.flags.in_semi_global_scope(),
             );
         }
@@ -1828,7 +1818,7 @@ impl<'a> Visitor<'a> {
         self.serialize(result, quote)
     }
 
-    fn without_slash(&mut self, v: Value) -> SassResult<Value> {
+    fn without_slash(&mut self, v: Value) -> Value {
         match v {
             Value::Dimension(..) if v.as_slash().is_some() => {
                 //   String recommendation(SassNumber number) {
@@ -1858,7 +1848,7 @@ impl<'a> Visitor<'a> {
             _ => {}
         }
 
-        Ok(v.without_slash())
+        v.without_slash()
     }
 
     fn eval_maybe_args(&mut self, args: MaybeEvaledArguments) -> SassResult<ArgumentResult> {
@@ -1873,14 +1863,14 @@ impl<'a> Visitor<'a> {
 
         for expr in arguments.positional {
             let val = self.visit_expr(expr)?;
-            positional.push(self.without_slash(val)?);
+            positional.push(self.without_slash(val));
         }
 
         let mut named = BTreeMap::new();
 
         for (key, expr) in arguments.named {
             let val = self.visit_expr(expr)?;
-            named.insert(key, self.without_slash(val)?);
+            named.insert(key, self.without_slash(val));
         }
 
         if arguments.rest.is_none() {
@@ -1903,7 +1893,7 @@ impl<'a> Visitor<'a> {
                 let mut list = elems
                     .into_iter()
                     .map(|e| self.without_slash(e))
-                    .collect::<SassResult<Vec<_>>>()?;
+                    .collect::<Vec<_>>();
                 positional.append(&mut list);
                 separator = list_separator;
             }
@@ -1916,16 +1906,16 @@ impl<'a> Visitor<'a> {
                 let mut list = elems
                     .into_iter()
                     .map(|e| self.without_slash(e))
-                    .collect::<SassResult<Vec<_>>>()?;
+                    .collect::<Vec<_>>();
                 positional.append(&mut list);
                 separator = list_separator;
 
                 for (key, value) in keywords {
-                    named.insert(key, self.without_slash(value)?);
+                    named.insert(key, self.without_slash(value));
                 }
             }
             _ => {
-                positional.push(self.without_slash(rest)?);
+                positional.push(self.without_slash(rest));
             }
         }
 
@@ -1943,13 +1933,13 @@ impl<'a> Visitor<'a> {
             Value::Map(keyword_rest) => {
                 self.add_rest_map(&mut named, keyword_rest)?;
 
-                return Ok(ArgumentResult {
+                Ok(ArgumentResult {
                     positional,
                     named,
                     separator,
                     span: arguments.span,
                     touched: BTreeSet::new(),
-                });
+                })
             }
             _ => {
                 todo!("Variable keyword arguments must be a map (was $keywordRest).")
@@ -1962,7 +1952,7 @@ impl<'a> Visitor<'a> {
         named: &mut BTreeMap<Identifier, Value>,
         rest: SassMap,
     ) -> SassResult<()> {
-        for (key, val) in rest.into_iter() {
+        for (key, val) in rest {
             match key {
                 Value::String(text, ..) => {
                     named.insert(Identifier::from(text), val);
@@ -2019,11 +2009,11 @@ impl<'a> Visitor<'a> {
                     let value = evaluated
                         .named
                         .remove(&argument.name)
-                        .map(|n| Ok(n))
+                        .map(SassResult::Ok)
                         .unwrap_or_else(|| {
                             // todo: superfluous clone
                             let v = visitor.visit_expr(argument.default.clone().unwrap())?;
-                            visitor.without_slash(v)
+                            Ok(visitor.without_slash(v))
                         })?;
                     visitor.env.scopes_mut().insert_var_last(name, value);
                 }
@@ -2110,7 +2100,7 @@ impl<'a> Visitor<'a> {
             SassFunction::Builtin(func, name) => {
                 let mut evaluated = self.eval_maybe_args(arguments)?;
                 let val = func.0(evaluated, self)?;
-                return self.without_slash(val);
+                Ok(self.without_slash(val))
             }
             SassFunction::UserDefined(UserDefinedFunction {
                 function,
@@ -2308,19 +2298,20 @@ impl<'a> Visitor<'a> {
         in_min_or_max: bool,
     ) -> SassResult<CalculationArg> {
         Ok(match expr {
-            AstExpr::Paren(val) => {
-                //   var inner = node.expression;
-                //   var result = await _visitCalculationValue(inner, inMinMax: inMinMax);
-                //   return inner is FunctionExpression &&
-                //           inner.name.toLowerCase() == 'var' &&
-                //           result is SassString &&
-                //           !result.hasQuotes
-                //       ? SassString('(${result.text})', quotes: false)
-                //       : result;
+            AstExpr::Paren(inner) => match &*inner {
+                AstExpr::FunctionCall { ref name, .. }
+                    if name.as_str().to_ascii_lowercase() == "var" =>
+                {
+                    let result = self.visit_calculation_value(*inner, in_min_or_max)?;
 
-                let result = self.visit_calculation_value(*val, in_min_or_max)?;
-                todo!()
-            }
+                    if let CalculationArg::String(text) = result {
+                        CalculationArg::String(format!("({})", text))
+                    } else {
+                        result
+                    }
+                }
+                _ => self.visit_calculation_value(*inner, in_min_or_max)?,
+            },
             AstExpr::String(string_expr) => {
                 debug_assert!(string_expr.1 == QuoteKind::None);
                 CalculationArg::String(self.perform_interpolation(string_expr.0, false)?)
@@ -2345,7 +2336,7 @@ impl<'a> Visitor<'a> {
                 let result = self.visit_expr(expr)?;
                 match result {
                     Value::Dimension(num, unit, as_slash) => {
-                        CalculationArg::Number(SassNumber(num, unit, as_slash))
+                        CalculationArg::Number(SassNumber(num.0, unit, as_slash))
                     }
                     Value::Calculation(calc) => CalculationArg::Calculation(calc),
                     Value::String(s, quotes) if quotes == QuoteKind::None => {
@@ -2415,10 +2406,10 @@ impl<'a> Visitor<'a> {
         let positional = if_expr.0.positional;
         let named = if_expr.0.named;
 
-        let condition = if positional.len() > 0 {
-            &positional[0]
-        } else {
+        let condition = if positional.is_empty() {
             named.get(&Identifier::from("condition")).unwrap()
+        } else {
+            &positional[0]
         };
 
         let if_true = if positional.len() > 1 {
@@ -2439,7 +2430,7 @@ impl<'a> Visitor<'a> {
             self.visit_expr(if_false.clone())?
         };
 
-        self.without_slash(value)
+        Ok(self.without_slash(value))
     }
 
     fn visit_string(&mut self, text: Interpolation, quote: QuoteKind) -> SassResult<Value> {
@@ -2602,10 +2593,6 @@ impl<'a> Visitor<'a> {
         })
     }
 
-    fn visit_color(&mut self, color: Color) -> SassResult<Value> {
-        Ok(Value::Color(Box::new(color)))
-    }
-
     // todo: superfluous clone and non-use of cow
     fn serialize(&mut self, mut expr: Value, quote: QuoteKind) -> SassResult<String> {
         if quote == QuoteKind::None {
@@ -2670,7 +2657,7 @@ impl<'a> Visitor<'a> {
 
             let parent_idx = self.css_tree.add_stmt(keyframes_ruleset, self.parent);
 
-            self.with_parent::<SassResult<()>>(parent_idx, false, true, |visitor| {
+            self.with_parent::<SassResult<()>>(parent_idx, true, |visitor| {
                 for stmt in ruleset_body {
                     let result = visitor.visit_stmt(stmt)?;
                     assert!(result.is_none());
@@ -2743,7 +2730,7 @@ impl<'a> Visitor<'a> {
         let old_style_rule_ignoring_at_root = self.style_rule_ignoring_at_root.take();
         self.style_rule_ignoring_at_root = Some(selector);
 
-        let result = self.with_parent::<SassResult<()>>(parent_idx, false, true, |visitor| {
+        self.with_parent::<SassResult<()>>(parent_idx, true, |visitor| {
             for stmt in ruleset_body {
                 let result = visitor.visit_stmt(stmt)?;
                 assert!(result.is_none());
@@ -2911,7 +2898,7 @@ impl<'a> Visitor<'a> {
 
         let children = style.body;
 
-        if children.len() > 0 {
+        if !children.is_empty() {
             let old_declaration_name = self.declaration_name.take();
             self.declaration_name = Some(name);
             self.with_scope::<SassResult<()>>(false, true, |visitor| {

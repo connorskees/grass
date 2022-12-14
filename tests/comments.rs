@@ -37,6 +37,13 @@ test!(
     "a {\n  color: red;\n}\n\n/* foo */\n"
 );
 test!(
+    preserves_trailing_comments,
+    "a { /**/
+      color: red; /**/
+    } /**/",
+    "a { /**/\n  color: red; /**/\n} /**/\n"
+);
+test!(
     removes_single_line_comment,
     "// a { color: red }\na {\n  height: 1 1px;\n}\n",
     "a {\n  height: 1 1px;\n}\n"
@@ -65,6 +72,16 @@ test!(
     interpolation_in_multiline_comment,
     "$a: foo;/* interpolation #{1 + 1} in #{$a} comments */",
     "/* interpolation 2 in foo comments */\n"
+);
+test!(
+    preserves_relative_whitespace,
+    "  /*!\n    * a\n    */\n",
+    "/*!\n  * a\n  */\n"
+);
+test!(
+    preserves_relative_whitespace_for_each_line,
+    "  /*!\n      * a\n    */\n",
+    "/*!\n    * a\n  */\n"
 );
 test!(
     triple_star_in_selector,

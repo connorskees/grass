@@ -1,7 +1,7 @@
 //! # Convert from SCSS AST to CSS
 use std::{io::Write, mem};
 
-use codemap::CodeMap;
+use codemap::{CodeMap, Span};
 
 use crate::{
     atrule::{
@@ -39,7 +39,7 @@ enum Toplevel {
         body: Vec<BlockEntry>,
         is_group_end: bool,
     },
-    MultilineComment(String),
+    MultilineComment(String, Span),
     UnknownAtRule(Box<ToplevelUnknownAtRule>),
     Keyframes(Box<Keyframes>),
     KeyframesRuleSet(Vec<KeyframesSelector>, Vec<BlockEntry>),
@@ -105,7 +105,7 @@ fn set_group_end(group: &mut [Toplevel]) {
 #[derive(Debug, Clone)]
 enum BlockEntry {
     Style(Style),
-    MultilineComment(String),
+    MultilineComment(String, Span),
     UnknownAtRule(BlockEntryUnknownAtRule),
 }
 
@@ -113,7 +113,7 @@ impl BlockEntry {
     pub fn to_string(&self) -> SassResult<String> {
         match self {
             BlockEntry::Style(s) => s.to_string(),
-            BlockEntry::MultilineComment(s) => Ok(format!("{}", s)),
+            BlockEntry::MultilineComment(s, _) => Ok(format!("{}", s)),
             BlockEntry::UnknownAtRule(BlockEntryUnknownAtRule { name, params }) => {
                 Ok(if params.is_empty() {
                     format!("@{};", name)
@@ -150,9 +150,9 @@ impl Toplevel {
         }
     }
 
-    fn push_comment(&mut self, s: String) {
+    fn push_comment(&mut self, s: String, span: Span) {
         if let Toplevel::RuleSet { body, .. } | Toplevel::KeyframesRuleSet(_, body) = self {
-            body.push(BlockEntry::MultilineComment(s));
+            body.push(BlockEntry::MultilineComment(s, span));
         } else {
             panic!();
         }
@@ -215,8 +215,8 @@ impl Css {
                     match rule {
                         Stmt::RuleSet { .. } => vals.extend(self.parse_stmt(rule)?),
                         Stmt::Style(s) => vals.first_mut().unwrap().push_style(s),
-                        Stmt::Comment(s) => vals.first_mut().unwrap().push_comment(s),
-                        Stmt::Media(m) => {
+                        Stmt::Comment(s, span) => vals.first_mut().unwrap().push_comment(s, span),
+                        Stmt::Media(m, inside_rule) => {
                             let MediaRule { query, body, .. } = *m;
                             vals.push(Toplevel::Media {
                                 query,
@@ -258,17 +258,17 @@ impl Css {
                                 vals.first_mut().unwrap().push_unknown_at_rule(at_rule);
                             }
                         }
-                        Stmt::Return(..) => unreachable!(),
-                        Stmt::AtRoot { body } => {
-                            body.into_iter().try_for_each(|r| -> SassResult<()> {
-                                let mut stmts = self.parse_stmt(r)?;
+                        // Stmt::Return(..) => unreachable!(),
+                        // Stmt::AtRoot { body } => {
+                        //     body.into_iter().try_for_each(|r| -> SassResult<()> {
+                        //         let mut stmts = self.parse_stmt(r)?;
 
-                                set_group_end(&mut stmts);
+                        //         set_group_end(&mut stmts);
 
-                                vals.append(&mut stmts);
-                                Ok(())
-                            })?;
-                        }
+                        //         vals.append(&mut stmts);
+                        //         Ok(())
+                        //     })?;
+                        // }
                         Stmt::Keyframes(k) => {
                             let Keyframes { rule, name, body } = *k;
                             vals.push(Toplevel::Keyframes(Box::new(Keyframes {
@@ -285,18 +285,18 @@ impl Css {
                 }
                 vals
             }
-            Stmt::Comment(s) => vec![Toplevel::MultilineComment(s)],
+            Stmt::Comment(s, span) => vec![Toplevel::MultilineComment(s, span)],
             Stmt::Import(s) => {
                 self.plain_imports.push(Toplevel::Import(s));
                 Vec::new()
             }
             Stmt::Style(s) => vec![Toplevel::Style(s)],
-            Stmt::Media(m) => {
+            Stmt::Media(m, inside_rule) => {
                 let MediaRule { query, body, .. } = *m;
                 vec![Toplevel::Media {
                     query,
                     body,
-                    inside_rule: false,
+                    inside_rule,
                     is_group_end: false,
                 }]
             }
@@ -326,14 +326,14 @@ impl Css {
                     is_group_end: false,
                 }))]
             }
-            Stmt::Return(..) => unreachable!("@return: {:?}", stmt),
-            Stmt::AtRoot { body } => body
-                .into_iter()
-                .map(|r| self.parse_stmt(r))
-                .collect::<SassResult<Vec<Vec<Toplevel>>>>()?
-                .into_iter()
-                .flatten()
-                .collect(),
+            // Stmt::Return(..) => unreachable!("@return: {:?}", stmt),
+            // Stmt::AtRoot { body } => body
+            //     .into_iter()
+            //     .map(|r| self.parse_stmt(r))
+            //     .collect::<SassResult<Vec<Vec<Toplevel>>>>()?
+            //     .into_iter()
+            //     .flatten()
+            //     .collect(),
             Stmt::Keyframes(k) => vec![Toplevel::Keyframes(k)],
             Stmt::KeyframesRuleSet(k) => {
                 let KeyframesRuleSet { body, selector } = *k;
@@ -578,6 +578,58 @@ struct ExpandedFormatter {
     nesting: usize,
 }
 
+impl ExpandedFormatter {
+    pub fn minimum_indentation(&self, text: &str) -> Option<i32> {
+        let mut scanner = text.chars().peekable();
+        while let Some(tok) = scanner.next() {
+            if tok == '\n' {
+                break;
+            }
+        }
+
+        let mut col = 0;
+
+        if scanner.peek().is_none() {
+            return if text.chars().last() == Some('\n') {
+                Some(-1)
+            } else {
+                None
+            };
+        }
+
+        let mut min = None;
+
+        while scanner.peek().is_some() {
+            while let Some(&next) = scanner.peek() {
+                if next != ' ' && next != '\t' {
+                    break;
+                }
+                scanner.next();
+                if next == '\n' {
+                    col = 0;
+                } else {
+                    col += 1;
+                }
+            }
+            if scanner.peek().is_none() || scanner.peek() == Some(&'\n') {
+                scanner.next();
+                col = 0;
+                continue;
+            }
+            min = if min.is_none() {
+                Some(col)
+            } else {
+                Some(min.unwrap().min(col))
+            };
+
+            while scanner.peek().is_some() && scanner.next() == Some('\n') {}
+            col = 0;
+        }
+
+        min.or(Some(-1))
+    }
+}
+
 #[derive(Clone, Copy)]
 struct Previous {
     is_group_end: bool,
@@ -649,8 +701,69 @@ impl Formatter for ExpandedFormatter {
                     }
                     write!(buf, "{}}}", padding)?;
                 }
-                Toplevel::MultilineComment(s) => {
-                    write!(buf, "{}{}", padding, s)?;
+                Toplevel::MultilineComment(s, span) => {
+                    // write!(buf, "{}", padding)?;
+
+                    // let mut lines = s.lines();
+
+                    // if let Some(line) = lines.next() {
+                    //     writeln!(buf, "{}", line.trim_start());
+                    // }
+
+                    // write!(buf, "{}", lines.map(|line| format!(" {}", line.trim_start())).collect::<Vec<String>>().join("\n"));
+
+                    // let mut start = true;
+                    // for line in s.lines() {
+                    //     if start {
+                    //         start = false;
+                    //         writeln!(buf, "{}", line.trim_start());
+                    //     } else {
+                    //         writeln!(buf, " {}", line.trim_start());
+                    //     }
+                    // }
+                    // dbg!(&s);
+                    let col = map.look_up_pos(span.low()).position.column;
+                    // let minimum_indentation = self.minimum_indentation(&s);
+                    // debug_assert_ne!(minimum_indentation, Some(-1));
+
+                    // dbg!(col);
+
+                    // let minimum_indentation = match minimum_indentation {
+                    //     Some(v) => v.min(col as i32),
+                    //     None => {
+                    //         write!(buf, "{}{}", padding, s)?;
+                    //         continue;
+                    //     }
+                    // };
+
+                    // write!(buf, "{}", padding);
+
+                    let mut lines = s.lines();
+
+                    if let Some(line) = lines.next() {
+                        write!(buf, "{}", line.trim_start())?;
+                    }
+
+                    let lines = lines
+                        .map(|line| {
+                            let diff = (line.len() - line.trim_start().len()).saturating_sub(col);
+                            format!("{}{}", " ".repeat(diff), line.trim_start())
+                        })
+                        .collect::<Vec<String>>()
+                        .join("\n");
+
+                    if !lines.is_empty() {
+                        write!(buf, "\n{}", lines)?;
+                    }
+
+                    // write!(buf, "{}", lines.map(|line| format!("{}{}", " ".repeat(col as usize), line.trim_start())).collect::<Vec<String>>().join("\n"));
+
+                    // minimumIndentation = math.min(minimumIndentation, node.span.start.column);
+
+                    //   _writeIndentation();
+                    //   _writeWithIndent(node.text, minimumIndentation);
+
+                    // write!(buf, "{}{}", padding, s)?;
                 }
                 Toplevel::Import(s) => {
                     write!(buf, "{}@import {};", padding, s)?;
@@ -760,7 +873,7 @@ impl Formatter for ExpandedFormatter {
                         if inside_rule {
                             AtRuleContext::Media
                         } else {
-                            AtRuleContext::Media
+                            AtRuleContext::None
                         },
                         css.allows_charset,
                     )?;

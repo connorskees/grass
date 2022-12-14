@@ -202,145 +202,142 @@ impl<'a, 'b> Parser<'a, 'b> {
         // })
     }
 
-    #[track_caller]
-    pub(crate) fn parse_identifier_no_interpolation(
-        &mut self,
-        unit: bool,
-    ) -> SassResult<Spanned<String>> {
-        todo!()
-        // let Token {
-        //     kind,
-        //     pos: mut span,
-        // } = self
-        //     .toks
-        //     .peek()
-        //     .ok_or(("Expected identifier.", self.span_before))?;
-        // let mut text = String::new();
-        // if kind == '-' {
-        //     self.toks.next();
-        //     text.push('-');
+    // pub(crate) fn parse_identifier_no_interpolation(
+    //     &mut self,
+    //     unit: bool,
+    // ) -> SassResult<Spanned<String>> {
+    // let Token {
+    //     kind,
+    //     pos: mut span,
+    // } = self
+    //     .toks
+    //     .peek()
+    //     .ok_or(("Expected identifier.", self.span_before))?;
+    // let mut text = String::new();
+    // if kind == '-' {
+    //     self.toks.next();
+    //     text.push('-');
 
-        //     match self.toks.peek() {
-        //         Some(Token { kind: '-', .. }) => {
-        //             self.toks.next();
-        //             text.push('-');
-        //             text.push_str(&self.ident_body_no_interpolation(unit)?.node);
-        //             return Ok(Spanned { node: text, span });
-        //         }
-        //         Some(..) => {}
-        //         None => return Ok(Spanned { node: text, span }),
-        //     }
-        // }
+    //     match self.toks.peek() {
+    //         Some(Token { kind: '-', .. }) => {
+    //             self.toks.next();
+    //             text.push('-');
+    //             text.push_str(&self.ident_body_no_interpolation(unit)?.node);
+    //             return Ok(Spanned { node: text, span });
+    //         }
+    //         Some(..) => {}
+    //         None => return Ok(Spanned { node: text, span }),
+    //     }
+    // }
 
-        // let first = match self.toks.next() {
-        //     Some(v) => v,
-        //     None => return Err(("Expected identifier.", span).into()),
-        // };
+    // let first = match self.toks.next() {
+    //     Some(v) => v,
+    //     None => return Err(("Expected identifier.", span).into()),
+    // };
 
-        // if is_name_start(first.kind) {
-        //     text.push(first.kind);
-        // } else if first.kind == '\\' {
-        //     text.push_str(&self.parse_escape(true)?);
-        // } else {
-        //     return Err(("Expected identifier.", first.pos).into());
-        // }
+    // if is_name_start(first.kind) {
+    //     text.push(first.kind);
+    // } else if first.kind == '\\' {
+    //     text.push_str(&self.parse_escape(true)?);
+    // } else {
+    //     return Err(("Expected identifier.", first.pos).into());
+    // }
 
-        // let body = self.ident_body_no_interpolation(unit)?;
-        // span = span.merge(body.span);
-        // text.push_str(&body.node);
-        // Ok(Spanned { node: text, span })
-    }
+    // let body = self.ident_body_no_interpolation(unit)?;
+    // span = span.merge(body.span);
+    // text.push_str(&body.node);
+    // Ok(Spanned { node: text, span })
+    // }
 
-    pub(crate) fn parse_quoted_string(&mut self, q: char) -> SassResult<Spanned<Value>> {
-        // let mut s = String::new();
-        // let mut span = self
-        //     .toks
-        //     .peek()
-        //     .ok_or((format!("Expected {}.", q), self.span_before))?
-        //     .pos();
-        // while let Some(tok) = self.toks.next() {
-        //     span = span.merge(tok.pos());
-        //     match tok.kind {
-        //         '"' if q == '"' => {
-        //             return Ok(Spanned {
-        //                 node: Value::String(s, QuoteKind::Quoted),
-        //                 span,
-        //             });
-        //         }
-        //         '\'' if q == '\'' => {
-        //             return Ok(Spanned {
-        //                 node: Value::String(s, QuoteKind::Quoted),
-        //                 span,
-        //             })
-        //         }
-        //         '#' => {
-        //             if let Some(Token { kind: '{', pos }) = self.toks.peek() {
-        //                 self.span_before = self.span_before.merge(pos);
-        //                 self.toks.next();
-        //                 let interpolation = self.parse_interpolation()?;
-        //                 match interpolation.node {
-        //                     Value::String(ref v, ..) => s.push_str(v),
-        //                     v => s.push_str(
-        //                         v.to_css_string(interpolation.span, self.options.is_compressed())?
-        //                             .borrow(),
-        //                     ),
-        //                 };
-        //                 continue;
-        //             }
+    // pub(crate) fn parse_quoted_string(&mut self, q: char) -> SassResult<Spanned<Value>> {
+    // let mut s = String::new();
+    // let mut span = self
+    //     .toks
+    //     .peek()
+    //     .ok_or((format!("Expected {}.", q), self.span_before))?
+    //     .pos();
+    // while let Some(tok) = self.toks.next() {
+    //     span = span.merge(tok.pos());
+    //     match tok.kind {
+    //         '"' if q == '"' => {
+    //             return Ok(Spanned {
+    //                 node: Value::String(s, QuoteKind::Quoted),
+    //                 span,
+    //             });
+    //         }
+    //         '\'' if q == '\'' => {
+    //             return Ok(Spanned {
+    //                 node: Value::String(s, QuoteKind::Quoted),
+    //                 span,
+    //             })
+    //         }
+    //         '#' => {
+    //             if let Some(Token { kind: '{', pos }) = self.toks.peek() {
+    //                 self.span_before = self.span_before.merge(pos);
+    //                 self.toks.next();
+    //                 let interpolation = self.parse_interpolation()?;
+    //                 match interpolation.node {
+    //                     Value::String(ref v, ..) => s.push_str(v),
+    //                     v => s.push_str(
+    //                         v.to_css_string(interpolation.span, self.options.is_compressed())?
+    //                             .borrow(),
+    //                     ),
+    //                 };
+    //                 continue;
+    //             }
 
-        //             s.push('#');
-        //             continue;
-        //         }
-        //         '\n' => return Err(("Expected \".", tok.pos()).into()),
-        //         '\\' => {
-        //             let first = match self.toks.peek() {
-        //                 Some(c) => c,
-        //                 None => {
-        //                     s.push('\u{FFFD}');
-        //                     continue;
-        //                 }
-        //             };
+    //             s.push('#');
+    //             continue;
+    //         }
+    //         '\n' => return Err(("Expected \".", tok.pos()).into()),
+    //         '\\' => {
+    //             let first = match self.toks.peek() {
+    //                 Some(c) => c,
+    //                 None => {
+    //                     s.push('\u{FFFD}');
+    //                     continue;
+    //                 }
+    //             };
 
-        //             if first.kind == '\n' {
-        //                 self.toks.next();
-        //                 continue;
-        //             }
+    //             if first.kind == '\n' {
+    //                 self.toks.next();
+    //                 continue;
+    //             }
 
-        //             if first.kind.is_ascii_hexdigit() {
-        //                 let mut value = 0;
-        //                 for _ in 0..6 {
-        //                     let next = match self.toks.peek() {
-        //                         Some(c) => c,
-        //                         None => break,
-        //                     };
-        //                     if !next.kind.is_ascii_hexdigit() {
-        //                         break;
-        //                     }
-        //                     value = (value << 4) + as_hex(self.toks.next().unwrap().kind);
-        //                 }
+    //             if first.kind.is_ascii_hexdigit() {
+    //                 let mut value = 0;
+    //                 for _ in 0..6 {
+    //                     let next = match self.toks.peek() {
+    //                         Some(c) => c,
+    //                         None => break,
+    //                     };
+    //                     if !next.kind.is_ascii_hexdigit() {
+    //                         break;
+    //                     }
+    //                     value = (value << 4) + as_hex(self.toks.next().unwrap().kind);
+    //                 }
 
-        //                 if self.toks.peek().is_some()
-        //                     && self.toks.peek().unwrap().kind.is_ascii_whitespace()
-        //                 {
-        //                     self.toks.next();
-        //                 }
+    //                 if self.toks.peek().is_some()
+    //                     && self.toks.peek().unwrap().kind.is_ascii_whitespace()
+    //                 {
+    //                     self.toks.next();
+    //                 }
 
-        //                 if value == 0 || (0xD800..=0xDFFF).contains(&value) || value >= 0x0010_FFFF
-        //                 {
-        //                     s.push('\u{FFFD}');
-        //                 } else {
-        //                     s.push(std::char::from_u32(value).unwrap());
-        //                 }
-        //             } else {
-        //                 s.push(self.toks.next().unwrap().kind);
-        //             }
-        //         }
-        //         _ => s.push(tok.kind),
-        //     }
-        // }
-        // Err((format!("Expected {}.", q), span).into())
-        todo!()
-    }
+    //                 if value == 0 || (0xD800..=0xDFFF).contains(&value) || value >= 0x0010_FFFF
+    //                 {
+    //                     s.push('\u{FFFD}');
+    //                 } else {
+    //                     s.push(std::char::from_u32(value).unwrap());
+    //                 }
+    //             } else {
+    //                 s.push(self.toks.next().unwrap().kind);
+    //             }
+    //         }
+    //         _ => s.push(tok.kind),
+    //     }
+    // }
+    // Err((format!("Expected {}.", q), span).into())
+    // }
 
     /// Returns whether the scanner is immediately before a plain CSS identifier.
     ///
@@ -359,12 +356,8 @@ impl<'a, 'b> Parser<'a, 'b> {
         }
 
         match self.toks.peek_n(1) {
-            Some(Token { kind, .. }) if is_name_start(kind) || kind == '-' || kind == '\\' => {
-                true
-            }
-            Some(..) | None => {
-                false
-            }
+            Some(Token { kind, .. }) if is_name_start(kind) || kind == '-' || kind == '\\' => true,
+            Some(..) | None => false,
         }
     }
 }

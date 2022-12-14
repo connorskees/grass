@@ -80,13 +80,7 @@ use crate::{
     builtin::modules::{ModuleConfig, Modules},
     lexer::Lexer,
     output::{AtRuleContext, Css},
-    parse::{
-        common::{ContextFlags, NeverEmptyVec},
-        visitor::Visitor,
-        Parser,
-    },
-    scope::{Scope, Scopes},
-    selector::{ExtendedSelector, Extender, SelectorList},
+    parse::{common::ContextFlags, visitor::Visitor, Parser},
 };
 
 mod args;
