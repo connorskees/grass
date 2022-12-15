@@ -330,15 +330,16 @@ pub(crate) fn get_function(mut args: ArgumentResult, parser: &mut Visitor) -> Sa
 }
 
 pub(crate) fn call(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+    let span = args.span();
     let func = match args.get_err(0, "function")? {
         Value::FunctionRef(f) => f,
         v => {
             return Err((
                 format!(
                     "$function: {} is not a function reference.",
-                    v.inspect(args.span())?
+                    v.inspect(span)?
                 ),
-                args.span(),
+                span,
             )
                 .into())
         }
@@ -346,7 +347,11 @@ pub(crate) fn call(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult
 
     args.remove_positional(0).unwrap();
 
-    parser.run_function_callable_with_maybe_evaled(func, MaybeEvaledArguments::Evaled(args))
+    parser.run_function_callable_with_maybe_evaled(
+        func,
+        MaybeEvaledArguments::Evaled(args),
+        span,
+    )
     // todo!()
     // func.call(args.decrement(), None, parser)
 }

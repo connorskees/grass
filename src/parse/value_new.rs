@@ -359,6 +359,7 @@ pub(crate) enum AstExpr {
         op: BinaryOp,
         rhs: Box<Self>,
         allows_slash: bool,
+        span: Span,
     },
     True,
     False,
@@ -372,11 +373,13 @@ pub(crate) enum AstExpr {
         namespace: Option<String>,
         name: Identifier,
         arguments: Box<ArgumentInvocation>,
+        span: Span,
     },
     If(Box<Ternary>),
     InterpolatedFunction {
         name: Interpolation,
         arguments: Box<ArgumentInvocation>,
+        span: Span,
     },
     List {
         elems: Vec<Spanned<Self>>,
@@ -391,7 +394,7 @@ pub(crate) enum AstExpr {
     },
     Paren(Box<Self>),
     ParentSelector,
-    String(StringExpr),
+    String(StringExpr, Span),
     UnaryOp(UnaryOp, Box<Self>),
     Value(Value),
     Variable {
@@ -494,12 +497,13 @@ impl AstExpr {
         }
     }
 
-    pub fn slash(left: Self, right: Self) -> Self {
+    pub fn slash(left: Self, right: Self, span: Span) -> Self {
         Self::BinaryOp {
             lhs: Box::new(left),
             op: BinaryOp::Div,
             rhs: Box::new(right),
             allows_slash: true,
+            span,
         }
     }
 
@@ -934,7 +938,7 @@ impl<'c> ValueParser<'c> {
                 Some(Token { kind: '"', .. }) | Some(Token { kind: '\'', .. }) => {
                     let expr = parser
                         .parse_interpolated_string()?
-                        .map_node(AstExpr::String);
+                        .map_node(|s| AstExpr::String(s, parser.toks.span_from(start)));
                     self.add_single_expression(expr, parser)?;
                 }
                 Some(Token { kind: '#', .. }) => {
@@ -1254,6 +1258,7 @@ impl<'c> ValueParser<'c> {
     }
 
     fn parse_single_expression(&mut self, parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
+        let start = parser.toks.cursor();
         let first = parser.toks.peek();
 
         match first {
@@ -1264,7 +1269,7 @@ impl<'c> ValueParser<'c> {
             Some(Token { kind: '&', .. }) => self.parse_selector(parser),
             Some(Token { kind: '"', .. }) | Some(Token { kind: '\'', .. }) => Ok(parser
                 .parse_interpolated_string()?
-                .map_node(AstExpr::String)),
+                .map_node(|s| AstExpr::String(s, parser.toks.span_from(start)))),
             Some(Token { kind: '#', .. }) => self.parse_hash(parser),
             Some(Token { kind: '+', .. }) => self.parse_plus_expr(parser),
             Some(Token { kind: '-', .. }) => self.parse_minus_expr(parser),
@@ -1316,7 +1321,7 @@ impl<'c> ValueParser<'c> {
             && left.node.is_slash_operand()
             && right.node.is_slash_operand()
         {
-            self.single_expression = Some(AstExpr::slash(left.node, right.node).span(span));
+            self.single_expression = Some(AstExpr::slash(left.node, right.node, span).span(span));
         } else {
             self.single_expression = Some(
                 AstExpr::BinaryOp {
@@ -1324,6 +1329,7 @@ impl<'c> ValueParser<'c> {
                     op: operator,
                     rhs: Box::new(right.node),
                     allows_slash: false,
+                    span,
                 }
                 .span(span),
             );
@@ -1599,6 +1605,7 @@ impl<'c> ValueParser<'c> {
     }
 
     fn parse_hash(&mut self, parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
+        let start = parser.toks.cursor();
         debug_assert!(matches!(parser.toks.peek(), Some(Token { kind: '#', .. })));
 
         if matches!(parser.toks.peek_n(1), Some(Token { kind: '{', .. })) {
@@ -1634,7 +1641,9 @@ impl<'c> ValueParser<'c> {
         });
         buffer.add_interpolation(ident);
 
-        Ok(AstExpr::String(StringExpr(buffer, QuoteKind::None)).span(parser.span_before))
+        let span = parser.toks.span_from(start);
+
+        Ok(AstExpr::String(StringExpr(buffer, QuoteKind::None), span).span(span))
 
         //     assert(scanner.peekChar() == $hash);
         // if (scanner.peekChar(1) == $lbrace) return identifierLike();
@@ -1894,15 +1903,21 @@ impl<'c> ValueParser<'c> {
     }
 
     fn parse_important_expr(parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
+        let start = parser.toks.cursor();
         parser.expect_char('!')?;
         parser.whitespace_or_comment();
         parser.expect_identifier("important", true)?;
 
-        Ok(AstExpr::String(StringExpr(
-            Interpolation::new_plain("!important".to_owned(), parser.span_before),
-            QuoteKind::None,
-        ))
-        .span(parser.span_before))
+        let span = parser.toks.span_from(start);
+
+        Ok(AstExpr::String(
+            StringExpr(
+                Interpolation::new_plain("!important".to_owned(), span),
+                QuoteKind::None,
+            ),
+            span,
+        )
+        .span(span))
     }
 
     fn parse_identifier_like(&mut self, parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
@@ -1923,18 +1938,17 @@ impl<'c> ValueParser<'c> {
 
                 let value = self.parse_single_expression(parser)?;
 
-                return Ok(
-                    AstExpr::UnaryOp(UnaryOp::Not, Box::new(value.node)).span(parser.span_before)
-                );
+                return Ok(AstExpr::UnaryOp(UnaryOp::Not, Box::new(value.node))
+                    .span(parser.toks.span_from(start)));
             }
 
             let lower_ref = lower.as_ref().unwrap();
 
             if !parser.toks.next_char_is('(') {
                 match plain {
-                    "null" => return Ok(AstExpr::Null.span(parser.span_before)),
-                    "true" => return Ok(AstExpr::True.span(parser.span_before)),
-                    "false" => return Ok(AstExpr::False.span(parser.span_before)),
+                    "null" => return Ok(AstExpr::Null.span(parser.toks.span_from(start))),
+                    "true" => return Ok(AstExpr::True.span(parser.toks.span_from(start))),
+                    "false" => return Ok(AstExpr::False.span(parser.toks.span_from(start))),
                     _ => {}
                 }
 
@@ -1946,11 +1960,11 @@ impl<'c> ValueParser<'c> {
                         color[3],
                         plain.to_owned(),
                     )))
-                    .span(parser.span_before));
+                    .span(parser.toks.span_from(start)));
                 }
             }
 
-            if let Some(func) = self.try_parse_special_function(parser, lower_ref)? {
+            if let Some(func) = self.try_parse_special_function(parser, lower_ref, start)? {
                 return Ok(func);
             }
         }
@@ -1958,8 +1972,11 @@ impl<'c> ValueParser<'c> {
         match parser.toks.peek() {
             Some(Token { kind: '.', .. }) => {
                 if matches!(parser.toks.peek_n(1), Some(Token { kind: '.', .. })) {
-                    return Ok(AstExpr::String(StringExpr(identifier, QuoteKind::None))
-                        .span(parser.span_before));
+                    return Ok(AstExpr::String(
+                        StringExpr(identifier, QuoteKind::None),
+                        parser.toks.span_from(start),
+                    )
+                    .span(parser.toks.span_from(start)));
                 }
                 parser.toks.next();
 
@@ -1977,21 +1994,24 @@ impl<'c> ValueParser<'c> {
                         namespace: None,
                         name: Identifier::from(plain),
                         arguments: Box::new(arguments),
+                        span: parser.toks.span_from(start),
                     }
-                    .span(parser.span_before))
+                    .span(parser.toks.span_from(start)))
                 } else {
                     let arguments = parser.parse_argument_invocation(false, false)?;
                     Ok(AstExpr::InterpolatedFunction {
                         name: identifier,
                         arguments: Box::new(arguments),
+                        span: parser.toks.span_from(start),
                     }
-                    .span(parser.span_before))
+                    .span(parser.toks.span_from(start)))
                 }
             }
-            _ => {
-                Ok(AstExpr::String(StringExpr(identifier, QuoteKind::None))
-                    .span(parser.span_before))
-            }
+            _ => Ok(AstExpr::String(
+                StringExpr(identifier, QuoteKind::None),
+                parser.toks.span_from(start),
+            )
+            .span(parser.toks.span_from(start))),
         }
     }
 
@@ -2073,9 +2093,10 @@ impl<'c> ValueParser<'c> {
         &mut self,
         parser: &mut Parser,
         name: &str,
+        start: usize,
     ) -> SassResult<Option<Spanned<AstExpr>>> {
         if matches!(parser.toks.peek(), Some(Token { kind: '(', .. })) {
-            if let Some(calculation) = self.try_parse_calculation(parser, name)? {
+            if let Some(calculation) = self.try_parse_calculation(parser, name, start)? {
                 return Ok(Some(calculation));
             }
         }
@@ -2111,7 +2132,11 @@ impl<'c> ValueParser<'c> {
             }
             "url" => {
                 return Ok(self.try_parse_url_contents(parser, None)?.map(|contents| {
-                    AstExpr::String(StringExpr(contents, QuoteKind::None)).span(parser.span_before)
+                    AstExpr::String(
+                        StringExpr(contents, QuoteKind::None),
+                        parser.toks.span_from(start),
+                    )
+                    .span(parser.toks.span_from(start))
                 }))
             }
             _ => return Ok(None),
@@ -2125,7 +2150,11 @@ impl<'c> ValueParser<'c> {
         });
 
         Ok(Some(
-            AstExpr::String(StringExpr(buffer, QuoteKind::None)).span(parser.span_before),
+            AstExpr::String(
+                StringExpr(buffer, QuoteKind::None),
+                parser.toks.span_from(start),
+            )
+            .span(parser.toks.span_from(start)),
         ))
     }
 
@@ -2188,12 +2217,16 @@ impl<'c> ValueParser<'c> {
     fn try_parse_calculation_interpolation(
         &mut self,
         parser: &mut Parser,
+        start: usize,
     ) -> SassResult<Option<AstExpr>> {
         Ok(if Self::contains_calculation_interpolation(parser)? {
-            Some(AstExpr::String(StringExpr(
-                parser.parse_interpolated_declaration_value(false, false, true)?,
-                QuoteKind::None,
-            )))
+            Some(AstExpr::String(
+                StringExpr(
+                    parser.parse_interpolated_declaration_value(false, false, true)?,
+                    QuoteKind::None,
+                ),
+                parser.toks.span_from(start),
+            ))
         } else {
             None
         })
@@ -2210,7 +2243,7 @@ impl<'c> ValueParser<'c> {
                 let start = parser.toks.cursor();
                 parser.toks.next();
 
-                let value = match self.try_parse_calculation_interpolation(parser)? {
+                let value = match self.try_parse_calculation_interpolation(parser, start)? {
                     Some(v) => v,
                     None => {
                         parser.whitespace_or_comment();
@@ -2221,7 +2254,7 @@ impl<'c> ValueParser<'c> {
                 parser.whitespace_or_comment();
                 parser.expect_char(')')?;
 
-                Ok(AstExpr::Paren(Box::new(value)).span(parser.span_before))
+                Ok(AstExpr::Paren(Box::new(value)).span(parser.toks.span_from(start)))
             }
             _ if !parser.looking_at_identifier() => {
                 todo!("Expected number, variable, function, or calculation.")
@@ -2238,7 +2271,7 @@ impl<'c> ValueParser<'c> {
                 }
 
                 let lowercase = ident.to_ascii_lowercase();
-                let calculation = self.try_parse_calculation(parser, &lowercase)?;
+                let calculation = self.try_parse_calculation(parser, &lowercase, start)?;
 
                 if let Some(calc) = calculation {
                     Ok(calc)
@@ -2252,6 +2285,7 @@ impl<'c> ValueParser<'c> {
                         namespace: None,
                         name: Identifier::from(ident),
                         arguments: Box::new(parser.parse_argument_invocation(false, false)?),
+                        span: parser.toks.span_from(start),
                     }
                     .span(parser.toks.span_from(start)))
                 }
@@ -2270,6 +2304,11 @@ impl<'c> ValueParser<'c> {
                 }) => {
                     parser.toks.next();
                     parser.whitespace_or_comment();
+
+                    let rhs = self.parse_calculation_value(parser)?;
+
+                    let span = product.span.merge(rhs.span);
+
                     product.node = AstExpr::BinaryOp {
                         lhs: Box::new(product.node),
                         op: if op == '*' {
@@ -2277,9 +2316,12 @@ impl<'c> ValueParser<'c> {
                         } else {
                             BinaryOp::Div
                         },
-                        rhs: Box::new(self.parse_calculation_value(parser)?.node),
+                        rhs: Box::new(rhs.node),
                         allows_slash: false,
-                    }
+                        span,
+                    };
+
+                    product.span = span;
                 }
                 _ => return Ok(product),
             }
@@ -2312,6 +2354,11 @@ impl<'c> ValueParser<'c> {
 
                     parser.toks.next();
                     parser.whitespace_or_comment();
+
+                    let rhs = self.parse_calculation_product(parser)?;
+
+                    let span = sum.span.merge(rhs.span);
+
                     sum = AstExpr::BinaryOp {
                         lhs: Box::new(sum.node),
                         op: if next == '+' {
@@ -2319,10 +2366,11 @@ impl<'c> ValueParser<'c> {
                         } else {
                             BinaryOp::Minus
                         },
-                        rhs: Box::new(self.parse_calculation_product(parser)?.node),
+                        rhs: Box::new(rhs.node),
                         allows_slash: false,
+                        span: span,
                     }
-                    .span(parser.span_before);
+                    .span(span);
                 }
                 _ => return Ok(sum),
             }
@@ -2333,9 +2381,10 @@ impl<'c> ValueParser<'c> {
         &mut self,
         parser: &mut Parser,
         max_args: Option<usize>,
+        start: usize,
     ) -> SassResult<Vec<AstExpr>> {
         parser.expect_char('(')?;
-        if let Some(interpolation) = self.try_parse_calculation_interpolation(parser)? {
+        if let Some(interpolation) = self.try_parse_calculation_interpolation(parser, start)? {
             parser.expect_char(')')?;
             return Ok(vec![interpolation]);
         }
@@ -2359,12 +2408,13 @@ impl<'c> ValueParser<'c> {
         &mut self,
         parser: &mut Parser,
         name: &str,
+        start: usize,
     ) -> SassResult<Option<Spanned<AstExpr>>> {
         debug_assert!(parser.toks.next_char_is('('));
 
         Ok(Some(match name {
             "calc" => {
-                let args = self.parse_calculation_arguments(parser, Some(1))?;
+                let args = self.parse_calculation_arguments(parser, Some(1), start)?;
 
                 AstExpr::Calculation {
                     name: CalculationName::Calc,
@@ -2377,7 +2427,7 @@ impl<'c> ValueParser<'c> {
                 // are parsed as normal Sass functions.
                 let before_args = parser.toks.cursor();
 
-                let args = match self.parse_calculation_arguments(parser, None) {
+                let args = match self.parse_calculation_arguments(parser, None, start) {
                     Ok(args) => args,
                     Err(..) => {
                         parser.toks.set_cursor(before_args);
@@ -2393,15 +2443,15 @@ impl<'c> ValueParser<'c> {
                     },
                     args,
                 }
-                .span(parser.span_before)
+                .span(parser.toks.span_from(start))
             }
             "clamp" => {
-                let args = self.parse_calculation_arguments(parser, Some(3))?;
+                let args = self.parse_calculation_arguments(parser, Some(3), start)?;
                 AstExpr::Calculation {
                     name: CalculationName::Calc,
                     args,
                 }
-                .span(parser.span_before)
+                .span(parser.toks.span_from(start))
             }
             _ => return Ok(None),
         }))

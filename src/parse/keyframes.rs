@@ -1,14 +1,14 @@
 use std::fmt;
 
 use crate::{
-    atrule::keyframes::{KeyframesSelector},
+    atrule::keyframes::KeyframesSelector,
     error::SassResult,
     // lexer::Lexer,
     // parse::Stmt,
     // Token,
 };
 
-use super::{ Parser};
+use super::Parser;
 
 impl fmt::Display for KeyframesSelector {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

@@ -1802,20 +1802,27 @@ impl<'a> Visitor<'a> {
         interpolation: Interpolation,
         warn_for_color: bool,
     ) -> SassResult<String> {
+        let span = interpolation.span;
         let result = interpolation.contents.into_iter().map(|part| match part {
             InterpolationPart::String(s) => Ok(s),
             InterpolationPart::Expr(e) => {
                 let result = self.visit_expr(e)?;
-                self.serialize(result, QuoteKind::None)
+                // todo: span for specific expr
+                self.serialize(result, QuoteKind::None, span)
             }
         });
 
         result.collect()
     }
 
-    fn evaluate_to_css(&mut self, expr: AstExpr, quote: QuoteKind) -> SassResult<String> {
+    fn evaluate_to_css(
+        &mut self,
+        expr: AstExpr,
+        quote: QuoteKind,
+        span: Span,
+    ) -> SassResult<String> {
         let result = self.visit_expr(expr)?;
-        self.serialize(result, quote)
+        self.serialize(result, quote, span)
     }
 
     fn without_slash(&mut self, v: Value) -> Value {
@@ -2084,10 +2091,12 @@ impl<'a> Visitor<'a> {
         &mut self,
         func: SassFunction,
         arguments: ArgumentInvocation,
+        span: Span,
     ) -> SassResult<Value> {
         self.run_function_callable_with_maybe_evaled(
             func,
             MaybeEvaledArguments::Invocation(arguments),
+            span,
         )
     }
 
@@ -2095,6 +2104,7 @@ impl<'a> Visitor<'a> {
         &mut self,
         func: SassFunction,
         arguments: MaybeEvaledArguments,
+        span: Span,
     ) -> SassResult<Value> {
         match func {
             SassFunction::Builtin(func, name) => {
@@ -2119,7 +2129,7 @@ impl<'a> Visitor<'a> {
                         }
                     }
 
-                    todo!("Function finished without @return.")
+                    return Err(("Function finished without @return.", span).into());
                 },
             ),
             SassFunction::Plain { name } => {
@@ -2142,7 +2152,7 @@ impl<'a> Visitor<'a> {
                         buffer.push_str(", ");
                     }
 
-                    buffer.push_str(&self.evaluate_to_css(argument, QuoteKind::Quoted)?);
+                    buffer.push_str(&self.evaluate_to_css(argument, QuoteKind::Quoted, span)?);
                 }
 
                 if let Some(rest_arg) = arguments.rest {
@@ -2150,7 +2160,7 @@ impl<'a> Visitor<'a> {
                     if !first {
                         buffer.push_str(", ");
                     }
-                    buffer.push_str(&self.serialize(rest, QuoteKind::Quoted)?);
+                    buffer.push_str(&self.serialize(rest, QuoteKind::Quoted, span)?);
                 }
                 buffer.push(')');
 
@@ -2179,13 +2189,16 @@ impl<'a> Visitor<'a> {
 
                 Value::List(elems, separator, brackets)
             }
-            AstExpr::String(StringExpr(text, quote)) => self.visit_string(text, quote)?,
+            AstExpr::String(StringExpr(text, quote), span) => {
+                self.visit_string(text, quote, span)?
+            }
             AstExpr::BinaryOp {
                 lhs,
                 op,
                 rhs,
                 allows_slash,
-            } => self.visit_bin_op(lhs, op, rhs, allows_slash)?,
+                span,
+            } => self.visit_bin_op(lhs, op, rhs, allows_slash, span)?,
             AstExpr::True => Value::True,
             AstExpr::False => Value::False,
             AstExpr::Calculation { name, args } => self.visit_calculation_expr(name, args)?,
@@ -2194,6 +2207,7 @@ impl<'a> Visitor<'a> {
                 namespace,
                 name,
                 arguments,
+                span,
             } => {
                 let func = match self.env.scopes().get_fn(name, self.env.global_scope()) {
                     Some(func) => func,
@@ -2212,7 +2226,7 @@ impl<'a> Visitor<'a> {
 
                 let old_in_function = self.flags.in_function();
                 self.flags.set(ContextFlags::IN_FUNCTION, true);
-                let value = self.run_function_callable(func, *arguments)?;
+                let value = self.run_function_callable(func, *arguments, span)?;
                 self.flags.set(ContextFlags::IN_FUNCTION, old_in_function);
 
                 value
@@ -2240,6 +2254,7 @@ impl<'a> Visitor<'a> {
             AstExpr::InterpolatedFunction {
                 name,
                 arguments: args,
+                span,
             } => {
                 let fn_name = self.perform_interpolation(name, false)?;
 
@@ -2256,7 +2271,7 @@ impl<'a> Visitor<'a> {
                     } else {
                         buffer.push_str(", ");
                     }
-                    let evaluated = self.evaluate_to_css(arg, QuoteKind::None)?;
+                    let evaluated = self.evaluate_to_css(arg, QuoteKind::Quoted, span)?;
                     buffer.push_str(&evaluated);
                 }
 
@@ -2265,7 +2280,7 @@ impl<'a> Visitor<'a> {
                     if !first {
                         buffer.push_str(", ");
                     }
-                    buffer.push_str(&self.serialize(rest, QuoteKind::None)?);
+                    buffer.push_str(&self.serialize(rest, QuoteKind::None, span)?);
                 }
 
                 buffer.push(')');
@@ -2314,7 +2329,7 @@ impl<'a> Visitor<'a> {
                 }
                 _ => self.visit_calculation_value(*inner, in_min_or_max)?,
             },
-            AstExpr::String(string_expr) => {
+            AstExpr::String(string_expr, span) => {
                 debug_assert!(string_expr.1 == QuoteKind::None);
                 CalculationArg::String(self.perform_interpolation(string_expr.0, false)?)
             }
@@ -2323,6 +2338,7 @@ impl<'a> Visitor<'a> {
                 op,
                 rhs,
                 allows_slash,
+                span,
             } => SassCalculation::operate_internal(
                 op,
                 self.visit_calculation_value(*lhs, in_min_or_max)?,
@@ -2435,7 +2451,12 @@ impl<'a> Visitor<'a> {
         Ok(self.without_slash(value))
     }
 
-    fn visit_string(&mut self, text: Interpolation, quote: QuoteKind) -> SassResult<Value> {
+    fn visit_string(
+        &mut self,
+        text: Interpolation,
+        quote: QuoteKind,
+        span: Span,
+    ) -> SassResult<Value> {
         // Don't use [performInterpolation] here because we need to get the raw text
         // from strings, rather than the semantic value.
         let old_in_supports_declaration = self.flags.in_supports_declaration();
@@ -2448,7 +2469,7 @@ impl<'a> Visitor<'a> {
                 InterpolationPart::String(s) => Ok(s),
                 InterpolationPart::Expr(e) => match self.visit_expr(e)? {
                     Value::String(s, ..) => Ok(s),
-                    e => self.serialize(e, QuoteKind::None),
+                    e => self.serialize(e, QuoteKind::None, span),
                 },
             })
             .collect::<SassResult<String>>()?;
@@ -2484,13 +2505,14 @@ impl<'a> Visitor<'a> {
         op: BinaryOp,
         rhs: Box<AstExpr>,
         allows_slash: bool,
+        span: Span,
     ) -> SassResult<Value> {
         let left = self.visit_expr(*lhs)?;
 
         Ok(match op {
             BinaryOp::SingleEq => {
                 let right = self.visit_expr(*rhs)?;
-                single_eq(left, right, self.parser.options, self.parser.span_before)?
+                single_eq(left, right, self.parser.options, span)?
             }
             BinaryOp::Or => {
                 if left.is_true() {
@@ -2519,25 +2541,19 @@ impl<'a> Visitor<'a> {
             | BinaryOp::LessThan
             | BinaryOp::LessThanEqual => {
                 let right = self.visit_expr(*rhs)?;
-                cmp(
-                    left,
-                    right,
-                    self.parser.options,
-                    self.parser.span_before,
-                    op,
-                )?
+                cmp(left, right, self.parser.options, span, op)?
             }
             BinaryOp::Plus => {
                 let right = self.visit_expr(*rhs)?;
-                add(left, right, self.parser.options, self.parser.span_before)?
+                add(left, right, self.parser.options, span)?
             }
             BinaryOp::Minus => {
                 let right = self.visit_expr(*rhs)?;
-                sub(left, right, self.parser.options, self.parser.span_before)?
+                sub(left, right, self.parser.options, span)?
             }
             BinaryOp::Mul => {
                 let right = self.visit_expr(*rhs)?;
-                mul(left, right, self.parser.options, self.parser.span_before)?
+                mul(left, right, self.parser.options, span)?
             }
             BinaryOp::Div => {
                 let right = self.visit_expr(*rhs)?;
@@ -2545,12 +2561,7 @@ impl<'a> Visitor<'a> {
                 let left_is_number = matches!(left, Value::Dimension(..));
                 let right_is_number = matches!(right, Value::Dimension(..));
 
-                let result = div(
-                    left.clone(),
-                    right.clone(),
-                    self.parser.options,
-                    self.parser.span_before,
-                )?;
+                let result = div(left.clone(), right.clone(), self.parser.options, span)?;
 
                 if left_is_number && right_is_number && allows_slash {
                     return result.with_slash(left.assert_number()?, right.assert_number()?);
@@ -2582,7 +2593,7 @@ impl<'a> Visitor<'a> {
                         crate::Cow::owned(format!(
                             "Using / for division outside of calc() is deprecated"
                         )),
-                        self.parser.span_before,
+                        span,
                     );
                 }
 
@@ -2590,19 +2601,19 @@ impl<'a> Visitor<'a> {
             }
             BinaryOp::Rem => {
                 let right = self.visit_expr(*rhs)?;
-                rem(left, right, self.parser.options, self.parser.span_before)?
+                rem(left, right, self.parser.options, span)?
             }
         })
     }
 
     // todo: superfluous clone and non-use of cow
-    fn serialize(&mut self, mut expr: Value, quote: QuoteKind) -> SassResult<String> {
+    fn serialize(&mut self, mut expr: Value, quote: QuoteKind, span: Span) -> SassResult<String> {
         if quote == QuoteKind::None {
             expr = expr.unquote();
         }
 
         Ok(expr
-            .to_css_string(self.parser.span_before, self.parser.options.is_compressed())?
+            .to_css_string(span, self.parser.options.is_compressed())?
             .into_owned())
     }
 
@@ -2879,7 +2890,11 @@ impl<'a> Visitor<'a> {
             name = format!("{}-{}", declaration_name, name);
         }
 
-        let value = self.visit_expr(style.value.unwrap())?;
+        let Spanned {
+            span: value_span,
+            node: value,
+        } = style.value.unwrap();
+        let value = self.visit_expr(value)?;
 
         // If the value is an empty list, preserve it, because converting it to CSS
         // will throw an error that we want the user to see.
@@ -2888,7 +2903,7 @@ impl<'a> Visitor<'a> {
             self.css_tree.add_stmt(
                 Stmt::Style(Style {
                     property: InternedString::get_or_intern(&name),
-                    value: Box::new(value.span(self.parser.span_before)),
+                    value: Box::new(value.span(value_span)),
                     declared_as_custom_property: is_custom_property,
                 }),
                 self.parent,

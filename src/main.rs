@@ -145,6 +145,12 @@ fn main() -> std::io::Result<()> {
                 .help("Whether to use terminal colors for messages.")
         )
         .arg(
+            Arg::with_name("VERBOSE")
+                .long("verbose")
+                .hidden(true)
+                .help("TODO://")
+        )
+        .arg(
             Arg::with_name("NO_UNICODE")
                 .long("no-unicode")
                 .help("Whether to use Unicode characters for messages.")

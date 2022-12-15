@@ -9,7 +9,7 @@ use crate::{
     common::{BinaryOp, QuoteKind},
     error::SassResult,
     unit::Unit,
-    value::{Value, SassNumber},
+    value::{SassNumber, Value},
     Options,
 };
 
@@ -433,9 +433,9 @@ pub(crate) fn div(left: Value, right: Value, options: &Options, span: Span) -> S
                     // let sass_num_2 = SassNumber(num2.0, unit2.clone(), as_slash2);
                     Value::Dimension(num / num2.convert(&unit2, &unit), Unit::None, None)
                     // Value::Dimension(num / num2.convert(&unit2, &unit), Unit::None, Some(Box::new((sass_num_1, sass_num_2))))
-                // `unit(1em / 1px)` => `"em/px"`
-                // todo: this should probably be its own variant
-                // within the `Value` enum
+                    // `unit(1em / 1px)` => `"em/px"`
+                    // todo: this should probably be its own variant
+                    // within the `Value` enum
                 } else {
                     // todo: remember to account for `Mul` and `Div`
                     // todo!("non-comparable inverse units")

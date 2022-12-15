@@ -203,7 +203,7 @@ pub(crate) struct AstRuleSet {
 #[derive(Debug, Clone)]
 pub(crate) struct AstStyle {
     name: Interpolation,
-    value: Option<AstExpr>,
+    value: Option<Spanned<AstExpr>>,
     body: Vec<AstStmt>,
     span: Span,
 }
@@ -634,7 +634,10 @@ impl<'a, 'b> Parser<'a, 'b> {
         }
     }
 
-    fn parse_statements(&mut self, statement: fn(&mut Self) -> SassResult<Option<AstStmt>>) -> SassResult<Vec<AstStmt>> {
+    fn parse_statements(
+        &mut self,
+        statement: fn(&mut Self) -> SassResult<Option<AstStmt>>,
+    ) -> SassResult<Vec<AstStmt>> {
         let mut stmts = Vec::new();
         self.whitespace();
         while let Some(tok) = self.toks.peek() {
@@ -649,13 +652,21 @@ impl<'a, 'b> Parser<'a, 'b> {
                         stmts.push(AstStmt::LoudComment(self.parse_loud_comment()?));
                         self.whitespace();
                     }
-                    _ => if let Some(stmt) = statement(self)? { stmts.push(stmt);},
+                    _ => {
+                        if let Some(stmt) = statement(self)? {
+                            stmts.push(stmt);
+                        }
+                    }
                 },
                 ';' => {
                     self.toks.next();
                     self.whitespace();
                 }
-                _ => if let Some(stmt) = statement(self)? { stmts.push(stmt);},
+                _ => {
+                    if let Some(stmt) = statement(self)? {
+                        stmts.push(stmt);
+                    }
+                }
             }
         }
 
@@ -1127,7 +1138,10 @@ impl<'a, 'b> Parser<'a, 'b> {
         let mut children = self.with_children(Self::function_child)?;
 
         Ok(AstStmt::FunctionDecl(AstFunctionDecl {
-            name: Spanned { node: Identifier::from(name), span: name_span },
+            name: Spanned {
+                node: Identifier::from(name),
+                span: name_span,
+            },
             arguments,
             children,
         }))
@@ -1164,7 +1178,8 @@ impl<'a, 'b> Parser<'a, 'b> {
                 kind: q @ ('\'' | '"'),
                 ..
             }) => q,
-            Some(..) | None => todo!("Expected string."),
+            Some(Token { pos, .. }) => return Err(("Expected string.", pos).into()),
+            None => return Err(("Expected string.", self.toks.current_span()).into()),
         };
 
         let mut buffer = String::new();
@@ -1383,13 +1398,18 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     fn parse_dynamic_url(&mut self) -> SassResult<AstExpr> {
+        let start = self.toks.cursor();
         self.expect_identifier("url", false)?;
 
         Ok(match self.try_url_contents(None)? {
-            Some(contents) => AstExpr::String(StringExpr(contents, QuoteKind::None)),
+            Some(contents) => AstExpr::String(
+                StringExpr(contents, QuoteKind::None),
+                self.toks.span_from(start),
+            ),
             None => AstExpr::InterpolatedFunction {
                 name: Interpolation::new_plain("url".to_owned(), self.span_before),
                 arguments: Box::new(self.parse_argument_invocation(false, false)?),
+                span: self.toks.span_from(start),
             },
         })
     }
@@ -1844,16 +1864,16 @@ impl<'a, 'b> Parser<'a, 'b> {
         self.expect_char(':')?;
 
         if parse_custom_properties && name.initial_plain().starts_with("--") {
-            let value = AstExpr::String(StringExpr(
-                self.parse_interpolated_declaration_value(false, false, true)?,
-                QuoteKind::None,
-            ));
+            let interpolation = self.parse_interpolated_declaration_value(false, false, true)?;
+            let value_span = self.toks.span_from(start);
+            let value = AstExpr::String(StringExpr(interpolation, QuoteKind::None), value_span)
+                .span(value_span);
             self.expect_statement_separator(Some("custom property"))?;
             return Ok(AstStmt::Style(AstStyle {
                 name,
                 value: Some(value),
                 body: Vec::new(),
-                span: self.toks.span_from(start),
+                span: value_span,
             }));
         }
 
@@ -1884,7 +1904,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
             Ok(AstStmt::Style(AstStyle {
                 name,
-                value: Some(value.node),
+                value: Some(value),
                 body: children,
                 span: self.toks.span_from(start),
             }))
@@ -1892,7 +1912,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             self.expect_statement_separator(None)?;
             Ok(AstStmt::Style(AstStyle {
                 name,
-                value: Some(value.node),
+                value: Some(value),
                 body: Vec::new(),
                 span: self.toks.span_from(start),
             }))
@@ -2354,10 +2374,13 @@ impl<'a, 'b> Parser<'a, 'b> {
                 && rest.is_none()
                 && matches!(self.toks.peek(), Some(Token { kind: ')', .. }))
             {
-                positional.push(AstExpr::String(StringExpr(
-                    Interpolation::new(self.toks.current_span()),
-                    QuoteKind::None,
-                )));
+                positional.push(AstExpr::String(
+                    StringExpr(
+                        Interpolation::new(self.toks.current_span()),
+                        QuoteKind::None,
+                    ),
+                    self.toks.current_span(),
+                ));
                 break;
             }
         }
@@ -2398,7 +2421,7 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     fn parse_declaration_or_buffer(&mut self) -> SassResult<DeclarationOrBuffer> {
-        // var start = scanner.state;
+        let start = self.toks.cursor();
         let mut name_buffer = Interpolation::new(self.span_before);
 
         // Allow the "*prop: val", ":prop: val", "#prop: val", and ".prop: val"
@@ -2465,12 +2488,17 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         // Parse custom properties as declarations no matter what.
         if name_buffer.initial_plain().starts_with("--") {
+            let value_start = self.toks.cursor();
             let value = self.parse_interpolated_declaration_value(false, false, true)?;
+            let value_span = self.toks.span_from(value_start);
             self.expect_statement_separator(Some("custom property"))?;
             return Ok(DeclarationOrBuffer::Stmt(AstStmt::Style(AstStyle {
                 name: name_buffer,
-                value: Some(AstExpr::String(StringExpr(value, QuoteKind::None))),
-                span: self.span_before,
+                value: Some(AstExpr::String(
+                    StringExpr(value, QuoteKind::None),
+                    value_span,
+                ).span(value_span)),
+                span: self.toks.span_from(start),
                 body: Vec::new(),
             })));
         }
@@ -2493,7 +2521,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             return Ok(DeclarationOrBuffer::Stmt(AstStmt::Style(AstStyle {
                 name: name_buffer,
                 value: None,
-                span: self.span_before,
+                span: self.toks.span_from(start),
                 body,
             })));
         }
@@ -2580,7 +2608,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             let body = self.with_children(Self::parse_declaration_child)?;
             Ok(DeclarationOrBuffer::Stmt(AstStmt::Style(AstStyle {
                 name: name_buffer,
-                value: Some(value.node),
+                value: Some(value),
                 span: self.span_before,
                 body,
             })))
@@ -2588,7 +2616,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             self.expect_statement_separator(None)?;
             Ok(DeclarationOrBuffer::Stmt(AstStmt::Style(AstStyle {
                 name: name_buffer,
-                value: Some(value.node),
+                value: Some(value),
                 span: self.span_before,
                 body: Vec::new(),
             })))
@@ -2996,7 +3024,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         for (idx, c) in s.chars().enumerate() {
             match self.toks.peek_n(idx) {
-                Some(Token { kind, .. }) if kind == c => {},
+                Some(Token { kind, .. }) if kind == c => {}
                 _ => return false,
             }
         }
@@ -3313,100 +3341,100 @@ impl<'a, 'b> Parser<'a, 'b> {
     //     mut string: String,
     // ) -> SassResult<(Selector, bool)> {
     //     todo!()
-        // let mut span = if let Some(tok) = self.toks.peek() {
-        //     tok.pos()
-        // } else {
-        //     return Err(("expected \"{\".", self.span_before).into());
-        // };
+    // let mut span = if let Some(tok) = self.toks.peek() {
+    //     tok.pos()
+    // } else {
+    //     return Err(("expected \"{\".", self.span_before).into());
+    // };
 
-        // self.span_before = span;
+    // self.span_before = span;
 
-        // let mut found_curly = false;
+    // let mut found_curly = false;
 
-        // let mut optional = false;
+    // let mut optional = false;
 
-        // // we resolve interpolation and strip comments
-        // while let Some(Token { kind, pos }) = self.toks.next() {
-        //     span = span.merge(pos);
-        //     match kind {
-        //         '#' => {
-        //             if self.consume_char_if_exists('{') {
-        //                 string.push_str(
-        //                     &self
-        //                         .parse_interpolation()?
-        //                         .to_css_string(span, self.options.is_compressed())?,
-        //                 );
-        //             } else {
-        //                 string.push('#');
-        //             }
-        //         }
-        //         '/' => {
-        //             if self.toks.peek().is_none() {
-        //                 return Err(("Expected selector.", pos).into());
-        //             }
-        //             self.parse_comment()?;
-        //             string.push(' ');
-        //         }
-        //         '{' => {
-        //             if from_fn {
-        //                 return Err(("Expected selector.", pos).into());
-        //             }
+    // // we resolve interpolation and strip comments
+    // while let Some(Token { kind, pos }) = self.toks.next() {
+    //     span = span.merge(pos);
+    //     match kind {
+    //         '#' => {
+    //             if self.consume_char_if_exists('{') {
+    //                 string.push_str(
+    //                     &self
+    //                         .parse_interpolation()?
+    //                         .to_css_string(span, self.options.is_compressed())?,
+    //                 );
+    //             } else {
+    //                 string.push('#');
+    //             }
+    //         }
+    //         '/' => {
+    //             if self.toks.peek().is_none() {
+    //                 return Err(("Expected selector.", pos).into());
+    //             }
+    //             self.parse_comment()?;
+    //             string.push(' ');
+    //         }
+    //         '{' => {
+    //             if from_fn {
+    //                 return Err(("Expected selector.", pos).into());
+    //             }
 
-        //             found_curly = true;
-        //             break;
-        //         }
-        //         '\\' => {
-        //             string.push('\\');
-        //             if let Some(Token { kind, .. }) = self.toks.next() {
-        //                 string.push(kind);
-        //             }
-        //         }
-        //         '!' => {
-        //             if from_fn {
-        //                 self.expect_identifier("optional")?;
-        //                 optional = true;
-        //             } else {
-        //                 return Err(("expected \"{\".", pos).into());
-        //             }
-        //         }
-        //         c => string.push(c),
-        //     }
-        // }
+    //             found_curly = true;
+    //             break;
+    //         }
+    //         '\\' => {
+    //             string.push('\\');
+    //             if let Some(Token { kind, .. }) = self.toks.next() {
+    //                 string.push(kind);
+    //             }
+    //         }
+    //         '!' => {
+    //             if from_fn {
+    //                 self.expect_identifier("optional")?;
+    //                 optional = true;
+    //             } else {
+    //                 return Err(("expected \"{\".", pos).into());
+    //             }
+    //         }
+    //         c => string.push(c),
+    //     }
+    // }
 
-        // if !found_curly && !from_fn {
-        //     return Err(("expected \"{\".", span).into());
-        // }
+    // if !found_curly && !from_fn {
+    //     return Err(("expected \"{\".", span).into());
+    // }
 
-        // let sel_toks: Vec<Token> = string.chars().map(|x| Token::new(span, x)).collect();
+    // let sel_toks: Vec<Token> = string.chars().map(|x| Token::new(span, x)).collect();
 
-        // let mut lexer = Lexer::new(sel_toks);
+    // let mut lexer = Lexer::new(sel_toks);
 
-        // let selector = SelectorParser::new(
-        //     &mut Parser {
-        //         toks: &mut lexer,
-        //         map: self.map,
-        //         path: self.path,
-        //         scopes: self.scopes,
-        //         global_scope: self.global_scope,
-        //         super_selectors: self.super_selectors,
-        //         span_before: self.span_before,
-        //         content: self.content,
-        //         flags: self.flags,
-        //         at_root: self.at_root,
-        //         at_root_has_selector: self.at_root_has_selector,
-        //         extender: self.extender,
-        //         content_scopes: self.content_scopes,
-        //         options: self.options,
-        //         modules: self.modules,
-        //         module_config: self.module_config,
-        //     },
-        //     allows_parent,
-        //     true,
-        //     span,
-        // )
-        // .parse()?;
+    // let selector = SelectorParser::new(
+    //     &mut Parser {
+    //         toks: &mut lexer,
+    //         map: self.map,
+    //         path: self.path,
+    //         scopes: self.scopes,
+    //         global_scope: self.global_scope,
+    //         super_selectors: self.super_selectors,
+    //         span_before: self.span_before,
+    //         content: self.content,
+    //         flags: self.flags,
+    //         at_root: self.at_root,
+    //         at_root_has_selector: self.at_root_has_selector,
+    //         extender: self.extender,
+    //         content_scopes: self.content_scopes,
+    //         options: self.options,
+    //         modules: self.modules,
+    //         module_config: self.module_config,
+    //     },
+    //     allows_parent,
+    //     true,
+    //     span,
+    // )
+    // .parse()?;
 
-        // Ok((Selector(selector), optional))
+    // Ok((Selector(selector), optional))
     // }
 
     // /// Eat and return the contents of a comment.

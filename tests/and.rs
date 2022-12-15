@@ -55,5 +55,5 @@ test!(
 );
 error!(
     properly_bubbles_error_when_invalid_char_after_and,
-    "a {\n  color: false and? foo;\n}\n", "Expected expression."
+    "a {\n  color: false and? foo;\n}\n", "Error: Expected expression."
 );

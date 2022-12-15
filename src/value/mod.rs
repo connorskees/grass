@@ -66,7 +66,7 @@ impl ArgList {
 
     pub fn is_null(&self) -> bool {
         // todo: include keywords
-        self.is_empty() || (self.elems.iter().all(|elem| elem.is_null()))
+        !self.is_empty() && (self.elems.iter().all(|elem| elem.is_null()))
     }
 }
 
@@ -334,6 +334,7 @@ impl Value {
         }
     }
 
+    #[track_caller]
     pub fn to_css_string(&self, span: Span, is_compressed: bool) -> SassResult<Cow<'static, str>> {
         Ok(match self {
             Value::Calculation(calc) => Cow::owned(format!(
@@ -731,7 +732,7 @@ impl Value {
         // }
         // .parse_selector(allows_parent, true, String::new())?
         // .0
-    // )
+        // )
     }
 
     #[allow(clippy::only_used_in_recursion)]

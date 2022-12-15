@@ -26,11 +26,7 @@ test!(
     "a {\n  /* foo */\n  /* bar */\n  color: red;\n}\n",
     "a {\n  /* foo */\n  /* bar */\n  color: red;\n}\n"
 );
-test!(
-    two_silent_comments_followed_by_eof,
-    "//\n//\n",
-    ""
-);
+test!(two_silent_comments_followed_by_eof, "//\n//\n", "");
 test!(
     preserves_toplevel_comment_before,
     "/* foo */\na {\n  color: red;\n}\n",
