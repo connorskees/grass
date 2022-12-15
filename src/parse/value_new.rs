@@ -624,12 +624,20 @@ impl ArgumentResult {
 
     /// Get a positional argument by 0-indexed position
     ///
-    /// Removes the argument
+    /// Replaces argument with `Value::Null` gravestone
     pub fn get_positional(&mut self, idx: usize) -> Option<Spanned<Value>> {
-        let val = self.positional.get(idx).cloned().map(|n| Spanned {
-            node: n,
-            span: self.span,
-        });
+        let val = match self.positional.get_mut(idx) {
+            Some(v) => {
+                let mut val = Value::Null;
+                mem::swap(v, &mut val);
+                Some(Spanned {
+                    node: val,
+                    span: self.span,
+                })
+            }
+            None => None,
+        };
+
         self.touched.insert(idx);
         val
         // self.0.remove(&CallArg::Positional(val))

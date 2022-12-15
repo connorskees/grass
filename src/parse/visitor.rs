@@ -2405,25 +2405,25 @@ impl<'a> Visitor<'a> {
     fn visit_ternary(&mut self, if_expr: Ternary) -> SassResult<Value> {
         IF_ARGUMENTS().verify(if_expr.0.positional.len(), &if_expr.0.named)?;
 
-        let positional = if_expr.0.positional;
-        let named = if_expr.0.named;
+        let mut positional = if_expr.0.positional;
+        let mut named = if_expr.0.named;
 
         let condition = if positional.is_empty() {
-            named.get(&Identifier::from("condition")).unwrap()
+            named.remove(&Identifier::from("condition")).unwrap()
         } else {
-            &positional[0]
+            positional.remove(0)
         };
 
-        let if_true = if positional.len() > 1 {
-            &positional[1]
+        let if_true = if positional.is_empty() {
+            named.remove(&Identifier::from("if_true")).unwrap()
         } else {
-            named.get(&Identifier::from("if_true")).unwrap()
+            positional.remove(0)
         };
 
-        let if_false = if positional.len() > 2 {
-            &positional[2]
+        let if_false = if positional.is_empty() {
+            named.remove(&Identifier::from("if_false")).unwrap()
         } else {
-            named.get(&Identifier::from("if_false")).unwrap()
+            positional.remove(0)
         };
 
         let value = if self.visit_expr(condition.clone())?.is_true() {
@@ -2887,7 +2887,7 @@ impl<'a> Visitor<'a> {
             // todo: superfluous clones?
             self.css_tree.add_stmt(
                 Stmt::Style(Style {
-                    property: InternedString::get_or_intern(name.clone()),
+                    property: InternedString::get_or_intern(&name),
                     value: Box::new(value.span(self.parser.span_before)),
                     declared_as_custom_property: is_custom_property,
                 }),

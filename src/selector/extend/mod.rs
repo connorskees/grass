@@ -718,6 +718,7 @@ impl Extender {
         }
 
         let mut tmp = vec![self.extension_for_simple(simple)];
+        tmp.reserve(extenders.len());
         tmp.extend(extenders.values().cloned());
 
         Some(tmp)
