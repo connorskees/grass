@@ -1499,6 +1499,9 @@ impl<'c> ValueParser<'c> {
         parser.whitespace_or_comment();
         if !parser.looking_at_expression() {
             parser.expect_char(')')?;
+            parser
+                .flags
+                .set(ContextFlags::IN_PARENS, was_in_parentheses);
             return Ok(AstExpr::List {
                 elems: Vec::new(),
                 separator: ListSeparator::Undecided,

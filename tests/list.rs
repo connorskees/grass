@@ -373,6 +373,16 @@ test!(
     "a {\n  color: [];\n}\n"
 );
 test!(
+    parens_in_space_separated_list,
+    "a {\n  color: foo () bar;\n}\n",
+    "a {\n  color: foo bar;\n}\n"
+);
+test!(
+    parens_in_comma_separated_list,
+    "a {\n  color: foo, (), bar;\n}\n",
+    "a {\n  color: foo, bar;\n}\n"
+);
+test!(
     space_separated_inside_comma_separated,
     "$a: 1 2 3 == 1, 2, 3;
     a {
