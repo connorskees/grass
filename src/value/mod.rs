@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, collections::BTreeMap};
+use std::{cmp::Ordering, collections::BTreeMap, borrow::Cow};
 
 use codemap::{Span, Spanned};
 
@@ -6,20 +6,21 @@ use crate::{
     color::Color,
     common::{BinaryOp, Brackets, Identifier, ListSeparator, QuoteKind},
     error::SassResult,
+    evaluate::Visitor,
     lexer::Lexer,
-    parse::{visitor::Visitor, Parser, SassCalculation},
+    parse::Parser,
     selector::Selector,
     unit::{Unit, UNIT_CONVERSION_TABLE},
-    utils::hex_char_for,
-    {Cow, Token},
+    utils::{hex_char_for, is_special_function},
+    {Token},
 };
 
-use css_function::is_special_function;
+pub(crate) use calculation::*;
 pub(crate) use map::SassMap;
 pub(crate) use number::Number;
 pub(crate) use sass_function::{SassFunction, UserDefinedFunction};
 
-pub(crate) mod css_function;
+mod calculation;
 mod map;
 mod number;
 mod sass_function;
@@ -337,7 +338,7 @@ impl Value {
     #[track_caller]
     pub fn to_css_string(&self, span: Span, is_compressed: bool) -> SassResult<Cow<'static, str>> {
         Ok(match self {
-            Value::Calculation(calc) => Cow::owned(format!(
+            Value::Calculation(calc) => Cow::Owned(format!(
                 "{}({})",
                 calc.name,
                 calc.args
@@ -367,14 +368,17 @@ impl Value {
                         let numer = &as_slash.0;
                         let denom = &as_slash.1;
 
-                        return Ok(Cow::owned(format!(
+                        return Ok(Cow::Owned(format!(
                             "{}/{}",
-                            numer.num().to_string(is_compressed),
-                            denom.num().to_string(is_compressed)
+                            // todo: superfluous clones
+                            Value::Dimension(Number(numer.0), numer.1.clone(), numer.2.clone())
+                                .to_css_string(span, is_compressed)?,
+                            Value::Dimension(Number(denom.0), denom.1.clone(), denom.2.clone())
+                                .to_css_string(span, is_compressed)?,
                         )));
                     }
 
-                    Cow::owned(format!("{}{}", num.to_string(is_compressed), unit))
+                    Cow::Owned(format!("{}{}", num.to_string(is_compressed), unit))
                 }
             },
             Value::Map(..) | Value::FunctionRef(..) => {
@@ -385,7 +389,7 @@ impl Value {
                     .into())
             }
             Value::List(vals, sep, brackets) => match brackets {
-                Brackets::None => Cow::owned(
+                Brackets::None => Cow::Owned(
                     vals.iter()
                         .filter(|x| !x.is_null())
                         .map(|x| x.to_css_string(span, is_compressed))
@@ -396,7 +400,7 @@ impl Value {
                             sep.as_str()
                         }),
                 ),
-                Brackets::Bracketed => Cow::owned(format!(
+                Brackets::Bracketed => Cow::Owned(format!(
                     "[{}]",
                     vals.iter()
                         .filter(|x| !x.is_null())
@@ -409,7 +413,7 @@ impl Value {
                         }),
                 )),
             },
-            Value::Color(c) => Cow::owned(c.to_string()),
+            Value::Color(c) => Cow::Owned(c.to_string()),
             Value::String(string, QuoteKind::None) => {
                 let mut after_newline = false;
                 let mut buf = String::with_capacity(string.len());
@@ -430,20 +434,20 @@ impl Value {
                         }
                     }
                 }
-                Cow::owned(buf)
+                Cow::Owned(buf)
             }
             Value::String(string, QuoteKind::Quoted) => {
                 let mut buf = String::with_capacity(string.len());
                 visit_quoted_string(&mut buf, false, string);
-                Cow::owned(buf)
+                Cow::Owned(buf)
             }
-            Value::True => Cow::const_str("true"),
-            Value::False => Cow::const_str("false"),
-            Value::Null => Cow::const_str(""),
+            Value::True => Cow::Borrowed("true"),
+            Value::False => Cow::Borrowed("false"),
+            Value::Null => Cow::Borrowed(""),
             Value::ArgList(args) if args.is_empty() => {
                 return Err(("() isn't a valid CSS value.", span).into());
             }
-            Value::ArgList(args) => Cow::owned(
+            Value::ArgList(args) => Cow::Owned(
                 args.elems
                     .iter()
                     .filter(|x| !x.is_null())
@@ -614,22 +618,22 @@ impl Value {
         Ok(match self {
             Value::Calculation(..) => todo!(),
             Value::List(v, _, brackets) if v.is_empty() => match brackets {
-                Brackets::None => Cow::const_str("()"),
-                Brackets::Bracketed => Cow::const_str("[]"),
+                Brackets::None => Cow::Borrowed("()"),
+                Brackets::Bracketed => Cow::Borrowed("[]"),
             },
             Value::List(v, sep, brackets) if v.len() == 1 => match brackets {
                 Brackets::None => match sep {
                     ListSeparator::Space | ListSeparator::Undecided => v[0].inspect(span)?,
-                    ListSeparator::Comma => Cow::owned(format!("({},)", v[0].inspect(span)?)),
+                    ListSeparator::Comma => Cow::Owned(format!("({},)", v[0].inspect(span)?)),
                 },
                 Brackets::Bracketed => match sep {
                     ListSeparator::Space | ListSeparator::Undecided => {
-                        Cow::owned(format!("[{}]", v[0].inspect(span)?))
+                        Cow::Owned(format!("[{}]", v[0].inspect(span)?))
                     }
-                    ListSeparator::Comma => Cow::owned(format!("[{},]", v[0].inspect(span)?)),
+                    ListSeparator::Comma => Cow::Owned(format!("[{},]", v[0].inspect(span)?)),
                 },
             },
-            Value::List(vals, sep, brackets) => Cow::owned(match brackets {
+            Value::List(vals, sep, brackets) => Cow::Owned(match brackets {
                 Brackets::None => vals
                     .iter()
                     .map(|x| x.inspect(span))
@@ -643,18 +647,18 @@ impl Value {
                         .join(sep.as_str()),
                 ),
             }),
-            Value::FunctionRef(f) => Cow::owned(format!("get-function(\"{}\")", f.name())),
-            Value::Null => Cow::const_str("null"),
-            Value::Map(map) => Cow::owned(format!(
+            Value::FunctionRef(f) => Cow::Owned(format!("get-function(\"{}\")", f.name())),
+            Value::Null => Cow::Borrowed("null"),
+            Value::Map(map) => Cow::Owned(format!(
                 "({})",
                 map.iter()
                     .map(|(k, v)| Ok(format!("{}: {}", k.inspect(span)?, v.inspect(span)?)))
                     .collect::<SassResult<Vec<String>>>()?
                     .join(", ")
             )),
-            Value::Dimension(num, unit, _) => Cow::owned(format!("{}{}", num.inspect(), unit)),
-            Value::ArgList(args) if args.is_empty() => Cow::const_str("()"),
-            Value::ArgList(args) if args.len() == 1 => Cow::owned(format!(
+            Value::Dimension(num, unit, _) => Cow::Owned(format!("{}{}", num.inspect(), unit)),
+            Value::ArgList(args) if args.is_empty() => Cow::Borrowed("()"),
+            Value::ArgList(args) if args.len() == 1 => Cow::Owned(format!(
                 "({},)",
                 args.elems
                     .iter()
@@ -663,7 +667,7 @@ impl Value {
                     .collect::<SassResult<Vec<Cow<'static, str>>>>()?
                     .join(", "),
             )),
-            Value::ArgList(args) => Cow::owned(
+            Value::ArgList(args) => Cow::Owned(
                 args.elems
                     .iter()
                     .filter(|x| !x.is_null())
@@ -776,7 +780,6 @@ impl Value {
             }
             _ => return Ok(None),
         }))
-        // todo!()
     }
 
     pub fn is_quoted_string(&self) -> bool {
@@ -786,7 +789,7 @@ impl Value {
     pub fn unary_plus(self, visitor: &mut Visitor) -> SassResult<Self> {
         Ok(match self {
             Self::Dimension(..) => self,
-            // Self::Calculation => todo!(),
+            Self::Calculation(..) => todo!(),
             _ => Self::String(
                 format!(
                     "+{}",
@@ -802,7 +805,7 @@ impl Value {
 
     pub fn unary_neg(self, visitor: &mut Visitor) -> SassResult<Self> {
         Ok(match self {
-            // Self::Calculation => todo!(),
+            Self::Calculation(..) => todo!(),
             Self::Dimension(n, unit, is_calculated) => Self::Dimension(-n, unit, is_calculated),
             _ => Self::String(
                 format!(
@@ -819,7 +822,7 @@ impl Value {
 
     pub fn unary_div(self, visitor: &mut Visitor) -> SassResult<Self> {
         Ok(match self {
-            // Self::Calculation => todo!(),
+            Self::Calculation(..) => todo!(),
             _ => Self::String(
                 format!(
                     "/{}",
@@ -835,7 +838,7 @@ impl Value {
 
     pub fn unary_not(self) -> SassResult<Self> {
         Ok(match self {
-            // Self::Calculation => todo!(),
+            Self::Calculation(..) => todo!(),
             Self::False | Self::Null => Self::True,
             _ => Self::False,
         })

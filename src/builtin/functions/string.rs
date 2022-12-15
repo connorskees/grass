@@ -1,18 +1,4 @@
-use super::{Builtin, GlobalFunctionMap};
-
-use num_bigint::BigInt;
-use num_traits::{Signed, ToPrimitive, Zero};
-
-#[cfg(feature = "random")]
-use rand::{distributions::Alphanumeric, thread_rng, Rng};
-
-use crate::{
-    common::QuoteKind,
-    error::SassResult,
-    parse::{visitor::Visitor, ArgumentResult, Parser},
-    unit::Unit,
-    value::{Number, Value},
-};
+use crate::builtin::builtin_imports::*;
 
 pub(crate) fn to_upper_case(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;

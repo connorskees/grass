@@ -1,10 +1,9 @@
 use std::{
-    borrow::Borrow,
-    cell::{Ref, RefCell, RefMut},
+    borrow::{Borrow, Cow},
+    cell::{Ref, RefCell},
     collections::{BTreeMap, BTreeSet, HashSet},
     ffi::OsStr,
     fmt, mem,
-    ops::Deref,
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -14,46 +13,34 @@ use indexmap::IndexSet;
 use num_traits::ToPrimitive;
 
 use crate::{
+    ast::*,
     atrule::{
         keyframes::KeyframesRuleSet,
         media::{MediaQuery, MediaQueryMergeResult, MediaRule},
         mixin::Mixin,
         UnknownAtRule,
     },
-    builtin::{
-        meta::{call, IF_ARGUMENTS},
-        modules::{ModuleConfig, Modules},
-        Builtin, GLOBAL_FUNCTIONS,
-    },
+    builtin::{meta::IF_ARGUMENTS, modules::ModuleConfig, Builtin, GLOBAL_FUNCTIONS},
     common::{unvendor, BinaryOp, Identifier, ListSeparator, QuoteKind, UnaryOp},
-    error::SassError,
+    error::{SassError, SassResult},
     interner::InternedString,
     lexer::Lexer,
-    parse::SassResult,
-    scope::{Scope, Scopes},
+    parse::{add, cmp, div, mul, rem, single_eq, sub, KeyframesSelectorParser, Parser, Stmt},
+    scope::Scopes,
     selector::{
         ComplexSelectorComponent, ExtendRule, ExtendedSelector, Extender, Selector, SelectorList,
         SelectorParser,
     },
     style::Style,
     token::Token,
-    value::{ArgList, Number, SassFunction, SassMap, SassNumber, UserDefinedFunction, Value},
+    value::{
+        ArgList, CalculationArg, CalculationName, Number, SassCalculation, SassFunction, SassMap,
+        SassNumber, UserDefinedFunction, Value,
+    },
+    ContextFlags,
 };
 
-use super::{
-    common::ContextFlags,
-    keyframes::KeyframesSelectorParser,
-    value::{add, cmp, div, mul, rem, single_eq, sub},
-    value_new::{
-        ArgumentDeclaration, ArgumentInvocation, ArgumentResult, AstExpr, AstSassMap,
-        CalculationArg, CalculationName, MaybeEvaledArguments, StringExpr, Ternary,
-    },
-    AstAtRootRule, AstContentBlock, AstContentRule, AstDebugRule, AstEach, AstErrorRule,
-    AstExtendRule, AstFor, AstFunctionDecl, AstIf, AstImport, AstImportRule, AstInclude,
-    AstLoudComment, AstMedia, AstMixin, AstPlainCssImport, AstReturn, AstRuleSet, AstSassImport,
-    AstStmt, AstStyle, AstUnknownAtRule, AstVariableDecl, AstWarn, AstWhile, AtRootQuery,
-    CssMediaQuery, Interpolation, InterpolationPart, Parser, SassCalculation, Stmt, StyleSheet,
-};
+use super::env::Environment;
 
 #[derive(Debug, Clone)]
 struct CssTree {
@@ -223,81 +210,6 @@ pub(crate) struct CallableContentBlock {
     scopes: Arc<RefCell<Scopes>>,
     // scope_idx: usize,
     content_at_decl: Option<Arc<Self>>,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct Environment {
-    pub scopes: Arc<RefCell<Scopes>>,
-    pub global_scope: Arc<RefCell<Scope>>,
-    pub modules: Modules,
-    // todo: maybe arc
-    pub content: Option<Arc<CallableContentBlock>>,
-}
-
-impl Environment {
-    pub fn new() -> Self {
-        Self {
-            scopes: Arc::new(RefCell::new(Scopes::new())),
-            global_scope: Arc::new(RefCell::new(Scope::new())),
-            modules: Modules::default(),
-            content: None,
-        }
-    }
-
-    pub fn new_for_content(
-        &self,
-        scopes: Arc<RefCell<Scopes>>,
-        content_at_decl: Option<Arc<CallableContentBlock>>,
-    ) -> Self {
-        Self {
-            scopes, //: Arc::clone(&self.scopes), //: Arc::new(RefCell::new(self.scopes().slice(scope_idx))),
-            global_scope: Arc::clone(&self.global_scope),
-            modules: self.modules.clone(),
-            content: content_at_decl,
-        }
-    }
-
-    pub fn new_closure_idx(&self, scope_idx: usize) -> Self {
-        Self {
-            scopes: Arc::new(RefCell::new(self.scopes().slice(scope_idx))),
-            global_scope: Arc::clone(&self.global_scope),
-            modules: self.modules.clone(),
-            content: self.content.as_ref().map(Arc::clone),
-        }
-    }
-
-    pub fn new_closure(&self) -> Self {
-        Self {
-            scopes: Arc::new(RefCell::new(self.scopes().clone())),
-            global_scope: Arc::clone(&self.global_scope),
-            modules: self.modules.clone(),
-            content: self.content.clone(),
-        }
-    }
-
-    fn insert_var(&mut self, name: Identifier, value: Value, is_global: bool) {
-        todo!()
-    }
-
-    pub fn at_root(&self) -> bool {
-        (*self.scopes).borrow().is_empty()
-    }
-
-    pub fn scopes(&self) -> Ref<Scopes> {
-        (*self.scopes).borrow()
-    }
-
-    pub fn scopes_mut(&mut self) -> RefMut<Scopes> {
-        (*self.scopes).borrow_mut()
-    }
-
-    pub fn global_scope(&self) -> Ref<Scope> {
-        (*self.global_scope).borrow()
-    }
-
-    pub fn global_scope_mut(&mut self) -> RefMut<Scope> {
-        (*self.global_scope).borrow_mut()
-    }
 }
 
 pub(crate) struct Visitor<'a> {
@@ -1254,7 +1166,8 @@ impl<'a> Visitor<'a> {
             return Err((
                 "At-rules may not be used within nested declarations.",
                 self.parser.span_before,
-            ).into());
+            )
+                .into());
         }
 
         let name = self.interpolation_to_value(unknown_at_rule.name, false, false)?;
@@ -1337,7 +1250,7 @@ impl<'a> Visitor<'a> {
         Ok(None)
     }
 
-    fn emit_warning(&mut self, message: crate::Cow<str>, span: Span) {
+    fn emit_warning(&mut self, message: Cow<str>, span: Span) {
         if self.parser.options.quiet {
             return;
         }
@@ -1748,9 +1661,9 @@ impl<'a> Visitor<'a> {
         if decl.is_global && !self.env.global_scope().borrow().var_exists(decl.name) {
             // todo: deprecation: true
             if self.env.at_root() {
-                self.emit_warning(crate::Cow::const_str("As of Dart Sass 2.0.0, !global assignments won't be able to declare new variables.\n\nSince this assignment is at the root of the stylesheet, the !global flag is\nunnecessary and can safely be removed."), decl.span);
+                self.emit_warning(Cow::Borrowed("As of Dart Sass 2.0.0, !global assignments won't be able to declare new variables.\n\nSince this assignment is at the root of the stylesheet, the !global flag is\nunnecessary and can safely be removed."), decl.span);
             } else {
-                self.emit_warning(crate::Cow::const_str("As of Dart Sass 2.0.0, !global assignments won't be able to declare new variables.\n\nRecommendation: add `${node.originalName}: null` at the stylesheet root."), decl.span);
+                self.emit_warning(Cow::Borrowed("As of Dart Sass 2.0.0, !global assignments won't be able to declare new variables.\n\nRecommendation: add `${node.originalName}: null` at the stylesheet root."), decl.span);
             }
         }
 
@@ -1844,7 +1757,7 @@ impl<'a> Visitor<'a> {
                 //       return number.toString();
                 //     }
                 self.emit_warning(
-                    crate::Cow::const_str("Using / for division is deprecated and will be removed"),
+                    Cow::Borrowed("Using / for division is deprecated and will be removed"),
                     self.parser.span_before,
                 );
                 //   _warn(
@@ -2178,26 +2091,114 @@ impl<'a> Visitor<'a> {
         }
     }
 
+    fn visit_list_expr(&mut self, list: ListExpr) -> SassResult<Value> {
+        let elems = list
+            .elems
+            .into_iter()
+            .map(|e| {
+                let span = e.span;
+                let value = self.visit_expr(e.node)?;
+                Ok(value)
+            })
+            .collect::<SassResult<Vec<_>>>()?;
+
+        Ok(Value::List(elems, list.separator, list.brackets))
+    }
+
+    fn visit_function_call_expr(&mut self, func_call: FunctionCallExpr) -> SassResult<Value> {
+        let name = func_call.name;
+        let func = match self.env.scopes().get_fn(name, self.env.global_scope()) {
+            Some(func) => func,
+            None => {
+                if let Some(f) = GLOBAL_FUNCTIONS.get(name.as_str()) {
+                    SassFunction::Builtin(f.clone(), name)
+                } else {
+                    if func_call.namespace.is_some() {
+                        return Err(("Undefined function.", func_call.span).into());
+                    }
+
+                    SassFunction::Plain { name }
+                }
+            }
+        };
+
+        let old_in_function = self.flags.in_function();
+        self.flags.set(ContextFlags::IN_FUNCTION, true);
+        let value = self.run_function_callable(func, *func_call.arguments, func_call.span)?;
+        self.flags.set(ContextFlags::IN_FUNCTION, old_in_function);
+
+        Ok(value)
+
+        //             var function = _addExceptionSpan(
+        //     node, () => _getFunction(node.name, namespace: node.namespace));
+
+        // if (function == null) {
+        //   if (node.namespace != null) {
+        //     throw _exception("Undefined function.", node.span);
+        //   }
+
+        //   function = PlainCssCallable(node.originalName);
+        // }
+
+        // var oldInFunction = _inFunction;
+        // _inFunction = true;
+        // var result = await _addErrorSpan(
+        //     node, () => _runFunctionCallable(node.arguments, function, node));
+        // _inFunction = oldInFunction;
+        // return result;
+        // todo!()
+    }
+
+    fn visit_interpolated_func_expr(&mut self, func: InterpolatedFunction) -> SassResult<Value> {
+        let InterpolatedFunction {
+            name,
+            arguments: args,
+            span,
+        } = func;
+        let fn_name = self.perform_interpolation(name, false)?;
+
+        if !args.named.is_empty() || args.keyword_rest.is_some() {
+            return Err(("Plain CSS functions don't support keyword arguments.", span).into());
+        }
+
+        let mut buffer = format!("{}(", fn_name);
+
+        let mut first = true;
+        for arg in args.positional {
+            if first {
+                first = false;
+            } else {
+                buffer.push_str(", ");
+            }
+            let evaluated = self.evaluate_to_css(arg, QuoteKind::Quoted, span)?;
+            buffer.push_str(&evaluated);
+        }
+
+        if let Some(rest_arg) = args.rest {
+            let rest = self.visit_expr(rest_arg)?;
+            if !first {
+                buffer.push_str(", ");
+            }
+            buffer.push_str(&self.serialize(rest, QuoteKind::None, span)?);
+        }
+
+        buffer.push(')');
+
+        Ok(Value::String(buffer, QuoteKind::None))
+    }
+
+    fn visit_parent_selector(&self) -> Value {
+        match &self.style_rule_ignoring_at_root {
+            Some(selector) => selector.as_selector_list().clone().to_sass_list(),
+            None => Value::Null,
+        }
+    }
+
     fn visit_expr(&mut self, expr: AstExpr) -> SassResult<Value> {
         Ok(match expr {
             AstExpr::Color(color) => Value::Color(color),
             AstExpr::Number { n, unit } => Value::Dimension(n, unit, None),
-            AstExpr::List {
-                elems,
-                separator,
-                brackets,
-            } => {
-                let elems = elems
-                    .into_iter()
-                    .map(|e| {
-                        let span = e.span;
-                        let value = self.visit_expr(e.node)?;
-                        Ok(value)
-                    })
-                    .collect::<SassResult<Vec<_>>>()?;
-
-                Value::List(elems, separator, brackets)
-            }
+            AstExpr::List(list) => self.visit_list_expr(list)?,
             AstExpr::String(StringExpr(text, quote), span) => {
                 self.visit_string(text, quote, span)?
             }
@@ -2211,102 +2212,14 @@ impl<'a> Visitor<'a> {
             AstExpr::True => Value::True,
             AstExpr::False => Value::False,
             AstExpr::Calculation { name, args } => self.visit_calculation_expr(name, args)?,
-            AstExpr::FunctionRef(_) => todo!(),
-            AstExpr::FunctionCall {
-                namespace,
-                name,
-                arguments,
-                span,
-            } => {
-                let func = match self.env.scopes().get_fn(name, self.env.global_scope()) {
-                    Some(func) => func,
-                    None => {
-                        if let Some(f) = GLOBAL_FUNCTIONS.get(name.as_str()) {
-                            SassFunction::Builtin(f.clone(), name)
-                        } else {
-                            if namespace.is_some() {
-                                return Err(("Undefined function.", span).into());
-                            }
-
-                            SassFunction::Plain { name }
-                        }
-                    }
-                };
-
-                let old_in_function = self.flags.in_function();
-                self.flags.set(ContextFlags::IN_FUNCTION, true);
-                let value = self.run_function_callable(func, *arguments, span)?;
-                self.flags.set(ContextFlags::IN_FUNCTION, old_in_function);
-
-                value
-
-                //             var function = _addExceptionSpan(
-                //     node, () => _getFunction(node.name, namespace: node.namespace));
-
-                // if (function == null) {
-                //   if (node.namespace != null) {
-                //     throw _exception("Undefined function.", node.span);
-                //   }
-
-                //   function = PlainCssCallable(node.originalName);
-                // }
-
-                // var oldInFunction = _inFunction;
-                // _inFunction = true;
-                // var result = await _addErrorSpan(
-                //     node, () => _runFunctionCallable(node.arguments, function, node));
-                // _inFunction = oldInFunction;
-                // return result;
-                // todo!()
-            }
+            AstExpr::FunctionCall(func_call) => self.visit_function_call_expr(func_call)?,
             AstExpr::If(if_expr) => self.visit_ternary(*if_expr)?,
-            AstExpr::InterpolatedFunction {
-                name,
-                arguments: args,
-                span,
-            } => {
-                let fn_name = self.perform_interpolation(name, false)?;
-
-                if !args.named.is_empty() || args.keyword_rest.is_some() {
-                    return Err(
-                        ("Plain CSS functions don't support keyword arguments.", span).into(),
-                    );
-                }
-
-                let mut buffer = format!("{}(", fn_name);
-
-                let mut first = true;
-                for arg in args.positional {
-                    if first {
-                        first = false;
-                    } else {
-                        buffer.push_str(", ");
-                    }
-                    let evaluated = self.evaluate_to_css(arg, QuoteKind::Quoted, span)?;
-                    buffer.push_str(&evaluated);
-                }
-
-                if let Some(rest_arg) = args.rest {
-                    let rest = self.visit_expr(rest_arg)?;
-                    if !first {
-                        buffer.push_str(", ");
-                    }
-                    buffer.push_str(&self.serialize(rest, QuoteKind::None, span)?);
-                }
-
-                buffer.push(')');
-
-                Value::String(buffer, QuoteKind::None)
-            }
+            AstExpr::InterpolatedFunction(func) => self.visit_interpolated_func_expr(func)?,
             AstExpr::Map(map) => self.visit_map(map)?,
             AstExpr::Null => Value::Null,
             AstExpr::Paren(expr) => self.visit_expr(*expr)?,
-            AstExpr::ParentSelector => match &self.style_rule_ignoring_at_root {
-                Some(selector) => selector.as_selector_list().clone().to_sass_list(),
-                None => Value::Null,
-            },
+            AstExpr::ParentSelector => self.visit_parent_selector(),
             AstExpr::UnaryOp(op, expr) => self.visit_unary_op(op, *expr)?,
-            AstExpr::Value(_) => todo!(),
             AstExpr::Variable { name, namespace } => {
                 if namespace.is_some() {
                     todo!()
@@ -2327,7 +2240,7 @@ impl<'a> Visitor<'a> {
     ) -> SassResult<CalculationArg> {
         Ok(match expr {
             AstExpr::Paren(inner) => match &*inner {
-                AstExpr::FunctionCall { ref name, .. }
+                AstExpr::FunctionCall(FunctionCallExpr { ref name, .. })
                     if name.as_str().to_ascii_lowercase() == "var" =>
                 {
                     let result = self.visit_calculation_value(*inner, in_min_or_max)?;
@@ -2601,7 +2514,7 @@ impl<'a> Visitor<'a> {
                     //           deprecation: true);
                     // todo!()
                     self.emit_warning(
-                        crate::Cow::owned(format!(
+                        Cow::Owned(format!(
                             "Using / for division outside of calc() is deprecated"
                         )),
                         span,

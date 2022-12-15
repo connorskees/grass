@@ -54,7 +54,7 @@ test!(
 test!(
     ceil_big_int,
     "a {\n  color: ceil(1.000000000000000001);\n}\n",
-    "a {\n  color: 2;\n}\n"
+    "a {\n  color: 1;\n}\n"
 );
 test!(
     abs_positive,
@@ -106,8 +106,8 @@ test!(
     "a {\n  color: random(1);\n}\n",
     "a {\n  color: 1;\n}\n"
 );
-test!(
+error!(
     random_limit_big_one,
     "a {\n  color: random(1000000000000000001 - 1000000000000000000);\n}\n",
-    "a {\n  color: 1;\n}\n"
+    "Error: $limit: Must be greater than 0, was 0."
 );

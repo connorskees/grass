@@ -62,8 +62,6 @@ rand = { version = "0.8", optional = true }
 # todo: update to use text_size::TextRange
 codemap = "0.1.3"
 wasm-bindgen = { version = "0.2.68", optional = true }
-# todo: use std-lib cow
-beef = "0.5"
 # todo: use phf for global functions
 phf = { version = "0.9", features = ["macros"] }
 # criterion is not a dev-dependency because it makes tests take too
@@ -82,8 +80,6 @@ commandline = ["clap"]
 random = ["rand"]
 # Option: expose JavaScript-friendly WebAssembly exports
 wasm-exports = ["wasm-bindgen"]
-# Option: enable features that assist in profiling (e.g. inline(never))
-profiling = []
 # Option: enable criterion for benchmarking
 bench = ["criterion"]
 

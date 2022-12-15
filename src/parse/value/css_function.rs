@@ -1,6 +1,6 @@
 use std::iter::Iterator;
 
-use crate::{error::SassResult, parse::value_new::opposite_bracket, Token};
+use crate::{error::SassResult, utils::opposite_bracket, Token};
 
 use super::super::Parser;
 
@@ -395,7 +395,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                 'u' | 'U' => {
                     let before_url = self.toks.cursor();
 
-                    if !self.scan_identifier("url", true) {
+                    if !self.scan_identifier("url", false)? {
                         buffer.push(tok.kind);
                         self.toks.next();
                         wrote_newline = false;

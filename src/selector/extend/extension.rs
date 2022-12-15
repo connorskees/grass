@@ -1,6 +1,8 @@
 use codemap::Span;
 
-use super::{ComplexSelector, CssMediaQuery, SimpleSelector};
+use crate::ast::CssMediaQuery;
+
+use super::{ComplexSelector, SimpleSelector};
 
 #[derive(Clone, Debug)]
 pub(crate) struct Extension {

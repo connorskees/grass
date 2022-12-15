@@ -5,805 +5,24 @@ use std::{
     mem,
 };
 
-use num_bigint::BigInt;
-// use num_rational::{BigRational, Rational64};
-use num_traits::{pow, One, Signed, ToPrimitive, Zero};
-
 use codemap::{Span, Spanned};
 
 use crate::{
+    ast::*,
     builtin::GLOBAL_FUNCTIONS,
     color::{Color, NAMED_COLORS},
     common::{unvendor, BinaryOp, Brackets, Identifier, ListSeparator, QuoteKind, UnaryOp},
     error::SassResult,
     lexer::Lexer,
     unit::Unit,
-    utils::{as_hex, is_name},
-    value::{Number, SassFunction, SassMap, SassNumber, Value},
-    Token,
+    utils::{as_hex, is_name, opposite_bracket},
+    value::{CalculationName, Number, SassFunction, SassMap, SassNumber, Value},
+    ContextFlags, Token,
 };
 
-use super::{common::ContextFlags, Interpolation, InterpolationPart, Parser};
+use super::Parser;
 
-pub(crate) type Predicate<'a> = &'a dyn Fn(&mut Parser<'_, '_>) -> bool;
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) enum CalculationArg {
-    Number(SassNumber),
-    Calculation(SassCalculation),
-    String(String),
-    Operation {
-        lhs: Box<Self>,
-        op: BinaryOp,
-        rhs: Box<Self>,
-    },
-    Interpolation(String),
-}
-
-impl CalculationArg {
-    fn parenthesize_calculation_rhs(outer: BinaryOp, right: BinaryOp) -> bool {
-        if outer == BinaryOp::Div {
-            true
-        } else if outer == BinaryOp::Plus {
-            false
-        } else {
-            right == BinaryOp::Plus || right == BinaryOp::Minus
-        }
-    }
-
-    fn write_calculation_value(
-        buf: &mut String,
-        val: &CalculationArg,
-        is_compressed: bool,
-        span: Span,
-    ) -> SassResult<()> {
-        match val {
-            CalculationArg::Number(n) => {
-                // todo: superfluous clone
-                let n = n.clone();
-                buf.push_str(
-                    &Value::Dimension(Number(n.0), n.1, n.2).to_css_string(span, is_compressed)?,
-                );
-            }
-            CalculationArg::Calculation(calc) => {
-                buf.push_str(&Value::Calculation(calc.clone()).to_css_string(span, is_compressed)?);
-            }
-            CalculationArg::Operation { lhs, op, rhs } => {
-                let paren_left = match &**lhs {
-                    CalculationArg::Interpolation(..) => true,
-                    CalculationArg::Operation { op: lhs_op, .. }
-                        if lhs_op.precedence() < op.precedence() =>
-                    {
-                        true
-                    }
-                    _ => false,
-                };
-
-                if paren_left {
-                    buf.push('(');
-                }
-
-                Self::write_calculation_value(buf, &**lhs, is_compressed, span)?;
-
-                if paren_left {
-                    buf.push(')');
-                }
-
-                let op_whitespace = !is_compressed || op.precedence() == 2;
-
-                if op_whitespace {
-                    buf.push(' ');
-                }
-
-                buf.push_str(&op.to_string());
-
-                if op_whitespace {
-                    buf.push(' ');
-                }
-
-                let paren_right = match &**lhs {
-                    CalculationArg::Interpolation(..) => true,
-                    CalculationArg::Operation { op: rhs_op, .. }
-                        if Self::parenthesize_calculation_rhs(*op, *rhs_op) =>
-                    {
-                        true
-                    }
-                    _ => false,
-                };
-
-                if paren_right {
-                    buf.push('(');
-                }
-
-                Self::write_calculation_value(buf, &**rhs, is_compressed, span)?;
-
-                if paren_right {
-                    buf.push(')');
-                }
-            }
-            CalculationArg::String(i) | CalculationArg::Interpolation(i) => buf.push_str(i),
-        }
-
-        Ok(())
-    }
-
-    pub fn to_css_string(&self, span: Span, is_compressed: bool) -> SassResult<String> {
-        let mut buf = String::new();
-        Self::write_calculation_value(&mut buf, self, is_compressed, span)?;
-        Ok(buf)
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(crate) enum CalculationName {
-    Calc,
-    Min,
-    Max,
-    Clamp,
-}
-
-impl fmt::Display for CalculationName {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            CalculationName::Calc => f.write_str("calc"),
-            CalculationName::Min => f.write_str("min"),
-            CalculationName::Max => f.write_str("max"),
-            CalculationName::Clamp => f.write_str("clamp"),
-        }
-    }
-}
-
-impl CalculationName {
-    pub fn in_min_or_max(&self) -> bool {
-        *self == CalculationName::Min || *self == CalculationName::Max
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct SassCalculation {
-    pub name: CalculationName,
-    pub args: Vec<CalculationArg>,
-}
-
-impl SassCalculation {
-    pub fn unsimplified(name: CalculationName, args: Vec<CalculationArg>) -> Self {
-        Self { name, args }
-    }
-
-    pub fn calc(arg: CalculationArg) -> SassResult<Value> {
-        let arg = Self::simplify(arg)?;
-        match arg {
-            CalculationArg::Number(n) => Ok(Value::Dimension(Number(n.0), n.1, n.2)),
-            CalculationArg::Calculation(c) => Ok(Value::Calculation(c)),
-            _ => Ok(Value::Calculation(SassCalculation {
-                name: CalculationName::Calc,
-                args: vec![arg],
-            })),
-        }
-    }
-
-    pub fn min(args: Vec<CalculationArg>) -> SassResult<Value> {
-        let args = Self::simplify_arguments(args)?;
-        if args.is_empty() {
-            todo!("min() must have at least one argument.")
-        }
-
-        let mut minimum: Option<SassNumber> = None;
-
-        for arg in args.iter() {
-            match arg {
-                CalculationArg::Number(n)
-                    if minimum.is_some() && !minimum.as_ref().unwrap().is_comparable_to(&n) =>
-                {
-                    minimum = None;
-                    break;
-                }
-                // todo: units
-                CalculationArg::Number(n)
-                    if minimum.is_none() || minimum.as_ref().unwrap().num() > n.num() =>
-                {
-                    minimum = Some(n.clone());
-                }
-                _ => break,
-            }
-        }
-
-        Ok(match minimum {
-            Some(min) => Value::Dimension(Number(min.0), min.1, min.2),
-            None => {
-                // _verifyCompatibleNumbers(args);
-                Value::Calculation(SassCalculation {
-                    name: CalculationName::Min,
-                    args,
-                })
-            }
-        })
-    }
-
-    pub fn max(args: Vec<CalculationArg>) -> SassResult<Value> {
-        let args = Self::simplify_arguments(args)?;
-        if args.is_empty() {
-            todo!("max() must have at least one argument.")
-        }
-
-        let mut maximum: Option<SassNumber> = None;
-
-        for arg in args.iter() {
-            match arg {
-                CalculationArg::Number(n)
-                    if maximum.is_some() && !maximum.as_ref().unwrap().is_comparable_to(&n) =>
-                {
-                    maximum = None;
-                    break;
-                }
-                // todo: units
-                CalculationArg::Number(n)
-                    if maximum.is_none() || maximum.as_ref().unwrap().num() < n.num() =>
-                {
-                    maximum = Some(n.clone());
-                }
-                _ => break,
-            }
-        }
-
-        Ok(match maximum {
-            Some(max) => Value::Dimension(Number(max.0), max.1, max.2),
-            None => {
-                // _verifyCompatibleNumbers(args);
-                Value::Calculation(SassCalculation {
-                    name: CalculationName::Max,
-                    args,
-                })
-            }
-        })
-    }
-
-    pub fn clamp(
-        min: CalculationArg,
-        value: Option<CalculationArg>,
-        max: Option<CalculationArg>,
-    ) -> SassResult<Value> {
-        todo!()
-    }
-
-    pub fn operate_internal(
-        mut op: BinaryOp,
-        left: CalculationArg,
-        right: CalculationArg,
-        in_min_or_max: bool,
-        simplify: bool,
-    ) -> SassResult<CalculationArg> {
-        if !simplify {
-            return Ok(CalculationArg::Operation {
-                lhs: Box::new(left),
-                op,
-                rhs: Box::new(right),
-            });
-        }
-
-        let left = Self::simplify(left)?;
-        let mut right = Self::simplify(right)?;
-
-        if op == BinaryOp::Plus || op == BinaryOp::Minus {
-            let is_comparable = if in_min_or_max {
-                // todo:
-                // left.isComparableTo(right)
-                true
-            } else {
-                // left.hasCompatibleUnits(right)
-                true
-            };
-            if matches!(left, CalculationArg::Number(..))
-                && matches!(right, CalculationArg::Number(..))
-                && is_comparable
-            {
-                return Ok(CalculationArg::Operation {
-                    lhs: Box::new(left),
-                    op,
-                    rhs: Box::new(right),
-                });
-            }
-
-            if let CalculationArg::Number(mut n) = right {
-                if n.num().is_negative() {
-                    n.0 *= -1.0;
-                    op = if op == BinaryOp::Plus {
-                        BinaryOp::Minus
-                    } else {
-                        BinaryOp::Plus
-                    }
-                } else {
-                }
-                right = CalculationArg::Number(n);
-            }
-        }
-
-        //   _verifyCompatibleNumbers([left, right]);
-
-        Ok(CalculationArg::Operation {
-            lhs: Box::new(left),
-            op,
-            rhs: Box::new(right),
-        })
-    }
-
-    fn simplify(arg: CalculationArg) -> SassResult<CalculationArg> {
-        Ok(match arg {
-            CalculationArg::Number(..)
-            | CalculationArg::Operation { .. }
-            | CalculationArg::Interpolation(..)
-            | CalculationArg::String(..) => arg,
-            CalculationArg::Calculation(mut calc) => {
-                if calc.name == CalculationName::Calc {
-                    calc.args.remove(0)
-                } else {
-                    CalculationArg::Calculation(calc)
-                }
-            }
-        })
-    }
-
-    fn simplify_arguments(args: Vec<CalculationArg>) -> SassResult<Vec<CalculationArg>> {
-        args.into_iter().map(Self::simplify).collect()
-    }
-}
-
-/// Represented by the `if` function
-#[derive(Debug, Clone)]
-pub(crate) struct Ternary(pub ArgumentInvocation);
-
-#[derive(Debug, Clone)]
-pub(crate) enum AstExpr {
-    BinaryOp {
-        lhs: Box<Self>,
-        op: BinaryOp,
-        rhs: Box<Self>,
-        allows_slash: bool,
-        span: Span,
-    },
-    True,
-    False,
-    Calculation {
-        name: CalculationName,
-        args: Vec<Self>,
-    },
-    Color(Box<Color>),
-    FunctionRef(SassFunction),
-    FunctionCall {
-        namespace: Option<String>,
-        name: Identifier,
-        arguments: Box<ArgumentInvocation>,
-        span: Span,
-    },
-    If(Box<Ternary>),
-    InterpolatedFunction {
-        name: Interpolation,
-        arguments: Box<ArgumentInvocation>,
-        span: Span,
-    },
-    List {
-        elems: Vec<Spanned<Self>>,
-        separator: ListSeparator,
-        brackets: Brackets,
-    },
-    Map(AstSassMap),
-    Null,
-    Number {
-        n: Number,
-        unit: Unit,
-    },
-    Paren(Box<Self>),
-    ParentSelector,
-    String(StringExpr, Span),
-    UnaryOp(UnaryOp, Box<Self>),
-    Value(Value),
-    Variable {
-        name: Spanned<Identifier>,
-        namespace: Option<String>,
-    },
-}
-
-// todo: make quotes bool
-// todo: track span inside
-#[derive(Debug, Clone)]
-pub(crate) struct StringExpr(pub Interpolation, pub QuoteKind);
-
-impl StringExpr {
-    fn quote_inner_text(
-        text: &str,
-        quote: char,
-        buffer: &mut Interpolation,
-        // default=false
-        is_static: bool,
-    ) {
-        let mut chars = text.chars().peekable();
-        while let Some(char) = chars.next() {
-            if char == '\n' || char == '\r' {
-                buffer.add_char('\\');
-                buffer.add_char('a');
-                if let Some(next) = chars.peek() {
-                    if next.is_ascii_whitespace() || next.is_ascii_hexdigit() {
-                        buffer.add_char(' ');
-                    }
-                }
-            } else {
-                if char == quote
-                    || char == '\\'
-                    || (is_static && char == '#' && chars.peek() == Some(&'{'))
-                {
-                    buffer.add_char('\\');
-                }
-                buffer.add_char(char);
-            }
-        }
-    }
-
-    fn best_quote<'a>(strings: impl Iterator<Item = &'a str>) -> char {
-        let mut contains_double_quote = false;
-        for s in strings {
-            for c in s.chars() {
-                if c == '\'' {
-                    return '"';
-                }
-                if c == '"' {
-                    contains_double_quote = true;
-                }
-            }
-        }
-        if contains_double_quote {
-            '\''
-        } else {
-            '"'
-        }
-    }
-
-    pub fn as_interpolation(self, span: Span, is_static: bool) -> Interpolation {
-        if self.1 == QuoteKind::None {
-            return self.0;
-        }
-
-        let quote = Self::best_quote(self.0.contents.iter().filter_map(|c| match c {
-            InterpolationPart::Expr(e) => None,
-            InterpolationPart::String(text) => Some(text.as_str()),
-        }));
-        let mut buffer = Interpolation::new(span);
-        buffer.add_char(quote);
-
-        for value in self.0.contents {
-            match value {
-                InterpolationPart::Expr(e) => buffer.add_expr(Spanned { node: e, span }),
-                InterpolationPart::String(text) => {
-                    Self::quote_inner_text(&text, quote, &mut buffer, is_static)
-                }
-            }
-        }
-
-        buffer.add_char(quote);
-
-        buffer
-    }
-}
-
-impl AstExpr {
-    pub fn is_variable(&self) -> bool {
-        matches!(self, Self::Variable { .. })
-    }
-
-    pub fn is_slash_operand(&self) -> bool {
-        match self {
-            Self::Number { .. } | Self::Calculation { .. } => true,
-            Self::BinaryOp { allows_slash, .. } => *allows_slash,
-            _ => false,
-        }
-    }
-
-    pub fn slash(left: Self, right: Self, span: Span) -> Self {
-        Self::BinaryOp {
-            lhs: Box::new(left),
-            op: BinaryOp::Div,
-            rhs: Box::new(right),
-            allows_slash: true,
-            span,
-        }
-    }
-
-    pub const fn span(self, span: Span) -> Spanned<Self> {
-        Spanned { node: self, span }
-    }
-}
-
-#[derive(Debug, Clone, Default)]
-pub(crate) struct AstSassMap(pub Vec<(AstExpr, AstExpr)>);
-
-#[derive(Debug, Clone)]
-pub(crate) struct Argument {
-    pub name: Identifier,
-    pub default: Option<AstExpr>,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct ArgumentDeclaration {
-    pub args: Vec<Argument>,
-    pub rest: Option<Identifier>,
-}
-
-impl ArgumentDeclaration {
-    pub fn empty() -> Self {
-        Self {
-            args: Vec::new(),
-            rest: None,
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct ArgumentInvocation {
-    pub positional: Vec<AstExpr>,
-    pub named: BTreeMap<Identifier, AstExpr>,
-    pub rest: Option<AstExpr>,
-    pub keyword_rest: Option<AstExpr>,
-    pub span: Span,
-}
-
-impl ArgumentInvocation {
-    pub fn empty(span: Span) -> Self {
-        Self {
-            positional: Vec::new(),
-            named: BTreeMap::new(),
-            rest: None,
-            keyword_rest: None,
-            span,
-        }
-    }
-}
-
-// todo: hack for builtin `call`
-#[derive(Debug, Clone)]
-pub(crate) enum MaybeEvaledArguments {
-    Invocation(ArgumentInvocation),
-    Evaled(ArgumentResult),
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct ArgumentResult {
-    pub positional: Vec<Value>,
-    pub named: BTreeMap<Identifier, Value>,
-    pub separator: ListSeparator,
-    pub span: Span,
-    // todo: hack
-    pub touched: BTreeSet<usize>,
-}
-
-impl ArgumentResult {
-    // pub fn new(span: Span) -> Self {
-    //     // CallArgs(HashMap::new(), span)
-    //     todo!()
-    // }
-
-    // pub fn to_css_string(self, is_compressed: bool) -> SassResult<Spanned<String>> {
-    // let mut string = String::with_capacity(2 + self.len() * 10);
-    // string.push('(');
-    // let mut span = self.1;
-
-    // if self.is_empty() {
-    //     return Ok(Spanned {
-    //         node: "()".to_owned(),
-    //         span,
-    //     });
-    // }
-
-    // let args = match self.get_variadic() {
-    //     Ok(v) => v,
-    //     Err(..) => {
-    //         return Err(("Plain CSS functions don't support keyword arguments.", span).into())
-    //     }
-    // };
-
-    // string.push_str(
-    //     &args
-    //         .iter()
-    //         .map(|a| {
-    //             span = span.merge(a.span);
-    //             a.node.to_css_string(a.span, is_compressed)
-    //         })
-    //         .collect::<SassResult<Vec<Cow<'static, str>>>>()?
-    //         .join(", "),
-    // );
-    // string.push(')');
-    // Ok(Spanned { node: string, span })
-    // todo!()
-    // }
-
-    /// Get argument by name
-    ///
-    /// Removes the argument
-    pub fn get_named<T: Into<Identifier>>(&mut self, val: T) -> Option<Spanned<Value>> {
-        self.named.remove(&val.into()).map(|n| Spanned {
-            node: n,
-            span: self.span,
-        })
-        // self.0.remove(&CallArg::Named(val.into()))
-        // todo!()
-    }
-
-    /// Get a positional argument by 0-indexed position
-    ///
-    /// Replaces argument with `Value::Null` gravestone
-    pub fn get_positional(&mut self, idx: usize) -> Option<Spanned<Value>> {
-        let val = match self.positional.get_mut(idx) {
-            Some(v) => {
-                let mut val = Value::Null;
-                mem::swap(v, &mut val);
-                Some(Spanned {
-                    node: val,
-                    span: self.span,
-                })
-            }
-            None => None,
-        };
-
-        self.touched.insert(idx);
-        val
-        // self.0.remove(&CallArg::Positional(val))
-        // todo!()
-    }
-
-    pub fn get<T: Into<Identifier>>(&mut self, position: usize, name: T) -> Option<Spanned<Value>> {
-        match self.get_named(name) {
-            Some(v) => Some(v),
-            None => self.get_positional(position),
-        }
-    }
-
-    pub fn get_err(&mut self, position: usize, name: &'static str) -> SassResult<Value> {
-        match self.get_named(name) {
-            Some(v) => Ok(v.node),
-            None => match self.get_positional(position) {
-                Some(v) => Ok(v.node),
-                None => Err((format!("Missing argument ${}.", name), self.span()).into()),
-            },
-        }
-        // todo!()
-    }
-
-    // / Decrement all positional arguments by 1
-    // /
-    // / This is used by builtin function `call` to pass
-    // / positional arguments to the other function
-    // pub fn decrement(self) -> CallArgs {
-    //     // CallArgs(
-    //     //     self.0
-    //     //         .into_iter()
-    //     //         .map(|(k, v)| (k.decrement(), v))
-    //     //         .collect(),
-    //     //     self.1,
-    //     // )
-    //     todo!()
-    // }
-
-    pub const fn span(&self) -> Span {
-        self.span
-    }
-
-    pub fn len(&self) -> usize {
-        self.positional.len() + self.named.len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-
-    pub fn min_args(&self, min: usize) -> SassResult<()> {
-        let len = self.len();
-        if len < min {
-            if min == 1 {
-                return Err(("At least one argument must be passed.", self.span()).into());
-            }
-            todo!("min args greater than one")
-        }
-        Ok(())
-    }
-
-    pub fn max_args(&self, max: usize) -> SassResult<()> {
-        let len = self.len();
-        if len > max {
-            let mut err = String::with_capacity(50);
-            #[allow(clippy::format_push_string)]
-            err.push_str(&format!("Only {} argument", max));
-            if max != 1 {
-                err.push('s');
-            }
-            err.push_str(" allowed, but ");
-            err.push_str(&len.to_string());
-            err.push(' ');
-            if len == 1 {
-                err.push_str("was passed.");
-            } else {
-                err.push_str("were passed.");
-            }
-            return Err((err, self.span()).into());
-        }
-        Ok(())
-        // todo!()
-    }
-
-    pub fn default_arg(&mut self, position: usize, name: &'static str, default: Value) -> Value {
-        match self.get(position, name) {
-            Some(val) => val.node,
-            None => default,
-        }
-    }
-
-    pub fn positional_arg(&mut self, position: usize) -> Option<Spanned<Value>> {
-        self.get_positional(position)
-    }
-
-    pub fn remove_positional(&mut self, position: usize) -> Option<Value> {
-        if self.positional.len() > position {
-            Some(self.positional.remove(position))
-        } else {
-            None
-        }
-    }
-
-    pub fn default_named_arg(&mut self, name: &'static str, default: Value) -> Value {
-        match self.get_named(name) {
-            Some(val) => val.node,
-            None => default,
-        }
-    }
-
-    // args: ArgumentDeclaration
-    pub fn get_variadic(self) -> SassResult<Vec<Spanned<Value>>> {
-        // todo: i think we do give a proper error here
-        assert!(self.named.is_empty());
-
-        let Self {
-            positional,
-            span,
-            touched,
-            ..
-        } = self;
-
-        // todo: complete hack, we shouldn't have the `touched` set
-        let mut args = positional
-            .into_iter()
-            .enumerate()
-            .filter(|(idx, _)| !touched.contains(idx))
-            .map(|(_, a)| Spanned {
-                node: a,
-                span: span,
-            })
-            .collect();
-
-        // let mut vals = Vec::new();
-        // let mut args = match self
-        //     .0
-        //     .into_iter()
-        //     .map(|(a, v)| Ok((a.position()?, v)))
-        //     .collect::<Result<Vec<(usize, SassResult<Spanned<Value>>)>, String>>()
-        // {
-        //     Ok(v) => v,
-        //     Err(e) => return Err((format!("No argument named ${}.", e), self.1).into()),
-        // };
-
-        // args.sort_by(|(a1, _), (a2, _)| a1.cmp(a2));
-
-        // for (_, arg) in args {
-        //     vals.push(arg?);
-        // }
-
-        // Ok(vals)
-        // todo!()
-        let span = self.span;
-
-        Ok(args)
-        // Ok(args
-        //     .into_iter()
-        //     .map(|a| Spanned { node: a, span })
-        //     .collect())
-    }
-}
+pub(crate) type Predicate<'a> = &'a dyn Fn(&mut Parser<'_, '_>) -> SassResult<bool>;
 
 fn is_hex_color(interpolation: &Interpolation) -> bool {
     if let Some(plain) = interpolation.as_plain() {
@@ -825,8 +44,6 @@ pub(crate) struct ValueParser<'c> {
     allow_slash: bool,
     single_expression: Option<Spanned<AstExpr>>,
     start: usize,
-    // in_parentheses: bool,
-    // was_in_parens: bool,
     inside_bracketed_list: bool,
     single_equals: bool,
     parse_until: Option<Predicate<'c>>,
@@ -843,7 +60,7 @@ impl<'c> ValueParser<'c> {
         let mut value_parser = Self::new(parser, parse_until, inside_bracketed_list, single_equals);
 
         if let Some(parse_until) = value_parser.parse_until {
-            if parse_until(parser) {
+            if parse_until(parser)? {
                 return Err(("Expected expression.", parser.toks.current_span()).into());
             }
         }
@@ -855,13 +72,12 @@ impl<'c> ValueParser<'c> {
             parser.whitespace_or_comment();
 
             if parser.consume_char_if_exists(']') {
-                return Ok(AstExpr::List {
+                return Ok(AstExpr::List(ListExpr {
                     elems: Vec::new(),
                     separator: ListSeparator::Undecided,
                     brackets: Brackets::Bracketed,
-                }
-                // todo: lexer.span_from(span)
-                .span(parser.span_before));
+                })
+                .span(parser.toks.span_from(start)));
             }
 
             Some(start)
@@ -912,7 +128,7 @@ impl<'c> ValueParser<'c> {
             parser.whitespace_or_comment();
 
             if let Some(parse_until) = self.parse_until {
-                if parse_until(parser) {
+                if parse_until(parser)? {
                     break;
                 }
             }
@@ -1119,7 +335,7 @@ impl<'c> ValueParser<'c> {
                     self.add_single_expression(expr, parser)?;
                 }
                 Some(Token { kind: 'a', .. }) => {
-                    if !parser.flags.in_plain_css() && parser.scan_identifier("and", false) {
+                    if !parser.flags.in_plain_css() && parser.scan_identifier("and", false)? {
                         self.add_operator(
                             Spanned {
                                 node: BinaryOp::And,
@@ -1133,7 +349,7 @@ impl<'c> ValueParser<'c> {
                     }
                 }
                 Some(Token { kind: 'o', .. }) => {
-                    if !parser.flags.in_plain_css() && parser.scan_identifier("or", false) {
+                    if !parser.flags.in_plain_css() && parser.scan_identifier("or", false)? {
                         self.add_operator(
                             Spanned {
                                 node: BinaryOp::Or,
@@ -1217,7 +433,7 @@ impl<'c> ValueParser<'c> {
                     .push(single_expression);
             }
 
-            return Ok(AstExpr::List {
+            return Ok(AstExpr::List(ListExpr {
                 elems: self.comma_expressions.take().unwrap(),
                 separator: ListSeparator::Comma,
                 brackets: if self.inside_bracketed_list {
@@ -1225,7 +441,7 @@ impl<'c> ValueParser<'c> {
                 } else {
                     Brackets::None
                 },
-            }
+            })
             .span(parser.span_before));
         } else if self.inside_bracketed_list && self.space_expressions.is_some() {
             self.resolve_operations(parser)?;
@@ -1235,21 +451,21 @@ impl<'c> ValueParser<'c> {
                 .unwrap()
                 .push(self.single_expression.take().unwrap());
 
-            return Ok(AstExpr::List {
+            return Ok(AstExpr::List(ListExpr {
                 elems: self.space_expressions.take().unwrap(),
                 separator: ListSeparator::Space,
                 brackets: Brackets::Bracketed,
-            }
+            })
             .span(parser.span_before));
         } else {
             self.resolve_space_expressions(parser)?;
 
             if self.inside_bracketed_list {
-                return Ok(AstExpr::List {
+                return Ok(AstExpr::List(ListExpr {
                     elems: vec![self.single_expression.take().unwrap()],
                     separator: ListSeparator::Undecided,
                     brackets: Brackets::Bracketed,
-                }
+                })
                 .span(parser.span_before));
             }
 
@@ -1450,11 +666,11 @@ impl<'c> ValueParser<'c> {
             space_expressions.push(single_expression);
 
             self.single_expression = Some(
-                AstExpr::List {
+                AstExpr::List(ListExpr {
                     elems: space_expressions,
                     separator: ListSeparator::Space,
                     brackets: Brackets::None,
-                }
+                })
                 .span(span),
             );
         }
@@ -1506,11 +722,11 @@ impl<'c> ValueParser<'c> {
             parser
                 .flags
                 .set(ContextFlags::IN_PARENS, was_in_parentheses);
-            return Ok(AstExpr::List {
+            return Ok(AstExpr::List(ListExpr {
                 elems: Vec::new(),
                 separator: ListSeparator::Undecided,
                 brackets: Brackets::None,
-            }
+            })
             .span(parser.span_before));
         }
 
@@ -1552,11 +768,11 @@ impl<'c> ValueParser<'c> {
             .flags
             .set(ContextFlags::IN_PARENS, was_in_parentheses);
 
-        Ok(AstExpr::List {
+        Ok(AstExpr::List(ListExpr {
             elems: expressions,
             separator: ListSeparator::Comma,
             brackets: Brackets::None,
-        }
+        })
         .span(parser.span_before))
     }
 
@@ -1584,7 +800,11 @@ impl<'c> ValueParser<'c> {
 
     fn parse_selector(&mut self, parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
         if parser.flags.in_plain_css() {
-            todo!("The parent selector isn't allowed in plain CSS.")
+            return Err((
+                "The parent selector isn't allowed in plain CSS.",
+                parser.toks.current_span(),
+            )
+                .into());
         }
 
         parser.expect_char('&')?;
@@ -1655,30 +875,6 @@ impl<'c> ValueParser<'c> {
         let span = parser.toks.span_from(start);
 
         Ok(AstExpr::String(StringExpr(buffer, QuoteKind::None), span).span(span))
-
-        //     assert(scanner.peekChar() == $hash);
-        // if (scanner.peekChar(1) == $lbrace) return identifierLike();
-
-        // var start = scanner.state;
-        // scanner.expectChar($hash);
-
-        // var first = scanner.peekChar();
-        // if (first != null && isDigit(first)) {
-        //   return ColorExpression(_hexColorContents(start), scanner.spanFrom(start));
-        // }
-
-        // var afterHash = scanner.state;
-        // var identifier = interpolatedIdentifier();
-        // if (_isHexColor(identifier)) {
-        //   scanner.state = afterHash;
-        //   return ColorExpression(_hexColorContents(start), scanner.spanFrom(start));
-        // }
-
-        // var buffer = InterpolationBuffer();
-        // buffer.writeCharCode($hash);
-        // buffer.addInterpolation(identifier);
-        // return StringExpression(buffer.interpolation(scanner.spanFrom(start)));
-        // todo!()
     }
 
     fn parse_hex_digit(&mut self, parser: &mut Parser) -> SassResult<u32> {
@@ -1687,7 +883,7 @@ impl<'c> ValueParser<'c> {
                 parser.toks.next();
                 Ok(as_hex(kind))
             }
-            _ => todo!("Expected hex digit."),
+            _ => Err(("Expected hex digit.", parser.toks.current_span()).into()),
         }
     }
 
@@ -1743,25 +939,28 @@ impl<'c> ValueParser<'c> {
     }
 
     fn parse_unary_operation(&mut self, parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
+        let op_span = parser.toks.current_span();
         let operator = self.expect_unary_operator(parser)?;
 
         if parser.flags.in_plain_css() && operator != UnaryOp::Div {
-            todo!("Operators aren't allowed in plain CSS.");
+            return Err(("Operators aren't allowed in plain CSS.", op_span).into());
         }
 
         parser.whitespace_or_comment();
 
         let operand = self.parse_single_expression(parser)?;
 
-        Ok(AstExpr::UnaryOp(operator, Box::new(operand.node)).span(parser.span_before))
+        Ok(AstExpr::UnaryOp(operator, Box::new(operand.node))
+            .span(op_span.merge(parser.toks.current_span())))
     }
 
     fn expect_unary_operator(&mut self, parser: &mut Parser) -> SassResult<UnaryOp> {
+        let span = parser.toks.current_span();
         Ok(match parser.toks.next() {
             Some(Token { kind: '+', .. }) => UnaryOp::Plus,
             Some(Token { kind: '-', .. }) => UnaryOp::Neg,
             Some(Token { kind: '/', .. }) => UnaryOp::Div,
-            _ => todo!("Expected unary operator."),
+            Some(..) | None => return Err(("Expected unary operator.", span).into()),
         })
     }
 
@@ -1811,12 +1010,12 @@ impl<'c> ValueParser<'c> {
             return Ok(None);
         }
 
-        if let Some(Token { kind, .. }) = parser.toks.peek_n(1) {
+        if let Some(Token { kind, pos }) = parser.toks.peek_n(1) {
             if !kind.is_ascii_digit() {
                 if allow_trailing_dot {
                     return Ok(None);
                 }
-                todo!("Expected digit.")
+                return Err(("Expected digit.", pos).into());
             }
         }
 
@@ -1917,7 +1116,7 @@ impl<'c> ValueParser<'c> {
         let start = parser.toks.cursor();
         parser.expect_char('!')?;
         parser.whitespace_or_comment();
-        parser.expect_identifier("important", true)?;
+        parser.expect_identifier("important", false)?;
 
         let span = parser.toks.span_from(start);
 
@@ -2001,20 +1200,20 @@ impl<'c> ValueParser<'c> {
                     let arguments =
                         parser.parse_argument_invocation(false, lower.as_deref() == Some("var"))?;
 
-                    Ok(AstExpr::FunctionCall {
+                    Ok(AstExpr::FunctionCall(FunctionCallExpr {
                         namespace: None,
                         name: Identifier::from(plain),
                         arguments: Box::new(arguments),
                         span: parser.toks.span_from(start),
-                    }
+                    })
                     .span(parser.toks.span_from(start)))
                 } else {
                     let arguments = parser.parse_argument_invocation(false, false)?;
-                    Ok(AstExpr::InterpolatedFunction {
+                    Ok(AstExpr::InterpolatedFunction(InterpolatedFunction {
                         name: identifier,
                         arguments: Box::new(arguments),
                         span: parser.toks.span_from(start),
-                    }
+                    })
                     .span(parser.toks.span_from(start)))
                 }
             }
@@ -2268,7 +1467,11 @@ impl<'c> ValueParser<'c> {
                 Ok(AstExpr::Paren(Box::new(value)).span(parser.toks.span_from(start)))
             }
             _ if !parser.looking_at_identifier() => {
-                todo!("Expected number, variable, function, or calculation.")
+                return Err((
+                    "Expected number, variable, function, or calculation.",
+                    parser.toks.current_span(),
+                )
+                    .into())
             }
             _ => {
                 let start = parser.toks.cursor();
@@ -2278,7 +1481,7 @@ impl<'c> ValueParser<'c> {
                 }
 
                 if !parser.toks.next_char_is('(') {
-                    todo!("Expected \"(\" or \".\".")
+                    return Err(("Expected \"(\" or \".\".", parser.toks.current_span()).into());
                 }
 
                 let lowercase = ident.to_ascii_lowercase();
@@ -2292,12 +1495,12 @@ impl<'c> ValueParser<'c> {
                     )))
                     .span(parser.toks.span_from(start)))
                 } else {
-                    Ok(AstExpr::FunctionCall {
+                    Ok(AstExpr::FunctionCall(FunctionCallExpr {
                         namespace: None,
                         name: Identifier::from(ident),
                         arguments: Box::new(parser.parse_argument_invocation(false, false)?),
                         span: parser.toks.span_from(start),
-                    }
+                    })
                     .span(parser.toks.span_from(start)))
                 }
             }
@@ -2478,18 +1681,5 @@ impl<'c> ValueParser<'c> {
         self.single_expression = Some(self.parse_single_expression(parser)?);
 
         Ok(())
-    }
-}
-
-pub(crate) fn opposite_bracket(b: char) -> char {
-    debug_assert!(matches!(b, '(' | '{' | '[' | ')' | '}' | ']'));
-    match b {
-        '(' => ')',
-        '{' => '}',
-        '[' => ']',
-        ')' => '(',
-        '}' => '{',
-        ']' => '[',
-        _ => unreachable!(),
     }
 }

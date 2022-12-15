@@ -1,62 +1,96 @@
 use codemap::Spanned;
 
 use crate::{
+    ast::{AstExpr, Interpolation},
     error::SassResult,
     utils::{is_name, is_name_start},
     Token,
 };
 
-use super::{value_new::AstExpr, Interpolation, Parser};
+use super::Parser;
 
 impl<'a, 'b> Parser<'a, 'b> {
-    fn consume_identifier(&mut self, ident: &str, case_insensitive: bool) -> bool {
-        let start = self.toks.cursor();
+    fn consume_identifier(&mut self, ident: &str, case_sensitive: bool) -> SassResult<bool> {
         for c in ident.chars() {
-            if self.consume_char_if_exists(c) {
-                continue;
+            if !self.scan_ident_char(c, case_sensitive)? {
+                return Ok(false);
             }
-
-            // todo: can be optimized
-            if case_insensitive
-                && (self.consume_char_if_exists(c.to_ascii_lowercase())
-                    || self.consume_char_if_exists(c.to_ascii_uppercase()))
-            {
-                continue;
-            }
-
-            self.toks.set_cursor(start);
-            return false;
         }
 
-        true
+        Ok(true)
+
+        // let start = self.toks.cursor();
+        // for c in ident.chars() {
+        //     if self.consume_char_if_exists(c) {
+        //         continue;
+        //     }
+
+        //     // todo: can be optimized
+        //     if case_insensitive
+        //         && (self.consume_char_if_exists(c.to_ascii_lowercase())
+        //             || self.consume_char_if_exists(c.to_ascii_uppercase()))
+        //     {
+        //         continue;
+        //     }
+
+        //     self.toks.set_cursor(start);
+        //     return false;
+        // }
+
+        // true
+    }
+
+    pub(crate) fn scan_ident_char(&mut self, c: char, case_sensitive: bool) -> SassResult<bool> {
+        let matches = |actual: char| if case_sensitive { actual == c } else {
+             actual.to_ascii_lowercase() == c.to_ascii_lowercase()
+        };
+
+        Ok(match self.toks.peek() {
+            Some(Token { kind, .. }) if matches(kind) => {
+                self.toks.next();
+                true
+            }
+            Some(Token { kind: '\\', .. }) => {
+                let start = self.toks.cursor();
+                if matches(self.consume_escaped_char()?) {
+                    return Ok(true);
+                }
+                self.toks.set_cursor(start);
+                false
+            }
+            Some(..) | None => false,
+        })
     }
 
     // todo: duplicated in selector code
-    fn looking_at_identifier_body(&mut self) -> bool {
+    pub(crate) fn looking_at_identifier_body(&mut self) -> bool {
         matches!(self.toks.peek(), Some(t) if is_name(t.kind) || t.kind == '\\')
     }
 
     /// Peeks to see if the `ident` is at the current position. If it is,
     /// consume the identifier
-    pub fn scan_identifier(&mut self, ident: &'static str, case_insensitive: bool) -> bool {
+    pub fn scan_identifier(&mut self, ident: &'static str,
+    // default=false
+    case_sensitive: bool
+) -> SassResult<bool> {
         if !self.looking_at_identifier() {
-            return false;
+            return Ok(false);
         }
 
         let start = self.toks.cursor();
 
-        if self.consume_identifier(ident, case_insensitive) && !self.looking_at_identifier_body() {
-            return true;
+        if self.consume_identifier(ident, case_sensitive)? && !self.looking_at_identifier_body() {
+            return Ok(true);
         } else {
             self.toks.set_cursor(start);
-            return false;
+            return Ok(false);
         }
     }
 
     pub fn expression_until_comparison(&mut self) -> SassResult<Spanned<AstExpr>> {
         let value = self.parse_expression(
             Some(&|parser| {
-                match parser.toks.peek() {
+                Ok(match parser.toks.peek() {
                     Some(Token { kind: '>', .. })
                     | Some(Token { kind: '<', .. })
                     | Some(Token { kind: ':', .. })
@@ -72,7 +106,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                         !is_double_eq
                     }
                     _ => false,
-                }
+                })
             }),
             None,
             None,
@@ -127,7 +161,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             });
 
             let value = self.parse_expression(
-                Some(&|parser| matches!(parser.toks.peek(), Some(Token { kind: ')', .. }))),
+                Some(&|parser| Ok(matches!(parser.toks.peek(), Some(Token { kind: ')', .. })))),
                 None,
                 None,
             )?;
@@ -198,7 +232,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                     span: self.span_before,
                 });
 
-                if self.scan_identifier("and", true) {
+                if self.scan_identifier("and", false)? {
                     self.whitespace_or_comment();
                     buf.add_string(Spanned {
                         node: " and ".to_owned(),
@@ -214,7 +248,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             self.whitespace_or_comment();
             buf.add_interpolation(self.parse_media_feature()?);
             self.whitespace_or_comment();
-            if !self.scan_identifier("and", true) {
+            if !self.scan_identifier("and", false)? {
                 break;
             }
             buf.add_string(Spanned {

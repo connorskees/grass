@@ -147,11 +147,21 @@ pub(crate) enum Brackets {
     Bracketed,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Eq)]
 pub(crate) enum ListSeparator {
     Space,
     Comma,
     Undecided,
+}
+
+impl PartialEq for ListSeparator {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Space | Self::Undecided, Self::Space | Self::Undecided) => true,
+            (Self::Comma, Self::Comma) => true,
+            _ => false,
+        }
+    }
 }
 
 impl ListSeparator {

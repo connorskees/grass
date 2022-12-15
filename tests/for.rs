@@ -216,3 +216,7 @@ error!(
     to_and_from_i32_min,
     "@for $i from -2147483648 through -2147483648 {}", "Error: -2147483648 is not an int."
 );
+error!(
+    invalid_escape_sequence_in_declaration,
+    "@for $i from 0 \\110000 o 2 {}", "Error: Invalid Unicode code point."
+);

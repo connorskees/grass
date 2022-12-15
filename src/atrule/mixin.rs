@@ -1,17 +1,16 @@
 use std::fmt;
 
 use crate::{
+    ast::{ArgumentInvocation, ArgumentResult},
     error::SassResult,
-    parse::{
-        visitor::{Environment, Visitor},
-        ArgumentInvocation, ArgumentResult, Parser, Stmt,
-    },
+    evaluate::{Environment, Visitor},
+    parse::{Parser, Stmt},
     Token,
 };
 
 pub(crate) type BuiltinMixin = fn(ArgumentResult, &mut Visitor) -> SassResult<Vec<Stmt>>;
 
-pub(crate) use crate::parse::AstMixin as UserDefinedMixin;
+pub(crate) use crate::ast::AstMixin as UserDefinedMixin;
 
 #[derive(Clone)]
 pub(crate) enum Mixin {

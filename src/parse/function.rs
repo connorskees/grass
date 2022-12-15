@@ -13,18 +13,6 @@
 
 // use super::{common::ContextFlags, Parser, Stmt};
 
-/// Names that functions are not allowed to have
-pub(super) const RESERVED_IDENTIFIERS: [&str; 8] = [
-    "calc",
-    "element",
-    "expression",
-    "url",
-    "and",
-    "or",
-    "not",
-    "clamp",
-];
-
 // impl<'a, 'b> Parser<'a, 'b> {
 // pub(super) fn parse_function(&mut self) -> SassResult<()> {
 //     self.whitespace_or_comment();

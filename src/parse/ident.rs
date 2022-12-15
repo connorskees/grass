@@ -1,12 +1,10 @@
-use std::{borrow::Borrow, iter::Iterator};
+use std::iter::Iterator;
 
 use codemap::Spanned;
 
 use crate::{
-    common::QuoteKind,
     error::SassResult,
     utils::{as_hex, hex_char_for, is_name, is_name_start},
-    value::Value,
     Token,
 };
 
@@ -81,7 +79,7 @@ impl<'a, 'b> Parser<'a, 'b> {
     // }
 
     pub(crate) fn parse_escape(&mut self, identifier_start: bool) -> SassResult<String> {
-        self.expect_char('\\');
+        self.expect_char('\\')?;
         let mut value = 0;
         let first = match self.toks.peek() {
             Some(t) => t,

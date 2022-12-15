@@ -1,16 +1,11 @@
-use codemap::Spanned;
+use crate::builtin::builtin_imports::*;
 
-use crate::{
-    builtin::{
-        meta::{
-            call, content_exists, feature_exists, function_exists, get_function,
-            global_variable_exists, inspect, keywords, mixin_exists, type_of, variable_exists,
-        },
-        modules::{Module, ModuleConfig},
+use crate::builtin::{
+    meta::{
+        call, content_exists, feature_exists, function_exists, get_function,
+        global_variable_exists, inspect, keywords, mixin_exists, type_of, variable_exists,
     },
-    error::SassResult,
-    parse::{visitor::Visitor, ArgumentResult, Parser, Stmt},
-    value::Value,
+    modules::{Module, ModuleConfig},
 };
 
 fn load_css(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Vec<Stmt>> {

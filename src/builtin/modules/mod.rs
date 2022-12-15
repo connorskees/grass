@@ -3,11 +3,13 @@ use std::collections::BTreeMap;
 use codemap::{Span, Spanned};
 
 use crate::{
+    ast::ArgumentResult,
     atrule::mixin::{BuiltinMixin, Mixin},
     builtin::Builtin,
     common::{Identifier, QuoteKind},
     error::SassResult,
-    parse::{visitor::Visitor, ArgumentResult, Parser},
+    evaluate::Visitor,
+    parse::Parser,
     scope::Scope,
     value::{SassFunction, SassMap, Value},
 };

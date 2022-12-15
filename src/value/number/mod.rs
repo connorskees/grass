@@ -2,12 +2,13 @@ use std::{
     cmp::Ordering,
     convert::From,
     fmt, mem,
-    ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub, SubAssign},
+    ops::{
+        Add, AddAssign, Deref, DerefMut, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub,
+        SubAssign,
+    },
 };
 
-// use num_bigint::BigInt;
-// use num_rational::{BigRational, Rational64};
-use num_traits::{Num, One, Signed, ToPrimitive, Zero};
+use num_traits::Zero;
 
 use crate::unit::{Unit, UNIT_CONVERSION_TABLE};
 
@@ -18,6 +19,7 @@ mod integer;
 const PRECISION: usize = 10;
 
 #[derive(Clone, Copy)]
+#[repr(transparent)]
 pub(crate) struct Number(pub f64);
 //  {
 //     Small(f64),
@@ -127,57 +129,55 @@ impl Number {
         }
     }
 
-    pub fn clamp<A: Into<Number> + Zero, B: Into<Number>>(self, min: A, max: B) -> Self {
-        let max = max.into();
-        if self > max {
-            return max;
+    pub fn clamp(self, min: f64, max: f64) -> Self {
+        if self.0 > max {
+            return Number(max);
         }
 
-        if min.is_zero() && self.is_negative() {
+        if min == 0.0 && self.is_negative() {
             return Number::zero();
         }
 
-        let min = min.into();
-        if self < min {
-            return min;
+        if self.0 < min {
+            return Number(min);
         }
 
         self
     }
 
-    #[allow(clippy::cast_precision_loss)]
-    pub fn as_float(self) -> f64 {
-        match self {
-            Number(n) => n,
-            // Number::Big(n) => (n.numer().to_f64().unwrap()) / (n.denom().to_f64().unwrap()),
-        }
-    }
+    // #[allow(clippy::cast_precision_loss)]
+    // pub fn as_float(self) -> f64 {
+    //     match self {
+    //         Number(n) => n,
+    //         // Number::Big(n) => (n.numer().to_f64().unwrap()) / (n.denom().to_f64().unwrap()),
+    //     }
+    // }
 
     pub fn sqrt(self) -> Self {
-        Self(self.as_float().sqrt())
+        Self(self.0.sqrt())
         // Number::Big(Box::new(
-        //     BigRational::from_float(self.as_float().sqrt()).unwrap(),
+        //     BigRational::from_float(self.0.sqrt()).unwrap(),
         // ))
     }
 
     pub fn ln(self) -> Self {
-        Self(self.as_float().ln())
+        Self(self.0.ln())
         // Number::Big(Box::new(
-        //     BigRational::from_float(self.as_float().ln()).unwrap(),
+        //     BigRational::from_float(self.0.ln()).unwrap(),
         // ))
     }
 
     pub fn log(self, base: Number) -> Self {
-        Self(self.as_float().log(base.as_float()))
+        Self(self.0.log(base.0))
         // Number::Big(Box::new(
-        //     BigRational::from_float(self.as_float().log(base.as_float())).unwrap(),
+        //     BigRational::from_float(self.0.log(base.0)).unwrap(),
         // ))
     }
 
     pub fn pow(self, exponent: Self) -> Self {
-        Self(self.as_float().powf(exponent.as_float()))
+        Self(self.0.powf(exponent.0))
         // Number::Big(Box::new(
-        //     BigRational::from_float(self.as_float().powf(exponent.as_float())).unwrap(),
+        //     BigRational::from_float(self.0.powf(exponent.0)).unwrap(),
         // ))
     }
 
@@ -186,9 +186,9 @@ impl Number {
     }
 
     pub fn atan2(self, other: Self) -> Self {
-        Self(self.as_float().atan2(other.as_float()))
+        Self(self.0.atan2(other.0))
         // Number::Big(Box::new(
-        //     BigRational::from_float(self.as_float().atan2(other.as_float())).unwrap(),
+        //     BigRational::from_float(self.0.atan2(other.0)).unwrap(),
         // ))
     }
 
@@ -207,16 +207,16 @@ impl Number {
 macro_rules! trig_fn(
     ($name:ident, $name_deg:ident) => {
         pub fn $name(self) -> Self {
-            Self(self.as_float().$name())
+            Self(self.0.$name())
             // Number::Big(Box::new(BigRational::from_float(
-            //     self.as_float().$name(),
+            //     self.0.$name(),
             // ).unwrap()))
         }
 
         pub fn $name_deg(self) -> Self {
-            Self(self.as_float().to_radians().$name())
+            Self(self.0.to_radians().$name())
             // Number::Big(Box::new(BigRational::from_float(
-            //     self.as_float().to_radians().$name(),
+            //     self.0.to_radians().$name(),
             // ).unwrap()))
         }
     }
@@ -225,9 +225,9 @@ macro_rules! trig_fn(
 macro_rules! inverse_trig_fn(
     ($name:ident) => {
         pub fn $name(self) -> Self {
-            Self(self.as_float().$name().to_degrees())
+            Self(self.0.$name().to_degrees())
             // Number::Big(Box::new(BigRational::from_float(
-            //     self.as_float().$name().to_degrees(),
+            //     self.0.$name().to_degrees(),
             // ).unwrap()))
         }
     }
@@ -250,77 +250,95 @@ impl Default for Number {
     }
 }
 
-impl Zero for Number {
-    fn zero() -> Self {
-        Self(0.0)
-        // Number::new_small(Rational64::from_integer(0))
-    }
-
-    fn is_zero(&self) -> bool {
-        match self {
-            Self(v) => v.is_zero(),
-            // Self::Big(v) => v.is_zero(),
-        }
-    }
-}
-
-impl One for Number {
-    fn one() -> Self {
+impl Number {
+    pub const fn one() -> Self {
         Self(1.0)
-        // Number::new_small(Rational64::from_integer(1))
     }
 
-    fn is_one(&self) -> bool {
-        match self {
-            Self(v) => v.is_one(),
-            // Self::Big(v) => v.is_one(),
-        }
+    pub fn is_one(&self) -> bool {
+        self.0 == 1.0
+    }
+
+    pub const fn zero() -> Self {
+        Self(0.0)
+    }
+
+    pub fn is_zero(&self) -> bool {
+        self.0 == 0.0
     }
 }
 
-impl Num for Number {
-    type FromStrRadixErr = ();
-    #[cold]
-    fn from_str_radix(_: &str, _: u32) -> Result<Self, Self::FromStrRadixErr> {
-        unimplemented!()
+impl Deref for Number {
+    type Target = f64;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
-impl Signed for Number {
-    fn abs(&self) -> Self {
-        Self(self.0.abs())
-    }
-
-    #[cold]
-    fn abs_sub(&self, _: &Self) -> Self {
-        unimplemented!()
-    }
-
-    #[cold]
-    fn signum(&self) -> Self {
-        if self.is_zero() {
-            Self::zero()
-        } else if self.is_positive() {
-            Self::one()
-        } else {
-            -Self::one()
-        }
-    }
-
-    fn is_positive(&self) -> bool {
-        match self {
-            Self(v) => v.is_positive(),
-            // Self::Big(v) => v.is_positive(),
-        }
-    }
-
-    fn is_negative(&self) -> bool {
-        match self {
-            Self(v) => v.is_negative(),
-            // Self::Big(v) => v.is_negative(),
-        }
+impl DerefMut for Number {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
+
+// impl One for Number {
+//     fn one() -> Self {
+//         Self(1.0)
+//         // Number::new_small(Rational64::from_integer(1))
+//     }
+
+//     fn is_one(&self) -> bool {
+//         match self {
+//             Self(v) => v.is_one(),
+//             // Self::Big(v) => v.is_one(),
+//         }
+//     }
+// }
+
+// impl Num for Number {
+//     type FromStrRadixErr = ();
+//     #[cold]
+//     fn from_str_radix(_: &str, _: u32) -> Result<Self, Self::FromStrRadixErr> {
+//         unimplemented!()
+//     }
+// }
+
+// impl Signed for Number {
+//     fn abs(&self) -> Self {
+//         Self(self.0.abs())
+//     }
+
+//     #[cold]
+//     fn abs_sub(&self, _: &Self) -> Self {
+//         unimplemented!()
+//     }
+
+//     #[cold]
+//     fn signum(&self) -> Self {
+//         if self.is_zero() {
+//             Self::zero()
+//         } else if self.is_positive() {
+//             Self::one()
+//         } else {
+//             -Self::one()
+//         }
+//     }
+
+//     fn is_positive(&self) -> bool {
+//         match self {
+//             Self(v) => v.is_positive(),
+//             // Self::Big(v) => v.is_positive(),
+//         }
+//     }
+
+//     fn is_negative(&self) -> bool {
+//         match self {
+//             Self(v) => v.is_negative(),
+//             // Self::Big(v) => v.is_negative(),
+//         }
+//     }
+// }
 
 macro_rules! from_integer {
     ($ty:ty) => {
@@ -354,7 +372,6 @@ impl From<i64> for Number {
     }
 }
 
-#[allow(clippy::fallible_impl_from)]
 impl From<f64> for Number {
     fn from(b: f64) -> Self {
         Self(b)
@@ -370,46 +387,47 @@ from_smaller_integer!(u8);
 
 impl fmt::Debug for Number {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self(..) => write!(f, "Number( {} )", self.to_string(false)),
-            // Self::Big(..) => write!(f, "Number::Big( {} )", self.to_string(false)),
-        }
+        write!(f, "Number( {} )", self.to_string(false))
+        // match self {
+        //     Self(..) => ),
+        //     // Self::Big(..) => write!(f, "Number::Big( {} )", self.to_string(false)),
+        // }
     }
 }
 
-impl ToPrimitive for Number {
-    fn to_u64(&self) -> Option<u64> {
-        match self {
-            Self(n) => {
-                // if !n.denom().is_one() {
-                //     return None;
-                // }
-                n.to_u64()
-            } // Self::Big(n) => {
-              //     if !n.denom().is_one() {
-              //         return None;
-              //     }
-              //     n.to_u64()
-              // }
-        }
-    }
+// impl ToPrimitive for Number {
+//     fn to_u64(&self) -> Option<u64> {
+//         match self {
+//             Self(n) => {
+//                 // if !n.denom().is_one() {
+//                 //     return None;
+//                 // }
+//                 n.to_u64()
+//             } // Self::Big(n) => {
+//               //     if !n.denom().is_one() {
+//               //         return None;
+//               //     }
+//               //     n.to_u64()
+//               // }
+//         }
+//     }
 
-    fn to_i64(&self) -> Option<i64> {
-        match self {
-            Self(n) => {
-                // if !n.denom().is_one() {
-                //     return None;
-                // }
-                n.to_i64()
-            } // Self::Big(n) => {
-              //     if !n.denom().is_one() {
-              //         return None;
-              //     }
-              //     n.to_i64()
-              // }
-        }
-    }
-}
+//     fn to_i64(&self) -> Option<i64> {
+//         match self {
+//             Self(n) => {
+//                 // if !n.denom().is_one() {
+//                 //     return None;
+//                 // }
+//                 n.to_i64()
+//             } // Self::Big(n) => {
+//               //     if !n.denom().is_one() {
+//               //         return None;
+//               //     }
+//               //     n.to_i64()
+//               // }
+//         }
+//     }
+// }
 
 impl Number {
     pub(crate) fn inspect(self) -> String {
@@ -417,79 +435,124 @@ impl Number {
     }
 
     pub(crate) fn to_string(self, is_compressed: bool) -> String {
-        let mut whole = self.to_integer().abs();
-        let has_decimal = self.is_decimal();
-        let mut frac = self.abs().fract();
-        let mut dec = String::with_capacity(if has_decimal { PRECISION } else { 0 });
+        let mut buffer = String::with_capacity(3);
 
-        let mut buf = String::new();
-
-        if has_decimal {
-            for _ in 0..(PRECISION - 1) {
-                frac *= 10_i64;
-                dec.push_str(&frac.to_integer().to_string());
-
-                frac = frac.fract();
-                if frac.is_zero() {
-                    break;
-                }
-            }
-            if !frac.is_zero() {
-                let end = (frac * 10_i64).round().to_integer();
-                if end.is_ten() {
-                    loop {
-                        match dec.pop() {
-                            Some('9') => continue,
-                            Some(c) => {
-                                dec.push(char::from(c as u8 + 1));
-                                break;
-                            }
-                            None => {
-                                whole += 1;
-                                break;
-                            }
-                        }
-                    }
-                } else if end.is_zero() {
-                    loop {
-                        match dec.pop() {
-                            Some('0') => continue,
-                            Some(c) => {
-                                dec.push(c);
-                                break;
-                            }
-                            None => break,
-                        }
-                    }
-                } else {
-                    dec.push_str(&end.to_string());
-                }
-            }
+        if self.0 < 0.0 {
+            buffer.push('-');
         }
 
-        let has_decimal = !dec.is_empty();
+        let num = self.0.abs();
 
-        if self.is_negative() && (!whole.is_zero() || has_decimal) {
-            buf.push('-');
+        if is_compressed && num < 1.0 {
+            buffer.push_str(
+                &format!("{:.10}", num)[1..]
+                    .trim_end_matches('0')
+                    .trim_end_matches('.'),
+            );
+        } else {
+            buffer.push_str(
+                &format!("{:.10}", num)
+                    .trim_end_matches('0')
+                    .trim_end_matches('.'),
+            );
         }
 
-        // if the entire number is just zero, we always want to emit it
-        if whole.is_zero() && !has_decimal {
+        if buffer.is_empty() || buffer == "-" || buffer == "-0" {
             return "0".to_owned();
-
-        // otherwise, if the number is not 0, or the number before the decimal
-        // _is_ 0 and we aren't in compressed mode, emit the number before the
-        // decimal
-        } else if !(whole.is_zero() && is_compressed) {
-            buf.push_str(&whole.to_string());
         }
 
-        if has_decimal {
-            buf.push('.');
-            buf.push_str(&dec);
-        }
+        buffer
+        // let decimal = self.0.fract().abs();
+        // let whole = self.0 - self.0.fract();
 
-        buf
+        // let mut result = if self.is_decimal() {
+        //     format!("{:.10}", self.0)
+        // } else {
+
+        // }
+        // ;
+
+        // let mut result = result.trim_end_matches('0');
+
+        // if is_compressed {
+        //     result = result.trim_start_matches('0');
+        // }
+
+        // result.to_owned()
+
+        // let mut whole = self.to_integer().abs();
+        // let has_decimal = self.is_decimal();
+        // let mut frac = self.abs().fract();
+        // let mut dec = String::with_capacity(if has_decimal { PRECISION } else { 0 });
+
+        // let mut buf = String::new();
+
+        // if has_decimal {
+        //     for _ in 0..(PRECISION - 1) {
+        //         frac *= 10_i64;
+        //         dec.push_str(&frac.to_integer().to_string());
+
+        //         frac = frac.fract();
+        //         if frac.is_zero() {
+        //             break;
+        //         }
+        //     }
+        //     if !frac.is_zero() {
+        //         let end = (frac * 10_i64).round().to_integer();
+        //         if end.is_ten() {
+        //             loop {
+        //                 match dec.pop() {
+        //                     Some('9') => continue,
+        //                     Some(c) => {
+        //                         dec.push(char::from(c as u8 + 1));
+        //                         break;
+        //                     }
+        //                     None => {
+        //                         whole += 1;
+        //                         break;
+        //                     }
+        //                 }
+        //             }
+        //         } else if end.is_zero() {
+        //             loop {
+        //                 match dec.pop() {
+        //                     Some('0') => continue,
+        //                     Some(c) => {
+        //                         dec.push(c);
+        //                         break;
+        //                     }
+        //                     None => break,
+        //                 }
+        //             }
+        //         } else {
+        //             dec.push_str(&end.to_string());
+        //         }
+        //     }
+        // }
+
+        // let has_decimal = !dec.is_empty();
+
+        // if self.is_negative() && (!whole.is_zero() || has_decimal) {
+        //     buf.push('-');
+        // }
+
+        // // if the entire number is just zero, we always want to emit it
+        // if whole.is_zero() && !has_decimal {
+        //     return "0".to_owned();
+
+        // // otherwise, if the number is not 0, or the number before the decimal
+        // // _is_ 0 and we aren't in compressed mode, emit the number before the
+        // // decimal
+        // } else if !(whole.is_zero() && is_compressed) {
+        //     buf.push_str(&whole.to_string());
+        // }
+
+        // if has_decimal {
+        //     buf.push('.');
+        //     buf.push_str(&dec);
+        // }
+
+        // buf
     }
 }
 

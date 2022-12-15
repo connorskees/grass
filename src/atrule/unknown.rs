@@ -1,4 +1,4 @@
-use crate::{parse::Stmt, selector::Selector};
+use crate::parse::Stmt;
 
 #[derive(Debug, Clone)]
 #[allow(dead_code)]

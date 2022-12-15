@@ -5,3 +5,29 @@ pub(crate) mod modules;
 pub(crate) use functions::{
     color, list, map, math, meta, selector, string, Builtin, GLOBAL_FUNCTIONS,
 };
+
+/// Imports common to all builtin fns
+mod builtin_imports {
+    pub(crate) use super::functions::{Builtin, GlobalFunctionMap, GLOBAL_FUNCTIONS};
+
+    pub(crate) use codemap::{Span, Spanned};
+
+    pub(crate) use num_bigint::BigInt;
+    pub(crate) use num_traits::{One, Signed, ToPrimitive, Zero};
+
+    #[cfg(feature = "random")]
+    pub(crate) use rand::{distributions::Alphanumeric, thread_rng, Rng};
+
+    pub(crate) use crate::{
+        ast::{Argument, ArgumentDeclaration, ArgumentResult, MaybeEvaledArguments},
+        color::Color,
+        common::{BinaryOp, Brackets, Identifier, ListSeparator, QuoteKind},
+        error::SassResult,
+        evaluate::Visitor,
+        parse::{Parser, Stmt},
+        unit::Unit,
+        value::{Number, SassFunction, SassMap, Value},
+    };
+
+    pub(crate) use std::{borrow::Borrow, cmp::Ordering};
+}

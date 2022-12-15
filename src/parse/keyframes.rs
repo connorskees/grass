@@ -34,9 +34,9 @@ impl<'a, 'b, 'c> KeyframesSelectorParser<'a, 'b, 'c> {
         loop {
             self.parser.whitespace_or_comment();
             if self.parser.looking_at_identifier() {
-                if self.parser.scan_identifier("to", true) {
+                if self.parser.scan_identifier("to", false)? {
                     selectors.push(KeyframesSelector::To);
-                } else if self.parser.scan_identifier("from", true) {
+                } else if self.parser.scan_identifier("from", false)? {
                     selectors.push(KeyframesSelector::From);
                 } else {
                     return Err((

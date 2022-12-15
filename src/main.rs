@@ -25,7 +25,6 @@ arg_enum! {
     }
 }
 
-#[cfg_attr(feature = "profiling", inline(never))]
 fn main() -> std::io::Result<()> {
     let matches = App::new("grass")
         .setting(AppSettings::ColoredHelp)

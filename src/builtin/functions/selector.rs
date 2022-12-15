@@ -1,11 +1,7 @@
-use super::{Builtin, GlobalFunctionMap};
+use crate::builtin::builtin_imports::*;
 
-use crate::{
-    common::{Brackets, ListSeparator, QuoteKind},
-    error::SassResult,
-    parse::{visitor::Visitor, ArgumentResult, Parser},
-    selector::{ComplexSelector, ComplexSelectorComponent, Extender, Selector, SelectorList},
-    value::Value,
+use crate::selector::{
+    ComplexSelector, ComplexSelectorComponent, Extender, Selector, SelectorList,
 };
 
 pub(crate) fn is_superselector(

@@ -1,15 +1,4 @@
-use super::{Builtin, GlobalFunctionMap};
-
-use num_traits::{One, Signed, Zero};
-
-use crate::{
-    color::Color,
-    common::QuoteKind,
-    error::SassResult,
-    parse::{visitor::Visitor, ArgumentResult, Parser},
-    unit::Unit,
-    value::{Number, Value},
-};
+use crate::builtin::builtin_imports::*;
 
 macro_rules! opt_rgba {
     ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal) => {

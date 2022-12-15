@@ -17,18 +17,6 @@ enum DevouredWhitespace {
     None,
 }
 
-impl DevouredWhitespace {
-    fn found_whitespace(&mut self) {
-        if self == &Self::None {
-            *self = Self::Whitespace;
-        }
-    }
-
-    fn found_newline(&mut self) {
-        *self = Self::Newline;
-    }
-}
-
 /// Pseudo-class selectors that take unadorned selectors as arguments.
 const SELECTOR_PSEUDO_CLASSES: [&str; 8] = [
     "not",
@@ -303,7 +291,7 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
             match (found_whitespace, self.parser.toks.peek()) {
                 (_, Some(Token { kind: ')', .. })) => {}
                 (true, _) => {
-                    self.parser.expect_identifier("of", true)?;
+                    self.parser.expect_identifier("of", false)?;
                     this_arg.push_str(" of");
                     self.parser.whitespace_or_comment();
                     selector = Some(Box::new(self.parse_selector_list()?));
@@ -428,11 +416,11 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
 
         match self.parser.toks.peek() {
             Some(Token { kind: 'e', .. }) | Some(Token { kind: 'E', .. }) => {
-                self.parser.expect_identifier("even", true)?;
+                self.parser.expect_identifier("even", false)?;
                 return Ok("even".to_owned());
             }
             Some(Token { kind: 'o', .. }) | Some(Token { kind: 'O', .. }) => {
-                self.parser.expect_identifier("odd", true)?;
+                self.parser.expect_identifier("odd", false)?;
                 return Ok("odd".to_owned());
             }
             Some(t @ Token { kind: '+', .. }) | Some(t @ Token { kind: '-', .. }) => {

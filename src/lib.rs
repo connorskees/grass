@@ -66,28 +66,30 @@ use std::path::Path;
 #[cfg(feature = "wasm-exports")]
 use wasm_bindgen::prelude::*;
 
-pub(crate) use beef::lean::Cow;
-
 use codemap::CodeMap;
 
 pub use crate::error::{
     PublicSassErrorKind as ErrorKind, SassError as Error, SassResult as Result,
 };
 pub use crate::fs::{Fs, NullFs, StdFs};
-pub(crate) use crate::token::Token;
 use crate::{
     builtin::modules::{ModuleConfig, Modules},
+    evaluate::Visitor,
     lexer::Lexer,
     output::{AtRuleContext, Css},
-    parse::{common::ContextFlags, visitor::Visitor, Parser},
+    parse::Parser,
 };
+pub(crate) use crate::{context_flags::ContextFlags, token::Token};
 
 mod args;
+mod ast;
 mod atrule;
 mod builtin;
 mod color;
 mod common;
+mod context_flags;
 mod error;
+mod evaluate;
 mod fs;
 mod interner;
 mod lexer;
@@ -253,7 +255,7 @@ fn raw_to_parse_error(map: &CodeMap, err: Error, unicode: bool) -> Box<Error> {
     Box::new(Error::from_loc(message, map.look_up_span(span), unicode))
 }
 
-#[cfg_attr(feature = "profiling", inline(never))]
+
 fn from_string_with_file_name(input: String, file_name: &str, options: &Options) -> Result<String> {
     let mut map = CodeMap::new();
     let file = map.add_file(file_name.to_owned(), input);
@@ -312,8 +314,8 @@ fn from_string_with_file_name(input: String, file_name: &str, options: &Options)
 ///     Ok(())
 /// }
 /// ```
-#[cfg_attr(feature = "profiling", inline(never))]
-#[cfg_attr(not(feature = "profiling"), inline)]
+
+#[inline]
 pub fn from_path(p: &str, options: &Options) -> Result<String> {
     from_string_with_file_name(
         String::from_utf8(options.fs.read(Path::new(p))?)?,
@@ -331,8 +333,8 @@ pub fn from_path(p: &str, options: &Options) -> Result<String> {
 ///     Ok(())
 /// }
 /// ```
-#[cfg_attr(feature = "profiling", inline(never))]
-#[cfg_attr(not(feature = "profiling"), inline)]
+
+#[inline]
 pub fn from_string(input: String, options: &Options) -> Result<String> {
     from_string_with_file_name(input, "stdin", options)
 }

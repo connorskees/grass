@@ -9,7 +9,7 @@ use crate::{
     common::{BinaryOp, QuoteKind},
     error::SassResult,
     unit::Unit,
-    value::{SassNumber, Value},
+    value::Value,
     Options,
 };
 
@@ -398,22 +398,20 @@ pub(crate) fn div(left: Value, right: Value, options: &Options, span: Span) -> S
             format!("/{}", right.to_css_string(span, options.is_compressed())?),
             QuoteKind::None,
         ),
-        Value::Dimension(n, ..) if n.is_nan() => todo!(),
         Value::Dimension(num, unit, as_slash1) => match right {
             Value::Calculation(..) => todo!(),
-            Value::Dimension(n, ..) if n.is_nan() => todo!(),
             Value::Dimension(num2, unit2, as_slash2) => {
                 // if should_divide1 || should_divide2 {
-                if num.is_zero() && num2.is_zero() {
-                    // todo: nan
-                    todo!()
-                    // return Ok(Value::Dimension(None, Unit::None, true));
-                }
+                // if num.is_zero() && num2.is_zero() {
+                //     // todo: nan
+                //     // todo!()
+                //     return Ok(Value::Dimension(NaN, Unit::None, true));
+                // }
 
-                if num2.is_zero() {
-                    // todo: Infinity and -Infinity
-                    return Err(("Infinity not yet implemented.", span).into());
-                }
+                // if num2.is_zero() {
+                //     // todo: Infinity and -Infinity
+                //     return Err(("Infinity not yet implemented.", span).into());
+                // }
 
                 // `unit(1em / 1em)` => `""`
                 if unit == unit2 {
@@ -578,15 +576,15 @@ pub(crate) fn rem(left: Value, right: Value, options: &Options, span: Span) -> S
                     return Err((format!("Incompatible units {} and {}.", u, u2), span).into());
                 }
 
-                if n2.is_zero() {
-                    // todo: NaN
-                    todo!()
-                    // return Ok(Value::Dimension(
-                    //     None,
-                    //     if u == Unit::None { u2 } else { u },
-                    //     true,
-                    // ));
-                }
+                // if n2.is_zero() {
+                //     // todo: NaN
+                //     todo!()
+                //     // return Ok(Value::Dimension(
+                //     //     None,
+                //     //     if u == Unit::None { u2 } else { u },
+                //     //     true,
+                //     // ));
+                // }
 
                 if u == u2 {
                     Value::Dimension(n % n2, u, None)

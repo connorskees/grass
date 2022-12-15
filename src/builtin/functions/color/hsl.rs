@@ -1,16 +1,4 @@
-use super::{Builtin, GlobalFunctionMap};
-
-use codemap::Spanned;
-use num_traits::One;
-
-use crate::{
-    color::Color,
-    common::{Brackets, ListSeparator, QuoteKind},
-    error::SassResult,
-    parse::{visitor::Visitor, ArgumentResult, Parser},
-    unit::Unit,
-    value::{Number, Value},
-};
+use crate::builtin::builtin_imports::*;
 
 fn inner_hsl(
     name: &'static str,

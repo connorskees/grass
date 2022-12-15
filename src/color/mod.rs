@@ -23,7 +23,7 @@ use std::{
 use crate::value::Number;
 pub(crate) use name::NAMED_COLORS;
 
-use num_traits::{One, Signed, ToPrimitive, Zero};
+use num_traits::ToPrimitive;
 
 mod name;
 
@@ -84,17 +84,17 @@ struct Rgba {
 impl PartialEq for Rgba {
     fn eq(&self, other: &Self) -> bool {
         if self.red != other.red
-            && !(self.red >= Number::from(255) && other.red >= Number::from(255))
+            && !(self.red >= Number::from(255.0) && other.red >= Number::from(255.0))
         {
             return false;
         }
         if self.green != other.green
-            && !(self.green >= Number::from(255) && other.green >= Number::from(255))
+            && !(self.green >= Number::from(255.0) && other.green >= Number::from(255.0))
         {
             return false;
         }
         if self.blue != other.blue
-            && !(self.blue >= Number::from(255) && other.blue >= Number::from(255))
+            && !(self.blue >= Number::from(255.0) && other.blue >= Number::from(255.0))
         {
             return false;
         }
@@ -177,10 +177,10 @@ impl Color {
         mut blue: Number,
         mut alpha: Number,
     ) -> Self {
-        red = red.clamp(0, 255);
-        green = green.clamp(0, 255);
-        blue = blue.clamp(0, 255);
-        alpha = alpha.clamp(0, 1);
+        red = red.clamp(0.0, 255.0);
+        green = green.clamp(0.0, 255.0);
+        blue = blue.clamp(0.0, 255.0);
+        alpha = alpha.clamp(0.0, 1.0);
 
         let repr = repr(red, green, blue, alpha);
         Color::new_rgba(red, green, blue, alpha, repr)
@@ -202,8 +202,8 @@ impl Color {
     /// Algorithm adapted from
     /// <https://github.com/sass/dart-sass/blob/0d0270cb12a9ac5cce73a4d0785fecb00735feee/lib/src/functions/color.dart#L718>
     pub fn mix(self, other: &Color, weight: Number) -> Self {
-        let weight = weight.clamp(0, 100);
-        let normalized_weight = weight * Number::from(2) - Number::one();
+        let weight = weight.clamp(0.0, 100.0);
+        let normalized_weight = weight * Number::from(2.0) - Number::one();
         let alpha_distance = self.alpha() - other.alpha();
 
         let combined_weight1 = if normalized_weight * alpha_distance == Number::from(-1) {
@@ -212,7 +212,7 @@ impl Color {
             (normalized_weight + alpha_distance)
                 / (Number::one() + normalized_weight * alpha_distance)
         };
-        let weight1 = (combined_weight1 + Number::one()) / Number::from(2);
+        let weight1 = (combined_weight1 + Number::one()) / Number::from(2.0);
         let weight2 = Number::one() - weight1;
 
         Color::from_rgba(
@@ -233,9 +233,9 @@ impl Color {
             return h.hue();
         }
 
-        let red = self.red() / Number::from(255);
-        let green = self.green() / Number::from(255);
-        let blue = self.blue() / Number::from(255);
+        let red = self.red() / Number::from(255.0);
+        let green = self.green() / Number::from(255.0);
+        let blue = self.blue() / Number::from(255.0);
 
         let min = min(red, min(green, blue));
         let max = max(red, max(green, blue));
@@ -245,25 +245,25 @@ impl Color {
         let hue = if min == max {
             Number::zero()
         } else if max == red {
-            Number::from(60_u8) * (green - blue) / delta
+            Number::from(60.0) * (green - blue) / delta
         } else if max == green {
-            Number::from(120_u8) + Number::from(60_u8) * (blue - red) / delta
+            Number::from(120.0) + Number::from(60.0) * (blue - red) / delta
         } else {
-            Number::from(240_u8) + Number::from(60_u8) * (red - green) / delta
+            Number::from(240.0) + Number::from(60.0) * (red - green) / delta
         };
 
-        hue % Number::from(360)
+        hue % Number::from(360.0)
     }
 
     /// Calculate saturation from RGBA values
     pub fn saturation(&self) -> Number {
         if let Some(h) = &self.hsla {
-            return h.saturation() * Number::from(100);
+            return h.saturation() * Number::from(100.0);
         }
 
-        let red: Number = self.red() / Number::from(255);
-        let green = self.green() / Number::from(255);
-        let blue = self.blue() / Number::from(255);
+        let red: Number = self.red() / Number::from(255.0);
+        let green = self.green() / Number::from(255.0);
+        let blue = self.blue() / Number::from(255.0);
 
         let min = min(red, min(green, blue));
         let max = red.max(green.max(blue));
@@ -278,26 +278,26 @@ impl Color {
 
         let s = delta
             / if sum > Number::one() {
-                Number::from(2) - sum
+                Number::from(2.0) - sum
             } else {
                 sum
             };
 
-        s * Number::from(100)
+        s * Number::from(100.0)
     }
 
     /// Calculate luminance from RGBA values
     pub fn lightness(&self) -> Number {
         if let Some(h) = &self.hsla {
-            return h.luminance() * Number::from(100);
+            return h.luminance() * Number::from(100.0);
         }
 
-        let red: Number = self.red() / Number::from(255);
-        let green = self.green() / Number::from(255);
-        let blue = self.blue() / Number::from(255);
+        let red: Number = self.red() / Number::from(255.0);
+        let green = self.green() / Number::from(255.0);
+        let blue = self.blue() / Number::from(255.0);
         let min = min(red, min(green, blue));
         let max = red.max(green.max(blue));
-        (((min + max) / Number::from(2)) * Number::from(100)).round()
+        (((min + max) / Number::from(2.0)) * Number::from(100.0)).round()
     }
 
     pub fn as_hsla(&self) -> (Number, Number, Number, Number) {
@@ -305,13 +305,13 @@ impl Color {
             return (h.hue(), h.saturation(), h.luminance(), h.alpha());
         }
 
-        let red = self.red() / Number::from(255);
-        let green = self.green() / Number::from(255);
-        let blue = self.blue() / Number::from(255);
+        let red = self.red() / Number::from(255.0);
+        let green = self.green() / Number::from(255.0);
+        let blue = self.blue() / Number::from(255.0);
         let min = min(red, min(green, blue));
         let max = max(red, max(green, blue));
 
-        let lightness = (min + max) / Number::from(2);
+        let lightness = (min + max) / Number::from(2.0);
 
         let saturation = if min == max {
             Number::zero()
@@ -319,7 +319,7 @@ impl Color {
             let d = max - min;
             let mm = max + min;
             d / if mm > Number::one() {
-                Number::from(2) - mm
+                Number::from(2.0) - mm
             } else {
                 mm
             }
@@ -328,18 +328,18 @@ impl Color {
         let mut hue = if min == max {
             Number::zero()
         } else if blue == max {
-            Number::from(4) + (red - green) / (max - min)
+            Number::from(4.0) + (red - green) / (max - min)
         } else if green == max {
-            Number::from(2) + (blue - red) / (max - min)
+            Number::from(2.0) + (blue - red) / (max - min)
         } else {
             (green - blue) / (max - min)
         };
 
         if hue.is_negative() {
-            hue += Number::from(360);
+            hue += Number::from(360.0);
         }
 
-        hue *= Number::from(60);
+        hue *= Number::from(60.0);
 
         (hue, saturation, lightness, self.alpha())
     }
@@ -371,35 +371,35 @@ impl Color {
 
     /// Create RGBA representation from HSLA values
     pub fn from_hsla(hue: Number, saturation: Number, luminance: Number, alpha: Number) -> Self {
-        let mut hue = if hue >= Number::from(360) {
-            hue % Number::from(360)
-        } else if hue < Number::from(-360) {
-            Number::from(360) + hue % Number::from(360)
+        let mut hue = if hue >= Number::from(360.0) {
+            hue % Number::from(360.0)
+        } else if hue < Number::from(-360.0) {
+            Number::from(360.0) + hue % Number::from(360.0)
         } else if hue.is_negative() {
-            Number::from(360) + hue.clamp(-360, 360)
+            Number::from(360.0) + hue.clamp(-360.0, 360.0)
         } else {
             hue
         };
 
-        let saturation = saturation.clamp(0, 1);
-        let luminance = luminance.clamp(0, 1);
-        let alpha = alpha.clamp(0, 1);
+        let saturation = saturation.clamp(0.0, 1.0);
+        let luminance = luminance.clamp(0.0, 1.0);
+        let alpha = alpha.clamp(0.0, 1.0);
 
         let hsla = Hsla::new(hue, saturation, luminance, alpha);
 
         if saturation.is_zero() {
-            let val = luminance * Number::from(255);
+            let val = luminance * Number::from(255.0);
             let repr = repr(val, val, val, alpha);
             return Color::new_hsla(val, val, val, alpha, hsla, repr);
         }
 
-        let temporary_1 = if luminance < Number::small_ratio(1, 2) {
+        let temporary_1 = if luminance < Number(0.5) {
             luminance * (Number::one() + saturation)
         } else {
             luminance + saturation - luminance * saturation
         };
-        let temporary_2 = Number::from(2) * luminance - temporary_1;
-        hue /= Number::from(360);
+        let temporary_2 = Number::from(2.0) * luminance - temporary_1;
+        hue /= Number::from(360.0);
         let mut temporary_r = hue + Number::small_ratio(1, 3);
         let mut temporary_g = hue;
         let mut temporary_b = hue - Number::small_ratio(1, 3);
@@ -419,13 +419,13 @@ impl Color {
         clamp_temp!(temporary_b);
 
         fn channel(temp: Number, temp1: Number, temp2: Number) -> Number {
-            Number::from(255)
-                * if Number::from(6) * temp < Number::one() {
-                    temp2 + (temp1 - temp2) * Number::from(6) * temp
-                } else if Number::from(2) * temp < Number::one() {
+            Number::from(255.0)
+                * if Number::from(6.0) * temp < Number::one() {
+                    temp2 + (temp1 - temp2) * Number::from(6.0) * temp
+                } else if Number::from(2.0) * temp < Number::one() {
                     temp1
-                } else if Number::from(3) * temp < Number::from(2) {
-                    temp2 + (temp1 - temp2) * (Number::small_ratio(2, 3) - temp) * Number::from(6)
+                } else if Number::from(3.0) * temp < Number::from(2.0) {
+                    temp2 + (temp1 - temp2) * (Number::small_ratio(2, 3) - temp) * Number::from(6.0)
                 } else {
                     temp2
                 }
@@ -466,7 +466,7 @@ impl Color {
     pub fn alpha(&self) -> Number {
         let a = self.rgba.alpha();
         if a > Number::one() {
-            a / Number::from(255)
+            a / Number::from(255.0)
         } else {
             a
         }
@@ -497,7 +497,7 @@ impl Color {
     pub fn to_ie_hex_str(&self) -> String {
         format!(
             "#{:X}{:X}{:X}{:X}",
-            (self.alpha() * Number::from(255)).round().to_integer(),
+            (self.alpha() * Number::from(255.0)).round().to_integer(),
             self.red().to_integer(),
             self.green().to_integer(),
             self.blue().to_integer()
@@ -513,11 +513,11 @@ impl Color {
         mut black: Number,
         mut alpha: Number,
     ) -> Color {
-        hue %= Number::from(360);
-        hue /= Number::from(360);
-        white /= Number::from(100);
-        black /= Number::from(100);
-        alpha = alpha.clamp(Number::zero(), Number::one());
+        hue %= Number::from(360.0);
+        hue /= Number::from(360.0);
+        white /= Number::from(100.0);
+        black /= Number::from(100.0);
+        alpha = alpha.clamp(0.0, 1.0);
 
         let white_black_sum = white + black;
 
@@ -538,11 +538,11 @@ impl Color {
             }
 
             if hue < Number::small_ratio(1, 6) {
-                m1 + (m2 - m1) * hue * Number::from(6)
-            } else if hue < Number::small_ratio(1, 2) {
+                m1 + (m2 - m1) * hue * Number::from(6.0)
+            } else if hue < Number(0.5) {
                 m2
             } else if hue < Number::small_ratio(2, 3) {
-                m1 + (m2 - m1) * (Number::small_ratio(2, 3) - hue) * Number::from(6)
+                m1 + (m2 - m1) * (Number::small_ratio(2, 3) - hue) * Number::from(6.0)
             } else {
                 m1
             }
@@ -550,7 +550,7 @@ impl Color {
 
         let to_rgb = |hue: Number| -> Number {
             let channel = channel(Number::zero(), Number::one(), hue) * factor + white;
-            channel * Number::from(255)
+            channel * Number::from(255.0)
         };
 
         let red = to_rgb(hue + Number::small_ratio(1, 3));
@@ -566,7 +566,7 @@ impl Color {
 /// Get the proper representation from RGBA values
 fn repr(red: Number, green: Number, blue: Number, alpha: Number) -> String {
     fn into_u8(channel: Number) -> u8 {
-        if channel > Number::from(255) {
+        if channel > Number::from(255.0) {
             255_u8
         } else if channel.is_negative() {
             0_u8

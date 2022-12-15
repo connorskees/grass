@@ -12,20 +12,6 @@ use std::{ffi::OsStr, path::Path, path::PathBuf};
 
 use super::Parser;
 
-#[allow(clippy::case_sensitive_file_extension_comparisons)]
-pub(crate) fn is_plain_css_import(url: &str) -> bool {
-    if url.len() < 5 {
-        return false;
-    }
-
-    let lower = url.to_ascii_lowercase();
-
-    lower.ends_with(".css")
-        || lower.starts_with("http://")
-        || lower.starts_with("https://")
-        || lower.starts_with("//")
-}
-
 impl<'a, 'b> Parser<'a, 'b> {
     // /// Searches the current directory of the file then searches in `load_paths` directories
     // /// if the import has not yet been found.

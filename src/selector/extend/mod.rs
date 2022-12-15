@@ -7,7 +7,7 @@ use codemap::Span;
 
 use indexmap::IndexMap;
 
-use crate::{error::SassResult, parse::CssMediaQuery};
+use crate::{ast::CssMediaQuery, error::SassResult};
 
 use super::{
     ComplexSelector, ComplexSelectorComponent, ComplexSelectorHashSet, CompoundSelector, Pseudo,

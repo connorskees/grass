@@ -1,15 +1,4 @@
-use super::{Builtin, GlobalFunctionMap};
-
-use num_traits::One;
-
-use crate::{
-    color::Color,
-    common::{Brackets, ListSeparator, QuoteKind},
-    error::SassResult,
-    parse::{visitor::Visitor, ArgumentResult, Parser},
-    unit::Unit,
-    value::{Number, Value},
-};
+use crate::builtin::builtin_imports::*;
 
 /// name: Either `rgb` or `rgba` depending on the caller
 // todo: refactor into smaller functions

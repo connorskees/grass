@@ -24,7 +24,7 @@ test!(
 test!(
     bracketed_null_list_not_emitted,
     "a {\n  color: [null null null];\n}\n",
-    ""
+    "a {\n  color: [];\n}\n"
 );
 test!(
     negative_null_in_var,

@@ -163,6 +163,11 @@ test!(
     "a {\n  color: 1/3/4;\n}\n"
 );
 test!(
+    long_as_slash_chain,
+    "a {\n  color: 1/2/3/4/5/6/7/8/9;\n}\n",
+    "a {\n  color: 1/2/3/4/5/6/7/8/9;\n}\n"
+);
+test!(
     does_not_eval_chained_binop_one_not_division,
     "a {\n  color: 1 + 3 / 4;\n}\n",
     "a {\n  color: 1.75;\n}\n"

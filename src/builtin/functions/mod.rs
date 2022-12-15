@@ -9,9 +9,7 @@ use std::{
 use once_cell::sync::Lazy;
 
 use crate::{
-    error::SassResult,
-    parse::{visitor::Visitor, ArgumentResult, Parser},
-    value::Value,
+    ast::ArgumentResult, error::SassResult, evaluate::Visitor, parse::Parser, value::Value,
 };
 
 #[macro_use]

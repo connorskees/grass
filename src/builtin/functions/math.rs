@@ -1,17 +1,4 @@
-use super::{Builtin, GlobalFunctionMap};
-
-#[cfg(feature = "random")]
-use num_traits::{One, Signed, ToPrimitive, Zero};
-#[cfg(feature = "random")]
-use rand::Rng;
-
-use crate::{
-    common::BinaryOp,
-    error::SassResult,
-    parse::{visitor::Visitor, ArgumentResult, Parser},
-    unit::Unit,
-    value::{Number, Value},
-};
+use crate::builtin::builtin_imports::*;
 
 pub(crate) fn percentage(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;

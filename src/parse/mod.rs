@@ -7,6 +7,7 @@ use std::{
 use codemap::{CodeMap, Span, Spanned};
 
 use crate::{
+    ast::*,
     atrule::{
         keyframes::{Keyframes, KeyframesRuleSet},
         media::{MediaQuery, MediaRule},
@@ -18,475 +19,33 @@ use crate::{
     lexer::Lexer,
     selector::{ExtendedSelector, Selector},
     style::Style,
-    utils::{as_hex, is_name, is_name_start},
-    Options, Token,
+    utils::{as_hex, is_name, is_name_start, is_plain_css_import, opposite_bracket},
+    ContextFlags, Options, Token,
 };
 
-use common::ContextFlags;
-pub(crate) use value_new::{
-    Argument, ArgumentDeclaration, ArgumentInvocation, ArgumentResult, MaybeEvaledArguments,
-    SassCalculation,
-};
+pub(crate) use keyframes::KeyframesSelectorParser;
+pub(crate) use value::{add, cmp, div, mul, rem, single_eq, sub};
 
-pub(crate) use value::{add, cmp, mul, sub};
+use crate::value::SassCalculation;
 
-use self::{
-    function::RESERVED_IDENTIFIERS,
-    import::is_plain_css_import,
-    value_new::{opposite_bracket, AstExpr, Predicate, StringExpr, ValueParser},
-};
+use self::value_new::{Predicate, ValueParser};
 
 // mod args;
-pub mod common;
+// pub mod common;
 // mod control_flow;
-mod function;
+// mod function;
 mod ident;
-mod import;
+// mod import;
 mod keyframes;
 mod media;
 // mod mixin;
 mod module;
-mod style;
+// mod style;
 // mod throw_away;
 mod value;
 mod value_new;
-mod variable;
-pub mod visitor;
-
-#[derive(Debug, Clone)]
-pub(crate) struct Interpolation {
-    contents: Vec<InterpolationPart>,
-    span: Span,
-}
-
-impl Interpolation {
-    pub fn new(span: Span) -> Self {
-        Self {
-            contents: Vec::new(),
-            span,
-        }
-    }
-
-    pub fn new_with_expr(e: AstExpr, span: Span) -> Self {
-        Self {
-            contents: vec![InterpolationPart::Expr(e)],
-            span,
-        }
-    }
-
-    pub fn new_plain(s: String, span: Span) -> Self {
-        Self {
-            contents: vec![InterpolationPart::String(s)],
-            span,
-        }
-    }
-
-    pub fn add_expr(&mut self, expr: Spanned<AstExpr>) {
-        self.contents.push(InterpolationPart::Expr(expr.node));
-        self.span = self.span.merge(expr.span);
-    }
-
-    pub fn add_string(&mut self, s: Spanned<String>) {
-        match self.contents.last_mut() {
-            Some(InterpolationPart::String(existing)) => *existing += &s.node,
-            _ => self.contents.push(InterpolationPart::String(s.node)),
-        }
-        self.span = self.span.merge(s.span);
-    }
-
-    pub fn add_token(&mut self, tok: Token) {
-        match self.contents.last_mut() {
-            Some(InterpolationPart::String(existing)) => existing.push(tok.kind),
-            _ => self
-                .contents
-                .push(InterpolationPart::String(tok.kind.to_string())),
-        }
-        self.span = self.span.merge(tok.pos);
-    }
-
-    pub fn add_char(&mut self, c: char) {
-        match self.contents.last_mut() {
-            Some(InterpolationPart::String(existing)) => existing.push(c),
-            _ => self.contents.push(InterpolationPart::String(c.to_string())),
-        }
-    }
-
-    pub fn add_interpolation(&mut self, mut other: Self) {
-        self.span = self.span.merge(other.span);
-        self.contents.append(&mut other.contents);
-    }
-
-    pub fn initial_plain(&self) -> &str {
-        match self.contents.first() {
-            Some(InterpolationPart::String(s)) => s,
-            _ => "",
-        }
-    }
-
-    pub fn as_plain(&self) -> Option<&str> {
-        if self.contents.is_empty() {
-            Some("")
-        } else if self.contents.len() > 1 {
-            None
-        } else {
-            match self.contents.first()? {
-                InterpolationPart::String(s) => Some(s),
-                InterpolationPart::Expr(..) => None,
-            }
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub(crate) enum InterpolationPart {
-    String(String),
-    Expr(AstExpr),
-}
-
-// #[derive(Debug, Clone)]
-// pub(crate) enum AstExpr {
-//     Interpolation(Interpolation),
-// }
-
-#[derive(Debug, Clone)]
-pub(crate) struct AstSilentComment {
-    text: String,
-    span: Span,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct AstPlainCssImport {
-    url: Interpolation,
-    modifiers: Option<Interpolation>,
-    span: Span,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct AstSassImport {
-    url: String,
-    span: Span,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct AstIf {
-    if_clauses: Vec<AstIfClause>,
-    else_clause: Option<Vec<AstStmt>>,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct AstIfClause {
-    condition: AstExpr,
-    body: Vec<AstStmt>,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct AstFor {
-    variable: Spanned<Identifier>,
-    from: Spanned<AstExpr>,
-    to: Spanned<AstExpr>,
-    is_exclusive: bool,
-    body: Vec<AstStmt>,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct AstReturn {
-    val: AstExpr,
-    span: Span,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct AstRuleSet {
-    selector: Interpolation,
-    body: Vec<AstStmt>,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct AstStyle {
-    name: Interpolation,
-    value: Option<Spanned<AstExpr>>,
-    body: Vec<AstStmt>,
-    span: Span,
-}
-
-impl AstStyle {
-    pub fn is_custom_property(&self) -> bool {
-        self.name.initial_plain().starts_with("--")
-    }
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct AstEach {
-    variables: Vec<Identifier>,
-    list: AstExpr,
-    body: Vec<AstStmt>,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct AstMedia {
-    query: Interpolation,
-    body: Vec<AstStmt>,
-}
-
-pub(crate) type CssMediaQuery = MediaQuery;
-
-#[derive(Debug, Clone)]
-pub(crate) struct AstWhile {
-    pub condition: AstExpr,
-    pub body: Vec<AstStmt>,
-}
-
-impl AstWhile {
-    fn has_declarations(&self) -> bool {
-        self.body.iter().any(|child| {
-            matches!(
-                child,
-                AstStmt::VariableDecl(..)
-                    | AstStmt::FunctionDecl(..)
-                    | AstStmt::Mixin(..)
-                    // todo: read imports in this case (only counts if dynamic)
-                    | AstStmt::ImportRule(..)
-            )
-        })
-    }
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct AstVariableDecl {
-    namespace: Option<Identifier>,
-    name: Identifier,
-    value: AstExpr,
-    is_guarded: bool,
-    is_global: bool,
-    span: Span,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct AstFunctionDecl {
-    name: Spanned<Identifier>,
-    arguments: ArgumentDeclaration,
-    children: Vec<AstStmt>,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct AstDebugRule {
-    value: AstExpr,
-    span: Span,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct AstWarn {
-    value: AstExpr,
-    span: Span,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct AstErrorRule {
-    value: AstExpr,
-    span: Span,
-}
-
-impl PartialEq for AstFunctionDecl {
-    fn eq(&self, other: &Self) -> bool {
-        self.name == other.name
-    }
-}
-
-impl Eq for AstFunctionDecl {}
-
-impl ArgumentDeclaration {
-    fn verify<T>(&self, num_positional: usize, names: &BTreeMap<Identifier, T>) -> SassResult<()> {
-        let mut named_used = 0;
-
-        for i in 0..self.args.len() {
-            let argument = &self.args[i];
-
-            if i < num_positional {
-                if names.contains_key(&argument.name) {
-                    todo!("Argument ${{_originalArgumentName(argument.name)}} was passed both by position and by name.")
-                }
-            } else if names.contains_key(&argument.name) {
-                named_used += 1;
-            } else if argument.default.is_none() {
-                todo!("Missing argument ${{_originalArgumentName(argument.name)}}.")
-            }
-        }
-
-        if self.rest.is_some() {
-            return Ok(());
-        }
-
-        if num_positional > self.args.len() {
-            todo!("Only ${{arguments.length}} ${{names.isEmpty ? '' : 'positional '}}${{pluralize('argument', arguments.length)}} allowed, but $positional ${{pluralize('was', positional, plural: 'were')}} passed.")
-        }
-
-        if named_used < names.len() {
-            todo!()
-        }
-
-        Ok(())
-    }
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct AstLoudComment {
-    text: Interpolation,
-    span: Span,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct AstMixin {
-    pub name: Identifier,
-    pub args: ArgumentDeclaration,
-    pub body: Vec<AstStmt>,
-    /// Whether the mixin contains a `@content` rule.
-    pub has_content: bool,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct AstContentRule {
-    args: ArgumentInvocation,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct AstContentBlock {
-    args: ArgumentDeclaration,
-    body: Vec<AstStmt>,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct AstInclude {
-    namespace: Option<Identifier>,
-    name: Spanned<Identifier>,
-    args: ArgumentInvocation,
-    content: Option<AstContentBlock>,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct AstUnknownAtRule {
-    name: Interpolation,
-    value: Option<Interpolation>,
-    children: Option<Vec<AstStmt>>,
-    span: Span,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct AstExtendRule {
-    value: Interpolation,
-    is_optional: bool,
-    span: Span,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct AstAtRootRule {
-    children: Vec<AstStmt>,
-    query: Option<Interpolation>,
-    span: Span,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct AtRootQuery {
-    include: bool,
-    names: HashSet<String>,
-    all: bool,
-    rule: bool,
-}
-
-impl AtRootQuery {
-    pub fn excludes_name(&self, name: &str) -> bool {
-        (self.all || self.names.contains(name)) != self.include
-    }
-
-    pub fn excludes_style_rules(&self) -> bool {
-        (self.all || self.rule) != self.include
-    }
-
-    pub fn excludes(&self, stmt: &Stmt) -> bool {
-        if self.all {
-            return !self.include;
-        }
-
-        match stmt {
-            Stmt::RuleSet { .. } => self.excludes_style_rules(),
-            Stmt::Media(..) => self.excludes_name("media"),
-            Stmt::Supports(..) => self.excludes_name("supports"),
-            Stmt::UnknownAtRule(rule) => self.excludes_name(&rule.name.to_ascii_lowercase()),
-            _ => false,
-        }
-    }
-}
-
-impl Default for AtRootQuery {
-    fn default() -> Self {
-        Self {
-            include: false,
-            names: HashSet::new(),
-            all: false,
-            rule: true,
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct AstImportRule {
-    imports: Vec<AstImport>,
-}
-
-#[derive(Debug, Clone)]
-pub(crate) enum AstImport {
-    Plain(AstPlainCssImport),
-    Sass(AstSassImport),
-}
-
-impl AstImport {
-    pub fn is_dynamic(&self) -> bool {
-        matches!(self, AstImport::Sass(..))
-    }
-}
-
-#[derive(Debug, Clone)]
-pub(crate) enum AstStmt {
-    If(AstIf),
-    For(AstFor),
-    Return(AstReturn),
-    RuleSet(AstRuleSet),
-    Style(AstStyle),
-    Each(AstEach),
-    Media(AstMedia),
-    Include(AstInclude),
-    While(AstWhile),
-    VariableDecl(AstVariableDecl),
-    LoudComment(AstLoudComment),
-    SilentComment(AstSilentComment),
-    FunctionDecl(AstFunctionDecl),
-    Mixin(AstMixin),
-    ContentRule(AstContentRule),
-    Warn(AstWarn),
-    UnknownAtRule(AstUnknownAtRule),
-    ErrorRule(AstErrorRule),
-    Extend(AstExtendRule),
-    AtRootRule(AstAtRootRule),
-    Debug(AstDebugRule),
-    // RuleSet {
-    //     selector: ExtendedSelector,
-    //     body: Vec<Self>,
-    // },
-    // Style(Style),
-    // Media(Box<MediaRule>),
-    // UnknownAtRule(Box<UnknownAtRule>),
-    // Supports(Box<SupportsRule>),
-    // AtRoot {
-    //     body: Vec<Stmt>,
-    // },
-    // Comment(String),
-    // Return(Box<Value>),
-    // Keyframes(Box<Keyframes>),
-    // KeyframesRuleSet(Box<KeyframesRuleSet>),
-    /// A plain import such as `@import "foo.css";` or
-    /// `@import url(https://fonts.google.com/foo?bar);`
-    // PlainCssImport(AstPlainCssImport),
-    // AstSassImport(AstSassImport),
-    ImportRule(AstImportRule),
-}
+// mod variable;
+// pub mod visitor;
 
 #[derive(Debug, Clone)]
 pub(crate) enum Stmt {
@@ -543,42 +102,25 @@ pub(crate) struct Parser<'a, 'b> {
     pub module_config: &'a mut ModuleConfig,
 }
 
+/// Names that functions are not allowed to have
+pub(super) const RESERVED_IDENTIFIERS: [&str; 8] = [
+    "calc",
+    "element",
+    "expression",
+    "url",
+    "and",
+    "or",
+    "not",
+    "clamp",
+];
+
 #[derive(Debug, Clone)]
 enum VariableDeclOrInterpolation {
     VariableDecl(AstVariableDecl),
     Interpolation(Interpolation),
 }
 
-#[derive(Debug, Clone)]
-struct AstUseRule {}
-
-#[derive(Debug, Clone)]
-struct AstForwardRule {}
-
-#[derive(Debug, Clone)]
-pub struct StyleSheet {
-    body: Vec<AstStmt>,
-    is_plain_css: bool,
-    uses: Vec<AstUseRule>,
-    forwards: Vec<AstForwardRule>,
-}
-
-impl StyleSheet {
-    pub fn new() -> Self {
-        Self {
-            body: Vec::new(),
-            is_plain_css: false,
-            uses: Vec::new(),
-            forwards: Vec::new(),
-        }
-    }
-}
-
 impl<'a, 'b> Parser<'a, 'b> {
-    // pub fn parse(&mut self) -> SassResult<Vec<Stmt>> {
-    //     todo!()
-    // }
-
     pub fn __parse(&mut self) -> SassResult<StyleSheet> {
         let mut style_sheet = StyleSheet::new();
 
@@ -992,8 +534,13 @@ impl<'a, 'b> Parser<'a, 'b> {
         // todo!()
     }
 
-    fn parse_disallowed_at_rule(&mut self) -> SassResult<AstStmt> {
-        todo!()
+    fn parse_disallowed_at_rule(&mut self, start: usize) -> SassResult<AstStmt> {
+        self.almost_any_value(false)?;
+        return Err((
+            "This at-rule is not allowed here.",
+            self.toks.span_from(start),
+        )
+            .into());
     }
 
     fn parse_error_rule(&mut self) -> SassResult<AstStmt> {
@@ -1053,17 +600,17 @@ impl<'a, 'b> Parser<'a, 'b> {
         let from = self.parse_expression(
             Some(&|parser| {
                 if !parser.looking_at_identifier() {
-                    return false;
+                    return Ok(false);
                 }
-                if parser.scan_identifier("to", false) {
+                Ok(if parser.scan_identifier("to", false)? {
                     exclusive.set(Some(true));
                     true
-                } else if parser.scan_identifier("through", false) {
+                } else if parser.scan_identifier("through", false)? {
                     exclusive.set(Some(false));
                     true
                 } else {
                     false
-                }
+                })
             }),
             None,
             None,
@@ -1165,18 +712,19 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     fn function_child(&mut self) -> SassResult<AstStmt> {
-        if let Some(Token { kind: '@', .. }) = self.toks.peek() {
+        let start = self.toks.cursor();
+        if self.toks.next_char_is('@') {
             return match self.plain_at_rule_name()?.as_str() {
                 "debug" => self.parse_debug_rule(),
                 "each" => self.parse_each_rule(Self::function_child),
-                "else" => self.parse_disallowed_at_rule(),
+                "else" => self.parse_disallowed_at_rule(start),
                 "error" => self.parse_error_rule(),
                 "for" => self.parse_for_rule(Self::function_child),
                 "if" => self.parse_if_rule(Self::function_child),
                 "return" => self.parse_return_rule(),
                 "warn" => self.parse_warn_rule(),
                 "while" => self.parse_while_rule(Self::function_child),
-                _ => self.disallowed_at_rule(),
+                _ => self.parse_disallowed_at_rule(start),
             };
         } else {
             // todo: better error message here
@@ -1237,7 +785,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         Ok(buffer)
     }
 
-    fn scan_else(&mut self) -> bool {
+    fn scan_else(&mut self) -> SassResult<bool> {
         let start = self.toks.cursor();
 
         self.whitespace_or_comment();
@@ -1245,11 +793,11 @@ impl<'a, 'b> Parser<'a, 'b> {
         let before_at = self.toks.cursor();
 
         if self.consume_char_if_exists('@') {
-            if self.scan_identifier("else", false) {
-                return true;
+            if self.scan_identifier("else", true)? {
+                return Ok(true);
             }
 
-            if self.scan_identifier("elseif", false) {
+            if self.scan_identifier("elseif", true)? {
                 //     logger.warn(
                 //         '@elseif is deprecated and will not be supported in future Sass '
                 //         'versions.\n'
@@ -1265,7 +813,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         self.toks.set_cursor(start);
 
-        false
+        Ok(false)
     }
 
     fn parse_if_rule(
@@ -1282,9 +830,9 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         let mut last_clause: Option<Vec<AstStmt>> = None;
 
-        while self.scan_else() {
+        while self.scan_else()? {
             self.whitespace_or_comment();
-            if self.scan_identifier("if", true) {
+            if self.scan_identifier("if", false)? {
                 self.whitespace_or_comment();
                 let condition = self.parse_expression(None, None, None)?.node;
                 let body = self.parse_children(child)?;
@@ -1423,11 +971,11 @@ impl<'a, 'b> Parser<'a, 'b> {
                 StringExpr(contents, QuoteKind::None),
                 self.toks.span_from(start),
             ),
-            None => AstExpr::InterpolatedFunction {
+            None => AstExpr::InterpolatedFunction(InterpolatedFunction {
                 name: Interpolation::new_plain("url".to_owned(), self.span_before),
                 arguments: Box::new(self.parse_argument_invocation(false, false)?),
                 span: self.toks.span_from(start),
-            },
+            }),
         })
     }
 
@@ -1464,7 +1012,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         }
     }
 
-    fn parse_import_rule(&mut self) -> SassResult<AstStmt> {
+    fn parse_import_rule(&mut self, start: usize) -> SassResult<AstStmt> {
         let mut imports = Vec::new();
 
         loop {
@@ -1473,7 +1021,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
             // todo: _inControlDirective
             if (self.flags.in_control_flow() || self.flags.in_mixin()) && argument.is_dynamic() {
-                self.parse_disallowed_at_rule()?;
+                self.parse_disallowed_at_rule(start)?;
             }
 
             imports.push(argument);
@@ -1517,7 +1065,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         self.whitespace_or_comment();
 
-        let content_args = if self.scan_identifier("using", false) {
+        let content_args = if self.scan_identifier("using", false)? {
             self.whitespace_or_comment();
             let args = self.parse_argument_declaration()?;
             self.whitespace_or_comment();
@@ -1634,9 +1182,6 @@ impl<'a, 'b> Parser<'a, 'b> {
             val: value.node,
             span: value.span,
         }))
-    }
-    fn disallowed_at_rule(&mut self) -> SassResult<AstStmt> {
-        todo!()
     }
 
     fn parse_mixin_rule(&mut self, start: usize) -> SassResult<AstStmt> {
@@ -1778,7 +1323,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             Some("content") => self.parse_content_rule(start),
             Some("debug") => self.parse_debug_rule(),
             Some("each") => self.parse_each_rule(child),
-            Some("else") | Some("return") => self.parse_disallowed_at_rule(),
+            Some("else") | Some("return") => self.parse_disallowed_at_rule(start),
             Some("error") => self.parse_error_rule(),
             Some("extend") => self.parse_extend_rule(start),
             Some("for") => self.parse_for_rule(child),
@@ -1791,7 +1336,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             }
             Some("function") => self.parse_function_rule(start),
             Some("if") => self.parse_if_rule(child),
-            Some("import") => self.parse_import_rule(),
+            Some("import") => self.parse_import_rule(start),
             Some("include") => self.parse_include_rule(),
             Some("media") => self.parse_media_rule(),
             Some("mixin") => self.parse_mixin_rule(start),
@@ -1908,17 +1453,36 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         if self.looking_at_children() {
             if self.is_plain_css {
-                todo!("Nested declarations aren't allowed in plain CSS.")
+                return Err((
+                    "Nested declarations aren't allowed in plain CSS.",
+                    self.toks.current_span(),
+                )
+                    .into());
             }
-            //   return _withChildren(_declarationChild, start,
-            //       (children, span) => Declaration.nested(name, children, span));
-            todo!()
+
+            let children = self.with_children(Self::parse_declaration_child)?;
+
+            assert!(
+                !name.initial_plain().starts_with("--"),
+                "todo: Declarations whose names begin with \"--\" may not be nested"
+            );
+
+            return Ok(AstStmt::Style(AstStyle {
+                name,
+                value: None,
+                body: children,
+                span: self.toks.span_from(start),
+            }));
         }
 
         let value = self.parse_expression(None, None, None)?;
         if self.looking_at_children() {
             if self.is_plain_css {
-                todo!("Nested declarations aren't allowed in plain CSS.")
+                return Err((
+                    "Nested declarations aren't allowed in plain CSS.",
+                    self.toks.current_span(),
+                )
+                    .into());
             }
 
             let children = self.with_children(Self::parse_declaration_child)?;
@@ -1954,7 +1518,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         self.expect_char('}')?;
 
         if self.flags.in_plain_css() {
-            todo!("Interpolation isn't allowed in plain CSS.")
+            return Err(("Interpolation isn't allowed in plain CSS.", contents.span).into());
         }
 
         let mut interpolation = Interpolation::new(contents.span);
@@ -2023,7 +1587,9 @@ impl<'a, 'b> Parser<'a, 'b> {
             {
                 buffer.add_interpolation(self.parse_single_interpolation()?);
             }
-            Some(..) | None => todo!("Expected identifier."),
+            Some(..) | None => {
+                return Err(("Expected identifier.", self.toks.current_span()).into())
+            }
         }
 
         self.parse_interpolated_identifier_body(&mut buffer)?;
@@ -2142,7 +1708,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             }
         }
 
-        todo!("expected more input.")
+        return Err(("expected more input.", self.toks.current_span()).into());
     }
 
     fn expect_statement_separator(&mut self, name: Option<&str>) -> SassResult<()> {
@@ -2331,7 +1897,7 @@ impl<'a, 'b> Parser<'a, 'b> {
     ) -> SassResult<Spanned<AstExpr>> {
         ValueParser::parse_expression(
             self,
-            Some(&|parser| matches!(parser.toks.peek(), Some(Token { kind: ',', .. }))),
+            Some(&|parser| Ok(matches!(parser.toks.peek(), Some(Token { kind: ',', .. })))),
             false,
             single_equals,
         )
@@ -2674,14 +2240,14 @@ impl<'a, 'b> Parser<'a, 'b> {
             "content" => self.parse_content_rule(start),
             "debug" => self.parse_debug_rule(),
             "each" => self.parse_each_rule(Self::parse_declaration_child),
-            "else" => self.parse_disallowed_at_rule(),
+            "else" => self.parse_disallowed_at_rule(start),
             "error" => self.parse_error_rule(),
             "for" => self.parse_for_rule(Self::parse_declaration_child),
             "if" => self.parse_if_rule(Self::parse_declaration_child),
             "include" => self.parse_include_rule(),
             "warn" => self.parse_warn_rule(),
             "while" => self.parse_while_rule(Self::parse_declaration_child),
-            _ => self.disallowed_at_rule(),
+            _ => self.parse_disallowed_at_rule(start),
         }
     }
 
@@ -2734,6 +2300,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
     // todo: should return silent comment struct
     fn parse_silent_comment(&mut self) -> SassResult<AstStmt> {
+        let start = self.toks.cursor();
         self.expect_char('/')?;
         self.expect_char('/')?;
 
@@ -2755,7 +2322,11 @@ impl<'a, 'b> Parser<'a, 'b> {
         }
 
         if self.flags.in_plain_css() {
-            todo!("Silent comments aren't allowed in plain CSS.");
+            return Err((
+                "Silent comments aren't allowed in plain CSS.",
+                self.toks.span_from(start),
+            )
+                .into());
         }
 
         self.whitespace();
@@ -2968,7 +2539,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                 '!' | ';' | '{' | '}' => break,
                 'u' | 'U' => {
                     let before_url = self.toks.cursor();
-                    if !self.scan_identifier("url", false) {
+                    if !self.scan_identifier("url", false)? {
                         self.toks.next();
                         buffer.add_token(tok);
                         continue;
@@ -3085,44 +2656,28 @@ impl<'a, 'b> Parser<'a, 'b> {
         false
     }
 
-    pub fn expect_identifier(&mut self, ident: &str, case_insensitive: bool) -> SassResult<()> {
+    pub fn expect_identifier(&mut self, ident: &str, case_sensitive: bool) -> SassResult<()> {
+        let start = self.toks.cursor();
+
         for c in ident.chars() {
-            if self.consume_char_if_exists(c) {
-                continue;
+            if !self.scan_ident_char(c, case_sensitive)? {
+                return Err((
+                    format!("Expected \"{}\".", ident),
+                    self.toks.span_from(start),
+                )
+                    .into());
             }
-
-            // todo: can be optimized
-            if case_insensitive
-                && (self.consume_char_if_exists(c.to_ascii_lowercase())
-                    || self.consume_char_if_exists(c.to_ascii_uppercase()))
-            {
-                continue;
-            }
-
-            todo!("expected ident")
         }
 
-        Ok(())
-        //     name ??= '"$text"';
+        if !self.looking_at_identifier_body() {
+            return Ok(());
+        }
 
-        // var start = scanner.position;
-        // for (var letter in text.codeUnits) {
-        //   if (scanIdentChar(letter, caseSensitive: caseSensitive)) continue;
-        //   scanner.error("Expected $name.", position: start);
-        // }
-
-        // if (!lookingAtIdentifierBody()) return;
-        // scanner.error("Expected $name", position: start);
-
-        // let this_ident = self.parse_identifier_no_interpolation(false)?;
-
-        // self.span_before = this_ident.span;
-
-        // if this_ident.node == ident {
-        //     return Ok(());
-        // }
-
-        // Err((format!("Expected \"{}\".", ident), this_ident.span).into())
+        Err((
+            format!("Expected \"{}\".", ident),
+            self.toks.span_from(start),
+        )
+            .into())
     }
 
     // fn parse_stmt(&mut self) -> SassResult<Vec<Stmt>> {

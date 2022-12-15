@@ -65,10 +65,10 @@ impl<'a> MediaQueryParser<'a> {
 
             let mut conjunction = true;
 
-            if self.parser.scan_identifier("and", false) {
+            if self.parser.scan_identifier("and", false)? {
                 self.expect_whitespace()?;
                 conditions.append(&mut self.parse_media_logic_sequence("and")?);
-            } else if self.parser.scan_identifier("or", false) {
+            } else if self.parser.scan_identifier("or", false)? {
                 self.expect_whitespace()?;
                 conjunction = false;
                 conditions.append(&mut self.parse_media_logic_sequence("or")?);
@@ -106,7 +106,7 @@ impl<'a> MediaQueryParser<'a> {
             self.parser.whitespace_or_comment();
             modifier = Some(identifier1);
             media_type = Some(identifier2);
-            if self.parser.scan_identifier("and", false) {
+            if self.parser.scan_identifier("and", false)? {
                 // For example, "@media only screen and ..."
                 self.expect_whitespace();
             } else {
@@ -118,7 +118,7 @@ impl<'a> MediaQueryParser<'a> {
         // We've consumed either `IDENTIFIER "and"` or
         // `IDENTIFIER IDENTIFIER "and"`.
 
-        if self.parser.scan_identifier("not", false) {
+        if self.parser.scan_identifier("not", false)? {
             // For example, "@media screen and not (...) {"
             self.expect_whitespace()?;
             return Ok(MediaQuery::media_type(
@@ -178,7 +178,7 @@ impl<'a> MediaQueryParser<'a> {
         loop {
             result.push(self.parse_media_in_parens()?);
             self.parser.whitespace_or_comment();
-            if !self.parser.scan_identifier(operator, false) {
+            if !self.parser.scan_identifier(operator, false)? {
                 return Ok(result);
             }
             self.expect_whitespace()?;

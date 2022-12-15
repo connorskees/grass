@@ -14,11 +14,11 @@ use std::fmt;
 // use codemap::Spanned;
 
 use crate::{
+    // error::SassResult,
+    ast::AstFunctionDecl,
+    // value::Value,
     builtin::Builtin,
     common::Identifier,
-    // error::SassResult,
-    parse::AstFunctionDecl,
-    // value::Value,
 };
 
 /// A Sass function
