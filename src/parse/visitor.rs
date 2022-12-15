@@ -262,7 +262,7 @@ impl Environment {
             scopes: Arc::new(RefCell::new(self.scopes().slice(scope_idx))),
             global_scope: Arc::clone(&self.global_scope),
             modules: self.modules.clone(),
-            content: self.content.clone(),
+            content: self.content.as_ref().map(Arc::clone),
         }
     }
 
@@ -743,7 +743,7 @@ impl<'a> Visitor<'a> {
         if let Some(content) = &self.env.content {
             self.run_user_defined_callable(
                 MaybeEvaledArguments::Invocation(content_rule.args),
-                content.clone(),
+                Arc::clone(content),
                 // self.env.clone(),
                 self.env.new_for_content(
                     Arc::clone(&self.env.scopes),
@@ -2426,10 +2426,10 @@ impl<'a> Visitor<'a> {
             positional.remove(0)
         };
 
-        let value = if self.visit_expr(condition.clone())?.is_true() {
-            self.visit_expr(if_true.clone())?
+        let value = if self.visit_expr(condition)?.is_true() {
+            self.visit_expr(if_true)?
         } else {
-            self.visit_expr(if_false.clone())?
+            self.visit_expr(if_false)?
         };
 
         Ok(self.without_slash(value))
