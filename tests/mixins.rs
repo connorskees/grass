@@ -563,6 +563,19 @@ test!(
     }",
     "a {\n  color: red;\n}\n"
 );
+test!(
+    mixin_cant_affect_scope_in_which_it_was_included,
+    "@mixin test {
+        $a: wrong;
+    }
+
+    a {
+        $a: correct;
+        @include test;
+        color: $a;
+    }",
+    "a {\n  color: red;\n}\n"
+);
 error!(
     mixin_in_function,
     "@function foo() {

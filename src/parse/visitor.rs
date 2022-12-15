@@ -1019,7 +1019,11 @@ impl<'a> Visitor<'a> {
 
     fn visit_extend_rule(&mut self, extend_rule: AstExtendRule) -> SassResult<Option<Value>> {
         if self.style_rule_ignoring_at_root.is_none() || self.declaration_name.is_some() {
-            todo!("@extend may only be used within style rules.")
+            return Err((
+                "@extend may only be used within style rules.",
+                extend_rule.span,
+            )
+                .into());
         }
 
         let super_selector = self.style_rule_ignoring_at_root.clone().unwrap();
@@ -1247,7 +1251,10 @@ impl<'a> Visitor<'a> {
         // here should be mirrored there.
 
         if self.declaration_name.is_some() {
-            todo!("At-rules may not be used within nested declarations.")
+            return Err((
+                "At-rules may not be used within nested declarations.",
+                self.parser.span_before,
+            ).into());
         }
 
         let name = self.interpolation_to_value(unknown_at_rule.name, false, false)?;
@@ -2139,7 +2146,9 @@ impl<'a> Visitor<'a> {
                 };
 
                 if !arguments.named.is_empty() || arguments.keyword_rest.is_some() {
-                    todo!("Plain CSS functions don't support keyword arguments.");
+                    return Err(
+                        ("Plain CSS functions don't support keyword arguments.", span).into(),
+                    );
                 }
 
                 let mut buffer = format!("{}(", name.as_str());
@@ -2216,7 +2225,7 @@ impl<'a> Visitor<'a> {
                             SassFunction::Builtin(f.clone(), name)
                         } else {
                             if namespace.is_some() {
-                                todo!("Undefined function.");
+                                return Err(("Undefined function.", span).into());
                             }
 
                             SassFunction::Plain { name }
@@ -2259,7 +2268,9 @@ impl<'a> Visitor<'a> {
                 let fn_name = self.perform_interpolation(name, false)?;
 
                 if !args.named.is_empty() || args.keyword_rest.is_some() {
-                    todo!("Plain CSS functions don't support keyword arguments.")
+                    return Err(
+                        ("Plain CSS functions don't support keyword arguments.", span).into(),
+                    );
                 }
 
                 let mut buffer = format!("{}(", fn_name);
@@ -2909,8 +2920,7 @@ impl<'a> Visitor<'a> {
                 self.parent,
             );
         } else if name.starts_with("--") {
-            dbg!(&value, &name);
-            todo!("Custom property values may not be empty.")
+            return Err(("Custom property values may not be empty.", style.span).into());
         }
 
         let children = style.body;

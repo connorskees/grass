@@ -1184,7 +1184,7 @@ impl<'c> ValueParser<'c> {
                     }
 
                     if self.single_expression.is_none() {
-                        todo!("Expected expression.")
+                        return Err(("Expected expression.", parser.toks.current_span()).into());
                     }
 
                     self.resolve_space_expressions(parser)?;
@@ -1489,7 +1489,11 @@ impl<'c> ValueParser<'c> {
 
     fn parse_paren_expr(&mut self, parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
         if parser.flags.in_plain_css() {
-            todo!("Parentheses aren't allowed in plain CSS.")
+            return Err((
+                "Parentheses aren't allowed in plain CSS.",
+                parser.toks.current_span(),
+            )
+                .into());
         }
 
         let was_in_parentheses = parser.flags.in_parens();
@@ -1561,7 +1565,11 @@ impl<'c> ValueParser<'c> {
         let name = parser.parse_variable_name()?;
 
         if parser.flags.in_plain_css() {
-            todo!("Sass variables aren't allowed in plain CSS.")
+            return Err((
+                "Sass variables aren't allowed in plain CSS.",
+                parser.toks.span_from(start),
+            )
+                .into());
         }
 
         Ok(AstExpr::Variable {
@@ -1857,7 +1865,7 @@ impl<'c> ValueParser<'c> {
             Some(Token {
                 kind: '0'..='9', ..
             }) => {}
-            _ => todo!("Expected digit."),
+            _ => return Err(("Expected digit.", parser.toks.current_span()).into()),
         }
 
         while let Some(tok) = parser.toks.peek() {
@@ -2148,7 +2156,7 @@ impl<'c> ValueParser<'c> {
         buffer.add_interpolation(parser.parse_interpolated_declaration_value(false, true, true)?);
         parser.expect_char(')')?;
         buffer.add_token(Token {
-            kind: '(',
+            kind: ')',
             pos: parser.span_before,
         });
 

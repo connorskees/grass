@@ -711,10 +711,9 @@ impl<'a, 'b> Parser<'a, 'b> {
         match self.toks.peek() {
             None => return Ok('\u{FFFD}'),
             Some(Token {
-                kind: '\n' | '\r', ..
-            }) => {
-                todo!("Expected escape sequence.")
-            }
+                kind: '\n' | '\r',
+                pos,
+            }) => return Err(("Expected escape sequence.", pos).into()),
             Some(Token { kind, .. }) if kind.is_ascii_hexdigit() => {
                 let mut value = 0;
                 for _ in 0..6 {
@@ -795,7 +794,9 @@ impl<'a, 'b> Parser<'a, 'b> {
             Some(Token { kind: '\\', .. }) => {
                 text.push_str(&self.parse_escape(true)?);
             }
-            Some(..) | None => todo!("Expected identifier."),
+            Some(..) | None => {
+                return Err(("Expected identifier.", self.toks.current_span()).into())
+            }
         }
 
         self.parse_identifier_body(&mut text, normalize, unit)?;
@@ -904,9 +905,13 @@ impl<'a, 'b> Parser<'a, 'b> {
         }))
     }
 
-    fn parse_content_rule(&mut self) -> SassResult<AstStmt> {
+    fn parse_content_rule(&mut self, start: usize) -> SassResult<AstStmt> {
         if !self.flags.in_mixin() {
-            todo!("@content is only allowed within mixin declarations.")
+            return Err((
+                "@content is only allowed within mixin declarations.",
+                self.toks.span_from(start),
+            )
+                .into());
         }
 
         self.whitespace_or_comment();
@@ -1000,9 +1005,13 @@ impl<'a, 'b> Parser<'a, 'b> {
         }))
     }
 
-    fn parse_extend_rule(&mut self) -> SassResult<AstStmt> {
+    fn parse_extend_rule(&mut self, start: usize) -> SassResult<AstStmt> {
         if !self.flags.in_style_rule() && !self.flags.in_mixin() && !self.flags.in_content_block() {
-            todo!("@extend may only be used within style rules.")
+            return Err((
+                "@extend may only be used within style rules.",
+                self.toks.span_from(start),
+            )
+                .into());
         }
 
         let value = self.almost_any_value(false)?;
@@ -1018,7 +1027,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         Ok(AstStmt::Extend(AstExtendRule {
             value,
             is_optional,
-            span: self.span_before,
+            span: self.toks.span_from(start),
         }))
     }
 
@@ -1116,21 +1125,29 @@ impl<'a, 'b> Parser<'a, 'b> {
         // todo!()
     }
 
-    fn parse_function_rule(&mut self) -> SassResult<AstStmt> {
-        let start = self.toks.cursor();
+    fn parse_function_rule(&mut self, start: usize) -> SassResult<AstStmt> {
+        let name_start = self.toks.cursor();
         let name = self.__parse_identifier(true, false)?;
-        let name_span = self.toks.span_from(start);
+        let name_span = self.toks.span_from(name_start);
         self.whitespace_or_comment();
         let arguments = self.parse_argument_declaration()?;
 
         if self.flags.in_mixin() || self.flags.in_content_block() {
-            todo!("Mixins may not contain function declarations.")
+            return Err((
+                "Mixins may not contain function declarations.",
+                self.toks.span_from(start),
+            )
+                .into());
         } else if self.flags.in_control_flow() {
-            todo!("Functions may not be declared in control directives.")
+            return Err((
+                "Functions may not be declared in control directives.",
+                self.toks.span_from(start),
+            )
+                .into());
         }
 
         if RESERVED_IDENTIFIERS.contains(&unvendor(&name)) {
-            todo!("Invalid function name.")
+            return Err(("Invalid function name.", name_span).into());
         }
 
         self.whitespace_or_comment();
@@ -1622,7 +1639,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         todo!()
     }
 
-    fn parse_mixin_rule(&mut self) -> SassResult<AstStmt> {
+    fn parse_mixin_rule(&mut self, start: usize) -> SassResult<AstStmt> {
         let name = Identifier::from(self.__parse_identifier(true, false)?);
         self.whitespace_or_comment();
         let args = if self.toks.next_char_is('(') {
@@ -1632,9 +1649,17 @@ impl<'a, 'b> Parser<'a, 'b> {
         };
 
         if self.flags.in_mixin() || self.flags.in_content_block() {
-            todo!("Mixins may not contain mixin declarations.");
+            return Err((
+                "Mixins may not contain mixin declarations.",
+                self.toks.span_from(start),
+            )
+                .into());
         } else if self.flags.in_control_flow() {
-            todo!("Mixins may not be declared in control directives.");
+            return Err((
+                "Mixins may not be declared in control directives.",
+                self.toks.span_from(start),
+            )
+                .into());
         }
 
         self.whitespace_or_comment();
@@ -1735,6 +1760,8 @@ impl<'a, 'b> Parser<'a, 'b> {
         // NOTE: this logic is largely duplicated in CssParser.atRule. Most changes
         // here should be mirrored there.
 
+        let start = self.toks.cursor();
+
         self.expect_char('@')?;
         let name = self.parse_interpolated_identifier()?;
         self.whitespace_or_comment();
@@ -1748,12 +1775,12 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         match name.as_plain() {
             Some("at-root") => self.parse_at_root_rule(),
-            Some("content") => self.parse_content_rule(),
+            Some("content") => self.parse_content_rule(start),
             Some("debug") => self.parse_debug_rule(),
             Some("each") => self.parse_each_rule(child),
             Some("else") | Some("return") => self.parse_disallowed_at_rule(),
             Some("error") => self.parse_error_rule(),
-            Some("extend") => self.parse_extend_rule(),
+            Some("extend") => self.parse_extend_rule(start),
             Some("for") => self.parse_for_rule(child),
             Some("forward") => {
                 // _isUseAllowed = wasUseAllowed;
@@ -1762,12 +1789,12 @@ impl<'a, 'b> Parser<'a, 'b> {
                 // }
                 self.parse_forward_rule()
             }
-            Some("function") => self.parse_function_rule(),
+            Some("function") => self.parse_function_rule(start),
             Some("if") => self.parse_if_rule(child),
             Some("import") => self.parse_import_rule(),
             Some("include") => self.parse_include_rule(),
             Some("media") => self.parse_media_rule(),
-            Some("mixin") => self.parse_mixin_rule(),
+            Some("mixin") => self.parse_mixin_rule(start),
             Some("-moz-document") => self.parse_moz_document_rule(name),
             Some("supports") => self.parse_supports_rule(),
             Some("use") => {
@@ -2494,10 +2521,10 @@ impl<'a, 'b> Parser<'a, 'b> {
             self.expect_statement_separator(Some("custom property"))?;
             return Ok(DeclarationOrBuffer::Stmt(AstStmt::Style(AstStyle {
                 name: name_buffer,
-                value: Some(AstExpr::String(
-                    StringExpr(value, QuoteKind::None),
-                    value_span,
-                ).span(value_span)),
+                value: Some(
+                    AstExpr::String(StringExpr(value, QuoteKind::None), value_span)
+                        .span(value_span),
+                ),
                 span: self.toks.span_from(start),
                 body: Vec::new(),
             })));
@@ -2624,8 +2651,10 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     fn parse_declaration_child(&mut self) -> SassResult<AstStmt> {
+        let start = self.toks.cursor();
+
         if self.toks.next_char_is('@') {
-            self.parse_declaration_at_rule()
+            self.parse_declaration_at_rule(start)
         } else {
             self.parse_property_or_variable_declaration(false)
         }
@@ -2638,11 +2667,11 @@ impl<'a, 'b> Parser<'a, 'b> {
         Ok(name)
     }
 
-    fn parse_declaration_at_rule(&mut self) -> SassResult<AstStmt> {
+    fn parse_declaration_at_rule(&mut self, start: usize) -> SassResult<AstStmt> {
         let name = self.parse_plain_at_rule_name()?;
 
         match name.as_str() {
-            "content" => self.parse_content_rule(),
+            "content" => self.parse_content_rule(start),
             "debug" => self.parse_debug_rule(),
             "each" => self.parse_each_rule(Self::parse_declaration_child),
             "else" => self.parse_disallowed_at_rule(),
