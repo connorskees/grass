@@ -397,8 +397,12 @@ test!(
 );
 test!(
     combinator_alone,
-    "a {\n  + {\n    b {\n      color: red;\n  }\n}\n",
+    "a {\n  + {\n    b {\n      color: red;\n    }\n  }\n}\n",
     "a + b {\n  color: red;\n}\n"
+);
+error!(
+    combinator_alone_missing_closing_curly_brace,
+    "a {\n  + {\n    b {\n      color: red;\n  }\n}\n", "a + b {\n  color: red;\n}\n"
 );
 test!(
     simple_multiple_newline,
@@ -915,4 +919,9 @@ error!(
 
 // [attr=unit] {
 //   color: red;
+// }
+
+// todo: error test
+// :nth-child(n/**/of a) {
+//   color: &;
 // }

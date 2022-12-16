@@ -190,10 +190,8 @@ pub(crate) fn sub(left: Value, right: Value, options: &Options, span: Span) -> S
             format!("-{}", right.to_css_string(span, options.is_compressed())?),
             QuoteKind::None,
         ),
-        Value::Dimension(n, ..) if n.is_nan() => todo!(),
         Value::Dimension(num, unit, _) => match right {
             Value::Calculation(..) => todo!(),
-            Value::Dimension(n, ..) if n.is_nan() => todo!(),
             Value::Dimension(num2, unit2, _) => {
                 if !unit.comparable(&unit2) {
                     return Err(
@@ -586,15 +584,17 @@ pub(crate) fn rem(left: Value, right: Value, options: &Options, span: Span) -> S
                 //     // ));
                 // }
 
-                if u == u2 {
-                    Value::Dimension(n % n2, u, None)
+                let new_num = n % n2.convert(&u2, &u);
+                let new_unit = if u == u2 {
+                    u
                 } else if u == Unit::None {
-                    Value::Dimension(n % n2, u2, None)
+                    u2
                 } else if u2 == Unit::None {
-                    Value::Dimension(n % n2, u, None)
+                    u
                 } else {
-                    Value::Dimension(n, u, None)
-                }
+                    u
+                };
+                Value::Dimension(new_num, new_unit, None)
             }
             _ => {
                 return Err((

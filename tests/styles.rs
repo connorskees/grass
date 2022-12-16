@@ -33,8 +33,12 @@ test!(
 );
 test!(
     removes_empty_outer_styles,
-    "a {\n  b {\n    color: red;\n  }\n",
+    "a {\n  b {\n    color: red;\n    }\n  }\n",
     "a b {\n  color: red;\n}\n"
+);
+error!(
+    removes_empty_outer_styles_missing_closing_curly_brace,
+    "a {\n  b {\n    color: red;\n  }\n", "Error: expected \"}\"."
 );
 test!(removes_empty_styles, "a {}\n", "");
 test!(

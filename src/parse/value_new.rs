@@ -1,22 +1,15 @@
-use core::fmt;
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    iter::Iterator,
-    mem,
-};
+use std::iter::Iterator;
 
-use codemap::{Span, Spanned};
+use codemap::Spanned;
 
 use crate::{
     ast::*,
-    builtin::GLOBAL_FUNCTIONS,
     color::{Color, NAMED_COLORS},
     common::{unvendor, BinaryOp, Brackets, Identifier, ListSeparator, QuoteKind, UnaryOp},
     error::SassResult,
-    lexer::Lexer,
     unit::Unit,
-    utils::{as_hex, is_name, opposite_bracket},
-    value::{CalculationName, Number, SassFunction, SassMap, SassNumber, Value},
+    utils::{as_hex, opposite_bracket},
+    value::{CalculationName, Number},
     ContextFlags, Token,
 };
 
@@ -118,7 +111,7 @@ impl<'c> ValueParser<'c> {
     ///
     /// This function will cease parsing if the predicate returns true.
     pub(crate) fn parse_value(&mut self, parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
-        parser.whitespace();
+        parser.whitespace_or_comment();
 
         let start = parser.toks.cursor();
 
@@ -141,7 +134,8 @@ impl<'c> ValueParser<'c> {
                     self.add_single_expression(expr, parser)?;
                 }
                 Some(Token { kind: '[', .. }) => {
-                    self.add_single_expression(todo!(), parser)?;
+                    let expr = parser.parse_expression(None, Some(true), None)?;
+                    self.add_single_expression(expr, parser)?;
                 }
                 Some(Token { kind: '$', .. }) => {
                     let expr = self.parse_variable(parser)?;
@@ -394,7 +388,7 @@ impl<'c> ValueParser<'c> {
                     if parser.flags.in_parens() {
                         parser.flags.set(ContextFlags::IN_PARENS, false);
                         if self.allow_slash {
-                            self.reset_state(parser);
+                            self.reset_state(parser)?;
                             continue;
                         }
                     }
@@ -1230,7 +1224,80 @@ impl<'c> ValueParser<'c> {
     }
 
     fn parse_unicode_range(&mut self, parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
-        todo!()
+        let start = parser.toks.cursor();
+        parser.expect_ident_char('u', false)?;
+        parser.expect_char('+')?;
+
+        let mut first_range_length = 0;
+
+        while let Some(next) = parser.toks.peek() {
+            if !next.kind.is_ascii_hexdigit() {
+                break;
+            }
+
+            parser.toks.next();
+            first_range_length += 1;
+        }
+
+        let mut has_question_mark = false;
+
+        while parser.consume_char_if_exists('?') {
+            has_question_mark = true;
+            first_range_length += 1;
+        }
+
+        let span = parser.toks.span_from(start);
+        if first_range_length == 0 {
+            return Err(("Expected hex digit or \"?\".", parser.toks.current_span()).into());
+        } else if first_range_length > 6 {
+            return Err(("Expected at most 6 digits.", span).into());
+        } else if has_question_mark {
+            return Ok(AstExpr::String(
+                StringExpr(
+                    Interpolation::new_plain(parser.toks.raw_text(start), span),
+                    QuoteKind::None,
+                ),
+                span,
+            )
+            .span(span));
+        }
+
+        if parser.consume_char_if_exists('-') {
+            let second_range_start = parser.toks.cursor();
+            let mut second_range_length = 0;
+
+            while let Some(next) = parser.toks.peek() {
+                if !next.kind.is_ascii_hexdigit() {
+                    break;
+                }
+
+                parser.toks.next();
+                second_range_length += 1;
+            }
+
+            if second_range_length == 0 {
+                return Err(("Expected hex digit.", parser.toks.current_span()).into());
+            } else if second_range_length > 6 {
+                return Err((
+                    "Expected at most 6 digits.",
+                    parser.toks.span_from(second_range_start),
+                )
+                    .into());
+            }
+        }
+
+        if parser.looking_at_interpolated_identifier_body() {
+            return Err(("Expected end of identifier.", parser.toks.current_span()).into());
+        }
+
+        return Ok(AstExpr::String(
+            StringExpr(
+                Interpolation::new_plain(parser.toks.raw_text(start), parser.toks.span_from(start)),
+                QuoteKind::None,
+            ),
+            parser.toks.span_from(start),
+        )
+        .span(parser.toks.span_from(start)));
     }
 
     fn try_parse_url_contents(

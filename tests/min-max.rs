@@ -4,17 +4,17 @@ mod macros;
 test!(
     min_not_evaluated_units_percent,
     "a {\n  color: min(1%, 2%);\n}\n",
-    "a {\n  color: min(1%, 2%);\n}\n"
+    "a {\n  color: 1%;\n}\n"
 );
 test!(
     min_not_evaluated_units_px,
     "a {\n  color: min(1px, 2px);\n}\n",
-    "a {\n  color: min(1px, 2px);\n}\n"
+    "a {\n  color: 1px;\n}\n"
 );
 test!(
     min_not_evaluated_no_units,
     "a {\n  color: min(1, 2);\n}\n",
-    "a {\n  color: min(1, 2);\n}\n"
+    "a {\n  color: 1;\n}\n"
 );
 test!(
     min_not_evaluated_incompatible_units,
@@ -53,17 +53,17 @@ error!(
 test!(
     max_not_evaluated_units_percent,
     "a {\n  color: max(1%, 2%);\n}\n",
-    "a {\n  color: max(1%, 2%);\n}\n"
+    "a {\n  color: 2%;\n}\n"
 );
 test!(
     max_not_evaluated_units_px,
     "a {\n  color: max(1px, 2px);\n}\n",
-    "a {\n  color: max(1px, 2px);\n}\n"
+    "a {\n  color: 2px;\n}\n"
 );
 test!(
     max_not_evaluated_no_units,
     "a {\n  color: max(1, 2);\n}\n",
-    "a {\n  color: max(1, 2);\n}\n"
+    "a {\n  color: 2;\n}\n"
 );
 test!(
     max_not_evaluated_incompatible_units,
@@ -108,27 +108,27 @@ error!(
 test!(
     min_containing_max,
     "a {\n  color: min(1, max(2));\n}\n",
-    "a {\n  color: min(1, max(2));\n}\n"
+    "a {\n  color: 1;\n}\n"
 );
 test!(
     max_containing_min,
     "a {\n  color: max(1, min(2));\n}\n",
-    "a {\n  color: max(1, min(2));\n}\n"
+    "a {\n  color: 2);\n}\n"
 );
 test!(
     min_containing_max_as_only_arg,
     "a {\n  color: min(max(1px, 2px));\n}\n",
-    "a {\n  color: min(max(1px, 2px));\n}\n"
+    "a {\n  color: 2px;\n}\n"
 );
 test!(
     max_containing_min_as_only_arg,
     "a {\n  color: max(min(1px, 2px));\n}\n",
-    "a {\n  color: max(min(1px, 2px));\n}\n"
+    "a {\n  color: 1px;\n}\n"
 );
 test!(
     extremely_nested_min_and_max,
     "a {\n  color: min(max(min(max(min(min(1), max(2))))), min(max(min(3))));\n}\n",
-    "a {\n  color: min(max(min(max(min(min(1), max(2))))), min(max(min(3))));\n}\n"
+    "a {\n  color: 1;\n}\n"
 );
 test!(
     decimal_without_leading_integer_is_evaluated,
@@ -138,7 +138,7 @@ test!(
 test!(
     decimal_with_leading_integer_is_not_evaluated,
     "a {\n  color: min(0.2, 0.4);\n}\n",
-    "a {\n  color: min(0.2, 0.4);\n}\n"
+    "a {\n  color: 0.2;\n}\n"
 );
 test!(
     min_conains_special_fn_env,
@@ -148,12 +148,12 @@ test!(
 test!(
     min_conains_special_fn_calc_with_div_and_spaces,
     "a {\n  color: min(calc(1 / 2));\n}\n",
-    "a {\n  color: min(calc(1 / 2));\n}\n"
+    "a {\n  color: 0.5;\n}\n"
 );
 test!(
     min_conains_special_fn_calc_with_div_without_spaces,
     "a {\n  color: min(calc(1/2));\n}\n",
-    "a {\n  color: min(calc(1/2));\n}\n"
+    "a {\n  color: 0.5;\n}\n"
 );
 test!(
     min_conains_special_fn_calc_with_plus_only,
@@ -173,7 +173,7 @@ test!(
 test!(
     min_conains_multiline_comment,
     "a {\n  color: min(1/**/);\n}\n",
-    "a {\n  color: min(1);\n}\n"
+    "a {\n  color: 1;\n}\n"
 );
 test!(
     min_conains_calc_contains_multiline_comment,
@@ -189,18 +189,17 @@ test!(
 test!(
     min_uppercase,
     "a {\n  color: MIN(1);\n}\n",
-    "a {\n  color: min(1);\n}\n"
+    "a {\n  color: 1;\n}\n"
 );
 test!(
     max_uppercase,
     "a {\n  color: MAX(1);\n}\n",
-    "a {\n  color: max(1);\n}\n"
+    "a {\n  color: 1;\n}\n"
 );
-
 test!(
     min_parenthesis_around_arg,
     "a {\n  color: min((1));\n}\n",
-    "a {\n  color: min((1));\n}\n"
+    "a {\n  color: 1;\n}\n"
 );
 error!(
     min_parenthesis_around_arg_with_comma,

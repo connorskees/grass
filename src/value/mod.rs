@@ -1,4 +1,4 @@
-use std::{cmp::Ordering, collections::BTreeMap, borrow::Cow};
+use std::{borrow::Cow, cmp::Ordering, collections::BTreeMap};
 
 use codemap::{Span, Spanned};
 
@@ -12,7 +12,7 @@ use crate::{
     selector::Selector,
     unit::{Unit, UNIT_CONVERSION_TABLE},
     utils::{hex_char_for, is_special_function},
-    {Token},
+    Token,
 };
 
 pub(crate) use calculation::*;

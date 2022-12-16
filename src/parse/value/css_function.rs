@@ -335,8 +335,8 @@ impl<'a, 'b> Parser<'a, 'b> {
                 }
                 '#' => {
                     if matches!(self.toks.peek_n(1), Some(Token { kind: '{', .. })) {
-                        let s = self.parse_identifier()?;
-                        buffer.push_str(&s.node);
+                        let s = self.__parse_identifier(false, false)?;
+                        buffer.push_str(&s);
                     } else {
                         buffer.push('#');
                         self.toks.next();

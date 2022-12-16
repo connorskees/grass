@@ -26,13 +26,13 @@ use crate::{
     interner::InternedString,
     lexer::Lexer,
     parse::{add, cmp, div, mul, rem, single_eq, sub, KeyframesSelectorParser, Parser, Stmt},
-    scope::Scopes,
     selector::{
         ComplexSelectorComponent, ExtendRule, ExtendedSelector, Extender, Selector, SelectorList,
         SelectorParser,
     },
     style::Style,
     token::Token,
+    utils::trim_ascii,
     value::{
         ArgList, CalculationArg, CalculationName, Number, SassCalculation, SassFunction, SassMap,
         SassNumber, UserDefinedFunction, Value,
@@ -69,7 +69,7 @@ impl CssTree {
         self.stmts[idx.0].borrow()
     }
 
-    pub fn finish(mut self) -> Vec<Stmt> {
+    pub fn finish(self) -> Vec<Stmt> {
         let mut idx = 1;
 
         while idx < self.stmts.len() - 1 {
@@ -206,10 +206,10 @@ impl UserDefinedCallable for Arc<CallableContentBlock> {
 #[derive(Debug, Clone)]
 pub(crate) struct CallableContentBlock {
     content: AstContentBlock,
-    // env: Environment,
-    scopes: Arc<RefCell<Scopes>>,
+    env: Environment,
+    // scopes: Arc<RefCell<Scopes>>,
     // scope_idx: usize,
-    content_at_decl: Option<Arc<Self>>,
+    // content_at_decl: Option<Arc<Self>>,
 }
 
 pub(crate) struct Visitor<'a> {
@@ -656,11 +656,7 @@ impl<'a> Visitor<'a> {
             self.run_user_defined_callable(
                 MaybeEvaledArguments::Invocation(content_rule.args),
                 Arc::clone(content),
-                // self.env.clone(),
-                self.env.new_for_content(
-                    Arc::clone(&self.env.scopes),
-                    content.content_at_decl.as_ref().map(Arc::clone),
-                ),
+                content.env.clone(),
                 |content, visitor| {
                     for stmt in content.content.body.clone() {
                         let result = visitor.visit_stmt(stmt)?;
@@ -878,20 +874,14 @@ impl<'a> Visitor<'a> {
     fn visit_function_decl(&mut self, fn_decl: AstFunctionDecl) {
         let name = fn_decl.name.node;
         // todo: independency
-        let scope_idx = self.env.scopes().len();
 
         let func = SassFunction::UserDefined(UserDefinedFunction {
             function: Box::new(fn_decl),
             name,
-            // env: self.env.new_closure(),
-            scope_idx,
+            env: self.env.new_closure(),
         });
 
-        if scope_idx == 0 {
-            self.env.global_scope_mut().insert_fn(name, func);
-        } else {
-            self.env.scopes_mut().insert_fn(name, func);
-        }
+        self.env.insert_fn(func);
     }
 
     pub fn parse_selector_from_string(&mut self, selector_text: &str) -> SassResult<SelectorList> {
@@ -1370,11 +1360,7 @@ impl<'a> Visitor<'a> {
     }
 
     fn visit_include_stmt(&mut self, include_stmt: AstInclude) -> SassResult<Option<Value>> {
-        let mixin = self
-            .env
-            .scopes
-            .borrow_mut()
-            .get_mixin(include_stmt.name, self.env.global_scope())?;
+        let mixin = self.env.get_mixin(include_stmt.name)?;
 
         match mixin {
             Mixin::Builtin(mixin) => {
@@ -1386,7 +1372,7 @@ impl<'a> Visitor<'a> {
 
                 todo!()
             }
-            Mixin::UserDefined(mixin, env__, scope_idx) => {
+            Mixin::UserDefined(mixin, env) => {
                 if include_stmt.content.is_some() && !mixin.has_content {
                     todo!("Mixin doesn't accept a content block.")
                 }
@@ -1399,20 +1385,14 @@ impl<'a> Visitor<'a> {
                 let callable_content = content.map(|c| {
                     Arc::new(CallableContentBlock {
                         content: c,
-                        scopes: Arc::clone(&self.env.scopes),
-                        content_at_decl: self.env.content.clone(),
-                        // env: self.env.new_closure(), // content_at_decl: self.env.content.clone(),
-                        // scope_idx: self.env.scopes.len(),
+                        env: self.env.new_closure(),
                     })
                 });
 
                 self.run_user_defined_callable::<_, ()>(
                     MaybeEvaledArguments::Invocation(args),
                     mixin,
-                    self.env.new_for_content(
-                        Arc::clone(&self.env.scopes),
-                        self.env.content.as_ref().map(Arc::clone),
-                    ), //.new_closure(), // _idx(scope_idx),
+                    env,
                     |mixin, visitor| {
                         visitor.with_content(callable_content, |visitor| {
                             for stmt in mixin.body {
@@ -1421,12 +1401,6 @@ impl<'a> Visitor<'a> {
                             }
                             Ok(())
                         })
-                        // let old_content = visitor.env.content.take();
-                        // visitor.env.content = callable_content;
-
-                        // visitor.env.content = old_content;
-
-                        // Ok(())
                     },
                 )?;
 
@@ -1438,18 +1412,10 @@ impl<'a> Visitor<'a> {
     }
 
     fn visit_mixin_decl(&mut self, mixin: AstMixin) {
-        let scope_idx = self.env.scopes().len();
-        if self.style_rule_exists() {
-            let scope = self.env.new_closure();
-            self.env
-                .scopes_mut()
-                .insert_mixin(mixin.name, Mixin::UserDefined(mixin, scope, scope_idx));
-        } else {
-            self.env.global_scope.borrow_mut().insert_mixin(
-                mixin.name,
-                Mixin::UserDefined(mixin, self.env.new_closure(), scope_idx),
-            );
-        }
+        self.env.insert_mixin(
+            mixin.name,
+            Mixin::UserDefined(mixin, self.env.new_closure()),
+        );
     }
 
     fn visit_each_stmt(&mut self, each_stmt: AstEach) -> SassResult<Option<Value>> {
@@ -1631,28 +1597,26 @@ impl<'a> Visitor<'a> {
             if decl.namespace.is_none() && self.env.at_root() {
                 let var_override = self.module_config.get(decl.name);
                 if !matches!(var_override, Some(Value::Null) | None) {
-                    self.env.insert_var(decl.name, var_override.unwrap(), true);
+                    self.env.insert_var(
+                        decl.name,
+                        var_override.unwrap(),
+                        true,
+                        self.flags.in_semi_global_scope(),
+                    );
                     return Ok(None);
                 }
             }
 
-            if self
-                .env
-                .scopes()
-                .var_exists(decl.name, self.env.global_scope())
-            {
-                let scopes = (*self.env.scopes).borrow();
-                let value = scopes
-                    .get_var(
-                        Spanned {
-                            node: decl.name,
-                            span: self.parser.span_before,
-                        },
-                        self.env.global_scope(),
-                    )
+            if self.env.var_exists(decl.name) {
+                let value = self
+                    .env
+                    .get_var(Spanned {
+                        node: decl.name,
+                        span: self.parser.span_before,
+                    })
                     .unwrap();
 
-                if *value != Value::Null {
+                if value != Value::Null {
                     return Ok(None);
                 }
             }
@@ -1670,18 +1634,24 @@ impl<'a> Visitor<'a> {
         let value = self.visit_expr(decl.value)?;
         let value = self.without_slash(value);
 
-        if decl.is_global || self.env.at_root() {
-            self.env.global_scope_mut().insert_var(decl.name, value);
-        } else {
-            // basically, if in_semi_global_scope AND var is global AND not re-declared, insert into last scope
-            // why? i don't know
-            self.env.scopes.borrow_mut().__insert_var(
-                decl.name,
-                value,
-                &self.env.global_scope,
-                self.flags.in_semi_global_scope(),
-            );
-        }
+        self.env.insert_var(
+            decl.name,
+            value,
+            decl.is_global,
+            self.flags.in_semi_global_scope(),
+        );
+        // if decl.is_global || self.env.at_root() {
+        //     self.env.global_scope_mut().insert_var(decl.name, value);
+        // } else {
+        //     // basically, if in_semi_global_scope AND var is global AND not re-declared, insert into last scope
+        //     // why? i don't know
+        //     self.env.scopes.borrow_mut().__insert_var(
+        //         decl.name,
+        //         value,
+        //         &self.env.global_scope,
+        //         self.flags.in_semi_global_scope(),
+        //     );
+        // }
 
         //   var value = _addExceptionSpan(node,
         //       () => _environment.getVariable(node.name, namespace: node.namespace));
@@ -1711,7 +1681,7 @@ impl<'a> Visitor<'a> {
         let result = self.perform_interpolation(interpolation, warn_for_color)?;
 
         Ok(if trim {
-            result.trim().to_owned()
+            trim_ascii(&result, true).to_owned()
         } else {
             result
         })
@@ -1723,6 +1693,9 @@ impl<'a> Visitor<'a> {
         warn_for_color: bool,
     ) -> SassResult<String> {
         let span = interpolation.span;
+
+        // todo: potential optimization for contents len == 1 and no exprs
+
         let result = interpolation.contents.into_iter().map(|part| match part {
             InterpolationPart::String(s) => Ok(s),
             InterpolationPart::Expr(e) => {
@@ -2034,24 +2007,20 @@ impl<'a> Visitor<'a> {
             }
             SassFunction::UserDefined(UserDefinedFunction {
                 function,
-                scope_idx,
+                // scope_idx,
+                env,
                 ..
-            }) => self.run_user_defined_callable(
-                arguments,
-                *function,
-                self.env.new_closure_idx(scope_idx),
-                |function, visitor| {
-                    for stmt in function.children {
-                        let result = visitor.visit_stmt(stmt)?;
+            }) => self.run_user_defined_callable(arguments, *function, env, |function, visitor| {
+                for stmt in function.children {
+                    let result = visitor.visit_stmt(stmt)?;
 
-                        if let Some(val) = result {
-                            return Ok(val);
-                        }
+                    if let Some(val) = result {
+                        return Ok(val);
                     }
+                }
 
-                    return Err(("Function finished without @return.", span).into());
-                },
-            ),
+                return Err(("Function finished without @return.", span).into());
+            }),
             SassFunction::Plain { name } => {
                 let arguments = match arguments {
                     MaybeEvaledArguments::Invocation(args) => args,
@@ -2107,7 +2076,7 @@ impl<'a> Visitor<'a> {
 
     fn visit_function_call_expr(&mut self, func_call: FunctionCallExpr) -> SassResult<Value> {
         let name = func_call.name;
-        let func = match self.env.scopes().get_fn(name, self.env.global_scope()) {
+        let func = match self.env.get_fn(name) {
             Some(func) => func,
             None => {
                 if let Some(f) = GLOBAL_FUNCTIONS.get(name.as_str()) {
@@ -2225,10 +2194,7 @@ impl<'a> Visitor<'a> {
                     todo!()
                 }
 
-                self.env
-                    .scopes()
-                    .get_var(name, self.env.global_scope())?
-                    .clone()
+                self.env.get_var(name)?
             }
         })
     }
@@ -2257,13 +2223,7 @@ impl<'a> Visitor<'a> {
                 debug_assert!(string_expr.1 == QuoteKind::None);
                 CalculationArg::String(self.perform_interpolation(string_expr.0, false)?)
             }
-            AstExpr::BinaryOp {
-                lhs,
-                op,
-                rhs,
-                allows_slash,
-                span,
-            } => SassCalculation::operate_internal(
+            AstExpr::BinaryOp { lhs, op, rhs, .. } => SassCalculation::operate_internal(
                 op,
                 self.visit_calculation_value(*lhs, in_min_or_max)?,
                 self.visit_calculation_value(*rhs, in_min_or_max)?,
@@ -2814,26 +2774,31 @@ impl<'a> Visitor<'a> {
             name = format!("{}-{}", declaration_name, name);
         }
 
-        let Spanned {
-            span: value_span,
-            node: value,
-        } = style.value.unwrap();
-        let value = self.visit_expr(value)?;
-
-        // If the value is an empty list, preserve it, because converting it to CSS
-        // will throw an error that we want the user to see.
-        if !value.is_null() || value.is_empty_list() {
-            // todo: superfluous clones?
-            self.css_tree.add_stmt(
-                Stmt::Style(Style {
-                    property: InternedString::get_or_intern(&name),
-                    value: Box::new(value.span(value_span)),
-                    declared_as_custom_property: is_custom_property,
-                }),
-                self.parent,
-            );
-        } else if name.starts_with("--") {
-            return Err(("Custom property values may not be empty.", style.span).into());
+        if let Some(value) = style
+            .value
+            .map(|s| {
+                SassResult::Ok(Spanned {
+                    node: self.visit_expr(s.node)?,
+                    span: s.span,
+                })
+            })
+            .transpose()?
+        {
+            // If the value is an empty list, preserve it, because converting it to CSS
+            // will throw an error that we want the user to see.
+            if !value.is_null() || value.is_empty_list() {
+                // todo: superfluous clones?
+                self.css_tree.add_stmt(
+                    Stmt::Style(Style {
+                        property: InternedString::get_or_intern(&name),
+                        value: Box::new(value),
+                        declared_as_custom_property: is_custom_property,
+                    }),
+                    self.parent,
+                );
+            } else if name.starts_with("--") {
+                return Err(("Custom property values may not be empty.", style.span).into());
+            }
         }
 
         let children = style.body;

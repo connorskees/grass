@@ -19,6 +19,7 @@ use crate::{
     // value::Value,
     builtin::Builtin,
     common::Identifier,
+    evaluate::Environment,
 };
 
 /// A Sass function
@@ -39,8 +40,8 @@ pub(crate) enum SassFunction {
 pub(crate) struct UserDefinedFunction {
     pub function: Box<AstFunctionDecl>,
     pub name: Identifier,
-    // pub env: Environment,
-    pub scope_idx: usize,
+    pub env: Environment,
+    // pub scope_idx: usize,
 }
 
 impl PartialEq for UserDefinedFunction {
@@ -55,11 +56,11 @@ impl SassFunction {
     /// Get the name of the function referenced
     ///
     /// Used mainly in debugging and `inspect()`
-    pub fn name(&self) -> &Identifier {
+    pub fn name(&self) -> Identifier {
         match self {
             Self::Builtin(_, name)
             | Self::UserDefined(UserDefinedFunction { name, .. })
-            | Self::Plain { name } => name,
+            | Self::Plain { name } => *name,
         }
     }
 

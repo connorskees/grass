@@ -41,8 +41,12 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     pub(crate) fn scan_ident_char(&mut self, c: char, case_sensitive: bool) -> SassResult<bool> {
-        let matches = |actual: char| if case_sensitive { actual == c } else {
-             actual.to_ascii_lowercase() == c.to_ascii_lowercase()
+        let matches = |actual: char| {
+            if case_sensitive {
+                actual == c
+            } else {
+                actual.to_ascii_lowercase() == c.to_ascii_lowercase()
+            }
         };
 
         Ok(match self.toks.peek() {
@@ -62,6 +66,14 @@ impl<'a, 'b> Parser<'a, 'b> {
         })
     }
 
+    pub(crate) fn expect_ident_char(&mut self, c: char, case_sensitive: bool) -> SassResult<()> {
+        if self.scan_ident_char(c, case_sensitive)? {
+            return Ok(());
+        }
+
+        Err((format!("Expected \"{}\".", c), self.toks.current_span()).into())
+    }
+
     // todo: duplicated in selector code
     pub(crate) fn looking_at_identifier_body(&mut self) -> bool {
         matches!(self.toks.peek(), Some(t) if is_name(t.kind) || t.kind == '\\')
@@ -69,10 +81,12 @@ impl<'a, 'b> Parser<'a, 'b> {
 
     /// Peeks to see if the `ident` is at the current position. If it is,
     /// consume the identifier
-    pub fn scan_identifier(&mut self, ident: &'static str,
-    // default=false
-    case_sensitive: bool
-) -> SassResult<bool> {
+    pub fn scan_identifier(
+        &mut self,
+        ident: &'static str,
+        // default=false
+        case_sensitive: bool,
+    ) -> SassResult<bool> {
         if !self.looking_at_identifier() {
             return Ok(false);
         }

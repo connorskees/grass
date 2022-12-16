@@ -79,9 +79,8 @@ fn module_functions(mut args: ArgumentResult, parser: &mut Visitor) -> SassResul
     };
 
     Ok(Value::Map(
-        parser
-            .env
-            .modules
+        (*parser.env.modules)
+            .borrow()
             .get(module.into(), args.span())?
             .functions(),
     ))
@@ -102,9 +101,8 @@ fn module_variables(mut args: ArgumentResult, parser: &mut Visitor) -> SassResul
     };
 
     Ok(Value::Map(
-        parser
-            .env
-            .modules
+        (*parser.env.modules)
+            .borrow()
             .get(module.into(), args.span())?
             .variables(),
     ))

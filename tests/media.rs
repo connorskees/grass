@@ -277,6 +277,15 @@ test!(
     ""
 );
 test!(
+    removes_media_if_all_children_are_placeholder,
+    "@media foo {
+      %a {
+        color: red;
+      }
+    }",
+    ""
+);
+test!(
     #[ignore = "we move to top of media"]
     plain_import_inside_media_is_not_moved_to_top,
     r#"@media foo {

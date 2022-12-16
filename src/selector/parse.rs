@@ -239,14 +239,7 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
 
     fn parse_pseudo_selector(&mut self) -> SassResult<SimpleSelector> {
         self.parser.toks.next();
-        let element = match self.parser.toks.peek() {
-            Some(Token { kind: ':', .. }) => {
-                self.parser.toks.next();
-                true
-            }
-            _ => false,
-        };
-
+        let element = self.parser.consume_char_if_exists(':');
         let name = self.parser.__parse_identifier(false, false)?;
 
         match self.parser.toks.peek() {
@@ -286,18 +279,24 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
             self.parser.expect_char(')')?;
         } else if unvendored == "nth-child" || unvendored == "nth-last-child" {
             let mut this_arg = self.parse_a_n_plus_b()?;
-            let found_whitespace = self.parser.whitespace_or_comment();
-            #[allow(clippy::match_same_arms)]
-            match (found_whitespace, self.parser.toks.peek()) {
-                (_, Some(Token { kind: ')', .. })) => {}
-                (true, _) => {
-                    self.parser.expect_identifier("of", false)?;
-                    this_arg.push_str(" of");
-                    self.parser.whitespace_or_comment();
-                    selector = Some(Box::new(self.parse_selector_list()?));
-                }
-                _ => {}
+            self.parser.whitespace_or_comment();
+
+            let last_was_whitespace = matches!(
+                self.parser.toks.peek_n_backwards(1),
+                Some(Token {
+                    kind: ' ' | '\t' | '\n' | '\r',
+                    ..
+                })
+            );
+            if last_was_whitespace
+                && !matches!(self.parser.toks.peek(), Some(Token { kind: ')', .. }))
+            {
+                self.parser.expect_identifier("of", false)?;
+                this_arg.push_str(" of");
+                self.parser.whitespace_or_comment();
+                selector = Some(Box::new(dbg!(self.parse_selector_list()?)));
             }
+
             self.parser.expect_char(')')?;
             argument = Some(this_arg.into_boxed_str());
         } else {
@@ -440,20 +439,11 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
                     self.parser.toks.next();
                 }
                 self.parser.whitespace_or_comment();
-                if let Some(t) = self.parser.toks.peek() {
-                    if t.kind != 'n' && t.kind != 'N' {
-                        return Ok(buf);
-                    }
-                    self.parser.toks.next();
+                if !self.parser.scan_ident_char('n', false)? {
+                    return Ok(buf);
                 }
             }
-            Some(t) => {
-                if t.kind == 'n' || t.kind == 'N' {
-                    self.parser.toks.next();
-                } else {
-                    return Err(("Expected \"n\".", self.span).into());
-                }
-            }
+            Some(..) => self.parser.expect_ident_char('n', false)?,
             None => return Err(("expected more input.", self.span).into()),
         }
 

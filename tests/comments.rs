@@ -12,6 +12,11 @@ test!(
     "a {\n  color: red;\n}\n"
 );
 test!(
+    removes_comment_before_style,
+    "a {\n  color: /**/red;\n}\n",
+    "a {\n  color: red;\n}\n"
+);
+test!(
     preserves_outer_comments_before,
     "a {\n  /* hi */\n  color: red;\n}\n",
     "a {\n  /* hi */\n  color: red;\n}\n"

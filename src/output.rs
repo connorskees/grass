@@ -867,7 +867,10 @@ impl Formatter for ExpandedFormatter {
                     inside_rule,
                     ..
                 } => {
-                    writeln!(buf, "{}@media {} {{", padding, query)?;
+                    if body.is_empty() {
+                        continue;
+                    }
+
                     let css = Css::from_stmts(
                         body,
                         if inside_rule {
@@ -877,6 +880,17 @@ impl Formatter for ExpandedFormatter {
                         },
                         css.allows_charset,
                     )?;
+
+                    if css.blocks.is_empty()
+                        || css
+                            .blocks
+                            .iter()
+                            .all(|block| matches!(block, Toplevel::Empty))
+                    {
+                        continue;
+                    }
+
+                    writeln!(buf, "{}@media {} {{", padding, query)?;
                     self.write_css(buf, css, map)?;
                     write!(buf, "\n{}}}", padding)?;
                 }

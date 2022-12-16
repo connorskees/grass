@@ -495,10 +495,10 @@ test!(
 test!(
     content_contains_variable_declared_in_outer_scope_not_declared_at_root_and_modified,
     "a {
-        $a: red;
+        $a: wrong;
 
         @mixin foo {
-            $a: green;
+            $a: correct;
             @content;
         }
 
@@ -506,24 +506,24 @@ test!(
             color: $a;
         }
     }",
-    "a {\n  color: green;\n}\n"
+    "a {\n  color: correct;\n}\n"
 );
 test!(
     content_contains_variable_declared_in_outer_scope_declared_at_root_and_modified,
     "@mixin foo {
-        $a: green;
+        $a: wrong;
         @content;
     }
 
     a {
-        $a: red;
+        $a: correct;
 
 
         @include foo {
             color: $a;
         }
     }",
-    "a {\n  color: red;\n}\n"
+    "a {\n  color: correct;\n}\n"
 );
 test!(
     content_default_arg_value_no_parens,
@@ -574,7 +574,7 @@ test!(
         @include test;
         color: $a;
     }",
-    "a {\n  color: red;\n}\n"
+    "a {\n  color: correct;\n}\n"
 );
 error!(
     mixin_in_function,

@@ -540,7 +540,7 @@ enum NumberState {
 
 impl NumberState {
     fn from_number(num: &Number) -> Self {
-        match (num.is_zero(), num.is_positive()) {
+        match (num.is_zero(), num.is_negative()) {
             (true, _) => NumberState::Zero,
             (false, true) => NumberState::Finite,
             (false, false) => NumberState::FiniteNegative,

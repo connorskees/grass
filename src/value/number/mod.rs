@@ -8,8 +8,6 @@ use std::{
     },
 };
 
-use num_traits::Zero;
-
 use crate::unit::{Unit, UNIT_CONVERSION_TABLE};
 
 use integer::Integer;
@@ -122,12 +120,20 @@ impl Number {
         }
     }
 
-    pub fn fract(self) -> Number {
-        match self {
-            Self(v) => Number(v.fract()),
-            // Self::Big(v) => Number::new_big(v.fract()),
-        }
+    pub fn is_positive(&self) -> bool {
+        self.0 > 0.0
     }
+
+    pub fn is_negative(&self) -> bool {
+        self.0 > 0.0
+    }
+
+    // pub fn fract(self) -> Number {
+    //     match self {
+    //         Self(v) => Number(v.fract()),
+    //         // Self::Big(v) => Number::new_big(v.fract()),
+    //     }
+    // }
 
     pub fn clamp(self, min: f64, max: f64) -> Self {
         if self.0 > max {
@@ -196,7 +202,7 @@ impl Number {
     pub fn convert(self, from: &Unit, to: &Unit) -> Self {
         debug_assert!(from.comparable(to));
 
-        if from == &Unit::None && to == &Unit::None {
+        if from == &Unit::None || to == &Unit::None || from == to {
             return self;
         }
 
@@ -862,8 +868,26 @@ impl DivAssign for Number {
     }
 }
 
+fn real_mod(n1: f64, n2: f64) -> f64 {
+    n1.rem_euclid(n2)
+}
+
 fn modulo(n1: f64, n2: f64) -> f64 {
-    (n1 % n2 + n2) % n2
+    if n2 > 0.0 {
+        return real_mod(n1, n2);
+    } 
+
+    if n2 == 0.0 {
+        return f64::NAN;
+    }
+
+    let result = real_mod(n1, n2);
+
+    if result == 0.0 {
+        0.0
+    } else {
+        result + n2
+    }
 }
 
 impl Rem for Number {

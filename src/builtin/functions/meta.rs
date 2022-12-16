@@ -125,12 +125,7 @@ pub(crate) fn inspect(mut args: ArgumentResult, parser: &mut Visitor) -> SassRes
 pub(crate) fn variable_exists(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "name")? {
-        Value::String(s, _) => Ok(Value::bool(
-            parser
-                .env
-                .scopes()
-                .var_exists(s.into(), parser.env.global_scope()),
-        )),
+        Value::String(s, _) => Ok(Value::bool(parser.env.var_exists(s.into()))),
         v => Err((
             format!("$name: {} is not a string.", v.inspect(args.span())?),
             args.span(),
@@ -169,9 +164,8 @@ pub(crate) fn global_variable_exists(
     };
 
     Ok(Value::bool(if let Some(module_name) = module {
-        parser
-            .env
-            .modules
+        (*parser.env.modules)
+            .borrow()
             .get(module_name.into(), args.span())?
             .var_exists(name)
     } else {
@@ -205,16 +199,12 @@ pub(crate) fn mixin_exists(mut args: ArgumentResult, parser: &mut Visitor) -> Sa
     };
 
     Ok(Value::bool(if let Some(module_name) = module {
-        parser
-            .env
-            .modules
+        (*parser.env.modules)
+            .borrow()
             .get(module_name.into(), args.span())?
             .mixin_exists(name)
     } else {
-        parser
-            .env
-            .scopes()
-            .mixin_exists(name, parser.env.global_scope())
+        parser.env.mixin_exists(name)
     }))
 }
 
@@ -245,16 +235,12 @@ pub(crate) fn function_exists(mut args: ArgumentResult, parser: &mut Visitor) ->
     };
 
     Ok(Value::bool(if let Some(module_name) = module {
-        parser
-            .env
-            .modules
+        (*parser.env.modules)
+            .borrow()
             .get(module_name.into(), args.span())?
             .fn_exists(name)
     } else {
-        parser
-            .env
-            .scopes()
-            .fn_exists(name, parser.env.global_scope())
+        parser.env.fn_exists(name)
     }))
 }
 
@@ -292,16 +278,15 @@ pub(crate) fn get_function(mut args: ArgumentResult, parser: &mut Visitor) -> Sa
                 .into());
         }
 
-        parser
-            .env
-            .modules
+        (*parser.env.modules)
+            .borrow()
             .get(module_name.into(), args.span())?
             .get_fn(Spanned {
                 node: name,
                 span: args.span(),
             })?
     } else {
-        parser.env.scopes().get_fn(name, parser.env.global_scope())
+        parser.env.get_fn(name)
     } {
         Some(f) => f,
         None => match GLOBAL_FUNCTIONS.get(name.as_str()) {

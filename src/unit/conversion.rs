@@ -4,10 +4,9 @@
 
 use std::{collections::HashMap, f64::consts::PI};
 
-use num_traits::One;
 use once_cell::sync::Lazy;
 
-use crate::{unit::Unit, value::Number};
+use crate::unit::Unit;
 
 pub(crate) static UNIT_CONVERSION_TABLE: Lazy<HashMap<Unit, HashMap<Unit, f64>>> =
     Lazy::new(|| {

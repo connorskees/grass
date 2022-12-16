@@ -45,3 +45,31 @@ pub(crate) fn is_special_function(s: &str) -> bool {
         || s.starts_with("max(")
         || s.starts_with("clamp(")
 }
+
+pub(crate) fn trim_ascii(
+    s: &str,
+    // default=false
+    exclude_escape: bool,
+) -> &str {
+    match s.chars().position(|c| !c.is_ascii_whitespace()) {
+        Some(start) => &s[start..last_non_whitespace(s, exclude_escape).unwrap() + 1],
+        None => "",
+    }
+}
+
+fn last_non_whitespace(s: &str, exclude_escape: bool) -> Option<usize> {
+    let mut idx = s.len() - 1;
+    for c in s.chars().rev() {
+        if !c.is_ascii_whitespace() {
+            if exclude_escape && idx != 0 && idx != s.len() && c == '\\' {
+                return Some(idx + 1);
+            } else {
+                return Some(idx);
+            }
+        }
+
+        idx -= 1;
+    }
+
+    None
+}

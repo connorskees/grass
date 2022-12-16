@@ -293,6 +293,11 @@ test!(
     "a {\n  color: [1];\n}\n"
 );
 test!(
+    space_separated_list_of_bracketed_lists,
+    "a {\n  color: [[]] [[]] [[]];\n}\n",
+    "a {\n  color: [[]] [[]] [[]];\n}\n"
+);
+test!(
     null_values_in_list_ommitted,
     "a {\n  color: 1, null, null;\n}\n",
     "a {\n  color: 1;\n}\n"

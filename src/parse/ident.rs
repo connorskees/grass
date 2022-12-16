@@ -83,7 +83,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         let mut value = 0;
         let first = match self.toks.peek() {
             Some(t) => t,
-            None => return Err(("Expected expression.", self.span_before).into()),
+            None => return Err(("Expected expression.", self.toks.current_span()).into()),
         };
         let mut span = first.pos();
         if first.kind == '\n' {
@@ -135,9 +135,8 @@ impl<'a, 'b> Parser<'a, 'b> {
         }
     }
 
-    #[track_caller]
-    pub(crate) fn parse_identifier(&mut self) -> SassResult<Spanned<String>> {
-        todo!()
+    // pub(crate) fn parse_identifier(&mut self) -> SassResult<Spanned<String>> {
+        // todo!()
         // let Token { kind, pos } = self
         //     .toks
         //     .peek()
@@ -198,7 +197,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         //     node: text,
         //     span: self.span_before,
         // })
-    }
+    // }
 
     // pub(crate) fn parse_identifier_no_interpolation(
     //     &mut self,

@@ -5,13 +5,11 @@ use crate::{
     error::SassResult,
     lexer::Lexer,
     parse::{Parser, Stmt},
-    selector::Selector,
     token::Token,
 };
 
 #[derive(Debug, Clone)]
 pub(crate) struct MediaRule {
-    // pub super_selector: Selector,
     pub query: String,
     pub body: Vec<Stmt>,
 }
@@ -108,7 +106,7 @@ impl<'a> MediaQueryParser<'a> {
             media_type = Some(identifier2);
             if self.parser.scan_identifier("and", false)? {
                 // For example, "@media only screen and ..."
-                self.expect_whitespace();
+                self.expect_whitespace()?;
             } else {
                 // For example, "@media only screen {"
                 return Ok(MediaQuery::media_type(media_type, modifier, None));

@@ -203,4 +203,91 @@ error!(
     "@keyframes foo { a", "Error: expected \"{\"."
 );
 
-// todo: `e` in keyframes selector
+test!(
+    e_alone,
+    "@keyframes foo {
+      1e3% {
+        color: red;
+      }
+    }",
+    "@keyframes foo {\n  1e3% {\n    color: red;\n  }\n}\n"
+);
+test!(
+    e_with_plus,
+    "@keyframes foo {
+      1e+3% {
+        color: red;
+      }
+    }",
+    "@keyframes foo {\n  1e+3% {\n    color: red;\n  }\n}\n"
+);
+test!(
+    e_with_minus,
+    "@keyframes foo {
+      1e-3% {
+        color: red;
+      }
+    }",
+    "@keyframes foo {\n  1e-3% {\n    color: red;\n  }\n}\n"
+);
+test!(
+    e_with_decimal_plus,
+    "@keyframes foo {
+      1.5e+3% {
+        color: red;
+      }
+    }",
+    "@keyframes foo {\n  1.5e+3% {\n    color: red;\n  }\n}\n"
+);
+test!(
+    e_with_decimal_no_number_after_decimal,
+    "@keyframes foo {
+      1.e3% {
+        color: red;
+      }
+    }",
+    "@keyframes foo {\n  1.e3% {\n    color: red;\n  }\n}\n"
+);
+test!(
+    uppercase_e,
+    "@keyframes foo {
+      1E3% {
+        color: red;
+      }
+    }",
+    "@keyframes foo {\n  1e3% {\n    color: red;\n  }\n}\n"
+);
+test!(
+    escaped_e,
+    "@keyframes foo {
+      1\\65 3% {
+        color: red;
+      }
+    }",
+    "@keyframes foo {\n  1e3% {\n    color: red;\n  }\n}\n"
+);
+test!(
+    uppercase_escaped_e,
+    "@keyframes foo {
+      1\\45 3% {
+        color: red;
+      }
+    }",
+    "@keyframes foo {\n  1e3% {\n    color: red;\n  }\n}\n"
+);
+error!(
+    invalid_escape_in_place_of_e,
+    "@keyframes foo {
+      1\\110000 3% {
+        color: red;
+      }
+    }",
+    "Error: expected " % "."
+);
+
+// todo: span for this
+// @keyframes foo {
+//   1\1100000000000000 3% {
+//     // color: \110000;
+//   }
+// }

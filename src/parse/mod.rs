@@ -17,7 +17,7 @@ use crate::{
     common::{unvendor, Identifier, QuoteKind},
     error::SassResult,
     lexer::Lexer,
-    selector::{ExtendedSelector, Selector},
+    selector::ExtendedSelector,
     style::Style,
     utils::{as_hex, is_name, is_name_start, is_plain_css_import, opposite_bracket},
     ContextFlags, Options, Token,
@@ -25,8 +25,6 @@ use crate::{
 
 pub(crate) use keyframes::KeyframesSelectorParser;
 pub(crate) use value::{add, cmp, div, mul, rem, single_eq, sub};
-
-use crate::value::SassCalculation;
 
 use self::value_new::{Predicate, ValueParser};
 
@@ -235,8 +233,12 @@ impl<'a, 'b> Parser<'a, 'b> {
 
                 self.toks.next();
                 buffer.push('-');
+            } else if normalize && tok.kind == '_' {
+                buffer.push('-');
+                self.toks.next();
             } else if is_name(tok.kind) {
-                buffer.push(self.toks.next().unwrap().kind);
+                self.toks.next();
+                buffer.push(tok.kind);
             } else if tok.kind == '\\' {
                 buffer.push_str(&self.parse_escape(false)?);
             } else {
@@ -297,7 +299,6 @@ impl<'a, 'b> Parser<'a, 'b> {
         //   } else {
         //     return scanner.readChar();
         //   }
-        todo!()
     }
 
     // todo: return span
@@ -595,7 +596,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         self.whitespace_or_comment();
 
         // todo: we shouldn't require cell here
-        let mut exclusive: Cell<Option<bool>> = Cell::new(None);
+        let exclusive: Cell<Option<bool>> = Cell::new(None);
 
         let from = self.parse_expression(
             Some(&|parser| {
@@ -699,7 +700,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         self.whitespace_or_comment();
 
-        let mut children = self.with_children(Self::function_child)?;
+        let children = self.with_children(Self::function_child)?;
 
         Ok(AstStmt::FunctionDecl(AstFunctionDecl {
             name: Spanned {
@@ -769,8 +770,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                     self.toks.next();
                     self.toks.next();
                 } else {
-                    //       buffer.writeCharCode(escapeCharacter());
-                    todo!()
+                    buffer.push(self.consume_escaped_char()?);
                 }
             } else {
                 self.toks.next();
@@ -1237,7 +1237,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         let was_in_unknown_at_rule = self.flags.in_unknown_at_rule();
         self.flags.set(ContextFlags::IN_UNKNOWN_AT_RULE, true);
 
-        let mut value: Option<Interpolation> =
+        let value: Option<Interpolation> =
             if !self.toks.next_char_is('!') && !self.at_end_of_statement() {
                 Some(self.almost_any_value(false)?)
             } else {
@@ -2034,7 +2034,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             starts_with_punctuation = true;
             name_buffer.add_token(self.toks.next().unwrap());
             name_buffer.add_string(Spanned {
-                node: self.raw_text(Self::whitespace),
+                node: self.raw_text(Self::whitespace_or_comment),
                 span: self.span_before,
             });
         }
@@ -2066,7 +2066,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         }
 
         let mut mid_buffer = String::new();
-        mid_buffer.push_str(&self.raw_text(Self::whitespace));
+        mid_buffer.push_str(&self.raw_text(Self::whitespace_or_comment));
 
         if !self.consume_char_if_exists(':') {
             if !mid_buffer.is_empty() {
@@ -2108,7 +2108,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             return Ok(DeclarationOrBuffer::Buffer(name_buffer));
         }
 
-        let post_colon_whitespace = self.raw_text(Self::whitespace);
+        let post_colon_whitespace = self.raw_text(Self::whitespace_or_comment);
         if self.looking_at_children() {
             let body = self.with_children(Self::parse_declaration_child)?;
             return Ok(DeclarationOrBuffer::Stmt(AstStmt::Style(AstStyle {
@@ -2491,10 +2491,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         // default=false
         omit_comments: bool,
     ) -> SassResult<Interpolation> {
-        let mut buffer = Interpolation {
-            contents: Vec::new(),
-            span: self.span_before,
-        };
+        let mut buffer = Interpolation::new(self.span_before);
 
         while let Some(tok) = self.toks.peek() {
             match tok.kind {
@@ -2620,8 +2617,6 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     fn next_matches(&mut self, s: &str) -> bool {
-        let mut chars = s.chars();
-
         for (idx, c) in s.chars().enumerate() {
             match self.toks.peek_n(idx) {
                 Some(Token { kind, .. }) if kind == c => {}

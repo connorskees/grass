@@ -3,6 +3,7 @@ use std::fmt;
 use crate::{
     atrule::keyframes::KeyframesSelector,
     error::SassResult,
+    token::Token,
     // lexer::Lexer,
     // parse::Stmt,
     // Token,
@@ -60,18 +61,83 @@ impl<'a, 'b, 'c> KeyframesSelectorParser<'a, 'b, 'c> {
     }
 
     fn parse_percentage_selector(&mut self) -> SassResult<KeyframesSelector> {
-        let mut selector = self.parser.parse_whole_number();
+        let mut buffer = String::new();
 
-        if self.parser.consume_char_if_exists('.') {
-            selector.push('.');
-            selector.push_str(&self.parser.parse_whole_number());
+        if self.parser.consume_char_if_exists('+') {
+            buffer.push('+');
         }
 
-        // todo: `e`
+        if !matches!(
+            self.parser.toks.peek(),
+            Some(Token {
+                kind: '0'..='9' | '.',
+                ..
+            })
+        ) {
+            return Err(("Expected number.", self.parser.toks.current_span()).into());
+        }
+
+        while matches!(
+            self.parser.toks.peek(),
+            Some(Token {
+                kind: '0'..='9',
+                ..
+            })
+        ) {
+            buffer.push(self.parser.toks.next().unwrap().kind);
+        }
+
+        if self.parser.consume_char_if_exists('.') {
+            buffer.push('.');
+
+            while matches!(
+                self.parser.toks.peek(),
+                Some(Token {
+                    kind: '0'..='9',
+                    ..
+                })
+            ) {
+                buffer.push(self.parser.toks.next().unwrap().kind);
+            }
+        }
+
+        if self.parser.scan_ident_char('e', false)? {
+            buffer.push('e');
+
+            if matches!(
+                self.parser.toks.peek(),
+                Some(Token {
+                    kind: '+' | '-',
+                    ..
+                })
+            ) {
+                buffer.push(self.parser.toks.next().unwrap().kind);
+            }
+
+            if !matches!(
+                self.parser.toks.peek(),
+                Some(Token {
+                    kind: '0'..='9',
+                    ..
+                })
+            ) {
+                return Err(("Expected digit.", self.parser.toks.current_span()).into());
+            }
+
+            while matches!(
+                self.parser.toks.peek(),
+                Some(Token {
+                    kind: '0'..='9',
+                    ..
+                })
+            ) {
+                buffer.push(self.parser.toks.next().unwrap().kind);
+            }
+        }
 
         self.parser.expect_char('%')?;
 
-        Ok(KeyframesSelector::Percent(selector.into_boxed_str()))
+        Ok(KeyframesSelector::Percent(buffer.into_boxed_str()))
     }
 }
 

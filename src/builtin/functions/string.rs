@@ -90,10 +90,10 @@ pub(crate) fn str_slice(mut args: ArgumentResult, parser: &mut Visitor) -> SassR
         Value::Dimension((n), Unit::None, _) if n.is_decimal() => {
             return Err((format!("{} is not an int.", n.inspect()), args.span()).into())
         }
+        Value::Dimension((n), Unit::None, _) if n.is_zero() => 1_usize,
         Value::Dimension((n), Unit::None, _) if n.is_positive() => {
             n.to_integer().to_usize().unwrap_or(str_len + 1)
         }
-        Value::Dimension((n), Unit::None, _) if n.is_zero() => 1_usize,
         Value::Dimension((n), Unit::None, _) if n < -Number::from(str_len) => 1_usize,
         Value::Dimension((n), Unit::None, _) => (n.to_integer() + BigInt::from(str_len + 1))
             .to_usize()
@@ -123,10 +123,10 @@ pub(crate) fn str_slice(mut args: ArgumentResult, parser: &mut Visitor) -> SassR
         Value::Dimension((n), Unit::None, _) if n.is_decimal() => {
             return Err((format!("{} is not an int.", n.inspect()), args.span()).into())
         }
+        Value::Dimension((n), Unit::None, _) if n.is_zero() => 0_usize,
         Value::Dimension((n), Unit::None, _) if n.is_positive() => {
             n.to_integer().to_usize().unwrap_or(str_len + 1)
         }
-        Value::Dimension((n), Unit::None, _) if n.is_zero() => 0_usize,
         Value::Dimension((n), Unit::None, _) if n < -Number::from(str_len) => 0_usize,
         Value::Dimension((n), Unit::None, _) => (n.to_integer() + BigInt::from(str_len + 1))
             .to_usize()

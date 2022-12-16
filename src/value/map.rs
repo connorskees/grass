@@ -90,11 +90,6 @@ impl SassMap {
             .collect()
     }
 
-    #[allow(clippy::missing_const_for_fn)]
-    pub fn entries(self) -> Vec<(Value, Value)> {
-        self.0
-    }
-
     /// Returns true if the key already exists
     pub fn insert(&mut self, key: Value, value: Value) -> bool {
         for (ref k, ref mut v) in &mut self.0 {
@@ -105,10 +100,6 @@ impl SassMap {
         }
         self.0.push((key, value));
         false
-    }
-
-    pub fn len(&self) -> usize {
-        self.0.len()
     }
 
     pub fn is_empty(&self) -> bool {
