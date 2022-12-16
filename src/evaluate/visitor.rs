@@ -866,11 +866,13 @@ impl<'a> Visitor<'a> {
     }
 
     fn visit_content_rule(&mut self, content_rule: AstContentRule) -> SassResult<Option<Value>> {
+        let span = content_rule.args.span;
         if let Some(content) = &self.env.content {
             self.run_user_defined_callable(
                 MaybeEvaledArguments::Invocation(content_rule.args),
                 Arc::clone(content),
                 content.env.clone(),
+                span,
                 |content, visitor| {
                     for stmt in content.content.body.clone() {
                         let result = visitor.visit_stmt(stmt)?;
@@ -1599,6 +1601,7 @@ impl<'a> Visitor<'a> {
                     MaybeEvaledArguments::Invocation(args),
                     mixin,
                     env,
+                    include_stmt.name.span,
                     |mixin, visitor| {
                         visitor.with_content(callable_content, |visitor| {
                             for stmt in mixin.body {
@@ -1964,14 +1967,22 @@ impl<'a> Visitor<'a> {
         v.without_slash()
     }
 
-    fn eval_maybe_args(&mut self, args: MaybeEvaledArguments) -> SassResult<ArgumentResult> {
+    fn eval_maybe_args(
+        &mut self,
+        args: MaybeEvaledArguments,
+        span: Span,
+    ) -> SassResult<ArgumentResult> {
         match args {
-            MaybeEvaledArguments::Invocation(args) => self.eval_args(args),
+            MaybeEvaledArguments::Invocation(args) => self.eval_args(args, span),
             MaybeEvaledArguments::Evaled(args) => Ok(args),
         }
     }
 
-    fn eval_args(&mut self, arguments: ArgumentInvocation) -> SassResult<ArgumentResult> {
+    fn eval_args(
+        &mut self,
+        arguments: ArgumentInvocation,
+        span: Span,
+    ) -> SassResult<ArgumentResult> {
         let mut positional = Vec::new();
 
         for expr in arguments.positional {
@@ -1991,7 +2002,7 @@ impl<'a> Visitor<'a> {
                 positional,
                 named,
                 separator: ListSeparator::Undecided,
-                span: arguments.span,
+                span,
                 touched: BTreeSet::new(),
             });
         }
@@ -2082,9 +2093,10 @@ impl<'a> Visitor<'a> {
         arguments: MaybeEvaledArguments,
         func: F,
         env: Environment,
+        span: Span,
         run: impl FnOnce(F, &mut Self) -> SassResult<V>,
     ) -> SassResult<V> {
-        let mut evaluated = self.eval_maybe_args(arguments)?;
+        let mut evaluated = self.eval_maybe_args(arguments, span)?;
 
         let mut name = func.name().to_string();
 
@@ -2214,7 +2226,7 @@ impl<'a> Visitor<'a> {
     ) -> SassResult<Value> {
         match func {
             SassFunction::Builtin(func, name) => {
-                let mut evaluated = self.eval_maybe_args(arguments)?;
+                let mut evaluated = self.eval_maybe_args(arguments, span)?;
                 let val = func.0(evaluated, self)?;
                 Ok(self.without_slash(val))
             }
@@ -2223,17 +2235,23 @@ impl<'a> Visitor<'a> {
                 // scope_idx,
                 env,
                 ..
-            }) => self.run_user_defined_callable(arguments, *function, env, |function, visitor| {
-                for stmt in function.children {
-                    let result = visitor.visit_stmt(stmt)?;
+            }) => self.run_user_defined_callable(
+                arguments,
+                *function,
+                env,
+                span,
+                |function, visitor| {
+                    for stmt in function.children {
+                        let result = visitor.visit_stmt(stmt)?;
 
-                    if let Some(val) = result {
-                        return Ok(val);
+                        if let Some(val) = result {
+                            return Ok(val);
+                        }
                     }
-                }
 
-                return Err(("Function finished without @return.", span).into());
-            }),
+                    return Err(("Function finished without @return.", span).into());
+                },
+            ),
             SassFunction::Plain { name } => {
                 let arguments = match arguments {
                     MaybeEvaledArguments::Invocation(args) => args,

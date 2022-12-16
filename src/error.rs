@@ -148,7 +148,7 @@ impl Display for SassError {
                 .collect::<String>()
         )?;
         writeln!(f, "{}{}", padding, fourth_bar)?;
-        //  input.scss 3:1  root stylesheet
+
         if unicode {
             writeln!(f, "./{}:{}:{}", loc.file.name(), line, col)?;
         } else {
