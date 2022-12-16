@@ -235,7 +235,6 @@ pub(crate) fn str_insert(mut args: ArgumentResult, parser: &mut Visitor) -> Sass
                 .into())
         }
         Value::Dimension((n), Unit::None, _) => n,
-
         v @ Value::Dimension(..) => {
             return Err((
                 format!(
@@ -277,7 +276,7 @@ pub(crate) fn str_insert(mut args: ArgumentResult, parser: &mut Visitor) -> Sass
             .collect::<String>()
     };
 
-    let string = if index.is_positive() {
+    let string = if index > Number(0.0) {
         insert(
             index
                 .to_integer()

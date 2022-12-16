@@ -120,14 +120,6 @@ impl Number {
         }
     }
 
-    pub fn is_positive(&self) -> bool {
-        self.0 > 0.0
-    }
-
-    pub fn is_negative(&self) -> bool {
-        self.0 > 0.0
-    }
-
     // pub fn fract(self) -> Number {
     //     match self {
     //         Self(v) => Number(v.fract()),
