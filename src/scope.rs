@@ -38,6 +38,10 @@ impl Scope {
         }
     }
 
+    pub fn var_names(&self) -> impl Iterator<Item = Identifier> + '_ {
+        self.vars.keys().copied()
+    }
+
     fn get_var<'a>(&'a self, name: Spanned<Identifier>) -> SassResult<&'a Value> {
         match self.vars.get(&name.node) {
             Some(v) => Ok(v),
@@ -45,7 +49,7 @@ impl Scope {
         }
     }
 
-    fn get_var_no_err<'a>(&'a self, name: Identifier) -> Option<&'a Value> {
+    pub fn get_var_no_err<'a>(&'a self, name: Identifier) -> Option<&'a Value> {
         self.vars.get(&name)
     }
 
@@ -57,7 +61,7 @@ impl Scope {
         self.vars.contains_key(&name)
     }
 
-    fn get_mixin(&self, name: Identifier) -> Option<Mixin> {
+    pub fn get_mixin(&self, name: Identifier) -> Option<Mixin> {
         self.mixins.get(&name).cloned()
     }
 
@@ -69,7 +73,7 @@ impl Scope {
         self.mixins.contains_key(&name)
     }
 
-    fn get_fn(&self, name: Identifier) -> Option<SassFunction> {
+    pub fn get_fn(&self, name: Identifier) -> Option<SassFunction> {
         self.functions.get(&name).cloned()
     }
 
@@ -99,6 +103,10 @@ impl Scopes {
 
     pub fn global_scope(&self) -> Ref<Scope> {
         (*self.0[0]).borrow()
+    }
+
+    pub fn global_scope_arc(&self) -> Arc<RefCell<Scope>> {
+        Arc::clone(&self.0[0])
     }
 
     pub fn find_var(&self, name: Identifier) -> Option<usize> {

@@ -172,12 +172,7 @@ pub(crate) fn scale_color(mut args: ArgumentResult, parser: &mut Visitor) -> Sas
         if by.is_zero() {
             return val;
         }
-        val.clone()
-            + (if by.is_positive() {
-                max - val
-            } else {
-                val
-            }) * by
+        val.clone() + (if by.is_positive() { max - val } else { val }) * by
     }
 
     let span = args.span();

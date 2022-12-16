@@ -1,7 +1,9 @@
 use std::{
+    borrow::Cow,
     cell::Cell,
     collections::{BTreeMap, HashSet},
-    path::Path,
+    ffi::{OsStr, OsString},
+    path::{Path, PathBuf},
 };
 
 use codemap::{CodeMap, Span, Spanned};
@@ -37,7 +39,7 @@ mod ident;
 mod keyframes;
 mod media;
 // mod mixin;
-mod module;
+// mod module;
 // mod style;
 // mod throw_away;
 mod value;
@@ -95,9 +97,8 @@ pub(crate) struct Parser<'a, 'b> {
     // pub at_root_has_selector: bool,
     // pub extender: &'a mut Extender,
     pub options: &'a Options<'a>,
-
-    pub modules: &'a mut Modules,
-    pub module_config: &'a mut ModuleConfig,
+    // pub modules: &'a mut Modules,
+    // pub module_config: &'a mut ModuleConfig,
 }
 
 /// Names that functions are not allowed to have
@@ -182,7 +183,9 @@ impl<'a, 'b> Parser<'a, 'b> {
         self.whitespace();
         while let Some(tok) = self.toks.peek() {
             match tok.kind {
-                '$' => stmts.push(self.parse_variable_declaration_without_namespace(None)?),
+                '$' => stmts.push(AstStmt::VariableDecl(
+                    self.parse_variable_declaration_without_namespace(None, None)?,
+                )),
                 '/' => match self.toks.peek_n(1) {
                     Some(Token { kind: '/', .. }) => {
                         stmts.push(self.parse_silent_comment()?);
@@ -712,27 +715,47 @@ impl<'a, 'b> Parser<'a, 'b> {
         }))
     }
 
+    fn parse_variable_declaration_with_namespace(&mut self) -> SassResult<AstVariableDecl> {
+        let start = self.toks.cursor();
+        let namespace = self.__parse_identifier(false, false)?;
+        let namespace_span = self.toks.span_from(start);
+        self.expect_char('.')?;
+        self.parse_variable_declaration_without_namespace(
+            Some(Spanned {
+                node: Identifier::from(namespace),
+                span: namespace_span,
+            }),
+            Some(start),
+        )
+    }
+
     fn function_child(&mut self) -> SassResult<AstStmt> {
         let start = self.toks.cursor();
-        if self.toks.next_char_is('@') {
-            return match self.plain_at_rule_name()?.as_str() {
-                "debug" => self.parse_debug_rule(),
-                "each" => self.parse_each_rule(Self::function_child),
-                "else" => self.parse_disallowed_at_rule(start),
-                "error" => self.parse_error_rule(),
-                "for" => self.parse_for_rule(Self::function_child),
-                "if" => self.parse_if_rule(Self::function_child),
-                "return" => self.parse_return_rule(),
-                "warn" => self.parse_warn_rule(),
-                "while" => self.parse_while_rule(Self::function_child),
-                _ => self.parse_disallowed_at_rule(start),
-            };
-        } else {
-            // todo: better error message here
-            Ok(AstStmt::VariableDecl(
-                self.variable_declaration_without_namespace(None)?,
-            ))
+        if !self.toks.next_char_is('@') {
+            match self.parse_variable_declaration_with_namespace() {
+                Ok(decl) => return Ok(AstStmt::VariableDecl(decl)),
+                Err(..) => {
+                    self.toks.set_cursor(start);
+                    let stmt = self.parse_declaration_or_style_rule()?;
+                    todo!(
+                        "@function rules may not contain ${{statement is StyleRule ? \"style rules\" : \"declarations\"}}.",
+                    )
+                }
+            }
         }
+
+        return match self.plain_at_rule_name()?.as_str() {
+            "debug" => self.parse_debug_rule(),
+            "each" => self.parse_each_rule(Self::function_child),
+            "else" => self.parse_disallowed_at_rule(start),
+            "error" => self.parse_error_rule(),
+            "for" => self.parse_for_rule(Self::function_child),
+            "if" => self.parse_if_rule(Self::function_child),
+            "return" => self.parse_return_rule(),
+            "warn" => self.parse_warn_rule(),
+            "while" => self.parse_while_rule(Self::function_child),
+            _ => self.parse_disallowed_at_rule(start),
+        };
     }
 
     pub(crate) fn parse_string(&mut self) -> SassResult<String> {
@@ -997,17 +1020,19 @@ impl<'a, 'b> Parser<'a, 'b> {
         self.whitespace_or_comment();
         let modifiers = self.try_import_modifiers()?;
 
+        let span = self.toks.span_from(start);
+
         if is_plain_css_import(&url) || modifiers.is_some() {
             Ok(AstImport::Plain(AstPlainCssImport {
-                url: Interpolation::new_plain(raw_url, self.span_before),
+                url: Interpolation::new_plain(raw_url, span),
                 modifiers,
-                span: self.span_before,
+                span,
             }))
         } else {
             // todo: try parseImportUrl
             Ok(AstImport::Sass(AstSassImport {
                 url,
-                span: self.span_before,
+                span,
             }))
         }
     }
@@ -1036,17 +1061,22 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     fn parse_public_identifier(&mut self) -> SassResult<String> {
-        todo!()
+        let start = self.toks.cursor();
+        let ident = self.__parse_identifier(true, false)?;
+        Self::assert_public(&ident, self.toks.span_from(start))?;
+
+        Ok(ident)
     }
 
     fn parse_include_rule(&mut self) -> SassResult<AstStmt> {
-        let mut namespace: Option<Identifier> = None;
+        let mut namespace: Option<Spanned<Identifier>> = None;
 
         let name_start = self.toks.cursor();
         let mut name = self.__parse_identifier(false, false)?;
 
         if self.consume_char_if_exists('.') {
-            namespace = Some(Identifier::from(name));
+            let namespace_span = self.toks.span_from(name_start);
+            namespace = Some(Spanned { node: Identifier::from(name), span: namespace_span });
             name = self.parse_public_identifier()?;
         } else {
             name = name.replace('_', "-");
@@ -1294,8 +1324,161 @@ impl<'a, 'b> Parser<'a, 'b> {
     fn parse_forward_rule(&mut self) -> SassResult<AstStmt> {
         todo!()
     }
-    fn parse_use_rule(&mut self) -> SassResult<AstStmt> {
-        todo!()
+
+    fn parse_url_string(&mut self) -> SassResult<String> {
+        // todo: real uri parsing
+        self.parse_string()
+    }
+
+    fn use_namespace(&mut self, url: &Path, start: usize) -> SassResult<Option<String>> {
+        if self.scan_identifier("as", false)? {
+            self.whitespace_or_comment();
+            return Ok(if self.consume_char_if_exists('*') {
+                None
+            } else {
+                Some(self.__parse_identifier(false, false)?)
+            });
+        }
+
+        let base_name = url
+            .file_name()
+            .map(ToOwned::to_owned)
+            .unwrap_or_else(OsString::new);
+        let base_name = base_name.to_string_lossy();
+        let dot = base_name.find('.');
+
+        let start = if base_name.starts_with('_') { 1 } else { 0 };
+        let end = dot.unwrap_or(base_name.len());
+        let namespace = if url.to_string_lossy().starts_with("sass:") {
+            return Ok(Some((url.to_string_lossy().into_owned())));
+        } else {
+            &base_name[start..end]
+        };
+
+        let mut toks = Lexer::new(
+            namespace
+                .chars()
+                .map(|x| Token::new(self.span_before, x))
+                .collect(),
+        );
+
+        let identifier = Parser {
+            toks: &mut toks,
+            map: self.map,
+            path: self.path,
+            is_plain_css: self.is_plain_css,
+            span_before: self.span_before,
+            flags: self.flags,
+            options: self.options,
+        }
+        .__parse_identifier(false, false);
+
+        match (identifier, toks.peek().is_none()) {
+            (Ok(i), true) => Ok(Some(i)),
+            _ => {
+                Err((
+                    format!("The default namespace \"{namespace}\" is not a valid Sass identifier.\n\nRecommendation: add an \"as\" clause to define an explicit namespace."),
+                    self.toks.span_from(start)
+                ).into())
+            }
+        }
+    }
+
+    fn parse_configuration(
+        &mut self,
+        // default=false
+        allow_guarded: bool,
+    ) -> SassResult<Option<Vec<ConfiguredVariable>>> {
+        if !self.scan_identifier("with", false)? {
+            return Ok(None);
+        }
+
+        let mut variable_names = HashSet::new();
+        let mut configuration = Vec::new();
+        self.whitespace_or_comment();
+        self.expect_char('(')?;
+
+        loop {
+            self.whitespace_or_comment();
+            let var_start = self.toks.cursor();
+            let name = Identifier::from(self.parse_variable_name()?);
+            let name_span = self.toks.span_from(var_start);
+            self.whitespace_or_comment();
+            self.expect_char(':')?;
+            self.whitespace_or_comment();
+            let expr = self.parse_expression_until_comma(false)?;
+
+            let mut is_guarded = false;
+            let flag_start = self.toks.cursor();
+            if allow_guarded && self.consume_char_if_exists('!') {
+                let flag = self.__parse_identifier(false, false)?;
+                if flag == "default" {
+                    is_guarded = true;
+                    self.whitespace_or_comment();
+                } else {
+                    return Err(("Invalid flag name.", self.toks.span_from(flag_start)).into());
+                }
+            }
+
+            let span = self.toks.span_from(var_start);
+            if variable_names.contains(&name) {
+                return Err(("The same variable may only be configured once.", span).into());
+            }
+
+            variable_names.insert(name);
+            configuration.push(ConfiguredVariable {
+                name: Spanned {
+                    node: name,
+                    span: name_span,
+                },
+                expr,
+                is_guarded,
+            });
+
+            if !self.consume_char_if_exists(',') {
+                break;
+            }
+            self.whitespace_or_comment();
+            if !self.looking_at_expression() {
+                break;
+            }
+        }
+
+        self.expect_char(')')?;
+
+        Ok(Some(configuration))
+    }
+
+    fn parse_use_rule(&mut self, start: usize) -> SassResult<AstStmt> {
+        let url = self.parse_url_string()?;
+        self.whitespace_or_comment();
+
+        let path = PathBuf::from(url.clone());
+
+        let namespace = self.use_namespace(path.as_ref(), start)?;
+        self.whitespace_or_comment();
+        let configuration = self.parse_configuration(false)?;
+
+        self.expect_statement_separator(Some("@use rule"))?;
+
+        let span = self.toks.span_from(start);
+
+        if !self.flags.is_use_allowed() {
+            return Err((
+                "@use rules must be written before any other rules.",
+                self.toks.span_from(start),
+            )
+                .into());
+        }
+
+        self.expect_statement_separator(Some("@use rule"))?;
+
+        Ok(AstStmt::Use(AstUseRule {
+            url: path,
+            namespace,
+            configuration: configuration.unwrap_or_default(),
+            span,
+        }))
     }
 
     fn parse_at_rule(
@@ -1315,8 +1498,8 @@ impl<'a, 'b> Parser<'a, 'b> {
         // `@charset`, `@forward`, or `@use`. To avoid double-comparing the rule
         // name, we always set it to `false` and then set it back to its previous
         // value if we're parsing an allowed rule.
-        // var was_use_allowed = _isUseAllowed;
-        // _isUseAllowed = false;
+        let was_use_allowed = self.flags.is_use_allowed();
+        self.flags.set(ContextFlags::IS_USE_ALLOWED, false);
 
         match name.as_plain() {
             Some("at-root") => self.parse_at_root_rule(),
@@ -1328,7 +1511,8 @@ impl<'a, 'b> Parser<'a, 'b> {
             Some("extend") => self.parse_extend_rule(start),
             Some("for") => self.parse_for_rule(child),
             Some("forward") => {
-                // _isUseAllowed = wasUseAllowed;
+                self.flags
+                    .set(ContextFlags::IS_USE_ALLOWED, was_use_allowed);
                 // if (!root) {
                 //     _disallowedAtRule();
                 // }
@@ -1343,16 +1527,16 @@ impl<'a, 'b> Parser<'a, 'b> {
             Some("-moz-document") => self.parse_moz_document_rule(name),
             Some("supports") => self.parse_supports_rule(),
             Some("use") => {
-                // _isUseAllowed = wasUseAllowed;
+                self.flags
+                    .set(ContextFlags::IS_USE_ALLOWED, was_use_allowed);
                 // if (!root) {
                 //     _disallowedAtRule();
                 // }
-                self.parse_use_rule()
+                self.parse_use_rule(start)
             }
             Some("warn") => self.parse_warn_rule(),
             Some("while") => self.parse_while_rule(child),
             Some(..) | None => self.unknown_at_rule(name),
-            //  => todo!(),
         }
     }
 
@@ -1842,23 +2026,27 @@ impl<'a, 'b> Parser<'a, 'b> {
                     wrote_newline = false;
                 }
                 'u' | 'U' => {
-                    //       var beforeUrl = scanner.state;
-                    //       if (!scanIdentifier("url")) {
-                    //         buffer.writeCharCode(scanner.readChar());
-                    //         wroteNewline = false;
-                    //         break;
-                    //       }
+                    let before_url = self.toks.cursor();
 
-                    //       var contents = _tryUrlContents(beforeUrl);
-                    //       if (contents == null) {
-                    //         scanner.state = beforeUrl;
-                    //         buffer.writeCharCode(scanner.readChar());
-                    //       } else {
-                    //         buffer.addInterpolation(contents);
-                    //       }
-                    //       wroteNewline = false;
+                    if !self.scan_identifier("url", false)? {
+                        buffer.add_token(tok);
+                        self.toks.next();
+                        wrote_newline = false;
+                        continue;
+                    }
 
-                    todo!()
+                    match self.try_url_contents(None)? {
+                        Some(contents) => {
+                            buffer.add_interpolation(contents);
+                        }
+                        None => {
+                            self.toks.set_cursor(before_url);
+                            buffer.add_token(tok);
+                            self.toks.next();
+                        }
+                    }
+
+                    wrote_newline = false;
                 }
                 _ => {
                     if self.looking_at_identifier() {
@@ -2056,7 +2244,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             }
         }
 
-        let mut is_use_allowed = false;
+        self.flags.set(ContextFlags::IS_USE_ALLOWED, false);
 
         if self.next_matches("/*") {
             name_buffer.add_string(Spanned {
@@ -2267,6 +2455,7 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     fn parse_style_rule(&mut self, existing_buffer: Option<Interpolation>) -> SassResult<AstStmt> {
+        self.flags.set(ContextFlags::IS_USE_ALLOWED, false);
         let mut interpolation = self.parse_style_rule_selector()?;
 
         if let Some(mut existing_buffer) = existing_buffer {
@@ -2356,7 +2545,9 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         while let Some(tok) = self.toks.peek() {
             match tok.kind {
-                '$' => children.push(self.parse_variable_declaration_without_namespace(None)?),
+                '$' => children.push(AstStmt::VariableDecl(
+                    self.parse_variable_declaration_without_namespace(None, None)?,
+                )),
                 '/' => match self.toks.peek_n(1) {
                     Some(Token { kind: '/', .. }) => {
                         children.push(self.parse_silent_comment()?);
@@ -2388,12 +2579,16 @@ impl<'a, 'b> Parser<'a, 'b> {
         Ok(children)
     }
 
-    fn assert_public(ident: &str) -> SassResult<()> {
+    fn assert_public(ident: &str, span: Span) -> SassResult<()> {
         if !Parser::is_private(ident) {
             return Ok(());
         }
 
-        todo!("Private members can't be accessed from outside their modules.")
+        Err((
+            "Private members can't be accessed from outside their modules.",
+            span,
+        )
+            .into())
     }
 
     fn is_private(ident: &str) -> bool {
@@ -2402,16 +2597,17 @@ impl<'a, 'b> Parser<'a, 'b> {
 
     fn parse_variable_declaration_without_namespace(
         &mut self,
-        namespace: Option<Identifier>,
-    ) -> SassResult<AstStmt> {
+        namespace: Option<Spanned<Identifier>>,
+        start: Option<usize>,
+    ) -> SassResult<AstVariableDecl> {
         //     var precedingComment = lastSilentComment;
         // lastSilentComment = null;
-        // var start = start_ ?? scanner.state; // dart-lang/sdk#45348
+        let start = start.unwrap_or(self.toks.cursor());
 
         let name = self.parse_variable_name()?;
 
         if namespace.is_some() {
-            Self::assert_public(&name)?;
+            Self::assert_public(&name, self.toks.span_from(start))?;
         }
 
         if self.flags.in_plain_css() {
@@ -2428,18 +2624,23 @@ impl<'a, 'b> Parser<'a, 'b> {
         let mut is_global = false;
 
         while self.consume_char_if_exists('!') {
+            let flag_start = self.toks.cursor();
             let flag = self.__parse_identifier(false, false)?;
 
             match flag.as_str() {
                 "default" => is_guarded = true,
                 "global" => {
                     if namespace.is_some() {
-                        todo!("!global isn't allowed for variables in other modules.")
+                        return Err((
+                            "!global isn't allowed for variables in other modules.",
+                            self.toks.span_from(flag_start),
+                        )
+                            .into());
                     }
 
                     is_global = true;
                 }
-                _ => todo!("Invalid flag name."),
+                _ => return Err(("Invalid flag name.", self.toks.span_from(flag_start)).into()),
             }
 
             self.whitespace_or_comment();
@@ -2461,7 +2662,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             // _globalVariables.putIfAbsent(name, () => declaration)
         }
 
-        Ok(AstStmt::VariableDecl(declaration))
+        Ok(declaration)
     }
 
     fn parse_style_rule_selector(&mut self) -> SassResult<Interpolation> {
@@ -2576,11 +2777,20 @@ impl<'a, 'b> Parser<'a, 'b> {
             ));
         }
 
+        let start = self.toks.cursor();
+
         let ident = self.__parse_identifier(false, false)?;
         if self.next_matches(".$") {
+            let namespace_span = self.toks.span_from(start);
             self.expect_char('.')?;
             Ok(VariableDeclOrInterpolation::VariableDecl(
-                self.variable_declaration_without_namespace(Some(ident))?,
+                self.parse_variable_declaration_without_namespace(
+                    Some(Spanned {
+                        node: Identifier::from(ident),
+                        span: namespace_span,
+                    }),
+                    Some(start),
+                )?,
             ))
         } else {
             let mut buffer = Interpolation {
@@ -2607,13 +2817,6 @@ impl<'a, 'b> Parser<'a, 'b> {
             Some(Token { kind, .. }) if is_name(kind) => true,
             Some(..) | None => false,
         }
-    }
-
-    fn variable_declaration_without_namespace(
-        &mut self,
-        namespace: Option<String>,
-    ) -> SassResult<AstVariableDecl> {
-        todo!()
     }
 
     fn next_matches(&mut self, s: &str) -> bool {

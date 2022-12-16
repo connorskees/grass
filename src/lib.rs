@@ -72,14 +72,13 @@ pub use crate::error::{
     PublicSassErrorKind as ErrorKind, SassError as Error, SassResult as Result,
 };
 pub use crate::fs::{Fs, NullFs, StdFs};
+pub(crate) use crate::{context_flags::ContextFlags, token::Token};
 use crate::{
-    builtin::modules::{ModuleConfig, Modules},
     evaluate::Visitor,
     lexer::Lexer,
     output::{AtRuleContext, Css},
     parse::Parser,
 };
-pub(crate) use crate::{context_flags::ContextFlags, token::Token};
 
 mod args;
 mod ast;
@@ -255,7 +254,6 @@ fn raw_to_parse_error(map: &CodeMap, err: Error, unicode: bool) -> Box<Error> {
     Box::new(Error::from_loc(message, map.look_up_span(span), unicode))
 }
 
-
 fn from_string_with_file_name(input: String, file_name: &str, options: &Options) -> Result<String> {
     let mut map = CodeMap::new();
     let file = map.add_file(file_name.to_owned(), input);
@@ -266,22 +264,12 @@ fn from_string_with_file_name(input: String, file_name: &str, options: &Options)
         map: &mut map,
         path: file_name.as_ref(),
         is_plain_css: false,
-        // scopes: &mut Scopes::new(),
-        // global_scope: &mut Scope::new(),
-        // super_selectors: &mut NeverEmptyVec::new(ExtendedSelector::new(SelectorList::new(
-        //     empty_span,
-        // ))),
         span_before: empty_span,
-        // content: &mut Vec::new(),
         flags: ContextFlags::empty(),
-        // at_root: true,
-        // at_root_has_selector: false,
-        // extender: &mut Extender::new(empty_span),
-        // content_scopes: &mut Scopes::new(),
         options,
-        modules: &mut Modules::default(),
-        module_config: &mut ModuleConfig::default(),
     };
+
+    parser.flags.set(ContextFlags::IS_USE_ALLOWED, true);
 
     let stmts = match parser.__parse() {
         Ok(v) => v,

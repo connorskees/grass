@@ -31,6 +31,26 @@ test!(
     "a {\n  --#{prop}:0.75;\n}\n",
     "a {\n  --prop:0.75;\n}\n"
 );
+test!(
+    prop_value_starts_with_u,
+    "a {\n  --prop: underline;\n}\n",
+    "a {\n  --prop: underline;\n}\n"
+);
+test!(
+    prop_value_is_url,
+    "a {\n  --prop: url();\n}\n",
+    "a {\n  --prop: url();\n}\n"
+);
+test!(
+    prop_value_starts_with_url,
+    "a {\n  --prop: urlaa;\n}\n",
+    "a {\n  --prop: urlaa;\n}\n"
+);
+test!(
+    prop_value_is_url_without_parens,
+    "a {\n  --prop: url;\n}\n",
+    "a {\n  --prop: url;\n}\n"
+);
 error!(
     nothing_after_colon,
     "a {\n  --btn-font-family:;\n}\n", "Error: Expected token."

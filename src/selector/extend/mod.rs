@@ -56,7 +56,7 @@ impl Default for ExtendMode {
 }
 
 #[derive(Clone, Debug)]
-pub(crate) struct Extender {
+pub(crate) struct ExtensionStore {
     /// A map from all simple selectors in the stylesheet to the selector lists
     /// that contain them.
     ///
@@ -104,7 +104,7 @@ pub(crate) struct Extender {
     span: Span,
 }
 
-impl Extender {
+impl ExtensionStore {
     /// An `Extender` that contains no extensions and can have no extensions added.
     // TODO: empty extender
     #[allow(dead_code)]
@@ -182,7 +182,7 @@ impl Extender {
                 })
                 .collect();
 
-        let mut extender = Extender::with_mode(mode, span);
+        let mut extender = ExtensionStore::with_mode(mode, span);
 
         if !selector.is_invisible() {
             extender.originals.extend(selector.components.iter());
@@ -194,7 +194,7 @@ impl Extender {
     fn with_mode(mode: ExtendMode, span: Span) -> Self {
         Self {
             mode,
-            ..Extender::new(span)
+            ..ExtensionStore::new(span)
         }
     }
 

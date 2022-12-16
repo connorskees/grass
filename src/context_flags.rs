@@ -20,6 +20,7 @@ impl ContextFlags {
     pub const IN_SUPPORTS_DECLARATION: ContextFlag = ContextFlag(1 << 11);
     pub const IN_SEMI_GLOBAL_SCOPE: ContextFlag = ContextFlag(1 << 12);
     pub const FOUND_CONTENT_RULE: ContextFlag = ContextFlag(1 << 13);
+    pub const IS_USE_ALLOWED: ContextFlag = ContextFlag(1 << 14);
 
     pub const fn empty() -> Self {
         Self(0)
@@ -91,6 +92,10 @@ impl ContextFlags {
 
     pub fn found_content_rule(self) -> bool {
         (self.0 & Self::FOUND_CONTENT_RULE) != 0
+    }
+
+    pub fn is_use_allowed(self) -> bool {
+        (self.0 & Self::IS_USE_ALLOWED) != 0
     }
 }
 

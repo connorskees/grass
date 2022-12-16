@@ -1,7 +1,7 @@
 use crate::builtin::builtin_imports::*;
 
 use crate::selector::{
-    ComplexSelector, ComplexSelectorComponent, Extender, Selector, SelectorList,
+    ComplexSelector, ComplexSelectorComponent, ExtensionStore, Selector, SelectorList,
 };
 
 pub(crate) fn is_superselector(
@@ -142,7 +142,7 @@ pub(crate) fn selector_extend(mut args: ArgumentResult, parser: &mut Visitor) ->
         .get_err(2, "extender")?
         .to_selector(parser, "extender", false)?;
 
-    Ok(Extender::extend(selector.0, source.0, target.0, args.span())?.to_sass_list())
+    Ok(ExtensionStore::extend(selector.0, source.0, target.0, args.span())?.to_sass_list())
 }
 
 pub(crate) fn selector_replace(
@@ -159,7 +159,7 @@ pub(crate) fn selector_replace(
     let source = args
         .get_err(2, "replacement")?
         .to_selector(parser, "replacement", true)?;
-    Ok(Extender::replace(selector.0, source.0, target.0, args.span())?.to_sass_list())
+    Ok(ExtensionStore::replace(selector.0, source.0, target.0, args.span())?.to_sass_list())
 }
 
 pub(crate) fn selector_unify(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {

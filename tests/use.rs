@@ -42,6 +42,10 @@ error!(
     module_not_quoted_string,
     "@use a", "Error: Expected string."
 );
+error!(
+    use_file_name_is_invalid_identifier,
+    r#"@use "a b";"#, r#"Error: The default namespace "a b" is not a valid Sass identifier."#
+);
 test!(
     use_as,
     "@use \"sass:math\" as foo;

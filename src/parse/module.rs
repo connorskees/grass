@@ -1,24 +1,24 @@
-use std::convert::TryFrom;
+// use std::convert::TryFrom;
 
-use codemap::Spanned;
+// use codemap::Spanned;
 
-use crate::{
-    // atrule::AtRuleKind,
-    builtin::modules::{
-        declare_module_color, declare_module_list, declare_module_map, declare_module_math,
-        declare_module_meta, declare_module_selector, declare_module_string, Module, ModuleConfig,
-        Modules,
-    },
-    common::Identifier,
-    error::SassResult,
-    lexer::Lexer,
-    parse::{Parser, Stmt},
-    scope::Scope,
-    Token,
-};
+// use crate::{
+//     // atrule::AtRuleKind,
+//     builtin::modules::{
+//         declare_module_color, declare_module_list, declare_module_map, declare_module_math,
+//         declare_module_meta, declare_module_selector, declare_module_string, Module, ModuleConfig,
+//         Modules,
+//     },
+//     common::Identifier,
+//     error::SassResult,
+//     lexer::Lexer,
+//     parse::{Parser, Stmt},
+//     scope::Scope,
+//     Token,
+// };
 
-impl<'a, 'b> Parser<'a, 'b> {
-    fn parse_module_alias(&mut self) -> SassResult<Option<String>> {
+// impl<'a, 'b> Parser<'a, 'b> {
+    // fn parse_module_alias(&mut self) -> SassResult<Option<String>> {
         // if !matches!(
         //     self.toks.peek(),
         //     Some(Token { kind: 'a', .. }) | Some(Token { kind: 'A', .. })
@@ -43,10 +43,10 @@ impl<'a, 'b> Parser<'a, 'b> {
         // let name = self.parse_identifier_no_interpolation(false)?;
 
         // Ok(Some(name.node))
-        todo!()
-    }
+    //     todo!()
+    // }
 
-    fn parse_module_config(&mut self) -> SassResult<ModuleConfig> {
+    // fn parse_module_config(&mut self) -> SassResult<ModuleConfig> {
         // let mut config = ModuleConfig::default();
 
         // if !matches!(
@@ -102,14 +102,14 @@ impl<'a, 'b> Parser<'a, 'b> {
         // }
 
         // Ok(config)
-        todo!()
-    }
+    //     todo!()
+    // }
 
-    pub fn load_module(
-        &mut self,
-        name: &str,
-        config: &mut ModuleConfig,
-    ) -> SassResult<(Module, Vec<Stmt>)> {
+    // pub fn load_module(
+    //     &mut self,
+    //     name: &str,
+    //     config: &mut ModuleConfig,
+    // ) -> SassResult<(Module, Vec<Stmt>)> {
         // Ok(match name {
         //     "sass:color" => (declare_module_color(), Vec::new()),
         //     "sass:list" => (declare_module_list(), Vec::new()),
@@ -164,12 +164,12 @@ impl<'a, 'b> Parser<'a, 'b> {
         //         }
         //     }
         // })
-        todo!()
-    }
+        // todo!()
+    // }
 
-    /// Returns any multiline comments that may have been found
-    /// while loading modules
-    pub(super) fn load_modules(&mut self) -> SassResult<Vec<Stmt>> {
+    // /// Returns any multiline comments that may have been found
+    // /// while loading modules
+    // pub(super) fn load_modules(&mut self) -> SassResult<Vec<Stmt>> {
         // let mut comments = Vec::new();
 
         // loop {
@@ -268,13 +268,13 @@ impl<'a, 'b> Parser<'a, 'b> {
         // self.toks.reset_cursor();
 
         // Ok(comments)
-        todo!()
-    }
+    //     todo!()
+    // }
 
-    pub(super) fn parse_module_variable_redeclaration(
-        &mut self,
-        module: Identifier,
-    ) -> SassResult<()> {
+    // pub(super) fn parse_module_variable_redeclaration(
+    //     &mut self,
+    //     module: Identifier,
+    // ) -> SassResult<()> {
         // let variable = self
         //     .parse_identifier_no_interpolation(false)?
         //     .map_node(Into::into);
@@ -307,6 +307,6 @@ impl<'a, 'b> Parser<'a, 'b> {
         //     .update_var(variable, value.node)?;
 
         // Ok(())
-        todo!()
-    }
-}
+    //     todo!()
+    // }
+// }

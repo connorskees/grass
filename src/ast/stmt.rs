@@ -1,4 +1,9 @@
-use std::collections::HashSet;
+use std::{
+    cell::RefCell,
+    collections::{HashMap, HashSet},
+    path::PathBuf,
+    sync::Arc,
+};
 
 use codemap::{Span, Spanned};
 
@@ -8,6 +13,7 @@ use crate::{
     atrule::media::MediaQuery,
     common::Identifier,
     parse::Stmt,
+    value::Value,
 };
 
 #[derive(Debug, Clone)]
@@ -114,7 +120,7 @@ impl AstWhile {
 
 #[derive(Debug, Clone)]
 pub(crate) struct AstVariableDecl {
-    pub namespace: Option<Identifier>,
+    pub namespace: Option<Spanned<Identifier>>,
     pub name: Identifier,
     pub value: AstExpr,
     pub is_guarded: bool,
@@ -183,7 +189,7 @@ pub(crate) struct AstContentBlock {
 
 #[derive(Debug, Clone)]
 pub(crate) struct AstInclude {
-    pub namespace: Option<Identifier>,
+    pub namespace: Option<Spanned<Identifier>>,
     pub name: Spanned<Identifier>,
     pub args: ArgumentInvocation,
     pub content: Option<AstContentBlock>,
@@ -272,6 +278,113 @@ impl AstImport {
 }
 
 #[derive(Debug, Clone)]
+pub(crate) struct AstUseRule {
+    pub url: PathBuf,
+    pub namespace: Option<String>,
+    pub configuration: Vec<ConfiguredVariable>,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct ConfiguredVariable {
+    pub name: Spanned<Identifier>,
+    pub expr: Spanned<AstExpr>,
+    pub is_guarded: bool,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct Configuration {
+    pub values: Arc<RefCell<HashMap<Identifier, ConfiguredValue>>>,
+    pub original_config: Option<Box<Self>>,
+    pub span: Option<Span>,
+}
+
+impl Configuration {
+    pub fn first(&self) -> Option<Spanned<Identifier>> {
+        let values = (*self.values).borrow();
+        let (name, value) = values.iter().next()?;
+
+        Some(Spanned {
+            node: *name,
+            span: value.configuration_span?,
+        })
+    }
+
+    pub fn remove(&mut self, name: Identifier) -> Option<ConfiguredValue> {
+        (*self.values).borrow_mut().remove(&name)
+    }
+
+    pub fn is_implicit(&self) -> bool {
+        self.span.is_none()
+    }
+
+    pub fn implicit(values: HashMap<Identifier, ConfiguredValue>) -> Self {
+        Self {
+            values: Arc::new(RefCell::new(values)),
+            original_config: None,
+            span: None,
+        }
+    }
+
+    pub fn explicit(values: HashMap<Identifier, ConfiguredValue>, span: Span) -> Self {
+        Self {
+            values: Arc::new(RefCell::new(values)),
+            original_config: None,
+            span: Some(span),
+        }
+    }
+
+    pub fn empty() -> Self {
+        Self {
+            values: Arc::new(RefCell::new(HashMap::new())),
+            original_config: None,
+            span: None,
+        }
+    }
+
+    pub fn through_forward(forward: AstForwardRule) -> Self {
+        todo!()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        (*self.values).borrow().is_empty()
+    }
+
+    pub fn original_config(&self) -> &Configuration {
+        match self.original_config.as_ref() {
+            Some(v) => &*v,
+            None => self,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct ConfiguredValue {
+    pub value: Value,
+    pub configuration_span: Option<Span>,
+}
+
+impl ConfiguredValue {
+    pub fn explicit(value: Value, configuration_span: Span) -> Self {
+        Self {
+            value,
+            configuration_span: Some(configuration_span),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct AstForwardRule {
+    pub url: PathBuf,
+    pub shown_mixins_and_functions: Option<HashSet<Identifier>>,
+    pub shown_variables: Option<HashSet<Identifier>>,
+    pub hidden_mixins_and_functions: Option<HashSet<Identifier>>,
+    pub hidden_variables: Option<HashSet<Identifier>>,
+    pub prefix: Option<String>,
+    pub configuration: Vec<ConfiguredVariable>,
+}
+
+#[derive(Debug, Clone)]
 pub(crate) enum AstStmt {
     If(AstIf),
     For(AstFor),
@@ -295,13 +408,9 @@ pub(crate) enum AstStmt {
     AtRootRule(AstAtRootRule),
     Debug(AstDebugRule),
     ImportRule(AstImportRule),
+    Use(AstUseRule),
+    Forward(AstForwardRule),
 }
-
-#[derive(Debug, Clone)]
-pub(crate) struct AstUseRule {}
-
-#[derive(Debug, Clone)]
-pub(crate) struct AstForwardRule {}
 
 #[derive(Debug, Clone)]
 pub(crate) struct StyleSheet {

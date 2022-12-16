@@ -24,7 +24,7 @@ pub(crate) struct ListExpr {
 
 #[derive(Debug, Clone)]
 pub(crate) struct FunctionCallExpr {
-    pub namespace: Option<String>,
+    pub namespace: Option<Spanned<Identifier>>,
     pub name: Identifier,
     pub arguments: Box<ArgumentInvocation>,
     pub span: Span,
@@ -69,7 +69,7 @@ pub(crate) enum AstExpr {
     UnaryOp(UnaryOp, Box<Self>),
     Variable {
         name: Spanned<Identifier>,
-        namespace: Option<String>,
+        namespace: Option<Spanned<Identifier>>,
     },
 }
 

@@ -867,7 +867,7 @@ fn real_mod(n1: f64, n2: f64) -> f64 {
 fn modulo(n1: f64, n2: f64) -> f64 {
     if n2 > 0.0 {
         return real_mod(n1, n2);
-    } 
+    }
 
     if n2 == 0.0 {
         return f64::NAN;

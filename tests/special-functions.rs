@@ -4,22 +4,20 @@ mod macros;
 test!(
     calc_whitespace,
     "a {\n  color: calc(       1      );\n}\n",
-    "a {\n  color: calc( 1 );\n}\n"
+    "a {\n  color: 1;\n}\n"
 );
-test!(
+error!(
     calc_newline,
-    "a {\n  color: calc(\n);\n}\n",
-    "a {\n  color: calc( );\n}\n"
+    "a {\n  color: calc(\n);\n}\n", "Error: Expected number, variable, function, or calculation."
 );
-test!(
+error!(
     calc_multiple_args,
-    "a {\n  color: calc(1, 2, a, b, c);\n}\n",
-    "a {\n  color: calc(1, 2, a, b, c);\n}\n"
+    "a {\n  color: calc(1, 2, a, b, c);\n}\n", r#"Error: expected "+", "-", "*", "/", or ")"."#
 );
 test!(
-    calc_does_not_evaluate_arithmetic,
+    calc_does_evaluate_arithmetic,
     "a {\n  color: calc(1 + 2);\n}\n",
-    "a {\n  color: calc(1 + 2);\n}\n"
+    "a {\n  color: 3;\n}\n"
 );
 test!(
     calc_mul_negative_number,
@@ -31,20 +29,18 @@ test!(
     "a {\n  color: calc(#{1 + 2});\n}\n",
     "a {\n  color: calc(3);\n}\n"
 );
-test!(
+error!(
     calc_retains_silent_comment,
-    "a {\n  color: calc(//);\n}\n",
-    "a {\n  color: calc(//);\n}\n"
+    "a {\n  color: calc(//);\n}\n", "Error: Expected number, variable, function, or calculation."
 );
-test!(
+error!(
     calc_retains_multiline_comment,
-    "a {\n  color: calc(/**/);\n}\n",
-    "a {\n  color: calc(/**/);\n}\n"
+    "a {\n  color: calc(/**/);\n}\n", "Error: Expected number, variable, function, or calculation."
 );
-test!(
+error!(
     calc_nested_parens,
     "a {\n  color: calc((((()))));\n}\n",
-    "a {\n  color: calc((((()))));\n}\n"
+    "Error: Expected number, variable, function, or calculation."
 );
 test!(
     calc_invalid_arithmetic,
@@ -66,25 +62,22 @@ test!(
     "a {\n  color: -webkit-calc(1 + 2);\n}\n",
     "a {\n  color: -webkit-calc(1 + 2);\n}\n"
 );
-test!(
+error!(
     calc_quoted_string,
-    r#"a { color: calc("\ "); }"#,
-    "a {\n  color: calc(\" \");\n}\n"
+    r#"a { color: calc("\ "); }"#, "Error: Expected number, variable, function, or calculation."
 );
-test!(
+error!(
     calc_quoted_string_single_quoted_paren,
-    "a {\n  color: calc(\")\");\n}\n",
-    "a {\n  color: calc(\")\");\n}\n"
+    r#"a {\n  color: calc(")");\n}\n"#,
+    "Error: Expected number, variable, function, or calculation."
 );
-test!(
+error!(
     calc_quoted_string_single_quotes,
-    "a {\n  color: calc('a');\n}\n",
-    "a {\n  color: calc(\"a\");\n}\n"
+    "a {\n  color: calc('a');\n}\n", "Error: Expected number, variable, function, or calculation."
 );
-test!(
+error!(
     calc_hash_no_interpolation,
-    "a {\n  color: calc(#);\n}\n",
-    "a {\n  color: calc(#);\n}\n"
+    "a {\n  color: calc(#);\n}\n", "Error: Expected number, variable, function, or calculation."
 );
 test!(
     element_whitespace,
@@ -239,23 +232,21 @@ error!(
     progid_nothing_after,
     "a { color: progid:", "Error: expected \"(\"."
 );
-test!(
+error!(
     clamp_empty_args,
-    "a {\n  color: clamp();\n}\n",
-    "a {\n  color: clamp();\n}\n"
+    "a {\n  color: clamp();\n}\n", "Error: Expected number, variable, function, or calculation."
 );
-test!(
+error!(
     clamp_parens_in_args,
     "a {\n  color: clamp((()));\n}\n",
-    "a {\n  color: clamp((()));\n}\n"
+    "Error: Expected number, variable, function, or calculation."
 );
-test!(
+error!(
     clamp_single_arg,
-    "a {\n  color: clamp(1);\n}\n",
-    "a {\n  color: clamp(1);\n}\n"
+    "a {\n  color: clamp(1);\n}\n", "Error: 3 arguments required, but only 1 was passed."
 );
 test!(
     clamp_many_args,
     "a {\n  color: clamp(1, 2, 3);\n}\n",
-    "a {\n  color: clamp(1, 2, 3);\n}\n"
+    "a {\n  color: 2;\n}\n"
 );

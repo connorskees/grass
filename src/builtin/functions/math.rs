@@ -1,4 +1,4 @@
-use crate::builtin::builtin_imports::*;
+use crate::{builtin::builtin_imports::*, parse::div};
 
 pub(crate) fn percentage(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
@@ -256,15 +256,7 @@ pub(crate) fn divide(mut args: ArgumentResult, parser: &mut Visitor) -> SassResu
     let number1 = args.get_err(0, "number1")?;
     let number2 = args.get_err(1, "number2")?;
 
-    // ValueVisitor::new(parser, args.span()).eval(
-    //     HigherIntermediateValue::BinaryOp(
-    //         Box::new(HigherIntermediateValue::Literal(number1)),
-    //         Op::Div,
-    //         Box::new(HigherIntermediateValue::Literal(number2)),
-    //     ),
-    //     None,
-    // )
-    todo!()
+    div(number1, number2, parser.parser.options, args.span())
 }
 
 pub(crate) fn declare(f: &mut GlobalFunctionMap) {

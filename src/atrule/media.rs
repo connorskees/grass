@@ -230,19 +230,9 @@ impl MediaQuery {
             map: parser.map,
             path: parser.path,
             is_plain_css: false,
-            // scopes: parser.scopes,
-            // global_scope: parser.global_scope,
-            // super_selectors: parser.super_selectors,
             span_before: parser.span_before,
-            // content: parser.content,
             flags: parser.flags,
-            // at_root: parser.at_root,
-            // at_root_has_selector: parser.at_root_has_selector,
-            // extender: parser.extender,
-            // content_scopes: parser.content_scopes,
             options: parser.options,
-            modules: parser.modules,
-            module_config: parser.module_config,
         };
 
         MediaQueryParser::new(&mut parser).parse()

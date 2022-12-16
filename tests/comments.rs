@@ -163,3 +163,8 @@ test!(
     /**/",
     "a {\n  color: red;\n}\na d {\n  color: red;\n}\n\n/**/\nc {\n  color: red;\n}\n\n/**/\n"
 );
+test!(
+    same_line_loud_comments_are_emitted_on_same_line_of_ruleset_brackets,
+    r"a {/**/}",
+    "a { /**/ }\n"
+);

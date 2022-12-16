@@ -25,9 +25,11 @@ impl<'a> Lexer<'a> {
         matches!(self.peek(), Some(Token { kind, .. }) if kind == c)
     }
 
-    pub fn span_from(&self, start: usize) -> Span {
+    pub fn span_from(&mut self, start: usize) -> Span {
         let start = self.buf[start].pos;
+        self.cursor = self.cursor.saturating_sub(1);
         let end = self.current_span();
+        self.cursor += 1;
 
         start.merge(end)
     }

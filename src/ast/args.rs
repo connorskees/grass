@@ -166,14 +166,10 @@ impl ArgumentResult {
     /// Replaces argument with `Value::Null` gravestone
     pub fn get_positional(&mut self, idx: usize) -> Option<Spanned<Value>> {
         let val = match self.positional.get_mut(idx) {
-            Some(v) => {
-                let mut val = Value::Null;
-                mem::swap(v, &mut val);
-                Some(Spanned {
-                    node: val,
-                    span: self.span,
-                })
-            }
+            Some(v) => Some(Spanned {
+                node: mem::replace(v, Value::Null),
+                span: self.span,
+            }),
             None => None,
         };
 

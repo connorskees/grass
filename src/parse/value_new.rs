@@ -1129,6 +1129,8 @@ impl<'c> ValueParser<'c> {
 
         let identifier = parser.parse_interpolated_identifier()?;
 
+        let ident_span = parser.toks.span_from(start);
+
         let plain = identifier.as_plain();
         let lower = plain.map(str::to_ascii_lowercase);
 
@@ -1185,7 +1187,14 @@ impl<'c> ValueParser<'c> {
                 parser.toks.next();
 
                 match plain {
-                    Some(s) => self.namespaced_expression(s),
+                    Some(s) => self.namespaced_expression(
+                        Spanned {
+                            node: Identifier::from(s),
+                            span: ident_span,
+                        },
+                        start,
+                        parser,
+                    ),
                     None => todo!("Interpolation isn't allowed in namespaces."),
                 }
             }
@@ -1219,8 +1228,39 @@ impl<'c> ValueParser<'c> {
         }
     }
 
-    fn namespaced_expression(&mut self, namespace: &str) -> SassResult<Spanned<AstExpr>> {
-        todo!()
+    fn namespaced_expression(
+        &mut self,
+        namespace: Spanned<Identifier>,
+        start: usize,
+        parser: &mut Parser,
+    ) -> SassResult<Spanned<AstExpr>> {
+        if parser.toks.next_char_is('$') {
+            let name_start = parser.toks.cursor();
+            let name = parser.parse_variable_name()?;
+            let span = parser.toks.span_from(start);
+            Parser::assert_public(&name, span);
+
+            return Ok(AstExpr::Variable {
+                name: Spanned {
+                    node: Identifier::from(name),
+                    span: parser.toks.span_from(name_start),
+                },
+                namespace: Some(namespace),
+            }
+            .span(span));
+        }
+
+        let name = parser.parse_public_identifier()?;
+        let args = parser.parse_argument_invocation(false, false)?;
+        let span = parser.toks.span_from(start);
+
+        Ok(AstExpr::FunctionCall(FunctionCallExpr {
+            namespace: Some(namespace),
+            name: Identifier::from(name),
+            arguments: Box::new(args),
+            span: span,
+        })
+        .span(span))
     }
 
     fn parse_unicode_range(&mut self, parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
@@ -1380,7 +1420,7 @@ impl<'c> ValueParser<'c> {
 
         let normalized = unvendor(name);
 
-        let mut buffer = Interpolation::new(parser.span_before);
+        let mut buffer;
 
         match normalized {
             "calc" | "element" | "expression" => {
@@ -1388,24 +1428,25 @@ impl<'c> ValueParser<'c> {
                     return Ok(None);
                 }
 
-                let mut new_buffer = Interpolation::new_plain(name.to_owned(), parser.span_before);
-                new_buffer.add_char('(');
-                buffer = new_buffer;
+                buffer = Interpolation::new_plain(name.to_owned(), parser.span_before);
+                buffer.add_char('(');
             }
             "progid" => {
-                //     if (!scanner.scanChar($colon)) return null;
-                //     buffer = InterpolationBuffer()
-                //       ..write(name)
-                //       ..writeCharCode($colon);
-                //     var next = scanner.peekChar();
-                //     while (next != null && (isAlphabetic(next) || next == $dot)) {
-                //       buffer.writeCharCode(scanner.readChar());
-                //       next = scanner.peekChar();
-                //     }
-                //     scanner.expectChar($lparen);
-                //     buffer.writeCharCode($lparen);
+                if !parser.consume_char_if_exists(':') {
+                    return Ok(None);
+                }
+                buffer = Interpolation::new_plain(name.to_owned(), parser.span_before);
+                buffer.add_char(':');
 
-                todo!()
+                while let Some(Token { kind, .. }) = parser.toks.peek() {
+                    if !kind.is_alphabetic() && kind != '.' {
+                        break;
+                    }
+                    buffer.add_char(kind);
+                    parser.toks.next();
+                }
+                parser.expect_char('(')?;
+                buffer.add_char('(');
             }
             "url" => {
                 return Ok(self.try_parse_url_contents(parser, None)?.map(|contents| {
@@ -1543,8 +1584,16 @@ impl<'c> ValueParser<'c> {
             _ => {
                 let start = parser.toks.cursor();
                 let ident = parser.__parse_identifier(false, false)?;
+                let ident_span = parser.toks.span_from(start);
                 if parser.consume_char_if_exists('.') {
-                    return self.namespaced_expression(&ident);
+                    return self.namespaced_expression(
+                        Spanned {
+                            node: Identifier::from(&ident),
+                            span: ident_span,
+                        },
+                        start,
+                        parser,
+                    );
                 }
 
                 if !parser.toks.next_char_is('(') {
@@ -1729,7 +1778,7 @@ impl<'c> ValueParser<'c> {
             "clamp" => {
                 let args = self.parse_calculation_arguments(parser, Some(3), start)?;
                 AstExpr::Calculation {
-                    name: CalculationName::Calc,
+                    name: CalculationName::Clamp,
                     args,
                 }
                 .span(parser.toks.span_from(start))

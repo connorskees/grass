@@ -125,7 +125,7 @@ pub(crate) fn inspect(mut args: ArgumentResult, parser: &mut Visitor) -> SassRes
 pub(crate) fn variable_exists(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "name")? {
-        Value::String(s, _) => Ok(Value::bool(parser.env.var_exists(s.into()))),
+        Value::String(s, _) => Ok(Value::bool(parser.env.var_exists(s.into(), None)?)),
         v => Err((
             format!("$name: {} is not a string.", v.inspect(args.span())?),
             args.span(),
@@ -278,15 +278,15 @@ pub(crate) fn get_function(mut args: ArgumentResult, parser: &mut Visitor) -> Sa
                 .into());
         }
 
-        (*parser.env.modules)
-            .borrow()
-            .get(module_name.into(), args.span())?
-            .get_fn(Spanned {
-                node: name,
+        parser.env.get_fn(
+            name,
+            Some(Spanned {
+                node: module_name.into(),
                 span: args.span(),
-            })?
+            }),
+        )?
     } else {
-        parser.env.get_fn(name)
+        parser.env.get_fn(name, None)?
     } {
         Some(f) => f,
         None => match GLOBAL_FUNCTIONS.get(name.as_str()) {

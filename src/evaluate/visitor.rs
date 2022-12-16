@@ -1,7 +1,7 @@
 use std::{
     borrow::{Borrow, Cow},
     cell::{Ref, RefCell},
-    collections::{BTreeMap, BTreeSet, HashSet},
+    collections::{BTreeMap, BTreeSet, HashMap, HashSet},
     ffi::OsStr,
     fmt, mem,
     path::{Path, PathBuf},
@@ -20,15 +20,23 @@ use crate::{
         mixin::Mixin,
         UnknownAtRule,
     },
-    builtin::{meta::IF_ARGUMENTS, modules::ModuleConfig, Builtin, GLOBAL_FUNCTIONS},
+    builtin::{
+        meta::IF_ARGUMENTS,
+        modules::{
+            declare_module_color, declare_module_list, declare_module_map, declare_module_math,
+            declare_module_meta, declare_module_selector, declare_module_string, Module,
+            ModuleConfig,
+        },
+        Builtin, GLOBAL_FUNCTIONS,
+    },
     common::{unvendor, BinaryOp, Identifier, ListSeparator, QuoteKind, UnaryOp},
     error::{SassError, SassResult},
     interner::InternedString,
     lexer::Lexer,
     parse::{add, cmp, div, mul, rem, single_eq, sub, KeyframesSelectorParser, Parser, Stmt},
     selector::{
-        ComplexSelectorComponent, ExtendRule, ExtendedSelector, Extender, Selector, SelectorList,
-        SelectorParser,
+        ComplexSelectorComponent, ExtendRule, ExtendedSelector, ExtensionStore, Selector,
+        SelectorList, SelectorParser,
     },
     style::Style,
     token::Token,
@@ -222,11 +230,12 @@ pub(crate) struct Visitor<'a> {
     pub warnings_emitted: HashSet<Span>,
     pub media_queries: Option<Vec<MediaQuery>>,
     pub media_query_sources: Option<IndexSet<MediaQuery>>,
-    pub extender: Extender,
+    pub extender: ExtensionStore,
     pub current_import_path: PathBuf,
     pub module_config: ModuleConfig,
     css_tree: CssTree,
     parent: Option<CssTreeIdx>,
+    configuration: Configuration,
 }
 
 impl<'a> Visitor<'a> {
@@ -234,7 +243,7 @@ impl<'a> Visitor<'a> {
         let mut flags = ContextFlags::empty();
         flags.set(ContextFlags::IN_SEMI_GLOBAL_SCOPE, true);
 
-        let extender = Extender::new(parser.span_before);
+        let extender = ExtensionStore::new(parser.span_before);
 
         let current_import_path = parser.path.to_path_buf();
 
@@ -252,6 +261,7 @@ impl<'a> Visitor<'a> {
             parent: None,
             current_import_path,
             module_config: ModuleConfig::default(),
+            configuration: Configuration::empty(),
         }
     }
 
@@ -309,7 +319,193 @@ impl<'a> Visitor<'a> {
             AstStmt::Extend(extend_rule) => self.visit_extend_rule(extend_rule),
             AstStmt::AtRootRule(at_root_rule) => self.visit_at_root_rule(at_root_rule),
             AstStmt::Debug(debug_rule) => self.visit_debug_rule(debug_rule),
+            AstStmt::Use(use_rule) => {
+                self.visit_use_rule(use_rule)?;
+                Ok(None)
+            }
+            AstStmt::Forward(_) => todo!(),
         }
+    }
+
+    fn execute(
+        &mut self,
+        stylesheet: StyleSheet,
+        configuration: Option<Configuration>,
+        names_in_errors: bool,
+    ) -> SassResult<Module> {
+        let env = Environment::new();
+        let mut extension_store = ExtensionStore::new(self.parser.span_before);
+
+        self.with_environment::<SassResult<()>>(env.new_closure(), |visitor| {
+            // let old_importer = visitor._importer;
+            // let old_stylesheet = visitor.__stylesheet;
+            // let old_root = visitor.__root;
+            let old_parent = visitor.parent;
+            // let old_end_of_imports = visitor.__endOfImports;
+            // let old_out_of_order_imports = visitor._outOfOrderImports;
+            mem::swap(&mut visitor.extender, &mut extension_store);
+            let old_style_rule = visitor.style_rule_ignoring_at_root.take();
+            let old_media_queries = visitor.media_queries.take();
+            let old_declaration_name = visitor.declaration_name.take();
+            let old_in_unknown_at_rule = visitor.flags.in_unknown_at_rule();
+            let old_at_root_excluding_style_rule = visitor.flags.at_root_excluding_style_rule();
+            let old_in_keyframes = visitor.flags.in_keyframes();
+            let old_configuration = if let Some(new_config) = configuration {
+                Some(mem::replace(&mut visitor.configuration, new_config))
+            } else {
+                None
+            };
+            visitor.parent = None;
+            visitor.flags.set(ContextFlags::IN_UNKNOWN_AT_RULE, false);
+            visitor
+                .flags
+                .set(ContextFlags::AT_ROOT_EXCLUDING_STYLE_RULE, false);
+            visitor.flags.set(ContextFlags::IN_KEYFRAMES, false);
+
+            visitor.visit_stylesheet(stylesheet)?;
+
+            // visitor.importer = old_importer;
+            // visitor.stylesheet = old_stylesheet;
+            // visitor.root = old_root;
+            visitor.parent = old_parent;
+            // visitor.end_of_imports = old_end_of_imports;
+            // visitor.out_of_order_imports = old_out_of_order_imports;
+            mem::swap(&mut visitor.extender, &mut extension_store);
+            visitor.style_rule_ignoring_at_root = old_style_rule;
+            visitor.media_queries = old_media_queries;
+            visitor.declaration_name = old_declaration_name;
+            visitor
+                .flags
+                .set(ContextFlags::IN_UNKNOWN_AT_RULE, old_in_unknown_at_rule);
+            visitor.flags.set(
+                ContextFlags::AT_ROOT_EXCLUDING_STYLE_RULE,
+                old_at_root_excluding_style_rule,
+            );
+            visitor
+                .flags
+                .set(ContextFlags::IN_KEYFRAMES, old_in_keyframes);
+            if let Some(old_config) = old_configuration {
+                visitor.configuration = old_config;
+            }
+
+            Ok(())
+        })?;
+
+        let module = env.to_module(extension_store);
+
+        // Ok(())
+        Ok(module)
+    }
+
+    fn load_module(
+        &mut self,
+        url: &Path,
+        configuration: Option<Configuration>,
+        names_in_errors: bool,
+        span: Span,
+        callback: impl Fn(&mut Self, Module) -> SassResult<()>,
+    ) -> SassResult<()> {
+        let builtin = match url.to_string_lossy().as_ref() {
+            "sass:color" => Some(declare_module_color()),
+            "sass:list" => Some(declare_module_list()),
+            "sass:map" => Some(declare_module_map()),
+            "sass:math" => Some(declare_module_math()),
+            "sass:meta" => Some(declare_module_meta()),
+            "sass:selector" => Some(declare_module_selector()),
+            "sass:string" => Some(declare_module_string()),
+            _ => None,
+        };
+
+        if let Some(builtin) = builtin {
+            // todo: lots of ugly unwraps here
+            if configuration.is_some() && !configuration.as_ref().unwrap().is_implicit() {
+                let msg = if names_in_errors {
+                    format!(
+                        "Built-in module {} can't be configured.",
+                        url.to_string_lossy()
+                    )
+                } else {
+                    "Built-in modules can't be configured.".to_owned()
+                };
+
+                return Err((msg, configuration.unwrap().span.unwrap()).into());
+            }
+
+            callback(self, builtin)?;
+            return Ok(());
+        }
+
+        // todo: decide on naming convention for style_sheet vs stylesheet
+        let stylesheet = self.load_style_sheet(url.to_string_lossy().as_ref(), false, span)?;
+
+        let module = self.execute(stylesheet, configuration, names_in_errors)?;
+
+        callback(self, module)?;
+
+        Ok(())
+    }
+
+    fn visit_use_rule(&mut self, use_rule: AstUseRule) -> SassResult<()> {
+        let mut configuration = Configuration::empty();
+
+        if !use_rule.configuration.is_empty() {
+            let mut values = HashMap::new();
+
+            for var in use_rule.configuration {
+                let value = self.visit_expr(var.expr.node)?;
+                let value = self.without_slash(value);
+                values.insert(
+                    var.name.node,
+                    ConfiguredValue::explicit(value, var.name.span.merge(var.expr.span)),
+                );
+            }
+
+            configuration = Configuration::explicit(values, use_rule.span);
+        }
+
+        let span = use_rule.span;
+
+        let namespace = use_rule
+            .namespace
+            .as_ref()
+            .map(|s| Identifier::from(s.trim_start_matches("sass:")));
+
+        self.load_module(
+            &use_rule.url,
+            Some(configuration.clone()),
+            false,
+            span,
+            |visitor, module| {
+                visitor.env.add_module(namespace, module, span)?;
+
+                Ok(())
+            },
+        )?;
+
+        Self::assert_configuration_is_empty(&configuration, false)?;
+
+        Ok(())
+    }
+
+    fn assert_configuration_is_empty(
+        config: &Configuration,
+        name_in_error: bool,
+    ) -> SassResult<()> {
+        // By definition, implicit configurations are allowed to only use a subset
+        // of their values.
+        if config.is_empty() || config.is_implicit() {
+            return Ok(());
+        }
+
+        let Spanned { node: name, span } = config.first().unwrap();
+
+        let msg = if name_in_error {
+            format!("${name} was not declared with !default in the @used module.")
+        } else {
+            "This variable was not declared with !default in the @used module.".to_owned()
+        };
+
+        Err((msg, span).into())
     }
 
     fn visit_import_rule(&mut self, import_rule: AstImportRule) -> SassResult<Option<Value>> {
@@ -357,12 +553,14 @@ impl<'a> Visitor<'a> {
             .with_file_name(format!("_{}", name.to_str().unwrap()))
             .with_extension("scss"));
         try_path!(path_buf.clone());
+        try_path!(path.with_file_name(name).with_extension("css"));
         try_path!(path_buf.join("index.scss"));
         try_path!(path_buf.join("_index.scss"));
 
         for path in &self.parser.options.load_paths {
             if self.parser.options.fs.is_dir(path) {
                 try_path!(path.join(name).with_extension("scss"));
+                try_path!(path.with_file_name(name).with_extension("css"));
                 try_path!(path
                     .join(format!("_{}", name.to_str().unwrap()))
                     .with_extension("scss"));
@@ -371,6 +569,7 @@ impl<'a> Visitor<'a> {
             } else {
                 try_path!(path.to_path_buf());
                 try_path!(path.with_file_name(name).with_extension("scss"));
+                try_path!(path.with_file_name(name).with_extension("css"));
                 try_path!(path
                     .with_file_name(format!("_{}", name.to_str().unwrap()))
                     .with_extension("scss"));
@@ -382,7 +581,12 @@ impl<'a> Visitor<'a> {
         None
     }
 
-    fn import_like_node(&mut self, url: &str, for_import: bool) -> SassResult<StyleSheet> {
+    fn import_like_node(
+        &mut self,
+        url: &str,
+        for_import: bool,
+        span: Span,
+    ) -> SassResult<StyleSheet> {
         if let Some(name) = self.find_import(url.as_ref()) {
             let file = self.parser.map.add_file(
                 name.to_string_lossy().into(),
@@ -392,24 +596,28 @@ impl<'a> Visitor<'a> {
             let mut old_import_path = name.clone();
             mem::swap(&mut self.current_import_path, &mut old_import_path);
 
+            let old_is_use_allowed = self.flags.is_use_allowed();
+            self.flags.set(ContextFlags::IS_USE_ALLOWED, true);
+
             let style_sheet = Parser {
                 toks: &mut Lexer::new_from_file(&file),
                 map: self.parser.map,
-                is_plain_css: false,
+                is_plain_css: name.extension() == Some(OsStr::new("css")),
                 path: &name,
                 span_before: file.span.subspan(0, 0),
                 flags: self.flags,
                 options: self.parser.options,
-                modules: self.parser.modules,
-                module_config: self.parser.module_config,
             }
             .__parse()?;
+
+            self.flags
+                .set(ContextFlags::IS_USE_ALLOWED, old_is_use_allowed);
 
             mem::swap(&mut self.current_import_path, &mut old_import_path);
             return Ok(style_sheet);
         }
 
-        Err(("Can't find stylesheet to import.", self.parser.span_before).into())
+        Err(("Can't find stylesheet to import.", span).into())
         // let path = self.find_import(url.as_ref());
         //      var result = _nodeImporter!.loadRelative(originalUrl, previous, forImport);
 
@@ -433,11 +641,17 @@ impl<'a> Visitor<'a> {
         //     isDependency: isDependency);
     }
 
-    fn load_style_sheet(&mut self, url: &str, for_import: bool) -> SassResult<StyleSheet> {
+    fn load_style_sheet(
+        &mut self,
+        url: &str,
+        // default=false
+        for_import: bool,
+        span: Span,
+    ) -> SassResult<StyleSheet> {
         // if let Some(result) = self.import_like_node(url, for_import)? {
         //     return Ok(result);
         // }
-        self.import_like_node(url, for_import)
+        self.import_like_node(url, for_import, span)
         //         var result = await _importLikeNode(
         //     url, baseUrl ?? _stylesheet.span.sourceUrl, forImport);
         // if (result != null) {
@@ -478,7 +692,7 @@ impl<'a> Visitor<'a> {
 
     // todo: import cache
     fn visit_dynamic_import_rule(&mut self, dynamic_import: AstSassImport) -> SassResult<()> {
-        let stylesheet = self.load_style_sheet(&dynamic_import.url, true)?;
+        let stylesheet = self.load_style_sheet(&dynamic_import.url, true, dynamic_import.span)?;
 
         //     return _withStackFrame("@import", import, () async {
         //   var result =
@@ -898,19 +1112,9 @@ impl<'a> Visitor<'a> {
                 map: self.parser.map,
                 path: self.parser.path,
                 is_plain_css: false,
-                // scopes: self.parser.scopes,
-                // global_scope: self.parser.global_scope,
-                // super_selectors: self.parser.super_selectors,
                 span_before: self.parser.span_before,
-                // content: self.parser.content,
                 flags: self.parser.flags,
-                // at_root: self.parser.at_root,
-                // at_root_has_selector: self.parser.at_root_has_selector,
-                // extender: self.parser.extender,
-                // content_scopes: self.parser.content_scopes,
                 options: self.parser.options,
-                modules: self.parser.modules,
-                module_config: self.parser.module_config,
             },
             !self.flags.in_plain_css(),
             !self.flags.in_plain_css(),
@@ -1360,7 +1564,9 @@ impl<'a> Visitor<'a> {
     }
 
     fn visit_include_stmt(&mut self, include_stmt: AstInclude) -> SassResult<Option<Value>> {
-        let mixin = self.env.get_mixin(include_stmt.name)?;
+        let mixin = self
+            .env
+            .get_mixin(include_stmt.name, include_stmt.namespace)?;
 
         match mixin {
             Mixin::Builtin(mixin) => {
@@ -1593,28 +1799,34 @@ impl<'a> Visitor<'a> {
     }
 
     fn visit_variable_decl(&mut self, decl: AstVariableDecl) -> SassResult<Option<Value>> {
+        let name = Spanned {
+            node: decl.name,
+            span: decl.span,
+        };
+
         if decl.is_guarded {
             if decl.namespace.is_none() && self.env.at_root() {
-                let var_override = self.module_config.get(decl.name);
-                if !matches!(var_override, Some(Value::Null) | None) {
+                let var_override = self.configuration.remove(decl.name);
+                if !matches!(
+                    var_override,
+                    Some(ConfiguredValue {
+                        value: Value::Null,
+                        ..
+                    }) | None
+                ) {
                     self.env.insert_var(
-                        decl.name,
-                        var_override.unwrap(),
+                        name,
+                        None,
+                        var_override.unwrap().value,
                         true,
                         self.flags.in_semi_global_scope(),
-                    );
+                    )?;
                     return Ok(None);
                 }
             }
 
-            if self.env.var_exists(decl.name) {
-                let value = self
-                    .env
-                    .get_var(Spanned {
-                        node: decl.name,
-                        span: self.parser.span_before,
-                    })
-                    .unwrap();
+            if self.env.var_exists(decl.name, decl.namespace)? {
+                let value = self.env.get_var(name, decl.namespace).unwrap();
 
                 if value != Value::Null {
                     return Ok(None);
@@ -1635,11 +1847,12 @@ impl<'a> Visitor<'a> {
         let value = self.without_slash(value);
 
         self.env.insert_var(
-            decl.name,
+            name,
+            decl.namespace,
             value,
             decl.is_global,
             self.flags.in_semi_global_scope(),
-        );
+        )?;
         // if decl.is_global || self.env.at_root() {
         //     self.env.global_scope_mut().insert_var(decl.name, value);
         // } else {
@@ -2076,7 +2289,8 @@ impl<'a> Visitor<'a> {
 
     fn visit_function_call_expr(&mut self, func_call: FunctionCallExpr) -> SassResult<Value> {
         let name = func_call.name;
-        let func = match self.env.get_fn(name) {
+
+        let func = match self.env.get_fn(name, func_call.namespace)? {
             Some(func) => func,
             None => {
                 if let Some(f) = GLOBAL_FUNCTIONS.get(name.as_str()) {
@@ -2189,13 +2403,7 @@ impl<'a> Visitor<'a> {
             AstExpr::Paren(expr) => self.visit_expr(*expr)?,
             AstExpr::ParentSelector => self.visit_parent_selector(),
             AstExpr::UnaryOp(op, expr) => self.visit_unary_op(op, *expr)?,
-            AstExpr::Variable { name, namespace } => {
-                if namespace.is_some() {
-                    todo!()
-                }
-
-                self.env.get_var(name)?
-            }
+            AstExpr::Variable { name, namespace } => self.env.get_var(name, namespace)?,
         })
     }
 
@@ -2531,19 +2739,9 @@ impl<'a> Visitor<'a> {
                 map: self.parser.map,
                 path: self.parser.path,
                 is_plain_css: false,
-                // scopes: self.parser.scopes,
-                // global_scope: self.parser.global_scope,
-                // super_selectors: self.parser.super_selectors,
                 span_before: self.parser.span_before,
-                // content: self.parser.content,
                 flags: self.parser.flags,
-                // at_root: self.parser.at_root,
-                // at_root_has_selector: self.parser.at_root_has_selector,
-                // extender: self.parser.extender,
-                // content_scopes: self.parser.content_scopes,
                 options: self.parser.options,
-                modules: self.parser.modules,
-                module_config: self.parser.module_config,
             })
             .parse_keyframes_selector()?;
 
@@ -2579,19 +2777,9 @@ impl<'a> Visitor<'a> {
                 map: self.parser.map,
                 path: self.parser.path,
                 is_plain_css: false,
-                // scopes: self.parser.scopes,
-                // global_scope: self.parser.global_scope,
-                // super_selectors: self.parser.super_selectors,
                 span_before: self.parser.span_before,
-                // content: self.parser.content,
                 flags: self.parser.flags,
-                // at_root: self.parser.at_root,
-                // at_root_has_selector: self.parser.at_root_has_selector,
-                // extender: self.parser.extender,
-                // content_scopes: self.parser.content_scopes,
                 options: self.parser.options,
-                modules: self.parser.modules,
-                module_config: self.parser.module_config,
             },
             !self.flags.in_plain_css(),
             !self.flags.in_plain_css(),
