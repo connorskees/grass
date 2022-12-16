@@ -118,10 +118,10 @@ impl Display for SassError {
             SassErrorKind::Raw(..) => unreachable!(),
         };
 
-        let first_bar = if unicode { '╷' } else { '|' };
+        let first_bar = if unicode { '╷' } else { ',' };
         let second_bar = if unicode { '│' } else { '|' };
         let third_bar = if unicode { '│' } else { '|' };
-        let fourth_bar = if unicode { '╵' } else { '|' };
+        let fourth_bar = if unicode { '╵' } else { '\'' };
 
         let line = loc.begin.line + 1;
         let col = loc.begin.column + 1;
@@ -148,7 +148,12 @@ impl Display for SassError {
                 .collect::<String>()
         )?;
         writeln!(f, "{}{}", padding, fourth_bar)?;
-        writeln!(f, "./{}:{}:{}", loc.file.name(), line, col)?;
+        //  input.scss 3:1  root stylesheet
+        if unicode {
+            writeln!(f, "./{}:{}:{}", loc.file.name(), line, col)?;
+        } else {
+            writeln!(f, "  {} {}:{}  root stylesheet", loc.file.name(), line, col)?;
+        }
         Ok(())
     }
 }
