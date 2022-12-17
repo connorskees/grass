@@ -1,6 +1,6 @@
 use std::{
     borrow::{Borrow, Cow},
-    cell::{Ref, RefCell},
+    cell::{Cell, Ref, RefCell},
     collections::{BTreeMap, BTreeSet, HashMap, HashSet},
     ffi::OsStr,
     fmt, mem,
@@ -40,7 +40,7 @@ use crate::{
     },
     style::Style,
     token::Token,
-    utils::trim_ascii,
+    utils::{to_sentence, trim_ascii},
     value::{
         ArgList, CalculationArg, CalculationName, Number, SassCalculation, SassFunction, SassMap,
         SassNumber, UserDefinedFunction, Value,
@@ -1908,7 +1908,7 @@ impl<'a> Visitor<'a> {
         interpolation: Interpolation,
         warn_for_color: bool,
     ) -> SassResult<String> {
-        let span = interpolation.span;
+        let span = self.parser.span_before;
 
         // todo: potential optimization for contents len == 1 and no exprs
 
@@ -2021,22 +2021,19 @@ impl<'a> Visitor<'a> {
                 positional.append(&mut list);
                 separator = list_separator;
             }
-            Value::ArgList(ArgList {
-                elems,
-                keywords,
-                separator: list_separator,
-                ..
-            }) => {
-                let mut list = elems
+            Value::ArgList(arglist) => {
+                // todo: superfluous clone
+                for (&key, value) in arglist.keywords().into_iter() {
+                    named.insert(key, self.without_slash(value.clone()));
+                }
+
+                let mut list = arglist
+                    .elems
                     .into_iter()
                     .map(|e| self.without_slash(e))
                     .collect::<Vec<_>>();
                 positional.append(&mut list);
-                separator = list_separator;
-
-                for (key, value) in keywords {
-                    named.insert(key, self.without_slash(value));
-                }
+                separator = arglist.separator;
             }
             _ => {
                 positional.push(self.without_slash(rest));
@@ -2143,6 +2140,8 @@ impl<'a> Visitor<'a> {
                     visitor.env.scopes_mut().insert_var_last(name, value);
                 }
 
+                let were_keywords_accessed = Arc::new(Cell::new(false));
+
                 let argument_list = if let Some(rest_arg) = func.arguments().rest {
                     let rest = if evaluated.positional.len() > declared_arguments.len() {
                         &evaluated.positional[declared_arguments.len()..]
@@ -2153,6 +2152,7 @@ impl<'a> Visitor<'a> {
                     let arg_list = Value::ArgList(ArgList::new(
                         rest.to_vec(),
                         // todo: superfluous clone
+                        Arc::clone(&were_keywords_accessed),
                         evaluated.named.clone(),
                         if evaluated.separator == ListSeparator::Undecided {
                             ListSeparator::Comma
@@ -2161,10 +2161,10 @@ impl<'a> Visitor<'a> {
                         },
                     ));
 
-                    // todo: potentially superfluous clone
                     visitor
                         .env
                         .scopes_mut()
+                        // todo: superfluous clone
                         .insert_var_last(rest_arg, arg_list.clone());
 
                     Some(arg_list)
@@ -2178,8 +2178,27 @@ impl<'a> Visitor<'a> {
                     return Ok(val);
                 }
 
+                if (*were_keywords_accessed).get() {
+                    return Ok(val);
+                }
                 //   if (argumentList.wereKeywordsAccessed) return result;
 
+                let argument_word = if evaluated.named.len() == 1 {
+                    "argument"
+                } else {
+                    "arguments"
+                };
+
+                let argument_names = to_sentence(
+                    evaluated
+                        .named
+                        .keys()
+                        .map(|key| format!("${key}"))
+                        .collect(),
+                    "or",
+                );
+
+                Err((format!("No {argument_word} named {argument_names}."), span).into())
                 //   var argumentWord = pluralize('argument', evaluated.named.keys.length);
                 //   var argumentNames =
                 //       toSentence(evaluated.named.keys.map((name) => "\$$name"), 'or');
@@ -2190,7 +2209,7 @@ impl<'a> Visitor<'a> {
                 //       {callable.declaration.arguments.spanWithName: "declaration"},
                 //       _stackTrace(nodeWithSpan.span));
                 // });
-                todo!("argument list mutable")
+                // todo!("No arguments named")
             })
         });
 

@@ -334,15 +334,28 @@ pub(crate) fn content_exists(args: ArgumentResult, parser: &mut Visitor) -> Sass
     Ok(Value::bool(parser.env.content.is_some()))
 }
 
-#[allow(unused_variables, clippy::needless_pass_by_value)]
-pub(crate) fn keywords(args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+pub(crate) fn keywords(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
 
-    Err((
-        "Builtin function `keywords` is not yet implemented",
-        args.span(),
-    )
-        .into())
+    let span = args.span();
+
+    let args = match args.get_err(0, "args")? {
+        Value::ArgList(args) => args,
+        v => {
+            return Err((
+                format!("$args: {} is not an argument list.", v.inspect(span)?),
+                span,
+            )
+                .into())
+        }
+    };
+
+    return Ok(Value::Map(SassMap::new_with(
+        args.into_keywords()
+            .into_iter()
+            .map(|(name, val)| (Value::String(name.to_string(), QuoteKind::None), val))
+            .collect(),
+    )));
 }
 
 pub(crate) fn declare(f: &mut GlobalFunctionMap) {

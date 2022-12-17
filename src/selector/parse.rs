@@ -184,10 +184,6 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
         Ok(CompoundSelector { components })
     }
 
-    fn looking_at_identifier_body(&mut self) -> bool {
-        matches!(self.parser.toks.peek(), Some(t) if is_name(t.kind) || t.kind == '\\')
-    }
-
     /// Consumes a simple selector.
     ///
     /// If `allows_parent` is `Some`, this will override `self.allows_parent`. If `allows_parent`
@@ -323,7 +319,7 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
 
     fn parse_parent_selector(&mut self) -> SassResult<SimpleSelector> {
         self.parser.toks.next();
-        let suffix = if self.looking_at_identifier_body() {
+        let suffix = if self.parser.looking_at_identifier_body() {
             let mut buffer = String::new();
             self.parser
                 .parse_identifier_body(&mut buffer, false, false)?;

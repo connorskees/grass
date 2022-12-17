@@ -105,19 +105,9 @@ impl<'a, 'b> Parser<'a, 'b> {
         let value = self.parse_expression(
             Some(&|parser| {
                 Ok(match parser.toks.peek() {
-                    Some(Token { kind: '>', .. })
-                    | Some(Token { kind: '<', .. })
-                    | Some(Token { kind: ':', .. })
-                    | Some(Token { kind: ')', .. }) => true,
+                    Some(Token { kind: '>', .. }) | Some(Token { kind: '<', .. }) => true,
                     Some(Token { kind: '=', .. }) => {
-                        let is_double_eq =
-                            matches!(parser.toks.peek_next(), Some(Token { kind: '=', .. }));
-                        parser.toks.reset_cursor();
-                        // if it is a double eq, then parse as normal
-                        //
-                        // otherwise, it is a single eq and we should
-                        // treat it as a comparison
-                        !is_double_eq
+                        !matches!(parser.toks.peek_n(1), Some(Token { kind: '=', .. }))
                     }
                     _ => false,
                 })
@@ -129,147 +119,274 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     pub(super) fn parse_media_query_list(&mut self) -> SassResult<Interpolation> {
-        let mut buf = Interpolation::new(self.span_before);
+        let mut buf = Interpolation::new();
         loop {
             self.whitespace_or_comment();
-            buf.add_interpolation(self.parse_single_media_query()?);
+            self.parse_media_query(&mut buf)?;
+            self.whitespace_or_comment();
             if !self.consume_char_if_exists(',') {
                 break;
             }
-            buf.add_token(Token {
-                kind: ',',
-                pos: self.span_before,
-            });
-            buf.add_token(Token {
-                kind: ' ',
-                pos: self.span_before,
-            });
+            buf.add_char(',');
+            buf.add_char(' ');
         }
         Ok(buf)
     }
 
-    fn parse_media_feature(&mut self) -> SassResult<Interpolation> {
-        let mut buf = Interpolation::new(self.span_before);
+    // fn parse_media_feature(&mut self) -> SassResult<Interpolation> {
+    //     let mut buf = Interpolation::new();
 
-        if self.consume_char_if_exists('#') {
-            self.expect_char('{')?;
-            todo!()
-            // buf.add_expr(self.parse_interpolated_string()?);
-            // return Ok(buf);
-        };
-        buf.add_token(self.expect_char('(')?);
-        self.whitespace_or_comment();
+    //     if self.consume_char_if_exists('#') {
+    //         self.expect_char('{')?;
+    //         todo!()
+    //         // buf.add_expr(self.parse_interpolated_string()?);
+    //         // return Ok(buf);
+    //     };
+    //     buf.add_token(self.expect_char('(')?);
+    //     self.whitespace_or_comment();
 
-        buf.add_expr(self.expression_until_comparison()?);
+    //     buf.add_expr(self.expression_until_comparison()?);
 
-        if self.consume_char_if_exists(':') {
-            self.whitespace_or_comment();
+    //     if self.consume_char_if_exists(':') {
+    //         self.whitespace_or_comment();
 
-            buf.add_token(Token {
-                kind: ':',
-                pos: self.span_before,
-            });
-            buf.add_token(Token {
-                kind: ' ',
-                pos: self.span_before,
-            });
+    //         buf.add_char(':');
+    //         buf.add_char(' ');
 
-            let value = self.parse_expression(
-                Some(&|parser| Ok(matches!(parser.toks.peek(), Some(Token { kind: ')', .. })))),
-                None,
-                None,
-            )?;
-            self.expect_char(')')?;
+    //         let value = self.parse_expression(
+    //             Some(&|parser| Ok(matches!(parser.toks.peek(), Some(Token { kind: ')', .. })))),
+    //             None,
+    //             None,
+    //         )?;
+    //         self.expect_char(')')?;
 
-            buf.add_expr(value);
+    //         buf.add_expr(value);
 
-            self.whitespace_or_comment();
-            buf.add_char(')');
-            return Ok(buf);
+    //         self.whitespace_or_comment();
+    //         buf.add_char(')');
+    //         return Ok(buf);
+    //     }
+
+    //     let next_tok = self.toks.peek();
+    //     let is_angle = next_tok.map_or(false, |t| t.kind == '<' || t.kind == '>');
+    //     if is_angle || matches!(next_tok, Some(Token { kind: '=', .. })) {
+    //         buf.add_char(' ');
+    //         // todo: remove this unwrap
+    //         buf.add_token(self.toks.next().unwrap());
+    //         if is_angle && self.consume_char_if_exists('=') {
+    //             buf.add_char('=');
+    //         }
+    //         buf.add_char(' ');
+
+    //         self.whitespace_or_comment();
+
+    //         buf.add_expr(self.expression_until_comparison()?);
+    //     }
+
+    //     self.expect_char(')')?;
+    //     self.whitespace_or_comment();
+    //     buf.add_char(')');
+    //     Ok(buf)
+    // }
+
+    pub(crate) fn expect_whitespace(&mut self) -> SassResult<()> {
+        if !matches!(
+            self.toks.peek(),
+            Some(Token {
+                kind: ' ' | '\t' | '\n' | '\r',
+                ..
+            })
+        ) && !self.scan_comment()?
+        {
+            return Err(("Expected whitespace.", self.toks.current_span()).into());
         }
 
-        let next_tok = self.toks.peek();
-        let is_angle = next_tok.map_or(false, |t| t.kind == '<' || t.kind == '>');
-        if is_angle || matches!(next_tok, Some(Token { kind: '=', .. })) {
-            buf.add_char(' ');
-            // todo: remove this unwrap
-            buf.add_token(self.toks.next().unwrap());
-            if is_angle && self.consume_char_if_exists('=') {
-                buf.add_char('=');
-            }
-            buf.add_char(' ');
+        self.whitespace_or_comment();
 
+        Ok(())
+    }
+
+    fn parse_media_in_parens(&mut self, buf: &mut Interpolation) -> SassResult<()> {
+        self.expect_char('(')?;
+        buf.add_char('(');
+        self.whitespace_or_comment();
+
+        if matches!(self.toks.peek(), Some(Token { kind: '(', .. })) {
+            self.parse_media_in_parens(buf)?;
             self.whitespace_or_comment();
 
+            if self.scan_identifier("and", false)? {
+                buf.add_string(" and ".to_owned());
+                self.expect_whitespace()?;
+                self.parse_media_logic_sequence(buf, "and")?;
+            } else if self.scan_identifier("or", false)? {
+                buf.add_string(" or ".to_owned());
+                self.expect_whitespace()?;
+                self.parse_media_logic_sequence(buf, "or")?;
+            }
+        } else if self.scan_identifier("not", false)? {
+            buf.add_string("not ".to_owned());
+            self.expect_whitespace()?;
+            self.parse_media_or_interpolation(buf)?;
+        } else {
             buf.add_expr(self.expression_until_comparison()?);
+
+            if self.consume_char_if_exists(':') {
+                self.whitespace_or_comment();
+                buf.add_char(':');
+                buf.add_char(' ');
+                buf.add_expr(self.parse_expression(None, None, None)?);
+            } else {
+                let next = self.toks.peek();
+                if matches!(
+                    next,
+                    Some(Token {
+                        kind: '<' | '>' | '=',
+                        ..
+                    })
+                ) {
+                    let next = next.unwrap().kind;
+                    buf.add_char(' ');
+                    buf.add_token(self.toks.next().unwrap());
+
+                    if (next == '<' || next == '>') && self.consume_char_if_exists('=') {
+                        buf.add_char('=');
+                    }
+
+                    buf.add_char(' ');
+
+                    self.whitespace_or_comment();
+
+                    buf.add_expr(self.expression_until_comparison()?);
+
+                    if (next == '<' || next == '>') && self.consume_char_if_exists(next) {
+                        buf.add_char(' ');
+                        buf.add_char(next);
+
+                        if self.consume_char_if_exists('=') {
+                            buf.add_char('=');
+                        }
+
+                        buf.add_char(' ');
+
+                        self.whitespace_or_comment();
+                        buf.add_expr(self.expression_until_comparison()?);
+                    }
+                }
+            }
         }
 
         self.expect_char(')')?;
         self.whitespace_or_comment();
         buf.add_char(')');
-        Ok(buf)
+
+        Ok(())
     }
 
-    fn parse_single_media_query(&mut self) -> SassResult<Interpolation> {
-        let mut buf = Interpolation::new(self.span_before);
-
-        if !matches!(self.toks.peek(), Some(Token { kind: '(', .. })) {
-            buf.add_string(Spanned {
-                node: self.__parse_identifier(false, false)?,
-                span: self.span_before,
-            });
-
-            self.whitespace_or_comment();
-
-            if let Some(tok) = self.toks.peek() {
-                if !is_name_start(tok.kind) {
-                    return Ok(buf);
-                }
-            }
-
-            buf.add_token(Token {
-                kind: ' ',
-                pos: self.span_before,
-            });
-            let ident = self.__parse_identifier(false, false)?;
-
-            self.whitespace_or_comment();
-
-            if ident.to_ascii_lowercase() == "and" {
-                buf.add_string(Spanned {
-                    node: "and ".to_owned(),
-                    span: self.span_before,
-                });
-            } else {
-                buf.add_string(Spanned {
-                    node: ident,
-                    span: self.span_before,
-                });
-
-                if self.scan_identifier("and", false)? {
-                    self.whitespace_or_comment();
-                    buf.add_string(Spanned {
-                        node: " and ".to_owned(),
-                        span: self.span_before,
-                    });
-                } else {
-                    return Ok(buf);
-                }
-            }
-        }
-
+    fn parse_media_logic_sequence(
+        &mut self,
+        buf: &mut Interpolation,
+        operator: &'static str,
+    ) -> SassResult<()> {
         loop {
+            self.parse_media_or_interpolation(buf)?;
             self.whitespace_or_comment();
-            buf.add_interpolation(self.parse_media_feature()?);
-            self.whitespace_or_comment();
-            if !self.scan_identifier("and", false)? {
-                break;
+
+            if !self.scan_identifier(operator, false)? {
+                return Ok(());
             }
-            buf.add_string(Spanned {
-                node: " and ".to_owned(),
-                span: self.span_before,
-            });
+
+            self.expect_whitespace()?;
+
+            buf.add_char(' ');
+            buf.add_string(operator.to_owned());
+            buf.add_char(' ');
         }
-        Ok(buf)
+    }
+
+    fn parse_media_or_interpolation(&mut self, buf: &mut Interpolation) -> SassResult<()> {
+        if self.toks.next_char_is('#') {
+            buf.add_interpolation(self.parse_single_interpolation()?);
+        } else {
+            self.parse_media_in_parens(buf)?;
+        }
+
+        Ok(())
+    }
+
+    fn parse_media_query(&mut self, buf: &mut Interpolation) -> SassResult<()> {
+        if matches!(self.toks.peek(), Some(Token { kind: '(', .. })) {
+            self.parse_media_in_parens(buf)?;
+            self.whitespace_or_comment();
+
+            if self.scan_identifier("and", false)? {
+                buf.add_string(" and ".to_owned());
+                self.expect_whitespace()?;
+                self.parse_media_logic_sequence(buf, "and")?;
+            } else if self.scan_identifier("or", false)? {
+                buf.add_string(" or ".to_owned());
+                self.expect_whitespace()?;
+                self.parse_media_logic_sequence(buf, "or")?;
+            }
+
+            return Ok(());
+        }
+
+        let ident1 = self.parse_interpolated_identifier()?;
+
+        if ident1.as_plain().unwrap_or("").to_ascii_lowercase() == "not" {
+            // For example, "@media not (...) {"
+            self.expect_whitespace()?;
+            if !self.looking_at_interpolated_identifier() {
+                dbg!(&ident1);
+                buf.add_string("not ".to_owned());
+                self.parse_media_or_interpolation(buf)?;
+                return Ok(());
+            }
+        }
+
+        self.whitespace_or_comment();
+        buf.add_interpolation(ident1);
+        if !self.looking_at_interpolated_identifier() {
+            // For example, "@media screen {".
+            return Ok(());
+        }
+
+        buf.add_char(' ');
+
+        let ident2 = self.parse_interpolated_identifier()?;
+
+        if ident2.as_plain().unwrap_or("").to_ascii_lowercase() == "and" {
+            self.expect_whitespace()?;
+            // For example, "@media screen and ..."
+            buf.add_string(" and ".to_owned());
+        } else {
+            self.whitespace_or_comment();
+            buf.add_interpolation(ident2);
+
+            if self.scan_identifier("and", false)? {
+                // For example, "@media only screen and ..."
+                self.expect_whitespace()?;
+                buf.add_string(" and ".to_owned());
+            } else {
+                // For example, "@media only screen {"
+                return Ok(());
+            }
+        }
+
+        // We've consumed either `IDENTIFIER "and"` or
+        // `IDENTIFIER IDENTIFIER "and"`.
+
+        if self.scan_identifier("not", false)? {
+            // For example, "@media screen and not (...) {"
+            self.expect_whitespace()?;
+            buf.add_string("not ".to_owned());
+            self.parse_media_or_interpolation(buf)?;
+            return Ok(());
+        }
+
+        self.parse_media_logic_sequence(buf, "and")?;
+
+        Ok(())
     }
 }

@@ -70,6 +70,14 @@ test!(
     }",
     "a {\n  color: -0.4161468365;\n}\n"
 );
+test!(
+    use_single_quotes,
+    "@use 'sass:math';
+    a {
+        color: math.cos(2);
+    }",
+    "a {\n  color: -0.4161468365;\n}\n"
+);
 
 #[test]
 fn use_user_defined_same_directory() {

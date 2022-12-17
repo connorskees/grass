@@ -333,7 +333,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                 self.toks.next();
                 text.push('-');
             }
-            Some(Token { kind, .. }) if is_name(kind) => {
+            Some(Token { kind, .. }) if is_name_start(kind) => {
                 self.toks.next();
                 text.push(kind);
             }
@@ -698,7 +698,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         }
 
         if RESERVED_IDENTIFIERS.contains(&unvendor(&name)) {
-            return Err(("Invalid function name.", name_span).into());
+            return Err(("Invalid function name.", self.toks.span_from(start)).into());
         }
 
         self.whitespace_or_comment();
@@ -939,19 +939,13 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         // Match Ruby Sass's behavior: parse a raw URL() if possible, and if not
         // backtrack and re-parse as a function expression.
-        let mut buffer = Interpolation::new(self.span_before);
-        buffer.add_string(Spanned {
-            node: name.unwrap_or("url").to_owned(),
-            span: self.span_before,
-        });
+        let mut buffer = Interpolation::new();
+        buffer.add_string(name.unwrap_or("url").to_owned());
         buffer.add_char('(');
 
         while let Some(next) = self.toks.peek() {
             match next.kind {
-                '\\' => buffer.add_string(Spanned {
-                    node: self.parse_escape(false)?,
-                    span: self.span_before,
-                }),
+                '\\' => buffer.add_string(self.parse_escape(false)?),
                 '!' | '%' | '&' | '*'..='~' | '\u{80}'..=char::MAX => {
                     self.toks.next();
                     buffer.add_char(next.kind);
@@ -995,7 +989,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                 self.toks.span_from(start),
             ),
             None => AstExpr::InterpolatedFunction(InterpolatedFunction {
-                name: Interpolation::new_plain("url".to_owned(), self.span_before),
+                name: Interpolation::new_plain("url".to_owned()),
                 arguments: Box::new(self.parse_argument_invocation(false, false)?),
                 span: self.toks.span_from(start),
             }),
@@ -1008,7 +1002,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             self.whitespace_or_comment();
             let modifiers = self.try_import_modifiers()?;
             return Ok(AstImport::Plain(AstPlainCssImport {
-                url: Interpolation::new_with_expr(url, self.span_before),
+                url: Interpolation::new_with_expr(url),
                 modifiers,
                 span: self.span_before,
             }));
@@ -1024,16 +1018,13 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         if is_plain_css_import(&url) || modifiers.is_some() {
             Ok(AstImport::Plain(AstPlainCssImport {
-                url: Interpolation::new_plain(raw_url, span),
+                url: Interpolation::new_plain(raw_url),
                 modifiers,
                 span,
             }))
         } else {
             // todo: try parseImportUrl
-            Ok(AstImport::Sass(AstSassImport {
-                url,
-                span,
-            }))
+            Ok(AstImport::Sass(AstSassImport { url, span }))
         }
     }
 
@@ -1076,7 +1067,10 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         if self.consume_char_if_exists('.') {
             let namespace_span = self.toks.span_from(name_start);
-            namespace = Some(Spanned { node: Identifier::from(name), span: namespace_span });
+            namespace = Some(Spanned {
+                node: Identifier::from(name),
+                span: namespace_span,
+            });
             name = self.parse_public_identifier()?;
         } else {
             name = name.replace('_', "-");
@@ -1152,7 +1146,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             Some(..) | None => todo!("Expected string."),
         };
 
-        let mut buffer = Interpolation::new(self.span_before);
+        let mut buffer = Interpolation::new();
 
         let mut found_match = false;
 
@@ -1172,12 +1166,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                             self.toks.next();
                             self.toks.next();
                         }
-                        _ => {
-                            buffer.add_token(Token {
-                                kind: self.consume_escaped_char()?,
-                                pos: self.span_before,
-                            });
-                        }
+                        _ => buffer.add_char(self.consume_escaped_char()?),
                     }
                 }
                 '#' => {
@@ -1582,8 +1571,6 @@ impl<'a, 'b> Parser<'a, 'b> {
         // default=true
         parse_custom_properties: bool,
     ) -> SassResult<AstStmt> {
-        // let mut name = Interpolation::new(self.span_before);
-        //     var start = scanner.state;
         let start = self.toks.cursor();
 
         let name = if matches!(
@@ -1597,12 +1584,9 @@ impl<'a, 'b> Parser<'a, 'b> {
         {
             // Allow the "*prop: val", ":prop: val", "#prop: val", and ".prop: val"
             // hacks.
-            let mut name_buffer = Interpolation::new(self.toks.current_span());
+            let mut name_buffer = Interpolation::new();
             name_buffer.add_token(self.toks.next().unwrap());
-            name_buffer.add_string(Spanned {
-                node: self.raw_text(Self::whitespace_or_comment),
-                span: self.span_before,
-            });
+            name_buffer.add_string(self.raw_text(Self::whitespace_or_comment));
             name_buffer.add_interpolation(self.parse_interpolated_identifier()?);
             name_buffer
         } else if !self.is_plain_css {
@@ -1705,7 +1689,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             return Err(("Interpolation isn't allowed in plain CSS.", contents.span).into());
         }
 
-        let mut interpolation = Interpolation::new(contents.span);
+        let mut interpolation = Interpolation::new();
         interpolation
             .contents
             .push(InterpolationPart::Expr(contents.node));
@@ -1721,10 +1705,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                     self.toks.next();
                 }
                 '\\' => {
-                    buffer.add_string(Spanned {
-                        node: self.parse_escape(false)?,
-                        span: self.span_before,
-                    });
+                    buffer.add_string(self.parse_escape(false)?);
                 }
                 '#' if matches!(self.toks.peek_n(1), Some(Token { kind: '{', .. })) => {
                     buffer.add_interpolation(self.parse_single_interpolation()?);
@@ -1737,19 +1718,13 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     fn parse_interpolated_identifier(&mut self) -> SassResult<Interpolation> {
-        let mut buffer = Interpolation::new(self.span_before);
+        let mut buffer = Interpolation::new();
 
         if self.consume_char_if_exists('-') {
-            buffer.add_token(Token {
-                kind: '-',
-                pos: self.span_before,
-            });
+            buffer.add_char('-');
 
             if self.consume_char_if_exists('-') {
-                buffer.add_token(Token {
-                    kind: '-',
-                    pos: self.span_before,
-                });
+                buffer.add_char('-');
                 self.parse_interpolated_identifier_body(&mut buffer)?;
                 return Ok(buffer);
             }
@@ -1761,10 +1736,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                 self.toks.next();
             }
             Some(Token { kind: '\\', .. }) => {
-                buffer.add_string(Spanned {
-                    node: self.parse_escape(true)?,
-                    span: self.span_before,
-                });
+                buffer.add_string(self.parse_escape(true)?);
             }
             Some(Token { kind: '#', .. })
                 if matches!(self.toks.peek_n(1), Some(Token { kind: '{', .. })) =>
@@ -1847,7 +1819,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         self.expect_char('/')?;
         self.expect_char('*')?;
 
-        let mut buffer = Interpolation::new_plain("/*".to_owned(), self.span_before);
+        let mut buffer = Interpolation::new_plain("/*".to_owned());
 
         while let Some(tok) = self.toks.peek() {
             match tok.kind {
@@ -1864,10 +1836,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                     buffer.add_token(tok);
 
                     if self.consume_char_if_exists('/') {
-                        buffer.add_token(Token {
-                            kind: '/',
-                            pos: self.span_before,
-                        });
+                        buffer.add_char('/');
 
                         return Ok(AstLoudComment {
                             text: buffer,
@@ -1879,10 +1848,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                     self.toks.next();
                     // todo: does \r even exist at this point? (removed by lexer)
                     if !self.toks.next_char_is('\n') {
-                        buffer.add_token(Token {
-                            kind: '\n',
-                            pos: self.span_before,
-                        });
+                        buffer.add_char('\n');
                     }
                 }
                 _ => {
@@ -1918,7 +1884,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         // default=true
         allow_colon: bool,
     ) -> SassResult<Interpolation> {
-        let mut buffer = Interpolation::new(self.span_before);
+        let mut buffer = Interpolation::new();
 
         let mut brackets = Vec::new();
         let mut wrote_newline = false;
@@ -1926,10 +1892,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         while let Some(tok) = self.toks.peek() {
             match tok.kind {
                 '\\' => {
-                    buffer.add_string(Spanned {
-                        node: self.parse_escape(true)?,
-                        span: self.span_before,
-                    });
+                    buffer.add_string(self.parse_escape(true)?);
                     wrote_newline = false;
                 }
                 '"' | '\'' => {
@@ -1943,10 +1906,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                 '/' => {
                     if matches!(self.toks.peek_n(1), Some(Token { kind: '*', .. })) {
                         let comment = self.fallible_raw_text(Self::skip_loud_comment)?;
-                        buffer.add_string(Spanned {
-                            node: comment,
-                            span: self.span_before,
-                        });
+                        buffer.add_string(comment);
                     } else {
                         self.toks.next();
                         buffer.add_token(tok);
@@ -2050,10 +2010,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                 }
                 _ => {
                     if self.looking_at_identifier() {
-                        buffer.add_string(Spanned {
-                            node: self.__parse_identifier(false, false)?,
-                            span: self.span_before,
-                        });
+                        buffer.add_string(self.__parse_identifier(false, false)?);
                     } else {
                         buffer.add_token(tok);
                         self.toks.next();
@@ -2156,10 +2113,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                 && matches!(self.toks.peek(), Some(Token { kind: ')', .. }))
             {
                 positional.push(AstExpr::String(
-                    StringExpr(
-                        Interpolation::new(self.toks.current_span()),
-                        QuoteKind::None,
-                    ),
+                    StringExpr(Interpolation::new(), QuoteKind::None),
                     self.toks.current_span(),
                 ));
                 break;
@@ -2203,7 +2157,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
     fn parse_declaration_or_buffer(&mut self) -> SassResult<DeclarationOrBuffer> {
         let start = self.toks.cursor();
-        let mut name_buffer = Interpolation::new(self.span_before);
+        let mut name_buffer = Interpolation::new();
 
         // Allow the "*prop: val", ":prop: val", "#prop: val", and ".prop: val"
         // hacks.
@@ -2221,10 +2175,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         {
             starts_with_punctuation = true;
             name_buffer.add_token(self.toks.next().unwrap());
-            name_buffer.add_string(Spanned {
-                node: self.raw_text(Self::whitespace_or_comment),
-                span: self.span_before,
-            });
+            name_buffer.add_string(self.raw_text(Self::whitespace_or_comment));
         }
 
         if !self.looking_at_interpolated_identifier() {
@@ -2247,10 +2198,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         self.flags.set(ContextFlags::IS_USE_ALLOWED, false);
 
         if self.next_matches("/*") {
-            name_buffer.add_string(Spanned {
-                node: self.fallible_raw_text(Self::skip_loud_comment)?,
-                span: self.span_before,
-            });
+            name_buffer.add_string(self.fallible_raw_text(Self::skip_loud_comment)?);
         }
 
         let mut mid_buffer = String::new();
@@ -2258,10 +2206,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         if !self.consume_char_if_exists(':') {
             if !mid_buffer.is_empty() {
-                name_buffer.add_token(Token {
-                    pos: self.span_before,
-                    kind: ' ',
-                });
+                name_buffer.add_char(' ');
             }
             return Ok(DeclarationOrBuffer::Buffer(name_buffer));
         }
@@ -2285,14 +2230,8 @@ impl<'a, 'b> Parser<'a, 'b> {
         }
 
         if self.consume_char_if_exists(':') {
-            name_buffer.add_string(Spanned {
-                node: mid_buffer,
-                span: self.span_before,
-            });
-            name_buffer.add_token(Token {
-                kind: ':',
-                pos: self.span_before,
-            });
+            name_buffer.add_string(mid_buffer);
+            name_buffer.add_char(':');
             return Ok(DeclarationOrBuffer::Buffer(name_buffer));
         }
 
@@ -2341,10 +2280,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                 break value?;
             }
 
-            name_buffer.add_string(Spanned {
-                node: mid_buffer,
-                span: self.span_before,
-            });
+            name_buffer.add_string(mid_buffer);
             name_buffer.add_interpolation(additional);
             return Ok(DeclarationOrBuffer::Buffer(name_buffer));
         };
@@ -2692,7 +2628,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         // default=false
         omit_comments: bool,
     ) -> SassResult<Interpolation> {
-        let mut buffer = Interpolation::new(self.span_before);
+        let mut buffer = Interpolation::new();
 
         while let Some(tok) = self.toks.peek() {
             match tok.kind {
@@ -2714,10 +2650,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                     let comment_start = self.toks.cursor();
                     if self.scan_comment()? {
                         if !omit_comments {
-                            buffer.add_string(Spanned {
-                                node: self.toks.raw_text(comment_start),
-                                span: self.span_before,
-                            });
+                            buffer.add_string(self.toks.raw_text(comment_start));
                         }
                     } else {
                         buffer.add_token(self.toks.next().unwrap());
@@ -2754,10 +2687,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                 }
                 _ => {
                     if self.looking_at_identifier() {
-                        buffer.add_string(Spanned {
-                            node: self.__parse_identifier(false, false)?,
-                            span: self.span_before,
-                        });
+                        buffer.add_string(self.__parse_identifier(false, false)?);
                     } else {
                         buffer.add_token(self.toks.next().unwrap());
                     }
@@ -2793,10 +2723,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                 )?,
             ))
         } else {
-            let mut buffer = Interpolation {
-                contents: vec![InterpolationPart::String(ident)],
-                span: self.span_before,
-            };
+            let mut buffer = Interpolation::new_plain(ident);
 
             if self.looking_at_interpolated_identifier_body() {
                 buffer.add_interpolation(self.parse_interpolated_identifier()?);

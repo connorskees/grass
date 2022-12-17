@@ -858,7 +858,7 @@ impl<'c> ValueParser<'c> {
             return Ok(AstExpr::Color(Box::new(color)).span(parser.span_before));
         }
 
-        let mut buffer = Interpolation::new(parser.span_before);
+        let mut buffer = Interpolation::new();
 
         buffer.add_token(Token {
             kind: '#',
@@ -1116,7 +1116,7 @@ impl<'c> ValueParser<'c> {
 
         Ok(AstExpr::String(
             StringExpr(
-                Interpolation::new_plain("!important".to_owned(), span),
+                Interpolation::new_plain("!important".to_owned()),
                 QuoteKind::None,
             ),
             span,
@@ -1294,7 +1294,7 @@ impl<'c> ValueParser<'c> {
         } else if has_question_mark {
             return Ok(AstExpr::String(
                 StringExpr(
-                    Interpolation::new_plain(parser.toks.raw_text(start), span),
+                    Interpolation::new_plain(parser.toks.raw_text(start)),
                     QuoteKind::None,
                 ),
                 span,
@@ -1332,7 +1332,7 @@ impl<'c> ValueParser<'c> {
 
         return Ok(AstExpr::String(
             StringExpr(
-                Interpolation::new_plain(parser.toks.raw_text(start), parser.toks.span_from(start)),
+                Interpolation::new_plain(parser.toks.raw_text(start)),
                 QuoteKind::None,
             ),
             parser.toks.span_from(start),
@@ -1358,20 +1358,14 @@ impl<'c> ValueParser<'c> {
 
         // Match Ruby Sass's behavior: parse a raw URL() if possible, and if not
         // backtrack and re-parse as a function expression.
-        let mut buffer = Interpolation::new(parser.span_before);
-        buffer.add_string(Spanned {
-            node: name.unwrap_or_else(|| "url".to_owned()),
-            span: parser.span_before,
-        });
+        let mut buffer = Interpolation::new();
+        buffer.add_string(name.unwrap_or_else(|| "url".to_owned()));
         buffer.add_char('(');
 
         while let Some(next) = parser.toks.peek() {
             match next.kind {
                 '\\' => {
-                    buffer.add_string(Spanned {
-                        node: parser.parse_escape(false)?,
-                        span: parser.span_before,
-                    });
+                    buffer.add_string(parser.parse_escape(false)?);
                 }
                 '!' | '%' | '&' | '*'..='~' | '\u{80}'..=char::MAX => {
                     parser.toks.next();
@@ -1428,14 +1422,14 @@ impl<'c> ValueParser<'c> {
                     return Ok(None);
                 }
 
-                buffer = Interpolation::new_plain(name.to_owned(), parser.span_before);
+                buffer = Interpolation::new_plain(name.to_owned());
                 buffer.add_char('(');
             }
             "progid" => {
                 if !parser.consume_char_if_exists(':') {
                     return Ok(None);
                 }
-                buffer = Interpolation::new_plain(name.to_owned(), parser.span_before);
+                buffer = Interpolation::new_plain(name.to_owned());
                 buffer.add_char(':');
 
                 while let Some(Token { kind, .. }) = parser.toks.peek() {
@@ -1462,10 +1456,7 @@ impl<'c> ValueParser<'c> {
 
         buffer.add_interpolation(parser.parse_interpolated_declaration_value(false, true, true)?);
         parser.expect_char(')')?;
-        buffer.add_token(Token {
-            kind: ')',
-            pos: parser.span_before,
-        });
+        buffer.add_char(')');
 
         Ok(Some(
             AstExpr::String(

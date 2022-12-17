@@ -37,6 +37,9 @@ pub(crate) struct InterpolatedFunction {
     pub span: Span,
 }
 
+#[derive(Debug, Clone, Default)]
+pub(crate) struct AstSassMap(pub Vec<(AstExpr, AstExpr)>);
+
 #[derive(Debug, Clone)]
 pub(crate) enum AstExpr {
     BinaryOp {
@@ -136,7 +139,8 @@ impl StringExpr {
             InterpolationPart::Expr(..) => None,
             InterpolationPart::String(text) => Some(text.as_str()),
         }));
-        let mut buffer = Interpolation::new(span);
+
+        let mut buffer = Interpolation::new();
         buffer.add_char(quote);
 
         for value in self.0.contents {
@@ -181,6 +185,3 @@ impl AstExpr {
         Spanned { node: self, span }
     }
 }
-
-#[derive(Debug, Clone, Default)]
-pub(crate) struct AstSassMap(pub Vec<(AstExpr, AstExpr)>);

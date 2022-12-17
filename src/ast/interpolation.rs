@@ -7,42 +7,37 @@ use super::AstExpr;
 #[derive(Debug, Clone)]
 pub(crate) struct Interpolation {
     pub contents: Vec<InterpolationPart>,
-    pub span: Span,
 }
 
 impl Interpolation {
-    pub fn new(span: Span) -> Self {
+    pub fn new() -> Self {
         Self {
             contents: Vec::new(),
-            span,
         }
     }
 
-    pub fn new_with_expr(e: AstExpr, span: Span) -> Self {
+    pub fn new_with_expr(e: AstExpr) -> Self {
         Self {
             contents: vec![InterpolationPart::Expr(e)],
-            span,
         }
     }
 
-    pub fn new_plain(s: String, span: Span) -> Self {
+    pub fn new_plain(s: String) -> Self {
         Self {
             contents: vec![InterpolationPart::String(s)],
-            span,
         }
     }
 
     pub fn add_expr(&mut self, expr: Spanned<AstExpr>) {
         self.contents.push(InterpolationPart::Expr(expr.node));
-        self.span = self.span.merge(expr.span);
     }
 
-    pub fn add_string(&mut self, s: Spanned<String>) {
+    // todo: cow?
+    pub fn add_string(&mut self, s: String) {
         match self.contents.last_mut() {
-            Some(InterpolationPart::String(existing)) => *existing += &s.node,
-            _ => self.contents.push(InterpolationPart::String(s.node)),
+            Some(InterpolationPart::String(existing)) => *existing += &s,
+            _ => self.contents.push(InterpolationPart::String(s)),
         }
-        self.span = self.span.merge(s.span);
     }
 
     pub fn add_token(&mut self, tok: Token) {
@@ -52,7 +47,6 @@ impl Interpolation {
                 .contents
                 .push(InterpolationPart::String(tok.kind.to_string())),
         }
-        self.span = self.span.merge(tok.pos);
     }
 
     pub fn add_char(&mut self, c: char) {
@@ -63,7 +57,6 @@ impl Interpolation {
     }
 
     pub fn add_interpolation(&mut self, mut other: Self) {
-        self.span = self.span.merge(other.span);
         self.contents.append(&mut other.contents);
     }
 

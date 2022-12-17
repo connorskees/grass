@@ -73,3 +73,25 @@ fn last_non_whitespace(s: &str, exclude_escape: bool) -> Option<usize> {
 
     None
 }
+
+pub(crate) fn to_sentence<T: Into<String>>(mut elems: Vec<T>, conjunction: &'static str) -> String {
+    debug_assert!(
+        !elems.is_empty(),
+        "expected sentence to contain at least one element"
+    );
+    if elems.len() == 1 {
+        return elems.pop().unwrap().into();
+    }
+
+    let last = elems.pop().unwrap();
+
+    format!(
+        "{} {conjunction} {}",
+        elems
+            .into_iter()
+            .map(Into::into)
+            .collect::<Vec<_>>()
+            .join(", "),
+        last.into()
+    )
+}

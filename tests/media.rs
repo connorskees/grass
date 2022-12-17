@@ -297,7 +297,6 @@ test!(
     }"#,
     "@media foo {\n  a {\n    color: red;\n  }\n\n  @import \"foo.css\";\n}\n"
 );
-
 error!(
     media_feature_missing_closing_paren,
     "@media foo and (bar:a", "Error: expected \")\"."
@@ -305,4 +304,85 @@ error!(
 error!(
     media_feature_missing_curly_brace_after_hash,
     "@media foo and # {}", "Error: expected \"{\"."
+);
+error!(
+    nothing_after_not_in_parens,
+    "@media (not", "Error: Expected expression."
+);
+error!(
+    nothing_after_and,
+    "@media foo and", "Error: Expected whitespace."
+);
+error!(nothing_after_or, "@media foo or", r#"Error: expected "{"."#);
+error!(
+    no_parens_after_and,
+    "@media foo and bar {
+        a {
+            color: red;
+        }
+    }",
+    "Error: expected media condition in parentheses."
+);
+test!(
+    query_starts_with_interpolation,
+    "@media #{foo} {
+      a {
+        color: red;
+      }
+    }",
+    "@media foo {\n  a {\n    color: red;\n  }\n}\n"
+);
+test!(
+    query_is_parens_with_comma,
+    "@media (foo, bar) {
+      a {
+        color: red;
+      }
+    }",
+    "@media (foo, bar) {\n  a {\n    color: red;\n  }\n}\n"
+);
+test!(
+    query_is_parens_with_space_before_comma,
+    "@media (foo , bar) {
+      a {
+        color: red;
+      }
+    }",
+    "@media (foo, bar) {\n  a {\n    color: red;\n  }\n}\n"
+);
+test!(
+    query_and_first_has_no_parens,
+    "@media foo and (bar) {
+      a {
+        color: red;
+      }
+    }",
+    "@media foo and (bar) {\n  a {\n    color: red;\n  }\n}\n"
+);
+test!(
+    query_comma_separated_list_both_parens,
+    "@media (foo), (bar) {
+      a {
+        color: red;
+      }
+    }",
+    "@media (foo), (bar) {\n  a {\n    color: red;\n  }\n}\n"
+);
+test!(
+    query_comma_separated_list_both_parens_space_before_paren,
+    "@media (foo) , (bar) {
+      a {
+        color: red;
+      }
+    }",
+    "@media (foo), (bar) {\n  a {\n    color: red;\n  }\n}\n"
+);
+test!(
+    query_comma_separated_list_loud_comments,
+    "@media /**/foo/**/,/**/bar/**/ {
+      a {
+        color: red;
+      }
+    }",
+    "@media foo, bar {\n  a {\n    color: red;\n  }\n}\n"
 );

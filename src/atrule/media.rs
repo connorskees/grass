@@ -34,6 +34,7 @@ struct MediaQueryParser<'a> {
     parser: &'a mut Parser<'a, 'a>,
 }
 
+// todo: move to separate file
 impl<'a> MediaQueryParser<'a> {
     pub fn new(parser: &'a mut Parser<'a, 'a>) -> MediaQueryParser<'a> {
         MediaQueryParser { parser }
@@ -64,10 +65,10 @@ impl<'a> MediaQueryParser<'a> {
             let mut conjunction = true;
 
             if self.parser.scan_identifier("and", false)? {
-                self.expect_whitespace()?;
+                self.parser.expect_whitespace()?;
                 conditions.append(&mut self.parse_media_logic_sequence("and")?);
             } else if self.parser.scan_identifier("or", false)? {
-                self.expect_whitespace()?;
+                self.parser.expect_whitespace()?;
                 conjunction = false;
                 conditions.append(&mut self.parse_media_logic_sequence("or")?);
             }
@@ -80,7 +81,7 @@ impl<'a> MediaQueryParser<'a> {
         let identifier1 = self.parser.__parse_identifier(false, false)?;
 
         if identifier1.to_ascii_lowercase() == "not" {
-            self.expect_whitespace()?;
+            self.parser.expect_whitespace()?;
             if !self.parser.looking_at_identifier() {
                 return Ok(MediaQuery::condition(vec![format!(
                     "(not ${})",
@@ -98,7 +99,7 @@ impl<'a> MediaQueryParser<'a> {
         let identifier2 = self.parser.__parse_identifier(false, false)?;
 
         if identifier2.to_ascii_lowercase() == "and" {
-            self.expect_whitespace()?;
+            self.parser.expect_whitespace()?;
             media_type = Some(identifier1);
         } else {
             self.parser.whitespace_or_comment();
@@ -106,7 +107,7 @@ impl<'a> MediaQueryParser<'a> {
             media_type = Some(identifier2);
             if self.parser.scan_identifier("and", false)? {
                 // For example, "@media only screen and ..."
-                self.expect_whitespace()?;
+                self.parser.expect_whitespace()?;
             } else {
                 // For example, "@media only screen {"
                 return Ok(MediaQuery::media_type(media_type, modifier, None));
@@ -118,7 +119,7 @@ impl<'a> MediaQueryParser<'a> {
 
         if self.parser.scan_identifier("not", false)? {
             // For example, "@media screen and not (...) {"
-            self.expect_whitespace()?;
+            self.parser.expect_whitespace()?;
             return Ok(MediaQuery::media_type(
                 media_type,
                 modifier,
@@ -131,37 +132,6 @@ impl<'a> MediaQueryParser<'a> {
             modifier,
             Some(self.parse_media_logic_sequence("and")?),
         ))
-    }
-
-    fn scan_comment(&self) -> bool {
-        todo!()
-    }
-
-    fn expect_whitespace(&mut self) -> SassResult<()> {
-        match self.parser.toks.peek() {
-            Some(Token {
-                kind: ' ' | '\t' | '\n' | '\r',
-                ..
-            })
-            | None => {}
-            Some(Token { kind: '/', .. }) => {
-                if self.scan_comment() {
-                    // todo!(),
-                }
-            }
-            _ => todo!(),
-        }
-        // if self.parser.toks.peek().is_none() || !
-        //      if (scanner.isDone ||
-        //     !(isWhitespace(scanner.peekChar()) || scanComment())) {
-        //   scanner.error("Expected whitespace.");
-        // }
-
-        // whitespace();
-        // todo!()
-        self.parser.whitespace_or_comment();
-
-        Ok(())
     }
 
     fn parse_media_in_parens(&mut self) -> SassResult<String> {
@@ -179,7 +149,7 @@ impl<'a> MediaQueryParser<'a> {
             if !self.parser.scan_identifier(operator, false)? {
                 return Ok(result);
             }
-            self.expect_whitespace()?;
+            self.parser.expect_whitespace()?;
         }
     }
 }

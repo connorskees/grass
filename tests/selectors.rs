@@ -445,15 +445,15 @@ test!(
     "#{&} a {\n  color: red;\n}\n",
     "a {\n  color: red;\n}\n"
 );
-test!(
+error!(
     allows_id_start_with_number,
     "#2foo {\n  color: red;\n}\n",
-    "#2foo {\n  color: red;\n}\n"
+    "Error: Expected identifier."
 );
-test!(
+error!(
     allows_id_only_number,
     "#2 {\n  color: red;\n}\n",
-    "#2 {\n  color: red;\n}\n"
+    "Error: Expected identifier."
 );
 test!(
     id_interpolation,
@@ -815,6 +815,11 @@ test!(
     parent_selector_is_null_at_root,
     "#{inspect(&)}  {\n  color: &;\n}\n",
     "null {\n  color: null;\n}\n"
+);
+error!(
+    id_selector_starts_with_number,
+    "#2b  {\n  color: &;\n}\n",
+    "Error: Expected identifier."
 );
 test!(
     nth_of_type_mutliple_spaces_inside_parens_are_collapsed,

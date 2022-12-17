@@ -242,6 +242,11 @@ test!(
     "@import \"//fonts.googleapis.com/css?family=Droid+Sans\";\n"
 );
 test!(
+    plain_css_retains_backslash_for_escaped_space,
+    r#"@import "hux\ bux.css";"#,
+    r#"@import "hux\ bux.css";\n"#
+);
+test!(
     plain_css_is_moved_to_top_of_file,
     "a {
         color: red;
