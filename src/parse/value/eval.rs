@@ -3,7 +3,6 @@
 use std::cmp::Ordering;
 
 use codemap::Span;
-use num_traits::Zero;
 
 use crate::{
     common::{BinaryOp, QuoteKind},
@@ -79,24 +78,48 @@ pub(crate) fn add(left: Value, right: Value, options: &Options, span: Span) -> S
                 QuoteKind::None,
             ),
         },
-        Value::Dimension(n, ..) if n.is_nan() => todo!(),
-        Value::Dimension(num, unit, _) => match right {
+        Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
+        Value::Dimension {
+            num,
+            unit,
+            as_slash: _,
+        } => match right {
             Value::Calculation(..) => todo!(),
-            Value::Dimension(n, ..) if n.is_nan() => todo!(),
-            Value::Dimension(num2, unit2, _) => {
+            Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
+            Value::Dimension {
+                num: num2,
+                unit: unit2,
+                as_slash: _,
+            } => {
                 if !unit.comparable(&unit2) {
                     return Err(
                         (format!("Incompatible units {} and {}.", unit2, unit), span).into(),
                     );
                 }
                 if unit == unit2 {
-                    Value::Dimension(num + num2, unit, None)
+                    Value::Dimension {
+                        num: num + num2,
+                        unit,
+                        as_slash: None,
+                    }
                 } else if unit == Unit::None {
-                    Value::Dimension(num + num2, unit2, None)
+                    Value::Dimension {
+                        num: num + num2,
+                        unit: unit2,
+                        as_slash: None,
+                    }
                 } else if unit2 == Unit::None {
-                    Value::Dimension(num + num2, unit, None)
+                    Value::Dimension {
+                        num: num + num2,
+                        unit,
+                        as_slash: None,
+                    }
                 } else {
-                    Value::Dimension(num + num2.convert(&unit2, &unit), unit, None)
+                    Value::Dimension {
+                        num: num + num2.convert(&unit2, &unit),
+                        unit,
+                        as_slash: None,
+                    }
                 }
             }
             Value::String(s, q) => Value::String(
@@ -190,22 +213,46 @@ pub(crate) fn sub(left: Value, right: Value, options: &Options, span: Span) -> S
             format!("-{}", right.to_css_string(span, options.is_compressed())?),
             QuoteKind::None,
         ),
-        Value::Dimension(num, unit, _) => match right {
+        Value::Dimension {
+            num,
+            unit,
+            as_slash: _,
+        } => match right {
             Value::Calculation(..) => todo!(),
-            Value::Dimension(num2, unit2, _) => {
+            Value::Dimension {
+                num: num2,
+                unit: unit2,
+                as_slash: _,
+            } => {
                 if !unit.comparable(&unit2) {
                     return Err(
                         (format!("Incompatible units {} and {}.", unit2, unit), span).into(),
                     );
                 }
                 if unit == unit2 {
-                    Value::Dimension(num - num2, unit, None)
+                    Value::Dimension {
+                        num: num - num2,
+                        unit,
+                        as_slash: None,
+                    }
                 } else if unit == Unit::None {
-                    Value::Dimension(num - num2, unit2, None)
+                    Value::Dimension {
+                        num: num - num2,
+                        unit: unit2,
+                        as_slash: None,
+                    }
                 } else if unit2 == Unit::None {
-                    Value::Dimension(num - num2, unit, None)
+                    Value::Dimension {
+                        num: num - num2,
+                        unit,
+                        as_slash: None,
+                    }
                 } else {
-                    Value::Dimension(num - num2.convert(&unit2, &unit), unit, None)
+                    Value::Dimension {
+                        num: num - num2.convert(&unit2, &unit),
+                        unit,
+                        as_slash: None,
+                    }
                 }
             }
             Value::List(..)
@@ -248,7 +295,7 @@ pub(crate) fn sub(left: Value, right: Value, options: &Options, span: Span) -> S
         Value::Color(c) => match right {
             Value::String(s, q) => Value::String(format!("{}-{}{}{}", c, q, s, q), QuoteKind::None),
             Value::Null => Value::String(format!("{}-", c), QuoteKind::None),
-            Value::Dimension(..) | Value::Color(..) => {
+            Value::Dimension { .. } | Value::Color(..) => {
                 return Err((
                     format!("Undefined operation \"{} - {}\".", c, right.inspect(span)?),
                     span,
@@ -302,16 +349,36 @@ pub(crate) fn sub(left: Value, right: Value, options: &Options, span: Span) -> S
 
 pub(crate) fn mul(left: Value, right: Value, options: &Options, span: Span) -> SassResult<Value> {
     Ok(match left {
-        Value::Dimension(n, ..) if n.is_nan() => todo!(),
-        Value::Dimension(num, unit, _) => match right {
-            Value::Dimension(n, ..) if n.is_nan() => todo!(),
-            Value::Dimension(num2, unit2, _) => {
+        Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
+        Value::Dimension {
+            num,
+            unit,
+            as_slash: _,
+        } => match right {
+            Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
+            Value::Dimension {
+                num: num2,
+                unit: unit2,
+                as_slash: _,
+            } => {
                 if unit == Unit::None {
-                    Value::Dimension(num * num2, unit2, None)
+                    Value::Dimension {
+                        num: num * num2,
+                        unit: unit2,
+                        as_slash: None,
+                    }
                 } else if unit2 == Unit::None {
-                    Value::Dimension(num * num2, unit, None)
+                    Value::Dimension {
+                        num: num * num2,
+                        unit,
+                        as_slash: None,
+                    }
                 } else {
-                    Value::Dimension(num * num2, unit * unit2, None)
+                    Value::Dimension {
+                        num: num * num2,
+                        unit: unit * unit2,
+                        as_slash: None,
+                    }
                 }
             }
             _ => {
@@ -396,9 +463,17 @@ pub(crate) fn div(left: Value, right: Value, options: &Options, span: Span) -> S
             format!("/{}", right.to_css_string(span, options.is_compressed())?),
             QuoteKind::None,
         ),
-        Value::Dimension(num, unit, as_slash1) => match right {
+        Value::Dimension {
+            num,
+            unit,
+            as_slash: as_slash1,
+        } => match right {
             Value::Calculation(..) => todo!(),
-            Value::Dimension(num2, unit2, as_slash2) => {
+            Value::Dimension {
+                num: num2,
+                unit: unit2,
+                as_slash: as_slash2,
+            } => {
                 // if should_divide1 || should_divide2 {
                 // if num.is_zero() && num2.is_zero() {
                 //     // todo: nan
@@ -413,21 +488,37 @@ pub(crate) fn div(left: Value, right: Value, options: &Options, span: Span) -> S
 
                 // `unit(1em / 1em)` => `""`
                 if unit == unit2 {
-                    Value::Dimension(num / num2, Unit::None, None)
+                    Value::Dimension {
+                        num: num / num2,
+                        unit: Unit::None,
+                        as_slash: None,
+                    }
 
                 // `unit(1 / 1em)` => `"em^-1"`
                 } else if unit == Unit::None {
-                    Value::Dimension(num / num2, Unit::None / unit2, None)
+                    Value::Dimension {
+                        num: num / num2,
+                        unit: Unit::None / unit2,
+                        as_slash: None,
+                    }
 
                 // `unit(1em / 1)` => `"em"`
                 } else if unit2 == Unit::None {
-                    Value::Dimension(num / num2, unit, None)
+                    Value::Dimension {
+                        num: num / num2,
+                        unit,
+                        as_slash: None,
+                    }
 
                 // `unit(1in / 1px)` => `""`
                 } else if unit.comparable(&unit2) {
                     // let sass_num_1 = SassNumber(num.0, unit.clone(), as_slash1);
                     // let sass_num_2 = SassNumber(num2.0, unit2.clone(), as_slash2);
-                    Value::Dimension(num / num2.convert(&unit2, &unit), Unit::None, None)
+                    Value::Dimension {
+                        num: num / num2.convert(&unit2, &unit),
+                        unit: Unit::None,
+                        as_slash: None,
+                    }
                     // Value::Dimension(num / num2.convert(&unit2, &unit), Unit::None, Some(Box::new((sass_num_1, sass_num_2))))
                     // `unit(1em / 1px)` => `"em/px"`
                     // todo: this should probably be its own variant
@@ -491,7 +582,7 @@ pub(crate) fn div(left: Value, right: Value, options: &Options, span: Span) -> S
         Value::Color(c) => match right {
             Value::String(s, q) => Value::String(format!("{}/{}{}{}", c, q, s, q), QuoteKind::None),
             Value::Null => Value::String(format!("{}/", c), QuoteKind::None),
-            Value::Dimension(..) | Value::Color(..) => {
+            Value::Dimension { .. } | Value::Color(..) => {
                 return Err((
                     format!("Undefined operation \"{} / {}\".", c, right.inspect(span)?),
                     span,
@@ -515,7 +606,7 @@ pub(crate) fn div(left: Value, right: Value, options: &Options, span: Span) -> S
             ),
             Value::True
             | Value::False
-            | Value::Dimension(..)
+            | Value::Dimension { .. }
             | Value::Color(..)
             | Value::List(..)
             | Value::ArgList(..) => Value::String(
@@ -566,10 +657,18 @@ pub(crate) fn div(left: Value, right: Value, options: &Options, span: Span) -> S
 
 pub(crate) fn rem(left: Value, right: Value, options: &Options, span: Span) -> SassResult<Value> {
     Ok(match left {
-        Value::Dimension(n, ..) if n.is_nan() => todo!(),
-        Value::Dimension(n, u, _) => match right {
-            Value::Dimension(n, ..) if n.is_nan() => todo!(),
-            Value::Dimension(n2, u2, _) => {
+        Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
+        Value::Dimension {
+            num: n,
+            unit: u,
+            as_slash: _,
+        } => match right {
+            Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
+            Value::Dimension {
+                num: n2,
+                unit: u2,
+                as_slash: _,
+            } => {
                 if !u.comparable(&u2) {
                     return Err((format!("Incompatible units {} and {}.", u, u2), span).into());
                 }
@@ -594,13 +693,22 @@ pub(crate) fn rem(left: Value, right: Value, options: &Options, span: Span) -> S
                 } else {
                     u
                 };
-                Value::Dimension(new_num, new_unit, None)
+                Value::Dimension {
+                    num: new_num,
+                    unit: new_unit,
+                    as_slash: None,
+                }
             }
             _ => {
                 return Err((
                     format!(
                         "Undefined operation \"{} % {}\".",
-                        Value::Dimension(n, u, None).inspect(span)?,
+                        Value::Dimension {
+                            num: n,
+                            unit: u,
+                            as_slash: None
+                        }
+                        .inspect(span)?,
                         right.inspect(span)?
                     ),
                     span,

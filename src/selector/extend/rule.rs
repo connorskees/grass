@@ -4,10 +4,8 @@ use crate::selector::Selector;
 
 #[derive(Clone, Debug)]
 pub(crate) struct ExtendRule {
-    #[allow(dead_code)]
     pub selector: Selector,
     pub is_optional: bool,
-    #[allow(dead_code)]
     pub span: Span,
 }
 

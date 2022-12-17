@@ -81,7 +81,11 @@ pub(crate) fn feature_exists(mut args: ArgumentResult, parser: &mut Visitor) -> 
 pub(crate) fn unit(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     let unit = match args.get_err(0, "number")? {
-        Value::Dimension(_, u, _) => u.to_string(),
+        Value::Dimension {
+            num: _,
+            unit: u,
+            as_slash: _,
+        } => u.to_string(),
         v => {
             return Err((
                 format!("$number: {} is not a number.", v.inspect(args.span())?),
@@ -102,8 +106,12 @@ pub(crate) fn type_of(mut args: ArgumentResult, parser: &mut Visitor) -> SassRes
 pub(crate) fn unitless(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     Ok(match args.get_err(0, "number")? {
-        Value::Dimension(_, Unit::None, _) => Value::True,
-        Value::Dimension(..) => Value::False,
+        Value::Dimension {
+            num: _,
+            unit: Unit::None,
+            as_slash: _,
+        } => Value::True,
+        Value::Dimension { .. } => Value::False,
         v => {
             return Err((
                 format!("$number: {} is not a number.", v.inspect(args.span())?),

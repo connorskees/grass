@@ -40,6 +40,7 @@ impl Hash for Attribute {
     }
 }
 
+// todo: rewrite
 fn attribute_name(parser: &mut Parser, start: Span) -> SassResult<QualifiedName> {
     let next = parser.toks.peek().ok_or(("Expected identifier.", start))?;
     if next.kind == '*' {

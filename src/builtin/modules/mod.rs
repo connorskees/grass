@@ -1,8 +1,4 @@
-use std::{
-    cell::{Ref, RefCell},
-    collections::BTreeMap,
-    sync::Arc,
-};
+use std::{cell::RefCell, collections::BTreeMap, sync::Arc};
 
 use codemap::{Span, Spanned};
 
@@ -10,10 +6,9 @@ use crate::{
     ast::ArgumentResult,
     atrule::mixin::{BuiltinMixin, Mixin},
     builtin::Builtin,
-    common::{Identifier, QuoteKind},
+    common::Identifier,
     error::SassResult,
     evaluate::{Environment, Visitor},
-    parse::Parser,
     scope::Scope,
     selector::ExtensionStore,
     value::{SassFunction, SassMap, Value},
@@ -46,33 +41,33 @@ pub(crate) enum Module {
 #[derive(Debug, Clone)]
 pub(crate) struct Modules(BTreeMap<Identifier, Module>);
 
-#[derive(Debug, Default)]
-pub(crate) struct ModuleConfig(BTreeMap<Identifier, Value>);
+// #[derive(Debug, Default)]
+// pub(crate) struct ModuleConfig(BTreeMap<Identifier, Value>);
 
-impl ModuleConfig {
-    /// Removes and returns element with name
-    pub fn get(&mut self, name: Identifier) -> Option<Value> {
-        self.0.remove(&name)
-    }
+// impl ModuleConfig {
+//     /// Removes and returns element with name
+//     pub fn get(&mut self, name: Identifier) -> Option<Value> {
+//         self.0.remove(&name)
+//     }
 
-    /// If this structure is not empty at the end of
-    /// an `@use`, we must throw an error
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
+//     /// If this structure is not empty at the end of
+//     /// an `@use`, we must throw an error
+//     pub fn is_empty(&self) -> bool {
+//         self.0.is_empty()
+//     }
 
-    pub fn insert(&mut self, name: Spanned<Identifier>, value: Spanned<Value>) -> SassResult<()> {
-        if self.0.insert(name.node, value.node).is_some() {
-            Err((
-                "The same variable may only be configured once.",
-                name.span.merge(value.span),
-            )
-                .into())
-        } else {
-            Ok(())
-        }
-    }
-}
+//     pub fn insert(&mut self, name: Spanned<Identifier>, value: Spanned<Value>) -> SassResult<()> {
+//         if self.0.insert(name.node, value.node).is_some() {
+//             Err((
+//                 "The same variable may only be configured once.",
+//                 name.span.merge(value.span),
+//             )
+//                 .into())
+//         } else {
+//             Ok(())
+//         }
+//     }
+// }
 
 impl Modules {
     pub fn new() -> Self {
@@ -235,7 +230,6 @@ impl Module {
             Some(v) => Ok(v.clone()),
             None => Err(("Undefined mixin.", name.span).into()),
         }
-
     }
 
     pub fn insert_builtin_mixin(&mut self, name: &'static str, mixin: BuiltinMixin) {

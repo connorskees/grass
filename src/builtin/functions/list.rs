@@ -2,21 +2,21 @@ use crate::builtin::builtin_imports::*;
 
 pub(crate) fn length(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
-    Ok(Value::Dimension(
-        (Number::from(args.get_err(0, "list")?.as_list().len())),
-        Unit::None,
-        None,
-    ))
+    Ok(Value::Dimension {
+        num: (Number::from(args.get_err(0, "list")?.as_list().len())),
+        unit: Unit::None,
+        as_slash: None,
+    })
 }
 
 pub(crate) fn nth(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(2)?;
     let mut list = args.get_err(0, "list")?.as_list();
     let (n, unit) = match args.get_err(1, "n")? {
-        Value::Dimension(n, u, ..) if n.is_nan() => {
-            return Err((format!("$n: NaN{} is not an int.", u), args.span()).into())
-        }
-        Value::Dimension((num), unit, ..) => (num, unit),
+        Value::Dimension {
+            num: n, unit: u, ..
+        } if n.is_nan() => return Err((format!("$n: NaN{} is not an int.", u), args.span()).into()),
+        Value::Dimension { num, unit, .. } => (num, unit),
         v => {
             return Err((
                 format!("$n: {} is not a number.", v.inspect(args.span())?),
@@ -80,10 +80,10 @@ pub(crate) fn set_nth(mut args: ArgumentResult, parser: &mut Visitor) -> SassRes
         v => (vec![v], ListSeparator::Space, Brackets::None),
     };
     let (n, unit) = match args.get_err(1, "n")? {
-        Value::Dimension(n, u, ..) if n.is_nan() => {
-            return Err((format!("$n: NaN{} is not an int.", u), args.span()).into())
-        }
-        Value::Dimension((num), unit, ..) => (num, unit),
+        Value::Dimension {
+            num: n, unit: u, ..
+        } if n.is_nan() => return Err((format!("$n: NaN{} is not an int.", u), args.span()).into()),
+        Value::Dimension { num, unit, .. } => (num, unit),
         v => {
             return Err((
                 format!("$n: {} is not a number.", v.inspect(args.span())?),
@@ -251,7 +251,11 @@ pub(crate) fn index(mut args: ArgumentResult, parser: &mut Visitor) -> SassResul
         Some(v) => Number::from(v + 1),
         None => return Ok(Value::Null),
     };
-    Ok(Value::Dimension((index), Unit::None, None))
+    Ok(Value::Dimension {
+        num: (index),
+        unit: Unit::None,
+        as_slash: None,
+    })
 }
 
 pub(crate) fn zip(args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {

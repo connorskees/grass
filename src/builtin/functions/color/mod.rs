@@ -1,4 +1,4 @@
-use super::{Builtin, GlobalFunctionMap};
+use super::{GlobalFunctionMap};
 
 pub mod hsl;
 pub mod hwb;

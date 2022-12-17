@@ -1,6 +1,6 @@
 use codemap::Span;
 
-use crate::{common::unvendor, error::SassResult, parse::Parser, utils::is_name, Token};
+use crate::{common::unvendor, error::SassResult, parse::Parser, Token};
 
 use super::{
     Attribute, Combinator, ComplexSelector, ComplexSelectorComponent, CompoundSelector, Namespace,

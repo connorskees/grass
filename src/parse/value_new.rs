@@ -1238,7 +1238,7 @@ impl<'c> ValueParser<'c> {
             let name_start = parser.toks.cursor();
             let name = parser.parse_variable_name()?;
             let span = parser.toks.span_from(start);
-            Parser::assert_public(&name, span);
+            Parser::assert_public(&name, span)?;
 
             return Ok(AstExpr::Variable {
                 name: Spanned {

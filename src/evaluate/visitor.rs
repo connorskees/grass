@@ -25,7 +25,6 @@ use crate::{
         modules::{
             declare_module_color, declare_module_list, declare_module_map, declare_module_math,
             declare_module_meta, declare_module_selector, declare_module_string, Module,
-            ModuleConfig,
         },
         Builtin, GLOBAL_FUNCTIONS,
     },
@@ -232,7 +231,6 @@ pub(crate) struct Visitor<'a> {
     pub media_query_sources: Option<IndexSet<MediaQuery>>,
     pub extender: ExtensionStore,
     pub current_import_path: PathBuf,
-    pub module_config: ModuleConfig,
     css_tree: CssTree,
     parent: Option<CssTreeIdx>,
     configuration: Configuration,
@@ -260,7 +258,6 @@ impl<'a> Visitor<'a> {
             css_tree: CssTree::new(),
             parent: None,
             current_import_path,
-            module_config: ModuleConfig::default(),
             configuration: Configuration::empty(),
         }
     }
@@ -1685,7 +1682,7 @@ impl<'a> Visitor<'a> {
         // todo: proper error here
         assert!(to_number.unit().comparable(&from_number.unit()));
 
-        let from = from_number.num().to_i64().unwrap();
+        let from = from_number.num.to_i64().unwrap();
         let mut to = to_number
             .num()
             .convert(to_number.unit(), from_number.unit())
@@ -1711,7 +1708,11 @@ impl<'a> Visitor<'a> {
         'outer: while i != to {
             self.env.scopes_mut().insert_var_last(
                 for_stmt.variable.node,
-                Value::Dimension(Number::from(i), from_number.unit().clone(), None),
+                Value::Dimension {
+                    num: Number::from(i),
+                    unit: from_number.unit().clone(),
+                    as_slash: None,
+                },
             );
 
             for stmt in for_stmt.body.clone() {
@@ -1936,7 +1937,7 @@ impl<'a> Visitor<'a> {
 
     fn without_slash(&mut self, v: Value) -> Value {
         match v {
-            Value::Dimension(..) if v.as_slash().is_some() => {
+            Value::Dimension { .. } if v.as_slash().is_some() => {
                 //   String recommendation(SassNumber number) {
                 //     var asSlash = number.asSlash;
                 //     if (asSlash != null) {
@@ -2417,7 +2418,11 @@ impl<'a> Visitor<'a> {
     fn visit_expr(&mut self, expr: AstExpr) -> SassResult<Value> {
         Ok(match expr {
             AstExpr::Color(color) => Value::Color(color),
-            AstExpr::Number { n, unit } => Value::Dimension(n, unit, None),
+            AstExpr::Number { n, unit } => Value::Dimension {
+                num: n,
+                unit,
+                as_slash: None,
+            },
             AstExpr::List(list) => self.visit_list_expr(list)?,
             AstExpr::String(StringExpr(text, quote), span) => {
                 self.visit_string(text, quote, span)?
@@ -2482,9 +2487,15 @@ impl<'a> Visitor<'a> {
             | AstExpr::If(..) => {
                 let result = self.visit_expr(expr)?;
                 match result {
-                    Value::Dimension(num, unit, as_slash) => {
-                        CalculationArg::Number(SassNumber(num.0, unit, as_slash))
-                    }
+                    Value::Dimension {
+                        num,
+                        unit,
+                        as_slash,
+                    } => CalculationArg::Number(SassNumber {
+                        num: num.0,
+                        unit: unit,
+                        as_slash,
+                    }),
                     Value::Calculation(calc) => CalculationArg::Calculation(calc),
                     Value::String(s, quotes) if quotes == QuoteKind::None => {
                         CalculationArg::String(s)
@@ -2687,8 +2698,8 @@ impl<'a> Visitor<'a> {
             BinaryOp::Div => {
                 let right = self.visit_expr(*rhs)?;
 
-                let left_is_number = matches!(left, Value::Dimension(..));
-                let right_is_number = matches!(right, Value::Dimension(..));
+                let left_is_number = todo!(); // matches!(left, Value::Dimension(..));
+                let right_is_number = todo!(); //matches!(right, Value::Dimension(..));
 
                 let result = div(left.clone(), right.clone(), self.parser.options, span)?;
 

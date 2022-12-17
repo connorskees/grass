@@ -3,7 +3,7 @@ use codemap::Spanned;
 use crate::{
     ast::{AstExpr, Interpolation},
     error::SassResult,
-    utils::{is_name, is_name_start},
+    utils::is_name,
     Token,
 };
 
@@ -18,26 +18,6 @@ impl<'a, 'b> Parser<'a, 'b> {
         }
 
         Ok(true)
-
-        // let start = self.toks.cursor();
-        // for c in ident.chars() {
-        //     if self.consume_char_if_exists(c) {
-        //         continue;
-        //     }
-
-        //     // todo: can be optimized
-        //     if case_insensitive
-        //         && (self.consume_char_if_exists(c.to_ascii_lowercase())
-        //             || self.consume_char_if_exists(c.to_ascii_uppercase()))
-        //     {
-        //         continue;
-        //     }
-
-        //     self.toks.set_cursor(start);
-        //     return false;
-        // }
-
-        // true
     }
 
     pub(crate) fn scan_ident_char(&mut self, c: char, case_sensitive: bool) -> SassResult<bool> {
@@ -74,7 +54,6 @@ impl<'a, 'b> Parser<'a, 'b> {
         Err((format!("Expected \"{}\".", c), self.toks.current_span()).into())
     }
 
-    // todo: duplicated in selector code
     pub(crate) fn looking_at_identifier_body(&mut self) -> bool {
         matches!(self.toks.peek(), Some(t) if is_name(t.kind) || t.kind == '\\')
     }
@@ -132,62 +111,6 @@ impl<'a, 'b> Parser<'a, 'b> {
         }
         Ok(buf)
     }
-
-    // fn parse_media_feature(&mut self) -> SassResult<Interpolation> {
-    //     let mut buf = Interpolation::new();
-
-    //     if self.consume_char_if_exists('#') {
-    //         self.expect_char('{')?;
-    //         todo!()
-    //         // buf.add_expr(self.parse_interpolated_string()?);
-    //         // return Ok(buf);
-    //     };
-    //     buf.add_token(self.expect_char('(')?);
-    //     self.whitespace_or_comment();
-
-    //     buf.add_expr(self.expression_until_comparison()?);
-
-    //     if self.consume_char_if_exists(':') {
-    //         self.whitespace_or_comment();
-
-    //         buf.add_char(':');
-    //         buf.add_char(' ');
-
-    //         let value = self.parse_expression(
-    //             Some(&|parser| Ok(matches!(parser.toks.peek(), Some(Token { kind: ')', .. })))),
-    //             None,
-    //             None,
-    //         )?;
-    //         self.expect_char(')')?;
-
-    //         buf.add_expr(value);
-
-    //         self.whitespace_or_comment();
-    //         buf.add_char(')');
-    //         return Ok(buf);
-    //     }
-
-    //     let next_tok = self.toks.peek();
-    //     let is_angle = next_tok.map_or(false, |t| t.kind == '<' || t.kind == '>');
-    //     if is_angle || matches!(next_tok, Some(Token { kind: '=', .. })) {
-    //         buf.add_char(' ');
-    //         // todo: remove this unwrap
-    //         buf.add_token(self.toks.next().unwrap());
-    //         if is_angle && self.consume_char_if_exists('=') {
-    //             buf.add_char('=');
-    //         }
-    //         buf.add_char(' ');
-
-    //         self.whitespace_or_comment();
-
-    //         buf.add_expr(self.expression_until_comparison()?);
-    //     }
-
-    //     self.expect_char(')')?;
-    //     self.whitespace_or_comment();
-    //     buf.add_char(')');
-    //     Ok(buf)
-    // }
 
     pub(crate) fn expect_whitespace(&mut self) -> SassResult<()> {
         if !matches!(

@@ -1,8 +1,7 @@
 use std::{
-    borrow::Cow,
     cell::Cell,
     collections::{BTreeMap, HashSet},
-    ffi::{OsStr, OsString},
+    ffi::OsString,
     path::{Path, PathBuf},
 };
 
@@ -12,10 +11,9 @@ use crate::{
     ast::*,
     atrule::{
         keyframes::{Keyframes, KeyframesRuleSet},
-        media::{MediaQuery, MediaRule},
+        media::MediaRule,
         SupportsRule, UnknownAtRule,
     },
-    builtin::modules::{ModuleConfig, Modules},
     common::{unvendor, Identifier, QuoteKind},
     error::SassResult,
     lexer::Lexer,
@@ -737,6 +735,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                 Err(..) => {
                     self.toks.set_cursor(start);
                     let stmt = self.parse_declaration_or_style_rule()?;
+                    let is_style_rule = matches!(stmt, AstStmt::RuleSet(..));
                     todo!(
                         "@function rules may not contain ${{statement is StyleRule ? \"style rules\" : \"declarations\"}}.",
                     )
@@ -1339,7 +1338,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         let start = if base_name.starts_with('_') { 1 } else { 0 };
         let end = dot.unwrap_or(base_name.len());
         let namespace = if url.to_string_lossy().starts_with("sass:") {
-            return Ok(Some((url.to_string_lossy().into_owned())));
+            return Ok(Some(url.to_string_lossy().into_owned()));
         } else {
             &base_name[start..end]
         };
@@ -1861,7 +1860,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         return Err(("expected more input.", self.toks.current_span()).into());
     }
 
-    fn expect_statement_separator(&mut self, name: Option<&str>) -> SassResult<()> {
+    fn expect_statement_separator(&mut self, _name: Option<&str>) -> SassResult<()> {
         self.whitespace();
         match self.toks.peek() {
             Some(Token {
@@ -3244,6 +3243,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         }
     }
 
+    // todo: rewrite
     pub fn whitespace_or_comment(&mut self) -> bool {
         let mut found_whitespace = false;
         while let Some(tok) = self.toks.peek() {

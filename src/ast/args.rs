@@ -297,7 +297,7 @@ impl ArgumentResult {
         } = self;
 
         // todo: complete hack, we shouldn't have the `touched` set
-        let mut args = positional
+        let args = positional
             .into_iter()
             .enumerate()
             .filter(|(idx, _)| !touched.contains(idx))
@@ -326,7 +326,6 @@ impl ArgumentResult {
 
         // Ok(vals)
         // todo!()
-        let span = self.span;
 
         Ok(args)
         // Ok(args

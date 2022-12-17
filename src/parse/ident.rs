@@ -1,7 +1,5 @@
 use std::iter::Iterator;
 
-use codemap::Spanned;
-
 use crate::{
     error::SassResult,
     utils::{as_hex, hex_char_for, is_name, is_name_start},

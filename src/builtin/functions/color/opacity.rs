@@ -33,7 +33,11 @@ mod test {
 pub(crate) fn alpha(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     if args.len() <= 1 {
         match args.get_err(0, "color")? {
-            Value::Color(c) => Ok(Value::Dimension((c.alpha()), Unit::None, None)),
+            Value::Color(c) => Ok(Value::Dimension {
+                num: (c.alpha()),
+                unit: Unit::None,
+                as_slash: None,
+            }),
             Value::String(s, QuoteKind::None) if is_ms_filter(&s) => {
                 Ok(Value::String(format!("alpha({})", s), QuoteKind::None))
             }
@@ -67,9 +71,17 @@ pub(crate) fn alpha(mut args: ArgumentResult, parser: &mut Visitor) -> SassResul
 pub(crate) fn opacity(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "color")? {
-        Value::Dimension(n, ..) if n.is_nan() => todo!(),
-        Value::Color(c) => Ok(Value::Dimension((c.alpha()), Unit::None, None)),
-        Value::Dimension((num), unit, _) => Ok(Value::String(
+        Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
+        Value::Color(c) => Ok(Value::Dimension {
+            num: (c.alpha()),
+            unit: Unit::None,
+            as_slash: None,
+        }),
+        Value::Dimension {
+            num,
+            unit,
+            as_slash: _,
+        } => Ok(Value::String(
             format!("opacity({}{})", num.inspect(), unit),
             QuoteKind::None,
         )),
@@ -95,8 +107,12 @@ fn opacify(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> 
         }
     };
     let amount = match args.get_err(1, "amount")? {
-        Value::Dimension(n, ..) if n.is_nan() => todo!(),
-        Value::Dimension((n), u, _) => bound!(args, "amount", n, u, 0, 1),
+        Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
+        Value::Dimension {
+            num: (n),
+            unit: u,
+            as_slash: _,
+        } => bound!(args, "amount", n, u, 0, 1),
         v => {
             return Err((
                 format!("$amount: {} is not a number.", v.inspect(args.span())?),
@@ -121,8 +137,12 @@ fn fade_in(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> 
         }
     };
     let amount = match args.get_err(1, "amount")? {
-        Value::Dimension(n, ..) if n.is_nan() => todo!(),
-        Value::Dimension((n), u, _) => bound!(args, "amount", n, u, 0, 1),
+        Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
+        Value::Dimension {
+            num: (n),
+            unit: u,
+            as_slash: _,
+        } => bound!(args, "amount", n, u, 0, 1),
         v => {
             return Err((
                 format!("$amount: {} is not a number.", v.inspect(args.span())?),
@@ -148,8 +168,12 @@ fn transparentize(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<
         }
     };
     let amount = match args.get_err(1, "amount")? {
-        Value::Dimension(n, ..) if n.is_nan() => todo!(),
-        Value::Dimension((n), u, _) => bound!(args, "amount", n, u, 0, 1),
+        Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
+        Value::Dimension {
+            num: (n),
+            unit: u,
+            as_slash: _,
+        } => bound!(args, "amount", n, u, 0, 1),
         v => {
             return Err((
                 format!("$amount: {} is not a number.", v.inspect(args.span())?),
@@ -174,8 +198,12 @@ fn fade_out(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value>
         }
     };
     let amount = match args.get_err(1, "amount")? {
-        Value::Dimension(n, ..) if n.is_nan() => todo!(),
-        Value::Dimension((n), u, _) => bound!(args, "amount", n, u, 0, 1),
+        Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
+        Value::Dimension {
+            num: (n),
+            unit: u,
+            as_slash: _,
+        } => bound!(args, "amount", n, u, 0, 1),
         v => {
             return Err((
                 format!("$amount: {} is not a number.", v.inspect(args.span())?),

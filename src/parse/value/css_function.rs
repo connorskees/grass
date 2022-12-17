@@ -393,7 +393,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                     wrote_newline = false;
                 }
                 'u' | 'U' => {
-                    let before_url = self.toks.cursor();
+                    // let before_url = self.toks.cursor();
 
                     if !self.scan_identifier("url", false)? {
                         buffer.push(tok.kind);

@@ -44,7 +44,12 @@ impl CalculationArg {
                 // todo: superfluous clone
                 let n = n.clone();
                 buf.push_str(
-                    &Value::Dimension(Number(n.0), n.1, n.2).to_css_string(span, is_compressed)?,
+                    &Value::Dimension {
+                        num: Number(n.num),
+                        unit: n.unit,
+                        as_slash: n.as_slash,
+                    }
+                    .to_css_string(span, is_compressed)?,
                 );
             }
             CalculationArg::Calculation(calc) => {
@@ -155,7 +160,11 @@ impl SassCalculation {
     pub fn calc(arg: CalculationArg) -> SassResult<Value> {
         let arg = Self::simplify(arg)?;
         match arg {
-            CalculationArg::Number(n) => Ok(Value::Dimension(Number(n.0), n.1, n.2)),
+            CalculationArg::Number(n) => Ok(Value::Dimension {
+                num: Number(n.num),
+                unit: n.unit,
+                as_slash: n.as_slash,
+            }),
             CalculationArg::Calculation(c) => Ok(Value::Calculation(c)),
             _ => Ok(Value::Calculation(SassCalculation {
                 name: CalculationName::Calc,
@@ -182,7 +191,7 @@ impl SassCalculation {
                 }
                 // todo: units
                 CalculationArg::Number(n)
-                    if minimum.is_none() || minimum.as_ref().unwrap().num() > n.num() =>
+                    if minimum.is_none() || minimum.as_ref().unwrap().num > n.num =>
                 {
                     minimum = Some(n.clone());
                 }
@@ -191,7 +200,11 @@ impl SassCalculation {
         }
 
         Ok(match minimum {
-            Some(min) => Value::Dimension(Number(min.0), min.1, min.2),
+            Some(min) => Value::Dimension {
+                num: Number(min.num),
+                unit: min.unit,
+                as_slash: min.as_slash,
+            },
             None => {
                 // _verifyCompatibleNumbers(args);
                 Value::Calculation(SassCalculation {
@@ -220,7 +233,7 @@ impl SassCalculation {
                 }
                 // todo: units
                 CalculationArg::Number(n)
-                    if maximum.is_none() || maximum.as_ref().unwrap().num() < n.num() =>
+                    if maximum.is_none() || maximum.as_ref().unwrap().num < n.num =>
                 {
                     maximum = Some(n.clone());
                 }
@@ -229,9 +242,13 @@ impl SassCalculation {
         }
 
         Ok(match maximum {
-            Some(max) => Value::Dimension(Number(max.0), max.1, max.2),
+            Some(max) => Value::Dimension {
+                num: Number(max.num),
+                unit: max.unit,
+                as_slash: max.as_slash,
+            },
             None => {
-                // _verifyCompatibleNumbers(args);
+                // todo: _verifyCompatibleNumbers(args);
                 Value::Calculation(SassCalculation {
                     name: CalculationName::Max,
                     args,
@@ -287,8 +304,8 @@ impl SassCalculation {
             }
 
             if let CalculationArg::Number(mut n) = right {
-                if n.num().is_negative() {
-                    n.0 *= -1.0;
+                if n.num.is_negative() {
+                    n.num *= -1.0;
                     op = if op == BinaryOp::Plus {
                         BinaryOp::Minus
                     } else {

@@ -5,7 +5,7 @@ use crate::builtin::{
         call, content_exists, feature_exists, function_exists, get_function,
         global_variable_exists, inspect, keywords, mixin_exists, type_of, variable_exists,
     },
-    modules::{Module, ModuleConfig},
+    modules::Module,
 };
 
 fn load_css(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Vec<Stmt>> {
