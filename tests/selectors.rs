@@ -447,13 +447,11 @@ test!(
 );
 error!(
     allows_id_start_with_number,
-    "#2foo {\n  color: red;\n}\n",
-    "Error: Expected identifier."
+    "#2foo {\n  color: red;\n}\n", "Error: Expected identifier."
 );
 error!(
     allows_id_only_number,
-    "#2 {\n  color: red;\n}\n",
-    "Error: Expected identifier."
+    "#2 {\n  color: red;\n}\n", "Error: Expected identifier."
 );
 test!(
     id_interpolation,
@@ -818,8 +816,7 @@ test!(
 );
 error!(
     id_selector_starts_with_number,
-    "#2b  {\n  color: &;\n}\n",
-    "Error: Expected identifier."
+    "#2b  {\n  color: &;\n}\n", "Error: Expected identifier."
 );
 test!(
     nth_of_type_mutliple_spaces_inside_parens_are_collapsed,

@@ -32,7 +32,10 @@ use crate::{
     error::{SassError, SassResult},
     interner::InternedString,
     lexer::Lexer,
-    parse::{add, cmp, div, mul, rem, single_eq, sub, KeyframesSelectorParser, Parser, Stmt},
+    parse::{
+        add, cmp, div, mul, rem, single_eq, sub, AtRootQueryParser, KeyframesSelectorParser,
+        Parser, Stmt,
+    },
     selector::{
         ComplexSelectorComponent, ExtendRule, ExtendedSelector, ExtensionStore, Selector,
         SelectorList, SelectorParser,
@@ -952,13 +955,27 @@ impl<'a> Visitor<'a> {
     }
 
     fn visit_at_root_rule(&mut self, mut at_root_rule: AstAtRootRule) -> SassResult<Option<Value>> {
-        let query = match at_root_rule.query {
+        let query = match at_root_rule.query.clone() {
             Some(val) => {
                 let resolved = self.perform_interpolation(val, true)?;
-                //   query = _adjustParseError(
-                //       unparsedQuery, () => AtRootQuery.parse(resolved, logger: _logger));
 
-                todo!()
+                let mut query_toks = Lexer::new(
+                    resolved
+                        .chars()
+                        .map(|x| Token::new(self.parser.span_before, x))
+                        .collect(),
+                );
+
+                AtRootQueryParser::new(&mut Parser {
+                    toks: &mut query_toks,
+                    map: self.parser.map,
+                    path: self.parser.path,
+                    is_plain_css: false,
+                    span_before: self.parser.span_before,
+                    flags: self.parser.flags,
+                    options: self.parser.options,
+                })
+                .parse()?
             }
             None => AtRootQuery::default(),
         };
@@ -1213,6 +1230,57 @@ impl<'a> Visitor<'a> {
         CssMediaQuery::parse_list(resolved, self.parser)
     }
 
+    fn serialize_media_query(query: MediaQuery) -> String {
+        let mut buffer = String::new();
+
+        if let Some(modifier) = query.modifier {
+            buffer.push_str(&modifier);
+            buffer.push(' ');
+        }
+
+        if let Some(media_type) = query.media_type {
+            buffer.push_str(&media_type);
+
+            if !query.conditions.is_empty() {
+                buffer.push_str(" and ");
+            }
+        }
+
+        if query.conditions.len() == 1 && query.conditions.first().unwrap().starts_with("(not ") {
+            buffer.push_str("not ");
+            let condition = query.conditions.first().unwrap();
+            buffer.push_str(&condition["(not ".len()..condition.len() - 1]);
+        } else {
+            let operator = if query.conjunction { " and " } else { " or " };
+            buffer.push_str(&format!("{}", query.conditions.join(operator)))
+        }
+
+        buffer
+    }
+
+    //    if (query.modifier != null) {
+    //   _buffer.write(query.modifier);
+    //   _buffer.writeCharCode($space);
+    // }
+
+    // if (query.type != null) {
+    //   _buffer.write(query.type);
+    //   if (query.conditions.isNotEmpty) {
+    //     _buffer.write(" and ");
+    //   }
+    // }
+
+    // if (query.conditions.length == 1 &&
+    //     query.conditions.first.startsWith("(not ")) {
+    //   _buffer.write("not ");
+    //   var condition = query.conditions.first;
+    //   _buffer.write(condition.substring("(not ".length, condition.length - 1));
+    // } else {
+    //   var operator = query.conjunction ? "and" : "or";
+    //   _writeBetween(query.conditions,
+    //       _isCompressed ? "$operator " : " $operator ", _buffer.write);
+    // }
+
     fn visit_media_rule(&mut self, media_rule: AstMedia) -> SassResult<Option<Value>> {
         // NOTE: this logic is largely duplicated in [visitCssMediaRule]. Most
         // changes here should be mirrored there.
@@ -1261,7 +1329,7 @@ impl<'a> Visitor<'a> {
             Box::new(MediaRule {
                 query: query
                     .into_iter()
-                    .map(|query| query.to_string())
+                    .map(Self::serialize_media_query)
                     .collect::<Vec<String>>()
                     .join(", "),
                 body: Vec::new(),
@@ -2699,7 +2767,7 @@ impl<'a> Visitor<'a> {
                 let right = self.visit_expr(rhs)?;
 
                 let left_is_number = matches!(left, Value::Dimension { .. });
-                let right_is_number =matches!(right, Value::Dimension { .. });
+                let right_is_number = matches!(right, Value::Dimension { .. });
 
                 let result = div(left.clone(), right.clone(), self.parser.options, span)?;
 
@@ -2768,6 +2836,7 @@ impl<'a> Visitor<'a> {
         let AstRuleSet {
             selector: ruleset_selector,
             body: ruleset_body,
+            ..
         } = ruleset;
 
         let selector_text = self.interpolation_to_value(ruleset_selector, true, true)?;

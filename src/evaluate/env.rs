@@ -51,13 +51,16 @@ impl Environment {
         self.scopes.mixin_exists(name)
     }
 
-    pub fn get_mixin(&self, name: Spanned<Identifier>, namespace: Option<Spanned<Identifier>>,) -> SassResult<Mixin> {
+    pub fn get_mixin(
+        &self,
+        name: Spanned<Identifier>,
+        namespace: Option<Spanned<Identifier>>,
+    ) -> SassResult<Mixin> {
         if let Some(namespace) = namespace {
             let modules = (*self.modules).borrow();
             let module = modules.get(namespace.node, namespace.span)?;
             return module.get_mixin(name);
         }
-
 
         self.scopes.get_mixin(name)
     }
@@ -177,10 +180,17 @@ impl Environment {
         self.scopes.global_scope()
     }
 
-    pub fn add_module(&mut self, namespace: Option<Identifier>, module: Module, span: Span) -> SassResult<()> {
+    pub fn add_module(
+        &mut self,
+        namespace: Option<Identifier>,
+        module: Module,
+        span: Span,
+    ) -> SassResult<()> {
         match namespace {
             Some(namespace) => {
-                (*self.modules).borrow_mut().insert(namespace, module, span)?;
+                (*self.modules)
+                    .borrow_mut()
+                    .insert(namespace, module, span)?;
             }
             None => {
                 for name in self.scopes.global_scope().var_names() {

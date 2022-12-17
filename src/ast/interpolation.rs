@@ -1,4 +1,4 @@
-use codemap::{Spanned};
+use codemap::Spanned;
 
 use crate::token::Token;
 

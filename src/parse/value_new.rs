@@ -507,9 +507,7 @@ impl<'c> ValueParser<'c> {
                 kind: '\u{80}'..=std::char::MAX,
                 ..
             }) => self.parse_identifier_like(parser),
-            Some(..) | None => {
-                Err(("Expected expression.", parser.toks.current_span()).into())
-            }
+            Some(..) | None => Err(("Expected expression.", parser.toks.current_span()).into()),
         }
     }
 

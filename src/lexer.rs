@@ -34,6 +34,14 @@ impl<'a> Lexer<'a> {
         start.merge(end)
     }
 
+    pub fn prev_span(&self) -> Span {
+        self.buf
+            .get(self.cursor.saturating_sub(1))
+            .copied()
+            .unwrap_or(self.buf.last().copied().unwrap())
+            .pos
+    }
+
     pub fn current_span(&self) -> Span {
         self.buf
             .get(self.cursor)
@@ -52,12 +60,6 @@ impl<'a> Lexer<'a> {
 
     pub fn reset_cursor(&mut self) {
         self.amt_peeked = 0;
-    }
-
-    pub fn peek_next(&mut self) -> Option<Token> {
-        self.amt_peeked += 1;
-
-        self.peek()
     }
 
     /// Peeks the previous token without modifying the peek cursor

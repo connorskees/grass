@@ -386,3 +386,30 @@ test!(
     }",
     "@media foo, bar {\n  a {\n    color: red;\n  }\n}\n"
 );
+test!(
+    query_not_paren,
+    "@media not (color) {
+      a {
+        color: red;
+      }
+    }",
+    "@media not (color) {\n  a {\n    color: red;\n  }\n}\n"
+);
+test!(
+    many_parens,
+    "@media (((color))) {
+      a {
+        color: red;
+      }
+    }",
+    "@media (((color))) {\n  a {\n    color: red;\n  }\n}\n"
+);
+test!(
+    many_parens_around_and,
+    "@media ((screen and (color))) {
+      a {
+        color: red;
+      }
+    }",
+    "@media ((color)) {\n  a {\n    color: red;\n  }\n}\n"
+);

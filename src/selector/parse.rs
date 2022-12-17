@@ -290,7 +290,7 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
                 self.parser.expect_identifier("of", false)?;
                 this_arg.push_str(" of");
                 self.parser.whitespace_or_comment();
-                selector = Some(Box::new(dbg!(self.parse_selector_list()?)));
+                selector = Some(Box::new(self.parse_selector_list()?));
             }
 
             self.parser.expect_char(')')?;

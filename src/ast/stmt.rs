@@ -66,6 +66,7 @@ pub(crate) struct AstReturn {
 pub(crate) struct AstRuleSet {
     pub selector: Interpolation,
     pub body: Vec<AstStmt>,
+    pub span: Span,
 }
 
 #[derive(Debug, Clone)]
@@ -226,6 +227,18 @@ pub(crate) struct AtRootQuery {
 }
 
 impl AtRootQuery {
+    pub fn new(include: bool, names: HashSet<String>) -> Self {
+        let all = names.contains("all");
+        let rule = names.contains("rule");
+
+        Self {
+            include,
+            names,
+            all,
+            rule,
+        }
+    }
+
     pub fn excludes_name(&self, name: &str) -> bool {
         (self.all || self.names.contains(name)) != self.include
     }

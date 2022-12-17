@@ -127,6 +127,15 @@ test!(
     }",
     "@media screen {\n  a {\n    color: red;\n  }\n}\n"
 );
+test!(
+    simple_at_root_query,
+    "a {
+        @at-root (with: rule) {
+            b: c;
+        }
+    }",
+    "a {\n  b: c;\n}\n"
+);
 error!(
     #[ignore = "we do not currently validate missing closing curly braces"]
     missing_closing_curly_brace,

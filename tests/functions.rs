@@ -338,6 +338,22 @@ error!(
     }",
     "Error: Only 1 argument allowed, but 2 were passed."
 );
+error!(
+    declaration_inside_function,
+    "@function foo() {
+        opacity: 1;
+        @return 2;
+    }",
+    "Error: @function rules may not contain declarations."
+);
+error!(
+    style_rule_inside_function,
+    "@function foo() {
+        a {}
+        @return 2;
+    }",
+    "Error: @function rules may not contain style rules."
+);
 test!(
     allows_multiline_comment,
     "@function foo($a) {

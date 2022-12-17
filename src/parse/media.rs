@@ -261,7 +261,6 @@ impl<'a, 'b> Parser<'a, 'b> {
             // For example, "@media not (...) {"
             self.expect_whitespace()?;
             if !self.looking_at_interpolated_identifier() {
-                dbg!(&ident1);
                 buf.add_string("not ".to_owned());
                 self.parse_media_or_interpolation(buf)?;
                 return Ok(());

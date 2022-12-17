@@ -9,10 +9,10 @@ pub(crate) use functions::{
 mod builtin_imports {
     pub(crate) use super::functions::{Builtin, GlobalFunctionMap, GLOBAL_FUNCTIONS};
 
-    pub(crate) use codemap::{Spanned};
+    pub(crate) use codemap::Spanned;
 
     pub(crate) use num_bigint::BigInt;
-    pub(crate) use num_traits::{ToPrimitive};
+    pub(crate) use num_traits::ToPrimitive;
 
     #[cfg(feature = "random")]
     pub(crate) use rand::{distributions::Alphanumeric, thread_rng, Rng};
@@ -23,7 +23,7 @@ mod builtin_imports {
         common::{BinaryOp, Brackets, Identifier, ListSeparator, QuoteKind},
         error::SassResult,
         evaluate::Visitor,
-        parse::{Stmt},
+        parse::Stmt,
         unit::Unit,
         value::{Number, SassFunction, SassMap, Value},
     };

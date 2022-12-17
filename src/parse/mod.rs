@@ -23,6 +23,7 @@ use crate::{
     ContextFlags, Options, Token,
 };
 
+pub(crate) use at_root_query::AtRootQueryParser;
 pub(crate) use keyframes::KeyframesSelectorParser;
 pub(crate) use value::{add, cmp, div, mul, rem, single_eq, sub};
 
@@ -32,6 +33,7 @@ use self::value_new::{Predicate, ValueParser};
 // pub mod common;
 // mod control_flow;
 // mod function;
+mod at_root_query;
 mod ident;
 // mod import;
 mod keyframes;
@@ -401,21 +403,50 @@ impl<'a, 'b> Parser<'a, 'b> {
     fn with_children(
         &mut self,
         child: fn(&mut Self) -> SassResult<AstStmt>,
-    ) -> SassResult<Vec<AstStmt>> {
+    ) -> SassResult<Spanned<Vec<AstStmt>>> {
+        let start = self.toks.cursor();
         let children = self.parse_children(child)?;
+        let span = self.toks.span_from(start);
         self.whitespace();
-        Ok(children)
+        Ok(Spanned {
+            node: children,
+            span,
+        })
     }
 
     fn parse_at_root_query(&mut self) -> SassResult<Interpolation> {
-        todo!()
+        if self.toks.next_char_is('#') {
+            return self.parse_single_interpolation();
+        }
+
+        let start = self.toks.cursor();
+        let mut buffer = Interpolation::new();
+        self.expect_char('(')?;
+        buffer.add_char('(');
+
+        self.whitespace_or_comment();
+
+        buffer.add_expr(self.parse_expression(None, None, None)?);
+
+        if self.consume_char_if_exists(':') {
+            self.whitespace_or_comment();
+            buffer.add_char(':');
+            buffer.add_char(' ');
+            buffer.add_expr(self.parse_expression(None, None, None)?);
+        }
+
+        self.expect_char(')');
+        self.whitespace_or_comment();
+        buffer.add_char(')');
+
+        Ok(buffer)
     }
 
     fn parse_at_root_rule(&mut self) -> SassResult<AstStmt> {
         Ok(AstStmt::AtRootRule(if self.toks.next_char_is('(') {
             let query = self.parse_at_root_query()?;
             self.whitespace_or_comment();
-            let children = self.with_children(Self::__parse_stmt)?;
+            let children = self.with_children(Self::__parse_stmt)?.node;
 
             AstAtRootRule {
                 query: Some(query),
@@ -423,14 +454,14 @@ impl<'a, 'b> Parser<'a, 'b> {
                 span: self.span_before,
             }
         } else if self.looking_at_children() {
-            let children = self.with_children(Self::__parse_stmt)?;
+            let children = self.with_children(Self::__parse_stmt)?.node;
             AstAtRootRule {
                 query: None,
                 children,
                 span: self.span_before,
             }
         } else {
-            let child = self.parse_style_rule(None)?;
+            let child = self.parse_style_rule(None, None)?;
             AstAtRootRule {
                 query: None,
                 children: vec![child],
@@ -493,7 +524,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         let list = self.parse_expression(None, None, None)?.node;
 
-        let body = self.with_children(child)?;
+        let body = self.with_children(child)?.node;
 
         self.flags
             .set(ContextFlags::IN_CONTROL_FLOW, was_in_control_directive);
@@ -617,7 +648,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         let to = self.parse_expression(None, None, None)?;
 
-        let body = self.with_children(child)?;
+        let body = self.with_children(child)?.node;
 
         self.flags
             .set(ContextFlags::IN_CONTROL_FLOW, was_in_control_directive);
@@ -691,7 +722,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         self.whitespace_or_comment();
 
-        let children = self.with_children(Self::function_child)?;
+        let children = self.with_children(Self::function_child)?.node;
 
         Ok(AstStmt::FunctionDecl(AstFunctionDecl {
             name: Spanned {
@@ -725,10 +756,27 @@ impl<'a, 'b> Parser<'a, 'b> {
                 Err(..) => {
                     self.toks.set_cursor(start);
                     let stmt = self.parse_declaration_or_style_rule()?;
+                    dbg!(self.toks.span_from(start));
                     let is_style_rule = matches!(stmt, AstStmt::RuleSet(..));
-                    todo!(
-                        "@function rules may not contain ${{statement is StyleRule ? \"style rules\" : \"declarations\"}}.",
+
+                    let (is_style_rule, span) = match stmt {
+                        AstStmt::RuleSet(ruleset) => (true, ruleset.span),
+                        AstStmt::Style(style) => (false, style.span),
+                        _ => unreachable!(),
+                    };
+
+                    return Err((
+                        format!(
+                            "@function rules may not contain {}.",
+                            if is_style_rule {
+                                "style rules"
+                            } else {
+                                "declarations"
+                            }
+                        ),
+                        span,
                     )
+                        .into());
                 }
             }
         }
@@ -1093,7 +1141,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             let content_args = content_args.unwrap_or_else(ArgumentDeclaration::empty);
             let was_in_content_block = self.flags.in_content_block();
             self.flags.set(ContextFlags::IN_CONTENT_BLOCK, true);
-            let body = self.with_children(Self::__parse_stmt)?;
+            let body = self.with_children(Self::__parse_stmt)?.node;
             content_block = Some(AstContentBlock {
                 args: content_args,
                 body,
@@ -1118,7 +1166,7 @@ impl<'a, 'b> Parser<'a, 'b> {
     fn parse_media_rule(&mut self) -> SassResult<AstStmt> {
         let query = self.parse_media_query_list()?;
 
-        let body = self.with_children(Self::__parse_stmt)?;
+        let body = self.with_children(Self::__parse_stmt)?.node;
 
         Ok(AstStmt::Media(AstMedia { query, body }))
     }
@@ -1221,7 +1269,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         self.flags.set(ContextFlags::FOUND_CONTENT_RULE, false);
         self.flags.set(ContextFlags::IN_MIXIN, true);
 
-        let body = self.with_children(Self::__parse_stmt)?;
+        let body = self.with_children(Self::__parse_stmt)?.node;
 
         let has_content = self.flags.found_content_rule();
 
@@ -1253,7 +1301,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             };
 
         let children = if self.looking_at_children() {
-            Some(self.with_children(Self::__parse_stmt)?)
+            Some(self.with_children(Self::__parse_stmt)?.node)
         } else {
             self.expect_statement_separator(None)?;
             None
@@ -1292,7 +1340,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         let condition = self.parse_expression(None, None, None)?.node;
 
-        let body = self.with_children(child)?;
+        let body = self.with_children(child)?.node;
 
         self.flags
             .set(ContextFlags::IN_CONTROL_FLOW, was_in_control_directive);
@@ -1521,7 +1569,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         match self.toks.peek() {
             Some(Token { kind: '@', .. }) => self.parse_at_rule(Self::__parse_stmt),
             // todo: indented stuff
-            Some(Token { kind: '+', .. }) => self.parse_style_rule(None),
+            Some(Token { kind: '+', .. }) => self.parse_style_rule(None, None),
             Some(Token { kind: '=', .. }) => todo!(),
             Some(Token { kind: '}', .. }) => todo!(),
             _ => {
@@ -1539,6 +1587,8 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     fn parse_declaration_or_style_rule(&mut self) -> SassResult<AstStmt> {
+        let start = self.toks.cursor();
+
         if self.flags.in_plain_css()
             && self.flags.in_style_rule()
             && !self.flags.in_unknown_at_rule()
@@ -1549,7 +1599,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         match self.parse_declaration_or_buffer()? {
             DeclarationOrBuffer::Stmt(s) => Ok(s),
             DeclarationOrBuffer::Buffer(existing_buffer) => {
-                self.parse_style_rule(Some(existing_buffer))
+                self.parse_style_rule(Some(existing_buffer), Some(start))
             }
         }
     }
@@ -1616,7 +1666,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                     .into());
             }
 
-            let children = self.with_children(Self::parse_declaration_child)?;
+            let children = self.with_children(Self::parse_declaration_child)?.node;
 
             assert!(
                 !name.initial_plain().starts_with("--"),
@@ -1641,7 +1691,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                     .into());
             }
 
-            let children = self.with_children(Self::parse_declaration_child)?;
+            let children = self.with_children(Self::parse_declaration_child)?.node;
 
             assert!(
                 !name.initial_plain().starts_with("--")
@@ -2225,7 +2275,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         let post_colon_whitespace = self.raw_text(Self::whitespace_or_comment);
         if self.looking_at_children() {
-            let body = self.with_children(Self::parse_declaration_child)?;
+            let body = self.with_children(Self::parse_declaration_child)?.node;
             return Ok(DeclarationOrBuffer::Stmt(AstStmt::Style(AstStyle {
                 name: name_buffer,
                 value: None,
@@ -2310,7 +2360,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         // };
 
         if self.looking_at_children() {
-            let body = self.with_children(Self::parse_declaration_child)?;
+            let body = self.with_children(Self::parse_declaration_child)?.node;
             Ok(DeclarationOrBuffer::Stmt(AstStmt::Style(AstStyle {
                 name: name_buffer,
                 value: Some(value),
@@ -2364,21 +2414,31 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     fn parse_variable_declaration_or_style_rule(&mut self) -> SassResult<AstStmt> {
+        let start = self.toks.cursor();
+
         if self.flags.in_plain_css() {
-            return self.parse_style_rule(None);
+            return self.parse_style_rule(None, None);
         }
 
         if !self.looking_at_identifier() {
-            return self.parse_style_rule(None);
+            return self.parse_style_rule(None, None);
         }
 
         match self.parse_variable_declaration_or_interpolation()? {
             VariableDeclOrInterpolation::VariableDecl(var) => Ok(AstStmt::VariableDecl(var)),
-            VariableDeclOrInterpolation::Interpolation(int) => self.parse_style_rule(Some(int)),
+            VariableDeclOrInterpolation::Interpolation(int) => {
+                self.parse_style_rule(Some(int), Some(start))
+            }
         }
     }
 
-    fn parse_style_rule(&mut self, existing_buffer: Option<Interpolation>) -> SassResult<AstStmt> {
+    fn parse_style_rule(
+        &mut self,
+        existing_buffer: Option<Interpolation>,
+        start: Option<usize>,
+    ) -> SassResult<AstStmt> {
+        let start = start.unwrap_or(self.toks.cursor());
+
         self.flags.set(ContextFlags::IS_USE_ALLOWED, false);
         let mut interpolation = self.parse_style_rule_selector()?;
 
@@ -2394,16 +2454,19 @@ impl<'a, 'b> Parser<'a, 'b> {
         let was_in_style_rule = self.flags.in_style_rule();
         self.flags |= ContextFlags::IN_STYLE_RULE;
 
+        let selector_span = self.toks.span_from(start);
+
         let children = self.with_children(Self::__parse_stmt)?;
 
         self.flags
             .set(ContextFlags::IN_STYLE_RULE, was_in_style_rule);
 
-        self.whitespace();
+        let span = selector_span.merge(children.span);
 
         Ok(AstStmt::RuleSet(AstRuleSet {
             selector: interpolation,
-            body: children,
+            body: children.node,
+            span,
         }))
     }
 
@@ -2756,6 +2819,13 @@ impl<'a, 'b> Parser<'a, 'b> {
             Some(Token { pos, .. }) => Err((format!("expected \"{}\".", c), pos).into()),
             None => Err((format!("expected \"{}\".", c), self.toks.current_span()).into()),
         }
+    }
+
+    // todo: not real impl
+    pub fn expect_done(&mut self) -> SassResult<()> {
+        debug_assert!(self.toks.peek().is_none());
+
+        Ok(())
     }
 
     pub fn consume_char_if_exists(&mut self, c: char) -> bool {

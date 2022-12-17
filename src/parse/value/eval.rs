@@ -519,16 +519,13 @@ pub(crate) fn div(left: Value, right: Value, options: &Options, span: Span) -> S
                         unit: Unit::None,
                         as_slash: None,
                     }
-                    // Value::Dimension(num / num2.convert(&unit2, &unit), Unit::None, Some(Box::new((sass_num_1, sass_num_2))))
-                    // `unit(1em / 1px)` => `"em/px"`
-                    // todo: this should probably be its own variant
-                    // within the `Value` enum
+                // `unit(1em / 1px)` => `"em/px"`
                 } else {
-                    // todo: remember to account for `Mul` and `Div`
-                    // todo!("non-comparable inverse units")
-                    return Err(
-                        ("Division of non-comparable units not yet supported.", span).into(),
-                    );
+                    Value::Dimension {
+                        num: num / num2,
+                        unit: unit / unit2,
+                        as_slash: None,
+                    }
                 }
                 // } else {
                 //     Value::String(

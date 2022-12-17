@@ -16,18 +16,10 @@ pub(crate) struct MediaRule {
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub(crate) struct MediaQuery {
-    /// The modifier, probably either "not" or "only".
-    ///
-    /// This may be `None` if no modifier is in use.
     pub modifier: Option<String>,
-
-    /// The media type, for example "screen" or "print".
-    ///
-    /// This may be `None`. If so, `self.features` will not be empty.
     pub media_type: Option<String>,
-
-    /// Feature queries, including parentheses.
-    pub features: Vec<String>,
+    pub conditions: Vec<String>,
+    pub conjunction: bool,
 }
 
 struct MediaQueryParser<'a> {
@@ -73,7 +65,7 @@ impl<'a> MediaQueryParser<'a> {
                 conditions.append(&mut self.parse_media_logic_sequence("or")?);
             }
 
-            return Ok(MediaQuery::condition(conditions));
+            return Ok(MediaQuery::condition(conditions, conjunction));
         }
 
         let mut modifier: Option<String> = None;
@@ -83,10 +75,10 @@ impl<'a> MediaQueryParser<'a> {
         if identifier1.to_ascii_lowercase() == "not" {
             self.parser.expect_whitespace()?;
             if !self.parser.looking_at_identifier() {
-                return Ok(MediaQuery::condition(vec![format!(
-                    "(not ${})",
-                    self.parse_media_in_parens()?
-                )]));
+                return Ok(MediaQuery::condition(
+                    vec![format!("(not {})", self.parse_media_in_parens()?)],
+                    true,
+                ));
             }
         }
 
@@ -135,6 +127,10 @@ impl<'a> MediaQueryParser<'a> {
     }
 
     fn parse_media_in_parens(&mut self) -> SassResult<String> {
+        // dbg!(&self.parser.toks.peek_n(0));
+        // dbg!(&self.parser.toks.peek_n(1));
+        // dbg!(&self.parser.toks.peek_n(2));
+        // dbg!(&self.parser.toks.peek_n(3));
         self.parser.expect_char('(')?;
         let result = format!("({})", self.parser.declaration_value(false)?);
         self.parser.expect_char(')')?;
@@ -167,11 +163,16 @@ impl MediaQuery {
                 .map_or(false, |v| v.to_ascii_lowercase() == "all")
     }
 
-    pub fn condition(features: Vec<String>) -> Self {
+    pub fn condition(
+        conditions: Vec<String>,
+        // default=true
+        conjunction: bool,
+    ) -> Self {
         Self {
             modifier: None,
             media_type: None,
-            features,
+            conditions,
+            conjunction,
         }
     }
 
@@ -180,11 +181,11 @@ impl MediaQuery {
         modifier: Option<String>,
         conditions: Option<Vec<String>>,
     ) -> Self {
-        // todo: conjunction = true
         Self {
             modifier,
+            conjunction: true,
             media_type,
-            features: conditions.unwrap_or_default(),
+            conditions: conditions.unwrap_or_default(),
         }
     }
 
@@ -210,6 +211,10 @@ impl MediaQuery {
 
     #[allow(clippy::if_not_else)]
     pub fn merge(&self, other: &Self) -> MediaQueryMergeResult {
+        if !self.conjunction || !other.conjunction {
+            return MediaQueryMergeResult::Unrepresentable;
+        }
+
         let this_modifier = self.modifier.as_ref().map(|m| m.to_ascii_lowercase());
         let this_type = self.media_type.as_ref().map(|m| m.to_ascii_lowercase());
         let other_modifier = other.modifier.as_ref().map(|m| m.to_ascii_lowercase());
@@ -217,33 +222,34 @@ impl MediaQuery {
 
         if this_type.is_none() && other_type.is_none() {
             return MediaQueryMergeResult::Success(Self::condition(
-                self.features
+                self.conditions
                     .iter()
-                    .chain(&other.features)
+                    .chain(&other.conditions)
                     .cloned()
                     .collect(),
+                true,
             ));
         }
 
         let modifier;
         let media_type;
-        let features;
+        let conditions;
 
         if (this_modifier.as_deref() == Some("not")) != (other_modifier.as_deref() == Some("not")) {
             if this_modifier == other_modifier {
-                let negative_features = if this_modifier.as_deref() == Some("not") {
-                    &self.features
+                let negative_conditions = if this_modifier.as_deref() == Some("not") {
+                    &self.conditions
                 } else {
-                    &other.features
+                    &other.conditions
                 };
 
-                let positive_features = if this_modifier.as_deref() == Some("not") {
-                    &other.features
+                let positive_conditions = if this_modifier.as_deref() == Some("not") {
+                    &other.conditions
                 } else {
-                    &self.features
+                    &self.conditions
                 };
 
-                // If the negative features are a subset of the positive features, the
+                // If the negative conditions are a subset of the positive conditions, the
                 // query is empty. For example, `not screen and (color)` has no
                 // intersection with `screen and (color) and (grid)`.
                 //
@@ -251,9 +257,9 @@ impl MediaQuery {
                 // (grid)`, because it means `not (screen and (color))` and so it allows
                 // a screen with no color but with a grid.
 
-                if negative_features
+                if negative_conditions
                     .iter()
-                    .all(|feat| positive_features.contains(feat))
+                    .all(|feat| positive_conditions.contains(feat))
                 {
                     return MediaQueryMergeResult::Empty;
                 }
@@ -266,11 +272,11 @@ impl MediaQuery {
             if this_modifier.as_deref() == Some("not") {
                 modifier = &other_modifier;
                 media_type = &other_type;
-                features = other.features.clone();
+                conditions = other.conditions.clone();
             } else {
                 modifier = &this_modifier;
                 media_type = &this_type;
-                features = self.features.clone();
+                conditions = self.conditions.clone();
             }
         } else if this_modifier.as_deref() == Some("not") {
             debug_assert_eq!(other_modifier.as_deref(), Some("not"));
@@ -280,27 +286,27 @@ impl MediaQuery {
                 return MediaQueryMergeResult::Unrepresentable;
             }
 
-            let more_features = if self.features.len() > other.features.len() {
-                &self.features
+            let more_conditions = if self.conditions.len() > other.conditions.len() {
+                &self.conditions
             } else {
-                &other.features
+                &other.conditions
             };
 
-            let fewer_features = if self.features.len() > other.features.len() {
-                &other.features
+            let fewer_conditions = if self.conditions.len() > other.conditions.len() {
+                &other.conditions
             } else {
-                &self.features
+                &self.conditions
             };
 
-            // If one set of features is a superset of the other, use those features
+            // If one set of conditions is a superset of the other, use those conditions
             // because they're strictly narrower.
-            if fewer_features
+            if fewer_conditions
                 .iter()
-                .all(|feat| more_features.contains(feat))
+                .all(|feat| more_conditions.contains(feat))
             {
                 modifier = &this_modifier; // "not"
                 media_type = &this_type;
-                features = more_features.clone();
+                conditions = more_conditions.clone();
             } else {
                 // Otherwise, there's no way to represent the intersection.
                 return MediaQueryMergeResult::Unrepresentable;
@@ -316,19 +322,19 @@ impl MediaQuery {
                 &other_type
             };
 
-            features = self
-                .features
+            conditions = self
+                .conditions
                 .iter()
-                .chain(&other.features)
+                .chain(&other.conditions)
                 .cloned()
                 .collect();
         } else if other.matches_all_types() {
             modifier = &this_modifier;
             media_type = &this_type;
-            features = self
-                .features
+            conditions = self
+                .conditions
                 .iter()
-                .chain(&other.features)
+                .chain(&other.conditions)
                 .cloned()
                 .collect();
         } else if this_type != other_type {
@@ -341,10 +347,10 @@ impl MediaQuery {
             }
 
             media_type = &this_type;
-            features = self
-                .features
+            conditions = self
+                .conditions
                 .iter()
-                .chain(&other.features)
+                .chain(&other.conditions)
                 .cloned()
                 .collect();
         }
@@ -360,7 +366,8 @@ impl MediaQuery {
             } else {
                 other.modifier.clone()
             },
-            features,
+            conditions,
+            conjunction: true,
         })
     }
 }
@@ -374,12 +381,12 @@ impl fmt::Display for MediaQuery {
 
         if let Some(media_type) = &self.media_type {
             f.write_str(media_type)?;
-            if !&self.features.is_empty() {
+            if !&self.conditions.is_empty() {
                 f.write_str(" and ")?;
             }
         }
 
-        f.write_str(&self.features.join(" and "))
+        f.write_str(&self.conditions.join(" and "))
     }
 }
 

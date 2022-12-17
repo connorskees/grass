@@ -376,6 +376,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                 }
                 ']' | ')' | '}' => {
                     if let Some(end) = brackets.pop() {
+                        buffer.push(tok.kind);
                         self.expect_char(end)?;
                     } else {
                         break;
