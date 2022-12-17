@@ -254,11 +254,11 @@ impl<'a, 'b> Parser<'a, 'b> {
         self.expect_char('\\')?;
 
         match self.toks.peek() {
-            None => return Ok('\u{FFFD}'),
+            None => Ok('\u{FFFD}'),
             Some(Token {
                 kind: '\n' | '\r',
                 pos,
-            }) => return Err(("Expected escape sequence.", pos).into()),
+            }) => Err(("Expected escape sequence.", pos).into()),
             Some(Token { kind, .. }) if kind.is_ascii_hexdigit() => {
                 let mut value = 0;
                 for _ in 0..6 {
@@ -280,26 +280,16 @@ impl<'a, 'b> Parser<'a, 'b> {
                 }
 
                 if value == 0 || (0xD800..=0xDFFF).contains(&value) || value >= 0x0010_FFFF {
-                    return Ok('\u{FFFD}');
+                    Ok('\u{FFFD}')
                 } else {
-                    return Ok(char::from_u32(value).unwrap());
+                    Ok(char::from_u32(value).unwrap())
                 }
             }
             Some(Token { kind, .. }) => {
                 self.toks.next();
-                return Ok(kind);
+                Ok(kind)
             }
         }
-        //         scanner.expectChar($backslash);
-        //   var first = scanner.peekChar();
-        //   if (first == null) {
-        //     return 0xFFFD;
-        //   } else if (isNewline(first)) {
-        //     scanner.error("Expected escape sequence.");
-        //   } else if (isHex(first)) {
-        //   } else {
-        //     return scanner.readChar();
-        //   }
     }
 
     // todo: return span
@@ -538,11 +528,11 @@ impl<'a, 'b> Parser<'a, 'b> {
 
     fn parse_disallowed_at_rule(&mut self, start: usize) -> SassResult<AstStmt> {
         self.almost_any_value(false)?;
-        return Err((
+        Err((
             "This at-rule is not allowed here.",
             self.toks.span_from(start),
         )
-            .into());
+            .into())
     }
 
     fn parse_error_rule(&mut self) -> SassResult<AstStmt> {
@@ -1330,8 +1320,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         let base_name = url
             .file_name()
-            .map(ToOwned::to_owned)
-            .unwrap_or_else(OsString::new);
+            .map_or_else(OsString::new, ToOwned::to_owned);
         let base_name = base_name.to_string_lossy();
         let dot = base_name.find('.');
 
@@ -1441,7 +1430,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         let url = self.parse_url_string()?;
         self.whitespace_or_comment();
 
-        let path = PathBuf::from(url.clone());
+        let path = PathBuf::from(url);
 
         let namespace = self.use_namespace(path.as_ref(), start)?;
         self.whitespace_or_comment();
@@ -1655,8 +1644,8 @@ impl<'a, 'b> Parser<'a, 'b> {
             let children = self.with_children(Self::parse_declaration_child)?;
 
             assert!(
-                !(name.initial_plain().starts_with("--")
-                    && !matches!(value.node, AstExpr::String(..))),
+                !name.initial_plain().starts_with("--")
+                    || matches!(value.node, AstExpr::String(..)),
                 "todo: Declarations whose names begin with \"--\" may not be nested"
             );
 
@@ -1857,7 +1846,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             }
         }
 
-        return Err(("expected more input.", self.toks.current_span()).into());
+        Err(("expected more input.", self.toks.current_span()).into())
     }
 
     fn expect_statement_separator(&mut self, _name: Option<&str>) -> SassResult<()> {

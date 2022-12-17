@@ -253,7 +253,7 @@ impl Number {
         Self(1.0)
     }
 
-    pub fn is_one(&self) -> bool {
+    pub fn is_one(self) -> bool {
         self.0 == 1.0
     }
 
@@ -261,7 +261,7 @@ impl Number {
         Self(0.0)
     }
 
-    pub fn is_zero(&self) -> bool {
+    pub fn is_zero(self) -> bool {
         self.0 == 0.0
     }
 }
@@ -443,13 +443,13 @@ impl Number {
 
         if is_compressed && num < 1.0 {
             buffer.push_str(
-                &format!("{:.10}", num)[1..]
+                format!("{:.10}", num)[1..]
                     .trim_end_matches('0')
                     .trim_end_matches('.'),
             );
         } else {
             buffer.push_str(
-                &format!("{:.10}", num)
+                format!("{:.10}", num)
                     .trim_end_matches('0')
                     .trim_end_matches('.'),
             );

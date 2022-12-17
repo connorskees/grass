@@ -73,10 +73,10 @@ impl<'a, 'b> Parser<'a, 'b> {
         let start = self.toks.cursor();
 
         if self.consume_identifier(ident, case_sensitive)? && !self.looking_at_identifier_body() {
-            return Ok(true);
+            Ok(true)
         } else {
             self.toks.set_cursor(start);
-            return Ok(false);
+            Ok(false)
         }
     }
 

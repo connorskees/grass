@@ -2269,7 +2269,7 @@ impl<'a> Visitor<'a> {
                         }
                     }
 
-                    return Err(("Function finished without @return.", span).into());
+                    Err(("Function finished without @return.", span).into())
                 },
             ),
             SassFunction::Plain { name } => {
@@ -2433,7 +2433,7 @@ impl<'a> Visitor<'a> {
                 rhs,
                 allows_slash,
                 span,
-            } => self.visit_bin_op(lhs, op, rhs, allows_slash, span)?,
+            } => self.visit_bin_op(*lhs, op, *rhs, allows_slash, span)?,
             AstExpr::True => Value::True,
             AstExpr::False => Value::False,
             AstExpr::Calculation { name, args } => self.visit_calculation_expr(name, args)?,
@@ -2641,65 +2641,65 @@ impl<'a> Visitor<'a> {
 
     fn visit_bin_op(
         &mut self,
-        lhs: Box<AstExpr>,
+        lhs: AstExpr,
         op: BinaryOp,
-        rhs: Box<AstExpr>,
+        rhs: AstExpr,
         allows_slash: bool,
         span: Span,
     ) -> SassResult<Value> {
-        let left = self.visit_expr(*lhs)?;
+        let left = self.visit_expr(lhs)?;
 
         Ok(match op {
             BinaryOp::SingleEq => {
-                let right = self.visit_expr(*rhs)?;
+                let right = self.visit_expr(rhs)?;
                 single_eq(left, right, self.parser.options, span)?
             }
             BinaryOp::Or => {
                 if left.is_true() {
                     left
                 } else {
-                    self.visit_expr(*rhs)?
+                    self.visit_expr(rhs)?
                 }
             }
             BinaryOp::And => {
                 if left.is_true() {
-                    self.visit_expr(*rhs)?
+                    self.visit_expr(rhs)?
                 } else {
                     left
                 }
             }
             BinaryOp::Equal => {
-                let right = self.visit_expr(*rhs)?;
+                let right = self.visit_expr(rhs)?;
                 Value::bool(left == right)
             }
             BinaryOp::NotEqual => {
-                let right = self.visit_expr(*rhs)?;
+                let right = self.visit_expr(rhs)?;
                 Value::bool(left != right)
             }
             BinaryOp::GreaterThan
             | BinaryOp::GreaterThanEqual
             | BinaryOp::LessThan
             | BinaryOp::LessThanEqual => {
-                let right = self.visit_expr(*rhs)?;
+                let right = self.visit_expr(rhs)?;
                 cmp(left, right, self.parser.options, span, op)?
             }
             BinaryOp::Plus => {
-                let right = self.visit_expr(*rhs)?;
+                let right = self.visit_expr(rhs)?;
                 add(left, right, self.parser.options, span)?
             }
             BinaryOp::Minus => {
-                let right = self.visit_expr(*rhs)?;
+                let right = self.visit_expr(rhs)?;
                 sub(left, right, self.parser.options, span)?
             }
             BinaryOp::Mul => {
-                let right = self.visit_expr(*rhs)?;
+                let right = self.visit_expr(rhs)?;
                 mul(left, right, self.parser.options, span)?
             }
             BinaryOp::Div => {
-                let right = self.visit_expr(*rhs)?;
+                let right = self.visit_expr(rhs)?;
 
-                let left_is_number = todo!(); // matches!(left, Value::Dimension(..));
-                let right_is_number = todo!(); //matches!(right, Value::Dimension(..));
+                let left_is_number = matches!(left, Value::Dimension { .. });
+                let right_is_number =matches!(right, Value::Dimension { .. });
 
                 let result = div(left.clone(), right.clone(), self.parser.options, span)?;
 
@@ -2740,7 +2740,7 @@ impl<'a> Visitor<'a> {
                 result
             }
             BinaryOp::Rem => {
-                let right = self.visit_expr(*rhs)?;
+                let right = self.visit_expr(rhs)?;
                 rem(left, right, self.parser.options, span)?
             }
         })

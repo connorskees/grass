@@ -23,7 +23,7 @@ grass input.scss
 ```
 */
 
-#![allow(warnings)]
+#![allow(unused)]
 #![warn(clippy::all, clippy::pedantic, clippy::nursery, clippy::cargo)]
 #![deny(missing_debug_implementations)]
 #![allow(

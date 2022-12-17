@@ -70,7 +70,7 @@ impl CalculationArg {
                     buf.push('(');
                 }
 
-                Self::write_calculation_value(buf, &**lhs, is_compressed, span)?;
+                Self::write_calculation_value(buf, lhs, is_compressed, span)?;
 
                 if paren_left {
                     buf.push(')');
@@ -102,7 +102,7 @@ impl CalculationArg {
                     buf.push('(');
                 }
 
-                Self::write_calculation_value(buf, &**rhs, is_compressed, span)?;
+                Self::write_calculation_value(buf, rhs, is_compressed, span)?;
 
                 if paren_right {
                     buf.push(')');
@@ -141,8 +141,8 @@ impl fmt::Display for CalculationName {
 }
 
 impl CalculationName {
-    pub fn in_min_or_max(&self) -> bool {
-        *self == CalculationName::Min || *self == CalculationName::Max
+    pub fn in_min_or_max(self) -> bool {
+        self == CalculationName::Min || self == CalculationName::Max
     }
 }
 
@@ -158,7 +158,7 @@ impl SassCalculation {
     }
 
     pub fn calc(arg: CalculationArg) -> SassResult<Value> {
-        let arg = Self::simplify(arg)?;
+        let arg = Self::simplify(arg);
         match arg {
             CalculationArg::Number(n) => Ok(Value::Dimension {
                 num: Number(n.num),
@@ -174,17 +174,17 @@ impl SassCalculation {
     }
 
     pub fn min(args: Vec<CalculationArg>) -> SassResult<Value> {
-        let args = Self::simplify_arguments(args)?;
+        let args = Self::simplify_arguments(args);
         if args.is_empty() {
             todo!("min() must have at least one argument.")
         }
 
         let mut minimum: Option<SassNumber> = None;
 
-        for arg in args.iter() {
+        for arg in &args {
             match arg {
                 CalculationArg::Number(n)
-                    if minimum.is_some() && !minimum.as_ref().unwrap().is_comparable_to(&n) =>
+                    if minimum.is_some() && !minimum.as_ref().unwrap().is_comparable_to(n) =>
                 {
                     minimum = None;
                     break;
@@ -216,17 +216,17 @@ impl SassCalculation {
     }
 
     pub fn max(args: Vec<CalculationArg>) -> SassResult<Value> {
-        let args = Self::simplify_arguments(args)?;
+        let args = Self::simplify_arguments(args);
         if args.is_empty() {
             todo!("max() must have at least one argument.")
         }
 
         let mut maximum: Option<SassNumber> = None;
 
-        for arg in args.iter() {
+        for arg in &args {
             match arg {
                 CalculationArg::Number(n)
-                    if maximum.is_some() && !maximum.as_ref().unwrap().is_comparable_to(&n) =>
+                    if maximum.is_some() && !maximum.as_ref().unwrap().is_comparable_to(n) =>
                 {
                     maximum = None;
                     break;
@@ -280,8 +280,8 @@ impl SassCalculation {
             });
         }
 
-        let left = Self::simplify(left)?;
-        let mut right = Self::simplify(right)?;
+        let left = Self::simplify(left);
+        let mut right = Self::simplify(right);
 
         if op == BinaryOp::Plus || op == BinaryOp::Minus {
             let is_comparable = if in_min_or_max {
@@ -326,8 +326,8 @@ impl SassCalculation {
         })
     }
 
-    fn simplify(arg: CalculationArg) -> SassResult<CalculationArg> {
-        Ok(match arg {
+    fn simplify(arg: CalculationArg) -> CalculationArg {
+        match arg {
             CalculationArg::Number(..)
             | CalculationArg::Operation { .. }
             | CalculationArg::Interpolation(..)
@@ -339,10 +339,10 @@ impl SassCalculation {
                     CalculationArg::Calculation(calc)
                 }
             }
-        })
+        }
     }
 
-    fn simplify_arguments(args: Vec<CalculationArg>) -> SassResult<Vec<CalculationArg>> {
+    fn simplify_arguments(args: Vec<CalculationArg>) -> Vec<CalculationArg> {
         args.into_iter().map(Self::simplify).collect()
     }
 }

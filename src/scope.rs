@@ -42,14 +42,14 @@ impl Scope {
         self.vars.keys().copied()
     }
 
-    fn get_var<'a>(&'a self, name: Spanned<Identifier>) -> SassResult<&'a Value> {
+    fn get_var(&self, name: Spanned<Identifier>) -> SassResult<&Value> {
         match self.vars.get(&name.node) {
             Some(v) => Ok(v),
             None => Err(("Undefined variable.", name.span).into()),
         }
     }
 
-    pub fn get_var_no_err<'a>(&'a self, name: Identifier) -> Option<&'a Value> {
+    pub fn get_var_no_err(&self, name: Identifier) -> Option<&Value> {
         self.vars.get(&name)
     }
 
@@ -133,7 +133,7 @@ impl Scopes {
 }
 
 /// Variables
-impl<'a> Scopes {
+impl Scopes {
     pub fn insert_var(&mut self, idx: usize, name: Identifier, v: Value) -> Option<Value> {
         self.0[idx].borrow_mut().insert_var(name, v)
     }
@@ -168,14 +168,14 @@ impl<'a> Scopes {
 }
 
 /// Mixins
-impl<'a> Scopes {
+impl Scopes {
     pub fn insert_mixin(&mut self, name: Identifier, mixin: Mixin) -> Option<Mixin> {
         self.0[self.0.len() - 1]
             .borrow_mut()
             .insert_mixin(name, mixin)
     }
 
-    pub fn get_mixin(&'a self, name: Spanned<Identifier>) -> SassResult<Mixin> {
+    pub fn get_mixin(&self, name: Spanned<Identifier>) -> SassResult<Mixin> {
         for scope in self.0.iter().rev() {
             match (**scope).borrow().get_mixin(name.node) {
                 Some(mixin) => return Ok(mixin),
@@ -198,7 +198,7 @@ impl<'a> Scopes {
 }
 
 /// Functions
-impl<'a> Scopes {
+impl Scopes {
     pub fn insert_fn(&mut self, func: SassFunction) {
         self.0[self.0.len() - 1]
             .borrow_mut()

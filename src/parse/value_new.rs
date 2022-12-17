@@ -508,7 +508,7 @@ impl<'c> ValueParser<'c> {
                 ..
             }) => self.parse_identifier_like(parser),
             Some(..) | None => {
-                return Err(("Expected expression.", parser.toks.current_span()).into())
+                Err(("Expected expression.", parser.toks.current_span()).into())
             }
         }
     }

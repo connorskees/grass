@@ -52,7 +52,7 @@ pub(crate) fn trim_ascii(
     exclude_escape: bool,
 ) -> &str {
     match s.chars().position(|c| !c.is_ascii_whitespace()) {
-        Some(start) => &s[start..last_non_whitespace(s, exclude_escape).unwrap() + 1],
+        Some(start) => &s[start..=last_non_whitespace(s, exclude_escape).unwrap()],
         None => "",
     }
 }
