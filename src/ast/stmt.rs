@@ -398,6 +398,35 @@ pub(crate) struct AstForwardRule {
 }
 
 #[derive(Debug, Clone)]
+pub(crate) enum AstSupportsCondition {
+    Anything {
+        contents: Interpolation,
+    },
+    Declaration {
+        name: AstExpr,
+        value: AstExpr,
+    },
+    Function {
+        name: Interpolation,
+        args: Interpolation,
+    },
+    Interpolation(AstExpr),
+    Negation(Box<Self>),
+    Operation {
+        left: Box<Self>,
+        operator: Option<String>,
+        right: Box<Self>,
+    },
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct AstSupportsRule {
+    pub condition: AstSupportsCondition,
+    pub children: Vec<AstStmt>,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone)]
 pub(crate) enum AstStmt {
     If(AstIf),
     For(AstFor),
@@ -423,6 +452,7 @@ pub(crate) enum AstStmt {
     ImportRule(AstImportRule),
     Use(AstUseRule),
     Forward(AstForwardRule),
+    Supports(AstSupportsRule),
 }
 
 #[derive(Debug, Clone)]
@@ -434,10 +464,10 @@ pub(crate) struct StyleSheet {
 }
 
 impl StyleSheet {
-    pub fn new() -> Self {
+    pub fn new(is_plain_css: bool) -> Self {
         Self {
             body: Vec::new(),
-            is_plain_css: false,
+            is_plain_css,
             uses: Vec::new(),
             forwards: Vec::new(),
         }

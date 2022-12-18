@@ -1,4 +1,11 @@
-use std::{borrow::Cow, cell::Cell, cmp::Ordering, collections::BTreeMap, sync::Arc};
+use std::{
+    borrow::Cow,
+    cell::Cell,
+    cmp::Ordering,
+    collections::BTreeMap,
+    ops::{Add, Div, Mul, Sub},
+    sync::Arc,
+};
 
 use codemap::{Span, Spanned};
 
@@ -282,6 +289,139 @@ pub(crate) struct SassNumber {
 impl PartialEq for SassNumber {
     fn eq(&self, other: &Self) -> bool {
         self.num == other.num && self.unit == other.unit
+    }
+}
+
+impl Add<SassNumber> for SassNumber {
+    type Output = SassNumber;
+    fn add(self, rhs: SassNumber) -> Self::Output {
+        if self.unit == rhs.unit {
+            SassNumber {
+                num: self.num + rhs.num,
+                unit: self.unit,
+                as_slash: None,
+            }
+        } else if self.unit == Unit::None {
+            SassNumber {
+                num: self.num + rhs.num,
+                unit: rhs.unit,
+                as_slash: None,
+            }
+        } else if rhs.unit == Unit::None {
+            SassNumber {
+                num: self.num + rhs.num,
+                unit: self.unit,
+                as_slash: None,
+            }
+        } else {
+            SassNumber {
+                num: self.num + Number(rhs.num).convert(&rhs.unit, &self.unit).0,
+                unit: self.unit,
+                as_slash: None,
+            }
+        }
+    }
+}
+
+impl Sub<SassNumber> for SassNumber {
+    type Output = SassNumber;
+
+    fn sub(self, rhs: SassNumber) -> Self::Output {
+        if self.unit == rhs.unit {
+            SassNumber {
+                num: self.num - rhs.num,
+                unit: self.unit,
+                as_slash: None,
+            }
+        } else if self.unit == Unit::None {
+            SassNumber {
+                num: self.num - rhs.num,
+                unit: rhs.unit,
+                as_slash: None,
+            }
+        } else if rhs.unit == Unit::None {
+            SassNumber {
+                num: self.num - rhs.num,
+                unit: self.unit,
+                as_slash: None,
+            }
+        } else {
+            SassNumber {
+                num: self.num - Number(rhs.num).convert(&rhs.unit, &self.unit).0,
+                unit: self.unit,
+                as_slash: None,
+            }
+        }
+    }
+}
+
+impl Mul<SassNumber> for SassNumber {
+    type Output = SassNumber;
+    fn mul(self, rhs: SassNumber) -> Self::Output {
+        if self.unit == Unit::None {
+            SassNumber {
+                num: self.num * rhs.num,
+                unit: rhs.unit,
+                as_slash: None,
+            }
+        } else if rhs.unit == Unit::None {
+            SassNumber {
+                num: self.num * rhs.num,
+                unit: self.unit,
+                as_slash: None,
+            }
+        } else {
+            SassNumber {
+                num: self.num * rhs.num,
+                unit: self.unit * rhs.unit,
+                as_slash: None,
+            }
+        }
+    }
+}
+
+impl Div<SassNumber> for SassNumber {
+    type Output = SassNumber;
+    fn div(self, rhs: SassNumber) -> Self::Output {
+        // `unit(1em / 1em)` => `""`
+        if self.unit == rhs.unit {
+            SassNumber {
+                num: self.num / rhs.num,
+                unit: Unit::None,
+                as_slash: None,
+            }
+
+        // `unit(1 / 1em)` => `"em^-1"`
+        } else if self.unit == Unit::None {
+            SassNumber {
+                num: self.num / rhs.num,
+                unit: Unit::None / rhs.unit,
+                as_slash: None,
+            }
+
+        // `unit(1em / 1)` => `"em"`
+        } else if rhs.unit == Unit::None {
+            SassNumber {
+                num: self.num / rhs.num,
+                unit: self.unit,
+                as_slash: None,
+            }
+
+        // `unit(1in / 1px)` => `""`
+        } else if self.unit.comparable(&rhs.unit) {
+            SassNumber {
+                num: self.num / Number(rhs.num).convert(&rhs.unit, &self.unit).0,
+                unit: Unit::None,
+                as_slash: None,
+            }
+            // `unit(1em / 1px)` => `"em/px"`
+        } else {
+            SassNumber {
+                num: self.num / rhs.num,
+                unit: self.unit / rhs.unit,
+                as_slash: None,
+            }
+        }
     }
 }
 

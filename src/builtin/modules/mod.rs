@@ -137,6 +137,14 @@ impl PublicMemberFilter {
         (*self.0).borrow().var_exists(name)
     }
 
+    pub fn fn_exists(&self, name: Identifier) -> bool {
+        if name.as_str().starts_with('-') {
+            return false;
+        }
+
+        (*self.0).borrow().fn_exists(name)
+    }
+
     pub fn get_mixin(&self, name: Identifier) -> Option<Mixin> {
         if name.as_str().starts_with('-') {
             return None;
@@ -187,6 +195,14 @@ impl Module {
             Some(v) => Ok(v.clone()),
             None => Err(("Undefined variable.", name.span).into()),
         }
+    }
+
+    pub fn get_var_no_err(&self, name: Identifier) -> Option<Value> {
+        let scope = match self {
+            Self::Builtin { scope } | Self::Environment { scope, .. } => scope,
+        };
+
+        scope.get_var(name)
     }
 
     pub fn update_var(&mut self, name: Spanned<Identifier>, value: Value) -> SassResult<()> {
@@ -283,7 +299,11 @@ impl Module {
 
     pub fn fn_exists(&self, name: Identifier) -> bool {
         // !name.as_str().starts_with('-') && self.scope.fn_exists(name)
-        todo!()
+        let scope = match self {
+            Self::Builtin { scope } | Self::Environment { scope, .. } => scope,
+        };
+
+        scope.fn_exists(name)
     }
 
     pub fn insert_builtin(

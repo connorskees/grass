@@ -113,7 +113,7 @@ test!(
 test!(
     max_containing_min,
     "a {\n  color: max(1, min(2));\n}\n",
-    "a {\n  color: 2);\n}\n"
+    "a {\n  color: 2;\n}\n"
 );
 test!(
     min_containing_max_as_only_arg,
@@ -141,48 +141,51 @@ test!(
     "a {\n  color: 0.2;\n}\n"
 );
 test!(
-    min_conains_special_fn_env,
+    min_contains_special_fn_env,
     "a {\n  color: min(env(\"foo\"));\n}\n",
     "a {\n  color: min(env(\"foo\"));\n}\n"
 );
 test!(
-    min_conains_special_fn_calc_with_div_and_spaces,
+    min_contains_special_fn_calc_with_div_and_spaces,
     "a {\n  color: min(calc(1 / 2));\n}\n",
     "a {\n  color: 0.5;\n}\n"
 );
 test!(
-    min_conains_special_fn_calc_with_div_without_spaces,
+    min_contains_special_fn_calc_with_div_without_spaces,
     "a {\n  color: min(calc(1/2));\n}\n",
     "a {\n  color: 0.5;\n}\n"
 );
 test!(
-    min_conains_special_fn_calc_with_plus_only,
+    min_contains_special_fn_calc_with_plus_only,
     "a {\n  color: min(calc(+));\n}\n",
     "a {\n  color: min(calc(+));\n}\n"
 );
-test!(
-    min_conains_special_fn_calc_space_separated_list,
-    "a {\n  color: min(calc(1  2));\n}\n",
-    "a {\n  color: min(calc(1 2));\n}\n"
+error!(
+    min_contains_special_fn_calc_space_separated_list,
+    "a {\n  color: min(calc(1  2));\n}\n", r#"Error: expected "+", "-", "*", "/", or ")"."#
 );
 test!(
-    min_conains_special_fn_var,
+    min_contains_special_fn_var,
     "a {\n  color: min(1, var(--foo));\n}\n",
     "a {\n  color: min(1, var(--foo));\n}\n"
 );
 test!(
-    min_conains_multiline_comment,
+    max_contains_special_fn_var,
+    "a {\n  color: max(1, var(--foo));\n}\n",
+    "a {\n  color: max(1, var(--foo));\n}\n"
+);
+test!(
+    min_contains_multiline_comment,
     "a {\n  color: min(1/**/);\n}\n",
     "a {\n  color: 1;\n}\n"
 );
-test!(
-    min_conains_calc_contains_multiline_comment,
-    "a {\n  color: min(calc(1 /**/ 2));\n}\n",
-    "a {\n  color: min(calc(1 /**/ 2));\n}\n"
+error!(
+    min_contains_calc_contains_multiline_comment,
+    "a {\n  color: min(calc(1 /**/ 2));\n}\n", r#"Error: expected "+", "-", "*", "/", or ")"."#
 );
 test!(
     #[ignore = "we currently resolve interpolation eagerly inside loud comments"]
-    min_conains_calc_contains_multiline_comment_with_interpolation,
+    min_contains_calc_contains_multiline_comment_with_interpolation,
     "a {\n  color: min(calc(1 /* #{5} */ 2));\n}\n",
     "a {\n  color: min(calc(1 /* #{5} */ 2));\n}\n"
 );
@@ -241,8 +244,8 @@ error!(
     min_min_invalid,
     "a {\n  color: min(min(#));\n}\n", "Error: Expected identifier."
 );
-test!(
+error!(
     min_calc_parens_no_args,
     "a {\n  color: min(calc());\n}\n",
-    "a {\n  color: min(calc());\n}\n"
+    "Error: Expected number, variable, function, or calculation."
 );

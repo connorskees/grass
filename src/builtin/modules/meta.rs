@@ -55,7 +55,7 @@ fn load_css(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Vec<St
     //         )?;
     //     }
 
-    //     let (_, stmts) = parser.parser.load_module(&url, &mut config)?;
+    //     let (_, stmts) = parser.load_module(&url, &mut config)?;
 
     //     Ok(stmts)
     // } else {

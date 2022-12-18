@@ -45,17 +45,22 @@ error!(
 test!(
     calc_invalid_arithmetic,
     "a {\n  color: calc(2px + 2px + 5%);\n}\n",
-    "a {\n  color: calc(2px + 2px + 5%);\n}\n"
+    "a {\n  color: calc(4px + 5%);\n}\n"
+);
+test!(
+    calc_add_same_unit_opposite_sides_of_non_comparable_unit,
+    "a {\n  color: calc(2px + 5% + 2px);\n}\n",
+    "a {\n  color: calc(2px + 5% + 2px);\n}\n"
 );
 test!(
     calc_uppercase,
     "a {\n  color: CALC(1 + 1);\n}\n",
-    "a {\n  color: calc(1 + 1);\n}\n"
+    "a {\n  color: 2;\n}\n"
 );
 test!(
     calc_mixed_casing,
     "a {\n  color: cAlC(1 + 1);\n}\n",
-    "a {\n  color: calc(1 + 1);\n}\n"
+    "a {\n  color: 2;\n}\n"
 );
 test!(
     calc_browser_prefixed,

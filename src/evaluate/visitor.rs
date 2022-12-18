@@ -18,7 +18,7 @@ use crate::{
         keyframes::KeyframesRuleSet,
         media::{MediaQuery, MediaQueryMergeResult, MediaRule},
         mixin::Mixin,
-        UnknownAtRule,
+        SupportsRule, UnknownAtRule,
     },
     builtin::{
         meta::IF_ARGUMENTS,
@@ -234,6 +234,7 @@ pub(crate) struct Visitor<'a> {
     pub media_query_sources: Option<IndexSet<MediaQuery>>,
     pub extender: ExtensionStore,
     pub current_import_path: PathBuf,
+    pub is_plain_css: bool,
     css_tree: CssTree,
     parent: Option<CssTreeIdx>,
     configuration: Configuration,
@@ -262,14 +263,18 @@ impl<'a> Visitor<'a> {
             parent: None,
             current_import_path,
             configuration: Configuration::empty(),
+            is_plain_css: false,
         }
     }
 
     pub fn visit_stylesheet(&mut self, style_sheet: StyleSheet) -> SassResult<()> {
+        let was_in_plain_css = self.is_plain_css;
+        self.is_plain_css = style_sheet.is_plain_css;
         for stmt in style_sheet.body {
             let result = self.visit_stmt(stmt)?;
             assert!(result.is_none());
         }
+        self.is_plain_css = was_in_plain_css;
 
         Ok(())
     }
@@ -324,7 +329,140 @@ impl<'a> Visitor<'a> {
                 Ok(None)
             }
             AstStmt::Forward(_) => todo!(),
+            AstStmt::Supports(supports_rule) => {
+                self.visit_supports_rule(supports_rule)?;
+                Ok(None)
+            }
         }
+    }
+
+    fn parenthesize_supports_condition(
+        &mut self,
+        condition: AstSupportsCondition,
+        operator: Option<&str>,
+    ) -> SassResult<String> {
+        match &condition {
+            AstSupportsCondition::Negation(..) => {
+                Ok(format!("({})", self.visit_supports_condition(condition)?))
+            }
+            AstSupportsCondition::Operation { operator, .. }
+                if operator.is_none() || operator != operator =>
+            {
+                Ok(format!("({})", self.visit_supports_condition(condition)?))
+            }
+            _ => self.visit_supports_condition(condition),
+        }
+    }
+
+    fn visit_supports_condition(&mut self, condition: AstSupportsCondition) -> SassResult<String> {
+        match condition {
+            AstSupportsCondition::Operation {
+                left,
+                operator,
+                right,
+            } => Ok(format!(
+                "{} {} {}",
+                self.parenthesize_supports_condition(*left, operator.as_deref())?,
+                operator.as_ref().unwrap(),
+                self.parenthesize_supports_condition(*right, operator.as_deref())?
+            )),
+            AstSupportsCondition::Negation(condition) => Ok(format!(
+                "not {}",
+                self.parenthesize_supports_condition(*condition, None)?
+            )),
+            AstSupportsCondition::Interpolation(expr) => {
+                self.evaluate_to_css(expr, QuoteKind::None, self.parser.span_before)
+            }
+            AstSupportsCondition::Declaration { name, value } => {
+                let old_in_supports_decl = self.flags.in_supports_declaration();
+                self.flags.set(ContextFlags::IN_SUPPORTS_DECLARATION, true);
+
+                let is_custom_property = match &name {
+                    AstExpr::String(StringExpr(text, QuoteKind::None), ..) => {
+                        text.initial_plain().starts_with("--")
+                    }
+                    _ => false,
+                };
+
+                let result = format!(
+                    "({}:{}{})",
+                    self.evaluate_to_css(name, QuoteKind::Quoted, self.parser.span_before)?,
+                    if is_custom_property { "" } else { " " },
+                    self.evaluate_to_css(value, QuoteKind::Quoted, self.parser.span_before)?,
+                );
+
+                self.flags
+                    .set(ContextFlags::IN_SUPPORTS_DECLARATION, old_in_supports_decl);
+
+                Ok(result)
+            }
+            AstSupportsCondition::Function { name, args } => Ok(format!(
+                "{}({})",
+                self.perform_interpolation(name, false)?,
+                self.perform_interpolation(args, false)?
+            )),
+            AstSupportsCondition::Anything { contents } => Ok(format!(
+                "({})",
+                self.perform_interpolation(contents, false)?,
+            )),
+        }
+    }
+
+    fn visit_supports_rule(&mut self, supports_rule: AstSupportsRule) -> SassResult<()> {
+        if self.declaration_name.is_some() {
+            return Err((
+                "Supports rules may not be used within nested declarations.",
+                supports_rule.span,
+            )
+                .into());
+        }
+
+        let condition = self.visit_supports_condition(supports_rule.condition)?;
+        dbg!(&condition);
+
+        let css_supports_rule = Stmt::Supports(Box::new(SupportsRule {
+            params: condition,
+            body: Vec::new(),
+        }));
+
+        let parent_idx = self.css_tree.add_stmt(css_supports_rule, None);
+
+        let children = supports_rule.children;
+
+        self.with_parent::<SassResult<()>>(parent_idx, true, |visitor| {
+            if !visitor.style_rule_exists() {
+                for stmt in children {
+                    let result = visitor.visit_stmt(stmt)?;
+                    assert!(result.is_none());
+                }
+            } else {
+                // If we're in a style rule, copy it into the supports rule so that
+                // declarations immediately inside @supports have somewhere to go.
+                //
+                // For example, "a {@supports (a: b) {b: c}}" should produce "@supports
+                // (a: b) {a {b: c}}".
+                let selector = visitor.style_rule_ignoring_at_root.clone().unwrap();
+                let ruleset = Stmt::RuleSet {
+                    selector,
+                    body: Vec::new(),
+                };
+
+                let parent_idx = visitor.css_tree.add_stmt(ruleset, visitor.parent);
+
+                visitor.with_parent::<SassResult<()>>(parent_idx, false, |visitor| {
+                    for stmt in children {
+                        let result = visitor.visit_stmt(stmt)?;
+                        assert!(result.is_none());
+                    }
+
+                    Ok(())
+                })?;
+            }
+
+            Ok(())
+        })?;
+
+        Ok(())
     }
 
     fn execute(
@@ -1127,13 +1265,13 @@ impl<'a> Visitor<'a> {
                 toks: &mut sel_toks,
                 map: self.parser.map,
                 path: self.parser.path,
-                is_plain_css: false,
+                is_plain_css: self.is_plain_css,
                 span_before: self.parser.span_before,
                 flags: self.parser.flags,
                 options: self.parser.options,
             },
-            !self.flags.in_plain_css(),
-            !self.flags.in_plain_css(),
+            !self.is_plain_css,
+            !self.is_plain_css,
             self.parser.span_before,
         )
         .parse()
@@ -2898,8 +3036,8 @@ impl<'a> Visitor<'a> {
                 flags: self.parser.flags,
                 options: self.parser.options,
             },
-            !self.flags.in_plain_css(),
-            !self.flags.in_plain_css(),
+            !self.is_plain_css,
+            !self.is_plain_css,
             self.parser.span_before,
         )
         .parse()?;

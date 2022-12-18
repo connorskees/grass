@@ -14,13 +14,12 @@ impl ContextFlags {
     pub const IN_STYLE_RULE: ContextFlag = ContextFlag(1 << 5);
     pub const IN_UNKNOWN_AT_RULE: ContextFlag = ContextFlag(1 << 6);
     pub const IN_CONTENT_BLOCK: ContextFlag = ContextFlag(1 << 7);
-    pub const IN_PLAIN_CSS: ContextFlag = ContextFlag(1 << 8);
+    pub const IS_USE_ALLOWED: ContextFlag = ContextFlag(1 << 8);
     pub const IN_PARENS: ContextFlag = ContextFlag(1 << 9);
     pub const AT_ROOT_EXCLUDING_STYLE_RULE: ContextFlag = ContextFlag(1 << 10);
     pub const IN_SUPPORTS_DECLARATION: ContextFlag = ContextFlag(1 << 11);
     pub const IN_SEMI_GLOBAL_SCOPE: ContextFlag = ContextFlag(1 << 12);
     pub const FOUND_CONTENT_RULE: ContextFlag = ContextFlag(1 << 13);
-    pub const IS_USE_ALLOWED: ContextFlag = ContextFlag(1 << 14);
 
     pub const fn empty() -> Self {
         Self(0)
@@ -68,10 +67,6 @@ impl ContextFlags {
 
     pub fn in_content_block(self) -> bool {
         (self.0 & Self::IN_CONTENT_BLOCK) != 0
-    }
-
-    pub fn in_plain_css(self) -> bool {
-        (self.0 & Self::IN_PLAIN_CSS) != 0
     }
 
     pub fn in_parens(self) -> bool {

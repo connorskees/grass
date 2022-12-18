@@ -121,7 +121,7 @@ enum VariableDeclOrInterpolation {
 
 impl<'a, 'b> Parser<'a, 'b> {
     pub fn __parse(&mut self) -> SassResult<StyleSheet> {
-        let mut style_sheet = StyleSheet::new();
+        let mut style_sheet = StyleSheet::new(self.is_plain_css);
 
         // Allow a byte-order mark at the beginning of the document.
         self.consume_char_if_exists('\u{feff}');
@@ -1318,8 +1318,236 @@ impl<'a, 'b> Parser<'a, 'b> {
         }))
     }
 
+    fn try_supports_operation(
+        &mut self,
+        interpolation: Interpolation,
+        start: usize,
+    ) -> SassResult<Option<AstSupportsCondition>> {
+        if interpolation.contents.len() != 1 {
+            return Ok(None);
+        }
+
+        let expression = match interpolation.contents.first() {
+            Some(InterpolationPart::Expr(e)) => e,
+            Some(InterpolationPart::String(..)) => return Ok(None),
+            None => unreachable!(),
+        };
+
+        let before_whitespace = self.toks.cursor();
+        self.whitespace_or_comment();
+
+        let mut operation: Option<AstSupportsCondition> = None;
+        let mut operator: Option<String> = None;
+
+        while self.looking_at_identifier() {
+            if let Some(operator) = &operator {
+                self.expect_identifier(operator, false)?;
+            } else if self.scan_identifier("and", false)? {
+                operator = Some("and".to_owned());
+            } else if self.scan_identifier("or", false)? {
+                operator = Some("or".to_owned());
+            } else {
+                self.toks.set_cursor(before_whitespace);
+                return Ok(None);
+            }
+
+            self.whitespace_or_comment();
+
+            let right = self.supports_condition_in_parens()?;
+            operation = Some(AstSupportsCondition::Operation {
+                left: Box::new(
+                    operation.unwrap_or(AstSupportsCondition::Interpolation(expression.clone())),
+                ),
+                operator: operator.clone(),
+                right: Box::new(right),
+            });
+            self.whitespace_or_comment();
+        }
+
+        Ok(operation)
+    }
+
+    fn supports_declaration_value(
+        &mut self,
+        name: AstExpr,
+        start: usize,
+    ) -> SassResult<AstSupportsCondition> {
+        let value = match &name {
+            AstExpr::String(StringExpr(text, QuoteKind::None), ..)
+                if text.initial_plain().starts_with("--") =>
+            {
+                let text = self.parse_interpolated_declaration_value(false, false, true)?;
+                AstExpr::String(StringExpr(text, QuoteKind::None), self.span_before)
+            }
+            _ => {
+                self.whitespace_or_comment();
+                self.parse_expression(None, None, None)?.node
+            }
+        };
+
+        Ok(AstSupportsCondition::Declaration { name, value })
+    }
+
+    fn supports_condition_in_parens(&mut self) -> SassResult<AstSupportsCondition> {
+        let start = self.toks.cursor();
+
+        if self.looking_at_interpolated_identifier() {
+            let identifier = self.parse_interpolated_identifier()?;
+
+            if identifier.as_plain().unwrap_or("").to_ascii_lowercase() == "not" {
+                todo!(r#""not" is not a valid identifier here."#);
+            }
+
+            if self.consume_char_if_exists('(') {
+                let arguments = self.parse_interpolated_declaration_value(true, true, true)?;
+                self.expect_char(')')?;
+                return Ok(AstSupportsCondition::Function {
+                    name: identifier,
+                    args: arguments,
+                });
+            } else if identifier.contents.len() != 1
+                || !matches!(
+                    identifier.contents.first(),
+                    Some(InterpolationPart::Expr(..))
+                )
+            {
+                todo!("Expected @supports condition.")
+            } else {
+                //     return SupportsInterpolation(
+                //         identifier.contents.first as Expression, scanner.spanFrom(start));
+
+                todo!()
+                // return Ok(AstSupportsCondition::Interpolation { name: identifier, args: arguments })
+            }
+        }
+
+        self.expect_char('(')?;
+        self.whitespace_or_comment();
+
+        if self.scan_identifier("not", false)? {
+            self.whitespace_or_comment();
+            let condition = self.supports_condition_in_parens()?;
+            self.expect_char(')')?;
+            return Ok(AstSupportsCondition::Negation(Box::new(condition)));
+        } else if self.toks.next_char_is('(') {
+            let condition = self.parse_supports_condition()?;
+            self.expect_char(')')?;
+            return Ok(condition);
+        }
+
+        // Unfortunately, we may have to backtrack here. The grammar is:
+        //
+        //       Expression ":" Expression
+        //     | InterpolatedIdentifier InterpolatedAnyValue?
+        //
+        // These aren't ambiguous because this `InterpolatedAnyValue` is forbidden
+        // from containing a top-level colon, but we still have to parse the full
+        // expression to figure out if there's a colon after it.
+        //
+        // We could avoid the overhead of a full expression parse by looking ahead
+        // for a colon (outside of balanced brackets), but in practice we expect the
+        // vast majority of real uses to be `Expression ":" Expression`, so it makes
+        // sense to parse that case faster in exchange for less code complexity and
+        // a slower backtracking case.
+
+        let name: AstExpr;
+        let name_start = self.toks.cursor();
+        let was_in_parens = self.flags.in_parens();
+
+        let expr = self.parse_expression(None, None, None);
+        let found_colon = self.expect_char(':');
+        match (expr, found_colon) {
+            (Ok(val), Ok(..)) => {
+                name = val.node;
+            }
+            (Ok(..), Err(e)) | (Err(e), Ok(..)) | (Err(e), Err(..)) => {
+                self.toks.set_cursor(name_start);
+                self.flags.set(ContextFlags::IN_PARENS, was_in_parens);
+
+                let identifier = self.parse_interpolated_identifier()?;
+
+                // todo: superfluous clone?
+                if let Some(operation) =
+                    self.try_supports_operation(identifier.clone(), name_start)?
+                {
+                    self.expect_char(')')?;
+                    return Ok(operation);
+                }
+
+                // If parsing an expression fails, try to parse an
+                // `InterpolatedAnyValue` instead. But if that value runs into a
+                // top-level colon, then this is probably intended to be a declaration
+                // after all, so we rethrow the declaration-parsing error.
+                let mut contents = Interpolation::new();
+                contents.add_interpolation(identifier);
+                contents.add_interpolation(
+                    self.parse_interpolated_declaration_value(true, true, false)?,
+                );
+
+                if self.toks.next_char_is(':') {
+                    return Err(e);
+                }
+
+                self.expect_char(')')?;
+
+                return Ok(AstSupportsCondition::Anything { contents });
+            }
+        }
+
+        let declaration = self.supports_declaration_value(name, start)?;
+        self.expect_char(')')?;
+
+        Ok(declaration)
+    }
+
+    fn parse_supports_condition(&mut self) -> SassResult<AstSupportsCondition> {
+        let start = self.toks.cursor();
+
+        if self.scan_identifier("not", false)? {
+            self.whitespace_or_comment();
+            return Ok(AstSupportsCondition::Negation(Box::new(
+                self.supports_condition_in_parens()?,
+            )));
+        }
+
+        let mut condition = self.supports_condition_in_parens()?;
+        self.whitespace_or_comment();
+
+        let mut operator: Option<String> = None;
+
+        while self.looking_at_identifier() {
+            if let Some(operator) = &operator {
+                self.expect_identifier(operator, false)?;
+            } else if self.scan_identifier("or", false)? {
+                operator = Some("or".to_owned());
+            } else {
+                self.expect_identifier("and", false)?;
+                operator = Some("and".to_owned());
+            }
+
+            self.whitespace_or_comment();
+            let right = self.supports_condition_in_parens()?;
+            condition = AstSupportsCondition::Operation {
+                left: Box::new(condition),
+                operator: operator.clone(),
+                right: Box::new(right),
+            };
+            self.whitespace_or_comment();
+        }
+
+        Ok(condition)
+    }
+
     fn parse_supports_rule(&mut self) -> SassResult<AstStmt> {
-        todo!()
+        let condition = self.parse_supports_condition()?;
+        self.whitespace_or_comment();
+        let children = self.with_children(Self::__parse_stmt)?;
+
+        Ok(AstStmt::Supports(AstSupportsRule {
+            condition,
+            children: children.node,
+            span: children.span,
+        }))
     }
 
     fn parse_warn_rule(&mut self) -> SassResult<AstStmt> {
@@ -1589,10 +1817,7 @@ impl<'a, 'b> Parser<'a, 'b> {
     fn parse_declaration_or_style_rule(&mut self) -> SassResult<AstStmt> {
         let start = self.toks.cursor();
 
-        if self.flags.in_plain_css()
-            && self.flags.in_style_rule()
-            && !self.flags.in_unknown_at_rule()
-        {
+        if self.is_plain_css && self.flags.in_style_rule() && !self.flags.in_unknown_at_rule() {
             return self.parse_property_or_variable_declaration(true);
         }
 
@@ -1723,7 +1948,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         let contents = self.parse_expression(None, None, None)?;
         self.expect_char('}')?;
 
-        if self.flags.in_plain_css() {
+        if self.is_plain_css {
             return Err(("Interpolation isn't allowed in plain CSS.", contents.span).into());
         }
 
@@ -2416,7 +2641,7 @@ impl<'a, 'b> Parser<'a, 'b> {
     fn parse_variable_declaration_or_style_rule(&mut self) -> SassResult<AstStmt> {
         let start = self.toks.cursor();
 
-        if self.flags.in_plain_css() {
+        if self.is_plain_css {
             return self.parse_style_rule(None, None);
         }
 
@@ -2497,7 +2722,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             buffer.push(tok.kind);
         }
 
-        if self.flags.in_plain_css() {
+        if self.is_plain_css {
             return Err((
                 "Silent comments aren't allowed in plain CSS.",
                 self.toks.span_from(start),
@@ -2597,8 +2822,12 @@ impl<'a, 'b> Parser<'a, 'b> {
             Self::assert_public(&name, self.toks.span_from(start))?;
         }
 
-        if self.flags.in_plain_css() {
-            todo!("Sass variables aren't allowed in plain CSS.")
+        if self.is_plain_css {
+            return Err((
+                "Sass variables aren't allowed in plain CSS.",
+                self.toks.span_from(start),
+            )
+                .into());
         }
 
         self.whitespace_or_comment();
@@ -2828,6 +3057,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         Ok(())
     }
 
+    // todo: rename to scan_char
     pub fn consume_char_if_exists(&mut self, c: char) -> bool {
         if let Some(Token { kind, .. }) = self.toks.peek() {
             if kind == c {
@@ -3294,6 +3524,7 @@ impl<'a, 'b> Parser<'a, 'b> {
     /// We only have to check for \n as the lexing step normalizes all newline characters
     ///
     /// The newline is consumed
+    // todo: remove
     pub fn read_until_newline(&mut self) {
         for tok in &mut self.toks {
             if tok.kind == '\n' {
@@ -3303,6 +3534,7 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     // todo: rewrite
+    // todo: rename to match sass
     pub fn whitespace_or_comment(&mut self) -> bool {
         let mut found_whitespace = false;
         while let Some(tok) = self.toks.peek() {

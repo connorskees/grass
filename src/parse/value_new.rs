@@ -329,7 +329,7 @@ impl<'c> ValueParser<'c> {
                     self.add_single_expression(expr, parser)?;
                 }
                 Some(Token { kind: 'a', .. }) => {
-                    if !parser.flags.in_plain_css() && parser.scan_identifier("and", false)? {
+                    if !parser.is_plain_css && parser.scan_identifier("and", false)? {
                         self.add_operator(
                             Spanned {
                                 node: BinaryOp::And,
@@ -343,7 +343,7 @@ impl<'c> ValueParser<'c> {
                     }
                 }
                 Some(Token { kind: 'o', .. }) => {
-                    if !parser.flags.in_plain_css() && parser.scan_identifier("or", false)? {
+                    if !parser.is_plain_css && parser.scan_identifier("or", false)? {
                         self.add_operator(
                             Spanned {
                                 node: BinaryOp::Or,
@@ -604,8 +604,7 @@ impl<'c> ValueParser<'c> {
     }
 
     fn add_operator(&mut self, op: Spanned<BinaryOp>, parser: &mut Parser) -> SassResult<()> {
-        if parser.flags.in_plain_css() && op.node != BinaryOp::Div && op.node != BinaryOp::SingleEq
-        {
+        if parser.is_plain_css && op.node != BinaryOp::Div && op.node != BinaryOp::SingleEq {
             return Err(("Operators aren't allowed in plain CSS.", op.span).into());
         }
 
@@ -696,7 +695,7 @@ impl<'c> ValueParser<'c> {
     }
 
     fn parse_paren_expr(&mut self, parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
-        if parser.flags.in_plain_css() {
+        if parser.is_plain_css {
             return Err((
                 "Parentheses aren't allowed in plain CSS.",
                 parser.toks.current_span(),
@@ -772,7 +771,7 @@ impl<'c> ValueParser<'c> {
         let start = parser.toks.cursor();
         let name = parser.parse_variable_name()?;
 
-        if parser.flags.in_plain_css() {
+        if parser.is_plain_css {
             return Err((
                 "Sass variables aren't allowed in plain CSS.",
                 parser.toks.span_from(start),
@@ -791,7 +790,7 @@ impl<'c> ValueParser<'c> {
     }
 
     fn parse_selector(&mut self, parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
-        if parser.flags.in_plain_css() {
+        if parser.is_plain_css {
             return Err((
                 "The parent selector isn't allowed in plain CSS.",
                 parser.toks.current_span(),
@@ -934,7 +933,7 @@ impl<'c> ValueParser<'c> {
         let op_span = parser.toks.current_span();
         let operator = self.expect_unary_operator(parser)?;
 
-        if parser.flags.in_plain_css() && operator != UnaryOp::Div {
+        if parser.is_plain_css && operator != UnaryOp::Div {
             return Err(("Operators aren't allowed in plain CSS.", op_span).into());
         }
 

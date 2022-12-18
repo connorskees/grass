@@ -84,7 +84,10 @@ impl Environment {
             return Ok(module.get_fn(name));
         }
 
-        Ok(self.scopes.get_fn(name))
+        Ok(self
+            .scopes
+            .get_fn(name)
+            .or_else(|| self.get_function_from_global_modules(name)))
     }
 
     pub fn var_exists(
@@ -112,7 +115,16 @@ impl Environment {
             return module.get_var(name);
         }
 
-        self.scopes.get_var(name)
+        match self.scopes.get_var(name) {
+            Ok(v) => Ok(v),
+            Err(e) => {
+                if let Some(v) = self.get_variable_from_global_modules(name.node) {
+                    return Ok(v);
+                }
+
+                Err(e)
+            }
+        }
     }
 
     pub fn insert_var(
@@ -178,6 +190,26 @@ impl Environment {
 
     pub fn global_scope(&self) -> Ref<Scope> {
         self.scopes.global_scope()
+    }
+
+    fn get_variable_from_global_modules(&self, name: Identifier) -> Option<Value> {
+        for module in &self.global_modules {
+            if (**module).var_exists(name) {
+                return module.get_var_no_err(name);
+            }
+        }
+
+        None
+    }
+
+    fn get_function_from_global_modules(&self, name: Identifier) -> Option<SassFunction> {
+        for module in &self.global_modules {
+            if (**module).fn_exists(name) {
+                return module.get_fn(name);
+            }
+        }
+
+        None
     }
 
     pub fn add_module(

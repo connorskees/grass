@@ -195,7 +195,11 @@ impl SassCalculation {
                 {
                     minimum = Some(n.clone());
                 }
-                _ => break,
+                CalculationArg::Number(..) => continue,
+                _ => {
+                    minimum = None;
+                    break;
+                }
             }
         }
 
@@ -237,7 +241,11 @@ impl SassCalculation {
                 {
                     maximum = Some(n.clone());
                 }
-                _ => break,
+                CalculationArg::Number(..) => continue,
+                _ => {
+                    maximum = None;
+                    break;
+                }
             }
         }
 
@@ -292,16 +300,26 @@ impl SassCalculation {
                 // left.hasCompatibleUnits(right)
                 true
             };
-            if matches!(left, CalculationArg::Number(..))
-                && matches!(right, CalculationArg::Number(..))
-                && is_comparable
-            {
-                return Ok(CalculationArg::Operation {
-                    lhs: Box::new(left),
-                    op,
-                    rhs: Box::new(right),
-                });
+            match (&left, &right) {
+                (CalculationArg::Number(num1), CalculationArg::Number(num2)) if is_comparable => {
+                    if op == BinaryOp::Plus {
+                        return Ok(CalculationArg::Number(num1.clone() + num2.clone()));
+                    } else {
+                        return Ok(CalculationArg::Number(num1.clone() - num2.clone()));
+                    }
+                }
+                _ => {}
             }
+            // if matches!(left, CalculationArg::Number(..))
+            //     && matches!(right, CalculationArg::Number(..))
+            //     && is_comparable
+            // {
+            //     return Ok(CalculationArg::Operation {
+            //         lhs: Box::new(left),
+            //         op,
+            //         rhs: Box::new(right),
+            //     });
+            // }
 
             if let CalculationArg::Number(mut n) = right {
                 if n.num.is_negative() {
@@ -317,13 +335,28 @@ impl SassCalculation {
             }
         }
 
+        match (left, right) {
+            (CalculationArg::Number(num1), CalculationArg::Number(num2)) => {
+                if op == BinaryOp::Mul {
+                    Ok(CalculationArg::Number(num1 * num2))
+                } else {
+                    Ok(CalculationArg::Number(num1 / num2))
+                }
+            }
+            (left, right) => Ok(CalculationArg::Operation {
+                lhs: Box::new(left),
+                op,
+                rhs: Box::new(right),
+            }),
+        }
+
         //   _verifyCompatibleNumbers([left, right]);
 
-        Ok(CalculationArg::Operation {
-            lhs: Box::new(left),
-            op,
-            rhs: Box::new(right),
-        })
+        // Ok(CalculationArg::Operation {
+        //     lhs: Box::new(left),
+        //     op,
+        //     rhs: Box::new(right),
+        // })
     }
 
     fn simplify(arg: CalculationArg) -> CalculationArg {
