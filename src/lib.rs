@@ -80,7 +80,6 @@ use crate::{
     parse::Parser,
 };
 
-mod args;
 mod ast;
 mod atrule;
 mod builtin;
@@ -96,7 +95,6 @@ mod output;
 mod parse;
 mod scope;
 mod selector;
-mod serializer;
 mod style;
 mod token;
 mod unit;

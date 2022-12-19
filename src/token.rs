@@ -17,13 +17,3 @@ impl Token {
         self.pos
     }
 }
-
-// impl IsWhitespace for Token {
-//     fn is_whitespace(&self) -> bool {
-//         if self.kind.is_whitespace() {
-//             return true;
-//         }
-
-//         false
-//     }
-// }

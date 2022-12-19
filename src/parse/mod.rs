@@ -29,23 +29,12 @@ pub(crate) use value::{add, cmp, div, mul, rem, single_eq, sub};
 
 use self::value_new::{Predicate, ValueParser};
 
-// mod args;
-// pub mod common;
-// mod control_flow;
-// mod function;
 mod at_root_query;
 mod ident;
-// mod import;
 mod keyframes;
 mod media;
-// mod mixin;
-// mod module;
-// mod style;
-// mod throw_away;
 mod value;
 mod value_new;
-// mod variable;
-// pub mod visitor;
 
 #[derive(Debug, Clone)]
 pub(crate) enum Stmt {
@@ -57,11 +46,7 @@ pub(crate) enum Stmt {
     Media(Box<MediaRule>, bool),
     UnknownAtRule(Box<UnknownAtRule>),
     Supports(Box<SupportsRule>),
-    // AtRoot {
-    //     body: Vec<Stmt>,
-    // },
     Comment(String, Span),
-    // Return(Box<Value>),
     Keyframes(Box<Keyframes>),
     KeyframesRuleSet(Box<KeyframesRuleSet>),
     /// A plain import such as `@import "foo.css";` or
@@ -756,7 +741,6 @@ impl<'a, 'b> Parser<'a, 'b> {
                 Err(..) => {
                     self.toks.set_cursor(start);
                     let stmt = self.parse_declaration_or_style_rule()?;
-                    let is_style_rule = matches!(stmt, AstStmt::RuleSet(..));
 
                     let (is_style_rule, span) = match stmt {
                         AstStmt::RuleSet(ruleset) => (true, ruleset.span),

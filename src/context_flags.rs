@@ -10,7 +10,7 @@ impl ContextFlags {
     pub const IN_FUNCTION: ContextFlag = ContextFlag(1 << 1);
     pub const IN_CONTROL_FLOW: ContextFlag = ContextFlag(1 << 2);
     pub const IN_KEYFRAMES: ContextFlag = ContextFlag(1 << 3);
-    pub const IN_AT_ROOT_RULE: ContextFlag = ContextFlag(1 << 4);
+    pub const FOUND_CONTENT_RULE: ContextFlag = ContextFlag(1 << 4);
     pub const IN_STYLE_RULE: ContextFlag = ContextFlag(1 << 5);
     pub const IN_UNKNOWN_AT_RULE: ContextFlag = ContextFlag(1 << 6);
     pub const IN_CONTENT_BLOCK: ContextFlag = ContextFlag(1 << 7);
@@ -19,7 +19,6 @@ impl ContextFlags {
     pub const AT_ROOT_EXCLUDING_STYLE_RULE: ContextFlag = ContextFlag(1 << 10);
     pub const IN_SUPPORTS_DECLARATION: ContextFlag = ContextFlag(1 << 11);
     pub const IN_SEMI_GLOBAL_SCOPE: ContextFlag = ContextFlag(1 << 12);
-    pub const FOUND_CONTENT_RULE: ContextFlag = ContextFlag(1 << 13);
 
     pub const fn empty() -> Self {
         Self(0)
@@ -51,10 +50,6 @@ impl ContextFlags {
 
     pub fn in_keyframes(self) -> bool {
         (self.0 & Self::IN_KEYFRAMES) != 0
-    }
-
-    pub fn in_at_root_rule(self) -> bool {
-        (self.0 & Self::IN_AT_ROOT_RULE) != 0
     }
 
     pub fn in_style_rule(self) -> bool {

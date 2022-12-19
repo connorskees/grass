@@ -1,7 +1,6 @@
 use std::{
     cell::RefCell,
-    collections::{BTreeMap, HashMap, HashSet},
-    fmt,
+    collections::{BTreeMap, HashSet},
     path::PathBuf,
     sync::Arc,
 };

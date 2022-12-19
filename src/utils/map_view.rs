@@ -1,17 +1,11 @@
 use std::{
     cell::RefCell,
-    collections::{BTreeMap, HashMap, HashSet},
+    collections::{BTreeMap, HashSet},
     fmt,
     sync::Arc,
 };
 
-use crate::{
-    ast::ConfiguredValue,
-    atrule::mixin::Mixin,
-    common::Identifier,
-    scope::Scope,
-    value::{SassFunction, Value},
-};
+use crate::common::Identifier;
 
 pub(crate) trait MapView: fmt::Debug {
     type Value;

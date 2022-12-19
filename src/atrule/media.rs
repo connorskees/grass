@@ -69,7 +69,7 @@ impl<'a> MediaQueryParser<'a> {
         }
 
         let mut modifier: Option<String> = None;
-        let mut media_type: Option<String> = None;
+        let media_type: Option<String>;
         let identifier1 = self.parser.__parse_identifier(false, false)?;
 
         if identifier1.to_ascii_lowercase() == "not" {

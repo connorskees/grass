@@ -179,17 +179,6 @@ impl Number {
         // ))
     }
 
-    pub fn pi() -> Self {
-        Number::from(std::f64::consts::PI)
-    }
-
-    pub fn atan2(self, other: Self) -> Self {
-        Self(self.0.atan2(other.0))
-        // Number::Big(Box::new(
-        //     BigRational::from_float(self.0.atan2(other.0)).unwrap(),
-        // ))
-    }
-
     /// Invariants: `from.comparable(&to)` must be true
     pub fn convert(self, from: &Unit, to: &Unit) -> Self {
         if from == &Unit::None || to == &Unit::None || from == to {
@@ -201,24 +190,6 @@ impl Number {
         Number(self.0 * UNIT_CONVERSION_TABLE[to][from])
     }
 }
-
-macro_rules! trig_fn(
-    ($name:ident, $name_deg:ident) => {
-        pub fn $name(self) -> Self {
-            Self(self.0.$name())
-            // Number::Big(Box::new(BigRational::from_float(
-            //     self.0.$name(),
-            // ).unwrap()))
-        }
-
-        pub fn $name_deg(self) -> Self {
-            Self(self.0.to_radians().$name())
-            // Number::Big(Box::new(BigRational::from_float(
-            //     self.0.to_radians().$name(),
-            // ).unwrap()))
-        }
-    }
-);
 
 macro_rules! inverse_trig_fn(
     ($name:ident) => {
@@ -233,10 +204,6 @@ macro_rules! inverse_trig_fn(
 
 /// Trigonometry methods
 impl Number {
-    trig_fn!(cos, cos_deg);
-    trig_fn!(sin, sin_deg);
-    trig_fn!(tan, tan_deg);
-
     inverse_trig_fn!(acos);
     inverse_trig_fn!(asin);
     inverse_trig_fn!(atan);
