@@ -756,7 +756,6 @@ impl<'a, 'b> Parser<'a, 'b> {
                 Err(..) => {
                     self.toks.set_cursor(start);
                     let stmt = self.parse_declaration_or_style_rule()?;
-                    dbg!(self.toks.span_from(start));
                     let is_style_rule = matches!(stmt, AstStmt::RuleSet(..));
 
                     let (is_style_rule, span) = match stmt {
@@ -1393,9 +1392,10 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         if self.looking_at_interpolated_identifier() {
             let identifier = self.parse_interpolated_identifier()?;
+            let ident_span = self.toks.span_from(start);
 
             if identifier.as_plain().unwrap_or("").to_ascii_lowercase() == "not" {
-                todo!(r#""not" is not a valid identifier here."#);
+                return Err((r#""not" is not a valid identifier here."#, ident_span).into());
             }
 
             if self.consume_char_if_exists('(') {
@@ -1411,13 +1411,14 @@ impl<'a, 'b> Parser<'a, 'b> {
                     Some(InterpolationPart::Expr(..))
                 )
             {
-                todo!("Expected @supports condition.")
+                return Err(("Expected @supports condition.", ident_span).into());
             } else {
-                //     return SupportsInterpolation(
-                //         identifier.contents.first as Expression, scanner.spanFrom(start));
-
-                todo!()
-                // return Ok(AstSupportsCondition::Interpolation { name: identifier, args: arguments })
+                match identifier.contents.first() {
+                    Some(InterpolationPart::Expr(e)) => {
+                        return Ok(AstSupportsCondition::Interpolation(e.clone()))
+                    }
+                    _ => unreachable!(),
+                }
             }
         }
 
@@ -1575,8 +1576,75 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         Ok(AstStmt::While(AstWhile { condition, body }))
     }
-    fn parse_forward_rule(&mut self) -> SassResult<AstStmt> {
-        todo!()
+    fn parse_forward_rule(&mut self, start: usize) -> SassResult<AstStmt> {
+        let url = PathBuf::from(self.parse_url_string()?);
+        self.whitespace_or_comment();
+
+        let prefix = if self.scan_identifier("as", false)?  {
+            self.whitespace_or_comment();
+            let prefix = self.__parse_identifier(true, false)?;
+            self.expect_char('*')?;
+            self.whitespace_or_comment();
+            Some(prefix)
+        } else {
+            None
+        };
+
+        let mut shown_mixins_and_functions: Option<HashSet<Identifier>> = None;
+        let mut shown_variables: Option<HashSet<Identifier>> = None;
+        let mut hidden_mixins_and_functions: Option<HashSet<Identifier>> = None;
+        let mut hidden_variables: Option<HashSet<Identifier>> = None;
+
+        if self.scan_identifier("show", false)? {
+            let members = self.parse_member_list()?;
+            shown_mixins_and_functions = Some(members.0);
+            shown_variables = Some(members.1);
+        } else if self.scan_identifier("hide", false)? {
+            let members = self.parse_member_list()?;
+            hidden_mixins_and_functions = Some(members.0);
+            hidden_variables = Some(members.1);
+        }
+        
+        let config = self.parse_configuration(true)?;
+
+        self.expect_statement_separator(Some("@forward rule"))?;
+        let span = self.toks.span_from(start);
+
+        if !self.flags.is_use_allowed() {
+            return Err(("@forward rules must be written before any other rules.", span).into());
+        }
+
+        Ok(AstStmt::Forward(if let (Some(shown_mixins_and_functions), Some(shown_variables)) = (shown_mixins_and_functions, shown_variables) {
+            AstForwardRule::show(url, shown_mixins_and_functions, shown_variables, prefix, config)
+        } else if let (Some(hidden_mixins_and_functions), Some(hidden_variables)) = (hidden_mixins_and_functions, hidden_variables) {
+            AstForwardRule::hide(url, hidden_mixins_and_functions, hidden_variables, prefix, config)
+        } else {
+            AstForwardRule::new(url, prefix, config)
+        }))
+    }
+
+    fn parse_member_list(&mut self) -> SassResult<(HashSet<Identifier>, HashSet<Identifier>)> {
+        let mut identifiers = HashSet::new();
+        let mut variables = HashSet::new();
+
+        loop {
+            self.whitespace_or_comment();
+
+            // todo: withErrorMessage("Expected variable, mixin, or function name"
+            if self.toks.next_char_is('$') {
+                variables.insert(Identifier::from(self.parse_variable_name()?));
+            } else {
+                identifiers.insert(Identifier::from(self.__parse_identifier(true, false)?));
+            }
+
+            self.whitespace_or_comment();
+
+            if !self.consume_char_if_exists(',') {
+                break;
+            }
+        }
+
+        Ok((identifiers, variables))
     }
 
     fn parse_url_string(&mut self) -> SassResult<String> {
@@ -1769,7 +1837,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                 // if (!root) {
                 //     _disallowedAtRule();
                 // }
-                self.parse_forward_rule()
+                self.parse_forward_rule(start)
             }
             Some("function") => self.parse_function_rule(start),
             Some("if") => self.parse_if_rule(child),
@@ -2288,7 +2356,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         }
 
         if !allow_empty && buffer.contents.is_empty() {
-            todo!("Expected token.");
+            return Err(("Expected token.", self.toks.current_span()).into());
         }
 
         Ok(buffer)

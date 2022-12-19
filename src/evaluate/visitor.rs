@@ -237,7 +237,7 @@ pub(crate) struct Visitor<'a> {
     pub is_plain_css: bool,
     css_tree: CssTree,
     parent: Option<CssTreeIdx>,
-    configuration: Configuration,
+    configuration: Arc<RefCell<Configuration>>,
 }
 
 impl<'a> Visitor<'a> {
@@ -262,7 +262,7 @@ impl<'a> Visitor<'a> {
             css_tree: CssTree::new(),
             parent: None,
             current_import_path,
-            configuration: Configuration::empty(),
+            configuration: Arc::new(RefCell::new(Configuration::empty())),
             is_plain_css: false,
         }
     }
@@ -328,12 +328,128 @@ impl<'a> Visitor<'a> {
                 self.visit_use_rule(use_rule)?;
                 Ok(None)
             }
-            AstStmt::Forward(_) => todo!(),
+            AstStmt::Forward(forward_rule) => {
+                self.visit_forward_rule(forward_rule)?;
+                Ok(None)
+            }
             AstStmt::Supports(supports_rule) => {
                 self.visit_supports_rule(supports_rule)?;
                 Ok(None)
             }
         }
+    }
+
+    fn visit_forward_rule(&mut self, forward_rule: AstForwardRule) -> SassResult<()> {
+        let old_config = Arc::clone(&self.configuration);
+        let adjusted_config =
+            Configuration::through_forward(Arc::clone(&old_config), &forward_rule);
+
+        if !forward_rule.configuration.is_empty() {
+            let new_configuration =
+                self.add_forward_configuration(Arc::clone(&adjusted_config), &forward_rule)?;
+
+            self.load_module(
+                forward_rule.url.as_path(),
+                Some(Arc::clone(&new_configuration)),
+                false,
+                self.parser.span_before,
+                |visitor, module| {
+                    visitor.env.forward_module(module, forward_rule.clone())?;
+
+                    Ok(())
+                },
+            )?;
+
+            self.remove_used_configuration(
+                adjusted_config,
+                Arc::clone(&new_configuration),
+                &forward_rule
+                    .configuration
+                    .iter()
+                    .filter(|var| !var.is_guarded)
+                    .map(|var| var.name.node)
+                    .collect(),
+            );
+
+            // Remove all the variables that weren't configured by this particular
+            // `@forward` before checking that the configuration is empty. Errors for
+            // outer `with` clauses will be thrown once those clauses finish
+            // executing.
+            let configured_variables: HashSet<Identifier> = forward_rule
+                .configuration
+                .iter()
+                .map(|var| var.name.node)
+                .collect();
+
+            for name in (*new_configuration).borrow().values.keys() {
+                if !configured_variables.contains(&name) {
+                    (*new_configuration).borrow_mut().remove(name);
+                }
+            }
+
+            Self::assert_configuration_is_empty(new_configuration, false)?;
+        } else {
+            self.configuration = adjusted_config;
+            let url = forward_rule.url.clone();
+            self.load_module(
+                url.as_path(),
+                None,
+                false,
+                self.parser.span_before,
+                move |visitor, module| {
+                    visitor.env.forward_module(module, forward_rule.clone())?;
+
+                    Ok(())
+                },
+            )?;
+            self.configuration = old_config;
+        }
+
+        Ok(())
+    }
+
+    fn add_forward_configuration(
+        &mut self,
+        config: Arc<RefCell<Configuration>>,
+        forward_rule: &AstForwardRule,
+    ) -> SassResult<Arc<RefCell<Configuration>>> {
+        //     var newValues = Map.of(configuration.values);
+        // for (var variable in node.configuration) {
+        //   if (variable.isGuarded) {
+        //     var oldValue = configuration.remove(variable.name);
+        //     if (oldValue != null && oldValue.value != sassNull) {
+        //       newValues[variable.name] = oldValue;
+        //       continue;
+        //     }
+        //   }
+
+        //   var variableNodeWithSpan = _expressionNode(variable.expression);
+        //   newValues[variable.name] = ConfiguredValue.explicit(
+        //       _withoutSlash(
+        //           await variable.expression.accept(this), variableNodeWithSpan),
+        //       variable.span,
+        //       variableNodeWithSpan);
+        // }
+
+        // if (configuration is ExplicitConfiguration || configuration.isEmpty) {
+        //   return ExplicitConfiguration(newValues, node);
+        // } else {
+        //   return Configuration.implicit(newValues);
+        // }
+        todo!()
+    }
+
+    fn remove_used_configuration(
+        &mut self,
+        upstream: Arc<RefCell<Configuration>>,
+        downstream: Arc<RefCell<Configuration>>,
+        except: &HashSet<Identifier>,
+    ) {
+        //     for (var name in upstream.values.keys.toList()) {
+        //   if (except.contains(name)) continue;
+        //   if (!downstream.values.containsKey(name)) upstream.remove(name);
+        // }
+        todo!()
     }
 
     fn parenthesize_supports_condition(
@@ -345,9 +461,10 @@ impl<'a> Visitor<'a> {
             AstSupportsCondition::Negation(..) => {
                 Ok(format!("({})", self.visit_supports_condition(condition)?))
             }
-            AstSupportsCondition::Operation { operator, .. }
-                if operator.is_none() || operator != operator =>
-            {
+            AstSupportsCondition::Operation {
+                operator: operator2,
+                ..
+            } if operator2.is_none() || operator2.as_deref() != operator => {
                 Ok(format!("({})", self.visit_supports_condition(condition)?))
             }
             _ => self.visit_supports_condition(condition),
@@ -418,14 +535,13 @@ impl<'a> Visitor<'a> {
         }
 
         let condition = self.visit_supports_condition(supports_rule.condition)?;
-        dbg!(&condition);
 
         let css_supports_rule = Stmt::Supports(Box::new(SupportsRule {
             params: condition,
             body: Vec::new(),
         }));
 
-        let parent_idx = self.css_tree.add_stmt(css_supports_rule, None);
+        let parent_idx = self.css_tree.add_stmt(css_supports_rule, self.parent);
 
         let children = supports_rule.children;
 
@@ -468,9 +584,9 @@ impl<'a> Visitor<'a> {
     fn execute(
         &mut self,
         stylesheet: StyleSheet,
-        configuration: Option<Configuration>,
+        configuration: Option<Arc<RefCell<Configuration>>>,
         names_in_errors: bool,
-    ) -> SassResult<Module> {
+    ) -> SassResult<Arc<RefCell<Module>>> {
         let env = Environment::new();
         let mut extension_store = ExtensionStore::new(self.parser.span_before);
 
@@ -538,10 +654,10 @@ impl<'a> Visitor<'a> {
     fn load_module(
         &mut self,
         url: &Path,
-        configuration: Option<Configuration>,
+        configuration: Option<Arc<RefCell<Configuration>>>,
         names_in_errors: bool,
         span: Span,
-        callback: impl Fn(&mut Self, Module) -> SassResult<()>,
+        callback: impl Fn(&mut Self, Arc<RefCell<Module>>) -> SassResult<()>,
     ) -> SassResult<()> {
         let builtin = match url.to_string_lossy().as_ref() {
             "sass:color" => Some(declare_module_color()),
@@ -556,7 +672,9 @@ impl<'a> Visitor<'a> {
 
         if let Some(builtin) = builtin {
             // todo: lots of ugly unwraps here
-            if configuration.is_some() && !configuration.as_ref().unwrap().is_implicit() {
+            if configuration.is_some()
+                && !(**configuration.as_ref().unwrap()).borrow().is_implicit()
+            {
                 let msg = if names_in_errors {
                     format!(
                         "Built-in module {} can't be configured.",
@@ -566,10 +684,14 @@ impl<'a> Visitor<'a> {
                     "Built-in modules can't be configured.".to_owned()
                 };
 
-                return Err((msg, configuration.unwrap().span.unwrap()).into());
+                return Err((
+                    msg,
+                    (**configuration.as_ref().unwrap()).borrow().span.unwrap(),
+                )
+                    .into());
             }
 
-            callback(self, builtin)?;
+            callback(self, Arc::new(RefCell::new(builtin)))?;
             return Ok(());
         }
 
@@ -584,10 +706,10 @@ impl<'a> Visitor<'a> {
     }
 
     fn visit_use_rule(&mut self, use_rule: AstUseRule) -> SassResult<()> {
-        let mut configuration = Configuration::empty();
+        let mut configuration = Arc::new(RefCell::new(Configuration::empty()));
 
         if !use_rule.configuration.is_empty() {
-            let mut values = HashMap::new();
+            let mut values = BTreeMap::new();
 
             for var in use_rule.configuration {
                 let value = self.visit_expr(var.expr.node)?;
@@ -598,7 +720,7 @@ impl<'a> Visitor<'a> {
                 );
             }
 
-            configuration = Configuration::explicit(values, use_rule.span);
+            configuration = Arc::new(RefCell::new(Configuration::explicit(values, use_rule.span)));
         }
 
         let span = use_rule.span;
@@ -610,7 +732,7 @@ impl<'a> Visitor<'a> {
 
         self.load_module(
             &use_rule.url,
-            Some(configuration.clone()),
+            Some(Arc::clone(&configuration)),
             false,
             span,
             |visitor, module| {
@@ -620,15 +742,16 @@ impl<'a> Visitor<'a> {
             },
         )?;
 
-        Self::assert_configuration_is_empty(&configuration, false)?;
+        Self::assert_configuration_is_empty(configuration, false)?;
 
         Ok(())
     }
 
     fn assert_configuration_is_empty(
-        config: &Configuration,
+        config: Arc<RefCell<Configuration>>,
         name_in_error: bool,
     ) -> SassResult<()> {
+        let config = (*config).borrow();
         // By definition, implicit configurations are allowed to only use a subset
         // of their values.
         if config.is_empty() || config.is_implicit() {
@@ -1475,7 +1598,7 @@ impl<'a> Visitor<'a> {
             self.style_rule_exists(),
         );
 
-        let parent_idx = self.css_tree.add_stmt(media_rule, None);
+        let parent_idx = self.css_tree.add_stmt(media_rule, self.parent);
 
         self.with_parent::<SassResult<()>>(parent_idx, true, |visitor| {
             visitor.with_media_queries(
@@ -2016,7 +2139,7 @@ impl<'a> Visitor<'a> {
 
         if decl.is_guarded {
             if decl.namespace.is_none() && self.env.at_root() {
-                let var_override = self.configuration.remove(decl.name);
+                let var_override = (*self.configuration).borrow_mut().remove(decl.name);
                 if !matches!(
                     var_override,
                     Some(ConfiguredValue {

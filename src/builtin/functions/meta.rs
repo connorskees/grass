@@ -172,9 +172,10 @@ pub(crate) fn global_variable_exists(
     };
 
     Ok(Value::bool(if let Some(module_name) = module {
-        (*parser.env.modules)
+        (*(*parser.env.modules)
             .borrow()
-            .get(module_name.into(), args.span())?
+            .get(module_name.into(), args.span())?)
+            .borrow()
             .var_exists(name)
     } else {
         parser.env.global_scope().borrow().var_exists(name)
@@ -207,9 +208,9 @@ pub(crate) fn mixin_exists(mut args: ArgumentResult, parser: &mut Visitor) -> Sa
     };
 
     Ok(Value::bool(if let Some(module_name) = module {
-        (*parser.env.modules)
+        (*(*parser.env.modules)
             .borrow()
-            .get(module_name.into(), args.span())?
+            .get(module_name.into(), args.span())?).borrow()
             .mixin_exists(name)
     } else {
         parser.env.mixin_exists(name)
@@ -243,9 +244,9 @@ pub(crate) fn function_exists(mut args: ArgumentResult, parser: &mut Visitor) ->
     };
 
     Ok(Value::bool(if let Some(module_name) = module {
-        (*parser.env.modules)
+        (*(*parser.env.modules)
             .borrow()
-            .get(module_name.into(), args.span())?
+            .get(module_name.into(), args.span())?).borrow()
             .fn_exists(name)
     } else {
         parser.env.fn_exists(name)

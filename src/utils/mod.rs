@@ -2,12 +2,14 @@ pub(crate) use chars::*;
 // pub(crate) use comment_whitespace::*;
 // pub(crate) use number::*;
 // pub(crate) use read_until::*;
+pub(crate) use map_view::*;
 pub(crate) use strings::*;
 
 mod chars;
 // mod comment_whitespace;
 // mod number;
 // mod read_until;
+mod map_view;
 mod strings;
 
 #[allow(clippy::case_sensitive_file_extension_comparisons)]

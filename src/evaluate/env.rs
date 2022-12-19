@@ -1,8 +1,9 @@
 use codemap::{Span, Spanned};
 
 use crate::{
+    ast::AstForwardRule,
     atrule::mixin::Mixin,
-    builtin::modules::{Module, Modules},
+    builtin::modules::{Module, Modules, ForwardedModule},
     common::Identifier,
     error::SassResult,
     scope::{Scope, Scopes},
@@ -20,8 +21,9 @@ use super::visitor::CallableContentBlock;
 pub(crate) struct Environment {
     pub scopes: Scopes,
     pub modules: Arc<RefCell<Modules>>,
-    pub global_modules: Vec<Arc<Module>>,
+    pub global_modules: Vec<Arc<RefCell<Module>>>,
     pub content: Option<Arc<CallableContentBlock>>,
+    pub forwarded_modules: Arc<RefCell<Vec<Arc<RefCell<Module>>>>>,
 }
 
 impl Environment {
@@ -31,6 +33,7 @@ impl Environment {
             modules: Arc::new(RefCell::new(Modules::new())),
             global_modules: Vec::new(),
             content: None,
+            forwarded_modules: Arc::new(RefCell::new(Vec::new())),
         }
     }
 
@@ -40,7 +43,32 @@ impl Environment {
             modules: Arc::clone(&self.modules),
             global_modules: self.global_modules.iter().map(Arc::clone).collect(),
             content: self.content.as_ref().map(Arc::clone),
+            forwarded_modules: Arc::clone(&self.forwarded_modules),
         }
+    }
+
+    pub fn forward_module(&mut self, module: Arc<RefCell<Module>>, rule: AstForwardRule) -> SassResult<()> {
+        let view = ForwardedModule::if_necessary(module, rule);
+        (*self.forwarded_modules).borrow_mut().push(view);
+        //     var forwardedModules = (_forwardedModules ??= {});
+
+        // var view = ForwardedModuleView.ifNecessary(module, rule);
+        // for (var other in forwardedModules.keys) {
+        //   _assertNoConflicts(
+        //       view.variables, other.variables, view, other, "variable");
+        //   _assertNoConflicts(
+        //       view.functions, other.functions, view, other, "function");
+        //   _assertNoConflicts(view.mixins, other.mixins, view, other, "mixin");
+        // }
+
+        // // Add the original module to [_allModules] (rather than the
+        // // [ForwardedModuleView]) so that we can de-duplicate upstream modules using
+        // // `==`. This is safe because upstream modules are only used for collating
+        // // CSS, not for the members they expose.
+        // _allModules.add(module);
+        // forwardedModules[view] = rule;
+        // todo!()
+        Ok(())
     }
 
     pub fn insert_mixin(&mut self, name: Identifier, mixin: Mixin) {
@@ -59,7 +87,7 @@ impl Environment {
         if let Some(namespace) = namespace {
             let modules = (*self.modules).borrow();
             let module = modules.get(namespace.node, namespace.span)?;
-            return module.get_mixin(name);
+            return (*module).borrow().get_mixin(name);
         }
 
         self.scopes.get_mixin(name)
@@ -81,7 +109,7 @@ impl Environment {
         if let Some(namespace) = namespace {
             let modules = (*self.modules).borrow();
             let module = modules.get(namespace.node, namespace.span)?;
-            return Ok(module.get_fn(name));
+            return Ok((*module).borrow().get_fn(name));
         }
 
         Ok(self
@@ -98,7 +126,7 @@ impl Environment {
         if let Some(namespace) = namespace {
             let modules = (*self.modules).borrow();
             let module = modules.get(namespace.node, namespace.span)?;
-            return Ok(module.var_exists(name));
+            return Ok((*module).borrow().var_exists(name));
         }
 
         Ok(self.scopes.var_exists(name))
@@ -112,7 +140,7 @@ impl Environment {
         if let Some(namespace) = namespace {
             let modules = (*self.modules).borrow();
             let module = modules.get(namespace.node, namespace.span)?;
-            return module.get_var(name);
+            return (*module).borrow().get_var(name);
         }
 
         match self.scopes.get_var(name) {
@@ -138,7 +166,7 @@ impl Environment {
         if let Some(namespace) = namespace {
             let mut modules = (*self.modules).borrow_mut();
             let module = modules.get_mut(namespace.node, namespace.span)?;
-            module.update_var(name, value)?;
+            (*module).borrow_mut().update_var(name, value)?;
             return Ok(());
         }
 
@@ -194,8 +222,8 @@ impl Environment {
 
     fn get_variable_from_global_modules(&self, name: Identifier) -> Option<Value> {
         for module in &self.global_modules {
-            if (**module).var_exists(name) {
-                return module.get_var_no_err(name);
+            if (**module).borrow().var_exists(name) {
+                return (**module).borrow().get_var_no_err(name);
             }
         }
 
@@ -204,8 +232,8 @@ impl Environment {
 
     fn get_function_from_global_modules(&self, name: Identifier) -> Option<SassFunction> {
         for module in &self.global_modules {
-            if (**module).fn_exists(name) {
-                return module.get_fn(name);
+            if (**module).borrow().fn_exists(name) {
+                return (**module).borrow().get_fn(name);
             }
         }
 
@@ -215,7 +243,7 @@ impl Environment {
     pub fn add_module(
         &mut self,
         namespace: Option<Identifier>,
-        module: Module,
+        module: Arc<RefCell<Module>>,
         span: Span,
     ) -> SassResult<()> {
         match namespace {
@@ -226,29 +254,23 @@ impl Environment {
             }
             None => {
                 for name in self.scopes.global_scope().var_names() {
-                    if module.var_exists(name) {
+                    if (*module).borrow().var_exists(name) {
                         todo!(
                             "This module and the new module both define a variable named \"{name}\"."
                         );
                     }
                 }
 
-                self.global_modules.push(Arc::new(module));
+                self.global_modules.push(module);
             }
         }
 
         Ok(())
     }
 
-    pub fn to_module(self, extension_store: ExtensionStore) -> Module {
+    pub fn to_module(self, extension_store: ExtensionStore) -> Arc<RefCell<Module>> {
         debug_assert!(self.at_root());
 
-        Module::new_env(self, extension_store)
-        // Module {
-        //     scope: todo!(),
-        //     upstream: todo!(),
-        //     extension_store: todo!(),
-        //     is_builtin: todo!(),
-        // }
+        Arc::new(RefCell::new(Module::new_env(self, extension_store)))
     }
 }

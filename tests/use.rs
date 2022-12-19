@@ -232,7 +232,7 @@ fn use_as_with() {
 
 #[test]
 fn use_whitespace_and_comments() {
-    let input = "@use  /**/  \"use_whitespace_and_comments\"  /**/  as  /**/  foo  /**/  with  /**/  (  /**/  $a  /**/  :  /**/  red  /**/  )  /**/  ;";
+    let input = "@use  /**/  \"use_whitespace_and_comments\"  /**/  as  /**/  foo  /**/  with  /**/  (  /**/  $a  /**/  :  /**/  red  /**/  );";
     tempfile!(
         "use_whitespace_and_comments.scss",
         "$a: green !default; a { color: $a }"
@@ -240,6 +240,19 @@ fn use_whitespace_and_comments() {
     assert_eq!(
         "a {\n  color: red;\n}\n",
         &grass::from_string(input.to_string(), &grass::Options::default()).expect(input)
+    );
+}
+
+#[test]
+fn use_loud_comment_after_close_paren_with() {
+    let input = r#"@use "b" as foo with ($a : red)  /**/  ;"#;
+    tempfile!(
+        "use_loud_comment_after_close_paren_with.scss",
+        "$a: green !default; a { color: $a }"
+    );
+    assert_err!(
+        r#"Error: expected ";"."#,
+        input
     );
 }
 
@@ -354,9 +367,9 @@ fn use_can_see_modules_imported_by_other_modules_when_aliased_as_star() {
         "@use \"sass:math\";"
     );
 
-    assert_eq!(
-        "a {\n  color: 2.7182818285;\n}\n",
-        &grass::from_string(input.to_string(), &grass::Options::default()).expect(input)
+    assert_err!(
+        r#"Error: There is no module with the namespace "math"."#,
+        input // &grass::from_string(input.to_string(), &grass::Options::default()).expect(input)
     );
 }
 

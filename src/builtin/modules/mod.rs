@@ -1,9 +1,14 @@
-use std::{cell::RefCell, collections::BTreeMap, sync::Arc};
+use std::{
+    cell::RefCell,
+    collections::{BTreeMap, HashSet},
+    fmt,
+    sync::Arc,
+};
 
 use codemap::{Span, Spanned};
 
 use crate::{
-    ast::ArgumentResult,
+    ast::{ArgumentResult, AstForwardRule},
     atrule::mixin::{BuiltinMixin, Mixin},
     builtin::Builtin,
     common::Identifier,
@@ -11,6 +16,7 @@ use crate::{
     evaluate::{Environment, Visitor},
     scope::Scope,
     selector::ExtensionStore,
+    utils::{BaseMapView, MapView, MergedMapView, PublicMemberMapView},
     value::{SassFunction, SassMap, Value},
 };
 
@@ -23,58 +29,85 @@ mod selector;
 mod string;
 
 #[derive(Debug, Clone)]
+pub(crate) struct ForwardedModule {
+    inner: Arc<RefCell<Module>>,
+    forward_rule: AstForwardRule,
+}
+
+impl ForwardedModule {
+    pub fn if_necessary(
+        module: Arc<RefCell<Module>>,
+        rule: AstForwardRule,
+    ) -> Arc<RefCell<Module>> {
+        if rule.prefix.is_none()
+            && rule.shown_mixins_and_functions.is_none()
+            && rule.shown_variables.is_none()
+            && rule
+                .hidden_mixins_and_functions
+                .as_ref()
+                .map(HashSet::is_empty)
+                .unwrap_or(false)
+            && rule
+                .hidden_variables
+                .as_ref()
+                .map(HashSet::is_empty)
+                .unwrap_or(false)
+        {
+            module
+        } else {
+            Arc::new(RefCell::new(Module::Forwarded(ForwardedModule {
+                inner: module,
+                forward_rule: rule,
+            })))
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct ModuleScope {
+    pub variables: Arc<dyn MapView<Value = Value>>,
+    pub mixins: Arc<dyn MapView<Value = Mixin>>,
+    pub functions: Arc<dyn MapView<Value = SassFunction>>,
+}
+
+impl ModuleScope {
+    pub fn new() -> Self {
+        Self {
+            variables: Arc::new(BaseMapView(Arc::new(RefCell::new(BTreeMap::new())))),
+            mixins: Arc::new(BaseMapView(Arc::new(RefCell::new(BTreeMap::new())))),
+            functions: Arc::new(BaseMapView(Arc::new(RefCell::new(BTreeMap::new())))),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
 pub(crate) enum Module {
     Environment {
-        scope: PublicMemberFilter,
+        scope: ModuleScope,
         upstream: Vec<Module>,
         extension_store: ExtensionStore,
         env: Environment,
     },
     Builtin {
-        scope: PublicMemberFilter,
+        scope: ModuleScope,
     },
+    Forwarded(ForwardedModule),
 }
-// /// Whether or not this module is builtin
-// /// e.g. `"sass:math"`
-// is_builtin: bool,
 
 #[derive(Debug, Clone)]
-pub(crate) struct Modules(BTreeMap<Identifier, Module>);
-
-// #[derive(Debug, Default)]
-// pub(crate) struct ModuleConfig(BTreeMap<Identifier, Value>);
-
-// impl ModuleConfig {
-//     /// Removes and returns element with name
-//     pub fn get(&mut self, name: Identifier) -> Option<Value> {
-//         self.0.remove(&name)
-//     }
-
-//     /// If this structure is not empty at the end of
-//     /// an `@use`, we must throw an error
-//     pub fn is_empty(&self) -> bool {
-//         self.0.is_empty()
-//     }
-
-//     pub fn insert(&mut self, name: Spanned<Identifier>, value: Spanned<Value>) -> SassResult<()> {
-//         if self.0.insert(name.node, value.node).is_some() {
-//             Err((
-//                 "The same variable may only be configured once.",
-//                 name.span.merge(value.span),
-//             )
-//                 .into())
-//         } else {
-//             Ok(())
-//         }
-//     }
-// }
+pub(crate) struct Modules(BTreeMap<Identifier, Arc<RefCell<Module>>>);
 
 impl Modules {
     pub fn new() -> Self {
         Self(BTreeMap::new())
     }
 
-    pub fn insert(&mut self, name: Identifier, module: Module, span: Span) -> SassResult<()> {
+    pub fn insert(
+        &mut self,
+        name: Identifier,
+        module: Arc<RefCell<Module>>,
+        span: Span,
+    ) -> SassResult<()> {
         if self.0.contains_key(&name) {
             return Err((
                 format!("There's already a module with namespace \"{}\".", name),
@@ -88,9 +121,9 @@ impl Modules {
         Ok(())
     }
 
-    pub fn get(&self, name: Identifier, span: Span) -> SassResult<&Module> {
+    pub fn get(&self, name: Identifier, span: Span) -> SassResult<Arc<RefCell<Module>>> {
         match self.0.get(&name) {
-            Some(v) => Ok(v),
+            Some(v) => Ok(Arc::clone(v)),
             None => Err((
                 format!(
                     "There is no module with the namespace \"{}\".",
@@ -102,7 +135,11 @@ impl Modules {
         }
     }
 
-    pub fn get_mut(&mut self, name: Identifier, span: Span) -> SassResult<&mut Module> {
+    pub fn get_mut(
+        &mut self,
+        name: Identifier,
+        span: Span,
+    ) -> SassResult<&mut Arc<RefCell<Module>>> {
         match self.0.get_mut(&name) {
             Some(v) => Ok(v),
             None => Err((
@@ -121,59 +158,68 @@ impl Modules {
     }
 }
 
-#[derive(Debug, Clone)]
-pub(crate) struct PublicMemberFilter(Arc<RefCell<Scope>>);
+fn member_map<V: fmt::Debug + Clone + 'static>(
+    local: Arc<dyn MapView<Value = V>>,
+    others: Vec<Arc<dyn MapView<Value = V>>>,
+) -> Arc<dyn MapView<Value = V>> {
+    let local_map = PublicMemberMapView(local);
 
-impl PublicMemberFilter {
-    pub fn new(scope: Arc<RefCell<Scope>>) -> Self {
-        Self(scope)
+    if others.is_empty() {
+        return Arc::new(local_map);
     }
 
-    pub fn var_exists(&self, name: Identifier) -> bool {
-        if name.as_str().starts_with('-') {
-            return false;
-        }
+    let mut all_maps: Vec<Arc<dyn MapView<Value = V>>> =
+        others.into_iter().filter(|map| !map.is_empty()).collect();
 
-        (*self.0).borrow().var_exists(name)
-    }
+    all_maps.push(Arc::new(local_map));
 
-    pub fn fn_exists(&self, name: Identifier) -> bool {
-        if name.as_str().starts_with('-') {
-            return false;
-        }
-
-        (*self.0).borrow().fn_exists(name)
-    }
-
-    pub fn get_mixin(&self, name: Identifier) -> Option<Mixin> {
-        if name.as_str().starts_with('-') {
-            return None;
-        }
-
-        (*self.0).borrow().get_mixin(name)
-    }
-
-    pub fn get_var(&self, name: Identifier) -> Option<Value> {
-        if name.as_str().starts_with('-') {
-            return None;
-        }
-
-        (*self.0).borrow().get_var_no_err(name).cloned()
-    }
-
-    pub fn get_fn(&self, name: Identifier) -> Option<SassFunction> {
-        if name.as_str().starts_with('-') {
-            return None;
-        }
-
-        (*self.0).borrow().get_fn(name)
-    }
+    // todo: potential optimization when all_maps.len() == 1
+    Arc::new(MergedMapView(all_maps))
 }
 
 impl Module {
     pub fn new_env(env: Environment, extension_store: ExtensionStore) -> Self {
+        let variables = {
+            let variables = (*env.forwarded_modules).borrow();
+            let variables = variables
+                .iter()
+                .map(|module| Arc::clone(&(*module).borrow().scope().variables));
+            let this = Arc::new(BaseMapView(Arc::new(RefCell::new(
+                (*env.scopes.global_scope_arc()).borrow().vars.clone(),
+            ))));
+            member_map(this, variables.collect())
+        };
+
+        let mixins = {
+            let mixins = (*env.forwarded_modules).borrow();
+            let mixins = mixins
+                .iter()
+                .map(|module| Arc::clone(&(*module).borrow().scope().mixins));
+            let this = Arc::new(BaseMapView(Arc::new(RefCell::new(
+                (*env.scopes.global_scope_arc()).borrow().mixins.clone(),
+            ))));
+            member_map(this, mixins.collect())
+        };
+
+        let functions = {
+            let functions = (*env.forwarded_modules).borrow();
+            let functions = functions
+                .iter()
+                .map(|module| Arc::clone(&(*module).borrow().scope().functions));
+            let this = Arc::new(BaseMapView(Arc::new(RefCell::new(
+                (*env.scopes.global_scope_arc()).borrow().functions.clone(),
+            ))));
+            member_map(this, functions.collect())
+        };
+
+        let scope = ModuleScope {
+            variables,
+            mixins,
+            functions,
+        };
+
         Module::Environment {
-            scope: PublicMemberFilter::new(env.scopes.global_scope_arc()),
+            scope,
             upstream: Vec::new(),
             extension_store,
             env,
@@ -182,27 +228,30 @@ impl Module {
 
     pub fn new_builtin() -> Self {
         Module::Builtin {
-            scope: PublicMemberFilter::new(Arc::new(RefCell::new(Scope::new()))),
+            scope: ModuleScope::new(),
+        }
+    }
+
+    fn scope(&self) -> ModuleScope {
+        match self {
+            Self::Builtin { scope } | Self::Environment { scope, .. } => scope.clone(),
+            Self::Forwarded(forwarded) => (*forwarded.inner).borrow().scope().clone(),
         }
     }
 
     pub fn get_var(&self, name: Spanned<Identifier>) -> SassResult<Value> {
-        let scope = match self {
-            Self::Builtin { scope } | Self::Environment { scope, .. } => scope,
-        };
+        let scope = self.scope();
 
-        match scope.get_var(name.node) {
+        match scope.variables.get(name.node) {
             Some(v) => Ok(v.clone()),
             None => Err(("Undefined variable.", name.span).into()),
         }
     }
 
     pub fn get_var_no_err(&self, name: Identifier) -> Option<Value> {
-        let scope = match self {
-            Self::Builtin { scope } | Self::Environment { scope, .. } => scope,
-        };
+        let scope = self.scope();
 
-        scope.get_var(name)
+        scope.variables.get(name)
     }
 
     pub fn update_var(&mut self, name: Spanned<Identifier>, value: Value) -> SassResult<()> {
@@ -210,100 +259,63 @@ impl Module {
             Self::Builtin { .. } => {
                 return Err(("Cannot modify built-in variable.", name.span).into())
             }
-            Self::Environment { scope, .. } => scope,
+            Self::Environment { scope, .. } => scope.clone(),
+            Self::Forwarded(forwarded) => (*forwarded.inner).borrow_mut().scope().clone(),
+            _ => todo!(),
         };
-        // if self.is_builtin {
-        //     return Err(("Cannot modify built-in variable.", name.span).into());
-        // }
 
-        if (*scope.0)
-            .borrow_mut()
-            .insert_var(name.node, value)
-            .is_none()
-        {
+        if scope.variables.insert(name.node, value).is_none() {
             return Err(("Undefined variable.", name.span).into());
         }
 
-        // if self.scope.insert_var(name.node, value).is_some() {
         Ok(())
-        // } else {
-        //
-        // }
-        // todo!()
     }
 
     pub fn get_mixin(&self, name: Spanned<Identifier>) -> SassResult<Mixin> {
-        // match self.scope.mixins.get(&name.node) {
-        //     Some(v) => Ok(v.clone()),
-        //     None => Err(("Undefined mixin.", name.span).into()),
-        // }
-        // todo!()
-        let scope = match self {
-            Self::Builtin { scope } | Self::Environment { scope, .. } => scope,
-        };
+        let scope = self.scope();
 
-        match scope.get_mixin(name.node) {
+        match scope.mixins.get(name.node) {
             Some(v) => Ok(v.clone()),
             None => Err(("Undefined mixin.", name.span).into()),
         }
     }
 
     pub fn insert_builtin_mixin(&mut self, name: &'static str, mixin: BuiltinMixin) {
-        let scope = match self {
-            Self::Builtin { scope } => scope,
-            _ => unreachable!(),
-        };
+        let scope = self.scope();
 
-        (*scope.0)
-            .borrow_mut()
-            .insert_mixin(name, Mixin::Builtin(mixin));
-
-        // self.scope.mixins.insert(name.into(), Mixin::Builtin(mixin));
-        // todo!()
+        scope.mixins.insert(name.into(), Mixin::Builtin(mixin));
     }
 
     pub fn insert_builtin_var(&mut self, name: &'static str, value: Value) {
         let ident = name.into();
 
-        let scope = match self {
-            Self::Builtin { scope } => scope,
-            _ => unreachable!(),
-        };
+        let scope = self.scope();
 
-        (*scope.0).borrow_mut().insert_var(ident, value);
-
-        // self.scope.vars.insert(name.into(), value);
-        // todo!()
+        scope.variables.insert(ident, value);
     }
 
     pub fn get_fn(&self, name: Identifier) -> Option<SassFunction> {
-        let scope = match self {
-            Self::Builtin { scope } | Self::Environment { scope, .. } => scope,
-        };
+        let scope = self.scope();
 
-        scope.get_fn(name)
+        scope.functions.get(name)
     }
 
     pub fn var_exists(&self, name: Identifier) -> bool {
-        let scope = match self {
-            Self::Builtin { scope } | Self::Environment { scope, .. } => scope,
-        };
+        let scope = self.scope();
 
-        scope.var_exists(name)
+        scope.variables.get(name).is_some()
     }
 
     pub fn mixin_exists(&self, name: Identifier) -> bool {
-        // !name.as_str().starts_with('-') && self.scope.mixin_exists(name)
-        todo!()
+        let scope = self.scope();
+
+        scope.mixins.get(name).is_some()
     }
 
     pub fn fn_exists(&self, name: Identifier) -> bool {
-        // !name.as_str().starts_with('-') && self.scope.fn_exists(name)
-        let scope = match self {
-            Self::Builtin { scope } | Self::Environment { scope, .. } => scope,
-        };
+        let scope = self.scope();
 
-        scope.fn_exists(name)
+        scope.functions.get(name).is_some()
     }
 
     pub fn insert_builtin(
@@ -318,9 +330,9 @@ impl Module {
             _ => unreachable!(),
         };
 
-        (*scope.0)
-            .borrow_mut()
-            .insert_fn(ident, SassFunction::Builtin(Builtin::new(function), ident));
+        scope
+            .functions
+            .insert(ident, SassFunction::Builtin(Builtin::new(function), ident));
     }
 
     pub fn functions(&self) -> SassMap {
