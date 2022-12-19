@@ -32,6 +32,7 @@ use crate::{
 pub(crate) enum SassFunction {
     // todo: Cow<'static>?
     Builtin(Builtin, Identifier),
+    // todo: maybe arc?
     UserDefined(UserDefinedFunction),
     Plain { name: Identifier },
 }

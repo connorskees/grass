@@ -184,10 +184,9 @@ error!(
     "a {\n  color: min(calc(1 /**/ 2));\n}\n", r#"Error: expected "+", "-", "*", "/", or ")"."#
 );
 test!(
-    #[ignore = "we currently resolve interpolation eagerly inside loud comments"]
     min_contains_calc_contains_multiline_comment_with_interpolation,
-    "a {\n  color: min(calc(1 /* #{5} */ 2));\n}\n",
-    "a {\n  color: min(calc(1 /* #{5} */ 2));\n}\n"
+    "a {\n  color: min(calc(1 + /* #{5} */ 2));\n}\n",
+    "a {\n  color: 3;\n}\n"
 );
 test!(
     min_uppercase,

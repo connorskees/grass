@@ -282,7 +282,7 @@ error!(
         color: red;
       }
     }",
-    "Error: expected " % "."
+    r#"Error: expected "%"."#
 );
 
 // todo: span for this

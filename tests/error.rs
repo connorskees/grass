@@ -83,7 +83,6 @@ error!(toplevel_comma, "a {},", "Error: expected \"{\".");
 error!(toplevel_exclamation_alone, "!", "Error: expected \"}\".");
 error!(toplevel_exclamation, "! {}", "Error: expected \"}\".");
 error!(toplevel_backtick, "` {}", "Error: expected selector.");
-// note that the message dart-sass gives is: `Error: expected "}".`
 error!(
     toplevel_open_curly_brace,
     "{ {color: red;}", "Error: expected \"}\"."

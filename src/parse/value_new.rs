@@ -798,32 +798,21 @@ impl<'c> ValueParser<'c> {
                 .into());
         }
 
+        let start = parser.toks.cursor();
+
         parser.expect_char('&')?;
 
-        if parser.toks.next_char_is('&') {
+        if parser.consume_char_if_exists('&') {
             //   warn(
             //       'In Sass, "&&" means two copies of the parent selector. You '
             //       'probably want to use "and" instead.',
             //       scanner.spanFrom(start));
+            //   scanner.position--;
 
             todo!()
         }
 
-        Ok(AstExpr::ParentSelector.span(parser.span_before))
-        //     if (plainCss) {
-        //   scanner.error("The parent selector isn't allowed in plain CSS.",
-        //       length: 1);
-        // }
-
-        // var start = scanner.state;
-        // scanner.expectChar($ampersand);
-
-        // if (scanner.scanChar($ampersand)) {
-        //   scanner.position--;
-        // }
-
-        // return SelectorExpression(scanner.spanFrom(start));
-        // todo!()
+        Ok(AstExpr::ParentSelector.span(parser.toks.span_from(start)))
     }
 
     fn parse_hash(&mut self, parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
@@ -1192,7 +1181,11 @@ impl<'c> ValueParser<'c> {
                         start,
                         parser,
                     ),
-                    None => todo!("Interpolation isn't allowed in namespaces."),
+                    None => {
+                        return Err(
+                            ("Interpolation isn't allowed in namespaces.", ident_span).into()
+                        )
+                    }
                 }
             }
             Some(Token { kind: '(', .. }) => {

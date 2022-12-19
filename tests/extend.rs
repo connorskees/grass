@@ -1401,7 +1401,6 @@ test!(
     "@media screen {\n  .foo, .bar {\n    a: b;\n  }\n}\n"
 );
 test!(
-    #[ignore = "media queries are not yet parsed correctly"]
     extend_within_separate_unknown_at_rules,
     "@unknown {.foo {a: b}}
     @unknown {.bar {@extend .foo}}
@@ -1409,7 +1408,6 @@ test!(
     "@unknown {\n  .foo, .bar {\n    a: b;\n  }\n}\n@unknown {}\n"
 );
 test!(
-    #[ignore = "media queries are not yet parsed correctly"]
     extend_within_separate_nested_at_rules,
     "@media screen {@flooblehoof {.foo {a: b}}}
      @media screen {@flooblehoof {.bar {@extend .foo}}}",
@@ -1741,7 +1739,6 @@ test!(
     ":not(.c):not(.a):not(.d):not(.b) {\n  a: b;\n}\n"
 );
 test!(
-    #[ignore = "media queries are not yet parsed correctly"]
     does_not_move_page_block_in_media,
     "@media screen {
         a { x:y; }

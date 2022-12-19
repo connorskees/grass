@@ -67,7 +67,6 @@ test!(
     "a {\n  color: red;\n}\n"
 );
 error!(
-    #[ignore = "expects incorrect char, '{'"]
     nothing_after_open,
     "a { color:rgb(; }", "Error: expected \")\"."
 );

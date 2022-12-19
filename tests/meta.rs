@@ -73,7 +73,6 @@ test!(
 );
 // Unignore as more features are added
 test!(
-    #[ignore]
     feature_exists_custom_property,
     "a {\n  color: feature-exists(custom-property)\n}\n",
     "a {\n  color: true;\n}\n"

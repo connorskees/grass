@@ -26,20 +26,20 @@ macro_rules! test {
 #[macro_export]
 macro_rules! error {
     ($( #[$attr:meta] ),*$func:ident, $input:expr, $err:expr) => {
-        // $(#[$attr])*
-        // #[test]
-        // #[allow(non_snake_case)]
-        // fn $func() {
-        //     match grass::from_string($input.to_string(), &grass::Options::default()) {
-        //         Ok(..) => panic!("did not fail"),
-        //         Err(e) => assert_eq!($err, e.to_string()
-        //                                         .chars()
-        //                                         .take_while(|c| *c != '\n')
-        //                                         .collect::<String>()
-        //                                         .as_str()
-        //         ),
-        //     }
-        // }
+        $(#[$attr])*
+        #[test]
+        #[allow(non_snake_case)]
+        fn $func() {
+            match grass::from_string($input.to_string(), &grass::Options::default()) {
+                Ok(..) => panic!("did not fail"),
+                Err(e) => assert_eq!($err, e.to_string()
+                                                .chars()
+                                                .take_while(|c| *c != '\n')
+                                                .collect::<String>()
+                                                .as_str()
+                ),
+            }
+        }
     };
 }
 

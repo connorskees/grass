@@ -72,7 +72,6 @@ test!(
     "a {\n  color: foo(a, 3, c);\n}\n"
 );
 test!(
-    #[ignore = "we evaluate interpolation eagerly"]
     interpolated_builtin_fn,
     "a {\n  color: uni#{t}less(1px);\n}\n",
     "a {\n  color: unitless(1px);\n}\n"

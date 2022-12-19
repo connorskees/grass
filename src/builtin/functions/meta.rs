@@ -67,7 +67,7 @@ pub(crate) fn feature_exists(mut args: ArgumentResult, parser: &mut Visitor) -> 
             // The "Custom Properties Level 1" spec is supported. This means
             // that custom properties are parsed statically, with only
             // interpolation treated as SassScript.
-            "custom-property" => Value::False,
+            "custom-property" => Value::True,
             _ => Value::False,
         }),
         v => Err((
