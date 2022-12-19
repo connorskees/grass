@@ -21,6 +21,7 @@ pub(crate) trait MapView: fmt::Debug {
     }
     // todo: wildly ineffecient to return vec here, because of the arbitrary nesting of Self
     fn keys(&self) -> Vec<Identifier>;
+    fn iter(&self) -> Vec<(Identifier, Self::Value)>;
 }
 
 impl<T> MapView for Arc<dyn MapView<Value = T>> {
@@ -39,6 +40,10 @@ impl<T> MapView for Arc<dyn MapView<Value = T>> {
     }
     fn keys(&self) -> Vec<Identifier> {
         (**self).keys()
+    }
+
+    fn iter(&self) -> Vec<(Identifier, Self::Value)> {
+        (**self).iter()
     }
 }
 
@@ -84,6 +89,10 @@ impl<T: fmt::Debug + Clone> MapView for BaseMapView<T> {
     fn keys(&self) -> Vec<Identifier> {
         (*self.0).borrow().keys().copied().collect()
     }
+
+    fn iter(&self) -> Vec<(Identifier, Self::Value)> {
+        (*self.0).borrow().clone().into_iter().collect()
+    }
 }
 
 impl<V: fmt::Debug + Clone, T: MapView<Value = V> + Clone> MapView for UnprefixedMapView<V, T> {
@@ -114,6 +123,10 @@ impl<V: fmt::Debug + Clone, T: MapView<Value = V> + Clone> MapView for Unprefixe
             .filter(|key| key.as_str().starts_with(&self.1))
             .map(|key| Identifier::from(key.as_str().strip_prefix(&self.1).unwrap()))
             .collect()
+    }
+
+    fn iter(&self) -> Vec<(Identifier, Self::Value)> {
+        todo!()
     }
 }
 
@@ -160,6 +173,10 @@ impl<V: fmt::Debug + Clone, T: MapView<Value = V> + Clone> MapView for PrefixedM
             .filter(|key| key.as_str().starts_with(&self.1))
             .map(|key| Identifier::from(format!("{}{}", self.1, key)))
             .collect()
+    }
+
+    fn iter(&self) -> Vec<(Identifier, Self::Value)> {
+        todo!()
     }
 }
 
@@ -224,6 +241,10 @@ impl<V: fmt::Debug + Clone, T: MapView<Value = V> + Clone> MapView for LimitedMa
     fn keys(&self) -> Vec<Identifier> {
         self.1.iter().copied().collect()
     }
+
+    fn iter(&self) -> Vec<(Identifier, Self::Value)> {
+        todo!()
+    }
 }
 
 #[derive(Debug)]
@@ -232,7 +253,7 @@ pub(crate) struct MergedMapView<V: fmt::Debug + Clone>(pub Vec<Arc<dyn MapView<V
 impl<V: fmt::Debug + Clone> MapView for MergedMapView<V> {
     type Value = V;
     fn get(&self, name: Identifier) -> Option<Self::Value> {
-        self.0.iter().find_map(|map| (*map).get(name))
+        self.0.iter().rev().find_map(|map| (*map).get(name))
     }
 
     fn remove(&self, name: Identifier) -> Option<Self::Value> {
@@ -256,6 +277,10 @@ impl<V: fmt::Debug + Clone> MapView for MergedMapView<V> {
     fn keys(&self) -> Vec<Identifier> {
         todo!()
         // self.1.iter().copied().collect()
+    }
+
+    fn iter(&self) -> Vec<(Identifier, Self::Value)> {
+        todo!()
     }
 }
 
@@ -295,5 +320,9 @@ impl<V: fmt::Debug + Clone, T: MapView<Value = V> + Clone> MapView for PublicMem
     fn keys(&self) -> Vec<Identifier> {
         todo!()
         // self.1.iter().copied().collect()
+    }
+
+    fn iter(&self) -> Vec<(Identifier, Self::Value)> {
+        todo!()
     }
 }

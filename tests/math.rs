@@ -12,6 +12,21 @@ test!(
     "a {\n  color: 200%;\n}\n"
 );
 test!(
+    percentage_nan,
+    "a {\n  color: percentage((0/0));\n}\n",
+    "a {\n  color: NaN%;\n}\n"
+);
+test!(
+    percentage_infinity,
+    "a {\n  color: percentage((1/0));\n}\n",
+    "a {\n  color: Infinity%;\n}\n"
+);
+test!(
+    percentage_neg_infinity,
+    "a {\n  color: percentage((-1/0));\n}\n",
+    "a {\n  color: -Infinity%;\n}\n"
+);
+test!(
     integer_division,
     "a {\n  color: percentage(2);\n}\n",
     "a {\n  color: 200%;\n}\n"

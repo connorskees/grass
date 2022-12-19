@@ -16,102 +16,49 @@ use crate::{
     value::{SassFunction, Value},
 };
 
-/// A singular scope
-///
-/// Contains variables, functions, and mixins
 #[derive(Debug, Default, Clone)]
-pub(crate) struct Scope {
-    pub vars: BTreeMap<Identifier, Value>,
-    pub mixins: BTreeMap<Identifier, Mixin>,
-    pub functions: BTreeMap<Identifier, SassFunction>,
+pub(crate) struct Scopes {
+    variables: Arc<RefCell<Vec<Arc<RefCell<BTreeMap<Identifier, Value>>>>>>,
+    mixins: Arc<RefCell<Vec<Arc<RefCell<BTreeMap<Identifier, Mixin>>>>>>,
+    functions: Arc<RefCell<Vec<Arc<RefCell<BTreeMap<Identifier, SassFunction>>>>>>,
+    len: usize,
 }
-
-impl Scope {
-    // `BTreeMap::new` is not yet const
-    #[allow(clippy::missing_const_for_fn)]
-    #[must_use]
-    pub fn new() -> Self {
-        Self {
-            vars: BTreeMap::new(),
-            mixins: BTreeMap::new(),
-            functions: BTreeMap::new(),
-        }
-    }
-
-    pub fn var_names(&self) -> impl Iterator<Item = Identifier> + '_ {
-        self.vars.keys().copied()
-    }
-
-    fn get_var(&self, name: Spanned<Identifier>) -> SassResult<&Value> {
-        match self.vars.get(&name.node) {
-            Some(v) => Ok(v),
-            None => Err(("Undefined variable.", name.span).into()),
-        }
-    }
-
-    pub fn get_var_no_err(&self, name: Identifier) -> Option<&Value> {
-        self.vars.get(&name)
-    }
-
-    pub fn insert_var(&mut self, s: Identifier, v: Value) -> Option<Value> {
-        self.vars.insert(s, v)
-    }
-
-    pub fn var_exists(&self, name: Identifier) -> bool {
-        self.vars.contains_key(&name)
-    }
-
-    pub fn get_mixin(&self, name: Identifier) -> Option<Mixin> {
-        self.mixins.get(&name).cloned()
-    }
-
-    pub fn insert_mixin<T: Into<Identifier>>(&mut self, s: T, v: Mixin) -> Option<Mixin> {
-        self.mixins.insert(s.into(), v)
-    }
-
-    pub fn mixin_exists(&self, name: Identifier) -> bool {
-        self.mixins.contains_key(&name)
-    }
-
-    pub fn get_fn(&self, name: Identifier) -> Option<SassFunction> {
-        self.functions.get(&name).cloned()
-    }
-
-    pub fn insert_fn(&mut self, s: Identifier, v: SassFunction) -> Option<SassFunction> {
-        self.functions.insert(s, v)
-    }
-
-    pub fn fn_exists(&self, name: Identifier) -> bool {
-        if self.functions.is_empty() {
-            return false;
-        }
-        self.functions.contains_key(&name)
-    }
-}
-
-#[derive(Debug, Default, Clone)]
-pub(crate) struct Scopes(Vec<Arc<RefCell<Scope>>>);
 
 impl Scopes {
     pub fn new() -> Self {
-        Self(vec![Arc::new(RefCell::new(Scope::new()))])
+        Self {
+            variables: Arc::new(RefCell::new(vec![Arc::new(RefCell::new(BTreeMap::new()))])),
+            mixins: Arc::new(RefCell::new(vec![Arc::new(RefCell::new(BTreeMap::new()))])),
+            functions: Arc::new(RefCell::new(vec![Arc::new(RefCell::new(BTreeMap::new()))])),
+            len: 1,
+        }
     }
 
     pub fn new_closure(&self) -> Self {
-        Self(self.0.iter().map(Arc::clone).collect())
+        Self {
+            variables: Arc::new(RefCell::new((*self.variables).borrow().iter().map(Arc::clone).collect())),
+            mixins: Arc::new(RefCell::new((*self.mixins).borrow().iter().map(Arc::clone).collect())),
+            functions: Arc::new(RefCell::new((*self.functions).borrow().iter().map(Arc::clone).collect())),
+            len: self.len,
+        }
+    //     Self(self.0.iter().map(Arc::clone).collect())
     }
 
-    pub fn global_scope(&self) -> Ref<Scope> {
-        (*self.0[0]).borrow()
+    pub fn global_variables(&self) -> Arc<RefCell<BTreeMap<Identifier, Value>>> {
+        Arc::clone(&(*self.variables).borrow()[0])
     }
 
-    pub fn global_scope_arc(&self) -> Arc<RefCell<Scope>> {
-        Arc::clone(&self.0[0])
+    pub fn global_functions(&self) -> Arc<RefCell<BTreeMap<Identifier, SassFunction>>> {
+        Arc::clone(&(*self.functions).borrow()[0])
+    }
+
+    pub fn global_mixins(&self) -> Arc<RefCell<BTreeMap<Identifier, Mixin>>> {
+        Arc::clone(&(*self.mixins).borrow()[0])
     }
 
     pub fn find_var(&self, name: Identifier) -> Option<usize> {
-        for (idx, scope) in self.0.iter().enumerate().rev() {
-            if (**scope).borrow().var_exists(name) {
+        for (idx, scope) in (*self.variables).borrow().iter().enumerate().rev() {
+            if (**scope).borrow().contains_key(&name) {
                 return Some(idx);
             }
         }
@@ -120,34 +67,40 @@ impl Scopes {
     }
 
     pub fn len(&self) -> usize {
-        self.0.len()
+        self.len
     }
 
     pub fn enter_new_scope(&mut self) {
-        self.0.push(Arc::new(RefCell::new(Scope::new())));
+        self.len += 1;
+        (*self.variables).borrow_mut().push(Arc::new(RefCell::new(BTreeMap::new())));
+        (*self.mixins).borrow_mut().push(Arc::new(RefCell::new(BTreeMap::new())));
+        (*self.functions).borrow_mut().push(Arc::new(RefCell::new(BTreeMap::new())));
     }
 
     pub fn exit_scope(&mut self) {
-        self.0.pop();
+        self.len -= 1;
+        (*self.variables).borrow_mut().pop();
+        (*self.mixins).borrow_mut().pop();
+        (*self.functions).borrow_mut().pop();
     }
 }
 
 /// Variables
 impl Scopes {
     pub fn insert_var(&mut self, idx: usize, name: Identifier, v: Value) -> Option<Value> {
-        self.0[idx].borrow_mut().insert_var(name, v)
+        (*(*self.variables).borrow_mut()[idx]).borrow_mut().insert(name, v)
     }
 
     /// Always insert this variable into the innermost scope
     ///
     /// Used, for example, for variables from `@each` and `@for`
     pub fn insert_var_last(&mut self, name: Identifier, v: Value) -> Option<Value> {
-        self.0[self.0.len() - 1].borrow_mut().insert_var(name, v)
+        (*(*self.variables).borrow_mut()[self.len() - 1]).borrow_mut().insert(name, v)
     }
 
     pub fn get_var(&self, name: Spanned<Identifier>) -> SassResult<Value> {
-        for scope in self.0.iter().rev() {
-            match (**scope).borrow().get_var_no_err(name.node) {
+        for scope in (*self.variables).borrow().iter().rev() {
+            match (**scope).borrow().get(&name.node) {
                 Some(var) => return Ok(var.clone()),
                 None => continue,
             }
@@ -157,8 +110,8 @@ impl Scopes {
     }
 
     pub fn var_exists(&self, name: Identifier) -> bool {
-        for scope in &self.0 {
-            if (**scope).borrow().var_exists(name) {
+        for scope in (*self.variables).borrow().iter() {
+            if (**scope).borrow().contains_key(&name) {
                 return true;
             }
         }
@@ -169,16 +122,14 @@ impl Scopes {
 
 /// Mixins
 impl Scopes {
-    pub fn insert_mixin(&mut self, name: Identifier, mixin: Mixin) -> Option<Mixin> {
-        self.0[self.0.len() - 1]
-            .borrow_mut()
-            .insert_mixin(name, mixin)
+    pub fn insert_mixin(&mut self, name: Identifier, mixin: Mixin) {
+        (*(*self.mixins).borrow_mut().last_mut().unwrap()).borrow_mut().insert(name, mixin);
     }
 
     pub fn get_mixin(&self, name: Spanned<Identifier>) -> SassResult<Mixin> {
-        for scope in self.0.iter().rev() {
-            match (**scope).borrow().get_mixin(name.node) {
-                Some(mixin) => return Ok(mixin),
+        for scope in (*self.mixins).borrow().iter().rev() {
+            match (**scope).borrow().get(&name.node) {
+                Some(mixin) => return Ok(mixin.clone()),
                 None => continue,
             }
         }
@@ -187,8 +138,8 @@ impl Scopes {
     }
 
     pub fn mixin_exists(&self, name: Identifier) -> bool {
-        for scope in &self.0 {
-            if (**scope).borrow().mixin_exists(name) {
+        for scope in (*self.mixins).borrow().iter() {
+            if (**scope).borrow().contains_key(&name) {
                 return true;
             }
         }
@@ -200,14 +151,12 @@ impl Scopes {
 /// Functions
 impl Scopes {
     pub fn insert_fn(&mut self, func: SassFunction) {
-        self.0[self.0.len() - 1]
-            .borrow_mut()
-            .insert_fn(func.name(), func);
+        (*(*self.functions).borrow_mut().last_mut().unwrap()).borrow_mut().insert(func.name(), func);
     }
 
     pub fn get_fn(&self, name: Identifier) -> Option<SassFunction> {
-        for scope in self.0.iter().rev() {
-            let func = (**scope).borrow().get_fn(name);
+        for scope in (*self.functions).borrow().iter().rev() {
+            let func = (**scope).borrow().get(&name).cloned();
 
             if func.is_some() {
                 return func;
@@ -218,8 +167,8 @@ impl Scopes {
     }
 
     pub fn fn_exists(&self, name: Identifier) -> bool {
-        for scope in &self.0 {
-            if (**scope).borrow().fn_exists(name) {
+        for scope in (*self.functions).borrow().iter() {
+            if (**scope).borrow().contains_key(&name) {
                 return true;
             }
         }

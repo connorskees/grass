@@ -258,17 +258,6 @@ impl Css {
                                 vals.first_mut().unwrap().push_unknown_at_rule(at_rule);
                             }
                         }
-                        // Stmt::Return(..) => unreachable!(),
-                        // Stmt::AtRoot { body } => {
-                        //     body.into_iter().try_for_each(|r| -> SassResult<()> {
-                        //         let mut stmts = self.parse_stmt(r)?;
-
-                        //         set_group_end(&mut stmts);
-
-                        //         vals.append(&mut stmts);
-                        //         Ok(())
-                        //     })?;
-                        // }
                         Stmt::Keyframes(k) => {
                             let Keyframes { rule, name, body } = *k;
                             vals.push(Toplevel::Keyframes(Box::new(Keyframes {
@@ -326,14 +315,6 @@ impl Css {
                     is_group_end: false,
                 }))]
             }
-            // Stmt::Return(..) => unreachable!("@return: {:?}", stmt),
-            // Stmt::AtRoot { body } => body
-            //     .into_iter()
-            //     .map(|r| self.parse_stmt(r))
-            //     .collect::<SassResult<Vec<Vec<Toplevel>>>>()?
-            //     .into_iter()
-            //     .flatten()
-            //     .collect(),
             Stmt::Keyframes(k) => vec![Toplevel::Keyframes(k)],
             Stmt::KeyframesRuleSet(k) => {
                 let KeyframesRuleSet { body, selector } = *k;

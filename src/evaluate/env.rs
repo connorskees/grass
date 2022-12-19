@@ -6,13 +6,13 @@ use crate::{
     builtin::modules::{ForwardedModule, Module, Modules},
     common::Identifier,
     error::SassResult,
-    scope::{Scope, Scopes},
+    scope::{Scopes},
     selector::ExtensionStore,
     value::{SassFunction, Value},
 };
 use std::{
     cell::{Ref, RefCell},
-    sync::Arc,
+    sync::Arc, collections::BTreeMap,
 };
 
 use super::visitor::CallableContentBlock;
@@ -220,8 +220,16 @@ impl Environment {
         &mut self.scopes
     }
 
-    pub fn global_scope(&self) -> Ref<Scope> {
-        self.scopes.global_scope()
+    pub fn global_vars(&self) -> Arc<RefCell<BTreeMap<Identifier, Value>>> {
+        self.scopes.global_variables()
+    }
+
+    pub fn global_mixins(&self) -> Arc<RefCell<BTreeMap<Identifier, Mixin>>> {
+        self.scopes.global_mixins()
+    }
+
+    pub fn global_functions(&self) -> Arc<RefCell<BTreeMap<Identifier, SassFunction>>> {
+        self.scopes.global_functions()
     }
 
     fn get_variable_from_global_modules(&self, name: Identifier) -> Option<Value> {
@@ -257,14 +265,14 @@ impl Environment {
                     .insert(namespace, module, span)?;
             }
             None => {
-                for name in self.scopes.global_scope().var_names() {
-                    if (*module).borrow().var_exists(name) {
-                        todo!(
+                for name in (*self.scopes.global_variables()).borrow().keys() {
+                    if (*module).borrow().var_exists(*name) {
+                        return Err((
                             "This module and the new module both define a variable named \"{name}\"."
-                        );
+                        , span).into());
                     }
                 }
-
+                
                 self.global_modules.push(module);
             }
         }

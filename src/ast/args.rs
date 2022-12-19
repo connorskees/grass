@@ -110,45 +110,6 @@ pub(crate) struct ArgumentResult {
 }
 
 impl ArgumentResult {
-    // pub fn new(span: Span) -> Self {
-    //     // CallArgs(HashMap::new(), span)
-    //     todo!()
-    // }
-
-    // pub fn to_css_string(self, is_compressed: bool) -> SassResult<Spanned<String>> {
-    // let mut string = String::with_capacity(2 + self.len() * 10);
-    // string.push('(');
-    // let mut span = self.1;
-
-    // if self.is_empty() {
-    //     return Ok(Spanned {
-    //         node: "()".to_owned(),
-    //         span,
-    //     });
-    // }
-
-    // let args = match self.get_variadic() {
-    //     Ok(v) => v,
-    //     Err(..) => {
-    //         return Err(("Plain CSS functions don't support keyword arguments.", span).into())
-    //     }
-    // };
-
-    // string.push_str(
-    //     &args
-    //         .iter()
-    //         .map(|a| {
-    //             span = span.merge(a.span);
-    //             a.node.to_css_string(a.span, is_compressed)
-    //         })
-    //         .collect::<SassResult<Vec<Cow<'static, str>>>>()?
-    //         .join(", "),
-    // );
-    // string.push(')');
-    // Ok(Spanned { node: string, span })
-    // todo!()
-    // }
-
     /// Get argument by name
     ///
     /// Removes the argument
@@ -157,8 +118,6 @@ impl ArgumentResult {
             node: n,
             span: self.span,
         })
-        // self.0.remove(&CallArg::Named(val.into()))
-        // todo!()
     }
 
     /// Get a positional argument by 0-indexed position
@@ -175,8 +134,6 @@ impl ArgumentResult {
 
         self.touched.insert(idx);
         val
-        // self.0.remove(&CallArg::Positional(val))
-        // todo!()
     }
 
     pub fn get<T: Into<Identifier>>(&mut self, position: usize, name: T) -> Option<Spanned<Value>> {
@@ -194,23 +151,7 @@ impl ArgumentResult {
                 None => Err((format!("Missing argument ${}.", name), self.span()).into()),
             },
         }
-        // todo!()
     }
-
-    // / Decrement all positional arguments by 1
-    // /
-    // / This is used by builtin function `call` to pass
-    // / positional arguments to the other function
-    // pub fn decrement(self) -> CallArgs {
-    //     // CallArgs(
-    //     //     self.0
-    //     //         .into_iter()
-    //     //         .map(|(k, v)| (k.decrement(), v))
-    //     //         .collect(),
-    //     //     self.1,
-    //     // )
-    //     todo!()
-    // }
 
     pub const fn span(&self) -> Span {
         self.span
@@ -255,7 +196,6 @@ impl ArgumentResult {
             return Err((err, self.span()).into());
         }
         Ok(())
-        // todo!()
     }
 
     pub fn default_arg(&mut self, position: usize, name: &'static str, default: Value) -> Value {
@@ -263,10 +203,6 @@ impl ArgumentResult {
             Some(val) => val.node,
             None => default,
         }
-    }
-
-    pub fn positional_arg(&mut self, position: usize) -> Option<Spanned<Value>> {
-        self.get_positional(position)
     }
 
     pub fn remove_positional(&mut self, position: usize) -> Option<Value> {
@@ -325,7 +261,6 @@ impl ArgumentResult {
         // }
 
         // Ok(vals)
-        // todo!()
 
         Ok(args)
         // Ok(args

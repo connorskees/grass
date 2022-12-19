@@ -3,12 +3,6 @@ use crate::{builtin::builtin_imports::*, parse::div};
 pub(crate) fn percentage(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     let num = match args.get_err(0, "number")? {
-        // todo: i want a test
-        Value::Dimension {
-            num: (n),
-            unit: Unit::None,
-            as_slash: _,
-        } if n.is_nan() => todo!(),
         Value::Dimension {
             num: (n),
             unit: Unit::None,

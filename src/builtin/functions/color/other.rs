@@ -39,7 +39,7 @@ macro_rules! opt_hsl {
 }
 
 pub(crate) fn change_color(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
-    if args.positional_arg(1).is_some() {
+    if args.get_positional(1).is_some() {
         return Err((
             "Only one positional argument is allowed. All other arguments must be passed by name.",
             args.span(),

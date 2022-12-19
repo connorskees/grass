@@ -14,7 +14,6 @@ use crate::{
     common::Identifier,
     error::SassResult,
     evaluate::{Environment, Visitor},
-    scope::Scope,
     selector::ExtensionStore,
     utils::{BaseMapView, MapView, MergedMapView, PublicMemberMapView},
     value::{SassFunction, SassMap, Value},
@@ -184,9 +183,7 @@ impl Module {
             let variables = variables
                 .iter()
                 .map(|module| Arc::clone(&(*module).borrow().scope().variables));
-            let this = Arc::new(BaseMapView(Arc::new(RefCell::new(
-                (*env.scopes.global_scope_arc()).borrow().vars.clone(),
-            ))));
+            let this = Arc::new(BaseMapView(env.global_vars()));
             member_map(this, variables.collect())
         };
 
@@ -195,9 +192,7 @@ impl Module {
             let mixins = mixins
                 .iter()
                 .map(|module| Arc::clone(&(*module).borrow().scope().mixins));
-            let this = Arc::new(BaseMapView(Arc::new(RefCell::new(
-                (*env.scopes.global_scope_arc()).borrow().mixins.clone(),
-            ))));
+            let this = Arc::new(BaseMapView(env.global_mixins()));
             member_map(this, mixins.collect())
         };
 
@@ -206,9 +201,7 @@ impl Module {
             let functions = functions
                 .iter()
                 .map(|module| Arc::clone(&(*module).borrow().scope().functions));
-            let this = Arc::new(BaseMapView(Arc::new(RefCell::new(
-                (*env.scopes.global_scope_arc()).borrow().functions.clone(),
-            ))));
+            let this = Arc::new(BaseMapView(env.global_functions()));
             member_map(this, functions.collect())
         };
 
@@ -261,7 +254,6 @@ impl Module {
             }
             Self::Environment { scope, .. } => scope.clone(),
             Self::Forwarded(forwarded) => (*forwarded.inner).borrow_mut().scope().clone(),
-            _ => todo!(),
         };
 
         if scope.variables.insert(name.node, value).is_none() {

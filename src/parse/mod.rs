@@ -60,30 +60,15 @@ enum DeclarationOrBuffer {
     Buffer(Interpolation),
 }
 
-// todo: merge at_root and at_root_has_selector into an enum
 pub(crate) struct Parser<'a, 'b> {
     pub toks: &'a mut Lexer<'b>,
     // todo: likely superfluous
     pub map: &'a mut CodeMap,
     pub path: &'a Path,
     pub is_plain_css: bool,
-    // pub global_scope: &'a mut Scope,
-    // pub scopes: &'a mut Scopes,
-    // pub content_scopes: &'a mut Scopes,
-    // pub super_selectors: &'a mut NeverEmptyVec<ExtendedSelector>,
     pub span_before: Span,
-    // pub content: &'a mut Vec<Content>,
     pub flags: ContextFlags,
-    /// Whether this parser is at the root of the document
-    /// E.g. not inside a style, mixin, or function
-    // pub at_root: bool,
-    /// If this parser is inside an `@at-rule` block, this is whether or
-    /// not the `@at-rule` block has a super selector
-    // pub at_root_has_selector: bool,
-    // pub extender: &'a mut Extender,
     pub options: &'a Options<'a>,
-    // pub modules: &'a mut Modules,
-    // pub module_config: &'a mut ModuleConfig,
 }
 
 /// Names that functions are not allowed to have

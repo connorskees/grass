@@ -5,7 +5,7 @@ use std::{
     ffi::OsStr,
     fmt, mem,
     path::{Path, PathBuf},
-    sync::Arc,
+    sync::Arc, iter::FromIterator,
 };
 
 use codemap::{Span, Spanned};
@@ -123,9 +123,7 @@ impl CssTree {
             Some(
                 Stmt::Style(..)
                 | Stmt::Comment(..)
-                // | Stmt::Return(..)
                 | Stmt::Import(..)
-                // | Stmt::AtRoot { .. },
             ) => unreachable!(),
             Some(Stmt::Media(media, ..)) => {
                 media.body.push(child);
@@ -142,7 +140,7 @@ impl CssTree {
             Some(Stmt::KeyframesRuleSet(keyframes)) => {
                 keyframes.body.push(child);
             }
-            None => todo!(),
+            None => unreachable!(),
         }
         self.stmts[parent_idx.0]
             .borrow_mut()
@@ -413,30 +411,30 @@ impl<'a> Visitor<'a> {
         config: Arc<RefCell<Configuration>>,
         forward_rule: &AstForwardRule,
     ) -> SassResult<Arc<RefCell<Configuration>>> {
-        //     var newValues = Map.of(configuration.values);
-        // for (var variable in node.configuration) {
-        //   if (variable.isGuarded) {
-        //     var oldValue = configuration.remove(variable.name);
-        //     if (oldValue != null && oldValue.value != sassNull) {
-        //       newValues[variable.name] = oldValue;
-        //       continue;
-        //     }
-        //   }
+        let mut new_values = BTreeMap::from_iter((*config).borrow().values.iter().into_iter());
 
-        //   var variableNodeWithSpan = _expressionNode(variable.expression);
-        //   newValues[variable.name] = ConfiguredValue.explicit(
-        //       _withoutSlash(
-        //           await variable.expression.accept(this), variableNodeWithSpan),
-        //       variable.span,
-        //       variableNodeWithSpan);
-        // }
+        for variable in &forward_rule.configuration {
+            if variable.is_guarded {
+                let old_value = (*config).borrow_mut().remove(variable.name.node);
 
-        // if (configuration is ExplicitConfiguration || configuration.isEmpty) {
-        //   return ExplicitConfiguration(newValues, node);
-        // } else {
-        //   return Configuration.implicit(newValues);
-        // }
-        todo!()
+                if old_value.is_some() && !matches!(old_value, Some(ConfiguredValue { value: Value::Null, .. })) {
+                    new_values.insert(variable.name.node, old_value.unwrap());
+                    continue;
+                }
+            }
+
+            // todo: superfluous clone?
+            let value = self.visit_expr(variable.expr.node.clone())?;
+            let value = self.without_slash(value);
+
+            new_values.insert(variable.name.node, ConfiguredValue::explicit(value, variable.expr.span));
+        }
+
+        Ok(Arc::new(RefCell::new(if !(*config).borrow().is_implicit() || (*config).borrow().is_empty() {
+            Configuration::explicit(new_values, self.parser.span_before)
+        } else {
+            Configuration::implicit(new_values)
+        })))
     }
 
     fn remove_used_configuration(
@@ -445,11 +443,16 @@ impl<'a> Visitor<'a> {
         downstream: Arc<RefCell<Configuration>>,
         except: &HashSet<Identifier>,
     ) {
-        //     for (var name in upstream.values.keys.toList()) {
-        //   if (except.contains(name)) continue;
-        //   if (!downstream.values.containsKey(name)) upstream.remove(name);
-        // }
-        todo!()
+        let downstream_keys = (*downstream).borrow().values.keys();
+        for name in (*upstream).borrow().values.keys() {
+            if except.contains(&name) {
+                continue;
+            }
+
+            if !downstream_keys.contains(&name) {
+                (*upstream).borrow_mut().remove(name);
+            }
+        }
     }
 
     fn parenthesize_supports_condition(
@@ -2167,7 +2170,7 @@ impl<'a> Visitor<'a> {
             }
         }
 
-        if decl.is_global && !self.env.global_scope().borrow().var_exists(decl.name) {
+        if decl.is_global && !(*self.env.global_vars()).borrow().contains_key(&decl.name) {
             // todo: deprecation: true
             if self.env.at_root() {
                 self.emit_warning(Cow::Borrowed("As of Dart Sass 2.0.0, !global assignments won't be able to declare new variables.\n\nSince this assignment is at the root of the stylesheet, the !global flag is\nunnecessary and can safely be removed."), decl.span);

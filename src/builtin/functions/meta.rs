@@ -178,7 +178,7 @@ pub(crate) fn global_variable_exists(
         .borrow()
         .var_exists(name)
     } else {
-        parser.env.global_scope().borrow().var_exists(name)
+        (*parser.env.global_vars()).borrow().contains_key(&name)
     }))
 }
 
@@ -328,8 +328,6 @@ pub(crate) fn call(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult
     args.remove_positional(0).unwrap();
 
     parser.run_function_callable_with_maybe_evaled(func, MaybeEvaledArguments::Evaled(args), span)
-    // todo!()
-    // func.call(args.decrement(), None, parser)
 }
 
 #[allow(clippy::needless_pass_by_value)]
