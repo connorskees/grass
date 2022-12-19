@@ -64,30 +64,30 @@ test!(
     "@supports (position: sticky) {\n  a {\n    color: red;\n  }\n}\n\na {\n  color: red;\n}\n"
 );
 test!(
-  supports_nested_inside_media,
-  "@media foo {
+    supports_nested_inside_media,
+    "@media foo {
       @supports (a: b) {
           a {
               color: red;
           }
       }
   }",
-  "@media foo {\n  @supports (a: b) {\n    a {\n      color: red;\n    }\n  }\n}\n"
+    "@media foo {\n  @supports (a: b) {\n    a {\n      color: red;\n    }\n  }\n}\n"
 );
 test!(
-  supports_nested_inside_style_rule,
-  "a {
+    supports_nested_inside_style_rule,
+    "a {
     @supports (a: b) {
         b {
             color: red;
         }
     }
   }",
-  "@supports (a: b) {\n  a b {\n    color: red;\n  }\n}\n"
+    "@supports (a: b) {\n  a b {\n    color: red;\n  }\n}\n"
 );
 test!(
-  supports_nested_inside_media_nested_inside_style_rule,
-  "a {
+    supports_nested_inside_media_nested_inside_style_rule,
+    "a {
     @media foo {
         @supports (a: b) {
             b {
@@ -96,36 +96,44 @@ test!(
         }
     }
   }",
-  "@media foo {\n  @supports (a: b) {\n    a b {\n      color: red;\n    }\n  }\n}\n"
+    "@media foo {\n  @supports (a: b) {\n    a b {\n      color: red;\n    }\n  }\n}\n"
 );
 test!(
-  media_nested_inside_supports,
-  "@supports (a: b) {
+    media_nested_inside_supports,
+    "@supports (a: b) {
     @media foo {
         a {
             color: red;
         }
     }
   }",
-  "@supports (a: b) {\n  @media foo {\n    a {\n      color: red;\n    }\n  }\n}\n"
+    "@supports (a: b) {\n  @media foo {\n    a {\n      color: red;\n    }\n  }\n}\n"
 );
 test!(
-  supports_nested_inside_supports,
-  "@supports (a: b) {
-    @supports (c: d) {
-        a {
-            color: red;
-        }
-    }
-  }",
-  "@supports (a: b) {\n  @supports (c: d) {\n    a {\n      color: red;\n    }\n  }\n}\n"
+    supports_nested_inside_supports,
+    "@supports (a: b) {
+     @supports (c: d) {
+         a {
+             color: red;
+         }
+     }
+   }",
+    "@supports (a: b) {\n  @supports (c: d) {\n    a {\n      color: red;\n    }\n  }\n}\n"
 );
 test!(
-  supports_different_operation_is_in_parens,
-  "@supports (a: b) and ((c: d) or (e: f)) {
-    a {
-        color: red;
-    }
-  }",
-  "@supports (a: b) and ((c: d) or (e: f)) {\n  a {\n    color: red;\n  }\n}\n"
+    supports_different_operation_is_in_parens,
+    "@supports (a: b) and ((c: d) or (e: f)) {
+      a {
+          color: red;
+      }
+    }",
+    "@supports (a: b) and ((c: d) or (e: f)) {\n  a {\n    color: red;\n  }\n}\n"
 );
+test!(
+    supports_removed_if_all_children_invisible,
+    "@supports (a: b) {
+      %a {}
+    }",
+    ""
+);
+test!(supports_empty_body, "@supports (a: b) {}", "");

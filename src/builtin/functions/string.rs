@@ -360,12 +360,12 @@ pub(crate) fn str_insert(mut args: ArgumentResult, parser: &mut Visitor) -> Sass
 pub(crate) fn unique_id(args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
     args.max_args(0)?;
     let mut rng = thread_rng();
-    let string = std::iter::repeat(())
+    let string: String = std::iter::repeat(())
         .map(|()| rng.sample(Alphanumeric))
         .map(char::from)
-        .take(7)
+        .take(12)
         .collect();
-    Ok(Value::String(string, QuoteKind::None))
+    Ok(Value::String(format!("id-{}", string), QuoteKind::None))
 }
 
 pub(crate) fn declare(f: &mut GlobalFunctionMap) {

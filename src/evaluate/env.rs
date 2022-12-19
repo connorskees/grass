@@ -3,7 +3,7 @@ use codemap::{Span, Spanned};
 use crate::{
     ast::AstForwardRule,
     atrule::mixin::Mixin,
-    builtin::modules::{Module, Modules, ForwardedModule},
+    builtin::modules::{ForwardedModule, Module, Modules},
     common::Identifier,
     error::SassResult,
     scope::{Scope, Scopes},
@@ -47,7 +47,11 @@ impl Environment {
         }
     }
 
-    pub fn forward_module(&mut self, module: Arc<RefCell<Module>>, rule: AstForwardRule) -> SassResult<()> {
+    pub fn forward_module(
+        &mut self,
+        module: Arc<RefCell<Module>>,
+        rule: AstForwardRule,
+    ) -> SassResult<()> {
         let view = ForwardedModule::if_necessary(module, rule);
         (*self.forwarded_modules).borrow_mut().push(view);
         //     var forwardedModules = (_forwardedModules ??= {});

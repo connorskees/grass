@@ -836,19 +836,10 @@ impl Formatter for ExpandedFormatter {
                     inside_rule,
                     ..
                 } => {
-                    if params.is_empty() {
-                        write!(buf, "{}@supports", padding)?;
-                    } else {
-                        write!(buf, "{}@supports {}", padding, params)?;
-                    }
-
                     if body.is_empty() {
-                        write!(buf, ";")?;
-                        prev = Some(Previous { is_group_end });
                         continue;
                     }
 
-                    writeln!(buf, " {{")?;
                     let css = Css::from_stmts(
                         body,
                         if inside_rule {
@@ -858,6 +849,23 @@ impl Formatter for ExpandedFormatter {
                         },
                         css.allows_charset,
                     )?;
+
+                    if css.blocks.is_empty()
+                        || css
+                            .blocks
+                            .iter()
+                            .all(|block| matches!(block, Toplevel::Empty))
+                    {
+                        continue;
+                    }
+
+                    if params.is_empty() {
+                        write!(buf, "{}@supports", padding)?;
+                    } else {
+                        write!(buf, "{}@supports {}", padding, params)?;
+                    }
+
+                    writeln!(buf, " {{")?;
                     self.write_css(buf, css, map)?;
                     write!(buf, "\n{}}}", padding)?;
                 }

@@ -25,7 +25,7 @@ mod builtin_imports {
         evaluate::Visitor,
         parse::Stmt,
         unit::Unit,
-        value::{Number, SassFunction, SassNumber, SassMap, Value, CalculationArg},
+        value::{CalculationArg, Number, SassFunction, SassMap, SassNumber, Value},
     };
 
     pub(crate) use std::{borrow::Borrow, cmp::Ordering};

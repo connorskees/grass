@@ -79,7 +79,7 @@ error!(
 error!(
     cos_non_angle,
     "@use 'sass:math';\na {\n  color: math.cos(1px);\n}\n",
-    "Error: $number: Expected 1px to be an angle."
+    "Error: $number: Expected 1px to have an angle unit (deg, grad, rad, turn)."
 );
 test!(
     cos_small_degree,
@@ -124,7 +124,7 @@ test!(
 error!(
     sin_non_angle,
     "@use 'sass:math';\na {\n  color: math.sin(1px);\n}\n",
-    "Error: $number: Expected 1px to be an angle."
+    "Error: $number: Expected 1px to have an angle unit (deg, grad, rad, turn)."
 );
 test!(
     sin_small_degree,
@@ -169,7 +169,7 @@ test!(
 error!(
     tan_non_angle,
     "@use 'sass:math';\na {\n  color: math.tan(1px);\n}\n",
-    "Error: $number: Expected 1px to be an angle."
+    "Error: $number: Expected 1px to have an angle unit (deg, grad, rad, turn)."
 );
 test!(
     tan_small_degree,

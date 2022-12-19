@@ -1580,7 +1580,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         let url = PathBuf::from(self.parse_url_string()?);
         self.whitespace_or_comment();
 
-        let prefix = if self.scan_identifier("as", false)?  {
+        let prefix = if self.scan_identifier("as", false)? {
             self.whitespace_or_comment();
             let prefix = self.__parse_identifier(true, false)?;
             self.expect_char('*')?;
@@ -1604,23 +1604,45 @@ impl<'a, 'b> Parser<'a, 'b> {
             hidden_mixins_and_functions = Some(members.0);
             hidden_variables = Some(members.1);
         }
-        
+
         let config = self.parse_configuration(true)?;
 
         self.expect_statement_separator(Some("@forward rule"))?;
         let span = self.toks.span_from(start);
 
         if !self.flags.is_use_allowed() {
-            return Err(("@forward rules must be written before any other rules.", span).into());
+            return Err((
+                "@forward rules must be written before any other rules.",
+                span,
+            )
+                .into());
         }
 
-        Ok(AstStmt::Forward(if let (Some(shown_mixins_and_functions), Some(shown_variables)) = (shown_mixins_and_functions, shown_variables) {
-            AstForwardRule::show(url, shown_mixins_and_functions, shown_variables, prefix, config)
-        } else if let (Some(hidden_mixins_and_functions), Some(hidden_variables)) = (hidden_mixins_and_functions, hidden_variables) {
-            AstForwardRule::hide(url, hidden_mixins_and_functions, hidden_variables, prefix, config)
-        } else {
-            AstForwardRule::new(url, prefix, config)
-        }))
+        Ok(AstStmt::Forward(
+            if let (Some(shown_mixins_and_functions), Some(shown_variables)) =
+                (shown_mixins_and_functions, shown_variables)
+            {
+                AstForwardRule::show(
+                    url,
+                    shown_mixins_and_functions,
+                    shown_variables,
+                    prefix,
+                    config,
+                )
+            } else if let (Some(hidden_mixins_and_functions), Some(hidden_variables)) =
+                (hidden_mixins_and_functions, hidden_variables)
+            {
+                AstForwardRule::hide(
+                    url,
+                    hidden_mixins_and_functions,
+                    hidden_variables,
+                    prefix,
+                    config,
+                )
+            } else {
+                AstForwardRule::new(url, prefix, config)
+            },
+        ))
     }
 
     fn parse_member_list(&mut self) -> SassResult<(HashSet<Identifier>, HashSet<Identifier>)> {

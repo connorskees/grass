@@ -250,10 +250,7 @@ fn use_loud_comment_after_close_paren_with() {
         "use_loud_comment_after_close_paren_with.scss",
         "$a: green !default; a { color: $a }"
     );
-    assert_err!(
-        r#"Error: expected ";"."#,
-        input
-    );
+    assert_err!(r#"Error: expected ";"."#, input);
 }
 
 #[test]
@@ -369,7 +366,7 @@ fn use_can_see_modules_imported_by_other_modules_when_aliased_as_star() {
 
     assert_err!(
         r#"Error: There is no module with the namespace "math"."#,
-        input // &grass::from_string(input.to_string(), &grass::Options::default()).expect(input)
+        input
     );
 }
 

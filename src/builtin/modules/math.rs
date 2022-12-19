@@ -370,7 +370,7 @@ macro_rules! trig_fn {
                 v @ Value::Dimension { .. } => {
                     return Err((
                         format!(
-                            "$number: Expected {} to be an angle.",
+                            "$number: Expected {} to have an angle unit (deg, grad, rad, turn).",
                             v.inspect(args.span())?
                         ),
                         args.span(),
