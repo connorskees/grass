@@ -124,17 +124,7 @@ fn comma_separated_import_trailing() {
     tempfile!("comma_separated_import_trailing1", "p { color: red; }");
     tempfile!("comma_separated_import_trailing2", "p { color: blue; }");
 
-    match grass::from_string(input.to_string(), &grass::Options::default()) {
-        Ok(..) => panic!("did not fail"),
-        Err(e) => assert_eq!(
-            "Error: Expected expression.",
-            e.to_string()
-                .chars()
-                .take_while(|c| *c != '\n')
-                .collect::<String>()
-                .as_str()
-        ),
-    }
+    assert_err!("Error: Expected expression.", input);
 }
 
 #[test]
@@ -244,7 +234,7 @@ test!(
 test!(
     plain_css_retains_backslash_for_escaped_space,
     r#"@import "hux\ bux.css";"#,
-    r#"@import "hux\ bux.css";\n"#
+    "@import \"hux\\ bux.css\";\n"
 );
 test!(
     plain_css_is_moved_to_top_of_file,
@@ -254,6 +244,11 @@ test!(
 
     @import url(\"foo.css\");",
     "@import url(\"foo.css\");\na {\n  color: red;\n}\n"
+);
+test!(
+    many_import_conditions,
+    r#"@import "a" b c d(e) supports(f: g) h i j(k) l m (n: o), (p: q);"#,
+    "@import \"a\" b c d(e) supports(f: g) h i j(k) l m (n: o), (p: q);\n"
 );
 
 // todo: edge case tests for plain css imports moved to top

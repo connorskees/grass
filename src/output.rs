@@ -57,7 +57,7 @@ enum Toplevel {
     },
     // todo: do we actually need a toplevel style variant?
     Style(Style),
-    Import(String),
+    Import(String, Option<String>),
     Empty,
 }
 
@@ -269,14 +269,16 @@ impl Css {
                         k @ Stmt::KeyframesRuleSet(..) => {
                             unreachable!("@keyframes ruleset {:?}", k);
                         }
-                        Stmt::Import(s) => self.plain_imports.push(Toplevel::Import(s)),
+                        Stmt::Import(s, modifiers) => {
+                            self.plain_imports.push(Toplevel::Import(s, modifiers))
+                        }
                     };
                 }
                 vals
             }
             Stmt::Comment(s, span) => vec![Toplevel::MultilineComment(s, span)],
-            Stmt::Import(s) => {
-                self.plain_imports.push(Toplevel::Import(s));
+            Stmt::Import(s, modifiers) => {
+                self.plain_imports.push(Toplevel::Import(s, modifiers));
                 Vec::new()
             }
             Stmt::Style(s) => vec![Toplevel::Style(s)],
@@ -428,8 +430,15 @@ impl Formatter for CompressedFormatter {
                     write!(buf, "}}")?;
                 }
                 Toplevel::Empty | Toplevel::MultilineComment(..) => continue,
-                Toplevel::Import(s) => {
-                    write!(buf, "@import {};", s)?;
+                Toplevel::Import(s, modifiers) => {
+                    write!(buf, "@import {}", s)?;
+
+                    if let Some(modifiers) = modifiers {
+                        buf.push(b' ');
+                        buf.extend_from_slice(modifiers.as_bytes());
+                    }
+
+                    buf.push(b';');
                 }
                 Toplevel::UnknownAtRule(u) => {
                     let ToplevelUnknownAtRule {
@@ -746,8 +755,15 @@ impl Formatter for ExpandedFormatter {
 
                     // write!(buf, "{}{}", padding, s)?;
                 }
-                Toplevel::Import(s) => {
-                    write!(buf, "{}@import {};", padding, s)?;
+                Toplevel::Import(s, modifiers) => {
+                    write!(buf, "{}@import {}", padding, s)?;
+
+                    if let Some(modifiers) = modifiers {
+                        buf.push(b' ');
+                        buf.extend_from_slice(modifiers.as_bytes());
+                    }
+
+                    buf.push(b';');
                 }
                 Toplevel::UnknownAtRule(u) => {
                     let ToplevelUnknownAtRule {

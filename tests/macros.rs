@@ -107,6 +107,7 @@ pub struct TestFs {
     files: BTreeMap<PathBuf, Cow<'static, str>>,
 }
 
+#[allow(unused)]
 impl TestFs {
     pub fn new() -> Self {
         Self {
@@ -120,6 +121,7 @@ impl TestFs {
     }
 }
 
+#[allow(unused)]
 impl Fs for TestFs {
     fn is_file(&self, path: &Path) -> bool {
         self.files.contains_key(path)

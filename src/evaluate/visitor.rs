@@ -1097,11 +1097,12 @@ impl<'a> Visitor<'a> {
 
         let import = self.interpolation_to_value(static_import.url, false, false)?;
 
-        if static_import.modifiers.is_some() {
-            todo!()
-        }
+        let modifiers = static_import
+            .modifiers
+            .map(|modifiers| self.interpolation_to_value(modifiers, false, false))
+            .transpose()?;
 
-        let node = Stmt::Import(import);
+        let node = Stmt::Import(import, modifiers);
 
         // if self.parent != Some(CssTree::ROOT) {
         self.css_tree.add_stmt(node, self.parent);
@@ -2796,6 +2797,9 @@ impl<'a> Visitor<'a> {
             AstExpr::ParentSelector => self.visit_parent_selector(),
             AstExpr::UnaryOp(op, expr) => self.visit_unary_op(op, *expr)?,
             AstExpr::Variable { name, namespace } => self.env.get_var(name, namespace)?,
+            AstExpr::Supports(condition) => {
+                Value::String(self.visit_supports_condition(*condition)?, QuoteKind::None)
+            }
         })
     }
 

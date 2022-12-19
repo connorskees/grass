@@ -16,6 +16,10 @@ impl Interpolation {
         }
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.contents.is_empty()
+    }
+
     pub fn new_with_expr(e: AstExpr) -> Self {
         Self {
             contents: vec![InterpolationPart::Expr(e)],

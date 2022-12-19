@@ -51,7 +51,8 @@ pub(crate) enum Stmt {
     KeyframesRuleSet(Box<KeyframesRuleSet>),
     /// A plain import such as `@import "foo.css";` or
     /// `@import url(https://fonts.google.com/foo?bar);`
-    Import(String),
+    // todo: named fields, 0: url, 1: modifiers
+    Import(String, Option<String>),
 }
 
 #[derive(Debug, Clone)]
@@ -881,6 +882,45 @@ impl<'a, 'b> Parser<'a, 'b> {
         }))
     }
 
+    fn try_parse_import_supports_function(&mut self) -> SassResult<Option<AstSupportsCondition>> {
+        if !self.looking_at_interpolated_identifier() {
+            return Ok(None);
+        }
+
+        let start = self.toks.cursor();
+        let name = self.parse_interpolated_identifier()?;
+        debug_assert!(name.as_plain() != Some("not"));
+
+        if !self.consume_char_if_exists('(') {
+            self.toks.set_cursor(start);
+            return Ok(None);
+        }
+
+        let value = self.parse_interpolated_declaration_value(true, true, true)?;
+        self.expect_char(')')?;
+
+        Ok(Some(AstSupportsCondition::Function { name, args: value }))
+    }
+
+    fn parse_import_supports_query(&mut self) -> SassResult<AstSupportsCondition> {
+        Ok(if self.scan_identifier("not", false)? {
+            self.whitespace_or_comment();
+            AstSupportsCondition::Negation(Box::new(self.supports_condition_in_parens()?))
+        } else if self.toks.next_char_is('(') {
+            self.parse_supports_condition()?
+        } else {
+            match self.try_parse_import_supports_function()? {
+                Some(function) => function,
+                None => {
+                    let start = self.toks.cursor();
+                    let name = self.parse_expression(None, None, None)?;
+                    self.expect_char(':')?;
+                    self.supports_declaration_value(name.node, start)?
+                }
+            }
+        })
+    }
+
     fn try_import_modifiers(&mut self) -> SassResult<Option<Interpolation>> {
         // Exit before allocating anything if we're not looking at any modifiers, as
         // is the most common case.
@@ -888,48 +928,64 @@ impl<'a, 'b> Parser<'a, 'b> {
             return Ok(None);
         }
 
-        // var start = scanner.state;
-        // var buffer = InterpolationBuffer();
-        // while (true) {
-        //   if (_lookingAtInterpolatedIdentifier()) {
-        //     if (!buffer.isEmpty) buffer.writeCharCode($space);
+        let start = self.toks.cursor();
+        let mut buffer = Interpolation::new();
 
-        //     var identifier = interpolatedIdentifier();
-        //     buffer.addInterpolation(identifier);
+        loop {
+            if self.looking_at_interpolated_identifier() {
+                if !buffer.is_empty() {
+                    buffer.add_char(' ');
+                }
 
-        //     var name = identifier.asPlain?.toLowerCase();
-        //     if (name != "and" && scanner.scanChar($lparen)) {
-        //       if (name == "supports") {
-        //         var query = _importSupportsQuery();
-        //         if (query is! SupportsDeclaration) buffer.writeCharCode($lparen);
-        //         buffer.add(SupportsExpression(query));
-        //         if (query is! SupportsDeclaration) buffer.writeCharCode($rparen);
-        //       } else {
-        //         buffer.writeCharCode($lparen);
-        //         buffer.addInterpolation(_interpolatedDeclarationValue(
-        //             allowEmpty: true, allowSemicolon: true));
-        //         buffer.writeCharCode($rparen);
-        //       }
+                let identifier = self.parse_interpolated_identifier()?;
+                let name = identifier.as_plain().map(str::to_ascii_lowercase);
+                buffer.add_interpolation(identifier);
 
-        //       scanner.expectChar($rparen);
-        //       whitespace();
-        //     } else {
-        //       whitespace();
-        //       if (scanner.scanChar($comma)) {
-        //         buffer.write(", ");
-        //         buffer.addInterpolation(_mediaQueryList());
-        //         return buffer.interpolation(scanner.spanFrom(start));
-        //       }
-        //     }
-        //   } else if (scanner.peekChar() == $lparen) {
-        //     if (!buffer.isEmpty) buffer.writeCharCode($space);
-        //     buffer.addInterpolation(_mediaQueryList());
-        //     return buffer.interpolation(scanner.spanFrom(start));
-        //   } else {
-        //     return buffer.interpolation(scanner.spanFrom(start));
-        //   }
-        // }
-        todo!()
+                if name.as_deref() != Some("and") && self.consume_char_if_exists('(') {
+                    if name.as_deref() == Some("supports") {
+                        let query = self.parse_import_supports_query()?;
+                        let is_declaration =
+                            matches!(query, AstSupportsCondition::Declaration { .. });
+
+                        if !is_declaration {
+                            buffer.add_char('(');
+                        }
+
+                        buffer.add_expr(AstExpr::Supports(Box::new(query)).span(self.span_before));
+
+                        if !is_declaration {
+                            buffer.add_char(')');
+                        }
+                    } else {
+                        buffer.add_char('(');
+                        buffer.add_interpolation(
+                            self.parse_interpolated_declaration_value(true, true, true)?,
+                        );
+                        buffer.add_char(')');
+                    }
+
+                    self.expect_char(')')?;
+                    self.whitespace_or_comment();
+                } else {
+                    self.whitespace_or_comment();
+                    if self.consume_char_if_exists(',') {
+                        buffer.add_char(',');
+                        buffer.add_char(' ');
+                        buffer.add_interpolation(self.parse_media_query_list()?);
+                        return Ok(Some(buffer));
+                    }
+                }
+            } else if self.toks.next_char_is('(') {
+                if !buffer.is_empty() {
+                    buffer.add_char(' ');
+                }
+
+                buffer.add_interpolation(self.parse_media_query_list()?);
+                return Ok(Some(buffer));
+            } else {
+                return Ok(Some(buffer));
+            }
+        }
     }
 
     fn try_url_contents(&mut self, name: Option<&str>) -> SassResult<Option<Interpolation>> {

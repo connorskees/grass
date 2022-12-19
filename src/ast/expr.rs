@@ -9,7 +9,7 @@ use crate::{
     value::{CalculationName, Number},
 };
 
-use super::{ArgumentInvocation, Interpolation, InterpolationPart};
+use super::{ArgumentInvocation, AstSupportsCondition, Interpolation, InterpolationPart};
 
 /// Represented by the `if` function
 #[derive(Debug, Clone)]
@@ -69,6 +69,7 @@ pub(crate) enum AstExpr {
     Paren(Box<Self>),
     ParentSelector,
     String(StringExpr, Span),
+    Supports(Box<AstSupportsCondition>),
     UnaryOp(UnaryOp, Box<Self>),
     Variable {
         name: Spanned<Identifier>,
