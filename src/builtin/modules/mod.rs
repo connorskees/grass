@@ -173,7 +173,7 @@ fn member_map<V: fmt::Debug + Clone + 'static>(
     all_maps.push(Arc::new(local_map));
 
     // todo: potential optimization when all_maps.len() == 1
-    Arc::new(MergedMapView(all_maps))
+    Arc::new(MergedMapView::new(all_maps))
 }
 
 impl Module {

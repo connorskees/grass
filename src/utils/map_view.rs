@@ -248,7 +248,21 @@ impl<V: fmt::Debug + Clone, T: MapView<Value = V> + Clone> MapView for LimitedMa
 }
 
 #[derive(Debug)]
-pub(crate) struct MergedMapView<V: fmt::Debug + Clone>(pub Vec<Arc<dyn MapView<Value = V>>>);
+pub(crate) struct MergedMapView<V: fmt::Debug + Clone>(
+    pub Vec<Arc<dyn MapView<Value = V>>>,
+    HashSet<Identifier>,
+);
+
+impl<V: fmt::Debug + Clone> MergedMapView<V> {
+    pub fn new(maps: Vec<Arc<dyn MapView<Value = V>>>) -> Self {
+        let unique_keys: HashSet<Identifier> = maps.iter().fold(HashSet::new(), |mut keys, map| {
+            keys.extend(&map.keys());
+            keys
+        });
+
+        Self(maps, unique_keys)
+    }
+}
 
 impl<V: fmt::Debug + Clone> MapView for MergedMapView<V> {
     type Value = V;
@@ -266,8 +280,7 @@ impl<V: fmt::Debug + Clone> MapView for MergedMapView<V> {
     }
 
     fn len(&self) -> usize {
-        // self.1.len()
-        todo!()
+        self.1.len()
     }
 
     fn insert(&self, name: Identifier, value: Self::Value) -> Option<Self::Value> {
@@ -275,8 +288,7 @@ impl<V: fmt::Debug + Clone> MapView for MergedMapView<V> {
     }
 
     fn keys(&self) -> Vec<Identifier> {
-        todo!()
-        // self.1.iter().copied().collect()
+        self.1.iter().copied().collect()
     }
 
     fn iter(&self) -> Vec<(Identifier, Self::Value)> {
@@ -318,8 +330,11 @@ impl<V: fmt::Debug + Clone, T: MapView<Value = V> + Clone> MapView for PublicMem
     }
 
     fn keys(&self) -> Vec<Identifier> {
-        todo!()
-        // self.1.iter().copied().collect()
+        self.0
+            .keys()
+            .into_iter()
+            .filter(|key| key.is_public())
+            .collect()
     }
 
     fn iter(&self) -> Vec<(Identifier, Self::Value)> {

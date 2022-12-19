@@ -1,5 +1,7 @@
 use std::io::Write;
 
+use macros::TestFs;
+
 #[macro_use]
 mod macros;
 
@@ -29,8 +31,14 @@ fn basic_forward_with_configuration() {
             color: basic_forward_with_configuration__b.$a;
         }
     "#;
-    tempfile!("basic_forward_with_configuration__b.scss", r#"@forward "basic_forward_with_configuration__a" with ($a: green);"#);
-    tempfile!("basic_forward_with_configuration__a.scss", r#"$a: red !default;"#);
+    tempfile!(
+        "basic_forward_with_configuration__b.scss",
+        r#"@forward "basic_forward_with_configuration__a" with ($a: green);"#
+    );
+    tempfile!(
+        "basic_forward_with_configuration__a.scss",
+        r#"$a: red !default;"#
+    );
     assert_eq!(
         "a {\n  color: green;\n}\n",
         &grass::from_string(input.to_string(), &grass::Options::default()).expect(input)
@@ -46,8 +54,14 @@ fn basic_forward_with_configuration_no_default_error() {
             color: basic_forward_with_configuration_no_default_error__b.$a;
         }
     "#;
-    tempfile!("basic_forward_with_configuration_no_default_error__b.scss", r#"@forward "basic_forward_with_configuration_no_default_error__a" with ($a: green);"#);
-    tempfile!("basic_forward_with_configuration_no_default_error__a.scss", r#"$a: red;"#);
+    tempfile!(
+        "basic_forward_with_configuration_no_default_error__b.scss",
+        r#"@forward "basic_forward_with_configuration_no_default_error__a" with ($a: green);"#
+    );
+    tempfile!(
+        "basic_forward_with_configuration_no_default_error__a.scss",
+        r#"$a: red;"#
+    );
     assert_err!(
         "Error: This variable was not declared with !default in the @used module.",
         input
@@ -72,10 +86,38 @@ fn can_redeclare_forwarded_upstream_vars() {
         @forward "can_redeclare_forwarded_upstream_vars__a";
 
         $a: midstream;
-    "#);
-    tempfile!("can_redeclare_forwarded_upstream_vars__a.scss", r#"$a: upstream;"#);
+    "#
+    );
+    tempfile!(
+        "can_redeclare_forwarded_upstream_vars__a.scss",
+        r#"$a: upstream;"#
+    );
     assert_eq!(
         "a {\n  color: upstream;\n  color: midstream;\n}\n",
         &grass::from_string(input.to_string(), &grass::Options::default()).expect(input)
+    );
+}
+#[test]
+fn through_forward_with_as() {
+    let mut fs = TestFs::new();
+
+    fs.add_file(
+        "_downstream.scss",
+        r#"@forward "midstream" with ($b-a: configured);"#,
+    );
+    fs.add_file("_midstream.scss", r#"@forward "upstream" as b-*;"#);
+    fs.add_file(
+        "_upstream.scss",
+        r#"
+            $a: original !default;
+            c {d: $a}
+        "#,
+    );
+
+    let input = r#"@use "downstream";"#;
+
+    assert_eq!(
+        "c {\n  d: configured;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
     );
 }

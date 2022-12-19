@@ -6,13 +6,14 @@ use crate::{
     builtin::modules::{ForwardedModule, Module, Modules},
     common::Identifier,
     error::SassResult,
-    scope::{Scopes},
+    scope::Scopes,
     selector::ExtensionStore,
     value::{SassFunction, Value},
 };
 use std::{
     cell::{Ref, RefCell},
-    sync::Arc, collections::BTreeMap,
+    collections::BTreeMap,
+    sync::Arc,
 };
 
 use super::visitor::CallableContentBlock;
@@ -272,7 +273,7 @@ impl Environment {
                         , span).into());
                     }
                 }
-                
+
                 self.global_modules.push(module);
             }
         }

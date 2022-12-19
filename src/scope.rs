@@ -36,12 +36,18 @@ impl Scopes {
 
     pub fn new_closure(&self) -> Self {
         Self {
-            variables: Arc::new(RefCell::new((*self.variables).borrow().iter().map(Arc::clone).collect())),
-            mixins: Arc::new(RefCell::new((*self.mixins).borrow().iter().map(Arc::clone).collect())),
-            functions: Arc::new(RefCell::new((*self.functions).borrow().iter().map(Arc::clone).collect())),
+            variables: Arc::new(RefCell::new(
+                (*self.variables).borrow().iter().map(Arc::clone).collect(),
+            )),
+            mixins: Arc::new(RefCell::new(
+                (*self.mixins).borrow().iter().map(Arc::clone).collect(),
+            )),
+            functions: Arc::new(RefCell::new(
+                (*self.functions).borrow().iter().map(Arc::clone).collect(),
+            )),
             len: self.len,
         }
-    //     Self(self.0.iter().map(Arc::clone).collect())
+        //     Self(self.0.iter().map(Arc::clone).collect())
     }
 
     pub fn global_variables(&self) -> Arc<RefCell<BTreeMap<Identifier, Value>>> {
@@ -72,9 +78,15 @@ impl Scopes {
 
     pub fn enter_new_scope(&mut self) {
         self.len += 1;
-        (*self.variables).borrow_mut().push(Arc::new(RefCell::new(BTreeMap::new())));
-        (*self.mixins).borrow_mut().push(Arc::new(RefCell::new(BTreeMap::new())));
-        (*self.functions).borrow_mut().push(Arc::new(RefCell::new(BTreeMap::new())));
+        (*self.variables)
+            .borrow_mut()
+            .push(Arc::new(RefCell::new(BTreeMap::new())));
+        (*self.mixins)
+            .borrow_mut()
+            .push(Arc::new(RefCell::new(BTreeMap::new())));
+        (*self.functions)
+            .borrow_mut()
+            .push(Arc::new(RefCell::new(BTreeMap::new())));
     }
 
     pub fn exit_scope(&mut self) {
@@ -88,14 +100,18 @@ impl Scopes {
 /// Variables
 impl Scopes {
     pub fn insert_var(&mut self, idx: usize, name: Identifier, v: Value) -> Option<Value> {
-        (*(*self.variables).borrow_mut()[idx]).borrow_mut().insert(name, v)
+        (*(*self.variables).borrow_mut()[idx])
+            .borrow_mut()
+            .insert(name, v)
     }
 
     /// Always insert this variable into the innermost scope
     ///
     /// Used, for example, for variables from `@each` and `@for`
     pub fn insert_var_last(&mut self, name: Identifier, v: Value) -> Option<Value> {
-        (*(*self.variables).borrow_mut()[self.len() - 1]).borrow_mut().insert(name, v)
+        (*(*self.variables).borrow_mut()[self.len() - 1])
+            .borrow_mut()
+            .insert(name, v)
     }
 
     pub fn get_var(&self, name: Spanned<Identifier>) -> SassResult<Value> {
@@ -123,7 +139,9 @@ impl Scopes {
 /// Mixins
 impl Scopes {
     pub fn insert_mixin(&mut self, name: Identifier, mixin: Mixin) {
-        (*(*self.mixins).borrow_mut().last_mut().unwrap()).borrow_mut().insert(name, mixin);
+        (*(*self.mixins).borrow_mut().last_mut().unwrap())
+            .borrow_mut()
+            .insert(name, mixin);
     }
 
     pub fn get_mixin(&self, name: Spanned<Identifier>) -> SassResult<Mixin> {
@@ -151,7 +169,9 @@ impl Scopes {
 /// Functions
 impl Scopes {
     pub fn insert_fn(&mut self, func: SassFunction) {
-        (*(*self.functions).borrow_mut().last_mut().unwrap()).borrow_mut().insert(func.name(), func);
+        (*(*self.functions).borrow_mut().last_mut().unwrap())
+            .borrow_mut()
+            .insert(func.name(), func);
     }
 
     pub fn get_fn(&self, name: Identifier) -> Option<SassFunction> {

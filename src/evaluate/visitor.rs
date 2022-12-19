@@ -3,9 +3,11 @@ use std::{
     cell::{Cell, Ref, RefCell},
     collections::{BTreeMap, BTreeSet, HashMap, HashSet},
     ffi::OsStr,
-    fmt, mem,
+    fmt,
+    iter::FromIterator,
+    mem,
     path::{Path, PathBuf},
-    sync::Arc, iter::FromIterator,
+    sync::Arc,
 };
 
 use codemap::{Span, Spanned};
@@ -120,11 +122,7 @@ impl CssTree {
         let mut parent = self.stmts[parent_idx.0].borrow_mut().take();
         match &mut parent {
             Some(Stmt::RuleSet { body, .. }) => body.push(child),
-            Some(
-                Stmt::Style(..)
-                | Stmt::Comment(..)
-                | Stmt::Import(..)
-            ) => unreachable!(),
+            Some(Stmt::Style(..) | Stmt::Comment(..) | Stmt::Import(..)) => unreachable!(),
             Some(Stmt::Media(media, ..)) => {
                 media.body.push(child);
             }
@@ -417,7 +415,15 @@ impl<'a> Visitor<'a> {
             if variable.is_guarded {
                 let old_value = (*config).borrow_mut().remove(variable.name.node);
 
-                if old_value.is_some() && !matches!(old_value, Some(ConfiguredValue { value: Value::Null, .. })) {
+                if old_value.is_some()
+                    && !matches!(
+                        old_value,
+                        Some(ConfiguredValue {
+                            value: Value::Null,
+                            ..
+                        })
+                    )
+                {
                     new_values.insert(variable.name.node, old_value.unwrap());
                     continue;
                 }
@@ -427,14 +433,19 @@ impl<'a> Visitor<'a> {
             let value = self.visit_expr(variable.expr.node.clone())?;
             let value = self.without_slash(value);
 
-            new_values.insert(variable.name.node, ConfiguredValue::explicit(value, variable.expr.span));
+            new_values.insert(
+                variable.name.node,
+                ConfiguredValue::explicit(value, variable.expr.span),
+            );
         }
 
-        Ok(Arc::new(RefCell::new(if !(*config).borrow().is_implicit() || (*config).borrow().is_empty() {
-            Configuration::explicit(new_values, self.parser.span_before)
-        } else {
-            Configuration::implicit(new_values)
-        })))
+        Ok(Arc::new(RefCell::new(
+            if !(*config).borrow().is_implicit() || (*config).borrow().is_empty() {
+                Configuration::explicit(new_values, self.parser.span_before)
+            } else {
+                Configuration::implicit(new_values)
+            },
+        )))
     }
 
     fn remove_used_configuration(

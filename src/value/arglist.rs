@@ -1,8 +1,4 @@
-use std::{
-    cell::Cell,
-    collections::BTreeMap,
-    sync::Arc,
-};
+use std::{cell::Cell, collections::BTreeMap, sync::Arc};
 
 use codemap::{Span, Spanned};
 
@@ -12,9 +8,7 @@ use crate::{
     evaluate::Visitor,
 };
 
-
 use super::Value;
-
 
 #[derive(Debug, Clone)]
 pub(crate) struct ArgList {

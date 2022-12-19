@@ -1,3 +1,11 @@
+use std::{
+    borrow::Cow,
+    collections::BTreeMap,
+    path::{Path, PathBuf},
+};
+
+use grass::Fs;
+
 #[macro_export]
 macro_rules! test {
     (@base $( #[$attr:meta] ),*$func:ident, $input:expr, $output:expr, $options:expr) => {
@@ -92,4 +100,36 @@ macro_rules! assert_err {
             ),
         }
     };
+}
+
+#[derive(Debug)]
+pub struct TestFs {
+    files: BTreeMap<PathBuf, Cow<'static, str>>,
+}
+
+impl TestFs {
+    pub fn new() -> Self {
+        Self {
+            files: BTreeMap::new(),
+        }
+    }
+
+    pub fn add_file(&mut self, name: &'static str, contents: &'static str) {
+        self.files
+            .insert(PathBuf::from(name), Cow::Borrowed(contents));
+    }
+}
+
+impl Fs for TestFs {
+    fn is_file(&self, path: &Path) -> bool {
+        self.files.contains_key(path)
+    }
+
+    fn is_dir(&self, path: &Path) -> bool {
+        false
+    }
+
+    fn read(&self, path: &Path) -> std::io::Result<Vec<u8>> {
+        Ok(self.files.get(path).unwrap().as_bytes().to_vec())
+    }
 }
