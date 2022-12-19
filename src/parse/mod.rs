@@ -91,7 +91,7 @@ enum VariableDeclOrInterpolation {
 
 impl<'a, 'b> Parser<'a, 'b> {
     pub fn __parse(&mut self) -> SassResult<StyleSheet> {
-        let mut style_sheet = StyleSheet::new(self.is_plain_css);
+        let mut style_sheet = StyleSheet::new(self.is_plain_css, self.path.to_path_buf());
 
         // Allow a byte-order mark at the beginning of the document.
         self.consume_char_if_exists('\u{feff}');

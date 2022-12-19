@@ -454,6 +454,7 @@ impl<'a> Visitor<'a> {
         downstream: Arc<RefCell<Configuration>>,
         except: &HashSet<Identifier>,
     ) {
+        let mut names_to_remove = Vec::new();
         let downstream_keys = (*downstream).borrow().values.keys();
         for name in (*upstream).borrow().values.keys() {
             if except.contains(&name) {
@@ -461,8 +462,12 @@ impl<'a> Visitor<'a> {
             }
 
             if !downstream_keys.contains(&name) {
-                (*upstream).borrow_mut().remove(name);
+                names_to_remove.push(name);
             }
+        }
+
+        for name in names_to_remove {
+            (*upstream).borrow_mut().remove(name);
         }
     }
 

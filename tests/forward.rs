@@ -97,6 +97,7 @@ fn can_redeclare_forwarded_upstream_vars() {
         &grass::from_string(input.to_string(), &grass::Options::default()).expect(input)
     );
 }
+
 #[test]
 fn through_forward_with_as() {
     let mut fs = TestFs::new();
@@ -118,6 +119,91 @@ fn through_forward_with_as() {
 
     assert_eq!(
         "c {\n  d: configured;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
+    );
+}
+#[test]
+fn through_forward_with_unconfigured() {
+    let mut fs = TestFs::new();
+
+    fs.add_file(
+        "_downstream.scss",
+        r#"@forward "midstream" with ($a: from downstream);"#,
+    );
+    fs.add_file(
+        "_midstream.scss",
+        r#"@forward "upstream" with ($b: from midstream !default);"#,
+    );
+    fs.add_file(
+        "_upstream.scss",
+        r#"
+            $a: from upstream !default;
+            $b: from upstream !default;
+            c {
+                a: $a;
+                b: $b;
+            }
+        "#,
+    );
+
+    let input = r#"@use "downstream";"#;
+
+    assert_eq!(
+        "c {\n  a: from downstream;\n  b: from midstream;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
+    );
+}
+
+#[test]
+fn member_visibility_variable_declaration() {
+    let mut fs = TestFs::new();
+
+    fs.add_file("_midstream.scss", r#"@forward "upstream" hide d;"#);
+    fs.add_file(
+        "_upstream.scss",
+        r#"
+            $a: old value;
+
+            @function get-a() {@return $a}
+        "#,
+    );
+
+    let input = r#"
+        @use "midstream";
+
+        midstream.$a: new value;
+
+        b {c: midstream.get-a()};
+    "#;
+
+    assert_eq!(
+        "b {\n  c: new value;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
+    );
+}
+
+#[test]
+fn member_import_precedence_top_level() {
+    let mut fs = TestFs::new();
+
+    fs.add_file("_midstream.scss", r#"@forward "upstream";"#);
+    fs.add_file(
+        "_upstream.scss",
+        r#"
+            $a: in-upstream;
+        "#,
+    );
+
+    let input = r#"
+        $a: in-input;
+
+        @import "midstream";
+
+        b {c: $a}
+    "#;
+
+    assert_eq!(
+        "b {\n  c: in-upstream;\n}\n",
         &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
     );
 }

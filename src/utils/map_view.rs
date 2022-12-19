@@ -284,7 +284,13 @@ impl<V: fmt::Debug + Clone> MapView for MergedMapView<V> {
     }
 
     fn insert(&self, name: Identifier, value: Self::Value) -> Option<Self::Value> {
-        todo!()
+        for map in self.0.iter().rev() {
+            if map.contains_key(name) {
+                return map.insert(name, value);
+            }
+        }
+
+        panic!("New entries may not be added to MergedMapView")
     }
 
     fn keys(&self) -> Vec<Identifier> {

@@ -550,15 +550,17 @@ pub(crate) enum AstStmt {
 #[derive(Debug, Clone)]
 pub(crate) struct StyleSheet {
     pub body: Vec<AstStmt>,
+    pub url: PathBuf,
     pub is_plain_css: bool,
     pub uses: Vec<AstUseRule>,
     pub forwards: Vec<AstForwardRule>,
 }
 
 impl StyleSheet {
-    pub fn new(is_plain_css: bool) -> Self {
+    pub fn new(is_plain_css: bool, url: PathBuf) -> Self {
         Self {
             body: Vec::new(),
+            url,
             is_plain_css,
             uses: Vec::new(),
             forwards: Vec::new(),
