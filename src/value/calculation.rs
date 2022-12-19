@@ -269,8 +269,117 @@ impl SassCalculation {
         min: CalculationArg,
         value: Option<CalculationArg>,
         max: Option<CalculationArg>,
+        span: Span,
     ) -> SassResult<Value> {
-        todo!()
+        if value.is_none() && max.is_some() {
+            return Err(("If value is null, max must also be null.", span).into());
+        }
+
+        let min = Self::simplify(min);
+        let value = value.map(Self::simplify);
+        let max = max.map(Self::simplify);
+
+        match (min.clone(), value.clone(), max.clone()) {
+            (
+                CalculationArg::Number(min),
+                Some(CalculationArg::Number(value)),
+                Some(CalculationArg::Number(max)),
+            ) => {
+                if min.is_comparable_to(&value) && min.is_comparable_to(&max) {
+                    // todo: account for units?
+                    if value.num <= min.num {
+                        return Ok(Value::Dimension {
+                            num: Number(min.num),
+                            unit: min.unit,
+                            as_slash: min.as_slash,
+                        });
+                    }
+
+                    // todo: account for units?
+                    if value.num >= max.num {
+                        return Ok(Value::Dimension {
+                            num: Number(max.num),
+                            unit: max.unit,
+                            as_slash: max.as_slash,
+                        });
+                    }
+
+                    return Ok(Value::Dimension {
+                        num: Number(value.num),
+                        unit: value.unit,
+                        as_slash: value.as_slash,
+                    });
+                }
+            }
+            _ => {}
+        }
+
+        let mut args = vec![min];
+
+        if let Some(value) = value {
+            args.push(value);
+        }
+
+        if let Some(max) = max {
+            args.push(max);
+        }
+
+        Self::verify_length(&args, 3, span)?;
+        Self::verify_compatible_numbers(&args)?;
+
+        Ok(Value::Calculation(SassCalculation {
+            name: CalculationName::Clamp,
+            args,
+        }))
+    }
+
+    fn verify_length(args: &[CalculationArg], len: usize, span: Span) -> SassResult<()> {
+        if args.len() == len {
+            return Ok(());
+        }
+
+        if args.iter().any(|arg| {
+            matches!(
+                arg,
+                CalculationArg::String(..) | CalculationArg::Interpolation(..)
+            )
+        }) {
+            return Ok(());
+        }
+
+        let was_or_were = if args.len() == 1 { "was" } else { "were" };
+
+        Err((
+            format!(
+                "{len} arguments required, but only {} {was_or_were} passed.",
+                args.len()
+            ),
+            span,
+        )
+            .into())
+    }
+
+    fn verify_compatible_numbers(args: &[CalculationArg]) -> SassResult<()> {
+        //         for (var arg in args) {
+        //   if (arg is! SassNumber) continue;
+        //   if (arg.numeratorUnits.length > 1 || arg.denominatorUnits.isNotEmpty) {
+        //     throw SassScriptException(
+        //         "Number $arg isn't compatible with CSS calculations.");
+        //   }
+        // }
+
+        // for (var i = 0; i < args.length - 1; i++) {
+        //   var number1 = args[i];
+        //   if (number1 is! SassNumber) continue;
+
+        //   for (var j = i + 1; j < args.length; j++) {
+        //     var number2 = args[j];
+        //     if (number2 is! SassNumber) continue;
+        //     if (number1.hasPossiblyCompatibleUnits(number2)) continue;
+        //     throw SassScriptException("$number1 and $number2 are incompatible.");
+        //   }
+        // }
+        Ok(())
     }
 
     pub fn operate_internal(
@@ -301,7 +410,9 @@ impl SassCalculation {
                 true
             };
             match (&left, &right) {
-                (CalculationArg::Number(num1), CalculationArg::Number(num2)) if is_comparable => {
+                (CalculationArg::Number(num1), CalculationArg::Number(num2))
+                    if num1.is_comparable_to(num2) =>
+                {
                     if op == BinaryOp::Plus {
                         return Ok(CalculationArg::Number(num1.clone() + num2.clone()));
                     } else {
@@ -310,16 +421,8 @@ impl SassCalculation {
                 }
                 _ => {}
             }
-            // if matches!(left, CalculationArg::Number(..))
-            //     && matches!(right, CalculationArg::Number(..))
-            //     && is_comparable
-            // {
-            //     return Ok(CalculationArg::Operation {
-            //         lhs: Box::new(left),
-            //         op,
-            //         rhs: Box::new(right),
-            //     });
-            // }
+
+            Self::verify_compatible_numbers(&[left.clone(), right.clone()])?;
 
             if let CalculationArg::Number(mut n) = right {
                 if n.num.is_negative() {
@@ -333,6 +436,12 @@ impl SassCalculation {
                 }
                 right = CalculationArg::Number(n);
             }
+
+            return Ok(CalculationArg::Operation {
+                lhs: Box::new(left),
+                op,
+                rhs: Box::new(right),
+            });
         }
 
         match (left, right) {

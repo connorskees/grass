@@ -446,19 +446,18 @@ impl SassNumber {
 
     /// Invariants: `from.comparable(&to)` must be true
     pub fn convert(mut self, to: &Unit) -> Self {
-        // let from = &self.unit;
-        // debug_assert!(from.comparable(to));
+        let from = &self.unit;
+        debug_assert!(from.comparable(to));
 
-        // if from == &Unit::None && to == &Unit::None {
-        //     self.unit = self.unit * to.clone();
-        //     return self;
-        // }
+        if from == &Unit::None || to == &Unit::None {
+            self.unit = self.unit * to.clone();
+            return self;
+        }
 
-        // self.num *= UNIT_CONVERSION_TABLE[to][from];
-        // self.unit = self.unit * to.clone();
+        self.num *= UNIT_CONVERSION_TABLE[to][from];
+        self.unit = self.unit * to.clone();
 
-        // self
-        todo!()
+        self
     }
 }
 

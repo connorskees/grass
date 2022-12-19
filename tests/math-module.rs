@@ -337,7 +337,6 @@ test!(
     "a {\n  color: NaN;\n}\n"
 );
 test!(
-    #[ignore = "we do not support Infinity"]
     log_zero,
     "@use 'sass:math';\na {\n  color: math.log(0);\n}\n",
     "a {\n  color: -Infinity;\n}\n"
@@ -368,7 +367,6 @@ test!(
     "a {\n  color: NaN;\n}\n"
 );
 test!(
-    #[ignore = "we do not support Infinity"]
     log_base_one,
     "@use 'sass:math';\na {\n  color: math.log(2, 1);\n}\n",
     "a {\n  color: Infinity;\n}\n"

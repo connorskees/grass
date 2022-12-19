@@ -127,10 +127,6 @@ impl<'a> MediaQueryParser<'a> {
     }
 
     fn parse_media_in_parens(&mut self) -> SassResult<String> {
-        // dbg!(&self.parser.toks.peek_n(0));
-        // dbg!(&self.parser.toks.peek_n(1));
-        // dbg!(&self.parser.toks.peek_n(2));
-        // dbg!(&self.parser.toks.peek_n(3));
         self.parser.expect_char('(')?;
         let result = format!("({})", self.parser.declaration_value(false)?);
         self.parser.expect_char(')')?;

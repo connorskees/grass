@@ -192,11 +192,11 @@ impl Number {
 
     /// Invariants: `from.comparable(&to)` must be true
     pub fn convert(self, from: &Unit, to: &Unit) -> Self {
-        debug_assert!(from.comparable(to));
-
         if from == &Unit::None || to == &Unit::None || from == to {
             return self;
         }
+
+        debug_assert!(from.comparable(to), "from: {:?}, to: {:?}", from, to);
 
         Number(self.0 * UNIT_CONVERSION_TABLE[to][from])
     }
@@ -433,6 +433,12 @@ impl Number {
     }
 
     pub(crate) fn to_string(self, is_compressed: bool) -> String {
+        if self.0.is_infinite() && self.0.is_sign_negative() {
+            return "-Infinity".to_owned();
+        } else if self.0.is_infinite() {
+            return "Infinity".to_owned();
+        }
+
         let mut buffer = String::with_capacity(3);
 
         if self.0 < 0.0 {

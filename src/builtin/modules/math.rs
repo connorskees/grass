@@ -9,6 +9,16 @@ use crate::builtin::{
 #[cfg(feature = "random")]
 use crate::builtin::math::random;
 
+fn coerce_to_rad(num: f64, unit: Unit) -> f64 {
+    SassNumber {
+        num,
+        unit,
+        as_slash: None,
+    }
+    .convert(&Unit::Rad)
+    .num
+}
+
 fn clamp(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
     args.max_args(3)?;
     let span = args.span();
@@ -175,7 +185,7 @@ fn log(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
     args.max_args(2)?;
 
     let number = match args.get_err(0, "number")? {
-        Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
+        // Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
         Value::Dimension {
             num,
             unit: Unit::None,
@@ -202,7 +212,6 @@ fn log(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
 
     let base = match args.default_arg(1, "base", Value::Null) {
         Value::Null => None,
-        Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
         Value::Dimension {
             num,
             unit: Unit::None,
@@ -234,12 +243,11 @@ fn log(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
             } else {
                 number.log(base)
             }
-        } else if number.is_negative() {
-            // todo: NaN
-            todo!()
-            // None
+        // todo: test with negative 0
+        } else if number.is_negative() && !number.is_zero() {
+            Number(f64::NAN)
         } else if number.is_zero() {
-            todo!()
+            Number(f64::NEG_INFINITY)
         } else {
             number.ln()
         },
@@ -252,7 +260,6 @@ fn pow(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
     args.max_args(2)?;
 
     let base = match args.get_err(0, "base")? {
-        Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
         Value::Dimension {
             num,
             unit: Unit::None,
@@ -278,7 +285,6 @@ fn pow(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
     };
 
     let exponent = match args.get_err(1, "exponent")? {
-        Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
         Value::Dimension {
             num,
             unit: Unit::None,
@@ -315,7 +321,6 @@ fn sqrt(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
     let number = args.get_err(0, "number")?;
 
     Ok(match number {
-        Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
         Value::Dimension {
             num,
             unit: Unit::None,
@@ -346,7 +351,7 @@ fn sqrt(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
 }
 
 macro_rules! trig_fn {
-    ($name:ident, $name_deg:ident) => {
+    ($name:ident) => {
         fn $name(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
             args.max_args(1)?;
             let number = args.get_err(0, "number")?;
@@ -355,24 +360,10 @@ macro_rules! trig_fn {
                 Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
                 Value::Dimension {
                     num,
-                    unit: Unit::None,
-                    ..
-                }
-                | Value::Dimension {
-                    num,
-                    unit: Unit::Rad,
+                    unit: unit @ (Unit::None | Unit::Rad | Unit::Deg | Unit::Grad | Unit::Turn),
                     ..
                 } => Value::Dimension {
-                    num: num.$name(),
-                    unit: Unit::None,
-                    as_slash: None,
-                },
-                Value::Dimension {
-                    num,
-                    unit: Unit::Deg,
-                    ..
-                } => Value::Dimension {
-                    num: num.$name_deg(),
+                    num: Number(coerce_to_rad(num.0, unit).$name()),
                     unit: Unit::None,
                     as_slash: None,
                 },
@@ -398,25 +389,22 @@ macro_rules! trig_fn {
     };
 }
 
-trig_fn!(cos, cos_deg);
-trig_fn!(sin, sin_deg);
-trig_fn!(tan, tan_deg);
+trig_fn!(cos);
+trig_fn!(sin);
+trig_fn!(tan);
 
 fn acos(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     let number = args.get_err(0, "number")?;
 
     Ok(match number {
-        Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
         Value::Dimension {
             num,
             unit: Unit::None,
             ..
         } => Value::Dimension {
             num: if num > Number::from(1) || num < Number::from(-1) {
-                // todo: NaN
-                // None
-                todo!()
+                Number(f64::NAN)
             } else if num.is_one() {
                 Number::zero()
             } else {
@@ -456,8 +444,11 @@ fn asin(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
             ..
         } => {
             if num > Number::from(1) || num < Number::from(-1) {
-                // todo: NaN
-                // return Ok(Value::Dimension(None, Unit::Deg, None));
+                return Ok(Value::Dimension {
+                    num: Number(f64::NAN),
+                    unit: Unit::Deg,
+                    as_slash: None,
+                });
             } else if num.is_zero() {
                 return Ok(Value::Dimension {
                     num: Number::zero(),
@@ -596,43 +587,11 @@ fn atan2(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
             .into());
     };
 
-    Ok(
-        match (
-            NumberState::from_number(&x_num),
-            NumberState::from_number(&y_num),
-        ) {
-            (NumberState::Zero, NumberState::FiniteNegative) => Value::Dimension {
-                num: (Number::from(-90)),
-                unit: Unit::Deg,
-                as_slash: None,
-            },
-            (NumberState::Zero, NumberState::Zero) | (NumberState::Finite, NumberState::Zero) => {
-                Value::Dimension {
-                    num: (Number::zero()),
-                    unit: Unit::Deg,
-                    as_slash: None,
-                }
-            }
-            (NumberState::Zero, NumberState::Finite) => Value::Dimension {
-                num: (Number::from(90)),
-                unit: Unit::Deg,
-                as_slash: None,
-            },
-            (NumberState::Finite, NumberState::Finite)
-            | (NumberState::FiniteNegative, NumberState::Finite)
-            | (NumberState::Finite, NumberState::FiniteNegative)
-            | (NumberState::FiniteNegative, NumberState::FiniteNegative) => Value::Dimension {
-                num: (y_num.atan2(x_num) * Number::from(180)) / Number::pi(),
-                unit: Unit::Deg,
-                as_slash: None,
-            },
-            (NumberState::FiniteNegative, NumberState::Zero) => Value::Dimension {
-                num: (Number::from(180)),
-                unit: Unit::Deg,
-                as_slash: None,
-            },
-        },
-    )
+    Ok(Value::Dimension {
+        num: Number(y_num.0.atan2(x_num.0) * 180.0 / std::f64::consts::PI),
+        unit: Unit::Deg,
+        as_slash: None,
+    })
 }
 
 enum NumberState {
@@ -690,6 +649,46 @@ pub(crate) fn declare(f: &mut Module) {
         "pi",
         Value::Dimension {
             num: Number::from(std::f64::consts::PI),
+            unit: Unit::None,
+            as_slash: None,
+        },
+    );
+    f.insert_builtin_var(
+        "epsilon",
+        Value::Dimension {
+            num: Number::from(std::f64::EPSILON),
+            unit: Unit::None,
+            as_slash: None,
+        },
+    );
+    f.insert_builtin_var(
+        "max-safe-integer",
+        Value::Dimension {
+            num: Number::from(9007199254740991.0),
+            unit: Unit::None,
+            as_slash: None,
+        },
+    );
+    f.insert_builtin_var(
+        "min-safe-integer",
+        Value::Dimension {
+            num: Number::from(-9007199254740991.0),
+            unit: Unit::None,
+            as_slash: None,
+        },
+    );
+    f.insert_builtin_var(
+        "max-number",
+        Value::Dimension {
+            num: Number::from(f64::MAX),
+            unit: Unit::None,
+            as_slash: None,
+        },
+    );
+    f.insert_builtin_var(
+        "min-number",
+        Value::Dimension {
+            num: Number::from(f64::MIN_POSITIVE),
             unit: Unit::None,
             as_slash: None,
         },

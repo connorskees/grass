@@ -2765,7 +2765,9 @@ impl<'a> Visitor<'a> {
             } => self.visit_bin_op(*lhs, op, *rhs, allows_slash, span)?,
             AstExpr::True => Value::True,
             AstExpr::False => Value::False,
-            AstExpr::Calculation { name, args } => self.visit_calculation_expr(name, args)?,
+            AstExpr::Calculation { name, args } => {
+                self.visit_calculation_expr(name, args, self.parser.span_before)?
+            }
             AstExpr::FunctionCall(func_call) => self.visit_function_call_expr(func_call)?,
             AstExpr::If(if_expr) => self.visit_ternary(*if_expr)?,
             AstExpr::InterpolatedFunction(func) => self.visit_interpolated_func_expr(func)?,
@@ -2840,6 +2842,7 @@ impl<'a> Visitor<'a> {
         &mut self,
         name: CalculationName,
         args: Vec<AstExpr>,
+        span: Span,
     ) -> SassResult<Value> {
         let mut args = args
             .into_iter()
@@ -2871,7 +2874,7 @@ impl<'a> Visitor<'a> {
                 } else {
                     Some(args.remove(0))
                 };
-                SassCalculation::clamp(min, value, max)
+                SassCalculation::clamp(min, value, max, span)
             }
         }
     }

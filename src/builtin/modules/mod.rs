@@ -354,8 +354,8 @@ impl Module {
 
     pub fn variables(&self) -> SassMap {
         // SassMap::new_with(
-        //     self.scope
-        //         .vars
+        //     self.scope()
+        //         .variables
         //         .iter()
         //         .filter(|(key, _)| !key.as_str().starts_with('-'))
         //         .map(|(key, value)| {
@@ -367,15 +367,6 @@ impl Module {
         //         .collect::<Vec<(Value, Value)>>(),
         // )
         todo!()
-    }
-
-    pub const fn new_from_scope(scope: Scope, modules: Modules, is_builtin: bool) -> Self {
-        todo!()
-        // Module {
-        //     scope,
-        //     modules,
-        //     is_builtin,
-        // }
     }
 }
 
