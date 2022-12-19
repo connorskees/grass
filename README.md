@@ -30,10 +30,7 @@ That said, there are a number of known missing features and bugs. The notable fe
 indented syntax
 @forward and more complex uses of @use
 @at-root and @import media queries
-@media query merging
 / as a separator in color functions, e.g. rgba(255, 255, 255 / 0)
-Infinity and -Infinity
-builtin meta function `keywords`
 ```
 
 All known missing features and bugs are tracked in [#19](https://github.com/connorskees/grass/issues/19).
@@ -74,26 +71,14 @@ are in the official spec.
 Having said that, to run the official test suite,
 
 ```bash
-git clone https://github.com/connorskees/grass --recursive
-cd grass
-cargo b --release
-./sass-spec/sass-spec.rb -c './target/release/grass'
-```
-
-Note: you will have to install [ruby](https://www.ruby-lang.org/en/downloads/),
-[bundler](https://bundler.io/) and run `bundle install` in `./sass-spec/`.
-This might also require you to install the requirements separately
-for [curses](https://github.com/ruby/curses).
-
-Alternatively, it is possible to use nodejs to run the spec,
-
-```bash
 # This script expects node >=v14.14.0. Check version with `node --version`
 git clone https://github.com/connorskees/grass --recursive
 cd grass && cargo b --release
 cd sass-spec && npm install
-npm run sass-spec -- --command '../target/release/grass'
+npm run sass-spec -- --impl=dart-sass --command '../target/release/grass'
 ```
+
+The spec runner does not work on Windows.
 
 These numbers come from a default run of the Sass specification as shown above.
 

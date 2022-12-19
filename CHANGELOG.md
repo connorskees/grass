@@ -1,3 +1,28 @@
+# TBD
+
+- complete rewrite of parsing, evaluation, and serialization steps
+- support for custom properties
+- represent all numbers as f64, rather than using arbitrary precision
+- implement media query merging
+- implement builtin function `keywords`
+- implement plain css imports
+- implement Infinity and -Infinity
+- implement the `@forward` rule
+- feature complete parsing of `@supports` conditions
+- support media queries level 4
+- implement calculation simplification
+- implement builtin fns `calc-args`, `calc-name`
+- add builtin math module variables `$epsilon`, `$max-safe-integer`, `$min-safe-integer`, `$max-number`, `$min-number`
+- allow angle units `turn` and `grad` in builtin trigonometry functions
+
+UPCOMING:
+
+- implement `@import` conditions
+- implement special `@extend` and `@media` interactions
+- implement division of non-comparable units
+- more robust support for NaN in builtin functions
+
+
 # 0.11.2
 
 - make `grass::Error` a `Send` type
