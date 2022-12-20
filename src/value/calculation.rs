@@ -23,6 +23,31 @@ pub(crate) enum CalculationArg {
 }
 
 impl CalculationArg {
+    pub fn inspect(&self, span: Span) -> SassResult<String> {
+        Ok(match self {
+            CalculationArg::Number(SassNumber {
+                num,
+                unit,
+                as_slash,
+            }) => Value::Dimension {
+                num: Number(*num),
+                unit: unit.clone(),
+                as_slash: as_slash.clone(),
+            }
+            .inspect(span)?
+            .into_owned(),
+            CalculationArg::Calculation(calc) => {
+                Value::Calculation(calc.clone()).inspect(span)?.into_owned()
+            }
+            CalculationArg::String(s) | CalculationArg::Interpolation(s) => s.clone(),
+            CalculationArg::Operation { lhs, op, rhs } => {
+                format!("{} {op} {}", lhs.inspect(span)?, rhs.inspect(span)?)
+            }
+        })
+    }
+}
+
+impl CalculationArg {
     fn parenthesize_calculation_rhs(outer: BinaryOp, right: BinaryOp) -> bool {
         if outer == BinaryOp::Div {
             true

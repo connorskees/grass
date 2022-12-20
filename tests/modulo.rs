@@ -125,3 +125,8 @@ test!(
     "a {\n  color: 0in % 0px;\n}\n",
     "a {\n  color: NaNin;\n}\n"
 );
+error!(
+    calculation_mod_calculation,
+    "a {\n  color: calc(1rem + 1px) % calc(1rem + 1px);\n}\n",
+    r#"Error: Undefined operation "calc(1rem + 1px) % calc(1rem + 1px)"."#
+);

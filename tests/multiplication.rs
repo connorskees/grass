@@ -23,3 +23,12 @@ error!(
     null_mul_number,
     "a {color: null * 1;}", "Error: Undefined operation \"null * 1\"."
 );
+error!(
+    calculation_mul_calculation,
+    "a {color: calc(1rem + 1px) * calc(1rem + 1px);}",
+    r#"Error: Undefined operation "calc(1rem + 1px) * calc(1rem + 1px)"."#
+);
+error!(
+    num_mul_calculation,
+    "a {color: 1 * calc(1rem + 1px);}", r#"Error: Undefined operation "1 * calc(1rem + 1px)"."#
+);

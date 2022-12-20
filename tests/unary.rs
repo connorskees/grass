@@ -91,3 +91,16 @@ test!(
     "a {\n  color: -null;\n}\n",
     "a {\n  color: -null;\n}\n"
 );
+test!(
+    unary_div_calculation,
+    "a {\n  color: /calc(1rem + 1px);\n}\n",
+    "a {\n  color: /calc(1rem + 1px);\n}\n"
+);
+error!(
+    unary_plus_calculation,
+    "a {\n  color: +calc(1rem + 1px);\n}\n", r#"Error: Undefined operation "+calc(1rem + 1px)"."#
+);
+error!(
+    unary_neg_calculation,
+    "a {\n  color: -(calc(1rem + 1px));\n}\n", r#"Error: Undefined operation "-calc(1rem + 1px)"."#
+);

@@ -578,9 +578,15 @@ impl Value {
 
     // TODO:
     // https://github.com/sass/dart-sass/blob/d4adea7569832f10e3a26d0e420ae51640740cfb/lib/src/ast/sass/expression/list.dart#L39
+    // todo: is this actually fallible?
     pub fn inspect(&self, span: Span) -> SassResult<Cow<'static, str>> {
         Ok(match self {
-            Value::Calculation(..) => todo!(),
+            Value::Calculation(SassCalculation { name, args }) => Cow::Owned(format!(
+                "{name}({})",
+                args.into_iter()
+                    .map(|arg| arg.inspect(span))
+                    .collect::<SassResult<String>>()?
+            )),
             Value::List(v, _, brackets) if v.is_empty() => match brackets {
                 Brackets::None => Cow::Borrowed("()"),
                 Brackets::Bracketed => Cow::Borrowed("[]"),
@@ -753,7 +759,16 @@ impl Value {
     pub fn unary_plus(self, visitor: &mut Visitor) -> SassResult<Self> {
         Ok(match self {
             Self::Dimension { .. } => self,
-            Self::Calculation(..) => todo!(),
+            Self::Calculation(..) => {
+                return Err((
+                    format!(
+                        "Undefined operation \"+{}\".",
+                        self.inspect(visitor.parser.span_before)?
+                    ),
+                    visitor.parser.span_before,
+                )
+                    .into())
+            }
             _ => Self::String(
                 format!(
                     "+{}",
@@ -769,7 +784,16 @@ impl Value {
 
     pub fn unary_neg(self, visitor: &mut Visitor) -> SassResult<Self> {
         Ok(match self {
-            Self::Calculation(..) => todo!(),
+            Self::Calculation(..) => {
+                return Err((
+                    format!(
+                        "Undefined operation \"-{}\".",
+                        self.inspect(visitor.parser.span_before)?
+                    ),
+                    visitor.parser.span_before,
+                )
+                    .into())
+            }
             Self::Dimension {
                 num,
                 unit,
@@ -794,7 +818,6 @@ impl Value {
 
     pub fn unary_div(self, visitor: &mut Visitor) -> SassResult<Self> {
         Ok(match self {
-            Self::Calculation(..) => todo!(),
             _ => Self::String(
                 format!(
                     "/{}",

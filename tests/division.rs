@@ -177,3 +177,28 @@ test!(
     "a {\n  color: (0 / 0);\n}\n",
     "a {\n  color: NaN;\n}\n"
 );
+test!(
+    divide_two_calculations,
+    "a {\n  color: (calc(1rem + 1px) / calc(1rem + 1px));\n}\n",
+    "a {\n  color: calc(1rem + 1px)/calc(1rem + 1px);\n}\n"
+);
+test!(
+    num_div_calculation,
+    "a {\n  color: (1 / calc(1rem + 1px));\n}\n",
+    "a {\n  color: 1/calc(1rem + 1px);\n}\n"
+);
+test!(
+    calculation_div_null,
+    "a {\n  color: (calc(1rem + 1px) / null);\n}\n",
+    "a {\n  color: calc(1rem + 1px)/;\n}\n"
+);
+test!(
+    calculation_div_dbl_quoted_string,
+    "a {\n  color: (calc(1rem + 1px) / \"foo\");\n}\n",
+    "a {\n  color: calc(1rem + 1px)/\"foo\";\n}\n"
+);
+test!(
+    calculation_div_sgl_quoted_string,
+    "a {\n  color: (calc(1rem + 1px) / 'foo');\n}\n",
+    "a {\n  color: calc(1rem + 1px)/\"foo\";\n}\n"
+);

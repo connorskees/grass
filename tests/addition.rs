@@ -380,3 +380,12 @@ error!(
     "a {color: 1 + get-function(lighten);}",
     "Error: get-function(\"lighten\") isn't a valid CSS value."
 );
+error!(
+    add_two_calculations,
+    "a {color: calc(1rem + 1px) + calc(1rem + 1px);}",
+    r#"Error: Undefined operation "calc(1rem + 1px) + calc(1rem + 1px)"."#
+);
+error!(
+    num_plus_calculation,
+    "a {color: 1 + calc(1rem + 1px);}", r#"Error: Undefined operation "1 + calc(1rem + 1px)"."#
+);

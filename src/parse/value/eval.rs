@@ -14,7 +14,17 @@ use crate::{
 
 pub(crate) fn add(left: Value, right: Value, options: &Options, span: Span) -> SassResult<Value> {
     Ok(match left {
-        Value::Calculation(..) => todo!(),
+        Value::Calculation(..) => {
+            return Err((
+                format!(
+                    "Undefined operation \"{} + {}\".",
+                    left.inspect(span)?,
+                    right.inspect(span)?
+                ),
+                span,
+            )
+                .into())
+        }
         Value::Map(..) | Value::FunctionRef(..) => {
             return Err((
                 format!("{} isn't a valid CSS value.", left.inspect(span)?),
@@ -55,7 +65,6 @@ pub(crate) fn add(left: Value, right: Value, options: &Options, span: Span) -> S
             unit,
             as_slash: _,
         } => match right {
-            Value::Calculation(..) => todo!(),
             Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
             Value::Dimension {
                 num: num2,
@@ -117,7 +126,7 @@ pub(crate) fn add(left: Value, right: Value, options: &Options, span: Span) -> S
                 )
                     .into())
             }
-            Value::Color(..) => {
+            Value::Color(..) | Value::Calculation(..) => {
                 return Err((
                     format!(
                         "Undefined operation \"{}{} + {}\".",
@@ -179,7 +188,17 @@ pub(crate) fn add(left: Value, right: Value, options: &Options, span: Span) -> S
 
 pub(crate) fn sub(left: Value, right: Value, options: &Options, span: Span) -> SassResult<Value> {
     Ok(match left {
-        Value::Calculation(..) => todo!(),
+        Value::Calculation(..) => {
+            return Err((
+                format!(
+                    "Undefined operation \"{} - {}\".",
+                    left.inspect(span)?,
+                    right.inspect(span)?
+                ),
+                span,
+            )
+                .into())
+        }
         Value::Null => Value::String(
             format!("-{}", right.to_css_string(span, options.is_compressed())?),
             QuoteKind::None,
@@ -189,7 +208,6 @@ pub(crate) fn sub(left: Value, right: Value, options: &Options, span: Span) -> S
             unit,
             as_slash: _,
         } => match right {
-            Value::Calculation(..) => todo!(),
             Value::Dimension {
                 num: num2,
                 unit: unit2,
@@ -246,7 +264,7 @@ pub(crate) fn sub(left: Value, right: Value, options: &Options, span: Span) -> S
                 )
                     .into())
             }
-            Value::Color(..) => {
+            Value::Color(..) | Value::Calculation(..) => {
                 return Err((
                     format!(
                         "Undefined operation \"{}{} - {}\".",
@@ -427,19 +445,14 @@ pub(crate) fn single_eq(
     })
 }
 
+// todo: simplify matching
 pub(crate) fn div(left: Value, right: Value, options: &Options, span: Span) -> SassResult<Value> {
     Ok(match left {
-        Value::Calculation(..) => todo!(),
-        Value::Null => Value::String(
-            format!("/{}", right.to_css_string(span, options.is_compressed())?),
-            QuoteKind::None,
-        ),
         Value::Dimension {
             num,
             unit,
             as_slash: as_slash1,
         } => match right {
-            Value::Calculation(..) => todo!(),
             Value::Dimension {
                 num: num2,
                 unit: unit2,
@@ -484,18 +497,6 @@ pub(crate) fn div(left: Value, right: Value, options: &Options, span: Span) -> S
                         as_slash: None,
                     }
                 }
-                // } else {
-                //     Value::String(
-                //         format!(
-                //             "{}{}/{}{}",
-                //             num.to_string(options.is_compressed()),
-                //             unit,
-                //             num2.to_string(options.is_compressed()),
-                //             unit2
-                //         ),
-                //         QuoteKind::None,
-                //     )
-                // }
             }
             Value::String(s, q) => Value::String(
                 format!(
@@ -512,7 +513,8 @@ pub(crate) fn div(left: Value, right: Value, options: &Options, span: Span) -> S
             | Value::True
             | Value::False
             | Value::Color(..)
-            | Value::ArgList(..) => Value::String(
+            | Value::ArgList(..)
+            | Value::Calculation(..) => Value::String(
                 format!(
                     "{}{}/{}",
                     num.to_string(options.is_compressed()),
@@ -582,30 +584,14 @@ pub(crate) fn div(left: Value, right: Value, options: &Options, span: Span) -> S
                     .into())
             }
         },
-        _ => match right {
-            Value::String(s, q) => Value::String(
-                format!(
-                    "{}/{}{}{}",
-                    left.to_css_string(span, options.is_compressed())?,
-                    q,
-                    s,
-                    q
-                ),
-                QuoteKind::None,
+        _ => Value::String(
+            format!(
+                "{}/{}",
+                left.to_css_string(span, options.is_compressed())?,
+                right.to_css_string(span, options.is_compressed())?
             ),
-            Value::Null => Value::String(
-                format!("{}/", left.to_css_string(span, options.is_compressed())?),
-                QuoteKind::None,
-            ),
-            _ => Value::String(
-                format!(
-                    "{}/{}",
-                    left.to_css_string(span, options.is_compressed())?,
-                    right.to_css_string(span, options.is_compressed())?
-                ),
-                QuoteKind::None,
-            ),
-        },
+            QuoteKind::None,
+        ),
     })
 }
 
