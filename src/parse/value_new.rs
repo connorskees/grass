@@ -2,6 +2,8 @@ use std::iter::Iterator;
 
 use codemap::Spanned;
 
+// todo: rename file
+
 use crate::{
     ast::*,
     color::{Color, NAMED_COLORS},
@@ -988,7 +990,7 @@ impl<'c> ValueParser<'c> {
             && (!matches!(parser.toks.peek(), Some(Token { kind: '-', .. }))
                 || !matches!(parser.toks.peek_n(1), Some(Token { kind: '-', .. })))
         {
-            Unit::from(parser.__parse_identifier(false, true)?)
+            Unit::from(parser.parse_identifier(false, true)?)
         } else {
             Unit::None
         };
@@ -1583,7 +1585,7 @@ impl<'c> ValueParser<'c> {
             }
             _ => {
                 let start = parser.toks.cursor();
-                let ident = parser.__parse_identifier(false, false)?;
+                let ident = parser.parse_identifier(false, false)?;
                 let ident_span = parser.toks.span_from(start);
                 if parser.scan_char('.') {
                     return self.namespaced_expression(
@@ -1722,9 +1724,7 @@ impl<'c> ValueParser<'c> {
         parser.whitespace()?;
         let mut arguments = vec![self.parse_calculation_sum(parser)?.node];
 
-        while (max_args.is_none() || arguments.len() < max_args.unwrap())
-            && parser.scan_char(',')
-        {
+        while (max_args.is_none() || arguments.len() < max_args.unwrap()) && parser.scan_char(',') {
             parser.whitespace()?;
             arguments.push(self.parse_calculation_sum(parser)?.node);
         }

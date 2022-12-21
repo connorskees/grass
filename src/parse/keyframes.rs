@@ -1,10 +1,6 @@
 use std::fmt;
 
-use crate::{
-    atrule::keyframes::KeyframesSelector,
-    error::SassResult,
-    token::Token,
-};
+use crate::{atrule::keyframes::KeyframesSelector, error::SassResult, token::Token};
 
 use super::Parser;
 

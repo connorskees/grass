@@ -222,21 +222,21 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
     fn parse_class_selector(&mut self) -> SassResult<SimpleSelector> {
         self.parser.toks.next();
         Ok(SimpleSelector::Class(
-            self.parser.__parse_identifier(false, false)?,
+            self.parser.parse_identifier(false, false)?,
         ))
     }
 
     fn parse_id_selector(&mut self) -> SassResult<SimpleSelector> {
         self.parser.toks.next();
         Ok(SimpleSelector::Id(
-            self.parser.__parse_identifier(false, false)?,
+            self.parser.parse_identifier(false, false)?,
         ))
     }
 
     fn parse_pseudo_selector(&mut self) -> SassResult<SimpleSelector> {
         self.parser.toks.next();
         let element = self.parser.scan_char(':');
-        let name = self.parser.__parse_identifier(false, false)?;
+        let name = self.parser.parse_identifier(false, false)?;
 
         match self.parser.toks.peek() {
             Some(Token { kind: '(', .. }) => self.parser.toks.next(),
@@ -333,7 +333,7 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
     fn parse_placeholder_selector(&mut self) -> SassResult<SimpleSelector> {
         self.parser.toks.next();
         Ok(SimpleSelector::Placeholder(
-            self.parser.__parse_identifier(false, false)?,
+            self.parser.parse_identifier(false, false)?,
         ))
     }
 
@@ -355,7 +355,7 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
                     }
 
                     return Ok(SimpleSelector::Type(QualifiedName {
-                        ident: self.parser.__parse_identifier(false, false)?,
+                        ident: self.parser.parse_identifier(false, false)?,
                         namespace: Namespace::Asterisk,
                     }));
                 }
@@ -372,7 +372,7 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
                     }
                     _ => {
                         return Ok(SimpleSelector::Type(QualifiedName {
-                            ident: self.parser.__parse_identifier(false, false)?,
+                            ident: self.parser.parse_identifier(false, false)?,
                             namespace: Namespace::Empty,
                         }));
                     }
@@ -381,7 +381,7 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
             _ => {}
         }
 
-        let name_or_namespace = self.parser.__parse_identifier(false, false)?;
+        let name_or_namespace = self.parser.parse_identifier(false, false)?;
 
         Ok(match self.parser.toks.peek() {
             Some(Token { kind: '|', .. }) => {
@@ -391,7 +391,7 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
                     SimpleSelector::Universal(Namespace::Other(name_or_namespace.into_boxed_str()))
                 } else {
                     SimpleSelector::Type(QualifiedName {
-                        ident: self.parser.__parse_identifier(false, false)?,
+                        ident: self.parser.parse_identifier(false, false)?,
                         namespace: Namespace::Other(name_or_namespace.into_boxed_str()),
                     })
                 }

@@ -15,7 +15,7 @@ use crate::{
     lexer::Lexer,
     selector::ExtendedSelector,
     style::Style,
-    utils::{as_hex, is_name, is_name_start, is_plain_css_import, opposite_bracket},
+    utils::{as_hex, hex_char_for, is_name, is_name_start, is_plain_css_import, opposite_bracket},
     ContextFlags, Options, Token,
 };
 
@@ -26,7 +26,6 @@ pub(crate) use value::{add, cmp, div, mul, rem, single_eq, sub};
 use self::value_new::{Predicate, ValueParser};
 
 mod at_root_query;
-mod ident;
 mod keyframes;
 mod media;
 mod value;
@@ -207,7 +206,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                 return Ok(None);
             }
 
-            Ok(Some(parser.__parse_stmt()?))
+            Ok(Some(parser.parse_statement()?))
         })?;
 
         Ok(style_sheet)
@@ -354,7 +353,7 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     // todo: return span
-    pub fn __parse_identifier(
+    pub fn parse_identifier(
         &mut self,
         // default=false
         normalize: bool,
@@ -401,7 +400,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
     fn parse_variable_name(&mut self) -> SassResult<String> {
         self.expect_char('$')?;
-        self.__parse_identifier(true, false)
+        self.parse_identifier(true, false)
     }
 
     fn parse_argument_declaration(&mut self) -> SassResult<ArgumentDeclaration> {
@@ -454,7 +453,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
     fn plain_at_rule_name(&mut self) -> SassResult<String> {
         self.expect_char('@')?;
-        let name = self.__parse_identifier(false, false)?;
+        let name = self.parse_identifier(false, false)?;
         self.whitespace()?;
         Ok(name)
     }
@@ -505,7 +504,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         Ok(AstStmt::AtRootRule(if self.toks.next_char_is('(') {
             let query = self.parse_at_root_query()?;
             self.whitespace()?;
-            let children = self.with_children(Self::__parse_stmt)?.node;
+            let children = self.with_children(Self::parse_statement)?.node;
 
             AstAtRootRule {
                 query: Some(query),
@@ -513,7 +512,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                 span: self.span_before,
             }
         } else if self.looking_at_children() {
-            let children = self.with_children(Self::__parse_stmt)?.node;
+            let children = self.with_children(Self::parse_statement)?.node;
             AstAtRootRule {
                 query: None,
                 children,
@@ -593,27 +592,6 @@ impl<'a, 'b> Parser<'a, 'b> {
             list,
             body,
         }))
-        //      var wasInControlDirective = _inControlDirective;
-        // _inControlDirective = true;
-
-        // var variables = [variableName()];
-        // whitespace();
-        // while (scanner.scanChar($comma)) {
-        //   whitespace();
-        //   variables.add(variableName());
-        //   whitespace();
-        // }
-
-        // expectIdentifier("in");
-        // whitespace();
-
-        // var list = _expression();
-
-        // return _withChildren(child, start, (children, span) {
-        //   _inControlDirective = wasInControlDirective;
-        //   return EachRule(variables, list, children, span);
-        // });
-        // todo!()
     }
 
     fn parse_disallowed_at_rule(&mut self, start: usize) -> SassResult<AstStmt> {
@@ -719,44 +697,11 @@ impl<'a, 'b> Parser<'a, 'b> {
             is_exclusive,
             body,
         }))
-
-        //     var wasInControlDirective = _inControlDirective;
-        // _inControlDirective = true;
-        // var variable = variableName();
-        // whitespace();
-
-        // expectIdentifier("from");
-        // whitespace();
-
-        // bool? exclusive;
-        // var from = _expression(until: () {
-        //   if (!lookingAtIdentifier()) return false;
-        //   if (scanIdentifier("to")) {
-        //     exclusive = true;
-        //     return true;
-        //   } else if (scanIdentifier("through")) {
-        //     exclusive = false;
-        //     return true;
-        //   } else {
-        //     return false;
-        //   }
-        // });
-        // if (exclusive == null) scanner.error('Expected "to" or "through".');
-
-        // whitespace();
-        // var to = _expression();
-
-        // return _withChildren(child, start, (children, span) {
-        //   _inControlDirective = wasInControlDirective;
-        //   return ForRule(variable, from, to, children, span,
-        //       exclusive: exclusive!); // dart-lang/sdk#45348
-        // });
-        // todo!()
     }
 
     fn parse_function_rule(&mut self, start: usize) -> SassResult<AstStmt> {
         let name_start = self.toks.cursor();
-        let name = self.__parse_identifier(true, false)?;
+        let name = self.parse_identifier(true, false)?;
         let name_span = self.toks.span_from(name_start);
         self.whitespace()?;
         let arguments = self.parse_argument_declaration()?;
@@ -795,7 +740,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
     fn parse_variable_declaration_with_namespace(&mut self) -> SassResult<AstVariableDecl> {
         let start = self.toks.cursor();
-        let namespace = self.__parse_identifier(false, false)?;
+        let namespace = self.parse_identifier(false, false)?;
         let namespace_span = self.toks.span_from(start);
         self.expect_char('.')?;
         self.parse_variable_declaration_without_namespace(
@@ -1205,7 +1150,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
     fn parse_public_identifier(&mut self) -> SassResult<String> {
         let start = self.toks.cursor();
-        let ident = self.__parse_identifier(true, false)?;
+        let ident = self.parse_identifier(true, false)?;
         Self::assert_public(&ident, self.toks.span_from(start))?;
 
         Ok(ident)
@@ -1215,7 +1160,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         let mut namespace: Option<Spanned<Identifier>> = None;
 
         let name_start = self.toks.cursor();
-        let mut name = self.__parse_identifier(false, false)?;
+        let mut name = self.parse_identifier(false, false)?;
 
         if self.scan_char('.') {
             let namespace_span = self.toks.span_from(name_start);
@@ -1256,7 +1201,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             let content_args = content_args.unwrap_or_else(ArgumentDeclaration::empty);
             let was_in_content_block = self.flags.in_content_block();
             self.flags.set(ContextFlags::IN_CONTENT_BLOCK, true);
-            let body = self.with_children(Self::__parse_stmt)?.node;
+            let body = self.with_children(Self::parse_statement)?.node;
             content_block = Some(AstContentBlock {
                 args: content_args,
                 body,
@@ -1281,7 +1226,7 @@ impl<'a, 'b> Parser<'a, 'b> {
     fn parse_media_rule(&mut self) -> SassResult<AstStmt> {
         let query = self.parse_media_query_list()?;
 
-        let body = self.with_children(Self::__parse_stmt)?.node;
+        let body = self.with_children(Self::parse_statement)?.node;
 
         Ok(AstStmt::Media(AstMedia { query, body }))
     }
@@ -1356,7 +1301,7 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     fn parse_mixin_rule(&mut self, start: usize) -> SassResult<AstStmt> {
-        let name = Identifier::from(self.__parse_identifier(true, false)?);
+        let name = Identifier::from(self.parse_identifier(true, false)?);
         self.whitespace()?;
         let args = if self.toks.next_char_is('(') {
             self.parse_argument_declaration()?
@@ -1384,7 +1329,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         self.flags.set(ContextFlags::FOUND_CONTENT_RULE, false);
         self.flags.set(ContextFlags::IN_MIXIN, true);
 
-        let body = self.with_children(Self::__parse_stmt)?.node;
+        let body = self.with_children(Self::parse_statement)?.node;
 
         let has_content = self.flags.found_content_rule();
 
@@ -1416,7 +1361,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             };
 
         let children = if self.looking_at_children() {
-            Some(self.with_children(Self::__parse_stmt)?.node)
+            Some(self.with_children(Self::parse_statement)?.node)
         } else {
             self.expect_statement_separator(None)?;
             None
@@ -1658,7 +1603,7 @@ impl<'a, 'b> Parser<'a, 'b> {
     fn parse_supports_rule(&mut self) -> SassResult<AstStmt> {
         let condition = self.parse_supports_condition()?;
         self.whitespace()?;
-        let children = self.with_children(Self::__parse_stmt)?;
+        let children = self.with_children(Self::parse_statement)?;
 
         Ok(AstStmt::Supports(AstSupportsRule {
             condition,
@@ -1698,7 +1643,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         let prefix = if self.scan_identifier("as", false)? {
             self.whitespace()?;
-            let prefix = self.__parse_identifier(true, false)?;
+            let prefix = self.parse_identifier(true, false)?;
             self.expect_char('*')?;
             self.whitespace()?;
             Some(prefix)
@@ -1772,7 +1717,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             if self.toks.next_char_is('$') {
                 variables.insert(Identifier::from(self.parse_variable_name()?));
             } else {
-                identifiers.insert(Identifier::from(self.__parse_identifier(true, false)?));
+                identifiers.insert(Identifier::from(self.parse_identifier(true, false)?));
             }
 
             self.whitespace()?;
@@ -1796,7 +1741,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             return Ok(if self.scan_char('*') {
                 None
             } else {
-                Some(self.__parse_identifier(false, false)?)
+                Some(self.parse_identifier(false, false)?)
             });
         }
 
@@ -1831,7 +1776,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             flags: self.flags,
             options: self.options,
         }
-        .__parse_identifier(false, false);
+        .parse_identifier(false, false);
 
         match (identifier, toks.peek().is_none()) {
             (Ok(i), true) => Ok(Some(i)),
@@ -1871,7 +1816,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             let mut is_guarded = false;
             let flag_start = self.toks.cursor();
             if allow_guarded && self.scan_char('!') {
-                let flag = self.__parse_identifier(false, false)?;
+                let flag = self.parse_identifier(false, false)?;
                 if flag == "default" {
                     is_guarded = true;
                     self.whitespace()?;
@@ -2000,9 +1945,9 @@ impl<'a, 'b> Parser<'a, 'b> {
         }
     }
 
-    fn __parse_stmt(&mut self) -> SassResult<AstStmt> {
+    fn parse_statement(&mut self) -> SassResult<AstStmt> {
         match self.toks.peek() {
-            Some(Token { kind: '@', .. }) => self.parse_at_rule(Self::__parse_stmt),
+            Some(Token { kind: '@', .. }) => self.parse_at_rule(Self::parse_statement),
             Some(Token { kind: '+', .. }) => {
                 if !self.is_indented {
                     return self.parse_style_rule(None, None);
@@ -2518,7 +2463,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                 }
                 _ => {
                     if self.looking_at_identifier() {
-                        buffer.add_string(self.__parse_identifier(false, false)?);
+                        buffer.add_string(self.parse_identifier(false, false)?);
                     } else {
                         buffer.add_token(tok);
                         self.toks.next();
@@ -2865,7 +2810,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
     fn parse_plain_at_rule_name(&mut self) -> SassResult<String> {
         self.expect_char('@')?;
-        let name = self.__parse_identifier(false, false)?;
+        let name = self.parse_identifier(false, false)?;
         self.whitespace()?;
         Ok(name)
     }
@@ -2938,7 +2883,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         let selector_span = self.toks.span_from(start);
 
-        let children = self.with_children(Self::__parse_stmt)?;
+        let children = self.with_children(Self::parse_statement)?;
 
         self.flags
             .set(ContextFlags::IN_STYLE_RULE, was_in_style_rule);
@@ -3103,7 +3048,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         while self.scan_char('!') {
             let flag_start = self.toks.cursor();
-            let flag = self.__parse_identifier(false, false)?;
+            let flag = self.parse_identifier(false, false)?;
 
             match flag.as_str() {
                 "default" => is_guarded = true,
@@ -3234,7 +3179,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                 }
                 _ => {
                     if self.looking_at_identifier() {
-                        buffer.add_string(self.__parse_identifier(false, false)?);
+                        buffer.add_string(self.parse_identifier(false, false)?);
                     } else {
                         buffer.add_token(self.toks.next().unwrap());
                     }
@@ -3256,7 +3201,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         let start = self.toks.cursor();
 
-        let ident = self.__parse_identifier(false, false)?;
+        let ident = self.parse_identifier(false, false)?;
         if self.next_matches(".$") {
             let namespace_span = self.toks.span_from(start);
             self.expect_char('.')?;
@@ -3392,6 +3337,82 @@ impl<'a, 'b> Parser<'a, 'b> {
         }
 
         Ok(())
+    }
+
+    /// Returns whether the scanner is immediately before a plain CSS identifier.
+    ///
+    /// This is based on [the CSS algorithm][], but it assumes all backslashes
+    /// start escapes.
+    ///
+    /// [the CSS algorithm]: https://drafts.csswg.org/css-syntax-3/#would-start-an-identifier
+    pub fn looking_at_identifier(&mut self) -> bool {
+        match self.toks.peek() {
+            Some(Token { kind, .. }) if is_name_start(kind) || kind == '\\' => return true,
+            Some(Token { kind: '-', .. }) => {}
+            Some(..) | None => return false,
+        }
+
+        match self.toks.peek_n(1) {
+            Some(Token { kind, .. }) if is_name_start(kind) || kind == '-' || kind == '\\' => true,
+            Some(..) | None => false,
+        }
+    }
+
+    pub(crate) fn parse_escape(&mut self, identifier_start: bool) -> SassResult<String> {
+        self.expect_char('\\')?;
+        let mut value = 0;
+        let first = match self.toks.peek() {
+            Some(t) => t,
+            None => return Err(("Expected expression.", self.toks.current_span()).into()),
+        };
+        let mut span = first.pos();
+        if first.kind == '\n' {
+            return Err(("Expected escape sequence.", span).into());
+        } else if first.kind.is_ascii_hexdigit() {
+            for _ in 0..6 {
+                let next = match self.toks.peek() {
+                    Some(t) => t,
+                    None => break,
+                };
+                if !next.kind.is_ascii_hexdigit() {
+                    break;
+                }
+                value *= 16;
+                span = span.merge(next.pos);
+                value += as_hex(next.kind);
+                self.toks.next();
+            }
+            if matches!(
+                self.toks.peek(),
+                Some(Token { kind: ' ', .. })
+                    | Some(Token { kind: '\n', .. })
+                    | Some(Token { kind: '\t', .. })
+            ) {
+                self.toks.next();
+            }
+        } else {
+            span = span.merge(first.pos);
+            value = first.kind as u32;
+            self.toks.next();
+        }
+
+        let c = std::char::from_u32(value).ok_or(("Invalid Unicode code point.", span))?;
+        if (identifier_start && is_name_start(c) && !c.is_ascii_digit())
+            || (!identifier_start && is_name(c))
+        {
+            Ok(c.to_string())
+        } else if value <= 0x1F || value == 0x7F || (identifier_start && c.is_ascii_digit()) {
+            let mut buf = String::with_capacity(4);
+            buf.push('\\');
+            if value > 0xF {
+                buf.push(hex_char_for(value >> 4));
+            }
+            buf.push(hex_char_for(value & 0xF));
+            buf.push(' ');
+            Ok(buf)
+        } else {
+            Ok(format!("\\{}", c))
+        }
     }
 }
 

@@ -43,14 +43,12 @@ pub(crate) fn nth(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<
             .into());
     }
 
-    if n.is_decimal() {
-        return Err((format!("$n: {} is not an int.", n.inspect()), args.span()).into());
-    }
-
     Ok(list.remove(if n.is_positive() {
-        n.to_integer().to_usize().unwrap_or(std::usize::MAX) - 1
+        let index = n.assert_int_with_name("n", args.span())? - 1;
+        debug_assert!(index > -1);
+        index as usize
     } else {
-        list.len() - n.abs().to_integer().to_usize().unwrap_or(std::usize::MAX)
+        list.len() - n.abs().assert_int_with_name("n", args.span())? as usize
     }))
 }
 
@@ -119,9 +117,9 @@ pub(crate) fn set_nth(mut args: ArgumentResult, parser: &mut Visitor) -> SassRes
     let val = args.get_err(2, "value")?;
 
     if n.is_positive() {
-        list[n.to_integer().to_usize().unwrap_or(std::usize::MAX) - 1] = val;
+        list[n.assert_int_with_name("n", args.span())? as usize - 1] = val;
     } else {
-        list[len - n.abs().to_integer().to_usize().unwrap_or(std::usize::MAX)] = val;
+        list[len - n.abs().assert_int_with_name("n", args.span())? as usize] = val;
     }
 
     Ok(Value::List(list, sep, brackets))

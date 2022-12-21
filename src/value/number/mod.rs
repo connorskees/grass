@@ -63,10 +63,25 @@ fn fuzzy_as_int(num: f64) -> Option<i32> {
 }
 
 impl Number {
+    pub fn is_positive(self) -> bool {
+        self.0.is_sign_positive() && !self.is_zero()
+    }
+
+    pub fn is_negative(self) -> bool {
+        self.0.is_sign_negative() && !self.is_zero()
+    }
+
     pub fn assert_int(self, span: Span) -> SassResult<i32> {
         match fuzzy_as_int(self.0) {
             Some(i) => Ok(i),
             None => Err((format!("{} is not an int.", self.0), span).into()),
+        }
+    }
+
+    pub fn assert_int_with_name(self, name: &'static str, span: Span) -> SassResult<i32> {
+        match fuzzy_as_int(self.0) {
+            Some(i) => Ok(i),
+            None => Err((format!("${name} is not an int."), span).into()),
         }
     }
 
@@ -279,97 +294,6 @@ impl Number {
         }
 
         buffer
-        // let decimal = self.0.fract().abs();
-        // let whole = self.0 - self.0.fract();
-
-        // let mut result = if self.is_decimal() {
-        //     format!("{:.10}", self.0)
-        // } else {
-
-        // }
-        // ;
-
-        // let mut result = result.trim_end_matches('0');
-
-        // if is_compressed {
-        //     result = result.trim_start_matches('0');
-        // }
-
-        // result.to_owned()
-
-        // let mut whole = self.to_integer().abs();
-        // let has_decimal = self.is_decimal();
-        // let mut frac = self.abs().fract();
-        // let mut dec = String::with_capacity(if has_decimal { PRECISION } else { 0 });
-
-        // let mut buf = String::new();
-
-        // if has_decimal {
-        //     for _ in 0..(PRECISION - 1) {
-        //         frac *= 10_i64;
-        //         dec.push_str(&frac.to_integer().to_string());
-
-        //         frac = frac.fract();
-        //         if frac.is_zero() {
-        //             break;
-        //         }
-        //     }
-        //     if !frac.is_zero() {
-        //         let end = (frac * 10_i64).round().to_integer();
-        //         if end.is_ten() {
-        //             loop {
-        //                 match dec.pop() {
-        //                     Some('9') => continue,
-        //                     Some(c) => {
-        //                         dec.push(char::from(c as u8 + 1));
-        //                         break;
-        //                     }
-        //                     None => {
-        //                         whole += 1;
-        //                         break;
-        //                     }
-        //                 }
-        //             }
-        //         } else if end.is_zero() {
-        //             loop {
-        //                 match dec.pop() {
-        //                     Some('0') => continue,
-        //                     Some(c) => {
-        //                         dec.push(c);
-        //                         break;
-        //                     }
-        //                     None => break,
-        //                 }
-        //             }
-        //         } else {
-        //             dec.push_str(&end.to_string());
-        //         }
-        //     }
-        // }
-
-        // let has_decimal = !dec.is_empty();
-
-        // if self.is_negative() && (!whole.is_zero() || has_decimal) {
-        //     buf.push('-');
-        // }
-
-        // // if the entire number is just zero, we always want to emit it
-        // if whole.is_zero() && !has_decimal {
-        //     return "0".to_owned();
-
-        // // otherwise, if the number is not 0, or the number before the decimal
-        // // _is_ 0 and we aren't in compressed mode, emit the number before the
-        // // decimal
-        // } else if !(whole.is_zero() && is_compressed) {
-        //     buf.push_str(&whole.to_string());
-        // }
-
-        // if has_decimal {
-        //     buf.push('.');
-        //     buf.push_str(&dec);
-        // }
-
-        // buf
     }
 }
 

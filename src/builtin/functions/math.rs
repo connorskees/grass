@@ -168,6 +168,7 @@ pub(crate) fn random(mut args: ArgumentResult, parser: &mut Visitor) -> SassResu
             num: n, unit: u, ..
         } if n.is_nan() => {
             // todo: likely same for finities
+            // todo: can remove match altogether thanks to assert_int
             return Err((format!("$limit: NaN{} is not an int.", u), args.span()).into());
         }
         Value::Dimension { num: (n), .. } => n,

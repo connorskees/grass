@@ -29,7 +29,7 @@ impl<'a> AtRootQueryParser<'a> {
         let mut names = HashSet::new();
 
         loop {
-            names.insert(self.parser.__parse_identifier(false, false)?);
+            names.insert(self.parser.parse_identifier(false, false)?);
 
             if !self.parser.looking_at_identifier() {
                 break;

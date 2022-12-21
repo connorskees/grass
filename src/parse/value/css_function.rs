@@ -34,7 +34,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                 }
                 '#' => {
                     if matches!(self.toks.peek_n(1), Some(Token { kind: '{', .. })) {
-                        let s = self.__parse_identifier(false, false)?;
+                        let s = self.parse_identifier(false, false)?;
                         buffer.push_str(&s);
                     } else {
                         buffer.push('#');
@@ -115,7 +115,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                 }
                 c => {
                     if self.looking_at_identifier() {
-                        buffer.push_str(&self.__parse_identifier(false, false)?);
+                        buffer.push_str(&self.parse_identifier(false, false)?);
                     } else {
                         self.toks.next();
                         buffer.push(c);

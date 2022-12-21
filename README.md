@@ -24,14 +24,14 @@ a bug except for in the following situations:
 
 Every commit of `grass` is tested against bootstrap v5.0.2, and every release is tested against the last 2,500 commits of bootstrap's `main` branch.
 
-That said, there are a number of known missing features and bugs. The notable features remaining are
+That said, there are a number of known missing features and bugs. The rough edges of `grass` are:
 
-```
-indented syntax
-@forward and more complex uses of @use
-@at-root and @import media queries
-/ as a separator in color functions, e.g. rgba(255, 255, 255 / 0)
-```
+ - `@forward` and more complex uses of `@uses`:
+    - we support basic usage of these rules, but more advanced features such as `@import`ing modules containing `@forward` with prefixes may not behave as expected
+ - the indented syntax/SASS:
+    - we do not current support the indented syntax
+ - / as a separator in color functions, e.g. rgba(255, 255, 255 / 0):
+    todo: this should be fixed before this pr merges
 
 All known missing features and bugs are tracked in [#19](https://github.com/connorskees/grass/issues/19).
 
@@ -41,11 +41,10 @@ All known missing features and bugs are tracked in [#19](https://github.com/conn
 
 `grass` experimentally releases a
 [WASM version of the library to npm](https://www.npmjs.com/package/@connorskees/grass),
-compiled using wasm-bindgen. To use `grass` in your JavaScript projects, just run
-`npm install @connorskees/grass` to add it to your package.json. Better documentation
-for this version will be provided when the library becomes more stable.
+compiled using wasm-bindgen. To use `grass` in your JavaScript projects, run
+`npm install @connorskees/grass` to add it to your package.json. This version of grass is not currently well documented, but one can find example usage in the [`grassmeister` repository](https://github.com/connorskees/grassmeister).
 
-## Features
+## Cargo Features
 
 ### commandline
 

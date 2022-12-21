@@ -47,14 +47,14 @@ fn attribute_name(parser: &mut Parser, start: Span) -> SassResult<QualifiedName>
         parser.toks.next();
         parser.expect_char('|')?;
 
-        let ident = parser.__parse_identifier(false, false)?;
+        let ident = parser.parse_identifier(false, false)?;
         return Ok(QualifiedName {
             ident,
             namespace: Namespace::Asterisk,
         });
     }
     parser.span_before = next.pos;
-    let name_or_namespace = parser.__parse_identifier(false, false)?;
+    let name_or_namespace = parser.parse_identifier(false, false)?;
     match parser.toks.peek() {
         Some(v) if v.kind != '|' => {
             return Ok(QualifiedName {
@@ -79,7 +79,7 @@ fn attribute_name(parser: &mut Parser, start: Span) -> SassResult<QualifiedName>
         None => return Err(("expected more input.", parser.span_before).into()),
     }
     parser.span_before = parser.toks.next().unwrap().pos();
-    let ident = parser.__parse_identifier(false, false)?;
+    let ident = parser.parse_identifier(false, false)?;
     Ok(QualifiedName {
         ident,
         namespace: Namespace::Other(name_or_namespace.into_boxed_str()),
@@ -132,7 +132,7 @@ impl Attribute {
         parser.span_before = peek.pos;
         let value = match peek.kind {
             '\'' | '"' => parser.parse_string()?,
-            _ => parser.__parse_identifier(false, false)?,
+            _ => parser.parse_identifier(false, false)?,
         };
         parser.whitespace_without_comments();
 

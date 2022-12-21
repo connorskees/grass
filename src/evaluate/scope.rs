@@ -1,7 +1,5 @@
 use std::{cell::RefCell, collections::BTreeMap, sync::Arc};
 
-// todo: move file to evaluate
-
 use codemap::Spanned;
 
 use crate::{

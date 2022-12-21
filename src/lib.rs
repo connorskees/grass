@@ -85,7 +85,6 @@ mod fs;
 mod interner;
 mod lexer;
 mod parse;
-mod scope;
 mod selector;
 mod serializer;
 mod style;

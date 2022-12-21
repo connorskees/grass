@@ -70,7 +70,7 @@ impl<'a> MediaQueryParser<'a> {
 
         let mut modifier: Option<String> = None;
         let media_type: Option<String>;
-        let identifier1 = self.parser.__parse_identifier(false, false)?;
+        let identifier1 = self.parser.parse_identifier(false, false)?;
 
         if identifier1.to_ascii_lowercase() == "not" {
             self.parser.expect_whitespace()?;
@@ -88,7 +88,7 @@ impl<'a> MediaQueryParser<'a> {
             return Ok(MediaQuery::media_type(Some(identifier1), None, None));
         }
 
-        let identifier2 = self.parser.__parse_identifier(false, false)?;
+        let identifier2 = self.parser.parse_identifier(false, false)?;
 
         if identifier2.to_ascii_lowercase() == "and" {
             self.parser.expect_whitespace()?;

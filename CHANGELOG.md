@@ -14,14 +14,27 @@
 - implement builtin fns `calc-args`, `calc-name`
 - add builtin math module variables `$epsilon`, `$max-safe-integer`, `$min-safe-integer`, `$max-number`, `$min-number`
 - allow angle units `turn` and `grad` in builtin trigonometry functions
+- implement `@at-root-` conditions
+- implement `@import` conditions
+- remove dependency on `num-rational` and `beef`
+- support control flow inside declaration blocks
+For example:
+```scss
+a {
+  -webkit-: {
+    @if 1 == 1 {
+      scrollbar: red
+    }
+  }
+}
+```
 
 UPCOMING:
 
-- implement `@import` conditions
 - implement special `@extend` and `@media` interactions
 - implement division of non-comparable units
 - more robust support for NaN in builtin functions
-
+- support the indented syntax
 
 # 0.11.2
 

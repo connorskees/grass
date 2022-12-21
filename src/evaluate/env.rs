@@ -6,13 +6,12 @@ use crate::{
     builtin::modules::{ForwardedModule, Module, Modules},
     common::Identifier,
     error::SassResult,
-    scope::Scopes,
     selector::ExtensionStore,
     value::{SassFunction, Value},
 };
 use std::{cell::RefCell, collections::BTreeMap, sync::Arc};
 
-use super::visitor::CallableContentBlock;
+use super::{scope::Scopes, visitor::CallableContentBlock};
 
 #[derive(Debug, Clone)]
 pub(crate) struct Environment {

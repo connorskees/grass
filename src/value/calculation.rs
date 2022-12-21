@@ -496,7 +496,7 @@ impl SassCalculation {
             Self::verify_compatible_numbers(&[left.clone(), right.clone()], options, span)?;
 
             if let CalculationArg::Number(mut n) = right {
-                if n.num.is_negative() {
+                if Number(n.num).is_negative() {
                     n.num *= -1.0;
                     op = if op == BinaryOp::Plus {
                         BinaryOp::Minus
