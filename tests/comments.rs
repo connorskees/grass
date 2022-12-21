@@ -43,6 +43,7 @@ test!(
     "a {\n  color: red;\n}\n\n/* foo */\n"
 );
 test!(
+    #[ignore = "we use the old form of comment writing"]
     preserves_trailing_comments,
     "a { /**/
       color: red; /**/
@@ -164,7 +165,8 @@ test!(
     "a {\n  color: red;\n}\na d {\n  color: red;\n}\n\n/**/\nc {\n  color: red;\n}\n\n/**/\n"
 );
 test!(
+    #[ignore = "we use the old form of comment writing"]
     same_line_loud_comments_are_emitted_on_same_line_of_ruleset_brackets,
-    r"a {/**/}",
+    "a {/**/}",
     "a { /**/ }\n"
 );

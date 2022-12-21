@@ -37,6 +37,10 @@ impl ExtendedSelector {
         Self(Rc::new(RefCell::new(selector)))
     }
 
+    pub fn is_invisible(&self) -> bool {
+        (*self.0).borrow().is_invisible()
+    }
+
     pub fn into_selector(self) -> Selector {
         Selector(match Rc::try_unwrap(self.0) {
             Ok(v) => v.into_inner(),

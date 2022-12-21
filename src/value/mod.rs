@@ -1,22 +1,17 @@
-use std::{
-    borrow::Cow,
-    cell::Cell,
-    cmp::Ordering,
-    collections::BTreeMap,
-    ops::{Add, Div, Mul, Sub},
-    sync::Arc,
-};
+use std::{borrow::Cow, cmp::Ordering};
 
 use codemap::{Span, Spanned};
 
 use crate::{
     color::Color,
-    common::{BinaryOp, Brackets, Identifier, ListSeparator, QuoteKind},
+    common::{BinaryOp, Brackets, ListSeparator, QuoteKind},
     error::SassResult,
     evaluate::Visitor,
     selector::Selector,
-    unit::{Unit, UNIT_CONVERSION_TABLE},
+    serializer::serialize_number,
+    unit::Unit,
     utils::{hex_char_for, is_special_function},
+    Options, OutputStyle,
 };
 
 pub(crate) use arglist::ArgList;
@@ -219,8 +214,13 @@ fn visit_quoted_string(buf: &mut String, force_double_quote: bool, string: &str)
 }
 
 impl Value {
-    pub fn with_slash(self, numerator: SassNumber, denom: SassNumber) -> SassResult<Self> {
-        let number = self.assert_number()?;
+    pub fn with_slash(
+        self,
+        numerator: SassNumber,
+        denom: SassNumber,
+        span: Span,
+    ) -> SassResult<Self> {
+        let number = self.assert_number(span)?;
         Ok(Value::Dimension {
             num: Number(number.num),
             unit: number.unit,
@@ -228,7 +228,7 @@ impl Value {
         })
     }
 
-    pub fn assert_number(self) -> SassResult<SassNumber> {
+    pub fn assert_number(self, span: Span) -> SassResult<SassNumber> {
         match self {
             Value::Dimension {
                 num,
@@ -239,15 +239,16 @@ impl Value {
                 unit,
                 as_slash,
             }),
-            _ => todo!(),
+            _ => Err((format!("{} is not a number.", self.inspect(span)?), span).into()),
         }
     }
 
+    // todo: rename is_blank
     pub fn is_null(&self) -> bool {
         match self {
             Value::Null => true,
             Value::String(i, QuoteKind::None) if i.is_empty() => true,
-            Value::List(v, _, Brackets::Bracketed) => false,
+            Value::List(_, _, Brackets::Bracketed) => false,
             Value::List(v, ..) => v.iter().map(Value::is_null).all(|f| f),
             Value::ArgList(v, ..) => v.is_null(),
             _ => false,
@@ -284,41 +285,46 @@ impl Value {
                 unit,
                 as_slash,
             } => match unit {
-                // Unit::Mul(..) | Unit::Div(..) => {
-                //     return Err((
-                //         format!(
-                //             "{}{} isn't a valid CSS value.",
-                //             num.to_string(is_compressed),
-                //             unit
-                //         ),
-                //         span,
-                //     )
-                //         .into());
-                // }
                 _ => {
-                    if let Some(as_slash) = as_slash {
-                        let numer = &as_slash.0;
-                        let denom = &as_slash.1;
+                    // if let Some(as_slash) = as_slash {
+                    //     let numer = &as_slash.0;
+                    //     let denom = &as_slash.1;
 
-                        return Ok(Cow::Owned(format!(
-                            "{}/{}",
-                            // todo: superfluous clones
-                            Value::Dimension {
-                                num: Number(numer.num),
-                                unit: numer.unit.clone(),
-                                as_slash: numer.as_slash.clone()
-                            }
-                            .to_css_string(span, is_compressed)?,
-                            Value::Dimension {
-                                num: Number(denom.num),
-                                unit: denom.unit.clone(),
-                                as_slash: denom.as_slash.clone()
-                            }
-                            .to_css_string(span, is_compressed)?,
-                        )));
-                    }
+                    //     return Ok(Cow::Owned(format!(
+                    //         "{}/{}",
+                    //         // todo: superfluous clones
+                    //         Value::Dimension {
+                    //             num: Number(numer.num),
+                    //             unit: numer.unit.clone(),
+                    //             as_slash: numer.as_slash.clone()
+                    //         }
+                    //         .to_css_string(span, is_compressed)?,
+                    //         Value::Dimension {
+                    //             num: Number(denom.num),
+                    //             unit: denom.unit.clone(),
+                    //             as_slash: denom.as_slash.clone()
+                    //         }
+                    //         .to_css_string(span, is_compressed)?,
+                    //     )));
+                    // }
 
-                    Cow::Owned(format!("{}{}", num.to_string(is_compressed), unit))
+                    Cow::Owned(serialize_number(
+                        &SassNumber {
+                            num: num.0,
+                            unit: unit.clone(),
+                            as_slash: as_slash.clone(),
+                        },
+                        &Options::default().style(if is_compressed {
+                            OutputStyle::Compressed
+                        } else {
+                            OutputStyle::Expanded
+                        }),
+                        span,
+                    )?)
+                    // if unit.is_complex() {
+                    //     return Err((format!("")))
+                    // }
+                    // Cow::Owned(format!("{}{}", num.to_string(is_compressed), unit))
                 }
             },
             Value::Map(..) | Value::FunctionRef(..) => {
@@ -682,35 +688,11 @@ impl Value {
             Some(v) => v,
             None => return Err((format!("${}: {} is not a valid selector: it must be a string, a list of strings, or a list of lists of strings.", name, self.inspect(visitor.parser.span_before)?), visitor.parser.span_before).into()),
         };
-        Ok(Selector(visitor.parse_selector_from_string(&string)?))
-        // Ok(
-        //     Parser {
-        //     toks: &mut Lexer::new(
-        //         string
-        //             .chars()
-        //             .map(|c| Token::new(visitor.parser.span_before, c))
-        //             .collect::<Vec<Token>>(),
-        //     ),
-        //     map: visitor.parser.map,
-        //     path: visitor.parser.path,
-        //     is_plain_css: false,
-        //     // scopes: visitor.parser.scopes,
-        //     // global_scope: visitor.parser.global_scope,
-        //     // super_selectors: visitor.parser.super_selectors,
-        //     span_before: visitor.parser.span_before,
-        //     // content: visitor.parser.content,
-        //     flags: visitor.parser.flags,
-        //     // at_root: visitor.parser.at_root,
-        //     // at_root_has_selector: visitor.parser.at_root_has_selector,
-        //     // extender: visitor.parser.extender,
-        //     // content_scopes: visitor.parser.content_scopes,
-        //     options: visitor.parser.options,
-        //     modules: visitor.parser.modules,
-        //     module_config: visitor.parser.module_config,
-        // }
-        // .parse_selector(allows_parent, true, String::new())?
-        // .0
-        // )
+        Ok(Selector(visitor.parse_selector_from_string(
+            &string,
+            allows_parent,
+            true,
+        )?))
     }
 
     #[allow(clippy::only_used_in_recursion)]

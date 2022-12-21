@@ -218,3 +218,16 @@ test!(
     "a {\n  * \n  zoom: 1;\n}\n",
     "a {\n  * \n  zoom: 1;\n}\n"
 );
+test!(
+    no_newline_after_child_ruleset_ends_with_silent_child,
+    "a {
+        position: relative;
+
+        b {}
+    }
+
+    c {
+        white-space: nowrap;
+    }",
+    "a {\n  position: relative;\n}\nc {\n  white-space: nowrap;\n}\n"
+);

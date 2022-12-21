@@ -44,35 +44,34 @@ error!(
     min_too_few_args,
     "a {\n  color: min();\n}\n", "Error: At least one argument must be passed."
 );
-// note: we explicitly have units in the opposite order of `dart-sass`.
-// see https://github.com/sass/dart-sass/issues/766
-error!(
+test!(
     min_incompatible_units,
-    "$a: 1px;\n$b: 2%;\na {\n  color: min($a, $b);\n}\n", "Error: Incompatible units px and %."
+    "$a: 1px;\n$b: 2%;\na {\n  color: min($a, $b);\n}\n",
+    "a {\n  color: min(1px, 2%);\n}\n"
 );
 test!(
-    max_not_evaluated_units_percent,
+    max_same_units_percent,
     "a {\n  color: max(1%, 2%);\n}\n",
     "a {\n  color: 2%;\n}\n"
 );
 test!(
-    max_not_evaluated_units_px,
+    max_same_units_px,
     "a {\n  color: max(1px, 2px);\n}\n",
     "a {\n  color: 2px;\n}\n"
 );
 test!(
-    max_not_evaluated_no_units,
+    max_same_units_none,
     "a {\n  color: max(1, 2);\n}\n",
     "a {\n  color: 2;\n}\n"
 );
 test!(
-    max_not_evaluated_incompatible_units,
+    max_uncomparable_but_compatible_units,
     "a {\n  color: max(1%, 2vh);\n}\n",
     "a {\n  color: max(1%, 2vh);\n}\n"
 );
 test!(
     max_not_evaluated_interpolation,
-    "$a: 1%;\n$b: 2%;\na {\n  color: max(#{$a}, #{$b});;\n}\n",
+    "$a: 1%;\n$b: 2%;\na {\n  color: max(#{$a}, #{$b});\n}\n",
     "a {\n  color: max(1%, 2%);\n}\n"
 );
 test!(
@@ -98,11 +97,10 @@ error!(
     max_too_few_args,
     "a {\n  color: max();\n}\n", "Error: At least one argument must be passed."
 );
-// note: we explicitly have units in the opposite order of `dart-sass`.
-// see https://github.com/sass/dart-sass/issues/766
-error!(
+test!(
     max_incompatible_units,
-    "$a: 1px;\n$b: 2%;\na {\n  color: max($a, $b);\n}\n", "Error: Incompatible units px and %."
+    "$a: 1px;\n$b: 2%;\na {\n  color: max($a, $b);\n}\n",
+    "a {\n  color: max(1px, 2%);\n}\n"
 );
 // todo: special functions, min(calc(1), $b);
 test!(
@@ -155,10 +153,9 @@ test!(
     "a {\n  color: min(calc(1/2));\n}\n",
     "a {\n  color: 0.5;\n}\n"
 );
-test!(
+error!(
     min_contains_special_fn_calc_with_plus_only,
-    "a {\n  color: min(calc(+));\n}\n",
-    "a {\n  color: min(calc(+));\n}\n"
+    "a {\n  color: min(calc(+));\n}\n", "Error: Expected digit."
 );
 error!(
     min_contains_special_fn_calc_space_separated_list,

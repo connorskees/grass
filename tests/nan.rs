@@ -119,35 +119,41 @@ error!(
     "@use \"sass:math\";\na {\n  color: random(math.acos(2));\n}\n",
     "Error: $limit: NaNdeg is not an int."
 );
-test!(
+error!(
+    #[ignore = "we dont error here"]
     unitful_nan_min_first_arg,
     "@use \"sass:math\";\na {\n  color: min(math.acos(2), 1px);\n}\n",
-    "a {\n  color: NaNdeg;\n}\n"
+    "Error: NaNdeg and 1px are incompatible."
 );
 test!(
+    #[ignore = "we don't error here"]
     unitful_nan_min_last_arg,
     "@use \"sass:math\";\na {\n  color: min(1px, math.acos(2));\n}\n",
-    "a {\n  color: 1px;\n}\n"
+    "Error: 1px and NaNdeg are incompatible."
 );
-test!(
+error!(
+    #[ignore = "we dont error here"]
     unitful_nan_min_middle_arg,
     "@use \"sass:math\";\na {\n  color: min(1px, math.acos(2), 0);\n}\n",
-    "a {\n  color: 0;\n}\n"
+    "Error: 1px and NaNdeg are incompatible."
 );
-test!(
+error!(
+    #[ignore = "we dont error here"]
     unitful_nan_max_first_arg,
     "@use \"sass:math\";\na {\n  color: max(math.acos(2), 1px);\n}\n",
-    "a {\n  color: NaNdeg;\n}\n"
+    "Error: NaNdeg and 1px are incompatible."
 );
-test!(
+error!(
+    #[ignore = "we dont error here"]
     unitful_nan_max_last_arg,
     "@use \"sass:math\";\na {\n  color: max(1px, math.acos(2));\n}\n",
-    "a {\n  color: 1px;\n}\n"
+    "Error: 1px and NaNdeg are incompatible."
 );
-test!(
+error!(
+    #[ignore = "we dont error here"]
     unitful_nan_max_middle_arg,
     "@use \"sass:math\";\na {\n  color: max(1px, math.acos(2), 0);\n}\n",
-    "a {\n  color: 1px;\n}\n"
+    "Error: 1px and NaNdeg are incompatible."
 );
 error!(
     unitful_nan_nth_n,

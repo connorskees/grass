@@ -19,6 +19,8 @@ use crate::{
     value::{SassFunction, SassMap, Value},
 };
 
+use super::builtin_imports::QuoteKind;
+
 mod color;
 mod list;
 mod map;
@@ -150,10 +152,6 @@ impl Modules {
             )
                 .into()),
         }
-    }
-
-    pub fn merge(&mut self, other: Self) {
-        self.0.extend(other.0);
     }
 }
 
@@ -327,38 +325,38 @@ impl Module {
             .insert(ident, SassFunction::Builtin(Builtin::new(function), ident));
     }
 
-    pub fn functions(&self) -> SassMap {
-        // SassMap::new_with(
-        //     self.scope
-        //         .functions
-        //         .iter()
-        //         .filter(|(key, _)| !key.as_str().starts_with('-'))
-        //         .map(|(key, value)| {
-        //             (
-        //                 Value::String(key.to_string(), QuoteKind::Quoted),
-        //                 Value::FunctionRef(value.clone()),
-        //             )
-        //         })
-        //         .collect::<Vec<(Value, Value)>>(),
-        // )
-        todo!()
+    pub fn functions(&self, span: Span) -> SassMap {
+        SassMap::new_with(
+            self.scope()
+                .functions
+                .iter()
+                .into_iter()
+                .filter(|(key, _)| !key.as_str().starts_with('-'))
+                .map(|(key, value)| {
+                    (
+                        Value::String(key.to_string(), QuoteKind::Quoted).span(span),
+                        Value::FunctionRef(value.clone()),
+                    )
+                })
+                .collect::<Vec<_>>(),
+        )
     }
 
-    pub fn variables(&self) -> SassMap {
-        // SassMap::new_with(
-        //     self.scope()
-        //         .variables
-        //         .iter()
-        //         .filter(|(key, _)| !key.as_str().starts_with('-'))
-        //         .map(|(key, value)| {
-        //             (
-        //                 Value::String(key.to_string(), QuoteKind::Quoted),
-        //                 value.clone(),
-        //             )
-        //         })
-        //         .collect::<Vec<(Value, Value)>>(),
-        // )
-        todo!()
+    pub fn variables(&self, span: Span) -> SassMap {
+        SassMap::new_with(
+            self.scope()
+                .variables
+                .iter()
+                .into_iter()
+                .filter(|(key, _)| !key.as_str().starts_with('-'))
+                .map(|(key, value)| {
+                    (
+                        Value::String(key.to_string(), QuoteKind::Quoted).span(span),
+                        value.clone(),
+                    )
+                })
+                .collect::<Vec<_>>(),
+        )
     }
 }
 

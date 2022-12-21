@@ -257,7 +257,7 @@ impl AtRootQuery {
             Stmt::RuleSet { .. } => self.excludes_style_rules(),
             Stmt::Media(..) => self.excludes_name("media"),
             Stmt::Supports(..) => self.excludes_name("supports"),
-            Stmt::UnknownAtRule(rule) => self.excludes_name(&rule.name.to_ascii_lowercase()),
+            Stmt::UnknownAtRule(rule, ..) => self.excludes_name(&rule.name.to_ascii_lowercase()),
             _ => false,
         }
     }

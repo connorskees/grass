@@ -280,7 +280,7 @@ pub(crate) fn get_function(mut args: ArgumentResult, parser: &mut Visitor) -> Sa
         }
     };
 
-    let func = match if let Some(module_name) = module {
+    let func = if let Some(module_name) = module {
         if css {
             return Err((
                 "$css and $module may not both be passed at once.",
@@ -297,16 +297,19 @@ pub(crate) fn get_function(mut args: ArgumentResult, parser: &mut Visitor) -> Sa
             }),
         )?
     } else {
-        parser.env.get_fn(name, None)?
-    } {
-        Some(f) => f,
-        None => match GLOBAL_FUNCTIONS.get(name.as_str()) {
-            Some(f) => SassFunction::Builtin(f.clone(), name),
-            None => return Err((format!("Function not found: {}", name), args.span()).into()),
-        },
+        match parser.env.get_fn(name, None)? {
+            Some(f) => Some(f),
+            None => match GLOBAL_FUNCTIONS.get(name.as_str()) {
+                Some(f) => Some(SassFunction::Builtin(f.clone(), name)),
+                None => None,
+            },
+        }
     };
 
-    Ok(Value::FunctionRef(func))
+    match func {
+        Some(func) => Ok(Value::FunctionRef(func)),
+        None => Err((format!("Function not found: {}", name), args.span()).into()),
+    }
 }
 
 pub(crate) fn call(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
@@ -362,7 +365,12 @@ pub(crate) fn keywords(mut args: ArgumentResult, parser: &mut Visitor) -> SassRe
     return Ok(Value::Map(SassMap::new_with(
         args.into_keywords()
             .into_iter()
-            .map(|(name, val)| (Value::String(name.to_string(), QuoteKind::None), val))
+            .map(|(name, val)| {
+                (
+                    Value::String(name.to_string(), QuoteKind::None).span(span),
+                    val,
+                )
+            })
             .collect(),
     )));
 }

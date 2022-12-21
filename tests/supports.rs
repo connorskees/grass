@@ -15,7 +15,7 @@ test!(
     "@supports (a: b) {\n  a {\n    color: red;\n  }\n}\na {\n  color: green;\n}\n"
 );
 test!(
-    newline_between_styles_inside,
+    no_newline_between_styles_inside,
     "@supports (-ms-ime-align: auto) {
       a {
         color: red;
@@ -25,7 +25,7 @@ test!(
         color: green;
       }
     }",
-    "@supports (-ms-ime-align: auto) {\n  a {\n    color: red;\n  }\n\n  b {\n    color: green;\n  }\n}\n"
+    "@supports (-ms-ime-align: auto) {\n  a {\n    color: red;\n  }\n  b {\n    color: green;\n  }\n}\n"
 );
 test!(
     no_newline_after_media,
@@ -48,7 +48,7 @@ test!(
         color: red;
       }
     }",
-    "@supports (position: sticky) {\n  a {\n    color: red;\n  }\n\n  @media (min-width: 576px) {\n    a {\n      color: red;\n    }\n\n    a {\n      color: red;\n    }\n  }\n  a {\n    color: red;\n  }\n}\n"
+    "@supports (position: sticky) {\n  a {\n    color: red;\n  }\n  @media (min-width: 576px) {\n    a {\n      color: red;\n    }\n    a {\n      color: red;\n    }\n  }\n  a {\n    color: red;\n  }\n}\n"
 );
 test!(
     newline_after_supports_when_inside_style_rule,

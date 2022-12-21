@@ -1,3 +1,8 @@
+use std::cell::RefCell;
+use std::collections::BTreeMap;
+use std::sync::Arc;
+
+use crate::ast::{Configuration, ConfiguredValue};
 use crate::builtin::builtin_imports::*;
 
 use crate::builtin::{
@@ -8,29 +13,83 @@ use crate::builtin::{
     modules::Module,
 };
 
-fn load_css(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Vec<Stmt>> {
-    // args.max_args(2)?;
+fn load_css(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<()> {
+    args.max_args(2)?;
 
-    // let span = args.span();
+    let span = args.span();
 
-    // let url = match args.get_err(0, "module")? {
-    //     Value::String(s, ..) => s,
-    //     v => {
-    //         return Err((
-    //             format!("$module: {} is not a string.", v.inspect(span)?),
-    //             span,
-    //         )
-    //             .into())
+    let url = match args.get_err(0, "module")? {
+        Value::String(s, ..) => s,
+        v => {
+            return Err((
+                format!("$module: {} is not a string.", v.inspect(span)?),
+                span,
+            )
+                .into())
+        }
+    };
+
+    let with = match args.default_arg(1, "with", Value::Null) {
+        Value::Map(map) => Some(map),
+        Value::Null => None,
+        v => return Err((format!("$with: {} is not a map.", v.inspect(span)?), span).into()),
+    };
+
+    let mut configuration = Configuration::empty();
+
+    if let Some(with) = with {
+        let mut values = BTreeMap::new();
+        for (key, value) in with {
+            let name = match key.node {
+                Value::String(s, ..) => Identifier::from(s),
+                v => {
+                    return Err((
+                        format!("$with key: {} is not a string.", v.inspect(span)?),
+                        span,
+                    )
+                        .into())
+                }
+            };
+
+            if values.contains_key(&name) {
+                todo!("The variable {name} was configured twice.");
+            }
+
+            values.insert(name, ConfiguredValue::explicit(value, args.span()));
+        }
+
+        configuration = Configuration::explicit(values, args.span());
+    }
+
+    let configuration = Arc::new(RefCell::new(configuration));
+
+    parser.load_module(
+        url.as_ref(),
+        Some(Arc::clone(&configuration)),
+        true,
+        args.span(),
+        |visitor, module, stylesheet| {
+            // (*module).borrow()
+            Ok(())
+        },
+    )?;
+
+    Visitor::assert_configuration_is_empty(configuration, true)?;
+
+    Ok(())
+    // var callableNode = _callableNode!;
+    //     var configuration = const Configuration.empty();
+    //     if (withMap != null) {
     //     }
-    // };
 
-    // let with = match args.default_arg(1, "with", Value::Null) {
-    //     Value::Map(map) => Some(map),
-    //     Value::Null => None,
-    //     v => return Err((format!("$with: {} is not a map.", v.inspect(span)?), span).into()),
-    // };
+    //     _loadModule(url, "load-css()", callableNode,
+    //         (module) => _combineCss(module, clone: true).accept(this),
+    //         baseUrl: callableNode.span.sourceUrl,
+    //         configuration: configuration,
+    //         namesInErrors: true);
+    //     _assertConfigurationIsEmpty(configuration, nameInError: true);
 
-    // // todo: tests for `with`
+    // todo: tests for `with`
     // if let Some(with) = with {
     //     let mut config = ModuleConfig::default();
 
@@ -61,7 +120,6 @@ fn load_css(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Vec<St
     // } else {
     //     parser.parser.parse_single_import(&url, span)
     // }
-    todo!()
 }
 
 fn module_functions(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
@@ -83,7 +141,7 @@ fn module_functions(mut args: ArgumentResult, parser: &mut Visitor) -> SassResul
             .borrow()
             .get(module.into(), args.span())?)
         .borrow()
-        .functions(),
+        .functions(args.span()),
     ))
 }
 
@@ -106,7 +164,7 @@ fn module_variables(mut args: ArgumentResult, parser: &mut Visitor) -> SassResul
             .borrow()
             .get(module.into(), args.span())?)
         .borrow()
-        .variables(),
+        .variables(args.span()),
     ))
 }
 

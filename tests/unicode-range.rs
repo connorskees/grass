@@ -31,7 +31,7 @@ error!(
 );
 error!(
     longer_than_6_characters,
-    "a {\n  color: U+1234567;\n}\n", "Error: Expected end of identifier."
+    "a {\n  color: U+1234567;\n}\n", "Error: Expected at most 6 digits."
 );
 error!(
     length_of_6_with_question_mark,

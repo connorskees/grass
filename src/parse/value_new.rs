@@ -674,7 +674,7 @@ impl<'c> ValueParser<'c> {
         parser: &mut Parser,
         first: Spanned<AstExpr>,
     ) -> SassResult<Spanned<AstExpr>> {
-        let mut pairs = vec![(first.node, parser.parse_expression_until_comma(false)?.node)];
+        let mut pairs = vec![(first, parser.parse_expression_until_comma(false)?.node)];
 
         while parser.consume_char_if_exists(',') {
             parser.whitespace_or_comment();
@@ -686,7 +686,7 @@ impl<'c> ValueParser<'c> {
             parser.expect_char(':')?;
             parser.whitespace_or_comment();
             let value = parser.parse_expression_until_comma(false)?;
-            pairs.push((key.node, value.node));
+            pairs.push((key, value.node));
         }
 
         parser.expect_char(')')?;
@@ -944,24 +944,43 @@ impl<'c> ValueParser<'c> {
         })
     }
 
+    fn consume_natural_number(&mut self, parser: &mut Parser) -> SassResult<()> {
+        if !matches!(
+            parser.toks.next(),
+            Some(Token {
+                kind: '0'..='9',
+                ..
+            })
+        ) {
+            return Err(("Expected digit.", parser.toks.prev_span()).into());
+        }
+
+        while matches!(
+            parser.toks.peek(),
+            Some(Token {
+                kind: '0'..='9',
+                ..
+            })
+        ) {
+            parser.toks.next();
+        }
+
+        Ok(())
+    }
+
     fn parse_number(&mut self, parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
-        let mut number = String::new();
+        let start = parser.toks.cursor();
 
-        if !parser.consume_char_if_exists('+') && parser.consume_char_if_exists('-') {
-            number.push('-');
+        parser.consume_char_if_exists('+') || parser.consume_char_if_exists('-');
+
+        if !parser.toks.next_char_is('.') {
+            self.consume_natural_number(parser)?;
         }
 
-        number.push_str(&parser.parse_whole_number());
+        self.try_decimal(parser, parser.toks.cursor() != start)?;
+        self.try_exponent(parser)?;
 
-        if let Some(dec) = self.try_decimal(parser, !number.is_empty())? {
-            number.push_str(&dec);
-        }
-
-        if let Some(exp) = self.try_exponent(parser)? {
-            number.push_str(&exp);
-        }
-
-        let number: f64 = number.parse().unwrap();
+        let number: f64 = parser.toks.raw_text(start).parse().unwrap();
 
         let unit = if parser.consume_char_if_exists('%') {
             Unit::Percent
@@ -1710,7 +1729,14 @@ impl<'c> ValueParser<'c> {
             arguments.push(self.parse_calculation_sum(parser)?.node);
         }
 
-        parser.expect_char(')')?;
+        parser.expect_char_with_message(
+            ')',
+            if Some(arguments.len()) == max_args {
+                r#""+", "-", "*", "/", or ")""#
+            } else {
+                r#""+", "-", "*", "/", ",", or ")""#
+            },
+        )?;
 
         Ok(arguments)
     }

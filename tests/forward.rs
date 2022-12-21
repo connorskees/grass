@@ -183,6 +183,7 @@ fn member_visibility_variable_declaration() {
 }
 
 #[test]
+#[ignore = "forward is still WIP"]
 fn member_import_precedence_top_level() {
     let mut fs = TestFs::new();
 

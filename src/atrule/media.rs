@@ -197,6 +197,7 @@ impl MediaQuery {
             map: parser.map,
             path: parser.path,
             is_plain_css: false,
+            is_indented: false,
             span_before: parser.span_before,
             flags: parser.flags,
             options: parser.options,

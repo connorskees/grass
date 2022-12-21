@@ -130,7 +130,7 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     fn parse_media_in_parens(&mut self, buf: &mut Interpolation) -> SassResult<()> {
-        self.expect_char('(')?;
+        self.expect_char_with_message('(', "media condition in parentheses")?;
         buf.add_char('(');
         self.whitespace_or_comment();
 

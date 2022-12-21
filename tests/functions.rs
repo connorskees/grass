@@ -314,7 +314,7 @@ error!(
     a {
         color: foo(nul);
     }",
-    "Error: Functions can only contain variable declarations and control directives."
+    "Error: expected \".\"."
 );
 error!(
     pass_one_arg_to_fn_that_accepts_zero,

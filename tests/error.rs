@@ -98,10 +98,10 @@ error!(
     "a {color:,red;}", "Error: Expected expression."
 );
 // dart-sass gives `Error: expected "{".`
-error!(nothing_after_hyphen, "a {-}", "Error: Expected identifier.");
+error!(nothing_after_hyphen, "a {-}", "Error: expected \"{\".");
 error!(
     nothing_after_hyphen_variable,
-    "a {$-", "Error: expected \":\"."
+    "a {$-", "Error: Expected identifier."
 );
 error!(
     closing_brace_after_hyphen_variable,
@@ -124,17 +124,14 @@ error!(
     "#{", "Error: Expected expression."
 );
 error!(toplevel_hash, "#", "Error: expected \"{\".");
-error!(
-    #[ignore = "we use closing brace to end scope"]
-    toplevel_closing_brace,
-    "}", "Error: unmatched \"}\"."
-);
+error!(toplevel_closing_brace, "}", "Error: unmatched \"}\".");
 error!(toplevel_at, "@", "Error: Expected identifier.");
 error!(
     toplevel_ampersand,
     "& {}", "Error: Top-level selectors may not contain the parent selector \"&\"."
 );
-error!(toplevel_backslash, "\\", "Error: expected \"{\".");
+// note: dart-sass gives error "Expected escape sequence."
+error!(toplevel_backslash, "\\", "Error: Expected expression.");
 error!(toplevel_var_no_colon, "$r", "Error: expected \":\".");
 error!(bar_in_value, "a {color: a|b;}", "Error: expected \";\".");
 error!(
@@ -151,7 +148,7 @@ error!(
 );
 error!(
     operator_ne,
-    "a {color: 5 - !=;}", "Error: Expected expression."
+    "a {color: 5 - !=;}", "Error: Expected \"important\"."
 );
 error!(
     operator_gt,
@@ -223,10 +220,7 @@ error!(
     empty_style_value_semicolon,
     "a {color:;}", "Error: Expected expression."
 );
-error!(
-    ident_colon_closing_brace,
-    "r:}", "Error: Expected expression."
-);
+error!(ident_colon_closing_brace, "r:}", "Error: expected \"{\".");
 error!(dollar_sign_alone, "$", "Error: Expected identifier.");
 error!(
     nothing_after_dbl_quote,
@@ -237,11 +231,16 @@ error!(
     invalid_binop_in_list,
     "a {color: foo % bar, baz;}", "Error: Undefined operation \"foo % bar\"."
 );
+// note: dart-sass has error "Expected identifier."
 error!(
     improperly_terminated_nested_style,
-    "a {foo: {bar: red", "Error: Expected identifier."
+    "a {foo: {bar: red", "Error: expected \"}\"."
 );
-error!(toplevel_nullbyte, "\u{0}", "Error: expected selector.");
+error!(toplevel_nullbyte, "\u{0}", "Error: expected \"{\".");
+error!(
+    toplevel_nullbyte_with_braces,
+    "\u{0} {}", "Error: expected selector."
+);
 error!(
     double_escaped_bang_at_toplevel,
     "\\!\\!", "Error: expected \"{\"."

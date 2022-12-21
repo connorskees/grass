@@ -73,8 +73,7 @@ error!(
 );
 error!(
     calc_quoted_string_single_quoted_paren,
-    r#"a {\n  color: calc(")");\n}\n"#,
-    "Error: Expected number, variable, function, or calculation."
+    r#"a {color: calc(")");}"#, "Error: Expected number, variable, function, or calculation."
 );
 error!(
     calc_quoted_string_single_quotes,
@@ -83,6 +82,10 @@ error!(
 error!(
     calc_hash_no_interpolation,
     "a {\n  color: calc(#);\n}\n", "Error: Expected number, variable, function, or calculation."
+);
+error!(
+    calc_boolean,
+    "$a: true; a {\n  color: calc($a);\n}\n", "Error: Value true can't be used in a calculation."
 );
 test!(
     element_whitespace,

@@ -1,7 +1,7 @@
 use std::{
-    borrow::{Borrow, Cow},
-    cell::{Cell, Ref, RefCell},
-    collections::{BTreeMap, BTreeSet, HashMap, HashSet},
+    borrow::Cow,
+    cell::{Cell, Ref, RefCell, RefMut},
+    collections::{BTreeMap, BTreeSet, HashSet},
     ffi::OsStr,
     fmt,
     iter::FromIterator,
@@ -12,7 +12,6 @@ use std::{
 
 use codemap::{Span, Spanned};
 use indexmap::IndexSet;
-use num_traits::ToPrimitive;
 
 use crate::{
     ast::*,
@@ -54,6 +53,7 @@ use crate::{
 
 use super::env::Environment;
 
+// todo: move to separate file
 #[derive(Debug, Clone)]
 struct CssTree {
     // None is tombstone
@@ -79,6 +79,10 @@ impl CssTree {
 
     pub fn get(&self, idx: CssTreeIdx) -> Ref<Option<Stmt>> {
         self.stmts[idx.0].borrow()
+    }
+
+    pub fn get_mut(&self, idx: CssTreeIdx) -> RefMut<Option<Stmt>> {
+        self.stmts[idx.0].borrow_mut()
     }
 
     pub fn finish(self) -> Vec<Stmt> {
@@ -126,14 +130,11 @@ impl CssTree {
             Some(Stmt::Media(media, ..)) => {
                 media.body.push(child);
             }
-            Some(Stmt::UnknownAtRule(at_rule)) => {
+            Some(Stmt::UnknownAtRule(at_rule, ..)) => {
                 at_rule.body.push(child);
             }
-            Some(Stmt::Supports(supports)) => {
+            Some(Stmt::Supports(supports, ..)) => {
                 supports.body.push(child);
-            }
-            Some(Stmt::Keyframes(keyframes)) => {
-                keyframes.body.push(child);
             }
             Some(Stmt::KeyframesRuleSet(keyframes)) => {
                 keyframes.body.push(child);
@@ -153,6 +154,32 @@ impl CssTree {
             .push(child_idx);
         self.child_to_parent.insert(child_idx, parent_idx);
         child_idx
+    }
+
+    pub fn link_child_to_parent(&mut self, child_idx: CssTreeIdx, parent_idx: CssTreeIdx) {
+        self.parent_to_child
+            .entry(parent_idx)
+            .or_default()
+            .push(child_idx);
+        self.child_to_parent.insert(child_idx, parent_idx);
+    }
+
+    pub fn has_following_sibling(&self, child: CssTreeIdx) -> bool {
+        if child == Self::ROOT {
+            return false;
+        }
+
+        let parent_idx = self.child_to_parent.get(&child).unwrap();
+
+        let parent_children = self.parent_to_child.get(parent_idx).unwrap();
+
+        let child_pos = parent_children
+            .iter()
+            .position(|child_idx| *child_idx == child)
+            .unwrap();
+
+        // todo: parent_children[child_pos + 1..] !is_invisible
+        child_pos + 1 < parent_children.len()
     }
 
     pub fn add_stmt(&mut self, child: Stmt, parent: Option<CssTreeIdx>) -> CssTreeIdx {
@@ -234,6 +261,7 @@ pub(crate) struct Visitor<'a> {
     css_tree: CssTree,
     parent: Option<CssTreeIdx>,
     configuration: Arc<RefCell<Configuration>>,
+    import_nodes: Vec<Stmt>,
 }
 
 impl<'a> Visitor<'a> {
@@ -260,6 +288,7 @@ impl<'a> Visitor<'a> {
             current_import_path,
             configuration: Arc::new(RefCell::new(Configuration::empty())),
             is_plain_css: false,
+            import_nodes: Vec::new(),
         }
     }
 
@@ -275,8 +304,9 @@ impl<'a> Visitor<'a> {
         Ok(())
     }
 
-    pub fn finish(self) -> SassResult<Vec<Stmt>> {
-        Ok(self.css_tree.finish())
+    pub fn finish(mut self) -> SassResult<Vec<Stmt>> {
+        self.import_nodes.append(&mut self.css_tree.finish());
+        Ok(self.import_nodes)
     }
 
     fn visit_return_rule(&mut self, ret: AstReturn) -> SassResult<Option<Value>> {
@@ -349,7 +379,7 @@ impl<'a> Visitor<'a> {
                 Some(Arc::clone(&new_configuration)),
                 false,
                 self.parser.span_before,
-                |visitor, module| {
+                |visitor, module, _| {
                     visitor.env.forward_module(module, forward_rule.clone())?;
 
                     Ok(())
@@ -392,7 +422,7 @@ impl<'a> Visitor<'a> {
                 None,
                 false,
                 self.parser.span_before,
-                move |visitor, module| {
+                move |visitor, module, _| {
                     visitor.env.forward_module(module, forward_rule.clone())?;
 
                     Ok(())
@@ -555,47 +585,61 @@ impl<'a> Visitor<'a> {
 
         let condition = self.visit_supports_condition(supports_rule.condition)?;
 
-        let css_supports_rule = Stmt::Supports(Box::new(SupportsRule {
-            params: condition,
-            body: Vec::new(),
-        }));
+        let css_supports_rule = Stmt::Supports(
+            SupportsRule {
+                params: condition,
+                body: Vec::new(),
+            },
+            false,
+        );
 
-        let parent_idx = self.css_tree.add_stmt(css_supports_rule, self.parent);
+        // let parent_idx = self.css_tree.add_stmt(css_supports_rule, self.parent);
 
         let children = supports_rule.children;
 
-        self.with_parent::<SassResult<()>>(parent_idx, true, |visitor| {
-            if !visitor.style_rule_exists() {
-                for stmt in children {
-                    let result = visitor.visit_stmt(stmt)?;
-                    assert!(result.is_none());
-                }
-            } else {
-                // If we're in a style rule, copy it into the supports rule so that
-                // declarations immediately inside @supports have somewhere to go.
-                //
-                // For example, "a {@supports (a: b) {b: c}}" should produce "@supports
-                // (a: b) {a {b: c}}".
-                let selector = visitor.style_rule_ignoring_at_root.clone().unwrap();
-                let ruleset = Stmt::RuleSet {
-                    selector,
-                    body: Vec::new(),
-                };
-
-                let parent_idx = visitor.css_tree.add_stmt(ruleset, visitor.parent);
-
-                visitor.with_parent::<SassResult<()>>(parent_idx, false, |visitor| {
+        self.with_parent::<SassResult<()>>(
+            css_supports_rule,
+            true,
+            |visitor| {
+                if !visitor.style_rule_exists() {
                     for stmt in children {
                         let result = visitor.visit_stmt(stmt)?;
                         assert!(result.is_none());
                     }
+                } else {
+                    // If we're in a style rule, copy it into the supports rule so that
+                    // declarations immediately inside @supports have somewhere to go.
+                    //
+                    // For example, "a {@supports (a: b) {b: c}}" should produce "@supports
+                    // (a: b) {a {b: c}}".
+                    let selector = visitor.style_rule_ignoring_at_root.clone().unwrap();
+                    let ruleset = Stmt::RuleSet {
+                        selector,
+                        body: Vec::new(),
+                        is_group_end: false,
+                    };
 
-                    Ok(())
-                })?;
-            }
+                    // let parent_idx = visitor.css_tree.add_stmt(ruleset, visitor.parent);
 
-            Ok(())
-        })?;
+                    visitor.with_parent::<SassResult<()>>(
+                        ruleset,
+                        false,
+                        |visitor| {
+                            for stmt in children {
+                                let result = visitor.visit_stmt(stmt)?;
+                                assert!(result.is_none());
+                            }
+
+                            Ok(())
+                        },
+                        |_| false,
+                    )?;
+                }
+
+                Ok(())
+            },
+            |stmt| stmt.is_style_rule(),
+        )?;
 
         Ok(())
     }
@@ -666,17 +710,16 @@ impl<'a> Visitor<'a> {
 
         let module = env.to_module(extension_store);
 
-        // Ok(())
         Ok(module)
     }
 
-    fn load_module(
+    pub fn load_module(
         &mut self,
         url: &Path,
         configuration: Option<Arc<RefCell<Configuration>>>,
         names_in_errors: bool,
         span: Span,
-        callback: impl Fn(&mut Self, Arc<RefCell<Module>>) -> SassResult<()>,
+        callback: impl Fn(&mut Self, Arc<RefCell<Module>>, StyleSheet) -> SassResult<()>,
     ) -> SassResult<()> {
         let builtin = match url.to_string_lossy().as_ref() {
             "sass:color" => Some(declare_module_color()),
@@ -710,16 +753,20 @@ impl<'a> Visitor<'a> {
                     .into());
             }
 
-            callback(self, Arc::new(RefCell::new(builtin)))?;
+            callback(
+                self,
+                Arc::new(RefCell::new(builtin)),
+                StyleSheet::new(false, PathBuf::from("")),
+            )?;
             return Ok(());
         }
 
         // todo: decide on naming convention for style_sheet vs stylesheet
         let stylesheet = self.load_style_sheet(url.to_string_lossy().as_ref(), false, span)?;
 
-        let module = self.execute(stylesheet, configuration, names_in_errors)?;
+        let module = self.execute(stylesheet.clone(), configuration, names_in_errors)?;
 
-        callback(self, module)?;
+        callback(self, module, stylesheet)?;
 
         Ok(())
     }
@@ -754,7 +801,7 @@ impl<'a> Visitor<'a> {
             Some(Arc::clone(&configuration)),
             false,
             span,
-            |visitor, module| {
+            |visitor, module, _| {
                 visitor.env.add_module(namespace, module, span)?;
 
                 Ok(())
@@ -766,7 +813,7 @@ impl<'a> Visitor<'a> {
         Ok(())
     }
 
-    fn assert_configuration_is_empty(
+    pub fn assert_configuration_is_empty(
         config: Arc<RefCell<Configuration>>,
         name_in_error: bool,
     ) -> SassResult<()> {
@@ -883,6 +930,7 @@ impl<'a> Visitor<'a> {
                 toks: &mut Lexer::new_from_file(&file),
                 map: self.parser.map,
                 is_plain_css: name.extension() == Some(OsStr::new("css")),
+                is_indented: name.extension() == Some(OsStr::new("sass")),
                 path: &name,
                 span_before: file.span.subspan(0, 0),
                 flags: self.flags,
@@ -1104,8 +1152,11 @@ impl<'a> Visitor<'a> {
 
         let node = Stmt::Import(import, modifiers);
 
-        // if self.parent != Some(CssTree::ROOT) {
-        self.css_tree.add_stmt(node, self.parent);
+        if self.parent.is_some() && self.parent != Some(CssTree::ROOT) {
+            self.css_tree.add_stmt(node, self.parent);
+        } else {
+            self.import_nodes.push(node);
+        }
         // } else {
         //     self.css_tree.add_child(node, Some(CssTree::ROOT))
         // }
@@ -1203,36 +1254,6 @@ impl<'a> Visitor<'a> {
         let root = nodes[innermost_contiguous.unwrap()];
 
         root
-        // todo!()
-        //       if (nodes.isEmpty) return _root;
-
-        // var parent = _parent;
-        // int? innermostContiguous;
-        // for (var i = 0; i < nodes.length; i++) {
-        //   while (parent != nodes[i]) {
-        //     innermostContiguous = null;
-
-        //     var grandparent = parent.parent;
-        //     if (grandparent == null) {
-        //       throw ArgumentError(
-        //           "Expected ${nodes[i]} to be an ancestor of $this.");
-        //     }
-
-        //     parent = grandparent;
-        //   }
-        //   innermostContiguous ??= i;
-
-        //   var grandparent = parent.parent;
-        //   if (grandparent == null) {
-        //     throw ArgumentError("Expected ${nodes[i]} to be an ancestor of $this.");
-        //   }
-        //   parent = grandparent;
-        // }
-
-        // if (parent != _root) return _root;
-        // var root = nodes[innermostContiguous!];
-        // nodes.removeRange(innermostContiguous, nodes.length);
-        // return root;
     }
 
     fn visit_at_root_rule(&mut self, mut at_root_rule: AstAtRootRule) -> SassResult<Option<Value>> {
@@ -1252,6 +1273,7 @@ impl<'a> Visitor<'a> {
                     map: self.parser.map,
                     path: self.parser.path,
                     is_plain_css: false,
+                    is_indented: false,
                     span_before: self.parser.span_before,
                     flags: self.parser.flags,
                     options: self.parser.options,
@@ -1296,24 +1318,37 @@ impl<'a> Visitor<'a> {
             return Ok(None);
         }
 
-        let mut inner_copy = self.css_tree.get(root).clone();
-        if !included.is_empty() {
-            // inner_copy = self.css_tree.get(included[0]);
-            // let outer_copy = inner_copy;
-            // for node in &included[1..] {
-            //     // let copy =
-            // }
+        let mut inner_copy = if !included.is_empty() {
+            let inner_copy = self
+                .css_tree
+                .get(*included.first().unwrap())
+                .as_ref()
+                .map(Stmt::copy_without_children);
+            let mut outer_copy = self.css_tree.add_stmt(inner_copy.unwrap(), None);
 
-            //   innerCopy = included.first.copyWithoutChildren();
-            //   var outerCopy = innerCopy;
-            //   for (var node in included.skip(1)) {
-            //     var copy = node.copyWithoutChildren();
-            //     copy.addChild(outerCopy);
-            //     outerCopy = copy;
-            //   }
+            for node in &included[1..] {
+                let copy = self
+                    .css_tree
+                    .get(*node)
+                    .as_ref()
+                    .map(Stmt::copy_without_children)
+                    .unwrap();
 
-            //   root.addChild(outerCopy);
-        }
+                let copy_idx = self.css_tree.add_stmt(copy, None);
+                self.css_tree.link_child_to_parent(outer_copy, copy_idx);
+
+                outer_copy = copy_idx;
+            }
+
+            Some(outer_copy)
+        } else {
+            let inner_copy = self
+                .css_tree
+                .get(root)
+                .as_ref()
+                .map(Stmt::copy_without_children);
+            inner_copy.map(|p| self.css_tree.add_stmt(p, None))
+        };
 
         let body = mem::take(&mut at_root_rule.children);
 
@@ -1338,13 +1373,11 @@ impl<'a> Visitor<'a> {
     fn with_scope_for_at_root<T>(
         &mut self,
         at_root_rule: &AstAtRootRule,
-        new_parent: Option<Stmt>,
+        new_parent_idx: Option<CssTreeIdx>,
         query: &AtRootQuery,
         included: &[CssTreeIdx],
         callback: impl FnOnce(&mut Self) -> T,
     ) -> T {
-        let new_parent_idx = new_parent.map(|p| self.css_tree.add_stmt(p, None));
-
         let old_parent = self.parent;
         self.parent = new_parent_idx;
 
@@ -1395,7 +1428,12 @@ impl<'a> Visitor<'a> {
         self.env.insert_fn(func);
     }
 
-    pub fn parse_selector_from_string(&mut self, selector_text: &str) -> SassResult<SelectorList> {
+    pub fn parse_selector_from_string(
+        &mut self,
+        selector_text: &str,
+        allows_parent: bool,
+        allows_placeholder: bool,
+    ) -> SassResult<SelectorList> {
         let mut sel_toks = Lexer::new(
             selector_text
                 .chars()
@@ -1409,12 +1447,13 @@ impl<'a> Visitor<'a> {
                 map: self.parser.map,
                 path: self.parser.path,
                 is_plain_css: self.is_plain_css,
+                is_indented: false,
                 span_before: self.parser.span_before,
                 flags: self.parser.flags,
                 options: self.parser.options,
             },
-            !self.is_plain_css,
-            !self.is_plain_css,
+            allows_parent,
+            allows_placeholder,
             self.parser.span_before,
         )
         .parse()
@@ -1433,7 +1472,7 @@ impl<'a> Visitor<'a> {
 
         let target_text = self.interpolation_to_value(extend_rule.value, false, true)?;
 
-        let list = self.parse_selector_from_string(&target_text)?;
+        let list = self.parse_selector_from_string(&target_text, false, true)?;
 
         let extend_rule = ExtendRule {
             selector: Selector(list.clone()),
@@ -1539,29 +1578,6 @@ impl<'a> Visitor<'a> {
         buffer
     }
 
-    //    if (query.modifier != null) {
-    //   _buffer.write(query.modifier);
-    //   _buffer.writeCharCode($space);
-    // }
-
-    // if (query.type != null) {
-    //   _buffer.write(query.type);
-    //   if (query.conditions.isNotEmpty) {
-    //     _buffer.write(" and ");
-    //   }
-    // }
-
-    // if (query.conditions.length == 1 &&
-    //     query.conditions.first.startsWith("(not ")) {
-    //   _buffer.write("not ");
-    //   var condition = query.conditions.first;
-    //   _buffer.write(condition.substring("(not ".length, condition.length - 1));
-    // } else {
-    //   var operator = query.conjunction ? "and" : "or";
-    //   _writeBetween(query.conditions,
-    //       _isCompressed ? "$operator " : " $operator ", _buffer.write);
-    // }
-
     fn visit_media_rule(&mut self, media_rule: AstMedia) -> SassResult<Option<Value>> {
         // NOTE: this logic is largely duplicated in [visitCssMediaRule]. Most
         // changes here should be mirrored there.
@@ -1594,12 +1610,7 @@ impl<'a> Visitor<'a> {
             None => IndexSet::new(),
         };
 
-        // dbg!(&merged_queries, &queries1);
-        //     through: (node) =>
-        //         node is CssStyleRule ||
-        //         (mergedSources.isNotEmpty &&
-        //             node is CssMediaRule &&
-        //             node.queries.every(mergedSources.contains)),
+        // todo: scopeWhen
         //     scopeWhen: node.hasDeclarations);
 
         let children = media_rule.body;
@@ -1607,57 +1618,74 @@ impl<'a> Visitor<'a> {
         let query = merged_queries.clone().unwrap_or_else(|| queries1.clone());
 
         let media_rule = Stmt::Media(
-            Box::new(MediaRule {
+            MediaRule {
+                // todo: no string here
                 query: query
                     .into_iter()
                     .map(Self::serialize_media_query)
                     .collect::<Vec<String>>()
                     .join(", "),
                 body: Vec::new(),
-            }),
-            self.style_rule_exists(),
+            },
+            false,
         );
 
-        let parent_idx = self.css_tree.add_stmt(media_rule, self.parent);
+        // let parent_idx = self.css_tree.add_stmt(media_rule, self.parent);
 
-        self.with_parent::<SassResult<()>>(parent_idx, true, |visitor| {
-            visitor.with_media_queries(
-                Some(merged_queries.unwrap_or(queries1)),
-                Some(merged_sources),
-                |visitor| {
-                    if !visitor.style_rule_exists() {
-                        for stmt in children {
-                            let result = visitor.visit_stmt(stmt)?;
-                            assert!(result.is_none());
-                        }
-                    } else {
-                        // If we're in a style rule, copy it into the media query so that
-                        // declarations immediately inside @media have somewhere to go.
-                        //
-                        // For example, "a {@media screen {b: c}}" should produce
-                        // "@media screen {a {b: c}}".
-                        let selector = visitor.style_rule_ignoring_at_root.clone().unwrap();
-                        let ruleset = Stmt::RuleSet {
-                            selector,
-                            body: Vec::new(),
-                        };
-
-                        let parent_idx = visitor.css_tree.add_stmt(ruleset, visitor.parent);
-
-                        visitor.with_parent::<SassResult<()>>(parent_idx, false, |visitor| {
+        self.with_parent::<SassResult<()>>(
+            media_rule,
+            true,
+            |visitor| {
+                visitor.with_media_queries(
+                    Some(merged_queries.unwrap_or(queries1)),
+                    Some(merged_sources.clone()),
+                    |visitor| {
+                        if !visitor.style_rule_exists() {
                             for stmt in children {
                                 let result = visitor.visit_stmt(stmt)?;
                                 assert!(result.is_none());
                             }
+                        } else {
+                            // If we're in a style rule, copy it into the media query so that
+                            // declarations immediately inside @media have somewhere to go.
+                            //
+                            // For example, "a {@media screen {b: c}}" should produce
+                            // "@media screen {a {b: c}}".
+                            let selector = visitor.style_rule_ignoring_at_root.clone().unwrap();
+                            let ruleset = Stmt::RuleSet {
+                                selector,
+                                body: Vec::new(),
+                                is_group_end: false,
+                            };
 
-                            Ok(())
-                        })?;
-                    }
+                            // let parent_idx = visitor.css_tree.add_stmt(ruleset, visitor.parent);
 
-                    Ok(())
-                },
-            )
-        })?;
+                            visitor.with_parent::<SassResult<()>>(
+                                ruleset,
+                                false,
+                                |visitor| {
+                                    for stmt in children {
+                                        let result = visitor.visit_stmt(stmt)?;
+                                        assert!(result.is_none());
+                                    }
+
+                                    Ok(())
+                                },
+                                |_| false,
+                            )?;
+                        }
+
+                        Ok(())
+                    },
+                )
+            },
+            |stmt| match stmt {
+                Stmt::RuleSet { .. } => true,
+                // todo: node.queries.every(mergedSources.contains))
+                Stmt::Media(media_rule, ..) => !merged_sources.is_empty(),
+                _ => false,
+            },
+        )?;
 
         // if (_declarationName != null) {
         //   throw _exception(
@@ -1720,12 +1748,15 @@ impl<'a> Visitor<'a> {
             .transpose()?;
 
         if unknown_at_rule.children.is_none() {
-            let stmt = Stmt::UnknownAtRule(Box::new(UnknownAtRule {
-                name,
-                params: value.unwrap_or_default(),
-                body: Vec::new(),
-                has_body: false,
-            }));
+            let stmt = Stmt::UnknownAtRule(
+                UnknownAtRule {
+                    name,
+                    params: value.unwrap_or_default(),
+                    body: Vec::new(),
+                    has_body: false,
+                },
+                false,
+            );
 
             self.css_tree.add_stmt(stmt, self.parent);
 
@@ -1743,47 +1774,61 @@ impl<'a> Visitor<'a> {
 
         let children = unknown_at_rule.children.unwrap();
 
-        let stmt = Stmt::UnknownAtRule(Box::new(UnknownAtRule {
-            name,
-            params: value.unwrap_or_default(),
-            body: Vec::new(),
-            has_body: true,
-        }));
+        let stmt = Stmt::UnknownAtRule(
+            UnknownAtRule {
+                name,
+                params: value.unwrap_or_default(),
+                body: Vec::new(),
+                has_body: true,
+            },
+            false,
+        );
 
-        let parent_idx = self.css_tree.add_stmt(stmt, self.parent);
+        // let parent_idx = self.css_tree.add_stmt(stmt, self.parent);
 
-        self.with_parent::<SassResult<()>>(parent_idx, true, |visitor| {
-            if !visitor.style_rule_exists() || visitor.flags.in_keyframes() {
-                for stmt in children {
-                    let result = visitor.visit_stmt(stmt)?;
-                    assert!(result.is_none());
-                }
-            } else {
-                // If we're in a style rule, copy it into the at-rule so that
-                // declarations immediately inside it have somewhere to go.
-                //
-                // For example, "a {@foo {b: c}}" should produce "@foo {a {b: c}}".
-                let selector = visitor.style_rule_ignoring_at_root.clone().unwrap();
-
-                let style_rule = Stmt::RuleSet {
-                    selector,
-                    body: Vec::new(),
-                };
-
-                let parent_idx = visitor.css_tree.add_stmt(style_rule, visitor.parent);
-
-                visitor.with_parent::<SassResult<()>>(parent_idx, false, |visitor| {
+        self.with_parent::<SassResult<()>>(
+            stmt,
+            true,
+            |visitor| {
+                if !visitor.style_rule_exists() || visitor.flags.in_keyframes() {
                     for stmt in children {
                         let result = visitor.visit_stmt(stmt)?;
                         assert!(result.is_none());
                     }
+                } else {
+                    // If we're in a style rule, copy it into the at-rule so that
+                    // declarations immediately inside it have somewhere to go.
+                    //
+                    // For example, "a {@foo {b: c}}" should produce "@foo {a {b: c}}".
+                    let selector = visitor.style_rule_ignoring_at_root.clone().unwrap();
 
-                    Ok(())
-                })?;
-            }
+                    let style_rule = Stmt::RuleSet {
+                        selector,
+                        body: Vec::new(),
+                        is_group_end: false,
+                    };
 
-            Ok(())
-        })?;
+                    // let parent_idx = visitor.css_tree.add_stmt(style_rule, visitor.parent);
+
+                    visitor.with_parent::<SassResult<()>>(
+                        style_rule,
+                        false,
+                        |visitor| {
+                            for stmt in children {
+                                let result = visitor.visit_stmt(stmt)?;
+                                assert!(result.is_none());
+                            }
+
+                            Ok(())
+                        },
+                        |_| false,
+                    )?;
+                }
+
+                Ok(())
+            },
+            |stmt| stmt.is_style_rule(),
+        )?;
 
         self.flags.set(ContextFlags::IN_KEYFRAMES, was_in_keyframes);
         self.flags
@@ -1853,15 +1898,69 @@ impl<'a> Visitor<'a> {
         val
     }
 
+    fn add_child(&mut self, node: Stmt, through: Option<impl Fn(&Stmt) -> bool>) -> CssTreeIdx {
+        if self.parent.is_none() || self.parent == Some(CssTree::ROOT) {
+            return self.css_tree.add_stmt(node, self.parent);
+        }
+
+        let mut parent = self.parent.unwrap();
+
+        if let Some(through) = through {
+            while parent != CssTree::ROOT && through(self.css_tree.get(parent).as_ref().unwrap()) {
+                let grandparent = self.css_tree.child_to_parent.get(&parent).copied();
+                if grandparent.is_none() {
+                    todo!("through() must return false for at least one parent of $node.")
+                }
+                parent = grandparent.unwrap();
+            }
+
+            // If the parent has a (visible) following sibling, we shouldn't add to
+            // the parent. Instead, we should create a copy and add it after the
+            // interstitial sibling.
+            if self.css_tree.has_following_sibling(parent) {
+                let grandparent = self.css_tree.child_to_parent.get(&parent).copied().unwrap();
+                let parent_node = self
+                    .css_tree
+                    .get(parent)
+                    .as_ref()
+                    .map(Stmt::copy_without_children)
+                    .unwrap();
+                parent = self.css_tree.add_child(parent_node, grandparent);
+            }
+
+            //   if (parent.hasFollowingSibling) {
+            //     // A node with siblings must have a parent
+            //     var grandparent = parent.parent!;
+            //     parent = parent.copyWithoutChildren();
+            //     grandparent.addChild(parent);
+            //   }
+        }
+        //     var parent = _parent;
+        // if (through != null) {
+        //   while (through(parent)) {
+        //     var grandparent = parent.parent;
+        //     if (grandparent == null) {
+        //       throw ArgumentError(
+        //           "through() must return false for at least one parent of $node.");
+        //     }
+        //     parent = grandparent;
+        //   }
+
+        self.css_tree.add_child(node, parent)
+    }
+
     fn with_parent<T>(
         &mut self,
-        parent: CssTreeIdx,
+        parent: Stmt,
         // default=true
         scope_when: bool,
         callback: impl FnOnce(&mut Self) -> T,
+        // todo: Option
+        through: impl Fn(&Stmt) -> bool,
     ) -> T {
+        let parent_idx = self.add_child(parent, Some(through));
         let old_parent = self.parent;
-        self.parent = Some(parent);
+        self.parent = Some(parent_idx);
         let result = self.with_scope(false, scope_when, callback);
         self.parent = old_parent;
         result
@@ -1922,9 +2021,13 @@ impl<'a> Visitor<'a> {
                     todo!("Mixin doesn't accept a content block.")
                 }
 
+                let args = self.eval_args(include_stmt.args, include_stmt.name.span)?;
+                mixin(args, self)?;
+
                 //   await _runBuiltInCallable(node.arguments, mixin, nodeWithSpan);
 
-                todo!()
+                // todo!()
+                Ok(None)
             }
             Mixin::UserDefined(mixin, env) => {
                 if include_stmt.content.is_some() && !mixin.has_content {
@@ -2025,18 +2128,21 @@ impl<'a> Visitor<'a> {
     }
 
     fn visit_for_stmt(&mut self, for_stmt: AstFor) -> SassResult<Option<Value>> {
-        let from_number = self.visit_expr(for_stmt.from.node)?.assert_number()?;
-        let to_number = self.visit_expr(for_stmt.to.node)?.assert_number()?;
+        let from_span = for_stmt.from.span;
+        let to_span = for_stmt.to.span;
+        let from_number = self
+            .visit_expr(for_stmt.from.node)?
+            .assert_number(from_span)?;
+        let to_number = self.visit_expr(for_stmt.to.node)?.assert_number(to_span)?;
 
         // todo: proper error here
         assert!(to_number.unit().comparable(&from_number.unit()));
 
-        let from = from_number.num.to_i64().unwrap();
+        let from = from_number.num().assert_int(from_span)?;
         let mut to = to_number
             .num()
             .convert(to_number.unit(), from_number.unit())
-            .to_i64()
-            .unwrap();
+            .assert_int(to_span)?;
 
         let direction = if from > to { -1 } else { 1 };
 
@@ -2206,33 +2312,7 @@ impl<'a> Visitor<'a> {
             decl.is_global,
             self.flags.in_semi_global_scope(),
         )?;
-        // if decl.is_global || self.env.at_root() {
-        //     self.env.global_scope_mut().insert_var(decl.name, value);
-        // } else {
-        //     // basically, if in_semi_global_scope AND var is global AND not re-declared, insert into last scope
-        //     // why? i don't know
-        //     self.env.scopes.borrow_mut().__insert_var(
-        //         decl.name,
-        //         value,
-        //         &self.env.global_scope,
-        //         self.flags.in_semi_global_scope(),
-        //     );
-        // }
 
-        //   var value = _addExceptionSpan(node,
-        //       () => _environment.getVariable(node.name, namespace: node.namespace));
-        //   if (value != null && value != sassNull) return null;
-        // }
-
-        // var value =
-        //     _withoutSlash(await node.expression.accept(this), node.expression);
-        // _addExceptionSpan(node, () {
-        //   _environment.setVariable(
-        //       node.name, value, _expressionNode(node.expression),
-        //       namespace: node.namespace, global: node.isGlobal);
-        // });
-        // return null
-        // todo!()
         Ok(None)
     }
 
@@ -2424,11 +2504,18 @@ impl<'a> Visitor<'a> {
         rest: SassMap,
     ) -> SassResult<()> {
         for (key, val) in rest {
-            match key {
+            match key.node {
                 Value::String(text, ..) => {
                     named.insert(Identifier::from(text), val);
                 }
-                _ => todo!("Variable keyword argument map must have string keys.\n"),
+                _ => {
+                    return Err((
+                        // todo: we have to render the map for this error message
+                        "Variable keyword argument map must have string keys.",
+                        key.span,
+                    )
+                        .into());
+                }
             }
         }
 
@@ -2453,8 +2540,11 @@ impl<'a> Visitor<'a> {
 
         let val = self.with_environment::<SassResult<V>>(env, |visitor| {
             visitor.with_scope(false, true, move |visitor| {
-                func.arguments()
-                    .verify(evaluated.positional.len(), &evaluated.named)?;
+                func.arguments().verify(
+                    evaluated.positional.len(),
+                    &evaluated.named,
+                    evaluated.span,
+                )?;
 
                 // todo: superfluous clone
                 let declared_arguments = func.arguments().args.clone();
@@ -2595,7 +2685,7 @@ impl<'a> Visitor<'a> {
     ) -> SassResult<Value> {
         match func {
             SassFunction::Builtin(func, name) => {
-                let mut evaluated = self.eval_maybe_args(arguments, span)?;
+                let evaluated = self.eval_maybe_args(arguments, span)?;
                 let val = func.0(evaluated, self)?;
                 Ok(self.without_slash(val))
             }
@@ -2665,7 +2755,6 @@ impl<'a> Visitor<'a> {
             .elems
             .into_iter()
             .map(|e| {
-                let span = e.span;
                 let value = self.visit_expr(e.node)?;
                 Ok(value)
             })
@@ -2807,13 +2896,14 @@ impl<'a> Visitor<'a> {
         &mut self,
         expr: AstExpr,
         in_min_or_max: bool,
+        span: Span,
     ) -> SassResult<CalculationArg> {
         Ok(match expr {
             AstExpr::Paren(inner) => match &*inner {
                 AstExpr::FunctionCall(FunctionCallExpr { ref name, .. })
                     if name.as_str().to_ascii_lowercase() == "var" =>
                 {
-                    let result = self.visit_calculation_value(*inner, in_min_or_max)?;
+                    let result = self.visit_calculation_value(*inner, in_min_or_max, span)?;
 
                     if let CalculationArg::String(text) = result {
                         CalculationArg::String(format!("({})", text))
@@ -2821,7 +2911,7 @@ impl<'a> Visitor<'a> {
                         result
                     }
                 }
-                _ => self.visit_calculation_value(*inner, in_min_or_max)?,
+                _ => self.visit_calculation_value(*inner, in_min_or_max, span)?,
             },
             AstExpr::String(string_expr, span) => {
                 debug_assert!(string_expr.1 == QuoteKind::None);
@@ -2829,10 +2919,12 @@ impl<'a> Visitor<'a> {
             }
             AstExpr::BinaryOp { lhs, op, rhs, .. } => SassCalculation::operate_internal(
                 op,
-                self.visit_calculation_value(*lhs, in_min_or_max)?,
-                self.visit_calculation_value(*rhs, in_min_or_max)?,
+                self.visit_calculation_value(*lhs, in_min_or_max, span)?,
+                self.visit_calculation_value(*rhs, in_min_or_max, span)?,
                 in_min_or_max,
                 !self.flags.in_supports_declaration(),
+                self.parser.options,
+                span,
             )?,
             AstExpr::Number { .. }
             | AstExpr::Calculation { .. }
@@ -2854,7 +2946,16 @@ impl<'a> Visitor<'a> {
                     Value::String(s, quotes) if quotes == QuoteKind::None => {
                         CalculationArg::String(s)
                     }
-                    _ => todo!("Value $result can't be used in a calculation."),
+                    value => {
+                        return Err((
+                            format!(
+                                "Value {} can't be used in a calculation.",
+                                value.inspect(span)?
+                            ),
+                            span,
+                        )
+                            .into())
+                    }
                 }
             }
             v => unreachable!("{:?}", v),
@@ -2869,7 +2970,7 @@ impl<'a> Visitor<'a> {
     ) -> SassResult<Value> {
         let mut args = args
             .into_iter()
-            .map(|arg| self.visit_calculation_value(arg, name.in_min_or_max()))
+            .map(|arg| self.visit_calculation_value(arg, name.in_min_or_max(), span))
             .collect::<SassResult<Vec<_>>>()?;
 
         if self.flags.in_supports_declaration() {
@@ -2897,7 +2998,7 @@ impl<'a> Visitor<'a> {
                 } else {
                     Some(args.remove(0))
                 };
-                SassCalculation::clamp(min, value, max, span)
+                SassCalculation::clamp(min, value, max, self.parser.options, span)
             }
         }
     }
@@ -2914,7 +3015,7 @@ impl<'a> Visitor<'a> {
     }
 
     fn visit_ternary(&mut self, if_expr: Ternary) -> SassResult<Value> {
-        IF_ARGUMENTS().verify(if_expr.0.positional.len(), &if_expr.0.named)?;
+        IF_ARGUMENTS().verify(if_expr.0.positional.len(), &if_expr.0.named, if_expr.0.span)?;
 
         let mut positional = if_expr.0.positional;
         let mut named = if_expr.0.named;
@@ -2981,14 +3082,21 @@ impl<'a> Visitor<'a> {
         let mut sass_map = SassMap::new();
 
         for pair in map.0 {
-            let key = self.visit_expr(pair.0)?;
+            let key_span = pair.0.span;
+            let key = self.visit_expr(pair.0.node)?;
             let value = self.visit_expr(pair.1)?;
 
             if let Some(old_value) = sass_map.get_ref(&key) {
-                todo!("Duplicate key.")
+                return Err(("Duplicate key.", key_span).into());
             }
 
-            sass_map.insert(key, value);
+            sass_map.insert(
+                Spanned {
+                    node: key,
+                    span: key_span,
+                },
+                value,
+            );
         }
 
         Ok(Value::Map(sass_map))
@@ -3059,7 +3167,11 @@ impl<'a> Visitor<'a> {
                 let result = div(left.clone(), right.clone(), self.parser.options, span)?;
 
                 if left_is_number && right_is_number && allows_slash {
-                    return result.with_slash(left.assert_number()?, right.assert_number()?);
+                    return result.with_slash(
+                        left.assert_number(span)?,
+                        right.assert_number(span)?,
+                        span,
+                    );
                 } else if left_is_number && right_is_number {
                     //       String recommendation(Expression expression) {
                     //         if (expression is BinaryOperationExpression &&
@@ -3143,27 +3255,31 @@ impl<'a> Visitor<'a> {
                 map: self.parser.map,
                 path: self.parser.path,
                 is_plain_css: false,
+                is_indented: false,
                 span_before: self.parser.span_before,
                 flags: self.parser.flags,
                 options: self.parser.options,
             })
             .parse_keyframes_selector()?;
 
-            let keyframes_ruleset = Stmt::KeyframesRuleSet(Box::new(KeyframesRuleSet {
+            let keyframes_ruleset = Stmt::KeyframesRuleSet(KeyframesRuleSet {
                 selector: parsed_selector,
                 body: Vec::new(),
-            }));
+            });
 
-            let parent_idx = self.css_tree.add_stmt(keyframes_ruleset, self.parent);
+            self.with_parent::<SassResult<()>>(
+                keyframes_ruleset,
+                true,
+                |visitor| {
+                    for stmt in ruleset_body {
+                        let result = visitor.visit_stmt(stmt)?;
+                        assert!(result.is_none());
+                    }
 
-            self.with_parent::<SassResult<()>>(parent_idx, true, |visitor| {
-                for stmt in ruleset_body {
-                    let result = visitor.visit_stmt(stmt)?;
-                    assert!(result.is_none());
-                }
-
-                Ok(())
-            })?;
+                    Ok(())
+                },
+                |stmt| stmt.is_style_rule(),
+            )?;
 
             return Ok(None);
         }
@@ -3181,6 +3297,7 @@ impl<'a> Visitor<'a> {
                 map: self.parser.map,
                 path: self.parser.path,
                 is_plain_css: false,
+                is_indented: false,
                 span_before: self.parser.span_before,
                 flags: self.parser.flags,
                 options: self.parser.options,
@@ -3207,9 +3324,8 @@ impl<'a> Visitor<'a> {
         let rule = Stmt::RuleSet {
             selector: selector.clone(),
             body: Vec::new(),
+            is_group_end: false,
         };
-
-        let parent_idx = self.css_tree.add_stmt(rule, self.parent);
 
         let old_at_root_excluding_style_rule = self.flags.at_root_excluding_style_rule();
 
@@ -3219,14 +3335,19 @@ impl<'a> Visitor<'a> {
         let old_style_rule_ignoring_at_root = self.style_rule_ignoring_at_root.take();
         self.style_rule_ignoring_at_root = Some(selector);
 
-        self.with_parent::<SassResult<()>>(parent_idx, true, |visitor| {
-            for stmt in ruleset_body {
-                let result = visitor.visit_stmt(stmt)?;
-                assert!(result.is_none());
-            }
+        self.with_parent::<SassResult<()>>(
+            rule,
+            true,
+            |visitor| {
+                for stmt in ruleset_body {
+                    let result = visitor.visit_stmt(stmt)?;
+                    assert!(result.is_none());
+                }
 
-            Ok(())
-        })?;
+                Ok(())
+            },
+            |stmt| stmt.is_style_rule(),
+        )?;
 
         self.style_rule_ignoring_at_root = old_style_rule_ignoring_at_root;
         self.flags.set(
@@ -3234,116 +3355,25 @@ impl<'a> Visitor<'a> {
             old_at_root_excluding_style_rule,
         );
 
+        self.set_group_end();
+
         Ok(None)
-        // Ok(vec![result])
-        // Ok(vec![Stmt::RuleSet { selector, body }])
+    }
 
-        // if (_declarationName != null) {
-        //   throw _exception(
-        //       "Style rules may not be used within nested declarations.", node.span);
-        // }
+    fn set_group_end(&mut self) -> Option<()> {
+        if !self.style_rule_exists() {
+            let children = self
+                .css_tree
+                .parent_to_child
+                .get(&self.parent.unwrap_or(CssTree::ROOT))?;
+            let child = *children.last()?;
+            self.css_tree
+                .get_mut(child)
+                .as_mut()
+                .map(|node| node.set_group_end())?;
+        }
 
-        // var selectorText = await _interpolationToValue(node.selector,
-        //     trim: true, warnForColor: true);
-        // if (_inKeyframes) {
-
-        //   var parsedSelector = _adjustParseError(
-        //       node.selector,
-        //       () => KeyframeSelectorParser(selectorText.value, logger: _logger)
-        //           .parse());
-        //   var rule = ModifiableCssKeyframeBlock(
-        //       CssValue(List.unmodifiable(parsedSelector), node.selector.span),
-        //       node.span);
-        //   await _withParent(rule, () async {
-        //     for (var child in node.children) {
-        //       await child.accept(this);
-        //     }
-        //   },
-        //       through: (node) => node is CssStyleRule,
-        //       scopeWhen: node.hasDeclarations);
-        //   return null;
-        // }
-
-        // var parsedSelector = _adjustParseError(
-        //     node.selector,
-        //     () => SelectorList.parse(selectorText.value,
-        //         allowParent: !_stylesheet.plainCss,
-        //         allowPlaceholder: !_stylesheet.plainCss,
-        //         logger: _logger));
-        // parsedSelector = _addExceptionSpan(
-        //     node.selector,
-        //     () => parsedSelector.resolveParentSelectors(
-        //         _styleRuleIgnoringAtRoot?.originalSelector,
-        //         implicitParent: !_atRootExcludingStyleRule));
-
-        // var selector = _extensionStore.addSelector(
-        //     parsedSelector, node.selector.span, _mediaQueries);
-        // var rule = ModifiableCssStyleRule(selector, node.span,
-        //     originalSelector: parsedSelector);
-        // var oldAtRootExcludingStyleRule = _atRootExcludingStyleRule;
-        // _atRootExcludingStyleRule = false;
-        // await _withParent(rule, () async {
-        //   await _withStyleRule(rule, () async {
-        //     for (var child in node.children) {
-        //       await child.accept(this);
-        //     }
-        //   });
-        // },
-        //     through: (node) => node is CssStyleRule,
-        //     scopeWhen: node.hasDeclarations);
-        // _atRootExcludingStyleRule = oldAtRootExcludingStyleRule;
-
-        // if (!rule.isInvisibleOtherThanBogusCombinators) {
-        //   for (var complex in parsedSelector.components) {
-        //     if (!complex.isBogus) continue;
-
-        //     if (complex.isUseless) {
-        //       _warn(
-        //           'The selector "${complex.toString().trim()}" is invalid CSS. It '
-        //           'will be omitted from the generated CSS.\n'
-        //           'This will be an error in Dart Sass 2.0.0.\n'
-        //           '\n'
-        //           'More info: https://sass-lang.com/d/bogus-combinators',
-        //           node.selector.span,
-        //           deprecation: true);
-        //     } else if (complex.leadingCombinators.isNotEmpty) {
-        //       _warn(
-        //           'The selector "${complex.toString().trim()}" is invalid CSS.\n'
-        //           'This will be an error in Dart Sass 2.0.0.\n'
-        //           '\n'
-        //           'More info: https://sass-lang.com/d/bogus-combinators',
-        //           node.selector.span,
-        //           deprecation: true);
-        //     } else {
-        //       _warn(
-        //           'The selector "${complex.toString().trim()}" is only valid for '
-        //                   "nesting and shouldn't\n"
-        //                   'have children other than style rules.' +
-        //               (complex.isBogusOtherThanLeadingCombinator
-        //                   ? ' It will be omitted from the generated CSS.'
-        //                   : '') +
-        //               '\n'
-        //                   'This will be an error in Dart Sass 2.0.0.\n'
-        //                   '\n'
-        //                   'More info: https://sass-lang.com/d/bogus-combinators',
-        //           MultiSpan(node.selector.span, 'invalid selector', {
-        //             rule.children.first.span: "this is not a style rule" +
-        //                 (rule.children.every((child) => child is CssComment)
-        //                     ? '\n(try converting to a //-style comment)'
-        //                     : '')
-        //           }),
-        //           deprecation: true);
-        //     }
-        //   }
-        // }
-
-        // if (_styleRule == null && _parent.children.isNotEmpty) {
-        //   var lastChild = _parent.children.last;
-        //   lastChild.isGroupEnd = true;
-        // }
-
-        // return null;
-        // todo!()
+        Some(())
     }
 
     fn style_rule_exists(&self) -> bool {

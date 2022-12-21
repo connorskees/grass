@@ -1,23 +1,6 @@
-use std::{
-    borrow::Cow,
-    cell::Cell,
-    cmp::Ordering,
-    collections::BTreeMap,
-    ops::{Add, Div, Mul, Sub},
-    sync::Arc,
-};
+use std::ops::{Add, Div, Mul, Sub};
 
-use codemap::{Span, Spanned};
-
-use crate::{
-    color::Color,
-    common::{BinaryOp, Brackets, Identifier, ListSeparator, QuoteKind},
-    error::SassResult,
-    evaluate::Visitor,
-    selector::Selector,
-    unit::{Unit, UNIT_CONVERSION_TABLE},
-    utils::{hex_char_for, is_special_function},
-};
+use crate::unit::{known_compatibilities_by_unit, Unit, UNIT_CONVERSION_TABLE};
 
 use super::Number;
 
@@ -176,16 +159,27 @@ impl SassNumber {
         self.unit.comparable(&other.unit)
     }
 
+    /// For use in calculations
+    pub fn has_possibly_compatible_units(&self, other: &Self) -> bool {
+        if self.unit.is_complex() || other.unit.is_complex() {
+            return false;
+        }
+
+        let known_compatibilities = match known_compatibilities_by_unit(&self.unit) {
+            Some(known_compatibilities) => known_compatibilities,
+            None => return true,
+        };
+
+        known_compatibilities.contains(&other.unit)
+            || known_compatibilities_by_unit(&other.unit).is_none()
+    }
+
     pub fn num(&self) -> Number {
         Number(self.num)
     }
 
     pub fn unit(&self) -> &Unit {
         &self.unit
-    }
-
-    pub fn as_slash(&self) -> &Option<Box<(Self, Self)>> {
-        &self.as_slash
     }
 
     /// Invariants: `from.comparable(&to)` must be true

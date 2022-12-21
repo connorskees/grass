@@ -25,7 +25,11 @@ test!(
     "a {\n  color: 2px;\n}\n"
 );
 test!(
-    clamp_last_non_comparable,
+    clamp_last_non_comparable_but_compatible,
     "a {\n  color: clamp(1px, 2px, 3vh);\n}\n",
     "a {\n  color: clamp(1px, 2px, 3vh);\n}\n"
+);
+error!(
+    clamp_last_non_compatible,
+    "a {\n  color: clamp(1px, 2px, 3deg);\n}\n", "Error: 1px and 3deg are incompatible."
 );

@@ -8,9 +8,7 @@ use std::{
 
 use once_cell::sync::Lazy;
 
-use crate::{
-    ast::ArgumentResult, error::SassResult, evaluate::Visitor, parse::Parser, value::Value,
-};
+use crate::{ast::ArgumentResult, error::SassResult, evaluate::Visitor, value::Value};
 
 #[macro_use]
 mod macros;

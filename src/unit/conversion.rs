@@ -2,7 +2,11 @@
 //!
 //! Arbitrary precision is retained.
 
-use std::{collections::HashMap, f64::consts::PI};
+use std::{
+    collections::{HashMap, HashSet},
+    f64::consts::PI,
+    iter::FromIterator,
+};
 
 use once_cell::sync::Lazy;
 
@@ -154,3 +158,65 @@ pub(crate) static UNIT_CONVERSION_TABLE: Lazy<HashMap<Unit, HashMap<Unit, f64>>>
 
         m
     });
+
+pub(crate) static KNOWN_COMPATIBILITIES: Lazy<[HashSet<Unit>; 5]> = Lazy::new(|| {
+    let dimensions = HashSet::from_iter([
+        Unit::Em,
+        Unit::Ex,
+        Unit::Ch,
+        Unit::Rem,
+        Unit::Vw,
+        Unit::Vh,
+        Unit::Vmin,
+        Unit::Vmax,
+        Unit::Cm,
+        Unit::Mm,
+        Unit::Q,
+        Unit::In,
+        Unit::Pt,
+        Unit::Pc,
+        Unit::Px,
+    ]);
+    let angles = HashSet::from_iter([Unit::Deg, Unit::Grad, Unit::Rad, Unit::Turn]);
+    let time = HashSet::from_iter([Unit::S, Unit::Ms]);
+    let frequency = HashSet::from_iter([Unit::Hz, Unit::Khz]);
+    let resolution = HashSet::from_iter([Unit::Dpi, Unit::Dpcm, Unit::Dppx]);
+
+    [dimensions, angles, time, frequency, resolution]
+});
+
+pub(crate) fn known_compatibilities_by_unit(unit: &Unit) -> Option<&HashSet<Unit>> {
+    match unit {
+        Unit::Em
+        | Unit::Ex
+        | Unit::Ch
+        | Unit::Rem
+        | Unit::Vw
+        | Unit::Vh
+        | Unit::Vmin
+        | Unit::Vmax
+        | Unit::Cm
+        | Unit::Mm
+        | Unit::Q
+        | Unit::In
+        | Unit::Pt
+        | Unit::Pc
+        | Unit::Px => Some(&KNOWN_COMPATIBILITIES[0]),
+        Unit::Deg | Unit::Grad | Unit::Rad | Unit::Turn => Some(&KNOWN_COMPATIBILITIES[1]),
+        Unit::S | Unit::Ms => Some(&KNOWN_COMPATIBILITIES[2]),
+        Unit::Hz | Unit::Khz => Some(&KNOWN_COMPATIBILITIES[3]),
+        Unit::Dpi | Unit::Dpcm | Unit::Dppx => Some(&KNOWN_COMPATIBILITIES[4]),
+        _ => None,
+    }
+}
+
+//     const _knownCompatibilities = [
+//   {
+//     "em", "ex", "ch", "rem", "vw", "vh", "vmin", "vmax", "cm", "mm", "q", //
+//     "in", "pt", "pc", "px"
+//   },
+//   {"deg", "grad", "rad", "turn"},
+//   {"s", "ms"},
+//   {"hz", "khz"},
+//   {"dpi", "dpcm", "dppx"}
+// ];

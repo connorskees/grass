@@ -188,21 +188,20 @@ error!(
         color: red;
       }
     }",
-    "Error: Expected \"to\" or \"from\"."
+    "Error: Expected number."
 );
 error!(
     keyframes_nothing_after_forward_slash_in_selector,
-    "@keyframes foo { a/", "Error: Expected selector."
+    "@keyframes foo { a/", "Error: expected \"{\"."
 );
 error!(
     keyframes_no_ident_after_forward_slash_in_selector,
-    "@keyframes foo { a/ {} }", "Error: expected selector."
+    "@keyframes foo { a/ {} }", "Error: Expected \"to\" or \"from\"."
 );
 error!(
     keyframes_nothing_after_selector,
     "@keyframes foo { a", "Error: expected \"{\"."
 );
-
 test!(
     e_alone,
     "@keyframes foo {
@@ -274,6 +273,32 @@ test!(
       }
     }",
     "@keyframes foo {\n  1e3% {\n    color: red;\n  }\n}\n"
+);
+test!(
+    style_rule_before_keyframes,
+    "a {
+        color: red;
+    }
+
+    @keyframes spinner-border {
+        to {
+            color: red;
+        }
+    }",
+    "a {\n  color: red;\n}\n\n@keyframes spinner-border {\n  to {\n    color: red;\n  }\n}\n"
+);
+test!(
+    style_rule_after_keyframes,
+    "@keyframes spinner-border {
+        to {
+            color: red;
+        }
+    }
+
+    a {
+        color: red;
+    }",
+    "@keyframes spinner-border {\n  to {\n    color: red;\n  }\n}\na {\n  color: red;\n}\n"
 );
 error!(
     invalid_escape_in_place_of_e,

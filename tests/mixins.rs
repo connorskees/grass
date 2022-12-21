@@ -576,6 +576,38 @@ test!(
     }",
     "a {\n  color: correct;\n}\n"
 );
+test!(
+    content_block_has_two_rulesets,
+    "@mixin foo() {
+        @content;
+    }
+
+    @include foo {
+        a {
+            color: red;
+        }
+
+        b {
+            color: red;
+        }
+    }",
+    "a {\n  color: red;\n}\n\nb {\n  color: red;\n}\n"
+);
+test!(
+    mixin_has_two_rulesets,
+    "@mixin foo() {
+        a {
+            display: none;
+        }
+
+        b {
+            display: block;
+        }
+    }
+
+    @include foo();",
+    "a {\n  display: none;\n}\n\nb {\n  display: block;\n}\n"
+);
 error!(
     mixin_in_function,
     "@function foo() {

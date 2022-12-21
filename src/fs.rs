@@ -1,8 +1,6 @@
 use std::{
-    borrow::Cow,
-    collections::BTreeMap,
     io::{self, Error, ErrorKind},
-    path::{Path, PathBuf},
+    path::Path,
 };
 
 /// A trait to allow replacing the file system lookup mechanisms.

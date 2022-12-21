@@ -68,6 +68,7 @@ impl<'a> Lexer<'a> {
     }
 
     /// Peeks `n` from current peeked position, modifying the peek cursor
+    // todo: remove this function
     pub fn peek_forward(&mut self, n: usize) -> Option<Token> {
         self.amt_peeked += n;
 
@@ -83,12 +84,6 @@ impl<'a> Lexer<'a> {
     pub fn peek_n_backwards(&self, n: usize) -> Option<Token> {
         self.buf.get(self.peek_cursor().checked_sub(n)?).copied()
     }
-
-    // pub fn peek_backward(&mut self, n: usize) -> Option<Token> {
-    //     self.amt_peeked = self.amt_peeked.checked_sub(n)?;
-
-    //     self.peek()
-    // }
 
     /// Set cursor to position and reset peek
     pub fn set_cursor(&mut self, cursor: usize) {

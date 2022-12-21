@@ -4,10 +4,9 @@ use crate::{
     ast::ArgumentResult,
     error::SassResult,
     evaluate::{Environment, Visitor},
-    parse::Stmt,
 };
 
-pub(crate) type BuiltinMixin = fn(ArgumentResult, &mut Visitor) -> SassResult<Vec<Stmt>>;
+pub(crate) type BuiltinMixin = fn(ArgumentResult, &mut Visitor) -> SassResult<()>;
 
 pub(crate) use crate::ast::AstMixin as UserDefinedMixin;
 

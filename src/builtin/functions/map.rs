@@ -142,10 +142,10 @@ pub(crate) fn map_merge(mut args: ArgumentResult, parser: &mut Visitor) -> SassR
         while let Some((key, queued_map)) = map_queue.pop() {
             match map_queue.last_mut() {
                 Some((_, map)) => {
-                    map.insert(key.node, Value::Map(queued_map));
+                    map.insert(key, Value::Map(queued_map));
                 }
                 None => {
-                    map1.insert(key.node, Value::Map(queued_map));
+                    map1.insert(key, Value::Map(queued_map));
                     break;
                 }
             }
@@ -192,7 +192,10 @@ pub(crate) fn map_set(mut args: ArgumentResult, parser: &mut Visitor) -> SassRes
         }
     };
 
-    let key = args.get_err(key_position, "key")?;
+    let key = Spanned {
+        node: args.get_err(key_position, "key")?,
+        span: args.span(),
+    };
     let value = args.get_err(value_position, "value")?;
 
     let keys = args.get_variadic()?;
@@ -224,10 +227,10 @@ pub(crate) fn map_set(mut args: ArgumentResult, parser: &mut Visitor) -> SassRes
         while let Some((key, queued_map)) = map_queue.pop() {
             match map_queue.last_mut() {
                 Some((_, next_map)) => {
-                    next_map.insert(key.node, Value::Map(queued_map));
+                    next_map.insert(key, Value::Map(queued_map));
                 }
                 None => {
-                    map.insert(key.node, Value::Map(queued_map));
+                    map.insert(key, Value::Map(queued_map));
                     break;
                 }
             }

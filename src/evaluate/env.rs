@@ -10,11 +10,7 @@ use crate::{
     selector::ExtensionStore,
     value::{SassFunction, Value},
 };
-use std::{
-    cell::{Ref, RefCell},
-    collections::BTreeMap,
-    sync::Arc,
-};
+use std::{cell::RefCell, collections::BTreeMap, sync::Arc};
 
 use super::visitor::CallableContentBlock;
 

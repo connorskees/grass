@@ -38,7 +38,7 @@ pub(crate) struct InterpolatedFunction {
 }
 
 #[derive(Debug, Clone, Default)]
-pub(crate) struct AstSassMap(pub Vec<(AstExpr, AstExpr)>);
+pub(crate) struct AstSassMap(pub Vec<(Spanned<AstExpr>, AstExpr)>);
 
 #[derive(Debug, Clone)]
 pub(crate) enum AstExpr {

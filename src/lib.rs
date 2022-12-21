@@ -1,17 +1,14 @@
-/*! # grass
-An implementation of Sass in pure rust.
-
-Spec progress as of 0.11.2, released on 2022-09-03:
-
-| Passing | Failing | Total |
-|---------|---------|-------|
-| 4205    | 2051    | 6256  |
+/*!
+This crate provides functionality for compiling [Sass](https://sass-lang.com/) to CSS.
 
 ## Use as library
 ```
 fn main() -> Result<(), Box<grass::Error>> {
-    let sass = grass::from_string("a { b { color: &; } }".to_string(), &grass::Options::default())?;
-    assert_eq!(sass, "a b {\n  color: a b;\n}\n");
+    let css = grass::from_string(
+        "a { b { color: &; } }".to_owned(),
+        &grass::Options::default()
+    )?;
+    assert_eq!(css, "a b {\n  color: a b;\n}\n");
     Ok(())
 }
 ```
@@ -63,6 +60,7 @@ grass input.scss
 
 use std::path::Path;
 
+use serializer::Serializer;
 #[cfg(feature = "wasm-exports")]
 use wasm_bindgen::prelude::*;
 
@@ -73,12 +71,7 @@ pub use crate::error::{
 };
 pub use crate::fs::{Fs, NullFs, StdFs};
 pub(crate) use crate::{context_flags::ContextFlags, token::Token};
-use crate::{
-    evaluate::Visitor,
-    lexer::Lexer,
-    output::{AtRuleContext, Css},
-    parse::Parser,
-};
+use crate::{evaluate::Visitor, lexer::Lexer, parse::Parser};
 
 mod ast;
 mod atrule;
@@ -91,10 +84,10 @@ mod evaluate;
 mod fs;
 mod interner;
 mod lexer;
-mod output;
 mod parse;
 mod scope;
 mod selector;
+mod serializer;
 mod style;
 mod token;
 mod unit;
@@ -262,6 +255,7 @@ fn from_string_with_file_name(input: String, file_name: &str, options: &Options)
         map: &mut map,
         path: file_name.as_ref(),
         is_plain_css: false,
+        is_indented: false,
         span_before: empty_span,
         flags: ContextFlags::empty(),
         options,
@@ -284,10 +278,24 @@ fn from_string_with_file_name(input: String, file_name: &str, options: &Options)
         Err(e) => return Err(raw_to_parse_error(&map, *e, options.unicode_error_messages)),
     };
 
-    Css::from_stmts(stmts, AtRuleContext::None, options.allows_charset)
-        .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages))?
-        .pretty_print(&map, options.style)
-        .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages))
+    let mut serializer = Serializer::new(&options, &map, false, empty_span);
+
+    let mut prev_was_group_end = false;
+    for stmt in stmts {
+        if stmt.is_invisible() {
+            continue;
+        }
+
+        let is_group_end = stmt.is_group_end();
+
+        serializer
+            .visit_group(stmt, prev_was_group_end)
+            .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages))?;
+
+        prev_was_group_end = is_group_end;
+    }
+
+    Ok(serializer.finish())
 }
 
 /// Compile CSS from a path

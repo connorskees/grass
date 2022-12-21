@@ -169,7 +169,7 @@ error!(
 );
 error!(
     filter_nothing_before_equal,
-    "a {\n  color: foo(=a);\n}\n", "Error: Expected expression."
+    "a {\n  color: foo(=a);\n}\n", "Error: expected \")\"."
 );
 error!(
     filter_nothing_after_equal,

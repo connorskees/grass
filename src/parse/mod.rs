@@ -1,7 +1,7 @@
 use std::{
     cell::Cell,
     collections::{BTreeMap, HashSet},
-    ffi::OsString,
+    ffi::{OsStr, OsString},
     path::{Path, PathBuf},
 };
 
@@ -9,11 +9,7 @@ use codemap::{CodeMap, Span, Spanned};
 
 use crate::{
     ast::*,
-    atrule::{
-        keyframes::{Keyframes, KeyframesRuleSet},
-        media::MediaRule,
-        SupportsRule, UnknownAtRule,
-    },
+    atrule::{keyframes::KeyframesRuleSet, media::MediaRule, SupportsRule, UnknownAtRule},
     common::{unvendor, Identifier, QuoteKind},
     error::SassResult,
     lexer::Lexer,
@@ -41,18 +37,100 @@ pub(crate) enum Stmt {
     RuleSet {
         selector: ExtendedSelector,
         body: Vec<Self>,
+        is_group_end: bool,
     },
     Style(Style),
-    Media(Box<MediaRule>, bool),
-    UnknownAtRule(Box<UnknownAtRule>),
-    Supports(Box<SupportsRule>),
+    // todo: unbox all of these
+    Media(MediaRule, bool),
+    UnknownAtRule(UnknownAtRule, bool),
+    Supports(SupportsRule, bool),
     Comment(String, Span),
-    Keyframes(Box<Keyframes>),
-    KeyframesRuleSet(Box<KeyframesRuleSet>),
+    KeyframesRuleSet(KeyframesRuleSet),
     /// A plain import such as `@import "foo.css";` or
     /// `@import url(https://fonts.google.com/foo?bar);`
     // todo: named fields, 0: url, 1: modifiers
     Import(String, Option<String>),
+}
+
+impl Stmt {
+    pub fn is_style_rule(&self) -> bool {
+        matches!(self, Stmt::RuleSet { .. })
+    }
+
+    pub fn set_group_end(&mut self) {
+        match self {
+            Stmt::Media(_, is_group_end)
+            | Stmt::UnknownAtRule(_, is_group_end)
+            | Stmt::Supports(_, is_group_end)
+            | Stmt::RuleSet { is_group_end, .. } => *is_group_end = true,
+            Stmt::Style(_) => todo!(),
+            Stmt::Comment(_, _) => todo!(),
+            Stmt::KeyframesRuleSet(_) => todo!(),
+            Stmt::Import(_, _) => todo!(),
+        }
+    }
+
+    pub fn is_group_end(&self) -> bool {
+        match self {
+            Stmt::Media(_, is_group_end)
+            | Stmt::UnknownAtRule(_, is_group_end)
+            | Stmt::Supports(_, is_group_end)
+            | Stmt::RuleSet { is_group_end, .. } => *is_group_end,
+            _ => false,
+        }
+    }
+
+    pub fn is_invisible(&self) -> bool {
+        match self {
+            Stmt::RuleSet { selector, body, .. } => {
+                selector.is_invisible() || body.iter().all(Stmt::is_invisible)
+            }
+            Stmt::Style(style) => style.value.node.is_null(),
+            Stmt::Media(media_rule, ..) => media_rule.body.iter().all(Stmt::is_invisible),
+            Stmt::UnknownAtRule(..) | Stmt::Import(..) | Stmt::Comment(..) => false,
+            Stmt::Supports(supports_rule, ..) => supports_rule.body.iter().all(Stmt::is_invisible),
+            Stmt::KeyframesRuleSet(kf) => kf.body.iter().all(Stmt::is_invisible),
+        }
+    }
+
+    pub fn copy_without_children(&self) -> Self {
+        match self {
+            (Stmt::RuleSet {
+                selector,
+                is_group_end,
+                ..
+            }) => Stmt::RuleSet {
+                selector: selector.clone(),
+                body: Vec::new(),
+                is_group_end: *is_group_end,
+            },
+            (Stmt::Style(..) | Stmt::Comment(..) | Stmt::Import(..)) => unreachable!(),
+            (Stmt::Media(media, is_group_end)) => Stmt::Media(
+                MediaRule {
+                    query: media.query.clone(),
+                    body: Vec::new(),
+                },
+                *is_group_end,
+            ),
+            (Stmt::UnknownAtRule(at_rule, is_group_end)) => Stmt::UnknownAtRule(
+                UnknownAtRule {
+                    name: at_rule.name.clone(),
+                    params: at_rule.params.clone(),
+                    body: Vec::new(),
+                    has_body: at_rule.has_body,
+                },
+                *is_group_end,
+            ),
+            (Stmt::Supports(supports, is_group_end)) => {
+                // supports.body.push(child);
+                todo!()
+            }
+            (Stmt::KeyframesRuleSet(keyframes)) => {
+                // keyframes.body.push(child);
+                todo!()
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -67,6 +145,7 @@ pub(crate) struct Parser<'a, 'b> {
     pub map: &'a mut CodeMap,
     pub path: &'a Path,
     pub is_plain_css: bool,
+    pub is_indented: bool,
     pub span_before: Span,
     pub flags: ContextFlags,
     pub options: &'a Options<'a>,
@@ -91,6 +170,29 @@ enum VariableDeclOrInterpolation {
 }
 
 impl<'a, 'b> Parser<'a, 'b> {
+    pub fn new(
+        toks: &'a mut Lexer<'b>,
+        map: &'a mut CodeMap,
+        options: &'a Options<'a>,
+        span_before: Span,
+        file_name: &'a Path,
+    ) -> Self {
+        let mut flags = ContextFlags::empty();
+
+        flags.set(ContextFlags::IS_USE_ALLOWED, true);
+
+        Parser {
+            toks,
+            map,
+            path: file_name,
+            is_plain_css: false,
+            is_indented: file_name.extension() == Some(OsStr::new("sass")),
+            span_before,
+            flags,
+            options,
+        }
+    }
+
     pub fn __parse(&mut self) -> SassResult<StyleSheet> {
         let mut style_sheet = StyleSheet::new(self.is_plain_css, self.path.to_path_buf());
 
@@ -406,7 +508,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             buffer.add_expr(self.parse_expression(None, None, None)?);
         }
 
-        self.expect_char(')');
+        self.expect_char(')')?;
         self.whitespace_or_comment();
         buffer.add_char(')');
 
@@ -724,9 +826,12 @@ impl<'a, 'b> Parser<'a, 'b> {
         if !self.toks.next_char_is('@') {
             match self.parse_variable_declaration_with_namespace() {
                 Ok(decl) => return Ok(AstStmt::VariableDecl(decl)),
-                Err(..) => {
+                Err(e) => {
                     self.toks.set_cursor(start);
-                    let stmt = self.parse_declaration_or_style_rule()?;
+                    let stmt = match self.parse_declaration_or_style_rule() {
+                        Ok(stmt) => stmt,
+                        Err(..) => return Err(e),
+                    };
 
                     let (is_style_rule, span) = match stmt {
                         AstStmt::RuleSet(ruleset) => (true, ruleset.span),
@@ -1246,7 +1351,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         }
 
         if !found_match {
-            todo!("Expected ${{String.fromCharCode(quote)}}.")
+            return Err((format!("Expected {quote}."), self.toks.current_span()).into());
         }
 
         Ok(Spanned {
@@ -1735,6 +1840,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             map: self.map,
             path: self.path,
             is_plain_css: self.is_plain_css,
+            is_indented: self.is_indented,
             span_before: self.span_before,
             flags: self.flags,
             options: self.options,
@@ -1911,10 +2017,37 @@ impl<'a, 'b> Parser<'a, 'b> {
     fn __parse_stmt(&mut self) -> SassResult<AstStmt> {
         match self.toks.peek() {
             Some(Token { kind: '@', .. }) => self.parse_at_rule(Self::__parse_stmt),
-            // todo: indented stuff
-            Some(Token { kind: '+', .. }) => self.parse_style_rule(None, None),
-            Some(Token { kind: '=', .. }) => todo!(),
-            Some(Token { kind: '}', .. }) => todo!(),
+            Some(Token { kind: '+', .. }) => {
+                if !self.is_indented {
+                    return self.parse_style_rule(None, None);
+                }
+
+                let start = self.toks.cursor();
+
+                self.toks.next();
+
+                if !self.looking_at_identifier() {
+                    self.toks.set_cursor(start);
+                    return self.parse_style_rule(None, None);
+                }
+
+                self.flags.set(ContextFlags::IS_USE_ALLOWED, false);
+                self.parse_include_rule()
+            }
+            Some(Token { kind: '=', .. }) => {
+                if !self.is_indented {
+                    return self.parse_style_rule(None, None);
+                }
+
+                self.flags.set(ContextFlags::IS_USE_ALLOWED, false);
+                let start = self.toks.cursor();
+                self.toks.next();
+                self.whitespace_or_comment();
+                self.parse_mixin_rule(start)
+            }
+            Some(Token { kind: '}', .. }) => {
+                Err(("unmatched \"}\".", self.toks.current_span()).into())
+            }
             _ => {
                 if self.flags.in_style_rule()
                     || self.flags.in_unknown_at_rule()
@@ -1935,6 +2068,13 @@ impl<'a, 'b> Parser<'a, 'b> {
         if self.is_plain_css && self.flags.in_style_rule() && !self.flags.in_unknown_at_rule() {
             return self.parse_property_or_variable_declaration(true);
         }
+
+        // The indented syntax allows a single backslash to distinguish a style rule
+        // from old-style property syntax. We don't support old property syntax, but
+        // we do support the backslash because it's easy to do.
+        if self.is_indented && self.consume_char_if_exists('\\') {
+            return self.parse_style_rule(None, None);
+        };
 
         match self.parse_declaration_or_buffer()? {
             DeclarationOrBuffer::Stmt(s) => Ok(s),
@@ -2321,6 +2461,9 @@ impl<'a, 'b> Parser<'a, 'b> {
                     }
                 }
                 '\n' | '\r' => {
+                    if self.is_indented {
+                        break;
+                    }
                     if !matches!(
                         self.toks.peek_n_backwards(1),
                         Some(Token {
@@ -2611,6 +2754,11 @@ impl<'a, 'b> Parser<'a, 'b> {
             name_buffer.add_string(mid_buffer);
             name_buffer.add_char(':');
             return Ok(DeclarationOrBuffer::Buffer(name_buffer));
+        } else if self.is_indented && self.looking_at_interpolated_identifier() {
+            // In the indented syntax, `foo:bar` is always considered a selector
+            // rather than a property.
+            name_buffer.add_string(mid_buffer);
+            return Ok(DeclarationOrBuffer::Buffer(name_buffer));
         }
 
         let post_colon_whitespace = self.raw_text(Self::whitespace_or_comment);
@@ -2760,6 +2908,13 @@ impl<'a, 'b> Parser<'a, 'b> {
             return self.parse_style_rule(None, None);
         }
 
+        // The indented syntax allows a single backslash to distinguish a style rule
+        // from old-style property syntax. We don't support old property syntax, but
+        // we do support the backslash because it's easy to do.
+        if self.is_indented && self.consume_char_if_exists('\\') {
+            return self.parse_style_rule(None, None);
+        };
+
         if !self.looking_at_identifier() {
             return self.parse_style_rule(None, None);
         }
@@ -2788,7 +2943,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         }
 
         if interpolation.contents.is_empty() {
-            todo!("expected \"}}\".");
+            return Err(("expected \"}\".", self.toks.current_span()).into());
         }
 
         let was_in_style_rule = self.flags.in_style_rule();
@@ -3061,7 +3216,12 @@ impl<'a, 'b> Parser<'a, 'b> {
                         buffer.add_token(tok);
                     }
                 }
-                '\r' | '\n' => buffer.add_token(self.toks.next().unwrap()),
+                '\r' | '\n' => {
+                    if self.is_indented {
+                        break;
+                    }
+                    buffer.add_token(self.toks.next().unwrap())
+                }
                 '!' | ';' | '{' | '}' => break,
                 'u' | 'U' => {
                     let before_url = self.toks.cursor();
@@ -3162,6 +3322,18 @@ impl<'a, 'b> Parser<'a, 'b> {
             }
             Some(Token { pos, .. }) => Err((format!("expected \"{}\".", c), pos).into()),
             None => Err((format!("expected \"{}\".", c), self.toks.current_span()).into()),
+        }
+    }
+
+    pub fn expect_char_with_message(&mut self, c: char, msg: &'static str) -> SassResult<()> {
+        match self.toks.peek() {
+            Some(tok) if tok.kind == c => {
+                self.span_before = tok.pos;
+                self.toks.next();
+                Ok(())
+            }
+            Some(Token { pos, .. }) => Err((format!("expected {}.", msg), pos).into()),
+            None => Err((format!("expected {}.", msg), self.toks.prev_span()).into()),
         }
     }
 

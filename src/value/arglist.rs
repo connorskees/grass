@@ -1,12 +1,6 @@
 use std::{cell::Cell, collections::BTreeMap, sync::Arc};
 
-use codemap::{Span, Spanned};
-
-use crate::{
-    common::{BinaryOp, Brackets, Identifier, ListSeparator, QuoteKind},
-    error::SassResult,
-    evaluate::Visitor,
-};
+use crate::common::{Identifier, ListSeparator};
 
 use super::Value;
 

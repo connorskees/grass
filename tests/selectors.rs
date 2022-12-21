@@ -402,7 +402,7 @@ test!(
 );
 error!(
     combinator_alone_missing_closing_curly_brace,
-    "a {\n  + {\n    b {\n      color: red;\n  }\n}\n", "a + b {\n  color: red;\n}\n"
+    "a {\n  + {\n    b {\n      color: red;\n  }\n}\n", "Error: expected \"}\"."
 );
 test!(
     simple_multiple_newline,
@@ -824,7 +824,6 @@ test!(
     ":nth-of-type(2 n - --1) {\n  color: red;\n}\n"
 );
 test!(
-    #[ignore = "we do not yet have a good way of consuming a string without converting \\a to a newline"]
     silent_comment_in_quoted_attribute_value,
     ".foo bar[val=\"//\"] {\n  color: &;\n}\n",
     ".foo bar[val=\"//\"] {\n  color: .foo bar[val=\"//\"];\n}\n"
@@ -842,11 +841,12 @@ test!(
     "[data-key=\"\\\\\"] {\n  color: [data-key=\"\\\\\"];\n}\n"
 );
 test!(
-    #[ignore = "we have to rewrite quoted attribute value parsing somewhat"]
+    #[ignore = "we have to rewrite quoted attribute serialization"]
     attribute_value_escape_ends_with_whitespace,
-    "[a=\"a\\\\66  \"] {\n  color: &;\n}\n",
+    r#"[a="a\\66  "] {  color: &;}"#,
     "[a=\"a\\\\66  \"] {\n  color: [a=\"a\\\\66  \"];\n}\n"
 );
+
 test!(
     no_newline_between_styles_when_last_style_was_placeholder,
     "a {

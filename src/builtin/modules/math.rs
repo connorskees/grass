@@ -594,22 +594,6 @@ fn atan2(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
     })
 }
 
-enum NumberState {
-    Zero,
-    Finite,
-    FiniteNegative,
-}
-
-impl NumberState {
-    fn from_number(num: &Number) -> Self {
-        match (num.is_zero(), num.is_negative()) {
-            (true, _) => NumberState::Zero,
-            (false, true) => NumberState::Finite,
-            (false, false) => NumberState::FiniteNegative,
-        }
-    }
-}
-
 pub(crate) fn declare(f: &mut Module) {
     f.insert_builtin("ceil", ceil);
     f.insert_builtin("floor", floor);

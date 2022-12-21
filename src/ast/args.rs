@@ -38,6 +38,7 @@ impl ArgumentDeclaration {
         &self,
         num_positional: usize,
         names: &BTreeMap<Identifier, T>,
+        span: Span,
     ) -> SassResult<()> {
         let mut named_used = 0;
 
@@ -46,12 +47,21 @@ impl ArgumentDeclaration {
 
             if i < num_positional {
                 if names.contains_key(&argument.name) {
-                    todo!("Argument ${{_originalArgumentName(argument.name)}} was passed both by position and by name.")
+                    // todo: _originalArgumentName
+                    return Err((
+                        format!(
+                            "Argument ${} was passed both by position and by name.",
+                            argument.name
+                        ),
+                        span,
+                    )
+                        .into());
                 }
             } else if names.contains_key(&argument.name) {
                 named_used += 1;
             } else if argument.default.is_none() {
-                todo!("Missing argument ${{_originalArgumentName(argument.name)}}.")
+                // todo: _originalArgumentName
+                return Err((format!("Missing argument ${}.", argument.name), span).into());
             }
         }
 
@@ -60,7 +70,21 @@ impl ArgumentDeclaration {
         }
 
         if num_positional > self.args.len() {
-            todo!("Only ${{arguments.length}} ${{names.isEmpty ? '' : 'positional '}}${{pluralize('argument', arguments.length)}} allowed, but $positional ${{pluralize('was', positional, plural: 'were')}} passed.")
+            return Err((
+                format!(
+                    "Only {} {}{} allowed, but {num_positional} {} passed.",
+                    self.args.len(),
+                    if names.is_empty() { "" } else { "positional " },
+                    if self.args.len() == 1 {
+                        "argument"
+                    } else {
+                        "arguments"
+                    },
+                    if num_positional == 1 { "was" } else { "were" }
+                ),
+                span,
+            )
+                .into());
         }
 
         if named_used < names.len() {

@@ -5,7 +5,7 @@ use std::{
 
 use crate::interner::InternedString;
 
-pub(crate) use conversion::UNIT_CONVERSION_TABLE;
+pub(crate) use conversion::{known_compatibilities_by_unit, UNIT_CONVERSION_TABLE};
 
 mod conversion;
 
@@ -92,8 +92,6 @@ pub(crate) enum Unit {
     Dpcm,
     /// Represents the number of dots per px unit
     Dppx,
-    /// Alias for dppx
-    X,
 
     // Other units
     /// Represents a fraction of the available space in the grid container
@@ -266,6 +264,10 @@ impl Div<Unit> for Unit {
 }
 
 impl Unit {
+    pub fn is_complex(&self) -> bool {
+        matches!(self, Unit::Complex { .. })
+    }
+
     pub fn comparable(&self, other: &Unit) -> bool {
         if other == &Unit::None {
             return true;
@@ -297,7 +299,7 @@ impl Unit {
             Unit::Deg | Unit::Grad | Unit::Rad | Unit::Turn => UnitKind::Angle,
             Unit::S | Unit::Ms => UnitKind::Time,
             Unit::Hz | Unit::Khz => UnitKind::Frequency,
-            Unit::Dpi | Unit::Dpcm | Unit::Dppx | Unit::X => UnitKind::Resolution,
+            Unit::Dpi | Unit::Dpcm | Unit::Dppx => UnitKind::Resolution,
             Unit::None => UnitKind::None,
             Unit::Fr | Unit::Percent | Unit::Unknown(..) | Unit::Complex { .. } => UnitKind::Other,
         }
@@ -340,7 +342,6 @@ impl From<String> for Unit {
             "dpi" => Unit::Dpi,
             "dpcm" => Unit::Dpcm,
             "dppx" => Unit::Dppx,
-            "x" => Unit::X,
             "fr" => Unit::Fr,
             _ => Unit::Unknown(InternedString::get_or_intern(unit)),
         }
@@ -383,7 +384,6 @@ impl fmt::Display for Unit {
             Unit::Dpi => write!(f, "dpi"),
             Unit::Dpcm => write!(f, "dpcm"),
             Unit::Dppx => write!(f, "dppx"),
-            Unit::X => write!(f, "x"),
             Unit::Fr => write!(f, "fr"),
             Unit::Unknown(s) => write!(f, "{}", s),
             Unit::None => Ok(()),

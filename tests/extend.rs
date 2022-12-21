@@ -1393,7 +1393,6 @@ test!(
     "@media screen {\n  @unknown {\n    .foo, .bar {\n      a: b;\n    }\n  }\n}\n"
 );
 test!(
-    #[ignore = "media queries are not yet parsed correctly"]
     extend_within_separate_media_queries,
     "@media screen {.foo {a: b}}
     @media screen {.bar {@extend .foo}}
@@ -1559,7 +1558,6 @@ test!(
     ".parent1 .child {\n  a: b;\n}\n"
 );
 test!(
-    #[ignore = "media queries are not yet parsed correctly"]
     extend_inside_double_nested_media,
     "@media all {
         @media (orientation: landscape) {
@@ -1745,7 +1743,7 @@ test!(
         @page {}
     }      
     ",
-    "@media screen {\n  a {\n    x: y;\n  }\n\n  @page {}\n}\n"
+    "@media screen {\n  a {\n    x: y;\n  }\n  @page {}\n}\n"
 );
 test!(
     escaped_selector,

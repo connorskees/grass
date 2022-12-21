@@ -191,7 +191,16 @@ error!(
     "a {\n  color: (1 / 1em);\n}\n", "Error: 1em^-1 isn't a valid CSS value."
 );
 error!(
-    #[ignore = "non-comparable inverse units"]
+    // note: dart-sass has error "Error: 1X and 1dppx have incompatible units."
+    capital_x_is_not_alias_for_dppx,
+    "a {\n  color: 1X + 1dppx;\n}\n", "Error: Incompatible units dppx and X."
+);
+error!(
+    // note: dart-sass has error "Error: 1x and 1dppx have incompatible units."
+    lowercase_x_is_not_alias_for_dppx,
+    "a {\n  color: 1x + 1dppx;\n}\n", "Error: Incompatible units dppx and x."
+);
+error!(
     display_single_div_with_non_comparable_numerator,
     "a {\n  color: (1px / 1em);\n}\n", "Error: 1px/em isn't a valid CSS value."
 );

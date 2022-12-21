@@ -82,6 +82,25 @@ test!(
     "b {\n  color: red;\n}\n\na b {\n  color: red;\n}\n"
 );
 test!(
+    at_root_between_other_styles_is_emitted_with_same_order,
+    "a {
+      a {
+          color: red;
+      }
+
+      @at-root {
+          b {
+              color: red;
+          }
+      }
+
+      c {
+          color: red;
+      }
+    }",
+    "a a {\n  color: red;\n}\nb {\n  color: red;\n}\n\na c {\n  color: red;\n}\n"
+);
+test!(
     no_newline_between_style_rules_when_there_exists_a_selector,
     "@at-root a {
       a {
@@ -142,5 +161,5 @@ error!(
 );
 error!(
     style_at_toplevel_without_selector,
-    "@at-root { color: red; }", "Error: Found style at the toplevel inside @at-root."
+    "@at-root { color: red; }", "Error: expected \"{\"."
 );

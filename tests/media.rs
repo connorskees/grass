@@ -306,8 +306,9 @@ error!(
     "@media foo and # {}", "Error: expected \"{\"."
 );
 error!(
+    // note: dart-sass gives error "Expected expression"
     nothing_after_not_in_parens,
-    "@media (not", "Error: Expected expression."
+    "@media (not", "Error: Expected whitespace."
 );
 error!(
     nothing_after_and,
@@ -412,4 +413,127 @@ test!(
       }
     }",
     "@media ((color)) {\n  a {\n    color: red;\n  }\n}\n"
+);
+test!(
+    newline_between_media_rules_declared_at_root_inside_each,
+    "@each $a in 1 2 3 {
+        a {
+            @media foo {
+                b {
+                    color: $a;
+                }
+            }
+
+            color: foo;
+        }
+    }",
+    "a {\n  color: foo;\n}\n@media foo {\n  a b {\n    color: 1;\n  }\n}\n\na {\n  color: foo;\n}\n@media foo {\n  a b {\n    color: 2;\n  }\n}\n\na {\n  color: foo;\n}\n@media foo {\n  a b {\n    color: 3;\n  }\n}\n"
+);
+test!(
+    newline_between_media_rules_declared_at_root_inside_each_with_preceding_style_rule,
+    "@each $a in 1 2 {
+        a {
+            color: red;
+        }
+
+        @media foo {
+            a {
+                color: $a;
+            }
+        }
+    }",
+    "a {\n  color: red;\n}\n\n@media foo {\n  a {\n    color: 1;\n  }\n}\na {\n  color: red;\n}\n\n@media foo {\n  a {\n    color: 2;\n  }\n}\n"
+);
+test!(
+    no_newline_between_media_rules_when_invisble_rule_between,
+    "a {}
+
+      @media (min-width: 5px) {
+          a {
+              color: 1;
+          }
+      }
+
+      a {}
+
+      @media (min-width: 5px) {
+          a {
+              color: 1;
+          }
+      }",
+    "@media (min-width: 5px) {\n  a {\n    color: 1;\n  }\n}\n@media (min-width: 5px) {\n  a {\n    color: 1;\n  }\n}\n"
+);
+test!(
+    two_media_rules_in_content_block,
+    "@mixin foo() {
+        @content;
+    }
+
+    @include foo {
+        @media foo {
+            a {
+                color: red;
+            }
+        }
+        @media foo {
+            b {
+                color: red;
+            }
+        }
+    }",
+    "@media foo {\n  a {\n    color: red;\n  }\n}\n@media foo {\n  b {\n    color: red;\n  }\n}\n"
+);
+test!(
+    splits_child_nodes_when_preceding_media,
+    "@media (foo) {
+        @media (prefers-reduced-motion: reduce) {
+            a {
+                transition: none;
+            }
+        }
+
+        a {
+            color: red;
+        }
+
+        a {
+            color: red;
+        }
+    }",
+    "@media (foo) and (prefers-reduced-motion: reduce) {\n  a {\n    transition: none;\n  }\n}\n@media (foo) {\n  a {\n    color: red;\n  }\n}\n@media (foo) {\n  a {\n    color: red;\n  }\n}\n"
+);
+test!(
+    doesnt_split_child_nodes_when_trailing_media,
+    "@media (foo) {
+        a {
+            color: red;
+        }
+
+        a {
+            color: red;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            a {
+                transition: none;
+            }
+        }
+    }",
+    "@media (foo) {\n  a {\n    color: red;\n  }\n  a {\n    color: red;\n  }\n}\n@media (foo) and (prefers-reduced-motion: reduce) {\n  a {\n    transition: none;\n  }\n}\n"
+);
+test!(
+    #[ignore = "our is_invisible_check inside css tree is flawed here"]
+    doesnt_split_child_nodes_when_leading_but_invisible_media,
+    "@media (foo) {
+        @media (prefers-reduced-motion: reduce) {}
+
+        a {
+            color: red;
+        }
+
+        a {
+            color: red;
+        }
+    }",
+    "@media (foo) {\n  a {\n    color: red;\n  }\n  a {\n    color: red;\n  }\n}\n"
 );

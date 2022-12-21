@@ -77,5 +77,5 @@ test!(
 );
 error!(
     properly_bubbles_error_when_invalid_char_after_or,
-    "a {\n  color: true or? foo;\n}\n", "Error: expected \";\"."
+    "a {\n  color: true or? foo;\n}\n", "Error: Expected expression."
 );

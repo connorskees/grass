@@ -8,23 +8,29 @@ use std::{
     },
 };
 
-use crate::unit::{Unit, UNIT_CONVERSION_TABLE};
+use crate::{
+    error::SassResult,
+    unit::{Unit, UNIT_CONVERSION_TABLE},
+};
 
+use codemap::Span;
 use integer::Integer;
 
 mod integer;
 
-const PRECISION: usize = 10;
+const PRECISION: i32 = 10;
+
+fn epsilon() -> f64 {
+    10.0_f64.powi(-PRECISION - 1)
+}
+
+fn inverse_epsilon() -> f64 {
+    10.0_f64.powi(PRECISION + 1)
+}
 
 #[derive(Clone, Copy)]
 #[repr(transparent)]
 pub(crate) struct Number(pub f64);
-
-impl Number {
-    pub fn is_nan(self) -> bool {
-        self.0.is_nan()
-    }
-}
 
 impl PartialEq for Number {
     fn eq(&self, other: &Self) -> bool {
@@ -34,12 +40,38 @@ impl PartialEq for Number {
 
 impl Eq for Number {}
 
+fn fuzzy_equals(a: f64, b: f64) -> bool {
+    if a == b {
+        return true;
+    }
+
+    (a - b).abs() <= epsilon() && (a * inverse_epsilon()).round() == (b * inverse_epsilon()).round()
+}
+
+fn fuzzy_as_int(num: f64) -> Option<i32> {
+    if !num.is_finite() {
+        return None;
+    }
+
+    let rounded = num.round();
+
+    if fuzzy_equals(num, rounded) {
+        Some(rounded as i32)
+    } else {
+        None
+    }
+}
+
 impl Number {
-    pub fn to_integer(self) -> Integer {
-        match self {
-            Self(val) => Integer::Small(val as i64),
-            // Self::Big(val) => Integer::Big(val.to_integer()),
+    pub fn assert_int(self, span: Span) -> SassResult<i32> {
+        match fuzzy_as_int(self.0) {
+            Some(i) => Ok(i),
+            None => Err((format!("{} is not an int.", self.0), span).into()),
         }
+    }
+
+    pub fn to_integer(self) -> Integer {
+        Integer::Small(self.0 as i64)
     }
 
     pub fn small_ratio<A: Into<i64>, B: Into<i64>>(a: A, b: B) -> Self {
@@ -83,40 +115,20 @@ impl Number {
         self
     }
 
-    // #[allow(clippy::cast_precision_loss)]
-    // pub fn as_float(self) -> f64 {
-    //     match self {
-    //         Number(n) => n,
-    //         // Number::Big(n) => (n.numer().to_f64().unwrap()) / (n.denom().to_f64().unwrap()),
-    //     }
-    // }
-
     pub fn sqrt(self) -> Self {
         Self(self.0.sqrt())
-        // Number::Big(Box::new(
-        //     BigRational::from_float(self.0.sqrt()).unwrap(),
-        // ))
     }
 
     pub fn ln(self) -> Self {
         Self(self.0.ln())
-        // Number::Big(Box::new(
-        //     BigRational::from_float(self.0.ln()).unwrap(),
-        // ))
     }
 
     pub fn log(self, base: Number) -> Self {
         Self(self.0.log(base.0))
-        // Number::Big(Box::new(
-        //     BigRational::from_float(self.0.log(base.0)).unwrap(),
-        // ))
     }
 
     pub fn pow(self, exponent: Self) -> Self {
         Self(self.0.powf(exponent.0))
-        // Number::Big(Box::new(
-        //     BigRational::from_float(self.0.powf(exponent.0)).unwrap(),
-        // ))
     }
 
     /// Invariants: `from.comparable(&to)` must be true
@@ -135,9 +147,6 @@ macro_rules! inverse_trig_fn(
     ($name:ident) => {
         pub fn $name(self) -> Self {
             Self(self.0.$name().to_degrees())
-            // Number::Big(Box::new(BigRational::from_float(
-            //     self.0.$name().to_degrees(),
-            // ).unwrap()))
         }
     }
 );
@@ -192,10 +201,6 @@ macro_rules! from_integer {
         impl From<$ty> for Number {
             fn from(b: $ty) -> Self {
                 Number(b as f64)
-                // if let Ok(v) = i64::try_from(b) {
-                // } else {
-                //     Number::Big(Box::new(BigRational::from_integer(BigInt::from(b))))
-                // }
             }
         }
     };
@@ -206,7 +211,6 @@ macro_rules! from_smaller_integer {
         impl From<$ty> for Number {
             fn from(val: $ty) -> Self {
                 Self(f64::from(val))
-                // Number::new_small(Rational64::from_integer(val as i64))
             }
         }
     };
@@ -215,14 +219,12 @@ macro_rules! from_smaller_integer {
 impl From<i64> for Number {
     fn from(val: i64) -> Self {
         Self(val as f64)
-        // Number::new_small(Rational64::from_integer(val))
     }
 }
 
 impl From<f64> for Number {
     fn from(b: f64) -> Self {
         Self(b)
-        // Number::Big(Box::new(BigRational::from_float(b).unwrap()))
     }
 }
 

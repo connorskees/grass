@@ -63,12 +63,12 @@ error!(
     "a {
         color: red(((a: b): red)...);
     }",
-    "Error: (a: b) is not a string in ((a: b): red)."
+    "Error: Variable keyword argument map must have string keys."
 );
 error!(
     splat_map_with_non_string_key_number,
     "a {
         color: red((1: red)...);
     }",
-    "Error: 1 is not a string in (1: red)."
+    "Error: Variable keyword argument map must have string keys."
 );
