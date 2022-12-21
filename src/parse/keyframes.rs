@@ -4,9 +4,6 @@ use crate::{
     atrule::keyframes::KeyframesSelector,
     error::SassResult,
     token::Token,
-    // lexer::Lexer,
-    // parse::Stmt,
-    // Token,
 };
 
 use super::Parser;
@@ -33,7 +30,7 @@ impl<'a, 'b, 'c> KeyframesSelectorParser<'a, 'b, 'c> {
     pub fn parse_keyframes_selector(&mut self) -> SassResult<Vec<KeyframesSelector>> {
         let mut selectors = Vec::new();
         loop {
-            self.parser.whitespace_or_comment();
+            self.parser.whitespace()?;
             if self.parser.looking_at_identifier() {
                 if self.parser.scan_identifier("to", false)? {
                     selectors.push(KeyframesSelector::To);
@@ -50,9 +47,9 @@ impl<'a, 'b, 'c> KeyframesSelectorParser<'a, 'b, 'c> {
                 selectors.push(self.parse_percentage_selector()?);
             }
 
-            self.parser.whitespace_or_comment();
+            self.parser.whitespace()?;
 
-            if !self.parser.consume_char_if_exists(',') {
+            if !self.parser.scan_char(',') {
                 break;
             }
         }
@@ -63,7 +60,7 @@ impl<'a, 'b, 'c> KeyframesSelectorParser<'a, 'b, 'c> {
     fn parse_percentage_selector(&mut self) -> SassResult<KeyframesSelector> {
         let mut buffer = String::new();
 
-        if self.parser.consume_char_if_exists('+') {
+        if self.parser.scan_char('+') {
             buffer.push('+');
         }
 
@@ -87,7 +84,7 @@ impl<'a, 'b, 'c> KeyframesSelectorParser<'a, 'b, 'c> {
             buffer.push(self.parser.toks.next().unwrap().kind);
         }
 
-        if self.parser.consume_char_if_exists('.') {
+        if self.parser.scan_char('.') {
             buffer.push('.');
 
             while matches!(

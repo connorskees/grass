@@ -62,9 +62,9 @@ impl<'c> ValueParser<'c> {
             let start = parser.toks.cursor();
 
             parser.expect_char('[')?;
-            parser.whitespace_or_comment();
+            parser.whitespace()?;
 
-            if parser.consume_char_if_exists(']') {
+            if parser.scan_char(']') {
                 return Ok(AstExpr::List(ListExpr {
                     elems: Vec::new(),
                     separator: ListSeparator::Undecided,
@@ -111,14 +111,14 @@ impl<'c> ValueParser<'c> {
     ///
     /// This function will cease parsing if the predicate returns true.
     pub(crate) fn parse_value(&mut self, parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
-        parser.whitespace_or_comment();
+        parser.whitespace()?;
 
         let start = parser.toks.cursor();
 
         let was_in_parens = parser.flags.in_parens();
 
         loop {
-            parser.whitespace_or_comment();
+            parser.whitespace()?;
 
             if let Some(parse_until) = self.parse_until {
                 if parse_until(parser)? {
@@ -206,7 +206,7 @@ impl<'c> ValueParser<'c> {
                     parser.toks.next();
                     self.add_operator(
                         Spanned {
-                            node: if parser.consume_char_if_exists('=') {
+                            node: if parser.scan_char('=') {
                                 BinaryOp::LessThanEqual
                             } else {
                                 BinaryOp::LessThan
@@ -220,7 +220,7 @@ impl<'c> ValueParser<'c> {
                     parser.toks.next();
                     self.add_operator(
                         Spanned {
-                            node: if parser.consume_char_if_exists('=') {
+                            node: if parser.scan_char('=') {
                                 BinaryOp::GreaterThanEqual
                             } else {
                                 BinaryOp::GreaterThan
@@ -636,7 +636,7 @@ impl<'c> ValueParser<'c> {
             None => return Err(("Expected expression.", op.span).into()),
         }
 
-        parser.whitespace_or_comment();
+        parser.whitespace()?;
 
         self.single_expression = Some(self.parse_single_expression(parser)?);
 
@@ -676,15 +676,15 @@ impl<'c> ValueParser<'c> {
     ) -> SassResult<Spanned<AstExpr>> {
         let mut pairs = vec![(first, parser.parse_expression_until_comma(false)?.node)];
 
-        while parser.consume_char_if_exists(',') {
-            parser.whitespace_or_comment();
+        while parser.scan_char(',') {
+            parser.whitespace()?;
             if !parser.looking_at_expression() {
                 break;
             }
 
             let key = parser.parse_expression_until_comma(false)?;
             parser.expect_char(':')?;
-            parser.whitespace_or_comment();
+            parser.whitespace()?;
             let value = parser.parse_expression_until_comma(false)?;
             pairs.push((key, value.node));
         }
@@ -707,7 +707,7 @@ impl<'c> ValueParser<'c> {
         parser.flags.set(ContextFlags::IN_PARENS, true);
 
         parser.expect_char('(')?;
-        parser.whitespace_or_comment();
+        parser.whitespace()?;
         if !parser.looking_at_expression() {
             parser.expect_char(')')?;
             parser
@@ -722,15 +722,15 @@ impl<'c> ValueParser<'c> {
         }
 
         let first = parser.parse_expression_until_comma(false)?;
-        if parser.consume_char_if_exists(':') {
-            parser.whitespace_or_comment();
+        if parser.scan_char(':') {
+            parser.whitespace()?;
             parser
                 .flags
                 .set(ContextFlags::IN_PARENS, was_in_parentheses);
             return self.parse_map(parser, first);
         }
 
-        if !parser.consume_char_if_exists(',') {
+        if !parser.scan_char(',') {
             parser.expect_char(')')?;
             parser
                 .flags
@@ -738,7 +738,7 @@ impl<'c> ValueParser<'c> {
             return Ok(AstExpr::Paren(Box::new(first.node)).span(first.span));
         }
 
-        parser.whitespace_or_comment();
+        parser.whitespace()?;
 
         let mut expressions = vec![first];
 
@@ -747,10 +747,10 @@ impl<'c> ValueParser<'c> {
                 break;
             }
             expressions.push(parser.parse_expression_until_comma(false)?);
-            if !parser.consume_char_if_exists(',') {
+            if !parser.scan_char(',') {
                 break;
             }
-            parser.whitespace_or_comment();
+            parser.whitespace()?;
         }
 
         parser.expect_char(')')?;
@@ -802,7 +802,7 @@ impl<'c> ValueParser<'c> {
 
         parser.expect_char('&')?;
 
-        if parser.consume_char_if_exists('&') {
+        if parser.scan_char('&') {
             //   warn(
             //       'In Sass, "&&" means two copies of the parent selector. You '
             //       'probably want to use "and" instead.',
@@ -926,7 +926,7 @@ impl<'c> ValueParser<'c> {
             return Err(("Operators aren't allowed in plain CSS.", op_span).into());
         }
 
-        parser.whitespace_or_comment();
+        parser.whitespace()?;
 
         let operand = self.parse_single_expression(parser)?;
 
@@ -971,7 +971,7 @@ impl<'c> ValueParser<'c> {
     fn parse_number(&mut self, parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
         let start = parser.toks.cursor();
 
-        parser.consume_char_if_exists('+') || parser.consume_char_if_exists('-');
+        parser.scan_char('+') || parser.scan_char('-');
 
         if !parser.toks.next_char_is('.') {
             self.consume_natural_number(parser)?;
@@ -982,7 +982,7 @@ impl<'c> ValueParser<'c> {
 
         let number: f64 = parser.toks.raw_text(start).parse().unwrap();
 
-        let unit = if parser.consume_char_if_exists('%') {
+        let unit = if parser.scan_char('%') {
             Unit::Percent
         } else if parser.looking_at_identifier()
             && (!matches!(parser.toks.peek(), Some(Token { kind: '-', .. }))
@@ -1114,7 +1114,7 @@ impl<'c> ValueParser<'c> {
     fn parse_important_expr(parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
         let start = parser.toks.cursor();
         parser.expect_char('!')?;
-        parser.whitespace_or_comment();
+        parser.whitespace()?;
         parser.expect_identifier("important", false)?;
 
         let span = parser.toks.span_from(start);
@@ -1145,7 +1145,7 @@ impl<'c> ValueParser<'c> {
                 let span = call_args.span;
                 return Ok(AstExpr::If(Box::new(Ternary(call_args))).span(span));
             } else if plain == "not" {
-                parser.whitespace_or_comment();
+                parser.whitespace()?;
 
                 let value = self.parse_single_expression(parser)?;
 
@@ -1290,7 +1290,7 @@ impl<'c> ValueParser<'c> {
 
         let mut has_question_mark = false;
 
-        while parser.consume_char_if_exists('?') {
+        while parser.scan_char('?') {
             has_question_mark = true;
             first_range_length += 1;
         }
@@ -1311,7 +1311,7 @@ impl<'c> ValueParser<'c> {
             .span(span));
         }
 
-        if parser.consume_char_if_exists('-') {
+        if parser.scan_char('-') {
             let second_range_start = parser.toks.cursor();
             let mut second_range_length = 0;
 
@@ -1359,11 +1359,11 @@ impl<'c> ValueParser<'c> {
 
         let start = parser.toks.cursor();
 
-        if !parser.consume_char_if_exists('(') {
+        if !parser.scan_char('(') {
             return Ok(None);
         }
 
-        parser.whitespace();
+        parser.whitespace_without_comments();
 
         // Match Ruby Sass's behavior: parse a raw URL() if possible, and if not
         // backtrack and re-parse as a function expression.
@@ -1395,7 +1395,7 @@ impl<'c> ValueParser<'c> {
                     return Ok(Some(buffer));
                 }
                 ' ' | '\t' | '\n' | '\r' => {
-                    parser.whitespace();
+                    parser.whitespace_without_comments();
 
                     if !parser.toks.next_char_is(')') {
                         break;
@@ -1427,7 +1427,7 @@ impl<'c> ValueParser<'c> {
 
         match normalized {
             "calc" | "element" | "expression" => {
-                if !parser.consume_char_if_exists('(') {
+                if !parser.scan_char('(') {
                     return Ok(None);
                 }
 
@@ -1435,7 +1435,7 @@ impl<'c> ValueParser<'c> {
                 buffer.add_char('(');
             }
             "progid" => {
-                if !parser.consume_char_if_exists(':') {
+                if !parser.scan_char(':') {
                     return Ok(None);
                 }
                 buffer = Interpolation::new_plain(name.to_owned());
@@ -1564,12 +1564,12 @@ impl<'c> ValueParser<'c> {
                 let value = match self.try_parse_calculation_interpolation(parser, start)? {
                     Some(v) => v,
                     None => {
-                        parser.whitespace_or_comment();
+                        parser.whitespace()?;
                         self.parse_calculation_sum(parser)?.node
                     }
                 };
 
-                parser.whitespace_or_comment();
+                parser.whitespace()?;
                 parser.expect_char(')')?;
 
                 Ok(AstExpr::Paren(Box::new(value)).span(parser.toks.span_from(start)))
@@ -1585,7 +1585,7 @@ impl<'c> ValueParser<'c> {
                 let start = parser.toks.cursor();
                 let ident = parser.__parse_identifier(false, false)?;
                 let ident_span = parser.toks.span_from(start);
-                if parser.consume_char_if_exists('.') {
+                if parser.scan_char('.') {
                     return self.namespaced_expression(
                         Spanned {
                             node: Identifier::from(&ident),
@@ -1626,14 +1626,14 @@ impl<'c> ValueParser<'c> {
         let mut product = self.parse_calculation_value(parser)?;
 
         loop {
-            parser.whitespace_or_comment();
+            parser.whitespace()?;
             match parser.toks.peek() {
                 Some(Token {
                     kind: op @ ('*' | '/'),
                     ..
                 }) => {
                     parser.toks.next();
-                    parser.whitespace_or_comment();
+                    parser.whitespace()?;
 
                     let rhs = self.parse_calculation_value(parser)?;
 
@@ -1683,7 +1683,7 @@ impl<'c> ValueParser<'c> {
                     }
 
                     parser.toks.next();
-                    parser.whitespace_or_comment();
+                    parser.whitespace()?;
 
                     let rhs = self.parse_calculation_product(parser)?;
 
@@ -1719,13 +1719,13 @@ impl<'c> ValueParser<'c> {
             return Ok(vec![interpolation]);
         }
 
-        parser.whitespace_or_comment();
+        parser.whitespace()?;
         let mut arguments = vec![self.parse_calculation_sum(parser)?.node];
 
         while (max_args.is_none() || arguments.len() < max_args.unwrap())
-            && parser.consume_char_if_exists(',')
+            && parser.scan_char(',')
         {
-            parser.whitespace_or_comment();
+            parser.whitespace()?;
             arguments.push(self.parse_calculation_sum(parser)?.node);
         }
 

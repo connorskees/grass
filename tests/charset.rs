@@ -49,3 +49,11 @@ error!(
     invalid_charset_value_unquoted_string,
     "@charset a;", "Error: Expected string."
 );
+error!(
+    invalid_charset_value_silent_comment,
+    "@charset //", "Error: Expected string."
+);
+error!(
+    invalid_charset_value_unterminated_loud_comment,
+    "@charset /*", "Error: expected more input."
+);

@@ -35,11 +35,11 @@ impl<'a> MediaQueryParser<'a> {
     pub fn parse(&mut self) -> SassResult<Vec<MediaQuery>> {
         let mut queries = Vec::new();
         loop {
-            self.parser.whitespace_or_comment();
+            self.parser.whitespace()?;
             queries.push(self.parse_media_query()?);
-            self.parser.whitespace_or_comment();
+            self.parser.whitespace()?;
 
-            if !self.parser.consume_char_if_exists(',') {
+            if !self.parser.scan_char(',') {
                 break;
             }
         }
@@ -52,7 +52,7 @@ impl<'a> MediaQueryParser<'a> {
     fn parse_media_query(&mut self) -> SassResult<MediaQuery> {
         if self.parser.toks.next_char_is('(') {
             let mut conditions = vec![self.parse_media_in_parens()?];
-            self.parser.whitespace_or_comment();
+            self.parser.whitespace()?;
 
             let mut conjunction = true;
 
@@ -82,7 +82,7 @@ impl<'a> MediaQueryParser<'a> {
             }
         }
 
-        self.parser.whitespace_or_comment();
+        self.parser.whitespace()?;
 
         if !self.parser.looking_at_identifier() {
             return Ok(MediaQuery::media_type(Some(identifier1), None, None));
@@ -94,7 +94,7 @@ impl<'a> MediaQueryParser<'a> {
             self.parser.expect_whitespace()?;
             media_type = Some(identifier1);
         } else {
-            self.parser.whitespace_or_comment();
+            self.parser.whitespace()?;
             modifier = Some(identifier1);
             media_type = Some(identifier2);
             if self.parser.scan_identifier("and", false)? {
@@ -137,7 +137,7 @@ impl<'a> MediaQueryParser<'a> {
         let mut result = Vec::new();
         loop {
             result.push(self.parse_media_in_parens()?);
-            self.parser.whitespace_or_comment();
+            self.parser.whitespace()?;
             if !self.parser.scan_identifier(operator, false)? {
                 return Ok(result);
             }

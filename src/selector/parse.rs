@@ -70,11 +70,11 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
     fn parse_selector_list(&mut self) -> SassResult<SelectorList> {
         let mut components = vec![self.parse_complex_selector(false)?];
 
-        self.parser.whitespace_or_comment();
+        self.parser.whitespace()?;
 
         let mut line_break = false;
 
-        while self.parser.consume_char_if_exists(',') {
+        while self.parser.scan_char(',') {
             line_break = self.eat_whitespace() == DevouredWhitespace::Newline || line_break;
             match self.parser.toks.peek() {
                 Some(Token { kind: ',', .. }) => continue,
@@ -93,7 +93,7 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
     }
 
     fn eat_whitespace(&mut self) -> DevouredWhitespace {
-        let text = self.parser.raw_text(Parser::whitespace_or_comment);
+        let text = self.parser.raw_text(Parser::whitespace);
 
         if text.contains('\n') {
             DevouredWhitespace::Newline
@@ -112,7 +112,7 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
         let mut components = Vec::new();
 
         loop {
-            self.parser.whitespace_or_comment();
+            self.parser.whitespace()?;
 
             // todo: can we do while let Some(..) = self.parser.toks.peek() ?
             match self.parser.toks.peek() {
@@ -235,7 +235,7 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
 
     fn parse_pseudo_selector(&mut self) -> SassResult<SimpleSelector> {
         self.parser.toks.next();
-        let element = self.parser.consume_char_if_exists(':');
+        let element = self.parser.scan_char(':');
         let name = self.parser.__parse_identifier(false, false)?;
 
         match self.parser.toks.peek() {
@@ -252,7 +252,7 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
             }
         };
 
-        self.parser.whitespace_or_comment();
+        self.parser.whitespace()?;
 
         let unvendored = unvendor(&name);
 
@@ -263,7 +263,7 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
             // todo: lowercase?
             if SELECTOR_PSEUDO_ELEMENTS.contains(&unvendored) {
                 selector = Some(Box::new(self.parse_selector_list()?));
-                self.parser.whitespace_or_comment();
+                self.parser.whitespace()?;
             } else {
                 argument = Some(self.parser.declaration_value(true)?.into_boxed_str());
             }
@@ -271,11 +271,11 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
             self.parser.expect_char(')')?;
         } else if SELECTOR_PSEUDO_CLASSES.contains(&unvendored) {
             selector = Some(Box::new(self.parse_selector_list()?));
-            self.parser.whitespace_or_comment();
+            self.parser.whitespace()?;
             self.parser.expect_char(')')?;
         } else if unvendored == "nth-child" || unvendored == "nth-last-child" {
             let mut this_arg = self.parse_a_n_plus_b()?;
-            self.parser.whitespace_or_comment();
+            self.parser.whitespace()?;
 
             let last_was_whitespace = matches!(
                 self.parser.toks.peek_n_backwards(1),
@@ -289,7 +289,7 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
             {
                 self.parser.expect_identifier("of", false)?;
                 this_arg.push_str(" of");
-                self.parser.whitespace_or_comment();
+                self.parser.whitespace()?;
                 selector = Some(Box::new(self.parse_selector_list()?));
             }
 
@@ -434,7 +434,7 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
                     buf.push(t.kind);
                     self.parser.toks.next();
                 }
-                self.parser.whitespace_or_comment();
+                self.parser.whitespace()?;
                 if !self.parser.scan_ident_char('n', false)? {
                     return Ok(buf);
                 }
@@ -445,14 +445,14 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
 
         buf.push('n');
 
-        self.parser.whitespace_or_comment();
+        self.parser.whitespace()?;
 
         if let Some(t @ Token { kind: '+', .. }) | Some(t @ Token { kind: '-', .. }) =
             self.parser.toks.peek()
         {
             buf.push(t.kind);
             self.parser.toks.next();
-            self.parser.whitespace_or_comment();
+            self.parser.whitespace()?;
             match self.parser.toks.peek() {
                 Some(t) if !t.kind.is_ascii_digit() => {
                     return Err(("Expected a number.", self.span).into())

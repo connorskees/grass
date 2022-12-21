@@ -40,7 +40,6 @@ pub(crate) enum Stmt {
         is_group_end: bool,
     },
     Style(Style),
-    // todo: unbox all of these
     Media(MediaRule, bool),
     UnknownAtRule(UnknownAtRule, bool),
     Supports(SupportsRule, bool),
@@ -197,32 +196,19 @@ impl<'a, 'b> Parser<'a, 'b> {
         let mut style_sheet = StyleSheet::new(self.is_plain_css, self.path.to_path_buf());
 
         // Allow a byte-order mark at the beginning of the document.
-        self.consume_char_if_exists('\u{feff}');
-
-        // self.whitespace();
-        // stmts.append(&mut self.load_modules()?);
+        self.scan_char('\u{feff}');
 
         style_sheet.body = self.parse_statements(|parser| {
             if parser.next_matches("@charset") {
                 parser.expect_char('@')?;
                 parser.expect_identifier("charset", false)?;
-                parser.whitespace_or_comment();
+                parser.whitespace()?;
                 parser.parse_string()?;
                 return Ok(None);
             }
 
             Ok(Some(parser.__parse_stmt()?))
         })?;
-
-        // while self.toks.peek().is_some() {
-        //     style_sheet.body.push(self.__parse_stmt()?);
-        //     self.whitespace();
-        //     //     stmts.append(&mut self.parse_stmt()?);
-        //     //     if self.flags.in_function() && !stmts.is_empty() {
-        //     //         // return Ok(stmts);
-        //     //     }
-        //     //     self.at_root = true;
-        // }
 
         Ok(style_sheet)
     }
@@ -253,7 +239,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         statement: fn(&mut Self) -> SassResult<Option<AstStmt>>,
     ) -> SassResult<Vec<AstStmt>> {
         let mut stmts = Vec::new();
-        self.whitespace();
+        self.whitespace_without_comments();
         while let Some(tok) = self.toks.peek() {
             match tok.kind {
                 '$' => stmts.push(AstStmt::VariableDecl(
@@ -262,11 +248,11 @@ impl<'a, 'b> Parser<'a, 'b> {
                 '/' => match self.toks.peek_n(1) {
                     Some(Token { kind: '/', .. }) => {
                         stmts.push(self.parse_silent_comment()?);
-                        self.whitespace();
+                        self.whitespace_without_comments();
                     }
                     Some(Token { kind: '*', .. }) => {
                         stmts.push(AstStmt::LoudComment(self.parse_loud_comment()?));
-                        self.whitespace();
+                        self.whitespace_without_comments();
                     }
                     _ => {
                         if let Some(stmt) = statement(self)? {
@@ -276,7 +262,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                 },
                 ';' => {
                     self.toks.next();
-                    self.whitespace();
+                    self.whitespace_without_comments();
                 }
                 _ => {
                     if let Some(stmt) = statement(self)? {
@@ -381,10 +367,10 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         let mut text = String::new();
 
-        if self.consume_char_if_exists('-') {
+        if self.scan_char('-') {
             text.push('-');
 
-            if self.consume_char_if_exists('-') {
+            if self.scan_char('-') {
                 text.push('-');
                 self.parse_identifier_body(&mut text, normalize, unit)?;
                 return Ok(text);
@@ -420,7 +406,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
     fn parse_argument_declaration(&mut self) -> SassResult<ArgumentDeclaration> {
         self.expect_char('(')?;
-        self.whitespace_or_comment();
+        self.whitespace()?;
 
         let mut arguments = Vec::new();
         let mut named = HashSet::new();
@@ -429,17 +415,17 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         while self.toks.next_char_is('$') {
             let name = Identifier::from(self.parse_variable_name()?);
-            self.whitespace_or_comment();
+            self.whitespace()?;
 
             let mut default_value: Option<AstExpr> = None;
 
-            if self.consume_char_if_exists(':') {
-                self.whitespace_or_comment();
+            if self.scan_char(':') {
+                self.whitespace()?;
                 default_value = Some(self.parse_expression_until_comma(false)?.node);
-            } else if self.consume_char_if_exists('.') {
+            } else if self.scan_char('.') {
                 self.expect_char('.')?;
                 self.expect_char('.')?;
-                self.whitespace_or_comment();
+                self.whitespace()?;
                 rest_argument = Some(name);
                 break;
             }
@@ -453,10 +439,10 @@ impl<'a, 'b> Parser<'a, 'b> {
                 todo!("Duplicate argument.")
             }
 
-            if !self.consume_char_if_exists(',') {
+            if !self.scan_char(',') {
                 break;
             }
-            self.whitespace_or_comment();
+            self.whitespace()?;
         }
         self.expect_char(')')?;
 
@@ -469,7 +455,7 @@ impl<'a, 'b> Parser<'a, 'b> {
     fn plain_at_rule_name(&mut self) -> SassResult<String> {
         self.expect_char('@')?;
         let name = self.__parse_identifier(false, false)?;
-        self.whitespace_or_comment();
+        self.whitespace()?;
         Ok(name)
     }
 
@@ -480,7 +466,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         let start = self.toks.cursor();
         let children = self.parse_children(child)?;
         let span = self.toks.span_from(start);
-        self.whitespace();
+        self.whitespace_without_comments();
         Ok(Spanned {
             node: children,
             span,
@@ -497,19 +483,19 @@ impl<'a, 'b> Parser<'a, 'b> {
         self.expect_char('(')?;
         buffer.add_char('(');
 
-        self.whitespace_or_comment();
+        self.whitespace()?;
 
         buffer.add_expr(self.parse_expression(None, None, None)?);
 
-        if self.consume_char_if_exists(':') {
-            self.whitespace_or_comment();
+        if self.scan_char(':') {
+            self.whitespace()?;
             buffer.add_char(':');
             buffer.add_char(' ');
             buffer.add_expr(self.parse_expression(None, None, None)?);
         }
 
         self.expect_char(')')?;
-        self.whitespace_or_comment();
+        self.whitespace()?;
         buffer.add_char(')');
 
         Ok(buffer)
@@ -518,7 +504,7 @@ impl<'a, 'b> Parser<'a, 'b> {
     fn parse_at_root_rule(&mut self) -> SassResult<AstStmt> {
         Ok(AstStmt::AtRootRule(if self.toks.next_char_is('(') {
             let query = self.parse_at_root_query()?;
-            self.whitespace_or_comment();
+            self.whitespace()?;
             let children = self.with_children(Self::__parse_stmt)?.node;
 
             AstAtRootRule {
@@ -552,7 +538,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                 .into());
         }
 
-        self.whitespace_or_comment();
+        self.whitespace()?;
 
         let args = if self.toks.next_char_is('(') {
             self.parse_argument_invocation(true, false)?
@@ -585,15 +571,15 @@ impl<'a, 'b> Parser<'a, 'b> {
         self.flags.set(ContextFlags::IN_CONTROL_FLOW, true);
 
         let mut variables = vec![Identifier::from(self.parse_variable_name()?)];
-        self.whitespace_or_comment();
-        while self.consume_char_if_exists(',') {
-            self.whitespace_or_comment();
+        self.whitespace()?;
+        while self.scan_char(',') {
+            self.whitespace()?;
             variables.push(Identifier::from(self.parse_variable_name()?));
-            self.whitespace_or_comment();
+            self.whitespace()?;
         }
 
         self.expect_identifier("in", false)?;
-        self.whitespace_or_comment();
+        self.whitespace()?;
 
         let list = self.parse_expression(None, None, None)?.node;
 
@@ -659,7 +645,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         let value = self.almost_any_value(false)?;
 
-        let is_optional = self.consume_char_if_exists('!');
+        let is_optional = self.scan_char('!');
 
         if is_optional {
             self.expect_identifier("optional", false)?;
@@ -685,10 +671,10 @@ impl<'a, 'b> Parser<'a, 'b> {
             node: Identifier::from(self.parse_variable_name()?),
             span: self.span_before,
         };
-        self.whitespace_or_comment();
+        self.whitespace()?;
 
         self.expect_identifier("from", false)?;
-        self.whitespace_or_comment();
+        self.whitespace()?;
 
         // todo: we shouldn't require cell here
         let exclusive: Cell<Option<bool>> = Cell::new(None);
@@ -717,7 +703,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             None => todo!("Expected \"to\" or \"through\"."),
         };
 
-        self.whitespace_or_comment();
+        self.whitespace()?;
 
         let to = self.parse_expression(None, None, None)?;
 
@@ -772,7 +758,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         let name_start = self.toks.cursor();
         let name = self.__parse_identifier(true, false)?;
         let name_span = self.toks.span_from(name_start);
-        self.whitespace_or_comment();
+        self.whitespace()?;
         let arguments = self.parse_argument_declaration()?;
 
         if self.flags.in_mixin() || self.flags.in_content_block() {
@@ -793,7 +779,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             return Err(("Invalid function name.", self.toks.span_from(start)).into());
         }
 
-        self.whitespace_or_comment();
+        self.whitespace()?;
 
         let children = self.with_children(Self::function_child)?.node;
 
@@ -922,11 +908,11 @@ impl<'a, 'b> Parser<'a, 'b> {
     fn scan_else(&mut self) -> SassResult<bool> {
         let start = self.toks.cursor();
 
-        self.whitespace_or_comment();
+        self.whitespace()?;
 
         let before_at = self.toks.cursor();
 
-        if self.consume_char_if_exists('@') {
+        if self.scan_char('@') {
             if self.scan_identifier("else", true)? {
                 return Ok(true);
             }
@@ -958,16 +944,16 @@ impl<'a, 'b> Parser<'a, 'b> {
         self.flags.set(ContextFlags::IN_CONTROL_FLOW, true);
         let condition = self.parse_expression(None, None, None)?.node;
         let body = self.parse_children(child)?;
-        self.whitespace();
+        self.whitespace_without_comments();
 
         let mut clauses = vec![AstIfClause { condition, body }];
 
         let mut last_clause: Option<Vec<AstStmt>> = None;
 
         while self.scan_else()? {
-            self.whitespace_or_comment();
+            self.whitespace()?;
             if self.scan_identifier("if", false)? {
-                self.whitespace_or_comment();
+                self.whitespace()?;
                 let condition = self.parse_expression(None, None, None)?.node;
                 let body = self.parse_children(child)?;
                 clauses.push(AstIfClause { condition, body });
@@ -979,7 +965,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         self.flags
             .set(ContextFlags::IN_CONTROL_FLOW, was_in_control_directive);
-        self.whitespace();
+        self.whitespace_without_comments();
 
         Ok(AstStmt::If(AstIf {
             if_clauses: clauses,
@@ -996,7 +982,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         let name = self.parse_interpolated_identifier()?;
         debug_assert!(name.as_plain() != Some("not"));
 
-        if !self.consume_char_if_exists('(') {
+        if !self.scan_char('(') {
             self.toks.set_cursor(start);
             return Ok(None);
         }
@@ -1009,7 +995,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
     fn parse_import_supports_query(&mut self) -> SassResult<AstSupportsCondition> {
         Ok(if self.scan_identifier("not", false)? {
-            self.whitespace_or_comment();
+            self.whitespace()?;
             AstSupportsCondition::Negation(Box::new(self.supports_condition_in_parens()?))
         } else if self.toks.next_char_is('(') {
             self.parse_supports_condition()?
@@ -1046,7 +1032,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                 let name = identifier.as_plain().map(str::to_ascii_lowercase);
                 buffer.add_interpolation(identifier);
 
-                if name.as_deref() != Some("and") && self.consume_char_if_exists('(') {
+                if name.as_deref() != Some("and") && self.scan_char('(') {
                     if name.as_deref() == Some("supports") {
                         let query = self.parse_import_supports_query()?;
                         let is_declaration =
@@ -1070,10 +1056,10 @@ impl<'a, 'b> Parser<'a, 'b> {
                     }
 
                     self.expect_char(')')?;
-                    self.whitespace_or_comment();
+                    self.whitespace()?;
                 } else {
-                    self.whitespace_or_comment();
-                    if self.consume_char_if_exists(',') {
+                    self.whitespace()?;
+                    if self.scan_char(',') {
                         buffer.add_char(',');
                         buffer.add_char(' ');
                         buffer.add_interpolation(self.parse_media_query_list()?);
@@ -1098,10 +1084,10 @@ impl<'a, 'b> Parser<'a, 'b> {
         // here should be mirrored there.
 
         let start = self.toks.cursor();
-        if !self.consume_char_if_exists('(') {
+        if !self.scan_char('(') {
             return Ok(None);
         }
-        self.whitespace();
+        self.whitespace_without_comments();
 
         // Match Ruby Sass's behavior: parse a raw URL() if possible, and if not
         // backtrack and re-parse as a function expression.
@@ -1131,7 +1117,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                     return Ok(Some(buffer));
                 }
                 ' ' | '\t' | '\n' | '\r' => {
-                    self.whitespace();
+                    self.whitespace_without_comments();
                     if !self.toks.next_char_is(')') {
                         break;
                     }
@@ -1165,7 +1151,7 @@ impl<'a, 'b> Parser<'a, 'b> {
     fn parse_import_argument(&mut self) -> SassResult<AstImport> {
         if self.toks.next_char_is('u') || self.toks.next_char_is('U') {
             let url = self.parse_dynamic_url()?;
-            self.whitespace_or_comment();
+            self.whitespace()?;
             let modifiers = self.try_import_modifiers()?;
             return Ok(AstImport::Plain(AstPlainCssImport {
                 url: Interpolation::new_with_expr(url),
@@ -1177,7 +1163,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         let start = self.toks.cursor();
         let url = self.parse_string()?;
         let raw_url = self.toks.raw_text(start);
-        self.whitespace_or_comment();
+        self.whitespace()?;
         let modifiers = self.try_import_modifiers()?;
 
         let span = self.toks.span_from(start);
@@ -1198,7 +1184,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         let mut imports = Vec::new();
 
         loop {
-            self.whitespace_or_comment();
+            self.whitespace()?;
             let argument = self.parse_import_argument()?;
 
             // todo: _inControlDirective
@@ -1207,9 +1193,9 @@ impl<'a, 'b> Parser<'a, 'b> {
             }
 
             imports.push(argument);
-            self.whitespace_or_comment();
+            self.whitespace()?;
 
-            if !self.consume_char_if_exists(',') {
+            if !self.scan_char(',') {
                 break;
             }
         }
@@ -1231,7 +1217,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         let name_start = self.toks.cursor();
         let mut name = self.__parse_identifier(false, false)?;
 
-        if self.consume_char_if_exists('.') {
+        if self.scan_char('.') {
             let namespace_span = self.toks.span_from(name_start);
             namespace = Some(Spanned {
                 node: Identifier::from(name),
@@ -1245,7 +1231,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         let name = Identifier::from(name);
         let name_span = self.toks.span_from(name_start);
 
-        self.whitespace_or_comment();
+        self.whitespace()?;
 
         let args = if self.toks.next_char_is('(') {
             self.parse_argument_invocation(true, false)?
@@ -1253,12 +1239,12 @@ impl<'a, 'b> Parser<'a, 'b> {
             ArgumentInvocation::empty(self.toks.current_span())
         };
 
-        self.whitespace_or_comment();
+        self.whitespace()?;
 
         let content_args = if self.scan_identifier("using", false)? {
-            self.whitespace_or_comment();
+            self.whitespace()?;
             let args = self.parse_argument_declaration()?;
-            self.whitespace_or_comment();
+            self.whitespace()?;
             Some(args)
         } else {
             None
@@ -1371,7 +1357,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
     fn parse_mixin_rule(&mut self, start: usize) -> SassResult<AstStmt> {
         let name = Identifier::from(self.__parse_identifier(true, false)?);
-        self.whitespace_or_comment();
+        self.whitespace()?;
         let args = if self.toks.next_char_is('(') {
             self.parse_argument_declaration()?
         } else {
@@ -1392,7 +1378,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                 .into());
         }
 
-        self.whitespace_or_comment();
+        self.whitespace()?;
 
         let old_found_content_rule = self.flags.found_content_rule();
         self.flags.set(ContextFlags::FOUND_CONTENT_RULE, false);
@@ -1463,7 +1449,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         };
 
         let before_whitespace = self.toks.cursor();
-        self.whitespace_or_comment();
+        self.whitespace()?;
 
         let mut operation: Option<AstSupportsCondition> = None;
         let mut operator: Option<String> = None;
@@ -1480,7 +1466,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                 return Ok(None);
             }
 
-            self.whitespace_or_comment();
+            self.whitespace()?;
 
             let right = self.supports_condition_in_parens()?;
             operation = Some(AstSupportsCondition::Operation {
@@ -1490,7 +1476,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                 operator: operator.clone(),
                 right: Box::new(right),
             });
-            self.whitespace_or_comment();
+            self.whitespace()?;
         }
 
         Ok(operation)
@@ -1509,7 +1495,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                 AstExpr::String(StringExpr(text, QuoteKind::None), self.span_before)
             }
             _ => {
-                self.whitespace_or_comment();
+                self.whitespace()?;
                 self.parse_expression(None, None, None)?.node
             }
         };
@@ -1528,7 +1514,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                 return Err((r#""not" is not a valid identifier here."#, ident_span).into());
             }
 
-            if self.consume_char_if_exists('(') {
+            if self.scan_char('(') {
                 let arguments = self.parse_interpolated_declaration_value(true, true, true)?;
                 self.expect_char(')')?;
                 return Ok(AstSupportsCondition::Function {
@@ -1553,10 +1539,10 @@ impl<'a, 'b> Parser<'a, 'b> {
         }
 
         self.expect_char('(')?;
-        self.whitespace_or_comment();
+        self.whitespace()?;
 
         if self.scan_identifier("not", false)? {
-            self.whitespace_or_comment();
+            self.whitespace()?;
             let condition = self.supports_condition_in_parens()?;
             self.expect_char(')')?;
             return Ok(AstSupportsCondition::Negation(Box::new(condition)));
@@ -1635,14 +1621,14 @@ impl<'a, 'b> Parser<'a, 'b> {
         let start = self.toks.cursor();
 
         if self.scan_identifier("not", false)? {
-            self.whitespace_or_comment();
+            self.whitespace()?;
             return Ok(AstSupportsCondition::Negation(Box::new(
                 self.supports_condition_in_parens()?,
             )));
         }
 
         let mut condition = self.supports_condition_in_parens()?;
-        self.whitespace_or_comment();
+        self.whitespace()?;
 
         let mut operator: Option<String> = None;
 
@@ -1656,14 +1642,14 @@ impl<'a, 'b> Parser<'a, 'b> {
                 operator = Some("and".to_owned());
             }
 
-            self.whitespace_or_comment();
+            self.whitespace()?;
             let right = self.supports_condition_in_parens()?;
             condition = AstSupportsCondition::Operation {
                 left: Box::new(condition),
                 operator: operator.clone(),
                 right: Box::new(right),
             };
-            self.whitespace_or_comment();
+            self.whitespace()?;
         }
 
         Ok(condition)
@@ -1671,7 +1657,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
     fn parse_supports_rule(&mut self) -> SassResult<AstStmt> {
         let condition = self.parse_supports_condition()?;
-        self.whitespace_or_comment();
+        self.whitespace()?;
         let children = self.with_children(Self::__parse_stmt)?;
 
         Ok(AstStmt::Supports(AstSupportsRule {
@@ -1708,13 +1694,13 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
     fn parse_forward_rule(&mut self, start: usize) -> SassResult<AstStmt> {
         let url = PathBuf::from(self.parse_url_string()?);
-        self.whitespace_or_comment();
+        self.whitespace()?;
 
         let prefix = if self.scan_identifier("as", false)? {
-            self.whitespace_or_comment();
+            self.whitespace()?;
             let prefix = self.__parse_identifier(true, false)?;
             self.expect_char('*')?;
-            self.whitespace_or_comment();
+            self.whitespace()?;
             Some(prefix)
         } else {
             None
@@ -1780,7 +1766,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         let mut variables = HashSet::new();
 
         loop {
-            self.whitespace_or_comment();
+            self.whitespace()?;
 
             // todo: withErrorMessage("Expected variable, mixin, or function name"
             if self.toks.next_char_is('$') {
@@ -1789,9 +1775,9 @@ impl<'a, 'b> Parser<'a, 'b> {
                 identifiers.insert(Identifier::from(self.__parse_identifier(true, false)?));
             }
 
-            self.whitespace_or_comment();
+            self.whitespace()?;
 
-            if !self.consume_char_if_exists(',') {
+            if !self.scan_char(',') {
                 break;
             }
         }
@@ -1806,8 +1792,8 @@ impl<'a, 'b> Parser<'a, 'b> {
 
     fn use_namespace(&mut self, url: &Path, start: usize) -> SassResult<Option<String>> {
         if self.scan_identifier("as", false)? {
-            self.whitespace_or_comment();
-            return Ok(if self.consume_char_if_exists('*') {
+            self.whitespace()?;
+            return Ok(if self.scan_char('*') {
                 None
             } else {
                 Some(self.__parse_identifier(false, false)?)
@@ -1869,26 +1855,26 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         let mut variable_names = HashSet::new();
         let mut configuration = Vec::new();
-        self.whitespace_or_comment();
+        self.whitespace()?;
         self.expect_char('(')?;
 
         loop {
-            self.whitespace_or_comment();
+            self.whitespace()?;
             let var_start = self.toks.cursor();
             let name = Identifier::from(self.parse_variable_name()?);
             let name_span = self.toks.span_from(var_start);
-            self.whitespace_or_comment();
+            self.whitespace()?;
             self.expect_char(':')?;
-            self.whitespace_or_comment();
+            self.whitespace()?;
             let expr = self.parse_expression_until_comma(false)?;
 
             let mut is_guarded = false;
             let flag_start = self.toks.cursor();
-            if allow_guarded && self.consume_char_if_exists('!') {
+            if allow_guarded && self.scan_char('!') {
                 let flag = self.__parse_identifier(false, false)?;
                 if flag == "default" {
                     is_guarded = true;
-                    self.whitespace_or_comment();
+                    self.whitespace()?;
                 } else {
                     return Err(("Invalid flag name.", self.toks.span_from(flag_start)).into());
                 }
@@ -1909,10 +1895,10 @@ impl<'a, 'b> Parser<'a, 'b> {
                 is_guarded,
             });
 
-            if !self.consume_char_if_exists(',') {
+            if !self.scan_char(',') {
                 break;
             }
-            self.whitespace_or_comment();
+            self.whitespace()?;
             if !self.looking_at_expression() {
                 break;
             }
@@ -1925,12 +1911,12 @@ impl<'a, 'b> Parser<'a, 'b> {
 
     fn parse_use_rule(&mut self, start: usize) -> SassResult<AstStmt> {
         let url = self.parse_url_string()?;
-        self.whitespace_or_comment();
+        self.whitespace()?;
 
         let path = PathBuf::from(url);
 
         let namespace = self.use_namespace(path.as_ref(), start)?;
-        self.whitespace_or_comment();
+        self.whitespace()?;
         let configuration = self.parse_configuration(false)?;
 
         self.expect_statement_separator(Some("@use rule"))?;
@@ -1966,7 +1952,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         self.expect_char('@')?;
         let name = self.parse_interpolated_identifier()?;
-        self.whitespace_or_comment();
+        self.whitespace()?;
 
         // We want to set [_isUseAllowed] to `false` *unless* we're parsing
         // `@charset`, `@forward`, or `@use`. To avoid double-comparing the rule
@@ -2042,7 +2028,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                 self.flags.set(ContextFlags::IS_USE_ALLOWED, false);
                 let start = self.toks.cursor();
                 self.toks.next();
-                self.whitespace_or_comment();
+                self.whitespace()?;
                 self.parse_mixin_rule(start)
             }
             Some(Token { kind: '}', .. }) => {
@@ -2072,7 +2058,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         // The indented syntax allows a single backslash to distinguish a style rule
         // from old-style property syntax. We don't support old property syntax, but
         // we do support the backslash because it's easy to do.
-        if self.is_indented && self.consume_char_if_exists('\\') {
+        if self.is_indented && self.scan_char('\\') {
             return self.parse_style_rule(None, None);
         };
 
@@ -2104,7 +2090,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             // hacks.
             let mut name_buffer = Interpolation::new();
             name_buffer.add_token(self.toks.next().unwrap());
-            name_buffer.add_string(self.raw_text(Self::whitespace_or_comment));
+            name_buffer.add_string(self.raw_text(Self::whitespace));
             name_buffer.add_interpolation(self.parse_interpolated_identifier()?);
             name_buffer
         } else if !self.is_plain_css {
@@ -2118,7 +2104,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             self.parse_interpolated_identifier()?
         };
 
-        self.whitespace_or_comment();
+        self.whitespace()?;
         self.expect_char(':')?;
 
         if parse_custom_properties && name.initial_plain().starts_with("--") {
@@ -2135,7 +2121,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             }));
         }
 
-        self.whitespace_or_comment();
+        self.whitespace()?;
 
         if self.looking_at_children() {
             if self.is_plain_css {
@@ -2199,7 +2185,7 @@ impl<'a, 'b> Parser<'a, 'b> {
     fn parse_single_interpolation(&mut self) -> SassResult<Interpolation> {
         self.expect_char('#')?;
         self.expect_char('{')?;
-        self.whitespace_or_comment();
+        self.whitespace()?;
         let contents = self.parse_expression(None, None, None)?;
         self.expect_char('}')?;
 
@@ -2238,10 +2224,10 @@ impl<'a, 'b> Parser<'a, 'b> {
     fn parse_interpolated_identifier(&mut self) -> SassResult<Interpolation> {
         let mut buffer = Interpolation::new();
 
-        if self.consume_char_if_exists('-') {
+        if self.scan_char('-') {
             buffer.add_char('-');
 
-            if self.consume_char_if_exists('-') {
+            if self.scan_char('-') {
                 buffer.add_char('-');
                 self.parse_interpolated_identifier_body(&mut buffer)?;
                 return Ok(buffer);
@@ -2314,22 +2300,23 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     fn skip_loud_comment(&mut self) -> SassResult<()> {
-        self.expect_char('/')?;
-        self.expect_char('*')?;
+        debug_assert!(self.next_matches("/*"));
+        self.toks.next();
+        self.toks.next();
 
         while let Some(next) = self.toks.next() {
             if next.kind != '*' {
                 continue;
             }
 
-            while self.consume_char_if_exists('*') {}
+            while self.scan_char('*') {}
 
-            if self.consume_char_if_exists('/') {
-                break;
+            if self.scan_char('/') {
+                return Ok(());
             }
         }
 
-        Ok(())
+        Err(("expected more input.", self.toks.current_span()).into())
     }
 
     fn parse_loud_comment(&mut self) -> SassResult<AstLoudComment> {
@@ -2353,7 +2340,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                     self.toks.next();
                     buffer.add_token(tok);
 
-                    if self.consume_char_if_exists('/') {
+                    if self.scan_char('/') {
                         buffer.add_char('/');
 
                         return Ok(AstLoudComment {
@@ -2380,7 +2367,7 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     fn expect_statement_separator(&mut self, _name: Option<&str>) -> SassResult<()> {
-        self.whitespace();
+        self.whitespace_without_comments();
         match self.toks.peek() {
             Some(Token {
                 kind: ';' | '}', ..
@@ -2577,7 +2564,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         let start = self.toks.cursor();
 
         self.expect_char('(')?;
-        self.whitespace_or_comment();
+        self.whitespace()?;
 
         let mut positional = Vec::new();
         let mut named = BTreeMap::new();
@@ -2587,15 +2574,15 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         while self.looking_at_expression() {
             let expression = self.parse_expression_until_comma(!for_mixin)?;
-            self.whitespace_or_comment();
+            self.whitespace()?;
 
-            if expression.node.is_variable() && self.consume_char_if_exists(':') {
+            if expression.node.is_variable() && self.scan_char(':') {
                 let name = match expression.node {
                     AstExpr::Variable { name, .. } => name,
                     _ => unreachable!(),
                 };
 
-                self.whitespace_or_comment();
+                self.whitespace()?;
                 if named.contains_key(&name.node) {
                     todo!("Duplicate argument.");
                 }
@@ -2604,7 +2591,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                     name.node,
                     self.parse_expression_until_comma(!for_mixin)?.node,
                 );
-            } else if self.consume_char_if_exists('.') {
+            } else if self.scan_char('.') {
                 self.expect_char('.')?;
                 self.expect_char('.')?;
 
@@ -2612,7 +2599,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                     rest = Some(expression.node);
                 } else {
                     keyword_rest = Some(expression.node);
-                    self.whitespace_or_comment();
+                    self.whitespace()?;
                     break;
                 }
             } else if !named.is_empty() {
@@ -2621,11 +2608,11 @@ impl<'a, 'b> Parser<'a, 'b> {
                 positional.push(expression.node);
             }
 
-            self.whitespace_or_comment();
-            if !self.consume_char_if_exists(',') {
+            self.whitespace()?;
+            if !self.scan_char(',') {
                 break;
             }
-            self.whitespace_or_comment();
+            self.whitespace()?;
 
             if allow_empty_second_arg
                 && positional.len() == 1
@@ -2696,7 +2683,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         {
             starts_with_punctuation = true;
             name_buffer.add_token(self.toks.next().unwrap());
-            name_buffer.add_string(self.raw_text(Self::whitespace_or_comment));
+            name_buffer.add_string(self.raw_text(Self::whitespace));
         }
 
         if !self.looking_at_interpolated_identifier() {
@@ -2723,9 +2710,9 @@ impl<'a, 'b> Parser<'a, 'b> {
         }
 
         let mut mid_buffer = String::new();
-        mid_buffer.push_str(&self.raw_text(Self::whitespace_or_comment));
+        mid_buffer.push_str(&self.raw_text(Self::whitespace));
 
-        if !self.consume_char_if_exists(':') {
+        if !self.scan_char(':') {
             if !mid_buffer.is_empty() {
                 name_buffer.add_char(' ');
             }
@@ -2750,7 +2737,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             })));
         }
 
-        if self.consume_char_if_exists(':') {
+        if self.scan_char(':') {
             name_buffer.add_string(mid_buffer);
             name_buffer.add_char(':');
             return Ok(DeclarationOrBuffer::Buffer(name_buffer));
@@ -2761,7 +2748,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             return Ok(DeclarationOrBuffer::Buffer(name_buffer));
         }
 
-        let post_colon_whitespace = self.raw_text(Self::whitespace_or_comment);
+        let post_colon_whitespace = self.raw_text(Self::whitespace);
         if self.looking_at_children() {
             let body = self.with_children(Self::parse_declaration_child)?.node;
             return Ok(DeclarationOrBuffer::Stmt(AstStmt::Style(AstStyle {
@@ -2879,7 +2866,7 @@ impl<'a, 'b> Parser<'a, 'b> {
     fn parse_plain_at_rule_name(&mut self) -> SassResult<String> {
         self.expect_char('@')?;
         let name = self.__parse_identifier(false, false)?;
-        self.whitespace_or_comment();
+        self.whitespace()?;
         Ok(name)
     }
 
@@ -2911,7 +2898,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         // The indented syntax allows a single backslash to distinguish a style rule
         // from old-style property syntax. We don't support old property syntax, but
         // we do support the backslash because it's easy to do.
-        if self.is_indented && self.consume_char_if_exists('\\') {
+        if self.is_indented && self.scan_char('\\') {
             return self.parse_style_rule(None, None);
         };
 
@@ -2965,24 +2952,29 @@ impl<'a, 'b> Parser<'a, 'b> {
         }))
     }
 
-    // fn parse_child(&mut self) -> SassResult<AstStmt> {
-    //     self.__parse_stmt(false)
-    // }
+    fn skip_silent_comment(&mut self) {
+        debug_assert!(self.next_matches("//"));
+        self.toks.next();
+        self.toks.next();
+        while self.toks.peek().is_some() && !self.toks.next_char_is('\n') {
+            self.toks.next();
+        }
+    }
 
-    // todo: should return silent comment struct
     fn parse_silent_comment(&mut self) -> SassResult<AstStmt> {
         let start = self.toks.cursor();
-        self.expect_char('/')?;
-        self.expect_char('/')?;
+        debug_assert!(self.next_matches("//"));
+        self.toks.next();
+        self.toks.next();
 
         let mut buffer = String::new();
 
         while let Some(tok) = self.toks.next() {
             if tok.kind == '\n' {
-                self.whitespace();
+                self.whitespace_without_comments();
                 if self.next_matches("//") {
-                    self.expect_char('/')?;
-                    self.expect_char('/')?;
+                    self.toks.next();
+                    self.toks.next();
                     buffer.clear();
                     continue;
                 }
@@ -3000,7 +2992,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                 .into());
         }
 
-        self.whitespace();
+        self.whitespace_without_comments();
 
         Ok(AstStmt::SilentComment(AstSilentComment {
             text: buffer,
@@ -3020,7 +3012,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         child: fn(&mut Self) -> SassResult<AstStmt>,
     ) -> SassResult<Vec<AstStmt>> {
         self.expect_char('{')?;
-        self.whitespace();
+        self.whitespace_without_comments();
         let mut children = Vec::new();
 
         let mut found_matching_brace = false;
@@ -3033,17 +3025,17 @@ impl<'a, 'b> Parser<'a, 'b> {
                 '/' => match self.toks.peek_n(1) {
                     Some(Token { kind: '/', .. }) => {
                         children.push(self.parse_silent_comment()?);
-                        self.whitespace();
+                        self.whitespace_without_comments();
                     }
                     Some(Token { kind: '*', .. }) => {
                         children.push(AstStmt::LoudComment(self.parse_loud_comment()?));
-                        self.whitespace();
+                        self.whitespace_without_comments();
                     }
                     _ => children.push(child(self)?),
                 },
                 ';' => {
                     self.toks.next();
-                    self.whitespace();
+                    self.whitespace_without_comments();
                 }
                 '}' => {
                     self.expect_char('}')?;
@@ -3100,16 +3092,16 @@ impl<'a, 'b> Parser<'a, 'b> {
                 .into());
         }
 
-        self.whitespace_or_comment();
+        self.whitespace()?;
         self.expect_char(':')?;
-        self.whitespace_or_comment();
+        self.whitespace()?;
 
         let value = self.parse_expression(None, None, None)?.node;
 
         let mut is_guarded = false;
         let mut is_global = false;
 
-        while self.consume_char_if_exists('!') {
+        while self.scan_char('!') {
             let flag_start = self.toks.cursor();
             let flag = self.__parse_identifier(false, false)?;
 
@@ -3129,7 +3121,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                 _ => return Err(("Invalid flag name.", self.toks.span_from(flag_start)).into()),
             }
 
-            self.whitespace_or_comment();
+            self.whitespace()?;
         }
 
         self.expect_statement_separator(Some("variable declaration"))?;
@@ -3162,7 +3154,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         Ok(match self.toks.peek_n(1) {
             Some(Token { kind: '/', .. }) => {
-                self.parse_silent_comment()?;
+                self.skip_silent_comment();
                 true
             }
             Some(Token { kind: '*', .. }) => {
@@ -3312,13 +3304,12 @@ impl<'a, 'b> Parser<'a, 'b> {
         true
     }
 
-    // todo: don't return token once we switch to remove pos
-    pub fn expect_char(&mut self, c: char) -> SassResult<Token> {
+    pub fn expect_char(&mut self, c: char) -> SassResult<()> {
         match self.toks.peek() {
             Some(tok) if tok.kind == c => {
                 self.span_before = tok.pos;
                 self.toks.next();
-                Ok(tok)
+                Ok(())
             }
             Some(Token { pos, .. }) => Err((format!("expected \"{}\".", c), pos).into()),
             None => Err((format!("expected \"{}\".", c), self.toks.current_span()).into()),
@@ -3344,8 +3335,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         Ok(())
     }
 
-    // todo: rename to scan_char
-    pub fn consume_char_if_exists(&mut self, c: char) -> bool {
+    pub fn scan_char(&mut self, c: char) -> bool {
         if let Some(Token { kind, .. }) = self.toks.peek() {
             if kind == c {
                 self.toks.next();
@@ -3380,71 +3370,28 @@ impl<'a, 'b> Parser<'a, 'b> {
             .into())
     }
 
-    // todo: this should also consume silent comments
-    pub fn whitespace(&mut self) -> bool {
-        let mut found_whitespace = false;
-        while let Some(tok) = self.toks.peek() {
-            match tok.kind {
-                ' ' | '\t' | '\n' => {
-                    self.toks.next();
-                    found_whitespace = true;
-                }
-                _ => return found_whitespace,
-            }
+    pub fn whitespace_without_comments(&mut self) {
+        while matches!(
+            self.toks.peek(),
+            Some(Token {
+                kind: ' ' | '\t' | '\n',
+                ..
+            })
+        ) {
+            self.toks.next();
         }
-        found_whitespace
     }
 
-    /// Eat tokens until a newline
-    ///
-    /// This exists largely to eat silent comments, "//"
-    /// We only have to check for \n as the lexing step normalizes all newline characters
-    ///
-    /// The newline is consumed
-    // todo: remove
-    pub fn read_until_newline(&mut self) {
-        for tok in &mut self.toks {
-            if tok.kind == '\n' {
+    pub fn whitespace(&mut self) -> SassResult<()> {
+        loop {
+            self.whitespace_without_comments();
+
+            if !self.scan_comment()? {
                 break;
             }
         }
-    }
 
-    // todo: rewrite
-    // todo: rename to match sass
-    pub fn whitespace_or_comment(&mut self) -> bool {
-        let mut found_whitespace = false;
-        while let Some(tok) = self.toks.peek() {
-            match tok.kind {
-                ' ' | '\t' | '\n' => {
-                    self.toks.next();
-                    found_whitespace = true;
-                }
-                '/' => match self.toks.peek_forward(1) {
-                    Some(Token { kind: '*', .. }) => {
-                        found_whitespace = true;
-                        self.toks.next();
-                        self.toks.next();
-                        #[allow(clippy::while_let_on_iterator)]
-                        while let Some(tok) = self.toks.next() {
-                            if tok.kind == '*' && self.consume_char_if_exists('/') {
-                                break;
-                            }
-                        }
-                    }
-                    Some(Token { kind: '/', .. }) => {
-                        found_whitespace = true;
-                        self.read_until_newline();
-                    }
-                    _ => {
-                        self.toks.reset_cursor();
-                        return found_whitespace;
-                    }
-                },
-                _ => return found_whitespace,
-            }
-        }
-        found_whitespace
+        Ok(())
     }
 }
 

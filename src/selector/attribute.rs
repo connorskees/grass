@@ -104,9 +104,9 @@ fn attribute_operator(parser: &mut Parser) -> SassResult<AttributeOp> {
 impl Attribute {
     pub fn from_tokens(parser: &mut Parser) -> SassResult<Attribute> {
         let start = parser.span_before;
-        parser.whitespace();
+        parser.whitespace_without_comments();
         let attr = attribute_name(parser, start)?;
-        parser.whitespace();
+        parser.whitespace_without_comments();
         if parser
             .toks
             .peek()
@@ -126,7 +126,7 @@ impl Attribute {
 
         parser.span_before = start;
         let op = attribute_operator(parser)?;
-        parser.whitespace();
+        parser.whitespace_without_comments();
 
         let peek = parser.toks.peek().ok_or(("expected more input.", start))?;
         parser.span_before = peek.pos;
@@ -134,7 +134,7 @@ impl Attribute {
             '\'' | '"' => parser.parse_string()?,
             _ => parser.__parse_identifier(false, false)?,
         };
-        parser.whitespace();
+        parser.whitespace_without_comments();
 
         let modifier = match parser.toks.peek() {
             Some(Token {
@@ -146,7 +146,7 @@ impl Attribute {
                 ..
             }) => {
                 parser.toks.next();
-                parser.whitespace();
+                parser.whitespace_without_comments();
                 Some(c)
             }
             _ => None,

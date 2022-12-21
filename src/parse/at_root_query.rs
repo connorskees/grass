@@ -15,16 +15,16 @@ impl<'a> AtRootQueryParser<'a> {
 
     pub fn parse(&mut self) -> SassResult<AtRootQuery> {
         self.parser.expect_char('(')?;
-        self.parser.whitespace_or_comment();
+        self.parser.whitespace()?;
         let include = self.parser.scan_identifier("with", false)?;
 
         if !include {
             self.parser.expect_identifier("without", false)?;
         }
 
-        self.parser.whitespace_or_comment();
+        self.parser.whitespace()?;
         self.parser.expect_char(':')?;
-        self.parser.whitespace_or_comment();
+        self.parser.whitespace()?;
 
         let mut names = HashSet::new();
 

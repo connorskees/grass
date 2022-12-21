@@ -100,10 +100,10 @@ impl<'a, 'b> Parser<'a, 'b> {
     pub(super) fn parse_media_query_list(&mut self) -> SassResult<Interpolation> {
         let mut buf = Interpolation::new();
         loop {
-            self.whitespace_or_comment();
+            self.whitespace()?;
             self.parse_media_query(&mut buf)?;
-            self.whitespace_or_comment();
-            if !self.consume_char_if_exists(',') {
+            self.whitespace()?;
+            if !self.scan_char(',') {
                 break;
             }
             buf.add_char(',');
@@ -124,7 +124,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             return Err(("Expected whitespace.", self.toks.current_span()).into());
         }
 
-        self.whitespace_or_comment();
+        self.whitespace()?;
 
         Ok(())
     }
@@ -132,11 +132,11 @@ impl<'a, 'b> Parser<'a, 'b> {
     fn parse_media_in_parens(&mut self, buf: &mut Interpolation) -> SassResult<()> {
         self.expect_char_with_message('(', "media condition in parentheses")?;
         buf.add_char('(');
-        self.whitespace_or_comment();
+        self.whitespace()?;
 
         if matches!(self.toks.peek(), Some(Token { kind: '(', .. })) {
             self.parse_media_in_parens(buf)?;
-            self.whitespace_or_comment();
+            self.whitespace()?;
 
             if self.scan_identifier("and", false)? {
                 buf.add_string(" and ".to_owned());
@@ -154,8 +154,8 @@ impl<'a, 'b> Parser<'a, 'b> {
         } else {
             buf.add_expr(self.expression_until_comparison()?);
 
-            if self.consume_char_if_exists(':') {
-                self.whitespace_or_comment();
+            if self.scan_char(':') {
+                self.whitespace()?;
                 buf.add_char(':');
                 buf.add_char(' ');
                 buf.add_expr(self.parse_expression(None, None, None)?);
@@ -172,27 +172,27 @@ impl<'a, 'b> Parser<'a, 'b> {
                     buf.add_char(' ');
                     buf.add_token(self.toks.next().unwrap());
 
-                    if (next == '<' || next == '>') && self.consume_char_if_exists('=') {
+                    if (next == '<' || next == '>') && self.scan_char('=') {
                         buf.add_char('=');
                     }
 
                     buf.add_char(' ');
 
-                    self.whitespace_or_comment();
+                    self.whitespace()?;
 
                     buf.add_expr(self.expression_until_comparison()?);
 
-                    if (next == '<' || next == '>') && self.consume_char_if_exists(next) {
+                    if (next == '<' || next == '>') && self.scan_char(next) {
                         buf.add_char(' ');
                         buf.add_char(next);
 
-                        if self.consume_char_if_exists('=') {
+                        if self.scan_char('=') {
                             buf.add_char('=');
                         }
 
                         buf.add_char(' ');
 
-                        self.whitespace_or_comment();
+                        self.whitespace()?;
                         buf.add_expr(self.expression_until_comparison()?);
                     }
                 }
@@ -200,7 +200,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         }
 
         self.expect_char(')')?;
-        self.whitespace_or_comment();
+        self.whitespace()?;
         buf.add_char(')');
 
         Ok(())
@@ -213,7 +213,7 @@ impl<'a, 'b> Parser<'a, 'b> {
     ) -> SassResult<()> {
         loop {
             self.parse_media_or_interpolation(buf)?;
-            self.whitespace_or_comment();
+            self.whitespace()?;
 
             if !self.scan_identifier(operator, false)? {
                 return Ok(());
@@ -240,7 +240,7 @@ impl<'a, 'b> Parser<'a, 'b> {
     fn parse_media_query(&mut self, buf: &mut Interpolation) -> SassResult<()> {
         if matches!(self.toks.peek(), Some(Token { kind: '(', .. })) {
             self.parse_media_in_parens(buf)?;
-            self.whitespace_or_comment();
+            self.whitespace()?;
 
             if self.scan_identifier("and", false)? {
                 buf.add_string(" and ".to_owned());
@@ -267,7 +267,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             }
         }
 
-        self.whitespace_or_comment();
+        self.whitespace()?;
         buf.add_interpolation(ident1);
         if !self.looking_at_interpolated_identifier() {
             // For example, "@media screen {".
@@ -283,7 +283,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             // For example, "@media screen and ..."
             buf.add_string(" and ".to_owned());
         } else {
-            self.whitespace_or_comment();
+            self.whitespace()?;
             buf.add_interpolation(ident2);
 
             if self.scan_identifier("and", false)? {
