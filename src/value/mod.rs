@@ -526,15 +526,13 @@ impl Value {
         }
     }
 
-    pub fn cmp(&self, other: &Self, span: Span, op: BinaryOp) -> SassResult<Ordering> {
+    pub fn cmp(&self, other: &Self, span: Span, op: BinaryOp) -> SassResult<Option<Ordering>> {
         Ok(match self {
-            Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
             Value::Dimension {
                 num,
                 unit,
                 as_slash: _,
             } => match &other {
-                Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
                 Value::Dimension {
                     num: num2,
                     unit: unit2,
@@ -546,9 +544,9 @@ impl Value {
                         );
                     }
                     if unit == unit2 || unit == &Unit::None || unit2 == &Unit::None {
-                        num.cmp(num2)
+                        num.partial_cmp(num2)
                     } else {
-                        num.cmp(&num2.convert(unit2, unit))
+                        num.partial_cmp(&num2.convert(unit2, unit))
                     }
                 }
                 _ => {

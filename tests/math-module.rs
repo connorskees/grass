@@ -592,6 +592,11 @@ test!(
     "a {\n  color: 0.5;\n}\n"
 );
 test!(
+    clamp_nan,
+    "@use 'sass:math';\na {\n  color: math.clamp((0/0), 5, (0/0));\n}\n",
+    "a {\n  color: 5;\n}\n"
+);
+test!(
     div_two_strings,
     "@use 'sass:math';\na {\n  color: math.div(\"1\",\"2\");\n}\n",
     "a {\n  color: \"1\"/\"2\";\n}\n"

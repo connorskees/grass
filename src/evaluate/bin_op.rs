@@ -420,7 +420,10 @@ pub(crate) fn cmp(
     span: Span,
     op: BinaryOp,
 ) -> SassResult<Value> {
-    let ordering = left.cmp(&right, span, op)?;
+    let ordering = match left.cmp(&right, span, op)? {
+        Some(ord) => ord,
+        None => return Ok(Value::False),
+    };
 
     Ok(match op {
         BinaryOp::GreaterThan => match ordering {

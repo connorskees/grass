@@ -28,7 +28,10 @@ fn inverse_epsilon() -> f64 {
     10.0_f64.powi(PRECISION + 1)
 }
 
-#[derive(Clone, Copy)]
+/// Thin wrapper around `f64` providing utility functions and more accurate
+/// operations -- namely a Sass-compatible modulo
+// todo: potentially superfluous?
+#[derive(Clone, Copy, PartialOrd)]
 #[repr(transparent)]
 pub(crate) struct Number(pub f64);
 
@@ -89,6 +92,22 @@ pub(crate) fn fuzzy_less_than_or_equals(number1: f64, number2: f64) -> bool {
 }
 
 impl Number {
+    pub fn min(self, other: Self) -> Self {
+        if self < other {
+            self
+        } else {
+            other
+        }
+    }
+
+    pub fn max(self, other: Self) -> Self {
+        if self > other {
+            self
+        } else {
+            other
+        }
+    }
+
     pub fn is_positive(self) -> bool {
         self.0.is_sign_positive() && !self.is_zero()
     }
@@ -320,22 +339,6 @@ impl Number {
         }
 
         buffer
-    }
-}
-
-impl PartialOrd for Number {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        self.0.partial_cmp(&other.0)
-    }
-}
-
-impl Ord for Number {
-    fn cmp(&self, other: &Self) -> Ordering {
-        if !self.is_finite() || !other.is_finite() {
-            todo!()
-        }
-
-        self.0.partial_cmp(&other.0).unwrap()
     }
 }
 

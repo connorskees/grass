@@ -256,8 +256,8 @@ impl Color {
         let green = self.green() / Number::from(255.0);
         let blue = self.blue() / Number::from(255.0);
 
-        let min = min(red, min(green, blue));
-        let max = max(red, max(green, blue));
+        let min = red.min(green.min(blue));
+        let max = red.max(green.max(blue));
 
         let delta = max - min;
 
@@ -284,7 +284,7 @@ impl Color {
         let green = self.green() / Number::from(255.0);
         let blue = self.blue() / Number::from(255.0);
 
-        let min = min(red, min(green, blue));
+        let min = red.min(green.min(blue));
         let max = red.max(green.max(blue));
 
         if min == max {
@@ -314,7 +314,7 @@ impl Color {
         let red: Number = self.red() / Number::from(255.0);
         let green = self.green() / Number::from(255.0);
         let blue = self.blue() / Number::from(255.0);
-        let min = min(red, min(green, blue));
+        let min = red.min(green.min(blue));
         let max = red.max(green.max(blue));
         (((min + max) / Number::from(2.0)) * Number::from(100.0)).round()
     }
@@ -327,8 +327,8 @@ impl Color {
         let red = self.red() / Number::from(255.0);
         let green = self.green() / Number::from(255.0);
         let blue = self.blue() / Number::from(255.0);
-        let min = min(red, min(green, blue));
-        let max = max(red, max(green, blue));
+        let min = red.min(green.min(blue));
+        let max = red.max(green.max(blue));
 
         let lightness = (min + max) / Number::from(2.0);
 

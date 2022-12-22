@@ -99,15 +99,15 @@ fn clamp(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
     }
 
     match min.cmp(&number, span, BinaryOp::LessThan)? {
-        Ordering::Greater => return Ok(min),
-        Ordering::Equal => return Ok(number),
-        Ordering::Less => {}
+        Some(Ordering::Greater) => return Ok(min),
+        Some(Ordering::Equal) => return Ok(number),
+        Some(Ordering::Less) | None => {}
     }
 
     match max.cmp(&number, span, BinaryOp::GreaterThan)? {
-        Ordering::Less => return Ok(max),
-        Ordering::Equal => return Ok(number),
-        Ordering::Greater => {}
+        Some(Ordering::Less) => return Ok(max),
+        Some(Ordering::Equal) => return Ok(number),
+        Some(Ordering::Greater) | None => {}
     }
 
     Ok(number)
