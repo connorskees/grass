@@ -938,11 +938,11 @@ impl<'a> Visitor<'a> {
         for load_path in &self.parser.options.load_paths {
             let path_buf = load_path.join(&path);
 
-            if !self.parser.options.fs.is_dir(&path_buf) {
-                try_path_with_extensions!(&path_buf);
-            }
+            try_path_with_extensions!(&path_buf);
 
-            try_path_with_extensions!(path_buf.join("index"));
+            if self.parser.options.fs.is_dir(&path_buf) {
+                try_path_with_extensions!(path_buf.join("index"));
+            }
         }
 
         None

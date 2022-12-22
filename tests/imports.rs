@@ -1,4 +1,4 @@
-use std::io::Write;
+use std::{io::Write, path::Path};
 
 use macros::TestFs;
 
@@ -312,6 +312,105 @@ fn imports_explicit_file_extension() {
     assert_eq!(
         "a {\n  color: red;\n}\n",
         &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
+    );
+}
+
+#[test]
+fn potentially_conflicting_directory_and_file() {
+    tempfile!(
+        "index.scss",
+        "$a: wrong;",
+        dir = "potentially_conflicting_directory_and_file"
+    );
+    tempfile!(
+        "_potentially_conflicting_directory_and_file.scss",
+        "$a: right;"
+    );
+
+    let input = r#"
+        @import "potentially_conflicting_directory_and_file";
+        a {
+            color: $a;
+        }
+    "#;
+
+    assert_eq!(
+        "a {\n  color: right;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default()).expect(input)
+    );
+}
+
+#[test]
+fn finds_index_file_no_underscore() {
+    tempfile!(
+        "index.scss",
+        "$a: right;",
+        dir = "finds_index_file_no_underscore"
+    );
+
+    let input = r#"
+        @import "finds_index_file_no_underscore";
+        a {
+            color: $a;
+        }
+    "#;
+
+    assert_eq!(
+        "a {\n  color: right;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default()).expect(input)
+    );
+}
+
+#[test]
+fn finds_index_file_with_underscore() {
+    tempfile!(
+        "_index.scss",
+        "$a: right;",
+        dir = "finds_index_file_with_underscore"
+    );
+
+    let input = r#"
+        @import "finds_index_file_with_underscore";
+        a {
+            color: $a;
+        }
+    "#;
+
+    assert_eq!(
+        "a {\n  color: right;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default()).expect(input)
+    );
+}
+
+#[test]
+fn potentially_conflicting_directory_and_file_from_load_path() {
+    tempfile!(
+        "_potentially_conflicting_directory_and_file_from_load_path.scss",
+        "$a: right;",
+        dir = "potentially_conflicting_directory_and_file_from_load_path__a"
+    );
+    tempfile!(
+        "index.scss",
+        "$a: wrong;",
+        dir = "potentially_conflicting_directory_and_file_from_load_path__a/potentially_conflicting_directory_and_file_from_load_path"
+    );
+
+    let input = r#"
+        @import "potentially_conflicting_directory_and_file_from_load_path";
+        a {
+            color: $a;
+        }
+    "#;
+
+    assert_eq!(
+        "a {\n  color: right;\n}\n",
+        &grass::from_string(
+            input.to_string(),
+            &grass::Options::default().load_path(&Path::new(
+                "potentially_conflicting_directory_and_file_from_load_path__a"
+            ))
+        )
+        .expect(input)
     );
 }
 
