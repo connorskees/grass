@@ -256,7 +256,11 @@ impl Value {
                 unit,
                 as_slash,
             }),
-            _ => Err((format!("${name} is not a number."), span).into()),
+            _ => Err((
+                format!("${name}: \"{}\" is not a number.", self.inspect(span)?),
+                span,
+            )
+                .into()),
         }
     }
 

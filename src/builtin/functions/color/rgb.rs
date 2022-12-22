@@ -219,7 +219,7 @@ fn parse_channels(
             return Ok(ParsedChannels::String(fn_string));
         } else {
             let argument = arg_names[list.len()];
-            return Err((format!("Missing element {argument}."), span).into());
+            return Err((format!("Missing element ${argument}."), span).into());
         }
     }
 

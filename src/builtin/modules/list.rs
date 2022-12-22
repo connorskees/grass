@@ -8,12 +8,20 @@ use crate::builtin::{
 // todo: tests
 fn slash(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.min_args(1)?;
-    args.max_args(1)?;
 
-    let list = args.get_err(0, "elements")?.as_list();
+    let span = args.span();
+
+    let list = if args.len() == 1 {
+        args.get_err(0, "elements")?.as_list()
+    } else {
+        args.get_variadic()?
+            .into_iter()
+            .map(|arg| arg.node)
+            .collect()
+    };
 
     if list.len() < 2 {
-        return Err(("At least two elements are required.", args.span()).into());
+        return Err(("At least two elements are required.", span).into());
     }
 
     Ok(Value::List(list, ListSeparator::Slash, Brackets::None))

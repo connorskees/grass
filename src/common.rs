@@ -109,7 +109,7 @@ impl ListSeparator {
         match self {
             Self::Space | Self::Undecided => " ",
             Self::Comma => ", ",
-            Self::Slash => "/",
+            Self::Slash => " / ",
         }
     }
 
