@@ -639,11 +639,13 @@ impl Value {
             },
             Value::List(v, sep, brackets) if v.len() == 1 => match brackets {
                 Brackets::None => match sep {
-                    ListSeparator::Space | ListSeparator::Undecided => v[0].inspect(span)?,
+                    ListSeparator::Space | ListSeparator::Slash | ListSeparator::Undecided => {
+                        v[0].inspect(span)?
+                    }
                     ListSeparator::Comma => Cow::Owned(format!("({},)", v[0].inspect(span)?)),
                 },
                 Brackets::Bracketed => match sep {
-                    ListSeparator::Space | ListSeparator::Undecided => {
+                    ListSeparator::Space | ListSeparator::Slash | ListSeparator::Undecided => {
                         Cow::Owned(format!("[{}]", v[0].inspect(span)?))
                     }
                     ListSeparator::Comma => Cow::Owned(format!("[{},]", v[0].inspect(span)?)),
@@ -710,6 +712,14 @@ impl Value {
         }
     }
 
+    pub fn separator(&self) -> ListSeparator {
+        match self {
+            Value::List(_, list_separator, _) => *list_separator,
+            Value::Map(..) | Value::ArgList(..) => ListSeparator::Comma,
+            _ => ListSeparator::Space,
+        }
+    }
+
     /// Parses `self` as a selector list, in the same manner as the
     /// `selector-parse()` function.
     ///
@@ -761,6 +771,7 @@ impl Value {
                             }
                         }
                     }
+                    ListSeparator::Slash => return Ok(None),
                     ListSeparator::Space | ListSeparator::Undecided => {
                         for compound in list {
                             if let Value::String(text, ..) = compound {

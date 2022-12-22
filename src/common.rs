@@ -90,6 +90,7 @@ pub(crate) enum Brackets {
 pub(crate) enum ListSeparator {
     Space,
     Comma,
+    Slash,
     Undecided,
 }
 
@@ -108,6 +109,7 @@ impl ListSeparator {
         match self {
             Self::Space | Self::Undecided => " ",
             Self::Comma => ", ",
+            Self::Slash => "/",
         }
     }
 
@@ -115,6 +117,7 @@ impl ListSeparator {
         match self {
             Self::Space | Self::Undecided => " ",
             Self::Comma => ",",
+            Self::Slash => "/",
         }
     }
 
@@ -122,6 +125,7 @@ impl ListSeparator {
         match self {
             Self::Space | Self::Undecided => "space",
             Self::Comma => "comma",
+            Self::Slash => "slash",
         }
     }
 }

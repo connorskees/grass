@@ -144,7 +144,7 @@ test!(
 test!(
     rgba_one_arg,
     "a {\n  color: rgba(1 2 3);\n}\n",
-    "a {\n  color: #010203;\n}\n"
+    "a {\n  color: rgb(1, 2, 3);\n}\n"
 );
 test!(
     rgb_two_args,
@@ -383,7 +383,7 @@ test!(
 test!(
     rgba_1_arg,
     "a {\n  color: rgba(74.7% 173 93%);\n}\n",
-    "a {\n  color: #beaded;\n}\n"
+    "a {\n  color: rgb(190, 173, 237);\n}\n"
 );
 test!(
     hsla_1_arg,
@@ -432,7 +432,7 @@ test!(
 test!(
     negative_values_in_rgb,
     "a {\n  color: rgb(-1 -1 -1);\n}\n",
-    "a {\n  color: black;\n}\n"
+    "a {\n  color: rgb(0, 0, 0);\n}\n"
 );
 test!(
     interpolation_after_hash_containing_only_hex_chars,
@@ -527,7 +527,6 @@ error!(
 );
 // todo: we need many more of these tests
 test!(
-    #[ignore = "new color format"]
     rgba_one_arg_special_fn_4th_arg_max,
     "a {\n  color: rgba(1 2 max(3, 3));\n}\n",
     "a {\n  color: rgb(1, 2, 3);\n}\n"

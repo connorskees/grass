@@ -1,3 +1,5 @@
+use std::collections::{BTreeMap, BTreeSet};
+
 use crate::{builtin::builtin_imports::*, serializer::inspect_number, value::fuzzy_round};
 
 fn function_string(
@@ -110,6 +112,153 @@ fn percentage_or_unitless(
     Ok(value.clamp(0.0, max))
 }
 
+#[derive(Debug, Clone)]
+enum ParsedChannels {
+    String(String),
+    List(Vec<Value>),
+}
+
+fn is_var_slash(value: &Value) -> bool {
+    match value {
+        Value::String(text, QuoteKind::Quoted) => {
+            text.to_ascii_lowercase().starts_with("var(") && text.contains('/')
+        }
+        _ => false,
+    }
+}
+
+fn parse_channels(
+    name: &'static str,
+    arg_names: &[&'static str],
+    mut channels: Value,
+    visitor: &mut Visitor,
+    span: Span,
+) -> SassResult<ParsedChannels> {
+    if channels.is_var() {
+        let fn_string = function_string(name, &[channels], visitor, span)?;
+        return Ok(ParsedChannels::String(fn_string));
+    }
+
+    let original_channels = channels.clone();
+
+    let mut alpha_from_slash_list = None;
+
+    if channels.separator() == ListSeparator::Slash {
+        let list = channels.clone().as_list();
+        if list.len() != 2 {
+            return Err((
+                format!(
+                    "Only 2 slash-separated elements allowed, but {} {} passed.",
+                    list.len(),
+                    if list.len() == 1 { "was" } else { "were" }
+                ),
+                span,
+            )
+                .into());
+        }
+
+        channels = list[0].clone();
+        let inner_alpha_from_slash_list = list[1].clone();
+
+        if !alpha_from_slash_list
+            .as_ref()
+            .map(Value::is_special_function)
+            .unwrap_or(false)
+        {
+            inner_alpha_from_slash_list
+                .clone()
+                .assert_number_with_name(span, "alpha")?;
+        }
+
+        alpha_from_slash_list = Some(inner_alpha_from_slash_list);
+
+        if list[0].is_var() {
+            let fn_string = function_string(name, &[original_channels], visitor, span)?;
+            return Ok(ParsedChannels::String(fn_string));
+        }
+    }
+
+    let is_comma_separated = channels.separator() == ListSeparator::Comma;
+    let is_bracketed = matches!(channels, Value::List(_, _, Brackets::Bracketed));
+
+    if is_comma_separated || is_bracketed {
+        let mut err_buffer = "$channels must be".to_owned();
+
+        if is_bracketed {
+            err_buffer.push_str(" an unbracketed");
+        }
+
+        if is_comma_separated {
+            if is_bracketed {
+                err_buffer.push(',');
+            } else {
+                err_buffer.push_str(" a");
+            }
+
+            err_buffer.push_str(" space-separated");
+        }
+
+        err_buffer.push_str(" list.");
+
+        return Err((err_buffer, span).into());
+    }
+
+    let mut list = channels.clone().as_list();
+
+    if list.len() > 3 {
+        return Err((
+            format!("Only 3 elements allowed, but {} were passed.", list.len()),
+            span,
+        )
+            .into());
+    } else if list.len() < 3 {
+        if list.iter().any(Value::is_var)
+            || (!list.is_empty() && is_var_slash(list.last().unwrap()))
+        {
+            let fn_string = function_string(name, &[original_channels], visitor, span)?;
+            return Ok(ParsedChannels::String(fn_string));
+        } else {
+            let argument = arg_names[list.len()];
+            return Err((format!("Missing element {argument}."), span).into());
+        }
+    }
+
+    if let Some(alpha_from_slash_list) = alpha_from_slash_list {
+        list.push(alpha_from_slash_list);
+        return Ok(ParsedChannels::List(list));
+    }
+
+    match &list[2] {
+        Value::Dimension { as_slash, .. } => match as_slash {
+            Some(slash) => {
+                // todo: superfluous clone
+                let slash_0 = slash.0.clone();
+                let slash_1 = slash.1.clone();
+                Ok(ParsedChannels::List(vec![
+                    list[0].clone(),
+                    list[1].clone(),
+                    Value::Dimension {
+                        num: Number(slash_0.num),
+                        unit: slash_0.unit,
+                        as_slash: slash_0.as_slash,
+                    },
+                    Value::Dimension {
+                        num: Number(slash_1.num),
+                        unit: slash_1.unit,
+                        as_slash: slash_1.as_slash,
+                    },
+                ]))
+            }
+            None => Ok(ParsedChannels::List(list)),
+        },
+        Value::String(text, QuoteKind::None) if text.contains('/') => {
+            let fn_string = function_string(name, &[channels], visitor, span)?;
+            Ok(ParsedChannels::String(fn_string))
+        }
+        _ => Ok(ParsedChannels::List(list)),
+    }
+}
+
 /// name: Either `rgb` or `rgba` depending on the caller
 // todo: refactor into smaller functions
 #[allow(clippy::cognitive_complexity)]
@@ -118,240 +267,108 @@ fn inner_rgb(
     mut args: ArgumentResult,
     parser: &mut Visitor,
 ) -> SassResult<Value> {
-    if args.is_empty() {
-        return Err(("Missing argument $channels.", args.span()).into());
-    }
-
     args.max_args(4)?;
 
     let len = args.len();
 
-    if len == 3 || len == 4 {
+    if len == 0 || len == 1 {
+        match parse_channels(
+            name,
+            &["red", "green", "blue"],
+            args.get_err(0, "channels")?,
+            parser,
+            args.span(),
+        )? {
+            ParsedChannels::String(s) => return Ok(Value::String(s, QuoteKind::None)),
+            ParsedChannels::List(list) => {
+                let args = ArgumentResult {
+                    positional: list,
+                    named: BTreeMap::new(),
+                    separator: ListSeparator::Comma,
+                    span: args.span(),
+                    touched: BTreeSet::new(),
+                };
+
+                return inner_rgb_3_arg(name, args, parser);
+            }
+        }
+    } else if len == 3 || len == 4 {
         return inner_rgb_3_arg(name, args, parser);
     }
 
-    if len == 1 {
-        let mut channels = match args.get_err(0, "channels")? {
-            Value::List(v, ..) => v,
-            v if v.is_special_function() => vec![v],
-            _ => return Err(("Missing argument $channels.", args.span()).into()),
-        };
+    debug_assert_eq!(len, 2);
 
-        if channels.len() > 3 {
+    let color = args.get_err(0, "color")?;
+    let alpha = args.get_err(1, "alpha")?;
+
+    if color.is_special_function() || (alpha.is_special_function() && !color.is_color()) {
+        return Ok(Value::String(
+            format!(
+                "{}({})",
+                name,
+                Value::List(vec![color, alpha], ListSeparator::Comma, Brackets::None)
+                    .to_css_string(args.span(), false)?
+            ),
+            QuoteKind::None,
+        ));
+    }
+
+    let color = match color {
+        Value::Color(c) => c,
+        v => {
+            return Err((
+                format!("$color: {} is not a color.", v.inspect(args.span())?),
+                args.span(),
+            )
+                .into())
+        }
+    };
+
+    if alpha.is_special_function() {
+        return Ok(Value::String(
+            format!(
+                "{}({}, {}, {}, {})",
+                name,
+                color.red().to_string(false),
+                color.green().to_string(false),
+                color.blue().to_string(false),
+                alpha.to_css_string(args.span(), false)?,
+            ),
+            QuoteKind::None,
+        ));
+    }
+
+    let alpha = match alpha {
+        Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
+        Value::Dimension {
+            num: (n),
+            unit: Unit::None,
+            as_slash: _,
+        } => n,
+        Value::Dimension {
+            num: (n),
+            unit: Unit::Percent,
+            as_slash: _,
+        } => n / Number::from(100),
+        v @ Value::Dimension { .. } => {
             return Err((
                 format!(
-                    "Only 3 elements allowed, but {} were passed.",
-                    channels.len()
+                    "$alpha: Expected {} to have no units or \"%\".",
+                    v.to_css_string(args.span(), parser.parser.options.is_compressed())?
                 ),
                 args.span(),
             )
-                .into());
+                .into())
         }
-
-        if channels.iter().any(Value::is_special_function) {
-            let channel_sep = if channels.len() < 3 {
-                ListSeparator::Space
-            } else {
-                ListSeparator::Comma
-            };
-
-            return Ok(Value::String(
-                format!(
-                    "{}({})",
-                    name,
-                    Value::List(channels, channel_sep, Brackets::None)
-                        .to_css_string(args.span(), false)?
-                ),
-                QuoteKind::None,
-            ));
+        v => {
+            return Err((
+                format!("$alpha: {} is not a number.", v.inspect(args.span())?),
+                args.span(),
+            )
+                .into())
         }
-
-        let blue = match channels.pop() {
-            Some(Value::Dimension { num: n, .. }) if n.is_nan() => todo!(),
-            Some(Value::Dimension {
-                num: (n),
-                unit: Unit::None,
-                as_slash: _,
-            }) => n,
-            Some(Value::Dimension {
-                num: (n),
-                unit: Unit::Percent,
-                as_slash: _,
-            }) => (n / Number::from(100)) * Number::from(255),
-            Some(v) if v.is_special_function() => {
-                let green = channels.pop().unwrap();
-                let red = channels.pop().unwrap();
-                return Ok(Value::String(
-                    format!(
-                        "{}({}, {}, {})",
-                        name,
-                        red.to_css_string(args.span(), parser.parser.options.is_compressed())?,
-                        green.to_css_string(args.span(), parser.parser.options.is_compressed())?,
-                        v.to_css_string(args.span(), parser.parser.options.is_compressed())?
-                    ),
-                    QuoteKind::None,
-                ));
-            }
-            Some(v) => {
-                return Err((
-                    format!("$blue: {} is not a number.", v.inspect(args.span())?),
-                    args.span(),
-                )
-                    .into())
-            }
-            None => return Err(("Missing element $blue.", args.span()).into()),
-        };
-
-        let green = match channels.pop() {
-            Some(Value::Dimension { num: n, .. }) if n.is_nan() => todo!(),
-            Some(Value::Dimension {
-                num: (n),
-                unit: Unit::None,
-                as_slash: _,
-            }) => n,
-            Some(Value::Dimension {
-                num: (n),
-                unit: Unit::Percent,
-                as_slash: _,
-            }) => (n / Number::from(100)) * Number::from(255),
-            Some(v) if v.is_special_function() => {
-                let string = match channels.pop() {
-                    Some(red) => format!(
-                        "{}({}, {}, {})",
-                        name,
-                        red.to_css_string(args.span(), parser.parser.options.is_compressed())?,
-                        v.to_css_string(args.span(), parser.parser.options.is_compressed())?,
-                        blue.to_string(parser.parser.options.is_compressed())
-                    ),
-                    None => format!(
-                        "{}({} {})",
-                        name,
-                        v.to_css_string(args.span(), parser.parser.options.is_compressed())?,
-                        blue.to_string(parser.parser.options.is_compressed())
-                    ),
-                };
-                return Ok(Value::String(string, QuoteKind::None));
-            }
-            Some(v) => {
-                return Err((
-                    format!("$green: {} is not a number.", v.inspect(args.span())?),
-                    args.span(),
-                )
-                    .into())
-            }
-            None => return Err(("Missing element $green.", args.span()).into()),
-        };
-
-        let red = match channels.pop() {
-            Some(Value::Dimension { num: n, .. }) if n.is_nan() => todo!(),
-            Some(Value::Dimension {
-                num: (n),
-                unit: Unit::None,
-                as_slash: _,
-            }) => n,
-            Some(Value::Dimension {
-                num: (n),
-                unit: Unit::Percent,
-                as_slash: _,
-            }) => (n / Number::from(100)) * Number::from(255),
-            Some(v) if v.is_special_function() => {
-                return Ok(Value::String(
-                    format!(
-                        "{}({}, {}, {})",
-                        name,
-                        v.to_css_string(args.span(), parser.parser.options.is_compressed())?,
-                        green.to_string(parser.parser.options.is_compressed()),
-                        blue.to_string(parser.parser.options.is_compressed())
-                    ),
-                    QuoteKind::None,
-                ));
-            }
-            Some(v) => {
-                return Err((
-                    format!("$red: {} is not a number.", v.inspect(args.span())?),
-                    args.span(),
-                )
-                    .into())
-            }
-            None => return Err(("Missing element $red.", args.span()).into()),
-        };
-
-        let color = Color::from_rgba(red, green, blue, Number::one());
-
-        Ok(Value::Color(Box::new(color)))
-    } else {
-        let color = args.get_err(0, "color")?;
-        let alpha = args.get_err(1, "alpha")?;
-
-        if color.is_special_function() || (alpha.is_special_function() && !color.is_color()) {
-            return Ok(Value::String(
-                format!(
-                    "{}({})",
-                    name,
-                    Value::List(vec![color, alpha], ListSeparator::Comma, Brackets::None)
-                        .to_css_string(args.span(), false)?
-                ),
-                QuoteKind::None,
-            ));
-        }
-
-        let color = match color {
-            Value::Color(c) => c,
-            v => {
-                return Err((
-                    format!("$color: {} is not a color.", v.inspect(args.span())?),
-                    args.span(),
-                )
-                    .into())
-            }
-        };
-
-        if alpha.is_special_function() {
-            return Ok(Value::String(
-                format!(
-                    "{}({}, {}, {}, {})",
-                    name,
-                    color.red().to_string(false),
-                    color.green().to_string(false),
-                    color.blue().to_string(false),
-                    alpha.to_css_string(args.span(), false)?,
-                ),
-                QuoteKind::None,
-            ));
-        }
-
-        let alpha = match alpha {
-            Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
-            Value::Dimension {
-                num: (n),
-                unit: Unit::None,
-                as_slash: _,
-            } => n,
-            Value::Dimension {
-                num: (n),
-                unit: Unit::Percent,
-                as_slash: _,
-            } => n / Number::from(100),
-            v @ Value::Dimension { .. } => {
-                return Err((
-                    format!(
-                        "$alpha: Expected {} to have no units or \"%\".",
-                        v.to_css_string(args.span(), parser.parser.options.is_compressed())?
-                    ),
-                    args.span(),
-                )
-                    .into())
-            }
-            v => {
-                return Err((
-                    format!("$alpha: {} is not a number.", v.inspect(args.span())?),
-                    args.span(),
-                )
-                    .into())
-            }
-        };
-        Ok(Value::Color(Box::new(color.with_alpha(alpha))))
-    }
+    };
+    Ok(Value::Color(Box::new(color.with_alpha(alpha))))
 }
 
 pub(crate) fn rgb(args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
