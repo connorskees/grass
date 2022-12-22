@@ -7,7 +7,7 @@ use std::{
 use codemap::Spanned;
 
 use crate::{
-    atrule::mixin::Mixin,
+    ast::Mixin,
     builtin::GLOBAL_FUNCTIONS,
     common::Identifier,
     error::SassResult,

@@ -78,7 +78,6 @@ pub(crate) use crate::{context_flags::ContextFlags, token::Token};
 use crate::{evaluate::Visitor, lexer::Lexer, parse::Parser};
 
 mod ast;
-mod atrule;
 mod builtin;
 mod color;
 mod common;
@@ -91,7 +90,6 @@ mod lexer;
 mod parse;
 mod selector;
 mod serializer;
-mod style;
 mod token;
 mod unit;
 mod utils;

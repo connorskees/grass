@@ -129,7 +129,7 @@ impl SimpleSelector {
                 name != "not" && selector.as_ref().map_or(false, |sel| sel.is_invisible())
             }
             Self::Placeholder(..) => true,
-            Self::Parent(..) => todo!(),
+            Self::Parent(..) => unreachable!("parent selectors should be resolved at this point"),
         }
     }
 

@@ -4,11 +4,9 @@ use std::io::Write;
 use codemap::{CodeMap, Span, Spanned};
 
 use crate::{
-    atrule::SupportsRule,
+    ast::{CssStmt, Style, SupportsRule},
     color::{Color, ColorFormat, NAMED_COLORS},
     error::SassResult,
-    parse::Stmt,
-    style::Style,
     utils::hex_char_for,
     value::{fuzzy_equals, SassNumber, Value},
     Options,
@@ -260,7 +258,7 @@ impl<'a> Serializer<'a> {
         self.buffer.append(&mut buffer.into_bytes());
     }
 
-    pub fn visit_group(&mut self, stmt: Stmt, previous_was_group_end: bool) -> SassResult<()> {
+    pub fn visit_group(&mut self, stmt: CssStmt, previous_was_group_end: bool) -> SassResult<()> {
         if previous_was_group_end && !self.buffer.is_empty() {
             self.buffer.push(b'\n');
         }
@@ -396,15 +394,15 @@ impl<'a> Serializer<'a> {
         Ok(())
     }
 
-    fn requires_semicolon(stmt: &Stmt) -> bool {
+    fn requires_semicolon(stmt: &CssStmt) -> bool {
         match stmt {
-            Stmt::Style(_) | Stmt::Import(_, _) => true,
-            Stmt::UnknownAtRule(rule, _) => !rule.has_body,
+            CssStmt::Style(_) | CssStmt::Import(_, _) => true,
+            CssStmt::UnknownAtRule(rule, _) => !rule.has_body,
             _ => false,
         }
     }
 
-    fn write_children(&mut self, children: Vec<Stmt>) -> SassResult<()> {
+    fn write_children(&mut self, children: Vec<CssStmt>) -> SassResult<()> {
         if self.options.is_compressed() {
             self.buffer.push(b'{');
         } else {
@@ -448,13 +446,13 @@ impl<'a> Serializer<'a> {
         Ok(())
     }
 
-    fn visit_stmt(&mut self, stmt: Stmt) -> SassResult<()> {
+    fn visit_stmt(&mut self, stmt: CssStmt) -> SassResult<()> {
         if stmt.is_invisible() {
             return Ok(());
         }
 
         match stmt {
-            Stmt::RuleSet { selector, body, .. } => {
+            CssStmt::RuleSet { selector, body, .. } => {
                 let selector = selector.into_selector().remove_placeholders();
 
                 self.write_indentation();
@@ -462,14 +460,14 @@ impl<'a> Serializer<'a> {
 
                 self.write_children(body)?;
             }
-            Stmt::Media(media_rule, ..) => {
+            CssStmt::Media(media_rule, ..) => {
                 self.write_indentation();
                 self.buffer.extend_from_slice(b"@media ");
                 self.buffer.extend_from_slice(media_rule.query.as_bytes());
 
                 self.write_children(media_rule.body)?;
             }
-            Stmt::UnknownAtRule(unknown_at_rule, ..) => {
+            CssStmt::UnknownAtRule(unknown_at_rule, ..) => {
                 self.write_indentation();
                 self.buffer.push(b'@');
                 self.buffer
@@ -483,16 +481,16 @@ impl<'a> Serializer<'a> {
                     debug_assert!(unknown_at_rule.body.is_empty());
                     self.buffer.extend_from_slice(b";\n");
                     return Ok(());
-                } else if unknown_at_rule.body.iter().all(Stmt::is_invisible) {
+                } else if unknown_at_rule.body.iter().all(CssStmt::is_invisible) {
                     self.buffer.extend_from_slice(b" {}\n");
                     return Ok(());
                 }
 
                 self.write_children(unknown_at_rule.body)?;
             }
-            Stmt::Style(style) => self.write_style(style)?,
-            Stmt::Comment(comment, span) => self.write_comment(comment, span)?,
-            Stmt::KeyframesRuleSet(keyframes_rule_set) => {
+            CssStmt::Style(style) => self.write_style(style)?,
+            CssStmt::Comment(comment, span) => self.write_comment(comment, span)?,
+            CssStmt::KeyframesRuleSet(keyframes_rule_set) => {
                 self.write_indentation();
                 // todo: i bet we can do something like write_with_separator to avoid extra allocation
                 let selector = keyframes_rule_set
@@ -506,8 +504,8 @@ impl<'a> Serializer<'a> {
 
                 self.write_children(keyframes_rule_set.body)?;
             }
-            Stmt::Import(import, modifier) => self.write_import(import, modifier)?,
-            Stmt::Supports(supports_rule, _) => self.write_supports_rule(supports_rule)?,
+            CssStmt::Import(import, modifier) => self.write_import(import, modifier)?,
+            CssStmt::Supports(supports_rule, _) => self.write_supports_rule(supports_rule)?,
         }
 
         Ok(())

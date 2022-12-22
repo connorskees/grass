@@ -871,6 +871,13 @@ test!(
     }",
     ".btn a:b {\n  color: red;\n}\n"
 );
+test!(
+    double_ampersand,
+    "a {
+        color: &&;
+    }",
+    "a {\n  color: a a;\n}\n"
+);
 error!(
     a_n_plus_b_n_invalid_odd,
     ":nth-child(ofdd) {\n  color: &;\n}\n", "Error: Expected \"odd\"."

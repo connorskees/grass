@@ -8,8 +8,7 @@ use std::{
 use codemap::{Span, Spanned};
 
 use crate::{
-    ast::{ArgumentResult, AstForwardRule},
-    atrule::mixin::{BuiltinMixin, Mixin},
+    ast::{ArgumentResult, AstForwardRule, BuiltinMixin, Mixin},
     builtin::Builtin,
     common::Identifier,
     error::SassResult,

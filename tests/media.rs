@@ -536,3 +536,12 @@ test!(
     }",
     "@media (foo) {\n  a {\n    color: red;\n  }\n  a {\n    color: red;\n  }\n}\n"
 );
+test!(
+    media_has_url_in_parens,
+    "@media (url) {
+        a {
+            color: red;
+        }
+    }",
+    "@media (url) {\n  a {\n    color: red;\n  }\n}\n"
+);

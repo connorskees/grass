@@ -1,4 +1,4 @@
-use crate::{builtin::builtin_imports::*, parse::div};
+use crate::{builtin::builtin_imports::*, evaluate::div};
 
 pub(crate) fn percentage(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
@@ -269,7 +269,7 @@ pub(crate) fn min(args: ArgumentResult, parser: &mut Visitor) -> SassResult<Valu
             as_slash: None,
         };
 
-        if crate::parse::cmp(
+        if crate::evaluate::cmp(
             lhs,
             rhs,
             parser.parser.options,
@@ -322,7 +322,7 @@ pub(crate) fn max(args: ArgumentResult, parser: &mut Visitor) -> SassResult<Valu
             as_slash: None,
         };
 
-        if crate::parse::cmp(
+        if crate::evaluate::cmp(
             lhs,
             rhs,
             parser.parser.options,

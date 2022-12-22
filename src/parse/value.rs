@@ -2,11 +2,9 @@ use std::iter::Iterator;
 
 use codemap::Spanned;
 
-// todo: rename file
-
 use crate::{
     ast::*,
-    color::{Color, NAMED_COLORS, ColorFormat},
+    color::{Color, ColorFormat, NAMED_COLORS},
     common::{unvendor, BinaryOp, Brackets, Identifier, ListSeparator, QuoteKind, UnaryOp},
     error::SassResult,
     unit::Unit,
@@ -101,7 +99,6 @@ impl<'c> ValueParser<'c> {
             operands: None,
             allow_slash: true,
             start: parser.toks.cursor(),
-            // was_in_parens: parser.flags.in_parens(),
             single_expression: None,
             parse_until,
             inside_bracketed_list,
@@ -804,14 +801,13 @@ impl<'c> ValueParser<'c> {
 
         parser.expect_char('&')?;
 
-        if parser.scan_char('&') {
+        if parser.toks.next_char_is('&') {
+            // todo: emit a warning here
             //   warn(
             //       'In Sass, "&&" means two copies of the parent selector. You '
             //       'probably want to use "and" instead.',
             //       scanner.spanFrom(start));
             //   scanner.position--;
-
-            todo!()
         }
 
         Ok(AstExpr::ParentSelector.span(parser.toks.span_from(start)))
@@ -1082,7 +1078,8 @@ impl<'c> ValueParser<'c> {
     }
 
     fn parse_plus_expr(&mut self, parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
-        debug_assert!(matches!(parser.toks.peek(), Some(Token { kind: '+', .. })));
+        debug_assert!(parser.toks.next_char_is('+'));
+
         match parser.toks.peek_n(1) {
             Some(Token {
                 kind: '0'..='9' | '.',
@@ -1092,9 +1089,8 @@ impl<'c> ValueParser<'c> {
         }
     }
 
-    // todo: i bet we can make minus expr crash somehow
     fn parse_minus_expr(&mut self, parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
-        assert!(matches!(parser.toks.peek(), Some(Token { kind: '-', .. })));
+        debug_assert!(parser.toks.next_char_is('-'));
 
         if matches!(
             parser.toks.peek_n(1),
@@ -1666,7 +1662,7 @@ impl<'c> ValueParser<'c> {
             match parser.toks.peek() {
                 Some(Token {
                     kind: next @ ('+' | '-'),
-                    ..
+                    pos,
                 }) => {
                     if !matches!(
                         parser.toks.peek_n_backwards(1),
@@ -1681,7 +1677,11 @@ impl<'c> ValueParser<'c> {
                             ..
                         })
                     ) {
-                        todo!("\"+\" and \"-\" must be surrounded by whitespace in calculations.");
+                        return Err((
+                            "\"+\" and \"-\" must be surrounded by whitespace in calculations.",
+                            pos,
+                        )
+                            .into());
                     }
 
                     parser.toks.next();

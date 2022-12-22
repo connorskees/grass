@@ -240,3 +240,8 @@ error!(
     progid_nothing_after,
     "a { color: progid:", "Error: expected \"(\"."
 );
+error!(
+    calc_no_whitespace_between_operator,
+    "a {\n  color: calc(1+1);\n}\n",
+    r#"Error: "+" and "-" must be surrounded by whitespace in calculations."#
+);

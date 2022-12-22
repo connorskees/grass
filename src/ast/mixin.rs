@@ -12,7 +12,6 @@ pub(crate) use crate::ast::AstMixin as UserDefinedMixin;
 
 #[derive(Clone)]
 pub(crate) enum Mixin {
-    // todo: env is superfluous?
     UserDefined(UserDefinedMixin, Environment),
     Builtin(BuiltinMixin),
 }

@@ -8,11 +8,9 @@ use std::{
 use codemap::{Span, Spanned};
 
 use crate::{
-    ast::Interpolation,
-    ast::{ArgumentDeclaration, ArgumentInvocation, AstExpr},
-    atrule::media::MediaQuery,
+    ast::{ArgumentDeclaration, ArgumentInvocation, AstExpr, CssStmt},
+    ast::{Interpolation, MediaQuery},
     common::Identifier,
-    parse::Stmt,
     utils::{BaseMapView, LimitedMapView, MapView, UnprefixedMapView},
     value::Value,
 };
@@ -249,16 +247,16 @@ impl AtRootQuery {
         (self.all || self.rule) != self.include
     }
 
-    pub fn excludes(&self, stmt: &Stmt) -> bool {
+    pub fn excludes(&self, stmt: &CssStmt) -> bool {
         if self.all {
             return !self.include;
         }
 
         match stmt {
-            Stmt::RuleSet { .. } => self.excludes_style_rules(),
-            Stmt::Media(..) => self.excludes_name("media"),
-            Stmt::Supports(..) => self.excludes_name("supports"),
-            Stmt::UnknownAtRule(rule, ..) => self.excludes_name(&rule.name.to_ascii_lowercase()),
+            CssStmt::RuleSet { .. } => self.excludes_style_rules(),
+            CssStmt::Media(..) => self.excludes_name("media"),
+            CssStmt::Supports(..) => self.excludes_name("supports"),
+            CssStmt::UnknownAtRule(rule, ..) => self.excludes_name(&rule.name.to_ascii_lowercase()),
             _ => false,
         }
     }

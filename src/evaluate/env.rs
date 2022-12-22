@@ -1,8 +1,7 @@
 use codemap::{Span, Spanned};
 
 use crate::{
-    ast::AstForwardRule,
-    atrule::mixin::Mixin,
+    ast::{AstForwardRule, Mixin},
     builtin::modules::{ForwardedModule, Module, Modules},
     common::Identifier,
     error::SassResult,

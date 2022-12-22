@@ -26,7 +26,6 @@ pub(crate) type GlobalFunctionMap = HashMap<&'static str, Builtin>;
 
 static FUNCTION_COUNT: AtomicUsize = AtomicUsize::new(0);
 
-// TODO: impl Fn
 #[derive(Clone)]
 pub(crate) struct Builtin(
     pub fn(ArgumentResult, &mut Visitor) -> SassResult<Value>,

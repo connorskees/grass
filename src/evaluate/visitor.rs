@@ -15,12 +15,6 @@ use indexmap::IndexSet;
 
 use crate::{
     ast::*,
-    atrule::{
-        keyframes::KeyframesRuleSet,
-        media::{MediaQuery, MediaQueryMergeResult, MediaRule},
-        mixin::Mixin,
-        SupportsRule, UnknownAtRule,
-    },
     builtin::{
         meta::IF_ARGUMENTS,
         modules::{
@@ -33,15 +27,11 @@ use crate::{
     error::{SassError, SassResult},
     interner::InternedString,
     lexer::Lexer,
-    parse::{
-        add, cmp, div, mul, rem, single_eq, sub, AtRootQueryParser, KeyframesSelectorParser,
-        Parser, Stmt,
-    },
+    parse::{AtRootQueryParser, KeyframesSelectorParser, Parser},
     selector::{
         ComplexSelectorComponent, ExtendRule, ExtendedSelector, ExtensionStore, Selector,
         SelectorList, SelectorParser,
     },
-    style::Style,
     token::Token,
     utils::{to_sentence, trim_ascii},
     value::{
@@ -51,155 +41,11 @@ use crate::{
     ContextFlags,
 };
 
-use super::env::Environment;
-
-// todo: move to separate file
-#[derive(Debug, Clone)]
-struct CssTree {
-    // None is tombstone
-    stmts: Vec<RefCell<Option<Stmt>>>,
-    parent_to_child: BTreeMap<CssTreeIdx, Vec<CssTreeIdx>>,
-    child_to_parent: BTreeMap<CssTreeIdx, CssTreeIdx>,
-}
-
-impl CssTree {
-    const ROOT: CssTreeIdx = CssTreeIdx(0);
-
-    pub fn new() -> Self {
-        let mut tree = Self {
-            stmts: Vec::new(),
-            parent_to_child: BTreeMap::new(),
-            child_to_parent: BTreeMap::new(),
-        };
-
-        tree.stmts.push(RefCell::new(None));
-
-        tree
-    }
-
-    pub fn get(&self, idx: CssTreeIdx) -> Ref<Option<Stmt>> {
-        self.stmts[idx.0].borrow()
-    }
-
-    pub fn get_mut(&self, idx: CssTreeIdx) -> RefMut<Option<Stmt>> {
-        self.stmts[idx.0].borrow_mut()
-    }
-
-    pub fn finish(self) -> Vec<Stmt> {
-        let mut idx = 1;
-
-        while idx < self.stmts.len() - 1 {
-            if self.stmts[idx].borrow().is_none() || !self.has_children(CssTreeIdx(idx)) {
-                idx += 1;
-                continue;
-            }
-
-            self.apply_children(CssTreeIdx(idx));
-
-            idx += 1;
-        }
-
-        self.stmts
-            .into_iter()
-            .filter_map(RefCell::into_inner)
-            .collect()
-    }
-
-    fn apply_children(&self, parent: CssTreeIdx) {
-        for &child in &self.parent_to_child[&parent] {
-            if self.has_children(child) {
-                self.apply_children(child);
-            }
-
-            match self.stmts[child.0].borrow_mut().take() {
-                Some(child) => self.add_child_to_parent(child, parent),
-                None => continue,
-            };
-        }
-    }
-
-    fn has_children(&self, parent: CssTreeIdx) -> bool {
-        self.parent_to_child.contains_key(&parent)
-    }
-
-    fn add_child_to_parent(&self, child: Stmt, parent_idx: CssTreeIdx) {
-        let mut parent = self.stmts[parent_idx.0].borrow_mut().take();
-        match &mut parent {
-            Some(Stmt::RuleSet { body, .. }) => body.push(child),
-            Some(Stmt::Style(..) | Stmt::Comment(..) | Stmt::Import(..)) => unreachable!(),
-            Some(Stmt::Media(media, ..)) => {
-                media.body.push(child);
-            }
-            Some(Stmt::UnknownAtRule(at_rule, ..)) => {
-                at_rule.body.push(child);
-            }
-            Some(Stmt::Supports(supports, ..)) => {
-                supports.body.push(child);
-            }
-            Some(Stmt::KeyframesRuleSet(keyframes)) => {
-                keyframes.body.push(child);
-            }
-            None => unreachable!(),
-        }
-        self.stmts[parent_idx.0]
-            .borrow_mut()
-            .replace(parent.unwrap());
-    }
-
-    fn add_child(&mut self, child: Stmt, parent_idx: CssTreeIdx) -> CssTreeIdx {
-        let child_idx = self.add_stmt_inner(child);
-        self.parent_to_child
-            .entry(parent_idx)
-            .or_default()
-            .push(child_idx);
-        self.child_to_parent.insert(child_idx, parent_idx);
-        child_idx
-    }
-
-    pub fn link_child_to_parent(&mut self, child_idx: CssTreeIdx, parent_idx: CssTreeIdx) {
-        self.parent_to_child
-            .entry(parent_idx)
-            .or_default()
-            .push(child_idx);
-        self.child_to_parent.insert(child_idx, parent_idx);
-    }
-
-    pub fn has_following_sibling(&self, child: CssTreeIdx) -> bool {
-        if child == Self::ROOT {
-            return false;
-        }
-
-        let parent_idx = self.child_to_parent.get(&child).unwrap();
-
-        let parent_children = self.parent_to_child.get(parent_idx).unwrap();
-
-        let child_pos = parent_children
-            .iter()
-            .position(|child_idx| *child_idx == child)
-            .unwrap();
-
-        // todo: parent_children[child_pos + 1..] !is_invisible
-        child_pos + 1 < parent_children.len()
-    }
-
-    pub fn add_stmt(&mut self, child: Stmt, parent: Option<CssTreeIdx>) -> CssTreeIdx {
-        match parent {
-            Some(parent) => self.add_child(child, parent),
-            None => self.add_child(child, Self::ROOT),
-        }
-    }
-
-    fn add_stmt_inner(&mut self, stmt: Stmt) -> CssTreeIdx {
-        let idx = CssTreeIdx(self.stmts.len());
-        self.stmts.push(RefCell::new(Some(stmt)));
-
-        idx
-    }
-}
-
-#[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, PartialOrd, Ord)]
-#[repr(transparent)]
-struct CssTreeIdx(usize);
+use super::{
+    bin_op::{add, cmp, div, mul, rem, single_eq, sub},
+    css_tree::{CssTree, CssTreeIdx},
+    env::Environment,
+};
 
 trait UserDefinedCallable {
     fn name(&self) -> Identifier;
@@ -261,7 +107,7 @@ pub(crate) struct Visitor<'a> {
     css_tree: CssTree,
     parent: Option<CssTreeIdx>,
     configuration: Arc<RefCell<Configuration>>,
-    import_nodes: Vec<Stmt>,
+    import_nodes: Vec<CssStmt>,
 }
 
 impl<'a> Visitor<'a> {
@@ -299,7 +145,7 @@ impl<'a> Visitor<'a> {
 
         for stmt in style_sheet.body {
             let result = self.visit_stmt(stmt)?;
-            assert!(result.is_none());
+            debug_assert!(result.is_none());
         }
 
         mem::swap(&mut self.current_import_path, &mut style_sheet.url);
@@ -308,7 +154,7 @@ impl<'a> Visitor<'a> {
         Ok(())
     }
 
-    pub fn finish(mut self) -> SassResult<Vec<Stmt>> {
+    pub fn finish(mut self) -> SassResult<Vec<CssStmt>> {
         self.import_nodes.append(&mut self.css_tree.finish());
         Ok(self.import_nodes)
     }
@@ -589,7 +435,7 @@ impl<'a> Visitor<'a> {
 
         let condition = self.visit_supports_condition(supports_rule.condition)?;
 
-        let css_supports_rule = Stmt::Supports(
+        let css_supports_rule = CssStmt::Supports(
             SupportsRule {
                 params: condition,
                 body: Vec::new(),
@@ -608,7 +454,7 @@ impl<'a> Visitor<'a> {
                 if !visitor.style_rule_exists() {
                     for stmt in children {
                         let result = visitor.visit_stmt(stmt)?;
-                        assert!(result.is_none());
+                        debug_assert!(result.is_none());
                     }
                 } else {
                     // If we're in a style rule, copy it into the supports rule so that
@@ -617,7 +463,7 @@ impl<'a> Visitor<'a> {
                     // For example, "a {@supports (a: b) {b: c}}" should produce "@supports
                     // (a: b) {a {b: c}}".
                     let selector = visitor.style_rule_ignoring_at_root.clone().unwrap();
-                    let ruleset = Stmt::RuleSet {
+                    let ruleset = CssStmt::RuleSet {
                         selector,
                         body: Vec::new(),
                         is_group_end: false,
@@ -631,7 +477,7 @@ impl<'a> Visitor<'a> {
                         |visitor| {
                             for stmt in children {
                                 let result = visitor.visit_stmt(stmt)?;
-                                assert!(result.is_none());
+                                debug_assert!(result.is_none());
                             }
 
                             Ok(())
@@ -1185,7 +1031,7 @@ impl<'a> Visitor<'a> {
             .map(|modifiers| self.interpolation_to_value(modifiers, false, false))
             .transpose()?;
 
-        let node = Stmt::Import(import, modifiers);
+        let node = CssStmt::Import(import, modifiers);
 
         if self.parent.is_some() && self.parent != Some(CssTree::ROOT) {
             self.css_tree.add_stmt(node, self.parent);
@@ -1243,7 +1089,7 @@ impl<'a> Visitor<'a> {
                 |content, visitor| {
                     for stmt in content.content.body.clone() {
                         let result = visitor.visit_stmt(stmt)?;
-                        assert!(result.is_none());
+                        debug_assert!(result.is_none());
                     }
 
                     Ok(())
@@ -1323,7 +1169,7 @@ impl<'a> Visitor<'a> {
         let mut included = Vec::new();
 
         while let Some(parent_idx) = current_parent_idx {
-            let parent = self.css_tree.stmts[parent_idx.0].borrow();
+            let parent = self.css_tree.get(parent_idx);
             let grandparent_idx = match &*parent {
                 Some(parent) => {
                     if !query.excludes(parent) {
@@ -1345,7 +1191,7 @@ impl<'a> Visitor<'a> {
             self.with_scope::<SassResult<()>>(false, true, |visitor| {
                 for stmt in at_root_rule.children {
                     let result = visitor.visit_stmt(stmt)?;
-                    assert!(result.is_none());
+                    debug_assert!(result.is_none());
                 }
 
                 Ok(())
@@ -1358,7 +1204,7 @@ impl<'a> Visitor<'a> {
                 .css_tree
                 .get(*included.first().unwrap())
                 .as_ref()
-                .map(Stmt::copy_without_children);
+                .map(CssStmt::copy_without_children);
             let mut outer_copy = self.css_tree.add_stmt(inner_copy.unwrap(), None);
 
             for node in &included[1..] {
@@ -1366,7 +1212,7 @@ impl<'a> Visitor<'a> {
                     .css_tree
                     .get(*node)
                     .as_ref()
-                    .map(Stmt::copy_without_children)
+                    .map(CssStmt::copy_without_children)
                     .unwrap();
 
                 let copy_idx = self.css_tree.add_stmt(copy, None);
@@ -1381,7 +1227,7 @@ impl<'a> Visitor<'a> {
                 .css_tree
                 .get(root)
                 .as_ref()
-                .map(Stmt::copy_without_children);
+                .map(CssStmt::copy_without_children);
             inner_copy.map(|p| self.css_tree.add_stmt(p, None))
         };
 
@@ -1395,7 +1241,7 @@ impl<'a> Visitor<'a> {
             |visitor| {
                 for stmt in body {
                     let result = visitor.visit_stmt(stmt)?;
-                    assert!(result.is_none());
+                    debug_assert!(result.is_none());
                 }
 
                 Ok(())
@@ -1661,7 +1507,7 @@ impl<'a> Visitor<'a> {
 
         let query = merged_queries.clone().unwrap_or_else(|| queries1.clone());
 
-        let media_rule = Stmt::Media(
+        let media_rule = CssStmt::Media(
             MediaRule {
                 // todo: no string here
                 query: query
@@ -1687,7 +1533,7 @@ impl<'a> Visitor<'a> {
                         if !visitor.style_rule_exists() {
                             for stmt in children {
                                 let result = visitor.visit_stmt(stmt)?;
-                                assert!(result.is_none());
+                                debug_assert!(result.is_none());
                             }
                         } else {
                             // If we're in a style rule, copy it into the media query so that
@@ -1696,7 +1542,7 @@ impl<'a> Visitor<'a> {
                             // For example, "a {@media screen {b: c}}" should produce
                             // "@media screen {a {b: c}}".
                             let selector = visitor.style_rule_ignoring_at_root.clone().unwrap();
-                            let ruleset = Stmt::RuleSet {
+                            let ruleset = CssStmt::RuleSet {
                                 selector,
                                 body: Vec::new(),
                                 is_group_end: false,
@@ -1710,7 +1556,7 @@ impl<'a> Visitor<'a> {
                                 |visitor| {
                                     for stmt in children {
                                         let result = visitor.visit_stmt(stmt)?;
-                                        assert!(result.is_none());
+                                        debug_assert!(result.is_none());
                                     }
 
                                     Ok(())
@@ -1724,9 +1570,9 @@ impl<'a> Visitor<'a> {
                 )
             },
             |stmt| match stmt {
-                Stmt::RuleSet { .. } => true,
+                CssStmt::RuleSet { .. } => true,
                 // todo: node.queries.every(mergedSources.contains))
-                Stmt::Media(media_rule, ..) => !merged_sources.is_empty(),
+                CssStmt::Media(media_rule, ..) => !merged_sources.is_empty(),
                 _ => false,
             },
         )?;
@@ -1792,7 +1638,7 @@ impl<'a> Visitor<'a> {
             .transpose()?;
 
         if unknown_at_rule.children.is_none() {
-            let stmt = Stmt::UnknownAtRule(
+            let stmt = CssStmt::UnknownAtRule(
                 UnknownAtRule {
                     name,
                     params: value.unwrap_or_default(),
@@ -1818,7 +1664,7 @@ impl<'a> Visitor<'a> {
 
         let children = unknown_at_rule.children.unwrap();
 
-        let stmt = Stmt::UnknownAtRule(
+        let stmt = CssStmt::UnknownAtRule(
             UnknownAtRule {
                 name,
                 params: value.unwrap_or_default(),
@@ -1837,7 +1683,7 @@ impl<'a> Visitor<'a> {
                 if !visitor.style_rule_exists() || visitor.flags.in_keyframes() {
                     for stmt in children {
                         let result = visitor.visit_stmt(stmt)?;
-                        assert!(result.is_none());
+                        debug_assert!(result.is_none());
                     }
                 } else {
                     // If we're in a style rule, copy it into the at-rule so that
@@ -1846,7 +1692,7 @@ impl<'a> Visitor<'a> {
                     // For example, "a {@foo {b: c}}" should produce "@foo {a {b: c}}".
                     let selector = visitor.style_rule_ignoring_at_root.clone().unwrap();
 
-                    let style_rule = Stmt::RuleSet {
+                    let style_rule = CssStmt::RuleSet {
                         selector,
                         body: Vec::new(),
                         is_group_end: false,
@@ -1860,7 +1706,7 @@ impl<'a> Visitor<'a> {
                         |visitor| {
                             for stmt in children {
                                 let result = visitor.visit_stmt(stmt)?;
-                                assert!(result.is_none());
+                                debug_assert!(result.is_none());
                             }
 
                             Ok(())
@@ -1942,7 +1788,11 @@ impl<'a> Visitor<'a> {
         val
     }
 
-    fn add_child(&mut self, node: Stmt, through: Option<impl Fn(&Stmt) -> bool>) -> CssTreeIdx {
+    fn add_child(
+        &mut self,
+        node: CssStmt,
+        through: Option<impl Fn(&CssStmt) -> bool>,
+    ) -> CssTreeIdx {
         if self.parent.is_none() || self.parent == Some(CssTree::ROOT) {
             return self.css_tree.add_stmt(node, self.parent);
         }
@@ -1952,9 +1802,10 @@ impl<'a> Visitor<'a> {
         if let Some(through) = through {
             while parent != CssTree::ROOT && through(self.css_tree.get(parent).as_ref().unwrap()) {
                 let grandparent = self.css_tree.child_to_parent.get(&parent).copied();
-                if grandparent.is_none() {
-                    todo!("through() must return false for at least one parent of $node.")
-                }
+                debug_assert!(
+                    grandparent.is_some(),
+                    "through() must return false for at least one parent of $node."
+                );
                 parent = grandparent.unwrap();
             }
 
@@ -1967,7 +1818,7 @@ impl<'a> Visitor<'a> {
                     .css_tree
                     .get(parent)
                     .as_ref()
-                    .map(Stmt::copy_without_children)
+                    .map(CssStmt::copy_without_children)
                     .unwrap();
                 parent = self.css_tree.add_child(parent_node, grandparent);
             }
@@ -1995,12 +1846,12 @@ impl<'a> Visitor<'a> {
 
     fn with_parent<T>(
         &mut self,
-        parent: Stmt,
+        parent: CssStmt,
         // default=true
         scope_when: bool,
         callback: impl FnOnce(&mut Self) -> T,
         // todo: Option
-        through: impl Fn(&Stmt) -> bool,
+        through: impl Fn(&CssStmt) -> bool,
     ) -> T {
         let parent_idx = self.add_child(parent, Some(through));
         let old_parent = self.parent;
@@ -2099,7 +1950,7 @@ impl<'a> Visitor<'a> {
                         visitor.with_content(callable_content, |visitor| {
                             for stmt in mixin.body {
                                 let result = visitor.visit_stmt(stmt)?;
-                                assert!(result.is_none());
+                                debug_assert!(result.is_none());
                             }
                             Ok(())
                         })
@@ -2123,6 +1974,7 @@ impl<'a> Visitor<'a> {
     fn visit_each_stmt(&mut self, each_stmt: AstEach) -> SassResult<Option<Value>> {
         let list = self.visit_expr(each_stmt.list)?.as_list();
 
+        // todo: not setting semi_global: true maybe means we can't assign to global scope when declared as global
         self.env.scopes_mut().enter_new_scope();
 
         let mut result = None;
@@ -2294,7 +2146,7 @@ impl<'a> Visitor<'a> {
         //   _endOfImports++;
         // }
 
-        let comment = Stmt::Comment(
+        let comment = CssStmt::Comment(
             self.perform_interpolation(comment.text, false)?,
             comment.span,
         );
@@ -3309,7 +3161,7 @@ impl<'a> Visitor<'a> {
             })
             .parse_keyframes_selector()?;
 
-            let keyframes_ruleset = Stmt::KeyframesRuleSet(KeyframesRuleSet {
+            let keyframes_ruleset = CssStmt::KeyframesRuleSet(KeyframesRuleSet {
                 selector: parsed_selector,
                 body: Vec::new(),
             });
@@ -3320,7 +3172,7 @@ impl<'a> Visitor<'a> {
                 |visitor| {
                     for stmt in ruleset_body {
                         let result = visitor.visit_stmt(stmt)?;
-                        assert!(result.is_none());
+                        debug_assert!(result.is_none());
                     }
 
                     Ok(())
@@ -3368,7 +3220,7 @@ impl<'a> Visitor<'a> {
             .extender
             .add_selector(parsed_selector, &self.media_queries);
 
-        let rule = Stmt::RuleSet {
+        let rule = CssStmt::RuleSet {
             selector: selector.clone(),
             body: Vec::new(),
             is_group_end: false,
@@ -3388,7 +3240,7 @@ impl<'a> Visitor<'a> {
             |visitor| {
                 for stmt in ruleset_body {
                     let result = visitor.visit_stmt(stmt)?;
-                    assert!(result.is_none());
+                    debug_assert!(result.is_none());
                 }
 
                 Ok(())
@@ -3458,7 +3310,7 @@ impl<'a> Visitor<'a> {
             if !value.is_null() || value.is_empty_list() {
                 // todo: superfluous clones?
                 self.css_tree.add_stmt(
-                    Stmt::Style(Style {
+                    CssStmt::Style(Style {
                         property: InternedString::get_or_intern(&name),
                         value: Box::new(value),
                         declared_as_custom_property: is_custom_property,
@@ -3478,7 +3330,7 @@ impl<'a> Visitor<'a> {
             self.with_scope::<SassResult<()>>(false, true, |visitor| {
                 for stmt in children {
                     let result = visitor.visit_stmt(stmt)?;
-                    assert!(result.is_none());
+                    debug_assert!(result.is_none());
                 }
 
                 Ok(())

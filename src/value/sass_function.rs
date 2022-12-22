@@ -75,20 +75,6 @@ impl SassFunction {
             Self::UserDefined { .. } => "UserDefined",
         }
     }
-
-    // pub fn call(
-    //     self,
-    //     args: CallArgs,
-    //     module: Option<Spanned<Identifier>>,
-    //     parser: &mut Visitor,
-    // ) -> SassResult<Value> {
-    //     match self {
-    //         Self::Builtin(f, ..) => todo!(), //f.0(args, parser),
-    //         Self::UserDefined { function, .. } => todo!(),
-    //         // parser.eval_function(*function, args, module),
-    //         Self::Plain { .. } => todo!(),
-    //     }
-    // }
 }
 
 impl fmt::Debug for SassFunction {
