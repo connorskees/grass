@@ -67,6 +67,11 @@ test!(
     "a {\n  color: true;\n}\n"
 );
 test!(
+    takes_into_account_different_units,
+    "a {\n  color: 2in < 1cm;\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
     infinity_gt_infinity,
     "a {\n  color: (1/0) > (1/0);\n}\n",
     "a {\n  color: false;\n}\n"

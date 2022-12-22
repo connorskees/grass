@@ -244,7 +244,6 @@ impl ArgumentResult {
         }
     }
 
-    // args: ArgumentDeclaration
     pub fn get_variadic(self) -> SassResult<Vec<Spanned<Value>>> {
         // todo: i think we do give a proper error here
         assert!(self.named.is_empty());
@@ -267,29 +266,6 @@ impl ArgumentResult {
             })
             .collect();
 
-        // let mut vals = Vec::new();
-        // let mut args = match self
-        //     .0
-        //     .into_iter()
-        //     .map(|(a, v)| Ok((a.position()?, v)))
-        //     .collect::<Result<Vec<(usize, SassResult<Spanned<Value>>)>, String>>()
-        // {
-        //     Ok(v) => v,
-        //     Err(e) => return Err((format!("No argument named ${}.", e), self.1).into()),
-        // };
-
-        // args.sort_by(|(a1, _), (a2, _)| a1.cmp(a2));
-
-        // for (_, arg) in args {
-        //     vals.push(arg?);
-        // }
-
-        // Ok(vals)
-
         Ok(args)
-        // Ok(args
-        //     .into_iter()
-        //     .map(|a| Spanned { node: a, span })
-        //     .collect())
     }
 }

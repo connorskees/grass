@@ -29,6 +29,11 @@ test!(
     "a {\n  color: clamp(1px, 2px, 3vh);\n}\n",
     "a {\n  color: clamp(1px, 2px, 3vh);\n}\n"
 );
+test!(
+    clamp_last_comparable_does_unit_conversion,
+    "a {\n  color: clamp(1px, 1in, 1cm);\n}\n",
+    "a {\n  color: 1cm;\n}\n"
+);
 error!(
     clamp_last_non_compatible,
     "a {\n  color: clamp(1px, 2px, 3deg);\n}\n", "Error: 1px and 3deg are incompatible."

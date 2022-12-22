@@ -125,7 +125,7 @@ error!(
     "@use \"sass:math\";\na {\n  color: min(math.acos(2), 1px);\n}\n",
     "Error: NaNdeg and 1px are incompatible."
 );
-test!(
+error!(
     #[ignore = "we don't error here"]
     unitful_nan_min_last_arg,
     "@use \"sass:math\";\na {\n  color: min(1px, math.acos(2));\n}\n",

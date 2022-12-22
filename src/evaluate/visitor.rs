@@ -2884,7 +2884,7 @@ impl<'a> Visitor<'a> {
                 SassCalculation::calc(args.remove(0))
             }
             CalculationName::Min => SassCalculation::min(args),
-            CalculationName::Max => SassCalculation::max(args),
+            CalculationName::Max => SassCalculation::max(args, span),
             CalculationName::Clamp => {
                 let min = args.remove(0);
                 let value = if args.is_empty() {

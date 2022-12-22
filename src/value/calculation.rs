@@ -26,32 +26,7 @@ pub(crate) enum CalculationArg {
 }
 
 impl CalculationArg {
-    pub fn inspect(&self, span: Span) -> SassResult<String> {
-        Ok(match self {
-            CalculationArg::Number(SassNumber {
-                num,
-                unit,
-                as_slash,
-            }) => Value::Dimension {
-                num: Number(*num),
-                unit: unit.clone(),
-                as_slash: as_slash.clone(),
-            }
-            .inspect(span)?
-            .into_owned(),
-            CalculationArg::Calculation(calc) => {
-                Value::Calculation(calc.clone()).inspect(span)?.into_owned()
-            }
-            CalculationArg::String(s) | CalculationArg::Interpolation(s) => s.clone(),
-            CalculationArg::Operation { lhs, op, rhs } => {
-                format!("{} {op} {}", lhs.inspect(span)?, rhs.inspect(span)?)
-            }
-        })
-    }
-}
-
-impl CalculationArg {
-    fn parenthesize_calculation_rhs(outer: BinaryOp, right: BinaryOp) -> bool {
+    pub fn parenthesize_calculation_rhs(outer: BinaryOp, right: BinaryOp) -> bool {
         if outer == BinaryOp::Div {
             true
         } else if outer == BinaryOp::Plus {
@@ -59,93 +34,6 @@ impl CalculationArg {
         } else {
             right == BinaryOp::Plus || right == BinaryOp::Minus
         }
-    }
-
-    fn write_calculation_value(
-        buf: &mut String,
-        val: &CalculationArg,
-        is_compressed: bool,
-        span: Span,
-    ) -> SassResult<()> {
-        match val {
-            CalculationArg::Number(n) => {
-                // todo: superfluous clone
-                let n = n.clone();
-                buf.push_str(
-                    &Value::Dimension {
-                        num: Number(n.num),
-                        unit: n.unit,
-                        as_slash: n.as_slash,
-                    }
-                    .to_css_string(span, is_compressed)?,
-                );
-            }
-            CalculationArg::Calculation(calc) => {
-                buf.push_str(&Value::Calculation(calc.clone()).to_css_string(span, is_compressed)?);
-            }
-            CalculationArg::Operation { lhs, op, rhs } => {
-                let paren_left = match &**lhs {
-                    CalculationArg::Interpolation(..) => true,
-                    CalculationArg::Operation { op: lhs_op, .. }
-                        if lhs_op.precedence() < op.precedence() =>
-                    {
-                        true
-                    }
-                    _ => false,
-                };
-
-                if paren_left {
-                    buf.push('(');
-                }
-
-                Self::write_calculation_value(buf, lhs, is_compressed, span)?;
-
-                if paren_left {
-                    buf.push(')');
-                }
-
-                let op_whitespace = !is_compressed || op.precedence() == 2;
-
-                if op_whitespace {
-                    buf.push(' ');
-                }
-
-                buf.push_str(&op.to_string());
-
-                if op_whitespace {
-                    buf.push(' ');
-                }
-
-                let paren_right = match &**lhs {
-                    CalculationArg::Interpolation(..) => true,
-                    CalculationArg::Operation { op: rhs_op, .. }
-                        if Self::parenthesize_calculation_rhs(*op, *rhs_op) =>
-                    {
-                        true
-                    }
-                    _ => false,
-                };
-
-                if paren_right {
-                    buf.push('(');
-                }
-
-                Self::write_calculation_value(buf, rhs, is_compressed, span)?;
-
-                if paren_right {
-                    buf.push(')');
-                }
-            }
-            CalculationArg::String(i) | CalculationArg::Interpolation(i) => buf.push_str(i),
-        }
-
-        Ok(())
-    }
-
-    pub fn to_css_string(&self, span: Span, is_compressed: bool) -> SassResult<String> {
-        let mut buf = String::new();
-        Self::write_calculation_value(&mut buf, self, is_compressed, span)?;
-        Ok(buf)
     }
 }
 
@@ -203,9 +91,7 @@ impl SassCalculation {
 
     pub fn min(args: Vec<CalculationArg>) -> SassResult<Value> {
         let args = Self::simplify_arguments(args);
-        if args.is_empty() {
-            todo!("min() must have at least one argument.")
-        }
+        debug_assert!(!args.is_empty(), "min() must have at least one argument.");
 
         let mut minimum: Option<SassNumber> = None;
 
@@ -217,9 +103,10 @@ impl SassCalculation {
                     minimum = None;
                     break;
                 }
-                // todo: units
                 CalculationArg::Number(n)
-                    if minimum.is_none() || minimum.as_ref().unwrap().num > n.num =>
+                    if minimum.is_none()
+                        || minimum.as_ref().unwrap().num()
+                            > n.num().convert(&n.unit, &minimum.as_ref().unwrap().unit) =>
                 {
                     minimum = Some(n.clone());
                 }
@@ -247,10 +134,10 @@ impl SassCalculation {
         })
     }
 
-    pub fn max(args: Vec<CalculationArg>) -> SassResult<Value> {
+    pub fn max(args: Vec<CalculationArg>, span: Span) -> SassResult<Value> {
         let args = Self::simplify_arguments(args);
         if args.is_empty() {
-            todo!("max() must have at least one argument.")
+            return Err(("max() must have at least one argument.", span).into());
         }
 
         let mut maximum: Option<SassNumber> = None;
@@ -263,9 +150,10 @@ impl SassCalculation {
                     maximum = None;
                     break;
                 }
-                // todo: units
                 CalculationArg::Number(n)
-                    if maximum.is_none() || maximum.as_ref().unwrap().num < n.num =>
+                    if maximum.is_none()
+                        || maximum.as_ref().unwrap().num()
+                            < n.num().convert(&n.unit, &maximum.as_ref().unwrap().unit) =>
                 {
                     maximum = Some(n.clone());
                 }
@@ -315,8 +203,7 @@ impl SassCalculation {
                 Some(CalculationArg::Number(max)),
             ) => {
                 if min.is_comparable_to(&value) && min.is_comparable_to(&max) {
-                    // todo: account for units?
-                    if value.num <= min.num {
+                    if value.num <= min.num().convert(min.unit(), value.unit()).0 {
                         return Ok(Value::Dimension {
                             num: Number(min.num),
                             unit: min.unit,
@@ -324,8 +211,7 @@ impl SassCalculation {
                         });
                     }
 
-                    // todo: account for units?
-                    if value.num >= max.num {
+                    if value.num >= max.num().convert(max.unit(), value.unit()).0 {
                         return Ok(Value::Dimension {
                             num: Number(max.num),
                             unit: max.unit,

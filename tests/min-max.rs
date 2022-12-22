@@ -200,6 +200,16 @@ test!(
     "a {\n  color: min((1));\n}\n",
     "a {\n  color: 1;\n}\n"
 );
+test!(
+    max_compatible_units_does_conversion,
+    "a {\n  color: max(1px, 1in, 1cm);\n}\n",
+    "a {\n  color: 1in;\n}\n"
+);
+test!(
+    min_compatible_units_does_conversion,
+    "a {\n  color: min(1px, 1in, 1cm);\n}\n",
+    "a {\n  color: 1px;\n}\n"
+);
 error!(
     min_parenthesis_around_arg_with_comma,
     "a {\n  color: min((1, 1));\n}\n", "Error: 1, 1 is not a number."

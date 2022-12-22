@@ -8,7 +8,7 @@ use crate::{
     error::SassResult,
     evaluate::Visitor,
     selector::Selector,
-    serializer::{inspect_number, serialize_color, serialize_number},
+    serializer::{inspect_number, serialize_calculation, serialize_color, serialize_number},
     unit::Unit,
     utils::{hex_char_for, is_special_function},
     Options, OutputStyle,
@@ -288,48 +288,20 @@ impl Value {
     #[track_caller]
     pub fn to_css_string(&self, span: Span, is_compressed: bool) -> SassResult<Cow<'static, str>> {
         Ok(match self {
-            Value::Calculation(calc) => Cow::Owned(format!(
-                "{}({})",
-                calc.name,
-                calc.args
-                    .iter()
-                    .map(|a| a.to_css_string(span, is_compressed))
-                    .collect::<SassResult<Vec<String>>>()?
-                    .join(if is_compressed {
-                        ListSeparator::Comma.as_compressed_str()
-                    } else {
-                        ListSeparator::Comma.as_str()
-                    }),
-            )),
+            Value::Calculation(calc) => Cow::Owned(serialize_calculation(
+                calc,
+                &Options::default().style(if is_compressed {
+                    OutputStyle::Compressed
+                } else {
+                    OutputStyle::Expanded
+                }),
+                span,
+            )?),
             Value::Dimension {
                 num,
                 unit,
                 as_slash,
-            } => match unit {
-                _ => {
-                    // if let Some(as_slash) = as_slash {
-                    //     let numer = &as_slash.0;
-                    //     let denom = &as_slash.1;
-
-                    //     return Ok(Cow::Owned(format!(
-                    //         "{}/{}",
-                    //         // todo: superfluous clones
-                    //         Value::Dimension {
-                    //             num: Number(numer.num),
-                    //             unit: numer.unit.clone(),
-                    //             as_slash: numer.as_slash.clone()
-                    //         }
-                    //         .to_css_string(span, is_compressed)?,
-                    //         Value::Dimension {
-                    //             num: Number(denom.num),
-                    //             unit: denom.unit.clone(),
-                    //             as_slash: denom.as_slash.clone()
-                    //         }
-                    //         .to_css_string(span, is_compressed)?,
-                    //     )));
-                    // }
-
-                    Cow::Owned(serialize_number(
+            } => Cow::Owned(serialize_number(
                         &SassNumber {
                             num: num.0,
                             unit: unit.clone(),
@@ -342,12 +314,7 @@ impl Value {
                         }),
                         span,
                     )?)
-                    // if unit.is_complex() {
-                    //     return Err((format!("")))
-                    // }
-                    // Cow::Owned(format!("{}{}", num.to_string(is_compressed), unit))
-                }
-            },
+            ,
             Value::Map(..) | Value::FunctionRef(..) => {
                 return Err((
                     format!("{} isn't a valid CSS value.", self.inspect(span)?),
@@ -629,12 +596,11 @@ impl Value {
     // todo: is this actually fallible?
     pub fn inspect(&self, span: Span) -> SassResult<Cow<'static, str>> {
         Ok(match self {
-            Value::Calculation(SassCalculation { name, args }) => Cow::Owned(format!(
-                "{name}({})",
-                args.into_iter()
-                    .map(|arg| arg.inspect(span))
-                    .collect::<SassResult<String>>()?
-            )),
+            Value::Calculation(calc) => Cow::Owned(serialize_calculation(
+                calc,
+                &Options::default(),
+                span,
+            )?),
             Value::List(v, _, brackets) if v.is_empty() => match brackets {
                 Brackets::None => Cow::Borrowed("()"),
                 Brackets::Bracketed => Cow::Borrowed("[]"),

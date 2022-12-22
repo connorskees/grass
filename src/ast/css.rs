@@ -34,10 +34,10 @@ impl CssStmt {
             | CssStmt::UnknownAtRule(_, is_group_end)
             | CssStmt::Supports(_, is_group_end)
             | CssStmt::RuleSet { is_group_end, .. } => *is_group_end = true,
-            CssStmt::Style(_) => todo!(),
-            CssStmt::Comment(_, _) => todo!(),
-            CssStmt::KeyframesRuleSet(_) => todo!(),
-            CssStmt::Import(_, _) => todo!(),
+            CssStmt::Style(_)
+            | CssStmt::Comment(_, _)
+            | CssStmt::KeyframesRuleSet(_)
+            | CssStmt::Import(_, _) => {}
         }
     }
 
@@ -94,14 +94,17 @@ impl CssStmt {
                 },
                 *is_group_end,
             ),
-            (CssStmt::Supports(supports, is_group_end)) => {
-                // supports.body.push(child);
-                todo!()
-            }
-            (CssStmt::KeyframesRuleSet(keyframes)) => {
-                // keyframes.body.push(child);
-                todo!()
-            }
+            (CssStmt::Supports(supports, is_group_end)) => CssStmt::Supports(
+                SupportsRule {
+                    params: supports.params.clone(),
+                    body: Vec::new(),
+                },
+                *is_group_end,
+            ),
+            (CssStmt::KeyframesRuleSet(keyframes)) => CssStmt::KeyframesRuleSet(KeyframesRuleSet {
+                selector: keyframes.selector.clone(),
+                body: Vec::new(),
+            }),
         }
     }
 }

@@ -1,4 +1,3 @@
-//! # Convert from SCSS AST to CSS
 use std::io::Write;
 
 use codemap::{CodeMap, Span, Spanned};
@@ -8,7 +7,7 @@ use crate::{
     color::{Color, ColorFormat, NAMED_COLORS},
     error::SassResult,
     utils::hex_char_for,
-    value::{fuzzy_equals, SassNumber, Value},
+    value::{fuzzy_equals, CalculationArg, SassCalculation, SassNumber, Value},
     Options,
 };
 
@@ -19,6 +18,19 @@ pub(crate) fn serialize_color(color: &Color, options: &Options, span: Span) -> S
     serializer.visit_color(color);
 
     serializer.finish_for_expr()
+}
+
+pub(crate) fn serialize_calculation(
+    calculation: &SassCalculation,
+    options: &Options,
+    span: Span,
+) -> SassResult<String> {
+    let map = CodeMap::new();
+    let mut serializer = Serializer::new(options, &map, false, span);
+
+    serializer.visit_calculation(calculation)?;
+
+    Ok(serializer.finish_for_expr())
 }
 
 pub(crate) fn serialize_number(
@@ -75,6 +87,89 @@ impl<'a> Serializer<'a> {
     fn write_comma_separator(&mut self) {
         self.buffer.push(b',');
         self.write_optional_space();
+    }
+
+    fn visit_calculation(&mut self, calculation: &SassCalculation) -> SassResult<()> {
+        // todo: superfluous allocation
+        self.buffer
+            .extend_from_slice(calculation.name.to_string().as_bytes());
+        self.buffer.push(b'(');
+
+        if let Some((last, slice)) = calculation.args.split_last() {
+            for arg in slice {
+                self.write_calculation_arg(arg)?;
+                self.buffer.push(b',');
+                self.write_optional_space();
+            }
+
+            self.write_calculation_arg(last)?;
+        }
+
+        self.buffer.push(b')');
+
+        Ok(())
+    }
+
+    fn write_calculation_arg(&mut self, arg: &CalculationArg) -> SassResult<()> {
+        match arg {
+            CalculationArg::Number(num) => self.visit_number(num)?,
+            CalculationArg::Calculation(calc) => {
+                self.visit_calculation(calc)?;
+            }
+            CalculationArg::String(s) | CalculationArg::Interpolation(s) => {
+                self.buffer.extend_from_slice(s.as_bytes())
+            }
+            CalculationArg::Operation { lhs, op, rhs } => {
+                let paren_left = match &**lhs {
+                    CalculationArg::Interpolation(..) => true,
+                    CalculationArg::Operation { op: op2, .. } => op2.precedence() < op.precedence(),
+                    _ => false,
+                };
+
+                if paren_left {
+                    self.buffer.push(b'(');
+                }
+
+                self.write_calculation_arg(&**lhs)?;
+
+                if paren_left {
+                    self.buffer.push(b')');
+                }
+
+                let operator_whitespace = !self.options.is_compressed() || op.precedence() == 1;
+
+                if operator_whitespace {
+                    self.buffer.push(b' ');
+                }
+
+                // todo: avoid allocation with `write_binary_operator` method
+                self.buffer.extend_from_slice(op.to_string().as_bytes());
+
+                if operator_whitespace {
+                    self.buffer.push(b' ');
+                }
+
+                let paren_right = match &**rhs {
+                    CalculationArg::Interpolation(..) => true,
+                    CalculationArg::Operation { op: op2, .. } => {
+                        CalculationArg::parenthesize_calculation_rhs(*op, *op2)
+                    }
+                    _ => false,
+                };
+
+                if paren_right {
+                    self.buffer.push(b'(');
+                }
+
+                self.write_calculation_arg(&**rhs)?;
+
+                if paren_right {
+                    self.buffer.push(b')');
+                }
+            }
+        }
+
+        Ok(())
     }
 
     fn write_rgb(&mut self, color: &Color) {
@@ -311,6 +406,7 @@ impl<'a> Serializer<'a> {
                 as_slash,
             })?,
             Value::Color(color) => self.visit_color(&*color),
+            Value::Calculation(calc) => self.visit_calculation(&calc)?,
             _ => {
                 let value_as_str = value
                     .node

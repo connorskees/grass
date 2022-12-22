@@ -236,6 +236,16 @@ test!(
     "a {\n  color: PrOgId:foo(fff);\n}\n",
     "a {\n  color: progid:foo(fff);\n}\n"
 );
+test!(
+    calc_plus_minus,
+    "a {\n  color: calc(1% + 3px - 2px);\n}\n",
+    "a {\n  color: calc(1% + 3px - 2px);\n}\n"
+);
+test!(
+    calc_num_plus_interpolation,
+    "a {\n  color: calc(1 + #{c});\n}\n",
+    "a {\n  color: calc(1 + c);\n}\n"
+);
 error!(
     progid_nothing_after,
     "a { color: progid:", "Error: expected \"(\"."
