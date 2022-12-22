@@ -608,6 +608,45 @@ test!(
     @include foo();",
     "a {\n  display: none;\n}\n\nb {\n  display: block;\n}\n"
 );
+test!(
+    sass_spec__188_test_mixin_content,
+    "$color: blue;
+
+    @mixin context($class, $color: red) {
+        .#{$class} {
+            background-color: $color;
+            @content;
+            border-color: $color;
+        }
+    }
+
+    @include context(parent) {
+        @include context(child, $color: yellow) {
+            color: $color;
+        }
+    }",
+    ".parent {\n  background-color: red;\n  border-color: red;\n}\n.parent .child {\n  background-color: yellow;\n  color: blue;\n  border-color: yellow;\n}\n"
+);
+test!(
+    sass_spec__mixin_environment_locality,
+    r#"// The "$var" variable should only be set locally, despite being in the same
+    // mixin each time.
+    @mixin with-local-variable($recurse) {
+        $var: before;
+
+        @if ($recurse) {
+            @include with-local-variable($recurse: false);
+        }
+
+        var: $var;
+        $var: after;
+    }
+
+    .environment-locality {
+        @include with-local-variable($recurse: true);
+    }"#,
+    ".environment-locality {\n  var: before;\n  var: before;\n}\n"
+);
 error!(
     mixin_in_function,
     "@function foo() {
@@ -647,4 +686,11 @@ error!(
         @include name;
     }",
     "Error: expected \"{\"."
+);
+error!(
+    disallows_content_block_when_mixin_has_no_content_block,
+    "@mixin foo () {}
+    @include foo {}
+    ",
+    "Error: Mixin doesn't accept a content block."
 );

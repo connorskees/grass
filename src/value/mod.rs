@@ -8,7 +8,7 @@ use crate::{
     error::SassResult,
     evaluate::Visitor,
     selector::Selector,
-    serializer::serialize_number,
+    serializer::{serialize_color, serialize_number},
     unit::Unit,
     utils::{hex_char_for, is_special_function},
     Options, OutputStyle,
@@ -17,7 +17,7 @@ use crate::{
 pub(crate) use arglist::ArgList;
 pub(crate) use calculation::*;
 pub(crate) use map::SassMap;
-pub(crate) use number::Number;
+pub(crate) use number::*;
 pub(crate) use sass_function::{SassFunction, UserDefinedFunction};
 pub(crate) use sass_number::SassNumber;
 
@@ -39,11 +39,13 @@ pub(crate) enum Value {
         as_slash: Option<Box<(SassNumber, SassNumber)>>,
     },
     List(Vec<Value>, ListSeparator, Brackets),
+    // todo: benchmark unboxing this, now that it's smaller
     Color(Box<Color>),
     String(String, QuoteKind),
     Map(SassMap),
     ArgList(ArgList),
     /// Returned by `get-function()`
+    // todo: benchmark boxing this (function refs are infrequent)
     FunctionRef(SassFunction),
     Calculation(SassCalculation),
 }
@@ -243,6 +245,21 @@ impl Value {
         }
     }
 
+    pub fn assert_number_with_name(self, span: Span, name: &str) -> SassResult<SassNumber> {
+        match self {
+            Value::Dimension {
+                num,
+                unit,
+                as_slash,
+            } => Ok(SassNumber {
+                num: num.0,
+                unit,
+                as_slash,
+            }),
+            _ => Err((format!("${name} is not a number."), span).into()),
+        }
+    }
+
     // todo: rename is_blank
     pub fn is_null(&self) -> bool {
         match self {
@@ -359,7 +376,15 @@ impl Value {
                         }),
                 )),
             },
-            Value::Color(c) => Cow::Owned(c.to_string()),
+            Value::Color(c) => Cow::Owned(serialize_color(
+                c,
+                &Options::default().style(if is_compressed {
+                    OutputStyle::Compressed
+                } else {
+                    OutputStyle::Expanded
+                }),
+                span,
+            )),
             Value::String(string, QuoteKind::None) => {
                 let mut after_newline = false;
                 let mut buf = String::with_capacity(string.len());
@@ -470,6 +495,7 @@ impl Value {
     pub fn is_special_function(&self) -> bool {
         match self {
             Value::String(s, QuoteKind::None) => is_special_function(s),
+            Value::Calculation(..) => true,
             _ => false,
         }
     }
@@ -813,11 +839,10 @@ impl Value {
         })
     }
 
-    pub fn unary_not(self) -> SassResult<Self> {
-        Ok(match self {
-            Self::Calculation(..) => todo!(),
+    pub fn unary_not(self) -> Self {
+        match self {
             Self::False | Self::Null => Self::True,
             _ => Self::False,
-        })
+        }
     }
 }

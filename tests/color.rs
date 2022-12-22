@@ -79,27 +79,27 @@ test!(
 test!(
     converts_rgb_to_named_color,
     "a {\n  color: rgb(0, 0, 0);\n}\n",
-    "a {\n  color: black;\n}\n"
+    "a {\n  color: rgb(0, 0, 0);\n}\n"
 );
 test!(
     converts_rgba_to_named_color_red,
     "a {\n  color: rgb(255, 0, 0, 255);\n}\n",
-    "a {\n  color: red;\n}\n"
+    "a {\n  color: rgb(255, 0, 0);\n}\n"
 );
 test!(
     rgb_negative,
     "a {\n  color: rgb(-1, 1, 1);\n}\n",
-    "a {\n  color: #000101;\n}\n"
+    "a {\n  color: rgb(0, 1, 1);\n}\n"
 );
 test!(
     rgb_binop,
     "a {\n  color: rgb(1, 2, 1+2);\n}\n",
-    "a {\n  color: #010203;\n}\n"
+    "a {\n  color: rgb(1, 2, 3);\n}\n"
 );
 test!(
     rgb_pads_0,
     "a {\n  color: rgb(1, 2, 3);\n}\n",
-    "a {\n  color: #010203;\n}\n"
+    "a {\n  color: rgb(1, 2, 3);\n}\n"
 );
 test!(
     rgba_percent,
@@ -114,12 +114,12 @@ test!(
 test!(
     rgb_double_digits,
     "a {\n  color: rgb(254, 255, 255);\n}\n",
-    "a {\n  color: #feffff;\n}\n"
+    "a {\n  color: rgb(254, 255, 255);\n}\n"
 );
 test!(
     rgb_double_digits_white,
     "a {\n  color: rgb(255, 255, 255);\n}\n",
-    "a {\n  color: white;\n}\n"
+    "a {\n  color: rgb(255, 255, 255);\n}\n"
 );
 test!(
     alpha_function_4_hex,
@@ -159,7 +159,7 @@ test!(
 test!(
     rgba_opacity_over_1,
     "a {\n  color: rgba(1, 2, 3, 3);\n}\n",
-    "a {\n  color: #010203;\n}\n"
+    "a {\n  color: rgb(1, 2, 3);\n}\n"
 );
 test!(
     rgba_negative_alpha,
@@ -179,7 +179,7 @@ test!(
 test!(
     rgba_3_args,
     "a {\n  color: rgba(7.1%, 20.4%, 33.9%);\n}\n",
-    "a {\n  color: #123456;\n}\n"
+    "a {\n  color: rgb(18, 52, 86);\n}\n"
 );
 error!(
     rgb_no_args,
@@ -397,16 +397,16 @@ test!(
 );
 test!(
     sass_spec__spec_colors_basic,
-    "p {
+    r#"p {
   color: rgb(255, 128, 0);
   color: red green blue;
   color: (red) (green) (blue);
   color: red + hux;
-  color: unquote(\"red\") + green;
+  color: unquote("red") + green;
   foo: rgb(200, 150%, 170%);
 }
-",
-    "p {\n  color: #ff8000;\n  color: red green blue;\n  color: red green blue;\n  color: redhux;\n  color: redgreen;\n  foo: #c8ffff;\n}\n"
+"#,
+    "p {\n  color: rgb(255, 128, 0);\n  color: red green blue;\n  color: red green blue;\n  color: redhux;\n  color: redgreen;\n  foo: rgb(200, 255, 255);\n}\n"
 );
 test!(
     sass_spec__spec_colors_change_color,
@@ -462,7 +462,7 @@ test!(
 test!(
     all_three_rgb_channels_have_decimal,
     "a {\n  color: rgba(1.5, 1.5, 1.5, 1);\n}\n",
-    "a {\n  color: #020202;\n}\n"
+    "a {\n  color: rgb(2, 2, 2);\n}\n"
 );
 test!(
     builtin_fn_red_rounds_channel,
@@ -588,6 +588,16 @@ test!(
     hue_largest_channel_is_blue,
     "a {\n  color: hue(rgb(1, 2, 5));\n}\n",
     "a {\n  color: 225deg;\n}\n"
+);
+error!(
+    rgb_more_than_4_args,
+    "a {\n  color: rgb(59%, 169, 69%, 50%, 50%);\n}\n",
+    "Error: Only 4 arguments allowed, but 5 were passed."
+);
+error!(
+    rgba_more_than_4_args,
+    "a {\n  color: rgba(59%, 169, 69%, 50%, 50%);\n}\n",
+    "Error: Only 4 arguments allowed, but 5 were passed."
 );
 
 // todo:

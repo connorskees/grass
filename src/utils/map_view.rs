@@ -339,7 +339,7 @@ impl<V: fmt::Debug + Clone, T: MapView<Value = V> + Clone> MapView for PublicMem
         self.0
             .keys()
             .into_iter()
-            .filter(|key| key.is_public())
+            .filter(Identifier::is_public)
             .collect()
     }
 

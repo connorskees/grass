@@ -6,7 +6,7 @@ use codemap::Spanned;
 
 use crate::{
     ast::*,
-    color::{Color, NAMED_COLORS},
+    color::{Color, NAMED_COLORS, ColorFormat},
     common::{unvendor, BinaryOp, Brackets, Identifier, ListSeparator, QuoteKind, UnaryOp},
     error::SassResult,
     unit::Unit,
@@ -916,7 +916,7 @@ impl<'c> ValueParser<'c> {
             // todo:
             //     // Don't emit four- or eight-digit hex colors as hex, since that's not
             //     // yet well-supported in browsers.
-            parser.toks.raw_text(start - 1),
+            ColorFormat::Literal(parser.toks.raw_text(start - 1)),
         ))
     }
 

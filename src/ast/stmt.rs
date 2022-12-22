@@ -195,6 +195,7 @@ pub(crate) struct AstInclude {
     pub name: Spanned<Identifier>,
     pub args: ArgumentInvocation,
     pub content: Option<AstContentBlock>,
+    pub span: Span,
 }
 
 #[derive(Debug, Clone)]

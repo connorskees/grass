@@ -1,11 +1,27 @@
 //! # Convert from SCSS AST to CSS
 use std::io::Write;
 
-use codemap::{CodeMap, Span};
+use codemap::{CodeMap, Span, Spanned};
 
 use crate::{
-    atrule::SupportsRule, error::SassResult, parse::Stmt, style::Style, value::SassNumber, Options,
+    atrule::SupportsRule,
+    color::{Color, ColorFormat, NAMED_COLORS},
+    error::SassResult,
+    parse::Stmt,
+    style::Style,
+    utils::hex_char_for,
+    value::{fuzzy_equals, SassNumber, Value},
+    Options,
 };
+
+pub(crate) fn serialize_color(color: &Color, options: &Options, span: Span) -> String {
+    let map = CodeMap::new();
+    let mut serializer = Serializer::new(options, &map, false, span);
+
+    serializer.visit_color(color);
+
+    serializer.finish_for_expr()
+}
 
 pub(crate) fn serialize_number(
     number: &SassNumber,
@@ -55,6 +71,128 @@ impl<'a> Serializer<'a> {
             buffer: Vec::new(),
             map,
             span,
+        }
+    }
+
+    fn write_comma_separator(&mut self) {
+        self.buffer.push(b',');
+        self.write_optional_space();
+    }
+
+    fn write_rgb(&mut self, color: &Color) {
+        let is_opaque = fuzzy_equals(color.alpha().0, 1.0);
+
+        if is_opaque {
+            self.buffer.extend_from_slice(b"rgb(");
+        } else {
+            self.buffer.extend_from_slice(b"rgba(");
+        }
+
+        self.write_float(color.red().0);
+        self.buffer.extend_from_slice(b", ");
+        self.write_float(color.green().0);
+        self.buffer.extend_from_slice(b", ");
+        self.write_float(color.blue().0);
+
+        if !is_opaque {
+            self.buffer.extend_from_slice(b", ");
+            self.write_float(color.alpha().0);
+        }
+
+        self.buffer.push(b')');
+    }
+
+    fn write_hsl(&mut self, color: &Color) {
+        let is_opaque = fuzzy_equals(color.alpha().0, 1.0);
+
+        if is_opaque {
+            self.buffer.extend_from_slice(b"hsl(");
+        } else {
+            self.buffer.extend_from_slice(b"hsla(");
+        }
+
+        self.write_float(color.hue().0);
+        self.buffer.extend_from_slice(b"deg, ");
+        self.write_float(color.saturation().0);
+        self.buffer.extend_from_slice(b"%, ");
+        self.write_float(color.lightness().0);
+        self.buffer.extend_from_slice(b"%");
+
+        if !is_opaque {
+            self.buffer.extend_from_slice(b", ");
+            self.write_float(color.alpha().0);
+        }
+
+        self.buffer.push(b')');
+    }
+
+    fn write_hex_component(&mut self, channel: u32) {
+        debug_assert!(channel < 256);
+
+        self.buffer.push(hex_char_for(channel >> 4) as u8);
+        self.buffer.push(hex_char_for(channel & 0xF) as u8);
+    }
+
+    fn is_symmetrical_hex(channel: u32) -> bool {
+        channel & 0xF == channel >> 4
+    }
+
+    fn can_use_short_hex(color: &Color) -> bool {
+        Self::is_symmetrical_hex(color.red().0.round() as u32)
+            && Self::is_symmetrical_hex(color.green().0.round() as u32)
+            && Self::is_symmetrical_hex(color.blue().0.round() as u32)
+    }
+
+    pub fn visit_color(&mut self, color: &Color) {
+        let red = color.red().0.round() as u8;
+        let green = color.green().0.round() as u8;
+        let blue = color.blue().0.round() as u8;
+
+        let name = if fuzzy_equals(color.alpha().0, 1.0) {
+            NAMED_COLORS.get_by_rgba([red, green, blue])
+        } else {
+            None
+        };
+
+        if self.options.is_compressed() {
+            if !fuzzy_equals(color.alpha().0, 1.0) {
+                self.write_rgb(color);
+            } else {
+                let hex_length = if Self::can_use_short_hex(color) { 4 } else { 7 };
+                if name.is_some() && name.unwrap().len() <= hex_length {
+                    self.buffer.extend_from_slice(name.unwrap().as_bytes());
+                } else if Self::can_use_short_hex(color) {
+                    self.buffer.push(b'#');
+                    self.buffer.push(hex_char_for(red as u32 & 0xF) as u8);
+                    self.buffer.push(hex_char_for(green as u32 & 0xF) as u8);
+                    self.buffer.push(hex_char_for(blue as u32 & 0xF) as u8);
+                } else {
+                    self.buffer.push(b'#');
+                    self.write_hex_component(red as u32);
+                    self.write_hex_component(green as u32);
+                    self.write_hex_component(blue as u32);
+                }
+            }
+        } else {
+            if color.format != ColorFormat::Infer {
+                match &color.format {
+                    ColorFormat::Rgb => self.write_rgb(color),
+                    ColorFormat::Hsl => self.write_hsl(color),
+                    ColorFormat::Literal(text) => self.buffer.extend_from_slice(text.as_bytes()),
+                    ColorFormat::Infer => unreachable!(),
+                }
+                // Always emit generated transparent colors in rgba format. This works
+                // around an IE bug. See sass/sass#1782.
+            } else if name.is_some() && !fuzzy_equals(color.alpha().0, 0.0) {
+                self.buffer.extend_from_slice(name.unwrap().as_bytes());
+            } else if fuzzy_equals(color.alpha().0, 1.0) {
+                self.buffer.push(b'#');
+                self.write_hex_component(red as u32);
+                self.write_hex_component(green as u32);
+                self.write_hex_component(blue as u32);
+            } else {
+                self.write_rgb(color);
+            }
         }
     }
 
@@ -127,11 +265,7 @@ impl<'a> Serializer<'a> {
             self.buffer.push(b'\n');
         }
 
-        // let len = self.buffer.len();
-
         self.visit_stmt(stmt)?;
-
-        // if len != self.buffer.len() && !group_starts_with_media {}
 
         Ok(())
     }
@@ -167,6 +301,29 @@ impl<'a> Serializer<'a> {
         }
     }
 
+    fn visit_value(&mut self, value: Spanned<Value>) -> SassResult<()> {
+        match value.node {
+            Value::Dimension {
+                num,
+                unit,
+                as_slash,
+            } => self.visit_number(&SassNumber {
+                num: num.0,
+                unit,
+                as_slash,
+            })?,
+            Value::Color(color) => self.visit_color(&*color),
+            _ => {
+                let value_as_str = value
+                    .node
+                    .to_css_string(value.span, self.options.is_compressed())?;
+                self.buffer.extend_from_slice(value_as_str.as_bytes());
+            }
+        }
+
+        Ok(())
+    }
+
     fn write_style(&mut self, style: Style) -> SassResult<()> {
         if !self.options.is_compressed() {
             self.write_indentation();
@@ -180,11 +337,7 @@ impl<'a> Serializer<'a> {
             self.buffer.push(b' ');
         }
 
-        let value_as_str = style
-            .value
-            .node
-            .to_css_string(style.value.span, self.options.is_compressed())?;
-        self.buffer.extend_from_slice(value_as_str.as_bytes());
+        self.visit_value(*style.value)?;
 
         self.buffer.push(b';');
 

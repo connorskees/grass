@@ -2018,7 +2018,7 @@ impl<'a> Visitor<'a> {
         match mixin {
             Mixin::Builtin(mixin) => {
                 if include_stmt.content.is_some() {
-                    todo!("Mixin doesn't accept a content block.")
+                    return Err(("Mixin doesn't accept a content block.", include_stmt.span).into());
                 }
 
                 let args = self.eval_args(include_stmt.args, include_stmt.name.span)?;
@@ -2031,7 +2031,7 @@ impl<'a> Visitor<'a> {
             }
             Mixin::UserDefined(mixin, env) => {
                 if include_stmt.content.is_some() && !mixin.has_content {
-                    todo!("Mixin doesn't accept a content block.")
+                    return Err(("Mixin doesn't accept a content block.", include_stmt.span).into());
                 }
 
                 let AstInclude { args, content, .. } = include_stmt;
@@ -2538,7 +2538,7 @@ impl<'a> Visitor<'a> {
             name.push_str("()");
         }
 
-        let val = self.with_environment::<SassResult<V>>(env, |visitor| {
+        let val = self.with_environment::<SassResult<V>>(env.new_closure(), |visitor| {
             visitor.with_scope(false, true, move |visitor| {
                 func.arguments().verify(
                     evaluated.positional.len(),
@@ -3010,7 +3010,7 @@ impl<'a> Visitor<'a> {
             UnaryOp::Plus => operand.unary_plus(self),
             UnaryOp::Neg => operand.unary_neg(self),
             UnaryOp::Div => operand.unary_div(self),
-            UnaryOp::Not => operand.unary_not(),
+            UnaryOp::Not => Ok(operand.unary_not()),
         }
     }
 
@@ -3164,7 +3164,11 @@ impl<'a> Visitor<'a> {
                 let left_is_number = matches!(left, Value::Dimension { .. });
                 let right_is_number = matches!(right, Value::Dimension { .. });
 
+                dbg!(&left, &right);
+
                 let result = div(left.clone(), right.clone(), self.parser.options, span)?;
+
+                dbg!(&result);
 
                 if left_is_number && right_is_number && allows_slash {
                     return result.with_slash(

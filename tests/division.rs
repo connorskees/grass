@@ -72,6 +72,26 @@ test!(
     "a {\n  color: /1;\n}\n"
 );
 test!(
+    null_div_named_color,
+    "a {\n  color: null / red;\n}\n",
+    "a {\n  color: /red;\n}\n"
+);
+test!(
+    null_div_hex_color,
+    "a {\n  color: null / #f0f0f0;\n}\n",
+    "a {\n  color: /#f0f0f0;\n}\n"
+);
+test!(
+    named_color_div_null,
+    "a {\n  color: red / null;\n}\n",
+    "a {\n  color: red/;\n}\n"
+);
+test!(
+    hex_color_div_null,
+    "a {\n  color: #f0f0f0 / null;\n}\n",
+    "a {\n  color: #f0f0f0/;\n}\n"
+);
+test!(
     null_div_dblquoted_string,
     "a {\n  color: null / \"foo\";\n}\n",
     "a {\n  color: /\"foo\";\n}\n"
@@ -201,4 +221,9 @@ test!(
     calculation_div_sgl_quoted_string,
     "a {\n  color: (calc(1rem + 1px) / 'foo');\n}\n",
     "a {\n  color: calc(1rem + 1px)/\"foo\";\n}\n"
+);
+test!(
+    three_chain_ending_in_string_is_not_evaled,
+    "a {\n  color: 1 / 2 / foo();\n}\n",
+    "a {\n  color: 1/2/foo();\n}\n"
 );

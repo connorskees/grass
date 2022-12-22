@@ -15,23 +15,30 @@
 //! Named colors retain their original casing,
 //! so `rEd` should be emitted as `rEd`.
 
-use std::{
-    cmp::{max, min},
-    fmt::{self, Display},
-};
+use std::cmp::{max, min};
 
 use crate::value::Number;
 pub(crate) use name::NAMED_COLORS;
 
-use num_traits::ToPrimitive;
-
 mod name;
 
+// todo: only store alpha once on color
 #[derive(Debug, Clone)]
 pub(crate) struct Color {
     rgba: Rgba,
     hsla: Option<Hsla>,
-    repr: String,
+    pub format: ColorFormat,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub(crate) enum ColorFormat {
+    Rgb,
+    Hsl,
+    /// Literal string from source text. Either a named color like `red` or a hex color
+    // todo: make this is a span and lookup text from codemap
+    Literal(String),
+    /// Use the most appropriate format
+    Infer,
 }
 
 impl PartialEq for Color {
@@ -48,12 +55,12 @@ impl Color {
         green: Number,
         blue: Number,
         alpha: Number,
-        repr: String,
+        format: ColorFormat,
     ) -> Color {
         Color {
             rgba: Rgba::new(red, green, blue, alpha),
             hsla: None,
-            repr,
+            format,
         }
     }
 
@@ -63,12 +70,11 @@ impl Color {
         blue: Number,
         alpha: Number,
         hsla: Hsla,
-        repr: String,
     ) -> Color {
         Color {
             rgba: Rgba::new(red, green, blue, alpha),
             hsla: Some(hsla),
-            repr,
+            format: ColorFormat::Infer,
         }
     }
 }
@@ -161,11 +167,11 @@ impl Hsla {
 
 // RGBA color functions
 impl Color {
-    pub fn new(red: u8, green: u8, blue: u8, alpha: u8, repr: String) -> Self {
+    pub fn new(red: u8, green: u8, blue: u8, alpha: u8, format: String) -> Self {
         Color {
             rgba: Rgba::new(red.into(), green.into(), blue.into(), alpha.into()),
             hsla: None,
-            repr,
+            format: ColorFormat::Literal(format),
         }
     }
 
@@ -182,8 +188,21 @@ impl Color {
         blue = blue.clamp(0.0, 255.0);
         alpha = alpha.clamp(0.0, 1.0);
 
-        let repr = repr(red, green, blue, alpha);
-        Color::new_rgba(red, green, blue, alpha, repr)
+        Color::new_rgba(red, green, blue, alpha, ColorFormat::Infer)
+    }
+
+    pub fn from_rgba_fn(
+        mut red: Number,
+        mut green: Number,
+        mut blue: Number,
+        mut alpha: Number,
+    ) -> Self {
+        red = red.clamp(0.0, 255.0);
+        green = green.clamp(0.0, 255.0);
+        blue = blue.clamp(0.0, 255.0);
+        alpha = alpha.clamp(0.0, 1.0);
+
+        Color::new_rgba(red, green, blue, alpha, ColorFormat::Rgb)
     }
 
     pub fn red(&self) -> Number {
@@ -389,8 +408,7 @@ impl Color {
 
         if saturation.is_zero() {
             let val = luminance * Number::from(255.0);
-            let repr = repr(val, val, val, alpha);
-            return Color::new_hsla(val, val, val, alpha, hsla, repr);
+            return Color::new_hsla(val, val, val, alpha, hsla);
         }
 
         let temporary_1 = if luminance < Number(0.5) {
@@ -435,8 +453,7 @@ impl Color {
         let green = channel(temporary_g, temporary_1, temporary_2);
         let blue = channel(temporary_b, temporary_1, temporary_2);
 
-        let repr = repr(red, green, blue, alpha);
-        Color::new_hsla(red, green, blue, alpha, hsla, repr)
+        Color::new_hsla(red, green, blue, alpha, hsla)
     }
 
     pub fn invert(&self, weight: Number) -> Self {
@@ -447,9 +464,8 @@ impl Color {
         let red = Number::from(u8::max_value()) - self.red();
         let green = Number::from(u8::max_value()) - self.green();
         let blue = Number::from(u8::max_value()) - self.blue();
-        let repr = repr(red, green, blue, self.alpha());
 
-        let inverse = Color::new_rgba(red, green, blue, self.alpha(), repr);
+        let inverse = Color::new_rgba(red, green, blue, self.alpha(), ColorFormat::Infer);
 
         inverse.mix(self, weight)
     }
@@ -557,46 +573,6 @@ impl Color {
         let green = to_rgb(hue);
         let blue = to_rgb(hue - Number::small_ratio(1, 3));
 
-        let repr = repr(red, green, blue, alpha);
-
-        Color::new_rgba(red, green, blue, alpha, repr)
-    }
-}
-
-/// Get the proper representation from RGBA values
-fn repr(red: Number, green: Number, blue: Number, alpha: Number) -> String {
-    fn into_u8(channel: Number) -> u8 {
-        if channel > Number::from(255.0) {
-            255_u8
-        } else if channel.is_negative() {
-            0_u8
-        } else {
-            channel.round().to_integer().to_u8().unwrap_or(255)
-        }
-    }
-
-    let red_u8 = into_u8(red);
-    let green_u8 = into_u8(green);
-    let blue_u8 = into_u8(blue);
-
-    if alpha < Number::one() {
-        format!(
-            "rgba({}, {}, {}, {})",
-            red_u8,
-            green_u8,
-            blue_u8,
-            // todo: is_compressed
-            alpha.inspect()
-        )
-    } else if let Some(c) = NAMED_COLORS.get_by_rgba([red_u8, green_u8, blue_u8]) {
-        (*c).to_owned()
-    } else {
-        format!("#{:0>2x}{:0>2x}{:0>2x}", red_u8, green_u8, blue_u8)
-    }
-}
-
-impl Display for Color {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.repr)
+        Color::new_rgba(red, green, blue, alpha, ColorFormat::Infer)
     }
 }

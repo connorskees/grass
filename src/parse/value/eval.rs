@@ -7,8 +7,9 @@ use codemap::Span;
 use crate::{
     common::{BinaryOp, QuoteKind},
     error::SassResult,
+    serializer::serialize_number,
     unit::Unit,
-    value::Value,
+    value::{SassNumber, Value},
     Options,
 };
 
@@ -139,20 +140,23 @@ pub(crate) fn add(left: Value, right: Value, options: &Options, span: Span) -> S
                     .into())
             }
         },
-        Value::Color(c) => match right {
-            Value::String(s, q) => Value::String(format!("{}{}", c, s), q),
-            Value::Null => Value::String(c.to_string(), QuoteKind::None),
-            Value::List(..) => Value::String(
+        c @ Value::Color(..) => match right {
+            // todo: we really cant add to any other types?
+            Value::String(..) | Value::Null | Value::List(..) => Value::String(
                 format!(
                     "{}{}",
-                    c,
-                    right.to_css_string(span, options.is_compressed())?
+                    c.to_css_string(span, options.is_compressed())?,
+                    right.to_css_string(span, options.is_compressed())?,
                 ),
                 QuoteKind::None,
             ),
             _ => {
                 return Err((
-                    format!("Undefined operation \"{} + {}\".", c, right.inspect(span)?),
+                    format!(
+                        "Undefined operation \"{} + {}\".",
+                        c.inspect(span)?,
+                        right.inspect(span)?
+                    ),
                     span,
                 )
                     .into())
@@ -281,12 +285,14 @@ pub(crate) fn sub(left: Value, right: Value, options: &Options, span: Span) -> S
                 QuoteKind::None,
             ),
         },
-        Value::Color(c) => match right {
-            Value::String(s, q) => Value::String(format!("{}-{}{}{}", c, q, s, q), QuoteKind::None),
-            Value::Null => Value::String(format!("{}-", c), QuoteKind::None),
+        c @ Value::Color(..) => match right {
             Value::Dimension { .. } | Value::Color(..) => {
                 return Err((
-                    format!("Undefined operation \"{} - {}\".", c, right.inspect(span)?),
+                    format!(
+                        "Undefined operation \"{} - {}\".",
+                        c.inspect(span)?,
+                        right.inspect(span)?
+                    ),
                     span,
                 )
                     .into())
@@ -294,7 +300,7 @@ pub(crate) fn sub(left: Value, right: Value, options: &Options, span: Span) -> S
             _ => Value::String(
                 format!(
                     "{}-{}",
-                    c,
+                    c.to_css_string(span, options.is_compressed())?,
                     right.to_css_string(span, options.is_compressed())?
                 ),
                 QuoteKind::None,
@@ -498,33 +504,27 @@ pub(crate) fn div(left: Value, right: Value, options: &Options, span: Span) -> S
                     }
                 }
             }
-            Value::String(s, q) => Value::String(
-                format!(
-                    "{}{}/{}{}{}",
-                    num.to_string(options.is_compressed()),
-                    unit,
-                    q,
-                    s,
-                    q
-                ),
-                QuoteKind::None,
-            ),
             Value::List(..)
             | Value::True
             | Value::False
             | Value::Color(..)
             | Value::ArgList(..)
+            | Value::Null
+            | Value::String(..)
             | Value::Calculation(..) => Value::String(
                 format!(
-                    "{}{}/{}",
-                    num.to_string(options.is_compressed()),
-                    unit,
+                    "{}/{}",
+                    serialize_number(
+                        &SassNumber {
+                            num: num.0,
+                            unit,
+                            as_slash: as_slash1
+                        },
+                        options,
+                        span
+                    )?,
                     right.to_css_string(span, options.is_compressed())?
                 ),
-                QuoteKind::None,
-            ),
-            Value::Null => Value::String(
-                format!("{}{}/", num.to_string(options.is_compressed()), unit),
                 QuoteKind::None,
             ),
             Value::Map(..) | Value::FunctionRef(..) => {
@@ -535,12 +535,14 @@ pub(crate) fn div(left: Value, right: Value, options: &Options, span: Span) -> S
                     .into())
             }
         },
-        Value::Color(c) => match right {
-            Value::String(s, q) => Value::String(format!("{}/{}{}{}", c, q, s, q), QuoteKind::None),
-            Value::Null => Value::String(format!("{}/", c), QuoteKind::None),
+        c @ Value::Color(..) => match right {
             Value::Dimension { .. } | Value::Color(..) => {
                 return Err((
-                    format!("Undefined operation \"{} / {}\".", c, right.inspect(span)?),
+                    format!(
+                        "Undefined operation \"{} / {}\".",
+                        c.inspect(span)?,
+                        right.inspect(span)?
+                    ),
                     span,
                 )
                     .into())
@@ -548,7 +550,7 @@ pub(crate) fn div(left: Value, right: Value, options: &Options, span: Span) -> S
             _ => Value::String(
                 format!(
                     "{}/{}",
-                    c,
+                    c.to_css_string(span, options.is_compressed())?,
                     right.to_css_string(span, options.is_compressed())?
                 ),
                 QuoteKind::None,

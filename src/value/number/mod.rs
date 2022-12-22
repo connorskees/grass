@@ -40,7 +40,7 @@ impl PartialEq for Number {
 
 impl Eq for Number {}
 
-fn fuzzy_equals(a: f64, b: f64) -> bool {
+pub(crate) fn fuzzy_equals(a: f64, b: f64) -> bool {
     if a == b {
         return true;
     }
@@ -48,7 +48,7 @@ fn fuzzy_equals(a: f64, b: f64) -> bool {
     (a - b).abs() <= epsilon() && (a * inverse_epsilon()).round() == (b * inverse_epsilon()).round()
 }
 
-fn fuzzy_as_int(num: f64) -> Option<i32> {
+pub(crate) fn fuzzy_as_int(num: f64) -> Option<i32> {
     if !num.is_finite() {
         return None;
     }
@@ -60,6 +60,32 @@ fn fuzzy_as_int(num: f64) -> Option<i32> {
     } else {
         None
     }
+}
+
+pub(crate) fn fuzzy_round(number: f64) -> f64 {
+    // If the number is within epsilon of X.5, round up (or down for negative
+    // numbers).
+    if number > 0.0 {
+        if fuzzy_less_than(number % 1.0, 0.5) {
+            number.floor()
+        } else {
+            number.ceil()
+        }
+    } else {
+        if fuzzy_less_than_or_equals(number % 1.0, 0.5) {
+            number.floor()
+        } else {
+            number.ceil()
+        }
+    }
+}
+
+pub(crate) fn fuzzy_less_than(number1: f64, number2: f64) -> bool {
+    number1 < number2 && !fuzzy_equals(number1, number2)
+}
+
+pub(crate) fn fuzzy_less_than_or_equals(number1: f64, number2: f64) -> bool {
+    number1 < number2 || fuzzy_equals(number1, number2)
 }
 
 impl Number {
@@ -185,7 +211,7 @@ impl Number {
     }
 
     pub fn is_one(self) -> bool {
-        self.0 == 1.0
+        fuzzy_equals(self.0, 1.0)
     }
 
     pub const fn zero() -> Self {
@@ -193,7 +219,7 @@ impl Number {
     }
 
     pub fn is_zero(self) -> bool {
-        self.0 == 0.0
+        fuzzy_equals(self.0, 0.0)
     }
 }
 

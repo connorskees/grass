@@ -1,4 +1,111 @@
-use crate::builtin::builtin_imports::*;
+use crate::{builtin::builtin_imports::*, serializer::inspect_number, value::fuzzy_round};
+
+fn function_string(
+    name: &'static str,
+    args: &[Value],
+    visitor: &mut Visitor,
+    span: Span,
+) -> SassResult<String> {
+    let args = args
+        .into_iter()
+        .map(|arg| arg.to_css_string(span, visitor.parser.options.is_compressed()))
+        .collect::<SassResult<Vec<_>>>()?
+        .join(", ");
+
+    Ok((format!("{}({})", name, args)))
+}
+
+fn inner_rgb_3_arg(
+    name: &'static str,
+    mut args: ArgumentResult,
+    visitor: &mut Visitor,
+) -> SassResult<Value> {
+    let alpha = if args.len() > 3 {
+        args.get(3, "alpha")
+    } else {
+        None
+    };
+
+    let red = args.get_err(0, "red")?;
+    let green = args.get_err(1, "green")?;
+    let blue = args.get_err(2, "blue")?;
+
+    if red.is_special_function()
+        || green.is_special_function()
+        || blue.is_special_function()
+        || alpha
+            .as_ref()
+            .map(|alpha| alpha.node.is_special_function())
+            .unwrap_or(false)
+    {
+        return Ok(Value::String(
+            function_string(
+                name,
+                &[red, green, blue, alpha.unwrap().node],
+                visitor,
+                args.span(),
+            )?,
+            QuoteKind::None,
+        ));
+    }
+
+    let span = args.span();
+
+    let red = red.assert_number_with_name(span, "red")?;
+    let green = green.assert_number_with_name(span, "green")?;
+    let blue = blue.assert_number_with_name(span, "blue")?;
+
+    Ok(Value::Color(Box::new(Color::from_rgba_fn(
+        Number(fuzzy_round(percentage_or_unitless(
+            red, 255.0, "red", span, visitor,
+        )?)),
+        Number(fuzzy_round(percentage_or_unitless(
+            green, 255.0, "green", span, visitor,
+        )?)),
+        Number(fuzzy_round(percentage_or_unitless(
+            blue, 255.0, "blue", span, visitor,
+        )?)),
+        Number(
+            alpha
+                .map(|alpha| {
+                    percentage_or_unitless(
+                        alpha.node.assert_number_with_name(span, "alpha")?,
+                        1.0,
+                        "alpha",
+                        span,
+                        visitor,
+                    )
+                })
+                .transpose()?
+                .unwrap_or(1.0),
+        ),
+    ))))
+}
+
+fn percentage_or_unitless(
+    number: SassNumber,
+    max: f64,
+    name: &str,
+    span: Span,
+    visitor: &mut Visitor,
+) -> SassResult<f64> {
+    let value = if number.unit == Unit::None {
+        number.num
+    } else if number.unit == Unit::Percent {
+        (number.num * max) / 100.0
+    } else {
+        return Err((
+            format!(
+                "${name}: Expected {} to have no units or \"%\".",
+                inspect_number(&number, visitor.parser.options, span)?
+            ),
+            span,
+        )
+            .into());
+    };
+
+    Ok(value.clamp(0.0, max))
+}
 
 /// name: Either `rgb` or `rgba` depending on the caller
 // todo: refactor into smaller functions
@@ -12,7 +119,13 @@ fn inner_rgb(
         return Err(("Missing argument $channels.", args.span()).into());
     }
 
+    args.max_args(4)?;
+
     let len = args.len();
+
+    if len == 3 || len == 4 {
+        return inner_rgb_3_arg(name, args, parser);
+    }
 
     if len == 1 {
         let mut channels = match args.get_err(0, "channels")? {
@@ -163,7 +276,7 @@ fn inner_rgb(
         let color = Color::from_rgba(red, green, blue, Number::one());
 
         Ok(Value::Color(Box::new(color)))
-    } else if len == 2 {
+    } else {
         let color = args.get_err(0, "color")?;
         let alpha = args.get_err(1, "alpha")?;
 
@@ -235,167 +348,6 @@ fn inner_rgb(
             }
         };
         Ok(Value::Color(Box::new(color.with_alpha(alpha))))
-    } else {
-        let red = args.get_err(0, "red")?;
-        let green = args.get_err(1, "green")?;
-        let blue = args.get_err(2, "blue")?;
-        let alpha = args.default_arg(
-            3,
-            "alpha",
-            Value::Dimension {
-                num: (Number::one()),
-                unit: Unit::None,
-                as_slash: None,
-            },
-        );
-
-        if [&red, &green, &blue, &alpha]
-            .iter()
-            .copied()
-            .any(Value::is_special_function)
-        {
-            return Ok(Value::String(
-                format!(
-                    "{}({})",
-                    name,
-                    Value::List(
-                        if len == 4 {
-                            vec![red, green, blue, alpha]
-                        } else {
-                            vec![red, green, blue]
-                        },
-                        ListSeparator::Comma,
-                        Brackets::None
-                    )
-                    .to_css_string(args.span(), false)?
-                ),
-                QuoteKind::None,
-            ));
-        }
-
-        let red = match red {
-            Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
-            Value::Dimension {
-                num: (n),
-                unit: Unit::None,
-                as_slash: _,
-            } => n,
-            Value::Dimension {
-                num: (n),
-                unit: Unit::Percent,
-                as_slash: _,
-            } => (n / Number::from(100)) * Number::from(255),
-            v @ Value::Dimension { .. } => {
-                return Err((
-                    format!(
-                        "$red: Expected {} to have no units or \"%\".",
-                        v.to_css_string(args.span(), parser.parser.options.is_compressed())?
-                    ),
-                    args.span(),
-                )
-                    .into())
-            }
-            v => {
-                return Err((
-                    format!("$red: {} is not a number.", v.inspect(args.span())?),
-                    args.span(),
-                )
-                    .into())
-            }
-        };
-        let green = match green {
-            Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
-            Value::Dimension {
-                num: (n),
-                unit: Unit::None,
-                as_slash: _,
-            } => n,
-            Value::Dimension {
-                num: (n),
-                unit: Unit::Percent,
-                as_slash: _,
-            } => (n / Number::from(100)) * Number::from(255),
-            v @ Value::Dimension { .. } => {
-                return Err((
-                    format!(
-                        "$green: Expected {} to have no units or \"%\".",
-                        v.to_css_string(args.span(), parser.parser.options.is_compressed())?
-                    ),
-                    args.span(),
-                )
-                    .into())
-            }
-            v => {
-                return Err((
-                    format!("$green: {} is not a number.", v.inspect(args.span())?),
-                    args.span(),
-                )
-                    .into())
-            }
-        };
-        let blue = match blue {
-            Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
-            Value::Dimension {
-                num: (n),
-                unit: Unit::None,
-                as_slash: _,
-            } => n,
-            Value::Dimension {
-                num: (n),
-                unit: Unit::Percent,
-                as_slash: _,
-            } => (n / Number::from(100)) * Number::from(255),
-            v @ Value::Dimension { .. } => {
-                return Err((
-                    format!(
-                        "$blue: Expected {} to have no units or \"%\".",
-                        v.to_css_string(args.span(), parser.parser.options.is_compressed())?
-                    ),
-                    args.span(),
-                )
-                    .into())
-            }
-            v => {
-                return Err((
-                    format!("$blue: {} is not a number.", v.inspect(args.span())?),
-                    args.span(),
-                )
-                    .into())
-            }
-        };
-        let alpha = match alpha {
-            Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
-            Value::Dimension {
-                num: (n),
-                unit: Unit::None,
-                as_slash: _,
-            } => n,
-            Value::Dimension {
-                num: (n),
-                unit: Unit::Percent,
-                as_slash: _,
-            } => n / Number::from(100),
-            v @ Value::Dimension { .. } => {
-                return Err((
-                    format!(
-                        "$alpha: Expected {} to have no units or \"%\".",
-                        v.to_css_string(args.span(), parser.parser.options.is_compressed())?
-                    ),
-                    args.span(),
-                )
-                    .into())
-            }
-            v => {
-                return Err((
-                    format!("$alpha: {} is not a number.", v.inspect(args.span())?),
-                    args.span(),
-                )
-                    .into())
-            }
-        };
-        Ok(Value::Color(Box::new(Color::from_rgba(
-            red, green, blue, alpha,
-        ))))
     }
 }
 

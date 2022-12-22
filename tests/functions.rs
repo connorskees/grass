@@ -390,5 +390,24 @@ test!(
     }",
     "a {\n  color: 0;\n}\n"
 );
+test!(
+    recursive_function_cannot_modify_scope_of_calling_function,
+    "@function with-local-variable($recurse) {
+        $var: before;
+
+        @if ($recurse) {
+                $a: with-local-variable($recurse: false);
+        }
+
+        $ret: $var;
+        $var: after;
+        @return $ret;
+    }
+
+    a {
+        color: with-local-variable($recurse: true);
+    }",
+    "a {\n  color: before;\n}\n"
+);
 
 // todo: return inside if, return inside while, return inside for

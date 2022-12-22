@@ -113,7 +113,7 @@ impl Display for SassError {
                 loc,
                 unicode,
             } => (message, loc, *unicode),
-            SassErrorKind::FromUtf8Error(s) => return writeln!(f, "Error: {}", s),
+            SassErrorKind::FromUtf8Error(..) => return writeln!(f, "Error: Invalid UTF-8."),
             SassErrorKind::IoError(s) => return writeln!(f, "Error: {}", s),
             SassErrorKind::Raw(..) => unreachable!(),
         };

@@ -1,4 +1,8 @@
-use std::{cell::RefCell, collections::BTreeMap, sync::Arc};
+use std::{
+    cell::{Cell, RefCell},
+    collections::BTreeMap,
+    sync::Arc,
+};
 
 use codemap::Spanned;
 
@@ -15,7 +19,7 @@ pub(crate) struct Scopes {
     variables: Arc<RefCell<Vec<Arc<RefCell<BTreeMap<Identifier, Value>>>>>>,
     mixins: Arc<RefCell<Vec<Arc<RefCell<BTreeMap<Identifier, Mixin>>>>>>,
     functions: Arc<RefCell<Vec<Arc<RefCell<BTreeMap<Identifier, SassFunction>>>>>>,
-    len: usize,
+    len: Arc<Cell<usize>>,
 }
 
 impl Scopes {
@@ -24,11 +28,12 @@ impl Scopes {
             variables: Arc::new(RefCell::new(vec![Arc::new(RefCell::new(BTreeMap::new()))])),
             mixins: Arc::new(RefCell::new(vec![Arc::new(RefCell::new(BTreeMap::new()))])),
             functions: Arc::new(RefCell::new(vec![Arc::new(RefCell::new(BTreeMap::new()))])),
-            len: 1,
+            len: Arc::new(Cell::new(1)),
         }
     }
 
     pub fn new_closure(&self) -> Self {
+        debug_assert_eq!(self.len(), (*self.variables).borrow().len());
         Self {
             variables: Arc::new(RefCell::new(
                 (*self.variables).borrow().iter().map(Arc::clone).collect(),
@@ -39,12 +44,12 @@ impl Scopes {
             functions: Arc::new(RefCell::new(
                 (*self.functions).borrow().iter().map(Arc::clone).collect(),
             )),
-            len: self.len,
+            len: Arc::new(Cell::new(self.len())),
         }
-        //     Self(self.0.iter().map(Arc::clone).collect())
     }
 
     pub fn global_variables(&self) -> Arc<RefCell<BTreeMap<Identifier, Value>>> {
+        debug_assert_eq!(self.len(), (*self.variables).borrow().len());
         Arc::clone(&(*self.variables).borrow()[0])
     }
 
@@ -57,6 +62,7 @@ impl Scopes {
     }
 
     pub fn find_var(&self, name: Identifier) -> Option<usize> {
+        debug_assert_eq!(self.len(), (*self.variables).borrow().len());
         for (idx, scope) in (*self.variables).borrow().iter().enumerate().rev() {
             if (**scope).borrow().contains_key(&name) {
                 return Some(idx);
@@ -67,11 +73,13 @@ impl Scopes {
     }
 
     pub fn len(&self) -> usize {
-        self.len
+        (*self.len).get()
     }
 
     pub fn enter_new_scope(&mut self) {
-        self.len += 1;
+        let len = self.len();
+        debug_assert_eq!(self.len(), (*self.variables).borrow().len());
+        (*self.len).set(len + 1);
         (*self.variables)
             .borrow_mut()
             .push(Arc::new(RefCell::new(BTreeMap::new())));
@@ -84,7 +92,9 @@ impl Scopes {
     }
 
     pub fn exit_scope(&mut self) {
-        self.len -= 1;
+        debug_assert_eq!(self.len(), (*self.variables).borrow().len());
+        let len = self.len();
+        (*self.len).set(len - 1);
         (*self.variables).borrow_mut().pop();
         (*self.mixins).borrow_mut().pop();
         (*self.functions).borrow_mut().pop();
@@ -94,6 +104,7 @@ impl Scopes {
 /// Variables
 impl Scopes {
     pub fn insert_var(&mut self, idx: usize, name: Identifier, v: Value) -> Option<Value> {
+        debug_assert_eq!(self.len(), (*self.variables).borrow().len());
         (*(*self.variables).borrow_mut()[idx])
             .borrow_mut()
             .insert(name, v)
@@ -103,12 +114,14 @@ impl Scopes {
     ///
     /// Used, for example, for variables from `@each` and `@for`
     pub fn insert_var_last(&mut self, name: Identifier, v: Value) -> Option<Value> {
+        debug_assert_eq!(self.len(), (*self.variables).borrow().len());
         (*(*self.variables).borrow_mut()[self.len() - 1])
             .borrow_mut()
             .insert(name, v)
     }
 
     pub fn get_var(&self, name: Spanned<Identifier>) -> SassResult<Value> {
+        debug_assert_eq!(self.len(), (*self.variables).borrow().len());
         for scope in (*self.variables).borrow().iter().rev() {
             match (**scope).borrow().get(&name.node) {
                 Some(var) => return Ok(var.clone()),
@@ -120,6 +133,7 @@ impl Scopes {
     }
 
     pub fn var_exists(&self, name: Identifier) -> bool {
+        debug_assert_eq!(self.len(), (*self.variables).borrow().len());
         for scope in (*self.variables).borrow().iter() {
             if (**scope).borrow().contains_key(&name) {
                 return true;
@@ -133,12 +147,14 @@ impl Scopes {
 /// Mixins
 impl Scopes {
     pub fn insert_mixin(&mut self, name: Identifier, mixin: Mixin) {
+        debug_assert_eq!(self.len(), (*self.variables).borrow().len());
         (*(*self.mixins).borrow_mut().last_mut().unwrap())
             .borrow_mut()
             .insert(name, mixin);
     }
 
     pub fn get_mixin(&self, name: Spanned<Identifier>) -> SassResult<Mixin> {
+        debug_assert_eq!(self.len(), (*self.variables).borrow().len());
         for scope in (*self.mixins).borrow().iter().rev() {
             match (**scope).borrow().get(&name.node) {
                 Some(mixin) => return Ok(mixin.clone()),
@@ -150,6 +166,7 @@ impl Scopes {
     }
 
     pub fn mixin_exists(&self, name: Identifier) -> bool {
+        debug_assert_eq!(self.len(), (*self.variables).borrow().len());
         for scope in (*self.mixins).borrow().iter() {
             if (**scope).borrow().contains_key(&name) {
                 return true;
@@ -163,12 +180,14 @@ impl Scopes {
 /// Functions
 impl Scopes {
     pub fn insert_fn(&mut self, func: SassFunction) {
+        debug_assert_eq!(self.len(), (*self.variables).borrow().len());
         (*(*self.functions).borrow_mut().last_mut().unwrap())
             .borrow_mut()
             .insert(func.name(), func);
     }
 
     pub fn get_fn(&self, name: Identifier) -> Option<SassFunction> {
+        debug_assert_eq!(self.len(), (*self.variables).borrow().len());
         for scope in (*self.functions).borrow().iter().rev() {
             let func = (**scope).borrow().get(&name).cloned();
 
@@ -181,6 +200,7 @@ impl Scopes {
     }
 
     pub fn fn_exists(&self, name: Identifier) -> bool {
+        debug_assert_eq!(self.len(), (*self.variables).borrow().len());
         for scope in (*self.functions).borrow().iter() {
             if (**scope).borrow().contains_key(&name) {
                 return true;

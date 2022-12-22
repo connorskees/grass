@@ -9,7 +9,7 @@ pub(crate) use functions::{
 mod builtin_imports {
     pub(crate) use super::functions::{Builtin, GlobalFunctionMap, GLOBAL_FUNCTIONS};
 
-    pub(crate) use codemap::Spanned;
+    pub(crate) use codemap::{Span, Spanned};
 
     pub(crate) use num_bigint::BigInt;
     pub(crate) use num_traits::ToPrimitive;

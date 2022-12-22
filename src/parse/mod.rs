@@ -1220,6 +1220,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             },
             args,
             content: content_block,
+            span: name_span,
         }))
     }
 

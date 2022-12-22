@@ -56,6 +56,10 @@ grass input.scss
     // this is only available on nightly
     clippy::unnested_or_patterns,
     clippy::uninlined_format_args,
+
+    // todo:
+    clippy::cast_sign_loss,
+    clippy::cast_lossless,
 )]
 
 use std::path::Path;
@@ -277,7 +281,7 @@ fn from_string_with_file_name(input: String, file_name: &str, options: &Options)
         Err(e) => return Err(raw_to_parse_error(&map, *e, options.unicode_error_messages)),
     };
 
-    let mut serializer = Serializer::new(&options, &map, false, empty_span);
+    let mut serializer = Serializer::new(options, &map, false, empty_span);
 
     let mut prev_was_group_end = false;
     for stmt in stmts {

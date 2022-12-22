@@ -5,28 +5,12 @@ use std::{
 };
 
 use num_bigint::BigInt;
-use num_traits::{Signed, ToPrimitive, Zero};
+use num_traits::{ToPrimitive, Zero};
 
+// todo: remove this struct
 pub(crate) enum Integer {
     Small(i64),
     Big(BigInt),
-}
-
-impl Integer {
-    pub fn abs(&self) -> Self {
-        match self {
-            Self::Small(v) => Self::Small(v.abs()),
-            Self::Big(v) => Self::Big(v.abs()),
-        }
-    }
-
-    pub fn is_ten(&self) -> bool {
-        match self {
-            Self::Small(10) => true,
-            Self::Small(..) => false,
-            Self::Big(v) => v == &BigInt::from(10),
-        }
-    }
 }
 
 impl Default for Integer {
@@ -100,7 +84,7 @@ impl AddAssign for Integer {
     }
 }
 
-impl Zero for Integer {
+impl Integer {
     fn zero() -> Self {
         Self::Small(0)
     }
