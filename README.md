@@ -29,9 +29,7 @@ That said, there are a number of known missing features and bugs. The rough edge
  - `@forward` and more complex uses of `@uses`:
     - we support basic usage of these rules, but more advanced features such as `@import`ing modules containing `@forward` with prefixes may not behave as expected
  - the indented syntax/SASS:
-    - we do not current support the indented syntax
- - / as a separator in color functions, e.g. rgba(255, 255, 255 / 0):
-    todo: this should be fixed before this pr merges
+    - we do not currently support the indented syntax
 
 All known missing features and bugs are tracked in [#19](https://github.com/connorskees/grass/issues/19).
 

@@ -10,11 +10,11 @@
 - implement the `@forward` rule
 - feature complete parsing of `@supports` conditions
 - support media queries level 4
-- implement calculation simplification
+- implement calculation simplification and the calculation value type
 - implement builtin fns `calc-args`, `calc-name`
 - add builtin math module variables `$epsilon`, `$max-safe-integer`, `$min-safe-integer`, `$max-number`, `$min-number`
 - allow angle units `turn` and `grad` in builtin trigonometry functions
-- implement `@at-root-` conditions
+- implement `@at-root` conditions
 - implement `@import` conditions
 - remove dependency on `num-rational` and `beef`
 - support control flow inside declaration blocks
@@ -28,6 +28,18 @@ a {
   }
 }
 ```
+
+will now emit
+
+```css
+a {
+  -webkit-scrollbar: red;
+}
+```
+- always emit `rgb` or `rgba` for colors declared as such in expanded mode
+- more efficiently compress colors in compressed mode
+- treat `:where` the same as `:is` in extension
+- support "import-only" files
 
 UPCOMING:
 
