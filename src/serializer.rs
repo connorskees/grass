@@ -333,6 +333,7 @@ impl<'a> Serializer<'a> {
             .extend_from_slice(style.property.resolve_ref().as_bytes());
         self.buffer.push(b':');
 
+        // todo: _writeFoldedValue and _writeReindentedValue
         if !style.declared_as_custom_property && !self.options.is_compressed() {
             self.buffer.push(b' ');
         }

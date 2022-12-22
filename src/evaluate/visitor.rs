@@ -292,13 +292,17 @@ impl<'a> Visitor<'a> {
         }
     }
 
-    pub fn visit_stylesheet(&mut self, style_sheet: StyleSheet) -> SassResult<()> {
+    pub fn visit_stylesheet(&mut self, mut style_sheet: StyleSheet) -> SassResult<()> {
         let was_in_plain_css = self.is_plain_css;
         self.is_plain_css = style_sheet.is_plain_css;
+        mem::swap(&mut self.current_import_path, &mut style_sheet.url);
+
         for stmt in style_sheet.body {
             let result = self.visit_stmt(stmt)?;
             assert!(result.is_none());
         }
+
+        mem::swap(&mut self.current_import_path, &mut style_sheet.url);
         self.is_plain_css = was_in_plain_css;
 
         Ok(())
@@ -920,9 +924,6 @@ impl<'a> Visitor<'a> {
                 String::from_utf8(self.parser.options.fs.read(&name)?)?,
             );
 
-            let mut old_import_path = name.clone();
-            mem::swap(&mut self.current_import_path, &mut old_import_path);
-
             let old_is_use_allowed = self.flags.is_use_allowed();
             self.flags.set(ContextFlags::IS_USE_ALLOWED, true);
 
@@ -940,8 +941,6 @@ impl<'a> Visitor<'a> {
 
             self.flags
                 .set(ContextFlags::IS_USE_ALLOWED, old_is_use_allowed);
-
-            mem::swap(&mut self.current_import_path, &mut old_import_path);
             return Ok(style_sheet);
         }
 

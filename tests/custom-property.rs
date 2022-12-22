@@ -51,6 +51,11 @@ test!(
     "a {\n  --prop: url;\n}\n",
     "a {\n  --prop: url;\n}\n"
 );
+test!(
+    preserves_newlines_in_value,
+    "a {\n    --without-semicolon: {\n        a: b\n    }\n}\n",
+    "a {\n  --without-semicolon: {\n      a: b\n  } ;\n}\n"
+);
 error!(
     nothing_after_colon,
     "a {\n  --btn-font-family:;\n}\n", "Error: Expected token."

@@ -1,5 +1,7 @@
 use std::io::Write;
 
+use macros::TestFs;
+
 #[macro_use]
 mod macros;
 
@@ -139,28 +141,44 @@ fn finds_name_scss() {
 
 #[test]
 fn finds_underscore_name_scss() {
-    let input = "@import \"finds_underscore_name_scss\";\na {\n color: $a;\n}";
-    tempfile!("_finds_underscore_name_scss.scss", "$a: red;");
+    let mut fs = TestFs::new();
+    fs.add_file("_a.scss", r#"$a: red;"#);
+
+    let input = r#"
+        @import "a";
+        a {
+            color: $a;
+        }
+    "#;
+
     assert_eq!(
         "a {\n  color: red;\n}\n",
-        &grass::from_string(input.to_string(), &grass::Options::default()).expect(input)
+        &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
     );
 }
 
 #[test]
 fn chained_imports() {
-    let input = "@import \"chained_imports__a\";\na {\n color: $a;\n}";
-    tempfile!("chained_imports__a.scss", "@import \"chained_imports__b\";");
-    tempfile!("chained_imports__b.scss", "@import \"chained_imports__c\";");
-    tempfile!("chained_imports__c.scss", "$a: red;");
+    let mut fs = TestFs::new();
+
+    fs.add_file("a.scss", r#"@import "b";"#);
+    fs.add_file("b.scss", r#"@import "c";"#);
+    fs.add_file("c.scss", r#"$a: red;"#);
+
+    let input = r#"
+        @import "a";
+        a {
+            color: $a;
+        }
+    "#;
+
     assert_eq!(
         "a {\n  color: red;\n}\n",
-        &grass::from_string(input.to_string(), &grass::Options::default()).expect(input)
+        &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
     );
 }
 
 #[test]
-#[ignore = "seems we introduced a bug loading directories"]
 fn chained_imports_in_directory() {
     let input = "@import \"chained_imports_in_directory__a\";\na {\n color: $a;\n}";
     tempfile!(
