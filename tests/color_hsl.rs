@@ -164,6 +164,11 @@ test!(
     "a {\n  color: #ffc499;\n}\n"
 );
 test!(
+    saturation_cannot_go_above_100,
+    "a {\n  color: saturation(saturate($color: hsl(25, 100%, 80%), $amount: 30%));\n}\n",
+    "a {\n  color: 100%;\n}\n"
+);
+test!(
     saturate_one_arg,
     "a {\n  color: saturate($amount: 50%);\n}\n",
     "a {\n  color: saturate(50%);\n}\n"

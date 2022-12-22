@@ -17,7 +17,7 @@
 
 use std::cmp::{max, min};
 
-use crate::value::Number;
+use crate::value::{fuzzy_round, Number};
 pub(crate) use name::NAMED_COLORS;
 
 mod name;
@@ -380,12 +380,12 @@ impl Color {
 
     pub fn saturate(&self, amount: Number) -> Self {
         let (hue, saturation, luminance, alpha) = self.as_hsla();
-        Color::from_hsla(hue, saturation + amount, luminance, alpha)
+        Color::from_hsla(hue, (saturation + amount).clamp(0.0, 1.0), luminance, alpha)
     }
 
     pub fn desaturate(&self, amount: Number) -> Self {
         let (hue, saturation, luminance, alpha) = self.as_hsla();
-        Color::from_hsla(hue, saturation - amount, luminance, alpha)
+        Color::from_hsla(hue, (saturation - amount).clamp(0.0, 1.0), luminance, alpha)
     }
 
     pub fn from_hsla_fn(hue: Number, saturation: Number, luminance: Number, alpha: Number) -> Self {
@@ -395,71 +395,50 @@ impl Color {
     }
 
     /// Create RGBA representation from HSLA values
-    pub fn from_hsla(hue: Number, saturation: Number, luminance: Number, alpha: Number) -> Self {
-        let mut hue = if hue >= Number::from(360.0) {
-            hue % Number::from(360.0)
-        } else if hue < Number::from(-360.0) {
-            Number::from(360.0) + hue % Number::from(360.0)
-        } else if hue.is_negative() {
-            Number::from(360.0) + hue.clamp(-360.0, 360.0)
+    pub fn from_hsla(hue: Number, saturation: Number, lightness: Number, alpha: Number) -> Self {
+        let hsla = Hsla::new(
+            hue,
+            saturation.clamp(0.0, 1.0),
+            lightness.clamp(0.0, 1.0),
+            alpha,
+        );
+
+        let scaled_hue = hue.0 / 360.0;
+        let scaled_saturation = saturation.0.clamp(0.0, 1.0);
+        let scaled_lightness = lightness.0.clamp(0.0, 1.0);
+
+        let m2 = if scaled_lightness <= 0.5 {
+            scaled_lightness * (scaled_saturation + 1.0)
         } else {
-            hue
+            scaled_lightness + scaled_saturation - scaled_lightness * scaled_saturation
         };
 
-        let saturation = saturation.clamp(0.0, 1.0);
-        let luminance = luminance.clamp(0.0, 1.0);
-        let alpha = alpha.clamp(0.0, 1.0);
+        let m1 = scaled_lightness * 2.0 - m2;
 
-        let hsla = Hsla::new(hue, saturation, luminance, alpha);
+        let red = fuzzy_round(Self::hue_to_rgb(m1, m2, scaled_hue + 1.0 / 3.0) * 255.0);
+        let green = fuzzy_round(Self::hue_to_rgb(m1, m2, scaled_hue) * 255.0);
+        let blue = fuzzy_round(Self::hue_to_rgb(m1, m2, scaled_hue - 1.0 / 3.0) * 255.0);
 
-        if saturation.is_zero() {
-            let val = luminance * Number::from(255.0);
-            return Color::new_hsla(val, val, val, alpha, hsla);
+        Color::new_hsla(Number(red), Number(green), Number(blue), alpha, hsla)
+    }
+
+    fn hue_to_rgb(m1: f64, m2: f64, mut hue: f64) -> f64 {
+        if hue < 0.0 {
+            hue += 1.0;
+        }
+        if hue > 1.0 {
+            hue -= 1.0;
         }
 
-        let temporary_1 = if luminance < Number(0.5) {
-            luminance * (Number::one() + saturation)
+        if hue < 1.0 / 6.0 {
+            return m1 + (m2 - m1) * hue * 6.0;
+        } else if hue < 1.0 / 2.0 {
+            return m2;
+        } else if hue < 2.0 / 3.0 {
+            return m1 + (m2 - m1) * (2.0 / 3.0 - hue) * 6.0;
         } else {
-            luminance + saturation - luminance * saturation
-        };
-        let temporary_2 = Number::from(2.0) * luminance - temporary_1;
-        hue /= Number::from(360.0);
-        let mut temporary_r = hue + Number::small_ratio(1, 3);
-        let mut temporary_g = hue;
-        let mut temporary_b = hue - Number::small_ratio(1, 3);
-
-        macro_rules! clamp_temp {
-            ($temp:ident) => {
-                if $temp > Number::one() {
-                    $temp -= Number::one();
-                } else if $temp.is_negative() {
-                    $temp += Number::one();
-                }
-            };
+            return m1;
         }
-
-        clamp_temp!(temporary_r);
-        clamp_temp!(temporary_g);
-        clamp_temp!(temporary_b);
-
-        fn channel(temp: Number, temp1: Number, temp2: Number) -> Number {
-            Number::from(255.0)
-                * if Number::from(6.0) * temp < Number::one() {
-                    temp2 + (temp1 - temp2) * Number::from(6.0) * temp
-                } else if Number::from(2.0) * temp < Number::one() {
-                    temp1
-                } else if Number::from(3.0) * temp < Number::from(2.0) {
-                    temp2 + (temp1 - temp2) * (Number::small_ratio(2, 3) - temp) * Number::from(6.0)
-                } else {
-                    temp2
-                }
-        }
-
-        let red = channel(temporary_r, temporary_1, temporary_2);
-        let green = channel(temporary_g, temporary_1, temporary_2);
-        let blue = channel(temporary_b, temporary_1, temporary_2);
-
-        Color::new_hsla(red, green, blue, alpha, hsla)
     }
 
     pub fn invert(&self, weight: Number) -> Self {

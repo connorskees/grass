@@ -186,6 +186,11 @@ test!(
     "a {\n  color: comparable(1vw, 1vh);\n}\n",
     "a {\n  color: false;\n}\n"
 );
+test!(
+    removes_same_unit_from_complex_in_division,
+    "a {\n  color: ((1px*1px) / 1px);\n}\n",
+    "a {\n  color: 1px;\n}\n"
+);
 error!(
     display_single_div_with_none_numerator,
     "a {\n  color: (1 / 1em);\n}\n", "Error: 1em^-1 isn't a valid CSS value."

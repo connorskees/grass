@@ -155,6 +155,58 @@ test!(
     }",
     "a {\n  b: c;\n}\n"
 );
+test!(
+    without_media_inside_media_rule,
+    "@media (min-width: 1337px) {
+        .foo {
+            content: baz;
+        }
+
+        @at-root (without: media) {
+            .foo {
+                content: bar;
+            }
+        }
+    }",
+    "@media (min-width: 1337px) {\n  .foo {\n    content: baz;\n  }\n}\n.foo {\n  content: bar;\n}\n"
+);
+test!(
+    with_media_inside_media_rule_inside_supports_rule,
+    "@media (min-width: 1337px) {
+        @supports (color: red) {
+            @at-root (with: media) {
+                .foo {
+                    content: bar;
+                }
+            }
+        }
+    }",
+    "@media (min-width: 1337px) {\n  .foo {\n    content: bar;\n  }\n}\n"
+);
+test!(
+    with_media_and_supports_inside_media_rule_inside_supports_rule,
+    "@media (min-width: 1337px) {
+        @supports (color: red) {
+            @at-root (with: media supports) {
+                .foo {
+                    content: bar;
+                }
+            }
+        }
+    }",
+    "@media (min-width: 1337px) {\n  @supports (color: red) {\n    .foo {\n      content: bar;\n    }\n  }\n}\n"
+);
+test!(
+    without_keyframes_inside_keyframes,
+    "@keyframes animation {
+        @at-root (without: keyframes) {
+            to {
+                color: red;
+            }
+        }
+    }",
+    "@keyframes animation {}\nto {\n  color: red;\n}\n"
+);
 error!(
     missing_closing_curly_brace,
     "@at-root {", "Error: expected \"}\"."

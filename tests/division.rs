@@ -227,3 +227,45 @@ test!(
     "a {\n  color: 1 / 2 / foo();\n}\n",
     "a {\n  color: 1/2/foo();\n}\n"
 );
+test!(
+    evaluates_variable_in_each,
+    "$x: a 3/4 b;
+
+    a {
+        @each $elem in $x {
+            color: $elem;
+        }
+    }",
+    "a {\n  color: a;\n  color: 0.75;\n  color: b;\n}\n"
+);
+test!(
+    evaluates_multiple_variables_in_each,
+    "$x: a 3/4;
+
+    a {
+
+        @each $a,
+        $b in $x {
+            color: $a;
+        }
+    }",
+    "a {\n  color: a;\n  color: 0.75;\n}\n"
+);
+test!(
+    not_evaluated_for_variable_as_map_value_in_list,
+    "$a: 1 2/3 4;
+
+    a {
+        color: inspect((a: $a))
+    }",
+    "a {\n  color: (a: 1 2/3 4);\n}\n"
+);
+test!(
+    is_evaluated_for_variable_as_map_value_alone,
+    "$a: 2/3;
+
+    a {
+        color: inspect((a: $a))
+    }",
+    "a {\n  color: (a: 0.6666666667);\n}\n"
+);

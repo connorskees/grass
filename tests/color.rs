@@ -591,6 +591,19 @@ test!(
     "a {\n  color: rgb(env(--foo), 2, 3);\n}\n",
     "a {\n  color: rgb(env(--foo), 2, 3);\n}\n"
 );
+test!(
+    hsl_conversion_is_correct,
+    "a {
+         color: hue(red);
+        color: saturation(red);
+        color: lightness(red);
+        color: change-color(red, $lightness: 95%);
+        color: red(change-color(red, $lightness: 95%));
+        color: blue(change-color(red, $lightness: 95%));
+        color: green(change-color(red, $lightness: 95%));
+    }",
+    "a {\n  color: 0deg;\n  color: 100%;\n  color: 50%;\n  color: #ffe6e6;\n  color: 255;\n  color: 230;\n  color: 230;\n}\n"
+);
 error!(
     rgb_more_than_4_args,
     "a {\n  color: rgb(59%, 169, 69%, 50%, 50%);\n}\n",

@@ -8,7 +8,7 @@ use crate::{
     error::SassResult,
     evaluate::Visitor,
     selector::Selector,
-    serializer::{serialize_color, serialize_number},
+    serializer::{inspect_number, serialize_color, serialize_number},
     unit::Unit,
     utils::{hex_char_for, is_special_function},
     Options, OutputStyle,
@@ -681,8 +681,16 @@ impl Value {
             Value::Dimension {
                 num,
                 unit,
-                as_slash: _,
-            } => Cow::Owned(format!("{}{}", num.inspect(), unit)),
+                as_slash,
+            } => Cow::Owned(inspect_number(
+                &SassNumber {
+                    num: num.0,
+                    unit: unit.clone(),
+                    as_slash: as_slash.clone(),
+                },
+                &Options::default(),
+                span,
+            )?),
             Value::ArgList(args) if args.is_empty() => Cow::Borrowed("()"),
             Value::ArgList(args) if args.len() == 1 => Cow::Owned(format!(
                 "({},)",

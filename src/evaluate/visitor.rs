@@ -1388,19 +1388,21 @@ impl<'a> Visitor<'a> {
                 .set(ContextFlags::AT_ROOT_EXCLUDING_STYLE_RULE, true);
         }
 
-        if self.media_queries.is_some() && query.excludes_name("media") {
-            // _withMediaQueries(null, null, () => innerScope(callback));
-            todo!()
-        }
+        let old_media_query_info = if self.media_queries.is_some() && query.excludes_name("media") {
+            Some((self.media_queries.take(), self.media_query_sources.take()))
+        } else {
+            None
+        };
 
-        if self.flags.in_keyframes() && query.excludes_name("keyframes") {
-            //     var wasInKeyframes = _inKeyframes;
-            // _inKeyframes = false;
-            // await innerScope(callback);
-            // _inKeyframes = wasInKeyframes;
-            todo!()
-        }
+        let was_in_keyframes = if self.flags.in_keyframes() && query.excludes_name("keyframes") {
+            let was = self.flags.in_keyframes();
+            self.flags.set(ContextFlags::IN_KEYFRAMES, false);
+            was
+        } else {
+            self.flags.in_keyframes()
+        };
 
+        // todo:
         // if self.flags.in_unknown_at_rule() && !included.iter().any(|parent| parent is CssAtRule)
 
         let res = callback(self);
@@ -1411,6 +1413,13 @@ impl<'a> Visitor<'a> {
             ContextFlags::AT_ROOT_EXCLUDING_STYLE_RULE,
             old_at_root_excluding_style_rule,
         );
+
+        if let Some((old_media_queries, old_media_query_sources)) = old_media_query_info {
+            self.media_queries = old_media_queries;
+            self.media_query_sources = old_media_query_sources;
+        }
+
+        self.flags.set(ContextFlags::IN_KEYFRAMES, was_in_keyframes);
 
         res
     }
@@ -2085,6 +2094,7 @@ impl<'a> Visitor<'a> {
 
         'outer: for val in list {
             if each_stmt.variables.len() == 1 {
+                let val = self.without_slash(val);
                 self.env
                     .scopes_mut()
                     .insert_var_last(each_stmt.variables[0], val);
@@ -2094,6 +2104,7 @@ impl<'a> Visitor<'a> {
                         .into_iter()
                         .chain(std::iter::once(Value::Null).cycle()),
                 ) {
+                    let val = self.without_slash(val);
                     self.env.scopes_mut().insert_var_last(var, val);
                 }
             }
@@ -2506,6 +2517,7 @@ impl<'a> Visitor<'a> {
         for (key, val) in rest {
             match key.node {
                 Value::String(text, ..) => {
+                    let val = self.without_slash(val);
                     named.insert(Identifier::from(text), val);
                 }
                 _ => {

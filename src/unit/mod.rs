@@ -178,6 +178,7 @@ impl Mul<Unit> for Unit {
                 denom: Vec::new(),
             },
         }
+        .simplify()
     }
 }
 
@@ -260,10 +261,20 @@ impl Div<Unit> for Unit {
                 denom: vec![rhs],
             },
         }
+        .simplify()
     }
 }
 
 impl Unit {
+    fn simplify(self) -> Self {
+        match self {
+            Unit::Complex { mut numer, denom } if denom.is_empty() && numer.len() == 1 => {
+                numer.pop().unwrap()
+            }
+            _ => self,
+        }
+    }
+
     pub fn is_complex(&self) -> bool {
         matches!(self, Unit::Complex { .. })
     }
