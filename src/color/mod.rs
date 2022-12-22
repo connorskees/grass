@@ -388,6 +388,12 @@ impl Color {
         Color::from_hsla(hue, saturation - amount, luminance, alpha)
     }
 
+    pub fn from_hsla_fn(hue: Number, saturation: Number, luminance: Number, alpha: Number) -> Self {
+        let mut color = Self::from_hsla(hue, saturation, luminance, alpha);
+        color.format = ColorFormat::Hsl;
+        color
+    }
+
     /// Create RGBA representation from HSLA values
     pub fn from_hsla(hue: Number, saturation: Number, luminance: Number, alpha: Number) -> Self {
         let mut hue = if hue >= Number::from(360.0) {

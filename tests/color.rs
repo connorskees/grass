@@ -388,12 +388,12 @@ test!(
 test!(
     hsla_1_arg,
     "a {\n  color: hsla(60 60% 50%);\n}\n",
-    "a {\n  color: #cccc33;\n}\n"
+    "a {\n  color: hsl(60deg, 60%, 50%);\n}\n"
 );
 test!(
     hsla_1_arg_weird_units,
     "a {\n  color: hsla(60foo 60foo 50foo);\n}\n",
-    "a {\n  color: #cccc33;\n}\n"
+    "a {\n  color: hsl(60deg, 60%, 50%);\n}\n"
 );
 test!(
     sass_spec__spec_colors_basic,

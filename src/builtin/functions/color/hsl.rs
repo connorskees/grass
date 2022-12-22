@@ -1,207 +1,117 @@
+use std::collections::{BTreeMap, BTreeSet};
+
 use crate::builtin::builtin_imports::*;
+
+use super::rgb::{function_string, parse_channels, percentage_or_unitless, ParsedChannels};
+
+fn hsl_3_args(
+    name: &'static str,
+    mut args: ArgumentResult,
+    visitor: &mut Visitor,
+) -> SassResult<Value> {
+    let span = args.span();
+
+    let hue = args.get_err(0, "hue")?;
+    let saturation = args.get_err(1, "saturation")?;
+    let lightness = args.get_err(2, "lightness")?;
+    let alpha = args.default_arg(
+        3,
+        "alpha",
+        Value::Dimension {
+            num: (Number::one()),
+            unit: Unit::None,
+            as_slash: None,
+        },
+    );
+
+    if [&hue, &saturation, &lightness, &alpha]
+        .iter()
+        .copied()
+        .any(Value::is_special_function)
+    {
+        return Ok(Value::String(
+            format!(
+                "{}({})",
+                name,
+                Value::List(
+                    if args.len() == 4 {
+                        vec![hue, saturation, lightness, alpha]
+                    } else {
+                        vec![hue, saturation, lightness]
+                    },
+                    ListSeparator::Comma,
+                    Brackets::None
+                )
+                .to_css_string(args.span(), false)?
+            ),
+            QuoteKind::None,
+        ));
+    }
+
+    let hue = hue.assert_number_with_name(span, "hue")?;
+    let saturation = saturation.assert_number_with_name(span, "saturation")?;
+    let lightness = lightness.assert_number_with_name(span, "lightness")?;
+    let alpha = percentage_or_unitless(
+        alpha.assert_number_with_name(span, "alpha")?,
+        1.0,
+        "alpha",
+        span,
+        visitor,
+    )?;
+
+    Ok(Value::Color(Box::new(Color::from_hsla_fn(
+        Number(hue.num().rem_euclid(360.0)),
+        saturation.num() / Number::from(100),
+        lightness.num() / Number::from(100),
+        Number(alpha),
+    ))))
+}
 
 fn inner_hsl(
     name: &'static str,
     mut args: ArgumentResult,
     parser: &mut Visitor,
 ) -> SassResult<Value> {
-    if args.is_empty() {
-        return Err(("Missing argument $channels.", args.span()).into());
-    }
+    args.max_args(4)?;
+    let span = args.span();
 
     let len = args.len();
 
-    if len == 1 {
-        let mut channels = match args.get_err(0, "channels")? {
-            Value::List(v, ..) => v,
-            v if v.is_special_function() => vec![v],
-            _ => return Err(("Missing argument $channels.", args.span()).into()),
-        };
+    if len == 1 || len == 0 {
+        match parse_channels(
+            name,
+            &["hue", "saturation", "lightness"],
+            args.get_err(0, "channels")?,
+            parser,
+            args.span(),
+        )? {
+            ParsedChannels::String(s) => return Ok(Value::String(s, QuoteKind::None)),
+            ParsedChannels::List(list) => {
+                let args = ArgumentResult {
+                    positional: list,
+                    named: BTreeMap::new(),
+                    separator: ListSeparator::Comma,
+                    span: args.span(),
+                    touched: BTreeSet::new(),
+                };
 
-        if channels.len() > 3 {
-            return Err((
-                format!(
-                    "Only 3 elements allowed, but {} were passed.",
-                    channels.len()
-                ),
-                args.span(),
-            )
-                .into());
+                return hsl_3_args(name, args, parser);
+            }
         }
-
-        if channels.iter().any(Value::is_special_function) {
-            let channel_sep = if channels.len() < 3 {
-                ListSeparator::Space
-            } else {
-                ListSeparator::Comma
-            };
-
-            return Ok(Value::String(
-                format!(
-                    "{}({})",
-                    name,
-                    Value::List(channels, channel_sep, Brackets::None)
-                        .to_css_string(args.span(), false)?
-                ),
-                QuoteKind::None,
-            ));
-        }
-
-        let lightness = match channels.pop() {
-            Some(Value::Dimension { num: n, .. }) if n.is_nan() => todo!(),
-            Some(Value::Dimension { num: (n), .. }) => n / Number::from(100),
-            Some(v) => {
-                return Err((
-                    format!("$lightness: {} is not a number.", v.inspect(args.span())?),
-                    args.span(),
-                )
-                    .into())
-            }
-            None => return Err(("Missing element $lightness.", args.span()).into()),
-        };
-
-        let saturation = match channels.pop() {
-            Some(Value::Dimension { num: n, .. }) if n.is_nan() => todo!(),
-            Some(Value::Dimension { num: (n), .. }) => n / Number::from(100),
-            Some(v) => {
-                return Err((
-                    format!("$saturation: {} is not a number.", v.inspect(args.span())?),
-                    args.span(),
-                )
-                    .into())
-            }
-            None => return Err(("Missing element $saturation.", args.span()).into()),
-        };
-
-        let hue = match channels.pop() {
-            Some(Value::Dimension { num: n, .. }) if n.is_nan() => todo!(),
-            Some(Value::Dimension { num: (n), .. }) => n,
-            Some(v) => {
-                return Err((
-                    format!("$hue: {} is not a number.", v.inspect(args.span())?),
-                    args.span(),
-                )
-                    .into())
-            }
-            None => return Err(("Missing element $hue.", args.span()).into()),
-        };
-
-        Ok(Value::Color(Box::new(Color::from_hsla(
-            hue,
-            saturation,
-            lightness,
-            Number::one(),
-        ))))
-    } else {
+    } else if len == 2 {
         let hue = args.get_err(0, "hue")?;
         let saturation = args.get_err(1, "saturation")?;
-        let lightness = args.get_err(2, "lightness")?;
-        let alpha = args.default_arg(
-            3,
-            "alpha",
-            Value::Dimension {
-                num: (Number::one()),
-                unit: Unit::None,
-                as_slash: None,
-            },
-        );
 
-        if [&hue, &saturation, &lightness, &alpha]
-            .iter()
-            .copied()
-            .any(Value::is_special_function)
-        {
+        if hue.is_var() || saturation.is_var() {
             return Ok(Value::String(
-                format!(
-                    "{}({})",
-                    name,
-                    Value::List(
-                        if len == 4 {
-                            vec![hue, saturation, lightness, alpha]
-                        } else {
-                            vec![hue, saturation, lightness]
-                        },
-                        ListSeparator::Comma,
-                        Brackets::None
-                    )
-                    .to_css_string(args.span(), false)?
-                ),
+                function_string(name, &[hue, saturation], parser, span)?,
                 QuoteKind::None,
             ));
+        } else {
+            return Err(("Missing argument $lightness.", args.span()).into());
         }
-
-        let hue = match hue {
-            Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
-            Value::Dimension { num: (n), .. } => n,
-            v => {
-                return Err((
-                    format!("$hue: {} is not a number.", v.inspect(args.span())?),
-                    args.span(),
-                )
-                    .into())
-            }
-        };
-        let saturation = match saturation {
-            Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
-            Value::Dimension { num: (n), .. } => n / Number::from(100),
-            v => {
-                return Err((
-                    format!(
-                        "$saturation: {} is not a number.",
-                        v.to_css_string(args.span(), parser.parser.options.is_compressed())?
-                    ),
-                    args.span(),
-                )
-                    .into())
-            }
-        };
-        let lightness = match lightness {
-            Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
-            Value::Dimension { num: (n), .. } => n / Number::from(100),
-            v => {
-                return Err((
-                    format!(
-                        "$lightness: {} is not a number.",
-                        v.to_css_string(args.span(), parser.parser.options.is_compressed())?
-                    ),
-                    args.span(),
-                )
-                    .into())
-            }
-        };
-        let alpha = match alpha {
-            Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
-            Value::Dimension {
-                num: (n),
-                unit: Unit::None,
-                as_slash: _,
-            } => n,
-            Value::Dimension {
-                num: (n),
-                unit: Unit::Percent,
-                as_slash: _,
-            } => n / Number::from(100),
-            v @ Value::Dimension { .. } => {
-                return Err((
-                    format!(
-                        "$alpha: Expected {} to have no units or \"%\".",
-                        v.to_css_string(args.span(), parser.parser.options.is_compressed())?
-                    ),
-                    args.span(),
-                )
-                    .into())
-            }
-            v => {
-                return Err((
-                    format!("$alpha: {} is not a number.", v.inspect(args.span())?),
-                    args.span(),
-                )
-                    .into())
-            }
-        };
-        Ok(Value::Color(Box::new(Color::from_hsla(
-            hue, saturation, lightness, alpha,
-        ))))
+    } else {
+        return hsl_3_args(name, args, parser);
     }
 }
 

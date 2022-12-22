@@ -12,47 +12,47 @@ error!(
 test!(
     hsl_basic,
     "a {\n  color: hsl(193, 67%, 99);\n}\n",
-    "a {\n  color: #fbfdfe;\n}\n"
+    "a {\n  color: hsl(193deg, 67%, 99%);\n}\n"
 );
 test!(
     hsla_basic,
     "a {\n  color: hsla(193, 67%, 99, .6);\n}\n",
-    "a {\n  color: rgba(251, 253, 254, 0.6);\n}\n"
+    "a {\n  color: hsla(193deg, 67%, 99%, 0.6);\n}\n"
 );
 test!(
     hsl_doesnt_care_about_units,
     "a {\n  color: hsl(193deg, 67foo, 99%);\n}\n",
-    "a {\n  color: #fbfdfe;\n}\n"
+    "a {\n  color: hsl(193deg, 67%, 99%);\n}\n"
 );
 test!(
     hsl_named,
     "a {\n  color: hsl($hue: 193, $saturation: 67%, $lightness: 99);\n}\n",
-    "a {\n  color: #fbfdfe;\n}\n"
+    "a {\n  color: hsl(193deg, 67%, 99%);\n}\n"
 );
 test!(
     hsl_four_args,
     "a {\n  color: hsl(0, 0, 0, 0.456);\n}\n",
-    "a {\n  color: rgba(0, 0, 0, 0.456);\n}\n"
+    "a {\n  color: hsla(0deg, 0%, 0%, 0.456);\n}\n"
 );
 test!(
     hsl_negative_hue,
     "a {\n  color: hsl(-60deg, 100%, 50%);\n}\n",
-    "a {\n  color: fuchsia;\n}\n"
+    "a {\n  color: hsl(300deg, 100%, 50%);\n}\n"
 );
 test!(
     hsl_hue_above_max,
     "a {\n  color: hsl(540, 100%, 50%);\n}\n",
-    "a {\n  color: aqua;\n}\n"
+    "a {\n  color: hsl(180deg, 100%, 50%);\n}\n"
 );
 test!(
     hsl_hue_below_min,
     "a {\n  color: hsl(-540, 100%, 50%);\n}\n",
-    "a {\n  color: aqua;\n}\n"
+    "a {\n  color: hsl(180deg, 100%, 50%);\n}\n"
 );
 test!(
     hsla_named,
     "a {\n  color: hsla($hue: 193, $saturation: 67%, $lightness: 99, $alpha: .6);\n}\n",
-    "a {\n  color: rgba(251, 253, 254, 0.6);\n}\n"
+    "a {\n  color: hsla(193deg, 67%, 99%, 0.6);\n}\n"
 );
 test!(
     hue,
@@ -201,12 +201,12 @@ test!(
 test!(
     negative_values_in_hsl,
     "a {\n  color: hsl(-1 -1 -1);\n}\n",
-    "a {\n  color: black;\n}\n"
+    "a {\n  color: hsl(359deg, 0%, 0%);\n}\n"
 );
 test!(
     hsla_becomes_named_color,
     "a {\n  color: hsla(0deg, 100%, 50%);\n}\n",
-    "a {\n  color: red;\n}\n"
+    "a {\n  color: hsl(0deg, 100%, 50%);\n}\n"
 );
 test!(
     #[ignore = "new color format"]
@@ -248,15 +248,15 @@ test!(
 test!(
     hsl_with_turn_unit,
     "a {\n  color: hsl(8turn, 25%, 50%);\n}\n",
-    "a {\n  color: #9f6860;\n}\n"
+    "a {\n  color: hsl(8deg, 25%, 50%);\n}\n"
 );
 test!(
     hsl_with_rad_unit,
     "a {\n  color: hsl(8rad, 25%, 50%);\n}\n",
-    "a {\n  color: #9f6860;\n}\n"
+    "a {\n  color: hsl(8deg, 25%, 50%);\n}\n"
 );
 test!(
     hsl_with_grad_unit,
     "a {\n  color: hsl(8grad, 25%, 50%);\n}\n",
-    "a {\n  color: #9f6860;\n}\n"
+    "a {\n  color: hsl(8deg, 25%, 50%);\n}\n"
 );

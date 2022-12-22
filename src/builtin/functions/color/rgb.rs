@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use crate::{builtin::builtin_imports::*, serializer::inspect_number, value::fuzzy_round};
 
-fn function_string(
+pub(crate) fn function_string(
     name: &'static str,
     args: &[Value],
     visitor: &mut Visitor,
@@ -87,7 +87,7 @@ fn inner_rgb_3_arg(
     ))))
 }
 
-fn percentage_or_unitless(
+pub(crate) fn percentage_or_unitless(
     number: SassNumber,
     max: f64,
     name: &str,
@@ -113,7 +113,7 @@ fn percentage_or_unitless(
 }
 
 #[derive(Debug, Clone)]
-enum ParsedChannels {
+pub(crate) enum ParsedChannels {
     String(String),
     List(Vec<Value>),
 }
@@ -127,7 +127,7 @@ fn is_var_slash(value: &Value) -> bool {
     }
 }
 
-fn parse_channels(
+pub(crate) fn parse_channels(
     name: &'static str,
     arg_names: &[&'static str],
     mut channels: Value,

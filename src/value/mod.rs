@@ -257,7 +257,7 @@ impl Value {
                 as_slash,
             }),
             _ => Err((
-                format!("${name}: \"{}\" is not a number.", self.inspect(span)?),
+                format!("${name}: {} is not a number.", self.inspect(span)?),
                 span,
             )
                 .into()),
