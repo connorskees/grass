@@ -389,3 +389,33 @@ error!(
     num_plus_calculation,
     "a {color: 1 + calc(1rem + 1px);}", r#"Error: Undefined operation "1 + calc(1rem + 1px)"."#
 );
+test!(
+    quoted_string_plus_calculation,
+    "a {\n  color: \"a\" + calc(1px + 1%);\n}\n",
+    "a {\n  color: \"acalc(1px + 1%)\";\n}\n"
+);
+test!(
+    calculation_plus_quoted_string,
+    "a {\n  color: calc(1px + 1%) + \"a\";\n}\n",
+    "a {\n  color: \"calc(1px + 1%)a\";\n}\n"
+);
+test!(
+    empty_quoted_string_plus_calculation,
+    "a {\n  color: \"\" + calc(1px + 1%);\n}\n",
+    "a {\n  color: \"calc(1px + 1%)\";\n}\n"
+);
+test!(
+    calculation_plus_empty_quoted_string,
+    "a {\n  color: calc(1px + 1%) + \"\";\n}\n",
+    "a {\n  color: \"calc(1px + 1%)\";\n}\n"
+);
+test!(
+    unquoted_string_plus_calculation,
+    "a {\n  color: foo + calc(1px + 1%);\n}\n",
+    "a {\n  color: foocalc(1px + 1%);\n}\n"
+);
+test!(
+    calculation_plus_unquoted_string,
+    "a {\n  color: calc(1px + 1%) + foo;\n}\n",
+    "a {\n  color: calc(1px + 1%)foo;\n}\n"
+);

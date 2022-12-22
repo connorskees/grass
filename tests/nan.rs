@@ -80,12 +80,12 @@ test!(
 error!(
     unitful_nan_str_slice_start,
     "@use \"sass:math\";\na {\n  color: str-slice(\"\", math.acos(2));\n}\n",
-    "Error: $start: Expected NaNdeg to have no units."
+    "Error: $start-at: Expected NaNdeg to have no units."
 );
 error!(
     unitful_nan_str_slice_end,
     "@use \"sass:math\";\na {\n  color: str-slice(\"\", 0, math.acos(2));\n}\n",
-    "Error: $end: Expected NaNdeg to have no units."
+    "Error: $end-at: Expected NaNdeg to have no units."
 );
 error!(
     unitful_nan_str_insert_index,

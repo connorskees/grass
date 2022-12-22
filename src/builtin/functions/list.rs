@@ -141,9 +141,10 @@ pub(crate) fn append(mut args: ArgumentResult, parser: &mut Visitor) -> SassResu
             "auto" => sep,
             "comma" => ListSeparator::Comma,
             "space" => ListSeparator::Space,
+            "slash" => ListSeparator::Slash,
             _ => {
                 return Err((
-                    "$separator: Must be \"space\", \"comma\", or \"auto\".",
+                    "$separator: Must be \"space\", \"comma\", \"slash\", or \"auto\".",
                     args.span(),
                 )
                     .into())
@@ -190,9 +191,10 @@ pub(crate) fn join(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult
             }
             "comma" => ListSeparator::Comma,
             "space" => ListSeparator::Space,
+            "slash" => ListSeparator::Slash,
             _ => {
                 return Err((
-                    "$separator: Must be \"space\", \"comma\", or \"auto\".",
+                    "$separator: Must be \"space\", \"comma\", \"slash\", or \"auto\".",
                     args.span(),
                 )
                     .into())

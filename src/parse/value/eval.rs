@@ -15,17 +15,27 @@ use crate::{
 
 pub(crate) fn add(left: Value, right: Value, options: &Options, span: Span) -> SassResult<Value> {
     Ok(match left {
-        Value::Calculation(..) => {
-            return Err((
+        Value::Calculation(..) => match right {
+            Value::String(s, quotes) => Value::String(
                 format!(
-                    "Undefined operation \"{} + {}\".",
-                    left.inspect(span)?,
-                    right.inspect(span)?
+                    "{}{}",
+                    left.to_css_string(span, options.is_compressed())?,
+                    s
                 ),
-                span,
-            )
-                .into())
-        }
+                quotes,
+            ),
+            _ => {
+                return Err((
+                    format!(
+                        "Undefined operation \"{} + {}\".",
+                        left.inspect(span)?,
+                        right.inspect(span)?
+                    ),
+                    span,
+                )
+                    .into())
+            }
+        },
         Value::Map(..) | Value::FunctionRef(..) => {
             return Err((
                 format!("{} isn't a valid CSS value.", left.inspect(span)?),

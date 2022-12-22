@@ -121,7 +121,7 @@ pub(crate) fn str_slice(mut args: ArgumentResult, parser: &mut Visitor) -> SassR
         v @ Value::Dimension { .. } => {
             return Err((
                 format!(
-                    "$start: Expected {} to have no units.",
+                    "$start-at: Expected {} to have no units.",
                     v.inspect(args.span())?
                 ),
                 args.span(),
@@ -174,7 +174,7 @@ pub(crate) fn str_slice(mut args: ArgumentResult, parser: &mut Visitor) -> SassR
         v @ Value::Dimension { .. } => {
             return Err((
                 format!(
-                    "$end: Expected {} to have no units.",
+                    "$end-at: Expected {} to have no units.",
                     v.inspect(args.span())?
                 ),
                 args.span(),
