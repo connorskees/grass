@@ -69,12 +69,18 @@ macro_rules! tempfile {
         write!(f, "{}", $content).unwrap();
     };
     ($name:literal, $content:literal, dir=$dir:literal) => {
-        let _d = tempfile::Builder::new()
-            .rand_bytes(0)
-            .prefix("")
-            .suffix($dir)
-            .tempdir_in("")
-            .unwrap();
+        let _d = if !std::path::Path::new($dir).is_dir() {
+            Some(
+                tempfile::Builder::new()
+                    .rand_bytes(0)
+                    .prefix("")
+                    .suffix($dir)
+                    .tempdir_in("")
+                    .unwrap(),
+            )
+        } else {
+            None
+        };
         let mut f = tempfile::Builder::new()
             .rand_bytes(0)
             .prefix("")

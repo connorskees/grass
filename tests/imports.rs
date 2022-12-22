@@ -26,11 +26,20 @@ fn null_fs_cannot_import() {
 
 #[test]
 fn imports_variable() {
-    let input = "@import \"imports_variable\";\na {\n color: $a;\n}";
-    tempfile!("imports_variable", "$a: red;");
+    let mut fs = TestFs::new();
+
+    fs.add_file("a.scss", r#"$a: red;"#);
+
+    let input = r#"
+        @import "a";
+        a {
+            color: $a;
+        }
+    "#;
+
     assert_eq!(
         "a {\n  color: red;\n}\n",
-        &grass::from_string(input.to_string(), &grass::Options::default()).expect(input)
+        &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
     );
 }
 
@@ -46,53 +55,81 @@ fn import_no_semicolon() {
 #[test]
 fn import_no_quotes() {
     let input = "@import import_no_quotes";
-    tempfile!("import_no_quotes", "$a: red;");
 
     assert_err!("Error: Expected string.", input);
 }
 
 #[test]
 fn single_quotes_import() {
-    let input = "@import 'single_quotes_import';\na {\n color: $a;\n}";
-    tempfile!("single_quotes_import", "$a: red;");
+    let mut fs = TestFs::new();
+
+    fs.add_file("a.scss", r#"$a: red;"#);
+
+    let input = r#"
+        @import 'a';
+        a {
+            color: $a;
+        }
+    "#;
+
     assert_eq!(
         "a {\n  color: red;\n}\n",
-        &grass::from_string(input.to_string(), &grass::Options::default()).expect(input)
+        &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
     );
 }
 
 #[test]
 fn comma_separated_import() {
-    let input = "@import 'comma_separated_import_first', 'comma_separated_import_second';\na {\n color: $a;\n}";
-    tempfile!("comma_separated_import_first", "$a: red;");
-    tempfile!("comma_separated_import_second", "p { color: blue; }");
+    let mut fs = TestFs::new();
+
+    fs.add_file("a.scss", r#"$a: red"#);
+    fs.add_file("b.scss", r#"p { color: blue; }"#);
+
+    let input = r#"
+        @import 'a', 'b';
+
+        a {
+            color: $a;
+        }
+    "#;
+
     assert_eq!(
         "p {\n  color: blue;\n}\n\na {\n  color: red;\n}\n",
-        &grass::from_string(input.to_string(), &grass::Options::default()).expect(input)
+        &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
     );
 }
 
 #[test]
 fn comma_separated_import_order() {
-    let input =
-        "@import 'comma_separated_import_order1', 'comma_separated_import_order2', url(third);";
-    tempfile!("comma_separated_import_order1", "p { color: red; }");
-    tempfile!("comma_separated_import_order2", "p { color: blue; }");
+    let mut fs = TestFs::new();
+
+    fs.add_file("a.scss", r#"p { color: red; }"#);
+    fs.add_file("b.scss", r#"p { color: blue; }"#);
+
+    let input = r#"
+        @import "a", "b", url(third);
+    "#;
+
     assert_eq!(
         "@import url(third);\np {\n  color: red;\n}\n\np {\n  color: blue;\n}\n",
-        &grass::from_string(input.to_string(), &grass::Options::default()).expect(input)
+        &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
     );
 }
 
 #[test]
 fn comma_separated_import_order_css() {
-    let input =
-        "@import 'comma_separated_import_order1.css', 'comma_separated_import_order_css', url(third);";
-    tempfile!("comma_separated_import_order1.css", "p { color: red; }");
-    tempfile!("comma_separated_import_order_css", "p { color: blue; }");
+    let mut fs = TestFs::new();
+
+    fs.add_file("a.css", r#"p { color: red; }"#);
+    fs.add_file("b.css", r#"p { color: blue; }"#);
+
+    let input = r#"
+        @import "a.css", "b", url(third);
+    "#;
+
     assert_eq!(
-        "@import 'comma_separated_import_order1.css';\n@import url(third);\np {\n  color: blue;\n}\n",
-        &grass::from_string(input.to_string(), &grass::Options::default()).expect(input)
+        "@import \"a.css\";\n@import url(third);\np {\n  color: blue;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
     );
 }
 
@@ -120,22 +157,58 @@ fn basic_load_path() {
 }
 
 #[test]
+fn load_path_same_directory() {
+    tempfile!(
+        "load_path_same_directory__a.scss",
+        "@import \"dir-load_path_same_directory__a/load_path_same_directory__b\";\na {\n color: $a;\n}",
+        dir = "dir-load_path_same_directory__a"
+    );
+    tempfile!(
+        "load_path_same_directory__b.scss",
+        "$a: red;",
+        dir = "dir-load_path_same_directory__a"
+    );
+
+    assert_eq!(
+        "a {\n  color: red;\n}\n",
+        grass::from_path(
+            "dir-load_path_same_directory__a/load_path_same_directory__a.scss",
+            &grass::Options::default().load_path(std::path::Path::new("."))
+        )
+        .unwrap()
+    );
+}
+
+#[test]
 fn comma_separated_import_trailing() {
-    let input =
-        "@import 'comma_separated_import_trailing1', 'comma_separated_import_trailing2', url(third),,,,,,,,;";
-    tempfile!("comma_separated_import_trailing1", "p { color: red; }");
-    tempfile!("comma_separated_import_trailing2", "p { color: blue; }");
+    let mut fs = TestFs::new();
+
+    fs.add_file("a.scss", r#"p { color: red; }"#);
+    fs.add_file("b.scss", r#"p { color: blue; }"#);
+
+    let input = r#"
+        @import "a", "b", url(third),,,,,,,,;
+    "#;
 
     assert_err!("Error: Expected string.", input);
 }
 
 #[test]
 fn finds_name_scss() {
-    let input = "@import \"finds_name_scss\";\na {\n color: $a;\n}";
-    tempfile!("finds_name_scss.scss", "$a: red;");
+    let mut fs = TestFs::new();
+
+    fs.add_file("a.scss", r#"$a: red;"#);
+
+    let input = r#"
+        @import "a";
+        a {
+            color: $a;
+        }
+    "#;
+
     assert_eq!(
         "a {\n  color: red;\n}\n",
-        &grass::from_string(input.to_string(), &grass::Options::default()).expect(input)
+        &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
     );
 }
 
@@ -170,6 +243,54 @@ fn chained_imports() {
         a {
             color: $a;
         }
+    "#;
+
+    assert_eq!(
+        "a {\n  color: red;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
+    );
+}
+
+#[test]
+fn imports_plain_css() {
+    let mut fs = TestFs::new();
+
+    fs.add_file("a.css", r#"a { color: red; }"#);
+
+    let input = r#"
+        @import "a";
+    "#;
+
+    assert_eq!(
+        "a {\n  color: red;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
+    );
+}
+
+#[test]
+fn imports_import_only_scss() {
+    let mut fs = TestFs::new();
+
+    fs.add_file("a.import.scss", r#"a { color: red; }"#);
+
+    let input = r#"
+        @import "a";
+    "#;
+
+    assert_eq!(
+        "a {\n  color: red;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
+    );
+}
+
+#[test]
+fn imports_absolute_scss() {
+    let mut fs = TestFs::new();
+
+    fs.add_file("/foo/a.scss", r#"a { color: red; }"#);
+
+    let input = r#"
+        @import "/foo/a";
     "#;
 
     assert_eq!(

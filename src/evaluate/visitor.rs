@@ -852,6 +852,25 @@ impl<'a> Visitor<'a> {
         Ok(None)
     }
 
+    fn try_path(&self, path: &Path) -> Vec<PathBuf> {
+        let dirname = path.parent().unwrap_or_else(|| Path::new(""));
+        let basename = path.file_name().unwrap_or_else(|| OsStr::new(".."));
+
+        let partial = dirname.join(format!("_{}", basename.to_str().unwrap()));
+
+        let mut paths = Vec::new();
+
+        if self.parser.options.fs.is_file(path) {
+            paths.push(path.to_path_buf());
+        }
+
+        if self.parser.options.fs.is_file(&partial) {
+            paths.push(partial);
+        }
+
+        paths
+    }
+
     /// Searches the current directory of the file then searches in `load_paths` directories
     /// if the import has not yet been found.
     ///
@@ -859,7 +878,6 @@ impl<'a> Visitor<'a> {
     /// <https://sass-lang.com/documentation/at-rules/import#load-paths>
     fn find_import(&self, path: &Path) -> Option<PathBuf> {
         let path_buf = if path.is_absolute() {
-            // todo: test for absolute path imports
             path.into()
         } else {
             self.current_import_path
@@ -868,45 +886,57 @@ impl<'a> Visitor<'a> {
                 .join(path)
         };
 
-        let name = path_buf.file_name().unwrap_or_else(|| OsStr::new(".."));
+        let dirname = path_buf.parent().unwrap_or_else(|| Path::new(""));
+        let basename = path_buf.file_name().unwrap_or_else(|| OsStr::new(".."));
 
         macro_rules! try_path {
-            ($name:expr) => {
-                let name = $name;
-                if self.parser.options.fs.is_file(&name) {
-                    return Some(name);
+            ($path:expr) => {
+                let path = $path;
+                let dirname = path.parent().unwrap_or_else(|| Path::new(""));
+                let basename = path.file_name().unwrap_or_else(|| OsStr::new(".."));
+
+                let partial = dirname.join(format!("_{}", basename.to_str().unwrap()));
+
+                if self.parser.options.fs.is_file(&path) {
+                    return Some(path.to_path_buf());
+                }
+
+                if self.parser.options.fs.is_file(&partial) {
+                    return Some(partial);
                 }
             };
         }
 
-        try_path!(path_buf.with_file_name(name).with_extension("scss"));
-        try_path!(path_buf
-            .with_file_name(format!("_{}", name.to_str().unwrap()))
-            .with_extension("scss"));
-        try_path!(path_buf.clone());
-        try_path!(path.with_file_name(name).with_extension("css"));
-        try_path!(path_buf.join("index.scss"));
-        try_path!(path_buf.join("_index.scss"));
+        if path_buf.extension() == Some(OsStr::new("scss")) {
+            todo!();
+        }
 
-        for path in &self.parser.options.load_paths {
-            if self.parser.options.fs.is_dir(path) {
-                try_path!(path.join(name).with_extension("scss"));
-                try_path!(path.with_file_name(name).with_extension("css"));
-                try_path!(path
-                    .join(format!("_{}", name.to_str().unwrap()))
-                    .with_extension("scss"));
-                try_path!(path.join("index.scss"));
-                try_path!(path.join("_index.scss"));
-            } else {
-                try_path!(path.to_path_buf());
-                try_path!(path.with_file_name(name).with_extension("scss"));
-                try_path!(path.with_file_name(name).with_extension("css"));
-                try_path!(path
-                    .with_file_name(format!("_{}", name.to_str().unwrap()))
-                    .with_extension("scss"));
-                try_path!(path.join("index.scss"));
-                try_path!(path.join("_index.scss"));
+        macro_rules! try_path_with_extensions {
+            ($path:expr) => {
+                let path = $path;
+                try_path!(path.with_extension("import.sass"));
+                try_path!(path.with_extension("import.scss"));
+                try_path!(path.with_extension("import.css"));
+                try_path!(path.with_extension("sass"));
+                try_path!(path.with_extension("scss"));
+                try_path!(path.with_extension("css"));
+            };
+        }
+
+        try_path_with_extensions!(path_buf.clone());
+
+        if self.parser.options.fs.is_dir(&path_buf) {
+            try_path_with_extensions!(path_buf.join("index"));
+        }
+
+        for load_path in &self.parser.options.load_paths {
+            let path_buf = load_path.join(&path);
+
+            if !self.parser.options.fs.is_dir(&path_buf) {
+                try_path_with_extensions!(&path_buf);
             }
+
+            try_path_with_extensions!(path_buf.join("index"));
         }
 
         None
