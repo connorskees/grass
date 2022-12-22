@@ -286,7 +286,6 @@ test!(
     ""
 );
 test!(
-    #[ignore = "we move to top of media"]
     plain_import_inside_media_is_not_moved_to_top,
     r#"@media foo {
       a {
@@ -295,7 +294,7 @@ test!(
     
       @import "foo.css";
     }"#,
-    "@media foo {\n  a {\n    color: red;\n  }\n\n  @import \"foo.css\";\n}\n"
+    "@media foo {\n  a {\n    color: red;\n  }\n  @import \"foo.css\";\n}\n"
 );
 error!(
     media_feature_missing_closing_paren,

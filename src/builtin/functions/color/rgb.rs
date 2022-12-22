@@ -38,15 +38,18 @@ fn inner_rgb_3_arg(
             .map(|alpha| alpha.node.is_special_function())
             .unwrap_or(false)
     {
-        return Ok(Value::String(
+        let fn_string = if alpha.is_some() {
             function_string(
                 name,
                 &[red, green, blue, alpha.unwrap().node],
                 visitor,
                 args.span(),
-            )?,
-            QuoteKind::None,
-        ));
+            )?
+        } else {
+            function_string(name, &[red, green, blue], visitor, args.span())?
+        };
+
+        return Ok(Value::String(fn_string, QuoteKind::None));
     }
 
     let span = args.span();

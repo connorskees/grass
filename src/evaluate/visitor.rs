@@ -3164,11 +3164,7 @@ impl<'a> Visitor<'a> {
                 let left_is_number = matches!(left, Value::Dimension { .. });
                 let right_is_number = matches!(right, Value::Dimension { .. });
 
-                dbg!(&left, &right);
-
                 let result = div(left.clone(), right.clone(), self.parser.options, span)?;
-
-                dbg!(&result);
 
                 if left_is_number && right_is_number && allows_slash {
                     return result.with_slash(

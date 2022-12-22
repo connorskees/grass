@@ -500,6 +500,20 @@ impl Value {
         }
     }
 
+    pub fn is_var(&self) -> bool {
+        match self {
+            Value::String(s, QuoteKind::None) => {
+                if s.len() < "var(--_)".len() {
+                    return false;
+                }
+
+                s.starts_with("var(")
+            }
+            Value::Calculation(..) => true,
+            _ => false,
+        }
+    }
+
     pub fn bool(b: bool) -> Self {
         if b {
             Value::True
@@ -712,7 +726,7 @@ impl Value {
     ) -> SassResult<Selector> {
         let string = match self.clone().selector_string(visitor.parser.span_before)? {
             Some(v) => v,
-            None => return Err((format!("${}: {} is not a valid selector: it must be a string, a list of strings, or a list of lists of strings.", name, self.inspect(visitor.parser.span_before)?), visitor.parser.span_before).into()),
+            None => return Err((format!("${}: {} is not a valid selector: it must be a string,\n a list of strings, or a list of lists of strings.", name, self.inspect(visitor.parser.span_before)?), visitor.parser.span_before).into()),
         };
         Ok(Selector(visitor.parse_selector_from_string(
             &string,

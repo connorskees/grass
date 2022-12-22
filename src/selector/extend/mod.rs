@@ -643,13 +643,14 @@ impl ExtensionStore {
                         // supporting it properly would make this code and the code calling it
                         // a lot more complicated, so it's not supported for now.
                         let inner_pseudo_normalized = inner_pseudo.normalized_name();
-                        if inner_pseudo_normalized == "matches" || inner_pseudo_normalized == "is" {
+                        if ["matches", "is", "where"].contains(&inner_pseudo_normalized) {
                             inner_pseudo.selector.clone().unwrap().components
                         } else {
                             Vec::new()
                         }
                     }
-                    "matches" | "is" | "any" | "current" | "nth-child" | "nth-last-child" => {
+                    "matches" | "where" | "is" | "any" | "current" | "nth-child"
+                    | "nth-last-child" => {
                         // As above, we could theoretically support :not within :matches, but
                         // doing so would require this method and its callers to handle much
                         // more complex cases that likely aren't worth the pain.

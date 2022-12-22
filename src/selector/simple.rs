@@ -12,7 +12,14 @@ use super::{
     QualifiedName, SelectorList, Specificity,
 };
 
-const SUBSELECTOR_PSEUDOS: [&str; 5] = ["matches", "is", "any", "nth-child", "nth-last-child"];
+const SUBSELECTOR_PSEUDOS: [&str; 6] = [
+    "matches",
+    "where",
+    "is",
+    "any",
+    "nth-child",
+    "nth-last-child",
+];
 
 const BASE_SPECIFICITY: i32 = 1000;
 
@@ -487,7 +494,7 @@ impl Pseudo {
     ) -> bool {
         debug_assert!(self.selector.is_some());
         match self.normalized_name() {
-            "matches" | "is" | "any" => {
+            "matches" | "is" | "any" | "where" => {
                 selector_pseudos_named(compound.clone(), &self.name, true).any(move |pseudo2| {
                     self.selector
                         .as_ref()

@@ -18,9 +18,10 @@ enum DevouredWhitespace {
 }
 
 /// Pseudo-class selectors that take unadorned selectors as arguments.
-const SELECTOR_PSEUDO_CLASSES: [&str; 8] = [
+const SELECTOR_PSEUDO_CLASSES: [&str; 9] = [
     "not",
     "matches",
+    "where",
     "is",
     "current",
     "any",

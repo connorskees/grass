@@ -67,7 +67,7 @@ error!(
 error!(
     invalid_type_in_first_arg,
     "a {\n  color: selector-append(\"c\", 1);\n}\n",
-    "Error: $selectors: 1 is not a valid selector: it must be a string, a list of strings, or a list of lists of strings."
+    "Error: $selectors: 1 is not a valid selector: it must be a string,"
 );
 error!(
     no_args,

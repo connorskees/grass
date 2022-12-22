@@ -591,12 +591,12 @@ error!(
 error!(
     invalid_type_in_first_arg,
     "a {\n  color: selector-unify(1, \"c\");\n}\n",
-    "Error: $selector1: 1 is not a valid selector: it must be a string, a list of strings, or a list of lists of strings."
+    "Error: $selector1: 1 is not a valid selector: it must be a string,"
 );
 error!(
     invalid_type_in_second_arg,
     "a {\n  color: selector-unify(\"c\", 1);\n}\n",
-    "Error: $selector2: 1 is not a valid selector: it must be a string, a list of strings, or a list of lists of strings."
+    "Error: $selector2: 1 is not a valid selector: it must be a string,"
 );
 test!(
     simple_pseudo_no_arg_class_same,

@@ -1916,7 +1916,11 @@ test!(
     }",
     "c b {\n  color: red;\n}\n"
 );
-
+test!(
+    unification_subselector_of_target_where,
+    r#"a {b: selector-extend(".c:where(d)", ":where(d)", "d.e")}"#,
+    "a {\n  b: .c:where(d);\n}\n"
+);
 error!(
     extend_optional_keyword_not_complete,
     "a {
@@ -1934,3 +1938,4 @@ error!(
 
 // todo: extend_loop (massive test)
 // todo: extend tests in folders
+// todo: copy all :where extend tests, https://github.com/sass/sass-spec/pull/1783/files

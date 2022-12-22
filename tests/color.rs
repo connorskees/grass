@@ -528,18 +528,16 @@ error!(
 // todo: we need many more of these tests
 test!(
     #[ignore = "new color format"]
-    rgba_special_fn_4th_arg_max,
+    rgba_one_arg_special_fn_4th_arg_max,
     "a {\n  color: rgba(1 2 max(3, 3));\n}\n",
-    "a {\n  color: rgba(1, 2, max(3, 3));\n}\n"
+    "a {\n  color: rgb(1, 2, 3);\n}\n"
 );
 test!(
-    #[ignore = "new color format"]
     rgb_special_fn_4_arg_maintains_units,
     "a {\n  color: rgb(1, 0.02, 3%, max(0.4));\n}\n",
-    "a {\n  color: rgb(1, 0.02, 3%, max(0.4));\n}\n"
+    "a {\n  color: rgba(1, 0, 8, 0.4);\n}\n"
 );
 test!(
-    #[ignore = "new color format"]
     rgb_special_fn_3_arg_maintains_units,
     "a {\n  color: rgb(1, 0.02, max(0.4));\n}\n",
     "a {\n  color: rgb(1, 0, 0);\n}\n"
@@ -588,6 +586,11 @@ test!(
     hue_largest_channel_is_blue,
     "a {\n  color: hue(rgb(1, 2, 5));\n}\n",
     "a {\n  color: 225deg;\n}\n"
+);
+test!(
+    rgb_3_args_first_arg_is_special_fn,
+    "a {\n  color: rgb(env(--foo), 2, 3);\n}\n",
+    "a {\n  color: rgb(env(--foo), 2, 3);\n}\n"
 );
 error!(
     rgb_more_than_4_args,
