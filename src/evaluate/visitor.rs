@@ -907,8 +907,14 @@ impl<'a> Visitor<'a> {
             };
         }
 
-        if path_buf.extension() == Some(OsStr::new("scss")) {
-            todo!();
+        if path_buf.extension() == Some(OsStr::new("scss"))
+            || path_buf.extension() == Some(OsStr::new("sass"))
+            || path_buf.extension() == Some(OsStr::new("css"))
+        {
+            let extension = path_buf.extension().unwrap();
+            try_path!(path.with_extension(format!(".import{}", extension.to_str().unwrap())));
+            try_path!(path);
+            return None;
         }
 
         macro_rules! try_path_with_extensions {

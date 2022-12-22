@@ -300,6 +300,22 @@ fn imports_absolute_scss() {
 }
 
 #[test]
+fn imports_explicit_file_extension() {
+    let mut fs = TestFs::new();
+
+    fs.add_file("a.scss", r#"a { color: red; }"#);
+
+    let input = r#"
+        @import "a.scss";
+    "#;
+
+    assert_eq!(
+        "a {\n  color: red;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
+    );
+}
+
+#[test]
 fn chained_imports_in_directory() {
     let input = "@import \"chained_imports_in_directory__a\";\na {\n color: $a;\n}";
     tempfile!(
