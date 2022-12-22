@@ -68,24 +68,24 @@ impl CssStmt {
 
     pub fn copy_without_children(&self) -> Self {
         match self {
-            (CssStmt::RuleSet {
+            CssStmt::RuleSet {
                 selector,
                 is_group_end,
                 ..
-            }) => CssStmt::RuleSet {
+            } => CssStmt::RuleSet {
                 selector: selector.clone(),
                 body: Vec::new(),
                 is_group_end: *is_group_end,
             },
-            (CssStmt::Style(..) | CssStmt::Comment(..) | CssStmt::Import(..)) => unreachable!(),
-            (CssStmt::Media(media, is_group_end)) => CssStmt::Media(
+            CssStmt::Style(..) | CssStmt::Comment(..) | CssStmt::Import(..) => unreachable!(),
+            CssStmt::Media(media, is_group_end) => CssStmt::Media(
                 MediaRule {
                     query: media.query.clone(),
                     body: Vec::new(),
                 },
                 *is_group_end,
             ),
-            (CssStmt::UnknownAtRule(at_rule, is_group_end)) => CssStmt::UnknownAtRule(
+            CssStmt::UnknownAtRule(at_rule, is_group_end) => CssStmt::UnknownAtRule(
                 UnknownAtRule {
                     name: at_rule.name.clone(),
                     params: at_rule.params.clone(),
@@ -94,14 +94,14 @@ impl CssStmt {
                 },
                 *is_group_end,
             ),
-            (CssStmt::Supports(supports, is_group_end)) => CssStmt::Supports(
+            CssStmt::Supports(supports, is_group_end) => CssStmt::Supports(
                 SupportsRule {
                     params: supports.params.clone(),
                     body: Vec::new(),
                 },
                 *is_group_end,
             ),
-            (CssStmt::KeyframesRuleSet(keyframes)) => CssStmt::KeyframesRuleSet(KeyframesRuleSet {
+            CssStmt::KeyframesRuleSet(keyframes) => CssStmt::KeyframesRuleSet(KeyframesRuleSet {
                 selector: keyframes.selector.clone(),
                 body: Vec::new(),
             }),

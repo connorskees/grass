@@ -20,8 +20,7 @@ grass input.scss
 ```
 */
 
-#![allow(warnings)]
-#![deny(unused_parens)]
+// #![allow(warnings)]
 #![warn(clippy::all, clippy::pedantic, clippy::nursery, clippy::cargo)]
 #![deny(missing_debug_implementations)]
 #![allow(

@@ -90,29 +90,29 @@ pub(crate) fn str_slice(mut args: ArgumentResult, parser: &mut Visitor) -> SassR
             ..
         } if n.is_nan() => return Err(("NaN is not an int.", args.span()).into()),
         Value::Dimension {
-            num: (n),
+            num: n,
             unit: Unit::None,
             as_slash: _,
         } if n.is_decimal() => {
             return Err((format!("{} is not an int.", n.inspect()), args.span()).into())
         }
         Value::Dimension {
-            num: (n),
+            num: n,
             unit: Unit::None,
             as_slash: _,
         } if n.is_zero() => 1_usize,
         Value::Dimension {
-            num: (n),
+            num: n,
             unit: Unit::None,
             as_slash: _,
         } if n.is_positive() => n.to_integer().to_usize().unwrap_or(str_len + 1),
         Value::Dimension {
-            num: (n),
+            num: n,
             unit: Unit::None,
             as_slash: _,
         } if n < -Number::from(str_len) => 1_usize,
         Value::Dimension {
-            num: (n),
+            num: n,
             unit: Unit::None,
             as_slash: _,
         } => (n.to_integer() + BigInt::from(str_len + 1))
@@ -143,29 +143,29 @@ pub(crate) fn str_slice(mut args: ArgumentResult, parser: &mut Visitor) -> SassR
             ..
         } if n.is_nan() => return Err(("NaN is not an int.", args.span()).into()),
         Value::Dimension {
-            num: (n),
+            num: n,
             unit: Unit::None,
             as_slash: _,
         } if n.is_decimal() => {
             return Err((format!("{} is not an int.", n.inspect()), args.span()).into())
         }
         Value::Dimension {
-            num: (n),
+            num: n,
             unit: Unit::None,
             as_slash: _,
         } if n.is_zero() => 0_usize,
         Value::Dimension {
-            num: (n),
+            num: n,
             unit: Unit::None,
             as_slash: _,
         } if n.is_positive() => n.to_integer().to_usize().unwrap_or(str_len + 1),
         Value::Dimension {
-            num: (n),
+            num: n,
             unit: Unit::None,
             as_slash: _,
         } if n < -Number::from(str_len) => 0_usize,
         Value::Dimension {
-            num: (n),
+            num: n,
             unit: Unit::None,
             as_slash: _,
         } => (n.to_integer() + BigInt::from(str_len + 1))
@@ -274,7 +274,7 @@ pub(crate) fn str_insert(mut args: ArgumentResult, parser: &mut Visitor) -> Sass
             ..
         } if n.is_nan() => return Err(("$index: NaN is not an int.", args.span()).into()),
         Value::Dimension {
-            num: (n),
+            num: n,
             unit: Unit::None,
             as_slash: _,
         } if n.is_decimal() => {
@@ -285,7 +285,7 @@ pub(crate) fn str_insert(mut args: ArgumentResult, parser: &mut Visitor) -> Sass
                 .into())
         }
         Value::Dimension {
-            num: (n),
+            num: n,
             unit: Unit::None,
             as_slash: _,
         } => n,

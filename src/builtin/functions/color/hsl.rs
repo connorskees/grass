@@ -215,7 +215,7 @@ fn lighten(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> 
     let amount = match args.get_err(1, "amount")? {
         Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
         Value::Dimension {
-            num: (n),
+            num: n,
             unit: u,
             as_slash: _,
         } => bound!(args, "amount", n, u, 0, 100) / Number::from(100),
@@ -248,7 +248,7 @@ fn darken(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     let amount = match args.get_err(1, "amount")? {
         Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
         Value::Dimension {
-            num: (n),
+            num: n,
             unit: u,
             as_slash: _,
         } => bound!(args, "amount", n, u, 0, 100) / Number::from(100),
@@ -282,7 +282,7 @@ fn saturate(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value>
     let amount = match args.get_err(1, "amount")? {
         Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
         Value::Dimension {
-            num: (n),
+            num: n,
             unit: u,
             as_slash: _,
         } => bound!(args, "amount", n, u, 0, 100) / Number::from(100),
@@ -300,7 +300,7 @@ fn saturate(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value>
     let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,
         Value::Dimension {
-            num: (n),
+            num: n,
             unit: u,
             as_slash: _,
         } => {
@@ -335,7 +335,7 @@ fn desaturate(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Valu
     let amount = match args.get_err(1, "amount")? {
         Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
         Value::Dimension {
-            num: (n),
+            num: n,
             unit: u,
             as_slash: _,
         } => bound!(args, "amount", n, u, 0, 100) / Number::from(100),
@@ -358,7 +358,7 @@ pub(crate) fn grayscale(mut args: ArgumentResult, parser: &mut Visitor) -> SassR
     let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,
         Value::Dimension {
-            num: (n),
+            num: n,
             unit: u,
             as_slash: _,
         } => {
@@ -399,7 +399,7 @@ pub(crate) fn invert(mut args: ArgumentResult, parser: &mut Visitor) -> SassResu
         Some(Spanned {
             node:
                 Value::Dimension {
-                    num: (n),
+                    num: n,
                     unit: u,
                     as_slash: _,
                 },
@@ -426,7 +426,7 @@ pub(crate) fn invert(mut args: ArgumentResult, parser: &mut Visitor) -> SassResu
             c.invert(weight.unwrap_or_else(Number::one)),
         ))),
         Value::Dimension {
-            num: (n),
+            num: n,
             unit: u,
             as_slash: _,
         } => {

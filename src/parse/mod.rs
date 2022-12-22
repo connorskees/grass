@@ -12,7 +12,6 @@ use crate::{
     common::{unvendor, Identifier, QuoteKind},
     error::SassResult,
     lexer::Lexer,
-    selector::ExtendedSelector,
     utils::{as_hex, hex_char_for, is_name, is_name_start, is_plain_css_import, opposite_bracket},
     ContextFlags, Options, Token,
 };
@@ -3735,9 +3734,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         Ok(buffer)
     }
 
-    fn try_parse_url(
-        &mut self,
-    ) -> SassResult<Option<String>> {
+    fn try_parse_url(&mut self) -> SassResult<Option<String>> {
         // NOTE: this logic is largely duplicated in Parser.tryUrl. Most changes
         // here should be mirrored there.
 
@@ -3752,7 +3749,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             return Ok(None);
         }
 
-        self.whitespace();
+        self.whitespace()?;
 
         // Match Ruby Sass's behavior: parse a raw URL() if possible, and if not
         // backtrack and re-parse as a function expression.

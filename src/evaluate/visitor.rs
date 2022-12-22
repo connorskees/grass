@@ -1,6 +1,6 @@
 use std::{
     borrow::Cow,
-    cell::{Cell, Ref, RefCell, RefMut},
+    cell::{Cell, RefCell},
     collections::{BTreeMap, BTreeSet, HashSet},
     ffi::OsStr,
     fmt,
@@ -696,25 +696,6 @@ impl<'a> Visitor<'a> {
         }
 
         Ok(None)
-    }
-
-    fn try_path(&self, path: &Path) -> Vec<PathBuf> {
-        let dirname = path.parent().unwrap_or_else(|| Path::new(""));
-        let basename = path.file_name().unwrap_or_else(|| OsStr::new(".."));
-
-        let partial = dirname.join(format!("_{}", basename.to_str().unwrap()));
-
-        let mut paths = Vec::new();
-
-        if self.parser.options.fs.is_file(path) {
-            paths.push(path.to_path_buf());
-        }
-
-        if self.parser.options.fs.is_file(&partial) {
-            paths.push(partial);
-        }
-
-        paths
     }
 
     /// Searches the current directory of the file then searches in `load_paths` directories
@@ -2265,29 +2246,11 @@ impl<'a> Visitor<'a> {
     fn without_slash(&mut self, v: Value) -> Value {
         match v {
             Value::Dimension { .. } if v.as_slash().is_some() => {
-                //   String recommendation(SassNumber number) {
-                //     var asSlash = number.asSlash;
-                //     if (asSlash != null) {
-                //       return "math.div(${recommendation(asSlash.item1)}, "
-                //           "${recommendation(asSlash.item2)})";
-                //     } else {
-                //       return number.toString();
-                //     }
-                self.emit_warning(
-                    Cow::Borrowed("Using / for division is deprecated and will be removed"),
-                    self.parser.span_before,
-                );
-                //   _warn(
-                //       "Using / for division is deprecated and will be removed in Dart Sass "
-                //       "2.0.0.\n"
-                //       "\n"
-                //       "Recommendation: ${recommendation(value)}\n"
-                //       "\n"
-                //       "More info and automated migrator: "
-                //       "https://sass-lang.com/d/slash-div",
-                //       nodeForSpan.span,
-                //       deprecation: true);
-                // }
+                // todo: emit warning. we don't currently because it can be quite loud
+                // self.emit_warning(
+                //     Cow::Borrowed("Using / for division is deprecated and will be removed at some point in the future"),
+                //     self.parser.span_before,
+                // );
             }
             _ => {}
         }
@@ -2520,7 +2483,6 @@ impl<'a> Visitor<'a> {
                 if (*were_keywords_accessed).get() {
                     return Ok(val);
                 }
-                //   if (argumentList.wereKeywordsAccessed) return result;
 
                 let argument_word = if evaluated.named.len() == 1 {
                     "argument"
@@ -2588,17 +2550,8 @@ impl<'a> Visitor<'a> {
                 let val = func.0(evaluated, self)?;
                 Ok(self.without_slash(val))
             }
-            SassFunction::UserDefined(UserDefinedFunction {
-                function,
-                // scope_idx,
-                env,
-                ..
-            }) => self.run_user_defined_callable(
-                arguments,
-                *function,
-                env,
-                span,
-                |function, visitor| {
+            SassFunction::UserDefined(UserDefinedFunction { function, env, .. }) => self
+                .run_user_defined_callable(arguments, *function, env, span, |function, visitor| {
                     for stmt in function.children {
                         let result = visitor.visit_stmt(stmt)?;
 
@@ -2608,8 +2561,7 @@ impl<'a> Visitor<'a> {
                     }
 
                     Err(("Function finished without @return.", span).into())
-                },
-            ),
+                }),
             SassFunction::Plain { name } => {
                 let arguments = match arguments {
                     MaybeEvaledArguments::Invocation(args) => args,

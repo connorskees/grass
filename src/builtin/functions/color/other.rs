@@ -5,7 +5,7 @@ macro_rules! opt_rgba {
         let $name = match $args.default_named_arg($arg, Value::Null) {
             Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
             Value::Dimension {
-                num: (n), unit: u, ..
+                num: n, unit: u, ..
             } => Some(bound!($args, $arg, n, u, $low, $high)),
             Value::Null => None,
             v => {
@@ -24,7 +24,7 @@ macro_rules! opt_hsl {
         let $name = match $args.default_named_arg($arg, Value::Null) {
             Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
             Value::Dimension {
-                num: (n), unit: u, ..
+                num: n, unit: u, ..
             } => Some(bound!($args, $arg, n, u, $low, $high) / Number::from(100)),
             Value::Null => None,
             v => {
@@ -74,7 +74,7 @@ pub(crate) fn change_color(mut args: ArgumentResult, parser: &mut Visitor) -> Sa
 
     let hue = match args.default_named_arg("hue", Value::Null) {
         Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
-        Value::Dimension { num: (n), .. } => Some(n),
+        Value::Dimension { num: n, .. } => Some(n),
         Value::Null => None,
         v => {
             return Err((
@@ -134,7 +134,7 @@ pub(crate) fn adjust_color(mut args: ArgumentResult, parser: &mut Visitor) -> Sa
 
     let hue = match args.default_named_arg("hue", Value::Null) {
         Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
-        Value::Dimension { num: (n), .. } => Some(n),
+        Value::Dimension { num: n, .. } => Some(n),
         Value::Null => None,
         v => {
             return Err((
@@ -194,7 +194,7 @@ pub(crate) fn scale_color(mut args: ArgumentResult, parser: &mut Visitor) -> Sas
             let $name = match $args.default_named_arg($arg, Value::Null) {
                 Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
                 Value::Dimension {
-                    num: (n),
+                    num: n,
                     unit: Unit::Percent,
                     ..
                 } => Some(bound!($args, $arg, n, Unit::Percent, $low, $high) / Number::from(100)),

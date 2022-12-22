@@ -14,7 +14,7 @@ pub(crate) fn function_string(
         .collect::<SassResult<Vec<_>>>()?
         .join(", ");
 
-    Ok((format!("{}({})", name, args)))
+    Ok(format!("{}({})", name, args))
 }
 
 fn inner_rgb_3_arg(
@@ -341,12 +341,12 @@ fn inner_rgb(
     let alpha = match alpha {
         Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
         Value::Dimension {
-            num: (n),
+            num: n,
             unit: Unit::None,
             as_slash: _,
         } => n,
         Value::Dimension {
-            num: (n),
+            num: n,
             unit: Unit::Percent,
             as_slash: _,
         } => n / Number::from(100),
@@ -462,7 +462,7 @@ pub(crate) fn mix(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<
     ) {
         Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
         Value::Dimension {
-            num: (n),
+            num: n,
             unit: u,
             as_slash: _,
         } => bound!(args, "weight", n, u, 0, 100) / Number::from(100),

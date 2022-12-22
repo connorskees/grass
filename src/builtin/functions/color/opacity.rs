@@ -109,7 +109,7 @@ fn opacify(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> 
     let amount = match args.get_err(1, "amount")? {
         Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
         Value::Dimension {
-            num: (n),
+            num: n,
             unit: u,
             as_slash: _,
         } => bound!(args, "amount", n, u, 0, 1),
@@ -139,7 +139,7 @@ fn fade_in(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> 
     let amount = match args.get_err(1, "amount")? {
         Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
         Value::Dimension {
-            num: (n),
+            num: n,
             unit: u,
             as_slash: _,
         } => bound!(args, "amount", n, u, 0, 1),
@@ -170,7 +170,7 @@ fn transparentize(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<
     let amount = match args.get_err(1, "amount")? {
         Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
         Value::Dimension {
-            num: (n),
+            num: n,
             unit: u,
             as_slash: _,
         } => bound!(args, "amount", n, u, 0, 1),
@@ -200,7 +200,7 @@ fn fade_out(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value>
     let amount = match args.get_err(1, "amount")? {
         Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
         Value::Dimension {
-            num: (n),
+            num: n,
             unit: u,
             as_slash: _,
         } => bound!(args, "amount", n, u, 0, 1),

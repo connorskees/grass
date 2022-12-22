@@ -1,10 +1,6 @@
-use codemap::Spanned;
-
 use crate::{
-    ast::{AstExpr, Interpolation, MediaQuery},
+    ast::{MediaQuery},
     error::SassResult,
-    utils::is_name,
-    Token,
 };
 
 use super::Parser;

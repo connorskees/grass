@@ -4,10 +4,10 @@ pub(crate) fn percentage(mut args: ArgumentResult, parser: &mut Visitor) -> Sass
     args.max_args(1)?;
     let num = match args.get_err(0, "number")? {
         Value::Dimension {
-            num: (n),
+            num: n,
             unit: Unit::None,
             as_slash: _,
-        } => (n * Number::from(100)),
+        } => n * Number::from(100),
         v @ Value::Dimension { .. } => {
             return Err((
                 format!(
@@ -41,7 +41,7 @@ pub(crate) fn round(mut args: ArgumentResult, parser: &mut Visitor) -> SassResul
             Err(("Infinity or NaN toInt", args.span()).into())
         }
         Value::Dimension {
-            num: (n),
+            num: n,
             unit: u,
             as_slash: _,
         } => Ok(Value::Dimension {
@@ -65,7 +65,7 @@ pub(crate) fn ceil(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult
             Err(("Infinity or NaN toInt", args.span()).into())
         }
         Value::Dimension {
-            num: (n),
+            num: n,
             unit: u,
             as_slash: _,
         } => Ok(Value::Dimension {
@@ -89,7 +89,7 @@ pub(crate) fn floor(mut args: ArgumentResult, parser: &mut Visitor) -> SassResul
             Err(("Infinity or NaN toInt", args.span()).into())
         }
         Value::Dimension {
-            num: (n),
+            num: n,
             unit: u,
             as_slash: _,
         } => Ok(Value::Dimension {
@@ -109,7 +109,7 @@ pub(crate) fn abs(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<
     args.max_args(1)?;
     match args.get_err(0, "number")? {
         Value::Dimension {
-            num: (n),
+            num: n,
             unit: u,
             as_slash: _,
         } => Ok(Value::Dimension {
@@ -171,7 +171,7 @@ pub(crate) fn random(mut args: ArgumentResult, parser: &mut Visitor) -> SassResu
             // todo: can remove match altogether thanks to assert_int
             return Err((format!("$limit: NaN{} is not an int.", u), args.span()).into());
         }
-        Value::Dimension { num: (n), .. } => n,
+        Value::Dimension { num: n, .. } => n,
         Value::Null => {
             let mut rng = rand::thread_rng();
             return Ok(Value::Dimension {
@@ -253,7 +253,7 @@ pub(crate) fn min(args: ArgumentResult, parser: &mut Visitor) -> SassResult<Valu
         .into_iter();
 
     let mut min = match nums.next() {
-        Some(((n), u)) => (n, u),
+        Some((n, u)) => (n, u),
         None => unreachable!(),
     };
 
@@ -306,7 +306,7 @@ pub(crate) fn max(args: ArgumentResult, parser: &mut Visitor) -> SassResult<Valu
         .into_iter();
 
     let mut max = match nums.next() {
-        Some(((n), u)) => (n, u),
+        Some((n, u)) => (n, u),
         None => unreachable!(),
     };
 

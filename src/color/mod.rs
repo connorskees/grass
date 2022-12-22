@@ -15,8 +15,6 @@
 //! Named colors retain their original casing,
 //! so `rEd` should be emitted as `rEd`.
 
-use std::cmp::{max, min};
-
 use crate::value::{fuzzy_round, Number};
 pub(crate) use name::NAMED_COLORS;
 

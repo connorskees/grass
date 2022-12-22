@@ -969,7 +969,9 @@ impl<'c> ValueParser<'c> {
     fn parse_number(&mut self, parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
         let start = parser.toks.cursor();
 
-        parser.scan_char('+') || parser.scan_char('-');
+        if !parser.scan_char('+') {
+            parser.scan_char('-');
+        }
 
         if !parser.toks.next_char_is('.') {
             self.consume_natural_number(parser)?;

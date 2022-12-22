@@ -57,7 +57,7 @@ pub(crate) fn hwb(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<
     let hue = match args.get(0, "hue") {
         Some(v) => match v.node {
             Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
-            Value::Dimension { num: (n), .. } => n,
+            Value::Dimension { num: n, .. } => n,
             v => {
                 return Err((
                     format!("$hue: {} is not a number.", v.inspect(args.span())?),
@@ -73,7 +73,7 @@ pub(crate) fn hwb(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<
         Some(v) => match v.node {
             Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
             Value::Dimension {
-                num: (n),
+                num: n,
                 unit: Unit::Percent,
                 ..
             } => n,
@@ -101,7 +101,7 @@ pub(crate) fn hwb(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<
     let blackness = match args.get(2, "blackness") {
         Some(v) => match v.node {
             Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
-            Value::Dimension { num: (n), .. } => n,
+            Value::Dimension { num: n, .. } => n,
             v => {
                 return Err((
                     format!("$blackness: {} is not a number.", v.inspect(args.span())?),
@@ -117,11 +117,11 @@ pub(crate) fn hwb(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<
         Some(v) => match v.node {
             Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
             Value::Dimension {
-                num: (n),
+                num: n,
                 unit: Unit::Percent,
                 ..
             } => n / Number::from(100),
-            Value::Dimension { num: (n), .. } => n,
+            Value::Dimension { num: n, .. } => n,
             v => {
                 return Err((
                     format!("$alpha: {} is not a number.", v.inspect(args.span())?),
