@@ -270,13 +270,8 @@ impl<V: fmt::Debug + Clone> MapView for MergedMapView<V> {
         self.0.iter().rev().find_map(|map| (*map).get(name))
     }
 
-    fn remove(&self, name: Identifier) -> Option<Self::Value> {
-        // if !self.1.contains(&name) {
-        //     return None;
-        // }
-
-        // self.0.remove(name)
-        todo!()
+    fn remove(&self, _name: Identifier) -> Option<Self::Value> {
+        unimplemented!()
     }
 
     fn len(&self) -> usize {

@@ -98,8 +98,7 @@ impl<'a> Serializer<'a> {
         if let Some((last, slice)) = calculation.args.split_last() {
             for arg in slice {
                 self.write_calculation_arg(arg)?;
-                self.buffer.push(b',');
-                self.write_optional_space();
+                self.write_comma_separator();
             }
 
             self.write_calculation_arg(last)?;

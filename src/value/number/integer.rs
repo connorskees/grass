@@ -88,14 +88,6 @@ impl Integer {
     fn zero() -> Self {
         Self::Small(0)
     }
-
-    fn is_zero(&self) -> bool {
-        match self {
-            Self::Small(0) => true,
-            Self::Small(..) => false,
-            Self::Big(v) => v.is_zero(),
-        }
-    }
 }
 
 impl Display for Integer {

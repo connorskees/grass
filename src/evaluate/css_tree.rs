@@ -13,6 +13,10 @@ pub(super) struct CssTree {
     pub child_to_parent: BTreeMap<CssTreeIdx, CssTreeIdx>,
 }
 
+#[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, PartialOrd, Ord)]
+#[repr(transparent)]
+pub(super) struct CssTreeIdx(usize);
+
 impl CssTree {
     pub const ROOT: CssTreeIdx = CssTreeIdx(0);
 
@@ -147,7 +151,3 @@ impl CssTree {
         idx
     }
 }
-
-#[derive(Debug, Copy, Clone, Hash, Eq, PartialEq, PartialOrd, Ord)]
-#[repr(transparent)]
-pub(super) struct CssTreeIdx(usize);

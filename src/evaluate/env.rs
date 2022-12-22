@@ -49,24 +49,9 @@ impl Environment {
     ) -> SassResult<()> {
         let view = ForwardedModule::if_necessary(module, rule);
         (*self.forwarded_modules).borrow_mut().push(view);
-        //     var forwardedModules = (_forwardedModules ??= {});
 
-        // var view = ForwardedModuleView.ifNecessary(module, rule);
-        // for (var other in forwardedModules.keys) {
-        //   _assertNoConflicts(
-        //       view.variables, other.variables, view, other, "variable");
-        //   _assertNoConflicts(
-        //       view.functions, other.functions, view, other, "function");
-        //   _assertNoConflicts(view.mixins, other.mixins, view, other, "mixin");
-        // }
+        // todo: assertnoconflicts
 
-        // // Add the original module to [_allModules] (rather than the
-        // // [ForwardedModuleView]) so that we can de-duplicate upstream modules using
-        // // `==`. This is safe because upstream modules are only used for collating
-        // // CSS, not for the members they expose.
-        // _allModules.add(module);
-        // forwardedModules[view] = rule;
-        // todo!()
         Ok(())
     }
 

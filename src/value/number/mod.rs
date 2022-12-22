@@ -1,5 +1,4 @@
 use std::{
-    cmp::Ordering,
     convert::From,
     fmt, mem,
     ops::{
