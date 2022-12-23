@@ -104,21 +104,6 @@ pub(crate) struct AstWhile {
     pub body: Vec<AstStmt>,
 }
 
-impl AstWhile {
-    pub fn has_declarations(&self) -> bool {
-        self.body.iter().any(|child| {
-            matches!(
-                child,
-                AstStmt::VariableDecl(..)
-                    | AstStmt::FunctionDecl(..)
-                    | AstStmt::Mixin(..)
-                    // todo: read imports in this case (only counts if dynamic)
-                    | AstStmt::ImportRule(..)
-            )
-        })
-    }
-}
-
 #[derive(Debug, Clone)]
 pub(crate) struct AstVariableDecl {
     pub namespace: Option<Spanned<Identifier>>,

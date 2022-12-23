@@ -91,7 +91,7 @@ pub(crate) struct CallableContentBlock {
 pub(crate) struct Visitor<'a> {
     pub declaration_name: Option<String>,
     pub flags: ContextFlags,
-    // should not need this
+    // todo: should not need this
     pub parser: &'a mut Parser<'a, 'a>,
     pub env: Environment,
     pub style_rule_ignoring_at_root: Option<ExtendedSelector>,
@@ -164,7 +164,6 @@ impl<'a> Visitor<'a> {
     }
 
     // todo: we really don't have to return Option<Value> from all of these children
-    //  - could save some time by not passing around size_of(Value) bytes
     pub fn visit_stmt(&mut self, stmt: AstStmt) -> SassResult<Option<Value>> {
         match stmt {
             AstStmt::RuleSet(ruleset) => self.visit_ruleset(ruleset),
@@ -497,12 +496,7 @@ impl<'a> Visitor<'a> {
         let mut extension_store = ExtensionStore::new(self.parser.span_before);
 
         self.with_environment::<SassResult<()>>(env.new_closure(), |visitor| {
-            // let old_importer = visitor._importer;
-            // let old_stylesheet = visitor.__stylesheet;
-            // let old_root = visitor.__root;
             let old_parent = visitor.parent;
-            // let old_end_of_imports = visitor.__endOfImports;
-            // let old_out_of_order_imports = visitor._outOfOrderImports;
             mem::swap(&mut visitor.extender, &mut extension_store);
             let old_style_rule = visitor.style_rule_ignoring_at_root.take();
             let old_media_queries = visitor.media_queries.take();
@@ -801,27 +795,6 @@ impl<'a> Visitor<'a> {
         }
 
         Err(("Can't find stylesheet to import.", span).into())
-        // let path = self.find_import(url.as_ref());
-        //      var result = _nodeImporter!.loadRelative(originalUrl, previous, forImport);
-
-        // bool isDependency;
-        // if (result != null) {
-        //   isDependency = _inDependency;
-        // } else {
-        //   result = await _nodeImporter!.loadAsync(originalUrl, previous, forImport);
-        //   if (result == null) return null;
-        //   isDependency = true;
-        // }
-
-        // var contents = result.item1;
-        // var url = result.item2;
-
-        // return _LoadedStylesheet(
-        //     Stylesheet.parse(contents,
-        //         url.startsWith('file') ? Syntax.forPath(url) : Syntax.scss,
-        //         url: url,
-        //         logger: _quietDeps && isDependency ? Logger.quiet : _logger),
-        //     isDependency: isDependency);
     }
 
     fn load_style_sheet(
@@ -831,67 +804,12 @@ impl<'a> Visitor<'a> {
         for_import: bool,
         span: Span,
     ) -> SassResult<StyleSheet> {
-        // if let Some(result) = self.import_like_node(url, for_import)? {
-        //     return Ok(result);
-        // }
+        // todo: import cache
         self.import_like_node(url, for_import, span)
-        //         var result = await _importLikeNode(
-        //     url, baseUrl ?? _stylesheet.span.sourceUrl, forImport);
-        // if (result != null) {
-        //   result.stylesheet.span.sourceUrl.andThen(_loadedUrls.add);
-        //   return result;
-        // }
-
-        //     try {
-        //   assert(_importSpan == null);
-        //   _importSpan = span;
-
-        //   var importCache = _importCache;
-        //   if (importCache != null) {
-        //     baseUrl ??= _stylesheet.span.sourceUrl;
-        //     var tuple = await importCache.canonicalize(Uri.parse(url),
-        //         baseImporter: _importer, baseUrl: baseUrl, forImport: forImport);
-
-        //     if (tuple != null) {
-        //       var isDependency = _inDependency || tuple.item1 != _importer;
-        //       var stylesheet = await importCache.importCanonical(
-        //           tuple.item1, tuple.item2,
-        //           originalUrl: tuple.item3, quiet: _quietDeps && isDependency);
-        //       if (stylesheet != null) {
-        //         _loadedUrls.add(tuple.item2);
-        //         return _LoadedStylesheet(stylesheet,
-        //             importer: tuple.item1, isDependency: isDependency);
-        //       }
-        //     }
-        //   } else {
-        //     var result = await _importLikeNode(
-        //         url, baseUrl ?? _stylesheet.span.sourceUrl, forImport);
-        //     if (result != null) {
-        //       result.stylesheet.span.sourceUrl.andThen(_loadedUrls.add);
-        //       return result;
-        //     }
-        //   }
     }
 
-    // todo: import cache
     fn visit_dynamic_import_rule(&mut self, dynamic_import: AstSassImport) -> SassResult<()> {
         let stylesheet = self.load_style_sheet(&dynamic_import.url, true, dynamic_import.span)?;
-
-        //     return _withStackFrame("@import", import, () async {
-        //   var result =
-        //       await _loadStylesheet(import.urlString, import.span, forImport: true);
-        //   var stylesheet = result.stylesheet;
-
-        //   var url = stylesheet.span.sourceUrl;
-        //   if (url != null) {
-        //     if (_activeModules.containsKey(url)) {
-        //       throw _activeModules[url].andThen((previousLoad) =>
-        //               _multiSpanException("This file is already being loaded.",
-        //                   "new load", {previousLoad.span: "original load"})) ??
-        //           _exception("This file is already being loaded.");
-        //     }
-        //     _activeModules[url] = import;
-        //   }
 
         // If the imported stylesheet doesn't use any modules, we can inject its
         // CSS directly into the current stylesheet. If it does use modules, we
@@ -901,96 +819,9 @@ impl<'a> Visitor<'a> {
             self.visit_stylesheet(stylesheet)?;
             return Ok(());
         }
-        //   if (stylesheet.uses.isEmpty && stylesheet.forwards.isEmpty) {
-        //     var oldImporter = _importer;
-        //     var oldStylesheet = _stylesheet;
-        //     var oldInDependency = _inDependency;
-        //     _importer = result.importer;
-        //     _stylesheet = stylesheet;
-        //     _inDependency = result.isDependency;
-        //     await visitStylesheet(stylesheet);
-        //     _importer = oldImporter;
-        //     _stylesheet = oldStylesheet;
-        //     _inDependency = oldInDependency;
-        //     _activeModules.remove(url);
-        //     return;
-        //   }
 
-        //   // If only built-in modules are loaded, we still need a separate
-        //   // environment to ensure their namespaces aren't exposed in the outer
-        //   // environment, but we don't need to worry about `@extend`s, so we can
-        //   // add styles directly to the existing stylesheet instead of creating a
-        //   // new one.
-        //   var loadsUserDefinedModules =
-        //       stylesheet.uses.any((rule) => rule.url.scheme != 'sass') ||
-        //           stylesheet.forwards.any((rule) => rule.url.scheme != 'sass');
-
-        //   late List<ModifiableCssNode> children;
-        //   var environment = _environment.forImport();
-        //   await _withEnvironment(environment, () async {
-        //     var oldImporter = _importer;
-        //     var oldStylesheet = _stylesheet;
-        //     var oldRoot = _root;
-        //     var oldParent = _parent;
-        //     var oldEndOfImports = _endOfImports;
-        //     var oldOutOfOrderImports = _outOfOrderImports;
-        //     var oldConfiguration = _configuration;
-        //     var oldInDependency = _inDependency;
-        //     _importer = result.importer;
-        //     _stylesheet = stylesheet;
-        //     if (loadsUserDefinedModules) {
-        //       _root = ModifiableCssStylesheet(stylesheet.span);
-        //       _parent = _root;
-        //       _endOfImports = 0;
-        //       _outOfOrderImports = null;
-        //     }
-        //     _inDependency = result.isDependency;
-
-        //     // This configuration is only used if it passes through a `@forward`
-        //     // rule, so we avoid creating unnecessary ones for performance reasons.
-        //     if (stylesheet.forwards.isNotEmpty) {
-        //       _configuration = environment.toImplicitConfiguration();
-        //     }
-
-        //     await visitStylesheet(stylesheet);
-        //     children = loadsUserDefinedModules ? _addOutOfOrderImports() : [];
-
-        //     _importer = oldImporter;
-        //     _stylesheet = oldStylesheet;
-        //     if (loadsUserDefinedModules) {
-        //       _root = oldRoot;
-        //       _parent = oldParent;
-        //       _endOfImports = oldEndOfImports;
-        //       _outOfOrderImports = oldOutOfOrderImports;
-        //     }
-        //     _configuration = oldConfiguration;
-        //     _inDependency = oldInDependency;
-        //   });
-
-        //   // Create a dummy module with empty CSS and no extensions to make forwarded
-        //   // members available in the current import context and to combine all the
-        //   // CSS from modules used by [stylesheet].
-        //   var module = environment.toDummyModule();
-        //   _environment.importForwards(module);
-        //   if (loadsUserDefinedModules) {
-        //     if (module.transitivelyContainsCss) {
-        //       // If any transitively used module contains extensions, we need to
-        //       // clone all modules' CSS. Otherwise, it's possible that they'll be
-        //       // used or imported from another location that shouldn't have the same
-        //       // extensions applied.
-        //       await _combineCss(module,
-        //               clone: module.transitivelyContainsExtensions)
-        //           .accept(this);
-        //     }
-
-        //     var visitor = _ImportedCssVisitor(this);
-        //     for (var child in children) {
-        //       child.accept(visitor);
-        //     }
-        //   }
-
-        //   _activeModules.remove(url);
-        // });
+        // this todo should be unreachable, as we currently do not push
+        // to stylesheet.uses or stylesheet.forwards
         todo!()
     }
 
@@ -1009,25 +840,7 @@ impl<'a> Visitor<'a> {
         } else {
             self.import_nodes.push(node);
         }
-        // } else {
-        //     self.css_tree.add_child(node, Some(CssTree::ROOT))
-        // }
-        // } else if self.end_of_imports
 
-        // var node = ModifiableCssImport(
-        //     await _interpolationToValue(import.url), import.span,
-        //     modifiers: await import.modifiers
-        //         .andThen<Future<CssValue<String>>?>(_interpolationToValue));
-
-        // if (_parent != _root) {
-        //   _parent.addChild(node);
-        // } else if (_endOfImports == _root.children.length) {
-        //   _root.addChild(node);
-        //   _endOfImports++;
-        // } else {
-        //   (_outOfOrderImports ??= []).add(node);
-        // }
-        // todo!()
         Ok(())
     }
 
@@ -1741,7 +1554,7 @@ impl<'a> Visitor<'a> {
         // default=true
         scope_when: bool,
         callback: impl FnOnce(&mut Self) -> T,
-        // todo: Option
+        // todo: optional
         through: impl Fn(&CssStmt) -> bool,
     ) -> T {
         let parent_idx = self.add_child(parent, Some(through));
@@ -1964,25 +1777,21 @@ impl<'a> Visitor<'a> {
     }
 
     fn visit_while_stmt(&mut self, while_stmt: &AstWhile) -> SassResult<Option<Value>> {
-        self.with_scope::<SassResult<Option<Value>>>(
-            true,
-            while_stmt.has_declarations(),
-            |visitor| {
-                let mut result = None;
+        self.with_scope::<SassResult<Option<Value>>>(true, true, |visitor| {
+            let mut result = None;
 
-                'outer: while visitor.visit_expr(while_stmt.condition.clone())?.is_true() {
-                    for stmt in while_stmt.body.clone() {
-                        let val = visitor.visit_stmt(stmt)?;
-                        if val.is_some() {
-                            result = val;
-                            break 'outer;
-                        }
+            'outer: while visitor.visit_expr(while_stmt.condition.clone())?.is_true() {
+                for stmt in while_stmt.body.clone() {
+                    let val = visitor.visit_stmt(stmt)?;
+                    if val.is_some() {
+                        result = val;
+                        break 'outer;
                     }
                 }
+            }
 
-                Ok(result)
-            },
-        )
+            Ok(result)
+        })
     }
 
     fn visit_if_stmt(&mut self, if_stmt: AstIf) -> SassResult<Option<Value>> {
@@ -2019,8 +1828,7 @@ impl<'a> Visitor<'a> {
             return Ok(None);
         }
 
-        // todo:
-        // // Comments are allowed to appear between CSS imports.
+        // todo: Comments are allowed to appear between CSS imports
         // if (_parent == _root && _endOfImports == _root.children.length) {
         //   _endOfImports++;
         // }
@@ -2067,15 +1875,6 @@ impl<'a> Visitor<'a> {
                 if value != Value::Null {
                     return Ok(None);
                 }
-            }
-        }
-
-        if decl.is_global && !(*self.env.global_vars()).borrow().contains_key(&decl.name) {
-            // todo: deprecation: true
-            if self.env.at_root() {
-                self.emit_warning(Cow::Borrowed("As of Dart Sass 2.0.0, !global assignments won't be able to declare new variables.\n\nSince this assignment is at the root of the stylesheet, the !global flag is\nunnecessary and can safely be removed."), decl.span);
-            } else {
-                self.emit_warning(Cow::Borrowed("As of Dart Sass 2.0.0, !global assignments won't be able to declare new variables.\n\nRecommendation: add `${node.originalName}: null` at the stylesheet root."), decl.span);
             }
         }
 
@@ -2708,7 +2507,7 @@ impl<'a> Visitor<'a> {
                 Ok(SassCalculation::calc(args.remove(0)))
             }
             CalculationName::Min => SassCalculation::min(args, self.parser.options, span),
-            CalculationName::Max => SassCalculation::max(args, span),
+            CalculationName::Max => SassCalculation::max(args, self.parser.options, span),
             CalculationName::Clamp => {
                 let min = args.remove(0);
                 let value = if args.is_empty() {
@@ -2914,7 +2713,7 @@ impl<'a> Visitor<'a> {
         })
     }
 
-    // todo: superfluous clone and non-use of cow
+    // todo: superfluous taking `expr` by value
     fn serialize(&mut self, mut expr: Value, quote: QuoteKind, span: Span) -> SassResult<String> {
         if quote == QuoteKind::None {
             expr = expr.unquote();

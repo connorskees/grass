@@ -178,7 +178,7 @@ impl MediaQuery {
                 .iter()
                 .all(|feat| more_conditions.contains(feat))
             {
-                modifier = &this_modifier; // "not"
+                modifier = &this_modifier;
                 media_type = &this_type;
                 conditions = more_conditions.clone();
             } else {

@@ -121,37 +121,31 @@ error!(
     "Error: $limit: NaNdeg is not an int."
 );
 error!(
-    #[ignore = "we dont error here"]
     unitful_nan_min_first_arg,
     "@use \"sass:math\";\na {\n  color: min(math.acos(2), 1px);\n}\n",
     "Error: NaNdeg and 1px are incompatible."
 );
 error!(
-    #[ignore = "we don't error here"]
     unitful_nan_min_last_arg,
     "@use \"sass:math\";\na {\n  color: min(1px, math.acos(2));\n}\n",
     "Error: 1px and NaNdeg are incompatible."
 );
 error!(
-    #[ignore = "we dont error here"]
     unitful_nan_min_middle_arg,
     "@use \"sass:math\";\na {\n  color: min(1px, math.acos(2), 0);\n}\n",
     "Error: 1px and NaNdeg are incompatible."
 );
 error!(
-    #[ignore = "we dont error here"]
     unitful_nan_max_first_arg,
     "@use \"sass:math\";\na {\n  color: max(math.acos(2), 1px);\n}\n",
     "Error: NaNdeg and 1px are incompatible."
 );
 error!(
-    #[ignore = "we dont error here"]
     unitful_nan_max_last_arg,
     "@use \"sass:math\";\na {\n  color: max(1px, math.acos(2));\n}\n",
     "Error: 1px and NaNdeg are incompatible."
 );
 error!(
-    #[ignore = "we dont error here"]
     unitful_nan_max_middle_arg,
     "@use \"sass:math\";\na {\n  color: max(1px, math.acos(2), 0);\n}\n",
     "Error: 1px and NaNdeg are incompatible."

@@ -135,7 +135,7 @@ impl SassCalculation {
         })
     }
 
-    pub fn max(args: Vec<CalculationArg>, span: Span) -> SassResult<Value> {
+    pub fn max(args: Vec<CalculationArg>, options: &Options, span: Span) -> SassResult<Value> {
         let args = Self::simplify_arguments(args);
         if args.is_empty() {
             return Err(("max() must have at least one argument.", span).into());
@@ -173,7 +173,8 @@ impl SassCalculation {
                 as_slash: max.as_slash,
             },
             None => {
-                // todo: _verifyCompatibleNumbers(args);
+                Self::verify_compatible_numbers(&args, options, span)?;
+
                 Value::Calculation(SassCalculation {
                     name: CalculationName::Max,
                     args,

@@ -1811,7 +1811,8 @@ impl<'a, 'b> Parser<'a, 'b> {
             Some("include") => self.parse_include_rule(),
             Some("media") => self.parse_media_rule(start),
             Some("mixin") => self.parse_mixin_rule(start),
-            Some("-moz-document") => self.parse_moz_document_rule(name),
+            // todo: support -moz-document
+            // Some("-moz-document") => self.parse_moz_document_rule(name),
             Some("supports") => self.parse_supports_rule(),
             Some("use") => {
                 self.flags
@@ -2635,6 +2636,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             return Ok(DeclarationOrBuffer::Buffer(name_buffer));
         };
 
+        // todo: the parsing here is very difficult
         // = match self.parse_expression(None, None, None) {
         //     Ok(value) => {
         //         if self.looking_at_children() {
