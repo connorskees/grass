@@ -19,7 +19,7 @@ pub(crate) use calculation::*;
 pub(crate) use map::SassMap;
 pub(crate) use number::*;
 pub(crate) use sass_function::{SassFunction, UserDefinedFunction};
-pub(crate) use sass_number::{SassNumber, conversion_factor};
+pub(crate) use sass_number::{conversion_factor, SassNumber};
 
 mod arglist;
 mod calculation;
@@ -65,28 +65,24 @@ impl PartialEq for Value {
                 num: n,
                 unit,
                 as_slash: _,
-            } if !n.is_nan() => match other {
+            } => match other {
                 Value::Dimension {
                     num: n2,
                     unit: unit2,
                     as_slash: _,
-                } if !n.is_nan() => {
+                } => {
                     if !unit.comparable(unit2) {
-                        false
-                    } else if unit == unit2 {
-                        n == n2
-                    } else if unit == &Unit::None || unit2 == &Unit::None {
-                        false
-                    } else {
-                        *n == n2.convert(unit2, unit)
+                        return false;
                     }
+
+                    if (*unit2 == Unit::None || *unit == Unit::None) && unit != unit2 {
+                        return false;
+                    }
+
+                    *n == n2.convert(unit2, unit)
                 }
                 _ => false,
             },
-            Value::Dimension { num: n, .. } => {
-                debug_assert!(n.is_nan());
-                false
-            }
             Value::List(list1, sep1, brackets1) => match other {
                 Value::List(list2, sep2, brackets2) => {
                     if sep1 != sep2 || brackets1 != brackets2 || list1.len() != list2.len() {

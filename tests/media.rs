@@ -545,6 +545,22 @@ test!(
     }",
     "@media (url) {\n  a {\n    color: red;\n  }\n}\n"
 );
+test!(
+    #[ignore = "our is_invisible_check inside css tree is flawed here"]
+    media_does_not_split_when_child_rule_has_invisible_media,
+    "@media (min-width: 1px) {
+        .first {
+            font-weight: 100;
+
+            @media (min-width: 2px) {}
+        }
+
+        .second {
+            font-weight: 200;
+        }
+    }",
+    "@media (url) {\n  a {\n    color: red;\n  }\n}\n"
+);
 error!(
     media_query_has_quoted_closing_paren,
     r#"@media ('a)'w) {

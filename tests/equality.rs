@@ -177,6 +177,16 @@ test!(
     "a {\n  color: true;\n}\n"
 );
 test!(
+    eq_does_unit_conversion,
+    "a {\n  color: 1in==2.54cm;\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    ne_does_unit_conversion,
+    "a {\n  color: 1in!=2.54cm;\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
     arglist_unquoted_string_eq,
     "@function foo($a...) {
       @return $a == bar;

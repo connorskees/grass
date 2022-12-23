@@ -215,3 +215,11 @@ error!(
     style_at_toplevel_without_selector,
     "@at-root { color: red; }", "Error: expected \"{\"."
 );
+error!(
+    extend_inside_at_root_would_be_put_at_root_of_document,
+    "a {
+        @at-root {
+            @extend b;
+        }
+    }", "Error: @extend may only be used within style rules."
+);

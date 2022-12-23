@@ -142,6 +142,40 @@ test!(
     "a {\n  color: #ee0000;\n}\n"
 );
 test!(
+    lighten_percent,
+    "a {
+        color: lighten(crimson, 10%);
+    }",
+    "a {\n  color: #ed365b;\n}\n"
+);
+test!(
+    lighten_no_percent,
+    "a {
+        color: lighten(crimson, 10);
+    }",
+    "a {\n  color: #ed365b;\n}\n"
+);
+test!(
+    channels_after_lighten,
+    "a {
+        color: red(lighten(crimson, 10));
+        color: green(lighten(crimson, 10));
+        color: blue(lighten(crimson, 10));
+        color: hue(lighten(crimson, 10));
+        color: hue(crimson);
+        color: saturation(lighten(crimson, 10));
+        color: lightness(lighten(crimson, 10));
+    }",
+    "a {\n  color: 237;\n  color: 54;\n  color: 91;\n  color: 348deg;\n  color: 348deg;\n  color: 83.3333333333%;\n  color: 57.0588235294%;\n}\n"
+);
+error!(
+    lighten_nan,
+    "a {
+        color: lighten(crimson, (0/0));
+    }",
+    "Error: $amount: Expected NaN to be within 0 and 100."
+);
+test!(
     darken_named_args,
     "a {\n  color: darken($color: hsl(25, 100%, 80%), $amount: 30%);\n}\n",
     "a {\n  color: #ff6a00;\n}\n"
@@ -214,16 +248,14 @@ test!(
     "a {\n  color: hsl(0deg, 100%, 50%);\n}\n"
 );
 test!(
-    #[ignore = "new color format"]
     hsl_special_fn_4_arg_maintains_units,
     "a {\n  color: hsl(1, 0.02, 3%, max(0.4));\n}\n",
-    "a {\n  color: hsl(1, 0.02, 3%, max(0.4));\n}\n"
+    "a {\n  color: hsla(1deg, 0.02%, 3%, 0.4);\n}\n"
 );
 test!(
-    #[ignore = "new color format"]
     hsl_special_fn_3_arg_maintains_units,
     "a {\n  color: hsl(1, 0.02, max(0.4));\n}\n",
-    "a {\n  color: hsl(1, 0.02, max(0.4));\n}\n"
+    "a {\n  color: hsl(1deg, 0.02%, 0.4%);\n}\n"
 );
 test!(
     hsla_special_fn_1_arg_is_not_list,

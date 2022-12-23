@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::builtin::builtin_imports::*;
+use crate::{builtin::builtin_imports::*, serializer::serialize_number};
 
 use super::rgb::{function_string, parse_channels, percentage_or_unitless, ParsedChannels};
 
@@ -173,17 +173,7 @@ pub(crate) fn lightness(mut args: ArgumentResult, parser: &mut Visitor) -> SassR
 
 pub(crate) fn adjust_hue(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(2)?;
-    let color = match args.get_err(0, "color")? {
-        Value::Color(c) => c,
-        v => {
-            return Err((
-                format!("$color: {} is not a color.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
-
+    let color = args.get_err(0, "color")?.assert_color_with_name("color", args.span())?;
     let degrees = args
         .get_err(1, "degrees")?
         .assert_number_with_name("degrees", args.span())?
@@ -204,24 +194,12 @@ fn lighten(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> 
                 .into())
         }
     };
-    let amount = match args.get_err(1, "amount")? {
-        Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
-        Value::Dimension {
-            num: n,
-            unit: u,
-            as_slash: _,
-        } => bound!(args, "amount", n, u, 0, 100) / Number::from(100),
-        v => {
-            return Err((
-                format!(
-                    "$amount: {} is not a number.",
-                    v.to_css_string(args.span(), false)?
-                ),
-                args.span(),
-            )
-                .into())
-        }
-    };
+
+    let amount = args
+        .get_err(1, "amount")?
+        .assert_number_with_name("amount", args.span())?;
+    let amount = bound!(args, "amount", amount.num(), amount.unit, 0, 100) / Number(100.0);
+
     Ok(Value::Color(Box::new(color.lighten(amount))))
 }
 
@@ -261,11 +239,14 @@ fn darken(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
 fn saturate(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(2)?;
     if args.len() == 1 {
+        let amount = args
+            .get_err(0, "amount")?
+            .assert_number_with_name("amount", args.span())?;
+
         return Ok(Value::String(
             format!(
                 "saturate({})",
-                args.get_err(0, "amount")?
-                    .to_css_string(args.span(), false)?
+                serialize_number(&amount, parser.parser.options, args.span())?,
             ),
             QuoteKind::None,
         ));
@@ -296,10 +277,11 @@ fn saturate(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value>
             unit: u,
             as_slash: _,
         } => {
+            // todo: this branch should be superfluous/incorrect
             return Ok(Value::String(
                 format!("saturate({}{})", n.inspect(), u),
                 QuoteKind::None,
-            ))
+            ));
         }
         v => {
             return Err((

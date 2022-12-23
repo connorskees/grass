@@ -33,7 +33,7 @@ pub(crate) struct Number(pub f64);
 
 impl PartialEq for Number {
     fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0
+        fuzzy_equals(self.0, other.0)
     }
 }
 

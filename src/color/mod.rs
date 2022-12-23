@@ -358,7 +358,7 @@ impl Color {
 
         hue *= Number::from(60.0);
 
-        (hue, saturation, lightness, self.alpha())
+        (hue % Number(360.0), saturation, lightness, self.alpha())
     }
 
     pub fn adjust_hue(&self, degrees: Number) -> Self {

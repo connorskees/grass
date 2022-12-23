@@ -201,6 +201,12 @@ test!(
     "a {\n  color: inspect((1em / 1em) + (1px / 1em));\n}\n",
     "a {\n  color: 2px/em;\n}\n"
 );
+test!(
+    #[ignore = "we need to rewrite how we compare and convert units"]
+    complex_units_with_same_denom_and_comparable_numer_are_comparable,
+    "a {\n  color: comparable((23in/2fu), (23cm/2fu));\n}\n",
+    "a {\n  color: true;\n}\n"
+);
 error!(
     display_single_div_with_none_numerator,
     "a {\n  color: (1 / 1em);\n}\n", "Error: 1em^-1 isn't a valid CSS value."

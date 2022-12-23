@@ -631,3 +631,7 @@ error!(
     interpolated_string_is_not_color,
     "a {\n  color: red(r#{e}d);\n}\n", "Error: $color: red is not a color."
 );
+error!(
+    single_arg_saturate_expects_number,
+    "a {\n  color: saturate(red);\n}\n", "Error: $amount: red is not a number."
+);

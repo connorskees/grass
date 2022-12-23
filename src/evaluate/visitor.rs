@@ -1321,7 +1321,7 @@ impl<'a> Visitor<'a> {
     }
 
     fn visit_extend_rule(&mut self, extend_rule: AstExtendRule) -> SassResult<Option<Value>> {
-        if self.style_rule_ignoring_at_root.is_none() || self.declaration_name.is_some() {
+        if !self.style_rule_exists() || self.declaration_name.is_some() {
             return Err((
                 "@extend may only be used within style rules.",
                 extend_rule.span,
@@ -2252,7 +2252,14 @@ impl<'a> Visitor<'a> {
                 })
             }
             v => {
-                return Err((format!("Variable keyword arguments must be a map (was {}).", v.inspect(arguments.span)?), arguments.span).into());
+                return Err((
+                    format!(
+                        "Variable keyword arguments must be a map (was {}).",
+                        v.inspect(arguments.span)?
+                    ),
+                    arguments.span,
+                )
+                    .into());
             }
         }
     }

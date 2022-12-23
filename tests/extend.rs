@@ -1935,6 +1935,28 @@ error!(
     }",
     "Error: Parent selectors aren't allowed here."
 );
+error!(
+    #[ignore = "we do not currently respect this"]
+    extend_across_media_boundary,
+    "a {
+        display: none;
+    }
+
+    @media only screen and (min-width:300px) {
+        a {
+            @extend a;
+        }
+    }",
+    "Error: You may not @extend selectors across media queries."
+);
+error!(
+    #[ignore = "we do not error for this"]
+    extend_target_does_not_exist,
+    "a {
+        @extend dne;
+    }",
+    "Error: The target selector was not found."
+);
 
 // todo: extend_loop (massive test)
 // todo: extend tests in folders
