@@ -362,24 +362,28 @@ pub(crate) fn mul(left: Value, right: Value, options: &Options, span: Span) -> S
                 unit: unit2,
                 as_slash: _,
             } => {
-                if unit == Unit::None {
-                    Value::Dimension {
-                        num: num * num2,
-                        unit: unit2,
-                        as_slash: None,
-                    }
-                } else if unit2 == Unit::None {
-                    Value::Dimension {
+                if unit2 == Unit::None {
+                    return Ok(Value::Dimension {
                         num: num * num2,
                         unit,
                         as_slash: None,
-                    }
-                } else {
-                    Value::Dimension {
-                        num: num * num2,
-                        unit: unit * unit2,
-                        as_slash: None,
-                    }
+                    });
+                }
+
+                let n = SassNumber {
+                    num: num.0,
+                    unit,
+                    as_slash: None,
+                } * SassNumber {
+                    num: num2.0,
+                    unit: unit2,
+                    as_slash: None,
+                };
+
+                Value::Dimension {
+                    num: n.num(),
+                    unit: n.unit,
+                    as_slash: None,
                 }
             }
             _ => {
@@ -471,44 +475,28 @@ pub(crate) fn div(left: Value, right: Value, options: &Options, span: Span) -> S
                 unit: unit2,
                 as_slash: as_slash2,
             } => {
-                // `unit(1em / 1em)` => `""`
-                if unit == unit2 {
-                    Value::Dimension {
-                        num: num / num2,
-                        unit: Unit::None,
-                        as_slash: None,
-                    }
-
-                // `unit(1 / 1em)` => `"em^-1"`
-                } else if unit == Unit::None {
-                    Value::Dimension {
-                        num: num / num2,
-                        unit: Unit::None / unit2,
-                        as_slash: None,
-                    }
-
-                // `unit(1em / 1)` => `"em"`
-                } else if unit2 == Unit::None {
-                    Value::Dimension {
+                if unit2 == Unit::None {
+                    return Ok(Value::Dimension {
                         num: num / num2,
                         unit,
                         as_slash: None,
-                    }
+                    });
+                }
 
-                // `unit(1in / 1px)` => `""`
-                } else if unit.comparable(&unit2) {
-                    Value::Dimension {
-                        num: num / num2.convert(&unit2, &unit),
-                        unit: Unit::None,
-                        as_slash: None,
-                    }
-                // `unit(1em / 1px)` => `"em/px"`
-                } else {
-                    Value::Dimension {
-                        num: num / num2,
-                        unit: unit / unit2,
-                        as_slash: None,
-                    }
+                let n = SassNumber {
+                    num: num.0,
+                    unit,
+                    as_slash: None,
+                } / SassNumber {
+                    num: num2.0,
+                    unit: unit2,
+                    as_slash: None,
+                };
+
+                Value::Dimension {
+                    num: n.num(),
+                    unit: n.unit,
+                    as_slash: None,
                 }
             }
             _ => Value::String(

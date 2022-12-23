@@ -191,6 +191,16 @@ test!(
     "a {\n  color: ((1px*1px) / 1px);\n}\n",
     "a {\n  color: 1px;\n}\n"
 );
+test!(
+    removes_comparable_unit_from_complex_in_division_and_does_conversion,
+    "a {\n  color: ((1in*1in) / 1cm);\n}\n",
+    "a {\n  color: 2.54in;\n}\n"
+);
+test!(
+    add_complex_div_units,
+    "a {\n  color: inspect((1em / 1em) + (1px / 1em));\n}\n",
+    "a {\n  color: 2px/em;\n}\n"
+);
 error!(
     display_single_div_with_none_numerator,
     "a {\n  color: (1 / 1em);\n}\n", "Error: 1em^-1 isn't a valid CSS value."

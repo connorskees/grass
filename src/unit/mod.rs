@@ -108,6 +108,45 @@ pub(crate) enum Unit {
         denom: Vec<Unit>,
     },
 }
+
+pub(crate) fn are_any_convertible(units1: &[Unit], units2: &[Unit]) -> bool {
+    for unit1 in units1 {
+        for unit2 in units2 {
+            if unit1.comparable(unit2) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+impl Unit {
+    pub fn new(mut numer: Vec<Self>, denom: Vec<Self>) -> Self {
+        if denom.is_empty() && numer.is_empty() {
+            Unit::None
+        } else if denom.is_empty() && numer.len() == 1 {
+            numer.pop().unwrap()
+        } else {
+            Unit::Complex { numer, denom }
+        }
+    }
+
+    pub fn numer_and_denom(self) -> (Vec<Unit>, Vec<Unit>) {
+        match self {
+            Self::Complex { numer, denom } => (numer, denom),
+            Self::None => (Vec::new(), Vec::new()),
+            v => (vec![v], Vec::new()),
+        }
+    }
+
+    pub fn invert(self) -> Self {
+        let (numer, denom) = self.numer_and_denom();
+
+        Self::new(denom, numer)
+    }
+}
+
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub(crate) enum UnitKind {
     Absolute,
@@ -121,150 +160,6 @@ pub(crate) enum UnitKind {
     None,
 }
 
-impl Mul<Unit> for Unit {
-    type Output = Unit;
-    fn mul(self, rhs: Unit) -> Self::Output {
-        if self == Unit::None {
-            return rhs;
-        } else if rhs == Unit::None {
-            return self;
-        }
-
-        match (self, rhs) {
-            (
-                Unit::Complex {
-                    numer: mut numer1,
-                    denom: mut denom1,
-                },
-                Unit::Complex {
-                    numer: mut numer2,
-                    denom: mut denom2,
-                },
-            ) => {
-                numer1.append(&mut numer2);
-                denom1.append(&mut denom2);
-
-                Unit::Complex {
-                    numer: numer1,
-                    denom: denom1,
-                }
-            }
-            (
-                Unit::Complex {
-                    mut numer,
-                    mut denom,
-                },
-                other,
-            ) => {
-                if let Some(pos_of_other) = denom.iter().position(|denom_unit| denom_unit == &other)
-                {
-                    denom.remove(pos_of_other);
-                } else {
-                    numer.push(other);
-                }
-
-                if numer.is_empty() && denom.is_empty() {
-                    return Unit::None;
-                }
-
-                Unit::Complex { numer, denom }
-            }
-            (other, Unit::Complex { mut numer, denom }) => {
-                numer.insert(0, other);
-                Unit::Complex { numer, denom }
-            }
-            (lhs, rhs) => Unit::Complex {
-                numer: vec![lhs, rhs],
-                denom: Vec::new(),
-            },
-        }
-        .simplify()
-    }
-}
-
-impl Div<Unit> for Unit {
-    type Output = Unit;
-    fn div(self, rhs: Unit) -> Self::Output {
-        if rhs == Unit::None {
-            return self;
-        }
-
-        match (self, rhs) {
-            (
-                Unit::Complex {
-                    numer: mut numer1,
-                    denom: mut denom1,
-                },
-                Unit::Complex {
-                    numer: mut numer2,
-                    denom: mut denom2,
-                },
-            ) => {
-                todo!()
-                // numer1.append(&mut numer2);
-                // denom1.append(&mut denom2);
-
-                // Unit::Complex {
-                //     numer: numer1,
-                //     denom: denom1,
-                // }
-            }
-            (
-                Unit::Complex {
-                    mut numer,
-                    mut denom,
-                },
-                other,
-            ) => {
-                if let Some(pos_of_other) = numer.iter().position(|numer_unit| numer_unit == &other)
-                {
-                    numer.remove(pos_of_other);
-                } else {
-                    denom.push(other);
-                }
-
-                if numer.is_empty() && denom.is_empty() {
-                    return Unit::None;
-                }
-
-                Unit::Complex { numer, denom }
-            }
-            (
-                other,
-                Unit::Complex {
-                    mut numer,
-                    mut denom,
-                },
-            ) => {
-                if let Some(pos_of_other) = numer.iter().position(|numer_unit| numer_unit == &other)
-                {
-                    numer.remove(pos_of_other);
-                } else {
-                    denom.insert(0, other);
-                }
-
-                if numer.is_empty() && denom.is_empty() {
-                    return Unit::None;
-                }
-
-                Unit::Complex {
-                    numer: denom,
-                    denom: numer,
-                }
-            }
-            (Unit::None, rhs) => Unit::Complex {
-                numer: Vec::new(),
-                denom: vec![rhs],
-            },
-            (lhs, rhs) => Unit::Complex {
-                numer: vec![lhs],
-                denom: vec![rhs],
-            },
-        }
-        .simplify()
-    }
-}
-
 impl Unit {
     fn simplify(self) -> Self {
         match self {
@@ -276,7 +171,7 @@ impl Unit {
     }
 
     pub fn is_complex(&self) -> bool {
-        matches!(self, Unit::Complex { .. })
+        matches!(self, Unit::Complex { numer, denom } if numer.len() != 1 || !denom.is_empty())
     }
 
     pub fn comparable(&self, other: &Unit) -> bool {
@@ -399,7 +294,10 @@ impl fmt::Display for Unit {
             Unit::Unknown(s) => write!(f, "{}", s),
             Unit::None => Ok(()),
             Unit::Complex { numer, denom } => {
-                debug_assert!(numer.len() > 1 || !denom.is_empty());
+                debug_assert!(
+                    numer.len() > 1 || !denom.is_empty(),
+                    "unsimplified complex unit"
+                );
 
                 let numer_rendered = numer
                     .iter()

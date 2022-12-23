@@ -8,15 +8,21 @@ use crate::builtin::{
 
 #[cfg(feature = "random")]
 use crate::builtin::math::random;
+use crate::value::conversion_factor;
 
 fn coerce_to_rad(num: f64, unit: Unit) -> f64 {
-    SassNumber {
-        num,
+    debug_assert!(matches!(
         unit,
-        as_slash: None,
+        Unit::None | Unit::Rad | Unit::Deg | Unit::Grad | Unit::Turn
+    ));
+
+    if unit == Unit::None {
+        return num;
     }
-    .convert(&Unit::Rad)
-    .num
+
+    let factor = conversion_factor(&unit, &Unit::Rad).unwrap();
+
+    num * factor
 }
 
 fn clamp(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {

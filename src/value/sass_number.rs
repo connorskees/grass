@@ -5,7 +5,7 @@ use codemap::Span;
 use crate::{
     error::SassResult,
     serializer::inspect_number,
-    unit::{known_compatibilities_by_unit, Unit, UNIT_CONVERSION_TABLE},
+    unit::{are_any_convertible, known_compatibilities_by_unit, Unit, UNIT_CONVERSION_TABLE},
     Options,
 };
 
@@ -91,76 +91,134 @@ impl Sub<SassNumber> for SassNumber {
 impl Mul<SassNumber> for SassNumber {
     type Output = SassNumber;
     fn mul(self, rhs: SassNumber) -> Self::Output {
-        if self.unit == Unit::None {
-            SassNumber {
-                num: self.num * rhs.num,
-                unit: rhs.unit,
-                as_slash: None,
-            }
-        } else if rhs.unit == Unit::None {
-            SassNumber {
+        if rhs.unit == Unit::None {
+            return SassNumber {
                 num: self.num * rhs.num,
                 unit: self.unit,
                 as_slash: None,
-            }
-        } else {
-            SassNumber {
-                num: self.num * rhs.num,
-                unit: self.unit * rhs.unit,
-                as_slash: None,
-            }
+            };
         }
+
+        self.multiply_units(self.num * rhs.num, rhs.unit)
     }
 }
 
 impl Div<SassNumber> for SassNumber {
     type Output = SassNumber;
     fn div(self, rhs: SassNumber) -> Self::Output {
-        // `unit(1em / 1em)` => `""`
-        if self.unit == rhs.unit {
-            SassNumber {
-                num: self.num / rhs.num,
-                unit: Unit::None,
-                as_slash: None,
-            }
-
-        // `unit(1 / 1em)` => `"em^-1"`
-        } else if self.unit == Unit::None {
-            SassNumber {
-                num: self.num / rhs.num,
-                unit: Unit::None / rhs.unit,
-                as_slash: None,
-            }
-
-        // `unit(1em / 1)` => `"em"`
-        } else if rhs.unit == Unit::None {
-            SassNumber {
+        if rhs.unit == Unit::None {
+            return SassNumber {
                 num: self.num / rhs.num,
                 unit: self.unit,
                 as_slash: None,
-            }
-
-        // `unit(1in / 1px)` => `""`
-        } else if self.unit.comparable(&rhs.unit) {
-            SassNumber {
-                num: self.num / Number(rhs.num).convert(&rhs.unit, &self.unit).0,
-                unit: Unit::None,
-                as_slash: None,
-            }
-            // `unit(1em / 1px)` => `"em/px"`
-        } else {
-            SassNumber {
-                num: self.num / rhs.num,
-                unit: self.unit / rhs.unit,
-                as_slash: None,
-            }
+            };
         }
+
+        self.multiply_units(self.num / rhs.num, rhs.unit.invert())
     }
 }
 
 impl Eq for SassNumber {}
 
+pub(crate) fn conversion_factor(from: &Unit, to: &Unit) -> Option<f64> {
+    if from == to {
+        return Some(1.0);
+    }
+
+    UNIT_CONVERSION_TABLE.get(to)?.get(from).copied()
+}
+
 impl SassNumber {
+    pub fn multiply_units(&self, mut num: f64, other_unit: Unit) -> SassNumber {
+        let (numer_units, denom_units) = self.unit.clone().numer_and_denom();
+        let (other_numer, other_denom) = other_unit.numer_and_denom();
+
+        if numer_units.is_empty() {
+            if other_denom.is_empty() && !are_any_convertible(&denom_units, &other_numer) {
+                return SassNumber {
+                    num,
+                    unit: Unit::new(other_numer, denom_units),
+                    as_slash: None,
+                };
+            } else if denom_units.is_empty() {
+                return SassNumber {
+                    num,
+                    unit: Unit::new(other_numer, other_denom),
+                    as_slash: None,
+                };
+            }
+        } else if other_numer.is_empty() {
+            if other_denom.is_empty() {
+                return SassNumber {
+                    num,
+                    unit: Unit::new(numer_units, other_denom),
+                    as_slash: None,
+                };
+            } else if denom_units.is_empty() && !are_any_convertible(&numer_units, &other_denom) {
+                return SassNumber {
+                    num,
+                    unit: Unit::new(numer_units, other_denom),
+                    as_slash: None,
+                };
+            }
+        }
+
+        let mut new_numer = Vec::new();
+
+        let mut mutable_other_denom = other_denom;
+
+        for numer in numer_units {
+            let mut has_removed = false;
+            mutable_other_denom.retain(|denom| {
+                if has_removed {
+                    return true;
+                }
+
+                if let Some(factor) = conversion_factor(denom, &numer) {
+                    num /= factor;
+                    has_removed = true;
+                    return false;
+                }
+
+                true
+            });
+
+            if !has_removed {
+                new_numer.push(numer);
+            }
+        }
+
+        let mut mutable_denom = denom_units;
+        for numer in other_numer {
+            let mut has_removed = false;
+            mutable_denom.retain(|denom| {
+                if has_removed {
+                    return true;
+                }
+
+                if let Some(factor) = conversion_factor(denom, &numer) {
+                    num /= factor;
+                    has_removed = true;
+                    return false;
+                }
+
+                true
+            });
+
+            if !has_removed {
+                new_numer.push(numer);
+            }
+        }
+
+        mutable_denom.append(&mut mutable_other_denom);
+
+        SassNumber {
+            num,
+            unit: Unit::new(new_numer, mutable_denom),
+            as_slash: None,
+        }
+    }
+
     pub fn assert_no_units(&self, name: &'static str, span: Span) -> SassResult<()> {
         if self.unit == Unit::None {
             Ok(())
@@ -201,21 +259,5 @@ impl SassNumber {
 
     pub fn unit(&self) -> &Unit {
         &self.unit
-    }
-
-    /// Invariants: `from.comparable(&to)` must be true
-    pub fn convert(mut self, to: &Unit) -> Self {
-        let from = &self.unit;
-        debug_assert!(from.comparable(to));
-
-        if from == &Unit::None || to == &Unit::None {
-            self.unit = self.unit * to.clone();
-            return self;
-        }
-
-        self.num *= UNIT_CONVERSION_TABLE[to][from];
-        self.unit = self.unit * to.clone();
-
-        self
     }
 }

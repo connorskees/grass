@@ -19,7 +19,7 @@ pub(crate) use calculation::*;
 pub(crate) use map::SassMap;
 pub(crate) use number::*;
 pub(crate) use sass_function::{SassFunction, UserDefinedFunction};
-pub(crate) use sass_number::SassNumber;
+pub(crate) use sass_number::{SassNumber, conversion_factor};
 
 mod arglist;
 mod calculation;
