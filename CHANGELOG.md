@@ -36,15 +36,16 @@ a {
   -webkit-scrollbar: red;
 }
 ```
-- always emit `rgb` or `rgba` for colors declared as such in expanded mode
+- always emit `rgb`/`rgba`/`hsl`/`hsla` for colors declared as such in expanded mode
 - more efficiently compress colors in compressed mode
 - treat `:where` the same as `:is` in extension
 - support "import-only" files
+- treat `@elseif` the same as `@else if`
+- implement division of non-comparable units and feature complete support for complex units
 
 UPCOMING:
 
-- implement special `@extend` and `@media` interactions
-- implement division of non-comparable units
+- error when `@extend` is used across `@media` boundaries
 - more robust support for NaN in builtin functions
 - support the indented syntax
 
