@@ -11,9 +11,6 @@ mod builtin_imports {
 
     pub(crate) use codemap::{Span, Spanned};
 
-    pub(crate) use num_bigint::BigInt;
-    pub(crate) use num_traits::ToPrimitive;
-
     #[cfg(feature = "random")]
     pub(crate) use rand::{distributions::Alphanumeric, thread_rng, Rng};
 

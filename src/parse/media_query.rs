@@ -1,7 +1,4 @@
-use crate::{
-    ast::{MediaQuery},
-    error::SassResult,
-};
+use crate::{ast::MediaQuery, error::SassResult};
 
 use super::Parser;
 

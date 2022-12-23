@@ -495,11 +495,11 @@ impl Color {
 impl Color {
     pub fn to_ie_hex_str(&self) -> String {
         format!(
-            "#{:X}{:X}{:X}{:X}",
-            (self.alpha() * Number::from(255.0)).round().to_integer(),
-            self.red().to_integer(),
-            self.green().to_integer(),
-            self.blue().to_integer()
+            "#{:02X}{:02X}{:02X}{:02X}",
+            fuzzy_round(self.alpha().0 * 255.0) as u8,
+            self.red().0 as u8,
+            self.green().0 as u8,
+            self.blue().0 as u8
         )
     }
 }

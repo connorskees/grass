@@ -440,8 +440,6 @@ impl<'a> Visitor<'a> {
             false,
         );
 
-        // let parent_idx = self.css_tree.add_stmt(css_supports_rule, self.parent);
-
         let children = supports_rule.children;
 
         self.with_parent::<SassResult<()>>(
@@ -465,8 +463,6 @@ impl<'a> Visitor<'a> {
                         body: Vec::new(),
                         is_group_end: false,
                     };
-
-                    // let parent_idx = visitor.css_tree.add_stmt(ruleset, visitor.parent);
 
                     visitor.with_parent::<SassResult<()>>(
                         ruleset,
@@ -1496,8 +1492,6 @@ impl<'a> Visitor<'a> {
             false,
         );
 
-        // let parent_idx = self.css_tree.add_stmt(media_rule, self.parent);
-
         self.with_parent::<SassResult<()>>(
             media_rule,
             true,
@@ -1523,8 +1517,6 @@ impl<'a> Visitor<'a> {
                                 body: Vec::new(),
                                 is_group_end: false,
                             };
-
-                            // let parent_idx = visitor.css_tree.add_stmt(ruleset, visitor.parent);
 
                             visitor.with_parent::<SassResult<()>>(
                                 ruleset,
@@ -1650,8 +1642,6 @@ impl<'a> Visitor<'a> {
             false,
         );
 
-        // let parent_idx = self.css_tree.add_stmt(stmt, self.parent);
-
         self.with_parent::<SassResult<()>>(
             stmt,
             true,
@@ -1673,8 +1663,6 @@ impl<'a> Visitor<'a> {
                         body: Vec::new(),
                         is_group_end: false,
                     };
-
-                    // let parent_idx = visitor.css_tree.add_stmt(style_rule, visitor.parent);
 
                     visitor.with_parent::<SassResult<()>>(
                         style_rule,
@@ -1798,24 +1786,7 @@ impl<'a> Visitor<'a> {
                     .unwrap();
                 parent = self.css_tree.add_child(parent_node, grandparent);
             }
-
-            //   if (parent.hasFollowingSibling) {
-            //     // A node with siblings must have a parent
-            //     var grandparent = parent.parent!;
-            //     parent = parent.copyWithoutChildren();
-            //     grandparent.addChild(parent);
-            //   }
         }
-        //     var parent = _parent;
-        // if (through != null) {
-        //   while (through(parent)) {
-        //     var grandparent = parent.parent;
-        //     if (grandparent == null) {
-        //       throw ArgumentError(
-        //           "through() must return false for at least one parent of $node.");
-        //     }
-        //     parent = grandparent;
-        //   }
 
         self.css_tree.add_child(node, parent)
     }

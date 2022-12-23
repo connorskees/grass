@@ -1,10 +1,16 @@
 use std::ops::{Add, Div, Mul, Sub};
 
-use crate::unit::{known_compatibilities_by_unit, Unit, UNIT_CONVERSION_TABLE};
+use codemap::Span;
+
+use crate::{
+    error::SassResult,
+    serializer::inspect_number,
+    unit::{known_compatibilities_by_unit, Unit, UNIT_CONVERSION_TABLE},
+    Options,
+};
 
 use super::Number;
 
-// num, unit, as_slash
 // todo: is as_slash included in eq
 #[derive(Debug, Clone)]
 pub(crate) struct SassNumber {
@@ -155,6 +161,21 @@ impl Div<SassNumber> for SassNumber {
 impl Eq for SassNumber {}
 
 impl SassNumber {
+    pub fn assert_no_units(&self, name: &'static str, span: Span) -> SassResult<()> {
+        if self.unit == Unit::None {
+            Ok(())
+        } else {
+            Err((
+                format!(
+                    "${name}: Expected {} to have no units.",
+                    inspect_number(self, &Options::default(), span)?
+                ),
+                span,
+            )
+                .into())
+        }
+    }
+
     pub fn is_comparable_to(&self, other: &Self) -> bool {
         self.unit.comparable(&other.unit)
     }

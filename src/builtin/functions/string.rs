@@ -72,6 +72,9 @@ pub(crate) fn unquote(mut args: ArgumentResult, parser: &mut Visitor) -> SassRes
 
 pub(crate) fn str_slice(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(3)?;
+
+    let span = args.span();
+
     let (string, quotes) = match args.get_err(0, "string")? {
         Value::String(s, q) => (s, q),
         v => {
@@ -82,118 +85,46 @@ pub(crate) fn str_slice(mut args: ArgumentResult, parser: &mut Visitor) -> SassR
                 .into())
         }
     };
+
     let str_len = string.chars().count();
-    let start = match args.get_err(1, "start-at")? {
-        Value::Dimension {
-            num: n,
-            unit: Unit::None,
-            ..
-        } if n.is_nan() => return Err(("NaN is not an int.", args.span()).into()),
-        Value::Dimension {
-            num: n,
-            unit: Unit::None,
-            as_slash: _,
-        } if n.is_decimal() => {
-            return Err((format!("{} is not an int.", n.inspect()), args.span()).into())
-        }
-        Value::Dimension {
-            num: n,
-            unit: Unit::None,
-            as_slash: _,
-        } if n.is_zero() => 1_usize,
-        Value::Dimension {
-            num: n,
-            unit: Unit::None,
-            as_slash: _,
-        } if n.is_positive() => n.to_integer().to_usize().unwrap_or(str_len + 1),
-        Value::Dimension {
-            num: n,
-            unit: Unit::None,
-            as_slash: _,
-        } if n < -Number::from(str_len) => 1_usize,
-        Value::Dimension {
-            num: n,
-            unit: Unit::None,
-            as_slash: _,
-        } => (n.to_integer() + BigInt::from(str_len + 1))
-            .to_usize()
-            .unwrap(),
-        v @ Value::Dimension { .. } => {
-            return Err((
-                format!(
-                    "$start-at: Expected {} to have no units.",
-                    v.inspect(args.span())?
-                ),
-                args.span(),
-            )
-                .into())
-        }
-        v => {
-            return Err((
-                format!("$start-at: {} is not a number.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
-    let mut end = match args.default_arg(2, "end-at", Value::Null) {
-        Value::Dimension {
-            num: n,
-            unit: Unit::None,
-            ..
-        } if n.is_nan() => return Err(("NaN is not an int.", args.span()).into()),
-        Value::Dimension {
-            num: n,
-            unit: Unit::None,
-            as_slash: _,
-        } if n.is_decimal() => {
-            return Err((format!("{} is not an int.", n.inspect()), args.span()).into())
-        }
-        Value::Dimension {
-            num: n,
-            unit: Unit::None,
-            as_slash: _,
-        } if n.is_zero() => 0_usize,
-        Value::Dimension {
-            num: n,
-            unit: Unit::None,
-            as_slash: _,
-        } if n.is_positive() => n.to_integer().to_usize().unwrap_or(str_len + 1),
-        Value::Dimension {
-            num: n,
-            unit: Unit::None,
-            as_slash: _,
-        } if n < -Number::from(str_len) => 0_usize,
-        Value::Dimension {
-            num: n,
-            unit: Unit::None,
-            as_slash: _,
-        } => (n.to_integer() + BigInt::from(str_len + 1))
-            .to_usize()
-            .unwrap_or(str_len + 1),
-        v @ Value::Dimension { .. } => {
-            return Err((
-                format!(
-                    "$end-at: Expected {} to have no units.",
-                    v.inspect(args.span())?
-                ),
-                args.span(),
-            )
-                .into())
-        }
-        Value::Null => str_len,
-        v => {
-            return Err((
-                format!("$end-at: {} is not a number.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
+
+    let start = args
+        .get_err(1, "start-at")?
+        .assert_number_with_name("start-at", span)?;
+    start.assert_no_units("start-at", span)?;
+
+    let start = start.num().assert_int(span)?;
+
+    let start = if start == 0 {
+        1
+    } else if start > 0 {
+        (start as usize).min(str_len + 1) as usize
+    } else {
+        (start + str_len as i32 + 1).max(1) as usize
     };
 
-    if end > str_len {
-        end = str_len;
+    let end = args
+        .default_arg(
+            2,
+            "end-at",
+            Value::Dimension {
+                num: Number(-1.0),
+                unit: Unit::None,
+                as_slash: None,
+            },
+        )
+        // todo: tidy arg ordering here
+        .assert_number_with_name("end-at", span)?;
+
+    end.assert_no_units("end-at", span)?;
+
+    let mut end = end.num().assert_int(span)?;
+
+    if end < 0 {
+        end += str_len as i32 + 1;
     }
+
+    let end = (end.max(0) as usize).min(str_len + 1);
 
     if start > end || start > str_len {
         Ok(Value::String(String::new(), quotes))
@@ -245,12 +176,14 @@ pub(crate) fn str_index(mut args: ArgumentResult, parser: &mut Visitor) -> SassR
 
 pub(crate) fn str_insert(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(3)?;
+    let span = args.span();
+
     let (s1, quotes) = match args.get_err(0, "string")? {
         Value::String(i, q) => (i, q),
         v => {
             return Err((
-                format!("$string: {} is not a string.", v.inspect(args.span())?),
-                args.span(),
+                format!("$string: {} is not a string.", v.inspect(span)?),
+                span,
             )
                 .into())
         }
@@ -260,53 +193,18 @@ pub(crate) fn str_insert(mut args: ArgumentResult, parser: &mut Visitor) -> Sass
         Value::String(i, _) => i,
         v => {
             return Err((
-                format!("$insert: {} is not a string.", v.inspect(args.span())?),
-                args.span(),
+                format!("$insert: {} is not a string.", v.inspect(span)?),
+                span,
             )
                 .into())
         }
     };
 
-    let index = match args.get_err(2, "index")? {
-        Value::Dimension {
-            num: n,
-            unit: Unit::None,
-            ..
-        } if n.is_nan() => return Err(("$index: NaN is not an int.", args.span()).into()),
-        Value::Dimension {
-            num: n,
-            unit: Unit::None,
-            as_slash: _,
-        } if n.is_decimal() => {
-            return Err((
-                format!("$index: {} is not an int.", n.inspect()),
-                args.span(),
-            )
-                .into())
-        }
-        Value::Dimension {
-            num: n,
-            unit: Unit::None,
-            as_slash: _,
-        } => n,
-        v @ Value::Dimension { .. } => {
-            return Err((
-                format!(
-                    "$index: Expected {} to have no units.",
-                    v.inspect(args.span())?
-                ),
-                args.span(),
-            )
-                .into())
-        }
-        v => {
-            return Err((
-                format!("$index: {} is not a number.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
+    let index = args
+        .get_err(2, "index")?
+        .assert_number_with_name("index", span)?;
+    index.assert_no_units("index", span)?;
+    let index_int = index.num().assert_int_with_name("index", span)?;
 
     if s1.is_empty() {
         return Ok(Value::String(substr, quotes));
@@ -330,26 +228,13 @@ pub(crate) fn str_insert(mut args: ArgumentResult, parser: &mut Visitor) -> Sass
             .collect::<String>()
     };
 
-    let string = if index > Number(0.0) {
-        insert(
-            index
-                .to_integer()
-                .to_usize()
-                .unwrap_or(len + 1)
-                .min(len + 1)
-                - 1,
-            s1,
-            &substr,
-        )
-    } else if index.is_zero() {
+    let string = if index_int > 0 {
+        insert((index_int as usize - 1).min(len), s1, &substr)
+    } else if index_int == 0 {
         insert(0, s1, &substr)
     } else {
-        let idx = index.abs().to_integer().to_usize().unwrap_or(len + 1);
-        if idx > len {
-            insert(0, s1, &substr)
-        } else {
-            insert(len - idx + 1, s1, &substr)
-        }
+        let idx = (len as i32 + index_int + 1).max(0) as usize;
+        insert(idx, s1, &substr)
     };
 
     Ok(Value::String(string, quotes))

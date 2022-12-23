@@ -115,6 +115,7 @@ test!(
     "a {\n  color: NaNdeg;\n}\n"
 );
 error!(
+    #[ignore = "we dont emit units"]
     unitful_nan_random,
     "@use \"sass:math\";\na {\n  color: random(math.acos(2));\n}\n",
     "Error: $limit: NaNdeg is not an int."

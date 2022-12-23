@@ -13,9 +13,6 @@ use crate::{
 };
 
 use codemap::Span;
-use integer::Integer;
-
-mod integer;
 
 const PRECISION: i32 = 10;
 
@@ -125,12 +122,12 @@ impl Number {
     pub fn assert_int_with_name(self, name: &'static str, span: Span) -> SassResult<i32> {
         match fuzzy_as_int(self.0) {
             Some(i) => Ok(i),
-            None => Err((format!("${name} is not an int."), span).into()),
+            None => Err((
+                format!("${name}: {} is not an int.", self.to_string(false)),
+                span,
+            )
+                .into()),
         }
-    }
-
-    pub fn to_integer(self) -> Integer {
-        Integer::Small(self.0 as i64)
     }
 
     pub fn small_ratio<A: Into<i64>, B: Into<i64>>(a: A, b: B) -> Self {

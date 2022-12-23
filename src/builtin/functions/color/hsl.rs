@@ -48,11 +48,11 @@ fn hsl_3_args(
         ));
     }
 
-    let hue = hue.assert_number_with_name(span, "hue")?;
-    let saturation = saturation.assert_number_with_name(span, "saturation")?;
-    let lightness = lightness.assert_number_with_name(span, "lightness")?;
+    let hue = hue.assert_number_with_name("hue", span)?;
+    let saturation = saturation.assert_number_with_name("saturation", span)?;
+    let lightness = lightness.assert_number_with_name("lightness", span)?;
     let alpha = percentage_or_unitless(
-        &alpha.assert_number_with_name(span, "alpha")?,
+        &alpha.assert_number_with_name("alpha", span)?,
         1.0,
         "alpha",
         span,
@@ -397,6 +397,10 @@ pub(crate) fn invert(mut args: ArgumentResult, parser: &mut Visitor) -> SassResu
     args.max_args(2)?;
     let weight = match args.get(1, "weight") {
         Some(Spanned {
+            node: Value::Dimension { num: n, .. },
+            ..
+        }) if n.is_nan() => todo!(),
+        Some(Spanned {
             node:
                 Value::Dimension {
                     num: n,
@@ -405,10 +409,6 @@ pub(crate) fn invert(mut args: ArgumentResult, parser: &mut Visitor) -> SassResu
                 },
             ..
         }) => Some(bound!(args, "weight", n, u, 0, 100) / Number::from(100)),
-        Some(Spanned {
-            node: Value::Dimension { num: n, .. },
-            ..
-        }) if n.is_nan() => todo!(),
         None => None,
         Some(v) => {
             return Err((

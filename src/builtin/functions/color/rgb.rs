@@ -56,9 +56,9 @@ fn inner_rgb_3_arg(
 
     let span = args.span();
 
-    let red = red.assert_number_with_name(span, "red")?;
-    let green = green.assert_number_with_name(span, "green")?;
-    let blue = blue.assert_number_with_name(span, "blue")?;
+    let red = red.assert_number_with_name("red", span)?;
+    let green = green.assert_number_with_name("green", span)?;
+    let blue = blue.assert_number_with_name("blue", span)?;
 
     Ok(Value::Color(Box::new(Color::from_rgba_fn(
         Number(fuzzy_round(percentage_or_unitless(
@@ -74,7 +74,7 @@ fn inner_rgb_3_arg(
             alpha
                 .map(|alpha| {
                     percentage_or_unitless(
-                        &alpha.node.assert_number_with_name(span, "alpha")?,
+                        &alpha.node.assert_number_with_name("alpha", span)?,
                         1.0,
                         "alpha",
                         span,
@@ -167,7 +167,7 @@ pub(crate) fn parse_channels(
         {
             inner_alpha_from_slash_list
                 .clone()
-                .assert_number_with_name(span, "alpha")?;
+                .assert_number_with_name("alpha", span)?;
         }
 
         alpha_from_slash_list = Some(inner_alpha_from_slash_list);

@@ -163,31 +163,19 @@ pub(crate) fn comparable(mut args: ArgumentResult, parser: &mut Visitor) -> Sass
 #[cfg(feature = "random")]
 pub(crate) fn random(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
-    let limit = match args.default_arg(0, "limit", Value::Null) {
-        Value::Dimension {
-            num: n, unit: u, ..
-        } if n.is_nan() => {
-            // todo: likely same for finities
-            // todo: can remove match altogether thanks to assert_int
-            return Err((format!("$limit: NaN{} is not an int.", u), args.span()).into());
-        }
-        Value::Dimension { num: n, .. } => n,
-        Value::Null => {
-            let mut rng = rand::thread_rng();
-            return Ok(Value::Dimension {
-                num: (Number::from(rng.gen_range(0.0..1.0))),
-                unit: Unit::None,
-                as_slash: None,
-            });
-        }
-        v => {
-            return Err((
-                format!("$limit: {} is not a number.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
+    let limit = args.default_arg(0, "limit", Value::Null);
+
+    if matches!(limit, Value::Null) {
+        let mut rng = rand::thread_rng();
+        return Ok(Value::Dimension {
+            num: (Number::from(rng.gen_range(0.0..1.0))),
+            unit: Unit::None,
+            as_slash: None,
+        });
+    }
+
+    let limit = limit.assert_number_with_name("limit", args.span())?.num();
+    let limit_int = limit.assert_int_with_name("limit", args.span())?;
 
     if limit.is_one() {
         return Ok(Value::Dimension {
@@ -195,14 +183,6 @@ pub(crate) fn random(mut args: ArgumentResult, parser: &mut Visitor) -> SassResu
             unit: Unit::None,
             as_slash: None,
         });
-    }
-
-    if limit.is_decimal() {
-        return Err((
-            format!("$limit: {} is not an int.", limit.inspect()),
-            args.span(),
-        )
-            .into());
     }
 
     if limit.is_zero() || limit.is_negative() {
@@ -213,23 +193,9 @@ pub(crate) fn random(mut args: ArgumentResult, parser: &mut Visitor) -> SassResu
             .into());
     }
 
-    let limit = match limit.to_integer().to_u32() {
-        Some(n) => n,
-        None => {
-            return Err((
-                format!(
-                    "max must be in range 0 < max \u{2264} 2^32, was {}",
-                    limit.inspect()
-                ),
-                args.span(),
-            )
-                .into())
-        }
-    };
-
     let mut rng = rand::thread_rng();
     Ok(Value::Dimension {
-        num: (Number::from(rng.gen_range(0..limit) + 1)),
+        num: (Number::from(rng.gen_range(0..limit_int) + 1)),
         unit: Unit::None,
         as_slash: None,
     })

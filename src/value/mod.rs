@@ -245,7 +245,7 @@ impl Value {
         }
     }
 
-    pub fn assert_number_with_name(self, span: Span, name: &str) -> SassResult<SassNumber> {
+    pub fn assert_number_with_name(self, name: &str, span: Span) -> SassResult<SassNumber> {
         match self {
             Value::Dimension {
                 num,
