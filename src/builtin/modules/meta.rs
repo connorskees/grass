@@ -53,7 +53,8 @@ fn load_css(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<()> {
             };
 
             if values.contains_key(&name) {
-                todo!("The variable {name} was configured twice.");
+                // todo: test
+                return Err((format!("The variable {name} was configured twice."), key.span).into());
             }
 
             values.insert(name, ConfiguredValue::explicit(value, args.span()));

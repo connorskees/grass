@@ -245,8 +245,9 @@ impl ArgumentResult {
     }
 
     pub fn get_variadic(self) -> SassResult<Vec<Spanned<Value>>> {
-        // todo: i think we do give a proper error here
-        assert!(self.named.is_empty());
+        if let Some((name, _)) = self.named.first_key_value() {
+            return Err((format!("No argument named ${}.", name), self.span).into())
+        }
 
         let Self {
             positional,

@@ -314,3 +314,8 @@ error!(
     }",
     "Error: Variable keyword arguments must be a map (was a b)."
 );
+error!(
+    keyword_arg_to_function_expecting_varargs,
+    "a {\n  color: zip(a, b, $a: c);\n}\n",
+    "Error: No argument named $a."
+);
