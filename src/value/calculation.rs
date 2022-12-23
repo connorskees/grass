@@ -76,11 +76,7 @@ impl SassCalculation {
     pub fn calc(arg: CalculationArg) -> Value {
         let arg = Self::simplify(arg);
         match arg {
-            CalculationArg::Number(n) => Value::Dimension {
-                num: Number(n.num),
-                unit: n.unit,
-                as_slash: n.as_slash,
-            },
+            CalculationArg::Number(n) => Value::Dimension(n),
             CalculationArg::Calculation(c) => Value::Calculation(c),
             _ => Value::Calculation(SassCalculation {
                 name: CalculationName::Calc,
@@ -119,11 +115,7 @@ impl SassCalculation {
         }
 
         Ok(match minimum {
-            Some(min) => Value::Dimension {
-                num: Number(min.num),
-                unit: min.unit,
-                as_slash: min.as_slash,
-            },
+            Some(min) => Value::Dimension(min),
             None => {
                 Self::verify_compatible_numbers(&args, options, span)?;
 
@@ -167,11 +159,7 @@ impl SassCalculation {
         }
 
         Ok(match maximum {
-            Some(max) => Value::Dimension {
-                num: Number(max.num),
-                unit: max.unit,
-                as_slash: max.as_slash,
-            },
+            Some(max) => Value::Dimension(max),
             None => {
                 Self::verify_compatible_numbers(&args, options, span)?;
 
@@ -205,27 +193,15 @@ impl SassCalculation {
                 Some(CalculationArg::Number(max)),
             ) => {
                 if min.is_comparable_to(&value) && min.is_comparable_to(&max) {
-                    if value.num <= min.num().convert(min.unit(), value.unit()).0 {
-                        return Ok(Value::Dimension {
-                            num: Number(min.num),
-                            unit: min.unit,
-                            as_slash: min.as_slash,
-                        });
+                    if value.num <= min.num().convert(min.unit(), value.unit()) {
+                        return Ok(Value::Dimension(min));
                     }
 
-                    if value.num >= max.num().convert(max.unit(), value.unit()).0 {
-                        return Ok(Value::Dimension {
-                            num: Number(max.num),
-                            unit: max.unit,
-                            as_slash: max.as_slash,
-                        });
+                    if value.num >= max.num().convert(max.unit(), value.unit()) {
+                        return Ok(Value::Dimension(max));
                     }
 
-                    return Ok(Value::Dimension {
-                        num: Number(value.num),
-                        unit: value.unit,
-                        as_slash: value.as_slash,
-                    });
+                    return Ok(Value::Dimension(value));
                 }
             }
             _ => {}
@@ -287,11 +263,7 @@ impl SassCalculation {
                     Unit::Complex { numer, denom } => {
                         if numer.len() > 1 || !denom.is_empty() {
                             let num = num.clone();
-                            let value = Value::Dimension {
-                                num: Number(num.num),
-                                unit: num.unit,
-                                as_slash: num.as_slash,
-                            };
+                            let value = Value::Dimension(num);
                             return Err((
                                 format!(
                                     "Number {} isn't compatible with CSS calculations.",
@@ -384,8 +356,8 @@ impl SassCalculation {
             Self::verify_compatible_numbers(&[left.clone(), right.clone()], options, span)?;
 
             if let CalculationArg::Number(mut n) = right {
-                if Number(n.num).is_negative() {
-                    n.num *= -1.0;
+                if n.num.is_negative() {
+                    n.num.0 *= -1.0;
                     op = if op == BinaryOp::Plus {
                         BinaryOp::Minus
                     } else {

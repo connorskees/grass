@@ -9,7 +9,7 @@ use crate::{
     error::SassResult,
     serializer::serialize_number,
     unit::Unit,
-    value::{SassNumber, Value},
+    value::{Number, SassNumber, Value},
     Options,
 };
 
@@ -70,45 +70,45 @@ pub(crate) fn add(left: Value, right: Value, options: &Options, span: Span) -> S
                 QuoteKind::None,
             ),
         },
-        Value::Dimension {
+        Value::Dimension(SassNumber {
             num,
             unit,
             as_slash: _,
-        } => match right {
-            Value::Dimension {
+        }) => match right {
+            Value::Dimension(SassNumber {
                 num: num2,
                 unit: unit2,
                 as_slash: _,
-            } => {
+            }) => {
                 if !unit.comparable(&unit2) {
                     return Err(
                         (format!("Incompatible units {} and {}.", unit2, unit), span).into(),
                     );
                 }
                 if unit == unit2 {
-                    Value::Dimension {
+                    Value::Dimension(SassNumber {
                         num: num + num2,
                         unit,
                         as_slash: None,
-                    }
+                    })
                 } else if unit == Unit::None {
-                    Value::Dimension {
+                    Value::Dimension(SassNumber {
                         num: num + num2,
                         unit: unit2,
                         as_slash: None,
-                    }
+                    })
                 } else if unit2 == Unit::None {
-                    Value::Dimension {
+                    Value::Dimension(SassNumber {
                         num: num + num2,
                         unit,
                         as_slash: None,
-                    }
+                    })
                 } else {
-                    Value::Dimension {
+                    Value::Dimension(SassNumber {
                         num: num + num2.convert(&unit2, &unit),
                         unit,
                         as_slash: None,
-                    }
+                    })
                 }
             }
             Value::String(s, q) => Value::String(
@@ -215,45 +215,45 @@ pub(crate) fn sub(left: Value, right: Value, options: &Options, span: Span) -> S
             format!("-{}", right.to_css_string(span, options.is_compressed())?),
             QuoteKind::None,
         ),
-        Value::Dimension {
+        Value::Dimension(SassNumber {
             num,
             unit,
             as_slash: _,
-        } => match right {
-            Value::Dimension {
+        }) => match right {
+            Value::Dimension(SassNumber {
                 num: num2,
                 unit: unit2,
                 as_slash: _,
-            } => {
+            }) => {
                 if !unit.comparable(&unit2) {
                     return Err(
                         (format!("Incompatible units {} and {}.", unit2, unit), span).into(),
                     );
                 }
                 if unit == unit2 {
-                    Value::Dimension {
+                    Value::Dimension(SassNumber {
                         num: num - num2,
                         unit,
                         as_slash: None,
-                    }
+                    })
                 } else if unit == Unit::None {
-                    Value::Dimension {
+                    Value::Dimension(SassNumber {
                         num: num - num2,
                         unit: unit2,
                         as_slash: None,
-                    }
+                    })
                 } else if unit2 == Unit::None {
-                    Value::Dimension {
+                    Value::Dimension(SassNumber {
                         num: num - num2,
                         unit,
                         as_slash: None,
-                    }
+                    })
                 } else {
-                    Value::Dimension {
+                    Value::Dimension(SassNumber {
                         num: num - num2.convert(&unit2, &unit),
                         unit,
                         as_slash: None,
-                    }
+                    })
                 }
             }
             Value::List(..)
@@ -294,7 +294,7 @@ pub(crate) fn sub(left: Value, right: Value, options: &Options, span: Span) -> S
             ),
         },
         c @ Value::Color(..) => match right {
-            Value::Dimension { .. } | Value::Color(..) => {
+            Value::Dimension(SassNumber { .. }) | Value::Color(..) => {
                 return Err((
                     format!(
                         "Undefined operation \"{} - {}\".",
@@ -352,39 +352,35 @@ pub(crate) fn sub(left: Value, right: Value, options: &Options, span: Span) -> S
 
 pub(crate) fn mul(left: Value, right: Value, options: &Options, span: Span) -> SassResult<Value> {
     Ok(match left {
-        Value::Dimension {
+        Value::Dimension(SassNumber {
             num,
             unit,
             as_slash: _,
-        } => match right {
-            Value::Dimension {
+        }) => match right {
+            Value::Dimension(SassNumber {
                 num: num2,
                 unit: unit2,
                 as_slash: _,
-            } => {
+            }) => {
                 if unit2 == Unit::None {
-                    return Ok(Value::Dimension {
+                    return Ok(Value::Dimension(SassNumber {
                         num: num * num2,
                         unit,
                         as_slash: None,
-                    });
+                    }));
                 }
 
                 let n = SassNumber {
-                    num: num.0,
+                    num: num,
                     unit,
                     as_slash: None,
                 } * SassNumber {
-                    num: num2.0,
+                    num: num2,
                     unit: unit2,
                     as_slash: None,
                 };
 
-                Value::Dimension {
-                    num: n.num(),
-                    unit: n.unit,
-                    as_slash: None,
-                }
+                Value::Dimension(n)
             }
             _ => {
                 return Err((
@@ -465,46 +461,42 @@ pub(crate) fn single_eq(
 // todo: simplify matching
 pub(crate) fn div(left: Value, right: Value, options: &Options, span: Span) -> SassResult<Value> {
     Ok(match left {
-        Value::Dimension {
+        Value::Dimension(SassNumber {
             num,
             unit,
             as_slash: as_slash1,
-        } => match right {
-            Value::Dimension {
+        }) => match right {
+            Value::Dimension(SassNumber {
                 num: num2,
                 unit: unit2,
                 as_slash: as_slash2,
-            } => {
+            }) => {
                 if unit2 == Unit::None {
-                    return Ok(Value::Dimension {
+                    return Ok(Value::Dimension(SassNumber {
                         num: num / num2,
                         unit,
                         as_slash: None,
-                    });
+                    }));
                 }
 
                 let n = SassNumber {
-                    num: num.0,
+                    num: num,
                     unit,
                     as_slash: None,
                 } / SassNumber {
-                    num: num2.0,
+                    num: num2,
                     unit: unit2,
                     as_slash: None,
                 };
 
-                Value::Dimension {
-                    num: n.num(),
-                    unit: n.unit,
-                    as_slash: None,
-                }
+                Value::Dimension(n)
             }
             _ => Value::String(
                 format!(
                     "{}/{}",
                     serialize_number(
                         &SassNumber {
-                            num: num.0,
+                            num,
                             unit,
                             as_slash: as_slash1
                         },
@@ -517,7 +509,7 @@ pub(crate) fn div(left: Value, right: Value, options: &Options, span: Span) -> S
             ),
         },
         c @ Value::Color(..) => match right {
-            Value::Dimension { .. } | Value::Color(..) => {
+            Value::Dimension(SassNumber { .. }) | Value::Color(..) => {
                 return Err((
                     format!(
                         "Undefined operation \"{} / {}\".",
@@ -550,16 +542,16 @@ pub(crate) fn div(left: Value, right: Value, options: &Options, span: Span) -> S
 
 pub(crate) fn rem(left: Value, right: Value, options: &Options, span: Span) -> SassResult<Value> {
     Ok(match left {
-        Value::Dimension {
+        Value::Dimension(SassNumber {
             num: n,
             unit: u,
             as_slash: _,
-        } => match right {
-            Value::Dimension {
+        }) => match right {
+            Value::Dimension(SassNumber {
                 num: n2,
                 unit: u2,
                 as_slash: _,
-            } => {
+            }) => {
                 if !u.comparable(&u2) {
                     return Err((format!("Incompatible units {} and {}.", u, u2), span).into());
                 }
@@ -572,27 +564,28 @@ pub(crate) fn rem(left: Value, right: Value, options: &Options, span: Span) -> S
                 } else {
                     u
                 };
-                Value::Dimension {
+                Value::Dimension(SassNumber {
                     num: new_num,
                     unit: new_unit,
                     as_slash: None,
-                }
+                })
             }
             _ => {
+                let val = Value::Dimension(SassNumber {
+                    num: n,
+                    unit: u,
+                    as_slash: None,
+                })
+                .inspect(span)?;
                 return Err((
                     format!(
                         "Undefined operation \"{} % {}\".",
-                        Value::Dimension {
-                            num: n,
-                            unit: u,
-                            as_slash: None
-                        }
-                        .inspect(span)?,
+                        val,
                         right.inspect(span)?
                     ),
                     span,
                 )
-                    .into())
+                    .into());
             }
         },
         _ => {

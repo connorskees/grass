@@ -14,7 +14,7 @@ use super::Number;
 // todo: is as_slash included in eq
 #[derive(Debug, Clone)]
 pub(crate) struct SassNumber {
-    pub num: f64,
+    pub num: Number,
     pub unit: Unit,
     pub as_slash: Option<Box<(Self, Self)>>,
 }
@@ -48,7 +48,7 @@ impl Add<SassNumber> for SassNumber {
             }
         } else {
             SassNumber {
-                num: self.num + Number(rhs.num).convert(&rhs.unit, &self.unit).0,
+                num: self.num + rhs.num.convert(&rhs.unit, &self.unit),
                 unit: self.unit,
                 as_slash: None,
             }
@@ -80,7 +80,7 @@ impl Sub<SassNumber> for SassNumber {
             }
         } else {
             SassNumber {
-                num: self.num - Number(rhs.num).convert(&rhs.unit, &self.unit).0,
+                num: self.num - rhs.num.convert(&rhs.unit, &self.unit),
                 unit: self.unit,
                 as_slash: None,
             }
@@ -99,7 +99,7 @@ impl Mul<SassNumber> for SassNumber {
             };
         }
 
-        self.multiply_units(self.num * rhs.num, rhs.unit)
+        self.multiply_units(self.num.0 * rhs.num.0, rhs.unit)
     }
 }
 
@@ -114,7 +114,7 @@ impl Div<SassNumber> for SassNumber {
             };
         }
 
-        self.multiply_units(self.num / rhs.num, rhs.unit.invert())
+        self.multiply_units(self.num.0 / rhs.num.0, rhs.unit.invert())
     }
 }
 
@@ -136,13 +136,13 @@ impl SassNumber {
         if numer_units.is_empty() {
             if other_denom.is_empty() && !are_any_convertible(&denom_units, &other_numer) {
                 return SassNumber {
-                    num,
+                    num: Number(num),
                     unit: Unit::new(other_numer, denom_units),
                     as_slash: None,
                 };
             } else if denom_units.is_empty() {
                 return SassNumber {
-                    num,
+                    num: Number(num),
                     unit: Unit::new(other_numer, other_denom),
                     as_slash: None,
                 };
@@ -150,13 +150,13 @@ impl SassNumber {
         } else if other_numer.is_empty() {
             if other_denom.is_empty() {
                 return SassNumber {
-                    num,
+                    num: Number(num),
                     unit: Unit::new(numer_units, other_denom),
                     as_slash: None,
                 };
             } else if denom_units.is_empty() && !are_any_convertible(&numer_units, &other_denom) {
                 return SassNumber {
-                    num,
+                    num: Number(num),
                     unit: Unit::new(numer_units, other_denom),
                     as_slash: None,
                 };
@@ -213,7 +213,7 @@ impl SassNumber {
         mutable_denom.append(&mut mutable_other_denom);
 
         SassNumber {
-            num,
+            num: Number(num),
             unit: Unit::new(new_numer, mutable_denom),
             as_slash: None,
         }
@@ -254,7 +254,7 @@ impl SassNumber {
     }
 
     pub fn num(&self) -> Number {
-        Number(self.num)
+        self.num
     }
 
     pub fn unit(&self) -> &Unit {

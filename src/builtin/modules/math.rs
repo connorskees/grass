@@ -8,7 +8,7 @@ use crate::builtin::{
 
 #[cfg(feature = "random")]
 use crate::builtin::math::random;
-use crate::value::conversion_factor;
+use crate::value::{conversion_factor, SassNumber};
 
 fn coerce_to_rad(num: f64, unit: Unit) -> f64 {
     debug_assert!(matches!(
@@ -30,7 +30,7 @@ fn clamp(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
     let span = args.span();
 
     let min = match args.get_err(0, "min")? {
-        v @ Value::Dimension { .. } => v,
+        v @ Value::Dimension(SassNumber { .. }) => v,
         v => {
             return Err((
                 format!("$min: {} is not a number.", v.inspect(args.span())?),
@@ -41,7 +41,7 @@ fn clamp(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
     };
 
     let number = match args.get_err(1, "number")? {
-        v @ Value::Dimension { .. } => v,
+        v @ Value::Dimension(SassNumber { .. }) => v,
         v => {
             return Err((
                 format!("$number: {} is not a number.", v.inspect(span)?),
@@ -52,7 +52,7 @@ fn clamp(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
     };
 
     let max = match args.get_err(2, "max")? {
-        v @ Value::Dimension { .. } => v,
+        v @ Value::Dimension(SassNumber { .. }) => v,
         v => return Err((format!("$max: {} is not a number.", v.inspect(span)?), span).into()),
     };
 
@@ -60,27 +60,27 @@ fn clamp(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
     min.cmp(&max, span, BinaryOp::LessThan)?;
 
     let min_unit = match min {
-        Value::Dimension {
+        Value::Dimension(SassNumber {
             num: _,
             unit: ref u,
             as_slash: _,
-        } => u,
+        }) => u,
         _ => unreachable!(),
     };
     let number_unit = match number {
-        Value::Dimension {
+        Value::Dimension(SassNumber {
             num: _,
             unit: ref u,
             as_slash: _,
-        } => u,
+        }) => u,
         _ => unreachable!(),
     };
     let max_unit = match max {
-        Value::Dimension {
+        Value::Dimension(SassNumber {
             num: _,
             unit: ref u,
             as_slash: _,
-        } => u,
+        }) => u,
         _ => unreachable!(),
     };
 
@@ -126,7 +126,7 @@ fn hypot(args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
 
     let mut numbers = args.get_variadic()?.into_iter().map(|v| -> SassResult<_> {
         match v.node {
-            Value::Dimension { num, unit, .. } => Ok((num, unit)),
+            Value::Dimension(SassNumber { num, unit, .. }) => Ok((num, unit)),
             v => Err((format!("{} is not a number.", v.inspect(span)?), span).into()),
         }
     });
@@ -180,11 +180,11 @@ fn hypot(args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
 
     let sum = first.0 + rest.into_iter().fold(Number::zero(), |a, b| a + b);
 
-    Ok(Value::Dimension {
+    Ok(Value::Dimension(SassNumber {
         num: sum.sqrt(),
         unit: first.1,
         as_slash: None,
-    })
+    }))
 }
 
 fn log(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
@@ -192,12 +192,12 @@ fn log(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
 
     let number = match args.get_err(0, "number")? {
         // Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
-        Value::Dimension {
+        Value::Dimension(SassNumber {
             num,
             unit: Unit::None,
             ..
-        } => num,
-        v @ Value::Dimension { .. } => {
+        }) => num,
+        v @ Value::Dimension(SassNumber { .. }) => {
             return Err((
                 format!(
                     "$number: Expected {} to be unitless.",
@@ -218,12 +218,12 @@ fn log(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
 
     let base = match args.default_arg(1, "base", Value::Null) {
         Value::Null => None,
-        Value::Dimension {
+        Value::Dimension(SassNumber {
             num,
             unit: Unit::None,
             ..
-        } => Some(num),
-        v @ Value::Dimension { .. } => {
+        }) => Some(num),
+        v @ Value::Dimension(SassNumber { .. }) => {
             return Err((
                 format!(
                     "$number: Expected {} to be unitless.",
@@ -242,7 +242,7 @@ fn log(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
         }
     };
 
-    Ok(Value::Dimension {
+    Ok(Value::Dimension(SassNumber {
         num: if let Some(base) = base {
             if base.is_zero() {
                 Number::zero()
@@ -259,19 +259,19 @@ fn log(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
         },
         unit: Unit::None,
         as_slash: None,
-    })
+    }))
 }
 
 fn pow(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
     args.max_args(2)?;
 
     let base = match args.get_err(0, "base")? {
-        Value::Dimension {
+        Value::Dimension(SassNumber {
             num,
             unit: Unit::None,
             ..
-        } => num,
-        v @ Value::Dimension { .. } => {
+        }) => num,
+        v @ Value::Dimension(SassNumber { .. }) => {
             return Err((
                 format!(
                     "$base: Expected {} to have no units.",
@@ -291,12 +291,12 @@ fn pow(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
     };
 
     let exponent = match args.get_err(1, "exponent")? {
-        Value::Dimension {
+        Value::Dimension(SassNumber {
             num,
             unit: Unit::None,
             ..
-        } => num,
-        v @ Value::Dimension { .. } => {
+        }) => num,
+        v @ Value::Dimension(SassNumber { .. }) => {
             return Err((
                 format!(
                     "$exponent: Expected {} to have no units.",
@@ -315,11 +315,11 @@ fn pow(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
         }
     };
 
-    Ok(Value::Dimension {
+    Ok(Value::Dimension(SassNumber {
         num: base.pow(exponent),
         unit: Unit::None,
         as_slash: None,
-    })
+    }))
 }
 
 fn sqrt(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
@@ -327,16 +327,16 @@ fn sqrt(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
     let number = args.get_err(0, "number")?;
 
     Ok(match number {
-        Value::Dimension {
+        Value::Dimension(SassNumber {
             num,
             unit: Unit::None,
             ..
-        } => Value::Dimension {
+        }) => Value::Dimension(SassNumber {
             num: num.sqrt(),
             unit: Unit::None,
             as_slash: None,
-        },
-        v @ Value::Dimension { .. } => {
+        }),
+        v @ Value::Dimension(SassNumber { .. }) => {
             return Err((
                 format!(
                     "$number: Expected {} to have no units.",
@@ -363,17 +363,17 @@ macro_rules! trig_fn {
             let number = args.get_err(0, "number")?;
 
             Ok(match number {
-                Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
-                Value::Dimension {
+                Value::Dimension(SassNumber { num: n, .. }) if n.is_nan() => todo!(),
+                Value::Dimension(SassNumber {
                     num,
                     unit: unit @ (Unit::None | Unit::Rad | Unit::Deg | Unit::Grad | Unit::Turn),
                     ..
-                } => Value::Dimension {
+                }) => Value::Dimension(SassNumber {
                     num: Number(coerce_to_rad(num.0, unit).$name()),
                     unit: Unit::None,
                     as_slash: None,
-                },
-                v @ Value::Dimension { .. } => {
+                }),
+                v @ Value::Dimension(..) => {
                     return Err((
                         format!(
                             "$number: Expected {} to have an angle unit (deg, grad, rad, turn).",
@@ -404,11 +404,11 @@ fn acos(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
     let number = args.get_err(0, "number")?;
 
     Ok(match number {
-        Value::Dimension {
+        Value::Dimension(SassNumber {
             num,
             unit: Unit::None,
             ..
-        } => Value::Dimension {
+        }) => Value::Dimension(SassNumber {
             num: if num > Number::from(1) || num < Number::from(-1) {
                 Number(f64::NAN)
             } else if num.is_one() {
@@ -418,8 +418,8 @@ fn acos(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
             },
             unit: Unit::Deg,
             as_slash: None,
-        },
-        v @ Value::Dimension { .. } => {
+        }),
+        v @ Value::Dimension(SassNumber { .. }) => {
             return Err((
                 format!(
                     "$number: Expected {} to be unitless.",
@@ -444,32 +444,32 @@ fn asin(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
     let number = args.get_err(0, "number")?;
 
     Ok(match number {
-        Value::Dimension {
+        Value::Dimension(SassNumber {
             num,
             unit: Unit::None,
             ..
-        } => {
+        }) => {
             if num > Number::from(1) || num < Number::from(-1) {
-                return Ok(Value::Dimension {
+                return Ok(Value::Dimension(SassNumber {
                     num: Number(f64::NAN),
                     unit: Unit::Deg,
                     as_slash: None,
-                });
+                }));
             } else if num.is_zero() {
-                return Ok(Value::Dimension {
+                return Ok(Value::Dimension(SassNumber {
                     num: Number::zero(),
                     unit: Unit::Deg,
                     as_slash: None,
-                });
+                }));
             }
 
-            Value::Dimension {
+            Value::Dimension(SassNumber {
                 num: num.asin(),
                 unit: Unit::Deg,
                 as_slash: None,
-            }
+            })
         }
-        v @ Value::Dimension { .. } => {
+        v @ Value::Dimension(SassNumber { .. }) => {
             return Err((
                 format!(
                     "$number: Expected {} to be unitless.",
@@ -494,26 +494,26 @@ fn atan(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
     let number = args.get_err(0, "number")?;
 
     Ok(match number {
-        Value::Dimension {
+        Value::Dimension(SassNumber {
             num: n,
             unit: Unit::None,
             ..
-        } => {
+        }) => {
             if n.is_zero() {
-                return Ok(Value::Dimension {
+                return Ok(Value::Dimension(SassNumber {
                     num: (Number::zero()),
                     unit: Unit::Deg,
                     as_slash: None,
-                });
+                }));
             }
 
-            Value::Dimension {
+            Value::Dimension(SassNumber {
                 num: n.atan(),
                 unit: Unit::Deg,
                 as_slash: None,
-            }
+            })
         }
-        v @ Value::Dimension { .. } => {
+        v @ Value::Dimension(SassNumber { .. }) => {
             return Err((
                 format!(
                     "$number: Expected {} to be unitless.",
@@ -536,9 +536,9 @@ fn atan(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
 fn atan2(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
     args.max_args(2)?;
     let (y_num, y_unit) = match args.get_err(0, "y")? {
-        Value::Dimension {
+        Value::Dimension(SassNumber {
             num: n, unit: u, ..
-        } => (n, u),
+        }) => (n, u),
         v => {
             return Err((
                 format!("$y: {} is not a number.", v.inspect(args.span())?),
@@ -549,9 +549,9 @@ fn atan2(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
     };
 
     let (x_num, x_unit) = match args.get_err(1, "x")? {
-        Value::Dimension {
+        Value::Dimension(SassNumber {
             num: n, unit: u, ..
-        } => (n, u),
+        }) => (n, u),
         v => {
             return Err((
                 format!("$x: {} is not a number.", v.inspect(args.span())?),
@@ -593,11 +593,11 @@ fn atan2(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
             .into());
     };
 
-    Ok(Value::Dimension {
+    Ok(Value::Dimension(SassNumber {
         num: Number(y_num.0.atan2(x_num.0) * 180.0 / std::f64::consts::PI),
         unit: Unit::Deg,
         as_slash: None,
-    })
+    }))
 }
 
 pub(crate) fn declare(f: &mut Module) {
@@ -629,58 +629,58 @@ pub(crate) fn declare(f: &mut Module) {
 
     f.insert_builtin_var(
         "e",
-        Value::Dimension {
+        Value::Dimension(SassNumber {
             num: Number::from(std::f64::consts::E),
             unit: Unit::None,
             as_slash: None,
-        },
+        }),
     );
     f.insert_builtin_var(
         "pi",
-        Value::Dimension {
+        Value::Dimension(SassNumber {
             num: Number::from(std::f64::consts::PI),
             unit: Unit::None,
             as_slash: None,
-        },
+        }),
     );
     f.insert_builtin_var(
         "epsilon",
-        Value::Dimension {
+        Value::Dimension(SassNumber {
             num: Number::from(std::f64::EPSILON),
             unit: Unit::None,
             as_slash: None,
-        },
+        }),
     );
     f.insert_builtin_var(
         "max-safe-integer",
-        Value::Dimension {
+        Value::Dimension(SassNumber {
             num: Number::from(9007199254740991.0),
             unit: Unit::None,
             as_slash: None,
-        },
+        }),
     );
     f.insert_builtin_var(
         "min-safe-integer",
-        Value::Dimension {
+        Value::Dimension(SassNumber {
             num: Number::from(-9007199254740991.0),
             unit: Unit::None,
             as_slash: None,
-        },
+        }),
     );
     f.insert_builtin_var(
         "max-number",
-        Value::Dimension {
+        Value::Dimension(SassNumber {
             num: Number::from(f64::MAX),
             unit: Unit::None,
             as_slash: None,
-        },
+        }),
     );
     f.insert_builtin_var(
         "min-number",
-        Value::Dimension {
+        Value::Dimension(SassNumber {
             num: Number::from(f64::MIN_POSITIVE),
             unit: Unit::None,
             as_slash: None,
-        },
+        }),
     );
 }

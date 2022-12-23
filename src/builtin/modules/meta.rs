@@ -13,6 +13,7 @@ use crate::builtin::{
     modules::Module,
 };
 use crate::serializer::serialize_calculation_arg;
+use crate::value::SassNumber;
 
 fn load_css(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<()> {
     args.max_args(2)?;
@@ -193,11 +194,7 @@ fn calc_args(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Valu
         .into_iter()
         .map(|arg| {
             Ok(match arg {
-                CalculationArg::Number(num) => Value::Dimension {
-                    num: Number(num.num),
-                    unit: num.unit,
-                    as_slash: num.as_slash,
-                },
+                CalculationArg::Number(num) => Value::Dimension(num),
                 CalculationArg::Calculation(calc) => Value::Calculation(calc),
                 CalculationArg::String(s) | CalculationArg::Interpolation(s) => {
                     Value::String(s, QuoteKind::None)

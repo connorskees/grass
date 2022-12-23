@@ -1,6 +1,10 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::{builtin::builtin_imports::*, serializer::inspect_number, value::fuzzy_round};
+use crate::{
+    builtin::builtin_imports::*,
+    serializer::inspect_number,
+    value::{fuzzy_round, SassNumber},
+};
 
 pub(crate) fn function_string(
     name: &'static str,
@@ -159,7 +163,7 @@ pub(crate) fn percentage_or_unitless(
     let value = if number.unit == Unit::None {
         number.num
     } else if number.unit == Unit::Percent {
-        (number.num * max) / 100.0
+        (number.num * Number(max)) / Number(100.0)
     } else {
         return Err((
             format!(
@@ -171,7 +175,7 @@ pub(crate) fn percentage_or_unitless(
             .into());
     };
 
-    Ok(0.0_f64.max(value.min(max)))
+    Ok(value.clamp(0.0, max).0)
 }
 
 #[derive(Debug, Clone)]
@@ -291,26 +295,14 @@ pub(crate) fn parse_channels(
     }
 
     match &list[2] {
-        Value::Dimension { as_slash, .. } => match as_slash {
-            Some(slash) => {
-                // todo: superfluous clone
-                let slash_0 = slash.0.clone();
-                let slash_1 = slash.1.clone();
-                Ok(ParsedChannels::List(vec![
-                    list[0].clone(),
-                    list[1].clone(),
-                    Value::Dimension {
-                        num: Number(slash_0.num),
-                        unit: slash_0.unit,
-                        as_slash: slash_0.as_slash,
-                    },
-                    Value::Dimension {
-                        num: Number(slash_1.num),
-                        unit: slash_1.unit,
-                        as_slash: slash_1.as_slash,
-                    },
-                ]))
-            }
+        Value::Dimension(SassNumber { as_slash, .. }) => match as_slash {
+            Some(slash) => Ok(ParsedChannels::List(vec![
+                list[0].clone(),
+                list[1].clone(),
+                // todo: superfluous clones
+                Value::Dimension(slash.0.clone()),
+                Value::Dimension(slash.1.clone()),
+            ])),
             None => Ok(ParsedChannels::List(list)),
         },
         Value::String(text, QuoteKind::None) if text.contains('/') => {
@@ -368,11 +360,11 @@ pub(crate) fn rgba(args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Va
 pub(crate) fn red(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "color")? {
-        Value::Color(c) => Ok(Value::Dimension {
+        Value::Color(c) => Ok(Value::Dimension(SassNumber {
             num: (c.red()),
             unit: Unit::None,
             as_slash: None,
-        }),
+        })),
         v => Err((
             format!("$color: {} is not a color.", v.inspect(args.span())?),
             args.span(),
@@ -384,11 +376,11 @@ pub(crate) fn red(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult
 pub(crate) fn green(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "color")? {
-        Value::Color(c) => Ok(Value::Dimension {
+        Value::Color(c) => Ok(Value::Dimension(SassNumber {
             num: (c.green()),
             unit: Unit::None,
             as_slash: None,
-        }),
+        })),
         v => Err((
             format!("$color: {} is not a color.", v.inspect(args.span())?),
             args.span(),
@@ -400,11 +392,11 @@ pub(crate) fn green(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResu
 pub(crate) fn blue(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "color")? {
-        Value::Color(c) => Ok(Value::Dimension {
+        Value::Color(c) => Ok(Value::Dimension(SassNumber {
             num: (c.blue()),
             unit: Unit::None,
             as_slash: None,
-        }),
+        })),
         v => Err((
             format!("$color: {} is not a color.", v.inspect(args.span())?),
             args.span(),
@@ -440,18 +432,18 @@ pub(crate) fn mix(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult
     let weight = match args.default_arg(
         2,
         "weight",
-        Value::Dimension {
+        Value::Dimension(SassNumber {
             num: (Number::from(50)),
             unit: Unit::None,
             as_slash: None,
-        },
+        }),
     ) {
-        Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
-        Value::Dimension {
+        Value::Dimension(SassNumber { num: n, .. }) if n.is_nan() => todo!(),
+        Value::Dimension(SassNumber {
             num: n,
             unit: u,
             as_slash: _,
-        } => bound!(args, "weight", n, u, 0, 100) / Number::from(100),
+        }) => bound!(args, "weight", n, u, 0, 100) / Number::from(100),
         v => {
             return Err((
                 format!(

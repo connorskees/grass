@@ -1753,11 +1753,11 @@ impl<'a> Visitor<'a> {
         'outer: while i != to {
             self.env.scopes_mut().insert_var_last(
                 for_stmt.variable.node,
-                Value::Dimension {
+                Value::Dimension(SassNumber {
                     num: Number::from(i),
                     unit: from_number.unit().clone(),
                     as_slash: None,
-                },
+                }),
             );
 
             for stmt in for_stmt.body.clone() {
@@ -1942,7 +1942,7 @@ impl<'a> Visitor<'a> {
 
     fn without_slash(&mut self, v: Value) -> Value {
         match v {
-            Value::Dimension { .. } if v.as_slash().is_some() => {
+            Value::Dimension(SassNumber { .. }) if v.as_slash().is_some() => {
                 // todo: emit warning. we don't currently because it can be quite loud
                 // self.emit_warning(
                 //     Cow::Borrowed("Using / for division is deprecated and will be removed at some point in the future"),
@@ -2378,11 +2378,11 @@ impl<'a> Visitor<'a> {
     fn visit_expr(&mut self, expr: AstExpr) -> SassResult<Value> {
         Ok(match expr {
             AstExpr::Color(color) => Value::Color(color),
-            AstExpr::Number { n, unit } => Value::Dimension {
+            AstExpr::Number { n, unit } => Value::Dimension(SassNumber {
                 num: n,
                 unit,
                 as_slash: None,
-            },
+            }),
             AstExpr::List(list) => self.visit_list_expr(list)?,
             AstExpr::String(StringExpr(text, quote), span) => {
                 self.visit_string(text, quote, span)?
@@ -2455,13 +2455,13 @@ impl<'a> Visitor<'a> {
             | AstExpr::If(..) => {
                 let result = self.visit_expr(expr)?;
                 match result {
-                    Value::Dimension {
+                    Value::Dimension(SassNumber {
                         num,
                         unit,
                         as_slash,
-                    } => CalculationArg::Number(SassNumber {
-                        num: num.0,
-                        unit: unit,
+                    }) => CalculationArg::Number(SassNumber {
+                        num,
+                        unit,
                         as_slash,
                     }),
                     Value::Calculation(calc) => CalculationArg::Calculation(calc),

@@ -320,7 +320,7 @@ impl<'a> Serializer<'a> {
                 .into());
         }
 
-        self.write_float(number.num);
+        self.write_float(number.num.0);
         write!(&mut self.buffer, "{}", number.unit)?;
 
         Ok(())
@@ -408,15 +408,7 @@ impl<'a> Serializer<'a> {
 
     fn visit_value(&mut self, value: Spanned<Value>) -> SassResult<()> {
         match value.node {
-            Value::Dimension {
-                num,
-                unit,
-                as_slash,
-            } => self.visit_number(&SassNumber {
-                num: num.0,
-                unit,
-                as_slash,
-            })?,
+            Value::Dimension(num) => self.visit_number(&num)?,
             Value::Color(color) => self.visit_color(&color),
             Value::Calculation(calc) => self.visit_calculation(&calc)?,
             _ => {

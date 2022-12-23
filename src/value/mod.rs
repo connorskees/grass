@@ -33,11 +33,7 @@ pub(crate) enum Value {
     True,
     False,
     Null,
-    Dimension {
-        num: Number,
-        unit: Unit,
-        as_slash: Option<Box<(SassNumber, SassNumber)>>,
-    },
+    Dimension(SassNumber),
     List(Vec<Value>, ListSeparator, Brackets),
     // todo: benchmark unboxing this, now that it's smaller
     Color(Box<Color>),
@@ -61,16 +57,16 @@ impl PartialEq for Value {
                 Value::String(s2, ..) => s1 == s2,
                 _ => false,
             },
-            Value::Dimension {
+            Value::Dimension(SassNumber {
                 num: n,
                 unit,
                 as_slash: _,
-            } => match other {
-                Value::Dimension {
+            }) => match other {
+                Value::Dimension(SassNumber {
                     num: n2,
                     unit: unit2,
                     as_slash: _,
-                } => {
+                }) => {
                     if !unit.comparable(unit2) {
                         return false;
                     }
@@ -218,40 +214,21 @@ impl Value {
         denom: SassNumber,
         span: Span,
     ) -> SassResult<Self> {
-        let number = self.assert_number(span)?;
-        Ok(Value::Dimension {
-            num: Number(number.num),
-            unit: number.unit,
-            as_slash: Some(Box::new((numerator, denom))),
-        })
+        let mut number = self.assert_number(span)?;
+        number.as_slash = Some(Box::new((numerator, denom)));
+        Ok(Value::Dimension(number))
     }
 
     pub fn assert_number(self, span: Span) -> SassResult<SassNumber> {
         match self {
-            Value::Dimension {
-                num,
-                unit,
-                as_slash,
-            } => Ok(SassNumber {
-                num: num.0,
-                unit,
-                as_slash,
-            }),
+            Value::Dimension(n) => Ok(n),
             _ => Err((format!("{} is not a number.", self.inspect(span)?), span).into()),
         }
     }
 
     pub fn assert_number_with_name(self, name: &str, span: Span) -> SassResult<SassNumber> {
         match self {
-            Value::Dimension {
-                num,
-                unit,
-                as_slash,
-            } => Ok(SassNumber {
-                num: num.0,
-                unit,
-                as_slash,
-            }),
+            Value::Dimension(n) => Ok(n),
             _ => Err((
                 format!("${name}: {} is not a number.", self.inspect(span)?),
                 span,
@@ -292,7 +269,6 @@ impl Value {
         }
     }
 
-    #[track_caller]
     pub fn to_css_string(&self, span: Span, is_compressed: bool) -> SassResult<Cow<'static, str>> {
         Ok(match self {
             Value::Calculation(calc) => Cow::Owned(serialize_calculation(
@@ -304,16 +280,8 @@ impl Value {
                 }),
                 span,
             )?),
-            Value::Dimension {
-                num,
-                unit,
-                as_slash,
-            } => Cow::Owned(serialize_number(
-                &SassNumber {
-                    num: num.0,
-                    unit: unit.clone(),
-                    as_slash: as_slash.clone(),
-                },
+            Value::Dimension(n) => Cow::Owned(serialize_number(
+                n,
                 &Options::default().style(if is_compressed {
                     OutputStyle::Compressed
                 } else {
@@ -433,7 +401,7 @@ impl Value {
             Value::Color(..) => "color",
             Value::String(..) => "string",
             Value::Calculation(..) => "calculation",
-            Value::Dimension { .. } => "number",
+            Value::Dimension(..) => "number",
             Value::List(..) => "list",
             Value::FunctionRef(..) => "function",
             Value::ArgList(..) => "arglist",
@@ -445,22 +413,22 @@ impl Value {
 
     pub fn as_slash(&self) -> Option<Box<(SassNumber, SassNumber)>> {
         match self {
-            Value::Dimension { as_slash, .. } => as_slash.clone(),
+            Value::Dimension(SassNumber { as_slash, .. }) => as_slash.clone(),
             _ => None,
         }
     }
 
     pub fn without_slash(self) -> Self {
         match self {
-            Value::Dimension {
+            Value::Dimension(SassNumber {
                 num,
                 unit,
                 as_slash: _,
-            } => Value::Dimension {
+            }) => Value::Dimension(SassNumber {
                 num,
                 unit,
                 as_slash: None,
-            },
+            }),
             _ => self,
         }
     }
@@ -501,16 +469,16 @@ impl Value {
 
     pub fn cmp(&self, other: &Self, span: Span, op: BinaryOp) -> SassResult<Option<Ordering>> {
         Ok(match self {
-            Value::Dimension {
+            Value::Dimension(SassNumber {
                 num,
                 unit,
                 as_slash: _,
-            } => match &other {
-                Value::Dimension {
+            }) => match &other {
+                Value::Dimension(SassNumber {
                     num: num2,
                     unit: unit2,
                     as_slash: _,
-                } => {
+                }) => {
                     if !unit.comparable(unit2) {
                         return Err(
                             (format!("Incompatible units {} and {}.", unit2, unit), span).into(),
@@ -556,16 +524,16 @@ impl Value {
                 Value::String(s2, ..) => s1 != s2,
                 _ => true,
             },
-            Value::Dimension {
+            Value::Dimension(SassNumber {
                 num: n,
                 unit,
                 as_slash: _,
-            } if !n.is_nan() => match other {
-                Value::Dimension {
+            }) if !n.is_nan() => match other {
+                Value::Dimension(SassNumber {
                     num: n2,
                     unit: unit2,
                     as_slash: _,
-                } if !n2.is_nan() => {
+                }) if !n2.is_nan() => {
                     if !unit.comparable(unit2) {
                         true
                     } else if unit == unit2 {
@@ -646,19 +614,7 @@ impl Value {
                     .collect::<SassResult<Vec<String>>>()?
                     .join(", ")
             )),
-            Value::Dimension {
-                num,
-                unit,
-                as_slash,
-            } => Cow::Owned(inspect_number(
-                &SassNumber {
-                    num: num.0,
-                    unit: unit.clone(),
-                    as_slash: as_slash.clone(),
-                },
-                &Options::default(),
-                span,
-            )?),
+            Value::Dimension(n) => Cow::Owned(inspect_number(&n, &Options::default(), span)?),
             Value::ArgList(args) if args.is_empty() => Cow::Borrowed("()"),
             Value::ArgList(args) if args.len() == 1 => Cow::Owned(format!(
                 "({},)",
@@ -771,7 +727,7 @@ impl Value {
 
     pub fn unary_plus(self, visitor: &mut Visitor) -> SassResult<Self> {
         Ok(match self {
-            Self::Dimension { .. } => self,
+            Self::Dimension(SassNumber { .. }) => self,
             Self::Calculation(..) => {
                 return Err((
                     format!(
@@ -807,15 +763,15 @@ impl Value {
                 )
                     .into())
             }
-            Self::Dimension {
+            Self::Dimension(SassNumber {
                 num,
                 unit,
                 as_slash,
-            } => Self::Dimension {
+            }) => Self::Dimension(SassNumber {
                 num: -num,
                 unit,
                 as_slash,
-            },
+            }),
             _ => Self::String(
                 format!(
                     "-{}",

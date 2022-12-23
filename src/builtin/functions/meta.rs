@@ -1,4 +1,4 @@
-use crate::builtin::builtin_imports::*;
+use crate::{builtin::builtin_imports::*, value::SassNumber};
 
 // todo: this should be a constant of some sort. we shouldn't be allocating this
 // every time
@@ -64,11 +64,11 @@ pub(crate) fn feature_exists(mut args: ArgumentResult, visitor: &mut Visitor) ->
 pub(crate) fn unit(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     let unit = match args.get_err(0, "number")? {
-        Value::Dimension {
+        Value::Dimension(SassNumber {
             num: _,
             unit: u,
             as_slash: _,
-        } => u.to_string(),
+        }) => u.to_string(),
         v => {
             return Err((
                 format!("$number: {} is not a number.", v.inspect(args.span())?),
@@ -89,12 +89,12 @@ pub(crate) fn type_of(mut args: ArgumentResult, visitor: &mut Visitor) -> SassRe
 pub(crate) fn unitless(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     Ok(match args.get_err(0, "number")? {
-        Value::Dimension {
+        Value::Dimension(SassNumber {
             num: _,
             unit: Unit::None,
             as_slash: _,
-        } => Value::True,
-        Value::Dimension { .. } => Value::False,
+        }) => Value::True,
+        Value::Dimension(SassNumber { .. }) => Value::False,
         v => {
             return Err((
                 format!("$number: {} is not a number.", v.inspect(args.span())?),

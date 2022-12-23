@@ -1,4 +1,4 @@
-use crate::builtin::builtin_imports::*;
+use crate::{builtin::builtin_imports::*, value::SassNumber};
 
 pub(crate) fn to_upper_case(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
@@ -33,11 +33,11 @@ pub(crate) fn to_lower_case(mut args: ArgumentResult, visitor: &mut Visitor) -> 
 pub(crate) fn str_length(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "string")? {
-        Value::String(i, _) => Ok(Value::Dimension {
+        Value::String(i, _) => Ok(Value::Dimension(SassNumber {
             num: (Number::from(i.chars().count())),
             unit: Unit::None,
             as_slash: None,
-        }),
+        })),
         v => Err((
             format!("$string: {} is not a string.", v.inspect(args.span())?),
             args.span(),
@@ -107,11 +107,11 @@ pub(crate) fn str_slice(mut args: ArgumentResult, visitor: &mut Visitor) -> Sass
         .default_arg(
             2,
             "end-at",
-            Value::Dimension {
+            Value::Dimension(SassNumber {
                 num: Number(-1.0),
                 unit: Unit::None,
                 as_slash: None,
-            },
+            }),
         )
         .assert_number_with_name("end-at", span)?;
 
@@ -164,11 +164,11 @@ pub(crate) fn str_index(mut args: ArgumentResult, visitor: &mut Visitor) -> Sass
     };
 
     Ok(match s1.find(&substr) {
-        Some(v) => Value::Dimension {
+        Some(v) => Value::Dimension(SassNumber {
             num: (Number::from(v + 1)),
             unit: Unit::None,
             as_slash: None,
-        },
+        }),
         None => Value::Null,
     })
 }

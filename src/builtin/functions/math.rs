@@ -1,14 +1,14 @@
-use crate::{builtin::builtin_imports::*, evaluate::div};
+use crate::{builtin::builtin_imports::*, evaluate::div, value::SassNumber};
 
 pub(crate) fn percentage(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     let num = match args.get_err(0, "number")? {
-        Value::Dimension {
+        Value::Dimension(SassNumber {
             num: n,
             unit: Unit::None,
             as_slash: _,
-        } => n * Number::from(100),
-        v @ Value::Dimension { .. } => {
+        }) => n * Number::from(100),
+        v @ Value::Dimension(SassNumber { .. }) => {
             return Err((
                 format!(
                     "$number: Expected {} to have no units.",
@@ -26,29 +26,29 @@ pub(crate) fn percentage(mut args: ArgumentResult, visitor: &mut Visitor) -> Sas
                 .into())
         }
     };
-    Ok(Value::Dimension {
+    Ok(Value::Dimension(SassNumber {
         num,
         unit: Unit::Percent,
         as_slash: None,
-    })
+    }))
 }
 
 pub(crate) fn round(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "number")? {
         // todo: better error message, consider finities
-        Value::Dimension { num: n, .. } if n.is_nan() => {
+        Value::Dimension(SassNumber { num: n, .. }) if n.is_nan() => {
             Err(("Infinity or NaN toInt", args.span()).into())
         }
-        Value::Dimension {
+        Value::Dimension(SassNumber {
             num: n,
             unit: u,
             as_slash: _,
-        } => Ok(Value::Dimension {
+        }) => Ok(Value::Dimension(SassNumber {
             num: (n.round()),
             unit: u,
             as_slash: None,
-        }),
+        })),
         v => Err((
             format!("$number: {} is not a number.", v.inspect(args.span())?),
             args.span(),
@@ -61,18 +61,18 @@ pub(crate) fn ceil(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResul
     args.max_args(1)?;
     match args.get_err(0, "number")? {
         // todo: better error message, consider finities
-        Value::Dimension { num: n, .. } if n.is_nan() => {
+        Value::Dimension(SassNumber { num: n, .. }) if n.is_nan() => {
             Err(("Infinity or NaN toInt", args.span()).into())
         }
-        Value::Dimension {
+        Value::Dimension(SassNumber {
             num: n,
             unit: u,
             as_slash: _,
-        } => Ok(Value::Dimension {
+        }) => Ok(Value::Dimension(SassNumber {
             num: (n.ceil()),
             unit: u,
             as_slash: None,
-        }),
+        })),
         v => Err((
             format!("$number: {} is not a number.", v.inspect(args.span())?),
             args.span(),
@@ -85,18 +85,18 @@ pub(crate) fn floor(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResu
     args.max_args(1)?;
     match args.get_err(0, "number")? {
         // todo: better error message, consider finities
-        Value::Dimension { num: n, .. } if n.is_nan() => {
+        Value::Dimension(SassNumber { num: n, .. }) if n.is_nan() => {
             Err(("Infinity or NaN toInt", args.span()).into())
         }
-        Value::Dimension {
+        Value::Dimension(SassNumber {
             num: n,
             unit: u,
             as_slash: _,
-        } => Ok(Value::Dimension {
+        }) => Ok(Value::Dimension(SassNumber {
             num: (n.floor()),
             unit: u,
             as_slash: None,
-        }),
+        })),
         v => Err((
             format!("$number: {} is not a number.", v.inspect(args.span())?),
             args.span(),
@@ -108,15 +108,15 @@ pub(crate) fn floor(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResu
 pub(crate) fn abs(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "number")? {
-        Value::Dimension {
+        Value::Dimension(SassNumber {
             num: n,
             unit: u,
             as_slash: _,
-        } => Ok(Value::Dimension {
+        }) => Ok(Value::Dimension(SassNumber {
             num: (n.abs()),
             unit: u,
             as_slash: None,
-        }),
+        })),
         v => Err((
             format!("$number: {} is not a number.", v.inspect(args.span())?),
             args.span(),
@@ -128,11 +128,11 @@ pub(crate) fn abs(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult
 pub(crate) fn comparable(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(2)?;
     let unit1 = match args.get_err(0, "number1")? {
-        Value::Dimension {
+        Value::Dimension(SassNumber {
             num: _,
             unit: u,
             as_slash: _,
-        } => u,
+        }) => u,
         v => {
             return Err((
                 format!("$number1: {} is not a number.", v.inspect(args.span())?),
@@ -142,11 +142,11 @@ pub(crate) fn comparable(mut args: ArgumentResult, visitor: &mut Visitor) -> Sas
         }
     };
     let unit2 = match args.get_err(1, "number2")? {
-        Value::Dimension {
+        Value::Dimension(SassNumber {
             num: _,
             unit: u,
             as_slash: _,
-        } => u,
+        }) => u,
         v => {
             return Err((
                 format!("$number2: {} is not a number.", v.inspect(args.span())?),
@@ -167,22 +167,22 @@ pub(crate) fn random(mut args: ArgumentResult, visitor: &mut Visitor) -> SassRes
 
     if matches!(limit, Value::Null) {
         let mut rng = rand::thread_rng();
-        return Ok(Value::Dimension {
+        return Ok(Value::Dimension(SassNumber {
             num: (Number::from(rng.gen_range(0.0..1.0))),
             unit: Unit::None,
             as_slash: None,
-        });
+        }));
     }
 
     let limit = limit.assert_number_with_name("limit", args.span())?.num();
     let limit_int = limit.assert_int_with_name("limit", args.span())?;
 
     if limit.is_one() {
-        return Ok(Value::Dimension {
+        return Ok(Value::Dimension(SassNumber {
             num: (Number::one()),
             unit: Unit::None,
             as_slash: None,
-        });
+        }));
     }
 
     if limit.is_zero() || limit.is_negative() {
@@ -194,11 +194,11 @@ pub(crate) fn random(mut args: ArgumentResult, visitor: &mut Visitor) -> SassRes
     }
 
     let mut rng = rand::thread_rng();
-    Ok(Value::Dimension {
+    Ok(Value::Dimension(SassNumber {
         num: (Number::from(rng.gen_range(0..limit_int) + 1)),
         unit: Unit::None,
         as_slash: None,
-    })
+    }))
 }
 
 pub(crate) fn min(args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
@@ -208,11 +208,11 @@ pub(crate) fn min(args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Val
         .get_variadic()?
         .into_iter()
         .map(|val| match val.node {
-            Value::Dimension {
+            Value::Dimension(SassNumber {
                 num: number,
                 unit,
                 as_slash: _,
-            } => Ok((number, unit)),
+            }) => Ok((number, unit)),
             v => Err((format!("{} is not a number.", v.inspect(span)?), span).into()),
         })
         .collect::<SassResult<Vec<(Number, Unit)>>>()?
@@ -224,16 +224,16 @@ pub(crate) fn min(args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Val
     };
 
     for (num, unit) in nums {
-        let lhs = Value::Dimension {
+        let lhs = Value::Dimension(SassNumber {
             num,
             unit: unit.clone(),
             as_slash: None,
-        };
-        let rhs = Value::Dimension {
+        });
+        let rhs = Value::Dimension(SassNumber {
             num: (min.0),
             unit: min.1.clone(),
             as_slash: None,
-        };
+        });
 
         if crate::evaluate::cmp(
             &lhs,
@@ -247,11 +247,11 @@ pub(crate) fn min(args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Val
             min = (num, unit);
         }
     }
-    Ok(Value::Dimension {
+    Ok(Value::Dimension(SassNumber {
         num: (min.0),
         unit: min.1,
         as_slash: None,
-    })
+    }))
 }
 
 pub(crate) fn max(args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
@@ -261,11 +261,11 @@ pub(crate) fn max(args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Val
         .get_variadic()?
         .into_iter()
         .map(|val| match val.node {
-            Value::Dimension {
+            Value::Dimension(SassNumber {
                 num: number,
                 unit,
                 as_slash: _,
-            } => Ok((number, unit)),
+            }) => Ok((number, unit)),
             v => Err((format!("{} is not a number.", v.inspect(span)?), span).into()),
         })
         .collect::<SassResult<Vec<(Number, Unit)>>>()?
@@ -277,16 +277,16 @@ pub(crate) fn max(args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Val
     };
 
     for (num, unit) in nums {
-        let lhs = Value::Dimension {
+        let lhs = Value::Dimension(SassNumber {
             num,
             unit: unit.clone(),
             as_slash: None,
-        };
-        let rhs = Value::Dimension {
+        });
+        let rhs = Value::Dimension(SassNumber {
             num: (max.0),
             unit: max.1.clone(),
             as_slash: None,
-        };
+        });
 
         if crate::evaluate::cmp(
             &lhs,
@@ -300,11 +300,11 @@ pub(crate) fn max(args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Val
             max = (num, unit);
         }
     }
-    Ok(Value::Dimension {
+    Ok(Value::Dimension(SassNumber {
         num: (max.0),
         unit: max.1,
         as_slash: None,
-    })
+    }))
 }
 
 pub(crate) fn divide(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {

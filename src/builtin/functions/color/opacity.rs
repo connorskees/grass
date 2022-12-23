@@ -1,4 +1,4 @@
-use crate::builtin::builtin_imports::*;
+use crate::{builtin::builtin_imports::*, value::SassNumber};
 
 /// Check if `s` matches the regex `^[a-zA-Z]+\s*=`
 fn is_ms_filter(s: &str) -> bool {
@@ -33,11 +33,11 @@ mod test {
 pub(crate) fn alpha(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     if args.len() <= 1 {
         match args.get_err(0, "color")? {
-            Value::Color(c) => Ok(Value::Dimension {
+            Value::Color(c) => Ok(Value::Dimension(SassNumber {
                 num: (c.alpha()),
                 unit: Unit::None,
                 as_slash: None,
-            }),
+            })),
             Value::String(s, QuoteKind::None) if is_ms_filter(&s) => {
                 Ok(Value::String(format!("alpha({})", s), QuoteKind::None))
             }
@@ -71,17 +71,17 @@ pub(crate) fn alpha(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResu
 pub(crate) fn opacity(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "color")? {
-        Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
-        Value::Color(c) => Ok(Value::Dimension {
+        Value::Dimension(SassNumber { num: n, .. }) if n.is_nan() => todo!(),
+        Value::Color(c) => Ok(Value::Dimension(SassNumber {
             num: (c.alpha()),
             unit: Unit::None,
             as_slash: None,
-        }),
-        Value::Dimension {
+        })),
+        Value::Dimension(SassNumber {
             num,
             unit,
             as_slash: _,
-        } => Ok(Value::String(
+        }) => Ok(Value::String(
             format!("opacity({}{})", num.inspect(), unit),
             QuoteKind::None,
         )),
@@ -127,12 +127,12 @@ fn transparentize(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult
         }
     };
     let amount = match args.get_err(1, "amount")? {
-        Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
-        Value::Dimension {
+        Value::Dimension(SassNumber { num: n, .. }) if n.is_nan() => todo!(),
+        Value::Dimension(SassNumber {
             num: n,
             unit: u,
             as_slash: _,
-        } => bound!(args, "amount", n, u, 0, 1),
+        }) => bound!(args, "amount", n, u, 0, 1),
         v => {
             return Err((
                 format!("$amount: {} is not a number.", v.inspect(args.span())?),

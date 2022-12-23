@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::{builtin::builtin_imports::*, serializer::serialize_number};
+use crate::{builtin::builtin_imports::*, serializer::serialize_number, value::SassNumber};
 
 use super::rgb::{function_string, parse_channels, percentage_or_unitless, ParsedChannels};
 
@@ -17,11 +17,11 @@ fn hsl_3_args(
     let alpha = args.default_arg(
         3,
         "alpha",
-        Value::Dimension {
+        Value::Dimension(SassNumber {
             num: (Number::one()),
             unit: Unit::None,
             as_slash: None,
-        },
+        }),
     );
 
     if [&hue, &saturation, &lightness, &alpha]
@@ -126,11 +126,11 @@ pub(crate) fn hsla(args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Va
 pub(crate) fn hue(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "color")? {
-        Value::Color(c) => Ok(Value::Dimension {
+        Value::Color(c) => Ok(Value::Dimension(SassNumber {
             num: (c.hue()),
             unit: Unit::Deg,
             as_slash: None,
-        }),
+        })),
         v => Err((
             format!("$color: {} is not a color.", v.inspect(args.span())?),
             args.span(),
@@ -142,11 +142,11 @@ pub(crate) fn hue(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult
 pub(crate) fn saturation(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "color")? {
-        Value::Color(c) => Ok(Value::Dimension {
+        Value::Color(c) => Ok(Value::Dimension(SassNumber {
             num: (c.saturation()),
             unit: Unit::Percent,
             as_slash: None,
-        }),
+        })),
         v => Err((
             format!("$color: {} is not a color.", v.inspect(args.span())?),
             args.span(),
@@ -158,11 +158,11 @@ pub(crate) fn saturation(mut args: ArgumentResult, visitor: &mut Visitor) -> Sas
 pub(crate) fn lightness(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "color")? {
-        Value::Color(c) => Ok(Value::Dimension {
+        Value::Color(c) => Ok(Value::Dimension(SassNumber {
             num: c.lightness(),
             unit: Unit::Percent,
             as_slash: None,
-        }),
+        })),
         v => Err((
             format!("$color: {} is not a color.", v.inspect(args.span())?),
             args.span(),
@@ -218,12 +218,12 @@ fn darken(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> 
         }
     };
     let amount = match args.get_err(1, "amount")? {
-        Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
-        Value::Dimension {
+        Value::Dimension(SassNumber { num: n, .. }) if n.is_nan() => todo!(),
+        Value::Dimension(SassNumber {
             num: n,
             unit: u,
             as_slash: _,
-        } => bound!(args, "amount", n, u, 0, 100) / Number::from(100),
+        }) => bound!(args, "amount", n, u, 0, 100) / Number::from(100),
         v => {
             return Err((
                 format!(
@@ -255,12 +255,12 @@ fn saturate(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value
     }
 
     let amount = match args.get_err(1, "amount")? {
-        Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
-        Value::Dimension {
+        Value::Dimension(SassNumber { num: n, .. }) if n.is_nan() => todo!(),
+        Value::Dimension(SassNumber {
             num: n,
             unit: u,
             as_slash: _,
-        } => bound!(args, "amount", n, u, 0, 100) / Number::from(100),
+        }) => bound!(args, "amount", n, u, 0, 100) / Number::from(100),
         v => {
             return Err((
                 format!(
@@ -274,11 +274,11 @@ fn saturate(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value
     };
     let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,
-        Value::Dimension {
+        Value::Dimension(SassNumber {
             num: n,
             unit: u,
             as_slash: _,
-        } => {
+        }) => {
             // todo: this branch should be superfluous/incorrect
             return Ok(Value::String(
                 format!("saturate({}{})", n.inspect(), u),
@@ -309,12 +309,12 @@ fn desaturate(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Val
         }
     };
     let amount = match args.get_err(1, "amount")? {
-        Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
-        Value::Dimension {
+        Value::Dimension(SassNumber { num: n, .. }) if n.is_nan() => todo!(),
+        Value::Dimension(SassNumber {
             num: n,
             unit: u,
             as_slash: _,
-        } => bound!(args, "amount", n, u, 0, 100) / Number::from(100),
+        }) => bound!(args, "amount", n, u, 0, 100) / Number::from(100),
         v => {
             return Err((
                 format!(
@@ -333,11 +333,11 @@ pub(crate) fn grayscale(mut args: ArgumentResult, visitor: &mut Visitor) -> Sass
     args.max_args(1)?;
     let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,
-        Value::Dimension {
+        Value::Dimension(SassNumber {
             num: n,
             unit: u,
             as_slash: _,
-        } => {
+        }) => {
             return Ok(Value::String(
                 format!("grayscale({}{})", n.inspect(), u),
                 QuoteKind::None,
@@ -373,16 +373,16 @@ pub(crate) fn invert(mut args: ArgumentResult, visitor: &mut Visitor) -> SassRes
     args.max_args(2)?;
     let weight = match args.get(1, "weight") {
         Some(Spanned {
-            node: Value::Dimension { num: n, .. },
+            node: Value::Dimension(SassNumber { num: n, .. }),
             ..
         }) if n.is_nan() => todo!(),
         Some(Spanned {
             node:
-                Value::Dimension {
+                Value::Dimension(SassNumber {
                     num: n,
                     unit: u,
                     as_slash: _,
-                },
+                }),
             ..
         }) => Some(bound!(args, "weight", n, u, 0, 100) / Number::from(100)),
         None => None,
@@ -401,11 +401,11 @@ pub(crate) fn invert(mut args: ArgumentResult, visitor: &mut Visitor) -> SassRes
         Value::Color(c) => Ok(Value::Color(Box::new(
             c.invert(weight.unwrap_or_else(Number::one)),
         ))),
-        Value::Dimension {
+        Value::Dimension(SassNumber {
             num: n,
             unit: u,
             as_slash: _,
-        } => {
+        }) => {
             if weight.is_some() {
                 return Err((
                     "Only one argument may be passed to the plain-CSS invert() function.",
