@@ -70,13 +70,11 @@ pub(crate) fn add(left: Value, right: Value, options: &Options, span: Span) -> S
                 QuoteKind::None,
             ),
         },
-        Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
         Value::Dimension {
             num,
             unit,
             as_slash: _,
         } => match right {
-            Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
             Value::Dimension {
                 num: num2,
                 unit: unit2,
@@ -354,13 +352,11 @@ pub(crate) fn sub(left: Value, right: Value, options: &Options, span: Span) -> S
 
 pub(crate) fn mul(left: Value, right: Value, options: &Options, span: Span) -> SassResult<Value> {
     Ok(match left {
-        Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
         Value::Dimension {
             num,
             unit,
             as_slash: _,
         } => match right {
-            Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
             Value::Dimension {
                 num: num2,
                 unit: unit2,
@@ -515,14 +511,7 @@ pub(crate) fn div(left: Value, right: Value, options: &Options, span: Span) -> S
                     }
                 }
             }
-            Value::List(..)
-            | Value::True
-            | Value::False
-            | Value::Color(..)
-            | Value::ArgList(..)
-            | Value::Null
-            | Value::String(..)
-            | Value::Calculation(..) => Value::String(
+            _ => Value::String(
                 format!(
                     "{}/{}",
                     serialize_number(
@@ -538,13 +527,6 @@ pub(crate) fn div(left: Value, right: Value, options: &Options, span: Span) -> S
                 ),
                 QuoteKind::None,
             ),
-            Value::Map(..) | Value::FunctionRef(..) => {
-                return Err((
-                    format!("{} isn't a valid CSS value.", right.inspect(span)?),
-                    span,
-                )
-                    .into())
-            }
         },
         c @ Value::Color(..) => match right {
             Value::Dimension { .. } | Value::Color(..) => {
@@ -567,36 +549,6 @@ pub(crate) fn div(left: Value, right: Value, options: &Options, span: Span) -> S
                 QuoteKind::None,
             ),
         },
-        Value::String(s1, q1) => match right {
-            Value::Calculation(..) => todo!(),
-            Value::String(s2, q2) => Value::String(
-                format!("{}{}{}/{}{}{}", q1, s1, q1, q2, s2, q2),
-                QuoteKind::None,
-            ),
-            Value::True
-            | Value::False
-            | Value::Dimension { .. }
-            | Value::Color(..)
-            | Value::List(..)
-            | Value::ArgList(..) => Value::String(
-                format!(
-                    "{}{}{}/{}",
-                    q1,
-                    s1,
-                    q1,
-                    right.to_css_string(span, options.is_compressed())?
-                ),
-                QuoteKind::None,
-            ),
-            Value::Null => Value::String(format!("{}{}{}/", q1, s1, q1), QuoteKind::None),
-            Value::Map(..) | Value::FunctionRef(..) => {
-                return Err((
-                    format!("{} isn't a valid CSS value.", right.inspect(span)?),
-                    span,
-                )
-                    .into())
-            }
-        },
         _ => Value::String(
             format!(
                 "{}/{}",
@@ -610,13 +562,11 @@ pub(crate) fn div(left: Value, right: Value, options: &Options, span: Span) -> S
 
 pub(crate) fn rem(left: Value, right: Value, options: &Options, span: Span) -> SassResult<Value> {
     Ok(match left {
-        Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
         Value::Dimension {
             num: n,
             unit: u,
             as_slash: _,
         } => match right {
-            Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
             Value::Dimension {
                 num: n2,
                 unit: u2,

@@ -256,10 +256,6 @@ impl<'a, 'b> Parser<'a, 'b> {
         // default=false
         unit: bool,
     ) -> SassResult<String> {
-        // NOTE: this logic is largely duplicated in
-        // StylesheetParser.interpolatedIdentifier. Most changes here should be
-        // mirrored there.
-
         let mut text = String::new();
 
         if self.scan_char('-') {
@@ -309,7 +305,9 @@ impl<'a, 'b> Parser<'a, 'b> {
         let mut rest_argument: Option<Identifier> = None;
 
         while self.toks.next_char_is('$') {
+            let name_start = self.toks.cursor();
             let name = Identifier::from(self.parse_variable_name()?);
+            let name_span = self.toks.span_from(name_start);
             self.whitespace()?;
 
             let mut default_value: Option<AstExpr> = None;
@@ -331,7 +329,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             });
 
             if !named.insert(name) {
-                todo!("Duplicate argument.")
+                return Err(("Duplicate argument.", name_span).into());
             }
 
             if !self.scan_char(',') {
@@ -696,9 +694,6 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     pub(crate) fn parse_string(&mut self) -> SassResult<String> {
-        // NOTE: this logic is largely duplicated in ScssParser._interpolatedString.
-        // Most changes here should be mirrored there.
-
         let quote = match self.toks.next() {
             Some(Token {
                 kind: q @ ('\'' | '"'),
@@ -739,7 +734,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         }
 
         if !found_matching_quote {
-            todo!("Expected ${{String.fromCharCode(quote)}}.")
+            return Err((format!("Expected {quote}."), self.toks.current_span()).into());
         }
 
         Ok(buffer)
@@ -750,24 +745,15 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         self.whitespace()?;
 
-        let before_at = self.toks.cursor();
-
         if self.scan_char('@') {
             if self.scan_identifier("else", true)? {
                 return Ok(true);
             }
 
             if self.scan_identifier("elseif", true)? {
-                //     logger.warn(
-                //         '@elseif is deprecated and will not be supported in future Sass '
-                //         'versions.\n'
-                //         '\n'
-                //         'Recommendation: @else if',
-                //         span: scanner.spanFrom(beforeAt),
-                //         deprecation: true);
-                //     scanner.position -= 2;
-                //     return true;
-                todo!()
+                // todo: deprecation warning here
+                self.toks.set_cursor(self.toks.cursor() - 2);
+                return Ok(true);
             }
         }
 
@@ -920,9 +906,6 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     fn try_url_contents(&mut self, name: Option<&str>) -> SassResult<Option<Interpolation>> {
-        // NOTE: this logic is largely duplicated in Parser.tryUrl. Most changes
-        // here should be mirrored there.
-
         let start = self.toks.cursor();
         if !self.scan_char('(') {
             return Ok(None);
@@ -1119,24 +1102,25 @@ impl<'a, 'b> Parser<'a, 'b> {
         }))
     }
 
-    fn parse_media_rule(&mut self) -> SassResult<AstStmt> {
+    fn parse_media_rule(&mut self, start: usize) -> SassResult<AstStmt> {
         let query = self.parse_media_query_list()?;
 
         let body = self.with_children(Self::parse_statement)?.node;
 
-        Ok(AstStmt::Media(AstMedia { query, body }))
+        Ok(AstStmt::Media(AstMedia {
+            query,
+            body,
+            span: self.toks.span_from(start),
+        }))
     }
 
     fn parse_interpolated_string(&mut self) -> SassResult<Spanned<StringExpr>> {
-        // NOTE: this logic is largely duplicated in ScssParser.interpolatedString.
-        // Most changes here should be mirrored there.
-
         let quote = match self.toks.next() {
             Some(Token {
                 kind: kind @ ('"' | '\''),
                 ..
             }) => kind,
-            Some(..) | None => todo!("Expected string."),
+            Some(..) | None => unreachable!("Expected string."),
         };
 
         let mut buffer = Interpolation::new();
@@ -1784,9 +1768,6 @@ impl<'a, 'b> Parser<'a, 'b> {
         &mut self,
         child: fn(&mut Self) -> SassResult<AstStmt>,
     ) -> SassResult<AstStmt> {
-        // NOTE: this logic is largely duplicated in CssParser.atRule. Most changes
-        // here should be mirrored there.
-
         let start = self.toks.cursor();
 
         self.expect_char('@')?;
@@ -1821,7 +1802,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             Some("if") => self.parse_if_rule(child),
             Some("import") => self.parse_import_rule(start),
             Some("include") => self.parse_include_rule(),
-            Some("media") => self.parse_media_rule(),
+            Some("media") => self.parse_media_rule(start),
             Some("mixin") => self.parse_mixin_rule(start),
             Some("-moz-document") => self.parse_moz_document_rule(name),
             Some("supports") => self.parse_supports_rule(),
@@ -2423,7 +2404,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
                 self.whitespace()?;
                 if named.contains_key(&name.node) {
-                    todo!("Duplicate argument.");
+                    return Err(("Duplicate argument.", name.span).into());
                 }
 
                 named.insert(
@@ -2442,7 +2423,11 @@ impl<'a, 'b> Parser<'a, 'b> {
                     break;
                 }
             } else if !named.is_empty() {
-                todo!("Positional arguments must come before keyword arguments.");
+                return Err((
+                    "Positional arguments must come before keyword arguments.",
+                    expression.span,
+                )
+                    .into());
             } else {
                 positional.push(expression.node);
             }
@@ -2913,8 +2898,6 @@ impl<'a, 'b> Parser<'a, 'b> {
         namespace: Option<Spanned<Identifier>>,
         start: Option<usize>,
     ) -> SassResult<AstVariableDecl> {
-        //     var precedingComment = lastSilentComment;
-        // lastSilentComment = null;
         let start = start.unwrap_or(self.toks.cursor());
 
         let name = self.parse_variable_name()?;
@@ -3733,9 +3716,6 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     fn try_parse_url(&mut self) -> SassResult<Option<String>> {
-        // NOTE: this logic is largely duplicated in Parser.tryUrl. Most changes
-        // here should be mirrored there.
-
         let start = self.toks.cursor();
 
         if !self.scan_identifier("url", false)? {

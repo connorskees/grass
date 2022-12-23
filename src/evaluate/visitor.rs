@@ -995,9 +995,6 @@ impl<'a> Visitor<'a> {
     }
 
     fn visit_static_import_rule(&mut self, static_import: AstPlainCssImport) -> SassResult<()> {
-        // NOTE: this logic is largely duplicated in [visitCssImport]. Most changes
-        // here should be mirrored there.
-
         let import = self.interpolation_to_value(static_import.url, false, false)?;
 
         let modifiers = static_import
@@ -1441,10 +1438,12 @@ impl<'a> Visitor<'a> {
     }
 
     fn visit_media_rule(&mut self, media_rule: AstMedia) -> SassResult<Option<Value>> {
-        // NOTE: this logic is largely duplicated in [visitCssMediaRule]. Most
-        // changes here should be mirrored there.
         if self.declaration_name.is_some() {
-            todo!("Media rules may not be used within nested declarations.")
+            return Err((
+                "Media rules may not be used within nested declarations.",
+                media_rule.span,
+            )
+                .into());
         }
 
         let queries1 = self.visit_media_queries(media_rule.query)?;
@@ -1453,12 +1452,6 @@ impl<'a> Visitor<'a> {
         let merged_queries = queries2
             .as_ref()
             .and_then(|queries2| Self::merge_media_queries(queries2, &queries1));
-
-        // if let Some(merged_queries) = merged_queries {
-        //     if merged_queries.is_empty() {
-        //         return Ok(Vec::new());
-        //     }
-        // }
 
         let merged_sources = match &merged_queries {
             Some(merged_queries) if merged_queries.is_empty() => return Ok(None),
@@ -1472,16 +1465,13 @@ impl<'a> Visitor<'a> {
             None => IndexSet::new(),
         };
 
-        // todo: scopeWhen
-        //     scopeWhen: node.hasDeclarations);
-
         let children = media_rule.body;
 
         let query = merged_queries.clone().unwrap_or_else(|| queries1.clone());
 
         let media_rule = CssStmt::Media(
             MediaRule {
-                // todo: no string here
+                // todo: no string here, we shouldn't serialize until final step
                 query: query
                     .into_iter()
                     .map(Self::serialize_media_query)
@@ -1545,41 +1535,6 @@ impl<'a> Visitor<'a> {
             },
         )?;
 
-        // if (_declarationName != null) {
-        //   throw _exception(
-        //       "Media rules may not be used within nested declarations.", node.span);
-        // }
-
-        // var queries = await _visitMediaQueries(node.query);
-        // var mergedQueries = _mediaQueries
-        //     .andThen((mediaQueries) => _mergeMediaQueries(mediaQueries, queries));
-        // if (mergedQueries != null && mergedQueries.isEmpty) return null;
-
-        // var mergedSources = mergedQueries == null
-        //     ? const <CssMediaQuery>{}
-        //     : {..._mediaQuerySources!, ..._mediaQueries!, ...queries};
-
-        // await _withParent(
-        //     ModifiableCssMediaRule(mergedQueries ?? queries, node.span), () async {
-        //   await _withMediaQueries(mergedQueries ?? queries, mergedSources,
-        //       () async {
-        //     var styleRule = _styleRule;
-        //     if (styleRule == null) {
-        //       for (var child in node.children) {
-        //         await child.accept(this);
-        //       }
-        //     } else {
-        //     }
-        //   });
-        // },
-        //     through: (node) =>
-        //         node is CssStyleRule ||
-        //         (mergedSources.isNotEmpty &&
-        //             node is CssMediaRule &&
-        //             node.queries.every(mergedSources.contains)),
-        //     scopeWhen: node.hasDeclarations);
-
-        // return null;
         Ok(None)
     }
 
@@ -1587,9 +1542,6 @@ impl<'a> Visitor<'a> {
         &mut self,
         unknown_at_rule: AstUnknownAtRule,
     ) -> SassResult<Option<Value>> {
-        // NOTE: this logic is largely duplicated in [visitCssAtRule]. Most changes
-        // here should be mirrored there.
-
         if self.declaration_name.is_some() {
             return Err((
                 "At-rules may not be used within nested declarations.",
@@ -1714,14 +1666,6 @@ impl<'a> Visitor<'a> {
         }
 
         Ok(())
-        //         if (_quietDeps &&
-        //     (_inDependency || (_currentCallable?.inDependency ?? false))) {
-        //   return;
-        // }
-
-        // if (!_warningsEmitted.add(Tuple2(message, span))) return;
-        // _logger.warn(message,
-        //     span: span, trace: _stackTrace(span), deprecation: deprecation);
     }
 
     fn with_media_queries<T>(
@@ -1866,9 +1810,6 @@ impl<'a> Visitor<'a> {
                 let args = self.eval_args(include_stmt.args, include_stmt.name.span)?;
                 mixin(args, self)?;
 
-                //   await _runBuiltInCallable(node.arguments, mixin, nodeWithSpan);
-
-                // todo!()
                 Ok(None)
             }
             Mixin::UserDefined(mixin, env) => {
@@ -1955,21 +1896,6 @@ impl<'a> Visitor<'a> {
         self.env.scopes_mut().exit_scope();
 
         Ok(result)
-        //     var list = await node.list.accept(this);
-        // var nodeWithSpan = _expressionNode(node.list);
-        // var setVariables = node.variables.length == 1
-        //     ? (Value value) => _environment.setLocalVariable(node.variables.first,
-        //         _withoutSlash(value, nodeWithSpan), nodeWithSpan)
-        //     : (Value value) =>
-        //         _setMultipleVariables(node.variables, value, nodeWithSpan);
-        // return _environment.scope(() {
-        //   return _handleReturn<Value>(list.asList, (element) {
-        //     setVariables(element);
-        //     return _handleReturn<Statement>(
-        //         node.children, (child) => child.accept(this));
-        //   });
-        // }, semiGlobal: true);
-        // todo!()
     }
 
     fn visit_for_stmt(&mut self, for_stmt: AstFor) -> SassResult<Option<Value>> {
@@ -1980,8 +1906,14 @@ impl<'a> Visitor<'a> {
             .assert_number(from_span)?;
         let to_number = self.visit_expr(for_stmt.to.node)?.assert_number(to_span)?;
 
-        // todo: proper error here
-        assert!(to_number.unit().comparable(from_number.unit()));
+        if !to_number.unit().comparable(from_number.unit()) {
+            // todo: better error message here
+            return Err((
+                "to and from values have incompatible units",
+                from_span.merge(to_span),
+            )
+                .into());
+        }
 
         let from = from_number.num().assert_int(from_span)?;
         let mut to = to_number
@@ -2465,17 +2397,6 @@ impl<'a> Visitor<'a> {
                 );
 
                 Err((format!("No {argument_word} named {argument_names}."), span).into())
-                //   var argumentWord = pluralize('argument', evaluated.named.keys.length);
-                //   var argumentNames =
-                //       toSentence(evaluated.named.keys.map((name) => "\$$name"), 'or');
-                //   throw MultiSpanSassRuntimeException(
-                //       "No $argumentWord named $argumentNames.",
-                //       nodeWithSpan.span,
-                //       "invocation",
-                //       {callable.declaration.arguments.spanWithName: "declaration"},
-                //       _stackTrace(nodeWithSpan.span));
-                // });
-                // todo!("No arguments named")
             })
         });
 
@@ -2601,25 +2522,6 @@ impl<'a> Visitor<'a> {
         self.flags.set(ContextFlags::IN_FUNCTION, old_in_function);
 
         Ok(value)
-
-        //             var function = _addExceptionSpan(
-        //     node, () => _getFunction(node.name, namespace: node.namespace));
-
-        // if (function == null) {
-        //   if (node.namespace != null) {
-        //     throw _exception("Undefined function.", node.span);
-        //   }
-
-        //   function = PlainCssCallable(node.originalName);
-        // }
-
-        // var oldInFunction = _inFunction;
-        // _inFunction = true;
-        // var result = await _addErrorSpan(
-        //     node, () => _runFunctionCallable(node.arguments, function, node));
-        // _inFunction = oldInFunction;
-        // return result;
-        // todo!()
     }
 
     fn visit_interpolated_func_expr(&mut self, func: InterpolatedFunction) -> SassResult<Value> {
@@ -3017,11 +2919,12 @@ impl<'a> Visitor<'a> {
     }
 
     pub fn visit_ruleset(&mut self, ruleset: AstRuleSet) -> SassResult<Option<Value>> {
-        // NOTE: this logic is largely duplicated in [visitCssStyleRule]. Most
-        // changes here should be mirrored there.
-
         if self.declaration_name.is_some() {
-            todo!("Style rules may not be used within nested declarations.")
+            return Err((
+                "Style rules may not be used within nested declarations.",
+                ruleset.span,
+            )
+                .into());
         }
 
         let AstRuleSet {
@@ -3033,9 +2936,6 @@ impl<'a> Visitor<'a> {
         let selector_text = self.interpolation_to_value(ruleset_selector, true, true)?;
 
         if self.flags.in_keyframes() {
-            // NOTE: this logic is largely duplicated in [visitCssKeyframeBlock]. Most
-            // changes here should be mirrored there.
-
             let mut sel_toks = Lexer::new(
                 selector_text
                     .chars()
@@ -3177,7 +3077,11 @@ impl<'a> Visitor<'a> {
             && !self.flags.in_unknown_at_rule()
             && !self.flags.in_keyframes()
         {
-            todo!("Declarations may only be used within style rules.")
+            return Err((
+                "Declarations may only be used within style rules.",
+                style.span,
+            )
+                .into());
         }
 
         let is_custom_property = style.is_custom_property();

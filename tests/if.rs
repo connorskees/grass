@@ -257,3 +257,14 @@ test!(
     }",
     "/**/\n"
 );
+test!(
+    elseif_is_parsed_as_else_if,
+    r"@if false {}
+
+    @elseif true {
+        a {
+            color: red;
+        }
+    }",
+    "a {\n  color: red;\n}\n"
+);

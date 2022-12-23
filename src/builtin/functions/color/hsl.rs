@@ -159,7 +159,7 @@ pub(crate) fn lightness(mut args: ArgumentResult, parser: &mut Visitor) -> SassR
     args.max_args(1)?;
     match args.get_err(0, "color")? {
         Value::Color(c) => Ok(Value::Dimension {
-            num: (c.lightness()),
+            num: c.lightness(),
             unit: Unit::Percent,
             as_slash: None,
         }),
@@ -183,20 +183,12 @@ pub(crate) fn adjust_hue(mut args: ArgumentResult, parser: &mut Visitor) -> Sass
                 .into())
         }
     };
-    let degrees = match args.get_err(1, "degrees")? {
-        Value::Dimension { num, .. } if num.is_nan() => todo!(),
-        Value::Dimension { num, .. } => num,
-        v => {
-            return Err((
-                format!(
-                    "$degrees: {} is not a number.",
-                    v.to_css_string(args.span(), parser.parser.options.is_compressed())?
-                ),
-                args.span(),
-            )
-                .into())
-        }
-    };
+
+    let degrees = args
+        .get_err(1, "degrees")?
+        .assert_number_with_name("degrees", args.span())?
+        .num();
+
     Ok(Value::Color(Box::new(color.adjust_hue(degrees))))
 }
 

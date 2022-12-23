@@ -58,7 +58,7 @@ impl SassError {
     pub(crate) fn raw(self) -> (String, Span) {
         match self.kind {
             SassErrorKind::Raw(string, span) => (string, span),
-            e => todo!("unable to get raw of {:?}", e),
+            e => unreachable!("unable to get raw of {:?}", e),
         }
     }
 

@@ -31,7 +31,7 @@ impl ContextFlags {
 
     pub fn set(&mut self, flag: ContextFlag, v: bool) {
         if v {
-            self.0 |= flag.0; // as u16;
+            self.0 |= flag.0;
         } else {
             self.unset(flag);
         }

@@ -207,6 +207,25 @@ test!(
     "@for $i from -2147483648 through -2147483648 {}",
     ""
 );
+test!(
+    to_and_from_comparable_units,
+    "@for $i from 1px to (3px * 1in) / 1in {
+        a {
+            color: $i;
+        }
+    }",
+    "a {\n  color: 1px;\n}\n\na {\n  color: 2px;\n}\n"
+);
+error!(
+    to_and_from_non_comparable_units,
+    "@for $i from 1px to 2vh {
+        a {
+            color: $i;
+        }
+    }",
+    "Error: to and from values have incompatible units"
+);
+
 error!(
     invalid_escape_sequence_in_declaration,
     "@for $i from 0 \\110000 o 2 {}", "Error: Invalid Unicode code point."

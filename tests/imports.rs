@@ -506,6 +506,8 @@ test!(
     r#"@import "a" b c d(e) supports(f: g) h i j(k) l m (n: o), (p: q);"#,
     "@import \"a\" b c d(e) supports(f: g) h i j(k) l m (n: o), (p: q);\n"
 );
+error!(unclosed_single_quote, r#"@import '"#, "Error: Expected '.");
+error!(unclosed_double_quote, r#"@import ""#, "Error: Expected \".");
 
 // todo: edge case tests for plain css imports moved to top
 // todo: test for calling paths, e.g. `grass b\index.scss`

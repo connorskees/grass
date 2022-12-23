@@ -231,3 +231,47 @@ test!(
     }",
     "a {\n  position: relative;\n}\nc {\n  white-space: nowrap;\n}\n"
 );
+error!(
+    media_inside_nested_declaration,
+    "a {
+        color: {
+            @media foo {}
+        }
+    }",
+    "Error: This at-rule is not allowed here."
+);
+error!(
+    media_inside_nested_declaration_from_mixin,
+    "@mixin foo() {
+        @media foo {}
+    }
+
+    a {
+        color: {
+            @include foo();
+        }
+    }",
+    "Error: Media rules may not be used within nested declarations."
+);
+error!(
+    ruleset_inside_nested_declaration_from_mixin,
+    "@mixin foo() {
+        a {}
+    }
+
+    a {
+        color: {
+            @include foo();
+        }
+    }",
+    "Error: Style rules may not be used within nested declarations."
+);
+error!(
+    style_at_the_toplevel_from_mixin,
+    "@mixin foo() {
+        color: red;
+    }
+
+    @include foo();",
+    "Error: Declarations may only be used within style rules."
+);

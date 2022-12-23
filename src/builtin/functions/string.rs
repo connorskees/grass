@@ -113,7 +113,6 @@ pub(crate) fn str_slice(mut args: ArgumentResult, parser: &mut Visitor) -> SassR
                 as_slash: None,
             },
         )
-        // todo: tidy arg ordering here
         .assert_number_with_name("end-at", span)?;
 
     end.assert_no_units("end-at", span)?;

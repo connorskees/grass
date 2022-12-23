@@ -93,6 +93,7 @@ pub(crate) struct AstEach {
 pub(crate) struct AstMedia {
     pub query: Interpolation,
     pub body: Vec<AstStmt>,
+    pub span: Span,
 }
 
 pub(crate) type CssMediaQuery = MediaQuery;

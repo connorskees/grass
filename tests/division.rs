@@ -269,3 +269,13 @@ test!(
     }",
     "a {\n  color: (a: 0.6666666667);\n}\n"
 );
+test!(
+    quoted_string_div_calculation,
+    "a {\n  color: \"\" / calc(1vh + 1px);\n}\n",
+    "a {\n  color: \"\"/calc(1vh + 1px);\n}\n"
+);
+test!(
+    unquoted_string_div_calculation,
+    "a {\n  color: foo / calc(1vh + 1px);\n}\n",
+    "a {\n  color: foo/calc(1vh + 1px);\n}\n"
+);

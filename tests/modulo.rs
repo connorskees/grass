@@ -125,6 +125,56 @@ test!(
     "a {\n  color: 0in % 0px;\n}\n",
     "a {\n  color: NaNin;\n}\n"
 );
+test!(
+    nan_mod_positive_finite,
+    "a {\n  color: (0/0) % 5;\n}\n",
+    "a {\n  color: NaN;\n}\n"
+);
+test!(
+    nan_mod_negative_finite,
+    "a {\n  color: (0/0) % -5;\n}\n",
+    "a {\n  color: NaN;\n}\n"
+);
+test!(
+    infinity_mod_positive_finite,
+    "a {\n  color: (1/0) % 5;\n}\n",
+    "a {\n  color: NaN;\n}\n"
+);
+test!(
+    infinity_mod_negative_finite,
+    "a {\n  color: (1/0) % -5;\n}\n",
+    "a {\n  color: NaN;\n}\n"
+);
+test!(
+    positive_finite_mod_nan,
+    "a {\n  color: 5 % (0/0);\n}\n",
+    "a {\n  color: NaN;\n}\n"
+);
+test!(
+    negative_finite_mod_nan,
+    "a {\n  color: -5 % (0/0);\n}\n",
+    "a {\n  color: NaN;\n}\n"
+);
+test!(
+    positive_finite_mod_infinity,
+    "a {\n  color: 5 % (1/0);\n}\n",
+    "a {\n  color: 5;\n}\n"
+);
+test!(
+    negative_finite_mod_infinity,
+    "a {\n  color: -5 % (1/0);\n}\n",
+    "a {\n  color: Infinity;\n}\n"
+);
+test!(
+    positive_finite_mod_negative_infinity,
+    "a {\n  color: 5 % (-1/0);\n}\n",
+    "a {\n  color: -Infinity;\n}\n"
+);
+test!(
+    negative_finite_mod_negative_infinity,
+    "a {\n  color: -5 % (-1/0);\n}\n",
+    "a {\n  color: NaN;\n}\n"
+);
 error!(
     calculation_mod_calculation,
     "a {\n  color: calc(1rem + 1px) % calc(1rem + 1px);\n}\n",

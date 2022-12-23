@@ -265,3 +265,13 @@ test!(
     "a {\n  color: hsl(8grad, 25%, 50%);\n}\n",
     "a {\n  color: hsl(8deg, 25%, 50%);\n}\n"
 );
+test!(
+    adjust_hue_nan,
+    "a {\n  color: adjust-hue(hsla(200, 50%, 50%), (0/0));\n}\n",
+    "a {\n  color: #404040;\n}\n"
+);
+test!(
+    adjust_hue_nan_get_hue,
+    "a {\n  color: hue(adjust-hue(hsla(200, 50%, 50%), (0/0)));\n}\n",
+    "a {\n  color: NaNdeg;\n}\n"
+);

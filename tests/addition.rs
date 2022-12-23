@@ -419,3 +419,18 @@ test!(
     "a {\n  color: calc(1px + 1%) + foo;\n}\n",
     "a {\n  color: calc(1px + 1%)foo;\n}\n"
 );
+test!(
+    num_plus_nan,
+    "a {\n  color: 1 + (0/0);\n}\n",
+    "a {\n  color: NaN;\n}\n"
+);
+test!(
+    nan_plus_num,
+    "a {\n  color: (0/0) + 1;\n}\n",
+    "a {\n  color: NaN;\n}\n"
+);
+test!(
+    nan_plus_nan,
+    "a {\n  color: (0/0) + (0/0);\n}\n",
+    "a {\n  color: NaN;\n}\n"
+);

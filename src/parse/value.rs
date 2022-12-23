@@ -1346,9 +1346,6 @@ impl<'c> ValueParser<'c> {
         parser: &mut Parser,
         name: Option<String>,
     ) -> SassResult<Option<Interpolation>> {
-        // NOTE: this logic is largely duplicated in Parser.tryUrl. Most changes
-        // here should be mirrored there.
-
         let start = parser.toks.cursor();
 
         if !parser.scan_char('(') {

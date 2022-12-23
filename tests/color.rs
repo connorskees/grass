@@ -614,8 +614,12 @@ error!(
     "a {\n  color: rgba(59%, 169, 69%, 50%, 50%);\n}\n",
     "Error: Only 4 arguments allowed, but 5 were passed."
 );
-
-// todo:
-// a {
-//     color: red(r#{e}d)
-// }
+error!(
+    opacify_amount_nan,
+    "a {\n  color: opacify(#fff, (0/0));\n}\n",
+    "Error: $amount: Expected NaN to be within 0 and 1."
+);
+error!(
+    interpolated_string_is_not_color,
+    "a {\n  color: red(r#{e}d);\n}\n", "Error: $color: red is not a color."
+);

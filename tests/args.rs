@@ -274,3 +274,32 @@ error!(
     }",
     "Error: expected \")\"."
 );
+error!(
+    duplicate_named_arg,
+    "@function foo($a) {
+        @return $a;
+    }
+
+    a {
+        color: foo($a: red, $a: green);
+    }",
+    "Error: Duplicate argument."
+);
+error!(
+    keyword_arg_before_positional,
+    "@function foo($a, $b) {
+        @return $a, $b;
+    }
+
+    a {
+        color: foo($a: red, green);
+    }",
+    "Error: Positional arguments must come before keyword arguments."
+);
+error!(
+    duplicate_arg_in_declaration,
+    "@function foo($a, $a) {
+        @return $a;
+    }",
+    "Error: Duplicate argument."
+);

@@ -93,7 +93,6 @@ pub(crate) fn opacity(mut args: ArgumentResult, parser: &mut Visitor) -> SassRes
     }
 }
 
-// todo: unify `opacify` and `fade_in`
 fn opacify(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(2)?;
     let color = match args.get_err(0, "color")? {
@@ -106,86 +105,16 @@ fn opacify(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> 
                 .into())
         }
     };
-    let amount = match args.get_err(1, "amount")? {
-        Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
-        Value::Dimension {
-            num: n,
-            unit: u,
-            as_slash: _,
-        } => bound!(args, "amount", n, u, 0, 1),
-        v => {
-            return Err((
-                format!("$amount: {} is not a number.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
+    let amount = args
+        .get_err(1, "amount")?
+        .assert_number_with_name("amount", args.span())?;
+
+    let amount = bound!(args, "amount", amount.num(), amount.unit(), 0, 1);
+
     Ok(Value::Color(Box::new(color.fade_in(amount))))
 }
 
-fn fade_in(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
-    args.max_args(2)?;
-    let color = match args.get_err(0, "color")? {
-        Value::Color(c) => c,
-        v => {
-            return Err((
-                format!("$color: {} is not a color.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
-    let amount = match args.get_err(1, "amount")? {
-        Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
-        Value::Dimension {
-            num: n,
-            unit: u,
-            as_slash: _,
-        } => bound!(args, "amount", n, u, 0, 1),
-        v => {
-            return Err((
-                format!("$amount: {} is not a number.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
-    Ok(Value::Color(Box::new(color.fade_in(amount))))
-}
-
-// todo: unify with `fade_out`
 fn transparentize(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
-    args.max_args(2)?;
-    let color = match args.get_err(0, "color")? {
-        Value::Color(c) => c,
-        v => {
-            return Err((
-                format!("$color: {} is not a color.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
-    let amount = match args.get_err(1, "amount")? {
-        Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
-        Value::Dimension {
-            num: n,
-            unit: u,
-            as_slash: _,
-        } => bound!(args, "amount", n, u, 0, 1),
-        v => {
-            return Err((
-                format!("$amount: {} is not a number.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
-    Ok(Value::Color(Box::new(color.fade_out(amount))))
-}
-
-fn fade_out(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(2)?;
     let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,
@@ -219,7 +148,7 @@ pub(crate) fn declare(f: &mut GlobalFunctionMap) {
     f.insert("alpha", Builtin::new(alpha));
     f.insert("opacity", Builtin::new(opacity));
     f.insert("opacify", Builtin::new(opacify));
-    f.insert("fade-in", Builtin::new(fade_in));
+    f.insert("fade-in", Builtin::new(opacify));
     f.insert("transparentize", Builtin::new(transparentize));
-    f.insert("fade-out", Builtin::new(fade_out));
+    f.insert("fade-out", Builtin::new(transparentize));
 }
