@@ -245,7 +245,7 @@ impl ArgumentResult {
     }
 
     pub fn get_variadic(self) -> SassResult<Vec<Spanned<Value>>> {
-        if let Some((name, _)) = self.named.first_key_value() {
+        if let Some((name, _)) = self.named.iter().next() {
             return Err((format!("No argument named ${}.", name), self.span).into())
         }
 
