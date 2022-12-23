@@ -52,7 +52,7 @@ fn hsl_3_args(
     let saturation = saturation.assert_number_with_name(span, "saturation")?;
     let lightness = lightness.assert_number_with_name(span, "lightness")?;
     let alpha = percentage_or_unitless(
-        alpha.assert_number_with_name(span, "alpha")?,
+        &alpha.assert_number_with_name(span, "alpha")?,
         1.0,
         "alpha",
         span,
@@ -85,7 +85,7 @@ fn inner_hsl(
             parser,
             args.span(),
         )? {
-            ParsedChannels::String(s) => return Ok(Value::String(s, QuoteKind::None)),
+            ParsedChannels::String(s) => Ok(Value::String(s, QuoteKind::None)),
             ParsedChannels::List(list) => {
                 let args = ArgumentResult {
                     positional: list,
@@ -95,7 +95,7 @@ fn inner_hsl(
                     touched: BTreeSet::new(),
                 };
 
-                return hsl_3_args(name, args, parser);
+                hsl_3_args(name, args, parser)
             }
         }
     } else if len == 2 {

@@ -148,7 +148,7 @@ impl StringExpr {
             match value {
                 InterpolationPart::Expr(e) => buffer.add_expr(Spanned { node: e, span }),
                 InterpolationPart::String(text) => {
-                    Self::quote_inner_text(&text, quote, &mut buffer, is_static)
+                    Self::quote_inner_text(&text, quote, &mut buffer, is_static);
                 }
             }
         }

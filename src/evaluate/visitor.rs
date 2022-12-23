@@ -16,7 +16,7 @@ use indexmap::IndexSet;
 use crate::{
     ast::*,
     builtin::{
-        meta::IF_ARGUMENTS,
+        meta::if_arguments,
         modules::{
             declare_module_color, declare_module_list, declare_module_map, declare_module_math,
             declare_module_meta, declare_module_selector, declare_module_string, Module,
@@ -86,14 +86,12 @@ impl UserDefinedCallable for Arc<CallableContentBlock> {
 pub(crate) struct CallableContentBlock {
     content: AstContentBlock,
     env: Environment,
-    // scopes: Arc<RefCell<Scopes>>,
-    // scope_idx: usize,
-    // content_at_decl: Option<Arc<Self>>,
 }
 
 pub(crate) struct Visitor<'a> {
     pub declaration_name: Option<String>,
     pub flags: ContextFlags,
+    // should not need this
     pub parser: &'a mut Parser<'a, 'a>,
     pub env: Environment,
     pub style_rule_ignoring_at_root: Option<ExtendedSelector>,
@@ -178,7 +176,7 @@ impl<'a> Visitor<'a> {
             AstStmt::Each(each_stmt) => self.visit_each_stmt(each_stmt),
             AstStmt::Media(media_rule) => self.visit_media_rule(media_rule),
             AstStmt::Include(include_stmt) => self.visit_include_stmt(include_stmt),
-            AstStmt::While(while_stmt) => self.visit_while_stmt(while_stmt),
+            AstStmt::While(while_stmt) => self.visit_while_stmt(&while_stmt),
             AstStmt::VariableDecl(decl) => self.visit_variable_decl(decl),
             AstStmt::LoudComment(comment) => self.visit_loud_comment(comment),
             AstStmt::ImportRule(import_rule) => self.visit_import_rule(import_rule),
@@ -230,13 +228,13 @@ impl<'a> Visitor<'a> {
                 false,
                 self.parser.span_before,
                 |visitor, module, _| {
-                    visitor.env.forward_module(module, forward_rule.clone())?;
+                    visitor.env.forward_module(module, forward_rule.clone());
 
                     Ok(())
                 },
             )?;
 
-            self.remove_used_configuration(
+            Self::remove_used_configuration(
                 adjusted_config,
                 Arc::clone(&new_configuration),
                 &forward_rule
@@ -273,7 +271,7 @@ impl<'a> Visitor<'a> {
                 false,
                 self.parser.span_before,
                 move |visitor, module, _| {
-                    visitor.env.forward_module(module, forward_rule.clone())?;
+                    visitor.env.forward_module(module, forward_rule.clone());
 
                     Ok(())
                 },
@@ -329,7 +327,6 @@ impl<'a> Visitor<'a> {
     }
 
     fn remove_used_configuration(
-        &mut self,
         upstream: Arc<RefCell<Configuration>>,
         downstream: Arc<RefCell<Configuration>>,
         except: &HashSet<Identifier>,
@@ -488,7 +485,7 @@ impl<'a> Visitor<'a> {
 
                 Ok(())
             },
-            |stmt| stmt.is_style_rule(),
+            CssStmt::is_style_rule,
         )?;
 
         Ok(())
@@ -622,9 +619,9 @@ impl<'a> Visitor<'a> {
     }
 
     fn visit_use_rule(&mut self, use_rule: AstUseRule) -> SassResult<()> {
-        let mut configuration = Arc::new(RefCell::new(Configuration::empty()));
-
-        if !use_rule.configuration.is_empty() {
+        let mut configuration = if use_rule.configuration.is_empty() {
+            Arc::new(RefCell::new(Configuration::empty()))
+        } else {
             let mut values = BTreeMap::new();
 
             for var in use_rule.configuration {
@@ -636,8 +633,8 @@ impl<'a> Visitor<'a> {
                 );
             }
 
-            configuration = Arc::new(RefCell::new(Configuration::explicit(values, use_rule.span)));
-        }
+            Arc::new(RefCell::new(Configuration::explicit(values, use_rule.span)))
+        };
 
         let span = use_rule.span;
 
@@ -763,7 +760,7 @@ impl<'a> Visitor<'a> {
         }
 
         for load_path in &self.parser.options.load_paths {
-            let path_buf = load_path.join(&path);
+            let path_buf = load_path.join(path);
 
             try_path_with_extensions!(&path_buf);
 
@@ -1065,7 +1062,7 @@ impl<'a> Visitor<'a> {
             self.run_user_defined_callable(
                 MaybeEvaledArguments::Invocation(content_rule.args),
                 Arc::clone(content),
-                content.env.clone(),
+                &content.env.clone(),
                 span,
                 |content, visitor| {
                     for stmt in content.content.body.clone() {
@@ -1346,9 +1343,7 @@ impl<'a> Visitor<'a> {
         let list = self.parse_selector_from_string(&target_text, false, true)?;
 
         let extend_rule = ExtendRule {
-            selector: Selector(list.clone()),
             is_optional: extend_rule.is_optional,
-            span: extend_rule.span,
         };
 
         for complex in list.components {
@@ -1418,7 +1413,7 @@ impl<'a> Visitor<'a> {
     fn visit_media_queries(&mut self, queries: Interpolation) -> SassResult<Vec<CssMediaQuery>> {
         let resolved = self.perform_interpolation(queries, true)?;
 
-        CssMediaQuery::parse_list(resolved, self.parser)
+        CssMediaQuery::parse_list(&resolved, self.parser)
     }
 
     fn serialize_media_query(query: MediaQuery) -> String {
@@ -1443,7 +1438,7 @@ impl<'a> Visitor<'a> {
             buffer.push_str(&condition["(not ".len()..condition.len() - 1]);
         } else {
             let operator = if query.conjunction { " and " } else { " or " };
-            buffer.push_str(&format!("{}", query.conditions.join(operator)))
+            buffer.push_str(&query.conditions.join(operator));
         }
 
         buffer
@@ -1698,7 +1693,7 @@ impl<'a> Visitor<'a> {
 
                 Ok(())
             },
-            |stmt| stmt.is_style_rule(),
+            CssStmt::is_style_rule,
         )?;
 
         self.flags.set(ContextFlags::IN_KEYFRAMES, was_in_keyframes);
@@ -1925,7 +1920,7 @@ impl<'a> Visitor<'a> {
                 self.run_user_defined_callable::<_, ()>(
                     MaybeEvaledArguments::Invocation(args),
                     mixin,
-                    env,
+                    &env,
                     include_stmt.name.span,
                     |mixin, visitor| {
                         visitor.with_content(callable_content, |visitor| {
@@ -2015,7 +2010,7 @@ impl<'a> Visitor<'a> {
         let to_number = self.visit_expr(for_stmt.to.node)?.assert_number(to_span)?;
 
         // todo: proper error here
-        assert!(to_number.unit().comparable(&from_number.unit()));
+        assert!(to_number.unit().comparable(from_number.unit()));
 
         let from = from_number.num().assert_int(from_span)?;
         let mut to = to_number
@@ -2065,7 +2060,7 @@ impl<'a> Visitor<'a> {
         Ok(result)
     }
 
-    fn visit_while_stmt(&mut self, while_stmt: AstWhile) -> SassResult<Option<Value>> {
+    fn visit_while_stmt(&mut self, while_stmt: &AstWhile) -> SassResult<Option<Value>> {
         self.with_scope::<SassResult<Option<Value>>>(
             true,
             while_stmt.has_declarations(),
@@ -2314,7 +2309,7 @@ impl<'a> Visitor<'a> {
             }
             Value::ArgList(arglist) => {
                 // todo: superfluous clone
-                for (&key, value) in arglist.keywords().into_iter() {
+                for (&key, value) in arglist.keywords() {
                     named.insert(key, self.without_slash(value.clone()));
                 }
 
@@ -2388,7 +2383,7 @@ impl<'a> Visitor<'a> {
         &mut self,
         arguments: MaybeEvaledArguments,
         func: F,
-        env: Environment,
+        env: &Environment,
         span: Span,
         run: impl FnOnce(F, &mut Self) -> SassResult<V>,
     ) -> SassResult<V> {
@@ -2430,15 +2425,14 @@ impl<'a> Visitor<'a> {
 
                 for argument in additional_declared_args {
                     let name = argument.name;
-                    let value = evaluated
-                        .named
-                        .remove(&argument.name)
-                        .map(SassResult::Ok)
-                        .unwrap_or_else(|| {
+                    let value = evaluated.named.remove(&argument.name).map_or_else(
+                        || {
                             // todo: superfluous clone
                             let v = visitor.visit_expr(argument.default.clone().unwrap())?;
                             Ok(visitor.without_slash(v))
-                        })?;
+                        },
+                        SassResult::Ok,
+                    )?;
                     visitor.env.scopes_mut().insert_var_last(name, value);
                 }
 
@@ -2517,14 +2511,6 @@ impl<'a> Visitor<'a> {
         val
     }
 
-    fn run_built_in_callable(
-        &mut self,
-        args: ArgumentInvocation,
-        func: Builtin,
-    ) -> SassResult<Value> {
-        todo!()
-    }
-
     pub(crate) fn run_function_callable(
         &mut self,
         func: SassFunction,
@@ -2551,17 +2537,23 @@ impl<'a> Visitor<'a> {
                 Ok(self.without_slash(val))
             }
             SassFunction::UserDefined(UserDefinedFunction { function, env, .. }) => self
-                .run_user_defined_callable(arguments, *function, env, span, |function, visitor| {
-                    for stmt in function.children {
-                        let result = visitor.visit_stmt(stmt)?;
+                .run_user_defined_callable(
+                    arguments,
+                    *function,
+                    &env,
+                    span,
+                    |function, visitor| {
+                        for stmt in function.children {
+                            let result = visitor.visit_stmt(stmt)?;
 
-                        if let Some(val) = result {
-                            return Ok(val);
+                            if let Some(val) = result {
+                                return Ok(val);
+                            }
                         }
-                    }
 
-                    Err(("Function finished without @return.", span).into())
-                }),
+                        Err(("Function finished without @return.", span).into())
+                    },
+                ),
             SassFunction::Plain { name } => {
                 let arguments = match arguments {
                     MaybeEvaledArguments::Invocation(args) => args,
@@ -2833,9 +2825,9 @@ impl<'a> Visitor<'a> {
         match name {
             CalculationName::Calc => {
                 debug_assert_eq!(args.len(), 1);
-                SassCalculation::calc(args.remove(0))
+                Ok(SassCalculation::calc(args.remove(0)))
             }
-            CalculationName::Min => SassCalculation::min(args),
+            CalculationName::Min => SassCalculation::min(args, self.parser.options, span),
             CalculationName::Max => SassCalculation::max(args, span),
             CalculationName::Clamp => {
                 let min = args.remove(0);
@@ -2866,7 +2858,7 @@ impl<'a> Visitor<'a> {
     }
 
     fn visit_ternary(&mut self, if_expr: Ternary) -> SassResult<Value> {
-        IF_ARGUMENTS().verify(if_expr.0.positional.len(), &if_expr.0.named, if_expr.0.span)?;
+        if_arguments().verify(if_expr.0.positional.len(), &if_expr.0.named, if_expr.0.span)?;
 
         let mut positional = if_expr.0.positional;
         let mut named = if_expr.0.named;
@@ -2966,7 +2958,7 @@ impl<'a> Visitor<'a> {
         Ok(match op {
             BinaryOp::SingleEq => {
                 let right = self.visit_expr(rhs)?;
-                single_eq(left, right, self.parser.options, span)?
+                single_eq(&left, &right, self.parser.options, span)?
             }
             BinaryOp::Or => {
                 if left.is_true() {
@@ -2995,7 +2987,7 @@ impl<'a> Visitor<'a> {
             | BinaryOp::LessThan
             | BinaryOp::LessThanEqual => {
                 let right = self.visit_expr(rhs)?;
-                cmp(left, right, self.parser.options, span, op)?
+                cmp(&left, &right, self.parser.options, span, op)?
             }
             BinaryOp::Plus => {
                 let right = self.visit_expr(rhs)?;
@@ -3024,35 +3016,13 @@ impl<'a> Visitor<'a> {
                         span,
                     );
                 } else if left_is_number && right_is_number {
-                    //       String recommendation(Expression expression) {
-                    //         if (expression is BinaryOperationExpression &&
-                    //             expression.operator == BinaryOperator.dividedBy) {
-                    //           return "math.div(${recommendation(expression.left)}, "
-                    //               "${recommendation(expression.right)})";
-                    //         } else if (expression is ParenthesizedExpression) {
-                    //           return expression.expression.toString();
-                    //         } else {
-                    //           return expression.toString();
-                    //         }
-                    //       }
-
-                    //       _warn(
-                    //           "Using / for division outside of calc() is deprecated "
-                    //           "and will be removed in Dart Sass 2.0.0.\n"
-                    //           "\n"
-                    //           "Recommendation: ${recommendation(node)} or calc($node)\n"
-                    //           "\n"
-                    //           "More info and automated migrator: "
-                    //           "https://sass-lang.com/d/slash-div",
-                    //           node.span,
-                    //           deprecation: true);
-                    // todo!()
-                    self.emit_warning(
-                        Cow::Owned(format!(
-                            "Using / for division outside of calc() is deprecated"
-                        )),
-                        span,
-                    );
+                    // todo: emit warning here. it prints too frequently, so we do not currently
+                    // self.emit_warning(
+                    //     Cow::Borrowed(format!(
+                    //         "Using / for division outside of calc() is deprecated"
+                    //     )),
+                    //     span,
+                    // );
                 }
 
                 result
@@ -3129,7 +3099,7 @@ impl<'a> Visitor<'a> {
 
                     Ok(())
                 },
-                |stmt| stmt.is_style_rule(),
+                CssStmt::is_style_rule,
             )?;
 
             return Ok(None);
@@ -3197,7 +3167,7 @@ impl<'a> Visitor<'a> {
 
                 Ok(())
             },
-            |stmt| stmt.is_style_rule(),
+            CssStmt::is_style_rule,
         )?;
 
         self.style_rule_ignoring_at_root = old_style_rule_ignoring_at_root;
@@ -3221,7 +3191,7 @@ impl<'a> Visitor<'a> {
             self.css_tree
                 .get_mut(child)
                 .as_mut()
-                .map(|node| node.set_group_end())?;
+                .map(CssStmt::set_group_end)?;
         }
 
         Some(())

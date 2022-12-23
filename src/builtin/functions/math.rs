@@ -270,8 +270,8 @@ pub(crate) fn min(args: ArgumentResult, parser: &mut Visitor) -> SassResult<Valu
         };
 
         if crate::evaluate::cmp(
-            lhs,
-            rhs,
+            &lhs,
+            &rhs,
             parser.parser.options,
             parser.parser.span_before,
             BinaryOp::LessThan,
@@ -323,8 +323,8 @@ pub(crate) fn max(args: ArgumentResult, parser: &mut Visitor) -> SassResult<Valu
         };
 
         if crate::evaluate::cmp(
-            lhs,
-            rhs,
+            &lhs,
+            &rhs,
             parser.parser.options,
             parser.parser.span_before,
             BinaryOp::GreaterThan,

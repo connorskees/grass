@@ -429,13 +429,13 @@ impl Color {
         }
 
         if hue < 1.0 / 6.0 {
-            return m1 + (m2 - m1) * hue * 6.0;
+            m1 + (m2 - m1) * hue * 6.0
         } else if hue < 1.0 / 2.0 {
-            return m2;
+            m2
         } else if hue < 2.0 / 3.0 {
-            return m1 + (m2 - m1) * (2.0 / 3.0 - hue) * 6.0;
+            m1 + (m2 - m1) * (2.0 / 3.0 - hue) * 6.0
         } else {
-            return m1;
+            m1
         }
     }
 

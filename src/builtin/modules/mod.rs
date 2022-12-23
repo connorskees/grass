@@ -45,13 +45,11 @@ impl ForwardedModule {
             && rule
                 .hidden_mixins_and_functions
                 .as_ref()
-                .map(HashSet::is_empty)
-                .unwrap_or(false)
+                .map_or(false, HashSet::is_empty)
             && rule
                 .hidden_variables
                 .as_ref()
-                .map(HashSet::is_empty)
-                .unwrap_or(false)
+                .map_or(false, HashSet::is_empty)
         {
             module
         } else {
@@ -233,7 +231,7 @@ impl Module {
         let scope = self.scope();
 
         match scope.variables.get(name.node) {
-            Some(v) => Ok(v.clone()),
+            Some(v) => Ok(v),
             None => Err(("Undefined variable.", name.span).into()),
         }
     }
@@ -250,7 +248,7 @@ impl Module {
                 return Err(("Cannot modify built-in variable.", name.span).into())
             }
             Self::Environment { scope, .. } => scope.clone(),
-            Self::Forwarded(forwarded) => (*forwarded.inner).borrow_mut().scope().clone(),
+            Self::Forwarded(forwarded) => (*forwarded.inner).borrow_mut().scope(),
         };
 
         if scope.variables.insert(name.node, value).is_none() {
@@ -264,7 +262,7 @@ impl Module {
         let scope = self.scope();
 
         match scope.mixins.get(name.node) {
-            Some(v) => Ok(v.clone()),
+            Some(v) => Ok(v),
             None => Err(("Undefined mixin.", name.span).into()),
         }
     }
@@ -334,7 +332,7 @@ impl Module {
                 .map(|(key, value)| {
                     (
                         Value::String(key.to_string(), QuoteKind::Quoted).span(span),
-                        Value::FunctionRef(value.clone()),
+                        Value::FunctionRef(value),
                     )
                 })
                 .collect::<Vec<_>>(),
@@ -351,7 +349,7 @@ impl Module {
                 .map(|(key, value)| {
                     (
                         Value::String(key.to_string(), QuoteKind::Quoted).span(span),
-                        value.clone(),
+                        value,
                     )
                 })
                 .collect::<Vec<_>>(),

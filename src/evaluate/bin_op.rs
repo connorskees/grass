@@ -414,13 +414,13 @@ pub(crate) fn mul(left: Value, right: Value, options: &Options, span: Span) -> S
 }
 
 pub(crate) fn cmp(
-    left: Value,
-    right: Value,
+    left: &Value,
+    right: &Value,
     options: &Options,
     span: Span,
     op: BinaryOp,
 ) -> SassResult<Value> {
-    let ordering = match left.cmp(&right, span, op)? {
+    let ordering = match left.cmp(right, span, op)? {
         Some(ord) => ord,
         None => return Ok(Value::False),
     };
@@ -447,21 +447,19 @@ pub(crate) fn cmp(
 }
 
 pub(crate) fn single_eq(
-    left: Value,
-    right: Value,
+    left: &Value,
+    right: &Value,
     options: &Options,
     span: Span,
 ) -> SassResult<Value> {
-    Ok(match left {
-        _ => Value::String(
-            format!(
-                "{}={}",
-                left.to_css_string(span, options.is_compressed())?,
-                right.to_css_string(span, options.is_compressed())?
-            ),
-            QuoteKind::None,
+    Ok(Value::String(
+        format!(
+            "{}={}",
+            left.to_css_string(span, options.is_compressed())?,
+            right.to_css_string(span, options.is_compressed())?
         ),
-    })
+        QuoteKind::None,
+    ))
 }
 
 // todo: simplify matching
@@ -633,8 +631,6 @@ pub(crate) fn rem(left: Value, right: Value, options: &Options, span: Span) -> S
                     u
                 } else if u == Unit::None {
                     u2
-                } else if u2 == Unit::None {
-                    u
                 } else {
                     u
                 };

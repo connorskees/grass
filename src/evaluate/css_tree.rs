@@ -81,7 +81,9 @@ impl CssTree {
         let mut parent = self.stmts[parent_idx.0].borrow_mut().take();
         match &mut parent {
             Some(CssStmt::RuleSet { body, .. }) => body.push(child),
-            Some(CssStmt::Style(..) | CssStmt::Comment(..) | CssStmt::Import(..)) => unreachable!(),
+            Some(CssStmt::Style(..) | CssStmt::Comment(..) | CssStmt::Import(..)) | None => {
+                unreachable!()
+            }
             Some(CssStmt::Media(media, ..)) => {
                 media.body.push(child);
             }
@@ -94,7 +96,6 @@ impl CssTree {
             Some(CssStmt::KeyframesRuleSet(keyframes)) => {
                 keyframes.body.push(child);
             }
-            None => unreachable!(),
         }
         self.stmts[parent_idx.0]
             .borrow_mut()

@@ -9,7 +9,7 @@ pub(crate) fn function_string(
     span: Span,
 ) -> SassResult<String> {
     let args = args
-        .into_iter()
+        .iter()
         .map(|arg| arg.to_css_string(span, visitor.parser.options.is_compressed()))
         .collect::<SassResult<Vec<_>>>()?
         .join(", ");
@@ -62,19 +62,19 @@ fn inner_rgb_3_arg(
 
     Ok(Value::Color(Box::new(Color::from_rgba_fn(
         Number(fuzzy_round(percentage_or_unitless(
-            red, 255.0, "red", span, visitor,
+            &red, 255.0, "red", span, visitor,
         )?)),
         Number(fuzzy_round(percentage_or_unitless(
-            green, 255.0, "green", span, visitor,
+            &green, 255.0, "green", span, visitor,
         )?)),
         Number(fuzzy_round(percentage_or_unitless(
-            blue, 255.0, "blue", span, visitor,
+            &blue, 255.0, "blue", span, visitor,
         )?)),
         Number(
             alpha
                 .map(|alpha| {
                     percentage_or_unitless(
-                        alpha.node.assert_number_with_name(span, "alpha")?,
+                        &alpha.node.assert_number_with_name(span, "alpha")?,
                         1.0,
                         "alpha",
                         span,
@@ -88,7 +88,7 @@ fn inner_rgb_3_arg(
 }
 
 pub(crate) fn percentage_or_unitless(
-    number: SassNumber,
+    number: &SassNumber,
     max: f64,
     name: &str,
     span: Span,

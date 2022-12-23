@@ -116,7 +116,7 @@ impl<'a> Serializer<'a> {
                 self.visit_calculation(calc)?;
             }
             CalculationArg::String(s) | CalculationArg::Interpolation(s) => {
-                self.buffer.extend_from_slice(s.as_bytes())
+                self.buffer.extend_from_slice(s.as_bytes());
             }
             CalculationArg::Operation { lhs, op, rhs } => {
                 let paren_left = match &**lhs {
@@ -129,7 +129,7 @@ impl<'a> Serializer<'a> {
                     self.buffer.push(b'(');
                 }
 
-                self.write_calculation_arg(&**lhs)?;
+                self.write_calculation_arg(lhs)?;
 
                 if paren_left {
                     self.buffer.push(b')');
@@ -160,7 +160,7 @@ impl<'a> Serializer<'a> {
                     self.buffer.push(b'(');
                 }
 
-                self.write_calculation_arg(&**rhs)?;
+                self.write_calculation_arg(rhs)?;
 
                 if paren_right {
                     self.buffer.push(b')');
@@ -247,9 +247,7 @@ impl<'a> Serializer<'a> {
         };
 
         if self.options.is_compressed() {
-            if !fuzzy_equals(color.alpha().0, 1.0) {
-                self.write_rgb(color);
-            } else {
+            if fuzzy_equals(color.alpha().0, 1.0) {
                 let hex_length = if Self::can_use_short_hex(color) { 4 } else { 7 };
                 if name.is_some() && name.unwrap().len() <= hex_length {
                     self.buffer.extend_from_slice(name.unwrap().as_bytes());
@@ -264,6 +262,8 @@ impl<'a> Serializer<'a> {
                     self.write_hex_component(green as u32);
                     self.write_hex_component(blue as u32);
                 }
+            } else {
+                self.write_rgb(color);
             }
         } else {
             if color.format != ColorFormat::Infer {
@@ -374,9 +374,9 @@ impl<'a> Serializer<'a> {
         let mut as_string = unsafe { String::from_utf8_unchecked(self.buffer) };
 
         if is_not_ascii && self.options.is_compressed() {
-            as_string.insert_str(0, "\u{FEFF}")
+            as_string.insert(0, '\u{FEFF}');
         } else if is_not_ascii {
-            as_string.insert_str(0, "@charset \"UTF-8\";\n")
+            as_string.insert_str(0, "@charset \"UTF-8\";\n");
         }
 
         as_string
@@ -404,7 +404,7 @@ impl<'a> Serializer<'a> {
                 unit,
                 as_slash,
             })?,
-            Value::Color(color) => self.visit_color(&*color),
+            Value::Color(color) => self.visit_color(&color),
             Value::Calculation(calc) => self.visit_calculation(&calc)?,
             _ => {
                 let value_as_str = value
@@ -442,7 +442,7 @@ impl<'a> Serializer<'a> {
         Ok(())
     }
 
-    fn write_import(&mut self, import: String, modifiers: Option<String>) -> SassResult<()> {
+    fn write_import(&mut self, import: &str, modifiers: Option<String>) -> SassResult<()> {
         self.write_indentation();
         self.buffer.extend_from_slice(b"@import ");
         write!(&mut self.buffer, "{}", import)?;
@@ -457,7 +457,7 @@ impl<'a> Serializer<'a> {
         Ok(())
     }
 
-    fn write_comment(&mut self, comment: String, span: Span) -> SassResult<()> {
+    fn write_comment(&mut self, comment: &str, span: Span) -> SassResult<()> {
         if self.options.is_compressed() && !comment.starts_with("/*!") {
             return Ok(());
         }
@@ -584,7 +584,7 @@ impl<'a> Serializer<'a> {
                 self.write_children(unknown_at_rule.body)?;
             }
             CssStmt::Style(style) => self.write_style(style)?,
-            CssStmt::Comment(comment, span) => self.write_comment(comment, span)?,
+            CssStmt::Comment(comment, span) => self.write_comment(&comment, span)?,
             CssStmt::KeyframesRuleSet(keyframes_rule_set) => {
                 self.write_indentation();
                 // todo: i bet we can do something like write_with_separator to avoid extra allocation
@@ -599,7 +599,7 @@ impl<'a> Serializer<'a> {
 
                 self.write_children(keyframes_rule_set.body)?;
             }
-            CssStmt::Import(import, modifier) => self.write_import(import, modifier)?,
+            CssStmt::Import(import, modifier) => self.write_import(&import, modifier)?,
             CssStmt::Supports(supports_rule, _) => self.write_supports_rule(supports_rule)?,
         }
 

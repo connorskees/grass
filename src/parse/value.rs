@@ -137,11 +137,11 @@ impl<'c> ValueParser<'c> {
                     self.add_single_expression(expr, parser)?;
                 }
                 Some(Token { kind: '$', .. }) => {
-                    let expr = self.parse_variable(parser)?;
+                    let expr = Self::parse_variable(parser)?;
                     self.add_single_expression(expr, parser)?;
                 }
                 Some(Token { kind: '&', .. }) => {
-                    let expr = self.parse_selector(parser)?;
+                    let expr = Self::parse_selector(parser)?;
                     self.add_single_expression(expr, parser)?;
                 }
                 Some(Token { kind: '"', .. }) | Some(Token { kind: '\'', .. }) => {
@@ -357,7 +357,7 @@ impl<'c> ValueParser<'c> {
                 }
                 Some(Token { kind: 'u', .. }) | Some(Token { kind: 'U', .. }) => {
                     if matches!(parser.toks.peek_n(1), Some(Token { kind: '+', .. })) {
-                        let expr = self.parse_unicode_range(parser)?;
+                        let expr = Self::parse_unicode_range(parser)?;
                         self.add_single_expression(expr, parser)?;
                     } else {
                         let expr = self.parse_identifier_like(parser)?;
@@ -426,7 +426,7 @@ impl<'c> ValueParser<'c> {
                     .push(single_expression);
             }
 
-            return Ok(AstExpr::List(ListExpr {
+            Ok(AstExpr::List(ListExpr {
                 elems: self.comma_expressions.take().unwrap(),
                 separator: ListSeparator::Comma,
                 brackets: if self.inside_bracketed_list {
@@ -435,7 +435,7 @@ impl<'c> ValueParser<'c> {
                     Brackets::None
                 },
             })
-            .span(parser.span_before));
+            .span(parser.span_before))
         } else if self.inside_bracketed_list && self.space_expressions.is_some() {
             self.resolve_operations(parser)?;
 
@@ -444,12 +444,12 @@ impl<'c> ValueParser<'c> {
                 .unwrap()
                 .push(self.single_expression.take().unwrap());
 
-            return Ok(AstExpr::List(ListExpr {
+            Ok(AstExpr::List(ListExpr {
                 elems: self.space_expressions.take().unwrap(),
                 separator: ListSeparator::Space,
                 brackets: Brackets::Bracketed,
             })
-            .span(parser.span_before));
+            .span(parser.span_before))
         } else {
             self.resolve_space_expressions(parser)?;
 
@@ -462,7 +462,7 @@ impl<'c> ValueParser<'c> {
                 .span(parser.span_before));
             }
 
-            return Ok(self.single_expression.take().unwrap());
+            Ok(self.single_expression.take().unwrap())
         }
     }
 
@@ -474,8 +474,8 @@ impl<'c> ValueParser<'c> {
             Some(Token { kind: '(', .. }) => self.parse_paren_expr(parser),
             Some(Token { kind: '/', .. }) => self.parse_unary_operation(parser),
             Some(Token { kind: '[', .. }) => Self::parse_expression(parser, None, true, false),
-            Some(Token { kind: '$', .. }) => self.parse_variable(parser),
-            Some(Token { kind: '&', .. }) => self.parse_selector(parser),
+            Some(Token { kind: '$', .. }) => Self::parse_variable(parser),
+            Some(Token { kind: '&', .. }) => Self::parse_selector(parser),
             Some(Token { kind: '"', .. }) | Some(Token { kind: '\'', .. }) => Ok(parser
                 .parse_interpolated_string()?
                 .map_node(|s| AstExpr::String(s, parser.toks.span_from(start)))),
@@ -485,7 +485,7 @@ impl<'c> ValueParser<'c> {
             Some(Token { kind: '!', .. }) => Self::parse_important_expr(parser),
             Some(Token { kind: 'u', .. }) | Some(Token { kind: 'U', .. }) => {
                 if matches!(parser.toks.peek_n(1), Some(Token { kind: '+', .. })) {
-                    self.parse_unicode_range(parser)
+                    Self::parse_unicode_range(parser)
                 } else {
                     self.parse_identifier_like(parser)
                 }
@@ -766,7 +766,7 @@ impl<'c> ValueParser<'c> {
         .span(parser.span_before))
     }
 
-    fn parse_variable(&mut self, parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
+    fn parse_variable(parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
         let start = parser.toks.cursor();
         let name = parser.parse_variable_name()?;
 
@@ -788,7 +788,7 @@ impl<'c> ValueParser<'c> {
         .span(parser.span_before))
     }
 
-    fn parse_selector(&mut self, parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
+    fn parse_selector(parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
         if parser.is_plain_css {
             return Err((
                 "The parent selector isn't allowed in plain CSS.",
@@ -855,7 +855,7 @@ impl<'c> ValueParser<'c> {
         Ok(AstExpr::String(StringExpr(buffer, QuoteKind::None), span).span(span))
     }
 
-    fn parse_hex_digit(&mut self, parser: &mut Parser) -> SassResult<u32> {
+    fn parse_hex_digit(parser: &mut Parser) -> SassResult<u32> {
         match parser.toks.peek() {
             Some(Token { kind, .. }) if kind.is_ascii_hexdigit() => {
                 parser.toks.next();
@@ -868,40 +868,40 @@ impl<'c> ValueParser<'c> {
     fn parse_hex_color_contents(&mut self, parser: &mut Parser) -> SassResult<Color> {
         let start = parser.toks.cursor();
 
-        let digit1 = self.parse_hex_digit(parser)?;
-        let digit2 = self.parse_hex_digit(parser)?;
-        let digit3 = self.parse_hex_digit(parser)?;
+        let digit1 = Self::parse_hex_digit(parser)?;
+        let digit2 = Self::parse_hex_digit(parser)?;
+        let digit3 = Self::parse_hex_digit(parser)?;
 
         let red: u32;
         let green: u32;
         let blue: u32;
         let mut alpha: f64 = 1.0;
 
-        if !parser.next_is_hex() {
-            // #abc
-            red = (digit1 << 4) + digit1;
-            green = (digit2 << 4) + digit2;
-            blue = (digit3 << 4) + digit3;
-        } else {
-            let digit4 = self.parse_hex_digit(parser)?;
+        if parser.next_is_hex() {
+            let digit4 = Self::parse_hex_digit(parser)?;
 
-            if !parser.next_is_hex() {
+            if parser.next_is_hex() {
+                red = (digit1 << 4) + digit2;
+                green = (digit3 << 4) + digit4;
+                blue = (Self::parse_hex_digit(parser)? << 4) + Self::parse_hex_digit(parser)?;
+
+                if parser.next_is_hex() {
+                    alpha = ((Self::parse_hex_digit(parser)? << 4) + Self::parse_hex_digit(parser)?)
+                        as f64
+                        / 0xff as f64;
+                }
+            } else {
                 // #abcd
                 red = (digit1 << 4) + digit1;
                 green = (digit2 << 4) + digit2;
                 blue = (digit3 << 4) + digit3;
                 alpha = ((digit4 << 4) + digit4) as f64 / 0xff as f64;
-            } else {
-                red = (digit1 << 4) + digit2;
-                green = (digit3 << 4) + digit4;
-                blue = (self.parse_hex_digit(parser)? << 4) + self.parse_hex_digit(parser)?;
-
-                if parser.next_is_hex() {
-                    alpha = ((self.parse_hex_digit(parser)? << 4) + self.parse_hex_digit(parser)?)
-                        as f64
-                        / 0xff as f64;
-                }
             }
+        } else {
+            // #abc
+            red = (digit1 << 4) + digit1;
+            green = (digit2 << 4) + digit2;
+            blue = (digit3 << 4) + digit3;
         }
 
         Ok(Color::new_rgba(
@@ -977,8 +977,8 @@ impl<'c> ValueParser<'c> {
             self.consume_natural_number(parser)?;
         }
 
-        self.try_decimal(parser, parser.toks.cursor() != start)?;
-        self.try_exponent(parser)?;
+        Self::try_decimal(parser, parser.toks.cursor() != start)?;
+        Self::try_exponent(parser)?;
 
         let number: f64 = parser.toks.raw_text(start).parse().unwrap();
 
@@ -1000,11 +1000,7 @@ impl<'c> ValueParser<'c> {
         .span(parser.span_before))
     }
 
-    fn try_decimal(
-        &mut self,
-        parser: &mut Parser,
-        allow_trailing_dot: bool,
-    ) -> SassResult<Option<String>> {
+    fn try_decimal(parser: &mut Parser, allow_trailing_dot: bool) -> SassResult<Option<String>> {
         if !matches!(parser.toks.peek(), Some(Token { kind: '.', .. })) {
             return Ok(None);
         }
@@ -1034,7 +1030,7 @@ impl<'c> ValueParser<'c> {
         Ok(Some(buffer))
     }
 
-    fn try_exponent(&mut self, parser: &mut Parser) -> SassResult<Option<String>> {
+    fn try_exponent(parser: &mut Parser) -> SassResult<Option<String>> {
         let mut buffer = String::new();
 
         match parser.toks.peek() {
@@ -1192,7 +1188,7 @@ impl<'c> ValueParser<'c> {
                 parser.toks.next();
 
                 match plain {
-                    Some(s) => self.namespaced_expression(
+                    Some(s) => Self::namespaced_expression(
                         Spanned {
                             node: Identifier::from(s),
                             span: ident_span,
@@ -1200,11 +1196,7 @@ impl<'c> ValueParser<'c> {
                         start,
                         parser,
                     ),
-                    None => {
-                        return Err(
-                            ("Interpolation isn't allowed in namespaces.", ident_span).into()
-                        )
-                    }
+                    None => Err(("Interpolation isn't allowed in namespaces.", ident_span).into()),
                 }
             }
             Some(Token { kind: '(', .. }) => {
@@ -1238,7 +1230,6 @@ impl<'c> ValueParser<'c> {
     }
 
     fn namespaced_expression(
-        &mut self,
         namespace: Spanned<Identifier>,
         start: usize,
         parser: &mut Parser,
@@ -1272,7 +1263,7 @@ impl<'c> ValueParser<'c> {
         .span(span))
     }
 
-    fn parse_unicode_range(&mut self, parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
+    fn parse_unicode_range(parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
         let start = parser.toks.cursor();
         parser.expect_ident_char('u', false)?;
         parser.expect_char('+')?;
@@ -1339,18 +1330,19 @@ impl<'c> ValueParser<'c> {
             return Err(("Expected end of identifier.", parser.toks.current_span()).into());
         }
 
-        return Ok(AstExpr::String(
+        let span = parser.toks.span_from(start);
+
+        Ok(AstExpr::String(
             StringExpr(
                 Interpolation::new_plain(parser.toks.raw_text(start)),
                 QuoteKind::None,
             ),
-            parser.toks.span_from(start),
+            span,
         )
-        .span(parser.toks.span_from(start)));
+        .span(span))
     }
 
     fn try_parse_url_contents(
-        &mut self,
         parser: &mut Parser,
         name: Option<String>,
     ) -> SassResult<Option<Interpolation>> {
@@ -1452,7 +1444,7 @@ impl<'c> ValueParser<'c> {
                 buffer.add_char('(');
             }
             "url" => {
-                return Ok(self.try_parse_url_contents(parser, None)?.map(|contents| {
+                return Ok(Self::try_parse_url_contents(parser, None)?.map(|contents| {
                     AstExpr::String(
                         StringExpr(contents, QuoteKind::None),
                         parser.toks.span_from(start),
@@ -1533,7 +1525,6 @@ impl<'c> ValueParser<'c> {
     }
 
     fn try_parse_calculation_interpolation(
-        &mut self,
         parser: &mut Parser,
         start: usize,
     ) -> SassResult<Option<AstExpr>> {
@@ -1556,12 +1547,12 @@ impl<'c> ValueParser<'c> {
                 kind: '+' | '-' | '.' | '0'..='9',
                 ..
             }) => self.parse_number(parser),
-            Some(Token { kind: '$', .. }) => self.parse_variable(parser),
+            Some(Token { kind: '$', .. }) => Self::parse_variable(parser),
             Some(Token { kind: '(', .. }) => {
                 let start = parser.toks.cursor();
                 parser.toks.next();
 
-                let value = match self.try_parse_calculation_interpolation(parser, start)? {
+                let value = match Self::try_parse_calculation_interpolation(parser, start)? {
                     Some(v) => v,
                     None => {
                         parser.whitespace()?;
@@ -1574,19 +1565,17 @@ impl<'c> ValueParser<'c> {
 
                 Ok(AstExpr::Paren(Box::new(value)).span(parser.toks.span_from(start)))
             }
-            _ if !parser.looking_at_identifier() => {
-                return Err((
-                    "Expected number, variable, function, or calculation.",
-                    parser.toks.current_span(),
-                )
-                    .into())
-            }
+            _ if !parser.looking_at_identifier() => Err((
+                "Expected number, variable, function, or calculation.",
+                parser.toks.current_span(),
+            )
+                .into()),
             _ => {
                 let start = parser.toks.cursor();
                 let ident = parser.parse_identifier(false, false)?;
                 let ident_span = parser.toks.span_from(start);
                 if parser.scan_char('.') {
-                    return self.namespaced_expression(
+                    return Self::namespaced_expression(
                         Spanned {
                             node: Identifier::from(&ident),
                             span: ident_span,
@@ -1718,7 +1707,7 @@ impl<'c> ValueParser<'c> {
         start: usize,
     ) -> SassResult<Vec<AstExpr>> {
         parser.expect_char('(')?;
-        if let Some(interpolation) = self.try_parse_calculation_interpolation(parser, start)? {
+        if let Some(interpolation) = Self::try_parse_calculation_interpolation(parser, start)? {
             parser.expect_char(')')?;
             return Ok(vec![interpolation]);
         }

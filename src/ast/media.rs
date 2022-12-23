@@ -62,7 +62,7 @@ impl MediaQuery {
         }
     }
 
-    pub fn parse_list(list: String, parser: &mut Parser) -> SassResult<Vec<Self>> {
+    pub fn parse_list(list: &str, parser: &mut Parser) -> SassResult<Vec<Self>> {
         let mut toks = Lexer::new(
             list.chars()
                 .map(|x| Token::new(parser.span_before, x))

@@ -42,17 +42,11 @@ impl Environment {
         }
     }
 
-    pub fn forward_module(
-        &mut self,
-        module: Arc<RefCell<Module>>,
-        rule: AstForwardRule,
-    ) -> SassResult<()> {
+    pub fn forward_module(&mut self, module: Arc<RefCell<Module>>, rule: AstForwardRule) {
         let view = ForwardedModule::if_necessary(module, rule);
         (*self.forwarded_modules).borrow_mut().push(view);
 
         // todo: assertnoconflicts
-
-        Ok(())
     }
 
     pub fn insert_mixin(&mut self, name: Identifier, mixin: Mixin) {

@@ -189,7 +189,7 @@ pub(crate) struct LimitedMapView<V: fmt::Debug + Clone, T: MapView<Value = V> + 
 impl<V: fmt::Debug + Clone, T: MapView<Value = V> + Clone> LimitedMapView<V, T> {
     pub fn safelist(map: T, keys: &HashSet<Identifier>) -> Self {
         let keys = keys
-            .into_iter()
+            .iter()
             .copied()
             .filter(|key| map.contains_key(*key))
             .collect();
@@ -199,7 +199,7 @@ impl<V: fmt::Debug + Clone, T: MapView<Value = V> + Clone> LimitedMapView<V, T> 
 
     pub fn blocklist(map: T, keys: &HashSet<Identifier>) -> Self {
         let keys = keys
-            .into_iter()
+            .iter()
             .copied()
             .filter(|key| !map.contains_key(*key))
             .collect();
@@ -333,7 +333,8 @@ impl<V: fmt::Debug + Clone, T: MapView<Value = V> + Clone> MapView for PublicMem
     fn keys(&self) -> Vec<Identifier> {
         self.0
             .keys()
-            .into_iter()
+            .iter()
+            .copied()
             .filter(Identifier::is_public)
             .collect()
     }

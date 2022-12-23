@@ -120,9 +120,9 @@ impl<'a, 'b> Parser<'a, 'b> {
             '!' => match self.toks.peek_n(1) {
                 Some(Token {
                     kind: 'i' | 'I', ..
-                }) => true,
+                })
+                | None => true,
                 Some(Token { kind, .. }) => kind.is_ascii_whitespace(),
-                None => true,
             },
             '(' | '/' | '[' | '\'' | '"' | '#' | '+' | '-' | '\\' | '$' | '&' => true,
             c => is_name_start(c) || c.is_ascii_digit(),
@@ -1276,7 +1276,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
     fn try_supports_operation(
         &mut self,
-        interpolation: Interpolation,
+        interpolation: &Interpolation,
         start: usize,
     ) -> SassResult<Option<AstSupportsCondition>> {
         if interpolation.contents.len() != 1 {
@@ -1425,9 +1425,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                 let identifier = self.parse_interpolated_identifier()?;
 
                 // todo: superfluous clone?
-                if let Some(operation) =
-                    self.try_supports_operation(identifier.clone(), name_start)?
-                {
+                if let Some(operation) = self.try_supports_operation(&identifier, name_start)? {
                     self.expect_char(')')?;
                     return Ok(operation);
                 }
@@ -3053,7 +3051,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                     if self.is_indented {
                         break;
                     }
-                    buffer.add_token(self.toks.next().unwrap())
+                    buffer.add_token(self.toks.next().unwrap());
                 }
                 '!' | ';' | '{' | '}' => break,
                 'u' | 'U' => {
@@ -3134,7 +3132,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         }
     }
 
-    fn next_matches(&mut self, s: &str) -> bool {
+    fn next_matches(&self, s: &str) -> bool {
         for (idx, c) in s.chars().enumerate() {
             match self.toks.peek_n(idx) {
                 Some(Token { kind, .. }) if kind == c => {}

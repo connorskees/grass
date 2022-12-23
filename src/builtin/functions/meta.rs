@@ -1,7 +1,8 @@
 use crate::builtin::builtin_imports::*;
 
-// todo: figure out better way for this
-pub(crate) fn IF_ARGUMENTS() -> ArgumentDeclaration {
+// todo: this should be a constant of some sort. we shouldn't be allocating this
+// every time
+pub(crate) fn if_arguments() -> ArgumentDeclaration {
     ArgumentDeclaration {
         args: vec![
             Argument {
@@ -20,24 +21,6 @@ pub(crate) fn IF_ARGUMENTS() -> ArgumentDeclaration {
         rest: None,
     }
 }
-
-// pub(crate) static IF_ARGUMENTS: Lazy<ArgumentDeclaration> = Lazy::new(|| ArgumentDeclaration {
-//     args: vec![
-//         Argument {
-//             name: Identifier::from("condition"),
-//             default: None,
-//         },
-//         Argument {
-//             name: Identifier::from("if-true"),
-//             default: None,
-//         },
-//         Argument {
-//             name: Identifier::from("if-false"),
-//             default: None,
-//         },
-//     ],
-//     rest: None,
-// });
 
 fn if_(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(3)?;

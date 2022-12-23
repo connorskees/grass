@@ -20,7 +20,7 @@ grass input.scss
 ```
 */
 
-// #![allow(warnings)]
+#![allow(unused)]
 #![warn(clippy::all, clippy::pedantic, clippy::nursery, clippy::cargo)]
 #![deny(missing_debug_implementations)]
 #![allow(
@@ -60,6 +60,9 @@ grass input.scss
     // todo:
     clippy::cast_sign_loss,
     clippy::cast_lossless,
+    clippy::cast_precision_loss,
+    clippy::float_cmp,
+    clippy::wildcard_imports,
 )]
 
 use std::path::Path;

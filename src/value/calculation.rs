@@ -73,23 +73,23 @@ impl SassCalculation {
         Self { name, args }
     }
 
-    pub fn calc(arg: CalculationArg) -> SassResult<Value> {
+    pub fn calc(arg: CalculationArg) -> Value {
         let arg = Self::simplify(arg);
         match arg {
-            CalculationArg::Number(n) => Ok(Value::Dimension {
+            CalculationArg::Number(n) => Value::Dimension {
                 num: Number(n.num),
                 unit: n.unit,
                 as_slash: n.as_slash,
-            }),
-            CalculationArg::Calculation(c) => Ok(Value::Calculation(c)),
-            _ => Ok(Value::Calculation(SassCalculation {
+            },
+            CalculationArg::Calculation(c) => Value::Calculation(c),
+            _ => Value::Calculation(SassCalculation {
                 name: CalculationName::Calc,
                 args: vec![arg],
-            })),
+            }),
         }
     }
 
-    pub fn min(args: Vec<CalculationArg>) -> SassResult<Value> {
+    pub fn min(args: Vec<CalculationArg>, options: &Options, span: Span) -> SassResult<Value> {
         let args = Self::simplify_arguments(args);
         debug_assert!(!args.is_empty(), "min() must have at least one argument.");
 
@@ -125,7 +125,8 @@ impl SassCalculation {
                 as_slash: min.as_slash,
             },
             None => {
-                // _verifyCompatibleNumbers(args);
+                Self::verify_compatible_numbers(&args, options, span)?;
+
                 Value::Calculation(SassCalculation {
                     name: CalculationName::Min,
                     args,

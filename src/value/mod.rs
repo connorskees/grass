@@ -302,19 +302,18 @@ impl Value {
                 unit,
                 as_slash,
             } => Cow::Owned(serialize_number(
-                        &SassNumber {
-                            num: num.0,
-                            unit: unit.clone(),
-                            as_slash: as_slash.clone(),
-                        },
-                        &Options::default().style(if is_compressed {
-                            OutputStyle::Compressed
-                        } else {
-                            OutputStyle::Expanded
-                        }),
-                        span,
-                    )?)
-            ,
+                &SassNumber {
+                    num: num.0,
+                    unit: unit.clone(),
+                    as_slash: as_slash.clone(),
+                },
+                &Options::default().style(if is_compressed {
+                    OutputStyle::Compressed
+                } else {
+                    OutputStyle::Expanded
+                }),
+                span,
+            )?),
             Value::Map(..) | Value::FunctionRef(..) => {
                 return Err((
                     format!("{} isn't a valid CSS value.", self.inspect(span)?),
@@ -596,11 +595,9 @@ impl Value {
     // todo: is this actually fallible?
     pub fn inspect(&self, span: Span) -> SassResult<Cow<'static, str>> {
         Ok(match self {
-            Value::Calculation(calc) => Cow::Owned(serialize_calculation(
-                calc,
-                &Options::default(),
-                span,
-            )?),
+            Value::Calculation(calc) => {
+                Cow::Owned(serialize_calculation(calc, &Options::default(), span)?)
+            }
             Value::List(v, _, brackets) if v.is_empty() => match brackets {
                 Brackets::None => Cow::Borrowed("()"),
                 Brackets::Bracketed => Cow::Borrowed("[]"),
@@ -826,18 +823,16 @@ impl Value {
     }
 
     pub fn unary_div(self, visitor: &mut Visitor) -> SassResult<Self> {
-        Ok(match self {
-            _ => Self::String(
-                format!(
-                    "/{}",
-                    &self.to_css_string(
-                        visitor.parser.span_before,
-                        visitor.parser.options.is_compressed()
-                    )?
-                ),
-                QuoteKind::None,
+        Ok(Self::String(
+            format!(
+                "/{}",
+                &self.to_css_string(
+                    visitor.parser.span_before,
+                    visitor.parser.options.is_compressed()
+                )?
             ),
-        })
+            QuoteKind::None,
+        ))
     }
 
     pub fn unary_not(self) -> Self {
