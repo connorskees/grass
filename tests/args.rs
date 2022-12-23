@@ -303,3 +303,14 @@ error!(
     }",
     "Error: Duplicate argument."
 );
+error!(
+    variable_keyword_args_is_list,
+    "@function foo($a...) {
+        @return inspect($a);
+    }
+
+    a {
+        color: foo(a..., a b...);
+    }",
+    "Error: Variable keyword arguments must be a map (was a b)."
+);

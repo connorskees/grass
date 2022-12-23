@@ -2251,8 +2251,8 @@ impl<'a> Visitor<'a> {
                     touched: BTreeSet::new(),
                 })
             }
-            _ => {
-                todo!("Variable keyword arguments must be a map (was $keywordRest).")
+            v => {
+                return Err((format!("Variable keyword arguments must be a map (was {}).", v.inspect(arguments.span)?), arguments.span).into());
             }
         }
     }

@@ -155,19 +155,7 @@ impl Number {
     }
 
     pub fn clamp(self, min: f64, max: f64) -> Self {
-        if self.0 > max {
-            return Number(max);
-        }
-
-        if min == 0.0 && self.is_negative() {
-            return Number::zero();
-        }
-
-        if self.0 < min {
-            return Number(min);
-        }
-
-        self
+        Number(min.max(self.0.min(max)))
     }
 
     pub fn sqrt(self) -> Self {

@@ -17,6 +17,68 @@ pub(crate) fn function_string(
     Ok(format!("{}({})", name, args))
 }
 
+fn inner_rgb_2_arg(
+    name: &'static str,
+    mut args: ArgumentResult,
+    visitor: &mut Visitor,
+) -> SassResult<Value> {
+    // rgba(var(--foo), 0.5) is valid CSS because --foo might be `123, 456, 789`
+    // and functions are parsed after variable substitution.
+    let color = args.get_err(0, "color")?;
+    let alpha = args.get_err(1, "alpha")?;
+
+    let is_compressed = visitor.parser.options.is_compressed();
+
+    if color.is_var() {
+        return Ok(Value::String(
+            function_string(name, &[color, alpha], visitor, args.span())?,
+            QuoteKind::None,
+        ));
+    } else if alpha.is_var() {
+        match &color {
+            Value::Color(color) => {
+                return Ok(Value::String(
+                    format!(
+                        "{}({}, {}, {}, {})",
+                        name,
+                        color.red().to_string(is_compressed),
+                        color.green().to_string(is_compressed),
+                        color.blue().to_string(is_compressed),
+                        alpha.to_css_string(args.span(), is_compressed)?
+                    ),
+                    QuoteKind::None,
+                ));
+            }
+            _ => {
+                return Ok(Value::String(
+                    function_string(name, &[color, alpha], visitor, args.span())?,
+                    QuoteKind::None,
+                ))
+            }
+        }
+    } else if alpha.is_special_function() {
+        let color = color.assert_color_with_name("color", args.span())?;
+
+        return Ok(Value::String(
+            format!(
+                "{}({}, {}, {}, {})",
+                name,
+                color.red().to_string(is_compressed),
+                color.green().to_string(is_compressed),
+                color.blue().to_string(is_compressed),
+                alpha.to_css_string(args.span(), is_compressed)?
+            ),
+            QuoteKind::None,
+        ));
+    }
+
+    let color = color.assert_color_with_name("color", args.span())?;
+    let alpha = alpha.assert_number_with_name("alpha", args.span())?;
+    Ok(Value::Color(Box::new(color.with_alpha(Number(
+        percentage_or_unitless(&alpha, 1.0, "alpha", args.span(), visitor)?,
+    )))))
+}
+
 fn inner_rgb_3_arg(
     name: &'static str,
     mut args: ArgumentResult,
@@ -109,7 +171,7 @@ pub(crate) fn percentage_or_unitless(
             .into());
     };
 
-    Ok(value.clamp(0.0, max))
+    Ok(0.0_f64.max(value.min(max)))
 }
 
 #[derive(Debug, Clone)]
@@ -260,8 +322,6 @@ pub(crate) fn parse_channels(
 }
 
 /// name: Either `rgb` or `rgba` depending on the caller
-// todo: refactor into smaller functions
-#[allow(clippy::cognitive_complexity)]
 fn inner_rgb(
     name: &'static str,
     mut args: ArgumentResult,
@@ -269,106 +329,32 @@ fn inner_rgb(
 ) -> SassResult<Value> {
     args.max_args(4)?;
 
-    let len = args.len();
+    match args.len() {
+        0 | 1 => {
+            match parse_channels(
+                name,
+                &["red", "green", "blue"],
+                args.get_err(0, "channels")?,
+                parser,
+                args.span(),
+            )? {
+                ParsedChannels::String(s) => Ok(Value::String(s, QuoteKind::None)),
+                ParsedChannels::List(list) => {
+                    let args = ArgumentResult {
+                        positional: list,
+                        named: BTreeMap::new(),
+                        separator: ListSeparator::Comma,
+                        span: args.span(),
+                        touched: BTreeSet::new(),
+                    };
 
-    if len == 0 || len == 1 {
-        match parse_channels(
-            name,
-            &["red", "green", "blue"],
-            args.get_err(0, "channels")?,
-            parser,
-            args.span(),
-        )? {
-            ParsedChannels::String(s) => return Ok(Value::String(s, QuoteKind::None)),
-            ParsedChannels::List(list) => {
-                let args = ArgumentResult {
-                    positional: list,
-                    named: BTreeMap::new(),
-                    separator: ListSeparator::Comma,
-                    span: args.span(),
-                    touched: BTreeSet::new(),
-                };
-
-                return inner_rgb_3_arg(name, args, parser);
+                    inner_rgb_3_arg(name, args, parser)
+                }
             }
         }
-    } else if len == 3 || len == 4 {
-        return inner_rgb_3_arg(name, args, parser);
+        2 => inner_rgb_2_arg(name, args, parser),
+        _ => inner_rgb_3_arg(name, args, parser),
     }
-
-    debug_assert_eq!(len, 2);
-
-    let color = args.get_err(0, "color")?;
-    let alpha = args.get_err(1, "alpha")?;
-
-    if color.is_special_function() || (alpha.is_special_function() && !color.is_color()) {
-        return Ok(Value::String(
-            format!(
-                "{}({})",
-                name,
-                Value::List(vec![color, alpha], ListSeparator::Comma, Brackets::None)
-                    .to_css_string(args.span(), false)?
-            ),
-            QuoteKind::None,
-        ));
-    }
-
-    let color = match color {
-        Value::Color(c) => c,
-        v => {
-            return Err((
-                format!("$color: {} is not a color.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
-
-    if alpha.is_special_function() {
-        return Ok(Value::String(
-            format!(
-                "{}({}, {}, {}, {})",
-                name,
-                color.red().to_string(false),
-                color.green().to_string(false),
-                color.blue().to_string(false),
-                alpha.to_css_string(args.span(), false)?,
-            ),
-            QuoteKind::None,
-        ));
-    }
-
-    let alpha = match alpha {
-        Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
-        Value::Dimension {
-            num: n,
-            unit: Unit::None,
-            as_slash: _,
-        } => n,
-        Value::Dimension {
-            num: n,
-            unit: Unit::Percent,
-            as_slash: _,
-        } => n / Number::from(100),
-        v @ Value::Dimension { .. } => {
-            return Err((
-                format!(
-                    "$alpha: Expected {} to have no units or \"%\".",
-                    v.to_css_string(args.span(), parser.parser.options.is_compressed())?
-                ),
-                args.span(),
-            )
-                .into())
-        }
-        v => {
-            return Err((
-                format!("$alpha: {} is not a number.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
-    Ok(Value::Color(Box::new(color.with_alpha(alpha))))
 }
 
 pub(crate) fn rgb(args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
