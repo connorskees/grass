@@ -70,7 +70,7 @@ fn hsl_3_args(
 fn inner_hsl(
     name: &'static str,
     mut args: ArgumentResult,
-    parser: &mut Visitor,
+    visitor: &mut Visitor,
 ) -> SassResult<Value> {
     args.max_args(4)?;
     let span = args.span();
@@ -82,7 +82,7 @@ fn inner_hsl(
             name,
             &["hue", "saturation", "lightness"],
             args.get_err(0, "channels")?,
-            parser,
+            visitor,
             args.span(),
         )? {
             ParsedChannels::String(s) => Ok(Value::String(s, QuoteKind::None)),
@@ -95,7 +95,7 @@ fn inner_hsl(
                     touched: BTreeSet::new(),
                 };
 
-                hsl_3_args(name, args, parser)
+                hsl_3_args(name, args, visitor)
             }
         }
     } else if len == 2 {
@@ -104,26 +104,26 @@ fn inner_hsl(
 
         if hue.is_var() || saturation.is_var() {
             return Ok(Value::String(
-                function_string(name, &[hue, saturation], parser, span)?,
+                function_string(name, &[hue, saturation], visitor, span)?,
                 QuoteKind::None,
             ));
         } else {
             return Err(("Missing argument $lightness.", args.span()).into());
         }
     } else {
-        return hsl_3_args(name, args, parser);
+        return hsl_3_args(name, args, visitor);
     }
 }
 
-pub(crate) fn hsl(args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
-    inner_hsl("hsl", args, parser)
+pub(crate) fn hsl(args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
+    inner_hsl("hsl", args, visitor)
 }
 
-pub(crate) fn hsla(args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
-    inner_hsl("hsla", args, parser)
+pub(crate) fn hsla(args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
+    inner_hsl("hsla", args, visitor)
 }
 
-pub(crate) fn hue(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+pub(crate) fn hue(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "color")? {
         Value::Color(c) => Ok(Value::Dimension {
@@ -139,7 +139,7 @@ pub(crate) fn hue(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<
     }
 }
 
-pub(crate) fn saturation(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+pub(crate) fn saturation(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "color")? {
         Value::Color(c) => Ok(Value::Dimension {
@@ -155,7 +155,7 @@ pub(crate) fn saturation(mut args: ArgumentResult, parser: &mut Visitor) -> Sass
     }
 }
 
-pub(crate) fn lightness(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+pub(crate) fn lightness(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "color")? {
         Value::Color(c) => Ok(Value::Dimension {
@@ -171,7 +171,7 @@ pub(crate) fn lightness(mut args: ArgumentResult, parser: &mut Visitor) -> SassR
     }
 }
 
-pub(crate) fn adjust_hue(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+pub(crate) fn adjust_hue(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(2)?;
     let color = args
         .get_err(0, "color")?
@@ -184,7 +184,7 @@ pub(crate) fn adjust_hue(mut args: ArgumentResult, parser: &mut Visitor) -> Sass
     Ok(Value::Color(Box::new(color.adjust_hue(degrees))))
 }
 
-fn lighten(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+fn lighten(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(2)?;
     let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,
@@ -205,7 +205,7 @@ fn lighten(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> 
     Ok(Value::Color(Box::new(color.lighten(amount))))
 }
 
-fn darken(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+fn darken(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(2)?;
     let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,
@@ -238,7 +238,7 @@ fn darken(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     Ok(Value::Color(Box::new(color.darken(amount))))
 }
 
-fn saturate(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+fn saturate(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(2)?;
     if args.len() == 1 {
         let amount = args
@@ -248,7 +248,7 @@ fn saturate(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value>
         return Ok(Value::String(
             format!(
                 "saturate({})",
-                serialize_number(&amount, parser.parser.options, args.span())?,
+                serialize_number(&amount, visitor.parser.options, args.span())?,
             ),
             QuoteKind::None,
         ));
@@ -296,7 +296,7 @@ fn saturate(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value>
     Ok(Value::Color(Box::new(color.saturate(amount))))
 }
 
-fn desaturate(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+fn desaturate(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(2)?;
     let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,
@@ -319,7 +319,7 @@ fn desaturate(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Valu
             return Err((
                 format!(
                     "$amount: {} is not a number.",
-                    v.to_css_string(args.span(), parser.parser.options.is_compressed())?
+                    v.to_css_string(args.span(), visitor.parser.options.is_compressed())?
                 ),
                 args.span(),
             )
@@ -329,7 +329,7 @@ fn desaturate(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Valu
     Ok(Value::Color(Box::new(color.desaturate(amount))))
 }
 
-pub(crate) fn grayscale(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+pub(crate) fn grayscale(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,
@@ -354,7 +354,7 @@ pub(crate) fn grayscale(mut args: ArgumentResult, parser: &mut Visitor) -> SassR
     Ok(Value::Color(Box::new(color.desaturate(Number::one()))))
 }
 
-pub(crate) fn complement(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+pub(crate) fn complement(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,
@@ -369,7 +369,7 @@ pub(crate) fn complement(mut args: ArgumentResult, parser: &mut Visitor) -> Sass
     Ok(Value::Color(Box::new(color.complement())))
 }
 
-pub(crate) fn invert(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+pub(crate) fn invert(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(2)?;
     let weight = match args.get(1, "weight") {
         Some(Spanned {
@@ -390,7 +390,7 @@ pub(crate) fn invert(mut args: ArgumentResult, parser: &mut Visitor) -> SassResu
             return Err((
                 format!(
                     "$weight: {} is not a number.",
-                    v.to_css_string(args.span(), parser.parser.options.is_compressed())?
+                    v.to_css_string(args.span(), visitor.parser.options.is_compressed())?
                 ),
                 args.span(),
             )

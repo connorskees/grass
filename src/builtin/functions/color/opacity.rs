@@ -30,7 +30,7 @@ mod test {
     }
 }
 
-pub(crate) fn alpha(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+pub(crate) fn alpha(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     if args.len() <= 1 {
         match args.get_err(0, "color")? {
             Value::Color(c) => Ok(Value::Dimension {
@@ -68,7 +68,7 @@ pub(crate) fn alpha(mut args: ArgumentResult, parser: &mut Visitor) -> SassResul
     }
 }
 
-pub(crate) fn opacity(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+pub(crate) fn opacity(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "color")? {
         Value::Dimension { num: n, .. } if n.is_nan() => todo!(),
@@ -93,7 +93,7 @@ pub(crate) fn opacity(mut args: ArgumentResult, parser: &mut Visitor) -> SassRes
     }
 }
 
-fn opacify(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+fn opacify(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(2)?;
     let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,
@@ -114,7 +114,7 @@ fn opacify(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> 
     Ok(Value::Color(Box::new(color.fade_in(amount))))
 }
 
-fn transparentize(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+fn transparentize(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(2)?;
     let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,

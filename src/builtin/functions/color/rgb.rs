@@ -325,7 +325,7 @@ pub(crate) fn parse_channels(
 fn inner_rgb(
     name: &'static str,
     mut args: ArgumentResult,
-    parser: &mut Visitor,
+    visitor: &mut Visitor,
 ) -> SassResult<Value> {
     args.max_args(4)?;
 
@@ -335,7 +335,7 @@ fn inner_rgb(
                 name,
                 &["red", "green", "blue"],
                 args.get_err(0, "channels")?,
-                parser,
+                visitor,
                 args.span(),
             )? {
                 ParsedChannels::String(s) => Ok(Value::String(s, QuoteKind::None)),
@@ -348,24 +348,24 @@ fn inner_rgb(
                         touched: BTreeSet::new(),
                     };
 
-                    inner_rgb_3_arg(name, args, parser)
+                    inner_rgb_3_arg(name, args, visitor)
                 }
             }
         }
-        2 => inner_rgb_2_arg(name, args, parser),
-        _ => inner_rgb_3_arg(name, args, parser),
+        2 => inner_rgb_2_arg(name, args, visitor),
+        _ => inner_rgb_3_arg(name, args, visitor),
     }
 }
 
-pub(crate) fn rgb(args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
-    inner_rgb("rgb", args, parser)
+pub(crate) fn rgb(args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
+    inner_rgb("rgb", args, visitor)
 }
 
-pub(crate) fn rgba(args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
-    inner_rgb("rgba", args, parser)
+pub(crate) fn rgba(args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
+    inner_rgb("rgba", args, visitor)
 }
 
-pub(crate) fn red(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+pub(crate) fn red(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "color")? {
         Value::Color(c) => Ok(Value::Dimension {
@@ -381,7 +381,7 @@ pub(crate) fn red(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<
     }
 }
 
-pub(crate) fn green(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+pub(crate) fn green(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "color")? {
         Value::Color(c) => Ok(Value::Dimension {
@@ -397,7 +397,7 @@ pub(crate) fn green(mut args: ArgumentResult, parser: &mut Visitor) -> SassResul
     }
 }
 
-pub(crate) fn blue(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+pub(crate) fn blue(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "color")? {
         Value::Color(c) => Ok(Value::Dimension {
@@ -413,7 +413,7 @@ pub(crate) fn blue(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult
     }
 }
 
-pub(crate) fn mix(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+pub(crate) fn mix(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(3)?;
     let color1 = match args.get_err(0, "color1")? {
         Value::Color(c) => c,
@@ -456,7 +456,7 @@ pub(crate) fn mix(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<
             return Err((
                 format!(
                     "$weight: {} is not a number.",
-                    v.to_css_string(args.span(), parser.parser.options.is_compressed())?
+                    v.to_css_string(args.span(), visitor.parser.options.is_compressed())?
                 ),
                 args.span(),
             )

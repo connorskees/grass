@@ -1,6 +1,6 @@
 use crate::builtin::builtin_imports::*;
 
-pub(crate) fn to_upper_case(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+pub(crate) fn to_upper_case(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "string")? {
         Value::String(mut i, q) => {
@@ -15,7 +15,7 @@ pub(crate) fn to_upper_case(mut args: ArgumentResult, parser: &mut Visitor) -> S
     }
 }
 
-pub(crate) fn to_lower_case(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+pub(crate) fn to_lower_case(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "string")? {
         Value::String(mut i, q) => {
@@ -30,7 +30,7 @@ pub(crate) fn to_lower_case(mut args: ArgumentResult, parser: &mut Visitor) -> S
     }
 }
 
-pub(crate) fn str_length(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+pub(crate) fn str_length(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "string")? {
         Value::String(i, _) => Ok(Value::Dimension {
@@ -46,7 +46,7 @@ pub(crate) fn str_length(mut args: ArgumentResult, parser: &mut Visitor) -> Sass
     }
 }
 
-pub(crate) fn quote(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+pub(crate) fn quote(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "string")? {
         Value::String(i, _) => Ok(Value::String(i, QuoteKind::Quoted)),
@@ -58,7 +58,7 @@ pub(crate) fn quote(mut args: ArgumentResult, parser: &mut Visitor) -> SassResul
     }
 }
 
-pub(crate) fn unquote(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+pub(crate) fn unquote(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "string")? {
         i @ Value::String(..) => Ok(i.unquote()),
@@ -70,7 +70,7 @@ pub(crate) fn unquote(mut args: ArgumentResult, parser: &mut Visitor) -> SassRes
     }
 }
 
-pub(crate) fn str_slice(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+pub(crate) fn str_slice(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(3)?;
 
     let span = args.span();
@@ -139,7 +139,7 @@ pub(crate) fn str_slice(mut args: ArgumentResult, parser: &mut Visitor) -> SassR
     }
 }
 
-pub(crate) fn str_index(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+pub(crate) fn str_index(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(2)?;
     let s1 = match args.get_err(0, "string")? {
         Value::String(i, _) => i,
@@ -173,7 +173,7 @@ pub(crate) fn str_index(mut args: ArgumentResult, parser: &mut Visitor) -> SassR
     })
 }
 
-pub(crate) fn str_insert(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+pub(crate) fn str_insert(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(3)?;
     let span = args.span();
 

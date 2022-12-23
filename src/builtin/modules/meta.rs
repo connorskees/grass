@@ -14,7 +14,7 @@ use crate::builtin::{
 };
 use crate::serializer::serialize_calculation_arg;
 
-fn load_css(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<()> {
+fn load_css(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<()> {
     args.max_args(2)?;
 
     let span = args.span();
@@ -69,7 +69,7 @@ fn load_css(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<()> {
 
     let configuration = Arc::new(RefCell::new(configuration));
 
-    parser.load_module(
+    visitor.load_module(
         url.as_ref(),
         Some(Arc::clone(&configuration)),
         true,
@@ -124,11 +124,11 @@ fn load_css(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<()> {
 
     //     Ok(stmts)
     // } else {
-    //     parser.parser.parse_single_import(&url, span)
+    //     visitor.parser.parse_single_import(&url, span)
     // }
 }
 
-fn module_functions(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+fn module_functions(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
 
     let module = match args.get_err(0, "module")? {
@@ -143,7 +143,7 @@ fn module_functions(mut args: ArgumentResult, parser: &mut Visitor) -> SassResul
     };
 
     Ok(Value::Map(
-        (*(*parser.env.modules)
+        (*(*visitor.env.modules)
             .borrow()
             .get(module.into(), args.span())?)
         .borrow()
@@ -151,7 +151,7 @@ fn module_functions(mut args: ArgumentResult, parser: &mut Visitor) -> SassResul
     ))
 }
 
-fn module_variables(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+fn module_variables(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
 
     let module = match args.get_err(0, "module")? {
@@ -166,7 +166,7 @@ fn module_variables(mut args: ArgumentResult, parser: &mut Visitor) -> SassResul
     };
 
     Ok(Value::Map(
-        (*(*parser.env.modules)
+        (*(*visitor.env.modules)
             .borrow()
             .get(module.into(), args.span())?)
         .borrow()
@@ -174,7 +174,7 @@ fn module_variables(mut args: ArgumentResult, parser: &mut Visitor) -> SassResul
     ))
 }
 
-fn calc_args(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+fn calc_args(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
 
     let calc = match args.get_err(0, "calc")? {
@@ -203,7 +203,7 @@ fn calc_args(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value
                     Value::String(s, QuoteKind::None)
                 }
                 CalculationArg::Operation { .. } => Value::String(
-                    serialize_calculation_arg(&arg, parser.parser.options, args.span())?,
+                    serialize_calculation_arg(&arg, visitor.parser.options, args.span())?,
                     QuoteKind::None,
                 ),
             })
@@ -213,7 +213,7 @@ fn calc_args(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value
     Ok(Value::List(args, ListSeparator::Comma, Brackets::None))
 }
 
-fn calc_name(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+fn calc_name(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
 
     let calc = match args.get_err(0, "calc")? {

@@ -1,6 +1,6 @@
 use crate::{builtin::builtin_imports::*, evaluate::div};
 
-pub(crate) fn percentage(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+pub(crate) fn percentage(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     let num = match args.get_err(0, "number")? {
         Value::Dimension {
@@ -33,7 +33,7 @@ pub(crate) fn percentage(mut args: ArgumentResult, parser: &mut Visitor) -> Sass
     })
 }
 
-pub(crate) fn round(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+pub(crate) fn round(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "number")? {
         // todo: better error message, consider finities
@@ -57,7 +57,7 @@ pub(crate) fn round(mut args: ArgumentResult, parser: &mut Visitor) -> SassResul
     }
 }
 
-pub(crate) fn ceil(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+pub(crate) fn ceil(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "number")? {
         // todo: better error message, consider finities
@@ -81,7 +81,7 @@ pub(crate) fn ceil(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult
     }
 }
 
-pub(crate) fn floor(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+pub(crate) fn floor(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "number")? {
         // todo: better error message, consider finities
@@ -105,7 +105,7 @@ pub(crate) fn floor(mut args: ArgumentResult, parser: &mut Visitor) -> SassResul
     }
 }
 
-pub(crate) fn abs(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+pub(crate) fn abs(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "number")? {
         Value::Dimension {
@@ -125,7 +125,7 @@ pub(crate) fn abs(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<
     }
 }
 
-pub(crate) fn comparable(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+pub(crate) fn comparable(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(2)?;
     let unit1 = match args.get_err(0, "number1")? {
         Value::Dimension {
@@ -161,7 +161,7 @@ pub(crate) fn comparable(mut args: ArgumentResult, parser: &mut Visitor) -> Sass
 
 // TODO: write tests for this
 #[cfg(feature = "random")]
-pub(crate) fn random(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+pub(crate) fn random(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     let limit = args.default_arg(0, "limit", Value::Null);
 
@@ -201,7 +201,7 @@ pub(crate) fn random(mut args: ArgumentResult, parser: &mut Visitor) -> SassResu
     })
 }
 
-pub(crate) fn min(args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+pub(crate) fn min(args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.min_args(1)?;
     let span = args.span();
     let mut nums = args
@@ -238,8 +238,8 @@ pub(crate) fn min(args: ArgumentResult, parser: &mut Visitor) -> SassResult<Valu
         if crate::evaluate::cmp(
             &lhs,
             &rhs,
-            parser.parser.options,
-            parser.parser.span_before,
+            visitor.parser.options,
+            visitor.parser.span_before,
             BinaryOp::LessThan,
         )?
         .is_true()
@@ -254,7 +254,7 @@ pub(crate) fn min(args: ArgumentResult, parser: &mut Visitor) -> SassResult<Valu
     })
 }
 
-pub(crate) fn max(args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+pub(crate) fn max(args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.min_args(1)?;
     let span = args.span();
     let mut nums = args
@@ -291,8 +291,8 @@ pub(crate) fn max(args: ArgumentResult, parser: &mut Visitor) -> SassResult<Valu
         if crate::evaluate::cmp(
             &lhs,
             &rhs,
-            parser.parser.options,
-            parser.parser.span_before,
+            visitor.parser.options,
+            visitor.parser.span_before,
             BinaryOp::GreaterThan,
         )?
         .is_true()
@@ -307,13 +307,13 @@ pub(crate) fn max(args: ArgumentResult, parser: &mut Visitor) -> SassResult<Valu
     })
 }
 
-pub(crate) fn divide(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+pub(crate) fn divide(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(2)?;
 
     let number1 = args.get_err(0, "number1")?;
     let number2 = args.get_err(1, "number2")?;
 
-    div(number1, number2, parser.parser.options, args.span())
+    div(number1, number2, visitor.parser.options, args.span())
 }
 
 pub(crate) fn declare(f: &mut GlobalFunctionMap) {

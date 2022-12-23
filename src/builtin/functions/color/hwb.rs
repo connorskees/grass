@@ -1,6 +1,6 @@
 use crate::builtin::builtin_imports::*;
 
-pub(crate) fn blackness(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+pub(crate) fn blackness(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
 
     let color = match args.get_err(0, "color")? {
@@ -24,7 +24,7 @@ pub(crate) fn blackness(mut args: ArgumentResult, parser: &mut Visitor) -> SassR
     })
 }
 
-pub(crate) fn whiteness(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+pub(crate) fn whiteness(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
 
     let color = match args.get_err(0, "color")? {
@@ -47,7 +47,7 @@ pub(crate) fn whiteness(mut args: ArgumentResult, parser: &mut Visitor) -> SassR
     })
 }
 
-pub(crate) fn hwb(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
+pub(crate) fn hwb(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(4)?;
 
     if args.is_empty() {
