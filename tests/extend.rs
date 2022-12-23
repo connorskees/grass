@@ -1957,6 +1957,14 @@ error!(
     }",
     "Error: The target selector was not found."
 );
+error!(
+    #[ignore = "crash"]
+    extends_self_is_has_invalid_combinator,
+    "a :is(#a, >) {
+        @extend a
+    }",
+    ""
+);
 
 // todo: extend_loop (massive test)
 // todo: extend tests in folders

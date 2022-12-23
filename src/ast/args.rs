@@ -9,6 +9,7 @@ use codemap::{Span, Spanned};
 use crate::{
     common::{Identifier, ListSeparator},
     error::SassResult,
+    utils::to_sentence,
     value::Value,
 };
 
@@ -88,7 +89,39 @@ impl ArgumentDeclaration {
         }
 
         if named_used < names.len() {
-            todo!()
+            let mut unknown_names = names.keys().copied().collect::<BTreeSet<_>>();
+
+            for arg in &self.args {
+                unknown_names.remove(&arg.name);
+            }
+
+            if unknown_names.len() == 1 {
+                return Err((
+                    format!(
+                        "No argument named ${}.",
+                        unknown_names.iter().next().unwrap()
+                    ),
+                    span,
+                )
+                    .into());
+            }
+
+            if unknown_names.len() > 1 {
+                return Err((
+                    format!(
+                        "No arguments named {}.",
+                        to_sentence(
+                            unknown_names
+                                .into_iter()
+                                .map(|name| format!("${name}"))
+                                .collect(),
+                            "or"
+                        )
+                    ),
+                    span,
+                )
+                    .into());
+            }
         }
 
         Ok(())
@@ -246,7 +279,7 @@ impl ArgumentResult {
 
     pub fn get_variadic(self) -> SassResult<Vec<Spanned<Value>>> {
         if let Some((name, _)) = self.named.iter().next() {
-            return Err((format!("No argument named ${}.", name), self.span).into())
+            return Err((format!("No argument named ${}.", name), self.span).into());
         }
 
         let Self {
