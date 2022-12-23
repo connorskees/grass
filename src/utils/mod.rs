@@ -42,6 +42,10 @@ pub(crate) fn is_special_function(s: &str) -> bool {
         || s.starts_with("clamp(")
 }
 
+/// Trim ASCII whitespace from both sides of string.
+///
+/// If [excludeEscape] is `true`, this doesn't trim whitespace included in a CSS
+/// escape.
 pub(crate) fn trim_ascii(
     s: &str,
     // default=false
@@ -57,7 +61,7 @@ fn last_non_whitespace(s: &str, exclude_escape: bool) -> Option<usize> {
     let mut idx = s.len() - 1;
     for c in s.chars().rev() {
         if !c.is_ascii_whitespace() {
-            if exclude_escape && idx != 0 && idx != s.len() && c == '\\' {
+            if exclude_escape && idx != 0 && idx != s.len() - 1 && c == '\\' {
                 return Some(idx + 1);
             } else {
                 return Some(idx);

@@ -878,6 +878,13 @@ test!(
     }",
     "a {\n  color: a a;\n}\n"
 );
+test!(
+    escaped_backslash_no_space_before_curly_brace,
+    r#"\\{
+        color: &;
+    }"#,
+    "\\\\ {\n  color: \\\\;\n}\n"
+);
 error!(
     a_n_plus_b_n_invalid_odd,
     ":nth-child(ofdd) {\n  color: &;\n}\n", "Error: Expected \"odd\"."

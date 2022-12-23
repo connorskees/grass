@@ -257,3 +257,19 @@ error!(
     nothing_after_backslash_in_possible_style,
     "a {a \\", "Error: expected more input."
 );
+error!(
+    nothing_after_bang_in_variable_decl,
+    "$foo: !", "Error: Expected \"important\"."
+);
+error!(
+    nothing_after_dot_in_value,
+    "a { color: .", "Error: Expected digit."
+);
+error!(
+    nothing_after_dot_in_value_preceded_by_plus_sign,
+    "a { color: +.", "Error: Expected digit."
+);
+error!(
+    nothing_after_dot_in_value_preceded_by_minus_sign,
+    "a { color: -.", "Error: Expected digit."
+);

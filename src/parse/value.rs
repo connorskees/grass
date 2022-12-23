@@ -973,11 +973,13 @@ impl<'c> ValueParser<'c> {
             parser.scan_char('-');
         }
 
+        let after_sign = parser.toks.cursor();
+
         if !parser.toks.next_char_is('.') {
             self.consume_natural_number(parser)?;
         }
 
-        Self::try_decimal(parser, parser.toks.cursor() != start)?;
+        Self::try_decimal(parser, parser.toks.cursor() != after_sign)?;
         Self::try_exponent(parser)?;
 
         let number: f64 = parser.toks.raw_text(start).parse().unwrap();
@@ -1005,13 +1007,16 @@ impl<'c> ValueParser<'c> {
             return Ok(None);
         }
 
-        if let Some(Token { kind, pos }) = parser.toks.peek_n(1) {
-            if !kind.is_ascii_digit() {
+        match parser.toks.peek_n(1) {
+            Some(Token { kind, pos }) if !kind.is_ascii_digit() => {
                 if allow_trailing_dot {
-                    return Ok(None);
+                    return Ok(None)
                 }
+
                 return Err(("Expected digit.", pos).into());
             }
+            Some(..) => {}
+            None => return Err(("Expected digit.", parser.toks.current_span()).into()),
         }
 
         let mut buffer = String::new();
