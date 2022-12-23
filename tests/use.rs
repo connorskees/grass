@@ -46,6 +46,10 @@ error!(
     use_file_name_is_invalid_identifier,
     r#"@use "a b";"#, r#"Error: The default namespace "a b" is not a valid Sass identifier."#
 );
+error!(
+    use_empty_string,
+    r#"@use "";"#, r#"Error: The default namespace "" is not a valid Sass identifier."#
+);
 test!(
     use_as,
     "@use \"sass:math\" as foo;

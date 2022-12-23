@@ -248,7 +248,6 @@ impl<'a, 'b> Parser<'a, 'b> {
         }
     }
 
-    // todo: return span
     pub fn parse_identifier(
         &mut self,
         // default=false
@@ -1646,17 +1645,23 @@ impl<'a, 'b> Parser<'a, 'b> {
                 .collect(),
         );
 
-        let identifier = Parser {
-            toks: &mut toks,
-            map: self.map,
-            path: self.path,
-            is_plain_css: self.is_plain_css,
-            is_indented: self.is_indented,
-            span_before: self.span_before,
-            flags: self.flags,
-            options: self.options,
-        }
-        .parse_identifier(false, false);
+        // if namespace is empty, avoid attempting to parse an identifier from
+        // an empty string, as there will be no span to emit
+        let identifier = if namespace.is_empty() {
+            Err(("", self.span_before).into())
+        } else {
+            Parser {
+                toks: &mut toks,
+                map: self.map,
+                path: self.path,
+                is_plain_css: self.is_plain_css,
+                is_indented: self.is_indented,
+                span_before: self.span_before,
+                flags: self.flags,
+                options: self.options,
+            }
+            .parse_identifier(false, false)
+        };
 
         match (identifier, toks.peek().is_none()) {
             (Ok(i), true) => Ok(Some(i)),
