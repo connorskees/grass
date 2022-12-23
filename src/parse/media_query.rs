@@ -23,7 +23,9 @@ impl<'a> MediaQueryParser<'a> {
             }
         }
 
-        debug_assert!(self.parser.toks.next().is_none());
+        if self.parser.toks.next().is_some() {
+            return Err(("expected no more input.", self.parser.toks.current_span()).into());
+        }
 
         Ok(queries)
     }

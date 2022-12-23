@@ -545,3 +545,12 @@ test!(
     }",
     "@media (url) {\n  a {\n    color: red;\n  }\n}\n"
 );
+error!(
+    media_query_has_quoted_closing_paren,
+    r#"@media ('a)'w) {
+        a {
+            color: red;
+        }
+    }"#,
+    "Error: expected no more input."
+);
