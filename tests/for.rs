@@ -225,8 +225,11 @@ error!(
     }",
     "Error: to and from values have incompatible units"
 );
-
 error!(
     invalid_escape_sequence_in_declaration,
     "@for $i from 0 \\110000 o 2 {}", "Error: Invalid Unicode code point."
+);
+error!(
+    invalid_keyword_after_first_number,
+    "@for $i from 1 FOO 3 {}", "Error: Expected \"to\" or \"through\"."
 );

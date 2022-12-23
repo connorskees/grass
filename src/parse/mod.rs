@@ -571,7 +571,9 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         let is_exclusive = match exclusive.get() {
             Some(b) => b,
-            None => todo!("Expected \"to\" or \"through\"."),
+            None => {
+                return Err(("Expected \"to\" or \"through\".", self.toks.current_span()).into())
+            }
         };
 
         self.whitespace()?;
