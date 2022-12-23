@@ -48,7 +48,6 @@ test!(
     "a {\n  color: false;\n}\n"
 );
 error!(
-    #[ignore = "haven't yet figured out a good way to check for whether an @content block exists"]
     include_empty_braces_no_args_no_at_content,
     "@mixin foo {\n    color: content-exists();\n}\n\na {\n    @include foo{};\n}\n",
     "Error: Mixin doesn't accept a content block."

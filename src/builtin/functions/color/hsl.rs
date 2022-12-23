@@ -173,7 +173,9 @@ pub(crate) fn lightness(mut args: ArgumentResult, parser: &mut Visitor) -> SassR
 
 pub(crate) fn adjust_hue(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value> {
     args.max_args(2)?;
-    let color = args.get_err(0, "color")?.assert_color_with_name("color", args.span())?;
+    let color = args
+        .get_err(0, "color")?
+        .assert_color_with_name("color", args.span())?;
     let degrees = args
         .get_err(1, "degrees")?
         .assert_number_with_name("degrees", args.span())?

@@ -1959,12 +1959,15 @@ impl<'a, 'b> Parser<'a, 'b> {
                     .into());
             }
 
-            let children = self.with_children(Self::parse_declaration_child)?.node;
+            if name.initial_plain().starts_with("--") {
+                return Err((
+                    "Declarations whose names begin with \"--\" may not be nested",
+                    self.toks.span_from(start),
+                )
+                    .into());
+            }
 
-            assert!(
-                !name.initial_plain().starts_with("--"),
-                "todo: Declarations whose names begin with \"--\" may not be nested"
-            );
+            let children = self.with_children(Self::parse_declaration_child)?.node;
 
             return Ok(AstStmt::Style(AstStyle {
                 name,
@@ -1984,13 +1987,16 @@ impl<'a, 'b> Parser<'a, 'b> {
                     .into());
             }
 
-            let children = self.with_children(Self::parse_declaration_child)?.node;
+            if name.initial_plain().starts_with("--") && !matches!(value.node, AstExpr::String(..))
+            {
+                return Err((
+                    "Declarations whose names begin with \"--\" may not be nested",
+                    self.toks.span_from(start),
+                )
+                    .into());
+            }
 
-            assert!(
-                !name.initial_plain().starts_with("--")
-                    || matches!(value.node, AstExpr::String(..)),
-                "todo: Declarations whose names begin with \"--\" may not be nested"
-            );
+            let children = self.with_children(Self::parse_declaration_child)?.node;
 
             Ok(AstStmt::Style(AstStyle {
                 name,

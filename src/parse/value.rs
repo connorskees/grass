@@ -1010,7 +1010,7 @@ impl<'c> ValueParser<'c> {
         match parser.toks.peek_n(1) {
             Some(Token { kind, pos }) if !kind.is_ascii_digit() => {
                 if allow_trailing_dot {
-                    return Ok(None)
+                    return Ok(None);
                 }
 
                 return Err(("Expected digit.", pos).into());

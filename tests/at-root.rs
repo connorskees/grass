@@ -221,5 +221,6 @@ error!(
         @at-root {
             @extend b;
         }
-    }", "Error: @extend may only be used within style rules."
+    }",
+    "Error: @extend may only be used within style rules."
 );

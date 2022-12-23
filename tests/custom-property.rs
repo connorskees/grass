@@ -61,3 +61,37 @@ error!(
     nothing_after_colon,
     "a {\n  --btn-font-family:;\n}\n", "Error: Expected token."
 );
+error!(
+    #[ignore = "dart-sass crashes on this input https://github.com/sass/dart-sass/issues/1857"]
+    child_in_declaration_block_is_custom_property,
+    "a {
+        color: {
+            --foo: bar;
+        }
+    }",
+    ""
+);
+error!(
+    // NOTE: https://github.com/sass/dart-sass/issues/1857
+    child_in_declaration_block_is_declaration_block_with_child_custom_property,
+    "a {
+        color: {
+            --a: {
+                foo: bar;
+            }
+        }
+    }",
+    r#"Error: Declarations whose names begin with "--" may not be nested"#
+);
+error!(
+    // NOTE: https://github.com/sass/dart-sass/issues/1857
+    custom_property_double_nested_custom_property_with_non_string_value_before_decl_block,
+    "a {
+        color: {
+            --a: 2 {
+                --foo: bar;
+            }
+        }
+    }",
+    r#"Error: Declarations whose names begin with "--" may not be nested"#
+);

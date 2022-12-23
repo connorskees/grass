@@ -207,6 +207,11 @@ test!(
     "a {\n  color: comparable((23in/2fu), (23cm/2fu));\n}\n",
     "a {\n  color: true;\n}\n"
 );
+test!(
+    complex_unit_many_denom_one_numer,
+    "a {\n  color: unit((1rem/1px) / 1vh);\n}\n",
+    "a {\n  color: \"rem/px*vh\";\n}\n"
+);
 error!(
     display_single_div_with_none_numerator,
     "a {\n  color: (1 / 1em);\n}\n", "Error: 1em^-1 isn't a valid CSS value."
