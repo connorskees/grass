@@ -26,7 +26,10 @@ impl<'a> Lexer<'a> {
     }
 
     pub fn span_from(&mut self, start: usize) -> Span {
-        let start = self.buf[start].pos;
+        let start = match self.buf.get(start) {
+            Some(start) => start.pos,
+            None => return self.current_span(),
+        };
         self.cursor = self.cursor.saturating_sub(1);
         let end = self.current_span();
         self.cursor += 1;

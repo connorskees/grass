@@ -253,3 +253,7 @@ error!(
     unclosed_bracketed_list,
     "a { color: [a", "Error: expected \"]\"."
 );
+error!(
+    nothing_after_backslash_in_possible_style,
+    "a {a \\", "Error: expected more input."
+);

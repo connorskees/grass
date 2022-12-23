@@ -33,6 +33,19 @@ pub(crate) fn serialize_calculation(
     Ok(serializer.finish_for_expr())
 }
 
+pub(crate) fn serialize_calculation_arg(
+    arg: &CalculationArg,
+    options: &Options,
+    span: Span,
+) -> SassResult<String> {
+    let map = CodeMap::new();
+    let mut serializer = Serializer::new(options, &map, false, span);
+
+    serializer.write_calculation_arg(arg)?;
+
+    Ok(serializer.finish_for_expr())
+}
+
 pub(crate) fn serialize_number(
     number: &SassNumber,
     options: &Options,

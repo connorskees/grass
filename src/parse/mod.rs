@@ -3002,8 +3002,12 @@ impl<'a, 'b> Parser<'a, 'b> {
                     // Write a literal backslash because this text will be re-parsed.
                     buffer.add_token(tok);
                     self.toks.next();
-                    // todo: is this breakable
-                    buffer.add_token(self.toks.next().unwrap());
+                    match self.toks.next() {
+                        Some(tok) => buffer.add_token(tok),
+                        None => {
+                            return Err(("expected more input.", self.toks.current_span()).into())
+                        }
+                    }
                 }
                 '"' | '\'' => {
                     let interpolation = self

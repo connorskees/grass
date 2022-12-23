@@ -12,6 +12,7 @@ use crate::builtin::{
     },
     modules::Module,
 };
+use crate::serializer::serialize_calculation_arg;
 
 fn load_css(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<()> {
     args.max_args(2)?;
@@ -185,19 +186,24 @@ fn calc_args(mut args: ArgumentResult, parser: &mut Visitor) -> SassResult<Value
     let args = calc
         .args
         .into_iter()
-        .map(|arg| match arg {
-            CalculationArg::Number(num) => Value::Dimension {
-                num: Number(num.num),
-                unit: num.unit,
-                as_slash: num.as_slash,
-            },
-            CalculationArg::Calculation(calc) => Value::Calculation(calc),
-            CalculationArg::String(s) | CalculationArg::Interpolation(s) => {
-                Value::String(s, QuoteKind::None)
-            }
-            CalculationArg::Operation { lhs, op, rhs } => todo!(),
+        .map(|arg| {
+            Ok(match arg {
+                CalculationArg::Number(num) => Value::Dimension {
+                    num: Number(num.num),
+                    unit: num.unit,
+                    as_slash: num.as_slash,
+                },
+                CalculationArg::Calculation(calc) => Value::Calculation(calc),
+                CalculationArg::String(s) | CalculationArg::Interpolation(s) => {
+                    Value::String(s, QuoteKind::None)
+                }
+                CalculationArg::Operation { .. } => Value::String(
+                    serialize_calculation_arg(&arg, parser.parser.options, args.span())?,
+                    QuoteKind::None,
+                ),
+            })
         })
-        .collect();
+        .collect::<SassResult<Vec<_>>>()?;
 
     Ok(Value::List(args, ListSeparator::Comma, Brackets::None))
 }
