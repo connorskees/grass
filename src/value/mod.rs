@@ -7,7 +7,7 @@ use crate::{
     common::{BinaryOp, Brackets, ListSeparator, QuoteKind},
     error::SassResult,
     evaluate::Visitor,
-    selector::Selector,
+    selector::SelectorList,
     serializer::{inspect_number, serialize_calculation, serialize_color, serialize_number},
     unit::Unit,
     utils::{hex_char_for, is_special_function},
@@ -665,16 +665,12 @@ impl Value {
         visitor: &mut Visitor,
         name: &str,
         allows_parent: bool,
-    ) -> SassResult<Selector> {
+    ) -> SassResult<SelectorList> {
         let string = match self.clone().selector_string(visitor.parser.span_before)? {
             Some(v) => v,
             None => return Err((format!("${}: {} is not a valid selector: it must be a string,\n a list of strings, or a list of lists of strings.", name, self.inspect(visitor.parser.span_before)?), visitor.parser.span_before).into()),
         };
-        Ok(Selector(visitor.parse_selector_from_string(
-            &string,
-            allows_parent,
-            true,
-        )?))
+        Ok(visitor.parse_selector_from_string(&string, allows_parent, true)?)
     }
 
     #[allow(clippy::only_used_in_recursion)]
