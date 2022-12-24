@@ -218,10 +218,6 @@ impl ArgumentResult {
         self.positional.len() + self.named.len()
     }
 
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-
     pub fn min_args(&self, min: usize) -> SassResult<()> {
         let len = self.len();
         if len < min {

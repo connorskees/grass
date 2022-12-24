@@ -22,6 +22,7 @@ mod builtin_imports {
         evaluate::Visitor,
         unit::Unit,
         value::{CalculationArg, Number, SassFunction, SassMap, SassNumber, Value},
+        Options,
     };
 
     pub(crate) use std::{cmp::Ordering, collections::{BTreeMap, BTreeSet}};

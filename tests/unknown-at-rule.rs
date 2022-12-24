@@ -98,12 +98,11 @@ test!(
     "@foo {\n  a f {\n    b: c;\n  }\n}\n"
 );
 test!(
-    #[ignore = "not sure how dart-sass is parsing this to include the semicolon in the params"]
     params_contain_silent_comment_and_semicolon,
     "a {
       @box-shadow: $btn-focus-box-shadow, // $btn-active-box-shadow;
     }",
-    "a {\n  @box-shadow : $btn-focus-box-shadow, / $btn-active-box-shadow;\n}\n"
+    "a {\n  @box-shadow : $btn-focus-box-shadow, // $btn-active-box-shadow;;\n}\n"
 );
 test!(contains_multiline_comment, "@foo /**/;\n", "@foo;\n");
 

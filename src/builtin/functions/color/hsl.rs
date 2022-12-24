@@ -248,7 +248,7 @@ fn saturate(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value
         return Ok(Value::String(
             format!(
                 "saturate({})",
-                serialize_number(&amount, visitor.parser.options, args.span())?,
+                serialize_number(&amount, &Options::default(), args.span())?,
             ),
             QuoteKind::None,
         ));

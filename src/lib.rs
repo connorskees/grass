@@ -277,21 +277,24 @@ fn from_string_with_file_name(input: String, file_name: &str, options: &Options)
     let mut serializer = Serializer::new(options, &map, false, empty_span);
 
     let mut prev_was_group_end = false;
+    let mut prev_requires_semicolon = false;
     for stmt in stmts {
         if stmt.is_invisible() {
             continue;
         }
 
         let is_group_end = stmt.is_group_end();
+        let requires_semicolon = Serializer::requires_semicolon(&stmt);
 
         serializer
-            .visit_group(stmt, prev_was_group_end)
+            .visit_group(stmt, prev_was_group_end, prev_requires_semicolon)
             .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages))?;
 
         prev_was_group_end = is_group_end;
+        prev_requires_semicolon = requires_semicolon;
     }
 
-    Ok(serializer.finish())
+    Ok(serializer.finish(prev_requires_semicolon))
 }
 
 /// Compile CSS from a path

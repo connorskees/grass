@@ -364,9 +364,22 @@ impl<'a> Serializer<'a> {
         self.buffer.append(&mut buffer.into_bytes());
     }
 
-    pub fn visit_group(&mut self, stmt: CssStmt, previous_was_group_end: bool) -> SassResult<()> {
-        if previous_was_group_end && !self.buffer.is_empty() {
-            self.buffer.push(b'\n');
+    pub fn visit_group(
+        &mut self,
+        stmt: CssStmt,
+        prev_was_group_end: bool,
+        prev_requires_semicolon: bool,
+    ) -> SassResult<()> {
+        if prev_requires_semicolon {
+            self.buffer.push(b';');
+        }
+
+        if !self.buffer.is_empty() {
+            self.write_optional_newline();
+        }
+
+        if prev_was_group_end && !self.buffer.is_empty() {
+            self.write_optional_newline();
         }
 
         self.visit_stmt(stmt)?;
@@ -379,8 +392,16 @@ impl<'a> Serializer<'a> {
         unsafe { String::from_utf8_unchecked(self.buffer) }
     }
 
-    pub fn finish(self) -> String {
+    pub fn finish(mut self, prev_requires_semicolon: bool) -> String {
         let is_not_ascii = self.buffer.iter().any(|&c| !c.is_ascii());
+
+        if prev_requires_semicolon {
+            self.buffer.push(b';');
+        }
+
+        if !self.buffer.is_empty() {
+            self.write_optional_newline();
+        }
 
         // SAFETY: todo
         let mut as_string = unsafe { String::from_utf8_unchecked(self.buffer) };
@@ -437,12 +458,6 @@ impl<'a> Serializer<'a> {
 
         self.visit_value(*style.value)?;
 
-        self.buffer.push(b';');
-
-        if !self.options.is_compressed() {
-            self.buffer.push(b'\n');
-        }
-
         Ok(())
     }
 
@@ -455,8 +470,6 @@ impl<'a> Serializer<'a> {
             self.buffer.push(b' ');
             self.buffer.extend_from_slice(modifiers.as_bytes());
         }
-
-        self.buffer.extend_from_slice(b";\n");
 
         Ok(())
     }
@@ -486,16 +499,10 @@ impl<'a> Serializer<'a> {
             write!(&mut self.buffer, "\n{}", lines)?;
         }
 
-        if !self.options.is_compressed() {
-            self.buffer.push(b'\n');
-        }
-
         Ok(())
     }
 
-    #[allow(dead_code)]
-    // todo: we will need this when we refactor writing unknown rules
-    fn requires_semicolon(stmt: &CssStmt) -> bool {
+    pub fn requires_semicolon(stmt: &CssStmt) -> bool {
         match stmt {
             CssStmt::Style(_) | CssStmt::Import(_, _) => true,
             CssStmt::UnknownAtRule(rule, _) => !rule.has_body,
@@ -503,7 +510,7 @@ impl<'a> Serializer<'a> {
         }
     }
 
-    fn write_children(&mut self, children: Vec<CssStmt>) -> SassResult<()> {
+    fn write_children(&mut self, mut children: Vec<CssStmt>) -> SassResult<()> {
         if self.options.is_compressed() {
             self.buffer.push(b'{');
         } else {
@@ -511,16 +518,44 @@ impl<'a> Serializer<'a> {
         }
 
         self.indentation += self.indent_width;
+
+        let last = children.pop();
+
         for child in children {
-            self.visit_stmt(child)?;
+            let needs_semicolon = Self::requires_semicolon(&child);
+            let did_write = self.visit_stmt(child)?;
+
+            if !did_write {
+                continue;
+            }
+
+            if needs_semicolon {
+                self.buffer.push(b';');
+            }
+
+            self.write_optional_newline();
         }
+
+        if let Some(last) = last {
+            let needs_semicolon = Self::requires_semicolon(&last);
+            let did_write = self.visit_stmt(last)?;
+
+            if did_write {
+                if needs_semicolon && !self.options.is_compressed() {
+                    self.buffer.push(b';');
+                }
+
+                self.write_optional_newline();
+            }
+        }
+
         self.indentation -= self.indent_width;
 
         if self.options.is_compressed() {
             self.buffer.push(b'}');
         } else {
             self.write_indentation();
-            self.buffer.extend_from_slice(b"}\n");
+            self.buffer.extend_from_slice(b"}");
         }
 
         Ok(())
@@ -529,6 +564,12 @@ impl<'a> Serializer<'a> {
     fn write_optional_space(&mut self) {
         if !self.options.is_compressed() {
             self.buffer.push(b' ');
+        }
+    }
+
+    fn write_optional_newline(&mut self) {
+        if !self.options.is_compressed() {
+            self.buffer.push(b'\n');
         }
     }
 
@@ -547,9 +588,10 @@ impl<'a> Serializer<'a> {
         Ok(())
     }
 
-    fn visit_stmt(&mut self, stmt: CssStmt) -> SassResult<()> {
+    /// Returns whether or not text was written
+    fn visit_stmt(&mut self, stmt: CssStmt) -> SassResult<bool> {
         if stmt.is_invisible() {
-            return Ok(());
+            return Ok(false);
         }
 
         match stmt {
@@ -580,11 +622,10 @@ impl<'a> Serializer<'a> {
 
                 if !unknown_at_rule.has_body {
                     debug_assert!(unknown_at_rule.body.is_empty());
-                    self.buffer.extend_from_slice(b";\n");
-                    return Ok(());
+                    return Ok(true);
                 } else if unknown_at_rule.body.iter().all(CssStmt::is_invisible) {
-                    self.buffer.extend_from_slice(b" {}\n");
-                    return Ok(());
+                    self.buffer.extend_from_slice(b" {}");
+                    return Ok(true);
                 }
 
                 self.write_children(unknown_at_rule.body)?;
@@ -609,6 +650,6 @@ impl<'a> Serializer<'a> {
             CssStmt::Supports(supports_rule, _) => self.write_supports_rule(supports_rule)?,
         }
 
-        Ok(())
+        Ok(true)
     }
 }
