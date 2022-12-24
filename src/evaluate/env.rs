@@ -68,7 +68,16 @@ impl Environment {
             return (*module).borrow().get_mixin(name);
         }
 
-        self.scopes.get_mixin(name)
+        match self.scopes.get_mixin(name) {
+            Ok(v) => Ok(v),
+            Err(e) => {
+                if let Some(v) = self.get_mixin_from_global_modules(name.node) {
+                    return Ok(v);
+                }
+
+                Err(e)
+            }
+        }
     }
 
     pub fn insert_fn(&mut self, func: SassFunction) {
@@ -220,6 +229,16 @@ impl Environment {
         for module in &self.global_modules {
             if (**module).borrow().fn_exists(name) {
                 return (**module).borrow().get_fn(name);
+            }
+        }
+
+        None
+    }
+
+    fn get_mixin_from_global_modules(&self, name: Identifier) -> Option<Mixin> {
+        for module in &self.global_modules {
+            if (**module).borrow().mixin_exists(name) {
+                return (**module).borrow().get_mixin_no_err(name);
             }
         }
 

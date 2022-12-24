@@ -247,6 +247,12 @@ impl Module {
         scope.variables.get(name)
     }
 
+    pub fn get_mixin_no_err(&self, name: Identifier) -> Option<Mixin> {
+        let scope = self.scope();
+
+        scope.mixins.get(name)
+    }
+
     pub fn update_var(&mut self, name: Spanned<Identifier>, value: Value) -> SassResult<()> {
         let scope = match self {
             Self::Builtin { .. } => {

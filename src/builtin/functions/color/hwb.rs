@@ -47,8 +47,7 @@ pub(crate) fn whiteness(mut args: ArgumentResult, visitor: &mut Visitor) -> Sass
     }))
 }
 
-pub(crate) fn hwb(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
-    args.max_args(4)?;
+fn hwb_inner(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
 
     if args.is_empty() {
         return Err(("Missing argument $channels.", args.span()).into());
@@ -136,4 +135,10 @@ pub(crate) fn hwb(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult
     Ok(Value::Color(Box::new(Color::from_hwb(
         hue, whiteness, blackness, alpha,
     ))))
+}
+
+pub(crate) fn hwb(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
+    args.max_args(4)?;
+
+    hwb_inner(args, visitor)
 }

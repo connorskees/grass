@@ -1,5 +1,7 @@
 use std::io::Write;
 
+use macros::TestFs;
+
 #[macro_use]
 mod macros;
 
@@ -468,3 +470,78 @@ fn use_variable_declaration_between_use() {
         &grass::from_string(input.to_string(), &grass::Options::default()).expect(input)
     );
 }
+
+#[test]
+fn include_mixin_with_star_namespace() {
+    let mut fs = TestFs::new();
+
+    fs.add_file(
+        "a.scss",
+        r#"@mixin foo() {
+            a {
+                color: red;
+            }
+        }"#,
+    );
+
+    let input = r#"
+        @use "a" as *;
+
+        @include foo();
+    "#;
+
+    assert_eq!(
+        "a {\n  color: red;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
+    );
+}
+
+#[test]
+fn include_variable_with_star_namespace() {
+    let mut fs = TestFs::new();
+
+    fs.add_file(
+        "a.scss",
+        r#"$a: red;"#,
+    );
+
+    let input = r#"
+        @use "a" as *;
+
+        a {
+            color: $a;
+        }
+    "#;
+
+    assert_eq!(
+        "a {\n  color: red;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
+    );
+}
+
+#[test]
+fn include_function_with_star_namespace() {
+    let mut fs = TestFs::new();
+
+    fs.add_file(
+        "a.scss",
+        r#"@function foo() {
+            @return red;
+        }"#,
+    );
+
+    let input = r#"
+        @use "a" as *;
+
+        a {
+            color: foo();
+        }
+    "#;
+
+    assert_eq!(
+        "a {\n  color: red;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
+    );
+}
+
+// todo: refactor these tests to use testfs where possible
