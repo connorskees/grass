@@ -185,7 +185,10 @@ impl<'a> Serializer<'a> {
                 self.buffer.push(b'*');
             }
             SimpleSelector::Pseudo(pseudo) => self.write_pseudo_selector(pseudo),
-            SimpleSelector::Type(name) => write!(&mut self.buffer, "{}", name).unwrap(),
+            SimpleSelector::Type(name) => {
+                self.write_namespace(&name.namespace);
+                self.buffer.extend_from_slice(name.ident.as_bytes());
+            },
             SimpleSelector::Attribute(attr) => write!(&mut self.buffer, "{}", attr).unwrap(),
             SimpleSelector::Parent(..) => unreachable!("It should not be possible to format `&`."),
         }
