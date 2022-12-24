@@ -506,55 +506,29 @@ impl Color {
 
 /// HWB color functions
 impl Color {
-    pub fn from_hwb(
-        mut hue: Number,
-        mut white: Number,
-        mut black: Number,
-        mut alpha: Number,
-    ) -> Color {
-        hue %= Number::from(360.0);
-        hue /= Number::from(360.0);
-        white /= Number::from(100.0);
-        black /= Number::from(100.0);
+    pub fn from_hwb(hue: Number, white: Number, black: Number, mut alpha: Number) -> Color {
+        let hue = Number(hue.rem_euclid(360.0) / 360.0);
+        let mut scaled_white = white.0 / 100.0;
+        let mut scaled_black = black.0 / 100.0;
         alpha = alpha.clamp(0.0, 1.0);
 
-        let white_black_sum = white + black;
+        let white_black_sum = scaled_white + scaled_black;
 
-        if white_black_sum > Number::one() {
-            white /= white_black_sum;
-            black /= white_black_sum;
+        if white_black_sum > 1.0 {
+            scaled_white /= white_black_sum;
+            scaled_black /= white_black_sum;
         }
 
-        let factor = Number::one() - white - black;
+        let factor = 1.0 - scaled_white - scaled_black;
 
-        fn channel(m1: Number, m2: Number, mut hue: Number) -> Number {
-            if hue < Number::zero() {
-                hue += Number::one();
-            }
-
-            if hue > Number::one() {
-                hue -= Number::one();
-            }
-
-            if hue < Number::small_ratio(1, 6) {
-                m1 + (m2 - m1) * hue * Number::from(6.0)
-            } else if hue < Number(0.5) {
-                m2
-            } else if hue < Number::small_ratio(2, 3) {
-                m1 + (m2 - m1) * (Number::small_ratio(2, 3) - hue) * Number::from(6.0)
-            } else {
-                m1
-            }
-        }
-
-        let to_rgb = |hue: Number| -> Number {
-            let channel = channel(Number::zero(), Number::one(), hue) * factor + white;
-            channel * Number::from(255.0)
+        let to_rgb = |hue: f64| -> Number {
+            let channel = Self::hue_to_rgb(0.0, 1.0, hue) * factor + scaled_white;
+            Number(fuzzy_round(channel * 255.0))
         };
 
-        let red = to_rgb(hue + Number::small_ratio(1, 3));
-        let green = to_rgb(hue);
-        let blue = to_rgb(hue - Number::small_ratio(1, 3));
+        let red = to_rgb(hue.0 + 1.0 / 3.0);
+        let green = to_rgb(hue.0);
+        let blue = to_rgb(hue.0 - 1.0 / 3.0);
 
         Color::new_rgba(red, green, blue, alpha, ColorFormat::Infer)
     }

@@ -27,16 +27,9 @@ pub(crate) fn blackness(mut args: ArgumentResult, visitor: &mut Visitor) -> Sass
 pub(crate) fn whiteness(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
 
-    let color = match args.get_err(0, "color")? {
-        Value::Color(c) => c,
-        v => {
-            return Err((
-                format!("$color: {} is not a color.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
+    let color = args
+        .get_err(0, "color")?
+        .assert_color_with_name("color", args.span())?;
 
     let whiteness = color.red().min(color.green()).min(color.blue()) / Number::from(255);
 
@@ -48,10 +41,7 @@ pub(crate) fn whiteness(mut args: ArgumentResult, visitor: &mut Visitor) -> Sass
 }
 
 fn hwb_inner(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
-
-    if args.is_empty() {
-        return Err(("Missing argument $channels.", args.span()).into());
-    }
+    let span = args.span();
 
     let hue = match args.get(0, "hue") {
         Some(v) => match v.node {
@@ -68,49 +58,15 @@ fn hwb_inner(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Valu
         None => return Err(("Missing element $hue.", args.span()).into()),
     };
 
-    let whiteness = match args.get(1, "whiteness") {
-        Some(v) => match v.node {
-            Value::Dimension(SassNumber { num: n, .. }) if n.is_nan() => todo!(),
-            Value::Dimension(SassNumber {
-                num: n,
-                unit: Unit::Percent,
-                ..
-            }) => n,
-            v @ Value::Dimension(SassNumber { .. }) => {
-                return Err((
-                    format!(
-                        "$whiteness: Expected {} to have unit \"%\".",
-                        v.inspect(args.span())?
-                    ),
-                    args.span(),
-                )
-                    .into())
-            }
-            v => {
-                return Err((
-                    format!("$whiteness: {} is not a number.", v.inspect(args.span())?),
-                    args.span(),
-                )
-                    .into())
-            }
-        },
-        None => return Err(("Missing element $whiteness.", args.span()).into()),
-    };
+    let whiteness = args
+        .get_err(1, "whiteness")?
+        .assert_number_with_name("whiteness", span)?;
+    whiteness.assert_unit(&Unit::Percent, "whiteness", span)?;
 
-    let blackness = match args.get(2, "blackness") {
-        Some(v) => match v.node {
-            Value::Dimension(SassNumber { num: n, .. }) if n.is_nan() => todo!(),
-            Value::Dimension(SassNumber { num: n, .. }) => n,
-            v => {
-                return Err((
-                    format!("$blackness: {} is not a number.", v.inspect(args.span())?),
-                    args.span(),
-                )
-                    .into())
-            }
-        },
-        None => return Err(("Missing element $blackness.", args.span()).into()),
-    };
+    let blackness = args
+        .get_err(2, "blackness")?
+        .assert_number_with_name("blackness", span)?;
+    blackness.assert_unit(&Unit::Percent, "blackness", span)?;
 
     let alpha = match args.get(3, "alpha") {
         Some(v) => match v.node {
@@ -133,12 +89,19 @@ fn hwb_inner(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Valu
     };
 
     Ok(Value::Color(Box::new(Color::from_hwb(
-        hue, whiteness, blackness, alpha,
+        hue,
+        whiteness.num,
+        blackness.num,
+        alpha,
     ))))
 }
 
-pub(crate) fn hwb(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
+pub(crate) fn hwb(args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(4)?;
+
+    if args.is_empty() {
+        return Err(("Missing argument $channels.", args.span()).into());
+    }
 
     hwb_inner(args, visitor)
 }

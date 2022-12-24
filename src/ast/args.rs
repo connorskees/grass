@@ -294,10 +294,7 @@ impl ArgumentResult {
             .into_iter()
             .enumerate()
             .filter(|(idx, _)| !touched.contains(idx))
-            .map(|(_, node)| Spanned {
-                node,
-                span,
-            })
+            .map(|(_, node)| Spanned { node, span })
             .collect();
 
         Ok(args)

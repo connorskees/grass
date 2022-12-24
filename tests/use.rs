@@ -500,10 +500,7 @@ fn include_mixin_with_star_namespace() {
 fn include_variable_with_star_namespace() {
     let mut fs = TestFs::new();
 
-    fs.add_file(
-        "a.scss",
-        r#"$a: red;"#,
-    );
+    fs.add_file("a.scss", r#"$a: red;"#);
 
     let input = r#"
         @use "a" as *;

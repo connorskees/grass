@@ -668,10 +668,7 @@ impl<'c> ValueParser<'c> {
         Ok(())
     }
 
-    fn parse_map(
-        parser: &mut Parser,
-        first: Spanned<AstExpr>,
-    ) -> SassResult<Spanned<AstExpr>> {
+    fn parse_map(parser: &mut Parser, first: Spanned<AstExpr>) -> SassResult<Spanned<AstExpr>> {
         let mut pairs = vec![(first, parser.parse_expression_until_comma(false)?.node)];
 
         while parser.scan_char(',') {

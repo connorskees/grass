@@ -76,6 +76,11 @@ test!(
     "@use \"sass:color\";\na {\n  color: color.hwb(0, 0%, 100%, -0.5);\n}\n",
     "a {\n  color: rgba(0, 0, 0, 0);\n}\n"
 );
+test!(
+    hue_60_whiteness_20_blackness_100,
+    "@use \"sass:color\";\na {\n  color: color.hwb(60, 20%, 100%);\n}\n",
+    "a {\n  color: #2b2b2b;\n}\n"
+);
 error!(
     hwb_whiteness_missing_pct,
     "@use \"sass:color\";\na {\n  color: color.hwb(0, 0, 100);\n}\n",

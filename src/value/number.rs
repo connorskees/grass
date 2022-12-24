@@ -128,10 +128,6 @@ impl Number {
         }
     }
 
-    pub fn small_ratio<A: Into<i64>, B: Into<i64>>(a: A, b: B) -> Self {
-        Self(a.into() as f64 / b.into() as f64)
-    }
-
     pub fn round(self) -> Self {
         Self(self.0.round())
     }
