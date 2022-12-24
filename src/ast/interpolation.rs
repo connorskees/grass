@@ -20,7 +20,7 @@ impl Interpolation {
         self.contents.is_empty()
     }
 
-    pub fn new_with_expr(e: AstExpr) -> Self {
+    pub fn new_with_expr(e: Spanned<AstExpr>) -> Self {
         Self {
             contents: vec![InterpolationPart::Expr(e)],
         }
@@ -33,7 +33,7 @@ impl Interpolation {
     }
 
     pub fn add_expr(&mut self, expr: Spanned<AstExpr>) {
-        self.contents.push(InterpolationPart::Expr(expr.node));
+        self.contents.push(InterpolationPart::Expr(expr));
     }
 
     // todo: cow?
@@ -88,5 +88,5 @@ impl Interpolation {
 #[derive(Debug, Clone)]
 pub(crate) enum InterpolationPart {
     String(String),
-    Expr(AstExpr),
+    Expr(Spanned<AstExpr>),
 }

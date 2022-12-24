@@ -239,7 +239,7 @@ pub(crate) fn min(args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Val
             &lhs,
             &rhs,
             visitor.parser.options,
-            visitor.parser.span_before,
+            span,
             BinaryOp::LessThan,
         )?
         .is_true()
@@ -292,7 +292,7 @@ pub(crate) fn max(args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Val
             &lhs,
             &rhs,
             visitor.parser.options,
-            visitor.parser.span_before,
+            span,
             BinaryOp::GreaterThan,
         )?
         .is_true()

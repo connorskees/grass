@@ -10,10 +10,12 @@ pub(crate) fn is_superselector(
     visitor: &mut Visitor,
 ) -> SassResult<Value> {
     args.max_args(2)?;
-    let parent_selector = args
-        .get_err(0, "super")?
-        .to_selector(visitor, "super", false)?;
-    let child_selector = args.get_err(1, "sub")?.to_selector(visitor, "sub", false)?;
+    let parent_selector =
+        args.get_err(0, "super")?
+            .to_selector(visitor, "super", false, args.span())?;
+    let child_selector = args
+        .get_err(1, "sub")?
+        .to_selector(visitor, "sub", false, args.span())?;
 
     Ok(Value::bool(
         parent_selector.is_super_selector(&child_selector),
@@ -26,9 +28,9 @@ pub(crate) fn simple_selectors(
 ) -> SassResult<Value> {
     args.max_args(1)?;
     // todo: Value::to_compound_selector
-    let selector = args
-        .get_err(0, "selector")?
-        .to_selector(visitor, "selector", false)?;
+    let selector =
+        args.get_err(0, "selector")?
+            .to_selector(visitor, "selector", false, args.span())?;
 
     if selector.0.components.len() != 1 {
         return Err(("$selector: expected selector.", args.span()).into());
@@ -57,7 +59,7 @@ pub(crate) fn selector_parse(mut args: ArgumentResult, visitor: &mut Visitor) ->
     args.max_args(1)?;
     Ok(args
         .get_err(0, "selector")?
-        .to_selector(visitor, "selector", false)
+        .to_selector(visitor, "selector", false, args.span())
         .map_err(|_| ("$selector: expected selector.", args.span()))?
         .into_value())
 }
@@ -71,7 +73,7 @@ pub(crate) fn selector_nest(args: ArgumentResult, visitor: &mut Visitor) -> Sass
 
     Ok(selectors
         .into_iter()
-        .map(|sel| sel.node.to_selector(visitor, "selectors", true))
+        .map(|sel| sel.node.to_selector(visitor, "selectors", true, span))
         .collect::<SassResult<Vec<Selector>>>()?
         .into_iter()
         .try_fold(
@@ -92,7 +94,7 @@ pub(crate) fn selector_append(args: ArgumentResult, visitor: &mut Visitor) -> Sa
 
     let mut parsed_selectors = selectors
         .into_iter()
-        .map(|s| s.node.to_selector(visitor, "selectors", false))
+        .map(|s| s.node.to_selector(visitor, "selectors", false, span))
         .collect::<SassResult<Vec<Selector>>>()?;
 
     let first = parsed_selectors.remove(0);
@@ -111,7 +113,15 @@ pub(crate) fn selector_append(args: ArgumentResult, visitor: &mut Visitor) -> Sa
                                 Some(v) => ComplexSelectorComponent::Compound(v),
                                 None => {
                                     return Err((
-                                        format!("Can't append {} to {}.", complex, serialize_selector_list(&parent.0, visitor.parser.options, span)),
+                                        format!(
+                                            "Can't append {} to {}.",
+                                            complex,
+                                            serialize_selector_list(
+                                                &parent.0,
+                                                visitor.parser.options,
+                                                span
+                                            )
+                                        ),
                                         span,
                                     )
                                         .into())
@@ -120,7 +130,19 @@ pub(crate) fn selector_append(args: ArgumentResult, visitor: &mut Visitor) -> Sa
                             components.extend(complex.components.into_iter().skip(1));
                             Ok(ComplexSelector::new(components, false))
                         } else {
-                            Err((format!("Can't append {} to {}.", complex, serialize_selector_list(&parent.0, visitor.parser.options, span)), span).into())
+                            Err((
+                                format!(
+                                    "Can't append {} to {}.",
+                                    complex,
+                                    serialize_selector_list(
+                                        &parent.0,
+                                        visitor.parser.options,
+                                        span
+                                    )
+                                ),
+                                span,
+                            )
+                                .into())
                         }
                     })
                     .collect::<SassResult<Vec<ComplexSelector>>>()?,
@@ -136,15 +158,15 @@ pub(crate) fn selector_extend(
     visitor: &mut Visitor,
 ) -> SassResult<Value> {
     args.max_args(3)?;
-    let selector = args
-        .get_err(0, "selector")?
-        .to_selector(visitor, "selector", false)?;
-    let target = args
-        .get_err(1, "extendee")?
-        .to_selector(visitor, "extendee", false)?;
-    let source = args
-        .get_err(2, "extender")?
-        .to_selector(visitor, "extender", false)?;
+    let selector =
+        args.get_err(0, "selector")?
+            .to_selector(visitor, "selector", false, args.span())?;
+    let target =
+        args.get_err(1, "extendee")?
+            .to_selector(visitor, "extendee", false, args.span())?;
+    let source =
+        args.get_err(2, "extender")?
+            .to_selector(visitor, "extender", false, args.span())?;
 
     Ok(ExtensionStore::extend(selector.0, source.0, target.0, args.span())?.to_sass_list())
 }
@@ -154,23 +176,23 @@ pub(crate) fn selector_replace(
     visitor: &mut Visitor,
 ) -> SassResult<Value> {
     args.max_args(3)?;
-    let selector = args
-        .get_err(0, "selector")?
-        .to_selector(visitor, "selector", true)?;
-    let target = args
-        .get_err(1, "original")?
-        .to_selector(visitor, "original", true)?;
-    let source = args
-        .get_err(2, "replacement")?
-        .to_selector(visitor, "replacement", true)?;
+    let selector =
+        args.get_err(0, "selector")?
+            .to_selector(visitor, "selector", true, args.span())?;
+    let target =
+        args.get_err(1, "original")?
+            .to_selector(visitor, "original", true, args.span())?;
+    let source =
+        args.get_err(2, "replacement")?
+            .to_selector(visitor, "replacement", true, args.span())?;
     Ok(ExtensionStore::replace(selector.0, source.0, target.0, args.span())?.to_sass_list())
 }
 
 pub(crate) fn selector_unify(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(2)?;
-    let selector1 = args
-        .get_err(0, "selector1")?
-        .to_selector(visitor, "selector1", true)?;
+    let selector1 =
+        args.get_err(0, "selector1")?
+            .to_selector(visitor, "selector1", true, args.span())?;
 
     if selector1.contains_parent_selector() {
         return Err((
@@ -180,9 +202,9 @@ pub(crate) fn selector_unify(mut args: ArgumentResult, visitor: &mut Visitor) ->
             .into());
     }
 
-    let selector2 = args
-        .get_err(1, "selector2")?
-        .to_selector(visitor, "selector2", true)?;
+    let selector2 =
+        args.get_err(1, "selector2")?
+            .to_selector(visitor, "selector2", true, args.span())?;
 
     if selector2.contains_parent_selector() {
         return Err((

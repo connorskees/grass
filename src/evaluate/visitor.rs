@@ -229,7 +229,7 @@ impl<'a> Visitor<'a> {
                 forward_rule.url.as_path(),
                 Some(Arc::clone(&new_configuration)),
                 false,
-                self.parser.span_before,
+                forward_rule.span,
                 |visitor, module, _| {
                     visitor.env.forward_module(module, forward_rule.clone());
 
@@ -278,7 +278,7 @@ impl<'a> Visitor<'a> {
                 url.as_path(),
                 None,
                 false,
-                self.parser.span_before,
+                forward_rule.span,
                 move |visitor, module, _| {
                     visitor.env.forward_module(module, forward_rule.clone());
 
@@ -328,7 +328,7 @@ impl<'a> Visitor<'a> {
 
         Ok(Arc::new(RefCell::new(
             if !(*config).borrow().is_implicit() || (*config).borrow().is_empty() {
-                Configuration::explicit(new_values, self.parser.span_before)
+                Configuration::explicit(new_values, forward_rule.span)
             } else {
                 Configuration::implicit(new_values)
             },
@@ -1106,13 +1106,9 @@ impl<'a> Visitor<'a> {
         selector_text: &str,
         allows_parent: bool,
         allows_placeholder: bool,
+        span: Span,
     ) -> SassResult<SelectorList> {
-        let mut sel_toks = Lexer::new(
-            selector_text
-                .chars()
-                .map(|x| Token::new(self.parser.span_before, x))
-                .collect(),
-        );
+        let mut sel_toks = Lexer::new(selector_text.chars().map(|x| Token::new(span, x)).collect());
 
         SelectorParser::new(
             &mut Parser {
@@ -1121,13 +1117,13 @@ impl<'a> Visitor<'a> {
                 path: self.parser.path,
                 is_plain_css: self.is_plain_css,
                 is_indented: false,
-                span_before: self.parser.span_before,
+                span_before: span,
                 flags: self.parser.flags,
                 options: self.parser.options,
             },
             allows_parent,
             allows_placeholder,
-            self.parser.span_before,
+            span,
         )
         .parse()
     }
@@ -1145,21 +1141,13 @@ impl<'a> Visitor<'a> {
 
         let target_text = self.interpolation_to_value(extend_rule.value, false, true)?;
 
-        let list = self.parse_selector_from_string(&target_text, false, true)?;
-
-        let extend_rule = ExtendRule {
-            is_optional: extend_rule.is_optional,
-        };
+        let list = self.parse_selector_from_string(&target_text, false, true, extend_rule.span)?;
 
         for complex in list.components {
             if complex.components.len() != 1 || !complex.components.first().unwrap().is_compound() {
                 // If the selector was a compound selector but not a simple
                 // selector, emit a more explicit error.
-                return Err((
-                    "complex selectors may not be extended.",
-                    self.parser.span_before,
-                )
-                    .into());
+                return Err(("complex selectors may not be extended.", extend_rule.span).into());
             }
 
             let compound = match complex.components.first() {
@@ -1172,15 +1160,17 @@ impl<'a> Visitor<'a> {
                         "compound selectors may no longer be extended.\nConsider `@extend {}` instead.\nSee http://bit.ly/ExtendCompound for details.\n",
                         compound.components.iter().map(ToString::to_string).collect::<Vec<String>>().join(", ")
                     )
-                , self.parser.span_before).into());
+                , extend_rule.span).into());
             }
 
             self.extender.add_extension(
                 super_selector.clone().into_selector().0,
                 compound.components.first().unwrap(),
-                &extend_rule,
+                &ExtendRule {
+                    is_optional: extend_rule.is_optional,
+                },
                 &self.media_queries,
-                self.parser.span_before,
+                extend_rule.span,
             );
         }
 
@@ -1330,7 +1320,7 @@ impl<'a> Visitor<'a> {
         if self.declaration_name.is_some() {
             return Err((
                 "At-rules may not be used within nested declarations.",
-                self.parser.span_before,
+                unknown_at_rule.span,
             )
                 .into());
         }
@@ -1887,14 +1877,13 @@ impl<'a> Visitor<'a> {
         // todo check to emit warning if this is true
         _warn_for_color: bool,
     ) -> SassResult<String> {
-        let span = self.parser.span_before;
-
         // todo: potential optimization for contents len == 1 and no exprs
 
         let result = interpolation.contents.into_iter().map(|part| match part {
             InterpolationPart::String(s) => Ok(s),
             InterpolationPart::Expr(e) => {
-                let result = self.visit_expr(e)?;
+                let span = e.span;
+                let result = self.visit_expr(e.node)?;
                 // todo: span for specific expr
                 self.serialize(result, QuoteKind::None, span)
             }
@@ -2356,8 +2345,8 @@ impl<'a> Visitor<'a> {
                 as_slash: None,
             }),
             AstExpr::List(list) => self.visit_list_expr(list)?,
-            AstExpr::String(StringExpr(text, quote), span) => {
-                self.visit_string(text, quote, span)?
+            AstExpr::String(StringExpr(text, quote), ..) => {
+                self.visit_string(text, quote)?
             }
             AstExpr::BinaryOp {
                 lhs,
@@ -2378,7 +2367,7 @@ impl<'a> Visitor<'a> {
             AstExpr::Null => Value::Null,
             AstExpr::Paren(expr) => self.visit_expr(*expr)?,
             AstExpr::ParentSelector => self.visit_parent_selector(),
-            AstExpr::UnaryOp(op, expr) => self.visit_unary_op(op, *expr)?,
+            AstExpr::UnaryOp(op, expr, span) => self.visit_unary_op(op, *expr, span)?,
             AstExpr::Variable { name, namespace } => self.env.get_var(name, namespace)?,
             AstExpr::Supports(condition) => {
                 Value::String(self.visit_supports_condition(*condition)?, QuoteKind::None)
@@ -2497,13 +2486,13 @@ impl<'a> Visitor<'a> {
         }
     }
 
-    fn visit_unary_op(&mut self, op: UnaryOp, expr: AstExpr) -> SassResult<Value> {
+    fn visit_unary_op(&mut self, op: UnaryOp, expr: AstExpr, span: Span) -> SassResult<Value> {
         let operand = self.visit_expr(expr)?;
 
         match op {
-            UnaryOp::Plus => operand.unary_plus(self),
-            UnaryOp::Neg => operand.unary_neg(self),
-            UnaryOp::Div => operand.unary_div(self),
+            UnaryOp::Plus => operand.unary_plus(self, span),
+            UnaryOp::Neg => operand.unary_neg(self, span),
+            UnaryOp::Div => operand.unary_div(self, span),
             UnaryOp::Not => Ok(operand.unary_not()),
         }
     }
@@ -2545,7 +2534,6 @@ impl<'a> Visitor<'a> {
         &mut self,
         text: Interpolation,
         quote: QuoteKind,
-        span: Span,
     ) -> SassResult<Value> {
         // Don't use [performInterpolation] here because we need to get the raw text
         // from strings, rather than the semantic value.
@@ -2557,7 +2545,7 @@ impl<'a> Visitor<'a> {
             .into_iter()
             .map(|part| match part {
                 InterpolationPart::String(s) => Ok(s),
-                InterpolationPart::Expr(e) => match self.visit_expr(e)? {
+                InterpolationPart::Expr(Spanned { node, span }) => match self.visit_expr(node)? {
                     Value::String(s, ..) => Ok(s),
                     e => self.serialize(e, QuoteKind::None, span),
                 },
@@ -2754,29 +2742,12 @@ impl<'a> Visitor<'a> {
             return Ok(None);
         }
 
-        let mut sel_toks = Lexer::new(
-            selector_text
-                .chars()
-                .map(|x| Token::new(self.parser.span_before, x))
-                .collect(),
-        );
-
-        let mut parsed_selector = SelectorParser::new(
-            &mut Parser {
-                toks: &mut sel_toks,
-                map: self.parser.map,
-                path: self.parser.path,
-                is_plain_css: false,
-                is_indented: false,
-                span_before: self.parser.span_before,
-                flags: self.parser.flags,
-                options: self.parser.options,
-            },
+        let mut parsed_selector = self.parse_selector_from_string(
+            &selector_text,
             !self.is_plain_css,
             !self.is_plain_css,
-            self.parser.span_before,
-        )
-        .parse()?;
+            ruleset.selector_span,
+        )?;
 
         parsed_selector = parsed_selector.resolve_parent_selectors(
             self.style_rule_ignoring_at_root

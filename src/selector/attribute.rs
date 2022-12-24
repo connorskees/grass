@@ -41,8 +41,11 @@ impl Hash for Attribute {
 }
 
 // todo: rewrite
-fn attribute_name(parser: &mut Parser, start: Span) -> SassResult<QualifiedName> {
-    let next = parser.toks.peek().ok_or(("Expected identifier.", start))?;
+fn attribute_name(parser: &mut Parser) -> SassResult<QualifiedName> {
+    let next = parser
+        .toks
+        .peek()
+        .ok_or(("Expected identifier.", parser.toks.current_span()))?;
     if next.kind == '*' {
         parser.toks.next();
         parser.expect_char('|')?;
@@ -53,7 +56,7 @@ fn attribute_name(parser: &mut Parser, start: Span) -> SassResult<QualifiedName>
             namespace: Namespace::Asterisk,
         });
     }
-    parser.span_before = next.pos;
+
     let name_or_namespace = parser.parse_identifier(false, false)?;
     match parser.toks.peek() {
         Some(v) if v.kind != '|' => {
@@ -63,22 +66,19 @@ fn attribute_name(parser: &mut Parser, start: Span) -> SassResult<QualifiedName>
             });
         }
         Some(..) => {}
-        None => return Err(("expected more input.", parser.span_before).into()),
+        None => return Err(("expected more input.", parser.toks.current_span()).into()),
     }
-    match parser.toks.peek_forward(1) {
+    match parser.toks.peek_n(1) {
         Some(v) if v.kind == '=' => {
-            parser.toks.reset_cursor();
             return Ok(QualifiedName {
                 ident: name_or_namespace,
                 namespace: Namespace::None,
             });
         }
-        Some(..) => {
-            parser.toks.reset_cursor();
-        }
-        None => return Err(("expected more input.", parser.span_before).into()),
+        Some(..) => {}
+        None => return Err(("expected more input.", parser.toks.current_span()).into()),
     }
-    parser.span_before = parser.toks.next().unwrap().pos();
+    parser.toks.next();
     let ident = parser.parse_identifier(false, false)?;
     Ok(QualifiedName {
         ident,
@@ -94,7 +94,7 @@ fn attribute_operator(parser: &mut Parser) -> SassResult<AttributeOp> {
         Some(Token { kind: '^', .. }) => AttributeOp::Prefix,
         Some(Token { kind: '$', .. }) => AttributeOp::Suffix,
         Some(Token { kind: '*', .. }) => AttributeOp::Contains,
-        Some(..) | None => return Err(("Expected \"]\".", parser.span_before).into()),
+        Some(..) | None => return Err(("Expected \"]\".", parser.toks.current_span()).into()),
     };
 
     parser.expect_char('=')?;
@@ -103,14 +103,14 @@ fn attribute_operator(parser: &mut Parser) -> SassResult<AttributeOp> {
 }
 impl Attribute {
     pub fn from_tokens(parser: &mut Parser) -> SassResult<Attribute> {
-        let start = parser.span_before;
+        let start = parser.toks.cursor();
         parser.whitespace_without_comments();
-        let attr = attribute_name(parser, start)?;
+        let attr = attribute_name(parser)?;
         parser.whitespace_without_comments();
         if parser
             .toks
             .peek()
-            .ok_or(("expected more input.", start))?
+            .ok_or(("expected more input.", parser.toks.current_span()))?
             .kind
             == ']'
         {
@@ -120,16 +120,18 @@ impl Attribute {
                 value: String::new(),
                 modifier: None,
                 op: AttributeOp::Any,
-                span: start,
+                span: parser.toks.span_from(start),
             });
         }
 
-        parser.span_before = start;
         let op = attribute_operator(parser)?;
         parser.whitespace_without_comments();
 
-        let peek = parser.toks.peek().ok_or(("expected more input.", start))?;
-        parser.span_before = peek.pos;
+        let peek = parser
+            .toks
+            .peek()
+            .ok_or(("expected more input.", parser.toks.current_span()))?;
+
         let value = match peek.kind {
             '\'' | '"' => parser.parse_string()?,
             _ => parser.parse_identifier(false, false)?,
@@ -159,7 +161,7 @@ impl Attribute {
             attr,
             value,
             modifier,
-            span: start,
+            span: parser.toks.span_from(start),
         })
     }
 }

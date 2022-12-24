@@ -68,6 +68,7 @@ pub(crate) struct AstReturn {
 pub(crate) struct AstRuleSet {
     pub selector: Interpolation,
     pub body: Vec<AstStmt>,
+    pub selector_span: Span,
     pub span: Span,
 }
 
@@ -190,7 +191,6 @@ pub(crate) struct AstUnknownAtRule {
     pub name: Interpolation,
     pub value: Option<Interpolation>,
     pub children: Option<Vec<AstStmt>>,
-    #[allow(unused)]
     pub span: Span,
 }
 
@@ -425,6 +425,7 @@ pub(crate) struct AstForwardRule {
     pub hidden_variables: Option<HashSet<Identifier>>,
     pub prefix: Option<String>,
     pub configuration: Vec<ConfiguredVariable>,
+    pub span: Span,
 }
 
 impl AstForwardRule {
@@ -432,6 +433,7 @@ impl AstForwardRule {
         url: PathBuf,
         prefix: Option<String>,
         configuration: Option<Vec<ConfiguredVariable>>,
+        span: Span,
     ) -> Self {
         Self {
             url,
@@ -441,6 +443,7 @@ impl AstForwardRule {
             hidden_variables: None,
             prefix,
             configuration: configuration.unwrap_or_default(),
+            span,
         }
     }
 
@@ -450,6 +453,7 @@ impl AstForwardRule {
         shown_variables: HashSet<Identifier>,
         prefix: Option<String>,
         configuration: Option<Vec<ConfiguredVariable>>,
+        span: Span,
     ) -> Self {
         Self {
             url,
@@ -459,6 +463,7 @@ impl AstForwardRule {
             hidden_variables: None,
             prefix,
             configuration: configuration.unwrap_or_default(),
+            span,
         }
     }
 
@@ -468,6 +473,7 @@ impl AstForwardRule {
         hidden_variables: HashSet<Identifier>,
         prefix: Option<String>,
         configuration: Option<Vec<ConfiguredVariable>>,
+        span: Span,
     ) -> Self {
         Self {
             url,
@@ -477,6 +483,7 @@ impl AstForwardRule {
             hidden_variables: Some(hidden_variables),
             prefix,
             configuration: configuration.unwrap_or_default(),
+            span,
         }
     }
 }

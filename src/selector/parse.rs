@@ -342,11 +342,8 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
     ///
     /// These are combined because either one could start with `*`.
     fn parse_type_or_universal_selector(&mut self) -> SassResult<SimpleSelector> {
-        self.parser.toks.peek();
-
         match self.parser.toks.peek() {
-            Some(Token { kind: '*', pos }) => {
-                self.parser.span_before = self.parser.span_before.merge(pos);
+            Some(Token { kind: '*', .. }) => {
                 self.parser.toks.next();
                 if let Some(Token { kind: '|', .. }) = self.parser.toks.peek() {
                     self.parser.toks.next();
@@ -363,8 +360,7 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
 
                 return Ok(SimpleSelector::Universal(Namespace::None));
             }
-            Some(Token { kind: '|', pos }) => {
-                self.parser.span_before = self.parser.span_before.merge(pos);
+            Some(Token { kind: '|', .. }) => {
                 self.parser.toks.next();
                 match self.parser.toks.peek() {
                     Some(Token { kind: '*', .. }) => {

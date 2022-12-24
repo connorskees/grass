@@ -392,7 +392,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         Ok(buffer)
     }
 
-    fn parse_at_root_rule(&mut self) -> SassResult<AstStmt> {
+    fn parse_at_root_rule(&mut self, start: usize) -> SassResult<AstStmt> {
         Ok(AstStmt::AtRootRule(if self.toks.next_char_is('(') {
             let query = self.parse_at_root_query()?;
             self.whitespace()?;
@@ -401,21 +401,21 @@ impl<'a, 'b> Parser<'a, 'b> {
             AstAtRootRule {
                 query: Some(query),
                 children,
-                span: self.span_before,
+                span: self.toks.span_from(start),
             }
         } else if self.looking_at_children() {
             let children = self.with_children(Self::parse_statement)?.node;
             AstAtRootRule {
                 query: None,
                 children,
-                span: self.span_before,
+                span: self.toks.span_from(start),
             }
         } else {
             let child = self.parse_style_rule(None, None)?;
             AstAtRootRule {
                 query: None,
                 children: vec![child],
-                span: self.span_before,
+                span: self.toks.span_from(start),
             }
         }))
     }
@@ -537,9 +537,10 @@ impl<'a, 'b> Parser<'a, 'b> {
         let was_in_control_directive = self.flags.in_control_flow();
         self.flags.set(ContextFlags::IN_CONTROL_FLOW, true);
 
+        let var_start = self.toks.cursor();
         let variable = Spanned {
             node: Identifier::from(self.parse_variable_name()?),
-            span: self.span_before,
+            span: self.toks.span_from(var_start),
         };
         self.whitespace()?;
 
@@ -970,15 +971,15 @@ impl<'a, 'b> Parser<'a, 'b> {
         })
     }
 
-    fn parse_import_argument(&mut self) -> SassResult<AstImport> {
+    fn parse_import_argument(&mut self, start: usize) -> SassResult<AstImport> {
         if self.toks.next_char_is('u') || self.toks.next_char_is('U') {
             let url = self.parse_dynamic_url()?;
             self.whitespace()?;
             let modifiers = self.try_import_modifiers()?;
             return Ok(AstImport::Plain(AstPlainCssImport {
-                url: Interpolation::new_with_expr(url),
+                url: Interpolation::new_with_expr(url.span(self.toks.span_from(start))),
                 modifiers,
-                span: self.span_before,
+                span: self.toks.span_from(start),
             }));
         }
 
@@ -1007,7 +1008,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         loop {
             self.whitespace()?;
-            let argument = self.parse_import_argument()?;
+            let argument = self.parse_import_argument(self.toks.cursor())?;
 
             // todo: _inControlDirective
             if (self.flags.in_control_flow() || self.flags.in_mixin()) && argument.is_dynamic() {
@@ -1114,6 +1115,7 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     fn parse_interpolated_string(&mut self) -> SassResult<Spanned<StringExpr>> {
+        let start = self.toks.cursor();
         let quote = match self.toks.next() {
             Some(Token {
                 kind: kind @ ('"' | '\''),
@@ -1166,7 +1168,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         Ok(Spanned {
             node: StringExpr(buffer, QuoteKind::Quoted),
-            span: self.span_before,
+            span: self.toks.span_from(start),
         })
     }
 
@@ -1228,7 +1230,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         todo!("special cased @-moz-document not yet implemented")
     }
 
-    fn unknown_at_rule(&mut self, name: Interpolation) -> SassResult<AstStmt> {
+    fn unknown_at_rule(&mut self, name: Interpolation, start: usize) -> SassResult<AstStmt> {
         let was_in_unknown_at_rule = self.flags.in_unknown_at_rule();
         self.flags.set(ContextFlags::IN_UNKNOWN_AT_RULE, true);
 
@@ -1253,7 +1255,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             name,
             value,
             children,
-            span: self.span_before,
+            span: self.toks.span_from(start),
         }))
     }
 
@@ -1295,7 +1297,8 @@ impl<'a, 'b> Parser<'a, 'b> {
             let right = self.supports_condition_in_parens()?;
             operation = Some(AstSupportsCondition::Operation {
                 left: Box::new(
-                    operation.unwrap_or(AstSupportsCondition::Interpolation(expression.clone())),
+                    operation
+                        .unwrap_or(AstSupportsCondition::Interpolation(expression.clone().node)),
                 ),
                 operator: operator.clone(),
                 right: Box::new(right),
@@ -1309,14 +1312,17 @@ impl<'a, 'b> Parser<'a, 'b> {
     fn supports_declaration_value(
         &mut self,
         name: AstExpr,
-        _start: usize,
+        start: usize,
     ) -> SassResult<AstSupportsCondition> {
         let value = match &name {
             AstExpr::String(StringExpr(text, QuoteKind::None), ..)
                 if text.initial_plain().starts_with("--") =>
             {
                 let text = self.parse_interpolated_declaration_value(false, false, true)?;
-                AstExpr::String(StringExpr(text, QuoteKind::None), self.span_before)
+                AstExpr::String(
+                    StringExpr(text, QuoteKind::None),
+                    self.toks.span_from(start),
+                )
             }
             _ => {
                 self.whitespace()?;
@@ -1355,7 +1361,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             } else {
                 match identifier.contents.first() {
                     Some(InterpolationPart::Expr(e)) => {
-                        return Ok(AstSupportsCondition::Interpolation(e.clone()))
+                        return Ok(AstSupportsCondition::Interpolation(e.clone().node))
                     }
                     _ => unreachable!(),
                 }
@@ -1564,6 +1570,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                     shown_variables,
                     prefix,
                     config,
+                    span,
                 )
             } else if let (Some(hidden_mixins_and_functions), Some(hidden_variables)) =
                 (hidden_mixins_and_functions, hidden_variables)
@@ -1574,9 +1581,10 @@ impl<'a, 'b> Parser<'a, 'b> {
                     hidden_variables,
                     prefix,
                     config,
+                    span,
                 )
             } else {
-                AstForwardRule::new(url, prefix, config)
+                AstForwardRule::new(url, prefix, config, span)
             },
         ))
     }
@@ -1785,7 +1793,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         self.flags.set(ContextFlags::IS_USE_ALLOWED, false);
 
         match name.as_plain() {
-            Some("at-root") => self.parse_at_root_rule(),
+            Some("at-root") => self.parse_at_root_rule(start),
             Some("content") => self.parse_content_rule(start),
             Some("debug") => self.parse_debug_rule(),
             Some("each") => self.parse_each_rule(child),
@@ -1820,7 +1828,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             }
             Some("warn") => self.parse_warn_rule(),
             Some("while") => self.parse_while_rule(child),
-            Some(..) | None => self.unknown_at_rule(name),
+            Some(..) | None => self.unknown_at_rule(name, start),
         }
     }
 
@@ -2026,7 +2034,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         let mut interpolation = Interpolation::new();
         interpolation
             .contents
-            .push(InterpolationPart::Expr(contents.node));
+            .push(InterpolationPart::Expr(contents));
 
         Ok(interpolation)
     }
@@ -2234,7 +2242,7 @@ impl<'a, 'b> Parser<'a, 'b> {
                     buffer.add_interpolation(
                         self.parse_interpolated_string()?
                             .node
-                            .as_interpolation(self.span_before, false),
+                            .as_interpolation(false),
                     );
                     wrote_newline = false;
                 }
@@ -2680,7 +2688,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             Ok(DeclarationOrBuffer::Stmt(AstStmt::Style(AstStyle {
                 name: name_buffer,
                 value: Some(value),
-                span: self.span_before,
+                span: self.toks.span_from(start),
                 body,
             })))
         } else {
@@ -2688,7 +2696,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             Ok(DeclarationOrBuffer::Stmt(AstStmt::Style(AstStyle {
                 name: name_buffer,
                 value: Some(value),
-                span: self.span_before,
+                span: self.toks.span_from(start),
                 body: Vec::new(),
             })))
         }
@@ -2789,6 +2797,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         Ok(AstStmt::RuleSet(AstRuleSet {
             selector: interpolation,
             body: children.node,
+            selector_span,
             span,
         }))
     }
@@ -2837,7 +2846,7 @@ impl<'a, 'b> Parser<'a, 'b> {
 
         Ok(AstStmt::SilentComment(AstSilentComment {
             text: buffer,
-            span: self.span_before,
+            span: self.toks.span_from(start),
         }))
     }
 
@@ -2971,7 +2980,7 @@ impl<'a, 'b> Parser<'a, 'b> {
             value,
             is_guarded,
             is_global,
-            span: self.span_before,
+            span: self.toks.span_from(start),
         };
 
         if is_global {
@@ -3025,11 +3034,11 @@ impl<'a, 'b> Parser<'a, 'b> {
                     }
                 }
                 '"' | '\'' => {
-                    let interpolation = self
-                        .parse_interpolated_string()?
-                        .node
-                        .as_interpolation(self.span_before, false);
-                    buffer.add_interpolation(interpolation);
+                    buffer.add_interpolation(
+                        self.parse_interpolated_string()?
+                            .node
+                            .as_interpolation(false),
+                    );
                 }
                 '/' => {
                     let comment_start = self.toks.cursor();
@@ -3150,7 +3159,6 @@ impl<'a, 'b> Parser<'a, 'b> {
     pub fn expect_char(&mut self, c: char) -> SassResult<()> {
         match self.toks.peek() {
             Some(tok) if tok.kind == c => {
-                self.span_before = tok.pos;
                 self.toks.next();
                 Ok(())
             }
@@ -3162,7 +3170,6 @@ impl<'a, 'b> Parser<'a, 'b> {
     pub fn expect_char_with_message(&mut self, c: char, msg: &'static str) -> SassResult<()> {
         match self.toks.peek() {
             Some(tok) if tok.kind == c => {
-                self.span_before = tok.pos;
                 self.toks.next();
                 Ok(())
             }
@@ -3730,7 +3737,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         }
 
         if !allow_empty && buffer.is_empty() {
-            return Err(("Expected token.", self.span_before).into());
+            return Err(("Expected token.", self.toks.current_span()).into());
         }
 
         Ok(buffer)

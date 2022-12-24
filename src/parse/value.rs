@@ -162,7 +162,7 @@ impl<'c> ValueParser<'c> {
                         self.add_operator(
                             Spanned {
                                 node: BinaryOp::SingleEq,
-                                span: parser.span_before,
+                                span: parser.toks.span_from(start),
                             },
                             parser,
                         )?;
@@ -171,7 +171,7 @@ impl<'c> ValueParser<'c> {
                         self.add_operator(
                             Spanned {
                                 node: BinaryOp::Equal,
-                                span: parser.span_before,
+                                span: parser.toks.span_from(start),
                             },
                             parser,
                         )?;
@@ -184,7 +184,7 @@ impl<'c> ValueParser<'c> {
                         self.add_operator(
                             Spanned {
                                 node: BinaryOp::NotEqual,
-                                span: parser.span_before,
+                                span: parser.toks.span_from(start),
                             },
                             parser,
                         )?;
@@ -210,7 +210,7 @@ impl<'c> ValueParser<'c> {
                             } else {
                                 BinaryOp::LessThan
                             },
-                            span: parser.span_before,
+                            span: parser.toks.span_from(start),
                         },
                         parser,
                     )?;
@@ -224,7 +224,7 @@ impl<'c> ValueParser<'c> {
                             } else {
                                 BinaryOp::GreaterThan
                             },
-                            span: parser.span_before,
+                            span: parser.toks.span_from(start),
                         },
                         parser,
                     )?;
@@ -248,7 +248,7 @@ impl<'c> ValueParser<'c> {
                         self.add_operator(
                             Spanned {
                                 node: BinaryOp::Plus,
-                                span: parser.span_before,
+                                span: parser.toks.span_from(start),
                             },
                             parser,
                         )?;
@@ -283,7 +283,7 @@ impl<'c> ValueParser<'c> {
                         self.add_operator(
                             Spanned {
                                 node: BinaryOp::Minus,
-                                span: parser.span_before,
+                                span: parser.toks.span_from(start),
                             },
                             parser,
                         )?;
@@ -298,7 +298,7 @@ impl<'c> ValueParser<'c> {
                         self.add_operator(
                             Spanned {
                                 node: BinaryOp::Div,
-                                span: parser.span_before,
+                                span: parser.toks.span_from(start),
                             },
                             parser,
                         )?;
@@ -332,7 +332,7 @@ impl<'c> ValueParser<'c> {
                         self.add_operator(
                             Spanned {
                                 node: BinaryOp::And,
-                                span: parser.span_before,
+                                span: parser.toks.span_from(start),
                             },
                             parser,
                         )?;
@@ -346,7 +346,7 @@ impl<'c> ValueParser<'c> {
                         self.add_operator(
                             Spanned {
                                 node: BinaryOp::Or,
-                                span: parser.span_before,
+                                span: parser.toks.span_from(start),
                             },
                             parser,
                         )?;
@@ -435,7 +435,7 @@ impl<'c> ValueParser<'c> {
                     Brackets::None
                 },
             })
-            .span(parser.span_before))
+            .span(parser.toks.span_from(start)))
         } else if self.inside_bracketed_list && self.space_expressions.is_some() {
             self.resolve_operations(parser)?;
 
@@ -449,7 +449,7 @@ impl<'c> ValueParser<'c> {
                 separator: ListSeparator::Space,
                 brackets: Brackets::Bracketed,
             })
-            .span(parser.span_before))
+            .span(parser.toks.span_from(start)))
         } else {
             self.resolve_space_expressions(parser)?;
 
@@ -459,7 +459,7 @@ impl<'c> ValueParser<'c> {
                     separator: ListSeparator::Undecided,
                     brackets: Brackets::Bracketed,
                 })
-                .span(parser.span_before));
+                .span(parser.toks.span_from(start)));
             }
 
             Ok(self.single_expression.take().unwrap())
@@ -668,7 +668,7 @@ impl<'c> ValueParser<'c> {
         Ok(())
     }
 
-    fn parse_map(parser: &mut Parser, first: Spanned<AstExpr>) -> SassResult<Spanned<AstExpr>> {
+    fn parse_map(parser: &mut Parser, first: Spanned<AstExpr>, start: usize) -> SassResult<Spanned<AstExpr>> {
         let mut pairs = vec![(first, parser.parse_expression_until_comma(false)?.node)];
 
         while parser.scan_char(',') {
@@ -686,10 +686,11 @@ impl<'c> ValueParser<'c> {
 
         parser.expect_char(')')?;
 
-        Ok(AstExpr::Map(AstSassMap(pairs)).span(parser.span_before))
+        Ok(AstExpr::Map(AstSassMap(pairs)).span(parser.toks.span_from(start)))
     }
 
     fn parse_paren_expr(&mut self, parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
+        let start = parser.toks.cursor();
         if parser.is_plain_css {
             return Err((
                 "Parentheses aren't allowed in plain CSS.",
@@ -713,7 +714,7 @@ impl<'c> ValueParser<'c> {
                 separator: ListSeparator::Undecided,
                 brackets: Brackets::None,
             })
-            .span(parser.span_before));
+            .span(parser.toks.span_from(start)));
         }
 
         let first = parser.parse_expression_until_comma(false)?;
@@ -722,7 +723,7 @@ impl<'c> ValueParser<'c> {
             parser
                 .flags
                 .set(ContextFlags::IN_PARENS, was_in_parentheses);
-            return Self::parse_map(parser, first);
+            return Self::parse_map(parser, first, start);
         }
 
         if !parser.scan_char(',') {
@@ -759,7 +760,7 @@ impl<'c> ValueParser<'c> {
             separator: ListSeparator::Comma,
             brackets: Brackets::None,
         })
-        .span(parser.span_before))
+        .span(parser.toks.span_from(start)))
     }
 
     fn parse_variable(parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
@@ -781,7 +782,7 @@ impl<'c> ValueParser<'c> {
             },
             namespace: None,
         }
-        .span(parser.span_before))
+        .span(parser.toks.span_from(start)))
     }
 
     fn parse_selector(parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
@@ -827,7 +828,7 @@ impl<'c> ValueParser<'c> {
             })
         ) {
             let color = Self::parse_hex_color_contents(parser)?;
-            return Ok(AstExpr::Color(Box::new(color)).span(parser.span_before));
+            return Ok(AstExpr::Color(Box::new(color)).span(parser.toks.span_from(start)));
         }
 
         let after_hash = parser.toks.cursor();
@@ -835,15 +836,12 @@ impl<'c> ValueParser<'c> {
         if is_hex_color(&ident) {
             parser.toks.set_cursor(after_hash);
             let color = Self::parse_hex_color_contents(parser)?;
-            return Ok(AstExpr::Color(Box::new(color)).span(parser.span_before));
+            return Ok(AstExpr::Color(Box::new(color)).span(parser.toks.span_from(after_hash)));
         }
 
         let mut buffer = Interpolation::new();
 
-        buffer.add_token(Token {
-            kind: '#',
-            pos: parser.span_before,
-        });
+        buffer.add_char('#');
         buffer.add_interpolation(ident);
 
         let span = parser.toks.span_from(start);
@@ -924,8 +922,9 @@ impl<'c> ValueParser<'c> {
 
         let operand = self.parse_single_expression(parser)?;
 
-        Ok(AstExpr::UnaryOp(operator, Box::new(operand.node))
-            .span(op_span.merge(parser.toks.current_span())))
+        let span = op_span.merge(parser.toks.current_span());
+
+        Ok(AstExpr::UnaryOp(operator, Box::new(operand.node), span).span(span))
     }
 
     fn expect_unary_operator(parser: &mut Parser) -> SassResult<UnaryOp> {
@@ -995,7 +994,7 @@ impl<'c> ValueParser<'c> {
             n: Number::from(number),
             unit,
         }
-        .span(parser.span_before))
+        .span(parser.toks.span_from(start)))
     }
 
     fn try_decimal(parser: &mut Parser, allow_trailing_dot: bool) -> SassResult<Option<String>> {
@@ -1146,8 +1145,9 @@ impl<'c> ValueParser<'c> {
 
                 let value = self.parse_single_expression(parser)?;
 
-                return Ok(AstExpr::UnaryOp(UnaryOp::Not, Box::new(value.node))
-                    .span(parser.toks.span_from(start)));
+                let span = parser.toks.span_from(start);
+
+                return Ok(AstExpr::UnaryOp(UnaryOp::Not, Box::new(value.node), span).span(span));
             }
 
             let lower_ref = lower.as_ref().unwrap();
@@ -1746,7 +1746,7 @@ impl<'c> ValueParser<'c> {
                     name: CalculationName::Calc,
                     args,
                 }
-                .span(parser.span_before)
+                .span(parser.toks.span_from(start))
             }
             "min" | "max" => {
                 // min() and max() are parsed as calculations if possible, and otherwise

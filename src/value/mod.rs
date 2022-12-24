@@ -665,15 +665,17 @@ impl Value {
         visitor: &mut Visitor,
         name: &str,
         allows_parent: bool,
+        span: Span,
     ) -> SassResult<Selector> {
-        let string = match self.clone().selector_string(visitor.parser.span_before)? {
+        let string = match self.clone().selector_string(span)? {
             Some(v) => v,
-            None => return Err((format!("${}: {} is not a valid selector: it must be a string,\n a list of strings, or a list of lists of strings.", name, self.inspect(visitor.parser.span_before)?), visitor.parser.span_before).into()),
+            None => return Err((format!("${}: {} is not a valid selector: it must be a string,\n a list of strings, or a list of lists of strings.", name, self.inspect(span)?), span).into()),
         };
         Ok(Selector(visitor.parse_selector_from_string(
             &string,
             allows_parent,
             true,
+            span,
         )?))
     }
 
@@ -721,41 +723,32 @@ impl Value {
         }))
     }
 
-    pub fn unary_plus(self, visitor: &mut Visitor) -> SassResult<Self> {
+    pub fn unary_plus(self, visitor: &mut Visitor, span: Span) -> SassResult<Self> {
         Ok(match self {
             Self::Dimension(SassNumber { .. }) => self,
             Self::Calculation(..) => {
                 return Err((
-                    format!(
-                        "Undefined operation \"+{}\".",
-                        self.inspect(visitor.parser.span_before)?
-                    ),
-                    visitor.parser.span_before,
+                    format!("Undefined operation \"+{}\".", self.inspect(span)?),
+                    span,
                 )
                     .into())
             }
             _ => Self::String(
                 format!(
                     "+{}",
-                    &self.to_css_string(
-                        visitor.parser.span_before,
-                        visitor.parser.options.is_compressed()
-                    )?
+                    &self.to_css_string(span, visitor.parser.options.is_compressed())?
                 ),
                 QuoteKind::None,
             ),
         })
     }
 
-    pub fn unary_neg(self, visitor: &mut Visitor) -> SassResult<Self> {
+    pub fn unary_neg(self, visitor: &mut Visitor, span: Span) -> SassResult<Self> {
         Ok(match self {
             Self::Calculation(..) => {
                 return Err((
-                    format!(
-                        "Undefined operation \"-{}\".",
-                        self.inspect(visitor.parser.span_before)?
-                    ),
-                    visitor.parser.span_before,
+                    format!("Undefined operation \"-{}\".", self.inspect(span)?),
+                    span,
                 )
                     .into())
             }
@@ -771,24 +764,18 @@ impl Value {
             _ => Self::String(
                 format!(
                     "-{}",
-                    &self.to_css_string(
-                        visitor.parser.span_before,
-                        visitor.parser.options.is_compressed()
-                    )?
+                    &self.to_css_string(span, visitor.parser.options.is_compressed())?
                 ),
                 QuoteKind::None,
             ),
         })
     }
 
-    pub fn unary_div(self, visitor: &mut Visitor) -> SassResult<Self> {
+    pub fn unary_div(self, visitor: &mut Visitor, span: Span) -> SassResult<Self> {
         Ok(Self::String(
             format!(
                 "/{}",
-                &self.to_css_string(
-                    visitor.parser.span_before,
-                    visitor.parser.options.is_compressed()
-                )?
+                &self.to_css_string(span, visitor.parser.options.is_compressed())?
             ),
             QuoteKind::None,
         ))

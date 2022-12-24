@@ -70,7 +70,7 @@ pub(crate) enum AstExpr {
     ParentSelector,
     String(StringExpr, Span),
     Supports(Box<AstSupportsCondition>),
-    UnaryOp(UnaryOp, Box<Self>),
+    UnaryOp(UnaryOp, Box<Self>, Span),
     Variable {
         name: Spanned<Identifier>,
         namespace: Option<Spanned<Identifier>>,
@@ -131,7 +131,7 @@ impl StringExpr {
         }
     }
 
-    pub fn as_interpolation(self, span: Span, is_static: bool) -> Interpolation {
+    pub fn as_interpolation(self, is_static: bool) -> Interpolation {
         if self.1 == QuoteKind::None {
             return self.0;
         }
@@ -146,7 +146,7 @@ impl StringExpr {
 
         for value in self.0.contents {
             match value {
-                InterpolationPart::Expr(e) => buffer.add_expr(Spanned { node: e, span }),
+                InterpolationPart::Expr(e) => buffer.add_expr(e),
                 InterpolationPart::String(text) => {
                     Self::quote_inner_text(&text, quote, &mut buffer, is_static);
                 }
