@@ -11,7 +11,7 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub(crate) struct MediaRule {
-    pub query: String,
+    pub query: Vec<MediaQuery>,
     pub body: Vec<CssStmt>,
 }
 

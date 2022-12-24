@@ -3,7 +3,7 @@ use std::io::Write;
 use codemap::{CodeMap, Span, Spanned};
 
 use crate::{
-    ast::{CssStmt, Style, SupportsRule},
+    ast::{CssStmt, Style, SupportsRule, MediaQuery},
     color::{Color, ColorFormat, NAMED_COLORS},
     error::SassResult,
     selector::{
@@ -465,6 +465,30 @@ impl<'a> Serializer<'a> {
         }
     }
 
+    fn write_media_query(&mut self, query: &MediaQuery) {
+        if let Some(modifier) = &query.modifier {
+            self.buffer.extend_from_slice(modifier.as_bytes());
+            self.buffer.push(b' ');
+        }
+
+        if let Some(media_type) = &query.media_type {
+            self.buffer.extend_from_slice(media_type.as_bytes());
+
+            if !query.conditions.is_empty() {
+                self.buffer.extend_from_slice(b" and ");
+            }
+        }
+
+        if query.conditions.len() == 1 && query.conditions.first().unwrap().starts_with("(not ") {
+            self.buffer.extend_from_slice(b"not ");
+            let condition = query.conditions.first().unwrap();
+            self.buffer.extend_from_slice(condition["(not ".len()..condition.len() - 1].as_bytes());
+        } else {
+            let operator = if query.conjunction { " and " } else { " or " };
+            self.buffer.extend_from_slice(query.conditions.join(operator).as_bytes());
+        }
+    }
+
     pub fn visit_number(&mut self, number: &SassNumber) -> SassResult<()> {
         if let Some(as_slash) = &number.as_slash {
             self.visit_number(&as_slash.0)?;
@@ -769,7 +793,18 @@ impl<'a> Serializer<'a> {
             CssStmt::Media(media_rule, ..) => {
                 self.write_indentation();
                 self.buffer.extend_from_slice(b"@media ");
-                self.buffer.extend_from_slice(media_rule.query.as_bytes());
+
+                if let Some((last, rest)) = media_rule.query.split_last() {
+                    for query in rest {
+                        self.write_media_query(query);
+
+                        self.buffer.push(b',');
+
+                        self.write_optional_space();
+                    }
+
+                    self.write_media_query(last);
+                }
 
                 self.write_children(media_rule.body)?;
             }

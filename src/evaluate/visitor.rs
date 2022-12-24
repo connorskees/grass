@@ -1221,34 +1221,6 @@ impl<'a> Visitor<'a> {
         CssMediaQuery::parse_list(&resolved, self.parser)
     }
 
-    fn serialize_media_query(query: MediaQuery) -> String {
-        let mut buffer = String::new();
-
-        if let Some(modifier) = query.modifier {
-            buffer.push_str(&modifier);
-            buffer.push(' ');
-        }
-
-        if let Some(media_type) = query.media_type {
-            buffer.push_str(&media_type);
-
-            if !query.conditions.is_empty() {
-                buffer.push_str(" and ");
-            }
-        }
-
-        if query.conditions.len() == 1 && query.conditions.first().unwrap().starts_with("(not ") {
-            buffer.push_str("not ");
-            let condition = query.conditions.first().unwrap();
-            buffer.push_str(&condition["(not ".len()..condition.len() - 1]);
-        } else {
-            let operator = if query.conjunction { " and " } else { " or " };
-            buffer.push_str(&query.conditions.join(operator));
-        }
-
-        buffer
-    }
-
     fn visit_media_rule(&mut self, media_rule: AstMedia) -> SassResult<Option<Value>> {
         if self.declaration_name.is_some() {
             return Err((
@@ -1283,12 +1255,7 @@ impl<'a> Visitor<'a> {
 
         let media_rule = CssStmt::Media(
             MediaRule {
-                // todo: no string here, we shouldn't serialize until final step
-                query: query
-                    .into_iter()
-                    .map(Self::serialize_media_query)
-                    .collect::<Vec<String>>()
-                    .join(", "),
+                query,
                 body: Vec::new(),
             },
             false,
@@ -1342,7 +1309,13 @@ impl<'a> Visitor<'a> {
             |stmt| match stmt {
                 CssStmt::RuleSet { .. } => true,
                 // todo: node.queries.every(mergedSources.contains))
-                CssStmt::Media(media_rule, ..) => !merged_sources.is_empty(),
+                CssStmt::Media(media_rule, ..) => {
+                    !merged_sources.is_empty()
+                        && media_rule
+                            .query
+                            .iter()
+                            .all(|query| merged_sources.contains(query))
+                }
                 _ => false,
             },
         )?;

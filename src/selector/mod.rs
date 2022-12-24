@@ -51,18 +51,6 @@ impl Selector {
         self.0.contains_parent_selector()
     }
 
-    pub fn remove_placeholders(self) -> Selector {
-        Self(SelectorList {
-            span: self.0.span,
-            components: self
-                .0
-                .components
-                .into_iter()
-                .filter(|c| !c.is_invisible())
-                .collect(),
-        })
-    }
-
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
