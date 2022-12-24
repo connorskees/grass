@@ -541,4 +541,46 @@ fn include_function_with_star_namespace() {
     );
 }
 
+#[test]
+fn use_with_through_forward_multiple() {
+    let mut fs = TestFs::new();
+
+    fs.add_file(
+        "_used.scss",
+        r#"
+            @forward "left" with ($a: from used !default);
+            @forward "right" with ($b: from used !default);
+        "#,
+    );
+    fs.add_file(
+        "_left.scss",
+        r#"
+            $a: from left !default;
+
+            in-left {
+                c: $a
+            }
+        "#,
+    );
+    fs.add_file(
+        "_right.scss",
+        r#"
+            $b: from left !default;
+
+            in-right {
+                d: $b
+            }
+        "#,
+    );
+
+    let input = r#"
+        @use "used" with ($a: from input, $b: from input);
+    "#;
+
+    assert_eq!(
+        "in-left {\n  c: from input;\n}\n\nin-right {\n  d: from input;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
+    );
+}
+
 // todo: refactor these tests to use testfs where possible

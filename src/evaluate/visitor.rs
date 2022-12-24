@@ -253,10 +253,16 @@ impl<'a> Visitor<'a> {
                 .map(|var| var.name.node)
                 .collect();
 
+            let mut to_remove = Vec::new();
+
             for name in (*new_configuration).borrow().values.keys() {
                 if !configured_variables.contains(&name) {
-                    (*new_configuration).borrow_mut().remove(name);
+                    to_remove.push(name);
                 }
+            }
+
+            for name in to_remove {
+                (*new_configuration).borrow_mut().remove(name);
             }
 
             Self::assert_configuration_is_empty(&new_configuration, false)?;
