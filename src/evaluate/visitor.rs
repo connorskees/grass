@@ -152,8 +152,13 @@ impl<'a> Visitor<'a> {
     }
 
     pub fn finish(mut self) -> Vec<CssStmt> {
-        self.import_nodes.append(&mut self.css_tree.finish());
-        self.import_nodes
+        let mut finished_tree = self.css_tree.finish();
+        if self.import_nodes.is_empty() {
+            finished_tree
+        } else {
+            self.import_nodes.append(&mut finished_tree);
+            self.import_nodes
+        }
     }
 
     fn visit_return_rule(&mut self, ret: AstReturn) -> SassResult<Option<Value>> {
