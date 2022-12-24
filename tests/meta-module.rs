@@ -41,7 +41,6 @@ fn mixin_exists_module() {
 }
 
 #[test]
-#[ignore = "we lost support for load css"]
 fn load_css_simple() {
     let input = "@use \"sass:meta\";\na {\n @include meta.load-css(load_css_simple);\n}";
     tempfile!("load_css_simple.scss", "a { color: red; }");
@@ -52,7 +51,6 @@ fn load_css_simple() {
 }
 
 #[test]
-#[ignore = "we lost support for load css"]
 fn load_css_explicit_args() {
     let input = "@use \"sass:meta\";\na {\n @include meta.load-css($module: load_css_explicit_args, $with: null);\n}";
     tempfile!("load_css_explicit_args.scss", "a { color: red; }");

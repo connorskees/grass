@@ -39,6 +39,8 @@ fn load_css(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<()> {
     let mut configuration = Configuration::empty();
 
     if let Some(with) = with {
+        visitor.emit_warning("`grass` does not currently support the $with parameter of load-css. This file will be imported the same way it would using `@import`.", args.span());
+
         let mut values = BTreeMap::new();
         for (key, value) in with {
             let name = match key.node {
@@ -67,65 +69,27 @@ fn load_css(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<()> {
         configuration = Configuration::explicit(values, args.span());
     }
 
-    let configuration = Arc::new(RefCell::new(configuration));
+    let _configuration = Arc::new(RefCell::new(configuration));
 
-    visitor.load_module(
-        url.as_ref(),
-        Some(Arc::clone(&configuration)),
-        true,
-        args.span(),
-        |visitor, module, stylesheet| {
-            // (*module).borrow()
-            Ok(())
-        },
-    )?;
+    let style_sheet = visitor.load_style_sheet(url.as_ref(), false, args.span())?;
 
-    Visitor::assert_configuration_is_empty(&configuration, true)?;
+    visitor.visit_stylesheet(style_sheet)?;
+
+    // todo: support the $with argument to load-css
+    // visitor.load_module(
+    //     url.as_ref(),
+    //     Some(Arc::clone(&configuration)),
+    //     true,
+    //     args.span(),
+    //     |visitor, module, stylesheet| {
+    //         // (*module).borrow()
+    //         Ok(())
+    //     },
+    // )?;
+
+    // Visitor::assert_configuration_is_empty(&configuration, true)?;
 
     Ok(())
-    // var callableNode = _callableNode!;
-    //     var configuration = const Configuration.empty();
-    //     if (withMap != null) {
-    //     }
-
-    //     _loadModule(url, "load-css()", callableNode,
-    //         (module) => _combineCss(module, clone: true).accept(this),
-    //         baseUrl: callableNode.span.sourceUrl,
-    //         configuration: configuration,
-    //         namesInErrors: true);
-    //     _assertConfigurationIsEmpty(configuration, nameInError: true);
-
-    // todo: tests for `with`
-    // if let Some(with) = with {
-    //     let mut config = ModuleConfig::default();
-
-    //     for (key, value) in with {
-    //         let key = match key {
-    //             Value::String(s, ..) => s,
-    //             v => {
-    //                 return Err((
-    //                     format!("$with key: {} is not a string.", v.inspect(span)?),
-    //                     span,
-    //                 )
-    //                     .into())
-    //             }
-    //         };
-
-    //         config.insert(
-    //             Spanned {
-    //                 node: key.into(),
-    //                 span,
-    //             },
-    //             value.span(span),
-    //         )?;
-    //     }
-
-    //     let (_, stmts) = parser.load_module(&url, &mut config)?;
-
-    //     Ok(stmts)
-    // } else {
-    //     visitor.parser.parse_single_import(&url, span)
-    // }
 }
 
 fn module_functions(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {

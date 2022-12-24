@@ -806,7 +806,7 @@ impl<'a> Visitor<'a> {
         Err(("Can't find stylesheet to import.", span).into())
     }
 
-    fn load_style_sheet(
+    pub fn load_style_sheet(
         &mut self,
         url: &str,
         // default=false
@@ -1455,13 +1455,13 @@ impl<'a> Visitor<'a> {
         Ok(None)
     }
 
-    fn emit_warning(&mut self, message: &str, span: Span) {
+    pub fn emit_warning(&mut self, message: &str, span: Span) {
         if self.parser.options.quiet {
             return;
         }
         let loc = self.parser.map.look_up_span(span);
         eprintln!(
-            "Warning: {}\n    {} {}:{}  root stylesheet",
+            "Warning: {}\n    ./{}:{}:{}",
             message,
             loc.file.name(),
             loc.begin.line + 1,
