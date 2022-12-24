@@ -20,7 +20,6 @@ test!(
     grass::Options::default().style(grass::OutputStyle::Compressed)
 );
 test!(
-    #[ignore = "regress selector compression"]
     compresses_selector_with_space_after_comma,
     "a, b {\n  color: red;\n}\n",
     "a,b{color:red}",
@@ -40,7 +39,6 @@ test!(
     grass::Options::default().style(grass::OutputStyle::Compressed)
 );
 test!(
-    #[ignore = "regress selector compression"]
     removes_space_between_selector_combinator,
     "a > b {\n  color: red;\n}\n",
     "a>b{color:red}",

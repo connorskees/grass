@@ -3,6 +3,7 @@ use crate::builtin::builtin_imports::*;
 use crate::selector::{
     ComplexSelector, ComplexSelectorComponent, ExtensionStore, Selector, SelectorList,
 };
+use crate::serializer::serialize_selector_list;
 
 pub(crate) fn is_superselector(
     mut args: ArgumentResult,
@@ -110,7 +111,7 @@ pub(crate) fn selector_append(args: ArgumentResult, visitor: &mut Visitor) -> Sa
                                 Some(v) => ComplexSelectorComponent::Compound(v),
                                 None => {
                                     return Err((
-                                        format!("Can't append {} to {}.", complex, parent),
+                                        format!("Can't append {} to {}.", complex, serialize_selector_list(&parent.0, visitor.parser.options, span)),
                                         span,
                                     )
                                         .into())
@@ -119,7 +120,7 @@ pub(crate) fn selector_append(args: ArgumentResult, visitor: &mut Visitor) -> Sa
                             components.extend(complex.components.into_iter().skip(1));
                             Ok(ComplexSelector::new(components, false))
                         } else {
-                            Err((format!("Can't append {} to {}.", complex, parent), span).into())
+                            Err((format!("Can't append {} to {}.", complex, serialize_selector_list(&parent.0, visitor.parser.options, span)), span).into())
                         }
                     })
                     .collect::<SassResult<Vec<ComplexSelector>>>()?,

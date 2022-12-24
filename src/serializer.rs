@@ -6,6 +6,10 @@ use crate::{
     ast::{CssStmt, Style, SupportsRule},
     color::{Color, ColorFormat, NAMED_COLORS},
     error::SassResult,
+    selector::{
+        Combinator, ComplexSelector, ComplexSelectorComponent, CompoundSelector, Namespace, Pseudo,
+        SelectorList, SimpleSelector,
+    },
     utils::hex_char_for,
     value::{fuzzy_equals, CalculationArg, SassCalculation, SassNumber, Value},
     Options,
@@ -16,6 +20,19 @@ pub(crate) fn serialize_color(color: &Color, options: &Options, span: Span) -> S
     let mut serializer = Serializer::new(options, &map, false, span);
 
     serializer.visit_color(color);
+
+    serializer.finish_for_expr()
+}
+
+pub(crate) fn serialize_selector_list(
+    list: &SelectorList,
+    options: &Options,
+    span: Span,
+) -> String {
+    let map = CodeMap::new();
+    let mut serializer = Serializer::new(options, &map, false, span);
+
+    serializer.write_selector_list(list);
 
     serializer.finish_for_expr()
 }
@@ -95,6 +112,151 @@ impl<'a> Serializer<'a> {
             buffer: Vec::new(),
             map,
             span,
+        }
+    }
+
+    fn omit_spaces_around_complex_component(&self, component: &ComplexSelectorComponent) -> bool {
+        self.options.is_compressed()
+            && matches!(component, ComplexSelectorComponent::Combinator(..))
+    }
+
+    fn write_pseudo_selector(&mut self, pseudo: &Pseudo) {
+        if let Some(sel) = &pseudo.selector {
+            if pseudo.name == "not" && sel.is_invisible() {
+                return;
+            }
+        }
+
+        self.buffer.push(b':');
+
+        if !pseudo.is_syntactic_class {
+            self.buffer.push(b':');
+        }
+
+        self.buffer.extend_from_slice(pseudo.name.as_bytes());
+
+        if pseudo.argument.is_none() && pseudo.selector.is_none() {
+            return;
+        }
+
+        self.buffer.push(b'(');
+        if let Some(arg) = &pseudo.argument {
+            self.buffer.extend_from_slice(arg.as_bytes());
+            if pseudo.selector.is_some() {
+                self.buffer.push(b' ');
+            }
+        }
+
+        if let Some(sel) = &pseudo.selector {
+            self.write_selector_list(sel);
+        }
+
+        self.buffer.push(b')');
+    }
+
+    fn write_namespace(&mut self, namespace: &Namespace) {
+        match namespace {
+            Namespace::Empty => self.buffer.push(b'|'),
+            Namespace::Asterisk => self.buffer.extend_from_slice(b"*|"),
+            Namespace::Other(namespace) => {
+                self.buffer.extend_from_slice(namespace.as_bytes());
+                self.buffer.push(b'|');
+            }
+            Namespace::None => {}
+        }
+    }
+
+    fn write_simple_selector(&mut self, simple: &SimpleSelector) {
+        match simple {
+            SimpleSelector::Id(name) => {
+                self.buffer.push(b'#');
+                self.buffer.extend_from_slice(name.as_bytes());
+            }
+            SimpleSelector::Class(name) => {
+                self.buffer.push(b'.');
+                self.buffer.extend_from_slice(name.as_bytes());
+            }
+            SimpleSelector::Placeholder(name) => {
+                self.buffer.push(b'%');
+                self.buffer.extend_from_slice(name.as_bytes());
+            }
+            SimpleSelector::Universal(namespace) => {
+                self.write_namespace(namespace);
+                self.buffer.push(b'*');
+            }
+            SimpleSelector::Pseudo(pseudo) => self.write_pseudo_selector(pseudo),
+            SimpleSelector::Type(name) => write!(&mut self.buffer, "{}", name).unwrap(),
+            SimpleSelector::Attribute(attr) => write!(&mut self.buffer, "{}", attr).unwrap(),
+            SimpleSelector::Parent(..) => unreachable!("It should not be possible to format `&`."),
+        }
+    }
+
+    fn write_compound_selector(&mut self, compound: &CompoundSelector) {
+        let mut did_write = false;
+        for simple in &compound.components {
+            if did_write {
+                self.write_simple_selector(simple);
+            } else {
+                let len = self.buffer.len();
+                self.write_simple_selector(simple);
+                if self.buffer.len() != len {
+                    did_write = true;
+                }
+            }
+        }
+
+        // If we emit an empty compound, it's because all of the components got
+        // optimized out because they match all selectors, so we just emit the
+        // universal selector.
+        if !did_write {
+            self.buffer.push(b'*');
+        }
+    }
+
+    fn write_complex_selector_component(&mut self, component: &ComplexSelectorComponent) {
+        match component {
+            ComplexSelectorComponent::Combinator(Combinator::NextSibling) => self.buffer.push(b'+'),
+            ComplexSelectorComponent::Combinator(Combinator::Child) => self.buffer.push(b'>'),
+            ComplexSelectorComponent::Combinator(Combinator::FollowingSibling) => {
+                self.buffer.push(b'~')
+            }
+            ComplexSelectorComponent::Compound(compound) => self.write_compound_selector(compound),
+        }
+    }
+
+    fn write_complex_selector(&mut self, complex: &ComplexSelector) {
+        let mut last_component = None;
+
+        for component in &complex.components {
+            if let Some(c) = last_component {
+                if !self.omit_spaces_around_complex_component(c)
+                    && !self.omit_spaces_around_complex_component(component)
+                {
+                    self.buffer.push(b' ');
+                }
+            }
+            self.write_complex_selector_component(component);
+            last_component = Some(component);
+        }
+    }
+
+    fn write_selector_list(&mut self, list: &SelectorList) {
+        let complexes = list.components.iter().filter(|c| !c.is_invisible());
+
+        let mut first = true;
+
+        for complex in complexes {
+            if first {
+                first = false;
+            } else {
+                self.buffer.push(b',');
+                if complex.line_break {
+                    self.buffer.push(b'\n');
+                } else {
+                    self.write_optional_space();
+                }
+            }
+            self.write_complex_selector(complex);
         }
     }
 
@@ -596,10 +758,8 @@ impl<'a> Serializer<'a> {
 
         match stmt {
             CssStmt::RuleSet { selector, body, .. } => {
-                let selector = selector.into_selector().remove_placeholders();
-
                 self.write_indentation();
-                write!(&mut self.buffer, "{}", selector)?;
+                self.write_selector_list(&*selector.as_selector_list());
 
                 self.write_children(body)?;
             }
