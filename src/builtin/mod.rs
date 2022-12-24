@@ -25,5 +25,8 @@ mod builtin_imports {
         Options,
     };
 
-    pub(crate) use std::{cmp::Ordering, collections::{BTreeMap, BTreeSet}};
+    pub(crate) use std::{
+        cmp::Ordering,
+        collections::{BTreeMap, BTreeSet},
+    };
 }

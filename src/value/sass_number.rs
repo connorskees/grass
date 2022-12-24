@@ -42,6 +42,7 @@ impl SassNumber {
         self.has_comparable_units(other_unit)
     }
 
+    #[allow(clippy::collapsible_if)]
     pub fn multiply_units(&self, mut num: f64, other_unit: Unit) -> SassNumber {
         let (numer_units, denom_units) = self.unit.clone().numer_and_denom();
         let (other_numer, other_denom) = other_unit.numer_and_denom();

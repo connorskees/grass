@@ -14,6 +14,7 @@ use crate::{
     value::{SassFunction, Value},
 };
 
+#[allow(clippy::type_complexity)]
 #[derive(Debug, Default, Clone)]
 pub(crate) struct Scopes {
     variables: Arc<RefCell<Vec<Arc<RefCell<BTreeMap<Identifier, Value>>>>>>,

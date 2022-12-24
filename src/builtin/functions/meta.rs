@@ -288,10 +288,9 @@ pub(crate) fn get_function(mut args: ArgumentResult, visitor: &mut Visitor) -> S
     } else {
         match visitor.env.get_fn(name, None)? {
             Some(f) => Some(f),
-            None => match GLOBAL_FUNCTIONS.get(name.as_str()) {
-                Some(f) => Some(SassFunction::Builtin(f.clone(), name)),
-                None => None,
-            },
+            None => GLOBAL_FUNCTIONS
+                .get(name.as_str())
+                .map(|f| SassFunction::Builtin(f.clone(), name)),
         }
     };
 

@@ -288,6 +288,7 @@ pub(crate) fn parse_channels(
         return Ok(ParsedChannels::List(list));
     }
 
+    #[allow(clippy::collapsible_match)]
     match &list[2] {
         Value::Dimension(SassNumber { as_slash, .. }) => match as_slash {
             Some(slash) => Ok(ParsedChannels::List(vec![

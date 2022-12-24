@@ -291,6 +291,7 @@ impl<'a> Visitor<'a> {
         Ok(())
     }
 
+    #[allow(clippy::unnecessary_unwrap)]
     fn add_forward_configuration(
         &mut self,
         config: Arc<RefCell<Configuration>>,
@@ -2079,6 +2080,7 @@ impl<'a> Visitor<'a> {
                 let declared_arguments = func.arguments().args.clone();
                 let min_len = evaluated.positional.len().min(declared_arguments.len());
 
+                #[allow(clippy::needless_range_loop)]
                 for i in 0..min_len {
                     // todo: superfluous clone
                     visitor.env.scopes_mut().insert_var_last(
@@ -2345,9 +2347,7 @@ impl<'a> Visitor<'a> {
                 as_slash: None,
             }),
             AstExpr::List(list) => self.visit_list_expr(list)?,
-            AstExpr::String(StringExpr(text, quote), ..) => {
-                self.visit_string(text, quote)?
-            }
+            AstExpr::String(StringExpr(text, quote), ..) => self.visit_string(text, quote)?,
             AstExpr::BinaryOp {
                 lhs,
                 op,
@@ -2530,11 +2530,7 @@ impl<'a> Visitor<'a> {
         Ok(self.without_slash(value))
     }
 
-    fn visit_string(
-        &mut self,
-        text: Interpolation,
-        quote: QuoteKind,
-    ) -> SassResult<Value> {
+    fn visit_string(&mut self, text: Interpolation, quote: QuoteKind) -> SassResult<Value> {
         // Don't use [performInterpolation] here because we need to get the raw text
         // from strings, rather than the semantic value.
         let old_in_supports_declaration = self.flags.in_supports_declaration();

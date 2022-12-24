@@ -254,6 +254,7 @@ impl SassCalculation {
             .into())
     }
 
+    #[allow(clippy::needless_range_loop)]
     fn verify_compatible_numbers(
         args: &[CalculationArg],
         options: &Options,

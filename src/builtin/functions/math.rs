@@ -235,14 +235,8 @@ pub(crate) fn min(args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Val
             as_slash: None,
         });
 
-        if crate::evaluate::cmp(
-            &lhs,
-            &rhs,
-            visitor.parser.options,
-            span,
-            BinaryOp::LessThan,
-        )?
-        .is_true()
+        if crate::evaluate::cmp(&lhs, &rhs, visitor.parser.options, span, BinaryOp::LessThan)?
+            .is_true()
         {
             min = (num, unit);
         }

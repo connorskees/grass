@@ -10,6 +10,7 @@ const FORM_FEED: char = '\x0C';
 pub(crate) struct Lexer<'a> {
     buf: Cow<'a, [Token]>,
     cursor: usize,
+    // todo: now superfluous?
     amt_peeked: usize,
 }
 
@@ -61,21 +62,9 @@ impl<'a> Lexer<'a> {
         self.buf.get(self.peek_cursor()).copied()
     }
 
-    pub fn reset_cursor(&mut self) {
-        self.amt_peeked = 0;
-    }
-
     /// Peeks the previous token without modifying the peek cursor
     pub fn peek_previous(&mut self) -> Option<Token> {
         self.buf.get(self.peek_cursor().checked_sub(1)?).copied()
-    }
-
-    /// Peeks `n` from current peeked position, modifying the peek cursor
-    // todo: remove this function
-    pub fn peek_forward(&mut self, n: usize) -> Option<Token> {
-        self.amt_peeked += n;
-
-        self.peek()
     }
 
     /// Peeks `n` from current peeked position without modifying cursor

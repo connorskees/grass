@@ -131,9 +131,8 @@ fn hypot(args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
         }
     });
 
-    let first: (Number, Unit) = match numbers.next().unwrap()? {
-        (n, u) => (n * n, u),
-    };
+    let (n, u) = numbers.next().unwrap()?;
+    let first: (Number, Unit) = (n * n, u);
 
     let rest = numbers
         .enumerate()

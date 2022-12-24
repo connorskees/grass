@@ -433,7 +433,7 @@ impl Color {
         } else if hue < 1.0 / 2.0 {
             m2
         } else if hue < 2.0 / 3.0 {
-            m1 + (m2 - m1) * (2.0 / 3.0 - hue) * 6.0
+            ((m2 - m1) * (2.0 / 3.0 - hue)).mul_add(6.0, m1)
         } else {
             m1
         }
@@ -522,7 +522,7 @@ impl Color {
         let factor = 1.0 - scaled_white - scaled_black;
 
         let to_rgb = |hue: f64| -> Number {
-            let channel = Self::hue_to_rgb(0.0, 1.0, hue) * factor + scaled_white;
+            let channel = Self::hue_to_rgb(0.0, 1.0, hue).mul_add(factor, scaled_white);
             Number(fuzzy_round(channel * 255.0))
         };
 

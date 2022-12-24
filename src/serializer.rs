@@ -3,7 +3,7 @@ use std::io::Write;
 use codemap::{CodeMap, Span, Spanned};
 
 use crate::{
-    ast::{CssStmt, Style, SupportsRule, MediaQuery},
+    ast::{CssStmt, MediaQuery, Style, SupportsRule},
     color::{Color, ColorFormat, NAMED_COLORS},
     error::SassResult,
     selector::{
@@ -188,7 +188,7 @@ impl<'a> Serializer<'a> {
             SimpleSelector::Type(name) => {
                 self.write_namespace(&name.namespace);
                 self.buffer.extend_from_slice(name.ident.as_bytes());
-            },
+            }
             SimpleSelector::Attribute(attr) => write!(&mut self.buffer, "{}", attr).unwrap(),
             SimpleSelector::Parent(..) => unreachable!("It should not be possible to format `&`."),
         }
@@ -425,6 +425,7 @@ impl<'a> Serializer<'a> {
             None
         };
 
+        #[allow(clippy::unnecessary_unwrap)]
         if self.options.is_compressed() {
             if fuzzy_equals(color.alpha().0, 1.0) {
                 let hex_length = if Self::can_use_short_hex(color) { 4 } else { 7 };
@@ -482,10 +483,12 @@ impl<'a> Serializer<'a> {
         if query.conditions.len() == 1 && query.conditions.first().unwrap().starts_with("(not ") {
             self.buffer.extend_from_slice(b"not ");
             let condition = query.conditions.first().unwrap();
-            self.buffer.extend_from_slice(condition["(not ".len()..condition.len() - 1].as_bytes());
+            self.buffer
+                .extend_from_slice(condition["(not ".len()..condition.len() - 1].as_bytes());
         } else {
             let operator = if query.conjunction { " and " } else { " or " };
-            self.buffer.extend_from_slice(query.conditions.join(operator).as_bytes());
+            self.buffer
+                .extend_from_slice(query.conditions.join(operator).as_bytes());
         }
     }
 
@@ -786,7 +789,7 @@ impl<'a> Serializer<'a> {
         match stmt {
             CssStmt::RuleSet { selector, body, .. } => {
                 self.write_indentation();
-                self.write_selector_list(&*selector.as_selector_list());
+                self.write_selector_list(&selector.as_selector_list());
 
                 self.write_children(body)?;
             }
