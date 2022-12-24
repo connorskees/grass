@@ -4,6 +4,7 @@ use crate::ast::CssStmt;
 #[allow(dead_code)]
 pub(crate) struct UnknownAtRule {
     pub name: String,
+    // pub super_selector: Selector,
     pub params: String,
     pub body: Vec<CssStmt>,
 

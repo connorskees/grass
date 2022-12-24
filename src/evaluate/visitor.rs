@@ -1176,7 +1176,7 @@ impl<'a> Visitor<'a> {
             }
 
             self.extender.add_extension(
-                super_selector.clone().into_selector(),
+                super_selector.clone().into_selector().0,
                 compound.components.first().unwrap(),
                 &extend_rule,
                 &self.media_queries,

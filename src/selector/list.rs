@@ -84,6 +84,10 @@ impl SelectorList {
         }
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.components.is_empty()
+    }
+
     /// Returns a `SassScript` list that represents this selector.
     ///
     /// This has the same format as a list returned by `selector-parse()`.

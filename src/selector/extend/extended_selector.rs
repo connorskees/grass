@@ -7,7 +7,7 @@ use std::{
     rc::Rc,
 };
 
-use crate::selector::{SelectorList};
+use crate::selector::{Selector, SelectorList};
 
 #[derive(Debug, Clone)]
 pub(crate) struct ExtendedSelector(Rc<RefCell<SelectorList>>);
@@ -41,11 +41,11 @@ impl ExtendedSelector {
         (*self.0).borrow().is_invisible()
     }
 
-    pub fn into_selector(self) -> SelectorList {
-        match Rc::try_unwrap(self.0) {
+    pub fn into_selector(self) -> Selector {
+        Selector(match Rc::try_unwrap(self.0) {
             Ok(v) => v.into_inner(),
             Err(v) => v.borrow().clone(),
-        }
+        })
     }
 
     pub fn as_selector_list(&self) -> impl Deref<Target = SelectorList> + '_ {

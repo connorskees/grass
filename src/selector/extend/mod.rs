@@ -1132,7 +1132,7 @@ impl ExtensionStore {
         new_extensions: &HashMap<SimpleSelector, IndexMap<ComplexSelector, Extension>>,
     ) {
         for mut selector in selectors {
-            let old_value = selector.clone().into_selector();
+            let old_value = selector.clone().into_selector().0;
             selector.set_inner(self.extend_list(
                 old_value.clone(),
                 Some(new_extensions),
@@ -1151,7 +1151,7 @@ impl ExtensionStore {
 
             // If no extends actually happened (for example becaues unification
             // failed), we don't need to re-register the selector.
-            let selector_as_selector = selector.clone().into_selector();
+            let selector_as_selector = selector.clone().into_selector().0;
             if old_value == selector_as_selector {
                 continue;
             }
