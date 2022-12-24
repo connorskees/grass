@@ -1,4 +1,6 @@
-use crate::{builtin::builtin_imports::*, value::SassNumber};
+use crate::builtin::builtin_imports::*;
+
+use super::rgb::{parse_channels, ParsedChannels};
 
 pub(crate) fn blackness(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
@@ -96,12 +98,33 @@ fn hwb_inner(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Valu
     ))))
 }
 
-pub(crate) fn hwb(args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
+pub(crate) fn hwb(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(4)?;
 
-    if args.is_empty() {
-        return Err(("Missing argument $channels.", args.span()).into());
-    }
+    if args.len() == 0 || args.len() == 1 {
+        match parse_channels(
+            "hwb",
+            &["hue", "whiteness", "blackness"],
+            args.get_err(0, "channels")?,
+            visitor,
+            args.span(),
+        )? {
+            ParsedChannels::String(s) => {
+                Err((format!("Expected numeric channels, got {}", s), args.span()).into())
+            }
+            ParsedChannels::List(list) => {
+                let args = ArgumentResult {
+                    positional: list,
+                    named: BTreeMap::new(),
+                    separator: ListSeparator::Comma,
+                    span: args.span(),
+                    touched: BTreeSet::new(),
+                };
 
-    hwb_inner(args, visitor)
+                hwb_inner(args, visitor)
+            }
+        }
+    } else {
+        hwb_inner(args, visitor)
+    }
 }

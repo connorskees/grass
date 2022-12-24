@@ -1,10 +1,4 @@
-use std::collections::{BTreeMap, BTreeSet};
-
-use crate::{
-    builtin::builtin_imports::*,
-    serializer::inspect_number,
-    value::{fuzzy_round, SassNumber},
-};
+use crate::{builtin::builtin_imports::*, serializer::inspect_number, value::fuzzy_round};
 
 pub(crate) fn function_string(
     name: &'static str,

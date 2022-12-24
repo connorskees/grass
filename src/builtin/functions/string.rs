@@ -1,4 +1,4 @@
-use crate::{builtin::builtin_imports::*, value::SassNumber};
+use crate::builtin::builtin_imports::*;
 
 pub(crate) fn to_upper_case(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;

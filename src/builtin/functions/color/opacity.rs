@@ -1,4 +1,4 @@
-use crate::{builtin::builtin_imports::*, value::SassNumber};
+use crate::builtin::builtin_imports::*;
 
 /// Check if `s` matches the regex `^[a-zA-Z]+\s*=`
 fn is_ms_filter(s: &str) -> bool {

@@ -81,6 +81,11 @@ test!(
     "@use \"sass:color\";\na {\n  color: color.hwb(60, 20%, 100%);\n}\n",
     "a {\n  color: #2b2b2b;\n}\n"
 );
+test!(
+    one_arg_with_slash,
+    "@use \"sass:color\";\na {\n  color: color.hwb(180 30% 40% / 0);\n}\n",
+    "a {\n  color: rgba(77, 153, 153, 0);\n}\n"
+);
 error!(
     hwb_whiteness_missing_pct,
     "@use \"sass:color\";\na {\n  color: color.hwb(0, 0, 100);\n}\n",

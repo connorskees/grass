@@ -24,5 +24,5 @@ mod builtin_imports {
         value::{CalculationArg, Number, SassFunction, SassMap, SassNumber, Value},
     };
 
-    pub(crate) use std::cmp::Ordering;
+    pub(crate) use std::{cmp::Ordering, collections::{BTreeMap, BTreeSet}};
 }
