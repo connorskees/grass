@@ -1,7 +1,4 @@
-use std::{
-    fmt,
-    ops::{Div, Mul},
-};
+use std::fmt;
 
 use crate::interner::InternedString;
 
@@ -118,7 +115,20 @@ pub(crate) fn are_any_convertible(units1: &[Unit], units2: &[Unit]) -> bool {
         }
     }
 
-    return false;
+    false
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub(crate) enum UnitKind {
+    Absolute,
+    FontRelative,
+    ViewportRelative,
+    Angle,
+    Time,
+    Frequency,
+    Resolution,
+    Other,
+    None,
 }
 
 impl Unit {
@@ -144,30 +154,6 @@ impl Unit {
         let (numer, denom) = self.numer_and_denom();
 
         Self::new(denom, numer)
-    }
-}
-
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub(crate) enum UnitKind {
-    Absolute,
-    FontRelative,
-    ViewportRelative,
-    Angle,
-    Time,
-    Frequency,
-    Resolution,
-    Other,
-    None,
-}
-
-impl Unit {
-    fn simplify(self) -> Self {
-        match self {
-            Unit::Complex { mut numer, denom } if denom.is_empty() && numer.len() == 1 => {
-                numer.pop().unwrap()
-            }
-            _ => self,
-        }
     }
 
     pub fn is_complex(&self) -> bool {

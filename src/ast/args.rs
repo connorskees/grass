@@ -294,9 +294,9 @@ impl ArgumentResult {
             .into_iter()
             .enumerate()
             .filter(|(idx, _)| !touched.contains(idx))
-            .map(|(_, a)| Spanned {
-                node: a,
-                span: span,
+            .map(|(_, node)| Spanned {
+                node,
+                span,
             })
             .collect();
 

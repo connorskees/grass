@@ -41,7 +41,7 @@ impl<'a> Lexer<'a> {
         self.buf
             .get(self.cursor.saturating_sub(1))
             .copied()
-            .unwrap_or(self.buf.last().copied().unwrap())
+            .unwrap_or_else(|| self.buf.last().copied().unwrap())
             .pos
     }
 
@@ -49,7 +49,7 @@ impl<'a> Lexer<'a> {
         self.buf
             .get(self.cursor)
             .copied()
-            .unwrap_or(self.buf.last().copied().unwrap())
+            .unwrap_or_else(|| self.buf.last().copied().unwrap())
             .pos
     }
 

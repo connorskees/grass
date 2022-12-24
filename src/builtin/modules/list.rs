@@ -5,8 +5,8 @@ use crate::builtin::{
     modules::Module,
 };
 
-// todo: tests
-fn slash(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
+// todo: write tests for this
+fn slash(mut args: ArgumentResult, _visitor: &mut Visitor) -> SassResult<Value> {
     args.min_args(1)?;
 
     let span = args.span();

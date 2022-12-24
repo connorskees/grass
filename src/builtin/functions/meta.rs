@@ -351,7 +351,7 @@ pub(crate) fn keywords(mut args: ArgumentResult, visitor: &mut Visitor) -> SassR
         }
     };
 
-    return Ok(Value::Map(SassMap::new_with(
+    Ok(Value::Map(SassMap::new_with(
         args.into_keywords()
             .into_iter()
             .map(|(name, val)| {
@@ -361,7 +361,7 @@ pub(crate) fn keywords(mut args: ArgumentResult, visitor: &mut Visitor) -> SassR
                 )
             })
             .collect(),
-    )));
+    )))
 }
 
 pub(crate) fn declare(f: &mut GlobalFunctionMap) {

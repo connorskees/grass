@@ -70,12 +70,10 @@ pub(crate) fn fuzzy_round(number: f64) -> f64 {
         } else {
             number.ceil()
         }
+    } else if fuzzy_less_than_or_equals(number % 1.0, 0.5) {
+        number.floor()
     } else {
-        if fuzzy_less_than_or_equals(number % 1.0, 0.5) {
-            number.floor()
-        } else {
-            number.ceil()
-        }
+        number.ceil()
     }
 }
 

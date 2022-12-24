@@ -13,7 +13,6 @@ use crate::builtin::{
     modules::Module,
 };
 use crate::serializer::serialize_calculation_arg;
-use crate::value::SassNumber;
 
 fn load_css(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<()> {
     args.max_args(2)?;
@@ -54,7 +53,7 @@ fn load_css(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<()> {
             };
 
             if values.contains_key(&name) {
-                // todo: test
+                // todo: write test for this
                 return Err((
                     format!("The variable {name} was configured twice."),
                     key.span,
@@ -81,7 +80,7 @@ fn load_css(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<()> {
         },
     )?;
 
-    Visitor::assert_configuration_is_empty(configuration, true)?;
+    Visitor::assert_configuration_is_empty(&configuration, true)?;
 
     Ok(())
     // var callableNode = _callableNode!;
@@ -210,7 +209,7 @@ fn calc_args(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Valu
     Ok(Value::List(args, ListSeparator::Comma, Brackets::None))
 }
 
-fn calc_name(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
+fn calc_name(mut args: ArgumentResult, _visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
 
     let calc = match args.get_err(0, "calc")? {

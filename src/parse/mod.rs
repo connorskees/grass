@@ -370,7 +370,6 @@ impl<'a, 'b> Parser<'a, 'b> {
             return self.parse_single_interpolation();
         }
 
-        let start = self.toks.cursor();
         let mut buffer = Interpolation::new();
         self.expect_char('(')?;
         buffer.add_char('(');
@@ -846,7 +845,6 @@ impl<'a, 'b> Parser<'a, 'b> {
             return Ok(None);
         }
 
-        let start = self.toks.cursor();
         let mut buffer = Interpolation::new();
 
         loop {
@@ -1226,8 +1224,8 @@ impl<'a, 'b> Parser<'a, 'b> {
         }))
     }
 
-    fn parse_moz_document_rule(&mut self, name: Interpolation) -> SassResult<AstStmt> {
-        todo!()
+    fn _parse_moz_document_rule(&mut self, _name: Interpolation) -> SassResult<AstStmt> {
+        todo!("special cased @-moz-document not yet implemented")
     }
 
     fn unknown_at_rule(&mut self, name: Interpolation) -> SassResult<AstStmt> {
@@ -1262,7 +1260,7 @@ impl<'a, 'b> Parser<'a, 'b> {
     fn try_supports_operation(
         &mut self,
         interpolation: &Interpolation,
-        start: usize,
+        _start: usize,
     ) -> SassResult<Option<AstSupportsCondition>> {
         if interpolation.contents.len() != 1 {
             return Ok(None);
@@ -1311,7 +1309,7 @@ impl<'a, 'b> Parser<'a, 'b> {
     fn supports_declaration_value(
         &mut self,
         name: AstExpr,
-        start: usize,
+        _start: usize,
     ) -> SassResult<AstSupportsCondition> {
         let value = match &name {
             AstExpr::String(StringExpr(text, QuoteKind::None), ..)
@@ -1442,8 +1440,6 @@ impl<'a, 'b> Parser<'a, 'b> {
     }
 
     fn parse_supports_condition(&mut self) -> SassResult<AstSupportsCondition> {
-        let start = self.toks.cursor();
-
         if self.scan_identifier("not", false)? {
             self.whitespace()?;
             return Ok(AstSupportsCondition::Negation(Box::new(
@@ -1614,7 +1610,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         self.parse_string()
     }
 
-    fn use_namespace(&mut self, url: &Path, start: usize) -> SassResult<Option<String>> {
+    fn use_namespace(&mut self, url: &Path, _start: usize) -> SassResult<Option<String>> {
         if self.scan_identifier("as", false)? {
             self.whitespace()?;
             return Ok(if self.scan_char('*') {
@@ -2602,6 +2598,8 @@ impl<'a, 'b> Parser<'a, 'b> {
             post_colon_whitespace.is_empty() && self.looking_at_interpolated_identifier();
 
         let before_decl = self.toks.cursor();
+        // we use loop as effectively a `goto`
+        #[allow(clippy::never_loop)]
         let value = loop {
             let value = self.parse_expression(None, None, None);
 
@@ -2619,7 +2617,11 @@ impl<'a, 'b> Parser<'a, 'b> {
                 break value?;
             }
 
-            self.expect_statement_separator(None);
+            // todo: complex logic for whether we rethrow here
+            #[allow(unused_must_use)]
+            {
+                self.expect_statement_separator(None);
+            }
 
             if !could_be_selector {
                 break value?;
@@ -2758,7 +2760,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         existing_buffer: Option<Interpolation>,
         start: Option<usize>,
     ) -> SassResult<AstStmt> {
-        let start = start.unwrap_or(self.toks.cursor());
+        let start = start.unwrap_or_else(|| self.toks.cursor());
 
         self.flags.set(ContextFlags::IS_USE_ALLOWED, false);
         let mut interpolation = self.parse_style_rule_selector()?;
@@ -2913,7 +2915,7 @@ impl<'a, 'b> Parser<'a, 'b> {
         namespace: Option<Spanned<Identifier>>,
         start: Option<usize>,
     ) -> SassResult<AstVariableDecl> {
-        let start = start.unwrap_or(self.toks.cursor());
+        let start = start.unwrap_or_else(|| self.toks.cursor());
 
         let name = self.parse_variable_name()?;
 
@@ -3782,32 +3784,3 @@ impl<'a, 'b> Parser<'a, 'b> {
         Ok(None)
     }
 }
-
-// impl<'a, 'b> Parser<'a, 'b> {
-//     fn debug(&self, message: &Spanned<Cow<'a, str>>) {
-//         if self.options.quiet {
-//             return;
-//         }
-//         let loc = self.map.look_up_span(message.span);
-//         eprintln!(
-//             "{}:{} DEBUG: {}",
-//             loc.file.name(),
-//             loc.begin.line + 1,
-//             message.node
-//         );
-//     }
-
-//     fn warn(&self, message: &Spanned<Cow<'a, str>>) {
-//         if self.options.quiet {
-//             return;
-//         }
-//         let loc = self.map.look_up_span(message.span);
-//         eprintln!(
-//             "Warning: {}\n    {} {}:{}  root stylesheet",
-//             message.node,
-//             loc.file.name(),
-//             loc.begin.line + 1,
-//             loc.begin.column + 1
-//         );
-//     }
-// }

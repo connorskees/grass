@@ -77,7 +77,8 @@ pub(crate) struct Serializer<'a> {
     options: &'a Options<'a>,
     inspect: bool,
     indent_width: usize,
-    quote: bool,
+    // todo: use this field
+    _quote: bool,
     buffer: Vec<u8>,
     map: &'a CodeMap,
     span: Span,
@@ -87,7 +88,7 @@ impl<'a> Serializer<'a> {
     pub fn new(options: &'a Options<'a>, map: &'a CodeMap, inspect: bool, span: Span) -> Self {
         Self {
             inspect,
-            quote: true,
+            _quote: true,
             indentation: 0,
             indent_width: 2,
             options,
@@ -278,26 +279,24 @@ impl<'a> Serializer<'a> {
             } else {
                 self.write_rgb(color);
             }
-        } else {
-            if color.format != ColorFormat::Infer {
-                match &color.format {
-                    ColorFormat::Rgb => self.write_rgb(color),
-                    ColorFormat::Hsl => self.write_hsl(color),
-                    ColorFormat::Literal(text) => self.buffer.extend_from_slice(text.as_bytes()),
-                    ColorFormat::Infer => unreachable!(),
-                }
-                // Always emit generated transparent colors in rgba format. This works
-                // around an IE bug. See sass/sass#1782.
-            } else if name.is_some() && !fuzzy_equals(color.alpha().0, 0.0) {
-                self.buffer.extend_from_slice(name.unwrap().as_bytes());
-            } else if fuzzy_equals(color.alpha().0, 1.0) {
-                self.buffer.push(b'#');
-                self.write_hex_component(red as u32);
-                self.write_hex_component(green as u32);
-                self.write_hex_component(blue as u32);
-            } else {
-                self.write_rgb(color);
+        } else if color.format != ColorFormat::Infer {
+            match &color.format {
+                ColorFormat::Rgb => self.write_rgb(color),
+                ColorFormat::Hsl => self.write_hsl(color),
+                ColorFormat::Literal(text) => self.buffer.extend_from_slice(text.as_bytes()),
+                ColorFormat::Infer => unreachable!(),
             }
+            // Always emit generated transparent colors in rgba format. This works
+            // around an IE bug. See sass/sass#1782.
+        } else if name.is_some() && !fuzzy_equals(color.alpha().0, 0.0) {
+            self.buffer.extend_from_slice(name.unwrap().as_bytes());
+        } else if fuzzy_equals(color.alpha().0, 1.0) {
+            self.buffer.push(b'#');
+            self.write_hex_component(red as u32);
+            self.write_hex_component(green as u32);
+            self.write_hex_component(blue as u32);
+        } else {
+            self.write_rgb(color);
         }
     }
 
@@ -494,6 +493,8 @@ impl<'a> Serializer<'a> {
         Ok(())
     }
 
+    #[allow(dead_code)]
+    // todo: we will need this when we refactor writing unknown rules
     fn requires_semicolon(stmt: &CssStmt) -> bool {
         match stmt {
             CssStmt::Style(_) | CssStmt::Import(_, _) => true,

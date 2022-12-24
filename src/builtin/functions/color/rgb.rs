@@ -168,7 +168,7 @@ pub(crate) fn percentage_or_unitless(
         return Err((
             format!(
                 "${name}: Expected {} to have no units or \"%\".",
-                inspect_number(&number, visitor.parser.options, span)?
+                inspect_number(number, visitor.parser.options, span)?
             ),
             span,
         )

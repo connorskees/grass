@@ -1,5 +1,4 @@
 use std::{
-    borrow::Cow,
     cell::{Cell, RefCell},
     collections::{BTreeMap, BTreeSet, HashSet},
     ffi::OsStr,
@@ -21,7 +20,7 @@ use crate::{
             declare_module_color, declare_module_list, declare_module_map, declare_module_math,
             declare_module_meta, declare_module_selector, declare_module_string, Module,
         },
-        Builtin, GLOBAL_FUNCTIONS,
+        GLOBAL_FUNCTIONS,
     },
     common::{unvendor, BinaryOp, Identifier, ListSeparator, QuoteKind, UnaryOp},
     error::{SassError, SassResult},
@@ -29,8 +28,8 @@ use crate::{
     lexer::Lexer,
     parse::{AtRootQueryParser, KeyframesSelectorParser, Parser},
     selector::{
-        ComplexSelectorComponent, ExtendRule, ExtendedSelector, ExtensionStore, Selector,
-        SelectorList, SelectorParser,
+        ComplexSelectorComponent, ExtendRule, ExtendedSelector, ExtensionStore, SelectorList,
+        SelectorParser,
     },
     token::Token,
     utils::{to_sentence, trim_ascii},
@@ -152,9 +151,9 @@ impl<'a> Visitor<'a> {
         Ok(())
     }
 
-    pub fn finish(mut self) -> SassResult<Vec<CssStmt>> {
+    pub fn finish(mut self) -> Vec<CssStmt> {
         self.import_nodes.append(&mut self.css_tree.finish());
-        Ok(self.import_nodes)
+        self.import_nodes
     }
 
     fn visit_return_rule(&mut self, ret: AstReturn) -> SassResult<Option<Value>> {
@@ -234,8 +233,8 @@ impl<'a> Visitor<'a> {
             )?;
 
             Self::remove_used_configuration(
-                adjusted_config,
-                Arc::clone(&new_configuration),
+                &adjusted_config,
+                &new_configuration,
                 &forward_rule
                     .configuration
                     .iter()
@@ -260,7 +259,7 @@ impl<'a> Visitor<'a> {
                 }
             }
 
-            Self::assert_configuration_is_empty(new_configuration, false)?;
+            Self::assert_configuration_is_empty(&new_configuration, false)?;
         } else {
             self.configuration = adjusted_config;
             let url = forward_rule.url.clone();
@@ -326,8 +325,8 @@ impl<'a> Visitor<'a> {
     }
 
     fn remove_used_configuration(
-        upstream: Arc<RefCell<Configuration>>,
-        downstream: Arc<RefCell<Configuration>>,
+        upstream: &Arc<RefCell<Configuration>>,
+        downstream: &Arc<RefCell<Configuration>>,
         except: &HashSet<Identifier>,
     ) {
         let mut names_to_remove = Vec::new();
@@ -490,7 +489,8 @@ impl<'a> Visitor<'a> {
         &mut self,
         stylesheet: StyleSheet,
         configuration: Option<Arc<RefCell<Configuration>>>,
-        names_in_errors: bool,
+        // todo: different errors based on this
+        _names_in_errors: bool,
     ) -> SassResult<Arc<RefCell<Module>>> {
         let env = Environment::new();
         let mut extension_store = ExtensionStore::new(self.parser.span_before);
@@ -609,7 +609,7 @@ impl<'a> Visitor<'a> {
     }
 
     fn visit_use_rule(&mut self, use_rule: AstUseRule) -> SassResult<()> {
-        let mut configuration = if use_rule.configuration.is_empty() {
+        let configuration = if use_rule.configuration.is_empty() {
             Arc::new(RefCell::new(Configuration::empty()))
         } else {
             let mut values = BTreeMap::new();
@@ -645,16 +645,16 @@ impl<'a> Visitor<'a> {
             },
         )?;
 
-        Self::assert_configuration_is_empty(configuration, false)?;
+        Self::assert_configuration_is_empty(&configuration, false)?;
 
         Ok(())
     }
 
     pub fn assert_configuration_is_empty(
-        config: Arc<RefCell<Configuration>>,
+        config: &Arc<RefCell<Configuration>>,
         name_in_error: bool,
     ) -> SassResult<()> {
-        let config = (*config).borrow();
+        let config = (**config).borrow();
         // By definition, implicit configurations are allowed to only use a subset
         // of their values.
         if config.is_empty() || config.is_implicit() {
@@ -676,7 +676,7 @@ impl<'a> Visitor<'a> {
         for import in import_rule.imports {
             match import {
                 AstImport::Sass(dynamic_import) => {
-                    self.visit_dynamic_import_rule(dynamic_import)?;
+                    self.visit_dynamic_import_rule(&dynamic_import)?;
                 }
                 AstImport::Plain(static_import) => self.visit_static_import_rule(static_import)?,
             }
@@ -690,6 +690,7 @@ impl<'a> Visitor<'a> {
     ///
     /// <https://sass-lang.com/documentation/at-rules/import#finding-the-file>
     /// <https://sass-lang.com/documentation/at-rules/import#load-paths>
+    #[allow(clippy::cognitive_complexity)]
     fn find_import(&self, path: &Path) -> Option<PathBuf> {
         let path_buf = if path.is_absolute() {
             path.into()
@@ -699,9 +700,6 @@ impl<'a> Visitor<'a> {
                 .unwrap_or_else(|| Path::new(""))
                 .join(path)
         };
-
-        let dirname = path_buf.parent().unwrap_or_else(|| Path::new(""));
-        let basename = path_buf.file_name().unwrap_or_else(|| OsStr::new(".."));
 
         macro_rules! try_path {
             ($path:expr) => {
@@ -765,7 +763,7 @@ impl<'a> Visitor<'a> {
     fn import_like_node(
         &mut self,
         url: &str,
-        for_import: bool,
+        _for_import: bool,
         span: Span,
     ) -> SassResult<StyleSheet> {
         if let Some(name) = self.find_import(url.as_ref()) {
@@ -808,7 +806,7 @@ impl<'a> Visitor<'a> {
         self.import_like_node(url, for_import, span)
     }
 
-    fn visit_dynamic_import_rule(&mut self, dynamic_import: AstSassImport) -> SassResult<()> {
+    fn visit_dynamic_import_rule(&mut self, dynamic_import: &AstSassImport) -> SassResult<()> {
         let stylesheet = self.load_style_sheet(&dynamic_import.url, true, dynamic_import.span)?;
 
         // If the imported stylesheet doesn't use any modules, we can inject its
@@ -916,9 +914,7 @@ impl<'a> Visitor<'a> {
             return CssTree::ROOT;
         }
 
-        let root = nodes[innermost_contiguous.unwrap()];
-
-        root
+        nodes[innermost_contiguous.unwrap()]
     }
 
     fn visit_at_root_rule(&mut self, mut at_root_rule: AstAtRootRule) -> SassResult<Option<Value>> {
@@ -983,7 +979,7 @@ impl<'a> Visitor<'a> {
             return Ok(None);
         }
 
-        let mut inner_copy = if !included.is_empty() {
+        let inner_copy = if !included.is_empty() {
             let inner_copy = self
                 .css_tree
                 .get(*included.first().unwrap())
@@ -1017,30 +1013,22 @@ impl<'a> Visitor<'a> {
 
         let body = mem::take(&mut at_root_rule.children);
 
-        self.with_scope_for_at_root::<SassResult<()>>(
-            &at_root_rule,
-            inner_copy,
-            &query,
-            &included,
-            |visitor| {
-                for stmt in body {
-                    let result = visitor.visit_stmt(stmt)?;
-                    debug_assert!(result.is_none());
-                }
+        self.with_scope_for_at_root::<SassResult<()>>(inner_copy, &query, |visitor| {
+            for stmt in body {
+                let result = visitor.visit_stmt(stmt)?;
+                debug_assert!(result.is_none());
+            }
 
-                Ok(())
-            },
-        )?;
+            Ok(())
+        })?;
 
         Ok(None)
     }
 
     fn with_scope_for_at_root<T>(
         &mut self,
-        at_root_rule: &AstAtRootRule,
         new_parent_idx: Option<CssTreeIdx>,
         query: &AtRootQuery,
-        included: &[CssTreeIdx],
         callback: impl FnOnce(&mut Self) -> T,
     ) -> T {
         let old_parent = self.parent;
@@ -1268,7 +1256,7 @@ impl<'a> Visitor<'a> {
 
         let merged_sources = match &merged_queries {
             Some(merged_queries) if merged_queries.is_empty() => return Ok(None),
-            Some(merged_queries) => {
+            Some(..) => {
                 let mut set = IndexSet::new();
                 set.extend(self.media_query_sources.clone().unwrap().into_iter());
                 set.extend(self.media_queries.clone().unwrap().into_iter());
@@ -1456,7 +1444,7 @@ impl<'a> Visitor<'a> {
         Ok(None)
     }
 
-    fn emit_warning(&mut self, message: Cow<str>, span: Span) {
+    fn emit_warning(&mut self, message: &str, span: Span) {
         if self.parser.options.quiet {
             return;
         }
@@ -1475,7 +1463,7 @@ impl<'a> Visitor<'a> {
             let value = self.visit_expr(warn_rule.value)?;
             let message =
                 value.to_css_string(warn_rule.span, self.parser.options.is_compressed())?;
-            self.emit_warning(message, warn_rule.span);
+            self.emit_warning(&message, warn_rule.span);
         }
 
         Ok(())
@@ -1912,7 +1900,8 @@ impl<'a> Visitor<'a> {
     fn perform_interpolation(
         &mut self,
         interpolation: Interpolation,
-        warn_for_color: bool,
+        // todo check to emit warning if this is true
+        _warn_for_color: bool,
     ) -> SassResult<String> {
         let span = self.parser.span_before;
 
@@ -1940,6 +1929,7 @@ impl<'a> Visitor<'a> {
         self.serialize(result, quote, span)
     }
 
+    #[allow(clippy::unused_self)]
     fn without_slash(&mut self, v: Value) -> Value {
         match v {
             Value::Dimension(SassNumber { .. }) if v.as_slash().is_some() => {
@@ -2104,7 +2094,7 @@ impl<'a> Visitor<'a> {
             name.push_str("()");
         }
 
-        let val = self.with_environment::<SassResult<V>>(env.new_closure(), |visitor| {
+        self.with_environment::<SassResult<V>>(env.new_closure(), |visitor| {
             visitor.with_scope(false, true, move |visitor| {
                 func.arguments().verify(
                     evaluated.positional.len(),
@@ -2204,9 +2194,7 @@ impl<'a> Visitor<'a> {
 
                 Err((format!("No {argument_word} named {argument_names}."), span).into())
             })
-        });
-
-        val
+        })
     }
 
     pub(crate) fn run_function_callable(
@@ -2229,7 +2217,7 @@ impl<'a> Visitor<'a> {
         span: Span,
     ) -> SassResult<Value> {
         match func {
-            SassFunction::Builtin(func, name) => {
+            SassFunction::Builtin(func, _name) => {
                 let evaluated = self.eval_maybe_args(arguments, span)?;
                 let val = func.0(evaluated, self)?;
                 Ok(self.without_slash(val))
@@ -2435,7 +2423,7 @@ impl<'a> Visitor<'a> {
                 }
                 _ => self.visit_calculation_value(*inner, in_min_or_max, span)?,
             },
-            AstExpr::String(string_expr, span) => {
+            AstExpr::String(string_expr, _span) => {
                 debug_assert!(string_expr.1 == QuoteKind::None);
                 CalculationArg::String(self.perform_interpolation(string_expr.0, false)?)
             }
@@ -2608,7 +2596,7 @@ impl<'a> Visitor<'a> {
             let key = self.visit_expr(pair.0.node)?;
             let value = self.visit_expr(pair.1)?;
 
-            if let Some(old_value) = sass_map.get_ref(&key) {
+            if sass_map.get_ref(&key).is_some() {
                 return Err(("Duplicate key.", key_span).into());
             }
 
@@ -2938,7 +2926,6 @@ impl<'a> Visitor<'a> {
 
                 Ok(())
             })?;
-            name = self.declaration_name.take().unwrap();
             self.declaration_name = old_declaration_name;
         }
 

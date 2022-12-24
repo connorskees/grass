@@ -58,7 +58,7 @@ impl<'c> ValueParser<'c> {
             }
         }
 
-        let before_bracket = if value_parser.inside_bracketed_list {
+        if value_parser.inside_bracketed_list {
             let start = parser.toks.cursor();
 
             parser.expect_char('[')?;
@@ -669,7 +669,6 @@ impl<'c> ValueParser<'c> {
     }
 
     fn parse_map(
-        &mut self,
         parser: &mut Parser,
         first: Spanned<AstExpr>,
     ) -> SassResult<Spanned<AstExpr>> {
@@ -726,7 +725,7 @@ impl<'c> ValueParser<'c> {
             parser
                 .flags
                 .set(ContextFlags::IN_PARENS, was_in_parentheses);
-            return self.parse_map(parser, first);
+            return Self::parse_map(parser, first);
         }
 
         if !parser.scan_char(',') {
@@ -830,7 +829,7 @@ impl<'c> ValueParser<'c> {
                 ..
             })
         ) {
-            let color = self.parse_hex_color_contents(parser)?;
+            let color = Self::parse_hex_color_contents(parser)?;
             return Ok(AstExpr::Color(Box::new(color)).span(parser.span_before));
         }
 
@@ -838,7 +837,7 @@ impl<'c> ValueParser<'c> {
         let ident = parser.parse_interpolated_identifier()?;
         if is_hex_color(&ident) {
             parser.toks.set_cursor(after_hash);
-            let color = self.parse_hex_color_contents(parser)?;
+            let color = Self::parse_hex_color_contents(parser)?;
             return Ok(AstExpr::Color(Box::new(color)).span(parser.span_before));
         }
 
@@ -865,7 +864,7 @@ impl<'c> ValueParser<'c> {
         }
     }
 
-    fn parse_hex_color_contents(&mut self, parser: &mut Parser) -> SassResult<Color> {
+    fn parse_hex_color_contents(parser: &mut Parser) -> SassResult<Color> {
         let start = parser.toks.cursor();
 
         let digit1 = Self::parse_hex_digit(parser)?;
@@ -918,7 +917,7 @@ impl<'c> ValueParser<'c> {
 
     fn parse_unary_operation(&mut self, parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
         let op_span = parser.toks.current_span();
-        let operator = self.expect_unary_operator(parser)?;
+        let operator = Self::expect_unary_operator(parser)?;
 
         if parser.is_plain_css && operator != UnaryOp::Div {
             return Err(("Operators aren't allowed in plain CSS.", op_span).into());
@@ -932,7 +931,7 @@ impl<'c> ValueParser<'c> {
             .span(op_span.merge(parser.toks.current_span())))
     }
 
-    fn expect_unary_operator(&mut self, parser: &mut Parser) -> SassResult<UnaryOp> {
+    fn expect_unary_operator(parser: &mut Parser) -> SassResult<UnaryOp> {
         let span = parser.toks.current_span();
         Ok(match parser.toks.next() {
             Some(Token { kind: '+', .. }) => UnaryOp::Plus,
@@ -942,7 +941,7 @@ impl<'c> ValueParser<'c> {
         })
     }
 
-    fn consume_natural_number(&mut self, parser: &mut Parser) -> SassResult<()> {
+    fn consume_natural_number(parser: &mut Parser) -> SassResult<()> {
         if !matches!(
             parser.toks.next(),
             Some(Token {
@@ -976,7 +975,7 @@ impl<'c> ValueParser<'c> {
         let after_sign = parser.toks.cursor();
 
         if !parser.toks.next_char_is('.') {
-            self.consume_natural_number(parser)?;
+            Self::consume_natural_number(parser)?;
         }
 
         Self::try_decimal(parser, parser.toks.cursor() != after_sign)?;
@@ -1263,7 +1262,7 @@ impl<'c> ValueParser<'c> {
             namespace: Some(namespace),
             name: Identifier::from(name),
             arguments: Box::new(args),
-            span: span,
+            span,
         })
         .span(span))
     }
@@ -1693,7 +1692,7 @@ impl<'c> ValueParser<'c> {
                         },
                         rhs: Box::new(rhs.node),
                         allows_slash: false,
-                        span: span,
+                        span,
                     }
                     .span(span);
                 }

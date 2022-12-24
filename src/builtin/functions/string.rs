@@ -98,7 +98,7 @@ pub(crate) fn str_slice(mut args: ArgumentResult, visitor: &mut Visitor) -> Sass
     let start = if start == 0 {
         1
     } else if start > 0 {
-        (start as usize).min(str_len + 1) as usize
+        (start as usize).min(str_len + 1)
     } else {
         (start + str_len as i32 + 1).max(1) as usize
     };

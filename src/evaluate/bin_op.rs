@@ -9,7 +9,7 @@ use crate::{
     error::SassResult,
     serializer::serialize_number,
     unit::Unit,
-    value::{Number, SassNumber, Value},
+    value::{SassNumber, Value},
     Options,
 };
 
@@ -371,7 +371,7 @@ pub(crate) fn mul(left: Value, right: Value, options: &Options, span: Span) -> S
                 }
 
                 let n = SassNumber {
-                    num: num,
+                    num,
                     unit,
                     as_slash: None,
                 } * SassNumber {
@@ -480,7 +480,7 @@ pub(crate) fn div(left: Value, right: Value, options: &Options, span: Span) -> S
                 }
 
                 let n = SassNumber {
-                    num: num,
+                    num,
                     unit,
                     as_slash: None,
                 } / SassNumber {

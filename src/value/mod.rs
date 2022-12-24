@@ -433,10 +433,6 @@ impl Value {
         }
     }
 
-    pub fn is_color(&self) -> bool {
-        matches!(self, Value::Color(..))
-    }
-
     pub fn is_special_function(&self) -> bool {
         match self {
             Value::String(s, QuoteKind::None) => is_special_function(s),
@@ -614,7 +610,7 @@ impl Value {
                     .collect::<SassResult<Vec<String>>>()?
                     .join(", ")
             )),
-            Value::Dimension(n) => Cow::Owned(inspect_number(&n, &Options::default(), span)?),
+            Value::Dimension(n) => Cow::Owned(inspect_number(n, &Options::default(), span)?),
             Value::ArgList(args) if args.is_empty() => Cow::Borrowed("()"),
             Value::ArgList(args) if args.len() == 1 => Cow::Owned(format!(
                 "({},)",

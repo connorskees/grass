@@ -148,13 +148,9 @@ impl SassNumber {
                 };
             }
         } else if other_numer.is_empty() {
-            if other_denom.is_empty() {
-                return SassNumber {
-                    num: Number(num),
-                    unit: Unit::new(numer_units, other_denom),
-                    as_slash: None,
-                };
-            } else if denom_units.is_empty() && !are_any_convertible(&numer_units, &other_denom) {
+            if other_denom.is_empty()
+                || (denom_units.is_empty() && !are_any_convertible(&numer_units, &other_denom))
+            {
                 return SassNumber {
                     num: Number(num),
                     unit: Unit::new(numer_units, other_denom),

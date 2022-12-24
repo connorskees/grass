@@ -408,10 +408,10 @@ impl Color {
         let m2 = if scaled_lightness <= 0.5 {
             scaled_lightness * (scaled_saturation + 1.0)
         } else {
-            scaled_lightness + scaled_saturation - scaled_lightness * scaled_saturation
+            scaled_lightness.mul_add(-scaled_saturation, scaled_lightness + scaled_saturation)
         };
 
-        let m1 = scaled_lightness * 2.0 - m2;
+        let m1 = scaled_lightness.mul_add(2.0, -m2);
 
         let red = fuzzy_round(Self::hue_to_rgb(m1, m2, scaled_hue + 1.0 / 3.0) * 255.0);
         let green = fuzzy_round(Self::hue_to_rgb(m1, m2, scaled_hue) * 255.0);
@@ -429,7 +429,7 @@ impl Color {
         }
 
         if hue < 1.0 / 6.0 {
-            m1 + (m2 - m1) * hue * 6.0
+            ((m2 - m1) * hue).mul_add(6.0, m1)
         } else if hue < 1.0 / 2.0 {
             m2
         } else if hue < 2.0 / 3.0 {

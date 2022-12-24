@@ -16,6 +16,7 @@ use crate::{
 };
 
 #[derive(Debug, Clone)]
+#[allow(unused)]
 pub(crate) struct AstSilentComment {
     pub text: String,
     pub span: Span,
@@ -25,6 +26,7 @@ pub(crate) struct AstSilentComment {
 pub(crate) struct AstPlainCssImport {
     pub url: Interpolation,
     pub modifiers: Option<Interpolation>,
+    #[allow(unused)]
     pub span: Span,
 }
 
@@ -58,6 +60,7 @@ pub(crate) struct AstFor {
 #[derive(Debug, Clone)]
 pub(crate) struct AstReturn {
     pub val: AstExpr,
+    #[allow(unused)]
     pub span: Span,
 }
 
@@ -187,6 +190,7 @@ pub(crate) struct AstUnknownAtRule {
     pub name: Interpolation,
     pub value: Option<Interpolation>,
     pub children: Option<Vec<AstStmt>>,
+    #[allow(unused)]
     pub span: Span,
 }
 
@@ -201,6 +205,7 @@ pub(crate) struct AstExtendRule {
 pub(crate) struct AstAtRootRule {
     pub children: Vec<AstStmt>,
     pub query: Option<Interpolation>,
+    #[allow(unused)]
     pub span: Span,
 }
 
@@ -294,6 +299,7 @@ pub(crate) struct ConfiguredVariable {
 #[derive(Debug, Clone)]
 pub(crate) struct Configuration {
     pub values: Arc<dyn MapView<Value = ConfiguredValue>>,
+    #[allow(unused)]
     pub original_config: Option<Arc<RefCell<Self>>>,
     pub span: Option<Span>,
 }
@@ -386,6 +392,7 @@ impl Configuration {
         self.values.is_empty()
     }
 
+    #[allow(unused)]
     pub fn original_config(config: Arc<RefCell<Configuration>>) -> Arc<RefCell<Configuration>> {
         match (*config).borrow().original_config.as_ref() {
             Some(v) => Arc::clone(v),

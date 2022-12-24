@@ -31,6 +31,7 @@ mod string;
 #[derive(Debug, Clone)]
 pub(crate) struct ForwardedModule {
     inner: Arc<RefCell<Module>>,
+    #[allow(dead_code)]
     forward_rule: AstForwardRule,
 }
 
@@ -79,11 +80,15 @@ impl ModuleScope {
 }
 
 #[derive(Debug, Clone)]
+#[allow(clippy::large_enum_variant)]
 pub(crate) enum Module {
     Environment {
         scope: ModuleScope,
+        #[allow(dead_code)]
         upstream: Vec<Module>,
+        #[allow(dead_code)]
         extension_store: ExtensionStore,
+        #[allow(dead_code)]
         env: Environment,
     },
     Builtin {
@@ -223,7 +228,7 @@ impl Module {
     fn scope(&self) -> ModuleScope {
         match self {
             Self::Builtin { scope } | Self::Environment { scope, .. } => scope.clone(),
-            Self::Forwarded(forwarded) => (*forwarded.inner).borrow().scope().clone(),
+            Self::Forwarded(forwarded) => (*forwarded.inner).borrow().scope(),
         }
     }
 

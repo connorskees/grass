@@ -20,8 +20,7 @@ grass input.scss
 ```
 */
 
-#![allow(unused)]
-#![warn(clippy::all, clippy::pedantic, clippy::nursery, clippy::cargo)]
+#![warn(clippy::all, clippy::nursery, clippy::cargo)]
 #![deny(missing_debug_implementations)]
 #![allow(
     clippy::use_self,
@@ -253,19 +252,15 @@ fn from_string_with_file_name(input: String, file_name: &str, options: &Options)
     let mut map = CodeMap::new();
     let file = map.add_file(file_name.to_owned(), input);
     let empty_span = file.span.subspan(0, 0);
+    let mut lexer = Lexer::new_from_file(&file);
 
-    let mut parser = Parser {
-        toks: &mut Lexer::new_from_file(&file),
-        map: &mut map,
-        path: file_name.as_ref(),
-        is_plain_css: false,
-        is_indented: false,
-        span_before: empty_span,
-        flags: ContextFlags::empty(),
+    let mut parser = Parser::new(
+        &mut lexer,
+        &mut map,
         options,
-    };
-
-    parser.flags.set(ContextFlags::IS_USE_ALLOWED, true);
+        empty_span,
+        file_name.as_ref(),
+    );
 
     let stmts = match parser.__parse() {
         Ok(v) => v,
@@ -277,10 +272,7 @@ fn from_string_with_file_name(input: String, file_name: &str, options: &Options)
         Ok(_) => {}
         Err(e) => return Err(raw_to_parse_error(&map, *e, options.unicode_error_messages)),
     }
-    let stmts = match visitor.finish() {
-        Ok(v) => v,
-        Err(e) => return Err(raw_to_parse_error(&map, *e, options.unicode_error_messages)),
-    };
+    let stmts = visitor.finish();
 
     let mut serializer = Serializer::new(options, &map, false, empty_span);
 

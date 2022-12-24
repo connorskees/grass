@@ -594,7 +594,7 @@ fn atan2(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
     };
 
     Ok(Value::Dimension(SassNumber {
-        num: Number(y_num.0.atan2(x_num.0) * 180.0 / std::f64::consts::PI),
+        num: Number(y_num.0.atan2(x_num.0).to_degrees()),
         unit: Unit::Deg,
         as_slash: None,
     }))
