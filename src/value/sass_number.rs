@@ -28,6 +28,20 @@ pub(crate) fn conversion_factor(from: &Unit, to: &Unit) -> Option<f64> {
 }
 
 impl SassNumber {
+    pub fn has_comparable_units(&self, other_unit: &Unit) -> bool {
+        self.unit.comparable(other_unit)
+    }
+
+    /// Unlike [`SassNumber::has_comparable_units`], this considers `Unit::None`
+    /// to be compatible only with itself
+    pub fn has_compatible_units(&self, other_unit: &Unit) -> bool {
+        if (self.unit == Unit::None || *other_unit == Unit::None) && self.unit != *other_unit {
+            return false;
+        }
+
+        self.has_comparable_units(other_unit)
+    }
+
     pub fn multiply_units(&self, mut num: f64, other_unit: Unit) -> SassNumber {
         let (numer_units, denom_units) = self.unit.clone().numer_and_denom();
         let (other_numer, other_denom) = other_unit.numer_and_denom();

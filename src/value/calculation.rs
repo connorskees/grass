@@ -334,22 +334,18 @@ impl SassCalculation {
         let mut right = Self::simplify(right);
 
         if op == BinaryOp::Plus || op == BinaryOp::Minus {
-            let is_comparable = if in_min_or_max {
-                // todo:
-                // left.isComparableTo(right)
-                true
-            } else {
-                // left.hasCompatibleUnits(right)
-                true
-            };
             match (&left, &right) {
-                (CalculationArg::Number(num1), CalculationArg::Number(num2))
-                    if num1.is_comparable_to(num2) =>
+                (CalculationArg::Number(left), CalculationArg::Number(right))
+                    if if in_min_or_max {
+                        left.is_comparable_to(right)
+                    } else {
+                        left.has_compatible_units(&right.unit)
+                    } =>
                 {
                     if op == BinaryOp::Plus {
-                        return Ok(CalculationArg::Number(num1.clone() + num2.clone()));
+                        return Ok(CalculationArg::Number(left.clone() + right.clone()));
                     } else {
-                        return Ok(CalculationArg::Number(num1.clone() - num2.clone()));
+                        return Ok(CalculationArg::Number(left.clone() - right.clone()));
                     }
                 }
                 _ => {}
