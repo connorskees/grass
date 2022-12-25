@@ -42,6 +42,7 @@ a {
 - support "import-only" files
 - treat `@elseif` the same as `@else if`
 - implement division of non-comparable units and feature complete support for complex units
+- support 1 arg color.hwb()
 
 UPCOMING:
 
