@@ -1070,7 +1070,7 @@ impl<'a> Visitor<'a> {
         // todo:
         // if self.flags.in_unknown_at_rule() && !included.iter().any(|parent| parent is CssAtRule)
 
-        let res = callback(self);
+        let res = self.with_scope(false, true, callback);
 
         self.parent = old_parent;
 

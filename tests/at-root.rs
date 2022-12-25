@@ -207,6 +207,49 @@ test!(
     }",
     "@keyframes animation {}\nto {\n  color: red;\n}\n"
 );
+test!(
+    at_root_has_its_own_scope,
+    "$root_default: initial;
+    $root_implicit: initial;
+    $root_explicit: initial !global;
+
+    @at-root {
+        $root_implicit: outer;
+        $root_explicit: outer !global;
+        $root_default: outer !default;
+        $local_implicit: outer;
+        $local_explicit: outer !global;
+        $local_default: outer !default;
+
+        @at-root {
+            $root_implicit: inner;
+            $root_explicit: inner !global;
+            $root_default: inner !default;
+            $local_implicit: inner;
+            $local_explicit: inner !global;
+            $local_default: inner !default;
+        }
+    }
+
+    result {
+        root_default: $root_default;
+        root_implicit: $root_implicit;
+        root_explicit: $root_explicit;
+
+        @if variable-exists(local_default) {
+            local_default: $local_default;
+        }
+
+        @if variable-exists(local_implicit) {
+            local_implicit: $local_implicit;
+        }
+
+        @if variable-exists(local_explicit) {
+            local_explicit: $local_explicit;
+        }
+    }",
+    "result {\n  root_default: initial;\n  root_implicit: initial;\n  root_explicit: inner;\n  local_explicit: inner;\n}\n"
+);
 error!(
     missing_closing_curly_brace,
     "@at-root {", "Error: expected \"}\"."
