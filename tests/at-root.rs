@@ -250,6 +250,18 @@ test!(
     }",
     "result {\n  root_default: initial;\n  root_implicit: initial;\n  root_explicit: inner;\n  local_explicit: inner;\n}\n"
 );
+test!(
+    #[ignore = "we currently emit the empty unknown-at-rule"]
+    inside_style_inside_unknown_at_rule,
+    "@unknown {
+        .foo {
+            @at-root .bar {
+                a: b
+            }
+        }
+    }",
+    "@unknown {\n  .bar {\n    a: b;\n  }\n}\n"
+);
 error!(
     missing_closing_curly_brace,
     "@at-root {", "Error: expected \"}\"."
