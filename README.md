@@ -8,7 +8,7 @@ replacement to the Sass commandline executable.
 
 This crate aims to achieve complete feature parity with the `dart-sass` reference
 implementation. A deviation from the `dart-sass` implementation can be considered
-a bug except for in the case of error message and error spans.
+a bug except for in the case of error messages and error spans.
 
 [Documentation](https://docs.rs/grass/)  
 [crates.io](https://crates.io/crates/grass)
@@ -67,13 +67,16 @@ npm run sass-spec -- --impl=dart-sass --command '../target/release/grass'
 
 The spec runner does not work on Windows.
 
-These numbers come from a default run of the Sass specification as shown above.
+Using a modified version of the spec runner that ignores warnings and error spans (but does include error messages), we get the following results:
 
 ```
-2021-09-20
-PASSING: 4205
-FAILING: 2051
-TOTAL: 6256
+2022-12-26
+PASSING: 6024
+FAILING: 881
+TOTAL: 6905
 ```
+
+The majority of the failing tests are purely aesthetic, relating to whitespace
+around comments in expanded mode or error messages.
 
 <!-- todo: msrv 1.41.1 -->
