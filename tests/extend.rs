@@ -1965,6 +1965,13 @@ error!(
     }",
     ""
 );
+error!(
+    extend_complex_selector,
+    "a {
+        @extend a>b;
+    }",
+    "Error: complex selectors may not be extended."
+);
 
 // todo: extend_loop (massive test)
 // todo: extend tests in folders

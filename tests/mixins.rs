@@ -694,3 +694,10 @@ error!(
     ",
     "Error: Mixin doesn't accept a content block."
 );
+error!(
+    disallows_content_block_to_builtin_mixin,
+    r#"@use "sass:meta";
+
+    @include meta.load-css("") {}"#,
+    "Error: Mixin doesn't accept a content block."
+);

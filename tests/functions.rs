@@ -409,5 +409,14 @@ test!(
     }",
     "a {\n  color: before;\n}\n"
 );
+error!(
+    function_no_return,
+    "@function foo() {}
+
+    a {
+        color: foo();
+    }",
+    "Error: Function finished without @return."
+);
 
 // todo: return inside if, return inside while, return inside for

@@ -95,3 +95,10 @@ error!(
     }",
     r#"Error: Declarations whose names begin with "--" may not be nested"#
 );
+error!(
+    empty_value,
+    "a {
+        --color:#{null};
+    }",
+    "Error: Custom property values may not be empty."
+);

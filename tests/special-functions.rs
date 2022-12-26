@@ -251,6 +251,35 @@ test!(
     "a {\n  color: calc(1 + #{c});\n}\n",
     "a {\n  color: calc(1 + c);\n}\n"
 );
+test!(
+    progid_no_colon,
+    "a {\n  color: progid;\n}\n",
+    "a {\n  color: progid;\n}\n"
+);
+test!(
+    progid_no_colon_with_args,
+    "a {\n  color: progid();\n}\n",
+    "a {\n  color: progid();\n}\n"
+);
+test!(
+    can_add_s_and_ms,
+    "a {\n  color: calc(1s + 1ms);\n}\n",
+    "a {\n  color: 1.001s;\n}\n"
+);
+test!(
+    can_add_hz_and_khz,
+    "a {\n  color: calc(1Hz + 1kHz);\n}\n",
+    "a {\n  color: 1001Hz;\n}\n"
+);
+test!(
+    can_add_dpi_and_dppx,
+    "a {\n  color: calc(1dpi + 1dppx);\n}\n",
+    "a {\n  color: 97dpi;\n}\n"
+);
+error!(
+    nothing_after_last_arg,
+    "a { color: calc(1 + 1", r#"Error: expected "+", "-", "*", "/", or ")"."#
+);
 error!(
     progid_nothing_after,
     "a { color: progid:", "Error: expected \"(\"."

@@ -105,5 +105,18 @@ test!(
     "a {\n  @box-shadow : $btn-focus-box-shadow, // $btn-active-box-shadow;;\n}\n"
 );
 test!(contains_multiline_comment, "@foo /**/;\n", "@foo;\n");
+error!(
+    unknown_at_rule_inside_declaration_body,
+    "@mixin foo {
+        @foo;
+    }
+
+    a {
+        color: {
+            @include foo;
+        }
+    }",
+    "Error: At-rules may not be used within nested declarations."
+);
 
 // todo: test scoping in rule

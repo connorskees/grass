@@ -212,6 +212,16 @@ test!(
     "a {\n  color: unit((1rem/1px) / 1vh);\n}\n",
     "a {\n  color: \"rem/px*vh\";\n}\n"
 );
+test!(
+    complex_unit_empty_numerator_single_denom,
+    "a {\n  color: unit(1 / 1px);\n}\n",
+    "a {\n  color: \"px^-1\";\n}\n"
+);
+test!(
+    complex_unit_empty_numerator_multiple_denom,
+    "a {\n  color: unit(1 / (1px*1rem));\n}\n",
+    "a {\n  color: \"(px*rem)^-1\";\n}\n"
+);
 error!(
     display_single_div_with_none_numerator,
     "a {\n  color: (1 / 1em);\n}\n", "Error: 1em^-1 isn't a valid CSS value."
@@ -242,6 +252,47 @@ error!(
 error!(
     display_single_div_with_none_numerator_percent,
     "a {\n  color: (35 / 7%);\n}\n", "Error: 5%^-1 isn't a valid CSS value."
+);
+test!(
+    /// Verify the display implementation of all special-cased units
+    render_units,
+    "a {
+        color: 1px;
+        color: 1mm;
+        color: 1in;
+        color: 1cm;
+        color: 1q;
+        color: 1pt;
+        color: 1pc;
+        color: 1em;
+        color: 1rem;
+        color: 1lh;
+        color: 1%;
+        color: 1ex;
+        color: 1ch;
+        color: 1cap;
+        color: 1ic;
+        color: 1rlh;
+        color: 1vw;
+        color: 1vh;
+        color: 1vmin;
+        color: 1vmax;
+        color: 1vi;
+        color: 1vb;
+        color: 1deg;
+        color: 1grad;
+        color: 1rad;
+        color: 1turn;
+        color: 1s;
+        color: 1ms;
+        color: 1Hz;
+        color: 1kHz;
+        color: 1dpi;
+        color: 1dpcm;
+        color: 1dppx;
+        color: 1fr;
+        color: 1foo;
+    }", "a {\n  color: 1px;\n  color: 1mm;\n  color: 1in;\n  color: 1cm;\n  color: 1q;\n  color: 1pt;\n  color: 1pc;\n  color: 1em;\n  color: 1rem;\n  color: 1lh;\n  color: 1%;\n  color: 1ex;\n  color: 1ch;\n  color: 1cap;\n  color: 1ic;\n  color: 1rlh;\n  color: 1vw;\n  color: 1vh;\n  color: 1vmin;\n  color: 1vmax;\n  color: 1vi;\n  color: 1vb;\n  color: 1deg;\n  color: 1grad;\n  color: 1rad;\n  color: 1turn;\n  color: 1s;\n  color: 1ms;\n  color: 1Hz;\n  color: 1kHz;\n  color: 1dpi;\n  color: 1dpcm;\n  color: 1dppx;\n  color: 1fr;\n  color: 1foo;\n}\n"
 );
 
 macro_rules! test_unit_addition {

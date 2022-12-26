@@ -52,6 +52,10 @@ error!(
     use_empty_string,
     r#"@use "";"#, r#"Error: The default namespace "" is not a valid Sass identifier."#
 );
+error!(
+    configure_builtin_module,
+    r#"@use "sass:math" with ($e: 5);"#, r#"Error: Built-in modules can't be configured."#
+);
 test!(
     use_as,
     "@use \"sass:math\" as foo;

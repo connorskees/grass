@@ -137,3 +137,25 @@ test!(
     ""
 );
 test!(supports_empty_body, "@supports (a: b) {}", "");
+test!(
+    does_not_simplify_calculation_in_args,
+    "@supports (calc(1 + 1)) {
+        a {
+            color: red;
+        }
+    }",
+    "@supports (calc(1 + 1)) {\n  a {\n    color: red;\n  }\n}\n"
+);
+error!(
+    supports_inside_declaration_body,
+    "@mixin foo() {
+        @supports (foo) {}
+    }
+
+    a {
+        color: {
+            @include foo();
+        }
+    }",
+    "Error: Supports rules may not be used within nested declarations."
+);

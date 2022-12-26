@@ -239,3 +239,8 @@ test!(
     "a {\n  color: \"#foo\";\n}\n",
     "a {\n  color: \"#foo\";\n}\n"
 );
+test!(
+    escaped_newline_inside_string,
+    "a {\n  color: \"f\\\n oo\";\n}\n",
+    "a {\n  color: \"f oo\";\n}\n"
+);

@@ -300,6 +300,15 @@ test!(
     }",
     "@keyframes spinner-border {\n  to {\n    color: red;\n  }\n}\na {\n  color: red;\n}\n"
 );
+test!(
+    percent_selector_leading_plus,
+    "@keyframes foo {
+        +5% {
+            color: red;
+        }
+    }",
+    "@keyframes foo {\n  +5% {\n    color: red;\n  }\n}\n"
+);
 error!(
     invalid_escape_in_place_of_e,
     "@keyframes foo {
@@ -308,6 +317,15 @@ error!(
       }
     }",
     r#"Error: expected "%"."#
+);
+error!(
+    percent_selector_no_number_after_e,
+    "@keyframes foo {
+        5e% {
+            color: red;
+        }
+    }",
+    r#"Error: Expected digit."#
 );
 
 // todo: span for this

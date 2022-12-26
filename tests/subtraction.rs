@@ -284,13 +284,18 @@ test!(
 );
 test!(
     sub_nan_left,
-    "a {\n  left:0/0-0;\n}\n",
+    "a {\n  left: (0/0) - 0;\n}\n",
     "a {\n  left: NaN;\n}\n"
 );
 test!(
     sub_nan_right,
-    "a {\n  left:0-0/0;\n}\n",
+    "a {\n  left: 0 - (0/0);\n}\n",
     "a {\n  left: NaN;\n}\n"
+);
+test!(
+    true_minus_null,
+    "a {\n  color: true - null;\n}\n",
+    "a {\n  color: true-;\n}\n"
 );
 error!(
     number_minus_color,
@@ -331,4 +336,12 @@ error!(
 error!(
     num_minus_calculation,
     "a {color: 1 - calc(1rem + 1px);}", r#"Error: Undefined operation "1 - calc(1rem + 1px)"."#
+);
+error!(
+    color_minus_number,
+    "a {color: red - 1;}", r#"Error: Undefined operation "red - 1"."#
+);
+error!(
+    map_minus_null,
+    "a {color: inspect((a: b) - null);}", r#"Error: (a: b) isn't a valid CSS value."#
 );

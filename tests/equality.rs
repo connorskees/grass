@@ -260,3 +260,10 @@ test!(
     }",
     "a {\n  color: false;\n}\n"
 );
+test!(
+    number_equality_is_fuzzy,
+    "a {
+      color: .9999999999999999999999999999999==.99999999999999999999999999999998;
+    }",
+    "a {\n  color: true;\n}\n"
+);

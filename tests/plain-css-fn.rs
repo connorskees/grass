@@ -81,5 +81,12 @@ test!(
     "a {\n  color: or(foo);\n}\n",
     "a {\n  color: or(foo);\n}\n"
 );
-
-// todo: @function and($a) {} a { color: and(foo) }
+error!(
+    denies_keyword_arguments_to_interpolated_function,
+    "a {\n  color: f#{o}o($a: red);\n}\n",
+    "Error: Plain CSS functions don't support keyword arguments."
+);
+error!(
+    denies_function_named_after_keyword,
+    "@function and($a) {}", "Error: Invalid function name."
+);

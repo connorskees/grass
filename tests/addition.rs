@@ -434,3 +434,8 @@ test!(
     "a {\n  color: (0/0) + (0/0);\n}\n",
     "a {\n  color: NaN;\n}\n"
 );
+test!(null_plus_null, "a {\n  color: null + null;\n}\n", "");
+error!(
+    color_plus_number,
+    "a {\n  color: red + 1;\n}\n", r#"Error: Undefined operation "red + 1"."#
+);

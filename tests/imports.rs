@@ -284,6 +284,22 @@ fn imports_import_only_scss() {
 }
 
 #[test]
+fn imports_sass_file() {
+    let mut fs = TestFs::new();
+
+    fs.add_file("a.sass", "a\n\tcolor: red\n");
+
+    let input = r#"
+        @import "a";
+    "#;
+
+    assert_eq!(
+        "a {\n  color: red;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
+    );
+}
+
+#[test]
 fn imports_absolute_scss() {
     let mut fs = TestFs::new();
 

@@ -279,3 +279,11 @@ test!(
     "a {\n  color: foo / calc(1vh + 1px);\n}\n",
     "a {\n  color: foo/calc(1vh + 1px);\n}\n"
 );
+error!(
+    color_div_color,
+    "a {\n  color: red / green;\n}\n", r#"Error: Undefined operation "red / green"."#
+);
+error!(
+    color_div_number,
+    "a {\n  color: red / 1;\n}\n", r#"Error: Undefined operation "red / 1"."#
+);

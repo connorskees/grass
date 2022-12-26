@@ -233,3 +233,12 @@ error!(
     invalid_keyword_after_first_number,
     "@for $i from 1 FOO 3 {}", "Error: Expected \"to\" or \"through\"."
 );
+test!(
+    to_equals_from,
+    "@for $i from 5 to 5 {
+        a {
+            color: red;
+        }
+    }",
+    ""
+);

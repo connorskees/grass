@@ -180,3 +180,7 @@ error!(
     "a {\n  color: calc(1rem + 1px) % calc(1rem + 1px);\n}\n",
     r#"Error: Undefined operation "calc(1rem + 1px) % calc(1rem + 1px)"."#
 );
+error!(
+    number_mod_color,
+    "a {\n  color: 5 % red;\n}\n", r#"Error: Undefined operation "5 % red"."#
+);
