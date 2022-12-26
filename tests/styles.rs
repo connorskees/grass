@@ -33,8 +33,12 @@ test!(
 );
 test!(
     removes_empty_outer_styles,
-    "a {\n  b {\n    color: red;\n  }\n",
+    "a {\n  b {\n    color: red;\n    }\n  }\n",
     "a b {\n  color: red;\n}\n"
+);
+error!(
+    removes_empty_outer_styles_missing_closing_curly_brace,
+    "a {\n  b {\n    color: red;\n  }\n", "Error: expected \"}\"."
 );
 test!(removes_empty_styles, "a {}\n", "");
 test!(
@@ -200,20 +204,74 @@ test!(
 );
 // todo: many other strange edge cases like `.style: val` (dealing with ambiguity is hard for very little gain)
 test!(
-    #[ignore = "strange edge case"]
     style_begins_with_asterisk_without_whitespace,
     "a {\n  *zoom: 1;\n}\n",
     "a {\n  *zoom: 1;\n}\n"
 );
 test!(
-    #[ignore = "strange edge case"]
     style_begins_with_asterisk_with_whitespace,
     "a {\n  *   zoom: 1;\n}\n",
     "a {\n  *   zoom: 1;\n}\n"
 );
 test!(
-    #[ignore = "strange edge case"]
     style_begins_with_asterisk_with_newline,
     "a {\n  * \n  zoom: 1;\n}\n",
     "a {\n  * \n  zoom: 1;\n}\n"
+);
+test!(
+    no_newline_after_child_ruleset_ends_with_silent_child,
+    "a {
+        position: relative;
+
+        b {}
+    }
+
+    c {
+        white-space: nowrap;
+    }",
+    "a {\n  position: relative;\n}\nc {\n  white-space: nowrap;\n}\n"
+);
+error!(
+    media_inside_nested_declaration,
+    "a {
+        color: {
+            @media foo {}
+        }
+    }",
+    "Error: This at-rule is not allowed here."
+);
+error!(
+    media_inside_nested_declaration_from_mixin,
+    "@mixin foo() {
+        @media foo {}
+    }
+
+    a {
+        color: {
+            @include foo();
+        }
+    }",
+    "Error: Media rules may not be used within nested declarations."
+);
+error!(
+    ruleset_inside_nested_declaration_from_mixin,
+    "@mixin foo() {
+        a {}
+    }
+
+    a {
+        color: {
+            @include foo();
+        }
+    }",
+    "Error: Style rules may not be used within nested declarations."
+);
+error!(
+    style_at_the_toplevel_from_mixin,
+    "@mixin foo() {
+        color: red;
+    }
+
+    @include foo();",
+    "Error: Declarations may only be used within style rules."
 );

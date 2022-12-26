@@ -34,6 +34,21 @@ test!(
     "a {\n  color: 1;\n}\n"
 );
 test!(
+    unary_plus_on_integer,
+    "a {\n  color: +1;\n}\n",
+    "a {\n  color: 1;\n}\n"
+);
+test!(
+    unary_plus_on_decimal,
+    "a {\n  color: +1.5;\n}\n",
+    "a {\n  color: 1.5;\n}\n"
+);
+test!(
+    unary_plus_on_scientific,
+    "a {\n  color: +1e5;\n}\n",
+    "a {\n  color: 100000;\n}\n"
+);
+test!(
     many_nines_not_rounded,
     "a {\n  color: 0.999999;\n}\n",
     "a {\n  color: 0.999999;\n}\n"
@@ -167,17 +182,17 @@ test!(
                 + 999999999999999999
                 + 999999999999999999
                 + 999999999999999999;\n}\n",
-    "a {\n  color: 9999999999999999990;\n}\n"
+    "a {\n  color: 10000000000000000000;\n}\n"
 );
 test!(
     number_overflow_from_multiplication,
     "a {\n  color: 999999999999999999 * 10;\n}\n",
-    "a {\n  color: 9999999999999999990;\n}\n"
+    "a {\n  color: 10000000000000000000;\n}\n"
 );
 test!(
     number_overflow_from_division,
     "a {\n  color: (999999999999999999 / .1);\n}\n",
-    "a {\n  color: 9999999999999999990;\n}\n"
+    "a {\n  color: 10000000000000000000;\n}\n"
 );
 test!(
     bigint_is_equal_to_smallint,
@@ -189,13 +204,17 @@ test!(
     }",
     "a {\n  color: 0;\n  color: true;\n}\n"
 );
-// we use arbitrary precision, so it is necessary to limit the size of exponents
-// in order to prevent hangs
-error!(
-    scientific_notation_too_positive,
-    "a {\n  color: 1e100;\n}\n", "Error: Exponent too large."
+test!(
+    #[ignore = "weird rounding issues"]
+    scientific_notation_very_large_positive,
+    "a {\n  color: 1e100;\n}\n", "a {\n  color: 10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000;\n}\n"
+);
+test!(
+    scientific_notation_very_large_negative,
+    "a {\n  color: 1e-100;\n}\n",
+    "a {\n  color: 0;\n}\n"
 );
 error!(
-    scientific_notation_too_negative,
-    "a {\n  color: 1e-100;\n}\n", "Error: Exponent too negative."
+    scientific_notation_no_number_after_decimal,
+    "a {\n  color: 1.e3;\n}\n", "Error: Expected digit."
 );

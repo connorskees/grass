@@ -1,68 +1,84 @@
-use std::cmp::Ordering;
+use std::{borrow::Cow, cmp::Ordering};
 
 use codemap::{Span, Spanned};
 
 use crate::{
     color::Color,
-    common::{Brackets, ListSeparator, Op, QuoteKind},
+    common::{BinaryOp, Brackets, ListSeparator, QuoteKind},
     error::SassResult,
-    lexer::Lexer,
-    parse::Parser,
+    evaluate::Visitor,
     selector::Selector,
+    serializer::{inspect_number, serialize_calculation, serialize_color, serialize_number},
     unit::Unit,
-    utils::hex_char_for,
-    {Cow, Token},
+    utils::{hex_char_for, is_special_function},
+    Options, OutputStyle,
 };
 
-use css_function::is_special_function;
+pub(crate) use arglist::ArgList;
+pub(crate) use calculation::*;
 pub(crate) use map::SassMap;
-pub(crate) use number::Number;
-pub(crate) use sass_function::SassFunction;
+pub(crate) use number::*;
+pub(crate) use sass_function::{SassFunction, UserDefinedFunction};
+pub(crate) use sass_number::{conversion_factor, SassNumber};
 
-pub(crate) mod css_function;
+mod arglist;
+mod calculation;
 mod map;
 mod number;
 mod sass_function;
+mod sass_number;
 
 #[derive(Debug, Clone)]
 pub(crate) enum Value {
-    Important,
     True,
     False,
     Null,
-    /// A `None` value for `Number` indicates a `NaN` value
-    Dimension(Option<Number>, Unit, bool),
+    Dimension(SassNumber),
     List(Vec<Value>, ListSeparator, Brackets),
+    // todo: benchmark unboxing this, now that it's smaller
     Color(Box<Color>),
     String(String, QuoteKind),
     Map(SassMap),
-    ArgList(Vec<Spanned<Value>>),
+    ArgList(ArgList),
     /// Returned by `get-function()`
+    // todo: benchmark boxing this (function refs are infrequent)
     FunctionRef(SassFunction),
+    Calculation(SassCalculation),
 }
 
 impl PartialEq for Value {
     fn eq(&self, other: &Self) -> bool {
         match self {
+            Value::Calculation(calc1) => match other {
+                Value::Calculation(calc2) => calc1 == calc2,
+                _ => false,
+            },
             Value::String(s1, ..) => match other {
                 Value::String(s2, ..) => s1 == s2,
                 _ => false,
             },
-            Value::Dimension(Some(n), unit, _) => match other {
-                Value::Dimension(Some(n2), unit2, _) => {
+            Value::Dimension(SassNumber {
+                num: n,
+                unit,
+                as_slash: _,
+            }) => match other {
+                Value::Dimension(SassNumber {
+                    num: n2,
+                    unit: unit2,
+                    as_slash: _,
+                }) => {
                     if !unit.comparable(unit2) {
-                        false
-                    } else if unit == unit2 {
-                        n == n2
-                    } else if unit == &Unit::None || unit2 == &Unit::None {
-                        false
-                    } else {
-                        n == &n2.clone().convert(unit2, unit)
+                        return false;
                     }
+
+                    if (*unit2 == Unit::None || *unit == Unit::None) && unit != unit2 {
+                        return false;
+                    }
+
+                    *n == n2.convert(unit2, unit)
                 }
                 _ => false,
             },
-            Value::Dimension(None, ..) => false,
             Value::List(list1, sep1, brackets1) => match other {
                 Value::List(list2, sep2, brackets2) => {
                     if sep1 != sep2 || brackets1 != brackets2 || list1.len() != list2.len() {
@@ -81,7 +97,6 @@ impl PartialEq for Value {
             Value::Null => matches!(other, Value::Null),
             Value::True => matches!(other, Value::True),
             Value::False => matches!(other, Value::False),
-            Value::Important => matches!(other, Value::Important),
             Value::FunctionRef(fn1) => {
                 if let Value::FunctionRef(fn2) = other {
                     fn1 == fn2
@@ -110,8 +125,8 @@ impl PartialEq for Value {
                         return false;
                     }
 
-                    for (el1, el2) in list1.iter().zip(list2) {
-                        if &el1.node != el2 {
+                    for (el1, el2) in list1.elems.iter().zip(list2) {
+                        if el1 != el2 {
                             return false;
                         }
                     }
@@ -193,45 +208,87 @@ fn visit_quoted_string(buf: &mut String, force_double_quote: bool, string: &str)
 }
 
 impl Value {
+    pub fn with_slash(
+        self,
+        numerator: SassNumber,
+        denom: SassNumber,
+        span: Span,
+    ) -> SassResult<Self> {
+        let mut number = self.assert_number(span)?;
+        number.as_slash = Some(Box::new((numerator, denom)));
+        Ok(Value::Dimension(number))
+    }
+
+    pub fn assert_number(self, span: Span) -> SassResult<SassNumber> {
+        match self {
+            Value::Dimension(n) => Ok(n),
+            _ => Err((format!("{} is not a number.", self.inspect(span)?), span).into()),
+        }
+    }
+
+    pub fn assert_number_with_name(self, name: &str, span: Span) -> SassResult<SassNumber> {
+        match self {
+            Value::Dimension(n) => Ok(n),
+            _ => Err((
+                format!("${name}: {} is not a number.", self.inspect(span)?),
+                span,
+            )
+                .into()),
+        }
+    }
+
+    pub fn assert_color_with_name(self, name: &str, span: Span) -> SassResult<Color> {
+        match self {
+            Value::Color(c) => Ok(*c),
+            _ => Err((
+                format!("${name}: {} is not a color.", self.inspect(span)?),
+                span,
+            )
+                .into()),
+        }
+    }
+
+    // todo: rename is_blank
     pub fn is_null(&self) -> bool {
         match self {
             Value::Null => true,
             Value::String(i, QuoteKind::None) if i.is_empty() => true,
-            Value::List(v, _, Brackets::Bracketed) if v.is_empty() => false,
+            Value::List(_, _, Brackets::Bracketed) => false,
             Value::List(v, ..) => v.iter().map(Value::is_null).all(|f| f),
-            Value::ArgList(v, ..) if v.is_empty() => false,
-            Value::ArgList(v, ..) => v.iter().map(|v| v.node.is_null()).all(|f| f),
+            Value::ArgList(v, ..) => v.is_null(),
+            _ => false,
+        }
+    }
+
+    pub fn is_empty_list(&self) -> bool {
+        match self {
+            Value::List(v, ..) => v.is_empty(),
+            Value::Map(m) => m.is_empty(),
+            Value::ArgList(v) => v.elems.is_empty(),
             _ => false,
         }
     }
 
     pub fn to_css_string(&self, span: Span, is_compressed: bool) -> SassResult<Cow<'static, str>> {
         Ok(match self {
-            Value::Important => Cow::const_str("!important"),
-            Value::Dimension(num, unit, _) => match unit {
-                Unit::Mul(..) | Unit::Div(..) => {
-                    if let Some(num) = num {
-                        return Err((
-                            format!(
-                                "{}{} isn't a valid CSS value.",
-                                num.to_string(is_compressed),
-                                unit
-                            ),
-                            span,
-                        )
-                            .into());
-                    }
-
-                    return Err((format!("NaN{} isn't a valid CSS value.", unit), span).into());
-                }
-                _ => {
-                    if let Some(num) = num {
-                        Cow::owned(format!("{}{}", num.to_string(is_compressed), unit))
-                    } else {
-                        Cow::owned(format!("NaN{}", unit))
-                    }
-                }
-            },
+            Value::Calculation(calc) => Cow::Owned(serialize_calculation(
+                calc,
+                &Options::default().style(if is_compressed {
+                    OutputStyle::Compressed
+                } else {
+                    OutputStyle::Expanded
+                }),
+                span,
+            )?),
+            Value::Dimension(n) => Cow::Owned(serialize_number(
+                n,
+                &Options::default().style(if is_compressed {
+                    OutputStyle::Compressed
+                } else {
+                    OutputStyle::Expanded
+                }),
+                span,
+            )?),
             Value::Map(..) | Value::FunctionRef(..) => {
                 return Err((
                     format!("{} isn't a valid CSS value.", self.inspect(span)?),
@@ -240,7 +297,7 @@ impl Value {
                     .into())
             }
             Value::List(vals, sep, brackets) => match brackets {
-                Brackets::None => Cow::owned(
+                Brackets::None => Cow::Owned(
                     vals.iter()
                         .filter(|x| !x.is_null())
                         .map(|x| x.to_css_string(span, is_compressed))
@@ -251,7 +308,7 @@ impl Value {
                             sep.as_str()
                         }),
                 ),
-                Brackets::Bracketed => Cow::owned(format!(
+                Brackets::Bracketed => Cow::Owned(format!(
                     "[{}]",
                     vals.iter()
                         .filter(|x| !x.is_null())
@@ -264,7 +321,15 @@ impl Value {
                         }),
                 )),
             },
-            Value::Color(c) => Cow::owned(c.to_string()),
+            Value::Color(c) => Cow::Owned(serialize_color(
+                c,
+                &Options::default().style(if is_compressed {
+                    OutputStyle::Compressed
+                } else {
+                    OutputStyle::Expanded
+                }),
+                span,
+            )),
             Value::String(string, QuoteKind::None) => {
                 let mut after_newline = false;
                 let mut buf = String::with_capacity(string.len());
@@ -285,23 +350,24 @@ impl Value {
                         }
                     }
                 }
-                Cow::owned(buf)
+                Cow::Owned(buf)
             }
             Value::String(string, QuoteKind::Quoted) => {
                 let mut buf = String::with_capacity(string.len());
                 visit_quoted_string(&mut buf, false, string);
-                Cow::owned(buf)
+                Cow::Owned(buf)
             }
-            Value::True => Cow::const_str("true"),
-            Value::False => Cow::const_str("false"),
-            Value::Null => Cow::const_str(""),
+            Value::True => Cow::Borrowed("true"),
+            Value::False => Cow::Borrowed("false"),
+            Value::Null => Cow::Borrowed(""),
             Value::ArgList(args) if args.is_empty() => {
                 return Err(("() isn't a valid CSS value.", span).into());
             }
-            Value::ArgList(args) => Cow::owned(
-                args.iter()
+            Value::ArgList(args) => Cow::Owned(
+                args.elems
+                    .iter()
                     .filter(|x| !x.is_null())
-                    .map(|a| a.node.to_css_string(span, is_compressed))
+                    .map(|a| a.to_css_string(span, is_compressed))
                     .collect::<SassResult<Vec<Cow<'static, str>>>>()?
                     .join(if is_compressed {
                         ListSeparator::Comma.as_compressed_str()
@@ -333,7 +399,8 @@ impl Value {
     pub fn kind(&self) -> &'static str {
         match self {
             Value::Color(..) => "color",
-            Value::String(..) | Value::Important => "string",
+            Value::String(..) => "string",
+            Value::Calculation(..) => "calculation",
             Value::Dimension(..) => "number",
             Value::List(..) => "list",
             Value::FunctionRef(..) => "function",
@@ -344,13 +411,46 @@ impl Value {
         }
     }
 
-    pub fn is_color(&self) -> bool {
-        matches!(self, Value::Color(..))
+    pub fn as_slash(&self) -> Option<Box<(SassNumber, SassNumber)>> {
+        match self {
+            Value::Dimension(SassNumber { as_slash, .. }) => as_slash.clone(),
+            _ => None,
+        }
+    }
+
+    pub fn without_slash(self) -> Self {
+        match self {
+            Value::Dimension(SassNumber {
+                num,
+                unit,
+                as_slash: _,
+            }) => Value::Dimension(SassNumber {
+                num,
+                unit,
+                as_slash: None,
+            }),
+            _ => self,
+        }
     }
 
     pub fn is_special_function(&self) -> bool {
         match self {
             Value::String(s, QuoteKind::None) => is_special_function(s),
+            Value::Calculation(..) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_var(&self) -> bool {
+        match self {
+            Value::String(s, QuoteKind::None) => {
+                if s.len() < "var(--_)".len() {
+                    return false;
+                }
+
+                s.starts_with("var(")
+            }
+            Value::Calculation(..) => true,
             _ => false,
         }
     }
@@ -363,21 +463,27 @@ impl Value {
         }
     }
 
-    pub fn cmp(&self, other: &Self, span: Span, op: Op) -> SassResult<Ordering> {
+    pub fn cmp(&self, other: &Self, span: Span, op: BinaryOp) -> SassResult<Option<Ordering>> {
         Ok(match self {
-            Value::Dimension(None, ..) => todo!(),
-            Value::Dimension(Some(num), unit, _) => match &other {
-                Value::Dimension(None, ..) => todo!(),
-                Value::Dimension(Some(num2), unit2, _) => {
+            Value::Dimension(SassNumber {
+                num,
+                unit,
+                as_slash: _,
+            }) => match &other {
+                Value::Dimension(SassNumber {
+                    num: num2,
+                    unit: unit2,
+                    as_slash: _,
+                }) => {
                     if !unit.comparable(unit2) {
                         return Err(
                             (format!("Incompatible units {} and {}.", unit2, unit), span).into(),
                         );
                     }
                     if unit == unit2 || unit == &Unit::None || unit2 == &Unit::None {
-                        num.cmp(num2)
+                        num.partial_cmp(num2)
                     } else {
-                        num.cmp(&num2.clone().convert(unit2, unit))
+                        num.partial_cmp(&num2.convert(unit2, unit))
                     }
                 }
                 _ => {
@@ -414,8 +520,16 @@ impl Value {
                 Value::String(s2, ..) => s1 != s2,
                 _ => true,
             },
-            Value::Dimension(Some(n), unit, _) => match other {
-                Value::Dimension(Some(n2), unit2, _) => {
+            Value::Dimension(SassNumber {
+                num: n,
+                unit,
+                as_slash: _,
+            }) if !n.is_nan() => match other {
+                Value::Dimension(SassNumber {
+                    num: n2,
+                    unit: unit2,
+                    as_slash: _,
+                }) if !n2.is_nan() => {
                     if !unit.comparable(unit2) {
                         true
                     } else if unit == unit2 {
@@ -423,7 +537,7 @@ impl Value {
                     } else if unit == &Unit::None || unit2 == &Unit::None {
                         true
                     } else {
-                        n != &n2.clone().convert(unit2, unit)
+                        n != &n2.convert(unit2, unit)
                     }
                 }
                 _ => true,
@@ -449,23 +563,31 @@ impl Value {
 
     // TODO:
     // https://github.com/sass/dart-sass/blob/d4adea7569832f10e3a26d0e420ae51640740cfb/lib/src/ast/sass/expression/list.dart#L39
+    // todo: is this actually fallible?
     pub fn inspect(&self, span: Span) -> SassResult<Cow<'static, str>> {
         Ok(match self {
+            Value::Calculation(calc) => {
+                Cow::Owned(serialize_calculation(calc, &Options::default(), span)?)
+            }
             Value::List(v, _, brackets) if v.is_empty() => match brackets {
-                Brackets::None => Cow::const_str("()"),
-                Brackets::Bracketed => Cow::const_str("[]"),
+                Brackets::None => Cow::Borrowed("()"),
+                Brackets::Bracketed => Cow::Borrowed("[]"),
             },
             Value::List(v, sep, brackets) if v.len() == 1 => match brackets {
                 Brackets::None => match sep {
-                    ListSeparator::Space => v[0].inspect(span)?,
-                    ListSeparator::Comma => Cow::owned(format!("({},)", v[0].inspect(span)?)),
+                    ListSeparator::Space | ListSeparator::Slash | ListSeparator::Undecided => {
+                        v[0].inspect(span)?
+                    }
+                    ListSeparator::Comma => Cow::Owned(format!("({},)", v[0].inspect(span)?)),
                 },
                 Brackets::Bracketed => match sep {
-                    ListSeparator::Space => Cow::owned(format!("[{}]", v[0].inspect(span)?)),
-                    ListSeparator::Comma => Cow::owned(format!("[{},]", v[0].inspect(span)?)),
+                    ListSeparator::Space | ListSeparator::Slash | ListSeparator::Undecided => {
+                        Cow::Owned(format!("[{}]", v[0].inspect(span)?))
+                    }
+                    ListSeparator::Comma => Cow::Owned(format!("[{},]", v[0].inspect(span)?)),
                 },
             },
-            Value::List(vals, sep, brackets) => Cow::owned(match brackets {
+            Value::List(vals, sep, brackets) => Cow::Owned(match brackets {
                 Brackets::None => vals
                     .iter()
                     .map(|x| x.inspect(span))
@@ -479,40 +601,37 @@ impl Value {
                         .join(sep.as_str()),
                 ),
             }),
-            Value::FunctionRef(f) => Cow::owned(format!("get-function(\"{}\")", f.name())),
-            Value::Null => Cow::const_str("null"),
-            Value::Map(map) => Cow::owned(format!(
+            Value::FunctionRef(f) => Cow::Owned(format!("get-function(\"{}\")", f.name())),
+            Value::Null => Cow::Borrowed("null"),
+            Value::Map(map) => Cow::Owned(format!(
                 "({})",
                 map.iter()
                     .map(|(k, v)| Ok(format!("{}: {}", k.inspect(span)?, v.inspect(span)?)))
                     .collect::<SassResult<Vec<String>>>()?
                     .join(", ")
             )),
-            Value::Dimension(Some(num), unit, _) => {
-                Cow::owned(format!("{}{}", num.inspect(), unit))
-            }
-            Value::Dimension(None, unit, ..) => Cow::owned(format!("NaN{}", unit)),
-            Value::ArgList(args) if args.is_empty() => Cow::const_str("()"),
-            Value::ArgList(args) if args.len() == 1 => Cow::owned(format!(
+            Value::Dimension(n) => Cow::Owned(inspect_number(n, &Options::default(), span)?),
+            Value::ArgList(args) if args.is_empty() => Cow::Borrowed("()"),
+            Value::ArgList(args) if args.len() == 1 => Cow::Owned(format!(
                 "({},)",
-                args.iter()
+                args.elems
+                    .iter()
                     .filter(|x| !x.is_null())
-                    .map(|a| a.node.inspect(span))
+                    .map(|a| a.inspect(span))
                     .collect::<SassResult<Vec<Cow<'static, str>>>>()?
                     .join(", "),
             )),
-            Value::ArgList(args) => Cow::owned(
-                args.iter()
+            Value::ArgList(args) => Cow::Owned(
+                args.elems
+                    .iter()
                     .filter(|x| !x.is_null())
-                    .map(|a| a.node.inspect(span))
+                    .map(|a| a.inspect(span))
                     .collect::<SassResult<Vec<Cow<'static, str>>>>()?
                     .join(", "),
             ),
-            Value::Important
-            | Value::True
-            | Value::False
-            | Value::Color(..)
-            | Value::String(..) => self.to_css_string(span, false)?,
+            Value::True | Value::False | Value::Color(..) | Value::String(..) => {
+                self.to_css_string(span, false)?
+            }
         })
     }
 
@@ -520,8 +639,16 @@ impl Value {
         match self {
             Value::List(v, ..) => v,
             Value::Map(m) => m.as_list(),
-            Value::ArgList(v) => v.into_iter().map(|val| val.node).collect(),
+            Value::ArgList(v) => v.elems,
             v => vec![v],
+        }
+    }
+
+    pub fn separator(&self) -> ListSeparator {
+        match self {
+            Value::List(_, list_separator, _) => *list_separator,
+            Value::Map(..) | Value::ArgList(..) => ListSeparator::Comma,
+            _ => ListSeparator::Space,
         }
     }
 
@@ -535,39 +662,21 @@ impl Value {
     /// `name` is the argument name. It's used for error reporting.
     pub fn to_selector(
         self,
-        parser: &mut Parser,
+        visitor: &mut Visitor,
         name: &str,
         allows_parent: bool,
+        span: Span,
     ) -> SassResult<Selector> {
-        let string = match self.clone().selector_string(parser.span_before)? {
+        let string = match self.clone().selector_string(span)? {
             Some(v) => v,
-            None => return Err((format!("${}: {} is not a valid selector: it must be a string, a list of strings, or a list of lists of strings.", name, self.inspect(parser.span_before)?), parser.span_before).into()),
+            None => return Err((format!("${}: {} is not a valid selector: it must be a string,\n a list of strings, or a list of lists of strings.", name, self.inspect(span)?), span).into()),
         };
-        Ok(Parser {
-            toks: &mut Lexer::new(
-                string
-                    .chars()
-                    .map(|c| Token::new(parser.span_before, c))
-                    .collect::<Vec<Token>>(),
-            ),
-            map: parser.map,
-            path: parser.path,
-            scopes: parser.scopes,
-            global_scope: parser.global_scope,
-            super_selectors: parser.super_selectors,
-            span_before: parser.span_before,
-            content: parser.content,
-            flags: parser.flags,
-            at_root: parser.at_root,
-            at_root_has_selector: parser.at_root_has_selector,
-            extender: parser.extender,
-            content_scopes: parser.content_scopes,
-            options: parser.options,
-            modules: parser.modules,
-            module_config: parser.module_config,
-        }
-        .parse_selector(allows_parent, true, String::new())?
-        .0)
+        Ok(Selector(visitor.parse_selector_from_string(
+            &string,
+            allows_parent,
+            true,
+            span,
+        )?))
     }
 
     #[allow(clippy::only_used_in_recursion)]
@@ -581,7 +690,12 @@ impl Value {
                         for complex in list {
                             if let Value::String(text, ..) = complex {
                                 result.push(text);
-                            } else if let Value::List(_, ListSeparator::Space, ..) = complex {
+                            } else if let Value::List(
+                                _,
+                                ListSeparator::Space | ListSeparator::Undecided,
+                                ..,
+                            ) = complex
+                            {
                                 result.push(match complex.selector_string(span)? {
                                     Some(v) => v,
                                     None => return Ok(None),
@@ -591,7 +705,8 @@ impl Value {
                             }
                         }
                     }
-                    ListSeparator::Space => {
+                    ListSeparator::Slash => return Ok(None),
+                    ListSeparator::Space | ListSeparator::Undecided => {
                         for compound in list {
                             if let Value::String(text, ..) = compound {
                                 result.push(text);
@@ -608,7 +723,68 @@ impl Value {
         }))
     }
 
-    pub fn is_quoted_string(&self) -> bool {
-        matches!(self, Value::String(_, QuoteKind::Quoted))
+    pub fn unary_plus(self, visitor: &mut Visitor, span: Span) -> SassResult<Self> {
+        Ok(match self {
+            Self::Dimension(SassNumber { .. }) => self,
+            Self::Calculation(..) => {
+                return Err((
+                    format!("Undefined operation \"+{}\".", self.inspect(span)?),
+                    span,
+                )
+                    .into())
+            }
+            _ => Self::String(
+                format!(
+                    "+{}",
+                    &self.to_css_string(span, visitor.options.is_compressed())?
+                ),
+                QuoteKind::None,
+            ),
+        })
+    }
+
+    pub fn unary_neg(self, visitor: &mut Visitor, span: Span) -> SassResult<Self> {
+        Ok(match self {
+            Self::Calculation(..) => {
+                return Err((
+                    format!("Undefined operation \"-{}\".", self.inspect(span)?),
+                    span,
+                )
+                    .into())
+            }
+            Self::Dimension(SassNumber {
+                num,
+                unit,
+                as_slash,
+            }) => Self::Dimension(SassNumber {
+                num: -num,
+                unit,
+                as_slash,
+            }),
+            _ => Self::String(
+                format!(
+                    "-{}",
+                    &self.to_css_string(span, visitor.options.is_compressed())?
+                ),
+                QuoteKind::None,
+            ),
+        })
+    }
+
+    pub fn unary_div(self, visitor: &mut Visitor, span: Span) -> SassResult<Self> {
+        Ok(Self::String(
+            format!(
+                "/{}",
+                &self.to_css_string(span, visitor.options.is_compressed())?
+            ),
+            QuoteKind::None,
+        ))
+    }
+
+    pub fn unary_not(self) -> Self {
+        match self {
+            Self::False | Self::Null => Self::True,
+            _ => Self::False,
+        }
     }
 }

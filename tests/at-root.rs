@@ -82,6 +82,25 @@ test!(
     "b {\n  color: red;\n}\n\na b {\n  color: red;\n}\n"
 );
 test!(
+    at_root_between_other_styles_is_emitted_with_same_order,
+    "a {
+      a {
+          color: red;
+      }
+
+      @at-root {
+          b {
+              color: red;
+          }
+      }
+
+      c {
+          color: red;
+      }
+    }",
+    "a a {\n  color: red;\n}\nb {\n  color: red;\n}\n\na c {\n  color: red;\n}\n"
+);
+test!(
     no_newline_between_style_rules_when_there_exists_a_selector,
     "@at-root a {
       a {
@@ -127,12 +146,136 @@ test!(
     }",
     "@media screen {\n  a {\n    color: red;\n  }\n}\n"
 );
+test!(
+    simple_at_root_query,
+    "a {
+        @at-root (with: rule) {
+            b: c;
+        }
+    }",
+    "a {\n  b: c;\n}\n"
+);
+test!(
+    without_media_inside_media_rule,
+    "@media (min-width: 1337px) {
+        .foo {
+            content: baz;
+        }
+
+        @at-root (without: media) {
+            .foo {
+                content: bar;
+            }
+        }
+    }",
+    "@media (min-width: 1337px) {\n  .foo {\n    content: baz;\n  }\n}\n.foo {\n  content: bar;\n}\n"
+);
+test!(
+    with_media_inside_media_rule_inside_supports_rule,
+    "@media (min-width: 1337px) {
+        @supports (color: red) {
+            @at-root (with: media) {
+                .foo {
+                    content: bar;
+                }
+            }
+        }
+    }",
+    "@media (min-width: 1337px) {\n  .foo {\n    content: bar;\n  }\n}\n"
+);
+test!(
+    with_media_and_supports_inside_media_rule_inside_supports_rule,
+    "@media (min-width: 1337px) {
+        @supports (color: red) {
+            @at-root (with: media supports) {
+                .foo {
+                    content: bar;
+                }
+            }
+        }
+    }",
+    "@media (min-width: 1337px) {\n  @supports (color: red) {\n    .foo {\n      content: bar;\n    }\n  }\n}\n"
+);
+test!(
+    without_keyframes_inside_keyframes,
+    "@keyframes animation {
+        @at-root (without: keyframes) {
+            to {
+                color: red;
+            }
+        }
+    }",
+    "@keyframes animation {}\nto {\n  color: red;\n}\n"
+);
+test!(
+    at_root_has_its_own_scope,
+    "$root_default: initial;
+    $root_implicit: initial;
+    $root_explicit: initial !global;
+
+    @at-root {
+        $root_implicit: outer;
+        $root_explicit: outer !global;
+        $root_default: outer !default;
+        $local_implicit: outer;
+        $local_explicit: outer !global;
+        $local_default: outer !default;
+
+        @at-root {
+            $root_implicit: inner;
+            $root_explicit: inner !global;
+            $root_default: inner !default;
+            $local_implicit: inner;
+            $local_explicit: inner !global;
+            $local_default: inner !default;
+        }
+    }
+
+    result {
+        root_default: $root_default;
+        root_implicit: $root_implicit;
+        root_explicit: $root_explicit;
+
+        @if variable-exists(local_default) {
+            local_default: $local_default;
+        }
+
+        @if variable-exists(local_implicit) {
+            local_implicit: $local_implicit;
+        }
+
+        @if variable-exists(local_explicit) {
+            local_explicit: $local_explicit;
+        }
+    }",
+    "result {\n  root_default: initial;\n  root_implicit: initial;\n  root_explicit: inner;\n  local_explicit: inner;\n}\n"
+);
+test!(
+    #[ignore = "we currently emit the empty unknown-at-rule"]
+    inside_style_inside_unknown_at_rule,
+    "@unknown {
+        .foo {
+            @at-root .bar {
+                a: b
+            }
+        }
+    }",
+    "@unknown {\n  .bar {\n    a: b;\n  }\n}\n"
+);
 error!(
-    #[ignore = "we do not currently validate missing closing curly braces"]
     missing_closing_curly_brace,
     "@at-root {", "Error: expected \"}\"."
 );
 error!(
     style_at_toplevel_without_selector,
-    "@at-root { color: red; }", "Error: Found style at the toplevel inside @at-root."
+    "@at-root { color: red; }", "Error: expected \"{\"."
+);
+error!(
+    extend_inside_at_root_would_be_put_at_root_of_document,
+    "a {
+        @at-root {
+            @extend b;
+        }
+    }",
+    "Error: @extend may only be used within style rules."
 );

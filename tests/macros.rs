@@ -1,3 +1,11 @@
+use std::{
+    borrow::Cow,
+    collections::BTreeMap,
+    path::{Path, PathBuf},
+};
+
+use grass::Fs;
+
 #[macro_export]
 macro_rules! test {
     (@base $( #[$attr:meta] ),*$func:ident, $input:expr, $output:expr, $options:expr) => {
@@ -25,12 +33,12 @@ macro_rules! test {
 /// Span and scope information are not yet tested
 #[macro_export]
 macro_rules! error {
-    ($( #[$attr:meta] ),*$func:ident, $input:expr, $err:expr) => {
+    (@base $( #[$attr:meta] ),*$func:ident, $input:expr, $err:expr, $options:expr) => {
         $(#[$attr])*
         #[test]
         #[allow(non_snake_case)]
         fn $func() {
-            match grass::from_string($input.to_string(), &grass::Options::default()) {
+            match grass::from_string($input.to_string(), &$options) {
                 Ok(..) => panic!("did not fail"),
                 Err(e) => assert_eq!($err, e.to_string()
                                                 .chars()
@@ -40,6 +48,12 @@ macro_rules! error {
                 ),
             }
         }
+    };
+    ($( #[$attr:meta] ),*$func:ident, $input:expr, $err:expr) => {
+        error!(@base $(#[$attr])* $func, $input, $err, grass::Options::default());
+    };
+    ($( #[$attr:meta] ),*$func:ident, $input:expr, $err:expr, $options:expr) => {
+        error!(@base $(#[$attr])* $func, $input, $err, $options);
     };
 }
 
@@ -61,12 +75,18 @@ macro_rules! tempfile {
         write!(f, "{}", $content).unwrap();
     };
     ($name:literal, $content:literal, dir=$dir:literal) => {
-        let _d = tempfile::Builder::new()
-            .rand_bytes(0)
-            .prefix("")
-            .suffix($dir)
-            .tempdir_in("")
-            .unwrap();
+        let _d = if !std::path::Path::new($dir).is_dir() {
+            Some(
+                tempfile::Builder::new()
+                    .rand_bytes(0)
+                    .prefix("")
+                    .suffix($dir)
+                    .tempdir_in("")
+                    .unwrap(),
+            )
+        } else {
+            None
+        };
         let mut f = tempfile::Builder::new()
             .rand_bytes(0)
             .prefix("")
@@ -92,4 +112,40 @@ macro_rules! assert_err {
             ),
         }
     };
+}
+
+/// Suitable for simple import tests. Does not properly implement path resolution --
+/// paths like `a/../b` will not work
+#[derive(Debug)]
+pub struct TestFs {
+    files: BTreeMap<PathBuf, Cow<'static, str>>,
+}
+
+#[allow(unused)]
+impl TestFs {
+    pub fn new() -> Self {
+        Self {
+            files: BTreeMap::new(),
+        }
+    }
+
+    pub fn add_file(&mut self, name: &'static str, contents: &'static str) {
+        self.files
+            .insert(PathBuf::from(name), Cow::Borrowed(contents));
+    }
+}
+
+#[allow(unused)]
+impl Fs for TestFs {
+    fn is_file(&self, path: &Path) -> bool {
+        self.files.contains_key(path)
+    }
+
+    fn is_dir(&self, path: &Path) -> bool {
+        false
+    }
+
+    fn read(&self, path: &Path) -> std::io::Result<Vec<u8>> {
+        Ok(self.files.get(path).unwrap().as_bytes().to_vec())
+    }
 }

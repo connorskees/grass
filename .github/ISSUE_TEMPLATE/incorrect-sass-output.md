@@ -1,19 +1,20 @@
 ---
-name: Incorrect SASS Output
-about: There exists a differential between the output of grass and dart-sass
+name: Incorrect Sass Output
+about: `grass` and `dart-sass` differ in output or `grass` reports and error for a valid style sheet
 title: ''
 labels: bug
 assignees: connorskees
 
 ---
 
-**Minimal Reproducible Example**:
+**Failing Sass**:
 ```
 a {
   color: red;
 }
 ```
 
+<!-- Showing output from both tools is optional, but does help in debugging -->
 **`grass` Output**:
 ```
 a {

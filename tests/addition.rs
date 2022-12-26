@@ -380,3 +380,57 @@ error!(
     "a {color: 1 + get-function(lighten);}",
     "Error: get-function(\"lighten\") isn't a valid CSS value."
 );
+error!(
+    add_two_calculations,
+    "a {color: calc(1rem + 1px) + calc(1rem + 1px);}",
+    r#"Error: Undefined operation "calc(1rem + 1px) + calc(1rem + 1px)"."#
+);
+error!(
+    num_plus_calculation,
+    "a {color: 1 + calc(1rem + 1px);}", r#"Error: Undefined operation "1 + calc(1rem + 1px)"."#
+);
+test!(
+    quoted_string_plus_calculation,
+    "a {\n  color: \"a\" + calc(1px + 1%);\n}\n",
+    "a {\n  color: \"acalc(1px + 1%)\";\n}\n"
+);
+test!(
+    calculation_plus_quoted_string,
+    "a {\n  color: calc(1px + 1%) + \"a\";\n}\n",
+    "a {\n  color: \"calc(1px + 1%)a\";\n}\n"
+);
+test!(
+    empty_quoted_string_plus_calculation,
+    "a {\n  color: \"\" + calc(1px + 1%);\n}\n",
+    "a {\n  color: \"calc(1px + 1%)\";\n}\n"
+);
+test!(
+    calculation_plus_empty_quoted_string,
+    "a {\n  color: calc(1px + 1%) + \"\";\n}\n",
+    "a {\n  color: \"calc(1px + 1%)\";\n}\n"
+);
+test!(
+    unquoted_string_plus_calculation,
+    "a {\n  color: foo + calc(1px + 1%);\n}\n",
+    "a {\n  color: foocalc(1px + 1%);\n}\n"
+);
+test!(
+    calculation_plus_unquoted_string,
+    "a {\n  color: calc(1px + 1%) + foo;\n}\n",
+    "a {\n  color: calc(1px + 1%)foo;\n}\n"
+);
+test!(
+    num_plus_nan,
+    "a {\n  color: 1 + (0/0);\n}\n",
+    "a {\n  color: NaN;\n}\n"
+);
+test!(
+    nan_plus_num,
+    "a {\n  color: (0/0) + 1;\n}\n",
+    "a {\n  color: NaN;\n}\n"
+);
+test!(
+    nan_plus_nan,
+    "a {\n  color: (0/0) + (0/0);\n}\n",
+    "a {\n  color: NaN;\n}\n"
+);

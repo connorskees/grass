@@ -72,14 +72,14 @@ test!(
     "a {\n  color: true;\n}\n"
 );
 test!(
-    #[ignore = "this is not currently parsed correctly"]
     fn_named_and_alone_is_not_evaluated_as_binop,
     "a {\n  color: and(foo);\n}\n",
     "a {\n  color: and(foo);\n}\n"
 );
 test!(
-    #[ignore = "this is not currently parsed correctly"]
     fn_named_or_alone_is_not_evaluated_as_binop,
     "a {\n  color: or(foo);\n}\n",
     "a {\n  color: or(foo);\n}\n"
 );
+
+// todo: @function and($a) {} a { color: and(foo) }

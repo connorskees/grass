@@ -12,6 +12,11 @@ test!(
     "a {\n  color: red;\n}\n"
 );
 test!(
+    removes_comment_before_style,
+    "a {\n  color: /**/red;\n}\n",
+    "a {\n  color: red;\n}\n"
+);
+test!(
     preserves_outer_comments_before,
     "a {\n  /* hi */\n  color: red;\n}\n",
     "a {\n  /* hi */\n  color: red;\n}\n"
@@ -26,6 +31,7 @@ test!(
     "a {\n  /* foo */\n  /* bar */\n  color: red;\n}\n",
     "a {\n  /* foo */\n  /* bar */\n  color: red;\n}\n"
 );
+test!(two_silent_comments_followed_by_eof, "//\n//\n", "");
 test!(
     preserves_toplevel_comment_before,
     "/* foo */\na {\n  color: red;\n}\n",
@@ -35,6 +41,14 @@ test!(
     preserves_toplevel_comment_after,
     "a {\n  color: red;\n}\n/* foo */\n",
     "a {\n  color: red;\n}\n\n/* foo */\n"
+);
+test!(
+    #[ignore = "we use the old form of comment writing"]
+    preserves_trailing_comments,
+    "a { /**/
+      color: red; /**/
+    } /**/",
+    "a { /**/\n  color: red; /**/\n} /**/\n"
 );
 test!(
     removes_single_line_comment,
@@ -65,6 +79,16 @@ test!(
     interpolation_in_multiline_comment,
     "$a: foo;/* interpolation #{1 + 1} in #{$a} comments */",
     "/* interpolation 2 in foo comments */\n"
+);
+test!(
+    preserves_relative_whitespace,
+    "  /*!\n    * a\n    */\n",
+    "/*!\n  * a\n  */\n"
+);
+test!(
+    preserves_relative_whitespace_for_each_line,
+    "  /*!\n      * a\n    */\n",
+    "/*!\n    * a\n  */\n"
 );
 test!(
     triple_star_in_selector,
@@ -139,4 +163,10 @@ test!(
     
     /**/",
     "a {\n  color: red;\n}\na d {\n  color: red;\n}\n\n/**/\nc {\n  color: red;\n}\n\n/**/\n"
+);
+test!(
+    #[ignore = "we use the old form of comment writing"]
+    same_line_loud_comments_are_emitted_on_same_line_of_ruleset_brackets,
+    "a {/**/}",
+    "a { /**/ }\n"
 );

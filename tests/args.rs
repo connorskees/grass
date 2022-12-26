@@ -67,7 +67,6 @@ test!(
     "a {\n  color: red;\n}\n"
 );
 error!(
-    #[ignore = "expects incorrect char, '{'"]
     nothing_after_open,
     "a { color:rgb(; }", "Error: expected \")\"."
 );
@@ -170,7 +169,7 @@ error!(
 );
 error!(
     filter_nothing_before_equal,
-    "a {\n  color: foo(=a);\n}\n", "Error: Expected expression."
+    "a {\n  color: foo(=a);\n}\n", "Error: expected \")\"."
 );
 error!(
     filter_nothing_after_equal,
@@ -274,4 +273,81 @@ error!(
         color: foo(a,,);
     }",
     "Error: expected \")\"."
+);
+error!(
+    duplicate_named_arg,
+    "@function foo($a) {
+        @return $a;
+    }
+
+    a {
+        color: foo($a: red, $a: green);
+    }",
+    "Error: Duplicate argument."
+);
+error!(
+    keyword_arg_before_positional,
+    "@function foo($a, $b) {
+        @return $a, $b;
+    }
+
+    a {
+        color: foo($a: red, green);
+    }",
+    "Error: Positional arguments must come before keyword arguments."
+);
+error!(
+    duplicate_arg_in_declaration,
+    "@function foo($a, $a) {
+        @return $a;
+    }",
+    "Error: Duplicate argument."
+);
+error!(
+    variable_keyword_args_is_list,
+    "@function foo($a...) {
+        @return inspect($a);
+    }
+
+    a {
+        color: foo(a..., a b...);
+    }",
+    "Error: Variable keyword arguments must be a map (was a b)."
+);
+error!(
+    keyword_arg_to_function_expecting_varargs,
+    "a {\n  color: zip(a, b, $a: c);\n}\n", "Error: No argument named $a."
+);
+error!(
+    too_many_keyword_args_passed_one_extra_arg,
+    "@function foo($a) {
+        @return $a;
+    }
+
+    a {
+        color: foo($a: red, $b: green);
+    }",
+    "Error: No argument named $b."
+);
+error!(
+    too_many_keyword_args_passed_two_extra_args,
+    "@function foo($a) {
+        @return $a;
+    }
+
+    a {
+        color: foo($a: red, $b: green, $c: blue);
+    }",
+    "Error: No arguments named $b or $c."
+);
+error!(
+    too_many_keyword_args_passed_three_extra_args,
+    "@function foo($a) {
+        @return $a;
+    }
+
+    a {
+        color: foo($a: red, $b: green, $c: blue, $d: brown);
+    }",
+    "Error: No arguments named $b, $c or $d."
 );

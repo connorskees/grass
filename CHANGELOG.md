@@ -1,3 +1,55 @@
+# TBD
+
+- complete rewrite of parsing, evaluation, and serialization steps
+- **implement the indented syntax**
+- **implement plain CSS imports**
+- support for custom properties
+- represent all numbers as f64, rather than using arbitrary precision
+- implement media query merging
+- implement builtin function `keywords`
+- implement Infinity and -Infinity
+- implement the `@forward` rule
+- feature complete parsing of `@supports` conditions
+- support media queries level 4
+- implement calculation simplification and the calculation value type
+- implement builtin fns `calc-args`, `calc-name`
+- add builtin math module variables `$epsilon`, `$max-safe-integer`, `$min-safe-integer`, `$max-number`, `$min-number`
+- allow angle units `turn` and `grad` in builtin trigonometry functions
+- implement `@at-root` conditions
+- implement `@import` conditions
+- remove dependency on `num-rational` and `beef`
+- support control flow inside declaration blocks
+For example:
+```scss
+a {
+  -webkit-: {
+    @if 1 == 1 {
+      scrollbar: red
+    }
+  }
+}
+```
+
+will now emit
+
+```css
+a {
+  -webkit-scrollbar: red;
+}
+```
+- always emit `rgb`/`rgba`/`hsl`/`hsla` for colors declared as such in expanded mode
+- more efficiently compress colors in compressed mode
+- treat `:where` the same as `:is` in extension
+- support "import-only" files
+- treat `@elseif` the same as `@else if`
+- implement division of non-comparable units and feature complete support for complex units
+- support 1 arg color.hwb()
+
+UPCOMING:
+
+- error when `@extend` is used across `@media` boundaries
+- more robust support for NaN in builtin functions
+
 # 0.11.2
 
 - make `grass::Error` a `Send` type

@@ -25,7 +25,6 @@ arg_enum! {
     }
 }
 
-#[cfg_attr(feature = "profiling", inline(never))]
 fn main() -> std::io::Result<()> {
     let matches = App::new("grass")
         .setting(AppSettings::ColoredHelp)
@@ -143,6 +142,12 @@ fn main() -> std::io::Result<()> {
                 .long("no-color")
                 .hidden(true)
                 .help("Whether to use terminal colors for messages.")
+        )
+        .arg(
+            Arg::with_name("VERBOSE")
+                .long("verbose")
+                .hidden(true)
+                .help("Print all deprecation warnings even when they're repetitive.")
         )
         .arg(
             Arg::with_name("NO_UNICODE")

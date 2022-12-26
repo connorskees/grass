@@ -363,7 +363,7 @@ error!(
     "Error: Missing argument $a."
 );
 test!(
-    inner_mixin_can_modify_scope,
+    inner_mixin_can_have_scope_modified,
     "a {
         $a: red;
         @mixin foo {
@@ -495,10 +495,10 @@ test!(
 test!(
     content_contains_variable_declared_in_outer_scope_not_declared_at_root_and_modified,
     "a {
-        $a: red;
+        $a: wrong;
 
         @mixin foo {
-            $a: green;
+            $a: correct;
             @content;
         }
 
@@ -506,24 +506,24 @@ test!(
             color: $a;
         }
     }",
-    "a {\n  color: green;\n}\n"
+    "a {\n  color: correct;\n}\n"
 );
 test!(
     content_contains_variable_declared_in_outer_scope_declared_at_root_and_modified,
     "@mixin foo {
-        $a: green;
+        $a: wrong;
         @content;
     }
 
     a {
-        $a: red;
+        $a: correct;
 
 
         @include foo {
             color: $a;
         }
     }",
-    "a {\n  color: red;\n}\n"
+    "a {\n  color: correct;\n}\n"
 );
 test!(
     content_default_arg_value_no_parens,
@@ -562,6 +562,90 @@ test!(
         @include foo;
     }",
     "a {\n  color: red;\n}\n"
+);
+test!(
+    mixin_cant_affect_scope_in_which_it_was_included,
+    "@mixin test {
+        $a: wrong;
+    }
+
+    a {
+        $a: correct;
+        @include test;
+        color: $a;
+    }",
+    "a {\n  color: correct;\n}\n"
+);
+test!(
+    content_block_has_two_rulesets,
+    "@mixin foo() {
+        @content;
+    }
+
+    @include foo {
+        a {
+            color: red;
+        }
+
+        b {
+            color: red;
+        }
+    }",
+    "a {\n  color: red;\n}\n\nb {\n  color: red;\n}\n"
+);
+test!(
+    mixin_has_two_rulesets,
+    "@mixin foo() {
+        a {
+            display: none;
+        }
+
+        b {
+            display: block;
+        }
+    }
+
+    @include foo();",
+    "a {\n  display: none;\n}\n\nb {\n  display: block;\n}\n"
+);
+test!(
+    sass_spec__188_test_mixin_content,
+    "$color: blue;
+
+    @mixin context($class, $color: red) {
+        .#{$class} {
+            background-color: $color;
+            @content;
+            border-color: $color;
+        }
+    }
+
+    @include context(parent) {
+        @include context(child, $color: yellow) {
+            color: $color;
+        }
+    }",
+    ".parent {\n  background-color: red;\n  border-color: red;\n}\n.parent .child {\n  background-color: yellow;\n  color: blue;\n  border-color: yellow;\n}\n"
+);
+test!(
+    sass_spec__mixin_environment_locality,
+    r#"// The "$var" variable should only be set locally, despite being in the same
+    // mixin each time.
+    @mixin with-local-variable($recurse) {
+        $var: before;
+
+        @if ($recurse) {
+            @include with-local-variable($recurse: false);
+        }
+
+        var: $var;
+        $var: after;
+    }
+
+    .environment-locality {
+        @include with-local-variable($recurse: true);
+    }"#,
+    ".environment-locality {\n  var: before;\n  var: before;\n}\n"
 );
 error!(
     mixin_in_function,
@@ -602,4 +686,11 @@ error!(
         @include name;
     }",
     "Error: expected \"{\"."
+);
+error!(
+    disallows_content_block_when_mixin_has_no_content_block,
+    "@mixin foo () {}
+    @include foo {}
+    ",
+    "Error: Mixin doesn't accept a content block."
 );

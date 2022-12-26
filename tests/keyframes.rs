@@ -128,6 +128,33 @@ test!(
     "@-webkit-keyframes foo {\n  0% {\n    color: red;\n  }\n}\n"
 );
 test!(
+    keyframes_percent_has_e,
+    "@keyframes foo {
+        1e2% {
+            color: red;
+        }
+    }",
+    "@keyframes foo {\n  1e2% {\n    color: red;\n  }\n}\n"
+);
+test!(
+    keyframes_percent_has_plus_e,
+    "@keyframes foo {
+        1e+2% {
+            color: red;
+        }
+    }",
+    "@keyframes foo {\n  1e+2% {\n    color: red;\n  }\n}\n"
+);
+test!(
+    keyframes_percent_has_negative_e,
+    "@keyframes foo {
+        1e-2% {
+            color: red;
+        }
+    }",
+    "@keyframes foo {\n  1e-2% {\n    color: red;\n  }\n}\n"
+);
+test!(
     keyframes_allow_decimal_selector,
     "@keyframes foo {
         12.5% {
@@ -161,17 +188,131 @@ error!(
         color: red;
       }
     }",
-    "Error: Expected \"to\" or \"from\"."
+    "Error: Expected number."
 );
 error!(
     keyframes_nothing_after_forward_slash_in_selector,
-    "@keyframes foo { a/", "Error: Expected selector."
+    "@keyframes foo { a/", "Error: expected \"{\"."
 );
 error!(
     keyframes_no_ident_after_forward_slash_in_selector,
-    "@keyframes foo { a/ {} }", "Error: expected selector."
+    "@keyframes foo { a/ {} }", "Error: Expected \"to\" or \"from\"."
 );
 error!(
     keyframes_nothing_after_selector,
     "@keyframes foo { a", "Error: expected \"{\"."
 );
+test!(
+    e_alone,
+    "@keyframes foo {
+      1e3% {
+        color: red;
+      }
+    }",
+    "@keyframes foo {\n  1e3% {\n    color: red;\n  }\n}\n"
+);
+test!(
+    e_with_plus,
+    "@keyframes foo {
+      1e+3% {
+        color: red;
+      }
+    }",
+    "@keyframes foo {\n  1e+3% {\n    color: red;\n  }\n}\n"
+);
+test!(
+    e_with_minus,
+    "@keyframes foo {
+      1e-3% {
+        color: red;
+      }
+    }",
+    "@keyframes foo {\n  1e-3% {\n    color: red;\n  }\n}\n"
+);
+test!(
+    e_with_decimal_plus,
+    "@keyframes foo {
+      1.5e+3% {
+        color: red;
+      }
+    }",
+    "@keyframes foo {\n  1.5e+3% {\n    color: red;\n  }\n}\n"
+);
+test!(
+    e_with_decimal_no_number_after_decimal,
+    "@keyframes foo {
+      1.e3% {
+        color: red;
+      }
+    }",
+    "@keyframes foo {\n  1.e3% {\n    color: red;\n  }\n}\n"
+);
+test!(
+    uppercase_e,
+    "@keyframes foo {
+      1E3% {
+        color: red;
+      }
+    }",
+    "@keyframes foo {\n  1e3% {\n    color: red;\n  }\n}\n"
+);
+test!(
+    escaped_e,
+    "@keyframes foo {
+      1\\65 3% {
+        color: red;
+      }
+    }",
+    "@keyframes foo {\n  1e3% {\n    color: red;\n  }\n}\n"
+);
+test!(
+    uppercase_escaped_e,
+    "@keyframes foo {
+      1\\45 3% {
+        color: red;
+      }
+    }",
+    "@keyframes foo {\n  1e3% {\n    color: red;\n  }\n}\n"
+);
+test!(
+    style_rule_before_keyframes,
+    "a {
+        color: red;
+    }
+
+    @keyframes spinner-border {
+        to {
+            color: red;
+        }
+    }",
+    "a {\n  color: red;\n}\n\n@keyframes spinner-border {\n  to {\n    color: red;\n  }\n}\n"
+);
+test!(
+    style_rule_after_keyframes,
+    "@keyframes spinner-border {
+        to {
+            color: red;
+        }
+    }
+
+    a {
+        color: red;
+    }",
+    "@keyframes spinner-border {\n  to {\n    color: red;\n  }\n}\na {\n  color: red;\n}\n"
+);
+error!(
+    invalid_escape_in_place_of_e,
+    "@keyframes foo {
+      1\\110000 3% {
+        color: red;
+      }
+    }",
+    r#"Error: expected "%"."#
+);
+
+// todo: span for this
+// @keyframes foo {
+//   1\1100000000000000 3% {
+//     // color: \110000;
+//   }
+// }

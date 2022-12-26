@@ -12,6 +12,21 @@ test!(
     "a {\n  color: 200%;\n}\n"
 );
 test!(
+    percentage_nan,
+    "a {\n  color: percentage((0/0));\n}\n",
+    "a {\n  color: NaN%;\n}\n"
+);
+test!(
+    percentage_infinity,
+    "a {\n  color: percentage((1/0));\n}\n",
+    "a {\n  color: Infinity%;\n}\n"
+);
+test!(
+    percentage_neg_infinity,
+    "a {\n  color: percentage((-1/0));\n}\n",
+    "a {\n  color: -Infinity%;\n}\n"
+);
+test!(
     integer_division,
     "a {\n  color: percentage(2);\n}\n",
     "a {\n  color: 200%;\n}\n"
@@ -54,7 +69,7 @@ test!(
 test!(
     ceil_big_int,
     "a {\n  color: ceil(1.000000000000000001);\n}\n",
-    "a {\n  color: 2;\n}\n"
+    "a {\n  color: 1;\n}\n"
 );
 test!(
     abs_positive,
@@ -106,8 +121,8 @@ test!(
     "a {\n  color: random(1);\n}\n",
     "a {\n  color: 1;\n}\n"
 );
-test!(
+error!(
     random_limit_big_one,
     "a {\n  color: random(1000000000000000001 - 1000000000000000000);\n}\n",
-    "a {\n  color: 1;\n}\n"
+    "Error: $limit: Must be greater than 0, was 0."
 );

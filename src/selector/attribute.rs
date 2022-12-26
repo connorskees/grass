@@ -6,10 +6,10 @@ use std::{
 use codemap::Span;
 
 use crate::{
-    common::QuoteKind, error::SassResult, parse::Parser, utils::is_ident, value::Value, Token,
+    common::QuoteKind, error::SassResult, parse::BaseParser, utils::is_ident, value::Value, Token,
 };
 
-use super::{Namespace, QualifiedName};
+use super::{Namespace, QualifiedName, SelectorParser};
 
 #[derive(Clone, Debug)]
 pub(crate) struct Attribute {
@@ -40,52 +40,53 @@ impl Hash for Attribute {
     }
 }
 
-fn attribute_name(parser: &mut Parser, start: Span) -> SassResult<QualifiedName> {
-    let next = parser.toks.peek().ok_or(("Expected identifier.", start))?;
+// todo: rewrite
+fn attribute_name(parser: &mut SelectorParser) -> SassResult<QualifiedName> {
+    let next = parser
+        .toks
+        .peek()
+        .ok_or(("Expected identifier.", parser.toks.current_span()))?;
     if next.kind == '*' {
         parser.toks.next();
         parser.expect_char('|')?;
 
-        let ident = parser.parse_identifier()?.node;
+        let ident = parser.parse_identifier(false, false)?;
         return Ok(QualifiedName {
             ident,
             namespace: Namespace::Asterisk,
         });
     }
-    parser.span_before = next.pos;
-    let name_or_namespace = parser.parse_identifier()?;
+
+    let name_or_namespace = parser.parse_identifier(false, false)?;
     match parser.toks.peek() {
         Some(v) if v.kind != '|' => {
             return Ok(QualifiedName {
-                ident: name_or_namespace.node,
+                ident: name_or_namespace,
                 namespace: Namespace::None,
             });
         }
         Some(..) => {}
-        None => return Err(("expected more input.", name_or_namespace.span).into()),
+        None => return Err(("expected more input.", parser.toks.current_span()).into()),
     }
-    match parser.toks.peek_forward(1) {
+    match parser.toks.peek_n(1) {
         Some(v) if v.kind == '=' => {
-            parser.toks.reset_cursor();
             return Ok(QualifiedName {
-                ident: name_or_namespace.node,
+                ident: name_or_namespace,
                 namespace: Namespace::None,
             });
         }
-        Some(..) => {
-            parser.toks.reset_cursor();
-        }
-        None => return Err(("expected more input.", name_or_namespace.span).into()),
+        Some(..) => {}
+        None => return Err(("expected more input.", parser.toks.current_span()).into()),
     }
-    parser.span_before = parser.toks.next().unwrap().pos();
-    let ident = parser.parse_identifier()?.node;
+    parser.toks.next();
+    let ident = parser.parse_identifier(false, false)?;
     Ok(QualifiedName {
         ident,
-        namespace: Namespace::Other(name_or_namespace.node.into_boxed_str()),
+        namespace: Namespace::Other(name_or_namespace.into_boxed_str()),
     })
 }
 
-fn attribute_operator(parser: &mut Parser) -> SassResult<AttributeOp> {
+fn attribute_operator(parser: &mut SelectorParser) -> SassResult<AttributeOp> {
     let op = match parser.toks.next() {
         Some(Token { kind: '=', .. }) => return Ok(AttributeOp::Equals),
         Some(Token { kind: '~', .. }) => AttributeOp::Include,
@@ -93,7 +94,7 @@ fn attribute_operator(parser: &mut Parser) -> SassResult<AttributeOp> {
         Some(Token { kind: '^', .. }) => AttributeOp::Prefix,
         Some(Token { kind: '$', .. }) => AttributeOp::Suffix,
         Some(Token { kind: '*', .. }) => AttributeOp::Contains,
-        Some(..) | None => return Err(("Expected \"]\".", parser.span_before).into()),
+        Some(..) | None => return Err(("Expected \"]\".", parser.toks.current_span()).into()),
     };
 
     parser.expect_char('=')?;
@@ -101,15 +102,15 @@ fn attribute_operator(parser: &mut Parser) -> SassResult<AttributeOp> {
     Ok(op)
 }
 impl Attribute {
-    pub fn from_tokens(parser: &mut Parser) -> SassResult<Attribute> {
-        let start = parser.span_before;
-        parser.whitespace();
-        let attr = attribute_name(parser, start)?;
-        parser.whitespace();
+    pub fn from_tokens(parser: &mut SelectorParser) -> SassResult<Attribute> {
+        let start = parser.toks.cursor();
+        parser.whitespace_without_comments();
+        let attr = attribute_name(parser)?;
+        parser.whitespace_without_comments();
         if parser
             .toks
             .peek()
-            .ok_or(("expected more input.", start))?
+            .ok_or(("expected more input.", parser.toks.current_span()))?
             .kind
             == ']'
         {
@@ -119,27 +120,23 @@ impl Attribute {
                 value: String::new(),
                 modifier: None,
                 op: AttributeOp::Any,
-                span: start,
+                span: parser.toks.span_from(start),
             });
         }
 
-        parser.span_before = start;
         let op = attribute_operator(parser)?;
-        parser.whitespace();
+        parser.whitespace_without_comments();
 
-        let peek = parser.toks.peek().ok_or(("expected more input.", start))?;
-        parser.span_before = peek.pos;
+        let peek = parser
+            .toks
+            .peek()
+            .ok_or(("expected more input.", parser.toks.current_span()))?;
+
         let value = match peek.kind {
-            q @ '\'' | q @ '"' => {
-                parser.toks.next();
-                match parser.parse_quoted_string(q)?.node {
-                    Value::String(s, ..) => s,
-                    _ => unreachable!(),
-                }
-            }
-            _ => parser.parse_identifier()?.node,
+            '\'' | '"' => parser.parse_string()?,
+            _ => parser.parse_identifier(false, false)?,
         };
-        parser.whitespace();
+        parser.whitespace_without_comments();
 
         let modifier = match parser.toks.peek() {
             Some(Token {
@@ -151,7 +148,7 @@ impl Attribute {
                 ..
             }) => {
                 parser.toks.next();
-                parser.whitespace();
+                parser.whitespace_without_comments();
                 Some(c)
             }
             _ => None,
@@ -164,7 +161,7 @@ impl Attribute {
             attr,
             value,
             modifier,
-            span: start,
+            span: parser.toks.span_from(start),
         })
     }
 }

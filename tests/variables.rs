@@ -383,11 +383,11 @@ error!(
 // note: dart-sass expects !important
 error!(
     no_value_only_flag,
-    "$a: !default;", "Error: Expected expression."
+    "$a: !default;", "Error: Expected \"important\"."
 );
 error!(
     variable_value_after_flag,
-    "$a: !default red;", "Error: Expected expression."
+    "$a: !default red;", "Error: Expected \"important\"."
 );
 error!(
     uppercase_flag,
@@ -428,3 +428,5 @@ test!(
     }",
     "a {\n  color: red;\n}\n"
 );
+
+// todo: test that all scopes can affect global vars

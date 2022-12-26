@@ -37,7 +37,21 @@ test!(
 );
 test!(
     nested_while_not_at_root_scope,
-    "$continue_inner: true;\n$continue_outer: true;\n\nresult {\n  @while $continue_outer {\n    @while $continue_inner {\n      $continue_inner: false;\n    }\n\n    $continue_outer: false;\n  }\n\n  continue_outer: $continue_outer;\n  continue_inner: $continue_inner;\n}\n",
+    "$continue_inner: true;
+     $continue_outer: true;
+
+     result {
+       @while $continue_outer {
+         @while $continue_inner {
+           $continue_inner: false;
+         }
+
+         $continue_outer: false;
+       }
+
+       continue_outer: $continue_outer;
+       continue_inner: $continue_inner;
+     }",
     "result {\n  continue_outer: true;\n  continue_inner: true;\n}\n"
 );
 test!(
@@ -130,5 +144,5 @@ test!(
 );
 error!(
     missing_closing_curly_brace,
-    "@while true {", "Error: expected \"}\"."
+    "@while false {", "Error: expected \"}\"."
 );

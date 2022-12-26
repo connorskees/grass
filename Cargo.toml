@@ -23,63 +23,32 @@ path = "src/lib.rs"
 # crate-type = ["cdylib", "rlib"]
 bench = false
 
-[[bench]]
-path = "benches/variables.rs"
-name = "variables"
-harness = false
-
-[[bench]]
-path = "benches/colors.rs"
-name = "colors"
-harness = false
-
-[[bench]]
-path = "benches/numbers.rs"
-name = "numbers"
-harness = false
-
-[[bench]]
-path = "benches/control_flow.rs"
-name = "control_flow"
-harness = false
-
-[[bench]]
-path = "benches/styles.rs"
-name = "styles"
-harness = false
-
-
 [dependencies]
 clap = { version = "2.34.0", optional = true }
-num-rational = "0.4"
-num-bigint = "0.4"
-num-traits = "0.2.14"
+# todo: use lazy_static
 once_cell = "1.15.0"
+# todo: use xorshift for random numbers
 rand = { version = "0.8", optional = true }
+# todo: update to use asref<path>
+# todo: update to expose more info (for eww)
+# todo: update to use text_size::TextRange
 codemap = "0.1.3"
 wasm-bindgen = { version = "0.2.68", optional = true }
-beef = "0.5"
+# todo: use phf for global functions
 phf = { version = "0.11", features = ["macros"] }
-# criterion is not a dev-dependency because it makes tests take too
-# long to compile, and you cannot make dev-dependencies optional
-criterion = { version = "0.4.0", optional = true }
-indexmap = "1.9.1"
+indexmap = "1.9.0"
+# todo: do we really need interning for things?
 lasso = "0.6"
 
 [features]
+# todo: no commandline by default
 default = ["commandline", "random"]
 # Option (enabled by default): build a binary using clap
 commandline = ["clap"]
-# Option: enable nightly-only features (for right now, only the `track_caller` attribute) 
-nightly = []
 # Option (enabled by default): enable the builtin functions `random([$limit])` and `unique-id()`
 random = ["rand"]
 # Option: expose JavaScript-friendly WebAssembly exports
 wasm-exports = ["wasm-bindgen"]
-# Option: enable features that assist in profiling (e.g. inline(never))
-profiling = []
-# Option: enable criterion for benchmarking
-bench = ["criterion"]
 
 [dev-dependencies]
 tempfile = "3.3.0"

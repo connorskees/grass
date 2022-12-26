@@ -3,7 +3,16 @@ use std::fmt::{self, Display, Write};
 use crate::interner::InternedString;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum Op {
+pub enum UnaryOp {
+    Plus,
+    Neg,
+    Div,
+    Not,
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum BinaryOp {
+    SingleEq,
     Equal,
     NotEqual,
     GreaterThan,
@@ -14,51 +23,43 @@ pub enum Op {
     Minus,
     Mul,
     Div,
+    // todo: maybe rename mod, since it is mod
     Rem,
     And,
     Or,
-    Not,
 }
 
-impl Display for Op {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl BinaryOp {
+    pub fn precedence(self) -> u8 {
         match self {
-            Self::Equal => write!(f, "=="),
-            Self::NotEqual => write!(f, "!="),
-            Self::GreaterThanEqual => write!(f, ">="),
-            Self::LessThanEqual => write!(f, "<="),
-            Self::GreaterThan => write!(f, ">"),
-            Self::LessThan => write!(f, "<"),
-            Self::Plus => write!(f, "+"),
-            Self::Minus => write!(f, "-"),
-            Self::Mul => write!(f, "*"),
-            Self::Div => write!(f, "/"),
-            Self::Rem => write!(f, "%"),
-            Self::And => write!(f, "and"),
-            Self::Or => write!(f, "or"),
-            Self::Not => write!(f, "not"),
+            Self::SingleEq => 0,
+            Self::Or => 1,
+            Self::And => 2,
+            Self::Equal | Self::NotEqual => 3,
+            Self::GreaterThan | Self::GreaterThanEqual | Self::LessThan | Self::LessThanEqual => 4,
+            Self::Plus | Self::Minus => 5,
+            Self::Mul | Self::Div | Self::Rem => 6,
         }
     }
 }
 
-impl Op {
-    /// Get order of precedence for an operator
-    ///
-    /// Higher numbers are evaluated first.
-    /// Do not rely on the number itself, but rather the size relative to other numbers
-    ///
-    /// If precedence is equal, the leftmost operation is evaluated first
-    pub fn precedence(self) -> usize {
+impl Display for BinaryOp {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::And | Self::Or | Self::Not => 0,
-            Self::Equal
-            | Self::NotEqual
-            | Self::GreaterThan
-            | Self::GreaterThanEqual
-            | Self::LessThan
-            | Self::LessThanEqual => 1,
-            Self::Plus | Self::Minus => 2,
-            Self::Mul | Self::Div | Self::Rem => 3,
+            BinaryOp::SingleEq => write!(f, "="),
+            BinaryOp::Equal => write!(f, "=="),
+            BinaryOp::NotEqual => write!(f, "!="),
+            BinaryOp::GreaterThanEqual => write!(f, ">="),
+            BinaryOp::LessThanEqual => write!(f, "<="),
+            BinaryOp::GreaterThan => write!(f, ">"),
+            BinaryOp::LessThan => write!(f, "<"),
+            BinaryOp::Plus => write!(f, "+"),
+            BinaryOp::Minus => write!(f, "-"),
+            BinaryOp::Mul => write!(f, "*"),
+            BinaryOp::Div => write!(f, "/"),
+            BinaryOp::Rem => write!(f, "%"),
+            BinaryOp::And => write!(f, "and"),
+            BinaryOp::Or => write!(f, "or"),
         }
     }
 }
@@ -85,31 +86,47 @@ pub(crate) enum Brackets {
     Bracketed,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, Eq)]
 pub(crate) enum ListSeparator {
     Space,
     Comma,
+    Slash,
+    Undecided,
+}
+
+impl PartialEq for ListSeparator {
+    #[allow(clippy::match_like_matches_macro)]
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Space | Self::Undecided, Self::Space | Self::Undecided) => true,
+            (Self::Comma, Self::Comma) => true,
+            _ => false,
+        }
+    }
 }
 
 impl ListSeparator {
     pub fn as_str(self) -> &'static str {
         match self {
-            Self::Space => " ",
+            Self::Space | Self::Undecided => " ",
             Self::Comma => ", ",
+            Self::Slash => " / ",
         }
     }
 
     pub fn as_compressed_str(self) -> &'static str {
         match self {
-            Self::Space => " ",
+            Self::Space | Self::Undecided => " ",
             Self::Comma => ",",
+            Self::Slash => "/",
         }
     }
 
     pub fn name(self) -> &'static str {
         match self {
-            Self::Space => "space",
+            Self::Space | Self::Undecided => "space",
             Self::Comma => "comma",
+            Self::Slash => "slash",
         }
     }
 }
@@ -119,8 +136,16 @@ impl ListSeparator {
 ///
 /// This struct protects that invariant by normalizing all
 /// underscores into hypens.
-#[derive(Debug, Clone, Eq, PartialEq, Hash, PartialOrd, Ord, Copy)]
+#[derive(Clone, Eq, PartialEq, Hash, PartialOrd, Ord, Copy)]
 pub(crate) struct Identifier(InternedString);
+
+impl fmt::Debug for Identifier {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("Identifier")
+            .field(&self.0.to_string())
+            .finish()
+    }
+}
 
 impl Identifier {
     fn from_str(s: &str) -> Self {
@@ -129,6 +154,10 @@ impl Identifier {
         } else {
             Identifier(InternedString::get_or_intern(s))
         }
+    }
+
+    pub fn is_public(&self) -> bool {
+        !self.as_str().starts_with('-')
     }
 }
 

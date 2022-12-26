@@ -1,17 +1,24 @@
-use std::collections::BTreeMap;
+use std::{
+    cell::RefCell,
+    collections::{BTreeMap, HashSet},
+    fmt,
+    sync::Arc,
+};
 
 use codemap::{Span, Spanned};
 
 use crate::{
-    args::CallArgs,
-    atrule::mixin::{BuiltinMixin, Mixin},
+    ast::{ArgumentResult, AstForwardRule, BuiltinMixin, Mixin},
     builtin::Builtin,
-    common::{Identifier, QuoteKind},
+    common::Identifier,
     error::SassResult,
-    parse::Parser,
-    scope::Scope,
+    evaluate::{Environment, Visitor},
+    selector::ExtensionStore,
+    utils::{BaseMapView, MapView, MergedMapView, PublicMemberMapView},
     value::{SassFunction, SassMap, Value},
 };
+
+use super::builtin_imports::QuoteKind;
 
 mod color;
 mod list;
@@ -21,51 +28,89 @@ mod meta;
 mod selector;
 mod string;
 
-#[derive(Debug, Default)]
-pub(crate) struct Module {
-    pub scope: Scope,
-
-    /// A module can itself import other modules
-    pub modules: Modules,
-
-    /// Whether or not this module is builtin
-    /// e.g. `"sass:math"`
-    is_builtin: bool,
+#[derive(Debug, Clone)]
+pub(crate) struct ForwardedModule {
+    inner: Arc<RefCell<Module>>,
+    #[allow(dead_code)]
+    forward_rule: AstForwardRule,
 }
 
-#[derive(Debug, Default)]
-pub(crate) struct Modules(BTreeMap<Identifier, Module>);
-
-#[derive(Debug, Default)]
-pub(crate) struct ModuleConfig(BTreeMap<Identifier, Value>);
-
-impl ModuleConfig {
-    /// Removes and returns element with name
-    pub fn get(&mut self, name: Identifier) -> Option<Value> {
-        self.0.remove(&name)
-    }
-
-    /// If this structure is not empty at the end of
-    /// an `@use`, we must throw an error
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-
-    pub fn insert(&mut self, name: Spanned<Identifier>, value: Spanned<Value>) -> SassResult<()> {
-        if self.0.insert(name.node, value.node).is_some() {
-            Err((
-                "The same variable may only be configured once.",
-                name.span.merge(value.span),
-            )
-                .into())
+impl ForwardedModule {
+    pub fn if_necessary(
+        module: Arc<RefCell<Module>>,
+        rule: AstForwardRule,
+    ) -> Arc<RefCell<Module>> {
+        if rule.prefix.is_none()
+            && rule.shown_mixins_and_functions.is_none()
+            && rule.shown_variables.is_none()
+            && rule
+                .hidden_mixins_and_functions
+                .as_ref()
+                .map_or(false, HashSet::is_empty)
+            && rule
+                .hidden_variables
+                .as_ref()
+                .map_or(false, HashSet::is_empty)
+        {
+            module
         } else {
-            Ok(())
+            Arc::new(RefCell::new(Module::Forwarded(ForwardedModule {
+                inner: module,
+                forward_rule: rule,
+            })))
         }
     }
 }
 
+#[derive(Debug, Clone)]
+pub(crate) struct ModuleScope {
+    pub variables: Arc<dyn MapView<Value = Value>>,
+    pub mixins: Arc<dyn MapView<Value = Mixin>>,
+    pub functions: Arc<dyn MapView<Value = SassFunction>>,
+}
+
+impl ModuleScope {
+    pub fn new() -> Self {
+        Self {
+            variables: Arc::new(BaseMapView(Arc::new(RefCell::new(BTreeMap::new())))),
+            mixins: Arc::new(BaseMapView(Arc::new(RefCell::new(BTreeMap::new())))),
+            functions: Arc::new(BaseMapView(Arc::new(RefCell::new(BTreeMap::new())))),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+#[allow(clippy::large_enum_variant)]
+pub(crate) enum Module {
+    Environment {
+        scope: ModuleScope,
+        #[allow(dead_code)]
+        upstream: Vec<Module>,
+        #[allow(dead_code)]
+        extension_store: ExtensionStore,
+        #[allow(dead_code)]
+        env: Environment,
+    },
+    Builtin {
+        scope: ModuleScope,
+    },
+    Forwarded(ForwardedModule),
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct Modules(BTreeMap<Identifier, Arc<RefCell<Module>>>);
+
 impl Modules {
-    pub fn insert(&mut self, name: Identifier, module: Module, span: Span) -> SassResult<()> {
+    pub fn new() -> Self {
+        Self(BTreeMap::new())
+    }
+
+    pub fn insert(
+        &mut self,
+        name: Identifier,
+        module: Arc<RefCell<Module>>,
+        span: Span,
+    ) -> SassResult<()> {
         if self.0.contains_key(&name) {
             return Err((
                 format!("There's already a module with namespace \"{}\".", name),
@@ -79,9 +124,9 @@ impl Modules {
         Ok(())
     }
 
-    pub fn get(&self, name: Identifier, span: Span) -> SassResult<&Module> {
+    pub fn get(&self, name: Identifier, span: Span) -> SassResult<Arc<RefCell<Module>>> {
         match self.0.get(&name) {
-            Some(v) => Ok(v),
+            Some(v) => Ok(Arc::clone(v)),
             None => Err((
                 format!(
                     "There is no module with the namespace \"{}\".",
@@ -93,7 +138,11 @@ impl Modules {
         }
     }
 
-    pub fn get_mut(&mut self, name: Identifier, span: Span) -> SassResult<&mut Module> {
+    pub fn get_mut(
+        &mut self,
+        name: Identifier,
+        span: Span,
+    ) -> SassResult<&mut Arc<RefCell<Module>>> {
         match self.0.get_mut(&name) {
             Some(v) => Ok(v),
             None => Err((
@@ -106,152 +155,216 @@ impl Modules {
                 .into()),
         }
     }
+}
 
-    pub fn merge(&mut self, other: Self) {
-        self.0.extend(other.0);
+fn member_map<V: fmt::Debug + Clone + 'static>(
+    local: Arc<dyn MapView<Value = V>>,
+    others: Vec<Arc<dyn MapView<Value = V>>>,
+) -> Arc<dyn MapView<Value = V>> {
+    let local_map = PublicMemberMapView(local);
+
+    if others.is_empty() {
+        return Arc::new(local_map);
     }
+
+    let mut all_maps: Vec<Arc<dyn MapView<Value = V>>> =
+        others.into_iter().filter(|map| !map.is_empty()).collect();
+
+    all_maps.push(Arc::new(local_map));
+
+    // todo: potential optimization when all_maps.len() == 1
+    Arc::new(MergedMapView::new(all_maps))
 }
 
 impl Module {
-    pub fn new_builtin() -> Self {
-        Module {
-            scope: Scope::default(),
-            modules: Modules::default(),
-            is_builtin: true,
+    pub fn new_env(env: Environment, extension_store: ExtensionStore) -> Self {
+        let variables = {
+            let variables = (*env.forwarded_modules).borrow();
+            let variables = variables
+                .iter()
+                .map(|module| Arc::clone(&(*module).borrow().scope().variables));
+            let this = Arc::new(BaseMapView(env.global_vars()));
+            member_map(this, variables.collect())
+        };
+
+        let mixins = {
+            let mixins = (*env.forwarded_modules).borrow();
+            let mixins = mixins
+                .iter()
+                .map(|module| Arc::clone(&(*module).borrow().scope().mixins));
+            let this = Arc::new(BaseMapView(env.global_mixins()));
+            member_map(this, mixins.collect())
+        };
+
+        let functions = {
+            let functions = (*env.forwarded_modules).borrow();
+            let functions = functions
+                .iter()
+                .map(|module| Arc::clone(&(*module).borrow().scope().functions));
+            let this = Arc::new(BaseMapView(env.global_functions()));
+            member_map(this, functions.collect())
+        };
+
+        let scope = ModuleScope {
+            variables,
+            mixins,
+            functions,
+        };
+
+        Module::Environment {
+            scope,
+            upstream: Vec::new(),
+            extension_store,
+            env,
         }
     }
 
-    pub fn get_var(&self, name: Spanned<Identifier>) -> SassResult<&Value> {
-        if name.node.as_str().starts_with('-') {
-            return Err((
-                "Private members can't be accessed from outside their modules.",
-                name.span,
-            )
-                .into());
+    pub fn new_builtin() -> Self {
+        Module::Builtin {
+            scope: ModuleScope::new(),
         }
+    }
 
-        match self.scope.vars.get(&name.node) {
+    fn scope(&self) -> ModuleScope {
+        match self {
+            Self::Builtin { scope } | Self::Environment { scope, .. } => scope.clone(),
+            Self::Forwarded(forwarded) => (*forwarded.inner).borrow().scope(),
+        }
+    }
+
+    pub fn get_var(&self, name: Spanned<Identifier>) -> SassResult<Value> {
+        let scope = self.scope();
+
+        match scope.variables.get(name.node) {
             Some(v) => Ok(v),
             None => Err(("Undefined variable.", name.span).into()),
         }
     }
 
+    pub fn get_var_no_err(&self, name: Identifier) -> Option<Value> {
+        let scope = self.scope();
+
+        scope.variables.get(name)
+    }
+
+    pub fn get_mixin_no_err(&self, name: Identifier) -> Option<Mixin> {
+        let scope = self.scope();
+
+        scope.mixins.get(name)
+    }
+
     pub fn update_var(&mut self, name: Spanned<Identifier>, value: Value) -> SassResult<()> {
-        if self.is_builtin {
-            return Err(("Cannot modify built-in variable.", name.span).into());
+        let scope = match self {
+            Self::Builtin { .. } => {
+                return Err(("Cannot modify built-in variable.", name.span).into())
+            }
+            Self::Environment { scope, .. } => scope.clone(),
+            Self::Forwarded(forwarded) => (*forwarded.inner).borrow_mut().scope(),
+        };
+
+        if scope.variables.insert(name.node, value).is_none() {
+            return Err(("Undefined variable.", name.span).into());
         }
 
-        if name.node.as_str().starts_with('-') {
-            return Err((
-                "Private members can't be accessed from outside their modules.",
-                name.span,
-            )
-                .into());
-        }
-
-        if self.scope.insert_var(name.node, value).is_some() {
-            Ok(())
-        } else {
-            Err(("Undefined variable.", name.span).into())
-        }
+        Ok(())
     }
 
     pub fn get_mixin(&self, name: Spanned<Identifier>) -> SassResult<Mixin> {
-        if name.node.as_str().starts_with('-') {
-            return Err((
-                "Private members can't be accessed from outside their modules.",
-                name.span,
-            )
-                .into());
-        }
+        let scope = self.scope();
 
-        match self.scope.mixins.get(&name.node) {
-            Some(v) => Ok(v.clone()),
+        match scope.mixins.get(name.node) {
+            Some(v) => Ok(v),
             None => Err(("Undefined mixin.", name.span).into()),
         }
     }
 
     pub fn insert_builtin_mixin(&mut self, name: &'static str, mixin: BuiltinMixin) {
-        self.scope.mixins.insert(name.into(), Mixin::Builtin(mixin));
+        let scope = self.scope();
+
+        scope.mixins.insert(name.into(), Mixin::Builtin(mixin));
     }
 
     pub fn insert_builtin_var(&mut self, name: &'static str, value: Value) {
-        self.scope.vars.insert(name.into(), value);
+        let ident = name.into();
+
+        let scope = self.scope();
+
+        scope.variables.insert(ident, value);
     }
 
-    pub fn get_fn(&self, name: Spanned<Identifier>) -> SassResult<Option<SassFunction>> {
-        if name.node.as_str().starts_with('-') {
-            return Err((
-                "Private members can't be accessed from outside their modules.",
-                name.span,
-            )
-                .into());
-        }
+    pub fn get_fn(&self, name: Identifier) -> Option<SassFunction> {
+        let scope = self.scope();
 
-        Ok(self.scope.functions.get(&name.node).cloned())
+        scope.functions.get(name)
     }
 
     pub fn var_exists(&self, name: Identifier) -> bool {
-        !name.as_str().starts_with('-') && self.scope.var_exists(name)
+        let scope = self.scope();
+
+        scope.variables.get(name).is_some()
     }
 
     pub fn mixin_exists(&self, name: Identifier) -> bool {
-        !name.as_str().starts_with('-') && self.scope.mixin_exists(name)
+        let scope = self.scope();
+
+        scope.mixins.get(name).is_some()
     }
 
     pub fn fn_exists(&self, name: Identifier) -> bool {
-        !name.as_str().starts_with('-') && self.scope.fn_exists(name)
+        let scope = self.scope();
+
+        scope.functions.get(name).is_some()
     }
 
     pub fn insert_builtin(
         &mut self,
         name: &'static str,
-        function: fn(CallArgs, &mut Parser) -> SassResult<Value>,
+        function: fn(ArgumentResult, &mut Visitor) -> SassResult<Value>,
     ) {
         let ident = name.into();
-        self.scope
+
+        let scope = match self {
+            Self::Builtin { scope } => scope,
+            _ => unreachable!(),
+        };
+
+        scope
             .functions
             .insert(ident, SassFunction::Builtin(Builtin::new(function), ident));
     }
 
-    pub fn functions(&self) -> SassMap {
+    pub fn functions(&self, span: Span) -> SassMap {
         SassMap::new_with(
-            self.scope
+            self.scope()
                 .functions
                 .iter()
+                .into_iter()
                 .filter(|(key, _)| !key.as_str().starts_with('-'))
                 .map(|(key, value)| {
                     (
-                        Value::String(key.to_string(), QuoteKind::Quoted),
-                        Value::FunctionRef(value.clone()),
+                        Value::String(key.to_string(), QuoteKind::Quoted).span(span),
+                        Value::FunctionRef(value),
                     )
                 })
-                .collect::<Vec<(Value, Value)>>(),
+                .collect::<Vec<_>>(),
         )
     }
 
-    pub fn variables(&self) -> SassMap {
+    pub fn variables(&self, span: Span) -> SassMap {
         SassMap::new_with(
-            self.scope
-                .vars
+            self.scope()
+                .variables
                 .iter()
+                .into_iter()
                 .filter(|(key, _)| !key.as_str().starts_with('-'))
                 .map(|(key, value)| {
                     (
-                        Value::String(key.to_string(), QuoteKind::Quoted),
-                        value.clone(),
+                        Value::String(key.to_string(), QuoteKind::Quoted).span(span),
+                        value,
                     )
                 })
-                .collect::<Vec<(Value, Value)>>(),
+                .collect::<Vec<_>>(),
         )
-    }
-
-    pub const fn new_from_scope(scope: Scope, modules: Modules, is_builtin: bool) -> Self {
-        Module {
-            scope,
-            modules,
-            is_builtin,
-        }
     }
 }
 

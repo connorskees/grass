@@ -293,6 +293,11 @@ test!(
     "a {\n  color: [1];\n}\n"
 );
 test!(
+    space_separated_list_of_bracketed_lists,
+    "a {\n  color: [[]] [[]] [[]];\n}\n",
+    "a {\n  color: [[]] [[]] [[]];\n}\n"
+);
+test!(
     null_values_in_list_ommitted,
     "a {\n  color: 1, null, null;\n}\n",
     "a {\n  color: 1;\n}\n"
@@ -373,6 +378,16 @@ test!(
     "a {\n  color: [];\n}\n"
 );
 test!(
+    parens_in_space_separated_list,
+    "a {\n  color: foo () bar;\n}\n",
+    "a {\n  color: foo bar;\n}\n"
+);
+test!(
+    parens_in_comma_separated_list,
+    "a {\n  color: foo, (), bar;\n}\n",
+    "a {\n  color: foo, bar;\n}\n"
+);
+test!(
     space_separated_inside_comma_separated,
     "$a: 1 2 3 == 1, 2, 3;
     a {
@@ -386,6 +401,21 @@ test!(
     whitespace_space_list_number,
     "a {\n  color:  1  2  3  ;\n}\n",
     "a {\n  color: 1 2 3;\n}\n"
+);
+test!(
+    bracketed_list_with_only_null_elements,
+    "a {\n  color: [null, null, null];\n}\n",
+    "a {\n  color: [];\n}\n"
+);
+test!(
+    bracketed_list_with_single_null_element,
+    "a {\n  color: [null];\n}\n",
+    "a {\n  color: [];\n}\n"
+);
+test!(
+    comma_separated_list_has_element_beginning_with_capital_A,
+    "a {\n  color: a, A, \"Noto Color Emoji\";\n}\n",
+    "a {\n  color: a, A, \"Noto Color Emoji\";\n}\n"
 );
 error!(
     invalid_item_in_space_separated_list,

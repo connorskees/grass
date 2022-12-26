@@ -314,7 +314,7 @@ error!(
     a {
         color: foo(nul);
     }",
-    "Error: Functions can only contain variable declarations and control directives."
+    "Error: expected \".\"."
 );
 error!(
     pass_one_arg_to_fn_that_accepts_zero,
@@ -337,6 +337,22 @@ error!(
       color: foo(1, 2);
     }",
     "Error: Only 1 argument allowed, but 2 were passed."
+);
+error!(
+    declaration_inside_function,
+    "@function foo() {
+        opacity: 1;
+        @return 2;
+    }",
+    "Error: @function rules may not contain declarations."
+);
+error!(
+    style_rule_inside_function,
+    "@function foo() {
+        a {}
+        @return 2;
+    }",
+    "Error: @function rules may not contain style rules."
 );
 test!(
     allows_multiline_comment,
@@ -361,3 +377,37 @@ test!(
     }",
     "a {\n  color: red;\n}\n"
 );
+test!(
+    return_inside_each,
+    "@function foo() {
+        @each $i in 0 {
+            @return $i;
+        }
+    }
+
+    a {
+        color: foo();
+    }",
+    "a {\n  color: 0;\n}\n"
+);
+test!(
+    recursive_function_cannot_modify_scope_of_calling_function,
+    "@function with-local-variable($recurse) {
+        $var: before;
+
+        @if ($recurse) {
+                $a: with-local-variable($recurse: false);
+        }
+
+        $ret: $var;
+        $var: after;
+        @return $ret;
+    }
+
+    a {
+        color: with-local-variable($recurse: true);
+    }",
+    "a {\n  color: before;\n}\n"
+);
+
+// todo: return inside if, return inside while, return inside for

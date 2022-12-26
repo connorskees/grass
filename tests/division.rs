@@ -72,6 +72,26 @@ test!(
     "a {\n  color: /1;\n}\n"
 );
 test!(
+    null_div_named_color,
+    "a {\n  color: null / red;\n}\n",
+    "a {\n  color: /red;\n}\n"
+);
+test!(
+    null_div_hex_color,
+    "a {\n  color: null / #f0f0f0;\n}\n",
+    "a {\n  color: /#f0f0f0;\n}\n"
+);
+test!(
+    named_color_div_null,
+    "a {\n  color: red / null;\n}\n",
+    "a {\n  color: red/;\n}\n"
+);
+test!(
+    hex_color_div_null,
+    "a {\n  color: #f0f0f0 / null;\n}\n",
+    "a {\n  color: #f0f0f0/;\n}\n"
+);
+test!(
     null_div_dblquoted_string,
     "a {\n  color: null / \"foo\";\n}\n",
     "a {\n  color: /\"foo\";\n}\n"
@@ -163,6 +183,11 @@ test!(
     "a {\n  color: 1/3/4;\n}\n"
 );
 test!(
+    long_as_slash_chain,
+    "a {\n  color: 1/2/3/4/5/6/7/8/9;\n}\n",
+    "a {\n  color: 1/2/3/4/5/6/7/8/9;\n}\n"
+);
+test!(
     does_not_eval_chained_binop_one_not_division,
     "a {\n  color: 1 + 3 / 4;\n}\n",
     "a {\n  color: 1.75;\n}\n"
@@ -171,4 +196,86 @@ test!(
     zero_div_zero_is_nan,
     "a {\n  color: (0 / 0);\n}\n",
     "a {\n  color: NaN;\n}\n"
+);
+test!(
+    divide_two_calculations,
+    "a {\n  color: (calc(1rem + 1px) / calc(1rem + 1px));\n}\n",
+    "a {\n  color: calc(1rem + 1px)/calc(1rem + 1px);\n}\n"
+);
+test!(
+    num_div_calculation,
+    "a {\n  color: (1 / calc(1rem + 1px));\n}\n",
+    "a {\n  color: 1/calc(1rem + 1px);\n}\n"
+);
+test!(
+    calculation_div_null,
+    "a {\n  color: (calc(1rem + 1px) / null);\n}\n",
+    "a {\n  color: calc(1rem + 1px)/;\n}\n"
+);
+test!(
+    calculation_div_dbl_quoted_string,
+    "a {\n  color: (calc(1rem + 1px) / \"foo\");\n}\n",
+    "a {\n  color: calc(1rem + 1px)/\"foo\";\n}\n"
+);
+test!(
+    calculation_div_sgl_quoted_string,
+    "a {\n  color: (calc(1rem + 1px) / 'foo');\n}\n",
+    "a {\n  color: calc(1rem + 1px)/\"foo\";\n}\n"
+);
+test!(
+    three_chain_ending_in_string_is_not_evaled,
+    "a {\n  color: 1 / 2 / foo();\n}\n",
+    "a {\n  color: 1/2/foo();\n}\n"
+);
+test!(
+    evaluates_variable_in_each,
+    "$x: a 3/4 b;
+
+    a {
+        @each $elem in $x {
+            color: $elem;
+        }
+    }",
+    "a {\n  color: a;\n  color: 0.75;\n  color: b;\n}\n"
+);
+test!(
+    evaluates_multiple_variables_in_each,
+    "$x: a 3/4;
+
+    a {
+
+        @each $a,
+        $b in $x {
+            color: $a;
+        }
+    }",
+    "a {\n  color: a;\n  color: 0.75;\n}\n"
+);
+test!(
+    not_evaluated_for_variable_as_map_value_in_list,
+    "$a: 1 2/3 4;
+
+    a {
+        color: inspect((a: $a))
+    }",
+    "a {\n  color: (a: 1 2/3 4);\n}\n"
+);
+test!(
+    is_evaluated_for_variable_as_map_value_alone,
+    "$a: 2/3;
+
+    a {
+        color: inspect((a: $a))
+    }",
+    "a {\n  color: (a: 0.6666666667);\n}\n"
+);
+test!(
+    quoted_string_div_calculation,
+    "a {\n  color: \"\" / calc(1vh + 1px);\n}\n",
+    "a {\n  color: \"\"/calc(1vh + 1px);\n}\n"
+);
+test!(
+    unquoted_string_div_calculation,
+    "a {\n  color: foo / calc(1vh + 1px);\n}\n",
+    "a {\n  color: foo/calc(1vh + 1px);\n}\n"
 );

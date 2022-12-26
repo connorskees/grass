@@ -1,6 +1,6 @@
 use codemap::Span;
 
-use crate::{common::unvendor, error::SassResult, parse::Parser, utils::is_name, Token};
+use crate::{common::unvendor, error::SassResult, lexer::Lexer, parse::BaseParser, Token};
 
 use super::{
     Attribute, Combinator, ComplexSelector, ComplexSelectorComponent, CompoundSelector, Namespace,
@@ -17,22 +17,11 @@ enum DevouredWhitespace {
     None,
 }
 
-impl DevouredWhitespace {
-    fn found_whitespace(&mut self) {
-        if self == &Self::None {
-            *self = Self::Whitespace;
-        }
-    }
-
-    fn found_newline(&mut self) {
-        *self = Self::Newline;
-    }
-}
-
 /// Pseudo-class selectors that take unadorned selectors as arguments.
-const SELECTOR_PSEUDO_CLASSES: [&str; 8] = [
+const SELECTOR_PSEUDO_CLASSES: [&str; 9] = [
     "not",
     "matches",
+    "where",
     "is",
     "current",
     "any",
@@ -44,36 +33,41 @@ const SELECTOR_PSEUDO_CLASSES: [&str; 8] = [
 /// Pseudo-element selectors that take unadorned selectors as arguments.
 const SELECTOR_PSEUDO_ELEMENTS: [&str; 1] = ["slotted"];
 
-pub(crate) struct SelectorParser<'a, 'b, 'c> {
+pub(crate) struct SelectorParser<'a> {
     /// Whether this parser allows the parent selector `&`.
     allows_parent: bool,
 
     /// Whether this parser allows placeholder selectors beginning with `%`.
     allows_placeholder: bool,
 
-    parser: &'a mut Parser<'b, 'c>,
+    pub toks: Lexer<'a>,
 
     span: Span,
 }
 
-impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
-    pub fn new(
-        parser: &'a mut Parser<'b, 'c>,
-        allows_parent: bool,
-        allows_placeholder: bool,
-        span: Span,
-    ) -> Self {
+impl<'a> BaseParser<'a> for SelectorParser<'a> {
+    fn toks(&self) -> &Lexer<'a> {
+        &self.toks
+    }
+
+    fn toks_mut(&mut self) -> &mut Lexer<'a> {
+        &mut self.toks
+    }
+}
+
+impl<'a> SelectorParser<'a> {
+    pub fn new(toks: Lexer<'a>, allows_parent: bool, allows_placeholder: bool, span: Span) -> Self {
         Self {
+            toks,
             allows_parent,
             allows_placeholder,
-            parser,
             span,
         }
     }
 
     pub fn parse(mut self) -> SassResult<SelectorList> {
         let tmp = self.parse_selector_list()?;
-        if self.parser.toks.peek().is_some() {
+        if self.toks.peek().is_some() {
             return Err(("expected selector.", self.span).into());
         }
         Ok(tmp)
@@ -82,14 +76,13 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
     fn parse_selector_list(&mut self) -> SassResult<SelectorList> {
         let mut components = vec![self.parse_complex_selector(false)?];
 
-        self.parser.whitespace();
+        self.whitespace()?;
 
         let mut line_break = false;
 
-        while let Some(Token { kind: ',', .. }) = self.parser.toks.peek() {
-            self.parser.toks.next();
+        while self.scan_char(',') {
             line_break = self.eat_whitespace() == DevouredWhitespace::Newline || line_break;
-            match self.parser.toks.peek() {
+            match self.toks.peek() {
                 Some(Token { kind: ',', .. }) => continue,
                 Some(..) => {}
                 None => break,
@@ -106,17 +99,15 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
     }
 
     fn eat_whitespace(&mut self) -> DevouredWhitespace {
-        let mut whitespace_devoured = DevouredWhitespace::None;
-        while let Some(tok) = self.parser.toks.peek() {
-            match tok.kind {
-                ' ' | '\t' => whitespace_devoured.found_whitespace(),
-                '\n' => whitespace_devoured.found_newline(),
-                _ => break,
-            }
-            self.parser.toks.next();
-        }
+        let text = self.raw_text(Self::whitespace);
 
-        whitespace_devoured
+        if text.contains('\n') {
+            DevouredWhitespace::Newline
+        } else if !text.is_empty() {
+            DevouredWhitespace::Whitespace
+        } else {
+            DevouredWhitespace::None
+        }
     }
 
     /// Consumes a complex selector.
@@ -127,22 +118,22 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
         let mut components = Vec::new();
 
         loop {
-            self.parser.whitespace();
+            self.whitespace()?;
 
-            // todo: can we do while let Some(..) = self.parser.toks.peek() ?
-            match self.parser.toks.peek() {
+            // todo: can we do while let Some(..) = self.toks.peek() ?
+            match self.toks.peek() {
                 Some(Token { kind: '+', .. }) => {
-                    self.parser.toks.next();
+                    self.toks.next();
                     components.push(ComplexSelectorComponent::Combinator(
                         Combinator::NextSibling,
                     ));
                 }
                 Some(Token { kind: '>', .. }) => {
-                    self.parser.toks.next();
+                    self.toks.next();
                     components.push(ComplexSelectorComponent::Combinator(Combinator::Child));
                 }
                 Some(Token { kind: '~', .. }) => {
-                    self.parser.toks.next();
+                    self.toks.next();
                     components.push(ComplexSelectorComponent::Combinator(
                         Combinator::FollowingSibling,
                     ));
@@ -159,18 +150,18 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
                     components.push(ComplexSelectorComponent::Compound(
                         self.parse_compound_selector()?,
                     ));
-                    if let Some(Token { kind: '&', .. }) = self.parser.toks.peek() {
+                    if let Some(Token { kind: '&', .. }) = self.toks.peek() {
                         return Err(("\"&\" may only used at the beginning of a compound selector.", self.span).into());
                     }
                 }
                 Some(..) => {
-                    if !self.parser.looking_at_identifier() {
+                    if !self.looking_at_identifier() {
                         break;
                     }
                     components.push(ComplexSelectorComponent::Compound(
                         self.parse_compound_selector()?,
                     ));
-                    if let Some(Token { kind: '&', .. }) = self.parser.toks.peek() {
+                    if let Some(Token { kind: '&', .. }) = self.toks.peek() {
                         return Err(("\"&\" may only used at the beginning of a compound selector.", self.span).into());
                     }
                 }
@@ -188,7 +179,7 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
     fn parse_compound_selector(&mut self) -> SassResult<CompoundSelector> {
         let mut components = vec![self.parse_simple_selector(None)?];
 
-        while let Some(Token { kind, .. }) = self.parser.toks.peek() {
+        while let Some(Token { kind, .. }) = self.toks.peek() {
             if !is_simple_selector_start(kind) {
                 break;
             }
@@ -199,16 +190,12 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
         Ok(CompoundSelector { components })
     }
 
-    fn looking_at_identifier_body(&mut self) -> bool {
-        matches!(self.parser.toks.peek(), Some(t) if is_name(t.kind) || t.kind == '\\')
-    }
-
     /// Consumes a simple selector.
     ///
     /// If `allows_parent` is `Some`, this will override `self.allows_parent`. If `allows_parent`
     /// is `None`, it will fallback to `self.allows_parent`.
     fn parse_simple_selector(&mut self, allows_parent: Option<bool>) -> SassResult<SimpleSelector> {
-        match self.parser.toks.peek() {
+        match self.toks.peek() {
             Some(Token { kind: '[', .. }) => self.parse_attribute_selector(),
             Some(Token { kind: '.', .. }) => self.parse_class_selector(),
             Some(Token { kind: '#', .. }) => self.parse_id_selector(),
@@ -232,40 +219,33 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
     }
 
     fn parse_attribute_selector(&mut self) -> SassResult<SimpleSelector> {
-        self.parser.toks.next();
+        self.toks.next();
         Ok(SimpleSelector::Attribute(Box::new(Attribute::from_tokens(
-            self.parser,
+            self,
         )?)))
     }
 
     fn parse_class_selector(&mut self) -> SassResult<SimpleSelector> {
-        self.parser.toks.next();
-        Ok(SimpleSelector::Class(self.parser.parse_identifier()?.node))
+        self.toks.next();
+        Ok(SimpleSelector::Class(self.parse_identifier(false, false)?))
     }
 
     fn parse_id_selector(&mut self) -> SassResult<SimpleSelector> {
-        self.parser.toks.next();
-        Ok(SimpleSelector::Id(self.parser.parse_identifier()?.node))
+        self.toks.next();
+        Ok(SimpleSelector::Id(self.parse_identifier(false, false)?))
     }
 
     fn parse_pseudo_selector(&mut self) -> SassResult<SimpleSelector> {
-        self.parser.toks.next();
-        let element = match self.parser.toks.peek() {
-            Some(Token { kind: ':', .. }) => {
-                self.parser.toks.next();
-                true
-            }
-            _ => false,
-        };
+        self.toks.next();
+        let element = self.scan_char(':');
+        let name = self.parse_identifier(false, false)?;
 
-        let name = self.parser.parse_identifier()?;
-
-        match self.parser.toks.peek() {
-            Some(Token { kind: '(', .. }) => self.parser.toks.next(),
+        match self.toks.peek() {
+            Some(Token { kind: '(', .. }) => self.toks.next(),
             _ => {
                 return Ok(SimpleSelector::Pseudo(Pseudo {
                     is_class: !element && !is_fake_pseudo_element(&name),
-                    name: name.node,
+                    name,
                     selector: None,
                     is_syntactic_class: !element,
                     argument: None,
@@ -274,7 +254,7 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
             }
         };
 
-        self.parser.whitespace();
+        self.whitespace()?;
 
         let unvendored = unvendor(&name);
 
@@ -285,51 +265,50 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
             // todo: lowercase?
             if SELECTOR_PSEUDO_ELEMENTS.contains(&unvendored) {
                 selector = Some(Box::new(self.parse_selector_list()?));
-                self.parser.whitespace();
+                self.whitespace()?;
             } else {
-                argument = Some(
-                    self.parser
-                        .declaration_value(true, false, true)?
-                        .into_boxed_str(),
-                );
+                argument = Some(self.declaration_value(true)?.into_boxed_str());
             }
 
-            self.parser.expect_char(')')?;
+            self.expect_char(')')?;
         } else if SELECTOR_PSEUDO_CLASSES.contains(&unvendored) {
             selector = Some(Box::new(self.parse_selector_list()?));
-            self.parser.whitespace();
-            self.parser.expect_char(')')?;
+            self.whitespace()?;
+            self.expect_char(')')?;
         } else if unvendored == "nth-child" || unvendored == "nth-last-child" {
             let mut this_arg = self.parse_a_n_plus_b()?;
-            let found_whitespace = self.parser.whitespace();
-            #[allow(clippy::match_same_arms)]
-            match (found_whitespace, self.parser.toks.peek()) {
-                (_, Some(Token { kind: ')', .. })) => {}
-                (true, _) => {
-                    self.expect_identifier("of")?;
-                    this_arg.push_str(" of");
-                    self.parser.whitespace();
-                    selector = Some(Box::new(self.parse_selector_list()?));
-                }
-                _ => {}
+            self.whitespace()?;
+
+            let last_was_whitespace = matches!(
+                self.toks.peek_n_backwards(1),
+                Some(Token {
+                    kind: ' ' | '\t' | '\n' | '\r',
+                    ..
+                })
+            );
+            if last_was_whitespace && !matches!(self.toks.peek(), Some(Token { kind: ')', .. })) {
+                self.expect_identifier("of", false)?;
+                this_arg.push_str(" of");
+                self.whitespace()?;
+                selector = Some(Box::new(self.parse_selector_list()?));
             }
-            self.parser.expect_char(')')?;
+
+            self.expect_char(')')?;
             argument = Some(this_arg.into_boxed_str());
         } else {
             argument = Some(
-                self.parser
-                    .declaration_value(true, false, true)?
+                self.declaration_value(true)?
                     .trim_end()
                     .to_owned()
                     .into_boxed_str(),
             );
 
-            self.parser.expect_char(')')?;
+            self.expect_char(')')?;
         }
 
         Ok(SimpleSelector::Pseudo(Pseudo {
             is_class: !element && !is_fake_pseudo_element(&name),
-            name: name.node,
+            name,
             selector,
             is_syntactic_class: !element,
             argument,
@@ -338,9 +317,11 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
     }
 
     fn parse_parent_selector(&mut self) -> SassResult<SimpleSelector> {
-        self.parser.toks.next();
+        self.toks.next();
         let suffix = if self.looking_at_identifier_body() {
-            Some(self.parser.parse_identifier()?.node)
+            let mut buffer = String::new();
+            self.parse_identifier_body(&mut buffer, false, false)?;
+            Some(buffer)
         } else {
             None
         };
@@ -348,9 +329,9 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
     }
 
     fn parse_placeholder_selector(&mut self) -> SassResult<SimpleSelector> {
-        self.parser.toks.next();
+        self.toks.next();
         Ok(SimpleSelector::Placeholder(
-            self.parser.parse_identifier()?.node,
+            self.parse_identifier(false, false)?,
         ))
     }
 
@@ -358,38 +339,34 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
     ///
     /// These are combined because either one could start with `*`.
     fn parse_type_or_universal_selector(&mut self) -> SassResult<SimpleSelector> {
-        self.parser.toks.peek();
-
-        match self.parser.toks.peek() {
-            Some(Token { kind: '*', pos }) => {
-                self.parser.span_before = self.parser.span_before.merge(pos);
-                self.parser.toks.next();
-                if let Some(Token { kind: '|', .. }) = self.parser.toks.peek() {
-                    self.parser.toks.next();
-                    if let Some(Token { kind: '*', .. }) = self.parser.toks.peek() {
-                        self.parser.toks.next();
+        match self.toks.peek() {
+            Some(Token { kind: '*', .. }) => {
+                self.toks.next();
+                if let Some(Token { kind: '|', .. }) = self.toks.peek() {
+                    self.toks.next();
+                    if let Some(Token { kind: '*', .. }) = self.toks.peek() {
+                        self.toks.next();
                         return Ok(SimpleSelector::Universal(Namespace::Asterisk));
                     }
 
                     return Ok(SimpleSelector::Type(QualifiedName {
-                        ident: self.parser.parse_identifier()?.node,
+                        ident: self.parse_identifier(false, false)?,
                         namespace: Namespace::Asterisk,
                     }));
                 }
 
                 return Ok(SimpleSelector::Universal(Namespace::None));
             }
-            Some(Token { kind: '|', pos }) => {
-                self.parser.span_before = self.parser.span_before.merge(pos);
-                self.parser.toks.next();
-                match self.parser.toks.peek() {
+            Some(Token { kind: '|', .. }) => {
+                self.toks.next();
+                match self.toks.peek() {
                     Some(Token { kind: '*', .. }) => {
-                        self.parser.toks.next();
+                        self.toks.next();
                         return Ok(SimpleSelector::Universal(Namespace::Empty));
                     }
                     _ => {
                         return Ok(SimpleSelector::Type(QualifiedName {
-                            ident: self.parser.parse_identifier()?.node,
+                            ident: self.parse_identifier(false, false)?,
                             namespace: Namespace::Empty,
                         }));
                     }
@@ -398,17 +375,17 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
             _ => {}
         }
 
-        let name_or_namespace = self.parser.parse_identifier()?.node;
+        let name_or_namespace = self.parse_identifier(false, false)?;
 
-        Ok(match self.parser.toks.peek() {
+        Ok(match self.toks.peek() {
             Some(Token { kind: '|', .. }) => {
-                self.parser.toks.next();
-                if let Some(Token { kind: '*', .. }) = self.parser.toks.peek() {
-                    self.parser.toks.next();
+                self.toks.next();
+                if let Some(Token { kind: '*', .. }) = self.toks.peek() {
+                    self.toks.next();
                     SimpleSelector::Universal(Namespace::Other(name_or_namespace.into_boxed_str()))
                 } else {
                     SimpleSelector::Type(QualifiedName {
-                        ident: self.parser.parse_identifier()?.node,
+                        ident: self.parse_identifier(false, false)?,
                         namespace: Namespace::Other(name_or_namespace.into_boxed_str()),
                     })
                 }
@@ -426,60 +403,51 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
     fn parse_a_n_plus_b(&mut self) -> SassResult<String> {
         let mut buf = String::new();
 
-        match self.parser.toks.peek() {
+        match self.toks.peek() {
             Some(Token { kind: 'e', .. }) | Some(Token { kind: 'E', .. }) => {
-                self.expect_identifier("even")?;
+                self.expect_identifier("even", false)?;
                 return Ok("even".to_owned());
             }
             Some(Token { kind: 'o', .. }) | Some(Token { kind: 'O', .. }) => {
-                self.expect_identifier("odd")?;
+                self.expect_identifier("odd", false)?;
                 return Ok("odd".to_owned());
             }
             Some(t @ Token { kind: '+', .. }) | Some(t @ Token { kind: '-', .. }) => {
                 buf.push(t.kind);
-                self.parser.toks.next();
+                self.toks.next();
             }
             _ => {}
         }
 
-        match self.parser.toks.peek() {
+        match self.toks.peek() {
             Some(t) if t.kind.is_ascii_digit() => {
-                while let Some(t) = self.parser.toks.peek() {
+                while let Some(t) = self.toks.peek() {
                     if !t.kind.is_ascii_digit() {
                         break;
                     }
                     buf.push(t.kind);
-                    self.parser.toks.next();
+                    self.toks.next();
                 }
-                self.parser.whitespace();
-                if let Some(t) = self.parser.toks.peek() {
-                    if t.kind != 'n' && t.kind != 'N' {
-                        return Ok(buf);
-                    }
-                    self.parser.toks.next();
+                self.whitespace()?;
+                if !self.scan_ident_char('n', false)? {
+                    return Ok(buf);
                 }
             }
-            Some(t) => {
-                if t.kind == 'n' || t.kind == 'N' {
-                    self.parser.toks.next();
-                } else {
-                    return Err(("Expected \"n\".", self.span).into());
-                }
-            }
+            Some(..) => self.expect_ident_char('n', false)?,
             None => return Err(("expected more input.", self.span).into()),
         }
 
         buf.push('n');
 
-        self.parser.whitespace();
+        self.whitespace()?;
 
         if let Some(t @ Token { kind: '+', .. }) | Some(t @ Token { kind: '-', .. }) =
-            self.parser.toks.peek()
+            self.toks.peek()
         {
             buf.push(t.kind);
-            self.parser.toks.next();
-            self.parser.whitespace();
-            match self.parser.toks.peek() {
+            self.toks.next();
+            self.whitespace()?;
+            match self.toks.peek() {
                 Some(t) if !t.kind.is_ascii_digit() => {
                     return Err(("Expected a number.", self.span).into())
                 }
@@ -487,25 +455,15 @@ impl<'a, 'b, 'c> SelectorParser<'a, 'b, 'c> {
                 Some(..) => {}
             }
 
-            while let Some(t) = self.parser.toks.peek() {
+            while let Some(t) = self.toks.peek() {
                 if !t.kind.is_ascii_digit() {
                     break;
                 }
                 buf.push(t.kind);
-                self.parser.toks.next();
+                self.toks.next();
             }
         }
         Ok(buf)
-    }
-
-    fn expect_identifier(&mut self, s: &str) -> SassResult<()> {
-        let mut ident = self.parser.parse_identifier_no_interpolation(false)?.node;
-        ident.make_ascii_lowercase();
-        if ident == s {
-            Ok(())
-        } else {
-            Err((format!("Expected \"{}\".", s), self.span).into())
-        }
     }
 }
 

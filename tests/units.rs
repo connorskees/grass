@@ -186,12 +186,47 @@ test!(
     "a {\n  color: comparable(1vw, 1vh);\n}\n",
     "a {\n  color: false;\n}\n"
 );
+test!(
+    removes_same_unit_from_complex_in_division,
+    "a {\n  color: ((1px*1px) / 1px);\n}\n",
+    "a {\n  color: 1px;\n}\n"
+);
+test!(
+    removes_comparable_unit_from_complex_in_division_and_does_conversion,
+    "a {\n  color: ((1in*1in) / 1cm);\n}\n",
+    "a {\n  color: 2.54in;\n}\n"
+);
+test!(
+    add_complex_div_units,
+    "a {\n  color: inspect((1em / 1em) + (1px / 1em));\n}\n",
+    "a {\n  color: 2px/em;\n}\n"
+);
+test!(
+    #[ignore = "we need to rewrite how we compare and convert units"]
+    complex_units_with_same_denom_and_comparable_numer_are_comparable,
+    "a {\n  color: comparable((23in/2fu), (23cm/2fu));\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    complex_unit_many_denom_one_numer,
+    "a {\n  color: unit((1rem/1px) / 1vh);\n}\n",
+    "a {\n  color: \"rem/px*vh\";\n}\n"
+);
 error!(
     display_single_div_with_none_numerator,
     "a {\n  color: (1 / 1em);\n}\n", "Error: 1em^-1 isn't a valid CSS value."
 );
 error!(
-    #[ignore = "non-comparable inverse units"]
+    // note: dart-sass has error "Error: 1X and 1dppx have incompatible units."
+    capital_x_is_not_alias_for_dppx,
+    "a {\n  color: 1X + 1dppx;\n}\n", "Error: Incompatible units dppx and X."
+);
+error!(
+    // note: dart-sass has error "Error: 1x and 1dppx have incompatible units."
+    lowercase_x_is_not_alias_for_dppx,
+    "a {\n  color: 1x + 1dppx;\n}\n", "Error: Incompatible units dppx and x."
+);
+error!(
     display_single_div_with_non_comparable_numerator,
     "a {\n  color: (1px / 1em);\n}\n", "Error: 1px/em isn't a valid CSS value."
 );

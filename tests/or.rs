@@ -70,7 +70,12 @@ test!(
     "a {\n  color: true or red % foo, red;\n}\n",
     "a {\n  color: true, red;\n}\n"
 );
+test!(
+    chained_and_or,
+    "a {\n  color: true and true or false and false;\n}\n",
+    "a {\n  color: true;\n}\n"
+);
 error!(
     properly_bubbles_error_when_invalid_char_after_or,
-    "a {\n  color: true or? foo;\n}\n", "Error: expected \";\"."
+    "a {\n  color: true or? foo;\n}\n", "Error: Expected expression."
 );

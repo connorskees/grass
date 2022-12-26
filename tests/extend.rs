@@ -1393,7 +1393,6 @@ test!(
     "@media screen {\n  @unknown {\n    .foo, .bar {\n      a: b;\n    }\n  }\n}\n"
 );
 test!(
-    #[ignore = "media queries are not yet parsed correctly"]
     extend_within_separate_media_queries,
     "@media screen {.foo {a: b}}
     @media screen {.bar {@extend .foo}}
@@ -1401,7 +1400,6 @@ test!(
     "@media screen {\n  .foo, .bar {\n    a: b;\n  }\n}\n"
 );
 test!(
-    #[ignore = "media queries are not yet parsed correctly"]
     extend_within_separate_unknown_at_rules,
     "@unknown {.foo {a: b}}
     @unknown {.bar {@extend .foo}}
@@ -1409,7 +1407,6 @@ test!(
     "@unknown {\n  .foo, .bar {\n    a: b;\n  }\n}\n@unknown {}\n"
 );
 test!(
-    #[ignore = "media queries are not yet parsed correctly"]
     extend_within_separate_nested_at_rules,
     "@media screen {@flooblehoof {.foo {a: b}}}
      @media screen {@flooblehoof {.bar {@extend .foo}}}",
@@ -1561,7 +1558,6 @@ test!(
     ".parent1 .child {\n  a: b;\n}\n"
 );
 test!(
-    #[ignore = "media queries are not yet parsed correctly"]
     extend_inside_double_nested_media,
     "@media all {
         @media (orientation: landscape) {
@@ -1741,14 +1737,13 @@ test!(
     ":not(.c):not(.a):not(.d):not(.b) {\n  a: b;\n}\n"
 );
 test!(
-    #[ignore = "media queries are not yet parsed correctly"]
     does_not_move_page_block_in_media,
     "@media screen {
         a { x:y; }
         @page {}
     }      
     ",
-    "@media screen {\n  a {\n    x: y;\n  }\n\n  @page {}\n}\n"
+    "@media screen {\n  a {\n    x: y;\n  }\n  @page {}\n}\n"
 );
 test!(
     escaped_selector,
@@ -1921,7 +1916,11 @@ test!(
     }",
     "c b {\n  color: red;\n}\n"
 );
-
+test!(
+    unification_subselector_of_target_where,
+    r#"a {b: selector-extend(".c:where(d)", ":where(d)", "d.e")}"#,
+    "a {\n  b: .c:where(d);\n}\n"
+);
 error!(
     extend_optional_keyword_not_complete,
     "a {
@@ -1936,6 +1935,37 @@ error!(
     }",
     "Error: Parent selectors aren't allowed here."
 );
+error!(
+    #[ignore = "we do not currently respect this"]
+    extend_across_media_boundary,
+    "a {
+        display: none;
+    }
+
+    @media only screen and (min-width:300px) {
+        a {
+            @extend a;
+        }
+    }",
+    "Error: You may not @extend selectors across media queries."
+);
+error!(
+    #[ignore = "we do not error for this"]
+    extend_target_does_not_exist,
+    "a {
+        @extend dne;
+    }",
+    "Error: The target selector was not found."
+);
+error!(
+    #[ignore = "crash"]
+    extends_self_is_has_invalid_combinator,
+    "a :is(#a, >) {
+        @extend a
+    }",
+    ""
+);
 
 // todo: extend_loop (massive test)
 // todo: extend tests in folders
+// todo: copy all :where extend tests, https://github.com/sass/sass-spec/pull/1783/files

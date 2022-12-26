@@ -1,5 +1,3 @@
-use std::fmt;
-
 use codemap::Span;
 
 use crate::{error::SassResult, value::Value};
@@ -22,14 +20,9 @@ mod list;
 mod parse;
 mod simple;
 
+// todo: delete this selector wrapper
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Selector(pub SelectorList);
-
-impl fmt::Display for Selector {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
 
 impl Selector {
     /// Small wrapper around `SelectorList`'s method that turns an empty parent selector
@@ -56,18 +49,6 @@ impl Selector {
 
     pub fn contains_parent_selector(&self) -> bool {
         self.0.contains_parent_selector()
-    }
-
-    pub fn remove_placeholders(self) -> Selector {
-        Self(SelectorList {
-            span: self.0.span,
-            components: self
-                .0
-                .components
-                .into_iter()
-                .filter(|c| !c.is_invisible())
-                .collect(),
-        })
     }
 
     pub fn is_empty(&self) -> bool {

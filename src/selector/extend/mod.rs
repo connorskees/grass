@@ -7,7 +7,7 @@ use codemap::Span;
 
 use indexmap::IndexMap;
 
-use crate::error::SassResult;
+use crate::{ast::CssMediaQuery, error::SassResult};
 
 use super::{
     ComplexSelector, ComplexSelectorComponent, ComplexSelectorHashSet, CompoundSelector, Pseudo,
@@ -27,9 +27,6 @@ mod extension;
 mod functions;
 mod merged;
 mod rule;
-
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
-pub(crate) struct CssMediaQuery;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 /// Different modes in which extension can run.
@@ -59,7 +56,7 @@ impl Default for ExtendMode {
 }
 
 #[derive(Clone, Debug)]
-pub(crate) struct Extender {
+pub(crate) struct ExtensionStore {
     /// A map from all simple selectors in the stylesheet to the selector lists
     /// that contain them.
     ///
@@ -107,7 +104,7 @@ pub(crate) struct Extender {
     span: Span,
 }
 
-impl Extender {
+impl ExtensionStore {
     /// An `Extender` that contains no extensions and can have no extensions added.
     // TODO: empty extender
     #[allow(dead_code)]
@@ -185,7 +182,7 @@ impl Extender {
                 })
                 .collect();
 
-        let mut extender = Extender::with_mode(mode, span);
+        let mut extender = ExtensionStore::with_mode(mode, span);
 
         if !selector.is_invisible() {
             extender.originals.extend(selector.components.iter());
@@ -197,7 +194,7 @@ impl Extender {
     fn with_mode(mode: ExtendMode, span: Span) -> Self {
         Self {
             mode,
-            ..Extender::new(span)
+            ..ExtensionStore::new(span)
         }
     }
 
@@ -646,13 +643,14 @@ impl Extender {
                         // supporting it properly would make this code and the code calling it
                         // a lot more complicated, so it's not supported for now.
                         let inner_pseudo_normalized = inner_pseudo.normalized_name();
-                        if inner_pseudo_normalized == "matches" || inner_pseudo_normalized == "is" {
+                        if ["matches", "is", "where"].contains(&inner_pseudo_normalized) {
                             inner_pseudo.selector.clone().unwrap().components
                         } else {
                             Vec::new()
                         }
                     }
-                    "matches" | "is" | "any" | "current" | "nth-child" | "nth-last-child" => {
+                    "matches" | "where" | "is" | "any" | "current" | "nth-child"
+                    | "nth-last-child" => {
                         // As above, we could theoretically support :not within :matches, but
                         // doing so would require this method and its callers to handle much
                         // more complex cases that likely aren't worth the pain.
@@ -721,6 +719,7 @@ impl Extender {
         }
 
         let mut tmp = vec![self.extension_for_simple(simple)];
+        tmp.reserve(extenders.len());
         tmp.extend(extenders.values().cloned());
 
         Some(tmp)
@@ -865,7 +864,7 @@ impl Extender {
         &mut self,
         mut selector: SelectorList,
         // span: Span,
-        media_query_context: Option<Vec<CssMediaQuery>>,
+        media_query_context: &Option<Vec<CssMediaQuery>>,
     ) -> ExtendedSelector {
         if !selector.is_invisible() {
             for complex in selector.components.clone() {
@@ -874,7 +873,7 @@ impl Extender {
         }
 
         if !self.extensions.is_empty() {
-            selector = self.extend_list(selector, None, &media_query_context);
+            selector = self.extend_list(selector, None, media_query_context);
             /*
               todo: when we have error handling
                   } on SassException catch (error) {
@@ -885,7 +884,7 @@ impl Extender {
             }
               */
         }
-        if let Some(mut media_query_context) = media_query_context {
+        if let Some(mut media_query_context) = media_query_context.clone() {
             self.media_contexts
                 .get_mut(&selector)
                 .replace(&mut media_query_context);

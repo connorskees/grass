@@ -73,10 +73,10 @@ jobs:
       - name: Build
         run: cargo build
 
-      - name: Install dart-sass 1.36.0
+      - name: Install dart-sass 1.54.3
         run: |
-          wget https://github.com/sass/dart-sass/releases/download/1.36.0/dart-sass-1.36.0-linux-x64.tar.gz
-          tar -xzvf dart-sass-1.36.0-linux-x64.tar.gz
+          wget https://github.com/sass/dart-sass/releases/download/1.54.3/dart-sass-1.54.3-linux-x64.tar.gz
+          tar -xzvf dart-sass-1.54.3-linux-x64.tar.gz
 
       - name: Install bootstrap
         run: git clone --depth=1 --branch v5.0.2 https://github.com/twbs/bootstrap.git

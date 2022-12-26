@@ -1,14 +1,6 @@
-use super::{Builtin, GlobalFunctionMap};
+use crate::builtin::builtin_imports::*;
 
-use crate::{
-    args::CallArgs,
-    common::{Brackets, ListSeparator},
-    error::SassResult,
-    parse::Parser,
-    value::{SassMap, Value},
-};
-
-pub(crate) fn map_get(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+pub(crate) fn map_get(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(2)?;
     let key = args.get_err(1, "key")?;
     let map = match args.get_err(0, "map")? {
@@ -26,7 +18,7 @@ pub(crate) fn map_get(mut args: CallArgs, parser: &mut Parser) -> SassResult<Val
     Ok(map.get(&key).unwrap_or(Value::Null))
 }
 
-pub(crate) fn map_has_key(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+pub(crate) fn map_has_key(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(2)?;
     let key = args.get_err(1, "key")?;
     let map = match args.get_err(0, "map")? {
@@ -44,7 +36,7 @@ pub(crate) fn map_has_key(mut args: CallArgs, parser: &mut Parser) -> SassResult
     Ok(Value::bool(map.get(&key).is_some()))
 }
 
-pub(crate) fn map_keys(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+pub(crate) fn map_keys(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     let map = match args.get_err(0, "map")? {
         Value::Map(m) => m,
@@ -65,7 +57,7 @@ pub(crate) fn map_keys(mut args: CallArgs, parser: &mut Parser) -> SassResult<Va
     ))
 }
 
-pub(crate) fn map_values(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+pub(crate) fn map_values(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     let map = match args.get_err(0, "map")? {
         Value::Map(m) => m,
@@ -86,7 +78,7 @@ pub(crate) fn map_values(mut args: CallArgs, parser: &mut Parser) -> SassResult<
     ))
 }
 
-pub(crate) fn map_merge(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+pub(crate) fn map_merge(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     if args.len() == 1 {
         return Err(("Expected $args to contain a key.", args.span()).into());
     }
@@ -150,10 +142,10 @@ pub(crate) fn map_merge(mut args: CallArgs, parser: &mut Parser) -> SassResult<V
         while let Some((key, queued_map)) = map_queue.pop() {
             match map_queue.last_mut() {
                 Some((_, map)) => {
-                    map.insert(key.node, Value::Map(queued_map));
+                    map.insert(key, Value::Map(queued_map));
                 }
                 None => {
-                    map1.insert(key.node, Value::Map(queued_map));
+                    map1.insert(key, Value::Map(queued_map));
                     break;
                 }
             }
@@ -163,7 +155,7 @@ pub(crate) fn map_merge(mut args: CallArgs, parser: &mut Parser) -> SassResult<V
     Ok(Value::Map(map1))
 }
 
-pub(crate) fn map_remove(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+pub(crate) fn map_remove(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     let mut map = match args.get_err(0, "map")? {
         Value::Map(m) => m,
         Value::List(v, ..) if v.is_empty() => SassMap::new(),
@@ -183,7 +175,7 @@ pub(crate) fn map_remove(mut args: CallArgs, parser: &mut Parser) -> SassResult<
     Ok(Value::Map(map))
 }
 
-pub(crate) fn map_set(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+pub(crate) fn map_set(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     let key_position = args.len().saturating_sub(2);
     let value_position = args.len().saturating_sub(1);
 
@@ -200,7 +192,10 @@ pub(crate) fn map_set(mut args: CallArgs, parser: &mut Parser) -> SassResult<Val
         }
     };
 
-    let key = args.get_err(key_position, "key")?;
+    let key = Spanned {
+        node: args.get_err(key_position, "key")?,
+        span: args.span(),
+    };
     let value = args.get_err(value_position, "value")?;
 
     let keys = args.get_variadic()?;
@@ -232,10 +227,10 @@ pub(crate) fn map_set(mut args: CallArgs, parser: &mut Parser) -> SassResult<Val
         while let Some((key, queued_map)) = map_queue.pop() {
             match map_queue.last_mut() {
                 Some((_, next_map)) => {
-                    next_map.insert(key.node, Value::Map(queued_map));
+                    next_map.insert(key, Value::Map(queued_map));
                 }
                 None => {
-                    map.insert(key.node, Value::Map(queued_map));
+                    map.insert(key, Value::Map(queued_map));
                     break;
                 }
             }

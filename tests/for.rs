@@ -195,14 +195,6 @@ error!(
     "@for $i from 0 to red {}", "Error: red is not a number."
 );
 error!(
-    through_i32_max,
-    "@for $i from 0 through 2147483647 {}", "Error: 2147483647 is not an int."
-);
-error!(
-    from_i32_max,
-    "@for $i from 2147483647 through 0 {}", "Error: 2147483647 is not an int."
-);
-error!(
     from_nan,
     "@for $i from (0/0) through 0 {}", "Error: NaN is not an int."
 );
@@ -210,7 +202,34 @@ error!(
     to_nan,
     "@for $i from 0 through (0/0) {}", "Error: NaN is not an int."
 );
-error!(
+test!(
     to_and_from_i32_min,
-    "@for $i from -2147483648 through -2147483648 {}", "Error: -2147483648 is not an int."
+    "@for $i from -2147483648 through -2147483648 {}",
+    ""
+);
+test!(
+    to_and_from_comparable_units,
+    "@for $i from 1px to (3px * 1in) / 1in {
+        a {
+            color: $i;
+        }
+    }",
+    "a {\n  color: 1px;\n}\n\na {\n  color: 2px;\n}\n"
+);
+error!(
+    to_and_from_non_comparable_units,
+    "@for $i from 1px to 2vh {
+        a {
+            color: $i;
+        }
+    }",
+    "Error: to and from values have incompatible units"
+);
+error!(
+    invalid_escape_sequence_in_declaration,
+    "@for $i from 0 \\110000 o 2 {}", "Error: Invalid Unicode code point."
+);
+error!(
+    invalid_keyword_after_first_number,
+    "@for $i from 1 FOO 3 {}", "Error: Expected \"to\" or \"through\"."
 );

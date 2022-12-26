@@ -1,5 +1,7 @@
-use std::io::{Error, ErrorKind, Result};
-use std::path::Path;
+use std::{
+    io::{self, Error, ErrorKind},
+    path::Path,
+};
 
 /// A trait to allow replacing the file system lookup mechanisms.
 ///
@@ -15,7 +17,7 @@ pub trait Fs: std::fmt::Debug {
     /// Returns `true` if the path exists on disk and is pointing at a regular file.
     fn is_file(&self, path: &Path) -> bool;
     /// Read the entire contents of a file into a bytes vector.
-    fn read(&self, path: &Path) -> Result<Vec<u8>>;
+    fn read(&self, path: &Path) -> io::Result<Vec<u8>>;
 }
 
 /// Use [`std::fs`] to read any files from disk.
@@ -36,7 +38,7 @@ impl Fs for StdFs {
     }
 
     #[inline]
-    fn read(&self, path: &Path) -> Result<Vec<u8>> {
+    fn read(&self, path: &Path) -> io::Result<Vec<u8>> {
         std::fs::read(path)
     }
 }
@@ -61,7 +63,7 @@ impl Fs for NullFs {
     }
 
     #[inline]
-    fn read(&self, _path: &Path) -> Result<Vec<u8>> {
+    fn read(&self, _path: &Path) -> io::Result<Vec<u8>> {
         Err(Error::new(
             ErrorKind::NotFound,
             "NullFs, there is no file system",

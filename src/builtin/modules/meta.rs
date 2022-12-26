@@ -1,20 +1,20 @@
-use codemap::Spanned;
+use std::cell::RefCell;
+use std::collections::BTreeMap;
+use std::sync::Arc;
 
-use crate::{
-    args::CallArgs,
-    builtin::{
-        meta::{
-            call, content_exists, feature_exists, function_exists, get_function,
-            global_variable_exists, inspect, keywords, mixin_exists, type_of, variable_exists,
-        },
-        modules::{Module, ModuleConfig},
+use crate::ast::{Configuration, ConfiguredValue};
+use crate::builtin::builtin_imports::*;
+
+use crate::builtin::{
+    meta::{
+        call, content_exists, feature_exists, function_exists, get_function,
+        global_variable_exists, inspect, keywords, mixin_exists, type_of, variable_exists,
     },
-    error::SassResult,
-    parse::{Parser, Stmt},
-    value::Value,
+    modules::Module,
 };
+use crate::serializer::serialize_calculation_arg;
 
-fn load_css(mut args: CallArgs, parser: &mut Parser) -> SassResult<Vec<Stmt>> {
+fn load_css(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<()> {
     args.max_args(2)?;
 
     let span = args.span();
@@ -30,19 +30,21 @@ fn load_css(mut args: CallArgs, parser: &mut Parser) -> SassResult<Vec<Stmt>> {
         }
     };
 
-    let with = match args.default_arg(1, "with", Value::Null)? {
+    let with = match args.default_arg(1, "with", Value::Null) {
         Value::Map(map) => Some(map),
         Value::Null => None,
         v => return Err((format!("$with: {} is not a map.", v.inspect(span)?), span).into()),
     };
 
-    // todo: tests for `with`
-    if let Some(with) = with {
-        let mut config = ModuleConfig::default();
+    let mut configuration = Configuration::empty();
 
+    if let Some(with) = with {
+        visitor.emit_warning("`grass` does not currently support the $with parameter of load-css. This file will be imported the same way it would using `@import`.", args.span());
+
+        let mut values = BTreeMap::new();
         for (key, value) in with {
-            let key = match key {
-                Value::String(s, ..) => s,
+            let name = match key.node {
+                Value::String(s, ..) => Identifier::from(s),
                 v => {
                     return Err((
                         format!("$with key: {} is not a string.", v.inspect(span)?),
@@ -52,24 +54,45 @@ fn load_css(mut args: CallArgs, parser: &mut Parser) -> SassResult<Vec<Stmt>> {
                 }
             };
 
-            config.insert(
-                Spanned {
-                    node: key.into(),
-                    span,
-                },
-                value.span(span),
-            )?;
+            if values.contains_key(&name) {
+                // todo: write test for this
+                return Err((
+                    format!("The variable {name} was configured twice."),
+                    key.span,
+                )
+                    .into());
+            }
+
+            values.insert(name, ConfiguredValue::explicit(value, args.span()));
         }
 
-        let (_, stmts) = parser.load_module(&url, &mut config)?;
-
-        Ok(stmts)
-    } else {
-        parser.parse_single_import(&url, span)
+        configuration = Configuration::explicit(values, args.span());
     }
+
+    let _configuration = Arc::new(RefCell::new(configuration));
+
+    let style_sheet = visitor.load_style_sheet(url.as_ref(), false, args.span())?;
+
+    visitor.visit_stylesheet(style_sheet)?;
+
+    // todo: support the $with argument to load-css
+    // visitor.load_module(
+    //     url.as_ref(),
+    //     Some(Arc::clone(&configuration)),
+    //     true,
+    //     args.span(),
+    //     |visitor, module, stylesheet| {
+    //         // (*module).borrow()
+    //         Ok(())
+    //     },
+    // )?;
+
+    // Visitor::assert_configuration_is_empty(&configuration, true)?;
+
+    Ok(())
 }
 
-fn module_functions(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+fn module_functions(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
 
     let module = match args.get_err(0, "module")? {
@@ -84,11 +107,15 @@ fn module_functions(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value
     };
 
     Ok(Value::Map(
-        parser.modules.get(module.into(), args.span())?.functions(),
+        (*(*visitor.env.modules)
+            .borrow()
+            .get(module.into(), args.span())?)
+        .borrow()
+        .functions(args.span()),
     ))
 }
 
-fn module_variables(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+fn module_variables(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
 
     let module = match args.get_err(0, "module")? {
@@ -103,8 +130,64 @@ fn module_variables(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value
     };
 
     Ok(Value::Map(
-        parser.modules.get(module.into(), args.span())?.variables(),
+        (*(*visitor.env.modules)
+            .borrow()
+            .get(module.into(), args.span())?)
+        .borrow()
+        .variables(args.span()),
     ))
+}
+
+fn calc_args(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
+    args.max_args(1)?;
+
+    let calc = match args.get_err(0, "calc")? {
+        Value::Calculation(calc) => calc,
+        v => {
+            return Err((
+                format!("$calc: {} is not a calculation.", v.inspect(args.span())?),
+                args.span(),
+            )
+                .into())
+        }
+    };
+
+    let args = calc
+        .args
+        .into_iter()
+        .map(|arg| {
+            Ok(match arg {
+                CalculationArg::Number(num) => Value::Dimension(num),
+                CalculationArg::Calculation(calc) => Value::Calculation(calc),
+                CalculationArg::String(s) | CalculationArg::Interpolation(s) => {
+                    Value::String(s, QuoteKind::None)
+                }
+                CalculationArg::Operation { .. } => Value::String(
+                    serialize_calculation_arg(&arg, visitor.options, args.span())?,
+                    QuoteKind::None,
+                ),
+            })
+        })
+        .collect::<SassResult<Vec<_>>>()?;
+
+    Ok(Value::List(args, ListSeparator::Comma, Brackets::None))
+}
+
+fn calc_name(mut args: ArgumentResult, _visitor: &mut Visitor) -> SassResult<Value> {
+    args.max_args(1)?;
+
+    let calc = match args.get_err(0, "calc")? {
+        Value::Calculation(calc) => calc,
+        v => {
+            return Err((
+                format!("$calc: {} is not a calculation.", v.inspect(args.span())?),
+                args.span(),
+            )
+                .into())
+        }
+    };
+
+    Ok(Value::String(calc.name.to_string(), QuoteKind::Quoted))
 }
 
 pub(crate) fn declare(f: &mut Module) {
@@ -121,6 +204,8 @@ pub(crate) fn declare(f: &mut Module) {
     f.insert_builtin("module-functions", module_functions);
     f.insert_builtin("get-function", get_function);
     f.insert_builtin("call", call);
+    f.insert_builtin("calc-args", calc_args);
+    f.insert_builtin("calc-name", calc_name);
 
     f.insert_builtin_mixin("load-css", load_css);
 }

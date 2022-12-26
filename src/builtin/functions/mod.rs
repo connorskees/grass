@@ -2,13 +2,13 @@
 #![allow(unused_variables)]
 
 use std::{
-    collections::HashMap,
+    collections::{BTreeSet, HashMap},
     sync::atomic::{AtomicUsize, Ordering},
 };
 
 use once_cell::sync::Lazy;
 
-use crate::{args::CallArgs, error::SassResult, parse::Parser, value::Value};
+use crate::{ast::ArgumentResult, error::SassResult, evaluate::Visitor, value::Value};
 
 #[macro_use]
 mod macros;
@@ -21,16 +21,19 @@ pub mod meta;
 pub mod selector;
 pub mod string;
 
+// todo: maybe Identifier instead of str?
 pub(crate) type GlobalFunctionMap = HashMap<&'static str, Builtin>;
 
 static FUNCTION_COUNT: AtomicUsize = AtomicUsize::new(0);
 
-// TODO: impl Fn
 #[derive(Clone)]
-pub(crate) struct Builtin(pub fn(CallArgs, &mut Parser) -> SassResult<Value>, usize);
+pub(crate) struct Builtin(
+    pub fn(ArgumentResult, &mut Visitor) -> SassResult<Value>,
+    usize,
+);
 
 impl Builtin {
-    pub fn new(body: fn(CallArgs, &mut Parser) -> SassResult<Value>) -> Builtin {
+    pub fn new(body: fn(ArgumentResult, &mut Visitor) -> SassResult<Value>) -> Builtin {
         let count = FUNCTION_COUNT.fetch_add(1, Ordering::Relaxed);
         Self(body, count)
     }
@@ -54,4 +57,25 @@ pub(crate) static GLOBAL_FUNCTIONS: Lazy<GlobalFunctionMap> = Lazy::new(|| {
     selector::declare(&mut m);
     string::declare(&mut m);
     m
+});
+
+pub(crate) static DISALLOWED_PLAIN_CSS_FUNCTION_NAMES: Lazy<BTreeSet<&str>> = Lazy::new(|| {
+    GLOBAL_FUNCTIONS
+        .keys()
+        .copied()
+        .filter(|&name| {
+            !matches!(
+                name,
+                "rgb"
+                    | "rgba"
+                    | "hsl"
+                    | "hsla"
+                    | "grayscale"
+                    | "invert"
+                    | "alpha"
+                    | "opacity"
+                    | "saturate"
+            )
+        })
+        .collect()
 });

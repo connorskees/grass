@@ -79,7 +79,7 @@ error!(
 error!(
     cos_non_angle,
     "@use 'sass:math';\na {\n  color: math.cos(1px);\n}\n",
-    "Error: $number: Expected 1px to be an angle."
+    "Error: $number: Expected 1px to have an angle unit (deg, grad, rad, turn)."
 );
 test!(
     cos_small_degree,
@@ -124,7 +124,7 @@ test!(
 error!(
     sin_non_angle,
     "@use 'sass:math';\na {\n  color: math.sin(1px);\n}\n",
-    "Error: $number: Expected 1px to be an angle."
+    "Error: $number: Expected 1px to have an angle unit (deg, grad, rad, turn)."
 );
 test!(
     sin_small_degree,
@@ -169,7 +169,7 @@ test!(
 error!(
     tan_non_angle,
     "@use 'sass:math';\na {\n  color: math.tan(1px);\n}\n",
-    "Error: $number: Expected 1px to be an angle."
+    "Error: $number: Expected 1px to have an angle unit (deg, grad, rad, turn)."
 );
 test!(
     tan_small_degree,
@@ -337,7 +337,6 @@ test!(
     "a {\n  color: NaN;\n}\n"
 );
 test!(
-    #[ignore = "we do not support Infinity"]
     log_zero,
     "@use 'sass:math';\na {\n  color: math.log(0);\n}\n",
     "a {\n  color: -Infinity;\n}\n"
@@ -368,7 +367,6 @@ test!(
     "a {\n  color: NaN;\n}\n"
 );
 test!(
-    #[ignore = "we do not support Infinity"]
     log_base_one,
     "@use 'sass:math';\na {\n  color: math.log(2, 1);\n}\n",
     "a {\n  color: Infinity;\n}\n"
@@ -594,6 +592,11 @@ test!(
     "a {\n  color: 0.5;\n}\n"
 );
 test!(
+    clamp_nan,
+    "@use 'sass:math';\na {\n  color: math.clamp((0/0), 5, (0/0));\n}\n",
+    "a {\n  color: 5;\n}\n"
+);
+test!(
     div_two_strings,
     "@use 'sass:math';\na {\n  color: math.div(\"1\",\"2\");\n}\n",
     "a {\n  color: \"1\"/\"2\";\n}\n"
@@ -607,3 +610,5 @@ test!(
     }",
     "a {\n  color: 3;\n  color: 3;\n}\n"
 );
+
+// todo: atan+asin with unitful NaN

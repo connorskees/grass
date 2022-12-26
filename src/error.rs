@@ -58,7 +58,7 @@ impl SassError {
     pub(crate) fn raw(self) -> (String, Span) {
         match self.kind {
             SassErrorKind::Raw(string, span) => (string, span),
-            e => todo!("unable to get raw of {:?}", e),
+            e => unreachable!("unable to get raw of {:?}", e),
         }
     }
 
@@ -113,15 +113,15 @@ impl Display for SassError {
                 loc,
                 unicode,
             } => (message, loc, *unicode),
-            SassErrorKind::FromUtf8Error(s) => return writeln!(f, "Error: {}", s),
+            SassErrorKind::FromUtf8Error(..) => return writeln!(f, "Error: Invalid UTF-8."),
             SassErrorKind::IoError(s) => return writeln!(f, "Error: {}", s),
             SassErrorKind::Raw(..) => unreachable!(),
         };
 
-        let first_bar = if unicode { '╷' } else { '|' };
+        let first_bar = if unicode { '╷' } else { ',' };
         let second_bar = if unicode { '│' } else { '|' };
         let third_bar = if unicode { '│' } else { '|' };
-        let fourth_bar = if unicode { '╵' } else { '|' };
+        let fourth_bar = if unicode { '╵' } else { '\'' };
 
         let line = loc.begin.line + 1;
         let col = loc.begin.column + 1;
@@ -148,7 +148,12 @@ impl Display for SassError {
                 .collect::<String>()
         )?;
         writeln!(f, "{}{}", padding, fourth_bar)?;
-        writeln!(f, "./{}:{}:{}", loc.file.name(), line, col)?;
+
+        if unicode {
+            writeln!(f, "./{}:{}:{}", loc.file.name(), line, col)?;
+        } else {
+            writeln!(f, "  {} {}:{}  root stylesheet", loc.file.name(), line, col)?;
+        }
         Ok(())
     }
 }

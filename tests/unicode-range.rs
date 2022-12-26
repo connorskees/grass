@@ -31,12 +31,12 @@ error!(
 );
 error!(
     longer_than_6_characters,
-    "a {\n  color: U+1234567;\n}\n", "Error: Expected end of identifier."
+    "a {\n  color: U+1234567;\n}\n", "Error: Expected at most 6 digits."
 );
-// I believe this to be a bug in the dart-sass implementation
-// we test for it to ensure full parity
-test!(
+error!(
     length_of_6_with_question_mark,
-    "a {\n  color: U+123456?;\n}\n",
-    "a {\n  color: U+123456?;\n}\n"
+    "a {\n  color: U+123456?;\n}\n", "Error: Expected at most 6 digits."
 );
+
+// todo: escaped u at start \75 and \55
+// with and without space

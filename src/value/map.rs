@@ -1,12 +1,14 @@
 use std::{slice::Iter, vec::IntoIter};
 
+use codemap::Spanned;
+
 use crate::{
     common::{Brackets, ListSeparator},
     value::Value,
 };
 
 #[derive(Debug, Clone, Default)]
-pub(crate) struct SassMap(Vec<(Value, Value)>);
+pub(crate) struct SassMap(Vec<(Spanned<Value>, Value)>);
 
 impl PartialEq for SassMap {
     fn eq(&self, other: &Self) -> bool {
@@ -17,7 +19,7 @@ impl PartialEq for SassMap {
             if !other
                 .0
                 .iter()
-                .any(|(key2, value2)| key == key2 && value == value2)
+                .any(|(key2, value2)| key.node == key2.node && value == value2)
             {
                 return false;
             }
@@ -33,17 +35,23 @@ impl SassMap {
         SassMap(Vec::new())
     }
 
-    pub const fn new_with(elements: Vec<(Value, Value)>) -> SassMap {
+    pub const fn new_with(elements: Vec<(Spanned<Value>, Value)>) -> SassMap {
         SassMap(elements)
     }
 
-    /// We take by value here (consuming the map) in order to
-    /// save a clone of the value, since the only place this
-    /// should be called is in a builtin function, which throws
-    /// away the map immediately anyway
     pub fn get(self, key: &Value) -> Option<Value> {
         for (k, v) in self.0 {
-            if &k == key {
+            if &k.node == key {
+                return Some(v);
+            }
+        }
+
+        None
+    }
+
+    pub fn get_ref(&self, key: &Value) -> Option<&Value> {
+        for (k, v) in &self.0 {
+            if &k.node == key {
                 return Some(v);
             }
         }
@@ -61,12 +69,12 @@ impl SassMap {
         }
     }
 
-    pub fn iter(&self) -> Iter<(Value, Value)> {
+    pub fn iter(&self) -> Iter<(Spanned<Value>, Value)> {
         self.0.iter()
     }
 
     pub fn keys(self) -> Vec<Value> {
-        self.0.into_iter().map(|(k, ..)| k).collect()
+        self.0.into_iter().map(|(k, ..)| k.node).collect()
     }
 
     pub fn values(self) -> Vec<Value> {
@@ -76,19 +84,14 @@ impl SassMap {
     pub fn as_list(self) -> Vec<Value> {
         self.0
             .into_iter()
-            .map(|(k, v)| Value::List(vec![k, v], ListSeparator::Space, Brackets::None))
+            .map(|(k, v)| Value::List(vec![k.node, v], ListSeparator::Space, Brackets::None))
             .collect()
     }
 
-    #[allow(clippy::missing_const_for_fn)]
-    pub fn entries(self) -> Vec<(Value, Value)> {
-        self.0
-    }
-
     /// Returns true if the key already exists
-    pub fn insert(&mut self, key: Value, value: Value) -> bool {
+    pub fn insert(&mut self, key: Spanned<Value>, value: Value) -> bool {
         for (ref k, ref mut v) in &mut self.0 {
-            if k == &key {
+            if k.node == key.node {
                 *v = value;
                 return true;
             }
@@ -96,10 +99,14 @@ impl SassMap {
         self.0.push((key, value));
         false
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
 }
 
 impl IntoIterator for SassMap {
-    type Item = (Value, Value);
+    type Item = (Spanned<Value>, Value);
     type IntoIter = IntoIter<Self::Item>;
 
     fn into_iter(self) -> Self::IntoIter {

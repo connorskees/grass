@@ -79,27 +79,27 @@ test!(
 test!(
     converts_rgb_to_named_color,
     "a {\n  color: rgb(0, 0, 0);\n}\n",
-    "a {\n  color: black;\n}\n"
+    "a {\n  color: rgb(0, 0, 0);\n}\n"
 );
 test!(
     converts_rgba_to_named_color_red,
     "a {\n  color: rgb(255, 0, 0, 255);\n}\n",
-    "a {\n  color: red;\n}\n"
+    "a {\n  color: rgb(255, 0, 0);\n}\n"
 );
 test!(
     rgb_negative,
     "a {\n  color: rgb(-1, 1, 1);\n}\n",
-    "a {\n  color: #000101;\n}\n"
+    "a {\n  color: rgb(0, 1, 1);\n}\n"
 );
 test!(
     rgb_binop,
     "a {\n  color: rgb(1, 2, 1+2);\n}\n",
-    "a {\n  color: #010203;\n}\n"
+    "a {\n  color: rgb(1, 2, 3);\n}\n"
 );
 test!(
     rgb_pads_0,
     "a {\n  color: rgb(1, 2, 3);\n}\n",
-    "a {\n  color: #010203;\n}\n"
+    "a {\n  color: rgb(1, 2, 3);\n}\n"
 );
 test!(
     rgba_percent,
@@ -114,12 +114,12 @@ test!(
 test!(
     rgb_double_digits,
     "a {\n  color: rgb(254, 255, 255);\n}\n",
-    "a {\n  color: #feffff;\n}\n"
+    "a {\n  color: rgb(254, 255, 255);\n}\n"
 );
 test!(
     rgb_double_digits_white,
     "a {\n  color: rgb(255, 255, 255);\n}\n",
-    "a {\n  color: white;\n}\n"
+    "a {\n  color: rgb(255, 255, 255);\n}\n"
 );
 test!(
     alpha_function_4_hex,
@@ -144,7 +144,7 @@ test!(
 test!(
     rgba_one_arg,
     "a {\n  color: rgba(1 2 3);\n}\n",
-    "a {\n  color: #010203;\n}\n"
+    "a {\n  color: rgb(1, 2, 3);\n}\n"
 );
 test!(
     rgb_two_args,
@@ -159,7 +159,7 @@ test!(
 test!(
     rgba_opacity_over_1,
     "a {\n  color: rgba(1, 2, 3, 3);\n}\n",
-    "a {\n  color: #010203;\n}\n"
+    "a {\n  color: rgb(1, 2, 3);\n}\n"
 );
 test!(
     rgba_negative_alpha,
@@ -179,7 +179,7 @@ test!(
 test!(
     rgba_3_args,
     "a {\n  color: rgba(7.1%, 20.4%, 33.9%);\n}\n",
-    "a {\n  color: #123456;\n}\n"
+    "a {\n  color: rgb(18, 52, 86);\n}\n"
 );
 error!(
     rgb_no_args,
@@ -383,30 +383,30 @@ test!(
 test!(
     rgba_1_arg,
     "a {\n  color: rgba(74.7% 173 93%);\n}\n",
-    "a {\n  color: #beaded;\n}\n"
+    "a {\n  color: rgb(190, 173, 237);\n}\n"
 );
 test!(
     hsla_1_arg,
     "a {\n  color: hsla(60 60% 50%);\n}\n",
-    "a {\n  color: #cccc33;\n}\n"
+    "a {\n  color: hsl(60deg, 60%, 50%);\n}\n"
 );
 test!(
     hsla_1_arg_weird_units,
     "a {\n  color: hsla(60foo 60foo 50foo);\n}\n",
-    "a {\n  color: #cccc33;\n}\n"
+    "a {\n  color: hsl(60deg, 60%, 50%);\n}\n"
 );
 test!(
     sass_spec__spec_colors_basic,
-    "p {
+    r#"p {
   color: rgb(255, 128, 0);
   color: red green blue;
   color: (red) (green) (blue);
   color: red + hux;
-  color: unquote(\"red\") + green;
+  color: unquote("red") + green;
   foo: rgb(200, 150%, 170%);
 }
-",
-    "p {\n  color: #ff8000;\n  color: red green blue;\n  color: red green blue;\n  color: redhux;\n  color: redgreen;\n  foo: #c8ffff;\n}\n"
+"#,
+    "p {\n  color: rgb(255, 128, 0);\n  color: red green blue;\n  color: red green blue;\n  color: redhux;\n  color: redgreen;\n  foo: rgb(200, 255, 255);\n}\n"
 );
 test!(
     sass_spec__spec_colors_change_color,
@@ -432,7 +432,7 @@ test!(
 test!(
     negative_values_in_rgb,
     "a {\n  color: rgb(-1 -1 -1);\n}\n",
-    "a {\n  color: black;\n}\n"
+    "a {\n  color: rgb(0, 0, 0);\n}\n"
 );
 test!(
     interpolation_after_hash_containing_only_hex_chars,
@@ -462,7 +462,7 @@ test!(
 test!(
     all_three_rgb_channels_have_decimal,
     "a {\n  color: rgba(1.5, 1.5, 1.5, 1);\n}\n",
-    "a {\n  color: #020202;\n}\n"
+    "a {\n  color: rgb(2, 2, 2);\n}\n"
 );
 test!(
     builtin_fn_red_rounds_channel,
@@ -527,19 +527,19 @@ error!(
 );
 // todo: we need many more of these tests
 test!(
-    rgba_special_fn_4th_arg_max,
+    rgba_one_arg_special_fn_4th_arg_max,
     "a {\n  color: rgba(1 2 max(3, 3));\n}\n",
-    "a {\n  color: rgba(1, 2, max(3, 3));\n}\n"
+    "a {\n  color: rgb(1, 2, 3);\n}\n"
 );
 test!(
     rgb_special_fn_4_arg_maintains_units,
     "a {\n  color: rgb(1, 0.02, 3%, max(0.4));\n}\n",
-    "a {\n  color: rgb(1, 0.02, 3%, max(0.4));\n}\n"
+    "a {\n  color: rgba(1, 0, 8, 0.4);\n}\n"
 );
 test!(
     rgb_special_fn_3_arg_maintains_units,
     "a {\n  color: rgb(1, 0.02, max(0.4));\n}\n",
-    "a {\n  color: rgb(1, 0.02, max(0.4));\n}\n"
+    "a {\n  color: rgb(1, 0, 0);\n}\n"
 );
 test!(
     rgb_special_fn_2_arg_first_non_color,
@@ -552,7 +552,6 @@ test!(
     "a {\n  color: rgb(3, 1, 1, var(--foo));\n}\n"
 );
 test!(
-    #[ignore = "we do not check if interpolation occurred"]
     interpolated_named_color_is_not_color,
     "a {\n  color: type-of(r#{e}d);\n}\n",
     "a {\n  color: string;\n}\n"
@@ -586,4 +585,53 @@ test!(
     hue_largest_channel_is_blue,
     "a {\n  color: hue(rgb(1, 2, 5));\n}\n",
     "a {\n  color: 225deg;\n}\n"
+);
+test!(
+    rgb_3_args_first_arg_is_special_fn,
+    "a {\n  color: rgb(env(--foo), 2, 3);\n}\n",
+    "a {\n  color: rgb(env(--foo), 2, 3);\n}\n"
+);
+test!(
+    hsl_conversion_is_correct,
+    "a {
+        color: hue(red);
+        color: saturation(red);
+        color: lightness(red);
+        color: change-color(red, $lightness: 95%);
+        color: red(change-color(red, $lightness: 95%));
+        color: blue(change-color(red, $lightness: 95%));
+        color: green(change-color(red, $lightness: 95%));
+    }",
+    "a {\n  color: 0deg;\n  color: 100%;\n  color: 50%;\n  color: #ffe6e6;\n  color: 255;\n  color: 230;\n  color: 230;\n}\n"
+);
+test!(
+    rgb_two_arg_nan_alpha,
+    "a {
+        color: rgb(red, 0/0);
+        color: opacity(rgb(red, 0/0));
+    }",
+    "a {\n  color: red;\n  color: 1;\n}\n"
+);
+error!(
+    rgb_more_than_4_args,
+    "a {\n  color: rgb(59%, 169, 69%, 50%, 50%);\n}\n",
+    "Error: Only 4 arguments allowed, but 5 were passed."
+);
+error!(
+    rgba_more_than_4_args,
+    "a {\n  color: rgba(59%, 169, 69%, 50%, 50%);\n}\n",
+    "Error: Only 4 arguments allowed, but 5 were passed."
+);
+error!(
+    opacify_amount_nan,
+    "a {\n  color: opacify(#fff, (0/0));\n}\n",
+    "Error: $amount: Expected NaN to be within 0 and 1."
+);
+error!(
+    interpolated_string_is_not_color,
+    "a {\n  color: red(r#{e}d);\n}\n", "Error: $color: red is not a color."
+);
+error!(
+    single_arg_saturate_expects_number,
+    "a {\n  color: saturate(red);\n}\n", "Error: $amount: red is not a number."
 );

@@ -1,11 +1,8 @@
-use std::{
-    fmt,
-    ops::{Div, Mul},
-};
+use std::fmt;
 
 use crate::interner::InternedString;
 
-pub(crate) use conversion::UNIT_CONVERSION_TABLE;
+pub(crate) use conversion::{known_compatibilities_by_unit, UNIT_CONVERSION_TABLE};
 
 mod conversion;
 
@@ -92,8 +89,6 @@ pub(crate) enum Unit {
     Dpcm,
     /// Represents the number of dots per px unit
     Dppx,
-    /// Alias for dppx
-    X,
 
     // Other units
     /// Represents a fraction of the available space in the grid container
@@ -105,14 +100,24 @@ pub(crate) enum Unit {
     /// Unspecified unit
     None,
 
-    /// Units multiplied together
-    /// Boxed under the assumption that mul units are exceedingly rare
-    #[allow(clippy::box_collection)]
-    Mul(Box<Vec<Unit>>),
-
-    /// Units divided by each other
-    Div(Box<DivUnit>),
+    Complex {
+        numer: Vec<Unit>,
+        denom: Vec<Unit>,
+    },
 }
+
+pub(crate) fn are_any_convertible(units1: &[Unit], units2: &[Unit]) -> bool {
+    for unit1 in units1 {
+        for unit2 in units2 {
+            if unit1.comparable(unit2) {
+                return true;
+            }
+        }
+    }
+
+    false
+}
+
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub(crate) enum UnitKind {
     Absolute,
@@ -126,115 +131,35 @@ pub(crate) enum UnitKind {
     None,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
-pub(crate) struct DivUnit {
-    numer: Unit,
-    denom: Unit,
-}
-
-impl DivUnit {
-    pub const fn new(numer: Unit, denom: Unit) -> Self {
-        Self { numer, denom }
-    }
-}
-
-impl fmt::Display for DivUnit {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.numer == Unit::None {
-            write!(f, "{}^-1", self.denom)
-        } else {
-            write!(f, "{}/{}", self.numer, self.denom)
-        }
-    }
-}
-
-#[allow(clippy::match_same_arms)]
-impl Mul<Unit> for DivUnit {
-    type Output = Unit;
-    fn mul(self, rhs: Unit) -> Self::Output {
-        match rhs {
-            Unit::Mul(..) => todo!(),
-            Unit::Div(..) => todo!(),
-            Unit::None => todo!(),
-            _ => {
-                if self.denom == rhs {
-                    self.numer
-                } else {
-                    match self.denom {
-                        Unit::Mul(..) => todo!(),
-                        Unit::Div(..) => unreachable!(),
-                        _ => match self.numer {
-                            Unit::Mul(..) => todo!(),
-                            Unit::Div(..) => unreachable!(),
-                            Unit::None => {
-                                let numer = Unit::Mul(Box::new(vec![rhs]));
-                                Unit::Div(Box::new(DivUnit::new(numer, self.denom)))
-                            }
-                            _ => {
-                                let numer = Unit::Mul(Box::new(vec![self.numer, rhs]));
-                                Unit::Div(Box::new(DivUnit::new(numer, self.denom)))
-                            }
-                        },
-                    }
-                }
-            }
-        }
-    }
-}
-
-// impl Div<Unit> for DivUnit {
-//     type Output = Unit;
-//     fn div(self, rhs: Unit) -> Self::Output {
-//         todo!()
-//     }
-// }
-
-impl Mul<Unit> for Unit {
-    type Output = Unit;
-    fn mul(self, rhs: Unit) -> Self::Output {
-        match self {
-            Unit::Mul(u) => match rhs {
-                Unit::Mul(u2) => {
-                    let mut unit1 = *u;
-                    unit1.extend_from_slice(&u2);
-                    Unit::Mul(Box::new(unit1))
-                }
-                Unit::Div(..) => todo!(),
-                _ => {
-                    let mut unit1 = *u;
-                    unit1.push(rhs);
-                    Unit::Mul(Box::new(unit1))
-                }
-            },
-            Unit::Div(div) => *div * rhs,
-            _ => match rhs {
-                Unit::Mul(u2) => {
-                    let mut unit1 = vec![self];
-                    unit1.extend_from_slice(&u2);
-                    Unit::Mul(Box::new(unit1))
-                }
-                Unit::Div(..) => todo!(),
-                _ => Unit::Mul(Box::new(vec![self, rhs])),
-            },
-        }
-    }
-}
-
-impl Div<Unit> for Unit {
-    type Output = Unit;
-    #[allow(clippy::if_same_then_else)]
-    fn div(self, rhs: Unit) -> Self::Output {
-        if let Unit::Div(..) = self {
-            todo!()
-        } else if let Unit::Div(..) = rhs {
-            todo!()
-        } else {
-            Unit::Div(Box::new(DivUnit::new(self, rhs)))
-        }
-    }
-}
-
 impl Unit {
+    pub fn new(mut numer: Vec<Self>, denom: Vec<Self>) -> Self {
+        if denom.is_empty() && numer.is_empty() {
+            Unit::None
+        } else if denom.is_empty() && numer.len() == 1 {
+            numer.pop().unwrap()
+        } else {
+            Unit::Complex { numer, denom }
+        }
+    }
+
+    pub fn numer_and_denom(self) -> (Vec<Unit>, Vec<Unit>) {
+        match self {
+            Self::Complex { numer, denom } => (numer, denom),
+            Self::None => (Vec::new(), Vec::new()),
+            v => (vec![v], Vec::new()),
+        }
+    }
+
+    pub fn invert(self) -> Self {
+        let (numer, denom) = self.numer_and_denom();
+
+        Self::new(denom, numer)
+    }
+
+    pub fn is_complex(&self) -> bool {
+        matches!(self, Unit::Complex { numer, denom } if numer.len() != 1 || !denom.is_empty())
+    }
+
     pub fn comparable(&self, other: &Unit) -> bool {
         if other == &Unit::None {
             return true;
@@ -266,11 +191,9 @@ impl Unit {
             Unit::Deg | Unit::Grad | Unit::Rad | Unit::Turn => UnitKind::Angle,
             Unit::S | Unit::Ms => UnitKind::Time,
             Unit::Hz | Unit::Khz => UnitKind::Frequency,
-            Unit::Dpi | Unit::Dpcm | Unit::Dppx | Unit::X => UnitKind::Resolution,
+            Unit::Dpi | Unit::Dpcm | Unit::Dppx => UnitKind::Resolution,
             Unit::None => UnitKind::None,
-            Unit::Fr | Unit::Percent | Unit::Unknown(..) | Unit::Mul(..) | Unit::Div(..) => {
-                UnitKind::Other
-            }
+            Unit::Fr | Unit::Percent | Unit::Unknown(..) | Unit::Complex { .. } => UnitKind::Other,
         }
     }
 }
@@ -311,7 +234,6 @@ impl From<String> for Unit {
             "dpi" => Unit::Dpi,
             "dpcm" => Unit::Dpcm,
             "dppx" => Unit::Dppx,
-            "x" => Unit::X,
             "fr" => Unit::Fr,
             _ => Unit::Unknown(InternedString::get_or_intern(unit)),
         }
@@ -354,19 +276,37 @@ impl fmt::Display for Unit {
             Unit::Dpi => write!(f, "dpi"),
             Unit::Dpcm => write!(f, "dpcm"),
             Unit::Dppx => write!(f, "dppx"),
-            Unit::X => write!(f, "x"),
             Unit::Fr => write!(f, "fr"),
             Unit::Unknown(s) => write!(f, "{}", s),
             Unit::None => Ok(()),
-            Unit::Mul(u) => write!(
-                f,
-                "{}",
-                u.iter()
+            Unit::Complex { numer, denom } => {
+                debug_assert!(
+                    numer.len() > 1 || !denom.is_empty(),
+                    "unsimplified complex unit"
+                );
+
+                let numer_rendered = numer
+                    .iter()
                     .map(ToString::to_string)
                     .collect::<Vec<String>>()
-                    .join("*")
-            ),
-            Unit::Div(u) => write!(f, "{}", u),
+                    .join("*");
+
+                let denom_rendered = denom
+                    .iter()
+                    .map(ToString::to_string)
+                    .collect::<Vec<String>>()
+                    .join("*");
+
+                if denom.is_empty() {
+                    write!(f, "{}", numer_rendered)
+                } else if numer.is_empty() && denom.len() == 1 {
+                    write!(f, "{}^-1", denom_rendered)
+                } else if numer.is_empty() {
+                    write!(f, "({})^-1", denom_rendered)
+                } else {
+                    write!(f, "{}/{}", numer_rendered, denom_rendered)
+                }
+            }
         }
     }
 }

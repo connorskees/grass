@@ -397,8 +397,12 @@ test!(
 );
 test!(
     combinator_alone,
-    "a {\n  + {\n    b {\n      color: red;\n  }\n}\n",
+    "a {\n  + {\n    b {\n      color: red;\n    }\n  }\n}\n",
     "a + b {\n  color: red;\n}\n"
+);
+error!(
+    combinator_alone_missing_closing_curly_brace,
+    "a {\n  + {\n    b {\n      color: red;\n  }\n}\n", "Error: expected \"}\"."
 );
 test!(
     simple_multiple_newline,
@@ -441,15 +445,13 @@ test!(
     "#{&} a {\n  color: red;\n}\n",
     "a {\n  color: red;\n}\n"
 );
-test!(
+error!(
     allows_id_start_with_number,
-    "#2foo {\n  color: red;\n}\n",
-    "#2foo {\n  color: red;\n}\n"
+    "#2foo {\n  color: red;\n}\n", "Error: Expected identifier."
 );
-test!(
+error!(
     allows_id_only_number,
-    "#2 {\n  color: red;\n}\n",
-    "#2 {\n  color: red;\n}\n"
+    "#2 {\n  color: red;\n}\n", "Error: Expected identifier."
 );
 test!(
     id_interpolation,
@@ -783,6 +785,11 @@ test!(
     ":nth-child(odd) {\n  color: :nth-child(odd);\n}\n"
 );
 test!(
+    a_n_plus_b_n_alone_of,
+    ":nth-child(n of a) {\n  color: &;\n}\n",
+    ":nth-child(n of a) {\n  color: :nth-child(n of a);\n}\n"
+);
+test!(
     escaped_space_at_end_of_selector_immediately_after_pseudo_color,
     "a color:\\  {\n  color: &;\n}\n",
     "a color:\\  {\n  color: a color:\\ ;\n}\n"
@@ -807,13 +814,16 @@ test!(
     "#{inspect(&)}  {\n  color: &;\n}\n",
     "null {\n  color: null;\n}\n"
 );
+error!(
+    id_selector_starts_with_number,
+    "#2b  {\n  color: &;\n}\n", "Error: Expected identifier."
+);
 test!(
     nth_of_type_mutliple_spaces_inside_parens_are_collapsed,
     ":nth-of-type(2  n  -  --1) {\n  color: red;\n}\n",
     ":nth-of-type(2 n - --1) {\n  color: red;\n}\n"
 );
 test!(
-    #[ignore = "we do not yet have a good way of consuming a string without converting \\a to a newline"]
     silent_comment_in_quoted_attribute_value,
     ".foo bar[val=\"//\"] {\n  color: &;\n}\n",
     ".foo bar[val=\"//\"] {\n  color: .foo bar[val=\"//\"];\n}\n"
@@ -831,11 +841,12 @@ test!(
     "[data-key=\"\\\\\"] {\n  color: [data-key=\"\\\\\"];\n}\n"
 );
 test!(
-    #[ignore = "we have to rewrite quoted attribute value parsing somewhat"]
+    #[ignore = "we have to rewrite quoted attribute serialization"]
     attribute_value_escape_ends_with_whitespace,
-    "[a=\"a\\\\66  \"] {\n  color: &;\n}\n",
+    r#"[a="a\\66  "] {  color: &;}"#,
     "[a=\"a\\\\66  \"] {\n  color: [a=\"a\\\\66  \"];\n}\n"
 );
+
 test!(
     no_newline_between_styles_when_last_style_was_placeholder,
     "a {
@@ -850,6 +861,29 @@ test!(
       color: red;
     }",
     "a {\n  color: red;\n}\nc {\n  color: red;\n}\n"
+);
+test!(
+    ambiguous_colon,
+    ".btn {
+        a:b {
+            color: red;
+        }
+    }",
+    ".btn a:b {\n  color: red;\n}\n"
+);
+test!(
+    double_ampersand,
+    "a {
+        color: &&;
+    }",
+    "a {\n  color: a a;\n}\n"
+);
+test!(
+    escaped_backslash_no_space_before_curly_brace,
+    r#"\\{
+        color: &;
+    }"#,
+    "\\\\ {\n  color: \\\\;\n}\n"
 );
 error!(
     a_n_plus_b_n_invalid_odd,
@@ -866,6 +900,10 @@ error!(
 error!(
     a_n_plus_b_n_invalid_char_after_even,
     ":nth-child(even#) {\n  color: &;\n}\n", "Error: expected \")\"."
+);
+error!(
+    a_n_plus_b_n_nothing_after_plus,
+    ":nth-child:nth-child(n+{}", "Error: Expected a number."
 );
 error!(nothing_after_period, ". {}", "Error: Expected identifier.");
 error!(nothing_after_hash, "# {}", "Error: Expected identifier.");
@@ -889,3 +927,17 @@ error!(
     denies_optional_in_selector,
     "a !optional {}", "Error: expected \"{\"."
 );
+
+// todo:
+// [attr=url] {
+//   color: red;
+// }
+
+// [attr=unit] {
+//   color: red;
+// }
+
+// todo: error test
+// :nth-child(n/**/of a) {
+//   color: &;
+// }

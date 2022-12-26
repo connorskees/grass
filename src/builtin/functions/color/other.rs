@@ -1,22 +1,12 @@
-use super::{Builtin, GlobalFunctionMap};
-
-use num_traits::{One, Signed, Zero};
-
-use crate::{
-    args::CallArgs,
-    color::Color,
-    common::QuoteKind,
-    error::SassResult,
-    parse::Parser,
-    unit::Unit,
-    value::{Number, Value},
-};
+use crate::builtin::builtin_imports::*;
 
 macro_rules! opt_rgba {
     ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal) => {
-        let $name = match $args.default_named_arg($arg, Value::Null)? {
-            Value::Dimension(Some(n), u, _) => Some(bound!($args, $arg, n, u, $low, $high)),
-            Value::Dimension(None, ..) => todo!(),
+        let $name = match $args.default_named_arg($arg, Value::Null) {
+            Value::Dimension(SassNumber { num: n, .. }) if n.is_nan() => todo!(),
+            Value::Dimension(SassNumber {
+                num: n, unit: u, ..
+            }) => Some(bound!($args, $arg, n, u, $low, $high)),
             Value::Null => None,
             v => {
                 return Err((
@@ -31,11 +21,11 @@ macro_rules! opt_rgba {
 
 macro_rules! opt_hsl {
     ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal) => {
-        let $name = match $args.default_named_arg($arg, Value::Null)? {
-            Value::Dimension(Some(n), u, _) => {
-                Some(bound!($args, $arg, n, u, $low, $high) / Number::from(100))
-            }
-            Value::Dimension(None, ..) => todo!(),
+        let $name = match $args.default_named_arg($arg, Value::Null) {
+            Value::Dimension(SassNumber { num: n, .. }) if n.is_nan() => todo!(),
+            Value::Dimension(SassNumber {
+                num: n, unit: u, ..
+            }) => Some(bound!($args, $arg, n, u, $low, $high) / Number::from(100)),
             Value::Null => None,
             v => {
                 return Err((
@@ -48,8 +38,8 @@ macro_rules! opt_hsl {
     };
 }
 
-pub(crate) fn change_color(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
-    if args.positional_arg(1).is_some() {
+pub(crate) fn change_color(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
+    if args.get_positional(1).is_some() {
         return Err((
             "Only one positional argument is allowed. All other arguments must be passed by name.",
             args.span(),
@@ -82,9 +72,9 @@ pub(crate) fn change_color(mut args: CallArgs, parser: &mut Parser) -> SassResul
         ))));
     }
 
-    let hue = match args.default_named_arg("hue", Value::Null)? {
-        Value::Dimension(Some(n), ..) => Some(n),
-        Value::Dimension(None, ..) => todo!(),
+    let hue = match args.default_named_arg("hue", Value::Null) {
+        Value::Dimension(SassNumber { num: n, .. }) if n.is_nan() => todo!(),
+        Value::Dimension(SassNumber { num: n, .. }) => Some(n),
         Value::Null => None,
         v => {
             return Err((
@@ -116,7 +106,7 @@ pub(crate) fn change_color(mut args: CallArgs, parser: &mut Parser) -> SassResul
     }))
 }
 
-pub(crate) fn adjust_color(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+pub(crate) fn adjust_color(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,
         v => {
@@ -142,9 +132,9 @@ pub(crate) fn adjust_color(mut args: CallArgs, parser: &mut Parser) -> SassResul
         ))));
     }
 
-    let hue = match args.default_named_arg("hue", Value::Null)? {
-        Value::Dimension(Some(n), ..) => Some(n),
-        Value::Dimension(None, ..) => todo!(),
+    let hue = match args.default_named_arg("hue", Value::Null) {
+        Value::Dimension(SassNumber { num: n, .. }) if n.is_nan() => todo!(),
+        Value::Dimension(SassNumber { num: n, .. }) => Some(n),
         Value::Null => None,
         v => {
             return Err((
@@ -179,12 +169,12 @@ pub(crate) fn adjust_color(mut args: CallArgs, parser: &mut Parser) -> SassResul
 
 #[allow(clippy::cognitive_complexity)]
 // todo: refactor into rgb and hsl?
-pub(crate) fn scale_color(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+pub(crate) fn scale_color(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     pub(crate) fn scale(val: Number, by: Number, max: Number) -> Number {
         if by.is_zero() {
             return val;
         }
-        val.clone() + (if by.is_positive() { max - val } else { val }) * by
+        val + (if by.is_positive() { max - val } else { val }) * by
     }
 
     let span = args.span();
@@ -201,12 +191,14 @@ pub(crate) fn scale_color(mut args: CallArgs, parser: &mut Parser) -> SassResult
 
     macro_rules! opt_scale_arg {
         ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal) => {
-            let $name = match $args.default_named_arg($arg, Value::Null)? {
-                Value::Dimension(Some(n), Unit::Percent, _) => {
-                    Some(bound!($args, $arg, n, Unit::Percent, $low, $high) / Number::from(100))
-                }
-                Value::Dimension(None, ..) => todo!(),
-                v @ Value::Dimension(..) => {
+            let $name = match $args.default_named_arg($arg, Value::Null) {
+                Value::Dimension(SassNumber { num: n, .. }) if n.is_nan() => todo!(),
+                Value::Dimension(SassNumber {
+                    num: n,
+                    unit: Unit::Percent,
+                    ..
+                }) => Some(bound!($args, $arg, n, Unit::Percent, $low, $high) / Number::from(100)),
+                v @ Value::Dimension { .. } => {
                     return Err((
                         format!(
                             "${}: Expected {} to have unit \"%\".",
@@ -293,7 +285,7 @@ pub(crate) fn scale_color(mut args: CallArgs, parser: &mut Parser) -> SassResult
     }))
 }
 
-pub(crate) fn ie_hex_str(mut args: CallArgs, parser: &mut Parser) -> SassResult<Value> {
+pub(crate) fn ie_hex_str(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,

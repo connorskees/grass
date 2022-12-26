@@ -3,17 +3,12 @@
 This crate aims to provide a high level interface for compiling Sass into
 plain CSS. It offers a very limited API, currently exposing only 2 functions.
 
-In addition to a library, also included is a binary that is intended to act as an invisible
+In addition to a library, this crate also includes a binary that is intended to act as an invisible
 replacement to the Sass commandline executable.
 
 This crate aims to achieve complete feature parity with the `dart-sass` reference
 implementation. A deviation from the `dart-sass` implementation can be considered
-a bug except for in the following situations:
-
-- Error messages
-- Error spans
-- Certain aspects of the indented syntax
-- Potentially others in the future
+a bug except for in the case of error message and error spans.
 
 [Documentation](https://docs.rs/grass/)  
 [crates.io](https://crates.io/crates/grass)
@@ -24,17 +19,7 @@ a bug except for in the following situations:
 
 Every commit of `grass` is tested against bootstrap v5.0.2, and every release is tested against the last 2,500 commits of bootstrap's `main` branch.
 
-That said, there are a number of known missing features and bugs. The notable features remaining are
-
-```
-indented syntax
-@forward and more complex uses of @use
-@at-root and @import media queries
-@media query merging
-/ as a separator in color functions, e.g. rgba(255, 255, 255 / 0)
-Infinity and -Infinity
-builtin meta function `keywords`
-```
+That said, there are a number of known missing features and bugs. The rough edges of `grass` largely include `@forward` and more complex uses of `@uses`. We support basic usage of these rules, but more advanced features such as `@import`ing modules containing `@forward` with prefixes may not behave as expected.
 
 All known missing features and bugs are tracked in [#19](https://github.com/connorskees/grass/issues/19).
 
@@ -44,11 +29,10 @@ All known missing features and bugs are tracked in [#19](https://github.com/conn
 
 `grass` experimentally releases a
 [WASM version of the library to npm](https://www.npmjs.com/package/@connorskees/grass),
-compiled using wasm-bindgen. To use `grass` in your JavaScript projects, just run
-`npm install @connorskees/grass` to add it to your package.json. Better documentation
-for this version will be provided when the library becomes more stable.
+compiled using wasm-bindgen. To use `grass` in your JavaScript projects, run
+`npm install @connorskees/grass` to add it to your package.json. This version of grass is not currently well documented, but one can find example usage in the [`grassmeister` repository](https://github.com/connorskees/grassmeister).
 
-## Features
+## Cargo Features
 
 ### commandline
 
@@ -74,26 +58,14 @@ are in the official spec.
 Having said that, to run the official test suite,
 
 ```bash
-git clone https://github.com/connorskees/grass --recursive
-cd grass
-cargo b --release
-./sass-spec/sass-spec.rb -c './target/release/grass'
-```
-
-Note: you will have to install [ruby](https://www.ruby-lang.org/en/downloads/),
-[bundler](https://bundler.io/) and run `bundle install` in `./sass-spec/`.
-This might also require you to install the requirements separately
-for [curses](https://github.com/ruby/curses).
-
-Alternatively, it is possible to use nodejs to run the spec,
-
-```bash
 # This script expects node >=v14.14.0. Check version with `node --version`
 git clone https://github.com/connorskees/grass --recursive
 cd grass && cargo b --release
 cd sass-spec && npm install
-npm run sass-spec -- --command '../target/release/grass'
+npm run sass-spec -- --impl=dart-sass --command '../target/release/grass'
 ```
+
+The spec runner does not work on Windows.
 
 These numbers come from a default run of the Sass specification as shown above.
 
@@ -103,3 +75,5 @@ PASSING: 4205
 FAILING: 2051
 TOTAL: 6256
 ```
+
+<!-- todo: msrv 1.41.1 -->

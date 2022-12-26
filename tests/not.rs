@@ -36,3 +36,8 @@ test!(
     "a {\n  color: not not false;\n}\n",
     "a {\n  color: false;\n}\n"
 );
+test!(
+    not_calculation,
+    "a {\n  color: not max(1px, 1vh);\n}\n",
+    "a {\n  color: false;\n}\n"
+);
