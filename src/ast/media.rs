@@ -1,13 +1,8 @@
-#![allow(dead_code)]
 use std::fmt::{self, Write};
 
-use crate::{
-    ast::CssStmt,
-    error::SassResult,
-    lexer::Lexer,
-    parse::{MediaQueryParser, Parser},
-    token::Token,
-};
+use codemap::Span;
+
+use crate::{ast::CssStmt, error::SassResult, lexer::Lexer, parse::MediaQueryParser, token::Token};
 
 #[derive(Debug, Clone)]
 pub(crate) struct MediaRule {
@@ -24,10 +19,6 @@ pub(crate) struct MediaQuery {
 }
 
 impl MediaQuery {
-    pub fn is_condition(&self) -> bool {
-        self.modifier.is_none() && self.media_type.is_none()
-    }
-
     pub fn matches_all_types(&self) -> bool {
         self.media_type.is_none()
             || self
@@ -62,25 +53,10 @@ impl MediaQuery {
         }
     }
 
-    pub fn parse_list(list: &str, parser: &mut Parser) -> SassResult<Vec<Self>> {
-        let mut toks = Lexer::new(
-            list.chars()
-                .map(|x| Token::new(parser.span_before, x))
-                .collect(),
-        );
+    pub fn parse_list(list: &str, span: Span) -> SassResult<Vec<Self>> {
+        let mut toks = Lexer::new(list.chars().map(|x| Token::new(span, x)).collect());
 
-        let mut parser = Parser {
-            toks: &mut toks,
-            map: parser.map,
-            path: parser.path,
-            is_plain_css: false,
-            is_indented: false,
-            span_before: parser.span_before,
-            flags: parser.flags,
-            options: parser.options,
-        };
-
-        MediaQueryParser::new(&mut parser).parse()
+        MediaQueryParser::new(&mut toks).parse()
     }
 
     #[allow(clippy::if_not_else)]

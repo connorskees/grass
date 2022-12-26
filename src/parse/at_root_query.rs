@@ -1,48 +1,54 @@
 use std::collections::HashSet;
 
-use crate::{ast::AtRootQuery, error::SassResult};
+use crate::{ast::AtRootQuery, error::SassResult, lexer::Lexer};
 
-use super::Parser;
+use super::BaseParser;
 
 pub(crate) struct AtRootQueryParser<'a> {
-    parser: &'a mut Parser<'a, 'a>,
+    toks: Lexer<'a>,
+}
+
+impl<'a: 'b, 'b: 'a> BaseParser<'a, 'b> for AtRootQueryParser<'a> {
+    fn toks(&self) -> &Lexer<'b> {
+        &self.toks
+    }
+
+    fn toks_mut(&mut self) -> &mut Lexer<'b> {
+        &mut self.toks
+    }
 }
 
 impl<'a> AtRootQueryParser<'a> {
-    pub fn new(parser: &'a mut Parser<'a, 'a>) -> AtRootQueryParser<'a> {
-        AtRootQueryParser { parser }
+    pub fn new(toks: Lexer<'a>) -> AtRootQueryParser<'a> {
+        AtRootQueryParser { toks }
     }
 
     pub fn parse(&mut self) -> SassResult<AtRootQuery> {
-        self.parser.expect_char('(')?;
-        self.parser.whitespace()?;
-        let include = self.parser.scan_identifier("with", false)?;
+        self.expect_char('(')?;
+        self.whitespace()?;
+        let include = self.scan_identifier("with", false)?;
 
         if !include {
-            self.parser.expect_identifier("without", false)?;
+            self.expect_identifier("without", false)?;
         }
 
-        self.parser.whitespace()?;
-        self.parser.expect_char(':')?;
-        self.parser.whitespace()?;
+        self.whitespace()?;
+        self.expect_char(':')?;
+        self.whitespace()?;
 
         let mut names = HashSet::new();
 
         loop {
-            names.insert(
-                self.parser
-                    .parse_identifier(false, false)?
-                    .to_ascii_lowercase(),
-            );
-            self.parser.whitespace()?;
+            names.insert(self.parse_identifier(false, false)?.to_ascii_lowercase());
+            self.whitespace()?;
 
-            if !self.parser.looking_at_identifier() {
+            if !self.looking_at_identifier() {
                 break;
             }
         }
 
-        self.parser.expect_char(')')?;
-        self.parser.expect_done()?;
+        self.expect_char(')')?;
+        self.expect_done()?;
 
         Ok(AtRootQuery::new(include, names))
     }

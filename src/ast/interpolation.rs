@@ -83,6 +83,13 @@ impl Interpolation {
             }
         }
     }
+
+    pub fn trailing_string(&self) -> &str {
+        match self.contents.last() {
+            Some(InterpolationPart::String(s)) => s,
+            Some(InterpolationPart::Expr(..)) | None => "",
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

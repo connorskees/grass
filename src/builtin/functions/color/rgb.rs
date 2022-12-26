@@ -8,7 +8,7 @@ pub(crate) fn function_string(
 ) -> SassResult<String> {
     let args = args
         .iter()
-        .map(|arg| arg.to_css_string(span, visitor.parser.options.is_compressed()))
+        .map(|arg| arg.to_css_string(span, visitor.options.is_compressed()))
         .collect::<SassResult<Vec<_>>>()?
         .join(", ");
 
@@ -25,7 +25,7 @@ fn inner_rgb_2_arg(
     let color = args.get_err(0, "color")?;
     let alpha = args.get_err(1, "alpha")?;
 
-    let is_compressed = visitor.parser.options.is_compressed();
+    let is_compressed = visitor.options.is_compressed();
 
     if color.is_var() {
         return Ok(Value::String(
@@ -162,7 +162,7 @@ pub(crate) fn percentage_or_unitless(
         return Err((
             format!(
                 "${name}: Expected {} to have no units or \"%\".",
-                inspect_number(number, visitor.parser.options, span)?
+                inspect_number(number, visitor.options, span)?
             ),
             span,
         )
@@ -443,7 +443,7 @@ pub(crate) fn mix(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult
             return Err((
                 format!(
                     "$weight: {} is not a number.",
-                    v.to_css_string(args.span(), visitor.parser.options.is_compressed())?
+                    v.to_css_string(args.span(), visitor.options.is_compressed())?
                 ),
                 args.span(),
             )

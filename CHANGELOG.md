@@ -1,11 +1,12 @@
 # TBD
 
 - complete rewrite of parsing, evaluation, and serialization steps
+- **implement the indented syntax**
+- **implement plain CSS imports**
 - support for custom properties
 - represent all numbers as f64, rather than using arbitrary precision
 - implement media query merging
 - implement builtin function `keywords`
-- implement plain css imports
 - implement Infinity and -Infinity
 - implement the `@forward` rule
 - feature complete parsing of `@supports` conditions
@@ -48,7 +49,6 @@ UPCOMING:
 
 - error when `@extend` is used across `@media` boundaries
 - more robust support for NaN in builtin functions
-- support the indented syntax
 
 # 0.11.2
 

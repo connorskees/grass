@@ -3,17 +3,12 @@
 This crate aims to provide a high level interface for compiling Sass into
 plain CSS. It offers a very limited API, currently exposing only 2 functions.
 
-In addition to a library, also included is a binary that is intended to act as an invisible
+In addition to a library, this crate also includes a binary that is intended to act as an invisible
 replacement to the Sass commandline executable.
 
 This crate aims to achieve complete feature parity with the `dart-sass` reference
 implementation. A deviation from the `dart-sass` implementation can be considered
-a bug except for in the following situations:
-
-- Error messages
-- Error spans
-- Certain aspects of the indented syntax
-- Potentially others in the future
+a bug except for in the case of error message and error spans.
 
 [Documentation](https://docs.rs/grass/)  
 [crates.io](https://crates.io/crates/grass)
@@ -24,12 +19,7 @@ a bug except for in the following situations:
 
 Every commit of `grass` is tested against bootstrap v5.0.2, and every release is tested against the last 2,500 commits of bootstrap's `main` branch.
 
-That said, there are a number of known missing features and bugs. The rough edges of `grass` are:
-
- - `@forward` and more complex uses of `@uses`:
-    - we support basic usage of these rules, but more advanced features such as `@import`ing modules containing `@forward` with prefixes may not behave as expected
- - the indented syntax/SASS:
-    - we do not currently support the indented syntax
+That said, there are a number of known missing features and bugs. The rough edges of `grass` largely include `@forward` and more complex uses of `@uses`. We support basic usage of these rules, but more advanced features such as `@import`ing modules containing `@forward` with prefixes may not behave as expected.
 
 All known missing features and bugs are tracked in [#19](https://github.com/connorskees/grass/issues/19).
 

@@ -9,7 +9,7 @@ use std::{
     sync::Arc,
 };
 
-use codemap::{Span, Spanned};
+use codemap::{CodeMap, Span, Spanned};
 use indexmap::IndexSet;
 
 use crate::{
@@ -26,7 +26,10 @@ use crate::{
     error::{SassError, SassResult},
     interner::InternedString,
     lexer::Lexer,
-    parse::{AtRootQueryParser, KeyframesSelectorParser, Parser},
+    parse::{
+        AtRootQueryParser, CssParser, KeyframesSelectorParser, SassParser, ScssParser,
+        StylesheetParser,
+    },
     selector::{
         ComplexSelectorComponent, ExtendRule, ExtendedSelector, ExtensionStore, SelectorList,
         SelectorParser,
@@ -37,7 +40,7 @@ use crate::{
         ArgList, CalculationArg, CalculationName, Number, SassCalculation, SassFunction, SassMap,
         SassNumber, UserDefinedFunction, Value,
     },
-    ContextFlags,
+    ContextFlags, InputSyntax, Options,
 };
 
 use super::{
@@ -91,7 +94,6 @@ pub(crate) struct Visitor<'a> {
     pub declaration_name: Option<String>,
     pub flags: ContextFlags,
     // todo: should not need this
-    pub parser: &'a mut Parser<'a, 'a>,
     pub env: Environment,
     pub style_rule_ignoring_at_root: Option<ExtendedSelector>,
     // avoid emitting duplicate warnings for the same span
@@ -105,20 +107,28 @@ pub(crate) struct Visitor<'a> {
     parent: Option<CssTreeIdx>,
     configuration: Arc<RefCell<Configuration>>,
     import_nodes: Vec<CssStmt>,
+    pub options: &'a Options<'a>,
+    pub map: &'a mut CodeMap,
+    // todo: remove
+    span_before: Span,
 }
 
 impl<'a> Visitor<'a> {
-    pub fn new(parser: &'a mut Parser<'a, 'a>) -> Self {
+    pub fn new(
+        path: &Path,
+        options: &'a Options<'a>,
+        map: &'a mut CodeMap,
+        span_before: Span,
+    ) -> Self {
         let mut flags = ContextFlags::empty();
         flags.set(ContextFlags::IN_SEMI_GLOBAL_SCOPE, true);
 
-        let extender = ExtensionStore::new(parser.span_before);
+        let extender = ExtensionStore::new(span_before);
 
-        let current_import_path = parser.path.to_path_buf();
+        let current_import_path = path.to_path_buf();
 
         Self {
             declaration_name: None,
-            parser,
             style_rule_ignoring_at_root: None,
             flags,
             warnings_emitted: HashSet::new(),
@@ -132,6 +142,9 @@ impl<'a> Visitor<'a> {
             configuration: Arc::new(RefCell::new(Configuration::empty())),
             is_plain_css: false,
             import_nodes: Vec::new(),
+            options,
+            span_before,
+            map,
         }
     }
 
@@ -394,7 +407,7 @@ impl<'a> Visitor<'a> {
                 self.parenthesize_supports_condition(*condition, None)?
             )),
             AstSupportsCondition::Interpolation(expr) => {
-                self.evaluate_to_css(expr, QuoteKind::None, self.parser.span_before)
+                self.evaluate_to_css(expr, QuoteKind::None, self.span_before)
             }
             AstSupportsCondition::Declaration { name, value } => {
                 let old_in_supports_decl = self.flags.in_supports_declaration();
@@ -409,9 +422,9 @@ impl<'a> Visitor<'a> {
 
                 let result = format!(
                     "({}:{}{})",
-                    self.evaluate_to_css(name, QuoteKind::Quoted, self.parser.span_before)?,
+                    self.evaluate_to_css(name, QuoteKind::Quoted, self.span_before)?,
                     if is_custom_property { "" } else { " " },
-                    self.evaluate_to_css(value, QuoteKind::Quoted, self.parser.span_before)?,
+                    self.evaluate_to_css(value, QuoteKind::Quoted, self.span_before)?,
                 );
 
                 self.flags
@@ -505,7 +518,7 @@ impl<'a> Visitor<'a> {
         _names_in_errors: bool,
     ) -> SassResult<Arc<RefCell<Module>>> {
         let env = Environment::new();
-        let mut extension_store = ExtensionStore::new(self.parser.span_before);
+        let mut extension_store = ExtensionStore::new(self.span_before);
 
         self.with_environment::<SassResult<()>>(env.new_closure(), |visitor| {
             let old_parent = visitor.parent;
@@ -721,11 +734,11 @@ impl<'a> Visitor<'a> {
 
                 let partial = dirname.join(format!("_{}", basename.to_str().unwrap()));
 
-                if self.parser.options.fs.is_file(&path) {
+                if self.options.fs.is_file(&path) {
                     return Some(path.to_path_buf());
                 }
 
-                if self.parser.options.fs.is_file(&partial) {
+                if self.options.fs.is_file(&partial) {
                     return Some(partial);
                 }
             };
@@ -755,21 +768,40 @@ impl<'a> Visitor<'a> {
 
         try_path_with_extensions!(path_buf.clone());
 
-        if self.parser.options.fs.is_dir(&path_buf) {
+        if self.options.fs.is_dir(&path_buf) {
             try_path_with_extensions!(path_buf.join("index"));
         }
 
-        for load_path in &self.parser.options.load_paths {
+        for load_path in &self.options.load_paths {
             let path_buf = load_path.join(path);
 
             try_path_with_extensions!(&path_buf);
 
-            if self.parser.options.fs.is_dir(&path_buf) {
+            if self.options.fs.is_dir(&path_buf) {
                 try_path_with_extensions!(path_buf.join("index"));
             }
         }
 
         None
+    }
+
+    fn parse_file(
+        &mut self,
+        mut lexer: Lexer,
+        path: &Path,
+        span_before: Span,
+    ) -> SassResult<StyleSheet> {
+        match InputSyntax::for_path(path) {
+            InputSyntax::Scss => {
+                ScssParser::new(&mut lexer, self.map, self.options, span_before, path).__parse()
+            }
+            InputSyntax::Sass => {
+                SassParser::new(&mut lexer, self.map, self.options, span_before, path).__parse()
+            }
+            InputSyntax::Css => {
+                CssParser::new(&mut lexer, self.map, self.options, span_before, path).__parse()
+            }
+        }
     }
 
     fn import_like_node(
@@ -779,25 +811,16 @@ impl<'a> Visitor<'a> {
         span: Span,
     ) -> SassResult<StyleSheet> {
         if let Some(name) = self.find_import(url.as_ref()) {
-            let file = self.parser.map.add_file(
+            let file = self.map.add_file(
                 name.to_string_lossy().into(),
-                String::from_utf8(self.parser.options.fs.read(&name)?)?,
+                String::from_utf8(self.options.fs.read(&name)?)?,
             );
 
             let old_is_use_allowed = self.flags.is_use_allowed();
             self.flags.set(ContextFlags::IS_USE_ALLOWED, true);
 
-            let style_sheet = Parser {
-                toks: &mut Lexer::new_from_file(&file),
-                map: self.parser.map,
-                is_plain_css: name.extension() == Some(OsStr::new("css")),
-                is_indented: name.extension() == Some(OsStr::new("sass")),
-                path: &name,
-                span_before: file.span.subspan(0, 0),
-                flags: self.flags,
-                options: self.parser.options,
-            }
-            .__parse()?;
+            let style_sheet =
+                self.parse_file(Lexer::new_from_file(&file), &name, file.span.subspan(0, 0))?;
 
             self.flags
                 .set(ContextFlags::IS_USE_ALLOWED, old_is_use_allowed);
@@ -855,13 +878,13 @@ impl<'a> Visitor<'a> {
     }
 
     fn visit_debug_rule(&mut self, debug_rule: AstDebugRule) -> SassResult<Option<Value>> {
-        if self.parser.options.quiet {
+        if self.options.quiet {
             return Ok(None);
         }
 
         let message = self.visit_expr(debug_rule.value)?;
 
-        let loc = self.parser.map.look_up_span(debug_rule.span);
+        let loc = self.map.look_up_span(debug_rule.span);
         eprintln!(
             "{}:{} DEBUG: {}",
             loc.file.name(),
@@ -934,24 +957,14 @@ impl<'a> Visitor<'a> {
             Some(val) => {
                 let resolved = self.perform_interpolation(val, true)?;
 
-                let mut query_toks = Lexer::new(
+                let query_toks = Lexer::new(
                     resolved
                         .chars()
-                        .map(|x| Token::new(self.parser.span_before, x))
+                        .map(|x| Token::new(self.span_before, x))
                         .collect(),
                 );
 
-                AtRootQueryParser::new(&mut Parser {
-                    toks: &mut query_toks,
-                    map: self.parser.map,
-                    path: self.parser.path,
-                    is_plain_css: false,
-                    is_indented: false,
-                    span_before: self.parser.span_before,
-                    flags: self.parser.flags,
-                    options: self.parser.options,
-                })
-                .parse()?
+                AtRootQueryParser::new(query_toks).parse()?
             }
             None => AtRootQuery::default(),
         };
@@ -1111,22 +1124,7 @@ impl<'a> Visitor<'a> {
     ) -> SassResult<SelectorList> {
         let mut sel_toks = Lexer::new(selector_text.chars().map(|x| Token::new(span, x)).collect());
 
-        SelectorParser::new(
-            &mut Parser {
-                toks: &mut sel_toks,
-                map: self.parser.map,
-                path: self.parser.path,
-                is_plain_css: self.is_plain_css,
-                is_indented: false,
-                span_before: span,
-                flags: self.parser.flags,
-                options: self.parser.options,
-            },
-            allows_parent,
-            allows_placeholder,
-            span,
-        )
-        .parse()
+        SelectorParser::new(&mut sel_toks, allows_parent, allows_placeholder, span).parse()
     }
 
     fn visit_extend_rule(&mut self, extend_rule: AstExtendRule) -> SassResult<Option<Value>> {
@@ -1209,7 +1207,7 @@ impl<'a> Visitor<'a> {
     fn visit_media_queries(&mut self, queries: Interpolation) -> SassResult<Vec<CssMediaQuery>> {
         let resolved = self.perform_interpolation(queries, true)?;
 
-        CssMediaQuery::parse_list(&resolved, self.parser)
+        CssMediaQuery::parse_list(&resolved, self.span_before)
     }
 
     fn visit_media_rule(&mut self, media_rule: AstMedia) -> SassResult<Option<Value>> {
@@ -1420,10 +1418,10 @@ impl<'a> Visitor<'a> {
     }
 
     pub fn emit_warning(&mut self, message: &str, span: Span) {
-        if self.parser.options.quiet {
+        if self.options.quiet {
             return;
         }
-        let loc = self.parser.map.look_up_span(span);
+        let loc = self.map.look_up_span(span);
         eprintln!(
             "Warning: {}\n    ./{}:{}:{}",
             message,
@@ -1436,8 +1434,7 @@ impl<'a> Visitor<'a> {
     fn visit_warn_rule(&mut self, warn_rule: AstWarn) -> SassResult<()> {
         if self.warnings_emitted.insert(warn_rule.span) {
             let value = self.visit_expr(warn_rule.value)?;
-            let message =
-                value.to_css_string(warn_rule.span, self.parser.options.is_compressed())?;
+            let message = value.to_css_string(warn_rule.span, self.options.is_compressed())?;
             self.emit_warning(&message, warn_rule.span);
         }
 
@@ -1910,7 +1907,7 @@ impl<'a> Visitor<'a> {
                 // todo: emit warning. we don't currently because it can be quite loud
                 // self.emit_warning(
                 //     Cow::Borrowed("Using / for division is deprecated and will be removed at some point in the future"),
-                //     self.parser.span_before,
+                //     self.span_before,
                 // );
             }
             _ => {}
@@ -2358,7 +2355,7 @@ impl<'a> Visitor<'a> {
             AstExpr::True => Value::True,
             AstExpr::False => Value::False,
             AstExpr::Calculation { name, args } => {
-                self.visit_calculation_expr(name, args, self.parser.span_before)?
+                self.visit_calculation_expr(name, args, self.span_before)?
             }
             AstExpr::FunctionCall(func_call) => self.visit_function_call_expr(func_call)?,
             AstExpr::If(if_expr) => self.visit_ternary(*if_expr)?,
@@ -2398,7 +2395,7 @@ impl<'a> Visitor<'a> {
             },
             AstExpr::String(string_expr, _span) => {
                 debug_assert!(string_expr.1 == QuoteKind::None);
-                CalculationArg::String(self.perform_interpolation(string_expr.0, false)?)
+                CalculationArg::Interpolation(self.perform_interpolation(string_expr.0, false)?)
             }
             AstExpr::BinaryOp { lhs, op, rhs, .. } => SassCalculation::operate_internal(
                 op,
@@ -2406,7 +2403,7 @@ impl<'a> Visitor<'a> {
                 self.visit_calculation_value(*rhs, in_min_or_max, span)?,
                 in_min_or_max,
                 !self.flags.in_supports_declaration(),
-                self.parser.options,
+                self.options,
                 span,
             )?,
             AstExpr::Number { .. }
@@ -2467,8 +2464,8 @@ impl<'a> Visitor<'a> {
                 debug_assert_eq!(args.len(), 1);
                 Ok(SassCalculation::calc(args.remove(0)))
             }
-            CalculationName::Min => SassCalculation::min(args, self.parser.options, span),
-            CalculationName::Max => SassCalculation::max(args, self.parser.options, span),
+            CalculationName::Min => SassCalculation::min(args, self.options, span),
+            CalculationName::Max => SassCalculation::max(args, self.options, span),
             CalculationName::Clamp => {
                 let min = args.remove(0);
                 let value = if args.is_empty() {
@@ -2481,7 +2478,7 @@ impl<'a> Visitor<'a> {
                 } else {
                     Some(args.remove(0))
                 };
-                SassCalculation::clamp(min, value, max, self.parser.options, span)
+                SassCalculation::clamp(min, value, max, self.options, span)
             }
         }
     }
@@ -2593,7 +2590,7 @@ impl<'a> Visitor<'a> {
         Ok(match op {
             BinaryOp::SingleEq => {
                 let right = self.visit_expr(rhs)?;
-                single_eq(&left, &right, self.parser.options, span)?
+                single_eq(&left, &right, self.options, span)?
             }
             BinaryOp::Or => {
                 if left.is_true() {
@@ -2622,19 +2619,19 @@ impl<'a> Visitor<'a> {
             | BinaryOp::LessThan
             | BinaryOp::LessThanEqual => {
                 let right = self.visit_expr(rhs)?;
-                cmp(&left, &right, self.parser.options, span, op)?
+                cmp(&left, &right, self.options, span, op)?
             }
             BinaryOp::Plus => {
                 let right = self.visit_expr(rhs)?;
-                add(left, right, self.parser.options, span)?
+                add(left, right, self.options, span)?
             }
             BinaryOp::Minus => {
                 let right = self.visit_expr(rhs)?;
-                sub(left, right, self.parser.options, span)?
+                sub(left, right, self.options, span)?
             }
             BinaryOp::Mul => {
                 let right = self.visit_expr(rhs)?;
-                mul(left, right, self.parser.options, span)?
+                mul(left, right, self.options, span)?
             }
             BinaryOp::Div => {
                 let right = self.visit_expr(rhs)?;
@@ -2642,7 +2639,7 @@ impl<'a> Visitor<'a> {
                 let left_is_number = matches!(left, Value::Dimension { .. });
                 let right_is_number = matches!(right, Value::Dimension { .. });
 
-                let result = div(left.clone(), right.clone(), self.parser.options, span)?;
+                let result = div(left.clone(), right.clone(), self.options, span)?;
 
                 if left_is_number && right_is_number && allows_slash {
                     return result.with_slash(
@@ -2664,7 +2661,7 @@ impl<'a> Visitor<'a> {
             }
             BinaryOp::Rem => {
                 let right = self.visit_expr(rhs)?;
-                rem(left, right, self.parser.options, span)?
+                rem(left, right, self.options, span)?
             }
         })
     }
@@ -2676,7 +2673,7 @@ impl<'a> Visitor<'a> {
         }
 
         Ok(expr
-            .to_css_string(span, self.parser.options.is_compressed())?
+            .to_css_string(span, self.options.is_compressed())?
             .into_owned())
     }
 
@@ -2701,20 +2698,11 @@ impl<'a> Visitor<'a> {
             let mut sel_toks = Lexer::new(
                 selector_text
                     .chars()
-                    .map(|x| Token::new(self.parser.span_before, x))
+                    .map(|x| Token::new(self.span_before, x))
                     .collect(),
             );
-            let parsed_selector = KeyframesSelectorParser::new(&mut Parser {
-                toks: &mut sel_toks,
-                map: self.parser.map,
-                path: self.parser.path,
-                is_plain_css: false,
-                is_indented: false,
-                span_before: self.parser.span_before,
-                flags: self.parser.flags,
-                options: self.parser.options,
-            })
-            .parse_keyframes_selector()?;
+            let parsed_selector =
+                KeyframesSelectorParser::new(&mut sel_toks).parse_keyframes_selector()?;
 
             let keyframes_ruleset = CssStmt::KeyframesRuleSet(KeyframesRuleSet {
                 selector: parsed_selector,

@@ -1,8 +1,8 @@
 use std::fmt;
 
-use crate::{ast::KeyframesSelector, error::SassResult, token::Token};
+use crate::{ast::KeyframesSelector, error::SassResult, lexer::Lexer, token::Token};
 
-use super::Parser;
+use super::BaseParser;
 
 impl fmt::Display for KeyframesSelector {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -14,38 +14,44 @@ impl fmt::Display for KeyframesSelector {
     }
 }
 
-pub(crate) struct KeyframesSelectorParser<'a, 'b, 'c> {
-    parser: &'a mut Parser<'b, 'c>,
+pub(crate) struct KeyframesSelectorParser<'a, 'b> {
+    pub toks: &'a mut Lexer<'b>,
 }
 
-impl<'a, 'b, 'c> KeyframesSelectorParser<'a, 'b, 'c> {
-    pub fn new(parser: &'a mut Parser<'b, 'c>) -> Self {
-        Self { parser }
+impl<'a, 'b: 'a> BaseParser<'a, 'b> for KeyframesSelectorParser<'a, 'b> {
+    fn toks(&self) -> &Lexer<'b> {
+        &self.toks
+    }
+
+    fn toks_mut(&mut self) -> &mut Lexer<'b> {
+        &mut self.toks
+    }
+}
+
+impl<'a, 'b> KeyframesSelectorParser<'a, 'b> {
+    pub fn new(toks: &'a mut Lexer<'b>) -> KeyframesSelectorParser<'a, 'b> {
+        KeyframesSelectorParser { toks }
     }
 
     pub fn parse_keyframes_selector(&mut self) -> SassResult<Vec<KeyframesSelector>> {
         let mut selectors = Vec::new();
         loop {
-            self.parser.whitespace()?;
-            if self.parser.looking_at_identifier() {
-                if self.parser.scan_identifier("to", false)? {
+            self.whitespace()?;
+            if self.looking_at_identifier() {
+                if self.scan_identifier("to", false)? {
                     selectors.push(KeyframesSelector::To);
-                } else if self.parser.scan_identifier("from", false)? {
+                } else if self.scan_identifier("from", false)? {
                     selectors.push(KeyframesSelector::From);
                 } else {
-                    return Err((
-                        "Expected \"to\" or \"from\".",
-                        self.parser.toks.current_span(),
-                    )
-                        .into());
+                    return Err(("Expected \"to\" or \"from\".", self.toks.current_span()).into());
                 }
             } else {
                 selectors.push(self.parse_percentage_selector()?);
             }
 
-            self.parser.whitespace()?;
+            self.whitespace()?;
 
-            if !self.parser.scan_char(',') {
+            if !self.scan_char(',') {
                 break;
             }
         }
@@ -56,79 +62,79 @@ impl<'a, 'b, 'c> KeyframesSelectorParser<'a, 'b, 'c> {
     fn parse_percentage_selector(&mut self) -> SassResult<KeyframesSelector> {
         let mut buffer = String::new();
 
-        if self.parser.scan_char('+') {
+        if self.scan_char('+') {
             buffer.push('+');
         }
 
         if !matches!(
-            self.parser.toks.peek(),
+            self.toks.peek(),
             Some(Token {
                 kind: '0'..='9' | '.',
                 ..
             })
         ) {
-            return Err(("Expected number.", self.parser.toks.current_span()).into());
+            return Err(("Expected number.", self.toks.current_span()).into());
         }
 
         while matches!(
-            self.parser.toks.peek(),
+            self.toks.peek(),
             Some(Token {
                 kind: '0'..='9',
                 ..
             })
         ) {
-            buffer.push(self.parser.toks.next().unwrap().kind);
+            buffer.push(self.toks.next().unwrap().kind);
         }
 
-        if self.parser.scan_char('.') {
+        if self.scan_char('.') {
             buffer.push('.');
 
             while matches!(
-                self.parser.toks.peek(),
+                self.toks.peek(),
                 Some(Token {
                     kind: '0'..='9',
                     ..
                 })
             ) {
-                buffer.push(self.parser.toks.next().unwrap().kind);
+                buffer.push(self.toks.next().unwrap().kind);
             }
         }
 
-        if self.parser.scan_ident_char('e', false)? {
+        if self.scan_ident_char('e', false)? {
             buffer.push('e');
 
             if matches!(
-                self.parser.toks.peek(),
+                self.toks.peek(),
                 Some(Token {
                     kind: '+' | '-',
                     ..
                 })
             ) {
-                buffer.push(self.parser.toks.next().unwrap().kind);
+                buffer.push(self.toks.next().unwrap().kind);
             }
 
             if !matches!(
-                self.parser.toks.peek(),
+                self.toks.peek(),
                 Some(Token {
                     kind: '0'..='9',
                     ..
                 })
             ) {
-                return Err(("Expected digit.", self.parser.toks.current_span()).into());
+                return Err(("Expected digit.", self.toks.current_span()).into());
             }
 
             while matches!(
-                self.parser.toks.peek(),
+                self.toks.peek(),
                 Some(Token {
                     kind: '0'..='9',
                     ..
                 })
             ) {
-                buffer.push(self.parser.toks.next().unwrap().kind);
+                buffer.push(self.toks.next().unwrap().kind);
             }
         }
 
-        self.parser.expect_char('%')?;
+        self.expect_char('%')?;
 
         Ok(KeyframesSelector::Percent(buffer.into_boxed_str()))
     }

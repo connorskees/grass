@@ -235,9 +235,7 @@ pub(crate) fn min(args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Val
             as_slash: None,
         });
 
-        if crate::evaluate::cmp(&lhs, &rhs, visitor.parser.options, span, BinaryOp::LessThan)?
-            .is_true()
-        {
+        if crate::evaluate::cmp(&lhs, &rhs, visitor.options, span, BinaryOp::LessThan)?.is_true() {
             min = (num, unit);
         }
     }
@@ -282,14 +280,7 @@ pub(crate) fn max(args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Val
             as_slash: None,
         });
 
-        if crate::evaluate::cmp(
-            &lhs,
-            &rhs,
-            visitor.parser.options,
-            span,
-            BinaryOp::GreaterThan,
-        )?
-        .is_true()
+        if crate::evaluate::cmp(&lhs, &rhs, visitor.options, span, BinaryOp::GreaterThan)?.is_true()
         {
             max = (num, unit);
         }
@@ -307,7 +298,7 @@ pub(crate) fn divide(mut args: ArgumentResult, visitor: &mut Visitor) -> SassRes
     let number1 = args.get_err(0, "number1")?;
     let number2 = args.get_err(1, "number2")?;
 
-    div(number1, number2, visitor.parser.options, args.span())
+    div(number1, number2, visitor.options, args.span())
 }
 
 pub(crate) fn declare(f: &mut GlobalFunctionMap) {

@@ -163,7 +163,7 @@ fn calc_args(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Valu
                     Value::String(s, QuoteKind::None)
                 }
                 CalculationArg::Operation { .. } => Value::String(
-                    serialize_calculation_arg(&arg, visitor.parser.options, args.span())?,
+                    serialize_calculation_arg(&arg, visitor.options, args.span())?,
                     QuoteKind::None,
                 ),
             })

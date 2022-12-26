@@ -68,6 +68,7 @@ grass input.scss
 
 use std::path::Path;
 
+use parse::{CssParser, SassParser, StylesheetParser};
 use serializer::Serializer;
 #[cfg(feature = "wasm-exports")]
 use wasm_bindgen::prelude::*;
@@ -79,7 +80,7 @@ pub use crate::error::{
 };
 pub use crate::fs::{Fs, NullFs, StdFs};
 pub(crate) use crate::{context_flags::ContextFlags, token::Token};
-use crate::{evaluate::Visitor, lexer::Lexer, parse::Parser};
+use crate::{evaluate::Visitor, lexer::Lexer, parse::ScssParser};
 
 mod ast;
 mod builtin;
@@ -99,11 +100,37 @@ mod unit;
 mod utils;
 mod value;
 
+/// The syntax style to parse input as
+#[non_exhaustive]
+#[derive(Clone, Copy, Debug)]
+pub enum InputSyntax {
+    /// The CSS-superset SCSS syntax.
+    Scss,
+
+    /// The whitespace-sensitive indented syntax.
+    Sass,
+
+    /// The plain CSS syntax, which disallows special Sass features.
+    Css,
+}
+
+impl InputSyntax {
+    pub(crate) fn for_path(path: &Path) -> Self {
+        match path.extension().and_then(|ext| ext.to_str()) {
+            Some("css") => Self::Css,
+            Some("sass") => Self::Sass,
+            _ => Self::Scss,
+        }
+    }
+}
+
 #[non_exhaustive]
 #[derive(Clone, Copy, Debug)]
 pub enum OutputStyle {
     /// The default style, this mode writes each
     /// selector and declaration on its own line.
+    ///
+    /// This is the default output.
     Expanded,
     /// Ideal for release builds, this mode removes
     /// as many extra characters as possible and
@@ -116,6 +143,7 @@ pub enum OutputStyle {
 /// The simplest usage is `grass::Options::default()`;
 /// however, a builder pattern is also exposed to offer
 /// more control.
+// todo: move to separate file
 #[derive(Debug)]
 pub struct Options<'a> {
     fs: &'a dyn Fs,
@@ -124,6 +152,7 @@ pub struct Options<'a> {
     allows_charset: bool,
     unicode_error_messages: bool,
     quiet: bool,
+    input_syntax: Option<InputSyntax>,
 }
 
 impl Default for Options<'_> {
@@ -136,6 +165,7 @@ impl Default for Options<'_> {
             allows_charset: true,
             unicode_error_messages: true,
             quiet: false,
+            input_syntax: None,
         }
     }
 }
@@ -154,8 +184,8 @@ impl<'a> Options<'a> {
 
     /// `grass` currently offers 2 different output styles
     ///
-    ///  - `OutputStyle::Expanded` writes each selector and declaration on its own line.
-    ///  - `OutputStyle::Compressed` removes as many extra characters as possible
+    ///  - [`OutputStyle::Expanded`] writes each selector and declaration on its own line.
+    ///  - [`OutputStyle::Compressed`] removes as many extra characters as possible
     ///    and writes the entire stylesheet on a single line.
     ///
     /// By default, output is expanded.
@@ -240,6 +270,20 @@ impl<'a> Options<'a> {
         self
     }
 
+    /// This option forces Sass to parse input using the given syntax.
+    ///
+    /// By default, Sass will attempt to read the file extension to determine
+    /// the syntax. If this is not possible, it will default to [`InputSyntax::Scss`]
+    ///
+    /// This flag only affects the first file loaded. Files that are loaded using
+    /// `@import`, `@use`, or `@forward` will always have their syntax inferred.
+    #[must_use]
+    #[inline]
+    pub const fn input_syntax(mut self, syntax: InputSyntax) -> Self {
+        self.input_syntax = Some(syntax);
+        self
+    }
+
     pub(crate) fn is_compressed(&self) -> bool {
         matches!(self.style, OutputStyle::Compressed)
     }
@@ -256,21 +300,46 @@ fn from_string_with_file_name(input: String, file_name: &str, options: &Options)
     let empty_span = file.span.subspan(0, 0);
     let mut lexer = Lexer::new_from_file(&file);
 
-    let mut parser = Parser::new(
-        &mut lexer,
-        &mut map,
-        options,
-        empty_span,
-        file_name.as_ref(),
-    );
+    let path = Path::new(file_name);
 
-    let stmts = match parser.__parse() {
+    let input_syntax = options
+        .input_syntax
+        .unwrap_or_else(|| InputSyntax::for_path(path));
+
+    let stylesheet = match input_syntax {
+        InputSyntax::Scss => ScssParser::new(
+            &mut lexer,
+            &mut map,
+            options,
+            empty_span,
+            file_name.as_ref(),
+        )
+        .__parse(),
+        InputSyntax::Sass => SassParser::new(
+            &mut lexer,
+            &mut map,
+            options,
+            empty_span,
+            file_name.as_ref(),
+        )
+        .__parse(),
+        InputSyntax::Css => CssParser::new(
+            &mut lexer,
+            &mut map,
+            options,
+            empty_span,
+            file_name.as_ref(),
+        )
+        .__parse(),
+    };
+
+    let stylesheet = match stylesheet {
         Ok(v) => v,
         Err(e) => return Err(raw_to_parse_error(&map, *e, options.unicode_error_messages)),
     };
 
-    let mut visitor = Visitor::new(&mut parser);
-    match visitor.visit_stylesheet(stmts) {
+    let mut visitor = Visitor::new(path, options, &mut map, empty_span);
+    match visitor.visit_stylesheet(stylesheet) {
         Ok(_) => {}
         Err(e) => return Err(raw_to_parse_error(&map, *e, options.unicode_error_messages)),
     }

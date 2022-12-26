@@ -20,6 +20,11 @@ test!(
     "a {\n  color: 3;\n}\n"
 );
 test!(
+    calc_operation_rhs_is_interpolation,
+    "a {\n  color: calc(100% + (#{4px}));\n}\n",
+    "a {\n  color: calc(100% + (4px));\n}\n"
+);
+test!(
     calc_mul_negative_number,
     "a {\n  color: calc(var(--bs-border-width) * -1);\n}\n",
     "a {\n  color: calc(var(--bs-border-width) * -1);\n}\n"

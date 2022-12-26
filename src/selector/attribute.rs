@@ -6,10 +6,15 @@ use std::{
 use codemap::Span;
 
 use crate::{
-    common::QuoteKind, error::SassResult, parse::Parser, utils::is_ident, value::Value, Token,
+    common::QuoteKind,
+    error::SassResult,
+    parse::{BaseParser},
+    utils::is_ident,
+    value::Value,
+    Token,
 };
 
-use super::{Namespace, QualifiedName};
+use super::{Namespace, QualifiedName, SelectorParser};
 
 #[derive(Clone, Debug)]
 pub(crate) struct Attribute {
@@ -41,7 +46,7 @@ impl Hash for Attribute {
 }
 
 // todo: rewrite
-fn attribute_name(parser: &mut Parser) -> SassResult<QualifiedName> {
+fn attribute_name(parser: &mut SelectorParser) -> SassResult<QualifiedName> {
     let next = parser
         .toks
         .peek()
@@ -86,7 +91,7 @@ fn attribute_name(parser: &mut Parser) -> SassResult<QualifiedName> {
     })
 }
 
-fn attribute_operator(parser: &mut Parser) -> SassResult<AttributeOp> {
+fn attribute_operator(parser: &mut SelectorParser) -> SassResult<AttributeOp> {
     let op = match parser.toks.next() {
         Some(Token { kind: '=', .. }) => return Ok(AttributeOp::Equals),
         Some(Token { kind: '~', .. }) => AttributeOp::Include,
@@ -102,7 +107,7 @@ fn attribute_operator(parser: &mut Parser) -> SassResult<AttributeOp> {
     Ok(op)
 }
 impl Attribute {
-    pub fn from_tokens(parser: &mut Parser) -> SassResult<Attribute> {
+    pub fn from_tokens(parser: &mut SelectorParser) -> SassResult<Attribute> {
         let start = parser.toks.cursor();
         parser.whitespace_without_comments();
         let attr = attribute_name(parser)?;

@@ -22,8 +22,6 @@ pub(crate) enum CalculationArg {
         op: BinaryOp,
         rhs: Box<Self>,
     },
-    // todo: why do we never construct this
-    #[allow(dead_code)]
     Interpolation(String),
 }
 

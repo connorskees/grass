@@ -2,7 +2,7 @@
 #![allow(unused_variables)]
 
 use std::{
-    collections::HashMap,
+    collections::{BTreeSet, HashMap},
     sync::atomic::{AtomicUsize, Ordering},
 };
 
@@ -57,4 +57,25 @@ pub(crate) static GLOBAL_FUNCTIONS: Lazy<GlobalFunctionMap> = Lazy::new(|| {
     selector::declare(&mut m);
     string::declare(&mut m);
     m
+});
+
+pub(crate) static DISALLOWED_PLAIN_CSS_FUNCTION_NAMES: Lazy<BTreeSet<&str>> = Lazy::new(|| {
+    GLOBAL_FUNCTIONS
+        .keys()
+        .copied()
+        .filter(|&name| {
+            !matches!(
+                name,
+                "rgb"
+                    | "rgba"
+                    | "hsl"
+                    | "hsla"
+                    | "grayscale"
+                    | "invert"
+                    | "alpha"
+                    | "opacity"
+                    | "saturate"
+            )
+        })
+        .collect()
 });

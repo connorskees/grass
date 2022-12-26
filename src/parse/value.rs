@@ -1,4 +1,4 @@
-use std::iter::Iterator;
+use std::{iter::Iterator, marker::PhantomData};
 
 use codemap::Spanned;
 
@@ -13,9 +13,9 @@ use crate::{
     ContextFlags, Token,
 };
 
-use super::Parser;
+use super::StylesheetParser;
 
-pub(crate) type Predicate<'a> = &'a dyn Fn(&mut Parser<'_, '_>) -> SassResult<bool>;
+pub(crate) type Predicate<'c, P> = &'c dyn Fn(&mut P) -> SassResult<bool>;
 
 fn is_hex_color(interpolation: &Interpolation) -> bool {
     if let Some(plain) = interpolation.as_plain() {
@@ -29,7 +29,7 @@ fn is_hex_color(interpolation: &Interpolation) -> bool {
     false
 }
 
-pub(crate) struct ValueParser<'c> {
+pub(crate) struct ValueParser<'a, 'b: 'a, 'c, P: StylesheetParser<'a, 'b>> {
     comma_expressions: Option<Vec<Spanned<AstExpr>>>,
     space_expressions: Option<Vec<Spanned<AstExpr>>>,
     binary_operators: Option<Vec<BinaryOp>>,
@@ -39,27 +39,29 @@ pub(crate) struct ValueParser<'c> {
     start: usize,
     inside_bracketed_list: bool,
     single_equals: bool,
-    parse_until: Option<Predicate<'c>>,
+    parse_until: Option<Predicate<'c, P>>,
+    _a: PhantomData<&'a ()>,
+    _b: PhantomData<&'b ()>,
 }
 
-impl<'c> ValueParser<'c> {
+impl<'a, 'b: 'a, 'c, P: StylesheetParser<'a, 'b>> ValueParser<'a, 'b, 'c, P> {
     pub fn parse_expression(
-        parser: &mut Parser,
-        parse_until: Option<Predicate<'c>>,
+        parser: &mut P,
+        parse_until: Option<Predicate<'c, P>>,
         inside_bracketed_list: bool,
         single_equals: bool,
     ) -> SassResult<Spanned<AstExpr>> {
-        let start = parser.toks.cursor();
+        let start = parser.toks().cursor();
         let mut value_parser = Self::new(parser, parse_until, inside_bracketed_list, single_equals);
 
         if let Some(parse_until) = value_parser.parse_until {
             if parse_until(parser)? {
-                return Err(("Expected expression.", parser.toks.current_span()).into());
+                return Err(("Expected expression.", parser.toks().current_span()).into());
             }
         }
 
         if value_parser.inside_bracketed_list {
-            let start = parser.toks.cursor();
+            let start = parser.toks().cursor();
 
             parser.expect_char('[')?;
             parser.whitespace()?;
@@ -70,7 +72,7 @@ impl<'c> ValueParser<'c> {
                     separator: ListSeparator::Undecided,
                     brackets: Brackets::Bracketed,
                 })
-                .span(parser.toks.span_from(start)));
+                .span(parser.toks_mut().span_from(start)));
             }
 
             Some(start)
@@ -81,14 +83,14 @@ impl<'c> ValueParser<'c> {
         value_parser.single_expression = Some(value_parser.parse_single_expression(parser)?);
 
         let mut value = value_parser.parse_value(parser)?;
-        value.span = parser.toks.span_from(start);
+        value.span = parser.toks_mut().span_from(start);
 
         Ok(value)
     }
 
     pub fn new(
-        parser: &mut Parser,
-        parse_until: Option<Predicate<'c>>,
+        parser: &mut P,
+        parse_until: Option<Predicate<'c, P>>,
         inside_bracketed_list: bool,
         single_equals: bool,
     ) -> Self {
@@ -98,23 +100,25 @@ impl<'c> ValueParser<'c> {
             binary_operators: None,
             operands: None,
             allow_slash: true,
-            start: parser.toks.cursor(),
+            start: parser.toks().cursor(),
             single_expression: None,
             parse_until,
             inside_bracketed_list,
             single_equals,
+            _a: PhantomData,
+            _b: PhantomData,
         }
     }
 
     /// Parse a value from a stream of tokens
     ///
     /// This function will cease parsing if the predicate returns true.
-    pub(crate) fn parse_value(&mut self, parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
+    pub(crate) fn parse_value(&mut self, parser: &mut P) -> SassResult<Spanned<AstExpr>> {
         parser.whitespace()?;
 
-        let start = parser.toks.cursor();
+        let start = parser.toks().cursor();
 
-        let was_in_parens = parser.flags.in_parens();
+        let was_in_parens = parser.flags().in_parens();
 
         loop {
             parser.whitespace()?;
@@ -125,7 +129,7 @@ impl<'c> ValueParser<'c> {
                 }
             }
 
-            let first = parser.toks.peek();
+            let first = parser.toks().peek();
 
             match first {
                 Some(Token { kind: '(', .. }) => {
@@ -147,7 +151,7 @@ impl<'c> ValueParser<'c> {
                 Some(Token { kind: '"', .. }) | Some(Token { kind: '\'', .. }) => {
                     let expr = parser
                         .parse_interpolated_string()?
-                        .map_node(|s| AstExpr::String(s, parser.toks.span_from(start)));
+                        .map_node(|s| AstExpr::String(s, parser.toks_mut().span_from(start)));
                     self.add_single_expression(expr, parser)?;
                 }
                 Some(Token { kind: '#', .. }) => {
@@ -155,14 +159,14 @@ impl<'c> ValueParser<'c> {
                     self.add_single_expression(expr, parser)?;
                 }
                 Some(Token { kind: '=', .. }) => {
-                    parser.toks.next();
+                    parser.toks_mut().next();
                     if self.single_equals
-                        && !matches!(parser.toks.peek(), Some(Token { kind: '=', .. }))
+                        && !matches!(parser.toks().peek(), Some(Token { kind: '=', .. }))
                     {
                         self.add_operator(
                             Spanned {
                                 node: BinaryOp::SingleEq,
-                                span: parser.toks.span_from(start),
+                                span: parser.toks_mut().span_from(start),
                             },
                             parser,
                         )?;
@@ -171,20 +175,20 @@ impl<'c> ValueParser<'c> {
                         self.add_operator(
                             Spanned {
                                 node: BinaryOp::Equal,
-                                span: parser.toks.span_from(start),
+                                span: parser.toks_mut().span_from(start),
                             },
                             parser,
                         )?;
                     }
                 }
-                Some(Token { kind: '!', .. }) => match parser.toks.peek_n(1) {
+                Some(Token { kind: '!', .. }) => match parser.toks().peek_n(1) {
                     Some(Token { kind: '=', .. }) => {
-                        parser.toks.next();
-                        parser.toks.next();
+                        parser.toks_mut().next();
+                        parser.toks_mut().next();
                         self.add_operator(
                             Spanned {
                                 node: BinaryOp::NotEqual,
-                                span: parser.toks.span_from(start),
+                                span: parser.toks_mut().span_from(start),
                             },
                             parser,
                         )?;
@@ -202,7 +206,7 @@ impl<'c> ValueParser<'c> {
                     Some(..) => break,
                 },
                 Some(Token { kind: '<', .. }) => {
-                    parser.toks.next();
+                    parser.toks_mut().next();
                     self.add_operator(
                         Spanned {
                             node: if parser.scan_char('=') {
@@ -210,13 +214,13 @@ impl<'c> ValueParser<'c> {
                             } else {
                                 BinaryOp::LessThan
                             },
-                            span: parser.toks.span_from(start),
+                            span: parser.toks_mut().span_from(start),
                         },
                         parser,
                     )?;
                 }
                 Some(Token { kind: '>', .. }) => {
-                    parser.toks.next();
+                    parser.toks_mut().next();
                     self.add_operator(
                         Spanned {
                             node: if parser.scan_char('=') {
@@ -224,13 +228,13 @@ impl<'c> ValueParser<'c> {
                             } else {
                                 BinaryOp::GreaterThan
                             },
-                            span: parser.toks.span_from(start),
+                            span: parser.toks_mut().span_from(start),
                         },
                         parser,
                     )?;
                 }
                 Some(Token { kind: '*', pos }) => {
-                    parser.toks.next();
+                    parser.toks_mut().next();
                     self.add_operator(
                         Spanned {
                             node: BinaryOp::Mul,
@@ -244,11 +248,11 @@ impl<'c> ValueParser<'c> {
                         let expr = self.parse_unary_operation(parser)?;
                         self.add_single_expression(expr, parser)?;
                     } else {
-                        parser.toks.next();
+                        parser.toks_mut().next();
                         self.add_operator(
                             Spanned {
                                 node: BinaryOp::Plus,
-                                span: parser.toks.span_from(start),
+                                span: parser.toks_mut().span_from(start),
                             },
                             parser,
                         )?;
@@ -256,21 +260,21 @@ impl<'c> ValueParser<'c> {
                 }
                 Some(Token { kind: '-', .. }) => {
                     if matches!(
-                        parser.toks.peek_n(1),
+                        parser.toks().peek_n(1),
                         Some(Token {
                             kind: '0'..='9' | '.',
                             ..
                         })
                     ) && (self.single_expression.is_none()
                         || matches!(
-                            parser.toks.peek_previous(),
+                            parser.toks_mut().peek_previous(),
                             Some(Token {
                                 kind: ' ' | '\t' | '\n' | '\r',
                                 ..
                             })
                         ))
                     {
-                        let expr = self.parse_number(parser)?;
+                        let expr = ValueParser::parse_number(parser)?;
                         self.add_single_expression(expr, parser)?;
                     } else if parser.looking_at_interpolated_identifier() {
                         let expr = self.parse_identifier_like(parser)?;
@@ -279,11 +283,11 @@ impl<'c> ValueParser<'c> {
                         let expr = self.parse_unary_operation(parser)?;
                         self.add_single_expression(expr, parser)?;
                     } else {
-                        parser.toks.next();
+                        parser.toks_mut().next();
                         self.add_operator(
                             Spanned {
                                 node: BinaryOp::Minus,
-                                span: parser.toks.span_from(start),
+                                span: parser.toks_mut().span_from(start),
                             },
                             parser,
                         )?;
@@ -294,18 +298,18 @@ impl<'c> ValueParser<'c> {
                         let expr = self.parse_unary_operation(parser)?;
                         self.add_single_expression(expr, parser)?;
                     } else {
-                        parser.toks.next();
+                        parser.toks_mut().next();
                         self.add_operator(
                             Spanned {
                                 node: BinaryOp::Div,
-                                span: parser.toks.span_from(start),
+                                span: parser.toks_mut().span_from(start),
                             },
                             parser,
                         )?;
                     }
                 }
                 Some(Token { kind: '%', pos }) => {
-                    parser.toks.next();
+                    parser.toks_mut().next();
                     self.add_operator(
                         Spanned {
                             node: BinaryOp::Rem,
@@ -317,22 +321,22 @@ impl<'c> ValueParser<'c> {
                 Some(Token {
                     kind: '0'..='9', ..
                 }) => {
-                    let expr = self.parse_number(parser)?;
+                    let expr = ValueParser::parse_number(parser)?;
                     self.add_single_expression(expr, parser)?;
                 }
                 Some(Token { kind: '.', .. }) => {
-                    if matches!(parser.toks.peek_n(1), Some(Token { kind: '.', .. })) {
+                    if matches!(parser.toks().peek_n(1), Some(Token { kind: '.', .. })) {
                         break;
                     }
-                    let expr = self.parse_number(parser)?;
+                    let expr = ValueParser::parse_number(parser)?;
                     self.add_single_expression(expr, parser)?;
                 }
                 Some(Token { kind: 'a', .. }) => {
-                    if !parser.is_plain_css && parser.scan_identifier("and", false)? {
+                    if !parser.is_plain_css() && parser.scan_identifier("and", false)? {
                         self.add_operator(
                             Spanned {
                                 node: BinaryOp::And,
-                                span: parser.toks.span_from(start),
+                                span: parser.toks_mut().span_from(start),
                             },
                             parser,
                         )?;
@@ -342,11 +346,11 @@ impl<'c> ValueParser<'c> {
                     }
                 }
                 Some(Token { kind: 'o', .. }) => {
-                    if !parser.is_plain_css && parser.scan_identifier("or", false)? {
+                    if !parser.is_plain_css() && parser.scan_identifier("or", false)? {
                         self.add_operator(
                             Spanned {
                                 node: BinaryOp::Or,
-                                span: parser.toks.span_from(start),
+                                span: parser.toks_mut().span_from(start),
                             },
                             parser,
                         )?;
@@ -356,7 +360,7 @@ impl<'c> ValueParser<'c> {
                     }
                 }
                 Some(Token { kind: 'u', .. }) | Some(Token { kind: 'U', .. }) => {
-                    if matches!(parser.toks.peek_n(1), Some(Token { kind: '+', .. })) {
+                    if matches!(parser.toks().peek_n(1), Some(Token { kind: '+', .. })) {
                         let expr = Self::parse_unicode_range(parser)?;
                         self.add_single_expression(expr, parser)?;
                     } else {
@@ -384,8 +388,8 @@ impl<'c> ValueParser<'c> {
                     // division operation, and we're in parentheses, reparse outside of a
                     // paren context. This ensures that `(1/2, 1)` doesn't perform division
                     // on its first element.
-                    if parser.flags.in_parens() {
-                        parser.flags.set(ContextFlags::IN_PARENS, false);
+                    if parser.flags().in_parens() {
+                        parser.flags_mut().set(ContextFlags::IN_PARENS, false);
                         if self.allow_slash {
                             self.reset_state(parser)?;
                             continue;
@@ -393,7 +397,7 @@ impl<'c> ValueParser<'c> {
                     }
 
                     if self.single_expression.is_none() {
-                        return Err(("Expected expression.", parser.toks.current_span()).into());
+                        return Err(("Expected expression.", parser.toks().current_span()).into());
                     }
 
                     self.resolve_space_expressions(parser)?;
@@ -403,7 +407,7 @@ impl<'c> ValueParser<'c> {
                     self.comma_expressions
                         .get_or_insert_with(Default::default)
                         .push(self.single_expression.take().unwrap());
-                    parser.toks.next();
+                    parser.toks_mut().next();
                     self.allow_slash = true;
                 }
                 Some(..) | None => break,
@@ -417,7 +421,9 @@ impl<'c> ValueParser<'c> {
         if self.comma_expressions.is_some() {
             self.resolve_space_expressions(parser)?;
 
-            parser.flags.set(ContextFlags::IN_PARENS, was_in_parens);
+            parser
+                .flags_mut()
+                .set(ContextFlags::IN_PARENS, was_in_parens);
 
             if let Some(single_expression) = self.single_expression.take() {
                 self.comma_expressions
@@ -435,7 +441,7 @@ impl<'c> ValueParser<'c> {
                     Brackets::None
                 },
             })
-            .span(parser.toks.span_from(start)))
+            .span(parser.toks_mut().span_from(start)))
         } else if self.inside_bracketed_list && self.space_expressions.is_some() {
             self.resolve_operations(parser)?;
 
@@ -449,7 +455,7 @@ impl<'c> ValueParser<'c> {
                 separator: ListSeparator::Space,
                 brackets: Brackets::Bracketed,
             })
-            .span(parser.toks.span_from(start)))
+            .span(parser.toks_mut().span_from(start)))
         } else {
             self.resolve_space_expressions(parser)?;
 
@@ -459,16 +465,16 @@ impl<'c> ValueParser<'c> {
                     separator: ListSeparator::Undecided,
                     brackets: Brackets::Bracketed,
                 })
-                .span(parser.toks.span_from(start)));
+                .span(parser.toks_mut().span_from(start)));
             }
 
             Ok(self.single_expression.take().unwrap())
         }
     }
 
-    fn parse_single_expression(&mut self, parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
-        let start = parser.toks.cursor();
-        let first = parser.toks.peek();
+    fn parse_single_expression(&mut self, parser: &mut P) -> SassResult<Spanned<AstExpr>> {
+        let start = parser.toks().cursor();
+        let first = parser.toks().peek();
 
         match first {
             Some(Token { kind: '(', .. }) => self.parse_paren_expr(parser),
@@ -478,13 +484,13 @@ impl<'c> ValueParser<'c> {
             Some(Token { kind: '&', .. }) => Self::parse_selector(parser),
             Some(Token { kind: '"', .. }) | Some(Token { kind: '\'', .. }) => Ok(parser
                 .parse_interpolated_string()?
-                .map_node(|s| AstExpr::String(s, parser.toks.span_from(start)))),
+                .map_node(|s| AstExpr::String(s, parser.toks_mut().span_from(start)))),
             Some(Token { kind: '#', .. }) => self.parse_hash(parser),
             Some(Token { kind: '+', .. }) => self.parse_plus_expr(parser),
             Some(Token { kind: '-', .. }) => self.parse_minus_expr(parser),
             Some(Token { kind: '!', .. }) => Self::parse_important_expr(parser),
             Some(Token { kind: 'u', .. }) | Some(Token { kind: 'U', .. }) => {
-                if matches!(parser.toks.peek_n(1), Some(Token { kind: '+', .. })) {
+                if matches!(parser.toks().peek_n(1), Some(Token { kind: '+', .. })) {
                     Self::parse_unicode_range(parser)
                 } else {
                     self.parse_identifier_like(parser)
@@ -493,7 +499,7 @@ impl<'c> ValueParser<'c> {
             Some(Token {
                 kind: '0'..='9', ..
             })
-            | Some(Token { kind: '.', .. }) => self.parse_number(parser),
+            | Some(Token { kind: '.', .. }) => ValueParser::parse_number(parser),
             Some(Token {
                 kind: 'a'..='z', ..
             })
@@ -506,11 +512,11 @@ impl<'c> ValueParser<'c> {
                 kind: '\u{80}'..=std::char::MAX,
                 ..
             }) => self.parse_identifier_like(parser),
-            Some(..) | None => Err(("Expected expression.", parser.toks.current_span()).into()),
+            Some(..) | None => Err(("Expected expression.", parser.toks().current_span()).into()),
         }
     }
 
-    fn resolve_one_operation(&mut self, parser: &mut Parser) -> SassResult<()> {
+    fn resolve_one_operation(&mut self, parser: &mut P) -> SassResult<()> {
         let operator = self.binary_operators.as_mut().unwrap().pop().unwrap();
         let operands = self.operands.as_mut().unwrap();
 
@@ -523,7 +529,7 @@ impl<'c> ValueParser<'c> {
         let span = left.span.merge(right.span);
 
         if self.allow_slash
-            && !parser.flags.in_parens()
+            && !parser.flags().in_parens()
             && operator == BinaryOp::Div
             && left.node.is_slash_operand()
             && right.node.is_slash_operand()
@@ -546,7 +552,7 @@ impl<'c> ValueParser<'c> {
         Ok(())
     }
 
-    fn resolve_operations(&mut self, parser: &mut Parser) -> SassResult<()> {
+    fn resolve_operations(&mut self, parser: &mut P) -> SassResult<()> {
         loop {
             let should_break = match self.binary_operators.as_ref() {
                 Some(bin) => bin.is_empty(),
@@ -566,15 +572,15 @@ impl<'c> ValueParser<'c> {
     fn add_single_expression(
         &mut self,
         expression: Spanned<AstExpr>,
-        parser: &mut Parser,
+        parser: &mut P,
     ) -> SassResult<()> {
         if self.single_expression.is_some() {
             // If we discover we're parsing a list whose first element is a division
             // operation, and we're in parentheses, reparse outside of a paren
             // context. This ensures that `(1/2 1)` doesn't perform division on its
             // first element.
-            if parser.flags.in_parens() {
-                parser.flags.set(ContextFlags::IN_PARENS, false);
+            if parser.flags().in_parens() {
+                parser.flags_mut().set(ContextFlags::IN_PARENS, false);
 
                 if self.allow_slash {
                     self.reset_state(parser)?;
@@ -602,8 +608,8 @@ impl<'c> ValueParser<'c> {
         Ok(())
     }
 
-    fn add_operator(&mut self, op: Spanned<BinaryOp>, parser: &mut Parser) -> SassResult<()> {
-        if parser.is_plain_css && op.node != BinaryOp::Div && op.node != BinaryOp::SingleEq {
+    fn add_operator(&mut self, op: Spanned<BinaryOp>, parser: &mut P) -> SassResult<()> {
+        if parser.is_plain_css() && op.node != BinaryOp::Div && op.node != BinaryOp::SingleEq {
             return Err(("Operators aren't allowed in plain CSS.", op.span).into());
         }
 
@@ -642,13 +648,13 @@ impl<'c> ValueParser<'c> {
         Ok(())
     }
 
-    fn resolve_space_expressions(&mut self, parser: &mut Parser) -> SassResult<()> {
+    fn resolve_space_expressions(&mut self, parser: &mut P) -> SassResult<()> {
         self.resolve_operations(parser)?;
 
         if let Some(mut space_expressions) = self.space_expressions.take() {
             let single_expression = match self.single_expression.take() {
                 Some(val) => val,
-                None => return Err(("Expected expression.", parser.toks.current_span()).into()),
+                None => return Err(("Expected expression.", parser.toks().current_span()).into()),
             };
 
             let span = single_expression.span;
@@ -669,7 +675,7 @@ impl<'c> ValueParser<'c> {
     }
 
     fn parse_map(
-        parser: &mut Parser,
+        parser: &mut P,
         first: Spanned<AstExpr>,
         start: usize,
     ) -> SassResult<Spanned<AstExpr>> {
@@ -690,42 +696,42 @@ impl<'c> ValueParser<'c> {
 
         parser.expect_char(')')?;
 
-        Ok(AstExpr::Map(AstSassMap(pairs)).span(parser.toks.span_from(start)))
+        Ok(AstExpr::Map(AstSassMap(pairs)).span(parser.toks_mut().span_from(start)))
     }
 
-    fn parse_paren_expr(&mut self, parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
-        let start = parser.toks.cursor();
-        if parser.is_plain_css {
+    fn parse_paren_expr(&mut self, parser: &mut P) -> SassResult<Spanned<AstExpr>> {
+        let start = parser.toks().cursor();
+        if parser.is_plain_css() {
             return Err((
                 "Parentheses aren't allowed in plain CSS.",
-                parser.toks.current_span(),
+                parser.toks().current_span(),
             )
                 .into());
         }
 
-        let was_in_parentheses = parser.flags.in_parens();
-        parser.flags.set(ContextFlags::IN_PARENS, true);
+        let was_in_parentheses = parser.flags().in_parens();
+        parser.flags_mut().set(ContextFlags::IN_PARENS, true);
 
         parser.expect_char('(')?;
         parser.whitespace()?;
         if !parser.looking_at_expression() {
             parser.expect_char(')')?;
             parser
-                .flags
+                .flags_mut()
                 .set(ContextFlags::IN_PARENS, was_in_parentheses);
             return Ok(AstExpr::List(ListExpr {
                 elems: Vec::new(),
                 separator: ListSeparator::Undecided,
                 brackets: Brackets::None,
             })
-            .span(parser.toks.span_from(start)));
+            .span(parser.toks_mut().span_from(start)));
         }
 
         let first = parser.parse_expression_until_comma(false)?;
         if parser.scan_char(':') {
             parser.whitespace()?;
             parser
-                .flags
+                .flags_mut()
                 .set(ContextFlags::IN_PARENS, was_in_parentheses);
             return Self::parse_map(parser, first, start);
         }
@@ -733,7 +739,7 @@ impl<'c> ValueParser<'c> {
         if !parser.scan_char(',') {
             parser.expect_char(')')?;
             parser
-                .flags
+                .flags_mut()
                 .set(ContextFlags::IN_PARENS, was_in_parentheses);
             return Ok(AstExpr::Paren(Box::new(first.node)).span(first.span));
         }
@@ -756,7 +762,7 @@ impl<'c> ValueParser<'c> {
         parser.expect_char(')')?;
 
         parser
-            .flags
+            .flags_mut()
             .set(ContextFlags::IN_PARENS, was_in_parentheses);
 
         Ok(AstExpr::List(ListExpr {
@@ -764,17 +770,17 @@ impl<'c> ValueParser<'c> {
             separator: ListSeparator::Comma,
             brackets: Brackets::None,
         })
-        .span(parser.toks.span_from(start)))
+        .span(parser.toks_mut().span_from(start)))
     }
 
-    fn parse_variable(parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
-        let start = parser.toks.cursor();
+    fn parse_variable(parser: &mut P) -> SassResult<Spanned<AstExpr>> {
+        let start = parser.toks().cursor();
         let name = parser.parse_variable_name()?;
 
-        if parser.is_plain_css {
+        if parser.is_plain_css() {
             return Err((
                 "Sass variables aren't allowed in plain CSS.",
-                parser.toks.span_from(start),
+                parser.toks_mut().span_from(start),
             )
                 .into());
         }
@@ -782,27 +788,27 @@ impl<'c> ValueParser<'c> {
         Ok(AstExpr::Variable {
             name: Spanned {
                 node: Identifier::from(name),
-                span: parser.toks.span_from(start),
+                span: parser.toks_mut().span_from(start),
             },
             namespace: None,
         }
-        .span(parser.toks.span_from(start)))
+        .span(parser.toks_mut().span_from(start)))
     }
 
-    fn parse_selector(parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
-        if parser.is_plain_css {
+    fn parse_selector(parser: &mut P) -> SassResult<Spanned<AstExpr>> {
+        if parser.is_plain_css() {
             return Err((
                 "The parent selector isn't allowed in plain CSS.",
-                parser.toks.current_span(),
+                parser.toks().current_span(),
             )
                 .into());
         }
 
-        let start = parser.toks.cursor();
+        let start = parser.toks().cursor();
 
         parser.expect_char('&')?;
 
-        if parser.toks.next_char_is('&') {
+        if parser.toks().next_char_is('&') {
             // todo: emit a warning here
             //   warn(
             //       'In Sass, "&&" means two copies of the parent selector. You '
@@ -811,36 +817,41 @@ impl<'c> ValueParser<'c> {
             //   scanner.position--;
         }
 
-        Ok(AstExpr::ParentSelector.span(parser.toks.span_from(start)))
+        Ok(AstExpr::ParentSelector.span(parser.toks_mut().span_from(start)))
     }
 
-    fn parse_hash(&mut self, parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
-        let start = parser.toks.cursor();
-        debug_assert!(matches!(parser.toks.peek(), Some(Token { kind: '#', .. })));
+    fn parse_hash(&mut self, parser: &mut P) -> SassResult<Spanned<AstExpr>> {
+        let start = parser.toks().cursor();
+        debug_assert!(matches!(
+            parser.toks().peek(),
+            Some(Token { kind: '#', .. })
+        ));
 
-        if matches!(parser.toks.peek_n(1), Some(Token { kind: '{', .. })) {
+        if matches!(parser.toks().peek_n(1), Some(Token { kind: '{', .. })) {
             return self.parse_identifier_like(parser);
         }
 
         parser.expect_char('#')?;
 
         if matches!(
-            parser.toks.peek(),
+            parser.toks().peek(),
             Some(Token {
                 kind: '0'..='9',
                 ..
             })
         ) {
-            let color = Self::parse_hex_color_contents(parser)?;
-            return Ok(AstExpr::Color(Box::new(color)).span(parser.toks.span_from(start)));
+            let color = self.parse_hex_color_contents(parser)?;
+            return Ok(AstExpr::Color(Box::new(color)).span(parser.toks_mut().span_from(start)));
         }
 
-        let after_hash = parser.toks.cursor();
+        let after_hash = parser.toks().cursor();
         let ident = parser.parse_interpolated_identifier()?;
         if is_hex_color(&ident) {
-            parser.toks.set_cursor(after_hash);
-            let color = Self::parse_hex_color_contents(parser)?;
-            return Ok(AstExpr::Color(Box::new(color)).span(parser.toks.span_from(after_hash)));
+            parser.toks_mut().set_cursor(after_hash);
+            let color = self.parse_hex_color_contents(parser)?;
+            return Ok(
+                AstExpr::Color(Box::new(color)).span(parser.toks_mut().span_from(after_hash))
+            );
         }
 
         let mut buffer = Interpolation::new();
@@ -848,27 +859,27 @@ impl<'c> ValueParser<'c> {
         buffer.add_char('#');
         buffer.add_interpolation(ident);
 
-        let span = parser.toks.span_from(start);
+        let span = parser.toks_mut().span_from(start);
 
         Ok(AstExpr::String(StringExpr(buffer, QuoteKind::None), span).span(span))
     }
 
-    fn parse_hex_digit(parser: &mut Parser) -> SassResult<u32> {
-        match parser.toks.peek() {
+    fn parse_hex_digit(&mut self, parser: &mut P) -> SassResult<u32> {
+        match parser.toks().peek() {
             Some(Token { kind, .. }) if kind.is_ascii_hexdigit() => {
-                parser.toks.next();
+                parser.toks_mut().next();
                 Ok(as_hex(kind))
             }
-            _ => Err(("Expected hex digit.", parser.toks.current_span()).into()),
+            _ => Err(("Expected hex digit.", parser.toks().current_span()).into()),
         }
     }
 
-    fn parse_hex_color_contents(parser: &mut Parser) -> SassResult<Color> {
-        let start = parser.toks.cursor();
+    fn parse_hex_color_contents(&mut self, parser: &mut P) -> SassResult<Color> {
+        let start = parser.toks().cursor();
 
-        let digit1 = Self::parse_hex_digit(parser)?;
-        let digit2 = Self::parse_hex_digit(parser)?;
-        let digit3 = Self::parse_hex_digit(parser)?;
+        let digit1 = self.parse_hex_digit(parser)?;
+        let digit2 = self.parse_hex_digit(parser)?;
+        let digit3 = self.parse_hex_digit(parser)?;
 
         let red: u32;
         let green: u32;
@@ -876,15 +887,15 @@ impl<'c> ValueParser<'c> {
         let mut alpha: f64 = 1.0;
 
         if parser.next_is_hex() {
-            let digit4 = Self::parse_hex_digit(parser)?;
+            let digit4 = self.parse_hex_digit(parser)?;
 
             if parser.next_is_hex() {
                 red = (digit1 << 4) + digit2;
                 green = (digit3 << 4) + digit4;
-                blue = (Self::parse_hex_digit(parser)? << 4) + Self::parse_hex_digit(parser)?;
+                blue = (self.parse_hex_digit(parser)? << 4) + self.parse_hex_digit(parser)?;
 
                 if parser.next_is_hex() {
-                    alpha = ((Self::parse_hex_digit(parser)? << 4) + Self::parse_hex_digit(parser)?)
+                    alpha = ((self.parse_hex_digit(parser)? << 4) + self.parse_hex_digit(parser)?)
                         as f64
                         / 0xff as f64;
                 }
@@ -910,15 +921,15 @@ impl<'c> ValueParser<'c> {
             // todo:
             //     // Don't emit four- or eight-digit hex colors as hex, since that's not
             //     // yet well-supported in browsers.
-            ColorFormat::Literal(parser.toks.raw_text(start - 1)),
+            ColorFormat::Literal(parser.toks_mut().raw_text(start - 1)),
         ))
     }
 
-    fn parse_unary_operation(&mut self, parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
-        let op_span = parser.toks.current_span();
+    fn parse_unary_operation(&mut self, parser: &mut P) -> SassResult<Spanned<AstExpr>> {
+        let op_span = parser.toks().current_span();
         let operator = Self::expect_unary_operator(parser)?;
 
-        if parser.is_plain_css && operator != UnaryOp::Div {
+        if parser.is_plain_css() && operator != UnaryOp::Div {
             return Err(("Operators aren't allowed in plain CSS.", op_span).into());
         }
 
@@ -926,14 +937,14 @@ impl<'c> ValueParser<'c> {
 
         let operand = self.parse_single_expression(parser)?;
 
-        let span = op_span.merge(parser.toks.current_span());
+        let span = op_span.merge(parser.toks().current_span());
 
         Ok(AstExpr::UnaryOp(operator, Box::new(operand.node), span).span(span))
     }
 
-    fn expect_unary_operator(parser: &mut Parser) -> SassResult<UnaryOp> {
-        let span = parser.toks.current_span();
-        Ok(match parser.toks.next() {
+    fn expect_unary_operator(parser: &mut P) -> SassResult<UnaryOp> {
+        let span = parser.toks().current_span();
+        Ok(match parser.toks_mut().next() {
             Some(Token { kind: '+', .. }) => UnaryOp::Plus,
             Some(Token { kind: '-', .. }) => UnaryOp::Neg,
             Some(Token { kind: '/', .. }) => UnaryOp::Div,
@@ -941,53 +952,53 @@ impl<'c> ValueParser<'c> {
         })
     }
 
-    fn consume_natural_number(parser: &mut Parser) -> SassResult<()> {
+    fn consume_natural_number(parser: &mut P) -> SassResult<()> {
         if !matches!(
-            parser.toks.next(),
+            parser.toks_mut().next(),
             Some(Token {
                 kind: '0'..='9',
                 ..
             })
         ) {
-            return Err(("Expected digit.", parser.toks.prev_span()).into());
+            return Err(("Expected digit.", parser.toks().prev_span()).into());
         }
 
         while matches!(
-            parser.toks.peek(),
+            parser.toks().peek(),
             Some(Token {
                 kind: '0'..='9',
                 ..
             })
         ) {
-            parser.toks.next();
+            parser.toks_mut().next();
         }
 
         Ok(())
     }
 
-    fn parse_number(&mut self, parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
-        let start = parser.toks.cursor();
+    fn parse_number(parser: &mut P) -> SassResult<Spanned<AstExpr>> {
+        let start = parser.toks().cursor();
 
         if !parser.scan_char('+') {
             parser.scan_char('-');
         }
 
-        let after_sign = parser.toks.cursor();
+        let after_sign = parser.toks().cursor();
 
-        if !parser.toks.next_char_is('.') {
-            Self::consume_natural_number(parser)?;
+        if !parser.toks().next_char_is('.') {
+            ValueParser::consume_natural_number(parser)?;
         }
 
-        Self::try_decimal(parser, parser.toks.cursor() != after_sign)?;
-        Self::try_exponent(parser)?;
+        ValueParser::try_decimal(parser, parser.toks().cursor() != after_sign)?;
+        ValueParser::try_exponent(parser)?;
 
-        let number: f64 = parser.toks.raw_text(start).parse().unwrap();
+        let number: f64 = parser.toks_mut().raw_text(start).parse().unwrap();
 
         let unit = if parser.scan_char('%') {
             Unit::Percent
         } else if parser.looking_at_identifier()
-            && (!matches!(parser.toks.peek(), Some(Token { kind: '-', .. }))
-                || !matches!(parser.toks.peek_n(1), Some(Token { kind: '-', .. })))
+            && (!matches!(parser.toks().peek(), Some(Token { kind: '-', .. }))
+                || !matches!(parser.toks().peek_n(1), Some(Token { kind: '-', .. })))
         {
             Unit::from(parser.parse_identifier(false, true)?)
         } else {
@@ -998,15 +1009,15 @@ impl<'c> ValueParser<'c> {
             n: Number::from(number),
             unit,
         }
-        .span(parser.toks.span_from(start)))
+        .span(parser.toks_mut().span_from(start)))
     }
 
-    fn try_decimal(parser: &mut Parser, allow_trailing_dot: bool) -> SassResult<Option<String>> {
-        if !matches!(parser.toks.peek(), Some(Token { kind: '.', .. })) {
+    fn try_decimal(parser: &mut P, allow_trailing_dot: bool) -> SassResult<Option<String>> {
+        if !matches!(parser.toks().peek(), Some(Token { kind: '.', .. })) {
             return Ok(None);
         }
 
-        match parser.toks.peek_n(1) {
+        match parser.toks().peek_n(1) {
             Some(Token { kind, pos }) if !kind.is_ascii_digit() => {
                 if allow_trailing_dot {
                     return Ok(None);
@@ -1015,7 +1026,7 @@ impl<'c> ValueParser<'c> {
                 return Err(("Expected digit.", pos).into());
             }
             Some(..) => {}
-            None => return Err(("Expected digit.", parser.toks.current_span()).into()),
+            None => return Err(("Expected digit.", parser.toks().current_span()).into()),
         }
 
         let mut buffer = String::new();
@@ -1023,28 +1034,28 @@ impl<'c> ValueParser<'c> {
         parser.expect_char('.')?;
         buffer.push('.');
 
-        while let Some(Token { kind, .. }) = parser.toks.peek() {
+        while let Some(Token { kind, .. }) = parser.toks().peek() {
             if !kind.is_ascii_digit() {
                 break;
             }
             buffer.push(kind);
-            parser.toks.next();
+            parser.toks_mut().next();
         }
 
         Ok(Some(buffer))
     }
 
-    fn try_exponent(parser: &mut Parser) -> SassResult<Option<String>> {
+    fn try_exponent(parser: &mut P) -> SassResult<Option<String>> {
         let mut buffer = String::new();
 
-        match parser.toks.peek() {
+        match parser.toks().peek() {
             Some(Token {
                 kind: 'e' | 'E', ..
             }) => buffer.push('e'),
             _ => return Ok(None),
         }
 
-        let next = match parser.toks.peek_n(1) {
+        let next = match parser.toks().peek_n(1) {
             Some(Token {
                 kind: kind @ ('0'..='9' | '-' | '+'),
                 ..
@@ -1052,56 +1063,56 @@ impl<'c> ValueParser<'c> {
             _ => return Ok(None),
         };
 
-        parser.toks.next();
+        parser.toks_mut().next();
 
         if next == '+' || next == '-' {
-            parser.toks.next();
+            parser.toks_mut().next();
             buffer.push(next);
         }
 
-        match parser.toks.peek() {
+        match parser.toks().peek() {
             Some(Token {
                 kind: '0'..='9', ..
             }) => {}
-            _ => return Err(("Expected digit.", parser.toks.current_span()).into()),
+            _ => return Err(("Expected digit.", parser.toks().current_span()).into()),
         }
 
-        while let Some(tok) = parser.toks.peek() {
+        while let Some(tok) = parser.toks().peek() {
             if !tok.kind.is_ascii_digit() {
                 break;
             }
 
             buffer.push(tok.kind);
 
-            parser.toks.next();
+            parser.toks_mut().next();
         }
 
         Ok(Some(buffer))
     }
 
-    fn parse_plus_expr(&mut self, parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
-        debug_assert!(parser.toks.next_char_is('+'));
+    fn parse_plus_expr(&mut self, parser: &mut P) -> SassResult<Spanned<AstExpr>> {
+        debug_assert!(parser.toks().next_char_is('+'));
 
-        match parser.toks.peek_n(1) {
+        match parser.toks().peek_n(1) {
             Some(Token {
                 kind: '0'..='9' | '.',
                 ..
-            }) => self.parse_number(parser),
+            }) => ValueParser::parse_number(parser),
             _ => self.parse_unary_operation(parser),
         }
     }
 
-    fn parse_minus_expr(&mut self, parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
-        debug_assert!(parser.toks.next_char_is('-'));
+    fn parse_minus_expr(&mut self, parser: &mut P) -> SassResult<Spanned<AstExpr>> {
+        debug_assert!(parser.toks().next_char_is('-'));
 
         if matches!(
-            parser.toks.peek_n(1),
+            parser.toks().peek_n(1),
             Some(Token {
                 kind: '0'..='9' | '.',
                 ..
             })
         ) {
-            return self.parse_number(parser);
+            return ValueParser::parse_number(parser);
         }
 
         if parser.looking_at_interpolated_identifier() {
@@ -1111,13 +1122,13 @@ impl<'c> ValueParser<'c> {
         self.parse_unary_operation(parser)
     }
 
-    fn parse_important_expr(parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
-        let start = parser.toks.cursor();
+    fn parse_important_expr(parser: &mut P) -> SassResult<Spanned<AstExpr>> {
+        let start = parser.toks().cursor();
         parser.expect_char('!')?;
         parser.whitespace()?;
         parser.expect_identifier("important", false)?;
 
-        let span = parser.toks.span_from(start);
+        let span = parser.toks_mut().span_from(start);
 
         Ok(AstExpr::String(
             StringExpr(
@@ -1129,18 +1140,22 @@ impl<'c> ValueParser<'c> {
         .span(span))
     }
 
-    fn parse_identifier_like(&mut self, parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
-        let start = parser.toks.cursor();
+    fn parse_identifier_like(&mut self, parser: &mut P) -> SassResult<Spanned<AstExpr>> {
+        if let Some(func) = P::IDENTIFIER_LIKE {
+            return func(parser);
+        }
+
+        let start = parser.toks().cursor();
 
         let identifier = parser.parse_interpolated_identifier()?;
 
-        let ident_span = parser.toks.span_from(start);
+        let ident_span = parser.toks_mut().span_from(start);
 
         let plain = identifier.as_plain();
         let lower = plain.map(str::to_ascii_lowercase);
 
         if let Some(plain) = plain {
-            if plain == "if" && parser.toks.next_char_is('(') {
+            if plain == "if" && parser.toks().next_char_is('(') {
                 let call_args = parser.parse_argument_invocation(false, false)?;
                 let span = call_args.span;
                 return Ok(AstExpr::If(Box::new(Ternary(call_args))).span(span));
@@ -1149,18 +1164,18 @@ impl<'c> ValueParser<'c> {
 
                 let value = self.parse_single_expression(parser)?;
 
-                let span = parser.toks.span_from(start);
+                let span = parser.toks_mut().span_from(start);
 
                 return Ok(AstExpr::UnaryOp(UnaryOp::Not, Box::new(value.node), span).span(span));
             }
 
             let lower_ref = lower.as_ref().unwrap();
 
-            if !parser.toks.next_char_is('(') {
+            if !parser.toks().next_char_is('(') {
                 match plain {
-                    "null" => return Ok(AstExpr::Null.span(parser.toks.span_from(start))),
-                    "true" => return Ok(AstExpr::True.span(parser.toks.span_from(start))),
-                    "false" => return Ok(AstExpr::False.span(parser.toks.span_from(start))),
+                    "null" => return Ok(AstExpr::Null.span(parser.toks_mut().span_from(start))),
+                    "true" => return Ok(AstExpr::True.span(parser.toks_mut().span_from(start))),
+                    "false" => return Ok(AstExpr::False.span(parser.toks_mut().span_from(start))),
                     _ => {}
                 }
 
@@ -1172,25 +1187,25 @@ impl<'c> ValueParser<'c> {
                         color[3],
                         plain.to_owned(),
                     )))
-                    .span(parser.toks.span_from(start)));
+                    .span(parser.toks_mut().span_from(start)));
                 }
             }
 
-            if let Some(func) = self.try_parse_special_function(parser, lower_ref, start)? {
+            if let Some(func) = ValueParser::try_parse_special_function(parser, lower_ref, start)? {
                 return Ok(func);
             }
         }
 
-        match parser.toks.peek() {
+        match parser.toks().peek() {
             Some(Token { kind: '.', .. }) => {
-                if matches!(parser.toks.peek_n(1), Some(Token { kind: '.', .. })) {
+                if matches!(parser.toks().peek_n(1), Some(Token { kind: '.', .. })) {
                     return Ok(AstExpr::String(
                         StringExpr(identifier, QuoteKind::None),
-                        parser.toks.span_from(start),
+                        parser.toks_mut().span_from(start),
                     )
-                    .span(parser.toks.span_from(start)));
+                    .span(parser.toks_mut().span_from(start)));
                 }
-                parser.toks.next();
+                parser.toks_mut().next();
 
                 match plain {
                     Some(s) => Self::namespaced_expression(
@@ -1213,42 +1228,46 @@ impl<'c> ValueParser<'c> {
                         namespace: None,
                         name: Identifier::from(plain),
                         arguments: Box::new(arguments),
-                        span: parser.toks.span_from(start),
+                        span: parser.toks_mut().span_from(start),
                     })
-                    .span(parser.toks.span_from(start)))
+                    .span(parser.toks_mut().span_from(start)))
                 } else {
                     let arguments = parser.parse_argument_invocation(false, false)?;
                     Ok(AstExpr::InterpolatedFunction(InterpolatedFunction {
                         name: identifier,
                         arguments: Box::new(arguments),
-                        span: parser.toks.span_from(start),
+                        span: parser.toks_mut().span_from(start),
                     })
-                    .span(parser.toks.span_from(start)))
+                    .span(parser.toks_mut().span_from(start)))
                 }
             }
             _ => Ok(AstExpr::String(
                 StringExpr(identifier, QuoteKind::None),
-                parser.toks.span_from(start),
+                parser.toks_mut().span_from(start),
             )
-            .span(parser.toks.span_from(start))),
+            .span(parser.toks_mut().span_from(start))),
         }
     }
 
     fn namespaced_expression(
         namespace: Spanned<Identifier>,
         start: usize,
-        parser: &mut Parser,
+        parser: &mut P,
     ) -> SassResult<Spanned<AstExpr>> {
-        if parser.toks.next_char_is('$') {
-            let name_start = parser.toks.cursor();
+        if parser.toks().next_char_is('$') {
+            let name_start = parser.toks().cursor();
             let name = parser.parse_variable_name()?;
-            let span = parser.toks.span_from(start);
-            Parser::assert_public(&name, span)?;
+            let span = parser.toks_mut().span_from(start);
+            P::assert_public(&name, span)?;
+
+            if parser.is_plain_css() {
+                return Err(("Module namespaces aren't allowed in plain CSS.", span).into());
+            }
 
             return Ok(AstExpr::Variable {
                 name: Spanned {
                     node: Identifier::from(name),
-                    span: parser.toks.span_from(name_start),
+                    span: parser.toks_mut().span_from(name_start),
                 },
                 namespace: Some(namespace),
             }
@@ -1257,7 +1276,11 @@ impl<'c> ValueParser<'c> {
 
         let name = parser.parse_public_identifier()?;
         let args = parser.parse_argument_invocation(false, false)?;
-        let span = parser.toks.span_from(start);
+        let span = parser.toks_mut().span_from(start);
+
+        if parser.is_plain_css() {
+            return Err(("Module namespaces aren't allowed in plain CSS.", span).into());
+        }
 
         Ok(AstExpr::FunctionCall(FunctionCallExpr {
             namespace: Some(namespace),
@@ -1268,19 +1291,19 @@ impl<'c> ValueParser<'c> {
         .span(span))
     }
 
-    fn parse_unicode_range(parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
-        let start = parser.toks.cursor();
+    fn parse_unicode_range(parser: &mut P) -> SassResult<Spanned<AstExpr>> {
+        let start = parser.toks().cursor();
         parser.expect_ident_char('u', false)?;
         parser.expect_char('+')?;
 
         let mut first_range_length = 0;
 
-        while let Some(next) = parser.toks.peek() {
+        while let Some(next) = parser.toks().peek() {
             if !next.kind.is_ascii_hexdigit() {
                 break;
             }
 
-            parser.toks.next();
+            parser.toks_mut().next();
             first_range_length += 1;
         }
 
@@ -1291,15 +1314,15 @@ impl<'c> ValueParser<'c> {
             first_range_length += 1;
         }
 
-        let span = parser.toks.span_from(start);
+        let span = parser.toks_mut().span_from(start);
         if first_range_length == 0 {
-            return Err(("Expected hex digit or \"?\".", parser.toks.current_span()).into());
+            return Err(("Expected hex digit or \"?\".", parser.toks().current_span()).into());
         } else if first_range_length > 6 {
             return Err(("Expected at most 6 digits.", span).into());
         } else if has_question_mark {
             return Ok(AstExpr::String(
                 StringExpr(
-                    Interpolation::new_plain(parser.toks.raw_text(start)),
+                    Interpolation::new_plain(parser.toks_mut().raw_text(start)),
                     QuoteKind::None,
                 ),
                 span,
@@ -1308,38 +1331,38 @@ impl<'c> ValueParser<'c> {
         }
 
         if parser.scan_char('-') {
-            let second_range_start = parser.toks.cursor();
+            let second_range_start = parser.toks().cursor();
             let mut second_range_length = 0;
 
-            while let Some(next) = parser.toks.peek() {
+            while let Some(next) = parser.toks().peek() {
                 if !next.kind.is_ascii_hexdigit() {
                     break;
                 }
 
-                parser.toks.next();
+                parser.toks_mut().next();
                 second_range_length += 1;
             }
 
             if second_range_length == 0 {
-                return Err(("Expected hex digit.", parser.toks.current_span()).into());
+                return Err(("Expected hex digit.", parser.toks().current_span()).into());
             } else if second_range_length > 6 {
                 return Err((
                     "Expected at most 6 digits.",
-                    parser.toks.span_from(second_range_start),
+                    parser.toks_mut().span_from(second_range_start),
                 )
                     .into());
             }
         }
 
         if parser.looking_at_interpolated_identifier_body() {
-            return Err(("Expected end of identifier.", parser.toks.current_span()).into());
+            return Err(("Expected end of identifier.", parser.toks().current_span()).into());
         }
 
-        let span = parser.toks.span_from(start);
+        let span = parser.toks_mut().span_from(start);
 
         Ok(AstExpr::String(
             StringExpr(
-                Interpolation::new_plain(parser.toks.raw_text(start)),
+                Interpolation::new_plain(parser.toks_mut().raw_text(start)),
                 QuoteKind::None,
             ),
             span,
@@ -1348,10 +1371,10 @@ impl<'c> ValueParser<'c> {
     }
 
     fn try_parse_url_contents(
-        parser: &mut Parser,
+        parser: &mut P,
         name: Option<String>,
     ) -> SassResult<Option<Interpolation>> {
-        let start = parser.toks.cursor();
+        let start = parser.toks().cursor();
 
         if !parser.scan_char('(') {
             return Ok(None);
@@ -1365,25 +1388,25 @@ impl<'c> ValueParser<'c> {
         buffer.add_string(name.unwrap_or_else(|| "url".to_owned()));
         buffer.add_char('(');
 
-        while let Some(next) = parser.toks.peek() {
+        while let Some(next) = parser.toks().peek() {
             match next.kind {
                 '\\' => {
                     buffer.add_string(parser.parse_escape(false)?);
                 }
                 '!' | '%' | '&' | '*'..='~' | '\u{80}'..=char::MAX => {
-                    parser.toks.next();
+                    parser.toks_mut().next();
                     buffer.add_token(next);
                 }
                 '#' => {
-                    if matches!(parser.toks.peek_n(1), Some(Token { kind: '{', .. })) {
+                    if matches!(parser.toks().peek_n(1), Some(Token { kind: '{', .. })) {
                         buffer.add_interpolation(parser.parse_single_interpolation()?);
                     } else {
-                        parser.toks.next();
+                        parser.toks_mut().next();
                         buffer.add_token(next);
                     }
                 }
                 ')' => {
-                    parser.toks.next();
+                    parser.toks_mut().next();
                     buffer.add_token(next);
 
                     return Ok(Some(buffer));
@@ -1391,7 +1414,7 @@ impl<'c> ValueParser<'c> {
                 ' ' | '\t' | '\n' | '\r' => {
                     parser.whitespace_without_comments();
 
-                    if !parser.toks.next_char_is(')') {
+                    if !parser.toks().next_char_is(')') {
                         break;
                     }
                 }
@@ -1399,18 +1422,17 @@ impl<'c> ValueParser<'c> {
             }
         }
 
-        parser.toks.set_cursor(start);
+        parser.toks_mut().set_cursor(start);
         Ok(None)
     }
 
-    fn try_parse_special_function(
-        &mut self,
-        parser: &mut Parser,
+    pub(crate) fn try_parse_special_function(
+        parser: &mut P,
         name: &str,
         start: usize,
     ) -> SassResult<Option<Spanned<AstExpr>>> {
-        if matches!(parser.toks.peek(), Some(Token { kind: '(', .. })) {
-            if let Some(calculation) = self.try_parse_calculation(parser, name, start)? {
+        if matches!(parser.toks().peek(), Some(Token { kind: '(', .. })) {
+            if let Some(calculation) = ValueParser::try_parse_calculation(parser, name, start)? {
                 return Ok(Some(calculation));
             }
         }
@@ -1435,24 +1457,26 @@ impl<'c> ValueParser<'c> {
                 buffer = Interpolation::new_plain(name.to_owned());
                 buffer.add_char(':');
 
-                while let Some(Token { kind, .. }) = parser.toks.peek() {
+                while let Some(Token { kind, .. }) = parser.toks().peek() {
                     if !kind.is_alphabetic() && kind != '.' {
                         break;
                     }
                     buffer.add_char(kind);
-                    parser.toks.next();
+                    parser.toks_mut().next();
                 }
                 parser.expect_char('(')?;
                 buffer.add_char('(');
             }
             "url" => {
-                return Ok(Self::try_parse_url_contents(parser, None)?.map(|contents| {
-                    AstExpr::String(
-                        StringExpr(contents, QuoteKind::None),
-                        parser.toks.span_from(start),
-                    )
-                    .span(parser.toks.span_from(start))
-                }))
+                return Ok(
+                    ValueParser::try_parse_url_contents(parser, None)?.map(|contents| {
+                        AstExpr::String(
+                            StringExpr(contents, QuoteKind::None),
+                            parser.toks_mut().span_from(start),
+                        )
+                        .span(parser.toks_mut().span_from(start))
+                    }),
+                )
             }
             _ => return Ok(None),
         }
@@ -1464,120 +1488,123 @@ impl<'c> ValueParser<'c> {
         Ok(Some(
             AstExpr::String(
                 StringExpr(buffer, QuoteKind::None),
-                parser.toks.span_from(start),
+                parser.toks_mut().span_from(start),
             )
-            .span(parser.toks.span_from(start)),
+            .span(parser.toks_mut().span_from(start)),
         ))
     }
 
-    fn contains_calculation_interpolation(parser: &mut Parser) -> SassResult<bool> {
+    fn contains_calculation_interpolation(parser: &mut P) -> SassResult<bool> {
         let mut parens = 0;
         let mut brackets = Vec::new();
 
-        let start = parser.toks.cursor();
+        let start = parser.toks().cursor();
 
-        while let Some(next) = parser.toks.peek() {
+        while let Some(next) = parser.toks().peek() {
             match next.kind {
                 '\\' => {
-                    parser.toks.next();
+                    parser.toks_mut().next();
                     // todo: i wonder if this can be broken (not for us but dart-sass)
-                    parser.toks.next();
+                    parser.toks_mut().next();
                 }
                 '/' => {
                     if !parser.scan_comment()? {
-                        parser.toks.next();
+                        parser.toks_mut().next();
                     }
                 }
                 '\'' | '"' => {
                     parser.parse_interpolated_string()?;
                 }
                 '#' => {
-                    if parens == 0 && matches!(parser.toks.peek_n(1), Some(Token { kind: '{', .. }))
+                    if parens == 0
+                        && matches!(parser.toks().peek_n(1), Some(Token { kind: '{', .. }))
                     {
-                        parser.toks.set_cursor(start);
+                        parser.toks_mut().set_cursor(start);
                         return Ok(true);
                     }
-                    parser.toks.next();
+                    parser.toks_mut().next();
                 }
                 '(' | '{' | '[' => {
                     if next.kind == '(' {
                         parens += 1;
                     }
                     brackets.push(opposite_bracket(next.kind));
-                    parser.toks.next();
+                    parser.toks_mut().next();
                 }
                 ')' | '}' | ']' => {
                     if next.kind == ')' {
                         parens -= 1;
                     }
                     if brackets.is_empty() || brackets.pop() != Some(next.kind) {
-                        parser.toks.set_cursor(start);
+                        parser.toks_mut().set_cursor(start);
                         return Ok(false);
                     }
-                    parser.toks.next();
+                    parser.toks_mut().next();
                 }
                 _ => {
-                    parser.toks.next();
+                    parser.toks_mut().next();
                 }
             }
         }
 
-        parser.toks.set_cursor(start);
+        parser.toks_mut().set_cursor(start);
         Ok(false)
     }
 
     fn try_parse_calculation_interpolation(
-        parser: &mut Parser,
+        parser: &mut P,
         start: usize,
     ) -> SassResult<Option<AstExpr>> {
-        Ok(if Self::contains_calculation_interpolation(parser)? {
-            Some(AstExpr::String(
-                StringExpr(
-                    parser.parse_interpolated_declaration_value(false, false, true)?,
-                    QuoteKind::None,
-                ),
-                parser.toks.span_from(start),
-            ))
-        } else {
-            None
-        })
+        Ok(
+            if ValueParser::contains_calculation_interpolation(parser)? {
+                Some(AstExpr::String(
+                    StringExpr(
+                        parser.parse_interpolated_declaration_value(false, false, true)?,
+                        QuoteKind::None,
+                    ),
+                    parser.toks_mut().span_from(start),
+                ))
+            } else {
+                None
+            },
+        )
     }
 
-    fn parse_calculation_value(&mut self, parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
-        match parser.toks.peek() {
+    fn parse_calculation_value(parser: &mut P) -> SassResult<Spanned<AstExpr>> {
+        match parser.toks().peek() {
             Some(Token {
                 kind: '+' | '-' | '.' | '0'..='9',
                 ..
-            }) => self.parse_number(parser),
-            Some(Token { kind: '$', .. }) => Self::parse_variable(parser),
+            }) => ValueParser::parse_number(parser),
+            Some(Token { kind: '$', .. }) => ValueParser::parse_variable(parser),
             Some(Token { kind: '(', .. }) => {
-                let start = parser.toks.cursor();
-                parser.toks.next();
+                let start = parser.toks().cursor();
+                parser.toks_mut().next();
 
-                let value = match Self::try_parse_calculation_interpolation(parser, start)? {
+                let value = match ValueParser::try_parse_calculation_interpolation(parser, start)? {
                     Some(v) => v,
                     None => {
                         parser.whitespace()?;
-                        self.parse_calculation_sum(parser)?.node
+                        ValueParser::parse_calculation_sum(parser)?.node
                     }
                 };
 
                 parser.whitespace()?;
                 parser.expect_char(')')?;
 
-                Ok(AstExpr::Paren(Box::new(value)).span(parser.toks.span_from(start)))
+                Ok(AstExpr::Paren(Box::new(value)).span(parser.toks_mut().span_from(start)))
             }
             _ if !parser.looking_at_identifier() => Err((
                 "Expected number, variable, function, or calculation.",
-                parser.toks.current_span(),
+                parser.toks().current_span(),
             )
                 .into()),
             _ => {
-                let start = parser.toks.cursor();
+                let start = parser.toks().cursor();
                 let ident = parser.parse_identifier(false, false)?;
-                let ident_span = parser.toks.span_from(start);
+                let ident_span = parser.toks_mut().span_from(start);
                 if parser.scan_char('.') {
-                    return Self::namespaced_expression(
+                    return ValueParser::namespaced_expression(
                         Spanned {
                             node: Identifier::from(&ident),
                             span: ident_span,
@@ -1587,12 +1614,12 @@ impl<'c> ValueParser<'c> {
                     );
                 }
 
-                if !parser.toks.next_char_is('(') {
-                    return Err(("Expected \"(\" or \".\".", parser.toks.current_span()).into());
+                if !parser.toks().next_char_is('(') {
+                    return Err(("Expected \"(\" or \".\".", parser.toks().current_span()).into());
                 }
 
                 let lowercase = ident.to_ascii_lowercase();
-                let calculation = self.try_parse_calculation(parser, &lowercase, start)?;
+                let calculation = ValueParser::try_parse_calculation(parser, &lowercase, start)?;
 
                 if let Some(calc) = calculation {
                     Ok(calc)
@@ -1600,33 +1627,33 @@ impl<'c> ValueParser<'c> {
                     Ok(AstExpr::If(Box::new(Ternary(
                         parser.parse_argument_invocation(false, false)?,
                     )))
-                    .span(parser.toks.span_from(start)))
+                    .span(parser.toks_mut().span_from(start)))
                 } else {
                     Ok(AstExpr::FunctionCall(FunctionCallExpr {
                         namespace: None,
                         name: Identifier::from(ident),
                         arguments: Box::new(parser.parse_argument_invocation(false, false)?),
-                        span: parser.toks.span_from(start),
+                        span: parser.toks_mut().span_from(start),
                     })
-                    .span(parser.toks.span_from(start)))
+                    .span(parser.toks_mut().span_from(start)))
                 }
             }
         }
     }
-    fn parse_calculation_product(&mut self, parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
-        let mut product = self.parse_calculation_value(parser)?;
+    fn parse_calculation_product(parser: &mut P) -> SassResult<Spanned<AstExpr>> {
+        let mut product = ValueParser::parse_calculation_value(parser)?;
 
         loop {
             parser.whitespace()?;
-            match parser.toks.peek() {
+            match parser.toks().peek() {
                 Some(Token {
                     kind: op @ ('*' | '/'),
                     ..
                 }) => {
-                    parser.toks.next();
+                    parser.toks_mut().next();
                     parser.whitespace()?;
 
-                    let rhs = self.parse_calculation_value(parser)?;
+                    let rhs = ValueParser::parse_calculation_value(parser)?;
 
                     let span = product.span.merge(rhs.span);
 
@@ -1648,23 +1675,23 @@ impl<'c> ValueParser<'c> {
             }
         }
     }
-    fn parse_calculation_sum(&mut self, parser: &mut Parser) -> SassResult<Spanned<AstExpr>> {
-        let mut sum = self.parse_calculation_product(parser)?;
+    fn parse_calculation_sum(parser: &mut P) -> SassResult<Spanned<AstExpr>> {
+        let mut sum = ValueParser::parse_calculation_product(parser)?;
 
         loop {
-            match parser.toks.peek() {
+            match parser.toks().peek() {
                 Some(Token {
                     kind: next @ ('+' | '-'),
                     pos,
                 }) => {
                     if !matches!(
-                        parser.toks.peek_n_backwards(1),
+                        parser.toks().peek_n_backwards(1),
                         Some(Token {
                             kind: ' ' | '\t' | '\r' | '\n',
                             ..
                         })
                     ) || !matches!(
-                        parser.toks.peek_n(1),
+                        parser.toks().peek_n(1),
                         Some(Token {
                             kind: ' ' | '\t' | '\r' | '\n',
                             ..
@@ -1677,10 +1704,10 @@ impl<'c> ValueParser<'c> {
                             .into());
                     }
 
-                    parser.toks.next();
+                    parser.toks_mut().next();
                     parser.whitespace()?;
 
-                    let rhs = self.parse_calculation_product(parser)?;
+                    let rhs = ValueParser::parse_calculation_product(parser)?;
 
                     let span = sum.span.merge(rhs.span);
 
@@ -1703,23 +1730,24 @@ impl<'c> ValueParser<'c> {
     }
 
     fn parse_calculation_arguments(
-        &mut self,
-        parser: &mut Parser,
+        parser: &mut P,
         max_args: Option<usize>,
         start: usize,
     ) -> SassResult<Vec<AstExpr>> {
         parser.expect_char('(')?;
-        if let Some(interpolation) = Self::try_parse_calculation_interpolation(parser, start)? {
+        if let Some(interpolation) =
+            ValueParser::try_parse_calculation_interpolation(parser, start)?
+        {
             parser.expect_char(')')?;
             return Ok(vec![interpolation]);
         }
 
         parser.whitespace()?;
-        let mut arguments = vec![self.parse_calculation_sum(parser)?.node];
+        let mut arguments = vec![ValueParser::parse_calculation_sum(parser)?.node];
 
         while (max_args.is_none() || arguments.len() < max_args.unwrap()) && parser.scan_char(',') {
             parser.whitespace()?;
-            arguments.push(self.parse_calculation_sum(parser)?.node);
+            arguments.push(ValueParser::parse_calculation_sum(parser)?.node);
         }
 
         parser.expect_char_with_message(
@@ -1735,32 +1763,31 @@ impl<'c> ValueParser<'c> {
     }
 
     fn try_parse_calculation(
-        &mut self,
-        parser: &mut Parser,
+        parser: &mut P,
         name: &str,
         start: usize,
     ) -> SassResult<Option<Spanned<AstExpr>>> {
-        debug_assert!(parser.toks.next_char_is('('));
+        debug_assert!(parser.toks().next_char_is('('));
 
         Ok(Some(match name {
             "calc" => {
-                let args = self.parse_calculation_arguments(parser, Some(1), start)?;
+                let args = ValueParser::parse_calculation_arguments(parser, Some(1), start)?;
 
                 AstExpr::Calculation {
                     name: CalculationName::Calc,
                     args,
                 }
-                .span(parser.toks.span_from(start))
+                .span(parser.toks_mut().span_from(start))
             }
             "min" | "max" => {
                 // min() and max() are parsed as calculations if possible, and otherwise
                 // are parsed as normal Sass functions.
-                let before_args = parser.toks.cursor();
+                let before_args = parser.toks().cursor();
 
-                let args = match self.parse_calculation_arguments(parser, None, start) {
+                let args = match ValueParser::parse_calculation_arguments(parser, None, start) {
                     Ok(args) => args,
                     Err(..) => {
-                        parser.toks.set_cursor(before_args);
+                        parser.toks_mut().set_cursor(before_args);
                         return Ok(None);
                     }
                 };
@@ -1773,26 +1800,26 @@ impl<'c> ValueParser<'c> {
                     },
                     args,
                 }
-                .span(parser.toks.span_from(start))
+                .span(parser.toks_mut().span_from(start))
             }
             "clamp" => {
-                let args = self.parse_calculation_arguments(parser, Some(3), start)?;
+                let args = ValueParser::parse_calculation_arguments(parser, Some(3), start)?;
                 AstExpr::Calculation {
                     name: CalculationName::Clamp,
                     args,
                 }
-                .span(parser.toks.span_from(start))
+                .span(parser.toks_mut().span_from(start))
             }
             _ => return Ok(None),
         }))
     }
 
-    fn reset_state(&mut self, parser: &mut Parser) -> SassResult<()> {
+    fn reset_state(&mut self, parser: &mut P) -> SassResult<()> {
         self.comma_expressions = None;
         self.space_expressions = None;
         self.binary_operators = None;
         self.operands = None;
-        parser.toks.set_cursor(self.start);
+        parser.toks_mut().set_cursor(self.start);
         self.allow_slash = true;
         self.single_expression = Some(self.parse_single_expression(parser)?);
 

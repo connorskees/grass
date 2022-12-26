@@ -319,7 +319,7 @@ fn desaturate(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Val
             return Err((
                 format!(
                     "$amount: {} is not a number.",
-                    v.to_css_string(args.span(), visitor.parser.options.is_compressed())?
+                    v.to_css_string(args.span(), visitor.options.is_compressed())?
                 ),
                 args.span(),
             )
@@ -390,7 +390,7 @@ pub(crate) fn invert(mut args: ArgumentResult, visitor: &mut Visitor) -> SassRes
             return Err((
                 format!(
                     "$weight: {} is not a number.",
-                    v.to_css_string(args.span(), visitor.parser.options.is_compressed())?
+                    v.to_css_string(args.span(), visitor.options.is_compressed())?
                 ),
                 args.span(),
             )
