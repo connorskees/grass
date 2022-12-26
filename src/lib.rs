@@ -298,7 +298,7 @@ fn from_string_with_file_name(input: String, file_name: &str, options: &Options)
     let mut map = CodeMap::new();
     let file = map.add_file(file_name.to_owned(), input);
     let empty_span = file.span.subspan(0, 0);
-    let mut lexer = Lexer::new_from_file(&file);
+    let lexer = Lexer::new_from_file(&file);
 
     let path = Path::new(file_name);
 
@@ -307,30 +307,15 @@ fn from_string_with_file_name(input: String, file_name: &str, options: &Options)
         .unwrap_or_else(|| InputSyntax::for_path(path));
 
     let stylesheet = match input_syntax {
-        InputSyntax::Scss => ScssParser::new(
-            &mut lexer,
-            &mut map,
-            options,
-            empty_span,
-            file_name.as_ref(),
-        )
-        .__parse(),
-        InputSyntax::Sass => SassParser::new(
-            &mut lexer,
-            &mut map,
-            options,
-            empty_span,
-            file_name.as_ref(),
-        )
-        .__parse(),
-        InputSyntax::Css => CssParser::new(
-            &mut lexer,
-            &mut map,
-            options,
-            empty_span,
-            file_name.as_ref(),
-        )
-        .__parse(),
+        InputSyntax::Scss => {
+            ScssParser::new(lexer, &mut map, options, empty_span, file_name.as_ref()).__parse()
+        }
+        InputSyntax::Sass => {
+            SassParser::new(lexer, &mut map, options, empty_span, file_name.as_ref()).__parse()
+        }
+        InputSyntax::Css => {
+            CssParser::new(lexer, &mut map, options, empty_span, file_name.as_ref()).__parse()
+        }
     };
 
     let stylesheet = match stylesheet {

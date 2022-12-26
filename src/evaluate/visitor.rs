@@ -787,19 +787,19 @@ impl<'a> Visitor<'a> {
 
     fn parse_file(
         &mut self,
-        mut lexer: Lexer,
+        lexer: Lexer,
         path: &Path,
         span_before: Span,
     ) -> SassResult<StyleSheet> {
         match InputSyntax::for_path(path) {
             InputSyntax::Scss => {
-                ScssParser::new(&mut lexer, self.map, self.options, span_before, path).__parse()
+                ScssParser::new(lexer, self.map, self.options, span_before, path).__parse()
             }
             InputSyntax::Sass => {
-                SassParser::new(&mut lexer, self.map, self.options, span_before, path).__parse()
+                SassParser::new(lexer, self.map, self.options, span_before, path).__parse()
             }
             InputSyntax::Css => {
-                CssParser::new(&mut lexer, self.map, self.options, span_before, path).__parse()
+                CssParser::new(lexer, self.map, self.options, span_before, path).__parse()
             }
         }
     }
@@ -1122,9 +1122,9 @@ impl<'a> Visitor<'a> {
         allows_placeholder: bool,
         span: Span,
     ) -> SassResult<SelectorList> {
-        let mut sel_toks = Lexer::new(selector_text.chars().map(|x| Token::new(span, x)).collect());
+        let sel_toks = Lexer::new(selector_text.chars().map(|x| Token::new(span, x)).collect());
 
-        SelectorParser::new(&mut sel_toks, allows_parent, allows_placeholder, span).parse()
+        SelectorParser::new(sel_toks, allows_parent, allows_placeholder, span).parse()
     }
 
     fn visit_extend_rule(&mut self, extend_rule: AstExtendRule) -> SassResult<Option<Value>> {
@@ -2695,14 +2695,14 @@ impl<'a> Visitor<'a> {
         let selector_text = self.interpolation_to_value(ruleset_selector, true, true)?;
 
         if self.flags.in_keyframes() {
-            let mut sel_toks = Lexer::new(
+            let sel_toks = Lexer::new(
                 selector_text
                     .chars()
                     .map(|x| Token::new(self.span_before, x))
                     .collect(),
             );
             let parsed_selector =
-                KeyframesSelectorParser::new(&mut sel_toks).parse_keyframes_selector()?;
+                KeyframesSelectorParser::new(sel_toks).parse_keyframes_selector()?;
 
             let keyframes_ruleset = CssStmt::KeyframesRuleSet(KeyframesRuleSet {
                 selector: parsed_selector,

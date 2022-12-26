@@ -6,12 +6,7 @@ use std::{
 use codemap::Span;
 
 use crate::{
-    common::QuoteKind,
-    error::SassResult,
-    parse::{BaseParser},
-    utils::is_ident,
-    value::Value,
-    Token,
+    common::QuoteKind, error::SassResult, parse::BaseParser, utils::is_ident, value::Value, Token,
 };
 
 use super::{Namespace, QualifiedName, SelectorParser};

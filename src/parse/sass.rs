@@ -6,8 +6,8 @@ use crate::{ast::*, error::SassResult, lexer::Lexer, token::Token, ContextFlags,
 
 use super::{BaseParser, StylesheetParser};
 
-pub(crate) struct SassParser<'a, 'b> {
-    pub toks: &'a mut Lexer<'b>,
+pub(crate) struct SassParser<'a> {
+    pub toks: Lexer<'a>,
     // todo: likely superfluous
     pub map: &'a mut CodeMap,
     pub path: &'a Path,
@@ -20,13 +20,13 @@ pub(crate) struct SassParser<'a, 'b> {
     pub next_indentation_end: Option<usize>,
 }
 
-impl<'a, 'b: 'a> BaseParser<'a, 'b> for SassParser<'a, 'b> {
-    fn toks(&self) -> &Lexer<'b> {
-        self.toks
+impl<'a> BaseParser<'a> for SassParser<'a> {
+    fn toks(&self) -> &Lexer<'a> {
+        &self.toks
     }
 
-    fn toks_mut(&mut self) -> &mut Lexer<'b> {
-        self.toks
+    fn toks_mut(&mut self) -> &mut Lexer<'a> {
+        &mut self.toks
     }
 
     fn whitespace_without_comments(&mut self) {
@@ -40,7 +40,7 @@ impl<'a, 'b: 'a> BaseParser<'a, 'b> for SassParser<'a, 'b> {
     }
 }
 
-impl<'a, 'b: 'a> StylesheetParser<'a, 'b> for SassParser<'a, 'b> {
+impl<'a> StylesheetParser<'a> for SassParser<'a> {
     fn is_plain_css(&mut self) -> bool {
         false
     }
@@ -240,9 +240,9 @@ impl<'a, 'b: 'a> StylesheetParser<'a, 'b> for SassParser<'a, 'b> {
     }
 }
 
-impl<'a, 'b: 'a> SassParser<'a, 'b> {
+impl<'a> SassParser<'a> {
     pub fn new(
-        toks: &'a mut Lexer<'b>,
+        toks: Lexer<'a>,
         map: &'a mut CodeMap,
         options: &'a Options<'a>,
         span_before: Span,

@@ -9,8 +9,8 @@ use crate::{
 
 use super::{value::ValueParser, BaseParser, StylesheetParser};
 
-pub(crate) struct CssParser<'a, 'b> {
-    pub toks: &'a mut Lexer<'b>,
+pub(crate) struct CssParser<'a> {
+    pub toks: Lexer<'a>,
     // todo: likely superfluous
     pub map: &'a mut CodeMap,
     pub path: &'a Path,
@@ -19,13 +19,13 @@ pub(crate) struct CssParser<'a, 'b> {
     pub options: &'a Options<'a>,
 }
 
-impl<'a, 'b: 'a> BaseParser<'a, 'b> for CssParser<'a, 'b> {
-    fn toks(&self) -> &Lexer<'b> {
-        self.toks
+impl<'a> BaseParser<'a> for CssParser<'a> {
+    fn toks(&self) -> &Lexer<'a> {
+        &self.toks
     }
 
-    fn toks_mut(&mut self) -> &mut Lexer<'b> {
-        self.toks
+    fn toks_mut(&mut self) -> &mut Lexer<'a> {
+        &mut self.toks
     }
 
     fn skip_silent_comment(&mut self) -> SassResult<()> {
@@ -37,7 +37,7 @@ impl<'a, 'b: 'a> BaseParser<'a, 'b> for CssParser<'a, 'b> {
     }
 }
 
-impl<'a, 'b: 'a> StylesheetParser<'a, 'b> for CssParser<'a, 'b> {
+impl<'a> StylesheetParser<'a> for CssParser<'a> {
     fn is_plain_css(&mut self) -> bool {
         true
     }
@@ -74,7 +74,8 @@ impl<'a, 'b: 'a> StylesheetParser<'a, 'b> for CssParser<'a, 'b> {
         self.span_before
     }
 
-    const IDENTIFIER_LIKE: Option<fn(&mut Self) -> SassResult<Spanned<AstExpr>>> = Some(Self::parse_identifier_like);
+    const IDENTIFIER_LIKE: Option<fn(&mut Self) -> SassResult<Spanned<AstExpr>>> =
+        Some(Self::parse_identifier_like);
 
     fn parse_at_rule(
         &mut self,
@@ -106,9 +107,9 @@ impl<'a, 'b: 'a> StylesheetParser<'a, 'b> for CssParser<'a, 'b> {
     }
 }
 
-impl<'a, 'b: 'a> CssParser<'a, 'b> {
+impl<'a, 'b: 'a> CssParser<'a> {
     pub fn new(
-        toks: &'a mut Lexer<'b>,
+        toks: Lexer<'a>,
         map: &'a mut CodeMap,
         options: &'a Options<'a>,
         span_before: Span,

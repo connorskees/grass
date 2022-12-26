@@ -54,9 +54,9 @@ impl MediaQuery {
     }
 
     pub fn parse_list(list: &str, span: Span) -> SassResult<Vec<Self>> {
-        let mut toks = Lexer::new(list.chars().map(|x| Token::new(span, x)).collect());
+        let toks = Lexer::new(list.chars().map(|x| Token::new(span, x)).collect());
 
-        MediaQueryParser::new(&mut toks).parse()
+        MediaQueryParser::new(toks).parse()
     }
 
     #[allow(clippy::if_not_else)]

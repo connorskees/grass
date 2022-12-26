@@ -8,12 +8,12 @@ pub(crate) struct AtRootQueryParser<'a> {
     toks: Lexer<'a>,
 }
 
-impl<'a: 'b, 'b: 'a> BaseParser<'a, 'b> for AtRootQueryParser<'a> {
-    fn toks(&self) -> &Lexer<'b> {
+impl<'a> BaseParser<'a> for AtRootQueryParser<'a> {
+    fn toks(&self) -> &Lexer<'a> {
         &self.toks
     }
 
-    fn toks_mut(&mut self) -> &mut Lexer<'b> {
+    fn toks_mut(&mut self) -> &mut Lexer<'a> {
         &mut self.toks
     }
 }

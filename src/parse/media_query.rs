@@ -1,30 +1,24 @@
-use crate::{
-    ast::MediaQuery, error::SassResult, lexer::Lexer, 
-};
+use crate::{ast::MediaQuery, error::SassResult, lexer::Lexer};
 
 use super::BaseParser;
 
-pub(crate) struct MediaQueryParser<'a, 'b> {
-    pub toks: &'a mut Lexer<'b>,
+pub(crate) struct MediaQueryParser<'a> {
+    pub toks: Lexer<'a>,
 }
 
-impl<'a, 'b: 'a> BaseParser<'a, 'b> for MediaQueryParser<'a, 'b> {
-    fn toks(&self) -> &Lexer<'b> {
+impl<'a> BaseParser<'a> for MediaQueryParser<'a> {
+    fn toks(&self) -> &Lexer<'a> {
         &self.toks
     }
 
-    fn toks_mut(&mut self) -> &mut Lexer<'b> {
+    fn toks_mut(&mut self) -> &mut Lexer<'a> {
         &mut self.toks
     }
 }
 
-impl<'a, 'b> MediaQueryParser<'a, 'b> {
-    pub fn new(
-        toks: &'a mut Lexer<'b>,
-    ) -> MediaQueryParser<'a, 'b> {
-        MediaQueryParser {
-            toks,
-        }
+impl<'a> MediaQueryParser<'a> {
+    pub fn new(toks: Lexer<'a>) -> MediaQueryParser<'a> {
+        MediaQueryParser { toks }
     }
 
     pub fn parse(&mut self) -> SassResult<Vec<MediaQuery>> {

@@ -29,7 +29,7 @@ fn is_hex_color(interpolation: &Interpolation) -> bool {
     false
 }
 
-pub(crate) struct ValueParser<'a, 'b: 'a, 'c, P: StylesheetParser<'a, 'b>> {
+pub(crate) struct ValueParser<'a, 'c, P: StylesheetParser<'a>> {
     comma_expressions: Option<Vec<Spanned<AstExpr>>>,
     space_expressions: Option<Vec<Spanned<AstExpr>>>,
     binary_operators: Option<Vec<BinaryOp>>,
@@ -41,10 +41,9 @@ pub(crate) struct ValueParser<'a, 'b: 'a, 'c, P: StylesheetParser<'a, 'b>> {
     single_equals: bool,
     parse_until: Option<Predicate<'c, P>>,
     _a: PhantomData<&'a ()>,
-    _b: PhantomData<&'b ()>,
 }
 
-impl<'a, 'b: 'a, 'c, P: StylesheetParser<'a, 'b>> ValueParser<'a, 'b, 'c, P> {
+impl<'a, 'c, P: StylesheetParser<'a>> ValueParser<'a, 'c, P> {
     pub fn parse_expression(
         parser: &mut P,
         parse_until: Option<Predicate<'c, P>>,
@@ -106,7 +105,6 @@ impl<'a, 'b: 'a, 'c, P: StylesheetParser<'a, 'b>> ValueParser<'a, 'b, 'c, P> {
             inside_bracketed_list,
             single_equals,
             _a: PhantomData,
-            _b: PhantomData,
         }
     }
 

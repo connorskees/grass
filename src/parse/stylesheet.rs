@@ -25,7 +25,7 @@ use super::{
 // todo: can we simplify lifetimes (by maybe not storing reference to lexer)
 /// Default implementations are oriented towards the SCSS syntax, as both CSS and
 /// SCSS share the behavior
-pub(crate) trait StylesheetParser<'a, 'b: 'a>: BaseParser<'a, 'b> + Sized {
+pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
     // todo: make constant?
     fn is_plain_css(&mut self) -> bool;
     // todo: make constant?
