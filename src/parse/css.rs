@@ -107,7 +107,7 @@ impl<'a> StylesheetParser<'a> for CssParser<'a> {
     }
 }
 
-impl<'a, 'b: 'a> CssParser<'a> {
+impl<'a> CssParser<'a> {
     pub fn new(
         toks: Lexer<'a>,
         map: &'a mut CodeMap,

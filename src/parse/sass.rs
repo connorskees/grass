@@ -38,6 +38,36 @@ impl<'a> BaseParser<'a> for SassParser<'a> {
             self.toks.next();
         }
     }
+
+    fn skip_loud_comment(&mut self) -> SassResult<()> {
+        self.expect_char('/')?;
+        self.expect_char('*')?;
+
+        loop {
+            let mut next = self.toks.next();
+            match next {
+                Some(Token { kind: '\n', .. }) => {
+                    return Err(("expected */.", self.toks.prev_span()).into())
+                }
+                Some(Token { kind: '*', .. }) => {}
+                _ => continue,
+            }
+
+            loop {
+                next = self.toks.next();
+
+                if !matches!(next, Some(Token { kind: '*', .. })) {
+                    break;
+                }
+            }
+
+            if matches!(next, Some(Token { kind: '/', .. })) {
+                break;
+            }
+        }
+
+        Ok(())
+    }
 }
 
 impl<'a> StylesheetParser<'a> for SassParser<'a> {
@@ -238,6 +268,84 @@ impl<'a> StylesheetParser<'a> for SassParser<'a> {
             span: self.toks.span_from(start),
         }))
     }
+
+    fn parse_loud_comment(&mut self) -> SassResult<AstLoudComment> {
+        let start = self.toks.cursor();
+        self.expect_char('/')?;
+        self.expect_char('*')?;
+
+        let mut first = true;
+
+        let mut buffer = Interpolation::new_plain("/*".to_owned());
+        let parent_indentation = self.current_indentation;
+
+        loop {
+            if first {
+                let beginning_of_comment = self.toks.cursor();
+
+                self.spaces();
+
+                if self.toks.next_char_is('\n') {
+                    self.read_indentation()?;
+                    buffer.add_char(' ');
+                } else {
+                    buffer.add_string(self.toks.raw_text(beginning_of_comment));
+                }
+            } else {
+                buffer.add_string("\n * ".to_owned());
+            }
+
+            first = false;
+
+            for _ in 3..(self.current_indentation - parent_indentation) {
+                buffer.add_char(' ');
+            }
+
+            while self.toks.peek().is_some() {
+                match self.toks.peek() {
+                    Some(Token {
+                        kind: '\n' | '\r', ..
+                    }) => break,
+                    Some(Token { kind: '#', .. }) => {
+                        if matches!(self.toks.peek_n(1), Some(Token { kind: '{', .. })) {
+                            buffer.add_interpolation(self.parse_single_interpolation()?);
+                        } else {
+                            buffer.add_char('#');
+                            self.toks.next();
+                        }
+                    }
+                    Some(Token { kind, .. }) => {
+                        buffer.add_char(kind);
+                        self.toks.next();
+                    }
+                    None => todo!(),
+                }
+            }
+
+            if self.peek_indentation()? <= parent_indentation {
+                break;
+            }
+
+            // Preserve empty lines.
+            while self.looking_at_double_newline() {
+                self.expect_newline()?;
+                buffer.add_char('\n');
+                buffer.add_char(' ');
+                buffer.add_char('*');
+            }
+
+            self.read_indentation()?;
+        }
+
+        if !buffer.trailing_string().trim_end().ends_with("*/") {
+            buffer.add_string(" */".to_owned());
+        }
+
+        Ok(AstLoudComment {
+            text: buffer,
+            span: self.toks.span_from(start),
+        })
+    }
 }
 
 impl<'a> SassParser<'a> {
@@ -433,5 +541,26 @@ impl<'a> SassParser<'a> {
             },
             _ => return child(self),
         }))
+    }
+
+    fn looking_at_double_newline(&mut self) -> bool {
+        match self.toks.peek() {
+            // todo: is this branch reachable
+            Some(Token { kind: '\r', .. }) => match self.toks.peek_n(1) {
+                Some(Token { kind: '\n', .. }) => {
+                    matches!(self.toks.peek_n(2), Some(Token { kind: '\n', .. }))
+                }
+                Some(Token { kind: '\r', .. }) => true,
+                _ => false,
+            },
+            Some(Token { kind: '\n', .. }) => matches!(
+                self.toks.peek_n(1),
+                Some(Token {
+                    kind: '\n' | '\r',
+                    ..
+                })
+            ),
+            _ => false,
+        }
     }
 }

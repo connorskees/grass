@@ -75,3 +75,18 @@ a
     "a {\n  color: red;\n}\n",
     grass::Options::default().input_syntax(InputSyntax::Sass)
 );
+test!(
+    unclosed_loud_comment,
+    r#"/* loud"#,
+    "/* loud */\n",
+    grass::Options::default().input_syntax(InputSyntax::Sass)
+);
+error!(
+    multiline_comment_in_value_position,
+    r#"
+$a: /*
+loud */ red
+"#,
+    "Error: expected */.",
+    grass::Options::default().input_syntax(InputSyntax::Sass)
+);

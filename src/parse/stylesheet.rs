@@ -38,6 +38,7 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
     fn flags(&mut self) -> &ContextFlags;
     fn flags_mut(&mut self) -> &mut ContextFlags;
 
+    #[allow(clippy::type_complexity)]
     const IDENTIFIER_LIKE: Option<fn(&mut Self) -> SassResult<Spanned<AstExpr>>> = None;
 
     fn parse_style_rule_selector(&mut self) -> SassResult<Interpolation> {

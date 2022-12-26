@@ -33,12 +33,12 @@ macro_rules! test {
 /// Span and scope information are not yet tested
 #[macro_export]
 macro_rules! error {
-    ($( #[$attr:meta] ),*$func:ident, $input:expr, $err:expr) => {
+    (@base $( #[$attr:meta] ),*$func:ident, $input:expr, $err:expr, $options:expr) => {
         $(#[$attr])*
         #[test]
         #[allow(non_snake_case)]
         fn $func() {
-            match grass::from_string($input.to_string(), &grass::Options::default()) {
+            match grass::from_string($input.to_string(), &$options) {
                 Ok(..) => panic!("did not fail"),
                 Err(e) => assert_eq!($err, e.to_string()
                                                 .chars()
@@ -48,6 +48,12 @@ macro_rules! error {
                 ),
             }
         }
+    };
+    ($( #[$attr:meta] ),*$func:ident, $input:expr, $err:expr) => {
+        error!(@base $(#[$attr])* $func, $input, $err, grass::Options::default());
+    };
+    ($( #[$attr:meta] ),*$func:ident, $input:expr, $err:expr, $options:expr) => {
+        error!(@base $(#[$attr])* $func, $input, $err, $options);
     };
 }
 

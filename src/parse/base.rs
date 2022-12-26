@@ -686,4 +686,10 @@ pub(crate) trait BaseParser<'a> {
 
         Ok(())
     }
+
+    fn spaces(&mut self) {
+        while self.toks().next_char_is(' ') || self.toks().next_char_is('\t') {
+            self.toks_mut().next();
+        }
+    }
 }
