@@ -147,7 +147,7 @@ fn main() -> std::io::Result<()> {
             Arg::with_name("VERBOSE")
                 .long("verbose")
                 .hidden(true)
-                .help("TODO://")
+                .help("Print all deprecation warnings even when they're repetitive.")
         )
         .arg(
             Arg::with_name("NO_UNICODE")

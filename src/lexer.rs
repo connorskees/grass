@@ -10,8 +10,6 @@ const FORM_FEED: char = '\x0C';
 pub(crate) struct Lexer<'a> {
     buf: Cow<'a, [Token]>,
     cursor: usize,
-    // todo: now superfluous?
-    amt_peeked: usize,
 }
 
 impl<'a> Lexer<'a> {
@@ -54,33 +52,28 @@ impl<'a> Lexer<'a> {
             .pos
     }
 
-    fn peek_cursor(&self) -> usize {
-        self.cursor + self.amt_peeked
-    }
-
     pub fn peek(&self) -> Option<Token> {
-        self.buf.get(self.peek_cursor()).copied()
+        self.buf.get(self.cursor).copied()
     }
 
     /// Peeks the previous token without modifying the peek cursor
     pub fn peek_previous(&mut self) -> Option<Token> {
-        self.buf.get(self.peek_cursor().checked_sub(1)?).copied()
+        self.buf.get(self.cursor.checked_sub(1)?).copied()
     }
 
     /// Peeks `n` from current peeked position without modifying cursor
     pub fn peek_n(&self, n: usize) -> Option<Token> {
-        self.buf.get(self.peek_cursor() + n).copied()
+        self.buf.get(self.cursor + n).copied()
     }
 
     /// Peeks `n` behind current peeked position without modifying cursor
     pub fn peek_n_backwards(&self, n: usize) -> Option<Token> {
-        self.buf.get(self.peek_cursor().checked_sub(n)?).copied()
+        self.buf.get(self.cursor.checked_sub(n)?).copied()
     }
 
     /// Set cursor to position and reset peek
     pub fn set_cursor(&mut self, cursor: usize) {
         self.cursor = cursor;
-        self.amt_peeked = 0;
     }
 
     pub fn cursor(&self) -> usize {
@@ -94,7 +87,6 @@ impl<'a> Iterator for Lexer<'a> {
     fn next(&mut self) -> Option<Self::Item> {
         self.buf.get(self.cursor).copied().map(|tok| {
             self.cursor += 1;
-            self.amt_peeked = self.amt_peeked.saturating_sub(1);
             tok
         })
     }
@@ -146,15 +138,6 @@ impl<'a> Lexer<'a> {
         Lexer {
             buf: Cow::Owned(buf),
             cursor: 0,
-            amt_peeked: 0,
         }
     }
-
-    // pub fn new_ref(buf: &'a [Token]) -> Lexer<'a> {
-    //     Lexer {
-    //         buf: Cow::Borrowed(buf),
-    //         cursor: 0,
-    //         amt_peeked: 0,
-    //     }
-    // }
 }

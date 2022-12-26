@@ -932,7 +932,7 @@ impl<'a> Visitor<'a> {
 
                 let grandparent = self.css_tree.child_to_parent.get(&parent.unwrap()).copied();
                 if grandparent.is_none() {
-                    todo!("Expected ${{nodes[i]}} to be an ancestor of $this.")
+                    unreachable!("Expected {:?} to be an ancestor of {:?}.", nodes[i], grandparent)
                 }
                 parent = grandparent;
             }
@@ -940,7 +940,7 @@ impl<'a> Visitor<'a> {
 
             let grandparent = self.css_tree.child_to_parent.get(&parent.unwrap()).copied();
             if grandparent.is_none() {
-                todo!("Expected ${{nodes[i]}} to be an ancestor of $this.")
+                unreachable!("Expected {:?} to be an ancestor of {:?}.", nodes[i], grandparent)
             }
             parent = grandparent;
         }
