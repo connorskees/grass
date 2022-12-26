@@ -93,7 +93,6 @@ pub(crate) struct CallableContentBlock {
 pub(crate) struct Visitor<'a> {
     pub declaration_name: Option<String>,
     pub flags: ContextFlags,
-    // todo: should not need this
     pub env: Environment,
     pub style_rule_ignoring_at_root: Option<ExtendedSelector>,
     // avoid emitting duplicate warnings for the same span
@@ -932,7 +931,10 @@ impl<'a> Visitor<'a> {
 
                 let grandparent = self.css_tree.child_to_parent.get(&parent.unwrap()).copied();
                 if grandparent.is_none() {
-                    unreachable!("Expected {:?} to be an ancestor of {:?}.", nodes[i], grandparent)
+                    unreachable!(
+                        "Expected {:?} to be an ancestor of {:?}.",
+                        nodes[i], grandparent
+                    )
                 }
                 parent = grandparent;
             }
@@ -940,7 +942,10 @@ impl<'a> Visitor<'a> {
 
             let grandparent = self.css_tree.child_to_parent.get(&parent.unwrap()).copied();
             if grandparent.is_none() {
-                unreachable!("Expected {:?} to be an ancestor of {:?}.", nodes[i], grandparent)
+                unreachable!(
+                    "Expected {:?} to be an ancestor of {:?}.",
+                    nodes[i], grandparent
+                )
             }
             parent = grandparent;
         }
