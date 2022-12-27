@@ -25,7 +25,7 @@ macro_rules! opt_hsl {
             Value::Dimension(SassNumber { num: n, .. }) if n.is_nan() => todo!(),
             Value::Dimension(SassNumber {
                 num: n, unit: u, ..
-            }) => Some(bound!($args, $arg, n, u, $low, $high) / Number::from(100)),
+            }) => Some(bound!($args, $arg, n, u, $low, $high) / Number(100.0)),
             Value::Null => None,
             v => {
                 return Err((
@@ -197,7 +197,7 @@ pub(crate) fn scale_color(mut args: ArgumentResult, visitor: &mut Visitor) -> Sa
                     num: n,
                     unit: Unit::Percent,
                     ..
-                }) => Some(bound!($args, $arg, n, Unit::Percent, $low, $high) / Number::from(100)),
+                }) => Some(bound!($args, $arg, n, Unit::Percent, $low, $high) / Number(100.0)),
                 v @ Value::Dimension { .. } => {
                     return Err((
                         format!(
@@ -228,20 +228,16 @@ pub(crate) fn scale_color(mut args: ArgumentResult, visitor: &mut Visitor) -> Sa
 
     if red.is_some() || green.is_some() || blue.is_some() {
         return Ok(Value::Color(Color::from_rgba(
-            scale(
-                color.red(),
-                red.unwrap_or_else(Number::zero),
-                Number::from(255),
-            ),
+            scale(color.red(), red.unwrap_or_else(Number::zero), Number(255.0)),
             scale(
                 color.green(),
                 green.unwrap_or_else(Number::zero),
-                Number::from(255),
+                Number(255.0),
             ),
             scale(
                 color.blue(),
                 blue.unwrap_or_else(Number::zero),
-                Number::from(255),
+                Number(255.0),
             ),
             scale(
                 color.alpha(),
@@ -258,7 +254,7 @@ pub(crate) fn scale_color(mut args: ArgumentResult, visitor: &mut Visitor) -> Sa
         // Color::as_hsla() returns more exact values than Color::hue(), etc.
         let (this_hue, this_saturation, this_luminance, this_alpha) = color.as_hsla();
         return Ok(Value::Color(Color::from_hsla(
-            scale(this_hue, Number::zero(), Number::from(360)),
+            scale(this_hue, Number::zero(), Number(360.0)),
             scale(
                 this_saturation,
                 saturation.unwrap_or_else(Number::zero),

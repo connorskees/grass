@@ -913,7 +913,7 @@ impl<'a, 'c, P: StylesheetParser<'a>> ValueParser<'a, 'c, P> {
             Number::from(red),
             Number::from(green),
             Number::from(blue),
-            Number::from(alpha),
+            Number(alpha),
             // todo:
             //     // Don't emit four- or eight-digit hex colors as hex, since that's not
             //     // yet well-supported in browsers.

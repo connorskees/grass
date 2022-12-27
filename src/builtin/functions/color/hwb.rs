@@ -17,7 +17,7 @@ pub(crate) fn blackness(mut args: ArgumentResult, visitor: &mut Visitor) -> Sass
     };
 
     let blackness =
-        Number::from(1) - (color.red().max(color.green()).max(color.blue()) / Number::from(255));
+        Number(1.0) - (color.red().max(color.green()).max(color.blue()) / Number(255.0));
 
     Ok(Value::Dimension(SassNumber {
         num: (blackness * 100),
@@ -33,7 +33,7 @@ pub(crate) fn whiteness(mut args: ArgumentResult, visitor: &mut Visitor) -> Sass
         .get_err(0, "color")?
         .assert_color_with_name("color", args.span())?;
 
-    let whiteness = color.red().min(color.green()).min(color.blue()) / Number::from(255);
+    let whiteness = color.red().min(color.green()).min(color.blue()) / Number(255.0);
 
     Ok(Value::Dimension(SassNumber {
         num: (whiteness * 100),
@@ -77,7 +77,7 @@ fn hwb_inner(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Valu
                 num: n,
                 unit: Unit::Percent,
                 ..
-            }) => n / Number::from(100),
+            }) => n / Number(100.0),
             Value::Dimension(SassNumber { num: n, .. }) => n,
             v => {
                 return Err((

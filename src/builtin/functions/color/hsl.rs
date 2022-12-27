@@ -61,8 +61,8 @@ fn hsl_3_args(
 
     Ok(Value::Color(Color::from_hsla_fn(
         Number(hue.num().rem_euclid(360.0)),
-        saturation.num() / Number::from(100),
-        lightness.num() / Number::from(100),
+        saturation.num() / Number(100.0),
+        lightness.num() / Number(100.0),
         Number(alpha),
     )))
 }
@@ -223,7 +223,7 @@ fn darken(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> 
             num: n,
             unit: u,
             as_slash: _,
-        }) => bound!(args, "amount", n, u, 0, 100) / Number::from(100),
+        }) => bound!(args, "amount", n, u, 0, 100) / Number(100.0),
         v => {
             return Err((
                 format!(
@@ -260,7 +260,7 @@ fn saturate(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value
             num: n,
             unit: u,
             as_slash: _,
-        }) => bound!(args, "amount", n, u, 0, 100) / Number::from(100),
+        }) => bound!(args, "amount", n, u, 0, 100) / Number(100.0),
         v => {
             return Err((
                 format!(
@@ -314,7 +314,7 @@ fn desaturate(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Val
             num: n,
             unit: u,
             as_slash: _,
-        }) => bound!(args, "amount", n, u, 0, 100) / Number::from(100),
+        }) => bound!(args, "amount", n, u, 0, 100) / Number(100.0),
         v => {
             return Err((
                 format!(
@@ -384,7 +384,7 @@ pub(crate) fn invert(mut args: ArgumentResult, visitor: &mut Visitor) -> SassRes
                     as_slash: _,
                 }),
             ..
-        }) => Some(bound!(args, "weight", n, u, 0, 100) / Number::from(100)),
+        }) => Some(bound!(args, "weight", n, u, 0, 100) / Number(100.0)),
         None => None,
         Some(v) => {
             return Err((

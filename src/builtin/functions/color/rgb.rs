@@ -428,7 +428,7 @@ pub(crate) fn mix(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult
         2,
         "weight",
         Value::Dimension(SassNumber {
-            num: (Number::from(50)),
+            num: (Number(50.0)),
             unit: Unit::None,
             as_slash: None,
         }),
@@ -438,7 +438,7 @@ pub(crate) fn mix(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult
             num: n,
             unit: u,
             as_slash: _,
-        }) => bound!(args, "weight", n, u, 0, 100) / Number::from(100),
+        }) => bound!(args, "weight", n, u, 0, 100) / Number(100.0),
         v => {
             return Err((
                 format!(

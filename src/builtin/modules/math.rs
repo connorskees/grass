@@ -408,7 +408,7 @@ fn acos(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
             unit: Unit::None,
             ..
         }) => Value::Dimension(SassNumber {
-            num: if num > Number::from(1) || num < Number::from(-1) {
+            num: if num > Number(1.0) || num < Number(-1.0) {
                 Number(f64::NAN)
             } else if num.is_one() {
                 Number::zero()
@@ -448,7 +448,7 @@ fn asin(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
             unit: Unit::None,
             ..
         }) => {
-            if num > Number::from(1) || num < Number::from(-1) {
+            if num > Number(1.0) || num < Number(-1.0) {
                 return Ok(Value::Dimension(SassNumber {
                     num: Number(f64::NAN),
                     unit: Unit::Deg,
@@ -629,7 +629,7 @@ pub(crate) fn declare(f: &mut Module) {
     f.insert_builtin_var(
         "e",
         Value::Dimension(SassNumber {
-            num: Number::from(std::f64::consts::E),
+            num: Number(std::f64::consts::E),
             unit: Unit::None,
             as_slash: None,
         }),
@@ -637,7 +637,7 @@ pub(crate) fn declare(f: &mut Module) {
     f.insert_builtin_var(
         "pi",
         Value::Dimension(SassNumber {
-            num: Number::from(std::f64::consts::PI),
+            num: Number(std::f64::consts::PI),
             unit: Unit::None,
             as_slash: None,
         }),
@@ -645,7 +645,7 @@ pub(crate) fn declare(f: &mut Module) {
     f.insert_builtin_var(
         "epsilon",
         Value::Dimension(SassNumber {
-            num: Number::from(std::f64::EPSILON),
+            num: Number(std::f64::EPSILON),
             unit: Unit::None,
             as_slash: None,
         }),
@@ -653,7 +653,7 @@ pub(crate) fn declare(f: &mut Module) {
     f.insert_builtin_var(
         "max-safe-integer",
         Value::Dimension(SassNumber {
-            num: Number::from(9007199254740991.0),
+            num: Number(9007199254740991.0),
             unit: Unit::None,
             as_slash: None,
         }),
@@ -661,7 +661,7 @@ pub(crate) fn declare(f: &mut Module) {
     f.insert_builtin_var(
         "min-safe-integer",
         Value::Dimension(SassNumber {
-            num: Number::from(-9007199254740991.0),
+            num: Number(-9007199254740991.0),
             unit: Unit::None,
             as_slash: None,
         }),
@@ -669,7 +669,7 @@ pub(crate) fn declare(f: &mut Module) {
     f.insert_builtin_var(
         "max-number",
         Value::Dimension(SassNumber {
-            num: Number::from(f64::MAX),
+            num: Number(f64::MAX),
             unit: Unit::None,
             as_slash: None,
         }),
@@ -677,7 +677,7 @@ pub(crate) fn declare(f: &mut Module) {
     f.insert_builtin_var(
         "min-number",
         Value::Dimension(SassNumber {
-            num: Number::from(f64::MIN_POSITIVE),
+            num: Number(f64::MIN_POSITIVE),
             unit: Unit::None,
             as_slash: None,
         }),
