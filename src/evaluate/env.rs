@@ -134,10 +134,10 @@ impl Environment {
             Ok(v) => Ok(v),
             Err(e) => {
                 if let Some(v) = self.get_variable_from_global_modules(name.node) {
-                    return Ok(v);
+                    Ok(v)
+                } else {
+                    Err(e)
                 }
-
-                Err(e)
             }
         }
     }

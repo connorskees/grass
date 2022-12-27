@@ -343,7 +343,7 @@ impl Module {
                 .map(|(key, value)| {
                     (
                         Value::String(key.to_string(), QuoteKind::Quoted).span(span),
-                        Value::FunctionRef(value),
+                        Value::FunctionRef(Box::new(value)),
                     )
                 })
                 .collect::<Vec<_>>(),

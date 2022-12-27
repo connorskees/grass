@@ -64,6 +64,16 @@ impl UserDefinedCallable for AstFunctionDecl {
     }
 }
 
+impl UserDefinedCallable for Arc<AstFunctionDecl> {
+    fn name(&self) -> Identifier {
+        self.name.node
+    }
+
+    fn arguments(&self) -> &ArgumentDeclaration {
+        &self.arguments
+    }
+}
+
 impl UserDefinedCallable for AstMixin {
     fn name(&self) -> Identifier {
         self.name
@@ -1112,7 +1122,7 @@ impl<'a> Visitor<'a> {
         // todo: independency
 
         let func = SassFunction::UserDefined(UserDefinedFunction {
-            function: Box::new(fn_decl),
+            function: Arc::new(fn_decl),
             name,
             env: self.env.new_closure(),
         });
@@ -1701,6 +1711,14 @@ impl<'a> Visitor<'a> {
 
         let direction = if from > to { -1 } else { 1 };
 
+        if to == i64::MAX || to == i64::MIN {
+            return Err((
+                "@for loop upper bound exceeds valid integer representation (i64::MAX)",
+                to_span,
+            )
+                .into());
+        }
+
         if !for_stmt.is_exclusive {
             to += direction;
         }
@@ -2200,23 +2218,17 @@ impl<'a> Visitor<'a> {
                 Ok(self.without_slash(val))
             }
             SassFunction::UserDefined(UserDefinedFunction { function, env, .. }) => self
-                .run_user_defined_callable(
-                    arguments,
-                    *function,
-                    &env,
-                    span,
-                    |function, visitor| {
-                        for stmt in function.children {
-                            let result = visitor.visit_stmt(stmt)?;
+                .run_user_defined_callable(arguments, function, &env, span, |function, visitor| {
+                    for stmt in function.children.clone() {
+                        let result = visitor.visit_stmt(stmt)?;
 
-                            if let Some(val) = result {
-                                return Ok(val);
-                            }
+                        if let Some(val) = result {
+                            return Ok(val);
                         }
+                    }
 
-                        Err(("Function finished without @return.", span).into())
-                    },
-                ),
+                    Err(("Function finished without @return.", span).into())
+                }),
             SassFunction::Plain { name } => {
                 let arguments = match arguments {
                     MaybeEvaledArguments::Invocation(args) => args,

@@ -295,7 +295,7 @@ pub(crate) fn get_function(mut args: ArgumentResult, visitor: &mut Visitor) -> S
     };
 
     match func {
-        Some(func) => Ok(Value::FunctionRef(func)),
+        Some(func) => Ok(Value::FunctionRef(Box::new(func))),
         None => Err((format!("Function not found: {}", name), args.span()).into()),
     }
 }
@@ -318,7 +318,7 @@ pub(crate) fn call(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResul
 
     args.remove_positional(0).unwrap();
 
-    visitor.run_function_callable_with_maybe_evaled(func, MaybeEvaledArguments::Evaled(args), span)
+    visitor.run_function_callable_with_maybe_evaled(*func, MaybeEvaledArguments::Evaled(args), span)
 }
 
 #[allow(clippy::needless_pass_by_value)]

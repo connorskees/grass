@@ -100,7 +100,7 @@ pub(crate) fn str_slice(mut args: ArgumentResult, visitor: &mut Visitor) -> Sass
     } else if start > 0 {
         (start as usize).min(str_len + 1)
     } else {
-        (start + str_len as i32 + 1).max(1) as usize
+        (start + str_len as i64 + 1).max(1) as usize
     };
 
     let end = args
@@ -120,7 +120,7 @@ pub(crate) fn str_slice(mut args: ArgumentResult, visitor: &mut Visitor) -> Sass
     let mut end = end.num().assert_int(span)?;
 
     if end < 0 {
-        end += str_len as i32 + 1;
+        end += str_len as i64 + 1;
     }
 
     let end = (end.max(0) as usize).min(str_len + 1);
@@ -232,7 +232,7 @@ pub(crate) fn str_insert(mut args: ArgumentResult, visitor: &mut Visitor) -> Sas
     } else if index_int == 0 {
         insert(0, s1, &substr)
     } else {
-        let idx = (len as i32 + index_int + 1).max(0) as usize;
+        let idx = (len as i64 + index_int + 1).max(0) as usize;
         insert(idx, s1, &substr)
     };
 

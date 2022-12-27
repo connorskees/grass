@@ -2,32 +2,13 @@ use crate::{builtin::builtin_imports::*, evaluate::div};
 
 pub(crate) fn percentage(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
-    let num = match args.get_err(0, "number")? {
-        Value::Dimension(SassNumber {
-            num: n,
-            unit: Unit::None,
-            as_slash: _,
-        }) => n * Number::from(100),
-        v @ Value::Dimension(SassNumber { .. }) => {
-            return Err((
-                format!(
-                    "$number: Expected {} to have no units.",
-                    v.inspect(args.span())?
-                ),
-                args.span(),
-            )
-                .into())
-        }
-        v => {
-            return Err((
-                format!("$number: {} is not a number.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
+    let num = args
+        .get_err(0, "number")?
+        .assert_number_with_name("number", args.span)?;
+    num.assert_no_units("number", args.span)?;
+
     Ok(Value::Dimension(SassNumber {
-        num,
+        num: Number(num.num.0 * 100.0),
         unit: Unit::Percent,
         as_slash: None,
     }))
@@ -107,54 +88,26 @@ pub(crate) fn floor(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResu
 
 pub(crate) fn abs(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
-    match args.get_err(0, "number")? {
-        Value::Dimension(SassNumber {
-            num: n,
-            unit: u,
-            as_slash: _,
-        }) => Ok(Value::Dimension(SassNumber {
-            num: (n.abs()),
-            unit: u,
-            as_slash: None,
-        })),
-        v => Err((
-            format!("$number: {} is not a number.", v.inspect(args.span())?),
-            args.span(),
-        )
-            .into()),
-    }
+    let mut num = args
+        .get_err(0, "number")?
+        .assert_number_with_name("number", args.span())?;
+
+    num.num = num.num.abs();
+
+    Ok(Value::Dimension(num))
 }
 
 pub(crate) fn comparable(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(2)?;
-    let unit1 = match args.get_err(0, "number1")? {
-        Value::Dimension(SassNumber {
-            num: _,
-            unit: u,
-            as_slash: _,
-        }) => u,
-        v => {
-            return Err((
-                format!("$number1: {} is not a number.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
-    let unit2 = match args.get_err(1, "number2")? {
-        Value::Dimension(SassNumber {
-            num: _,
-            unit: u,
-            as_slash: _,
-        }) => u,
-        v => {
-            return Err((
-                format!("$number2: {} is not a number.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
+    let unit1 = args
+        .get_err(0, "number1")?
+        .assert_number_with_name("number1", args.span())?
+        .unit;
+
+    let unit2 = args
+        .get_err(1, "number2")?
+        .assert_number_with_name("number2", args.span())?
+        .unit;
 
     Ok(Value::bool(unit1.comparable(&unit2)))
 }

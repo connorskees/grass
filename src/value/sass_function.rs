@@ -3,24 +3,15 @@
 //! Sass functions can be either user-defined or builtin.
 //!
 //! User-defined functions are those that have been implemented in Sass
-//! using the @function rule. See the documentation of `crate::atrule::Function`
+//! using the @function rule. See the documentation of [`crate::atrule::Function`]
 //! for more information.
 //!
 //! Builtin functions are those that have been implemented in rust and are
 //! in the global scope.
 
-use std::fmt;
+use std::{fmt, sync::Arc};
 
-// use codemap::Spanned;
-
-use crate::{
-    // error::SassResult,
-    ast::AstFunctionDecl,
-    // value::Value,
-    builtin::Builtin,
-    common::Identifier,
-    evaluate::Environment,
-};
+use crate::{ast::AstFunctionDecl, builtin::Builtin, common::Identifier, evaluate::Environment};
 
 /// A Sass function
 ///
@@ -39,7 +30,7 @@ pub(crate) enum SassFunction {
 
 #[derive(Debug, Clone)]
 pub(crate) struct UserDefinedFunction {
-    pub function: Box<AstFunctionDecl>,
+    pub function: Arc<AstFunctionDecl>,
     pub name: Identifier,
     pub env: Environment,
 }

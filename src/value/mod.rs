@@ -40,8 +40,7 @@ pub(crate) enum Value {
     Map(SassMap),
     ArgList(ArgList),
     /// Returned by `get-function()`
-    // todo: benchmark boxing this (function refs are infrequent)
-    FunctionRef(SassFunction),
+    FunctionRef(Box<SassFunction>),
     Calculation(SassCalculation),
 }
 

@@ -47,7 +47,7 @@ pub(crate) fn fuzzy_equals(a: f64, b: f64) -> bool {
     (a - b).abs() <= epsilon() && (a * inverse_epsilon()).round() == (b * inverse_epsilon()).round()
 }
 
-pub(crate) fn fuzzy_as_int(num: f64) -> Option<i32> {
+pub(crate) fn fuzzy_as_int(num: f64) -> Option<i64> {
     if !num.is_finite() {
         return None;
     }
@@ -55,7 +55,7 @@ pub(crate) fn fuzzy_as_int(num: f64) -> Option<i32> {
     let rounded = num.round();
 
     if fuzzy_equals(num, rounded) {
-        Some(rounded as i32)
+        Some(rounded as i64)
     } else {
         None
     }
@@ -110,14 +110,14 @@ impl Number {
         self.0.is_sign_negative() && !self.is_zero()
     }
 
-    pub fn assert_int(self, span: Span) -> SassResult<i32> {
+    pub fn assert_int(self, span: Span) -> SassResult<i64> {
         match fuzzy_as_int(self.0) {
             Some(i) => Ok(i),
             None => Err((format!("{} is not an int.", self.0), span).into()),
         }
     }
 
-    pub fn assert_int_with_name(self, name: &'static str, span: Span) -> SassResult<i32> {
+    pub fn assert_int_with_name(self, name: &'static str, span: Span) -> SassResult<i64> {
         match fuzzy_as_int(self.0) {
             Some(i) => Ok(i),
             None => Err((
