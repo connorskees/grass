@@ -839,7 +839,7 @@ impl<'a, 'c, P: StylesheetParser<'a>> ValueParser<'a, 'c, P> {
             })
         ) {
             let color = self.parse_hex_color_contents(parser)?;
-            return Ok(AstExpr::Color(Box::new(color)).span(parser.toks_mut().span_from(start)));
+            return Ok(AstExpr::Color(color).span(parser.toks_mut().span_from(start)));
         }
 
         let after_hash = parser.toks().cursor();
@@ -847,9 +847,7 @@ impl<'a, 'c, P: StylesheetParser<'a>> ValueParser<'a, 'c, P> {
         if is_hex_color(&ident) {
             parser.toks_mut().set_cursor(after_hash);
             let color = self.parse_hex_color_contents(parser)?;
-            return Ok(
-                AstExpr::Color(Box::new(color)).span(parser.toks_mut().span_from(after_hash))
-            );
+            return Ok(AstExpr::Color(color).span(parser.toks_mut().span_from(after_hash)));
         }
 
         let mut buffer = Interpolation::new();
@@ -1178,13 +1176,13 @@ impl<'a, 'c, P: StylesheetParser<'a>> ValueParser<'a, 'c, P> {
                 }
 
                 if let Some(color) = NAMED_COLORS.get_by_name(lower_ref.as_str()) {
-                    return Ok(AstExpr::Color(Box::new(Color::new(
+                    return Ok(AstExpr::Color(Color::new(
                         color[0],
                         color[1],
                         color[2],
                         color[3],
                         plain.to_owned(),
-                    )))
+                    ))
                     .span(parser.toks_mut().span_from(start)));
                 }
             }

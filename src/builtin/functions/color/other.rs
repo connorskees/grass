@@ -64,12 +64,12 @@ pub(crate) fn change_color(mut args: ArgumentResult, visitor: &mut Visitor) -> S
     opt_rgba!(args, blue, "blue", 0, 255);
 
     if red.is_some() || green.is_some() || blue.is_some() {
-        return Ok(Value::Color(Box::new(Color::from_rgba(
+        return Ok(Value::Color(Color::from_rgba(
             red.unwrap_or_else(|| color.red()),
             green.unwrap_or_else(|| color.green()),
             blue.unwrap_or_else(|| color.blue()),
             alpha.unwrap_or_else(|| color.alpha()),
-        ))));
+        )));
     }
 
     let hue = match args.default_named_arg("hue", Value::Null) {
@@ -91,16 +91,16 @@ pub(crate) fn change_color(mut args: ArgumentResult, visitor: &mut Visitor) -> S
     if hue.is_some() || saturation.is_some() || luminance.is_some() {
         // Color::as_hsla() returns more exact values than Color::hue(), etc.
         let (this_hue, this_saturation, this_luminance, this_alpha) = color.as_hsla();
-        return Ok(Value::Color(Box::new(Color::from_hsla(
+        return Ok(Value::Color(Color::from_hsla(
             hue.unwrap_or(this_hue),
             saturation.unwrap_or(this_saturation),
             luminance.unwrap_or(this_luminance),
             alpha.unwrap_or(this_alpha),
-        ))));
+        )));
     }
 
     Ok(Value::Color(if let Some(a) = alpha {
-        Box::new(color.with_alpha(a))
+        color.with_alpha(a)
     } else {
         color
     }))
@@ -124,12 +124,12 @@ pub(crate) fn adjust_color(mut args: ArgumentResult, visitor: &mut Visitor) -> S
     opt_rgba!(args, blue, "blue", -255, 255);
 
     if red.is_some() || green.is_some() || blue.is_some() {
-        return Ok(Value::Color(Box::new(Color::from_rgba(
+        return Ok(Value::Color(Color::from_rgba(
             color.red() + red.unwrap_or_else(Number::zero),
             color.green() + green.unwrap_or_else(Number::zero),
             color.blue() + blue.unwrap_or_else(Number::zero),
             color.alpha() + alpha.unwrap_or_else(Number::zero),
-        ))));
+        )));
     }
 
     let hue = match args.default_named_arg("hue", Value::Null) {
@@ -151,17 +151,17 @@ pub(crate) fn adjust_color(mut args: ArgumentResult, visitor: &mut Visitor) -> S
     if hue.is_some() || saturation.is_some() || luminance.is_some() {
         // Color::as_hsla() returns more exact values than Color::hue(), etc.
         let (this_hue, this_saturation, this_luminance, this_alpha) = color.as_hsla();
-        return Ok(Value::Color(Box::new(Color::from_hsla(
+        return Ok(Value::Color(Color::from_hsla(
             this_hue + hue.unwrap_or_else(Number::zero),
             this_saturation + saturation.unwrap_or_else(Number::zero),
             this_luminance + luminance.unwrap_or_else(Number::zero),
             this_alpha + alpha.unwrap_or_else(Number::zero),
-        ))));
+        )));
     }
 
     Ok(Value::Color(if let Some(a) = alpha {
         let temp_alpha = color.alpha();
-        Box::new(color.with_alpha(temp_alpha + a))
+        color.with_alpha(temp_alpha + a)
     } else {
         color
     }))
@@ -227,7 +227,7 @@ pub(crate) fn scale_color(mut args: ArgumentResult, visitor: &mut Visitor) -> Sa
     opt_scale_arg!(args, blue, "blue", -100, 100);
 
     if red.is_some() || green.is_some() || blue.is_some() {
-        return Ok(Value::Color(Box::new(Color::from_rgba(
+        return Ok(Value::Color(Color::from_rgba(
             scale(
                 color.red(),
                 red.unwrap_or_else(Number::zero),
@@ -248,7 +248,7 @@ pub(crate) fn scale_color(mut args: ArgumentResult, visitor: &mut Visitor) -> Sa
                 alpha.unwrap_or_else(Number::zero),
                 Number::one(),
             ),
-        ))));
+        )));
     }
 
     opt_scale_arg!(args, saturation, "saturation", -100, 100);
@@ -257,7 +257,7 @@ pub(crate) fn scale_color(mut args: ArgumentResult, visitor: &mut Visitor) -> Sa
     if saturation.is_some() || luminance.is_some() {
         // Color::as_hsla() returns more exact values than Color::hue(), etc.
         let (this_hue, this_saturation, this_luminance, this_alpha) = color.as_hsla();
-        return Ok(Value::Color(Box::new(Color::from_hsla(
+        return Ok(Value::Color(Color::from_hsla(
             scale(this_hue, Number::zero(), Number::from(360)),
             scale(
                 this_saturation,
@@ -274,12 +274,12 @@ pub(crate) fn scale_color(mut args: ArgumentResult, visitor: &mut Visitor) -> Sa
                 alpha.unwrap_or_else(Number::zero),
                 Number::one(),
             ),
-        ))));
+        )));
     }
 
     Ok(Value::Color(if let Some(a) = alpha {
         let temp_alpha = color.alpha();
-        Box::new(color.with_alpha(scale(temp_alpha, a, Number::one())))
+        color.with_alpha(scale(temp_alpha, a, Number::one()))
     } else {
         color
     }))

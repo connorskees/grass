@@ -55,7 +55,7 @@ pub(crate) enum AstExpr {
         name: CalculationName,
         args: Vec<Self>,
     },
-    Color(Box<Color>),
+    Color(Color),
     FunctionCall(FunctionCallExpr),
     If(Box<Ternary>),
     InterpolatedFunction(InterpolatedFunction),

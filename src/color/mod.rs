@@ -23,8 +23,9 @@ mod name;
 // todo: only store alpha once on color
 #[derive(Debug, Clone)]
 pub(crate) struct Color {
-    rgba: Rgba,
-    hsla: Option<Hsla>,
+    rgba: Rgb,
+    hsla: Option<Hsl>,
+    alpha: Number,
     pub format: ColorFormat,
 }
 
@@ -41,6 +42,12 @@ pub(crate) enum ColorFormat {
 
 impl PartialEq for Color {
     fn eq(&self, other: &Self) -> bool {
+        if self.alpha != other.alpha
+            && !(self.alpha >= Number::one() && other.alpha >= Number::one())
+        {
+            return false;
+        }
+
         self.rgba == other.rgba
     }
 }
@@ -56,21 +63,17 @@ impl Color {
         format: ColorFormat,
     ) -> Color {
         Color {
-            rgba: Rgba::new(red, green, blue, alpha),
+            rgba: Rgb::new(red, green, blue),
+            alpha,
             hsla: None,
             format,
         }
     }
 
-    const fn new_hsla(
-        red: Number,
-        green: Number,
-        blue: Number,
-        alpha: Number,
-        hsla: Hsla,
-    ) -> Color {
+    const fn new_hsla(red: Number, green: Number, blue: Number, alpha: Number, hsla: Hsl) -> Color {
         Color {
-            rgba: Rgba::new(red, green, blue, alpha),
+            rgba: Rgb::new(red, green, blue),
+            alpha,
             hsla: Some(hsla),
             format: ColorFormat::Infer,
         }
@@ -78,14 +81,13 @@ impl Color {
 }
 
 #[derive(Debug, Clone)]
-struct Rgba {
+struct Rgb {
     red: Number,
     green: Number,
     blue: Number,
-    alpha: Number,
 }
 
-impl PartialEq for Rgba {
+impl PartialEq for Rgb {
     fn eq(&self, other: &Self) -> bool {
         if self.red != other.red
             && !(self.red >= Number::from(255.0) && other.red >= Number::from(255.0))
@@ -102,47 +104,31 @@ impl PartialEq for Rgba {
         {
             return false;
         }
-        if self.alpha != other.alpha
-            && !(self.alpha >= Number::one() && other.alpha >= Number::one())
-        {
-            return false;
-        }
         true
     }
 }
 
-impl Eq for Rgba {}
+impl Eq for Rgb {}
 
-impl Rgba {
-    pub const fn new(red: Number, green: Number, blue: Number, alpha: Number) -> Self {
-        Rgba {
-            red,
-            green,
-            blue,
-            alpha,
-        }
-    }
-
-    pub fn alpha(&self) -> Number {
-        self.alpha
+impl Rgb {
+    pub const fn new(red: Number, green: Number, blue: Number) -> Self {
+        Rgb { red, green, blue }
     }
 }
 
 #[derive(Debug, Clone)]
-struct Hsla {
+struct Hsl {
     hue: Number,
     saturation: Number,
     luminance: Number,
-    alpha: Number,
 }
 
-impl Hsla {
-    pub const fn new(hue: Number, saturation: Number, luminance: Number, alpha: Number) -> Self {
-        Hsla {
+impl Hsl {
+    pub const fn new(hue: Number, saturation: Number, luminance: Number) -> Self {
+        Hsl {
             hue,
             saturation,
             luminance,
-            alpha,
         }
     }
 
@@ -157,18 +143,15 @@ impl Hsla {
     pub fn luminance(&self) -> Number {
         self.luminance
     }
-
-    pub fn alpha(&self) -> Number {
-        self.alpha
-    }
 }
 
 // RGBA color functions
 impl Color {
     pub fn new(red: u8, green: u8, blue: u8, alpha: u8, format: String) -> Self {
         Color {
-            rgba: Rgba::new(red.into(), green.into(), blue.into(), alpha.into()),
+            rgba: Rgb::new(red.into(), green.into(), blue.into()),
             hsla: None,
+            alpha: alpha.into(),
             format: ColorFormat::Literal(format),
         }
     }
@@ -319,7 +302,7 @@ impl Color {
 
     pub fn as_hsla(&self) -> (Number, Number, Number, Number) {
         if let Some(h) = &self.hsla {
-            return (h.hue(), h.saturation(), h.luminance(), h.alpha());
+            return (h.hue(), h.saturation(), h.luminance(), self.alpha());
         }
 
         let red = self.red() / Number::from(255.0);
@@ -394,12 +377,7 @@ impl Color {
 
     /// Create RGBA representation from HSLA values
     pub fn from_hsla(hue: Number, saturation: Number, lightness: Number, alpha: Number) -> Self {
-        let hsla = Hsla::new(
-            hue,
-            saturation.clamp(0.0, 1.0),
-            lightness.clamp(0.0, 1.0),
-            alpha,
-        );
+        let hsla = Hsl::new(hue, saturation.clamp(0.0, 1.0), lightness.clamp(0.0, 1.0));
 
         let scaled_hue = hue.0 / 360.0;
         let scaled_saturation = saturation.0.clamp(0.0, 1.0);
@@ -463,11 +441,10 @@ impl Color {
 /// Opacity color functions
 impl Color {
     pub fn alpha(&self) -> Number {
-        let a = self.rgba.alpha();
-        if a > Number::one() {
-            a / Number::from(255.0)
+        if self.alpha > Number::one() {
+            self.alpha / Number::from(255.0)
         } else {
-            a
+            self.alpha
         }
     }
 

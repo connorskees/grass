@@ -72,9 +72,9 @@ fn inner_rgb_2_arg(
 
     let color = color.assert_color_with_name("color", args.span())?;
     let alpha = alpha.assert_number_with_name("alpha", args.span())?;
-    Ok(Value::Color(Box::new(color.with_alpha(Number(
+    Ok(Value::Color(color.with_alpha(Number(
         percentage_or_unitless(&alpha, 1.0, "alpha", args.span(), visitor)?,
-    )))))
+    ))))
 }
 
 fn inner_rgb_3_arg(
@@ -120,7 +120,7 @@ fn inner_rgb_3_arg(
     let green = green.assert_number_with_name("green", span)?;
     let blue = blue.assert_number_with_name("blue", span)?;
 
-    Ok(Value::Color(Box::new(Color::from_rgba_fn(
+    Ok(Value::Color(Color::from_rgba_fn(
         Number(fuzzy_round(percentage_or_unitless(
             &red, 255.0, "red", span, visitor,
         )?)),
@@ -144,7 +144,7 @@ fn inner_rgb_3_arg(
                 .transpose()?
                 .unwrap_or(1.0),
         ),
-    ))))
+    )))
 }
 
 pub(crate) fn percentage_or_unitless(
@@ -450,7 +450,7 @@ pub(crate) fn mix(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult
                 .into())
         }
     };
-    Ok(Value::Color(Box::new(color1.mix(&color2, weight))))
+    Ok(Value::Color(color1.mix(&color2, weight)))
 }
 
 pub(crate) fn declare(f: &mut GlobalFunctionMap) {

@@ -90,12 +90,12 @@ fn hwb_inner(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Valu
         None => Number::one(),
     };
 
-    Ok(Value::Color(Box::new(Color::from_hwb(
+    Ok(Value::Color(Color::from_hwb(
         hue,
         whiteness.num,
         blackness.num,
         alpha,
-    ))))
+    )))
 }
 
 pub(crate) fn hwb(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
