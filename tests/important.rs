@@ -31,5 +31,13 @@ test!(
     "a {\n  color: !    important;\n}\n",
     "a {\n  color: !important;\n}\n"
 );
-
-// todo: loud comment between !<>i, silent comment between !<>i
+test!(
+    loud_comment_after_exclamation,
+    "a {\n  color: !/**/important;\n}\n",
+    "a {\n  color: !important;\n}\n"
+);
+test!(
+    silent_comment_after_exclamation,
+    "a {\n  color: !//\nimportant;\n}\n",
+    "a {\n  color: !important;\n}\n"
+);

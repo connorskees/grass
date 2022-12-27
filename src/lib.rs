@@ -107,13 +107,12 @@ fn raw_to_parse_error(map: &CodeMap, err: Error, unicode: bool) -> Box<Error> {
     Box::new(Error::from_loc(message, map.look_up_span(span), unicode))
 }
 
-fn from_string_with_file_name(input: String, file_name: &str, options: &Options) -> Result<String> {
+fn from_string_with_file_name<P: AsRef<Path>>(input: String, file_name: P, options: &Options) -> Result<String> {
     let mut map = CodeMap::new();
-    let file = map.add_file(file_name.to_owned(), input);
+    let path = file_name.as_ref();
+    let file = map.add_file(path.to_string_lossy().into_owned(), input);
     let empty_span = file.span.subspan(0, 0);
     let lexer = Lexer::new_from_file(&file);
-
-    let path = Path::new(file_name);
 
     let input_syntax = options
         .input_syntax
@@ -178,9 +177,9 @@ fn from_string_with_file_name(input: String, file_name: &str, options: &Options)
 /// ```
 
 #[inline]
-pub fn from_path(p: &str, options: &Options) -> Result<String> {
+pub fn from_path<P: AsRef<Path>>(p: P, options: &Options) -> Result<String> {
     from_string_with_file_name(
-        String::from_utf8(options.fs.read(Path::new(p))?)?,
+        String::from_utf8(options.fs.read(p.as_ref())?)?,
         p,
         options,
     )

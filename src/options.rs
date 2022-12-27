@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::{Fs, StdFs};
 
@@ -11,7 +11,7 @@ use crate::{Fs, StdFs};
 pub struct Options<'a> {
     pub(crate) fs: &'a dyn Fs,
     pub(crate) style: OutputStyle,
-    pub(crate) load_paths: Vec<&'a Path>,
+    pub(crate) load_paths: Vec<PathBuf>,
     pub(crate) allows_charset: bool,
     pub(crate) unicode_error_messages: bool,
     pub(crate) quiet: bool,
@@ -88,8 +88,8 @@ impl<'a> Options<'a> {
     /// This method will append a single path to the list.
     #[must_use]
     #[inline]
-    pub fn load_path(mut self, path: &'a Path) -> Self {
-        self.load_paths.push(path);
+    pub fn load_path<P: AsRef<Path>>(mut self, path: P) -> Self {
+        self.load_paths.push(path.as_ref().to_owned());
         self
     }
 
@@ -101,8 +101,11 @@ impl<'a> Options<'a> {
     /// load paths
     #[must_use]
     #[inline]
-    pub fn load_paths(mut self, paths: &'a [&'a Path]) -> Self {
-        self.load_paths.extend_from_slice(paths);
+    pub fn load_paths<P: AsRef<Path>>(mut self, paths: &[P]) -> Self {
+        for path in paths {
+            self.load_paths.push(path.as_ref().to_owned());
+        }
+
         self
     }
 
