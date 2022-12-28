@@ -120,7 +120,7 @@ impl Environment {
     }
 
     pub fn get_var(
-        &self,
+        &mut self,
         name: Spanned<Identifier>,
         namespace: Option<Spanned<Identifier>>,
     ) -> SassResult<Value> {
@@ -189,6 +189,8 @@ impl Environment {
         if !in_semi_global_scope && index == 0 {
             index = self.scopes.len() - 1;
         }
+
+        self.scopes.last_variable_index = Some((name.node, index));
 
         self.scopes.insert_var(index, name.node, value);
 

@@ -21,6 +21,7 @@ pub(crate) struct Scopes {
     mixins: Arc<RefCell<Vec<Arc<RefCell<BTreeMap<Identifier, Mixin>>>>>>,
     functions: Arc<RefCell<Vec<Arc<RefCell<BTreeMap<Identifier, SassFunction>>>>>>,
     len: Arc<Cell<usize>>,
+    pub last_variable_index: Option<(Identifier, usize)>,
 }
 
 impl Scopes {
@@ -30,6 +31,7 @@ impl Scopes {
             mixins: Arc::new(RefCell::new(vec![Arc::new(RefCell::new(BTreeMap::new()))])),
             functions: Arc::new(RefCell::new(vec![Arc::new(RefCell::new(BTreeMap::new()))])),
             len: Arc::new(Cell::new(1)),
+            last_variable_index: None,
         }
     }
 
@@ -46,6 +48,7 @@ impl Scopes {
                 (*self.functions).borrow().iter().map(Arc::clone).collect(),
             )),
             len: Arc::new(Cell::new(self.len())),
+            last_variable_index: self.last_variable_index,
         }
     }
 
@@ -62,10 +65,17 @@ impl Scopes {
         Arc::clone(&(*self.mixins).borrow()[0])
     }
 
-    pub fn find_var(&self, name: Identifier) -> Option<usize> {
+    pub fn find_var(&mut self, name: Identifier) -> Option<usize> {
         debug_assert_eq!(self.len(), (*self.variables).borrow().len());
+
+        match self.last_variable_index {
+            Some((prev_name, idx)) if prev_name == name => return Some(idx),
+            _ => {}
+        };
+
         for (idx, scope) in (*self.variables).borrow().iter().enumerate().rev() {
             if (**scope).borrow().contains_key(&name) {
+                self.last_variable_index = Some((name, idx));
                 return Some(idx);
             }
         }
@@ -99,6 +109,7 @@ impl Scopes {
         (*self.variables).borrow_mut().pop();
         (*self.mixins).borrow_mut().pop();
         (*self.functions).borrow_mut().pop();
+        self.last_variable_index = None;
     }
 }
 
@@ -116,16 +127,29 @@ impl Scopes {
     /// Used, for example, for variables from `@each` and `@for`
     pub fn insert_var_last(&mut self, name: Identifier, v: Value) -> Option<Value> {
         debug_assert_eq!(self.len(), (*self.variables).borrow().len());
-        (*(*self.variables).borrow_mut()[self.len() - 1])
+        let last_idx = self.len() - 1;
+        self.last_variable_index = Some((name, last_idx));
+        (*(*self.variables).borrow_mut()[last_idx])
             .borrow_mut()
             .insert(name, v)
     }
 
-    pub fn get_var(&self, name: Spanned<Identifier>) -> SassResult<Value> {
+    pub fn get_var(&mut self, name: Spanned<Identifier>) -> SassResult<Value> {
         debug_assert_eq!(self.len(), (*self.variables).borrow().len());
-        for scope in (*self.variables).borrow().iter().rev() {
+
+        match self.last_variable_index {
+            Some((prev_name, idx)) if prev_name == name.node => {
+                return Ok((*(*self.variables).borrow()[idx]).borrow()[&name.node].clone());
+            }
+            _ => {}
+        };
+
+        for (idx, scope) in (*self.variables).borrow().iter().enumerate().rev() {
             match (**scope).borrow().get(&name.node) {
-                Some(var) => return Ok(var.clone()),
+                Some(var) => {
+                    self.last_variable_index = Some((name.node, idx));
+                    return Ok(var.clone());
+                }
                 None => continue,
             }
         }
