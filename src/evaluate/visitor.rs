@@ -1703,9 +1703,9 @@ impl<'a> Visitor<'a> {
                 .into());
         }
 
-        let from = from_number.num().assert_int(from_span)?;
+        let from = from_number.num.assert_int(from_span)?;
         let mut to = to_number
-            .num()
+            .num
             .convert(to_number.unit(), from_number.unit())
             .assert_int(to_span)?;
 

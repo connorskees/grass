@@ -60,9 +60,9 @@ fn hsl_3_args(
     )?;
 
     Ok(Value::Color(Box::new(Color::from_hsla_fn(
-        Number(hue.num().rem_euclid(360.0)),
-        saturation.num() / Number(100.0),
-        lightness.num() / Number(100.0),
+        Number(hue.num.rem_euclid(360.0)),
+        saturation.num / Number(100.0),
+        lightness.num / Number(100.0),
         Number(alpha),
     ))))
 }
@@ -179,7 +179,7 @@ pub(crate) fn adjust_hue(mut args: ArgumentResult, visitor: &mut Visitor) -> Sas
     let degrees = args
         .get_err(1, "degrees")?
         .assert_number_with_name("degrees", args.span())?
-        .num();
+        .num;
 
     Ok(Value::Color(Box::new(color.adjust_hue(degrees))))
 }
@@ -200,7 +200,7 @@ fn lighten(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value>
     let amount = args
         .get_err(1, "amount")?
         .assert_number_with_name("amount", args.span())?;
-    let amount = bound!(args, "amount", amount.num(), amount.unit, 0, 100) / Number(100.0);
+    let amount = bound!(args, "amount", amount.num, amount.unit, 0, 100) / Number(100.0);
 
     Ok(Value::Color(Box::new(color.lighten(amount))))
 }

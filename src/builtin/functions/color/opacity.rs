@@ -109,7 +109,7 @@ fn opacify(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value>
         .get_err(1, "amount")?
         .assert_number_with_name("amount", args.span())?;
 
-    let amount = bound!(args, "amount", amount.num(), amount.unit(), 0, 1);
+    let amount = bound!(args, "amount", amount.num, amount.unit(), 0, 1);
 
     Ok(Value::Color(Box::new(color.fade_in(amount))))
 }

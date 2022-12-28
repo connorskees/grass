@@ -1,7 +1,5 @@
 use codemap::Spanned;
 
-use crate::token::Token;
-
 use super::AstExpr;
 
 #[derive(Debug, Clone)]
@@ -36,7 +34,6 @@ impl Interpolation {
         self.contents.push(InterpolationPart::Expr(expr));
     }
 
-    // todo: cow?
     pub fn add_string(&mut self, s: String) {
         match self.contents.last_mut() {
             Some(InterpolationPart::String(existing)) => *existing += &s,

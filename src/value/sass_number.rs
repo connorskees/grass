@@ -179,11 +179,6 @@ impl SassNumber {
     }
 
     // todo: remove
-    pub fn num(&self) -> Number {
-        self.num
-    }
-
-    // todo: remove
     pub fn unit(&self) -> &Unit {
         &self.unit
     }

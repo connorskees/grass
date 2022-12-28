@@ -101,8 +101,8 @@ impl SassCalculation {
                 }
                 CalculationArg::Number(n)
                     if minimum.is_none()
-                        || minimum.as_ref().unwrap().num()
-                            > n.num().convert(&n.unit, &minimum.as_ref().unwrap().unit) =>
+                        || minimum.as_ref().unwrap().num
+                            > n.num.convert(&n.unit, &minimum.as_ref().unwrap().unit) =>
                 {
                     minimum = Some(n.clone());
                 }
@@ -145,8 +145,8 @@ impl SassCalculation {
                 }
                 CalculationArg::Number(n)
                     if maximum.is_none()
-                        || maximum.as_ref().unwrap().num()
-                            < n.num().convert(&n.unit, &maximum.as_ref().unwrap().unit) =>
+                        || maximum.as_ref().unwrap().num
+                            < n.num.convert(&n.unit, &maximum.as_ref().unwrap().unit) =>
                 {
                     maximum = Some(n.clone());
                 }
@@ -193,11 +193,11 @@ impl SassCalculation {
                 Some(CalculationArg::Number(max)),
             ) => {
                 if min.is_comparable_to(&value) && min.is_comparable_to(&max) {
-                    if value.num <= min.num().convert(min.unit(), value.unit()) {
+                    if value.num <= min.num.convert(min.unit(), value.unit()) {
                         return Ok(Value::Dimension(min));
                     }
 
-                    if value.num >= max.num().convert(max.unit(), value.unit()) {
+                    if value.num >= max.num.convert(max.unit(), value.unit()) {
                         return Ok(Value::Dimension(max));
                     }
 

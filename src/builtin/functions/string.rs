@@ -93,7 +93,7 @@ pub(crate) fn str_slice(mut args: ArgumentResult, visitor: &mut Visitor) -> Sass
         .assert_number_with_name("start-at", span)?;
     start.assert_no_units("start-at", span)?;
 
-    let start = start.num().assert_int(span)?;
+    let start = start.num.assert_int(span)?;
 
     let start = if start == 0 {
         1
@@ -117,7 +117,7 @@ pub(crate) fn str_slice(mut args: ArgumentResult, visitor: &mut Visitor) -> Sass
 
     end.assert_no_units("end-at", span)?;
 
-    let mut end = end.num().assert_int(span)?;
+    let mut end = end.num.assert_int(span)?;
 
     if end < 0 {
         end += str_len as i64 + 1;
@@ -203,7 +203,7 @@ pub(crate) fn str_insert(mut args: ArgumentResult, visitor: &mut Visitor) -> Sas
         .get_err(2, "index")?
         .assert_number_with_name("index", span)?;
     index.assert_no_units("index", span)?;
-    let index_int = index.num().assert_int_with_name("index", span)?;
+    let index_int = index.num.assert_int_with_name("index", span)?;
 
     if s1.is_empty() {
         return Ok(Value::String(substr, quotes));
