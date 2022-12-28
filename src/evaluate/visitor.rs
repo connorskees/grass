@@ -1894,23 +1894,38 @@ impl<'a> Visitor<'a> {
 
     fn perform_interpolation(
         &mut self,
-        interpolation: Interpolation,
+        mut interpolation: Interpolation,
         // todo check to emit warning if this is true
         _warn_for_color: bool,
     ) -> SassResult<String> {
-        // todo: potential optimization for contents len == 1 and no exprs
+        let result = match interpolation.contents.len() {
+            0 => String::new(),
+            1 => match interpolation.contents.pop() {
+                Some(InterpolationPart::String(s)) => s,
+                Some(InterpolationPart::Expr(e)) => {
+                    let span = e.span;
+                    let result = self.visit_expr(e.node)?;
+                    // todo: span for specific expr
+                    self.serialize(result, QuoteKind::None, span)?
+                }
+                None => unreachable!(),
+            },
+            _ => interpolation
+                .contents
+                .into_iter()
+                .map(|part| match part {
+                    InterpolationPart::String(s) => Ok(s),
+                    InterpolationPart::Expr(e) => {
+                        let span = e.span;
+                        let result = self.visit_expr(e.node)?;
+                        // todo: span for specific expr
+                        self.serialize(result, QuoteKind::None, span)
+                    }
+                })
+                .collect::<SassResult<String>>()?,
+        };
 
-        let result = interpolation.contents.into_iter().map(|part| match part {
-            InterpolationPart::String(s) => Ok(s),
-            InterpolationPart::Expr(e) => {
-                let span = e.span;
-                let result = self.visit_expr(e.node)?;
-                // todo: span for specific expr
-                self.serialize(result, QuoteKind::None, span)
-            }
-        });
-
-        result.collect()
+        Ok(result)
     }
 
     fn evaluate_to_css(
@@ -2544,23 +2559,38 @@ impl<'a> Visitor<'a> {
         Ok(self.without_slash(value))
     }
 
-    fn visit_string(&mut self, text: Interpolation, quote: QuoteKind) -> SassResult<Value> {
+    fn visit_string(&mut self, mut text: Interpolation, quote: QuoteKind) -> SassResult<Value> {
         // Don't use [performInterpolation] here because we need to get the raw text
         // from strings, rather than the semantic value.
         let old_in_supports_declaration = self.flags.in_supports_declaration();
         self.flags.set(ContextFlags::IN_SUPPORTS_DECLARATION, false);
 
-        let result = text
-            .contents
-            .into_iter()
-            .map(|part| match part {
-                InterpolationPart::String(s) => Ok(s),
-                InterpolationPart::Expr(Spanned { node, span }) => match self.visit_expr(node)? {
-                    Value::String(s, ..) => Ok(s),
-                    e => self.serialize(e, QuoteKind::None, span),
-                },
-            })
-            .collect::<SassResult<String>>()?;
+        let result = match text.contents.len() {
+            0 => String::new(),
+            1 => match text.contents.pop() {
+                Some(InterpolationPart::String(s)) => s,
+                Some(InterpolationPart::Expr(Spanned { node, span })) => {
+                    match self.visit_expr(node)? {
+                        Value::String(s, ..) => s,
+                        e => self.serialize(e, QuoteKind::None, span)?,
+                    }
+                }
+                None => unreachable!(),
+            },
+            _ => text
+                .contents
+                .into_iter()
+                .map(|part| match part {
+                    InterpolationPart::String(s) => Ok(s),
+                    InterpolationPart::Expr(Spanned { node, span }) => {
+                        match self.visit_expr(node)? {
+                            Value::String(s, ..) => Ok(s),
+                            e => self.serialize(e, QuoteKind::None, span),
+                        }
+                    }
+                })
+                .collect::<SassResult<String>>()?,
+        };
 
         self.flags.set(
             ContextFlags::IN_SUPPORTS_DECLARATION,
