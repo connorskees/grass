@@ -387,7 +387,6 @@ pub(crate) trait BaseParser<'a> {
         while let Some(tok) = self.toks().peek() {
             match tok.kind {
                 '\\' => {
-                    self.toks_mut().next();
                     buffer.push_str(&self.parse_escape(true)?);
                     wrote_newline = false;
                 }

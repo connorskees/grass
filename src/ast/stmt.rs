@@ -96,6 +96,7 @@ pub(crate) struct AstEach {
 #[derive(Debug, Clone)]
 pub(crate) struct AstMedia {
     pub query: Interpolation,
+    pub query_span: Span,
     pub body: Vec<AstStmt>,
     pub span: Span,
 }

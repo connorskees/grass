@@ -981,12 +981,15 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
     }
 
     fn parse_media_rule(&mut self, start: usize) -> SassResult<AstStmt> {
+        let query_start = self.toks().cursor();
         let query = self.parse_media_query_list()?;
+        let query_span = self.toks_mut().span_from(query_start);
 
         let body = self.with_children(Self::parse_statement)?.node;
 
         Ok(AstStmt::Media(AstMedia {
             query,
+            query_span,
             body,
             span: self.toks_mut().span_from(start),
         }))

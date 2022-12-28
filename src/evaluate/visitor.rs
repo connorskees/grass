@@ -1222,10 +1222,14 @@ impl<'a> Visitor<'a> {
         Some(queries)
     }
 
-    fn visit_media_queries(&mut self, queries: Interpolation) -> SassResult<Vec<CssMediaQuery>> {
+    fn visit_media_queries(
+        &mut self,
+        queries: Interpolation,
+        span: Span,
+    ) -> SassResult<Vec<CssMediaQuery>> {
         let resolved = self.perform_interpolation(queries, true)?;
 
-        CssMediaQuery::parse_list(&resolved, self.span_before)
+        CssMediaQuery::parse_list(&resolved, span)
     }
 
     fn visit_media_rule(&mut self, media_rule: AstMedia) -> SassResult<Option<Value>> {
@@ -1237,7 +1241,7 @@ impl<'a> Visitor<'a> {
                 .into());
         }
 
-        let queries1 = self.visit_media_queries(media_rule.query)?;
+        let queries1 = self.visit_media_queries(media_rule.query, media_rule.query_span)?;
         // todo: superfluous clone?
         let queries2 = self.media_queries.clone();
         let merged_queries = queries2

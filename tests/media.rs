@@ -561,6 +561,15 @@ test!(
     }",
     "@media (url) {\n  a {\n    color: red;\n  }\n}\n"
 );
+test!(
+    escaped_nullbyte_in_query,
+    r#"@media (min-width:\0) {
+        a {
+            color: red;
+        }
+    }"#,
+    "@media (min-width: \\0 ) {\n  a {\n    color: red;\n  }\n}\n"
+);
 error!(
     media_query_has_quoted_closing_paren,
     r#"@media ('a)'w) {
