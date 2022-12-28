@@ -1393,19 +1393,19 @@ impl<'a, 'c, P: StylesheetParser<'a>> ValueParser<'a, 'c, P> {
                 }
                 '!' | '%' | '&' | '*'..='~' | '\u{80}'..=char::MAX => {
                     parser.toks_mut().next();
-                    buffer.add_token(next);
+                    buffer.add_char(next.kind);
                 }
                 '#' => {
                     if matches!(parser.toks().peek_n(1), Some(Token { kind: '{', .. })) {
                         buffer.add_interpolation(parser.parse_single_interpolation()?);
                     } else {
                         parser.toks_mut().next();
-                        buffer.add_token(next);
+                        buffer.add_char(next.kind);
                     }
                 }
                 ')' => {
                     parser.toks_mut().next();
-                    buffer.add_token(next);
+                    buffer.add_char(next.kind);
 
                     return Ok(Some(buffer));
                 }

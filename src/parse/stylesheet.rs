@@ -1025,11 +1025,11 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
                         buffer.add_interpolation(self.parse_single_interpolation()?);
                     } else {
                         self.toks_mut().next();
-                        buffer.add_token(next);
+                        buffer.add_char(next.kind);
                     }
                 }
                 _ => {
-                    buffer.add_token(next);
+                    buffer.add_char(next.kind);
                     self.toks_mut().next();
                 }
             }
@@ -1791,7 +1791,7 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
             // Allow the "*prop: val", ":prop: val", "#prop: val", and ".prop: val"
             // hacks.
             let mut name_buffer = Interpolation::new();
-            name_buffer.add_token(self.toks_mut().next().unwrap());
+            name_buffer.add_char(self.toks_mut().next().unwrap().kind);
             name_buffer.add_string(self.raw_text(Self::whitespace));
             name_buffer.add_interpolation(self.parse_interpolated_identifier()?);
             name_buffer
@@ -1913,7 +1913,7 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
         while let Some(next) = self.toks().peek() {
             match next.kind {
                 'a'..='z' | 'A'..='Z' | '0'..='9' | '_' | '-' | '\u{80}'..=std::char::MAX => {
-                    buffer.add_token(next);
+                    buffer.add_char(next.kind);
                     self.toks_mut().next();
                 }
                 '\\' => {
@@ -1944,7 +1944,7 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
 
         match self.toks().peek() {
             Some(tok) if is_name_start(tok.kind) => {
-                buffer.add_token(tok);
+                buffer.add_char(tok.kind);
                 self.toks_mut().next();
             }
             Some(Token { kind: '\\', .. }) => {
@@ -2006,12 +2006,12 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
                         buffer.add_interpolation(self.parse_single_interpolation()?);
                     } else {
                         self.toks_mut().next();
-                        buffer.add_token(tok);
+                        buffer.add_char(tok.kind);
                     }
                 }
                 '*' => {
                     self.toks_mut().next();
-                    buffer.add_token(tok);
+                    buffer.add_char(tok.kind);
 
                     if self.scan_char('/') {
                         buffer.add_char('/');
@@ -2030,7 +2030,7 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
                     }
                 }
                 _ => {
-                    buffer.add_token(tok);
+                    buffer.add_char(tok.kind);
                     self.toks_mut().next();
                 }
             }
@@ -2073,7 +2073,7 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
                         buffer.add_string(comment);
                     } else {
                         self.toks_mut().next();
-                        buffer.add_token(tok);
+                        buffer.add_char(tok.kind);
                     }
 
                     wrote_newline = false;
@@ -2085,7 +2085,7 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
                         buffer.add_interpolation(self.parse_interpolated_identifier()?);
                     } else {
                         self.toks_mut().next();
-                        buffer.add_token(tok);
+                        buffer.add_char(tok.kind);
                     }
 
                     wrote_newline = false;
@@ -2101,7 +2101,7 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
                         )
                     {
                         self.toks_mut().next();
-                        buffer.add_token(tok);
+                        buffer.add_char(tok.kind);
                     } else {
                         self.toks_mut().next();
                     }
@@ -2124,7 +2124,7 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
                 }
                 '(' | '{' | '[' => {
                     self.toks_mut().next();
-                    buffer.add_token(tok);
+                    buffer.add_char(tok.kind);
                     brackets.push(opposite_bracket(tok.kind));
                     wrote_newline = false;
                 }
@@ -2132,7 +2132,7 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
                     if brackets.is_empty() {
                         break;
                     }
-                    buffer.add_token(tok);
+                    buffer.add_char(tok.kind);
                     self.expect_char(brackets.pop().unwrap())?;
                     wrote_newline = false;
                 }
@@ -2140,7 +2140,7 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
                     if !allow_semicolon && brackets.is_empty() {
                         break;
                     }
-                    buffer.add_token(tok);
+                    buffer.add_char(tok.kind);
                     self.toks_mut().next();
                     wrote_newline = false;
                 }
@@ -2148,7 +2148,7 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
                     if !allow_colon && brackets.is_empty() {
                         break;
                     }
-                    buffer.add_token(tok);
+                    buffer.add_char(tok.kind);
                     self.toks_mut().next();
                     wrote_newline = false;
                 }
@@ -2156,7 +2156,7 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
                     let before_url = self.toks().cursor();
 
                     if !self.scan_identifier("url", false)? {
-                        buffer.add_token(tok);
+                        buffer.add_char(tok.kind);
                         self.toks_mut().next();
                         wrote_newline = false;
                         continue;
@@ -2168,7 +2168,7 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
                         }
                         None => {
                             self.toks_mut().set_cursor(before_url);
-                            buffer.add_token(tok);
+                            buffer.add_char(tok.kind);
                             self.toks_mut().next();
                         }
                     }
@@ -2179,7 +2179,7 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
                     if self.looking_at_identifier() {
                         buffer.add_string(self.parse_identifier(false, false)?);
                     } else {
-                        buffer.add_token(tok);
+                        buffer.add_char(tok.kind);
                         self.toks_mut().next();
                     }
                     wrote_newline = false;
@@ -2336,7 +2336,7 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
             && !matches!(self.toks().peek_n(1), Some(Token { kind: '{', .. })))
         {
             starts_with_punctuation = true;
-            name_buffer.add_token(self.toks_mut().next().unwrap());
+            name_buffer.add_char(self.toks_mut().next().unwrap().kind);
             name_buffer.add_string(self.raw_text(Self::whitespace));
         }
 
@@ -2720,10 +2720,10 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
             match tok.kind {
                 '\\' => {
                     // Write a literal backslash because this text will be re-parsed.
-                    buffer.add_token(tok);
+                    buffer.add_char(tok.kind);
                     self.toks_mut().next();
                     match self.toks_mut().next() {
-                        Some(tok) => buffer.add_token(tok),
+                        Some(tok) => buffer.add_char(tok.kind),
                         None => {
                             return Err(("expected more input.", self.toks().current_span()).into())
                         }
@@ -2743,7 +2743,7 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
                             buffer.add_string(self.toks().raw_text(comment_start));
                         }
                     } else {
-                        buffer.add_token(self.toks_mut().next().unwrap());
+                        buffer.add_char(self.toks_mut().next().unwrap().kind);
                     }
                 }
                 '#' => {
@@ -2753,21 +2753,21 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
                         buffer.add_interpolation(self.parse_interpolated_identifier()?);
                     } else {
                         self.toks_mut().next();
-                        buffer.add_token(tok);
+                        buffer.add_char(tok.kind);
                     }
                 }
                 '\r' | '\n' => {
                     if self.is_indented() {
                         break;
                     }
-                    buffer.add_token(self.toks_mut().next().unwrap());
+                    buffer.add_char(self.toks_mut().next().unwrap().kind);
                 }
                 '!' | ';' | '{' | '}' => break,
                 'u' | 'U' => {
                     let before_url = self.toks().cursor();
                     if !self.scan_identifier("url", false)? {
                         self.toks_mut().next();
-                        buffer.add_token(tok);
+                        buffer.add_char(tok.kind);
                         continue;
                     }
 
@@ -2776,7 +2776,7 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
                         None => {
                             self.toks_mut().set_cursor(before_url);
                             self.toks_mut().next();
-                            buffer.add_token(tok);
+                            buffer.add_char(tok.kind);
                         }
                     }
                 }
@@ -2784,7 +2784,7 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
                     if self.looking_at_identifier() {
                         buffer.add_string(self.parse_identifier(false, false)?);
                     } else {
-                        buffer.add_token(self.toks_mut().next().unwrap());
+                        buffer.add_char(self.toks_mut().next().unwrap().kind);
                     }
                 }
             }
@@ -2914,7 +2914,7 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
                 ) {
                     let next = next.unwrap().kind;
                     buf.add_char(' ');
-                    buf.add_token(self.toks_mut().next().unwrap());
+                    buf.add_char(self.toks_mut().next().unwrap().kind);
 
                     if (next == '<' || next == '>') && self.scan_char('=') {
                         buf.add_char('=');

@@ -44,15 +44,6 @@ impl Interpolation {
         }
     }
 
-    pub fn add_token(&mut self, tok: Token) {
-        match self.contents.last_mut() {
-            Some(InterpolationPart::String(existing)) => existing.push(tok.kind),
-            _ => self
-                .contents
-                .push(InterpolationPart::String(tok.kind.to_string())),
-        }
-    }
-
     pub fn add_char(&mut self, c: char) {
         match self.contents.last_mut() {
             Some(InterpolationPart::String(existing)) => existing.push(c),
