@@ -5,16 +5,9 @@ use super::rgb::{parse_channels, ParsedChannels};
 pub(crate) fn blackness(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
 
-    let color = match args.get_err(0, "color")? {
-        Value::Color(c) => c,
-        v => {
-            return Err((
-                format!("$color: {} is not a color.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
+    let color = args
+        .get_err(0, "color")?
+        .assert_color_with_name("color", args.span())?;
 
     let blackness =
         Number(1.0) - (color.red().max(color.green()).max(color.blue()) / Number(255.0));

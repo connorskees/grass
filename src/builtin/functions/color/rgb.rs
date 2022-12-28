@@ -354,75 +354,52 @@ pub(crate) fn rgba(args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Va
 
 pub(crate) fn red(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
-    match args.get_err(0, "color")? {
-        Value::Color(c) => Ok(Value::Dimension(SassNumber {
-            num: (c.red()),
-            unit: Unit::None,
-            as_slash: None,
-        })),
-        v => Err((
-            format!("$color: {} is not a color.", v.inspect(args.span())?),
-            args.span(),
-        )
-            .into()),
-    }
+    let color = args
+        .get_err(0, "color")?
+        .assert_color_with_name("color", args.span())?;
+
+    Ok(Value::Dimension(SassNumber {
+        num: color.red(),
+        unit: Unit::None,
+        as_slash: None,
+    }))
 }
 
 pub(crate) fn green(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
-    match args.get_err(0, "color")? {
-        Value::Color(c) => Ok(Value::Dimension(SassNumber {
-            num: (c.green()),
-            unit: Unit::None,
-            as_slash: None,
-        })),
-        v => Err((
-            format!("$color: {} is not a color.", v.inspect(args.span())?),
-            args.span(),
-        )
-            .into()),
-    }
+    let color = args
+        .get_err(0, "color")?
+        .assert_color_with_name("color", args.span())?;
+
+    Ok(Value::Dimension(SassNumber {
+        num: color.green(),
+        unit: Unit::None,
+        as_slash: None,
+    }))
 }
 
 pub(crate) fn blue(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
-    match args.get_err(0, "color")? {
-        Value::Color(c) => Ok(Value::Dimension(SassNumber {
-            num: (c.blue()),
-            unit: Unit::None,
-            as_slash: None,
-        })),
-        v => Err((
-            format!("$color: {} is not a color.", v.inspect(args.span())?),
-            args.span(),
-        )
-            .into()),
-    }
+    let color = args
+        .get_err(0, "color")?
+        .assert_color_with_name("color", args.span())?;
+
+    Ok(Value::Dimension(SassNumber {
+        num: color.blue(),
+        unit: Unit::None,
+        as_slash: None,
+    }))
 }
 
 pub(crate) fn mix(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(3)?;
-    let color1 = match args.get_err(0, "color1")? {
-        Value::Color(c) => c,
-        v => {
-            return Err((
-                format!("$color1: {} is not a color.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
+    let color1 = args
+        .get_err(0, "color1")?
+        .assert_color_with_name("color1", args.span())?;
 
-    let color2 = match args.get_err(1, "color2")? {
-        Value::Color(c) => c,
-        v => {
-            return Err((
-                format!("$color2: {} is not a color.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
+    let color2 = args
+        .get_err(1, "color2")?
+        .assert_color_with_name("color2", args.span())?;
 
     let weight = match args.default_arg(
         2,

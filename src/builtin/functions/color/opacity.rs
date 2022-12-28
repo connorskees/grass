@@ -34,7 +34,7 @@ pub(crate) fn alpha(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResu
     if args.len() <= 1 {
         match args.get_err(0, "color")? {
             Value::Color(c) => Ok(Value::Dimension(SassNumber {
-                num: (c.alpha()),
+                num: c.alpha(),
                 unit: Unit::None,
                 as_slash: None,
             })),
@@ -73,7 +73,7 @@ pub(crate) fn opacity(mut args: ArgumentResult, visitor: &mut Visitor) -> SassRe
     match args.get_err(0, "color")? {
         Value::Dimension(SassNumber { num: n, .. }) if n.is_nan() => todo!(),
         Value::Color(c) => Ok(Value::Dimension(SassNumber {
-            num: (c.alpha()),
+            num: c.alpha(),
             unit: Unit::None,
             as_slash: None,
         })),
@@ -95,16 +95,9 @@ pub(crate) fn opacity(mut args: ArgumentResult, visitor: &mut Visitor) -> SassRe
 
 fn opacify(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(2)?;
-    let color = match args.get_err(0, "color")? {
-        Value::Color(c) => c,
-        v => {
-            return Err((
-                format!("$color: {} is not a color.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
+    let color = args
+        .get_err(0, "color")?
+        .assert_color_with_name("color", args.span())?;
     let amount = args
         .get_err(1, "amount")?
         .assert_number_with_name("amount", args.span())?;
@@ -116,16 +109,9 @@ fn opacify(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value>
 
 fn transparentize(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(2)?;
-    let color = match args.get_err(0, "color")? {
-        Value::Color(c) => c,
-        v => {
-            return Err((
-                format!("$color: {} is not a color.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
+    let color = args
+        .get_err(0, "color")?
+        .assert_color_with_name("color", args.span())?;
     let amount = match args.get_err(1, "amount")? {
         Value::Dimension(SassNumber { num: n, .. }) if n.is_nan() => todo!(),
         Value::Dimension(SassNumber {

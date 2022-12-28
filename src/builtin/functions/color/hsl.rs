@@ -125,50 +125,41 @@ pub(crate) fn hsla(args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Va
 
 pub(crate) fn hue(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
-    match args.get_err(0, "color")? {
-        Value::Color(c) => Ok(Value::Dimension(SassNumber {
-            num: (c.hue()),
-            unit: Unit::Deg,
-            as_slash: None,
-        })),
-        v => Err((
-            format!("$color: {} is not a color.", v.inspect(args.span())?),
-            args.span(),
-        )
-            .into()),
-    }
+    let color = args
+        .get_err(0, "color")?
+        .assert_color_with_name("color", args.span())?;
+
+    Ok(Value::Dimension(SassNumber {
+        num: color.hue(),
+        unit: Unit::Deg,
+        as_slash: None,
+    }))
 }
 
 pub(crate) fn saturation(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
-    match args.get_err(0, "color")? {
-        Value::Color(c) => Ok(Value::Dimension(SassNumber {
-            num: (c.saturation()),
-            unit: Unit::Percent,
-            as_slash: None,
-        })),
-        v => Err((
-            format!("$color: {} is not a color.", v.inspect(args.span())?),
-            args.span(),
-        )
-            .into()),
-    }
+    let color = args
+        .get_err(0, "color")?
+        .assert_color_with_name("color", args.span())?;
+
+    Ok(Value::Dimension(SassNumber {
+        num: color.saturation(),
+        unit: Unit::Percent,
+        as_slash: None,
+    }))
 }
 
 pub(crate) fn lightness(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
-    match args.get_err(0, "color")? {
-        Value::Color(c) => Ok(Value::Dimension(SassNumber {
-            num: c.lightness(),
-            unit: Unit::Percent,
-            as_slash: None,
-        })),
-        v => Err((
-            format!("$color: {} is not a color.", v.inspect(args.span())?),
-            args.span(),
-        )
-            .into()),
-    }
+    let color = args
+        .get_err(0, "color")?
+        .assert_color_with_name("color", args.span())?;
+
+    Ok(Value::Dimension(SassNumber {
+        num: color.lightness(),
+        unit: Unit::Percent,
+        as_slash: None,
+    }))
 }
 
 pub(crate) fn adjust_hue(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
@@ -186,16 +177,9 @@ pub(crate) fn adjust_hue(mut args: ArgumentResult, visitor: &mut Visitor) -> Sas
 
 fn lighten(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(2)?;
-    let color = match args.get_err(0, "color")? {
-        Value::Color(c) => c,
-        v => {
-            return Err((
-                format!("$color: {} is not a color.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
+    let color = args
+        .get_err(0, "color")?
+        .assert_color_with_name("color", args.span())?;
 
     let amount = args
         .get_err(1, "amount")?
@@ -207,16 +191,10 @@ fn lighten(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value>
 
 fn darken(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(2)?;
-    let color = match args.get_err(0, "color")? {
-        Value::Color(c) => c,
-        v => {
-            return Err((
-                format!("$color: {} is not a color.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
+    let color = args
+        .get_err(0, "color")?
+        .assert_color_with_name("color", args.span())?;
+
     let amount = match args.get_err(1, "amount")? {
         Value::Dimension(SassNumber { num: n, .. }) if n.is_nan() => todo!(),
         Value::Dimension(SassNumber {
@@ -298,16 +276,9 @@ fn saturate(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value
 
 fn desaturate(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(2)?;
-    let color = match args.get_err(0, "color")? {
-        Value::Color(c) => c,
-        v => {
-            return Err((
-                format!("$color: {} is not a color.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
+    let color = args
+        .get_err(0, "color")?
+        .assert_color_with_name("color", args.span())?;
     let amount = match args.get_err(1, "amount")? {
         Value::Dimension(SassNumber { num: n, .. }) if n.is_nan() => todo!(),
         Value::Dimension(SassNumber {
@@ -356,16 +327,9 @@ pub(crate) fn grayscale(mut args: ArgumentResult, visitor: &mut Visitor) -> Sass
 
 pub(crate) fn complement(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
-    let color = match args.get_err(0, "color")? {
-        Value::Color(c) => c,
-        v => {
-            return Err((
-                format!("$color: {} is not a color.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
+    let color = args
+        .get_err(0, "color")?
+        .assert_color_with_name("color", args.span())?;
     Ok(Value::Color(Box::new(color.complement())))
 }
 

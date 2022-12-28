@@ -47,16 +47,9 @@ pub(crate) fn change_color(mut args: ArgumentResult, visitor: &mut Visitor) -> S
             .into());
     }
 
-    let color = match args.get_err(0, "color")? {
-        Value::Color(c) => c,
-        v => {
-            return Err((
-                format!("$color: {} is not a color.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
+    let color = args
+        .get_err(0, "color")?
+        .assert_color_with_name("color", args.span())?;
 
     opt_rgba!(args, alpha, "alpha", 0, 1);
     opt_rgba!(args, red, "red", 0, 255);
@@ -102,21 +95,14 @@ pub(crate) fn change_color(mut args: ArgumentResult, visitor: &mut Visitor) -> S
     Ok(Value::Color(if let Some(a) = alpha {
         Box::new(color.with_alpha(a))
     } else {
-        color
+        Box::new(color)
     }))
 }
 
 pub(crate) fn adjust_color(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
-    let color = match args.get_err(0, "color")? {
-        Value::Color(c) => c,
-        v => {
-            return Err((
-                format!("$color: {} is not a color.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
+    let color = args
+        .get_err(0, "color")?
+        .assert_color_with_name("color", args.span())?;
 
     opt_rgba!(args, alpha, "alpha", -1, 1);
     opt_rgba!(args, red, "red", -255, 255);
@@ -163,7 +149,7 @@ pub(crate) fn adjust_color(mut args: ArgumentResult, visitor: &mut Visitor) -> S
         let temp_alpha = color.alpha();
         Box::new(color.with_alpha(temp_alpha + a))
     } else {
-        color
+        Box::new(color)
     }))
 }
 
@@ -178,16 +164,9 @@ pub(crate) fn scale_color(mut args: ArgumentResult, visitor: &mut Visitor) -> Sa
     }
 
     let span = args.span();
-    let color = match args.get_err(0, "color")? {
-        Value::Color(c) => c,
-        v => {
-            return Err((
-                format!("$color: {} is not a color.", v.inspect(span)?),
-                span,
-            )
-                .into())
-        }
-    };
+    let color = args
+        .get_err(0, "color")?
+        .assert_color_with_name("color", args.span())?;
 
     macro_rules! opt_scale_arg {
         ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal) => {
@@ -277,22 +256,15 @@ pub(crate) fn scale_color(mut args: ArgumentResult, visitor: &mut Visitor) -> Sa
         let temp_alpha = color.alpha();
         Box::new(color.with_alpha(scale(temp_alpha, a, Number::one())))
     } else {
-        color
+        Box::new(color)
     }))
 }
 
 pub(crate) fn ie_hex_str(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
-    let color = match args.get_err(0, "color")? {
-        Value::Color(c) => c,
-        v => {
-            return Err((
-                format!("$color: {} is not a color.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
+    let color = args
+        .get_err(0, "color")?
+        .assert_color_with_name("color", args.span())?;
     Ok(Value::String(color.to_ie_hex_str(), QuoteKind::None))
 }
 
