@@ -327,6 +327,13 @@ error!(
     }",
     r#"Error: Expected digit."#
 );
+error!(
+    selector_is_empty_after_interpolation_is_resolved,
+    "@keyframes foo {
+        #{null} {}
+    }",
+    r#"Error: Expected number."#
+);
 
 // todo: span for this
 // @keyframes foo {

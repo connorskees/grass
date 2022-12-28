@@ -279,3 +279,12 @@ error!(
     }",
     "Error: @extend may only be used within style rules."
 );
+error!(
+    selector_is_empty_after_interpolation_is_resolved,
+    "@at-root #{null} {}", "Error: expected selector."
+);
+error!(
+    // todo: dart-sass gives error r#"Error: Expected "with" or "without"."#
+    query_is_empty_parens_after_interpolation_is_resolved,
+    "@at-root (#{null}) {}", r#"Error: Expected "without"."#
+);

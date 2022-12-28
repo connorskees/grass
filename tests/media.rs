@@ -570,3 +570,8 @@ error!(
     }"#,
     "Error: expected no more input."
 );
+error!(
+    empty_query_after_resolving_interpolation,
+    "@media #{null} {}",
+    "Error: expected no more input."
+);

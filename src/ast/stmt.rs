@@ -204,7 +204,7 @@ pub(crate) struct AstExtendRule {
 #[derive(Debug, Clone)]
 pub(crate) struct AstAtRootRule {
     pub children: Vec<AstStmt>,
-    pub query: Option<Interpolation>,
+    pub query: Option<Spanned<Interpolation>>,
     #[allow(unused)]
     pub span: Span,
 }

@@ -54,7 +54,7 @@ impl MediaQuery {
     }
 
     pub fn parse_list(list: &str, span: Span) -> SassResult<Vec<Self>> {
-        let toks = Lexer::new(list.chars().map(|x| Token::new(span, x)).collect());
+        let toks = Lexer::new(list.chars().map(|x| Token::new(span, x)).collect(), span);
 
         MediaQueryParser::new(toks).parse()
     }

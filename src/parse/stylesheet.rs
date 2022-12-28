@@ -325,12 +325,17 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
 
     fn parse_at_root_rule(&mut self, start: usize) -> SassResult<AstStmt> {
         Ok(AstStmt::AtRootRule(if self.toks_mut().next_char_is('(') {
+            let query_start = self.toks().cursor();
             let query = self.parse_at_root_query()?;
+            let query_span = self.toks_mut().span_from(query_start);
             self.whitespace()?;
             let children = self.with_children(Self::parse_statement)?.node;
 
             AstAtRootRule {
-                query: Some(query),
+                query: Some(Spanned {
+                    node: query,
+                    span: query_span,
+                }),
                 children,
                 span: self.toks_mut().span_from(start),
             }
@@ -1521,6 +1526,7 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
                 .chars()
                 .map(|x| Token::new(self.span_before(), x))
                 .collect(),
+            self.span_before(),
         );
 
         // if namespace is empty, avoid attempting to parse an identifier from

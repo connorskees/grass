@@ -969,14 +969,14 @@ impl<'a> Visitor<'a> {
 
     fn visit_at_root_rule(&mut self, mut at_root_rule: AstAtRootRule) -> SassResult<Option<Value>> {
         let query = match at_root_rule.query.clone() {
-            Some(val) => {
-                let resolved = self.perform_interpolation(val, true)?;
+            Some(query) => {
+                let resolved = self.perform_interpolation(query.node, true)?;
+
+                let span = query.span;
 
                 let query_toks = Lexer::new(
-                    resolved
-                        .chars()
-                        .map(|x| Token::new(self.span_before, x))
-                        .collect(),
+                    resolved.chars().map(|x| Token::new(span, x)).collect(),
+                    span,
                 );
 
                 AtRootQueryParser::new(query_toks).parse()?
@@ -1137,7 +1137,10 @@ impl<'a> Visitor<'a> {
         allows_placeholder: bool,
         span: Span,
     ) -> SassResult<SelectorList> {
-        let sel_toks = Lexer::new(selector_text.chars().map(|x| Token::new(span, x)).collect());
+        let sel_toks = Lexer::new(
+            selector_text.chars().map(|x| Token::new(span, x)).collect(),
+            span,
+        );
 
         SelectorParser::new(sel_toks, allows_parent, allows_placeholder, span).parse()
     }
@@ -2742,11 +2745,10 @@ impl<'a> Visitor<'a> {
         let selector_text = self.interpolation_to_value(ruleset_selector, true, true)?;
 
         if self.flags.in_keyframes() {
+            let span = ruleset.selector_span;
             let sel_toks = Lexer::new(
-                selector_text
-                    .chars()
-                    .map(|x| Token::new(self.span_before, x))
-                    .collect(),
+                selector_text.chars().map(|x| Token::new(span, x)).collect(),
+                span,
             );
             let parsed_selector =
                 KeyframesSelectorParser::new(sel_toks).parse_keyframes_selector()?;

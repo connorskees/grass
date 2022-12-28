@@ -7,8 +7,11 @@ use crate::Token;
 const FORM_FEED: char = '\x0C';
 
 #[derive(Debug, Clone)]
+// todo: remove lifetime as Cow is now superfluous
 pub(crate) struct Lexer<'a> {
     buf: Cow<'a, [Token]>,
+    /// The span to be used in the case that `buf` is empty
+    empty_span: Span,
     cursor: usize,
 }
 
@@ -37,19 +40,23 @@ impl<'a> Lexer<'a> {
     }
 
     pub fn prev_span(&self) -> Span {
-        self.buf
-            .get(self.cursor.saturating_sub(1))
-            .copied()
-            .unwrap_or_else(|| self.buf.last().copied().unwrap())
-            .pos
+        match self.buf.get(self.cursor.saturating_sub(1)) {
+            Some(tok) => tok.pos,
+            None => match self.buf.last() {
+                Some(tok) => tok.pos,
+                None => self.empty_span,
+            },
+        }
     }
 
     pub fn current_span(&self) -> Span {
-        self.buf
-            .get(self.cursor)
-            .copied()
-            .unwrap_or_else(|| self.buf.last().copied().unwrap())
-            .pos
+        match self.buf.get(self.cursor) {
+            Some(tok) => tok.pos,
+            None => match self.buf.last() {
+                Some(tok) => tok.pos,
+                None => self.empty_span,
+            },
+        }
     }
 
     pub fn peek(&self) -> Option<Token> {
@@ -131,13 +138,14 @@ impl<'a> Lexer<'a> {
         }
         .collect();
 
-        Self::new(buf)
+        Self::new(buf, file.span.subspan(0, 0))
     }
 
-    pub fn new(buf: Vec<Token>) -> Self {
+    pub fn new(buf: Vec<Token>, empty_span: Span) -> Self {
         Lexer {
             buf: Cow::Owned(buf),
             cursor: 0,
+            empty_span,
         }
     }
 }
