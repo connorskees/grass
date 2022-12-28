@@ -6,7 +6,7 @@ pub(crate) use conversion::{known_compatibilities_by_unit, UNIT_CONVERSION_TABLE
 
 mod conversion;
 
-#[derive(Clone, Debug, Eq, PartialEq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub(crate) enum Unit {
     // Absolute units
     /// Pixels
@@ -100,10 +100,13 @@ pub(crate) enum Unit {
     /// Unspecified unit
     None,
 
-    Complex {
-        numer: Vec<Unit>,
-        denom: Vec<Unit>,
-    },
+    Complex(Box<ComplexUnit>),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub(crate) struct ComplexUnit {
+    pub(crate) numer: Vec<Unit>,
+    pub(crate) denom: Vec<Unit>,
 }
 
 pub(crate) fn are_any_convertible(units1: &[Unit], units2: &[Unit]) -> bool {
@@ -138,13 +141,13 @@ impl Unit {
         } else if denom.is_empty() && numer.len() == 1 {
             numer.pop().unwrap()
         } else {
-            Unit::Complex { numer, denom }
+            Unit::Complex(Box::new(ComplexUnit { numer, denom }))
         }
     }
 
     pub fn numer_and_denom(self) -> (Vec<Unit>, Vec<Unit>) {
         match self {
-            Self::Complex { numer, denom } => (numer, denom),
+            Self::Complex(complex) => (complex.numer, complex.denom),
             Self::None => (Vec::new(), Vec::new()),
             v => (vec![v], Vec::new()),
         }
@@ -157,7 +160,7 @@ impl Unit {
     }
 
     pub fn is_complex(&self) -> bool {
-        matches!(self, Unit::Complex { numer, denom } if numer.len() != 1 || !denom.is_empty())
+        matches!(self, Unit::Complex(complex) if complex.numer.len() != 1 || !complex.denom.is_empty())
     }
 
     pub fn comparable(&self, other: &Unit) -> bool {
@@ -279,7 +282,9 @@ impl fmt::Display for Unit {
             Unit::Fr => write!(f, "fr"),
             Unit::Unknown(s) => write!(f, "{}", s),
             Unit::None => Ok(()),
-            Unit::Complex { numer, denom } => {
+            Unit::Complex(complex) => {
+                let numer = &complex.numer;
+                let denom = &complex.denom;
                 debug_assert!(
                     numer.len() > 1 || !denom.is_empty(),
                     "unsimplified complex unit"

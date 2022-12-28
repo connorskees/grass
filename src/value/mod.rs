@@ -35,7 +35,7 @@ pub(crate) enum Value {
     Null,
     Dimension(SassNumber),
     List(Vec<Value>, ListSeparator, Brackets),
-    Color(Color),
+    Color(Box<Color>),
     String(String, QuoteKind),
     Map(SassMap),
     ArgList(ArgList),
@@ -237,7 +237,7 @@ impl Value {
 
     pub fn assert_color_with_name(self, name: &str, span: Span) -> SassResult<Color> {
         match self {
-            Value::Color(c) => Ok(c),
+            Value::Color(c) => Ok(*c),
             _ => Err((
                 format!("${name}: {} is not a color.", self.inspect(span)?),
                 span,

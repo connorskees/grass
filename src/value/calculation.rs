@@ -261,8 +261,8 @@ impl SassCalculation {
         for arg in args {
             match arg {
                 CalculationArg::Number(num) => match &num.unit {
-                    Unit::Complex { numer, denom } => {
-                        if numer.len() > 1 || !denom.is_empty() {
+                    Unit::Complex(complex) => {
+                        if complex.numer.len() > 1 || !complex.denom.is_empty() {
                             let num = num.clone();
                             let value = Value::Dimension(num);
                             return Err((
