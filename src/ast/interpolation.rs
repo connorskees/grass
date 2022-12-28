@@ -36,7 +36,7 @@ impl Interpolation {
 
     pub fn add_string(&mut self, s: String) {
         match self.contents.last_mut() {
-            Some(InterpolationPart::String(existing)) => *existing += &s,
+            Some(InterpolationPart::String(existing)) => existing.push_str(&s),
             _ => self.contents.push(InterpolationPart::String(s)),
         }
     }

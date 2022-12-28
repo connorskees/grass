@@ -1,6 +1,6 @@
 use std::{
     fs::OpenOptions,
-    io::{stdin, stdout, BufWriter, Read, Write},
+    io::{stdin, stdout, Read, Write},
     path::Path,
 };
 
@@ -198,16 +198,14 @@ fn main() -> std::io::Result<()> {
 
     let (mut stdout_write, mut file_write);
     let buf_out: &mut dyn Write = if let Some(path) = matches.value_of("OUTPUT") {
-        file_write = BufWriter::new(
-            OpenOptions::new()
-                .create(true)
-                .write(true)
-                .truncate(true)
-                .open(path)?,
-        );
+        file_write = OpenOptions::new()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open(path)?;
         &mut file_write
     } else {
-        stdout_write = BufWriter::new(stdout());
+        stdout_write = stdout().lock();
         &mut stdout_write
     };
 
