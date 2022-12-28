@@ -81,7 +81,8 @@ impl ArgumentDeclaration {
                     } else {
                         "arguments"
                     },
-                    if num_positional == 1 { "was" } else { "were" }
+                    if num_positional == 1 { "was" } else { "were" },
+                    num_positional = num_positional,
                 ),
                 span,
             )
@@ -113,7 +114,7 @@ impl ArgumentDeclaration {
                         to_sentence(
                             unknown_names
                                 .into_iter()
-                                .map(|name| format!("${name}"))
+                                .map(|name| format!("${name}", name = name))
                                 .collect(),
                             "or"
                         )
@@ -234,7 +235,7 @@ impl ArgumentResult {
         if len > max {
             let mut err = String::with_capacity(50);
             #[allow(clippy::format_push_string)]
-            err.push_str(&format!("Only {} argument", max));
+            err.push_str(&format!("Only {max} argument", max = max));
             if max != 1 {
                 err.push('s');
             }

@@ -136,7 +136,8 @@ impl SassNumber {
             Err((
                 format!(
                     "${name}: Expected {} to have no units.",
-                    inspect_number(self, &Options::default(), span)?
+                    inspect_number(self, &Options::default(), span)?,
+                    name = name,
                 ),
                 span,
             )
@@ -151,7 +152,9 @@ impl SassNumber {
             Err((
                 format!(
                     "${name}: Expected {} to have unit \"{unit}\".",
-                    inspect_number(self, &Options::default(), span)?
+                    inspect_number(self, &Options::default(), span)?,
+                    name = name,
+                    unit = unit,
                 ),
                 span,
             )

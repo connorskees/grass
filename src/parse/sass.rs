@@ -511,7 +511,10 @@ impl<'a> SassParser<'a> {
 
             if child_indent != indentation {
                 return Err((
-                    format!("Inconsistent indentation, expected {child_indent} spaces."),
+                    format!(
+                        "Inconsistent indentation, expected {child_indent} spaces.",
+                        child_indent = child_indent
+                    ),
                     self.toks.current_span(),
                 )
                     .into());

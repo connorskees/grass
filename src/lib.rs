@@ -64,6 +64,8 @@ grass input.scss
     clippy::wildcard_imports,
     clippy::comparison_chain,
     clippy::bool_to_int_with_if,
+
+    unknown_lints,
 )]
 
 use std::path::Path;

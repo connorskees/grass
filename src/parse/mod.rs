@@ -20,6 +20,7 @@ mod stylesheet;
 mod value;
 
 #[derive(Debug, Clone)]
+#[allow(clippy::large_enum_variant)]
 pub(crate) enum DeclarationOrBuffer {
     Stmt(AstStmt),
     Buffer(Interpolation),

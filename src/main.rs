@@ -205,7 +205,7 @@ fn main() -> std::io::Result<()> {
             .open(path)?;
         &mut file_write
     } else {
-        stdout_write = stdout().lock();
+        stdout_write = stdout();
         &mut stdout_write
     };
 

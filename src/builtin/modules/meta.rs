@@ -57,7 +57,7 @@ fn load_css(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<()> {
             if values.contains_key(&name) {
                 // todo: write test for this
                 return Err((
-                    format!("The variable {name} was configured twice."),
+                    format!("The variable {name} was configured twice.", name = name),
                     key.span,
                 )
                     .into());

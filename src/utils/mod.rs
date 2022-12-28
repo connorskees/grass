@@ -92,6 +92,7 @@ pub(crate) fn to_sentence<T: Into<String>>(mut elems: Vec<T>, conjunction: &'sta
             .map(Into::into)
             .collect::<Vec<_>>()
             .join(", "),
-        last.into()
+        last.into(),
+        conjunction = conjunction,
     )
 }

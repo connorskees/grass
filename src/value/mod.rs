@@ -228,7 +228,11 @@ impl Value {
         match self {
             Value::Dimension(n) => Ok(n),
             _ => Err((
-                format!("${name}: {} is not a number.", self.inspect(span)?),
+                format!(
+                    "${name}: {} is not a number.",
+                    self.inspect(span)?,
+                    name = name,
+                ),
                 span,
             )
                 .into()),
@@ -239,7 +243,11 @@ impl Value {
         match self {
             Value::Color(c) => Ok(*c),
             _ => Err((
-                format!("${name}: {} is not a color.", self.inspect(span)?),
+                format!(
+                    "${name}: {} is not a color.",
+                    self.inspect(span)?,
+                    name = name,
+                ),
                 span,
             )
                 .into()),

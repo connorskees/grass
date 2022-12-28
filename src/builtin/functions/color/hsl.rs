@@ -103,15 +103,15 @@ fn inner_hsl(
         let saturation = args.get_err(1, "saturation")?;
 
         if hue.is_var() || saturation.is_var() {
-            return Ok(Value::String(
+            Ok(Value::String(
                 function_string(name, &[hue, saturation], visitor, span)?,
                 QuoteKind::None,
-            ));
+            ))
         } else {
-            return Err(("Missing argument $lightness.", args.span()).into());
+            Err(("Missing argument $lightness.", args.span()).into())
         }
     } else {
-        return hsl_3_args(name, args, visitor);
+        hsl_3_args(name, args, visitor)
     }
 }
 

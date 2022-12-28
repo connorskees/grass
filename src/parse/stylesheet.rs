@@ -1044,7 +1044,11 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
         }
 
         if !found_match {
-            return Err((format!("Expected {quote}."), self.toks().current_span()).into());
+            return Err((
+                format!("Expected {quote}.", quote = quote),
+                self.toks().current_span(),
+            )
+                .into());
         }
 
         Ok(Spanned {
@@ -1547,7 +1551,10 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
             (Ok(i), true) => Ok(Some(i)),
             _ => {
                 Err((
-                    format!("The default namespace \"{namespace}\" is not a valid Sass identifier.\n\nRecommendation: add an \"as\" clause to define an explicit namespace."),
+                    format!(
+                        "The default namespace \"{namespace}\" is not a valid Sass identifier.\n\nRecommendation: add an \"as\" clause to define an explicit namespace.", 
+                        namespace = namespace
+                    ),
                     self.toks_mut().span_from(start)
                 ).into())
             }

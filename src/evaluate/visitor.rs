@@ -474,7 +474,7 @@ impl<'a> Visitor<'a> {
 
         let children = supports_rule.children;
 
-        self.with_parent::<SassResult<()>>(
+        self.with_parent(
             css_supports_rule,
             true,
             |visitor| {
@@ -496,7 +496,7 @@ impl<'a> Visitor<'a> {
                         is_group_end: false,
                     };
 
-                    visitor.with_parent::<SassResult<()>>(
+                    visitor.with_parent(
                         ruleset,
                         false,
                         |visitor| {
@@ -529,7 +529,7 @@ impl<'a> Visitor<'a> {
         let env = Environment::new();
         let mut extension_store = ExtensionStore::new(self.span_before);
 
-        self.with_environment::<SassResult<()>>(env.new_closure(), |visitor| {
+        self.with_environment::<SassResult<()>, _>(env.new_closure(), |visitor| {
             let old_parent = visitor.parent;
             mem::swap(&mut visitor.extender, &mut extension_store);
             let old_style_rule = visitor.style_rule_ignoring_at_root.take();
@@ -698,7 +698,10 @@ impl<'a> Visitor<'a> {
         let Spanned { node: name, span } = config.first().unwrap();
 
         let msg = if name_in_error {
-            format!("${name} was not declared with !default in the @used module.")
+            format!(
+                "${name} was not declared with !default in the @used module.",
+                name = name
+            )
         } else {
             "This variable was not declared with !default in the @used module.".to_owned()
         };
@@ -907,6 +910,7 @@ impl<'a> Visitor<'a> {
     fn visit_content_rule(&mut self, content_rule: AstContentRule) -> SassResult<Option<Value>> {
         let span = content_rule.args.span;
         if let Some(content) = &self.env.content {
+            #[allow(mutable_borrow_reservation_conflict)]
             self.run_user_defined_callable(
                 MaybeEvaledArguments::Invocation(content_rule.args),
                 Arc::clone(content),
@@ -1008,7 +1012,7 @@ impl<'a> Visitor<'a> {
         // If we didn't exclude any rules, we don't need to use the copies we might
         // have created.
         if Some(root) == self.parent {
-            self.with_scope::<SassResult<()>>(false, true, |visitor| {
+            self.with_scope::<SassResult<()>, _>(false, true, |visitor| {
                 for stmt in at_root_rule.children {
                     let result = visitor.visit_stmt(stmt)?;
                     debug_assert!(result.is_none());
@@ -1053,7 +1057,7 @@ impl<'a> Visitor<'a> {
 
         let body = mem::take(&mut at_root_rule.children);
 
-        self.with_scope_for_at_root::<SassResult<()>>(inner_copy, &query, |visitor| {
+        self.with_scope_for_at_root::<SassResult<()>, _>(inner_copy, &query, |visitor| {
             for stmt in body {
                 let result = visitor.visit_stmt(stmt)?;
                 debug_assert!(result.is_none());
@@ -1065,11 +1069,11 @@ impl<'a> Visitor<'a> {
         Ok(None)
     }
 
-    fn with_scope_for_at_root<T>(
+    fn with_scope_for_at_root<T, F: FnOnce(&mut Self) -> T>(
         &mut self,
         new_parent_idx: Option<CssTreeIdx>,
         query: &AtRootQuery,
-        callback: impl FnOnce(&mut Self) -> T,
+        callback: F,
     ) -> T {
         let old_parent = self.parent;
         self.parent = new_parent_idx;
@@ -1272,7 +1276,7 @@ impl<'a> Visitor<'a> {
             false,
         );
 
-        self.with_parent::<SassResult<()>>(
+        self.with_parent(
             media_rule,
             true,
             |visitor| {
@@ -1298,7 +1302,7 @@ impl<'a> Visitor<'a> {
                                 is_group_end: false,
                             };
 
-                            visitor.with_parent::<SassResult<()>>(
+                            visitor.with_parent(
                                 ruleset,
                                 false,
                                 |visitor| {
@@ -1390,7 +1394,7 @@ impl<'a> Visitor<'a> {
             false,
         );
 
-        self.with_parent::<SassResult<()>>(
+        self.with_parent(
             stmt,
             true,
             |visitor| {
@@ -1412,7 +1416,7 @@ impl<'a> Visitor<'a> {
                         is_group_end: false,
                     };
 
-                    visitor.with_parent::<SassResult<()>>(
+                    visitor.with_parent(
                         style_rule,
                         false,
                         |visitor| {
@@ -1479,10 +1483,10 @@ impl<'a> Visitor<'a> {
         result
     }
 
-    fn with_environment<T>(
+    fn with_environment<T, F: FnOnce(&mut Self) -> T>(
         &mut self,
         env: Environment,
-        callback: impl FnOnce(&mut Self) -> T,
+        callback: F,
     ) -> T {
         let mut old_env = env;
         mem::swap(&mut self.env, &mut old_env);
@@ -1491,10 +1495,10 @@ impl<'a> Visitor<'a> {
         val
     }
 
-    fn add_child(
+    fn add_child<F: Fn(&CssStmt) -> bool>(
         &mut self,
         node: CssStmt,
-        through: Option<impl Fn(&CssStmt) -> bool>,
+        through: Option<F>,
     ) -> CssTreeIdx {
         if self.parent.is_none() || self.parent == Some(CssTree::ROOT) {
             return self.css_tree.add_stmt(node, self.parent);
@@ -1530,15 +1534,15 @@ impl<'a> Visitor<'a> {
         self.css_tree.add_child(node, parent)
     }
 
-    fn with_parent<T>(
+    fn with_parent<F: FnOnce(&mut Self) -> SassResult<()>, FT: Fn(&CssStmt) -> bool>(
         &mut self,
         parent: CssStmt,
         // default=true
         scope_when: bool,
-        callback: impl FnOnce(&mut Self) -> T,
+        callback: F,
         // todo: optional
-        through: impl Fn(&CssStmt) -> bool,
-    ) -> T {
+        through: FT,
+    ) -> SassResult<()> {
         let parent_idx = self.add_child(parent, Some(through));
         let old_parent = self.parent;
         self.parent = Some(parent_idx);
@@ -1547,13 +1551,13 @@ impl<'a> Visitor<'a> {
         result
     }
 
-    fn with_scope<T>(
+    fn with_scope<T, F: FnOnce(&mut Self) -> T>(
         &mut self,
         // default=false
         semi_global: bool,
         // default=true
         when: bool,
-        callback: impl FnOnce(&mut Self) -> T,
+        callback: F,
     ) -> T {
         let semi_global = semi_global && self.flags.in_semi_global_scope();
         let was_in_semi_global_scope = self.flags.in_semi_global_scope();
@@ -1624,7 +1628,7 @@ impl<'a> Visitor<'a> {
                     })
                 });
 
-                self.run_user_defined_callable::<_, ()>(
+                self.run_user_defined_callable::<_, (), _>(
                     MaybeEvaledArguments::Invocation(args),
                     mixin,
                     &env,
@@ -1767,7 +1771,7 @@ impl<'a> Visitor<'a> {
     }
 
     fn visit_while_stmt(&mut self, while_stmt: &AstWhile) -> SassResult<Option<Value>> {
-        self.with_scope::<SassResult<Option<Value>>>(true, true, |visitor| {
+        self.with_scope(true, true, |visitor| {
             let mut result = None;
 
             'outer: while visitor.visit_expr(while_stmt.condition.clone())?.is_true() {
@@ -2094,13 +2098,17 @@ impl<'a> Visitor<'a> {
         Ok(())
     }
 
-    fn run_user_defined_callable<F: UserDefinedCallable, V: fmt::Debug>(
+    fn run_user_defined_callable<
+        F: UserDefinedCallable,
+        V: fmt::Debug,
+        R: FnOnce(F, &mut Self) -> SassResult<V>,
+    >(
         &mut self,
         arguments: MaybeEvaledArguments,
         func: F,
         env: &Environment,
         span: Span,
-        run: impl FnOnce(F, &mut Self) -> SassResult<V>,
+        run: R,
     ) -> SassResult<V> {
         let mut evaluated = self.eval_maybe_args(arguments, span)?;
 
@@ -2110,7 +2118,7 @@ impl<'a> Visitor<'a> {
             name.push_str("()");
         }
 
-        self.with_environment::<SassResult<V>>(env.new_closure(), |visitor| {
+        self.with_environment(env.new_closure(), |visitor| {
             visitor.with_scope(false, true, move |visitor| {
                 func.arguments().verify(
                     evaluated.positional.len(),
@@ -2204,12 +2212,20 @@ impl<'a> Visitor<'a> {
                     evaluated
                         .named
                         .keys()
-                        .map(|key| format!("${key}"))
+                        .map(|key| format!("${key}", key = key))
                         .collect(),
                     "or",
                 );
 
-                Err((format!("No {argument_word} named {argument_names}."), span).into())
+                Err((
+                    format!(
+                        "No {argument_word} named {argument_names}.",
+                        argument_word = argument_word,
+                        argument_names = argument_names
+                    ),
+                    span,
+                )
+                    .into())
             })
         })
     }
@@ -2762,7 +2778,7 @@ impl<'a> Visitor<'a> {
                 body: Vec::new(),
             });
 
-            self.with_parent::<SassResult<()>>(
+            self.with_parent(
                 keyframes_ruleset,
                 true,
                 |visitor| {
@@ -2813,7 +2829,7 @@ impl<'a> Visitor<'a> {
         let old_style_rule_ignoring_at_root = self.style_rule_ignoring_at_root.take();
         self.style_rule_ignoring_at_root = Some(selector);
 
-        self.with_parent::<SassResult<()>>(
+        self.with_parent(
             rule,
             true,
             |visitor| {
@@ -2910,7 +2926,7 @@ impl<'a> Visitor<'a> {
         if !children.is_empty() {
             let old_declaration_name = self.declaration_name.take();
             self.declaration_name = Some(name);
-            self.with_scope::<SassResult<()>>(false, true, |visitor| {
+            self.with_scope::<SassResult<()>, _>(false, true, |visitor| {
                 for stmt in children {
                     let result = visitor.visit_stmt(stmt)?;
                     debug_assert!(result.is_none());

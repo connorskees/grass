@@ -245,7 +245,9 @@ impl SassCalculation {
         Err((
             format!(
                 "{len} arguments required, but only {} {was_or_were} passed.",
-                args.len()
+                args.len(),
+                len = len,
+                was_or_were = was_or_were,
             ),
             span,
         )

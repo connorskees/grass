@@ -121,7 +121,11 @@ impl Number {
         match fuzzy_as_int(self.0) {
             Some(i) => Ok(i),
             None => Err((
-                format!("${name}: {} is not an int.", self.to_string(false)),
+                format!(
+                    "${name}: {} is not an int.",
+                    self.to_string(false),
+                    name = name,
+                ),
                 span,
             )
                 .into()),

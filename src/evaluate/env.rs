@@ -263,7 +263,7 @@ impl Environment {
                 for name in (*self.scopes.global_variables()).borrow().keys() {
                     if (*module).borrow().var_exists(*name) {
                         return Err((
-                            format!("This module and the new module both define a variable named \"{name}\".")
+                            format!("This module and the new module both define a variable named \"{}\".", name = name)
                         , span).into());
                     }
                 }
