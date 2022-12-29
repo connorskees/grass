@@ -10,13 +10,12 @@ use codemap::{Span, SpanLoc};
 
 pub type SassResult<T> = Result<T, Box<SassError>>;
 
-/// `SassError`s can be either a structured error
-/// specific to `grass` or an `io::Error`.
+/// `SassError`s can be either a structured error specific to `grass` or an
+/// `io::Error`.
 ///
-/// In the former case, the best way to interact with
-/// the error is to simply print it to the user. The
-/// `Display` implementation of this kind of error
-/// mirrors that of the errors `dart-sass` emits, e.g.
+/// In the former case, the best way to interact with the error is to simply print
+/// it to the user. The `Display` implementation of this kind of error mirrors
+/// that of the errors `dart-sass` emits, e.g.
 ///```scss
 /// Error: $number: foo is not a number.
 ///     |
@@ -26,11 +25,6 @@ pub type SassResult<T> = Result<T, Box<SassError>>;
 /// ./input.scss:308:17
 ///```
 ///
-/// The file name, line number, and column are structured in
-/// such a way as to allow Visual Studio Code users to go
-/// directly to the error by simply clicking the file name.
-///
-/// Note that this is a deviation from the Sass specification.
 #[derive(Debug, Clone)]
 pub struct SassError {
     kind: SassErrorKind,
@@ -77,11 +71,31 @@ impl SassError {
 #[derive(Debug, Clone)]
 pub enum PublicSassErrorKind {
     ParseError {
+        /// The message related to this parse error.
+        ///
+        /// Error messages should only be used to assist in debugging for the
+        /// end user. They may change significantly between bugfix versions and
+        /// should not be relied on to remain stable.
+        ///
+        /// Error messages do not contain the `Error: ` prefix or pretty-printed
+        /// span and context information as is shown in the `Display` implementation.
         message: String,
         loc: SpanLoc,
+
+        /// Whether or not the user allows unicode characters to be emitted in
+        /// error messages.
+        ///
+        /// This is configurable with [`crate::Options::unicode_error_messages`]
         unicode: bool,
     },
+
+    /// Sass was unable to find the entry-point file.
+    ///
+    /// Files that cannot be found using `@import`, `@use`, and `@forward` will
+    /// emit [`Self::ParseError`]s
     IoError(Arc<io::Error>),
+
+    /// The entry-point file or an imported file was not valid UTF-8.
     FromUtf8Error(String),
 }
 

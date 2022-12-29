@@ -1,31 +1,25 @@
-//! Sass functions are those that are evaluated and return a value
-//!
-//! Sass functions can be either user-defined or builtin.
-//!
-//! User-defined functions are those that have been implemented in Sass
-//! using the @function rule. See the documentation of [`crate::atrule::Function`]
-//! for more information.
-//!
-//! Builtin functions are those that have been implemented in rust and are
-//! in the global scope.
-
 use std::{fmt, sync::Arc};
 
 use crate::{ast::AstFunctionDecl, builtin::Builtin, common::Identifier, evaluate::Environment};
 
 /// A Sass function
 ///
-/// See toplevel documentation for more information
-///
 /// The function name is stored in addition to the body
 /// for use in the builtin function `inspect()`
 #[derive(Clone, Eq, PartialEq)]
 pub(crate) enum SassFunction {
     // todo: Cow<'static>?
+    /// Builtin functions are those that have been implemented in Rust and are
+    /// in the global scope.
     Builtin(Builtin, Identifier),
+
     // todo: maybe arc?
+    /// User-defined functions are those that have been implemented in Sass using
+    /// the @function rule.
     UserDefined(UserDefinedFunction),
-    Plain { name: Identifier },
+    Plain {
+        name: Identifier,
+    },
 }
 
 #[derive(Debug, Clone)]

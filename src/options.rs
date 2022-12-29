@@ -160,7 +160,7 @@ impl<'a> Options<'a> {
 ///
 /// See [`Options::input_syntax`] for additional information
 #[non_exhaustive]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum InputSyntax {
     /// The CSS-superset SCSS syntax.
     Scss,
@@ -183,7 +183,7 @@ impl InputSyntax {
 }
 
 #[non_exhaustive]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum OutputStyle {
     /// This mode writes each selector and declaration on its own line.
     ///

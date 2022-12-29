@@ -1,6 +1,17 @@
 /*!
 This crate provides functionality for compiling [Sass](https://sass-lang.com/) to CSS.
 
+This crate targets compatability with the reference implementation in Dart. If
+upgrading from the [now deprecated](https://sass-lang.com/blog/libsass-is-deprecated)
+`libsass`, one may have to modify their stylesheets. These changes will not differ
+from those necessary to upgrade to `dart-sass`, and in general such changes should
+be quite rare.
+
+This crate is capable of compiling Bootstrap 4 and 5, bulma and bulma-scss, Bourbon,
+as well as most other large Sass libraries with complete accuracy. For the vast
+majority of use cases there should be no perceptible differences from the reference
+implementation.
+
 ## Use as library
 ```
 fn main() -> Result<(), Box<grass::Error>> {
