@@ -1,14 +1,14 @@
 [package]
 name = "grass"
-version = "0.11.2"
-description = "A near-feature-complete Sass compiler written purely in Rust"
+version = "0.12.0"
+description = "A Sass compiler written purely in Rust"
 readme = "README.md"
 license = "MIT"
 categories = ["command-line-utilities", "web-programming"]
 keywords = ["scss", "sass", "css", "web"]
 repository = "https://github.com/connorskees/grass"
 authors = ["ConnorSkees <39542938+ConnorSkees@users.noreply.github.com>"]
-edition = "2018"
+edition = "2021"
 include = ["src", "Cargo.toml", "README.md", "CHANGELOG.md", "Cargo.lock", "LICENSE"]
 default-run = "grass"
 
@@ -34,8 +34,8 @@ rand = { version = "0.8", optional = true }
 # todo: update to use text_size::TextRange
 codemap = "0.1.3"
 wasm-bindgen = { version = "0.2.68", optional = true }
-# todo: use phf for global functions
-phf = { version = "0.11", features = ["macros"] }
+# todo: benchmark using phf for global functions
+phf = { version = "0.10.1", features = ["macros"] }
 indexmap = "1.9.0"
 # todo: do we really need interning for things?
 lasso = "0.6"

@@ -1,4 +1,11 @@
-# TBD
+<!-- UPCOMING:
+
+- error when `@extend` is used across `@media` boundaries
+- more robust support for NaN in builtin functions
+
+-->
+
+# 0.12.0
 
 - complete rewrite of parsing, evaluation, and serialization steps
 - **implement the indented syntax**
@@ -44,11 +51,6 @@ a {
 - treat `@elseif` the same as `@else if`
 - implement division of non-comparable units and feature complete support for complex units
 - support 1 arg color.hwb()
-
-UPCOMING:
-
-- error when `@extend` is used across `@media` boundaries
-- more robust support for NaN in builtin functions
 
 # 0.11.2
 

@@ -67,7 +67,7 @@ npm run sass-spec -- --impl=dart-sass --command '../target/release/grass'
 
 The spec runner does not work on Windows.
 
-Using a modified version of the spec runner that ignores warnings and error spans (but does include error messages), we get the following results:
+Using a modified version of the spec runner that ignores warnings and error spans (but does include error messages), `grass` achieves the following results:
 
 ```
 2022-12-26
@@ -79,4 +79,9 @@ TOTAL: 6905
 The majority of the failing tests are purely aesthetic, relating to whitespace
 around comments in expanded mode or error messages.
 
-<!-- todo: msrv 1.41.1 -->
+## Versioning
+
+The minimum supported rust version (MSRV) of `grass` is `1.56.0`. An increase to the MSRV will correspond with a minor version bump. The current MSRV is not a hard minimum, but future bugfix
+versions of `grass` are not guaranteed to work on versions prior to this.
+
+`grass` currently targets `dart-sass` version `1.54.3`. An increase to this number will correspond to a either a minor or bugfix version bump, depending on the changes.
