@@ -1972,6 +1972,11 @@ error!(
     }",
     "Error: complex selectors may not be extended."
 );
+error!(
+    extend_at_root_of_document,
+    "@extend a;",
+    "Error: @extend may only be used within style rules."
+);
 
 // todo: extend_loop (massive test)
 // todo: extend tests in folders

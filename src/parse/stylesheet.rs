@@ -54,7 +54,7 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
             | None => Ok(()),
             _ => {
                 self.expect_char(';')?;
-                Ok(())
+                unreachable!();
             }
         }
     }

@@ -158,6 +158,12 @@ error!(
     grass::Options::default().input_syntax(InputSyntax::Css)
 );
 error!(
+    disallows_variable_decl,
+    "$bar: red;",
+    "Error: Sass variables aren't allowed in plain CSS.",
+    grass::Options::default().input_syntax(InputSyntax::Css)
+);
+error!(
     disallows_parent_selector_expr,
     "a {
         color: &;

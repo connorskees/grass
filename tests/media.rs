@@ -581,6 +581,42 @@ test!(
     }",
     ""
 );
+test!(
+    query_is_identifier_and_not_parens,
+    "@media screen and not (foo) {
+        a {
+            color: red;
+        }
+    }",
+    "@media screen and not (foo) {\n  a {\n    color: red;\n  }\n}\n"
+);
+test!(
+    query_is_identifier_identifier_and_parens,
+    "@media only screen and (foo) {
+        a {
+            color: red;
+        }
+    }",
+    "@media only screen and (foo) {\n  a {\n    color: red;\n  }\n}\n"
+);
+test!(
+    query_is_paren_and_paren,
+    "@media (foo) and (bar) {
+        a {
+            color: red;
+        }
+    }",
+    "@media (foo) and (bar) {\n  a {\n    color: red;\n  }\n}\n"
+);
+test!(
+    query_is_paren_or_paren,
+    "@media (foo) or (bar) {
+        a {
+            color: red;
+        }
+    }",
+    "@media (foo) or (bar) {\n  a {\n    color: red;\n  }\n}\n"
+);
 error!(
     media_query_has_quoted_closing_paren,
     r#"@media ('a)'w) {

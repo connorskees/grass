@@ -93,6 +93,16 @@ a
     "a {\n  color: red;\n}\n",
     grass::Options::default().input_syntax(InputSyntax::Sass)
 );
+test!(
+    style_rule_begins_with_plus,
+    r#"
+a
+    + b
+        color: red
+"#,
+    "a + b {\n  color: red;\n}\n",
+    grass::Options::default().input_syntax(InputSyntax::Sass)
+);
 error!(
     multiline_comment_in_value_position,
     r#"

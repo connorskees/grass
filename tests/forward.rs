@@ -208,3 +208,11 @@ fn member_import_precedence_top_level() {
         &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
     );
 }
+error!(
+    after_style_rule,
+    r#"
+        a {}
+        @forward "foo";
+    "#,
+    "Error: @forward rules must be written before any other rules."
+);

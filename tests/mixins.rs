@@ -647,6 +647,24 @@ test!(
     }"#,
     ".environment-locality {\n  var: before;\n  var: before;\n}\n"
 );
+test!(
+    parses_extend_inside_mixin_not_in_style_rule,
+    "@mixin foo {
+        @extend a;
+    }",
+    ""
+);
+error!(
+    parses_extend_inside_content_block_not_in_style_rule,
+    "@mixin foo {
+        @content;
+    }
+
+    @include foo {
+        @extend a;
+    }",
+    "Error: @extend may only be used within style rules."
+);
 error!(
     mixin_in_function,
     "@function foo() {
