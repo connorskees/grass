@@ -509,7 +509,11 @@ impl<'a, 'c, P: StylesheetParser<'a>> ValueParser<'a, 'c, P> {
                 kind: '\u{80}'..=std::char::MAX,
                 ..
             }) => self.parse_identifier_like(parser),
-            Some(..) | None => Err(("Expected expression.", parser.toks().current_span()).into()),
+            Some(..) | None => Err((
+                "Expected expression.",
+                parser.toks_mut().span_from(self.start),
+            )
+                .into()),
         }
     }
 
