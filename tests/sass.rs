@@ -81,6 +81,18 @@ test!(
     "/* loud */\n",
     grass::Options::default().input_syntax(InputSyntax::Sass)
 );
+test!(
+    special_mixin_and_include_characters,
+    r#"
+=foo
+    color: red
+
+a
+    +foo
+"#,
+    "a {\n  color: red;\n}\n",
+    grass::Options::default().input_syntax(InputSyntax::Sass)
+);
 error!(
     multiline_comment_in_value_position,
     r#"
@@ -88,5 +100,17 @@ $a: /*
 loud */ red
 "#,
     "Error: expected */.",
+    grass::Options::default().input_syntax(InputSyntax::Sass)
+);
+error!(
+    document_starts_with_spaces,
+    r#"    "#,
+    "Error: Indenting at the beginning of the document is illegal.",
+    grass::Options::default().input_syntax(InputSyntax::Sass)
+);
+error!(
+    document_starts_with_tab,
+    "\t",
+    "Error: Indenting at the beginning of the document is illegal.",
     grass::Options::default().input_syntax(InputSyntax::Sass)
 );

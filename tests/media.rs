@@ -570,6 +570,17 @@ test!(
     }"#,
     "@media (min-width: \\0 ) {\n  a {\n    color: red;\n  }\n}\n"
 );
+test!(
+    simple_unmergeable,
+    "a {
+        @media a {
+            @media b {
+                color: red;
+            }
+        }
+    }",
+    ""
+);
 error!(
     media_query_has_quoted_closing_paren,
     r#"@media ('a)'w) {

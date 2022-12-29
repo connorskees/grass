@@ -170,3 +170,4 @@ test!(
     "a {/**/}",
     "a { /**/ }\n"
 );
+test!(silent_comment_as_child, "a {\n// silent\n}\n", "");

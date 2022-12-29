@@ -60,7 +60,7 @@ impl<'a, 'c, P: StylesheetParser<'a>> ValueParser<'a, 'c, P> {
         }
 
         if value_parser.inside_bracketed_list {
-            let start = parser.toks().cursor();
+            let bracket_start = parser.toks().cursor();
 
             parser.expect_char('[')?;
             parser.whitespace()?;
@@ -71,13 +71,11 @@ impl<'a, 'c, P: StylesheetParser<'a>> ValueParser<'a, 'c, P> {
                     separator: ListSeparator::Undecided,
                     brackets: Brackets::Bracketed,
                 })
-                .span(parser.toks_mut().span_from(start)));
+                .span(parser.toks_mut().span_from(bracket_start)));
             }
-
-            Some(start)
-        } else {
-            None
         };
+
+        value_parser.start = parser.toks().cursor();
 
         value_parser.single_expression = Some(value_parser.parse_single_expression(parser)?);
 
@@ -392,6 +390,7 @@ impl<'a, 'c, P: StylesheetParser<'a>> ValueParser<'a, 'c, P> {
                             self.reset_state(parser)?;
                             continue;
                         }
+                        // todo: does this branch ever get hit
                     }
 
                     if self.single_expression.is_none() {
@@ -400,7 +399,7 @@ impl<'a, 'c, P: StylesheetParser<'a>> ValueParser<'a, 'c, P> {
 
                     self.resolve_space_expressions(parser)?;
 
-                    // [resolveSpaceExpressions can modify [singleExpression_], but it
+                    // [resolveSpaceExpressions] can modify [singleExpression_], but it
                     // can't set it to null`.
                     self.comma_expressions
                         .get_or_insert_with(Default::default)
@@ -1368,62 +1367,6 @@ impl<'a, 'c, P: StylesheetParser<'a>> ValueParser<'a, 'c, P> {
         .span(span))
     }
 
-    fn try_parse_url_contents(
-        parser: &mut P,
-        name: Option<String>,
-    ) -> SassResult<Option<Interpolation>> {
-        let start = parser.toks().cursor();
-
-        if !parser.scan_char('(') {
-            return Ok(None);
-        }
-
-        parser.whitespace_without_comments();
-
-        // Match Ruby Sass's behavior: parse a raw URL() if possible, and if not
-        // backtrack and re-parse as a function expression.
-        let mut buffer = Interpolation::new();
-        buffer.add_string(name.unwrap_or_else(|| "url".to_owned()));
-        buffer.add_char('(');
-
-        while let Some(next) = parser.toks().peek() {
-            match next.kind {
-                '\\' => {
-                    buffer.add_string(parser.parse_escape(false)?);
-                }
-                '!' | '%' | '&' | '*'..='~' | '\u{80}'..=char::MAX => {
-                    parser.toks_mut().next();
-                    buffer.add_char(next.kind);
-                }
-                '#' => {
-                    if matches!(parser.toks().peek_n(1), Some(Token { kind: '{', .. })) {
-                        buffer.add_interpolation(parser.parse_single_interpolation()?);
-                    } else {
-                        parser.toks_mut().next();
-                        buffer.add_char(next.kind);
-                    }
-                }
-                ')' => {
-                    parser.toks_mut().next();
-                    buffer.add_char(next.kind);
-
-                    return Ok(Some(buffer));
-                }
-                ' ' | '\t' | '\n' | '\r' => {
-                    parser.whitespace_without_comments();
-
-                    if !parser.toks().next_char_is(')') {
-                        break;
-                    }
-                }
-                _ => break,
-            }
-        }
-
-        parser.toks_mut().set_cursor(start);
-        Ok(None)
-    }
-
     pub(crate) fn try_parse_special_function(
         parser: &mut P,
         name: &str,
@@ -1466,15 +1409,13 @@ impl<'a, 'c, P: StylesheetParser<'a>> ValueParser<'a, 'c, P> {
                 buffer.add_char('(');
             }
             "url" => {
-                return Ok(
-                    ValueParser::try_parse_url_contents(parser, None)?.map(|contents| {
-                        AstExpr::String(
-                            StringExpr(contents, QuoteKind::None),
-                            parser.toks_mut().span_from(start),
-                        )
-                        .span(parser.toks_mut().span_from(start))
-                    }),
-                )
+                return Ok(parser.try_url_contents(None)?.map(|contents| {
+                    AstExpr::String(
+                        StringExpr(contents, QuoteKind::None),
+                        parser.toks_mut().span_from(start),
+                    )
+                    .span(parser.toks_mut().span_from(start))
+                }))
             }
             _ => return Ok(None),
         }

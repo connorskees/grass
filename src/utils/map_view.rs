@@ -285,7 +285,7 @@ impl<V: fmt::Debug + Clone> MapView for MergedMapView<V> {
             }
         }
 
-        panic!("New entries may not be added to MergedMapView")
+        unreachable!("New entries may not be added to MergedMapView")
     }
 
     fn keys(&self) -> Vec<Identifier> {

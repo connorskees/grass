@@ -413,6 +413,26 @@ test!(
     "a {\n  color: [];\n}\n"
 );
 test!(
+    space_separated_bracketed_list_in_parens,
+    "a {\n  color: ([a b]);\n}\n",
+    "a {\n  color: [a b];\n}\n"
+);
+test!(
+    does_not_eval_division_inside_space_separated_bracketed_list_in_parens,
+    "a {\n  color: ([1/2 1/2]);\n}\n",
+    "a {\n  color: [1/2 1/2];\n}\n"
+);
+test!(
+    comma_separated_bracketed_list_in_parens,
+    "a {\n  color: ([a, b]);\n}\n",
+    "a {\n  color: [a, b];\n}\n"
+);
+test!(
+    does_not_eval_division_inside_comma_separated_bracketed_list_in_parens,
+    "a {\n  color: ([1/2, 1/2]);\n}\n",
+    "a {\n  color: [1/2, 1/2];\n}\n"
+);
+test!(
     comma_separated_list_has_element_beginning_with_capital_A,
     "a {\n  color: a, A, \"Noto Color Emoji\";\n}\n",
     "a {\n  color: a, A, \"Noto Color Emoji\";\n}\n"

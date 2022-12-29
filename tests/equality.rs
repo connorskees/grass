@@ -267,3 +267,10 @@ test!(
     }",
     "a {\n  color: true;\n}\n"
 );
+test!(
+    calculation_equality_converts_units,
+    "a {
+      color: calc(1in + 1rem) == calc(2.54cm + 1rem);
+    }",
+    "a {\n  color: true;\n}\n"
+);

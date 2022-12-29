@@ -927,6 +927,10 @@ error!(
     denies_optional_in_selector,
     "a !optional {}", "Error: expected \"{\"."
 );
+error!(
+    child_selector_starts_with_forward_slash,
+    "a { /b { } }", "Error: expected selector."
+);
 
 // todo:
 // [attr=url] {

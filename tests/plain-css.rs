@@ -36,6 +36,32 @@ test!(
     grass::Options::default().input_syntax(InputSyntax::Css)
 );
 test!(
+    simple_calculation,
+    "a {
+        color: calc(1 + 1);
+    }",
+    "a {\n  color: 2;\n}\n",
+    grass::Options::default().input_syntax(InputSyntax::Css)
+);
+test!(
+    simple_url_import,
+    r#"@import url("foo");"#,
+    "@import url(\"foo\");\n",
+    grass::Options::default().input_syntax(InputSyntax::Css)
+);
+test!(
+    import_no_file_extension,
+    r#"@import "foo";"#,
+    "@import \"foo\";\n",
+    grass::Options::default().input_syntax(InputSyntax::Css)
+);
+test!(
+    import_with_condition,
+    r#"@import "foo" screen and (foo: bar);"#,
+    "@import \"foo\" screen and (foo: bar);\n",
+    grass::Options::default().input_syntax(InputSyntax::Css)
+);
+test!(
     does_not_evaluate_not,
     "a {
         color: not 2;
@@ -155,11 +181,29 @@ error!(
     "Error: Operators aren't allowed in plain CSS.",
     grass::Options::default().input_syntax(InputSyntax::Css)
 );
+error!(
+    disallows_interpolation,
+    "a {
+        color: a#{b}c;
+    }",
+    "Error: Interpolation isn't allowed in plain CSS.",
+    grass::Options::default().input_syntax(InputSyntax::Css)
+);
 test!(
     allows_rgb_function,
     "a {
         color: rgb(true, a, b);
     }",
     "a {\n  color: rgb(true, a, b);\n}\n",
+    grass::Options::default().input_syntax(InputSyntax::Css)
+);
+test!(
+    simple_supports,
+    "@supports (foo) {
+        a {
+            color: red;
+        }
+    }",
+    "@supports (foo) {\n  a {\n    color: red;\n  }\n}\n",
     grass::Options::default().input_syntax(InputSyntax::Css)
 );

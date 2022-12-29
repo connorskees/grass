@@ -189,9 +189,19 @@ impl SassNumber {
 
 impl PartialEq for SassNumber {
     fn eq(&self, other: &Self) -> bool {
-        self.num == other.num && self.unit == other.unit
+        if !self.unit.comparable(&other.unit) {
+            return false;
+        }
+
+        if (other.unit == Unit::None || self.unit == Unit::None) && self.unit != other.unit {
+            return false;
+        }
+
+        self.num == other.num.convert(&other.unit, &self.unit)
     }
 }
+
+impl Eq for SassNumber {}
 
 impl Add<SassNumber> for SassNumber {
     type Output = SassNumber;
@@ -285,5 +295,3 @@ impl Div<SassNumber> for SassNumber {
         self.multiply_units(self.num.0 / rhs.num.0, rhs.unit.invert())
     }
 }
-
-impl Eq for SassNumber {}

@@ -281,6 +281,27 @@ test!(
     "a {\n  color: false;\n}\n"
 );
 test!(
+    important_as_key,
+    "a {\n  color: inspect((a: b, !important: c));\n}\n",
+    "a {\n  color: (a: b, !important: c);\n}\n"
+);
+error!(
+    bang_identifier_not_important_as_key,
+    "a {\n  color: inspect((a: b, !a: c));\n}\n", r#"Error: expected ")"."#
+);
+error!(
+    bang_identifier_not_important_but_starts_with_i_as_key,
+    "a {\n  color: inspect((a: b, !i: c));\n}\n", r#"Error: Expected "important"."#
+);
+error!(
+    bang_identifier_not_important_ascii_whitespace_as_key,
+    "a {\n  color: inspect((a: b, ! : c));\n}\n", r#"Error: Expected "important"."#
+);
+error!(
+    bang_identifier_not_important_loud_comment_as_key,
+    "a {\n  color: inspect((a: b, !/**/: c));\n}\n", r#"Error: expected ")"."#
+);
+test!(
     empty_with_single_line_comments,
     "$foo: (\n  \n  // :/a.b\n  \n  );
     a {
@@ -313,4 +334,8 @@ error!(
 error!(
     denies_comma_separated_list_without_parens_as_key,
     "$map: (a: 1, b, c, d: e);", "Error: expected \":\"."
+);
+error!(
+    nothing_after_first_comma,
+    "$map: (a: b,", "Error: expected \")\"."
 );

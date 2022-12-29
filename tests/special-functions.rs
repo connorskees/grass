@@ -276,6 +276,30 @@ test!(
     "a {\n  color: calc(1dpi + 1dppx);\n}\n",
     "a {\n  color: 97dpi;\n}\n"
 );
+test!(
+    ternary_inside_calc,
+    "a {\n  color: calc(if(true, 1, unit(foo)));\n}\n",
+    "a {\n  color: 1;\n}\n"
+);
+test!(
+    retains_parens_around_var_in_calc,
+    "a {\n  color: calc((var(--a)) + 1rem);\n}\n",
+    "a {\n  color: calc((var(--a)) + 1rem);\n}\n"
+);
+test!(
+    removes_superfluous_parens_around_function_call_in_calc,
+    "a {\n  color: calc((foo(--a)) + 1rem);\n}\n",
+    "a {\n  color: calc(foo(--a) + 1rem);\n}\n"
+);
+test!(
+    calculation_inside_calc,
+    "a {\n  color: calc(calc(1px + 1rem) * calc(2px - 2in));\n}\n",
+    "a {\n  color: calc((1px + 1rem) * -190px);\n}\n"
+);
+error!(
+    escaped_close_paren_inside_calc,
+    "a {\n  color: calc(\\));\n}\n", r#"Error: Expected "(" or "."."#
+);
 error!(
     nothing_after_last_arg,
     "a { color: calc(1 + 1", r#"Error: expected "+", "-", "*", "/", or ")"."#

@@ -635,3 +635,26 @@ error!(
     single_arg_saturate_expects_number,
     "a {\n  color: saturate(red);\n}\n", "Error: $amount: red is not a number."
 );
+error!(
+    hex_color_starts_with_number_non_hex_digit_at_position_2,
+    "a {\n  color: #0zz;\n}\n", "Error: Expected hex digit."
+);
+error!(
+    hex_color_starts_with_number_non_hex_digit_at_position_3,
+    "a {\n  color: #00z;\n}\n", "Error: Expected hex digit."
+);
+test!(
+    hex_color_starts_with_number_non_hex_digit_at_position_4,
+    "a {\n  color: #000z;\n}\n",
+    "a {\n  color: #000 z;\n}\n"
+);
+test!(
+    #[ignore = "we don't emit 4 character hex colors correctly"]
+    hex_color_starts_with_number_non_hex_digit_at_position_5,
+    "a {\n  color: #0000z;\n}\n",
+    "a {\n  color: rgba(0, 0, 0, 0) z;\n}\n"
+);
+error!(
+    hex_color_starts_with_number_non_hex_digit_at_position_6,
+    "a {\n  color: #00000z;\n}\n", "Error: Expected hex digit."
+);

@@ -21,6 +21,6 @@ pub(crate) fn as_hex(c: char) -> u32 {
         '0'..='9' => c as u32 - '0' as u32,
         'A'..='F' => 10 + c as u32 - 'A' as u32,
         'a'..='f' => 10 + c as u32 - 'a' as u32,
-        _ => panic!(),
+        _ => unreachable!(),
     }
 }

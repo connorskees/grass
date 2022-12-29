@@ -273,3 +273,7 @@ error!(
     nothing_after_dot_in_value_preceded_by_minus_sign,
     "a { color: -.", "Error: Expected digit."
 );
+error!(
+    nothing_after_bang_in_space_separated_list,
+    "a { color: a !", r#"Error: Expected "important"."#
+);

@@ -171,6 +171,11 @@ test!(
     "a {\n  color: url(#);\n}\n",
     "a {\n  color: url(#);\n}\n"
 );
+test!(
+    escaped_close_paren,
+    "a {\n  color: url(\\));\n}\n",
+    "a {\n  color: url(\\));\n}\n"
+);
 error!(
     url_nothing_after_forward_slash_in_interpolation,
     "a { color: url(#{/", "Error: Expected expression."

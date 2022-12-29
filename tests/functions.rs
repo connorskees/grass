@@ -409,6 +409,13 @@ test!(
     }",
     "a {\n  color: before;\n}\n"
 );
+test!(
+    can_parse_module_variable_declaration,
+    "@function foo() {
+        foo.$bar: red;
+    }",
+    ""
+);
 error!(
     function_no_return,
     "@function foo() {}

@@ -262,6 +262,15 @@ test!(
     }",
     "@unknown {\n  .bar {\n    a: b;\n  }\n}\n"
 );
+test!(
+    query_begins_with_interpolation,
+    "a {
+        @at-root (#{wi}th: rule) {
+            color: red;
+        }
+    }",
+    "a {\n  color: red;\n}\n"
+);
 error!(
     missing_closing_curly_brace,
     "@at-root {", "Error: expected \"}\"."

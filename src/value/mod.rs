@@ -55,26 +55,8 @@ impl PartialEq for Value {
                 Value::String(s2, ..) => s1 == s2,
                 _ => false,
             },
-            Value::Dimension(SassNumber {
-                num: n,
-                unit,
-                as_slash: _,
-            }) => match other {
-                Value::Dimension(SassNumber {
-                    num: n2,
-                    unit: unit2,
-                    as_slash: _,
-                }) => {
-                    if !unit.comparable(unit2) {
-                        return false;
-                    }
-
-                    if (*unit2 == Unit::None || *unit == Unit::None) && unit != unit2 {
-                        return false;
-                    }
-
-                    *n == n2.convert(unit2, unit)
-                }
+            Value::Dimension(n1) => match other {
+                Value::Dimension(n2) => n1 == n2,
                 _ => false,
             },
             Value::List(list1, sep1, brackets1) => match other {

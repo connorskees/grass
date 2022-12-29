@@ -523,6 +523,72 @@ test!(
 );
 error!(unclosed_single_quote, r#"@import '"#, "Error: Expected '.");
 error!(unclosed_double_quote, r#"@import ""#, "Error: Expected \".");
+error!(
+    dynamic_disallowed_inside_if,
+    r#"@if true {
+        @import "foo";
+    }"#,
+    "Error: This at-rule is not allowed here."
+);
+error!(
+    dynamic_disallowed_inside_while,
+    r#"@while true {
+        @import "foo";
+    }"#,
+    "Error: This at-rule is not allowed here."
+);
+error!(
+    dynamic_disallowed_inside_for,
+    r#"@for $i from 0 through 1 {
+        @import "foo";
+    }"#,
+    "Error: This at-rule is not allowed here."
+);
+error!(
+    dynamic_disallowed_inside_each,
+    r#"@each $i in a {
+        @import "foo";
+    }"#,
+    "Error: This at-rule is not allowed here."
+);
+test!(
+    static_allowed_inside_if,
+    r#"@if true {
+        @import "foo.css";
+    }"#,
+    "@import \"foo.css\";\n"
+);
+test!(
+    static_allowed_inside_while,
+    r#"
+    $a: 0;
+    @while $a == 0 {
+        @import "foo.css";
+        $a: 1;
+    }"#,
+    "@import \"foo.css\";\n"
+);
+test!(
+    static_allowed_inside_for,
+    r#"@for $i from 0 to 1 {
+        @import "foo.css";
+    }"#,
+    "@import \"foo.css\";\n"
+);
+test!(
+    static_allowed_inside_each,
+    r#"@each $i in a {
+        @import "foo.css";
+    }"#,
+    "@import \"foo.css\";\n"
+);
+error!(
+    dynamic_disallowed_inside_mixin,
+    r#"@mixin foo {
+        @import "foo";
+    }"#,
+    "Error: This at-rule is not allowed here."
+);
 
 // todo: edge case tests for plain css imports moved to top
 // todo: test for calling paths, e.g. `grass b\index.scss`
