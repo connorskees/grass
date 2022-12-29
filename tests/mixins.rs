@@ -701,3 +701,9 @@ error!(
     @include meta.load-css("") {}"#,
     "Error: Mixin doesn't accept a content block."
 );
+error!(
+    disallows_interpolation_in_include_name,
+    r#"@mixin foo {}
+    @include f#{o}o;"#,
+    "Error: expected \";\"."
+);
