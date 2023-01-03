@@ -316,7 +316,7 @@ pub(crate) fn call(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResul
         }
     };
 
-    args.remove_positional(0).unwrap();
+    args.remove_positional(0);
 
     visitor.run_function_callable_with_maybe_evaled(*func, MaybeEvaledArguments::Evaled(args), span)
 }

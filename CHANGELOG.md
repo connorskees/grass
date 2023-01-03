@@ -12,6 +12,7 @@
 - support `$whiteness` and `$blackness` as arguments to `scale-color(..)`
 - more accurate list separator from `join(..)`
 - resolve unicode edge cases in `str-index(..)`
+- more robust support for `@forward` prefixes
 
 # 0.12.0
 

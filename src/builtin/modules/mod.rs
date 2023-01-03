@@ -14,7 +14,7 @@ use crate::{
     error::SassResult,
     evaluate::{Environment, Visitor},
     selector::ExtensionStore,
-    utils::{BaseMapView, MapView, MergedMapView, PublicMemberMapView},
+    utils::{BaseMapView, MapView, MergedMapView, PrefixedMapView, PublicMemberMapView},
     value::{SassFunction, SassMap, Value},
 };
 
@@ -36,6 +36,61 @@ pub(crate) struct ForwardedModule {
 }
 
 impl ForwardedModule {
+    pub fn new(module: Arc<RefCell<Module>>, rule: AstForwardRule) -> Self {
+        let scope = (*module).borrow().scope();
+
+        let variables = Self::forwarded_map(
+            scope.variables,
+            rule.prefix.as_deref(),
+            rule.shown_variables.as_ref(),
+            rule.hidden_variables.as_ref(),
+        );
+
+        let functions = Self::forwarded_map(
+            scope.functions,
+            rule.prefix.as_deref(),
+            rule.shown_mixins_and_functions.as_ref(),
+            rule.hidden_mixins_and_functions.as_ref(),
+        );
+
+        let mixins = Self::forwarded_map(
+            scope.mixins,
+            rule.prefix.as_deref(),
+            rule.shown_mixins_and_functions.as_ref(),
+            rule.hidden_mixins_and_functions.as_ref(),
+        );
+
+        (*module).borrow_mut().set_scope(ModuleScope {
+            variables,
+            mixins,
+            functions,
+        });
+
+        ForwardedModule {
+            inner: module,
+            forward_rule: rule,
+        }
+    }
+
+    fn forwarded_map<T: Clone + fmt::Debug + 'static>(
+        mut map: Arc<dyn MapView<Value = T>>,
+        prefix: Option<&str>,
+        safelist: Option<&HashSet<Identifier>>,
+        blocklist: Option<&HashSet<Identifier>>,
+    ) -> Arc<dyn MapView<Value = T>> {
+        debug_assert!(safelist.is_none() || blocklist.is_none());
+
+        if prefix.is_none() && safelist.is_none() && blocklist.is_none() {
+            return map;
+        }
+
+        if let Some(prefix) = prefix {
+            map = Arc::new(PrefixedMapView(map, prefix.to_owned()));
+        }
+
+        map
+    }
+
     pub fn if_necessary(
         module: Arc<RefCell<Module>>,
         rule: AstForwardRule,
@@ -54,10 +109,9 @@ impl ForwardedModule {
         {
             module
         } else {
-            Arc::new(RefCell::new(Module::Forwarded(ForwardedModule {
-                inner: module,
-                forward_rule: rule,
-            })))
+            Arc::new(RefCell::new(Module::Forwarded(ForwardedModule::new(
+                module, rule,
+            ))))
         }
     }
 }
@@ -229,6 +283,13 @@ impl Module {
         match self {
             Self::Builtin { scope } | Self::Environment { scope, .. } => scope.clone(),
             Self::Forwarded(forwarded) => (*forwarded.inner).borrow().scope(),
+        }
+    }
+
+    fn set_scope(&mut self, new_scope: ModuleScope) {
+        match self {
+            Self::Builtin { scope } | Self::Environment { scope, .. } => *scope = new_scope,
+            Self::Forwarded(forwarded) => (*forwarded.inner).borrow_mut().set_scope(new_scope),
         }
     }
 

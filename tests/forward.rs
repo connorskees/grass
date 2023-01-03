@@ -208,6 +208,115 @@ fn member_import_precedence_top_level() {
         &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
     );
 }
+
+#[test]
+fn member_as_function() {
+    let mut fs = TestFs::new();
+
+    fs.add_file("_midstream.scss", r#"@forward "upstream" as d-*;"#);
+    fs.add_file(
+        "_upstream.scss",
+        r#"
+            @function c() {
+                @return e;
+            }
+        "#,
+    );
+
+    let input = r#"
+        @use "midstream";
+
+        a {
+            b: midstream.d-c();
+        }
+    "#;
+
+    assert_eq!(
+        "a {\n  b: e;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
+    );
+}
+
+#[test]
+fn member_as_mixin() {
+    let mut fs = TestFs::new();
+
+    fs.add_file("_midstream.scss", r#"@forward "upstream" as b-*;"#);
+    fs.add_file(
+        "_upstream.scss",
+        r#"
+            @mixin a() {
+                c {
+                    d: e
+                }
+            }
+        "#,
+    );
+
+    let input = r#"
+        @use "midstream";
+
+        @include midstream.b-a;
+    "#;
+
+    assert_eq!(
+        "c {\n  d: e;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
+    );
+}
+
+#[test]
+fn member_as_variable_use() {
+    let mut fs = TestFs::new();
+
+    fs.add_file("_midstream.scss", r#"@forward "upstream" as d-*;"#);
+    fs.add_file(
+        "_upstream.scss",
+        r#"
+            $c: e;
+        "#,
+    );
+
+    let input = r#"
+        @use "midstream";
+
+        a {b: midstream.$d-c}
+    "#;
+
+    assert_eq!(
+        "a {\n  b: e;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
+    );
+}
+
+#[test]
+fn member_as_variable_assignment_toplevel() {
+    let mut fs = TestFs::new();
+
+    fs.add_file("_midstream.scss", r#"@forward "upstream" as d-*;"#);
+    fs.add_file(
+        "_upstream.scss",
+        r#"
+            $a: old value;
+
+            @function get-a() {@return $a}
+        "#,
+    );
+
+    let input = r#"
+        @use "midstream";
+
+        midstream.$d-a: new value;
+
+        b {c: midstream.d-get-a()};
+    "#;
+
+    assert_eq!(
+        "b {\n  c: new value;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
+    );
+}
+
 error!(
     after_style_rule,
     r#"

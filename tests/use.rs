@@ -587,4 +587,57 @@ fn use_with_through_forward_multiple() {
     );
 }
 
+#[test]
+fn module_functions_empty() {
+    let mut fs = TestFs::new();
+
+    fs.add_file("_other.scss", r#""#);
+
+    let input = r#"
+        @use "sass:meta";
+        @use "other";
+
+        a {
+            b: meta.inspect(meta.module-functions("other"))
+        }
+    "#;
+
+    assert_eq!(
+        "a {\n  b: ();\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
+    );
+}
+
+#[test]
+fn module_functions_through_forward() {
+    let mut fs = TestFs::new();
+
+    fs.add_file(
+        "_a.scss",
+        r#"
+        @forward "b";
+    "#,
+    );
+    fs.add_file(
+        "_b.scss",
+        r#"
+        @function foo() {}
+    "#,
+    );
+
+    let input = r#"
+        @use "sass:meta";
+        @use "a";
+
+        a {
+            b: meta.inspect(meta.module-functions("a"))
+        }
+    "#;
+
+    assert_eq!(
+        "a {\n  b: (\"foo\": get-function(\"foo\"));\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
+    );
+}
+
 // todo: refactor these tests to use testfs where possible

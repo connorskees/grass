@@ -314,5 +314,19 @@ test!(
     }",
     "a {\n  color: true;\n}\n"
 );
+error!(
+    call_single_arg_is_named,
+    "a {
+      color: call($function: get-function(\"red\"));
+    }",
+    "Error: Missing argument $color."
+);
+test!(
+    call_all_args_named,
+    "a {
+      color: call($function: get-function(\"red\"), $color: #fff);
+    }",
+    "a {\n  color: 255;\n}\n"
+);
 
 // todo: if() with different combinations of named and positional args

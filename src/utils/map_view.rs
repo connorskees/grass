@@ -293,7 +293,11 @@ impl<V: fmt::Debug + Clone> MapView for MergedMapView<V> {
     }
 
     fn iter(&self) -> Vec<(Identifier, Self::Value)> {
-        unimplemented!()
+        self.1
+            .iter()
+            .copied()
+            .map(|name| (name, self.get(name).unwrap()))
+            .collect()
     }
 }
 
@@ -340,6 +344,10 @@ impl<V: fmt::Debug + Clone, T: MapView<Value = V> + Clone> MapView for PublicMem
     }
 
     fn iter(&self) -> Vec<(Identifier, Self::Value)> {
-        unimplemented!()
+        self.0
+            .iter()
+            .into_iter()
+            .filter(|(name, _)| Identifier::is_public(name))
+            .collect()
     }
 }

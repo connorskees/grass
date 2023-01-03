@@ -32,6 +32,8 @@ fn load_css(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<()> {
 
     let with = match args.default_arg(1, "with", Value::Null) {
         Value::Map(map) => Some(map),
+        Value::List(v, ..) if v.is_empty() => Some(SassMap::new()),
+        Value::ArgList(v) if v.is_empty() => Some(SassMap::new()),
         Value::Null => None,
         v => return Err((format!("$with: {} is not a map.", v.inspect(span)?), span).into()),
     };

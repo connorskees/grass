@@ -70,9 +70,9 @@ The spec runner does not work on Windows.
 Using a modified version of the spec runner that ignores warnings and error spans (but does include error messages), `grass` achieves the following results:
 
 ```
-2022-12-26
-PASSING: 6077
-FAILING: 828
+2022-01-03
+PASSING: 6118
+FAILING: 787
 TOTAL: 6905
 ```
 
