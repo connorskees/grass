@@ -43,6 +43,11 @@ error!(
     "a {\n  color: calc(/**/);\n}\n", "Error: Expected number, variable, function, or calculation."
 );
 error!(
+    calc_complex_unit,
+    "a {\n  color: calc(1% + 1px * 2px);\n}\n",
+    "Error: Number 2px*px isn't compatible with CSS calculations."
+);
+error!(
     calc_nested_parens,
     "a {\n  color: calc((((()))));\n}\n",
     "Error: Expected number, variable, function, or calculation."

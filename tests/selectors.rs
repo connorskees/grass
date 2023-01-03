@@ -885,6 +885,48 @@ test!(
     }"#,
     "\\\\ {\n  color: \\\\;\n}\n"
 );
+test!(
+    pseudo_element_double_quotes,
+    r#"::foo("red") {
+        color: &;
+    }"#,
+    "::foo(\"red\") {\n  color: ::foo(\"red\");\n}\n"
+);
+test!(
+    pseudo_element_single_quotes,
+    r#"::foo('red') {
+        color: &;
+    }"#,
+    "::foo(\"red\") {\n  color: ::foo(\"red\");\n}\n"
+);
+test!(
+    pseudo_element_loud_comments,
+    r#"::foo(/**/a/**/b/**/) {
+        color: &;
+    }"#,
+    "::foo(a/**/b/**/) {\n  color: ::foo(a/**/b/**/);\n}\n"
+);
+test!(
+    pseudo_element_forward_slash,
+    r#"::foo(/a/b/) {
+        color: &;
+    }"#,
+    "::foo(/a/b/) {\n  color: ::foo(/a/b/);\n}\n"
+);
+error!(
+    pseudo_element_interpolated_semicolon_no_brackets,
+    r#"::foo(#{";"}) {
+        color: &;
+    }"#,
+    r#"Error: expected ")"."#
+);
+test!(
+    pseudo_element_interpolated_semicolon_with_parens,
+    r#"::foo((#{";"})) {
+        color: &;
+    }"#,
+    "::foo((;)) {\n  color: ::foo((;));\n}\n"
+);
 error!(
     a_n_plus_b_n_invalid_odd,
     ":nth-child(ofdd) {\n  color: &;\n}\n", "Error: Expected \"odd\"."

@@ -9,11 +9,8 @@ pub(crate) fn blackness(mut args: ArgumentResult, visitor: &mut Visitor) -> Sass
         .get_err(0, "color")?
         .assert_color_with_name("color", args.span())?;
 
-    let blackness =
-        Number(1.0) - (color.red().max(color.green()).max(color.blue()) / Number(255.0));
-
     Ok(Value::Dimension(SassNumber {
-        num: (blackness * 100),
+        num: color.blackness() * 100,
         unit: Unit::Percent,
         as_slash: None,
     }))
@@ -26,10 +23,8 @@ pub(crate) fn whiteness(mut args: ArgumentResult, visitor: &mut Visitor) -> Sass
         .get_err(0, "color")?
         .assert_color_with_name("color", args.span())?;
 
-    let whiteness = color.red().min(color.green()).min(color.blue()) / Number(255.0);
-
     Ok(Value::Dimension(SassNumber {
-        num: (whiteness * 100),
+        num: color.whiteness() * 100,
         unit: Unit::Percent,
         as_slash: None,
     }))
@@ -102,9 +97,11 @@ pub(crate) fn hwb(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult
             visitor,
             args.span(),
         )? {
-            ParsedChannels::String(s) => {
-                Err((format!("Expected numeric channels, got {}", s), args.span()).into())
-            }
+            ParsedChannels::String(s) => Err((
+                format!("Expected numeric channels, got \"{}\"", s),
+                args.span(),
+            )
+                .into()),
             ParsedChannels::List(list) => {
                 let args = ArgumentResult {
                     positional: list,

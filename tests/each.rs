@@ -99,3 +99,7 @@ error!(
     missing_closing_curly_brace,
     "@each $i in 1 {", "Error: expected \"}\"."
 );
+error!(
+    in_has_characters_after,
+    "@each $i inaa 0 1 2 {}", "Error: Expected \"in\"."
+);

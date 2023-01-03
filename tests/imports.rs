@@ -485,6 +485,11 @@ test!(
     "@import \"foo.css\";",
     "@import \"foo.css\";\n"
 );
+test!(
+    newline_in_plain_css,
+    "@import \"fo\\\no.css\";",
+    "@import \"fo\\\no.css\";\n"
+);
 test!(import_url, "@import url(foo..);", "@import url(foo..);\n");
 test!(
     import_url_interpolation,

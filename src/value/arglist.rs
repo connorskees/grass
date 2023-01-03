@@ -44,7 +44,7 @@ impl ArgList {
     }
 
     pub fn len(&self) -> usize {
-        self.elems.len() + self.keywords.len()
+        self.elems.len()
     }
 
     pub fn is_empty(&self) -> bool {
@@ -52,7 +52,6 @@ impl ArgList {
     }
 
     pub fn is_null(&self) -> bool {
-        // todo: include keywords
         !self.is_empty() && (self.elems.iter().all(Value::is_null))
     }
 

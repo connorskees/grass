@@ -75,16 +75,9 @@ pub(crate) fn str_slice(mut args: ArgumentResult, visitor: &mut Visitor) -> Sass
 
     let span = args.span();
 
-    let (string, quotes) = match args.get_err(0, "string")? {
-        Value::String(s, q) => (s, q),
-        v => {
-            return Err((
-                format!("$string: {} is not a string.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
+    let (string, quotes) = args
+        .get_err(0, "string")?
+        .assert_string_with_name("string", args.span())?;
 
     let str_len = string.chars().count();
 
@@ -141,63 +134,40 @@ pub(crate) fn str_slice(mut args: ArgumentResult, visitor: &mut Visitor) -> Sass
 
 pub(crate) fn str_index(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(2)?;
-    let s1 = match args.get_err(0, "string")? {
-        Value::String(i, _) => i,
-        v => {
-            return Err((
-                format!("$string: {} is not a string.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
+    let s1 = args
+        .get_err(0, "string")?
+        .assert_string_with_name("string", args.span())?
+        .0;
+
+    let substr = args
+        .get_err(1, "substring")?
+        .assert_string_with_name("substring", args.span())?
+        .0;
+
+    let char_position = match s1.find(&substr) {
+        Some(i) => s1[0..i].chars().count() + 1,
+        None => return Ok(Value::Null),
     };
 
-    let substr = match args.get_err(1, "substring")? {
-        Value::String(i, _) => i,
-        v => {
-            return Err((
-                format!("$substring: {} is not a string.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
-
-    Ok(match s1.find(&substr) {
-        Some(v) => Value::Dimension(SassNumber {
-            num: (Number::from(v + 1)),
-            unit: Unit::None,
-            as_slash: None,
-        }),
-        None => Value::Null,
-    })
+    Ok(Value::Dimension(SassNumber {
+        num: Number::from(char_position),
+        unit: Unit::None,
+        as_slash: None,
+    }))
 }
 
 pub(crate) fn str_insert(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(3)?;
     let span = args.span();
 
-    let (s1, quotes) = match args.get_err(0, "string")? {
-        Value::String(i, q) => (i, q),
-        v => {
-            return Err((
-                format!("$string: {} is not a string.", v.inspect(span)?),
-                span,
-            )
-                .into())
-        }
-    };
+    let (s1, quotes) = args
+        .get_err(0, "string")?
+        .assert_string_with_name("string", args.span())?;
 
-    let substr = match args.get_err(1, "insert")? {
-        Value::String(i, _) => i,
-        v => {
-            return Err((
-                format!("$insert: {} is not a string.", v.inspect(span)?),
-                span,
-            )
-                .into())
-        }
-    };
+    let substr = args
+        .get_err(1, "insert")?
+        .assert_string_with_name("insert", args.span())?
+        .0;
 
     let index = args
         .get_err(2, "index")?

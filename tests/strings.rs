@@ -244,3 +244,13 @@ test!(
     "a {\n  color: \"f\\\n oo\";\n}\n",
     "a {\n  color: \"f oo\";\n}\n"
 );
+test!(
+    str_index_double_width_character,
+    "a {\n  color: str-index(\"👭a\", \"a\");\n}\n",
+    "a {\n  color: 2;\n}\n"
+);
+test!(
+    str_index_combining_character,
+    "a {\n  color: str-index(\"c\\0308 a\", \"a\");\n}\n",
+    "a {\n  color: 3;\n}\n"
+);

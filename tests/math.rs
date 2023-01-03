@@ -126,3 +126,35 @@ error!(
     "a {\n  color: random(1000000000000000001 - 1000000000000000000);\n}\n",
     "Error: $limit: Must be greater than 0, was 0."
 );
+error!(
+    percentage_non_number_arg,
+    "a {\n  color: percentage(a);\n}\n", "Error: $number: a is not a number."
+);
+error!(
+    round_non_number_arg,
+    "a {\n  color: round(a);\n}\n", "Error: $number: a is not a number."
+);
+error!(
+    ceil_non_number_arg,
+    "a {\n  color: ceil(a);\n}\n", "Error: $number: a is not a number."
+);
+error!(
+    floor_non_number_arg,
+    "a {\n  color: floor(a);\n}\n", "Error: $number: a is not a number."
+);
+error!(
+    abs_non_number_arg,
+    "a {\n  color: abs(a);\n}\n", "Error: $number: a is not a number."
+);
+error!(
+    comparable_non_number_arg_both,
+    "a {\n  color: comparable(a, b);\n}\n", "Error: $number1: a is not a number."
+);
+error!(
+    comparable_non_number_arg_first,
+    "a {\n  color: comparable(a, 1);\n}\n", "Error: $number1: a is not a number."
+);
+error!(
+    comparable_non_number_arg_last,
+    "a {\n  color: comparable(1, b);\n}\n", "Error: $number2: b is not a number."
+);

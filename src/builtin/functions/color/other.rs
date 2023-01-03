@@ -79,15 +79,15 @@ pub(crate) fn change_color(mut args: ArgumentResult, visitor: &mut Visitor) -> S
     };
 
     opt_hsl!(args, saturation, "saturation", 0, 100);
-    opt_hsl!(args, luminance, "lightness", 0, 100);
+    opt_hsl!(args, lightness, "lightness", 0, 100);
 
-    if hue.is_some() || saturation.is_some() || luminance.is_some() {
+    if hue.is_some() || saturation.is_some() || lightness.is_some() {
         // Color::as_hsla() returns more exact values than Color::hue(), etc.
-        let (this_hue, this_saturation, this_luminance, this_alpha) = color.as_hsla();
+        let (this_hue, this_saturation, this_lightness, this_alpha) = color.as_hsla();
         return Ok(Value::Color(Box::new(Color::from_hsla(
             hue.unwrap_or(this_hue),
             saturation.unwrap_or(this_saturation),
-            luminance.unwrap_or(this_luminance),
+            lightness.unwrap_or(this_lightness),
             alpha.unwrap_or(this_alpha),
         ))));
     }
@@ -132,15 +132,15 @@ pub(crate) fn adjust_color(mut args: ArgumentResult, visitor: &mut Visitor) -> S
     };
 
     opt_hsl!(args, saturation, "saturation", -100, 100);
-    opt_hsl!(args, luminance, "lightness", -100, 100);
+    opt_hsl!(args, lightness, "lightness", -100, 100);
 
-    if hue.is_some() || saturation.is_some() || luminance.is_some() {
+    if hue.is_some() || saturation.is_some() || lightness.is_some() {
         // Color::as_hsla() returns more exact values than Color::hue(), etc.
-        let (this_hue, this_saturation, this_luminance, this_alpha) = color.as_hsla();
+        let (this_hue, this_saturation, this_lightness, this_alpha) = color.as_hsla();
         return Ok(Value::Color(Box::new(Color::from_hsla(
             this_hue + hue.unwrap_or_else(Number::zero),
             this_saturation + saturation.unwrap_or_else(Number::zero),
-            this_luminance + luminance.unwrap_or_else(Number::zero),
+            this_lightness + lightness.unwrap_or_else(Number::zero),
             this_alpha + alpha.unwrap_or_else(Number::zero),
         ))));
     }
@@ -163,47 +163,39 @@ pub(crate) fn scale_color(mut args: ArgumentResult, visitor: &mut Visitor) -> Sa
         val + (if by.is_positive() { max - val } else { val }) * by
     }
 
+    fn check_num(num: Spanned<Value>, name: &str, min: f64, max: f64) -> SassResult<Number> {
+        let span = num.span;
+        let mut num = num.node.assert_number_with_name(name, span)?;
+
+        num.assert_unit(&Unit::Percent, name, span)?;
+        num.assert_bounds(name, min, max, span)?;
+
+        num.num /= Number(100.0);
+
+        Ok(num.num)
+    }
+
+    fn get_arg(
+        args: &mut ArgumentResult,
+        name: &str,
+        min: f64,
+        max: f64,
+    ) -> SassResult<Option<Number>> {
+        Ok(match args.get(usize::MAX, name) {
+            Some(v) => Some(check_num(v, name, min, max)?),
+            None => None,
+        })
+    }
+
     let span = args.span();
     let color = args
         .get_err(0, "color")?
         .assert_color_with_name("color", args.span())?;
 
-    macro_rules! opt_scale_arg {
-        ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal) => {
-            let $name = match $args.default_named_arg($arg, Value::Null) {
-                Value::Dimension(SassNumber { num: n, .. }) if n.is_nan() => todo!(),
-                Value::Dimension(SassNumber {
-                    num: n,
-                    unit: Unit::Percent,
-                    ..
-                }) => Some(bound!($args, $arg, n, Unit::Percent, $low, $high) / Number(100.0)),
-                v @ Value::Dimension { .. } => {
-                    return Err((
-                        format!(
-                            "${}: Expected {} to have unit \"%\".",
-                            $arg,
-                            v.inspect($args.span())?
-                        ),
-                        $args.span(),
-                    )
-                        .into())
-                }
-                Value::Null => None,
-                v => {
-                    return Err((
-                        format!("${}: {} is not a number.", $arg, v.inspect($args.span())?),
-                        $args.span(),
-                    )
-                        .into())
-                }
-            };
-        };
-    }
-
-    opt_scale_arg!(args, alpha, "alpha", -100, 100);
-    opt_scale_arg!(args, red, "red", -100, 100);
-    opt_scale_arg!(args, green, "green", -100, 100);
-    opt_scale_arg!(args, blue, "blue", -100, 100);
+    let red = get_arg(&mut args, "red", -100.0, 100.0)?;
+    let green = get_arg(&mut args, "green", -100.0, 100.0)?;
+    let blue = get_arg(&mut args, "blue", -100.0, 100.0)?;
+    let alpha = get_arg(&mut args, "alpha", -100.0, 100.0)?;
 
     if red.is_some() || green.is_some() || blue.is_some() {
         return Ok(Value::Color(Box::new(Color::from_rgba(
@@ -226,12 +218,12 @@ pub(crate) fn scale_color(mut args: ArgumentResult, visitor: &mut Visitor) -> Sa
         ))));
     }
 
-    opt_scale_arg!(args, saturation, "saturation", -100, 100);
-    opt_scale_arg!(args, luminance, "lightness", -100, 100);
+    let saturation = get_arg(&mut args, "saturation", -100.0, 100.0)?;
+    let lightness = get_arg(&mut args, "lightness", -100.0, 100.0)?;
 
-    if saturation.is_some() || luminance.is_some() {
+    if saturation.is_some() || lightness.is_some() {
         // Color::as_hsla() returns more exact values than Color::hue(), etc.
-        let (this_hue, this_saturation, this_luminance, this_alpha) = color.as_hsla();
+        let (this_hue, this_saturation, this_lightness, this_alpha) = color.as_hsla();
         return Ok(Value::Color(Box::new(Color::from_hsla(
             scale(this_hue, Number::zero(), Number(360.0)),
             scale(
@@ -240,12 +232,40 @@ pub(crate) fn scale_color(mut args: ArgumentResult, visitor: &mut Visitor) -> Sa
                 Number::one(),
             ),
             scale(
-                this_luminance,
-                luminance.unwrap_or_else(Number::zero),
+                this_lightness,
+                lightness.unwrap_or_else(Number::zero),
                 Number::one(),
             ),
             scale(
                 this_alpha,
+                alpha.unwrap_or_else(Number::zero),
+                Number::one(),
+            ),
+        ))));
+    }
+
+    let whiteness = get_arg(&mut args, "whiteness", -100.0, 100.0)?;
+    let blackness = get_arg(&mut args, "blackness", -100.0, 100.0)?;
+
+    if whiteness.is_some() || blackness.is_some() {
+        let this_hue = color.hue();
+        let this_whiteness = color.whiteness() * Number(100.0);
+        let this_blackness = color.blackness() * Number(100.0);
+
+        return Ok(Value::Color(Box::new(Color::from_hwb(
+            scale(this_hue, Number::zero(), Number(360.0)),
+            scale(
+                this_whiteness,
+                whiteness.unwrap_or_else(Number::zero),
+                Number(100.0),
+            ),
+            scale(
+                this_blackness,
+                blackness.unwrap_or_else(Number::zero),
+                Number(100.0),
+            ),
+            scale(
+                color.alpha(),
                 alpha.unwrap_or_else(Number::zero),
                 Number::one(),
             ),

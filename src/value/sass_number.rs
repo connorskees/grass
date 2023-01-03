@@ -4,7 +4,7 @@ use codemap::Span;
 
 use crate::{
     error::SassResult,
-    serializer::inspect_number,
+    serializer::{inspect_float, inspect_number},
     unit::{are_any_convertible, known_compatibilities_by_unit, Unit, UNIT_CONVERSION_TABLE},
     Options,
 };
@@ -160,6 +160,26 @@ impl SassNumber {
             )
                 .into())
         }
+    }
+
+    pub fn assert_bounds(&self, name: &str, min: f64, max: f64, span: Span) -> SassResult<()> {
+        if !(self.num <= Number(max) && self.num >= Number(min)) {
+            return Err((
+                format!(
+                    "${}: Expected {} to be within {}{} and {}{}.",
+                    name,
+                    inspect_number(self, &Options::default(), span)?,
+                    inspect_float(min, &Options::default(), span),
+                    self.unit,
+                    inspect_float(max, &Options::default(), span),
+                    self.unit,
+                ),
+                span,
+            )
+                .into());
+        }
+
+        Ok(())
     }
 
     pub fn is_comparable_to(&self, other: &Self) -> bool {

@@ -92,3 +92,51 @@ test!(
     }",
     ""
 );
+test!(
+    keyword_args_no_positional,
+    "@mixin foo($a...) {
+        pos: inspect($a);
+        kw: inspect(keywords($a));
+    }
+
+    a {
+        @include foo($a: b);
+    }",
+    "a {\n  pos: ();\n  kw: (a: b);\n}\n"
+);
+test!(
+    keyword_args_one_positional,
+    "@mixin foo($a...) {
+        pos: inspect($a);
+        kw: inspect(keywords($a));
+    }
+
+    a {
+        @include foo(a, $b: c);
+    }",
+    "a {\n  pos: (a,);\n  kw: (b: c);\n}\n"
+);
+test!(
+    keyword_args_length_no_positional,
+    "@mixin foo($a...) {
+        pos: length($a);
+        kw: length(keywords($a));
+    }
+
+    a {
+        @include foo($a: b);
+    }",
+    "a {\n  pos: 0;\n  kw: 1;\n}\n"
+);
+error!(
+    keyword_args_no_positional_is_invalid,
+    "@mixin foo($a...) {
+        pos: $a;
+        kw: length(keywords($a));
+    }
+
+    a {
+        @include foo($a: b);
+    }",
+    "Error: () isn't a valid CSS value."
+);

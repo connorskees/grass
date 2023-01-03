@@ -77,7 +77,7 @@ pub(crate) fn set_nth(mut args: ArgumentResult, visitor: &mut Visitor) -> SassRe
             Brackets::None,
         ),
         Value::Map(m) => (m.as_list(), ListSeparator::Comma, Brackets::None),
-        v => (vec![v], ListSeparator::Space, Brackets::None),
+        v => (vec![v], ListSeparator::Undecided, Brackets::None),
     };
     let (n, unit) = match args.get_err(1, "n")? {
         Value::Dimension(SassNumber {
@@ -133,7 +133,7 @@ pub(crate) fn append(mut args: ArgumentResult, visitor: &mut Visitor) -> SassRes
     args.max_args(3)?;
     let (mut list, sep, brackets) = match args.get_err(0, "list")? {
         Value::List(v, sep, b) => (v, sep, b),
-        v => (vec![v], ListSeparator::Space, Brackets::None),
+        v => (vec![v], ListSeparator::Undecided, Brackets::None),
     };
     let val = args.get_err(1, "val")?;
     let sep = match args.default_arg(
@@ -142,7 +142,13 @@ pub(crate) fn append(mut args: ArgumentResult, visitor: &mut Visitor) -> SassRes
         Value::String("auto".to_owned(), QuoteKind::None),
     ) {
         Value::String(s, ..) => match s.as_str() {
-            "auto" => sep,
+            "auto" => {
+                if sep == ListSeparator::Undecided {
+                    ListSeparator::Space
+                } else {
+                    sep
+                }
+            }
             "comma" => ListSeparator::Comma,
             "space" => ListSeparator::Space,
             "slash" => ListSeparator::Slash,
@@ -173,12 +179,12 @@ pub(crate) fn join(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResul
     let (mut list1, sep1, brackets) = match args.get_err(0, "list1")? {
         Value::List(v, sep, brackets) => (v, sep, brackets),
         Value::Map(m) => (m.as_list(), ListSeparator::Comma, Brackets::None),
-        v => (vec![v], ListSeparator::Space, Brackets::None),
+        v => (vec![v], ListSeparator::Undecided, Brackets::None),
     };
     let (list2, sep2) = match args.get_err(1, "list2")? {
         Value::List(v, sep, ..) => (v, sep),
         Value::Map(m) => (m.as_list(), ListSeparator::Comma),
-        v => (vec![v], ListSeparator::Space),
+        v => (vec![v], ListSeparator::Undecided),
     };
     let sep = match args.default_arg(
         2,
@@ -187,10 +193,12 @@ pub(crate) fn join(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResul
     ) {
         Value::String(s, ..) => match s.as_str() {
             "auto" => {
-                if list1.is_empty() || (list1.len() == 1 && sep1 == ListSeparator::Space) {
+                if sep1 != ListSeparator::Undecided {
+                    sep1
+                } else if sep2 != ListSeparator::Undecided {
                     sep2
                 } else {
-                    sep1
+                    ListSeparator::Space
                 }
             }
             "comma" => ListSeparator::Comma,

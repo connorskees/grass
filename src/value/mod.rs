@@ -236,6 +236,25 @@ impl Value {
         }
     }
 
+    pub fn assert_string_with_name(
+        self,
+        name: &str,
+        span: Span,
+    ) -> SassResult<(String, QuoteKind)> {
+        match self {
+            Value::String(s, quotes) => Ok((s, quotes)),
+            _ => Err((
+                format!(
+                    "${name}: {} is not a string.",
+                    self.inspect(span)?,
+                    name = name,
+                ),
+                span,
+            )
+                .into()),
+        }
+    }
+
     // todo: rename is_blank
     pub fn is_null(&self) -> bool {
         match self {
@@ -599,8 +618,8 @@ impl Value {
                     .join(", ")
             )),
             Value::Dimension(n) => Cow::Owned(inspect_number(n, &Options::default(), span)?),
-            Value::ArgList(args) if args.is_empty() => Cow::Borrowed("()"),
-            Value::ArgList(args) if args.len() == 1 => Cow::Owned(format!(
+            Value::ArgList(args) if args.elems.is_empty() => Cow::Borrowed("()"),
+            Value::ArgList(args) if args.elems.len() == 1 => Cow::Owned(format!(
                 "({},)",
                 args.elems
                     .iter()

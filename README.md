@@ -19,7 +19,7 @@ a bug except for in the case of error messages and error spans.
 
 Every commit of `grass` is tested against bootstrap v5.0.2, and every release is tested against the last 2,500 commits of bootstrap's `main` branch.
 
-That said, there are a number of known missing features and bugs. The rough edges of `grass` largely include `@forward` and more complex uses of `@uses`. We support basic usage of these rules, but more advanced features such as `@import`ing modules containing `@forward` with prefixes may not behave as expected.
+That said, there are a number of known missing features and bugs. The rough edges of `grass` largely include `@forward` and more complex uses of `@use`. We support basic usage of these rules, but more advanced features such as `@import`ing modules containing `@forward` with prefixes may not behave as expected.
 
 All known missing features and bugs are tracked in [#19](https://github.com/connorskees/grass/issues/19).
 
@@ -71,8 +71,8 @@ Using a modified version of the spec runner that ignores warnings and error span
 
 ```
 2022-12-26
-PASSING: 6024
-FAILING: 881
+PASSING: 6077
+FAILING: 828
 TOTAL: 6905
 ```
 

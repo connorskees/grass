@@ -98,7 +98,8 @@ impl PartialEq for ListSeparator {
     #[allow(clippy::match_like_matches_macro)]
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
-            (Self::Space | Self::Undecided, Self::Space | Self::Undecided) => true,
+            (Self::Space, Self::Space) => true,
+            (Self::Undecided, Self::Undecided) => true,
             (Self::Comma, Self::Comma) => true,
             _ => false,
         }

@@ -1974,8 +1974,7 @@ error!(
 );
 error!(
     extend_at_root_of_document,
-    "@extend a;",
-    "Error: @extend may only be used within style rules."
+    "@extend a;", "Error: @extend may only be used within style rules."
 );
 
 // todo: extend_loop (massive test)

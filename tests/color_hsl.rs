@@ -307,3 +307,37 @@ test!(
     "a {\n  color: hue(adjust-hue(hsla(200, 50%, 50%), (0/0)));\n}\n",
     "a {\n  color: NaNdeg;\n}\n"
 );
+test!(
+    hsl_special_two_arg_var_first,
+    "a {\n  color: hsl(var(--foo), --bar);\n}\n",
+    "a {\n  color: hsl(var(--foo), --bar);\n}\n"
+);
+test!(
+    hsl_special_two_arg_var_second,
+    "a {\n  color: hsl(--foo, var(--bar));\n}\n",
+    "a {\n  color: hsl(--foo, var(--bar));\n}\n"
+);
+error!(
+    hsl_special_two_arg_neither_var,
+    "a {\n  color: hsl(--foo, --bar);\n}\n", "Error: Missing argument $lightness."
+);
+test!(
+    hsl_special_four_arg_var_last,
+    "a {\n  color: hsl(a, b, c, var(--bar));\n}\n",
+    "a {\n  color: hsl(a, b, c, var(--bar));\n}\n"
+);
+test!(
+    hsl_special_three_arg_var_last,
+    "a {\n  color: hsl(a, b, var(--bar));\n}\n",
+    "a {\n  color: hsl(a, b, var(--bar));\n}\n"
+);
+test!(
+    darken_all_channels_equal,
+    "a {\n  color: darken(#fff, 10);\n}\n",
+    "a {\n  color: #e6e6e6;\n}\n"
+);
+test!(
+    darken_green_channel_max,
+    "a {\n  color: darken(rgb(50, 200, 100), 10);\n}\n",
+    "a {\n  color: #289f50;\n}\n"
+);

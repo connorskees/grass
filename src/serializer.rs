@@ -76,6 +76,15 @@ pub(crate) fn serialize_number(
     Ok(serializer.finish_for_expr())
 }
 
+pub(crate) fn inspect_float(number: f64, options: &Options, span: Span) -> String {
+    let map = CodeMap::new();
+    let mut serializer = Serializer::new(options, &map, true, span);
+
+    serializer.write_float(number);
+
+    serializer.finish_for_expr()
+}
+
 pub(crate) fn inspect_number(
     number: &SassNumber,
     options: &Options,

@@ -270,7 +270,7 @@ impl SassCalculation {
                             return Err((
                                 format!(
                                     "Number {} isn't compatible with CSS calculations.",
-                                    value.to_css_string(span, false)?
+                                    value.inspect(span)?
                                 ),
                                 span,
                             )

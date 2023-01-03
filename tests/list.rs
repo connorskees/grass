@@ -437,6 +437,18 @@ test!(
     "a {\n  color: a, A, \"Noto Color Emoji\";\n}\n",
     "a {\n  color: a, A, \"Noto Color Emoji\";\n}\n"
 );
+test!(
+    list_separator_of_empty_list_after_join,
+    "a {
+        color: list-separator(join(join((), (), comma), 1 2));
+        color: list-separator(join(join((), (), comma), (1, 2)));
+    }",
+    "a {\n  color: comma;\n  color: comma;\n}\n"
+);
+error!(
+    nth_list_index_0,
+    "a {\n  color: nth(a b c, 0);\n}\n", "Error: $n: List index may not be 0."
+);
 error!(
     invalid_item_in_space_separated_list,
     "a {\n  color: red color * #abc;\n}\n", "Error: Undefined operation \"color * #abc\"."

@@ -1,5 +1,3 @@
-#![allow(unused_variables)]
-
 use std::cmp::Ordering;
 
 use codemap::Span;
@@ -350,7 +348,7 @@ pub(crate) fn sub(left: Value, right: Value, options: &Options, span: Span) -> S
     })
 }
 
-pub(crate) fn mul(left: Value, right: Value, options: &Options, span: Span) -> SassResult<Value> {
+pub(crate) fn mul(left: Value, right: Value, _: &Options, span: Span) -> SassResult<Value> {
     Ok(match left {
         Value::Dimension(SassNumber {
             num,
@@ -412,7 +410,7 @@ pub(crate) fn mul(left: Value, right: Value, options: &Options, span: Span) -> S
 pub(crate) fn cmp(
     left: &Value,
     right: &Value,
-    options: &Options,
+    _: &Options,
     span: Span,
     op: BinaryOp,
 ) -> SassResult<Value> {
@@ -469,7 +467,7 @@ pub(crate) fn div(left: Value, right: Value, options: &Options, span: Span) -> S
             Value::Dimension(SassNumber {
                 num: num2,
                 unit: unit2,
-                as_slash: as_slash2,
+                ..
             }) => {
                 if unit2 == Unit::None {
                     return Ok(Value::Dimension(SassNumber {
@@ -540,7 +538,7 @@ pub(crate) fn div(left: Value, right: Value, options: &Options, span: Span) -> S
     })
 }
 
-pub(crate) fn rem(left: Value, right: Value, options: &Options, span: Span) -> SassResult<Value> {
+pub(crate) fn rem(left: Value, right: Value, _: &Options, span: Span) -> SassResult<Value> {
     Ok(match left {
         Value::Dimension(SassNumber {
             num: n,

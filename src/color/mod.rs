@@ -505,4 +505,12 @@ impl Color {
 
         Color::new_rgba(red, green, blue, alpha, ColorFormat::Infer)
     }
+
+    pub fn whiteness(&self) -> Number {
+        self.red().min(self.green()).min(self.blue()) / Number(255.0)
+    }
+
+    pub fn blackness(&self) -> Number {
+        Number(1.0) - (self.red().max(self.green()).max(self.blue()) / Number(255.0))
+    }
 }

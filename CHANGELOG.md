@@ -5,6 +5,14 @@
 
 -->
 
+# 0.12.1 (unreleased)
+
+- improve error message for complex units in calculations
+- more accurate formatting of named arguments in arglists when passed to `inspect(..)`
+- support `$whiteness` and `$blackness` as arguments to `scale-color(..)`
+- more accurate list separator from `join(..)`
+- resolve unicode edge cases in `str-index(..)`
+
 # 0.12.0
 
 - complete rewrite of parsing, evaluation, and serialization steps
