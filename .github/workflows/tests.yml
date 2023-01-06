@@ -22,7 +22,7 @@ jobs:
         run: rustc --version; cargo --version;
 
       - name: Run all tests
-        run: cargo test
+        run: cargo test --features=macro
 
   fmt:
     runs-on: ubuntu-latest

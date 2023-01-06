@@ -31,6 +31,7 @@ grass input.scss
 ```
 */
 
+#![cfg_attr(doc, feature(doc_cfg))]
 #![warn(clippy::all, clippy::cargo)]
 #![deny(missing_debug_implementations)]
 #![allow(
@@ -79,142 +80,37 @@ grass input.scss
     unknown_lints,
 )]
 
-use std::path::Path;
+pub use grass_internal::*;
 
-use parse::{CssParser, SassParser, StylesheetParser};
-use serializer::Serializer;
-#[cfg(feature = "wasm-exports")]
-use wasm_bindgen::prelude::*;
-
-use codemap::CodeMap;
-
-pub use crate::error::{
-    PublicSassErrorKind as ErrorKind, SassError as Error, SassResult as Result,
-};
-pub use crate::fs::{Fs, NullFs, StdFs};
-pub use crate::options::{InputSyntax, Options, OutputStyle};
-pub(crate) use crate::{context_flags::ContextFlags, token::Token};
-use crate::{evaluate::Visitor, lexer::Lexer, parse::ScssParser};
-
-mod ast;
-mod builtin;
-mod color;
-mod common;
-mod context_flags;
-mod error;
-mod evaluate;
-mod fs;
-mod interner;
-mod lexer;
-mod options;
-mod parse;
-mod selector;
-mod serializer;
-mod token;
-mod unit;
-mod utils;
-mod value;
-
-fn raw_to_parse_error(map: &CodeMap, err: Error, unicode: bool) -> Box<Error> {
-    let (message, span) = err.raw();
-    Box::new(Error::from_loc(message, map.look_up_span(span), unicode))
-}
-
-fn from_string_with_file_name<P: AsRef<Path>>(
-    input: String,
-    file_name: P,
-    options: &Options,
-) -> Result<String> {
-    let mut map = CodeMap::new();
-    let path = file_name.as_ref();
-    let file = map.add_file(path.to_string_lossy().into_owned(), input);
-    let empty_span = file.span.subspan(0, 0);
-    let lexer = Lexer::new_from_file(&file);
-
-    let input_syntax = options
-        .input_syntax
-        .unwrap_or_else(|| InputSyntax::for_path(path));
-
-    let stylesheet = match input_syntax {
-        InputSyntax::Scss => {
-            ScssParser::new(lexer, &mut map, options, empty_span, file_name.as_ref()).__parse()
-        }
-        InputSyntax::Sass => {
-            SassParser::new(lexer, &mut map, options, empty_span, file_name.as_ref()).__parse()
-        }
-        InputSyntax::Css => {
-            CssParser::new(lexer, &mut map, options, empty_span, file_name.as_ref()).__parse()
-        }
+/// Include CSS in your binary at compile time from a Sass source file
+///
+/// ```no_run
+/// static CSS: &str = grass::include!("../static/_main.scss");
+/// ```
+///
+/// This requires the `"macro"` feature, which is not enabled by default.
+///
+/// By default `grass` will track files using [`include_str!`]. This allows incremental
+/// compilation to be updated when any Sass files are modified.
+///
+/// If compiling with a nightly version of rust, `grass` can make use of
+/// [proc_macro::tracked_path](https://github.com/rust-lang/rust/issues/99515)
+/// in order to force incremental recompilation, which is more robust and potentially
+/// faster. This is enabled by the `"nightly"` feature.
+///
+/// ###### Limitations
+///
+/// Compilation options are not configurable with this macro. The default values
+/// for all options are used, except for output style, which is compressed.
+#[macro_export]
+#[cfg(any(feature = "macro", doc))]
+#[cfg_attr(doc, doc(cfg(feature = "macro")))]
+macro_rules! include {
+    ($path:literal) => {
+        $crate::__internal_include_sass::include_sass!($path);
     };
-
-    let stylesheet = match stylesheet {
-        Ok(v) => v,
-        Err(e) => return Err(raw_to_parse_error(&map, *e, options.unicode_error_messages)),
-    };
-
-    let mut visitor = Visitor::new(path, options, &mut map, empty_span);
-    match visitor.visit_stylesheet(stylesheet) {
-        Ok(_) => {}
-        Err(e) => return Err(raw_to_parse_error(&map, *e, options.unicode_error_messages)),
-    }
-    let stmts = visitor.finish();
-
-    let mut serializer = Serializer::new(options, &map, false, empty_span);
-
-    let mut prev_was_group_end = false;
-    let mut prev_requires_semicolon = false;
-    for stmt in stmts {
-        if stmt.is_invisible() {
-            continue;
-        }
-
-        let is_group_end = stmt.is_group_end();
-        let requires_semicolon = Serializer::requires_semicolon(&stmt);
-
-        serializer
-            .visit_group(stmt, prev_was_group_end, prev_requires_semicolon)
-            .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages))?;
-
-        prev_was_group_end = is_group_end;
-        prev_requires_semicolon = requires_semicolon;
-    }
-
-    Ok(serializer.finish(prev_requires_semicolon))
 }
 
-/// Compile CSS from a path
-///
-/// n.b. grass does not currently support files or paths that are not valid UTF-8
-///
-/// ```
-/// fn main() -> Result<(), Box<grass::Error>> {
-///     let sass = grass::from_path("input.scss", &grass::Options::default())?;
-///     Ok(())
-/// }
-/// ```
-
-#[inline]
-pub fn from_path<P: AsRef<Path>>(p: P, options: &Options) -> Result<String> {
-    from_string_with_file_name(String::from_utf8(options.fs.read(p.as_ref())?)?, p, options)
-}
-
-/// Compile CSS from a string
-///
-/// ```
-/// fn main() -> Result<(), Box<grass::Error>> {
-///     let sass = grass::from_string("a { b { color: &; } }".to_string(), &grass::Options::default())?;
-///     assert_eq!(sass, "a b {\n  color: a b;\n}\n");
-///     Ok(())
-/// }
-/// ```
-
-#[inline]
-pub fn from_string(input: String, options: &Options) -> Result<String> {
-    from_string_with_file_name(input, "stdin", options)
-}
-
-#[cfg(feature = "wasm-exports")]
-#[wasm_bindgen(js_name = from_string)]
-pub fn from_string_js(input: String) -> std::result::Result<String, String> {
-    from_string(input, &Options::default()).map_err(|e| e.to_string())
-}
+#[doc(hidden)]
+#[cfg(feature = "macro")]
+pub use include_sass as __internal_include_sass;

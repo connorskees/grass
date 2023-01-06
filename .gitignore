@@ -9,6 +9,7 @@ Cargo.lock
 coverage
 pkg
 flamegraph.svg
+perf*
 
 # editor specific
 .idea
@@ -28,3 +29,6 @@ uikit
 bourbon
 foundation-sites
 sassline
+true
+dart-sass
+sass-fairy

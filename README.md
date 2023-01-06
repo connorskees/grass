@@ -45,6 +45,16 @@ compiled using wasm-bindgen. To use `grass` in your JavaScript projects, run
 In the future this feature will be removed when it is no longer necessary to rely on `rand` for
 random numbers.
 
+### macro
+
+(disabled by default): enable the macro `grass::include!` for compiling Sass to
+CSS at compile time
+
+### nightly
+
+(disabled by default): currently only used by `grass::include!` to enable 
+[proc_macro::tracked_path](https://github.com/rust-lang/rust/issues/99515)
+
 ## Testing
 
 As much as possible this library attempts to follow the same [philosophy for testing as

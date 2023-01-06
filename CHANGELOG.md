@@ -7,6 +7,7 @@
 
 # 0.12.1 (unreleased)
 
+- add `grass::include!` macro to make it easier to include CSS at compile time
 - improve error message for complex units in calculations
 - more accurate formatting of named arguments in arglists when passed to `inspect(..)`
 - support `$whiteness` and `$blackness` as arguments to `scale-color(..)`
