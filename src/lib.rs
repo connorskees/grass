@@ -107,10 +107,13 @@ pub use grass_internal::*;
 #[cfg_attr(doc, doc(cfg(feature = "macro")))]
 macro_rules! include {
     ($path:literal) => {
-        $crate::__internal_include_sass::include_sass!($path);
+        $crate::__internal::include_sass::include_sass!($path);
     };
 }
 
 #[doc(hidden)]
 #[cfg(feature = "macro")]
-pub use include_sass as __internal_include_sass;
+pub mod __internal {
+    #[doc(hidden)]
+    pub use include_sass;
+}
