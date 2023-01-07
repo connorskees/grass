@@ -1,4 +1,4 @@
-use std::iter::Iterator;
+use std::{iter::Iterator, sync::Arc};
 
 use codemap::{Span, Spanned};
 
@@ -43,9 +43,9 @@ pub(crate) struct AstSassMap(pub Vec<(Spanned<AstExpr>, AstExpr)>);
 #[derive(Debug, Clone)]
 pub(crate) enum AstExpr {
     BinaryOp {
-        lhs: Box<Self>,
+        lhs: Arc<Self>,
         op: BinaryOp,
-        rhs: Box<Self>,
+        rhs: Arc<Self>,
         allows_slash: bool,
         span: Span,
     },
@@ -55,9 +55,9 @@ pub(crate) enum AstExpr {
         name: CalculationName,
         args: Vec<Self>,
     },
-    Color(Box<Color>),
+    Color(Arc<Color>),
     FunctionCall(FunctionCallExpr),
-    If(Box<Ternary>),
+    If(Arc<Ternary>),
     InterpolatedFunction(InterpolatedFunction),
     List(ListExpr),
     Map(AstSassMap),
@@ -66,11 +66,11 @@ pub(crate) enum AstExpr {
         n: Number,
         unit: Unit,
     },
-    Paren(Box<Self>),
+    Paren(Arc<Self>),
     ParentSelector,
     String(StringExpr, Span),
-    Supports(Box<AstSupportsCondition>),
-    UnaryOp(UnaryOp, Box<Self>, Span),
+    Supports(Arc<AstSupportsCondition>),
+    UnaryOp(UnaryOp, Arc<Self>, Span),
     Variable {
         name: Spanned<Identifier>,
         namespace: Option<Spanned<Identifier>>,
@@ -174,9 +174,9 @@ impl AstExpr {
 
     pub fn slash(left: Self, right: Self, span: Span) -> Self {
         Self::BinaryOp {
-            lhs: Box::new(left),
+            lhs: Arc::new(left),
             op: BinaryOp::Div,
-            rhs: Box::new(right),
+            rhs: Arc::new(right),
             allows_slash: true,
             span,
         }

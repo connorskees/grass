@@ -3,7 +3,7 @@ use std::{
     collections::{BTreeMap, HashSet},
     ffi::OsString,
     mem,
-    path::{Path, PathBuf},
+    path::{Path, PathBuf}, sync::Arc,
 };
 
 use codemap::{CodeMap, Span, Spanned};
@@ -745,7 +745,7 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
                         }
 
                         buffer
-                            .add_expr(AstExpr::Supports(Box::new(query)).span(self.span_before()));
+                            .add_expr(AstExpr::Supports(Arc::new(query)).span(self.span_before()));
 
                         if !is_declaration {
                             buffer.add_char(')');

@@ -1,4 +1,4 @@
-use std::cmp::Ordering;
+use std::{cmp::Ordering, sync::Arc};
 
 use codemap::{Span, Spanned};
 
@@ -35,7 +35,7 @@ pub(crate) enum Value {
     Null,
     Dimension(SassNumber),
     List(Vec<Value>, ListSeparator, Brackets),
-    Color(Box<Color>),
+    Color(Arc<Color>),
     String(String, QuoteKind),
     Map(SassMap),
     ArgList(ArgList),
@@ -155,9 +155,9 @@ impl Value {
         }
     }
 
-    pub fn assert_color_with_name(self, name: &str, span: Span) -> SassResult<Color> {
+    pub fn assert_color_with_name(self, name: &str, span: Span) -> SassResult<Arc<Color>> {
         match self {
-            Value::Color(c) => Ok(*c),
+            Value::Color(c) => Ok(c),
             _ => Err((
                 format!(
                     "${name}: {} is not a color.",

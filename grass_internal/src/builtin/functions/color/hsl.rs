@@ -59,7 +59,7 @@ fn hsl_3_args(
         visitor,
     )?;
 
-    Ok(Value::Color(Box::new(Color::from_hsla_fn(
+    Ok(Value::Color(Arc::new(Color::from_hsla_fn(
         Number(hue.num.rem_euclid(360.0)),
         saturation.num / Number(100.0),
         lightness.num / Number(100.0),
@@ -172,7 +172,7 @@ pub(crate) fn adjust_hue(mut args: ArgumentResult, visitor: &mut Visitor) -> Sas
         .assert_number_with_name("degrees", args.span())?
         .num;
 
-    Ok(Value::Color(Box::new(color.adjust_hue(degrees))))
+    Ok(Value::Color(Arc::new(color.adjust_hue(degrees))))
 }
 
 fn lighten(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
@@ -186,7 +186,7 @@ fn lighten(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value>
         .assert_number_with_name("amount", args.span())?;
     let amount = bound!(args, "amount", amount.num, amount.unit, 0, 100) / Number(100.0);
 
-    Ok(Value::Color(Box::new(color.lighten(amount))))
+    Ok(Value::Color(Arc::new(color.lighten(amount))))
 }
 
 fn darken(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
@@ -213,7 +213,7 @@ fn darken(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> 
                 .into())
         }
     };
-    Ok(Value::Color(Box::new(color.darken(amount))))
+    Ok(Value::Color(Arc::new(color.darken(amount))))
 }
 
 fn saturate(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
@@ -271,7 +271,7 @@ fn saturate(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value
                 .into())
         }
     };
-    Ok(Value::Color(Box::new(color.saturate(amount))))
+    Ok(Value::Color(Arc::new(color.saturate(amount))))
 }
 
 fn desaturate(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
@@ -297,7 +297,7 @@ fn desaturate(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Val
                 .into())
         }
     };
-    Ok(Value::Color(Box::new(color.desaturate(amount))))
+    Ok(Value::Color(Arc::new(color.desaturate(amount))))
 }
 
 pub(crate) fn grayscale(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
@@ -322,7 +322,7 @@ pub(crate) fn grayscale(mut args: ArgumentResult, visitor: &mut Visitor) -> Sass
                 .into())
         }
     };
-    Ok(Value::Color(Box::new(color.desaturate(Number::one()))))
+    Ok(Value::Color(Arc::new(color.desaturate(Number::one()))))
 }
 
 pub(crate) fn complement(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
@@ -330,7 +330,7 @@ pub(crate) fn complement(mut args: ArgumentResult, visitor: &mut Visitor) -> Sas
     let color = args
         .get_err(0, "color")?
         .assert_color_with_name("color", args.span())?;
-    Ok(Value::Color(Box::new(color.complement())))
+    Ok(Value::Color(Arc::new(color.complement())))
 }
 
 pub(crate) fn invert(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
@@ -362,7 +362,7 @@ pub(crate) fn invert(mut args: ArgumentResult, visitor: &mut Visitor) -> SassRes
         }
     };
     match args.get_err(0, "color")? {
-        Value::Color(c) => Ok(Value::Color(Box::new(
+        Value::Color(c) => Ok(Value::Color(Arc::new(
             c.invert(weight.unwrap_or_else(Number::one)),
         ))),
         Value::Dimension(SassNumber {

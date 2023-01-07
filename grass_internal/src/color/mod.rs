@@ -197,7 +197,7 @@ impl Color {
     /// Mix two colors together with weight
     /// Algorithm adapted from
     /// <https://github.com/sass/dart-sass/blob/0d0270cb12a9ac5cce73a4d0785fecb00735feee/lib/src/functions/color.dart#L718>
-    pub fn mix(self, other: &Color, weight: Number) -> Self {
+    pub fn mix(&self, other: &Color, weight: Number) -> Self {
         let weight = weight.clamp(0.0, 100.0);
         let normalized_weight = weight * Number(2.0) - Number::one();
         let alpha_distance = self.alpha() - other.alpha();
@@ -445,21 +445,21 @@ impl Color {
     }
 
     /// Change `alpha` to value given
-    pub fn with_alpha(self, alpha: Number) -> Self {
+    pub fn with_alpha(&self, alpha: Number) -> Self {
         Color::from_rgba(self.red(), self.green(), self.blue(), alpha)
     }
 
     /// Makes a color more opaque.
     /// Takes a color and a number between 0 and 1,
     /// and returns a color with the opacity increased by that amount.
-    pub fn fade_in(self, amount: Number) -> Self {
+    pub fn fade_in(&self, amount: Number) -> Self {
         Color::from_rgba(self.red(), self.green(), self.blue(), self.alpha() + amount)
     }
 
     /// Makes a color more transparent.
     /// Takes a color and a number between 0 and 1,
     /// and returns a color with the opacity decreased by that amount.
-    pub fn fade_out(self, amount: Number) -> Self {
+    pub fn fade_out(&self, amount: Number) -> Self {
         Color::from_rgba(self.red(), self.green(), self.blue(), self.alpha() - amount)
     }
 }

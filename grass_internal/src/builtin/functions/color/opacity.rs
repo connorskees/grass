@@ -104,7 +104,7 @@ fn opacify(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value>
 
     let amount = bound!(args, "amount", amount.num, amount.unit(), 0, 1);
 
-    Ok(Value::Color(Box::new(color.fade_in(amount))))
+    Ok(Value::Color(Arc::new(color.fade_in(amount))))
 }
 
 fn transparentize(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
@@ -127,7 +127,7 @@ fn transparentize(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult
                 .into())
         }
     };
-    Ok(Value::Color(Box::new(color.fade_out(amount))))
+    Ok(Value::Color(Arc::new(color.fade_out(amount))))
 }
 
 pub(crate) fn declare(f: &mut GlobalFunctionMap) {

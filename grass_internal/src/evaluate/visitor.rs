@@ -2427,24 +2427,25 @@ impl<'a> Visitor<'a> {
                 rhs,
                 allows_slash,
                 span,
-            } => self.visit_bin_op(*lhs, op, *rhs, allows_slash, span)?,
+            } => self.visit_bin_op((*lhs).clone(), op, (*rhs).clone(), allows_slash, span)?,
             AstExpr::True => Value::True,
             AstExpr::False => Value::False,
             AstExpr::Calculation { name, args } => {
                 self.visit_calculation_expr(name, args, self.span_before)?
             }
             AstExpr::FunctionCall(func_call) => self.visit_function_call_expr(func_call)?,
-            AstExpr::If(if_expr) => self.visit_ternary(*if_expr)?,
+            AstExpr::If(if_expr) => self.visit_ternary((*if_expr).clone())?,
             AstExpr::InterpolatedFunction(func) => self.visit_interpolated_func_expr(func)?,
             AstExpr::Map(map) => self.visit_map(map)?,
             AstExpr::Null => Value::Null,
-            AstExpr::Paren(expr) => self.visit_expr(*expr)?,
+            AstExpr::Paren(expr) => self.visit_expr((*expr).clone())?,
             AstExpr::ParentSelector => self.visit_parent_selector(),
-            AstExpr::UnaryOp(op, expr, span) => self.visit_unary_op(op, *expr, span)?,
+            AstExpr::UnaryOp(op, expr, span) => self.visit_unary_op(op, (*expr).clone(), span)?,
             AstExpr::Variable { name, namespace } => self.env.get_var(name, namespace)?,
-            AstExpr::Supports(condition) => {
-                Value::String(self.visit_supports_condition(*condition)?, QuoteKind::None)
-            }
+            AstExpr::Supports(condition) => Value::String(
+                self.visit_supports_condition((*condition).clone())?,
+                QuoteKind::None,
+            ),
         })
     }
 
@@ -2459,7 +2460,8 @@ impl<'a> Visitor<'a> {
                 AstExpr::FunctionCall(FunctionCallExpr { ref name, .. })
                     if name.as_str().to_ascii_lowercase() == "var" =>
                 {
-                    let result = self.visit_calculation_value(*inner, in_min_or_max, span)?;
+                    let result =
+                        self.visit_calculation_value((*inner).clone(), in_min_or_max, span)?;
 
                     if let CalculationArg::String(text) = result {
                         CalculationArg::String(format!("({})", text))
@@ -2467,7 +2469,7 @@ impl<'a> Visitor<'a> {
                         result
                     }
                 }
-                _ => self.visit_calculation_value(*inner, in_min_or_max, span)?,
+                _ => self.visit_calculation_value((*inner).clone(), in_min_or_max, span)?,
             },
             AstExpr::String(string_expr, _span) => {
                 debug_assert!(string_expr.1 == QuoteKind::None);
@@ -2475,8 +2477,8 @@ impl<'a> Visitor<'a> {
             }
             AstExpr::BinaryOp { lhs, op, rhs, .. } => SassCalculation::operate_internal(
                 op,
-                self.visit_calculation_value(*lhs, in_min_or_max, span)?,
-                self.visit_calculation_value(*rhs, in_min_or_max, span)?,
+                self.visit_calculation_value((*lhs).clone(), in_min_or_max, span)?,
+                self.visit_calculation_value((*rhs).clone(), in_min_or_max, span)?,
                 in_min_or_max,
                 !self.flags.in_supports_declaration(),
                 self.options,
