@@ -225,7 +225,7 @@ impl Value {
         inspect_value(self, &Options::default(), span)
     }
 
-    pub fn is_true(&self) -> bool {
+    pub fn is_truthy(&self) -> bool {
         !matches!(self, Value::Null | Value::False)
     }
 

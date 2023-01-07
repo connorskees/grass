@@ -24,7 +24,7 @@ pub(crate) fn if_arguments() -> ArgumentDeclaration {
 
 fn if_(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(3)?;
-    if args.get_err(0, "condition")?.is_true() {
+    if args.get_err(0, "condition")?.is_truthy() {
         Ok(args.get_err(1, "if-true")?)
     } else {
         Ok(args.get_err(2, "if-false")?)
@@ -249,7 +249,7 @@ pub(crate) fn get_function(mut args: ArgumentResult, visitor: &mut Visitor) -> S
                 .into())
         }
     };
-    let css = args.default_arg(1, "css", Value::False).is_true();
+    let css = args.default_arg(1, "css", Value::False).is_truthy();
     let module = match args.default_arg(2, "module", Value::Null) {
         Value::String(s, ..) => Some(s),
         Value::Null => None,

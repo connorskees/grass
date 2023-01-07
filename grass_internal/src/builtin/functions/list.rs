@@ -231,7 +231,7 @@ pub(crate) fn join(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResul
             _ => Brackets::Bracketed,
         },
         v => {
-            if v.is_true() {
+            if v.is_truthy() {
                 Brackets::Bracketed
             } else {
                 Brackets::None

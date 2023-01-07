@@ -1773,7 +1773,10 @@ impl<'a> Visitor<'a> {
         self.with_scope(true, true, |visitor| {
             let mut result = None;
 
-            'outer: while visitor.visit_expr(while_stmt.condition.clone())?.is_true() {
+            'outer: while visitor
+                .visit_expr(while_stmt.condition.clone())?
+                .is_truthy()
+            {
                 for stmt in while_stmt.body.clone() {
                     let val = visitor.visit_stmt(stmt)?;
                     if val.is_some() {
@@ -1790,7 +1793,7 @@ impl<'a> Visitor<'a> {
     fn visit_if_stmt(&mut self, if_stmt: AstIf) -> SassResult<Option<Value>> {
         let mut clause: Option<Vec<AstStmt>> = if_stmt.else_clause;
         for clause_to_check in if_stmt.if_clauses {
-            if self.visit_expr(clause_to_check.condition)?.is_true() {
+            if self.visit_expr(clause_to_check.condition)?.is_truthy() {
                 clause = Some(clause_to_check.body);
                 break;
             }
@@ -2591,7 +2594,7 @@ impl<'a> Visitor<'a> {
             positional.remove(0)
         };
 
-        let value = if self.visit_expr(condition)?.is_true() {
+        let value = if self.visit_expr(condition)?.is_truthy() {
             self.visit_expr(if_true)?
         } else {
             self.visit_expr(if_false)?
@@ -2681,14 +2684,14 @@ impl<'a> Visitor<'a> {
                 single_eq(&left, &right, self.options, span)?
             }
             BinaryOp::Or => {
-                if left.is_true() {
+                if left.is_truthy() {
                     left
                 } else {
                     self.visit_expr(rhs)?
                 }
             }
             BinaryOp::And => {
-                if left.is_true() {
+                if left.is_truthy() {
                     self.visit_expr(rhs)?
                 } else {
                     left

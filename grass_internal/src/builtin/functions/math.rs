@@ -188,7 +188,8 @@ pub(crate) fn min(args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Val
             as_slash: None,
         });
 
-        if crate::evaluate::cmp(&lhs, &rhs, visitor.options, span, BinaryOp::LessThan)?.is_true() {
+        if crate::evaluate::cmp(&lhs, &rhs, visitor.options, span, BinaryOp::LessThan)?.is_truthy()
+        {
             min = (num, unit);
         }
     }
@@ -233,7 +234,8 @@ pub(crate) fn max(args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Val
             as_slash: None,
         });
 
-        if crate::evaluate::cmp(&lhs, &rhs, visitor.options, span, BinaryOp::GreaterThan)?.is_true()
+        if crate::evaluate::cmp(&lhs, &rhs, visitor.options, span, BinaryOp::GreaterThan)?
+            .is_truthy()
         {
             max = (num, unit);
         }
