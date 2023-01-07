@@ -4,9 +4,8 @@ use crate::{Fs, StdFs};
 
 /// Configuration for Sass compilation
 ///
-/// The simplest usage is `grass::Options::default()`;
-/// however, a builder pattern is also exposed to offer
-/// more control.
+/// The simplest usage is `grass::Options::default()`; however, a builder pattern
+/// is also exposed to offer more control.
 #[derive(Debug)]
 pub struct Options<'a> {
     pub(crate) fs: &'a dyn Fs,

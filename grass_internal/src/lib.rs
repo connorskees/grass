@@ -183,15 +183,14 @@ fn from_string_with_file_name<P: AsRef<Path>>(
 
 /// Compile CSS from a path
 ///
-/// n.b. grass does not currently support files or paths that are not valid UTF-8
+/// n.b. `grass` does not currently support files or paths that are not valid UTF-8
 ///
 /// ```
 /// fn main() -> Result<(), Box<grass::Error>> {
-///     let sass = grass::from_path("input.scss", &grass::Options::default())?;
+///     let css = grass::from_path("input.scss", &grass::Options::default())?;
 ///     Ok(())
 /// }
 /// ```
-
 #[inline]
 pub fn from_path<P: AsRef<Path>>(p: P, options: &Options) -> Result<String> {
     from_string_with_file_name(String::from_utf8(options.fs.read(p.as_ref())?)?, p, options)
@@ -201,12 +200,11 @@ pub fn from_path<P: AsRef<Path>>(p: P, options: &Options) -> Result<String> {
 ///
 /// ```
 /// fn main() -> Result<(), Box<grass::Error>> {
-///     let sass = grass::from_string("a { b { color: &; } }".to_string(), &grass::Options::default())?;
-///     assert_eq!(sass, "a b {\n  color: a b;\n}\n");
+///     let css = grass::from_string("a { b { color: &; } }".to_string(), &grass::Options::default())?;
+///     assert_eq!(css, "a b {\n  color: a b;\n}\n");
 ///     Ok(())
 /// }
 /// ```
-
 #[inline]
 pub fn from_string(input: String, options: &Options) -> Result<String> {
     from_string_with_file_name(input, "stdin", options)

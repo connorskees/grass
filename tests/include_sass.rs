@@ -3,5 +3,5 @@
 fn basic() {
     let css: &str = grass::include!("./input.scss");
 
-    assert!(css == "a {\n  color: red;\n}\n");
+    assert_eq!(css, "a{color:red}");
 }
