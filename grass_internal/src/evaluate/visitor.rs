@@ -2360,7 +2360,8 @@ impl<'a> Visitor<'a> {
 
         let old_in_function = self.flags.in_function();
         self.flags.set(ContextFlags::IN_FUNCTION, true);
-        let value = self.run_function_callable(func, *func_call.arguments, func_call.span)?;
+        let value =
+            self.run_function_callable(func, (*func_call.arguments).clone(), func_call.span)?;
         self.flags.set(ContextFlags::IN_FUNCTION, old_in_function);
 
         Ok(value)
@@ -2381,7 +2382,7 @@ impl<'a> Visitor<'a> {
         let mut buffer = format!("{}(", fn_name);
 
         let mut first = true;
-        for arg in args.positional {
+        for arg in args.positional.clone() {
             if first {
                 first = false;
             } else {
@@ -2391,7 +2392,7 @@ impl<'a> Visitor<'a> {
             buffer.push_str(&evaluated);
         }
 
-        if let Some(rest_arg) = args.rest {
+        if let Some(rest_arg) = args.rest.clone() {
             let rest = self.visit_expr(rest_arg)?;
             if !first {
                 buffer.push_str(", ");
@@ -2421,15 +2422,13 @@ impl<'a> Visitor<'a> {
             }),
             AstExpr::List(list) => self.visit_list_expr(list)?,
             AstExpr::String(StringExpr(text, quote), ..) => self.visit_string(text, quote)?,
-            AstExpr::BinaryOp(binop) => {
-                self.visit_bin_op(
-                    binop.lhs.clone(),
-                    binop.op,
-                    binop.rhs.clone(),
-                    binop.allows_slash,
-                    binop.span,
-                )?
-            }
+            AstExpr::BinaryOp(binop) => self.visit_bin_op(
+                binop.lhs.clone(),
+                binop.op,
+                binop.rhs.clone(),
+                binop.allows_slash,
+                binop.span,
+            )?,
             AstExpr::True => Value::True,
             AstExpr::False => Value::False,
             AstExpr::Calculation { name, args } => {
@@ -2437,7 +2436,9 @@ impl<'a> Visitor<'a> {
             }
             AstExpr::FunctionCall(func_call) => self.visit_function_call_expr(func_call)?,
             AstExpr::If(if_expr) => self.visit_ternary((*if_expr).clone())?,
-            AstExpr::InterpolatedFunction(func) => self.visit_interpolated_func_expr(func)?,
+            AstExpr::InterpolatedFunction(func) => {
+                self.visit_interpolated_func_expr((*func).clone())?
+            }
             AstExpr::Map(map) => self.visit_map(map)?,
             AstExpr::Null => Value::Null,
             AstExpr::Paren(expr) => self.visit_expr((*expr).clone())?,
@@ -2477,17 +2478,15 @@ impl<'a> Visitor<'a> {
                 debug_assert!(string_expr.1 == QuoteKind::None);
                 CalculationArg::Interpolation(self.perform_interpolation(string_expr.0, false)?)
             }
-            AstExpr::BinaryOp(binop) => {
-                SassCalculation::operate_internal(
-                    binop.op,
-                    self.visit_calculation_value(binop.lhs.clone(), in_min_or_max, span)?,
-                    self.visit_calculation_value(binop.rhs.clone(), in_min_or_max, span)?,
-                    in_min_or_max,
-                    !self.flags.in_supports_declaration(),
-                    self.options,
-                    span,
-                )?
-            }
+            AstExpr::BinaryOp(binop) => SassCalculation::operate_internal(
+                binop.op,
+                self.visit_calculation_value(binop.lhs.clone(), in_min_or_max, span)?,
+                self.visit_calculation_value(binop.rhs.clone(), in_min_or_max, span)?,
+                in_min_or_max,
+                !self.flags.in_supports_declaration(),
+                self.options,
+                span,
+            )?,
             AstExpr::Number { .. }
             | AstExpr::Calculation { .. }
             | AstExpr::Variable { .. }

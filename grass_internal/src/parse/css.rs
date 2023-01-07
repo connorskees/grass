@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, path::Path};
+use std::{collections::BTreeMap, path::Path, sync::Arc};
 
 use codemap::{CodeMap, Span, Spanned};
 
@@ -203,17 +203,17 @@ impl<'a> CssParser<'a> {
             return Err(("This function isn't allowed in plain CSS.", span).into());
         }
 
-        Ok(AstExpr::InterpolatedFunction(InterpolatedFunction {
+        Ok(AstExpr::InterpolatedFunction(Arc::new(InterpolatedFunction {
             name: identifier,
-            arguments: Box::new(ArgumentInvocation {
+            arguments: ArgumentInvocation {
                 positional: arguments,
                 named: BTreeMap::new(),
                 rest: None,
                 keyword_rest: None,
                 span: self.toks.span_from(before_args),
-            }),
+            },
             span,
-        })
+        }))
         .span(span))
     }
 }

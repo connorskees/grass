@@ -3,7 +3,8 @@ use std::{
     collections::{BTreeMap, HashSet},
     ffi::OsString,
     mem,
-    path::{Path, PathBuf}, sync::Arc,
+    path::{Path, PathBuf},
+    sync::Arc,
 };
 
 use codemap::{CodeMap, Span, Spanned};
@@ -840,11 +841,11 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
                 StringExpr(contents, QuoteKind::None),
                 self.toks_mut().span_from(start),
             ),
-            None => AstExpr::InterpolatedFunction(InterpolatedFunction {
+            None => AstExpr::InterpolatedFunction(Arc::new(InterpolatedFunction {
                 name: Interpolation::new_plain("url".to_owned()),
-                arguments: Box::new(self.parse_argument_invocation(false, false)?),
+                arguments: self.parse_argument_invocation(false, false)?,
                 span: self.toks_mut().span_from(start),
-            }),
+            })),
         })
     }
 

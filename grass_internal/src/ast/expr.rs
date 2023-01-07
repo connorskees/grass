@@ -26,14 +26,14 @@ pub(crate) struct ListExpr {
 pub(crate) struct FunctionCallExpr {
     pub namespace: Option<Spanned<Identifier>>,
     pub name: Identifier,
-    pub arguments: Box<ArgumentInvocation>,
+    pub arguments: Arc<ArgumentInvocation>,
     pub span: Span,
 }
 
 #[derive(Debug, Clone)]
 pub(crate) struct InterpolatedFunction {
     pub name: Interpolation,
-    pub arguments: Box<ArgumentInvocation>,
+    pub arguments: ArgumentInvocation,
     pub span: Span,
 }
 
@@ -61,7 +61,7 @@ pub(crate) enum AstExpr {
     Color(Arc<Color>),
     FunctionCall(FunctionCallExpr),
     If(Arc<Ternary>),
-    InterpolatedFunction(InterpolatedFunction),
+    InterpolatedFunction(Arc<InterpolatedFunction>),
     List(ListExpr),
     Map(AstSassMap),
     Null,

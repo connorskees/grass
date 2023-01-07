@@ -1228,17 +1228,17 @@ impl<'a, 'c, P: StylesheetParser<'a>> ValueParser<'a, 'c, P> {
                     Ok(AstExpr::FunctionCall(FunctionCallExpr {
                         namespace: None,
                         name: Identifier::from(plain),
-                        arguments: Box::new(arguments),
+                        arguments: Arc::new(arguments),
                         span: parser.toks_mut().span_from(start),
                     })
                     .span(parser.toks_mut().span_from(start)))
                 } else {
                     let arguments = parser.parse_argument_invocation(false, false)?;
-                    Ok(AstExpr::InterpolatedFunction(InterpolatedFunction {
+                    Ok(AstExpr::InterpolatedFunction(Arc::new(InterpolatedFunction {
                         name: identifier,
-                        arguments: Box::new(arguments),
+                        arguments,
                         span: parser.toks_mut().span_from(start),
-                    })
+                    }))
                     .span(parser.toks_mut().span_from(start)))
                 }
             }
@@ -1286,7 +1286,7 @@ impl<'a, 'c, P: StylesheetParser<'a>> ValueParser<'a, 'c, P> {
         Ok(AstExpr::FunctionCall(FunctionCallExpr {
             namespace: Some(namespace),
             name: Identifier::from(name),
-            arguments: Box::new(args),
+            arguments: Arc::new(args),
             span,
         })
         .span(span))
@@ -1575,7 +1575,7 @@ impl<'a, 'c, P: StylesheetParser<'a>> ValueParser<'a, 'c, P> {
                     Ok(AstExpr::FunctionCall(FunctionCallExpr {
                         namespace: None,
                         name: Identifier::from(ident),
-                        arguments: Box::new(parser.parse_argument_invocation(false, false)?),
+                        arguments: Arc::new(parser.parse_argument_invocation(false, false)?),
                         span: parser.toks_mut().span_from(start),
                     })
                     .span(parser.toks_mut().span_from(start)))

@@ -129,7 +129,7 @@ impl Value {
         span: Span,
     ) -> SassResult<Self> {
         let mut number = self.assert_number(span)?;
-        number.as_slash = Some(Box::new((numerator, denom)));
+        number.as_slash = Some(Arc::new((numerator, denom)));
         Ok(Value::Dimension(number))
     }
 
@@ -194,7 +194,7 @@ impl Value {
             Value::Null => true,
             Value::String(i, QuoteKind::None) if i.is_empty() => true,
             Value::List(_, _, Brackets::Bracketed) => false,
-            Value::List(v, ..) => v.iter().map(Value::is_blank).all(|f| f),
+            Value::List(v, ..) => v.iter().all(Value::is_blank),
             Value::ArgList(v, ..) => v.is_blank(),
             _ => false,
         }
@@ -258,7 +258,7 @@ impl Value {
         }
     }
 
-    pub fn as_slash(&self) -> Option<Box<(SassNumber, SassNumber)>> {
+    pub fn as_slash(&self) -> Option<Arc<(SassNumber, SassNumber)>> {
         match self {
             Value::Dimension(SassNumber { as_slash, .. }) => as_slash.clone(),
             _ => None,

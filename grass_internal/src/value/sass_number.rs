@@ -1,4 +1,7 @@
-use std::ops::{Add, Div, Mul, Sub};
+use std::{
+    ops::{Add, Div, Mul, Sub},
+    sync::Arc,
+};
 
 use codemap::Span;
 
@@ -11,12 +14,11 @@ use crate::{
 
 use super::Number;
 
-// todo: is as_slash included in eq
 #[derive(Debug, Clone)]
 pub(crate) struct SassNumber {
     pub num: Number,
     pub unit: Unit,
-    pub as_slash: Option<Box<(Self, Self)>>,
+    pub as_slash: Option<Arc<(Self, Self)>>,
 }
 
 pub(crate) fn conversion_factor(from: &Unit, to: &Unit) -> Option<f64> {

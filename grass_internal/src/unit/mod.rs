@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{fmt, sync::Arc};
 
 use crate::interner::InternedString;
 
@@ -100,7 +100,7 @@ pub(crate) enum Unit {
     /// Unspecified unit
     None,
 
-    Complex(Box<ComplexUnit>),
+    Complex(Arc<ComplexUnit>),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -141,13 +141,13 @@ impl Unit {
         } else if denom.is_empty() && numer.len() == 1 {
             numer.pop().unwrap()
         } else {
-            Unit::Complex(Box::new(ComplexUnit { numer, denom }))
+            Unit::Complex(Arc::new(ComplexUnit { numer, denom }))
         }
     }
 
     pub fn numer_and_denom(self) -> (Vec<Unit>, Vec<Unit>) {
         match self {
-            Self::Complex(complex) => (complex.numer, complex.denom),
+            Self::Complex(complex) => (complex.numer.clone(), complex.denom.clone()),
             Self::None => (Vec::new(), Vec::new()),
             v => (vec![v], Vec::new()),
         }
