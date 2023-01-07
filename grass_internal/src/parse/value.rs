@@ -229,12 +229,12 @@ impl<'a, 'c, P: StylesheetParser<'a>> ValueParser<'a, 'c, P> {
                         parser,
                     )?;
                 }
-                Some(Token { kind: '*', pos }) => {
+                Some(Token { kind: '*', .. }) => {
                     parser.toks_mut().next();
                     self.add_operator(
                         Spanned {
                             node: BinaryOp::Mul,
-                            span: pos,
+                            span: parser.toks().current_span(),
                         },
                         parser,
                     )?;
@@ -304,12 +304,12 @@ impl<'a, 'c, P: StylesheetParser<'a>> ValueParser<'a, 'c, P> {
                         )?;
                     }
                 }
-                Some(Token { kind: '%', pos }) => {
+                Some(Token { kind: '%', .. }) => {
                     parser.toks_mut().next();
                     self.add_operator(
                         Spanned {
                             node: BinaryOp::Rem,
-                            span: pos,
+                            span: parser.toks().current_span(),
                         },
                         parser,
                     )?;
@@ -1019,12 +1019,12 @@ impl<'a, 'c, P: StylesheetParser<'a>> ValueParser<'a, 'c, P> {
         }
 
         match parser.toks().peek_n(1) {
-            Some(Token { kind, pos }) if !kind.is_ascii_digit() => {
+            Some(Token { kind, .. }) if !kind.is_ascii_digit() => {
                 if allow_trailing_dot {
                     return Ok(None);
                 }
 
-                return Err(("Expected digit.", pos).into());
+                return Err(("Expected digit.", parser.toks().current_span()).into());
             }
             Some(..) => {}
             None => return Err(("Expected digit.", parser.toks().current_span()).into()),
@@ -1234,12 +1234,14 @@ impl<'a, 'c, P: StylesheetParser<'a>> ValueParser<'a, 'c, P> {
                     .span(parser.toks_mut().span_from(start)))
                 } else {
                     let arguments = parser.parse_argument_invocation(false, false)?;
-                    Ok(AstExpr::InterpolatedFunction(Arc::new(InterpolatedFunction {
-                        name: identifier,
-                        arguments,
-                        span: parser.toks_mut().span_from(start),
-                    }))
-                    .span(parser.toks_mut().span_from(start)))
+                    Ok(
+                        AstExpr::InterpolatedFunction(Arc::new(InterpolatedFunction {
+                            name: identifier,
+                            arguments,
+                            span: parser.toks_mut().span_from(start),
+                        }))
+                        .span(parser.toks_mut().span_from(start)),
+                    )
                 }
             }
             _ => Ok(AstExpr::String(
@@ -1625,7 +1627,7 @@ impl<'a, 'c, P: StylesheetParser<'a>> ValueParser<'a, 'c, P> {
             match parser.toks().peek() {
                 Some(Token {
                     kind: next @ ('+' | '-'),
-                    pos,
+                    ..
                 }) => {
                     if !matches!(
                         parser.toks().peek_n_backwards(1),
@@ -1642,7 +1644,7 @@ impl<'a, 'c, P: StylesheetParser<'a>> ValueParser<'a, 'c, P> {
                     ) {
                         return Err((
                             "\"+\" and \"-\" must be surrounded by whitespace in calculations.",
-                            pos,
+                            parser.toks().current_span(),
                         )
                             .into());
                     }

@@ -13,7 +13,7 @@ use crate::{
     ast::*,
     common::{unvendor, Identifier, QuoteKind},
     error::SassResult,
-    lexer::Lexer,
+    lexer::{Lexer, TokenLexer},
     utils::{is_name, is_name_start, is_plain_css_import, opposite_bracket},
     ContextFlags, Options, Token,
 };
@@ -1505,7 +1505,12 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
         self.parse_string()
     }
 
-    fn use_namespace(&mut self, url: &Path, _start: usize) -> SassResult<Option<String>> {
+    fn use_namespace(
+        &mut self,
+        url: &Path,
+        _start: usize,
+        url_span: Span,
+    ) -> SassResult<Option<String>> {
         if self.scan_identifier("as", false)? {
             self.whitespace()?;
             return Ok(if self.scan_char('*') {
@@ -1530,11 +1535,8 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
         };
 
         let mut toks = Lexer::new(
-            namespace
-                .chars()
-                .map(|x| Token::new(self.span_before(), x))
-                .collect(),
-            self.span_before(),
+            TokenLexer::new(namespace.chars().peekable()).collect(),
+            url_span,
         );
 
         // if namespace is empty, avoid attempting to parse an identifier from
@@ -1630,12 +1632,14 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
     }
 
     fn parse_use_rule(&mut self, start: usize) -> SassResult<AstStmt> {
+        let url_start = self.toks().cursor();
         let url = self.parse_url_string()?;
+        let url_span = self.toks().span_from(url_start);
         self.whitespace()?;
 
         let path = PathBuf::from(url);
 
-        let namespace = self.use_namespace(path.as_ref(), start)?;
+        let namespace = self.use_namespace(path.as_ref(), start, url_span)?;
         self.whitespace()?;
         let configuration = self.parse_configuration(false)?;
 

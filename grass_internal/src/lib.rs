@@ -93,7 +93,7 @@ pub use crate::error::{
 };
 pub use crate::fs::{Fs, NullFs, StdFs};
 pub use crate::options::{InputSyntax, Options, OutputStyle};
-pub(crate) use crate::{context_flags::ContextFlags, token::Token};
+pub(crate) use crate::{context_flags::ContextFlags, lexer::Token};
 use crate::{evaluate::Visitor, lexer::Lexer, parse::ScssParser};
 
 mod ast;
@@ -110,7 +110,6 @@ mod options;
 mod parse;
 mod selector;
 mod serializer;
-mod token;
 mod unit;
 mod utils;
 mod value;

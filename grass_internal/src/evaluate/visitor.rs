@@ -25,7 +25,7 @@ use crate::{
     common::{unvendor, BinaryOp, Identifier, ListSeparator, QuoteKind, UnaryOp},
     error::{SassError, SassResult},
     interner::InternedString,
-    lexer::Lexer,
+    lexer::{Lexer, TokenLexer},
     parse::{
         AtRootQueryParser, CssParser, KeyframesSelectorParser, SassParser, ScssParser,
         StylesheetParser,
@@ -34,7 +34,6 @@ use crate::{
         ComplexSelectorComponent, ExtendRule, ExtendedSelector, ExtensionStore, SelectorList,
         SelectorParser,
     },
-    token::Token,
     utils::{to_sentence, trim_ascii},
     value::{
         ArgList, CalculationArg, CalculationName, Number, SassCalculation, SassFunction, SassMap,
@@ -978,10 +977,8 @@ impl<'a> Visitor<'a> {
 
                 let span = query.span;
 
-                let query_toks = Lexer::new(
-                    resolved.chars().map(|x| Token::new(span, x)).collect(),
-                    span,
-                );
+                let query_toks =
+                    Lexer::new(TokenLexer::new(resolved.chars().peekable()).collect(), span);
 
                 AtRootQueryParser::new(query_toks).parse()?
             }
@@ -1142,7 +1139,7 @@ impl<'a> Visitor<'a> {
         span: Span,
     ) -> SassResult<SelectorList> {
         let sel_toks = Lexer::new(
-            selector_text.chars().map(|x| Token::new(span, x)).collect(),
+            TokenLexer::new(selector_text.chars().peekable()).collect(),
             span,
         );
 
@@ -2792,7 +2789,7 @@ impl<'a> Visitor<'a> {
         if self.flags.in_keyframes() {
             let span = ruleset.selector_span;
             let sel_toks = Lexer::new(
-                selector_text.chars().map(|x| Token::new(span, x)).collect(),
+                TokenLexer::new(selector_text.chars().peekable()).collect(),
                 span,
             );
             let parsed_selector =

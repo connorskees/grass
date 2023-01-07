@@ -2,16 +2,19 @@ use std::{borrow::Cow, iter::Peekable, str::Chars, sync::Arc};
 
 use codemap::{File, Span};
 
-use crate::Token;
-
 const FORM_FEED: char = '\x0C';
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub(crate) struct Token {
+    pub kind: char,
+    pos: u32,
+}
 
 #[derive(Debug, Clone)]
 // todo: remove lifetime as Cow is now superfluous
 pub(crate) struct Lexer<'a> {
     buf: Cow<'a, [Token]>,
-    /// The span to be used in the case that `buf` is empty
-    empty_span: Span,
+    entire_span: Span,
     cursor: usize,
 }
 
@@ -27,36 +30,35 @@ impl<'a> Lexer<'a> {
         matches!(self.peek(), Some(Token { kind, .. }) if kind == c)
     }
 
-    pub fn span_from(&mut self, start: usize) -> Span {
-        let start = match self.buf.get(start) {
-            Some(start) => start.pos,
-            None => return self.current_span(),
+    /// Gets the span of the character at the given index. If the index is out of
+    /// bounds, it returns the span of the last character. If the input is empty,
+    /// it returns an empty span
+    fn span_at_index(&self, idx: usize) -> Span {
+        let (start, len) = match self.buf.get(idx) {
+            Some(tok) => (tok.pos, tok.kind.len_utf8()),
+            None => match self.buf.last() {
+                Some(tok) => (tok.pos, tok.kind.len_utf8()),
+                None => (0, 0),
+            },
         };
-        self.cursor = self.cursor.saturating_sub(1);
-        let end = self.current_span();
-        self.cursor += 1;
+
+        self.entire_span
+            .subspan(start as u64, start as u64 + len as u64)
+    }
+
+    pub fn span_from(&self, start: usize) -> Span {
+        let start = self.span_at_index(start);
+        let end = self.prev_span();
 
         start.merge(end)
     }
 
     pub fn prev_span(&self) -> Span {
-        match self.buf.get(self.cursor.saturating_sub(1)) {
-            Some(tok) => tok.pos,
-            None => match self.buf.last() {
-                Some(tok) => tok.pos,
-                None => self.empty_span,
-            },
-        }
+        self.span_at_index(self.cursor.saturating_sub(1))
     }
 
     pub fn current_span(&self) -> Span {
-        match self.buf.get(self.cursor) {
-            Some(tok) => tok.pos,
-            None => match self.buf.last() {
-                Some(tok) => tok.pos,
-                None => self.empty_span,
-            },
-        }
+        self.span_at_index(self.cursor)
     }
 
     pub fn peek(&self) -> Option<Token> {
@@ -104,10 +106,16 @@ impl<'a> Iterator for Lexer<'a> {
     }
 }
 
-struct TokenLexer<'a> {
+/// Lex a string into a series of tokens
+pub(crate) struct TokenLexer<'a> {
     buf: Peekable<Chars<'a>>,
-    cursor: usize,
-    file: Arc<File>,
+    cursor: u32,
+}
+
+impl<'a> TokenLexer<'a> {
+    pub fn new(buf: Peekable<Chars<'a>>) -> TokenLexer<'a> {
+        Self { buf, cursor: 0 }
+    }
 }
 
 impl<'a> Iterator for TokenLexer<'a> {
@@ -124,11 +132,8 @@ impl<'a> Iterator for TokenLexer<'a> {
             }
             c => c,
         };
-        let len = kind.len_utf8();
-        let pos = self
-            .file
-            .span
-            .subspan(self.cursor as u64, (self.cursor + len) as u64);
+        let len = kind.len_utf8() as u32;
+        let pos = self.cursor;
         self.cursor += len;
         Some(Token { pos, kind })
     }
@@ -140,21 +145,15 @@ impl<'a> Iterator for TokenLexer<'a> {
 
 impl<'a> Lexer<'a> {
     pub fn new_from_file(file: &Arc<File>) -> Self {
-        let buf = TokenLexer {
-            file: Arc::clone(file),
-            buf: file.source().chars().peekable(),
-            cursor: 0,
-        }
-        .collect();
-
-        Self::new(buf, file.span.subspan(0, 0))
+        let buf = TokenLexer::new(file.source().chars().peekable()).collect();
+        Self::new(buf, file.span)
     }
 
-    pub fn new(buf: Vec<Token>, empty_span: Span) -> Self {
+    pub fn new(buf: Vec<Token>, entire_span: Span) -> Self {
         Lexer {
             buf: Cow::Owned(buf),
             cursor: 0,
-            empty_span,
+            entire_span,
         }
     }
 }

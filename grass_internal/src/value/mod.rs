@@ -312,15 +312,11 @@ impl Value {
 
     pub fn cmp(&self, other: &Self, span: Span, op: BinaryOp) -> SassResult<Option<Ordering>> {
         Ok(match self {
-            Value::Dimension(SassNumber {
-                num,
-                unit,
-                as_slash: _,
-            }) => match &other {
+            Value::Dimension(SassNumber { num, unit, .. }) => match &other {
                 Value::Dimension(SassNumber {
                     num: num2,
                     unit: unit2,
-                    as_slash: _,
+                    ..
                 }) => {
                     if !unit.comparable(unit2) {
                         return Err(

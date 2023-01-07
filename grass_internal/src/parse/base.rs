@@ -211,15 +211,15 @@ pub(crate) trait BaseParser<'a> {
     }
 
     fn parse_escape(&mut self, identifier_start: bool) -> SassResult<String> {
+        let start = self.toks().cursor();
         self.expect_char('\\')?;
         let mut value = 0;
         let first = match self.toks().peek() {
             Some(t) => t,
             None => return Err(("Expected expression.", self.toks().current_span()).into()),
         };
-        let mut span = first.pos();
         if first.kind == '\n' {
-            return Err(("Expected escape sequence.", span).into());
+            return Err(("Expected escape sequence.", self.toks().current_span()).into());
         } else if first.kind.is_ascii_hexdigit() {
             for _ in 0..6 {
                 let next = match self.toks().peek() {
@@ -230,7 +230,6 @@ pub(crate) trait BaseParser<'a> {
                     break;
                 }
                 value *= 16;
-                span = span.merge(next.pos);
                 value += as_hex(next.kind);
                 self.toks_mut().next();
             }
@@ -243,12 +242,12 @@ pub(crate) trait BaseParser<'a> {
                 self.toks_mut().next();
             }
         } else {
-            span = span.merge(first.pos);
             value = first.kind as u32;
             self.toks_mut().next();
         }
 
-        let c = std::char::from_u32(value).ok_or(("Invalid Unicode code point.", span))?;
+        let c = std::char::from_u32(value)
+            .ok_or(("Invalid Unicode code point.", self.toks().span_from(start)))?;
         if (identifier_start && is_name_start(c) && !c.is_ascii_digit())
             || (!identifier_start && is_name(c))
         {
@@ -273,8 +272,9 @@ pub(crate) trait BaseParser<'a> {
                 self.toks_mut().next();
                 Ok(())
             }
-            Some(Token { pos, .. }) => Err((format!("expected \"{}\".", c), pos).into()),
-            None => Err((format!("expected \"{}\".", c), self.toks().current_span()).into()),
+            Some(..) | None => {
+                Err((format!("expected \"{}\".", c), self.toks().current_span()).into())
+            }
         }
     }
 
@@ -284,8 +284,7 @@ pub(crate) trait BaseParser<'a> {
                 self.toks_mut().next();
                 Ok(())
             }
-            Some(Token { pos, .. }) => Err((format!("expected {}.", msg), pos).into()),
-            None => Err((format!("expected {}.", msg), self.toks().prev_span()).into()),
+            Some(..) | None => Err((format!("expected {}.", msg), self.toks().prev_span()).into()),
         }
     }
 
@@ -295,8 +294,7 @@ pub(crate) trait BaseParser<'a> {
                 kind: q @ ('\'' | '"'),
                 ..
             }) => q,
-            Some(Token { pos, .. }) => return Err(("Expected string.", pos).into()),
-            None => return Err(("Expected string.", self.toks().current_span()).into()),
+            Some(..) | None => return Err(("Expected string.", self.toks().current_span()).into()),
         };
 
         let mut buffer = String::new();
@@ -346,9 +344,8 @@ pub(crate) trait BaseParser<'a> {
         match self.toks().peek() {
             None => Ok('\u{FFFD}'),
             Some(Token {
-                kind: '\n' | '\r',
-                pos,
-            }) => Err(("Expected escape sequence.", pos).into()),
+                kind: '\n' | '\r', ..
+            }) => Err(("Expected escape sequence.", self.toks().current_span()).into()),
             Some(Token { kind, .. }) if kind.is_ascii_hexdigit() => {
                 let mut value = 0;
                 for _ in 0..6 {
