@@ -129,13 +129,8 @@ impl CssTree {
 
         let parent_children = self.parent_to_child.get(parent_idx).unwrap();
 
-        let child_pos = parent_children
-            .iter()
-            .position(|child_idx| *child_idx == child)
-            .unwrap();
-
-        // todo: parent_children[child_pos + 1..] !is_invisible
-        child_pos + 1 < parent_children.len()
+        // todo: we shouldn't take into account children that are invisible
+        parent_children.last() != Some(&child)
     }
 
     pub fn add_stmt(&mut self, child: CssStmt, parent: Option<CssTreeIdx>) -> CssTreeIdx {
