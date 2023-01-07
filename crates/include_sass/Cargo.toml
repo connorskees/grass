@@ -8,7 +8,7 @@ proc-macro = true
 
 [dependencies]
 syn = { version = "1.0.103", default-features = false }
-grass_internal = { path = "../grass_internal" }
+compiler = { path = "../compiler" }
 quote = { version = "1.0.23", default-features = false }
 
 [features]

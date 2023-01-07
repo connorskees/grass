@@ -80,11 +80,11 @@ grass input.scss
     unknown_lints,
 )]
 
-pub use grass_internal::*;
+pub use compiler::*;
 
 /// Include CSS in your binary at compile time from a Sass source file
 ///
-/// ```ignore
+/// ```
 /// static CSS: &str = grass::include!("../static/_main.scss");
 /// ```
 ///

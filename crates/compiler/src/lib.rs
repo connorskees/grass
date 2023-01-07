@@ -14,6 +14,7 @@ implementation.
 
 ## Use as library
 ```
+# use compiler as grass;
 fn main() -> Result<(), Box<grass::Error>> {
     let css = grass::from_string(
         "a { b { color: &; } }".to_owned(),
@@ -186,6 +187,7 @@ fn from_string_with_file_name<P: AsRef<Path>>(
 /// n.b. `grass` does not currently support files or paths that are not valid UTF-8
 ///
 /// ```
+/// # use compiler as grass;
 /// fn main() -> Result<(), Box<grass::Error>> {
 ///     let css = grass::from_path("input.scss", &grass::Options::default())?;
 ///     Ok(())
@@ -199,6 +201,7 @@ pub fn from_path<P: AsRef<Path>>(p: P, options: &Options) -> Result<String> {
 /// Compile CSS from a string
 ///
 /// ```
+/// # use compiler as grass;
 /// fn main() -> Result<(), Box<grass::Error>> {
 ///     let css = grass::from_string("a { b { color: &; } }".to_string(), &grass::Options::default())?;
 ///     assert_eq!(css, "a b {\n  color: a b;\n}\n");

@@ -1,12 +1,12 @@
 [package]
-name = "grass_internal"
+name = "compiler"
 version = "0.12.1"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
-name = "grass_internal"
+name = "compiler"
 path = "src/lib.rs"
 # crate-type = ["cdylib", "rlib"]
 bench = false

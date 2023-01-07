@@ -1,0 +1,50 @@
+[package]
+name = "grass"
+version = "0.12.1"
+description = "A Sass compiler written purely in Rust"
+readme = "README.md"
+license = "MIT"
+categories = ["command-line-utilities", "web-programming"]
+keywords = ["scss", "sass", "css", "web"]
+repository = "https://github.com/connorskees/grass"
+authors = ["ConnorSkees <39542938+ConnorSkees@users.noreply.github.com>"]
+edition = "2021"
+include = ["src", "Cargo.toml", "README.md", "CHANGELOG.md", "Cargo.lock", "LICENSE"]
+default-run = "grass"
+
+[[bin]]
+name = "grass"
+path = "src/main.rs"
+required-features = ["commandline"]
+
+[lib]
+name = "grass"
+path = "src/lib.rs"
+# crate-type = ["cdylib", "rlib"]
+bench = false
+
+[dependencies]
+compiler = { path = "../compiler", version = "0.12.1" }
+include_sass = { path = "../include_sass", version = "0.12.1", optional = true }
+clap = { version = "2.34.0", optional = true }
+
+[features]
+# todo: no commandline by default
+default = ["commandline", "random"]
+# Option (enabled by default): build a binary using clap
+commandline = ["clap"]
+random = ["compiler/random"]
+wasm-exports = ["compiler/wasm-exports"]
+# Option: include the proc macro `include_sass!`
+macro = ["include_sass"]
+nightly = ["include_sass/nightly"]
+
+[dev-dependencies]
+tempfile = "3.3.0"
+paste = "1.0.3"
+
+# [profile.release]
+# debug = true
+# panic = "abort"
+# lto = true
+# codegen-units = 1
