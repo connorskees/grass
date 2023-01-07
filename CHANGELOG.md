@@ -5,7 +5,7 @@
 
 -->
 
-# 0.12.1 (unreleased)
+# 0.12.1
 
 - add `grass::include!` macro to make it easier to include CSS at compile time
 - various optimizations improving the bootstrap benchmark by ~30% and the bulma benchmark by ~15%

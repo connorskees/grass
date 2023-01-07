@@ -1,6 +1,6 @@
 [package]
 name = "include_sass"
-version = "0.12.0"
+version = "0.12.1"
 edition = "2021"
 
 [lib]
@@ -9,7 +9,7 @@ proc-macro = true
 [dependencies]
 syn = { version = "1.0.103", default-features = false }
 grass_internal = { path = "../grass_internal" }
-quote = "1.0.23"
+quote = { version = "1.0.23", default-features = false }
 
 [features]
 nightly = []

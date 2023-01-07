@@ -1,6 +1,6 @@
 [package]
 name = "grass_internal"
-version = "0.12.0"
+version = "0.12.1"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -26,10 +26,8 @@ phf = { version = "0.10.1", features = ["macros"] }
 indexmap = "1.9.0"
 # todo: do we really need interning for things?
 lasso = "0.6"
-# include_sass = { path = "./include_sass", optional = true }
 
 [features]
-# todo: no commandline by default
 default = ["random"]
 # Option (enabled by default): enable the builtin functions `random([$limit])` and `unique-id()`
 random = ["rand"]
