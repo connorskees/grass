@@ -62,9 +62,7 @@ pub(crate) fn add(left: Value, right: Value, options: &Options, span: Span) -> S
         Value::Null => match right {
             Value::Null => Value::Null,
             _ => Value::String(
-                right
-                    .to_css_string(span, options.is_compressed())?
-                    .into_owned(),
+                right.to_css_string(span, options.is_compressed())?,
                 QuoteKind::None,
             ),
         },

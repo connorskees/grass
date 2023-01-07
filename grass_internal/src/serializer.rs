@@ -1,28 +1,23 @@
 use std::io::Write;
 
-use codemap::{CodeMap, Span, Spanned};
+use codemap::{CodeMap, Span};
 
 use crate::{
     ast::{CssStmt, MediaQuery, Style, SupportsRule},
     color::{Color, ColorFormat, NAMED_COLORS},
+    common::{Brackets, ListSeparator, QuoteKind},
     error::SassResult,
     selector::{
         Combinator, ComplexSelector, ComplexSelectorComponent, CompoundSelector, Namespace, Pseudo,
         SelectorList, SimpleSelector,
     },
     utils::hex_char_for,
-    value::{fuzzy_equals, CalculationArg, SassCalculation, SassNumber, Value},
+    value::{
+        fuzzy_equals, ArgList, CalculationArg, SassCalculation, SassFunction, SassMap, SassNumber,
+        Value,
+    },
     Options,
 };
-
-pub(crate) fn serialize_color(color: &Color, options: &Options, span: Span) -> String {
-    let map = CodeMap::new();
-    let mut serializer = Serializer::new(options, &map, false, span);
-
-    serializer.visit_color(color);
-
-    serializer.finish_for_expr()
-}
 
 pub(crate) fn serialize_selector_list(
     list: &SelectorList,
@@ -35,19 +30,6 @@ pub(crate) fn serialize_selector_list(
     serializer.write_selector_list(list);
 
     serializer.finish_for_expr()
-}
-
-pub(crate) fn serialize_calculation(
-    calculation: &SassCalculation,
-    options: &Options,
-    span: Span,
-) -> SassResult<String> {
-    let map = CodeMap::new();
-    let mut serializer = Serializer::new(options, &map, false, span);
-
-    serializer.visit_calculation(calculation)?;
-
-    Ok(serializer.finish_for_expr())
 }
 
 pub(crate) fn serialize_calculation_arg(
@@ -76,6 +58,24 @@ pub(crate) fn serialize_number(
     Ok(serializer.finish_for_expr())
 }
 
+pub(crate) fn serialize_value(val: &Value, options: &Options, span: Span) -> SassResult<String> {
+    let map = CodeMap::new();
+    let mut serializer = Serializer::new(options, &map, false, span);
+
+    serializer.visit_value(val, span)?;
+
+    Ok(serializer.finish_for_expr())
+}
+
+pub(crate) fn inspect_value(val: &Value, options: &Options, span: Span) -> SassResult<String> {
+    let map = CodeMap::new();
+    let mut serializer = Serializer::new(options, &map, true, span);
+
+    serializer.visit_value(val, span)?;
+
+    Ok(serializer.finish_for_expr())
+}
+
 pub(crate) fn inspect_float(number: f64, options: &Options, span: Span) -> String {
     let map = CodeMap::new();
     let mut serializer = Serializer::new(options, &map, true, span);
@@ -83,6 +83,28 @@ pub(crate) fn inspect_float(number: f64, options: &Options, span: Span) -> Strin
     serializer.write_float(number);
 
     serializer.finish_for_expr()
+}
+
+pub(crate) fn inspect_map(map: &SassMap, options: &Options, span: Span) -> SassResult<String> {
+    let code_map = CodeMap::new();
+    let mut serializer = Serializer::new(options, &code_map, true, span);
+
+    serializer.visit_map(map, span)?;
+
+    Ok(serializer.finish_for_expr())
+}
+
+pub(crate) fn inspect_function_ref(
+    func: &SassFunction,
+    options: &Options,
+    span: Span,
+) -> SassResult<String> {
+    let code_map = CodeMap::new();
+    let mut serializer = Serializer::new(options, &code_map, true, span);
+
+    serializer.visit_function_ref(func, span)?;
+
+    Ok(serializer.finish_for_expr())
 }
 
 pub(crate) fn inspect_number(
@@ -627,17 +649,296 @@ impl<'a> Serializer<'a> {
         }
     }
 
-    fn visit_value(&mut self, value: Spanned<Value>) -> SassResult<()> {
-        match value.node {
+    fn write_list_separator(&mut self, sep: ListSeparator) {
+        match (sep, self.options.is_compressed()) {
+            (ListSeparator::Space | ListSeparator::Undecided, _) => self.buffer.push(b' '),
+            (ListSeparator::Comma, true) => self.buffer.push(b','),
+            (ListSeparator::Comma, false) => self.buffer.extend_from_slice(b", "),
+            (ListSeparator::Slash, true) => self.buffer.push(b'/'),
+            (ListSeparator::Slash, false) => self.buffer.extend_from_slice(b" / "),
+        }
+    }
+
+    fn elem_needs_parens(sep: ListSeparator, elem: &Value) -> bool {
+        match elem {
+            Value::List(elems, sep2, brackets) => {
+                if elems.len() < 2 {
+                    return false;
+                }
+
+                if *brackets == Brackets::Bracketed {
+                    return false;
+                }
+
+                match sep {
+                    ListSeparator::Comma => *sep2 == ListSeparator::Comma,
+                    ListSeparator::Slash => {
+                        *sep2 == ListSeparator::Comma || *sep2 == ListSeparator::Slash
+                    }
+                    _ => *sep2 != ListSeparator::Undecided,
+                }
+            }
+            _ => false,
+        }
+    }
+
+    fn visit_list(
+        &mut self,
+        list_elems: &[Value],
+        sep: ListSeparator,
+        brackets: Brackets,
+        span: Span,
+    ) -> SassResult<()> {
+        if brackets == Brackets::Bracketed {
+            self.buffer.push(b'[');
+        } else if list_elems.is_empty() {
+            if !self.inspect {
+                return Err(("() isn't a valid CSS value.", span).into());
+            }
+
+            self.buffer.extend_from_slice(b"()");
+            return Ok(());
+        }
+
+        let is_singleton = self.inspect
+            && list_elems.len() == 1
+            && (sep == ListSeparator::Comma || sep == ListSeparator::Slash);
+
+        if is_singleton && brackets != Brackets::Bracketed {
+            self.buffer.push(b'(');
+        }
+
+        let (mut x, mut y);
+        let elems: &mut dyn Iterator<Item = &Value> = if self.inspect {
+            x = list_elems.iter();
+            &mut x
+        } else {
+            y = list_elems.iter().filter(|elem| !elem.is_blank());
+            &mut y
+        };
+
+        let mut elems = elems.peekable();
+
+        while let Some(elem) = elems.next() {
+            if self.inspect {
+                let needs_parens = Self::elem_needs_parens(sep, &elem);
+                if needs_parens {
+                    self.buffer.push(b'(');
+                }
+
+                self.visit_value(elem, span)?;
+
+                if needs_parens {
+                    self.buffer.push(b')');
+                }
+            } else {
+                self.visit_value(elem, span)?;
+            }
+
+            if elems.peek().is_some() {
+                self.write_list_separator(sep);
+            }
+        }
+
+        if is_singleton {
+            match sep {
+                ListSeparator::Comma => self.buffer.push(b','),
+                ListSeparator::Slash => self.buffer.push(b'/'),
+                _ => unreachable!(),
+            }
+
+            if brackets != Brackets::Bracketed {
+                self.buffer.push(b')');
+            }
+        }
+
+        if brackets == Brackets::Bracketed {
+            self.buffer.push(b']');
+        }
+
+        Ok(())
+    }
+
+    fn write_map_element(&mut self, value: &Value, span: Span) -> SassResult<()> {
+        let needs_parens = matches!(value, Value::List(_, ListSeparator::Comma, Brackets::None));
+
+        if needs_parens {
+            self.buffer.push(b'(');
+        }
+
+        self.visit_value(value, span)?;
+
+        if needs_parens {
+            self.buffer.push(b')');
+        }
+
+        Ok(())
+    }
+
+    fn visit_map(&mut self, map: &SassMap, span: Span) -> SassResult<()> {
+        if !self.inspect {
+            return Err((
+                format!(
+                    "{} isn't a valid CSS value.",
+                    inspect_map(map, self.options, span)?
+                ),
+                span,
+            )
+                .into());
+        }
+
+        self.buffer.push(b'(');
+
+        let mut elems = map.iter().peekable();
+
+        while let Some((k, v)) = elems.next() {
+            self.write_map_element(&k.node, k.span)?;
+            self.buffer.extend_from_slice(b": ");
+            self.write_map_element(v, k.span)?;
+            if elems.peek().is_some() {
+                self.buffer.extend_from_slice(b", ");
+            }
+        }
+
+        self.buffer.push(b')');
+
+        Ok(())
+    }
+
+    fn visit_unquoted_string(&mut self, string: &str) {
+        let mut after_newline = false;
+        self.buffer.reserve(string.len());
+
+        for c in string.bytes() {
+            match c {
+                b'\n' => {
+                    self.buffer.push(b' ');
+                    after_newline = true;
+                }
+                b' ' => {
+                    if !after_newline {
+                        self.buffer.push(b' ');
+                    }
+                }
+                _ => {
+                    self.buffer.push(c);
+                    after_newline = false;
+                }
+            }
+        }
+    }
+
+    fn visit_quoted_string(&mut self, force_double_quote: bool, string: &str) {
+        let mut has_single_quote = false;
+        let mut has_double_quote = false;
+
+        let mut buffer = Vec::new();
+
+        if force_double_quote {
+            buffer.push(b'"');
+        }
+        let mut iter = string.as_bytes().iter().copied().peekable();
+        while let Some(c) = iter.next() {
+            match c {
+                b'\'' => {
+                    if force_double_quote {
+                        buffer.push(b'\'');
+                    } else if has_double_quote {
+                        self.visit_quoted_string(true, string);
+                        return;
+                    } else {
+                        has_single_quote = true;
+                        buffer.push(b'\'');
+                    }
+                }
+                b'"' => {
+                    if force_double_quote {
+                        buffer.push(b'\\');
+                        buffer.push(b'"');
+                    } else if has_single_quote {
+                        self.visit_quoted_string(true, string);
+                        return;
+                    } else {
+                        has_double_quote = true;
+                        buffer.push(b'"');
+                    }
+                }
+                b'\x00'..=b'\x08' | b'\x0A'..=b'\x1F' => {
+                    buffer.push(b'\\');
+                    if c as u32 > 0xF {
+                        buffer.push(hex_char_for(c as u32 >> 4) as u8);
+                    }
+                    buffer.push(hex_char_for(c as u32 & 0xF) as u8);
+
+                    let next = match iter.peek() {
+                        Some(v) => *v,
+                        None => break,
+                    };
+
+                    if next.is_ascii_hexdigit() || next == b' ' || next == b'\t' {
+                        buffer.push(b' ');
+                    }
+                }
+                b'\\' => {
+                    buffer.push(b'\\');
+                    buffer.push(b'\\');
+                }
+                _ => buffer.push(c),
+            }
+        }
+
+        if force_double_quote {
+            buffer.push(b'"');
+            self.buffer.extend_from_slice(&buffer);
+        } else {
+            let quote = if has_double_quote { b'\'' } else { b'"' };
+            self.buffer.push(quote);
+            self.buffer.extend_from_slice(&buffer);
+            self.buffer.push(quote);
+        }
+    }
+
+    fn visit_function_ref(&mut self, func: &SassFunction, span: Span) -> SassResult<()> {
+        if !self.inspect {
+            return Err((
+                format!(
+                    "{} isn't a valid CSS value.",
+                    inspect_function_ref(func, self.options, span)?
+                ),
+                span,
+            )
+                .into());
+        }
+
+        self.buffer.extend_from_slice(b"get-function(");
+        self.visit_quoted_string(false, func.name().as_str());
+        self.buffer.push(b')');
+
+        Ok(())
+    }
+
+    fn visit_arglist(&mut self, arglist: &ArgList, span: Span) -> SassResult<()> {
+        self.visit_list(&arglist.elems, ListSeparator::Comma, Brackets::None, span)
+    }
+
+    fn visit_value(&mut self, value: &Value, span: Span) -> SassResult<()> {
+        match value {
             Value::Dimension(num) => self.visit_number(&num)?,
             Value::Color(color) => self.visit_color(&color),
             Value::Calculation(calc) => self.visit_calculation(&calc)?,
-            _ => {
-                let value_as_str = value
-                    .node
-                    .to_css_string(value.span, self.options.is_compressed())?;
-                self.buffer.extend_from_slice(value_as_str.as_bytes());
+            Value::List(elems, sep, brackets) => self.visit_list(elems, *sep, *brackets, span)?,
+            Value::True => self.buffer.extend_from_slice(b"true"),
+            Value::False => self.buffer.extend_from_slice(b"false"),
+            Value::Null => {
+                if self.inspect {
+                    self.buffer.extend_from_slice(b"null")
+                }
             }
+            Value::Map(map) => self.visit_map(map, span)?,
+            Value::FunctionRef(func) => self.visit_function_ref(&*func, span)?,
+            Value::String(s, QuoteKind::Quoted) => self.visit_quoted_string(false, s),
+            Value::String(s, QuoteKind::None) => self.visit_unquoted_string(s),
+            Value::ArgList(arglist) => self.visit_arglist(arglist, span)?,
         }
 
         Ok(())
@@ -657,7 +958,7 @@ impl<'a> Serializer<'a> {
             self.buffer.push(b' ');
         }
 
-        self.visit_value(*style.value)?;
+        self.visit_value(&style.value.node, style.value.span)?;
 
         Ok(())
     }

@@ -56,7 +56,7 @@ impl CssStmt {
             CssStmt::RuleSet { selector, body, .. } => {
                 selector.is_invisible() || body.iter().all(CssStmt::is_invisible)
             }
-            CssStmt::Style(style) => style.value.node.is_null(),
+            CssStmt::Style(style) => style.value.node.is_blank(),
             CssStmt::Media(media_rule, ..) => media_rule.body.iter().all(CssStmt::is_invisible),
             CssStmt::UnknownAtRule(..) | CssStmt::Import(..) | CssStmt::Comment(..) => false,
             CssStmt::Supports(supports_rule, ..) => {

@@ -81,8 +81,8 @@ Using a modified version of the spec runner that ignores warnings and error span
 
 ```
 2022-01-03
-PASSING: 6118
-FAILING: 787
+PASSING: 6153
+FAILING: 752
 TOTAL: 6905
 ```
 

@@ -97,6 +97,11 @@ impl<'a> Iterator for Lexer<'a> {
             tok
         })
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let remaining = self.buf.len() - self.cursor;
+        (remaining, Some(remaining))
+    }
 }
 
 struct TokenLexer<'a> {
@@ -126,6 +131,10 @@ impl<'a> Iterator for TokenLexer<'a> {
             .subspan(self.cursor as u64, (self.cursor + len) as u64);
         self.cursor += len;
         Some(Token { pos, kind })
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.buf.size_hint()
     }
 }
 

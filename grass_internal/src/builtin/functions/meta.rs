@@ -90,9 +90,7 @@ pub(crate) fn unitless(mut args: ArgumentResult, visitor: &mut Visitor) -> SassR
     args.max_args(1)?;
     Ok(match args.get_err(0, "number")? {
         Value::Dimension(SassNumber {
-            num: _,
-            unit: Unit::None,
-            as_slash: _,
+            unit: Unit::None, ..
         }) => Value::True,
         Value::Dimension(SassNumber { .. }) => Value::False,
         v => {
@@ -108,7 +106,7 @@ pub(crate) fn unitless(mut args: ArgumentResult, visitor: &mut Visitor) -> SassR
 pub(crate) fn inspect(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     Ok(Value::String(
-        args.get_err(0, "value")?.inspect(args.span())?.into_owned(),
+        args.get_err(0, "value")?.inspect(args.span())?,
         QuoteKind::None,
     ))
 }
@@ -134,16 +132,11 @@ pub(crate) fn global_variable_exists(
 ) -> SassResult<Value> {
     args.max_args(2)?;
 
-    let name: Identifier = match args.get_err(0, "name")? {
-        Value::String(s, _) => s.into(),
-        v => {
-            return Err((
-                format!("$name: {} is not a string.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
+    let name = Identifier::from(
+        args.get_err(0, "name")?
+            .assert_string_with_name("name", args.span())?
+            .0,
+    );
 
     let module = match args.default_arg(1, "module", Value::Null) {
         Value::String(s, _) => Some(s),
@@ -269,15 +262,17 @@ pub(crate) fn get_function(mut args: ArgumentResult, visitor: &mut Visitor) -> S
         }
     };
 
-    let func = if let Some(module_name) = module {
-        if css {
-            return Err((
-                "$css and $module may not both be passed at once.",
-                args.span(),
-            )
-                .into());
-        }
+    if css && module.is_some() {
+        return Err((
+            "$css and $module may not both be passed at once.",
+            args.span(),
+        )
+            .into());
+    }
 
+    let func = if css {
+        Some(SassFunction::Plain { name })
+    } else if let Some(module_name) = module {
         visitor.env.get_fn(
             name,
             Some(Spanned {
@@ -303,7 +298,18 @@ pub(crate) fn get_function(mut args: ArgumentResult, visitor: &mut Visitor) -> S
 pub(crate) fn call(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     let span = args.span();
     let func = match args.get_err(0, "function")? {
-        Value::FunctionRef(f) => f,
+        Value::FunctionRef(f) => *f,
+        Value::String(name, ..) => {
+            let name = Identifier::from(name);
+
+            match visitor.env.get_fn(name, None)? {
+                Some(f) => f,
+                None => match GLOBAL_FUNCTIONS.get(name.as_str()) {
+                    Some(f) => SassFunction::Builtin(f.clone(), name),
+                    None => SassFunction::Plain { name },
+                },
+            }
+        }
         v => {
             return Err((
                 format!(
@@ -318,7 +324,7 @@ pub(crate) fn call(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResul
 
     args.remove_positional(0);
 
-    visitor.run_function_callable_with_maybe_evaled(*func, MaybeEvaledArguments::Evaled(args), span)
+    visitor.run_function_callable_with_maybe_evaled(func, MaybeEvaledArguments::Evaled(args), span)
 }
 
 #[allow(clippy::needless_pass_by_value)]

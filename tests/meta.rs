@@ -71,7 +71,6 @@ test!(
     "a {\n  color: feature-exists(units-level-3)\n}\n",
     "a {\n  color: true;\n}\n"
 );
-// Unignore as more features are added
 test!(
     feature_exists_custom_property,
     "a {\n  color: feature-exists(custom-property)\n}\n",
@@ -327,6 +326,38 @@ test!(
       color: call($function: get-function(\"red\"), $color: #fff);
     }",
     "a {\n  color: 255;\n}\n"
+);
+test!(
+    call_function_is_string_and_exists,
+    "a {
+      color: call(\"red\", blue);
+    }",
+    "a {\n  color: 0;\n}\n"
+);
+test!(
+    call_function_is_string_and_dne,
+    "a {
+      color: call(\"reddd\", blue);
+    }",
+    "a {\n  color: reddd(blue);\n}\n"
+);
+test!(
+    call_function_is_string_and_is_user_defined,
+    "@function foo() {
+        @return 5;
+    }
+
+    a {
+      color: call(\"foo\");
+    }",
+    "a {\n  color: 5;\n}\n"
+);
+test!(
+    get_function_css_parameter,
+    "a {
+      color: inspect(get-function('empty', $css: true));
+    }",
+    "a {\n  color: get-function(\"empty\");\n}\n"
 );
 
 // todo: if() with different combinations of named and positional args

@@ -1,4 +1,4 @@
-use std::{borrow::Cow, cmp::Ordering};
+use std::cmp::Ordering;
 
 use codemap::{Span, Spanned};
 
@@ -8,9 +8,9 @@ use crate::{
     error::SassResult,
     evaluate::Visitor,
     selector::Selector,
-    serializer::{inspect_number, serialize_calculation, serialize_color, serialize_number},
+    serializer::{inspect_value, serialize_value},
     unit::Unit,
-    utils::{hex_char_for, is_special_function},
+    utils::is_special_function,
     Options, OutputStyle,
 };
 
@@ -121,72 +121,6 @@ impl PartialEq for Value {
 
 impl Eq for Value {}
 
-fn visit_quoted_string(buf: &mut String, force_double_quote: bool, string: &str) {
-    let mut has_single_quote = false;
-    let mut has_double_quote = false;
-
-    let mut buffer = String::new();
-
-    if force_double_quote {
-        buffer.push('"');
-    }
-    let mut iter = string.chars().peekable();
-    while let Some(c) = iter.next() {
-        match c {
-            '\'' => {
-                if force_double_quote {
-                    buffer.push('\'');
-                } else if has_double_quote {
-                    return visit_quoted_string(buf, true, string);
-                } else {
-                    has_single_quote = true;
-                    buffer.push('\'');
-                }
-            }
-            '"' => {
-                if force_double_quote {
-                    buffer.push('\\');
-                    buffer.push('"');
-                } else if has_single_quote {
-                    return visit_quoted_string(buf, true, string);
-                } else {
-                    has_double_quote = true;
-                    buffer.push('"');
-                }
-            }
-            '\x00'..='\x08' | '\x0A'..='\x1F' => {
-                buffer.push('\\');
-                if c as u32 > 0xF {
-                    buffer.push(hex_char_for(c as u32 >> 4));
-                }
-                buffer.push(hex_char_for(c as u32 & 0xF));
-
-                let next = match iter.peek() {
-                    Some(v) => v,
-                    None => break,
-                };
-
-                if next.is_ascii_hexdigit() || next == &' ' || next == &'\t' {
-                    buffer.push(' ');
-                }
-            }
-            '\\' => {
-                buffer.push('\\');
-                buffer.push('\\');
-            }
-            _ => buffer.push(c),
-        }
-    }
-
-    if force_double_quote {
-        buffer.push('"');
-    } else {
-        let quote = if has_double_quote { '\'' } else { '"' };
-        buffer = format!("{}{}{}", quote, buffer, quote);
-    }
-    buf.push_str(&buffer);
-}
-
 impl Value {
     pub fn with_slash(
         self,
@@ -255,14 +189,13 @@ impl Value {
         }
     }
 
-    // todo: rename is_blank
-    pub fn is_null(&self) -> bool {
+    pub fn is_blank(&self) -> bool {
         match self {
             Value::Null => true,
             Value::String(i, QuoteKind::None) if i.is_empty() => true,
             Value::List(_, _, Brackets::Bracketed) => false,
-            Value::List(v, ..) => v.iter().map(Value::is_null).all(|f| f),
-            Value::ArgList(v, ..) => v.is_null(),
+            Value::List(v, ..) => v.iter().map(Value::is_blank).all(|f| f),
+            Value::ArgList(v, ..) => v.is_blank(),
             _ => false,
         }
     }
@@ -276,113 +209,20 @@ impl Value {
         }
     }
 
-    pub fn to_css_string(&self, span: Span, is_compressed: bool) -> SassResult<Cow<'static, str>> {
-        Ok(match self {
-            Value::Calculation(calc) => Cow::Owned(serialize_calculation(
-                calc,
-                &Options::default().style(if is_compressed {
-                    OutputStyle::Compressed
-                } else {
-                    OutputStyle::Expanded
-                }),
-                span,
-            )?),
-            Value::Dimension(n) => Cow::Owned(serialize_number(
-                n,
-                &Options::default().style(if is_compressed {
-                    OutputStyle::Compressed
-                } else {
-                    OutputStyle::Expanded
-                }),
-                span,
-            )?),
-            Value::Map(..) | Value::FunctionRef(..) => {
-                return Err((
-                    format!("{} isn't a valid CSS value.", self.inspect(span)?),
-                    span,
-                )
-                    .into())
-            }
-            Value::List(vals, sep, brackets) => match brackets {
-                Brackets::None => Cow::Owned(
-                    vals.iter()
-                        .filter(|x| !x.is_null())
-                        .map(|x| x.to_css_string(span, is_compressed))
-                        .collect::<SassResult<Vec<Cow<'static, str>>>>()?
-                        .join(if is_compressed {
-                            sep.as_compressed_str()
-                        } else {
-                            sep.as_str()
-                        }),
-                ),
-                Brackets::Bracketed => Cow::Owned(format!(
-                    "[{}]",
-                    vals.iter()
-                        .filter(|x| !x.is_null())
-                        .map(|x| x.to_css_string(span, is_compressed))
-                        .collect::<SassResult<Vec<Cow<'static, str>>>>()?
-                        .join(if is_compressed {
-                            sep.as_compressed_str()
-                        } else {
-                            sep.as_str()
-                        }),
-                )),
-            },
-            Value::Color(c) => Cow::Owned(serialize_color(
-                c,
-                &Options::default().style(if is_compressed {
-                    OutputStyle::Compressed
-                } else {
-                    OutputStyle::Expanded
-                }),
-                span,
-            )),
-            Value::String(string, QuoteKind::None) => {
-                let mut after_newline = false;
-                let mut buf = String::with_capacity(string.len());
-                for c in string.chars() {
-                    match c {
-                        '\n' => {
-                            buf.push(' ');
-                            after_newline = true;
-                        }
-                        ' ' => {
-                            if !after_newline {
-                                buf.push(' ');
-                            }
-                        }
-                        _ => {
-                            buf.push(c);
-                            after_newline = false;
-                        }
-                    }
-                }
-                Cow::Owned(buf)
-            }
-            Value::String(string, QuoteKind::Quoted) => {
-                let mut buf = String::with_capacity(string.len());
-                visit_quoted_string(&mut buf, false, string);
-                Cow::Owned(buf)
-            }
-            Value::True => Cow::Borrowed("true"),
-            Value::False => Cow::Borrowed("false"),
-            Value::Null => Cow::Borrowed(""),
-            Value::ArgList(args) if args.is_empty() => {
-                return Err(("() isn't a valid CSS value.", span).into());
-            }
-            Value::ArgList(args) => Cow::Owned(
-                args.elems
-                    .iter()
-                    .filter(|x| !x.is_null())
-                    .map(|a| a.to_css_string(span, is_compressed))
-                    .collect::<SassResult<Vec<Cow<'static, str>>>>()?
-                    .join(if is_compressed {
-                        ListSeparator::Comma.as_compressed_str()
-                    } else {
-                        ListSeparator::Comma.as_str()
-                    }),
-            ),
-        })
+    pub fn to_css_string(&self, span: Span, is_compressed: bool) -> SassResult<String> {
+        serialize_value(
+            self,
+            &Options::default().style(if is_compressed {
+                OutputStyle::Compressed
+            } else {
+                OutputStyle::Expanded
+            }),
+            span,
+        )
+    }
+
+    pub fn inspect(&self, span: Span) -> SassResult<String> {
+        inspect_value(self, &Options::default(), span)
     }
 
     pub fn is_true(&self) -> bool {
@@ -566,80 +406,6 @@ impl Value {
             },
             s => s != other,
         }
-    }
-
-    // TODO:
-    // https://github.com/sass/dart-sass/blob/d4adea7569832f10e3a26d0e420ae51640740cfb/lib/src/ast/sass/expression/list.dart#L39
-    // todo: is this actually fallible?
-    pub fn inspect(&self, span: Span) -> SassResult<Cow<'static, str>> {
-        Ok(match self {
-            Value::Calculation(calc) => {
-                Cow::Owned(serialize_calculation(calc, &Options::default(), span)?)
-            }
-            Value::List(v, _, brackets) if v.is_empty() => match brackets {
-                Brackets::None => Cow::Borrowed("()"),
-                Brackets::Bracketed => Cow::Borrowed("[]"),
-            },
-            Value::List(v, sep, brackets) if v.len() == 1 => match brackets {
-                Brackets::None => match sep {
-                    ListSeparator::Space | ListSeparator::Slash | ListSeparator::Undecided => {
-                        v[0].inspect(span)?
-                    }
-                    ListSeparator::Comma => Cow::Owned(format!("({},)", v[0].inspect(span)?)),
-                },
-                Brackets::Bracketed => match sep {
-                    ListSeparator::Space | ListSeparator::Slash | ListSeparator::Undecided => {
-                        Cow::Owned(format!("[{}]", v[0].inspect(span)?))
-                    }
-                    ListSeparator::Comma => Cow::Owned(format!("[{},]", v[0].inspect(span)?)),
-                },
-            },
-            Value::List(vals, sep, brackets) => Cow::Owned(match brackets {
-                Brackets::None => vals
-                    .iter()
-                    .map(|x| x.inspect(span))
-                    .collect::<SassResult<Vec<Cow<'static, str>>>>()?
-                    .join(sep.as_str()),
-                Brackets::Bracketed => format!(
-                    "[{}]",
-                    vals.iter()
-                        .map(|x| x.inspect(span))
-                        .collect::<SassResult<Vec<Cow<'static, str>>>>()?
-                        .join(sep.as_str()),
-                ),
-            }),
-            Value::FunctionRef(f) => Cow::Owned(format!("get-function(\"{}\")", f.name())),
-            Value::Null => Cow::Borrowed("null"),
-            Value::Map(map) => Cow::Owned(format!(
-                "({})",
-                map.iter()
-                    .map(|(k, v)| Ok(format!("{}: {}", k.inspect(span)?, v.inspect(span)?)))
-                    .collect::<SassResult<Vec<String>>>()?
-                    .join(", ")
-            )),
-            Value::Dimension(n) => Cow::Owned(inspect_number(n, &Options::default(), span)?),
-            Value::ArgList(args) if args.elems.is_empty() => Cow::Borrowed("()"),
-            Value::ArgList(args) if args.elems.len() == 1 => Cow::Owned(format!(
-                "({},)",
-                args.elems
-                    .iter()
-                    .filter(|x| !x.is_null())
-                    .map(|a| a.inspect(span))
-                    .collect::<SassResult<Vec<Cow<'static, str>>>>()?
-                    .join(", "),
-            )),
-            Value::ArgList(args) => Cow::Owned(
-                args.elems
-                    .iter()
-                    .filter(|x| !x.is_null())
-                    .map(|a| a.inspect(span))
-                    .collect::<SassResult<Vec<Cow<'static, str>>>>()?
-                    .join(", "),
-            ),
-            Value::True | Value::False | Value::Color(..) | Value::String(..) => {
-                self.to_css_string(span, false)?
-            }
-        })
     }
 
     pub fn as_list(self) -> Vec<Value> {

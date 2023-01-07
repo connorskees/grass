@@ -51,8 +51,8 @@ impl ArgList {
         self.len() == 0
     }
 
-    pub fn is_null(&self) -> bool {
-        !self.is_empty() && (self.elems.iter().all(Value::is_null))
+    pub fn is_blank(&self) -> bool {
+        !self.is_empty() && (self.elems.iter().all(Value::is_blank))
     }
 
     pub fn keywords(&self) -> &BTreeMap<Identifier, Value> {

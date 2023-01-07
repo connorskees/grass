@@ -82,7 +82,6 @@ test!(
     "a {\n  color: (), ();\n}\n"
 );
 test!(
-    #[ignore]
     inspect_comma_separated_list_of_comma_separated_lists,
     "a {\n  color: inspect([(1, 2), (3, 4)]);\n}\n",
     "a {\n  color: [(1, 2), (3, 4)];\n}\n"
@@ -98,7 +97,7 @@ test!(
     "a {\n  color: 1 2 3;\n}\n"
 );
 test!(
-    #[ignore]
+    #[ignore = "we don't support multiple arguments to inspect"]
     inspect_comma_list,
     "a {\n  color: inspect(1, 2, 3)\n}\n",
     "a {\n  color: 1, 2, 3;\n}\n"

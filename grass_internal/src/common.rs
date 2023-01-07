@@ -115,14 +115,6 @@ impl ListSeparator {
         }
     }
 
-    pub fn as_compressed_str(self) -> &'static str {
-        match self {
-            Self::Space | Self::Undecided => " ",
-            Self::Comma => ",",
-            Self::Slash => "/",
-        }
-    }
-
     pub fn name(self) -> &'static str {
         match self {
             Self::Space | Self::Undecided => "space",

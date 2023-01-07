@@ -1201,8 +1201,7 @@ impl<'a> Visitor<'a> {
     fn visit_error_rule(&mut self, error_rule: AstErrorRule) -> SassResult<Box<SassError>> {
         let value = self
             .visit_expr(error_rule.value)?
-            .inspect(error_rule.span)?
-            .into_owned();
+            .inspect(error_rule.span)?;
 
         Ok((value, error_rule.span).into())
     }
@@ -2268,12 +2267,31 @@ impl<'a> Visitor<'a> {
                     Err(("Function finished without @return.", span).into())
                 }),
             SassFunction::Plain { name } => {
+                let has_named;
+                let mut rest = None;
+
+                // todo: somewhat hacky solution to support plain css fns passed
+                // as strings to `call(..)`
                 let arguments = match arguments {
-                    MaybeEvaledArguments::Invocation(args) => args,
-                    MaybeEvaledArguments::Evaled(..) => unreachable!(),
+                    MaybeEvaledArguments::Invocation(args) => {
+                        has_named = !args.named.is_empty() || args.keyword_rest.is_some();
+                        rest = args.rest;
+                        args.positional
+                            .into_iter()
+                            .map(|arg| self.evaluate_to_css(arg, QuoteKind::Quoted, span))
+                            .collect::<SassResult<Vec<_>>>()?
+                    }
+                    MaybeEvaledArguments::Evaled(args) => {
+                        has_named = !args.named.is_empty();
+
+                        args.positional
+                            .into_iter()
+                            .map(|arg| Ok(arg.to_css_string(span, self.options.is_compressed())?))
+                            .collect::<SassResult<Vec<_>>>()?
+                    }
                 };
 
-                if !arguments.named.is_empty() || arguments.keyword_rest.is_some() {
+                if has_named {
                     return Err(
                         ("Plain CSS functions don't support keyword arguments.", span).into(),
                     );
@@ -2282,17 +2300,17 @@ impl<'a> Visitor<'a> {
                 let mut buffer = format!("{}(", name.as_str());
                 let mut first = true;
 
-                for argument in arguments.positional {
+                for argument in arguments {
                     if first {
                         first = false;
                     } else {
                         buffer.push_str(", ");
                     }
 
-                    buffer.push_str(&self.evaluate_to_css(argument, QuoteKind::Quoted, span)?);
+                    buffer.push_str(&argument);
                 }
 
-                if let Some(rest_arg) = arguments.rest {
+                if let Some(rest_arg) = rest {
                     let rest = self.visit_expr(rest_arg)?;
                     if !first {
                         buffer.push_str(", ");
@@ -2709,9 +2727,8 @@ impl<'a> Visitor<'a> {
                 let left_is_number = matches!(left, Value::Dimension { .. });
                 let right_is_number = matches!(right, Value::Dimension { .. });
 
-                let result = div(left.clone(), right.clone(), self.options, span)?;
-
                 if left_is_number && right_is_number && allows_slash {
+                    let result = div(left.clone(), right.clone(), self.options, span)?;
                     return result.with_slash(
                         left.assert_number(span)?,
                         right.assert_number(span)?,
@@ -2726,6 +2743,8 @@ impl<'a> Visitor<'a> {
                     //     span,
                     // );
                 }
+
+                let result = div(left, right, self.options, span)?;
 
                 result
             }
@@ -2742,9 +2761,7 @@ impl<'a> Visitor<'a> {
             expr = expr.unquote();
         }
 
-        Ok(expr
-            .to_css_string(span, self.options.is_compressed())?
-            .into_owned())
+        expr.to_css_string(span, self.options.is_compressed())
     }
 
     pub fn visit_ruleset(&mut self, ruleset: AstRuleSet) -> SassResult<Option<Value>> {
@@ -2906,7 +2923,7 @@ impl<'a> Visitor<'a> {
         {
             // If the value is an empty list, preserve it, because converting it to CSS
             // will throw an error that we want the user to see.
-            if !value.is_null() || value.is_empty_list() {
+            if !value.is_blank() || value.is_empty_list() {
                 // todo: superfluous clones?
                 self.css_tree.add_stmt(
                     CssStmt::Style(Style {

@@ -10,10 +10,13 @@
 - add `grass::include!` macro to make it easier to include CSS at compile time
 - improve error message for complex units in calculations
 - more accurate formatting of named arguments in arglists when passed to `inspect(..)`
+- more accurate formatting of nested lists with different separators when passed to `inspect(..)`
 - support `$whiteness` and `$blackness` as arguments to `scale-color(..)`
 - more accurate list separator from `join(..)`
 - resolve unicode edge cases in `str-index(..)`
 - more robust support for `@forward` prefixes
+- allow strings as the first argument to `call(..)`
+- bug fix: add back support for the `$css` argument to `get-function(..)`. regressed in 0.12.0
 
 # 0.12.0
 

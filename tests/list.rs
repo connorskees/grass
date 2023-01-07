@@ -474,3 +474,8 @@ error!(
     "a {\n  color: set-nth([], 1px, a);\n}\n",
     "Error: $n: Invalid index 1px for a list with 0 elements."
 );
+error!(
+    #[ignore = ""]
+    empty_list_is_invalid,
+    "a {\n  color: ();\n}\n", "Error: () isn't a valid CSS value."
+);

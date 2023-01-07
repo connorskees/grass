@@ -7,8 +7,8 @@ mod macros;
 
 #[test]
 fn null_fs_cannot_import() {
-    let input = "@import \"foo\";";
-    tempfile!("foo.scss", "");
+    let input = "@import \"__foo\";";
+    tempfile!("__foo.scss", "");
     match grass::from_string(
         input.to_string(),
         &grass::Options::default().fs(&grass::NullFs),
