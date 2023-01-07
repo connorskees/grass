@@ -41,14 +41,17 @@ pub(crate) struct InterpolatedFunction {
 pub(crate) struct AstSassMap(pub Vec<(Spanned<AstExpr>, AstExpr)>);
 
 #[derive(Debug, Clone)]
+pub(crate) struct BinaryOpExpr {
+    pub lhs: AstExpr,
+    pub op: BinaryOp,
+    pub rhs: AstExpr,
+    pub allows_slash: bool,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone)]
 pub(crate) enum AstExpr {
-    BinaryOp {
-        lhs: Arc<Self>,
-        op: BinaryOp,
-        rhs: Arc<Self>,
-        allows_slash: bool,
-        span: Span,
-    },
+    BinaryOp(Arc<BinaryOpExpr>),
     True,
     False,
     Calculation {
@@ -167,19 +170,19 @@ impl AstExpr {
     pub fn is_slash_operand(&self) -> bool {
         match self {
             Self::Number { .. } | Self::Calculation { .. } => true,
-            Self::BinaryOp { allows_slash, .. } => *allows_slash,
+            Self::BinaryOp(binop) => binop.allows_slash,
             _ => false,
         }
     }
 
     pub fn slash(left: Self, right: Self, span: Span) -> Self {
-        Self::BinaryOp {
-            lhs: Arc::new(left),
+        Self::BinaryOp(Arc::new(BinaryOpExpr {
+            lhs: left,
             op: BinaryOp::Div,
-            rhs: Arc::new(right),
+            rhs: right,
             allows_slash: true,
             span,
-        }
+        }))
     }
 
     pub const fn span(self, span: Span) -> Spanned<Self> {

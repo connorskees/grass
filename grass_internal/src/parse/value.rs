@@ -538,13 +538,13 @@ impl<'a, 'c, P: StylesheetParser<'a>> ValueParser<'a, 'c, P> {
             self.single_expression = Some(AstExpr::slash(left.node, right.node, span).span(span));
         } else {
             self.single_expression = Some(
-                AstExpr::BinaryOp {
-                    lhs: Arc::new(left.node),
+                AstExpr::BinaryOp(Arc::new(BinaryOpExpr {
+                    lhs: left.node,
                     op: operator,
-                    rhs: Arc::new(right.node),
+                    rhs: right.node,
                     allows_slash: false,
                     span,
-                }
+                }))
                 .span(span),
             );
             self.allow_slash = false;
@@ -1600,17 +1600,17 @@ impl<'a, 'c, P: StylesheetParser<'a>> ValueParser<'a, 'c, P> {
 
                     let span = product.span.merge(rhs.span);
 
-                    product.node = AstExpr::BinaryOp {
-                        lhs: Arc::new(product.node),
+                    product.node = AstExpr::BinaryOp(Arc::new(BinaryOpExpr {
+                        lhs: product.node,
                         op: if op == '*' {
                             BinaryOp::Mul
                         } else {
                             BinaryOp::Div
                         },
-                        rhs: Arc::new(rhs.node),
+                        rhs: rhs.node,
                         allows_slash: false,
                         span,
-                    };
+                    }));
 
                     product.span = span;
                 }
@@ -1654,17 +1654,17 @@ impl<'a, 'c, P: StylesheetParser<'a>> ValueParser<'a, 'c, P> {
 
                     let span = sum.span.merge(rhs.span);
 
-                    sum = AstExpr::BinaryOp {
-                        lhs: Arc::new(sum.node),
+                    sum = AstExpr::BinaryOp(Arc::new(BinaryOpExpr {
+                        lhs: sum.node,
                         op: if next == '+' {
                             BinaryOp::Plus
                         } else {
                             BinaryOp::Minus
                         },
-                        rhs: Arc::new(rhs.node),
+                        rhs: rhs.node,
                         allows_slash: false,
                         span,
-                    }
+                    }))
                     .span(span);
                 }
                 _ => return Ok(sum),

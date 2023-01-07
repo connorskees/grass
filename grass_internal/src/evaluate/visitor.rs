@@ -2421,13 +2421,15 @@ impl<'a> Visitor<'a> {
             }),
             AstExpr::List(list) => self.visit_list_expr(list)?,
             AstExpr::String(StringExpr(text, quote), ..) => self.visit_string(text, quote)?,
-            AstExpr::BinaryOp {
-                lhs,
-                op,
-                rhs,
-                allows_slash,
-                span,
-            } => self.visit_bin_op((*lhs).clone(), op, (*rhs).clone(), allows_slash, span)?,
+            AstExpr::BinaryOp(binop) => {
+                self.visit_bin_op(
+                    binop.lhs.clone(),
+                    binop.op,
+                    binop.rhs.clone(),
+                    binop.allows_slash,
+                    binop.span,
+                )?
+            }
             AstExpr::True => Value::True,
             AstExpr::False => Value::False,
             AstExpr::Calculation { name, args } => {
@@ -2475,15 +2477,17 @@ impl<'a> Visitor<'a> {
                 debug_assert!(string_expr.1 == QuoteKind::None);
                 CalculationArg::Interpolation(self.perform_interpolation(string_expr.0, false)?)
             }
-            AstExpr::BinaryOp { lhs, op, rhs, .. } => SassCalculation::operate_internal(
-                op,
-                self.visit_calculation_value((*lhs).clone(), in_min_or_max, span)?,
-                self.visit_calculation_value((*rhs).clone(), in_min_or_max, span)?,
-                in_min_or_max,
-                !self.flags.in_supports_declaration(),
-                self.options,
-                span,
-            )?,
+            AstExpr::BinaryOp(binop) => {
+                SassCalculation::operate_internal(
+                    binop.op,
+                    self.visit_calculation_value(binop.lhs.clone(), in_min_or_max, span)?,
+                    self.visit_calculation_value(binop.rhs.clone(), in_min_or_max, span)?,
+                    in_min_or_max,
+                    !self.flags.in_supports_declaration(),
+                    self.options,
+                    span,
+                )?
+            }
             AstExpr::Number { .. }
             | AstExpr::Calculation { .. }
             | AstExpr::Variable { .. }
