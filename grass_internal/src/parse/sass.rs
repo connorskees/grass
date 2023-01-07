@@ -2,7 +2,7 @@ use std::path::Path;
 
 use codemap::{CodeMap, Span};
 
-use crate::{ast::*, error::SassResult, lexer::Lexer, Token, ContextFlags, Options};
+use crate::{ast::*, error::SassResult, lexer::Lexer, ContextFlags, Options, Token};
 
 use super::{BaseParser, StylesheetParser};
 

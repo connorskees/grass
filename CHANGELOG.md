@@ -8,6 +8,7 @@
 # 0.12.1 (unreleased)
 
 - add `grass::include!` macro to make it easier to include CSS at compile time
+- various optimizations improving the bootstrap benchmark by ~30% and the bulma benchmark by ~15%
 - improve error message for complex units in calculations
 - more accurate formatting of named arguments in arglists when passed to `inspect(..)`
 - more accurate formatting of nested lists with different separators when passed to `inspect(..)`

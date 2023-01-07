@@ -27,8 +27,8 @@ mod builtin_imports {
     };
 
     pub(crate) use std::{
-        sync::Arc,
         cmp::Ordering,
         collections::{BTreeMap, BTreeSet},
+        sync::Arc,
     };
 }

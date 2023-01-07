@@ -203,17 +203,19 @@ impl<'a> CssParser<'a> {
             return Err(("This function isn't allowed in plain CSS.", span).into());
         }
 
-        Ok(AstExpr::InterpolatedFunction(Arc::new(InterpolatedFunction {
-            name: identifier,
-            arguments: ArgumentInvocation {
-                positional: arguments,
-                named: BTreeMap::new(),
-                rest: None,
-                keyword_rest: None,
-                span: self.toks.span_from(before_args),
-            },
-            span,
-        }))
-        .span(span))
+        Ok(
+            AstExpr::InterpolatedFunction(Arc::new(InterpolatedFunction {
+                name: identifier,
+                arguments: ArgumentInvocation {
+                    positional: arguments,
+                    named: BTreeMap::new(),
+                    rest: None,
+                    keyword_rest: None,
+                    span: self.toks.span_from(before_args),
+                },
+                span,
+            }))
+            .span(span),
+        )
     }
 }
