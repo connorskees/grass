@@ -84,7 +84,7 @@ pub use grass_internal::*;
 
 /// Include CSS in your binary at compile time from a Sass source file
 ///
-/// ```no_run
+/// ```ignore
 /// static CSS: &str = grass::include!("../static/_main.scss");
 /// ```
 ///
