@@ -5,7 +5,6 @@ use codemap::Span;
 use crate::{
     common::{BinaryOp, QuoteKind},
     error::SassResult,
-    serializer::serialize_number,
     unit::Unit,
     value::{SassNumber, Value},
     Options,
@@ -454,78 +453,44 @@ pub(crate) fn single_eq(
     ))
 }
 
-// todo: simplify matching
 pub(crate) fn div(left: Value, right: Value, options: &Options, span: Span) -> SassResult<Value> {
-    Ok(match left {
-        Value::Dimension(SassNumber {
-            num,
-            unit,
-            as_slash: as_slash1,
-        }) => match right {
-            Value::Dimension(SassNumber {
-                num: num2,
-                unit: unit2,
-                ..
-            }) => {
-                if unit2 == Unit::None {
-                    return Ok(Value::Dimension(SassNumber {
-                        num: num / num2,
-                        unit,
-                        as_slash: None,
-                    }));
-                }
-
-                let n = SassNumber {
-                    num,
-                    unit,
+    Ok(match (left, right) {
+        (Value::Dimension(num1), Value::Dimension(num2)) => {
+            if num2.unit == Unit::None {
+                return Ok(Value::Dimension(SassNumber {
+                    num: num1.num / num2.num,
+                    unit: num1.unit,
                     as_slash: None,
-                } / SassNumber {
-                    num: num2,
-                    unit: unit2,
-                    as_slash: None,
-                };
+                }));
+            }
 
-                Value::Dimension(n)
-            }
-            _ => Value::String(
+            let n = SassNumber {
+                num: num1.num,
+                unit: num1.unit,
+                as_slash: None,
+            } / SassNumber {
+                num: num2.num,
+                unit: num2.unit,
+                as_slash: None,
+            };
+
+            Value::Dimension(n)
+        }
+        (
+            left @ Value::Color(..),
+            right @ (Value::Dimension(SassNumber { .. }) | Value::Color(..)),
+        ) => {
+            return Err((
                 format!(
-                    "{}/{}",
-                    serialize_number(
-                        &SassNumber {
-                            num,
-                            unit,
-                            as_slash: as_slash1
-                        },
-                        options,
-                        span
-                    )?,
-                    right.to_css_string(span, options.is_compressed())?
+                    "Undefined operation \"{} / {}\".",
+                    left.inspect(span)?,
+                    right.inspect(span)?
                 ),
-                QuoteKind::None,
-            ),
-        },
-        c @ Value::Color(..) => match right {
-            Value::Dimension(SassNumber { .. }) | Value::Color(..) => {
-                return Err((
-                    format!(
-                        "Undefined operation \"{} / {}\".",
-                        c.inspect(span)?,
-                        right.inspect(span)?
-                    ),
-                    span,
-                )
-                    .into())
-            }
-            _ => Value::String(
-                format!(
-                    "{}/{}",
-                    c.to_css_string(span, options.is_compressed())?,
-                    right.to_css_string(span, options.is_compressed())?
-                ),
-                QuoteKind::None,
-            ),
-        },
-        _ => Value::String(
+                span,
+            )
+                .into())
+        }
+        (left, right) => Value::String(
             format!(
                 "{}/{}",
                 left.to_css_string(span, options.is_compressed())?,
@@ -537,54 +502,31 @@ pub(crate) fn div(left: Value, right: Value, options: &Options, span: Span) -> S
 }
 
 pub(crate) fn rem(left: Value, right: Value, _: &Options, span: Span) -> SassResult<Value> {
-    Ok(match left {
-        Value::Dimension(SassNumber {
-            num: n,
-            unit: u,
-            as_slash: _,
-        }) => match right {
-            Value::Dimension(SassNumber {
-                num: n2,
-                unit: u2,
-                as_slash: _,
-            }) => {
-                if !u.comparable(&u2) {
-                    return Err((format!("Incompatible units {} and {}.", u, u2), span).into());
-                }
-
-                let new_num = n % n2.convert(&u2, &u);
-                let new_unit = if u == u2 {
-                    u
-                } else if u == Unit::None {
-                    u2
-                } else {
-                    u
-                };
-                Value::Dimension(SassNumber {
-                    num: new_num,
-                    unit: new_unit,
-                    as_slash: None,
-                })
-            }
-            _ => {
-                let val = Value::Dimension(SassNumber {
-                    num: n,
-                    unit: u,
-                    as_slash: None,
-                })
-                .inspect(span)?;
+    Ok(match (left, right) {
+        (Value::Dimension(num1), Value::Dimension(num2)) => {
+            if !num1.unit.comparable(&num2.unit) {
                 return Err((
-                    format!(
-                        "Undefined operation \"{} % {}\".",
-                        val,
-                        right.inspect(span)?
-                    ),
+                    format!("Incompatible units {} and {}.", num1.unit, num2.unit),
                     span,
                 )
                     .into());
             }
-        },
-        _ => {
+
+            let new_num = num1.num % num2.num.convert(&num2.unit, &num1.unit);
+            let new_unit = if num1.unit == num2.unit {
+                num1.unit
+            } else if num1.unit == Unit::None {
+                num2.unit
+            } else {
+                num1.unit
+            };
+            Value::Dimension(SassNumber {
+                num: new_num,
+                unit: new_unit,
+                as_slash: None,
+            })
+        }
+        (left, right) => {
             return Err((
                 format!(
                     "Undefined operation \"{} % {}\".",
