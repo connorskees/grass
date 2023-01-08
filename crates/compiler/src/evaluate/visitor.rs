@@ -2125,26 +2125,25 @@ impl<'a> Visitor<'a> {
                     evaluated.span,
                 )?;
 
-                // todo: superfluous clone
-                let declared_arguments = func.arguments().args.clone();
+                let declared_arguments = &func.arguments().args;
                 let min_len = evaluated.positional.len().min(declared_arguments.len());
 
+                let positional_len = evaluated.positional.len();
+
                 #[allow(clippy::needless_range_loop)]
-                for i in 0..min_len {
-                    // todo: superfluous clone
+                for i in (0..min_len).rev() {
                     visitor.env.scopes_mut().insert_var_last(
                         declared_arguments[i].name,
-                        evaluated.positional[i].clone(),
+                        evaluated.positional.remove(i),
                     );
                 }
 
                 // todo: better name for var
-                let additional_declared_args =
-                    if declared_arguments.len() > evaluated.positional.len() {
-                        &declared_arguments[evaluated.positional.len()..declared_arguments.len()]
-                    } else {
-                        &[]
-                    };
+                let additional_declared_args = if declared_arguments.len() > positional_len {
+                    &declared_arguments[positional_len..declared_arguments.len()]
+                } else {
+                    &[]
+                };
 
                 for argument in additional_declared_args {
                     let name = argument.name;
@@ -2161,17 +2160,19 @@ impl<'a> Visitor<'a> {
 
                 let were_keywords_accessed = Arc::new(Cell::new(false));
 
-                let argument_list = if let Some(rest_arg) = func.arguments().rest {
-                    let rest = if evaluated.positional.len() > declared_arguments.len() {
-                        &evaluated.positional[declared_arguments.len()..]
+                let num_named_args = evaluated.named.len();
+
+                let has_arg_list = if let Some(rest_arg) = func.arguments().rest {
+                    let rest = if evaluated.positional.len() > 0 {
+                        evaluated.positional
                     } else {
-                        &[]
+                        Vec::new()
                     };
 
                     let arg_list = Value::ArgList(ArgList::new(
-                        rest.to_vec(),
-                        // todo: superfluous clone
+                        rest,
                         Arc::clone(&were_keywords_accessed),
+                        // todo: superfluous clone
                         evaluated.named.clone(),
                         if evaluated.separator == ListSeparator::Undecided {
                             ListSeparator::Comma
@@ -2180,20 +2181,16 @@ impl<'a> Visitor<'a> {
                         },
                     ));
 
-                    visitor
-                        .env
-                        .scopes_mut()
-                        // todo: superfluous clone
-                        .insert_var_last(rest_arg, arg_list.clone());
+                    visitor.env.scopes_mut().insert_var_last(rest_arg, arg_list);
 
-                    Some(arg_list)
+                    true
                 } else {
-                    None
+                    false
                 };
 
                 let val = run(func, visitor)?;
 
-                if argument_list.is_none() || evaluated.named.is_empty() {
+                if !has_arg_list || num_named_args == 0 {
                     return Ok(val);
                 }
 
@@ -2201,7 +2198,7 @@ impl<'a> Visitor<'a> {
                     return Ok(val);
                 }
 
-                let argument_word = if evaluated.named.len() == 1 {
+                let argument_word = if num_named_args == 1 {
                     "argument"
                 } else {
                     "arguments"

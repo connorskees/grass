@@ -13,8 +13,8 @@ use crate::{
     },
     utils::hex_char_for,
     value::{
-        fuzzy_equals, ArgList, CalculationArg, SassCalculation, SassFunction, SassMap, SassNumber,
-        Value,
+        fuzzy_equals, ArgList, CalculationArg, CalculationName, SassCalculation, SassFunction,
+        SassMap, SassNumber, Value,
     },
     Options,
 };
@@ -299,10 +299,17 @@ impl<'a> Serializer<'a> {
         self.write_optional_space();
     }
 
+    fn write_calculation_name(&mut self, name: CalculationName) {
+        match name {
+            CalculationName::Calc => self.buffer.extend_from_slice(b"calc"),
+            CalculationName::Min => self.buffer.extend_from_slice(b"min"),
+            CalculationName::Max => self.buffer.extend_from_slice(b"max"),
+            CalculationName::Clamp => self.buffer.extend_from_slice(b"clamp"),
+        }
+    }
+
     fn visit_calculation(&mut self, calculation: &SassCalculation) -> SassResult<()> {
-        // todo: superfluous allocation
-        self.buffer
-            .extend_from_slice(calculation.name.to_string().as_bytes());
+        self.write_calculation_name(calculation.name);
         self.buffer.push(b'(');
 
         if let Some((last, slice)) = calculation.args.split_last() {

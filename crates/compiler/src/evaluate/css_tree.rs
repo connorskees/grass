@@ -78,28 +78,27 @@ impl CssTree {
     }
 
     fn add_child_to_parent(&self, child: CssStmt, parent_idx: CssTreeIdx) {
-        let mut parent = self.stmts[parent_idx.0].borrow_mut().take();
-        match &mut parent {
-            Some(CssStmt::RuleSet { body, .. }) => body.push(child),
-            Some(CssStmt::Style(..) | CssStmt::Comment(..) | CssStmt::Import(..)) | None => {
-                unreachable!()
-            }
-            Some(CssStmt::Media(media, ..)) => {
-                media.body.push(child);
-            }
-            Some(CssStmt::UnknownAtRule(at_rule, ..)) => {
-                at_rule.body.push(child);
-            }
-            Some(CssStmt::Supports(supports, ..)) => {
-                supports.body.push(child);
-            }
-            Some(CssStmt::KeyframesRuleSet(keyframes)) => {
-                keyframes.body.push(child);
-            }
-        }
-        self.stmts[parent_idx.0]
-            .borrow_mut()
-            .replace(parent.unwrap());
+        RefMut::map(self.stmts[parent_idx.0].borrow_mut(), |parent| {
+            match parent {
+                Some(CssStmt::RuleSet { body, .. }) => body.push(child),
+                Some(CssStmt::Style(..) | CssStmt::Comment(..) | CssStmt::Import(..)) | None => {
+                    unreachable!()
+                }
+                Some(CssStmt::Media(media, ..)) => {
+                    media.body.push(child);
+                }
+                Some(CssStmt::UnknownAtRule(at_rule, ..)) => {
+                    at_rule.body.push(child);
+                }
+                Some(CssStmt::Supports(supports, ..)) => {
+                    supports.body.push(child);
+                }
+                Some(CssStmt::KeyframesRuleSet(keyframes)) => {
+                    keyframes.body.push(child);
+                }
+            };
+            parent
+        });
     }
 
     pub fn add_child(&mut self, child: CssStmt, parent_idx: CssTreeIdx) -> CssTreeIdx {
