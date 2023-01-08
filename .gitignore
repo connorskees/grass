@@ -2,6 +2,7 @@
 *.css
 *.exe
 !input.scss
+!crates/static/_index.scss
 
 # devops
 /target

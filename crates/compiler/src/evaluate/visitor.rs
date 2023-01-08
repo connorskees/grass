@@ -2163,7 +2163,7 @@ impl<'a> Visitor<'a> {
                 let num_named_args = evaluated.named.len();
 
                 let has_arg_list = if let Some(rest_arg) = func.arguments().rest {
-                    let rest = if evaluated.positional.len() > 0 {
+                    let rest = if !evaluated.positional.is_empty() {
                         evaluated.positional
                     } else {
                         Vec::new()
