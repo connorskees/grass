@@ -1,5 +1,5 @@
 [package]
-name = "compiler"
+name = "grass_compiler"
 version = "0.12.1"
 edition = "2021"
 description = "Internal implementation of the grass compiler"
@@ -11,7 +11,7 @@ repository = "https://github.com/connorskees/grass"
 authors = ["Connor Skees <39542938+ConnorSkees@users.noreply.github.com>"]
 
 [lib]
-name = "compiler"
+name = "grass_compiler"
 path = "src/lib.rs"
 # crate-type = ["cdylib", "rlib"]
 bench = false

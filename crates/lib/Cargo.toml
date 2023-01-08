@@ -24,7 +24,7 @@ path = "src/lib.rs"
 bench = false
 
 [dependencies]
-compiler = { path = "../compiler", version = "0.12.1" }
+grass_compiler = { path = "../compiler", version = "0.12.1" }
 include_sass = { path = "../include_sass", version = "0.12.1", optional = true }
 clap = { version = "2.34.0", optional = true }
 
@@ -33,8 +33,8 @@ clap = { version = "2.34.0", optional = true }
 default = ["commandline", "random"]
 # Option (enabled by default): build a binary using clap
 commandline = ["clap"]
-random = ["compiler/random"]
-wasm-exports = ["compiler/wasm-exports"]
+random = ["grass_compiler/random"]
+wasm-exports = ["grass_compiler/wasm-exports"]
 # Option: include the proc macro `include_sass!`
 macro = ["include_sass"]
 nightly = ["include_sass/nightly"]
