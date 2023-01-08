@@ -1980,7 +1980,7 @@ impl<'a> Visitor<'a> {
         arguments: ArgumentInvocation,
         span: Span,
     ) -> SassResult<ArgumentResult> {
-        let mut positional = Vec::new();
+        let mut positional = Vec::with_capacity(arguments.positional.len());
 
         for expr in arguments.positional {
             let val = self.visit_expr(expr)?;
