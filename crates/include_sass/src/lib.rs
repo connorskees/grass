@@ -99,7 +99,9 @@ pub fn include_sass(item: TokenStream) -> TokenStream {
 
     let css = match grass_compiler::from_path(
         value,
-        &options.fs(&fs).style(grass_compiler::OutputStyle::Compressed),
+        &options
+            .fs(&fs)
+            .style(grass_compiler::OutputStyle::Compressed),
     ) {
         Ok(css) => css,
         Err(e) => {
