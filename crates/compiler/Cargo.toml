@@ -2,8 +2,13 @@
 name = "compiler"
 version = "0.12.1"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+description = "Internal implementation of the grass compiler"
+readme = "../README.md"
+license = "MIT"
+categories = ["web-programming"]
+keywords = ["scss", "sass", "css", "web"]
+repository = "https://github.com/connorskees/grass"
+authors = ["Connor Skees <39542938+ConnorSkees@users.noreply.github.com>"]
 
 [lib]
 name = "compiler"

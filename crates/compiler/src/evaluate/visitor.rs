@@ -2286,7 +2286,7 @@ impl<'a> Visitor<'a> {
 
                         args.positional
                             .into_iter()
-                            .map(|arg| Ok(arg.to_css_string(span, self.options.is_compressed())?))
+                            .map(|arg| arg.to_css_string(span, self.options.is_compressed()))
                             .collect::<SassResult<Vec<_>>>()?
                     }
                 };
@@ -2389,7 +2389,7 @@ impl<'a> Visitor<'a> {
             buffer.push_str(&evaluated);
         }
 
-        if let Some(rest_arg) = args.rest.clone() {
+        if let Some(rest_arg) = args.rest {
             let rest = self.visit_expr(rest_arg)?;
             if !first {
                 buffer.push_str(", ");
@@ -2749,9 +2749,7 @@ impl<'a> Visitor<'a> {
                     // );
                 }
 
-                let result = div(left, right, self.options, span)?;
-
-                result
+                div(left, right, self.options, span)?
             }
             BinaryOp::Rem => {
                 let right = self.visit_expr(rhs)?;

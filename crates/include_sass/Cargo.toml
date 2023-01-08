@@ -2,6 +2,14 @@
 name = "include_sass"
 version = "0.12.1"
 edition = "2021"
+description = "Internal implementation of the grass::include! macro"
+readme = "../README.md"
+license = "MIT"
+categories = ["web-programming"]
+keywords = ["scss", "sass", "css", "web"]
+repository = "https://github.com/connorskees/grass"
+authors = ["Connor Skees <39542938+ConnorSkees@users.noreply.github.com>"]
+include = ["src", "Cargo.toml", "../README.md", "../CHANGELOG.md", "../LICENSE"]
 
 [lib]
 proc-macro = true

@@ -721,7 +721,7 @@ impl<'a> Serializer<'a> {
 
         while let Some(elem) = elems.next() {
             if self.inspect {
-                let needs_parens = Self::elem_needs_parens(sep, &elem);
+                let needs_parens = Self::elem_needs_parens(sep, elem);
                 if needs_parens {
                     self.buffer.push(b'(');
                 }
@@ -923,9 +923,9 @@ impl<'a> Serializer<'a> {
 
     fn visit_value(&mut self, value: &Value, span: Span) -> SassResult<()> {
         match value {
-            Value::Dimension(num) => self.visit_number(&num)?,
-            Value::Color(color) => self.visit_color(&color),
-            Value::Calculation(calc) => self.visit_calculation(&calc)?,
+            Value::Dimension(num) => self.visit_number(num)?,
+            Value::Color(color) => self.visit_color(color),
+            Value::Calculation(calc) => self.visit_calculation(calc)?,
             Value::List(elems, sep, brackets) => self.visit_list(elems, *sep, *brackets, span)?,
             Value::True => self.buffer.extend_from_slice(b"true"),
             Value::False => self.buffer.extend_from_slice(b"false"),
@@ -935,7 +935,7 @@ impl<'a> Serializer<'a> {
                 }
             }
             Value::Map(map) => self.visit_map(map, span)?,
-            Value::FunctionRef(func) => self.visit_function_ref(&*func, span)?,
+            Value::FunctionRef(func) => self.visit_function_ref(func, span)?,
             Value::String(s, QuoteKind::Quoted) => self.visit_quoted_string(false, s),
             Value::String(s, QuoteKind::None) => self.visit_unquoted_string(s),
             Value::ArgList(arglist) => self.visit_arglist(arglist, span)?,
