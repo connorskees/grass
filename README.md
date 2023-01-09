@@ -1,6 +1,6 @@
 # grass
 
-This crate aims to provide a high level interface for compiling Sass into
+This crate aims to provide a high level interface for compiling [Sass](https://sass-lang.com/documentation/) into
 plain CSS. It offers a very limited API, currently exposing only 2 functions.
 
 In addition to a library, this crate also includes a binary that is intended to act as an invisible
