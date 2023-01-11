@@ -119,6 +119,11 @@ pub(crate) struct Visitor<'a> {
     pub map: &'a mut CodeMap,
     // todo: remove
     span_before: Span,
+    import_cache: BTreeMap<PathBuf, StyleSheet>,
+    /// As a simple heuristic, we don't cache the results of an import unless it
+    /// has been seen in the past. In the majority of cases, files are imported
+    /// at most once.
+    files_seen: BTreeSet<PathBuf>,
 }
 
 impl<'a> Visitor<'a> {
@@ -153,6 +158,8 @@ impl<'a> Visitor<'a> {
             options,
             span_before,
             map,
+            import_cache: BTreeMap::new(),
+            files_seen: BTreeSet::new(),
         }
     }
 
@@ -822,6 +829,16 @@ impl<'a> Visitor<'a> {
         span: Span,
     ) -> SassResult<StyleSheet> {
         if let Some(name) = self.find_import(url.as_ref()) {
+            // assumption: most users use regular file paths for their imports.
+            // we do support importing syntactically invalid paths and paths that
+            // do not exist through the `Options::fs` API, so we fallback to the
+            // original name if necessary
+            let canonical = std::fs::canonicalize(&name).unwrap_or_else(|_| name.to_path_buf());
+
+            if let Some(style_sheet) = self.import_cache.get(&canonical) {
+                return Ok(style_sheet.clone());
+            }
+
             let file = self.map.add_file(
                 name.to_string_lossy().into(),
                 String::from_utf8(self.options.fs.read(&name)?)?,
@@ -835,6 +852,13 @@ impl<'a> Visitor<'a> {
 
             self.flags
                 .set(ContextFlags::IS_USE_ALLOWED, old_is_use_allowed);
+
+            if self.files_seen.contains(&canonical) {
+                self.import_cache.insert(canonical, style_sheet.clone());
+            } else {
+                self.files_seen.insert(canonical);
+            }
+
             return Ok(style_sheet);
         }
 

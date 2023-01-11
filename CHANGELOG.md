@@ -5,6 +5,10 @@
 
 -->
 
+# 0.12.2 (unreleased)
+
+- implement an import cache, significantly improving the performance of certain pathological cases
+
 # 0.12.1
 
 - add `grass::include!` macro to make it easier to include CSS at compile time
