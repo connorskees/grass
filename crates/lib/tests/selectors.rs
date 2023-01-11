@@ -913,6 +913,33 @@ test!(
     }"#,
     "::foo(/a/b/) {\n  color: ::foo(/a/b/);\n}\n"
 );
+test!(
+    interpolated_parent_selector_as_child_to_selector_with_escape_and_length_greater_than_child,
+    r#"abcde \a {
+        #{&} {
+            color: red;
+        }
+    }"#,
+    "abcde \\a  abcde \\a  {\n  color: red;\n}\n"
+);
+error!(
+    interpolated_parent_selector_as_child_to_selector_with_escape_and_invalid_escape_and_length_greater_than_child,
+    r#"abcde \a {
+        #{&} \1111111 {
+            color: red;
+        }
+    }"#,
+    "Error: Invalid Unicode code point."
+);
+test!(
+    interpolated_parent_selector_as_child_to_selector_with_attribute_selector_and_length_greater_than_child,
+    r#"abcde [a] {
+        #{&} {
+            color: red;
+        }
+    }"#,
+    "abcde [a] abcde [a] {\n  color: red;\n}\n"
+);
 error!(
     pseudo_element_interpolated_semicolon_no_brackets,
     r#"::foo(#{";"}) {

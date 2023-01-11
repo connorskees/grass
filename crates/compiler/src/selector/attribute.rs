@@ -45,7 +45,7 @@ fn attribute_name(parser: &mut SelectorParser) -> SassResult<QualifiedName> {
     let next = parser
         .toks
         .peek()
-        .ok_or(("Expected identifier.", parser.toks.current_span()))?;
+        .ok_or_else(|| ("Expected identifier.", parser.toks.current_span()))?;
     if next.kind == '*' {
         parser.toks.next();
         parser.expect_char('|')?;
@@ -110,7 +110,7 @@ impl Attribute {
         if parser
             .toks
             .peek()
-            .ok_or(("expected more input.", parser.toks.current_span()))?
+            .ok_or_else(|| ("expected more input.", parser.toks.current_span()))?
             .kind
             == ']'
         {
@@ -130,7 +130,7 @@ impl Attribute {
         let peek = parser
             .toks
             .peek()
-            .ok_or(("expected more input.", parser.toks.current_span()))?;
+            .ok_or_else(|| ("expected more input.", parser.toks.current_span()))?;
 
         let value = match peek.kind {
             '\'' | '"' => parser.parse_string()?,

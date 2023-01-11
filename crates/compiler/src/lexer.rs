@@ -16,6 +16,9 @@ pub(crate) struct Lexer<'a> {
     buf: Cow<'a, [Token]>,
     entire_span: Span,
     cursor: usize,
+    /// If the input this lexer is spanned over is larger than the original span.
+    /// This is possible due to interpolation.
+    is_expanded: bool,
 }
 
 impl<'a> Lexer<'a> {
@@ -34,6 +37,10 @@ impl<'a> Lexer<'a> {
     /// bounds, it returns the span of the last character. If the input is empty,
     /// it returns an empty span
     fn span_at_index(&self, idx: usize) -> Span {
+        if self.is_expanded {
+            return self.entire_span;
+        }
+
         let (start, len) = match self.buf.get(idx) {
             Some(tok) => (tok.pos, tok.kind.len_utf8()),
             None => match self.buf.last() {
@@ -146,14 +153,22 @@ impl<'a> Iterator for TokenLexer<'a> {
 impl<'a> Lexer<'a> {
     pub fn new_from_file(file: &Arc<File>) -> Self {
         let buf = TokenLexer::new(file.source().chars().peekable()).collect();
-        Self::new(buf, file.span)
+        Self::new(buf, file.span, false)
     }
 
-    pub fn new(buf: Vec<Token>, entire_span: Span) -> Self {
+    pub fn new_from_string(s: &str, entire_span: Span) -> Self {
+        let is_expanded = s.len() as u64 > entire_span.len();
+        let buf = TokenLexer::new(s.chars().peekable()).collect();
+
+        Self::new(buf, entire_span, is_expanded)
+    }
+
+    fn new(buf: Vec<Token>, entire_span: Span, is_expanded: bool) -> Self {
         Lexer {
             buf: Cow::Owned(buf),
             cursor: 0,
             entire_span,
+            is_expanded,
         }
     }
 }

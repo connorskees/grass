@@ -2,12 +2,7 @@ use std::fmt::{self, Write};
 
 use codemap::Span;
 
-use crate::{
-    ast::CssStmt,
-    error::SassResult,
-    lexer::{Lexer, TokenLexer},
-    parse::MediaQueryParser,
-};
+use crate::{ast::CssStmt, error::SassResult, lexer::Lexer, parse::MediaQueryParser};
 
 #[derive(Debug, Clone)]
 pub(crate) struct MediaRule {
@@ -59,7 +54,7 @@ impl MediaQuery {
     }
 
     pub fn parse_list(list: &str, span: Span) -> SassResult<Vec<Self>> {
-        let toks = Lexer::new(TokenLexer::new(list.chars().peekable()).collect(), span);
+        let toks = Lexer::new_from_string(list, span);
 
         MediaQueryParser::new(toks).parse()
     }

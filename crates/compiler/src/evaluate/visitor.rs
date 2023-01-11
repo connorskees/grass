@@ -25,7 +25,7 @@ use crate::{
     common::{unvendor, BinaryOp, Identifier, ListSeparator, QuoteKind, UnaryOp},
     error::{SassError, SassResult},
     interner::InternedString,
-    lexer::{Lexer, TokenLexer},
+    lexer::Lexer,
     parse::{
         AtRootQueryParser, CssParser, KeyframesSelectorParser, SassParser, ScssParser,
         StylesheetParser,
@@ -977,8 +977,7 @@ impl<'a> Visitor<'a> {
 
                 let span = query.span;
 
-                let query_toks =
-                    Lexer::new(TokenLexer::new(resolved.chars().peekable()).collect(), span);
+                let query_toks = Lexer::new_from_string(&resolved, span);
 
                 AtRootQueryParser::new(query_toks).parse()?
             }
@@ -1138,10 +1137,7 @@ impl<'a> Visitor<'a> {
         allows_placeholder: bool,
         span: Span,
     ) -> SassResult<SelectorList> {
-        let sel_toks = Lexer::new(
-            TokenLexer::new(selector_text.chars().peekable()).collect(),
-            span,
-        );
+        let sel_toks = Lexer::new_from_string(&selector_text, span);
 
         SelectorParser::new(sel_toks, allows_parent, allows_placeholder, span).parse()
     }
@@ -2783,10 +2779,7 @@ impl<'a> Visitor<'a> {
 
         if self.flags.in_keyframes() {
             let span = ruleset.selector_span;
-            let sel_toks = Lexer::new(
-                TokenLexer::new(selector_text.chars().peekable()).collect(),
-                span,
-            );
+            let sel_toks = Lexer::new_from_string(&selector_text, span);
             let parsed_selector =
                 KeyframesSelectorParser::new(sel_toks).parse_keyframes_selector()?;
 

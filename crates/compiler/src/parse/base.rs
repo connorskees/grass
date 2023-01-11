@@ -247,7 +247,7 @@ pub(crate) trait BaseParser<'a> {
         }
 
         let c = std::char::from_u32(value)
-            .ok_or(("Invalid Unicode code point.", self.toks().span_from(start)))?;
+            .ok_or_else(|| ("Invalid Unicode code point.", self.toks().span_from(start)))?;
         if (identifier_start && is_name_start(c) && !c.is_ascii_digit())
             || (!identifier_start && is_name(c))
         {

@@ -13,7 +13,7 @@ use crate::{
     ast::*,
     common::{unvendor, Identifier, QuoteKind},
     error::SassResult,
-    lexer::{Lexer, TokenLexer},
+    lexer::Lexer,
     utils::{is_name, is_name_start, is_plain_css_import, opposite_bracket},
     ContextFlags, Options, Token,
 };
@@ -1534,10 +1534,7 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
             &base_name[start..end]
         };
 
-        let mut toks = Lexer::new(
-            TokenLexer::new(namespace.chars().peekable()).collect(),
-            url_span,
-        );
+        let mut toks = Lexer::new_from_string(&namespace, url_span);
 
         // if namespace is empty, avoid attempting to parse an identifier from
         // an empty string, as there will be no span to emit
