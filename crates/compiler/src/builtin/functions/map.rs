@@ -15,7 +15,7 @@ pub(crate) fn map_get(mut args: ArgumentResult, visitor: &mut Visitor) -> SassRe
                 .into())
         }
     };
-    Ok(map.get(&key).unwrap_or(Value::Null))
+    Ok(map.get(&key.span(args.span())).unwrap_or(Value::Null))
 }
 
 pub(crate) fn map_has_key(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
@@ -33,7 +33,7 @@ pub(crate) fn map_has_key(mut args: ArgumentResult, visitor: &mut Visitor) -> Sa
                 .into())
         }
     };
-    Ok(Value::bool(map.get(&key).is_some()))
+    Ok(Value::bool(map.key_exists(&key.span(args.span()))))
 }
 
 pub(crate) fn map_keys(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {

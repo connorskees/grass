@@ -12,6 +12,34 @@ use once_cell::sync::Lazy;
 
 use crate::unit::Unit;
 
+pub(crate) static CANONICAL_UNIT: Lazy<HashMap<Unit, Unit>> = Lazy::new(|| {
+    let mut canonical = HashMap::new();
+    canonical.insert(Unit::In, Unit::In);
+    canonical.insert(Unit::Cm, Unit::In);
+    canonical.insert(Unit::Pc, Unit::In);
+    canonical.insert(Unit::Mm, Unit::In);
+    canonical.insert(Unit::Q, Unit::In);
+    canonical.insert(Unit::Pt, Unit::In);
+    canonical.insert(Unit::Px, Unit::In);
+
+    canonical.insert(Unit::Deg, Unit::Deg);
+    canonical.insert(Unit::Grad, Unit::Deg);
+    canonical.insert(Unit::Rad, Unit::Deg);
+    canonical.insert(Unit::Turn, Unit::Deg);
+
+    canonical.insert(Unit::S, Unit::S);
+    canonical.insert(Unit::Ms, Unit::S);
+
+    canonical.insert(Unit::Khz, Unit::Hz);
+    canonical.insert(Unit::Hz, Unit::Hz);
+
+    canonical.insert(Unit::Dpi, Unit::Dpi);
+    canonical.insert(Unit::Dpcm, Unit::Dpi);
+    canonical.insert(Unit::Dppx, Unit::Dpi);
+
+    canonical
+});
+
 pub(crate) static UNIT_CONVERSION_TABLE: Lazy<HashMap<Unit, HashMap<Unit, f64>>> =
     Lazy::new(|| {
         let mut from_in = HashMap::new();

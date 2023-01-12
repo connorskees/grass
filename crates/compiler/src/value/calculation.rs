@@ -12,7 +12,7 @@ use crate::{
     Options,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub(crate) enum CalculationArg {
     Number(SassNumber),
     Calculation(SassCalculation),
@@ -62,7 +62,7 @@ impl CalculationName {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub(crate) struct SassCalculation {
     pub name: CalculationName,
     pub args: Vec<CalculationArg>,

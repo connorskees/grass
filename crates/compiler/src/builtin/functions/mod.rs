@@ -29,7 +29,7 @@ static FUNCTION_COUNT: AtomicUsize = AtomicUsize::new(0);
 #[derive(Clone)]
 pub(crate) struct Builtin(
     pub fn(ArgumentResult, &mut Visitor) -> SassResult<Value>,
-    usize,
+    pub(crate) usize,
 );
 
 impl Builtin {

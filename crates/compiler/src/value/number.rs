@@ -1,6 +1,8 @@
 use std::{
     convert::From,
-    fmt, mem,
+    fmt,
+    hash::{Hash, Hasher},
+    mem,
     ops::{
         Add, AddAssign, Deref, DerefMut, Div, DivAssign, Mul, MulAssign, Neg, Rem, RemAssign, Sub,
         SubAssign,
@@ -25,8 +27,7 @@ fn inverse_epsilon() -> f64 {
 }
 
 /// Thin wrapper around `f64` providing utility functions and more accurate
-/// operations -- namely a Sass-compatible modulo
-// todo: potentially superfluous?
+/// operations
 #[derive(Clone, Copy, PartialOrd)]
 #[repr(transparent)]
 pub(crate) struct Number(pub f64);
@@ -38,6 +39,12 @@ impl PartialEq for Number {
 }
 
 impl Eq for Number {}
+
+impl Hash for Number {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        (self.0 * inverse_epsilon()).round().to_bits().hash(state);
+    }
+}
 
 pub(crate) fn fuzzy_equals(a: f64, b: f64) -> bool {
     if a == b {

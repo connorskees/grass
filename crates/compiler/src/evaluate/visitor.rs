@@ -2098,7 +2098,7 @@ impl<'a> Visitor<'a> {
         rest: SassMap,
     ) -> SassResult<()> {
         for (key, val) in rest {
-            match key.node {
+            match key.0.node {
                 Value::String(text, ..) => {
                     let val = self.without_slash(val);
                     named.insert(Identifier::from(text), val);
@@ -2671,17 +2671,13 @@ impl<'a> Visitor<'a> {
             let key = self.visit_expr(pair.0.node)?;
             let value = self.visit_expr(pair.1)?;
 
-            if sass_map.get_ref(&key).is_some() {
+            let spanned_key = key.span(key_span);
+
+            if sass_map.key_exists(&spanned_key) {
                 return Err(("Duplicate key.", key_span).into());
             }
 
-            sass_map.insert(
-                Spanned {
-                    node: key,
-                    span: key_span,
-                },
-                value,
-            );
+            sass_map.insert(spanned_key, value);
         }
 
         Ok(Value::Map(sass_map))
@@ -2945,7 +2941,7 @@ impl<'a> Visitor<'a> {
                 self.css_tree.add_stmt(
                     CssStmt::Style(Style {
                         property: InternedString::get_or_intern(&name),
-                        value: Box::new(value),
+                        value: Arc::new(value),
                         declared_as_custom_property: is_custom_property,
                     }),
                     self.parent,

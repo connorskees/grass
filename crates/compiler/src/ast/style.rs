@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use codemap::Spanned;
 
 use crate::{interner::InternedString, value::Value};
@@ -6,6 +8,6 @@ use crate::{interner::InternedString, value::Value};
 #[derive(Clone, Debug)]
 pub(crate) struct Style {
     pub property: InternedString,
-    pub value: Box<Spanned<Value>>,
+    pub value: Arc<Spanned<Value>>,
     pub declared_as_custom_property: bool,
 }

@@ -361,7 +361,9 @@ pub(crate) fn keywords(mut args: ArgumentResult, visitor: &mut Visitor) -> SassR
             .into_iter()
             .map(|(name, val)| {
                 (
-                    Value::String(name.to_string(), QuoteKind::None).span(span),
+                    SpannedValueWrapper(
+                        Value::String(name.to_string(), QuoteKind::None).span(span),
+                    ),
                     val,
                 )
             })

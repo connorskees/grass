@@ -1,4 +1,8 @@
-use std::{cmp::Ordering, sync::Arc};
+use std::{
+    cmp::Ordering,
+    hash::{Hash, Hasher},
+    sync::Arc,
+};
 
 use codemap::{Span, Spanned};
 
@@ -16,7 +20,7 @@ use crate::{
 
 pub(crate) use arglist::ArgList;
 pub(crate) use calculation::*;
-pub(crate) use map::SassMap;
+pub(crate) use map::{SassMap, SpannedValueWrapper};
 pub(crate) use number::*;
 pub(crate) use sass_function::{SassFunction, UserDefinedFunction};
 pub(crate) use sass_number::{conversion_factor, SassNumber};
@@ -42,6 +46,61 @@ pub(crate) enum Value {
     /// Returned by `get-function()`
     FunctionRef(Box<SassFunction>),
     Calculation(SassCalculation),
+}
+
+impl Hash for Value {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        std::mem::discriminant(self).hash(state);
+
+        match self {
+            Value::True | Value::False | Value::Null => {}
+            Value::Dimension(num) => num.hash(state),
+            Value::List(elems, sep, brackets) => {
+                elems.len().hash(state);
+                for elem in elems {
+                    elem.hash(state);
+                }
+                sep.hash(state);
+                brackets.hash(state);
+            }
+            Value::Color(color) => {
+                // todo: should live on color
+                // color.hash(state);
+                color.red().hash(state);
+                color.green().hash(state);
+                color.blue().hash(state);
+                color.alpha().hash(state);
+            }
+            Value::String(s, quotes) => {
+                s.hash(state);
+                quotes.hash(state);
+            }
+            Value::Map(map) => {
+                map.len().hash(state);
+                for (key, value) in map.iter() {
+                    key.node.hash(state);
+                    value.hash(state);
+                }
+            }
+            Value::ArgList(_) => todo!(),
+            Value::FunctionRef(func) => {
+                let unboxed = &**func;
+                std::mem::discriminant(unboxed).hash(state);
+                unboxed.name().hash(state);
+
+                match unboxed {
+                    SassFunction::Builtin(builtin, _) => builtin.1.hash(state),
+                    SassFunction::UserDefined(func) => {
+                        func.function.name.hash(state);
+                    }
+                    SassFunction::Plain { .. } => {}
+                }
+            }
+            Value::Calculation(calc) => {
+                calc.hash(state);
+            }
+        }
+    }
 }
 
 impl PartialEq for Value {
@@ -355,53 +414,6 @@ impl Value {
                     .into());
             }
         })
-    }
-
-    pub fn not_equals(&self, other: &Self) -> bool {
-        match self {
-            Value::String(s1, ..) => match other {
-                Value::String(s2, ..) => s1 != s2,
-                _ => true,
-            },
-            Value::Dimension(SassNumber {
-                num: n,
-                unit,
-                as_slash: _,
-            }) if !n.is_nan() => match other {
-                Value::Dimension(SassNumber {
-                    num: n2,
-                    unit: unit2,
-                    as_slash: _,
-                }) if !n2.is_nan() => {
-                    if !unit.comparable(unit2) {
-                        true
-                    } else if unit == unit2 {
-                        n != n2
-                    } else if unit == &Unit::None || unit2 == &Unit::None {
-                        true
-                    } else {
-                        n != &n2.convert(unit2, unit)
-                    }
-                }
-                _ => true,
-            },
-            Value::List(list1, sep1, brackets1) => match other {
-                Value::List(list2, sep2, brackets2) => {
-                    if sep1 != sep2 || brackets1 != brackets2 || list1.len() != list2.len() {
-                        true
-                    } else {
-                        for (a, b) in list1.iter().zip(list2) {
-                            if a.not_equals(b) {
-                                return true;
-                            }
-                        }
-                        false
-                    }
-                }
-                _ => true,
-            },
-            s => s != other,
-        }
     }
 
     pub fn as_list(self) -> Vec<Value> {

@@ -1,4 +1,5 @@
 use std::{
+    hash::{Hash, Hasher},
     ops::{Add, Div, Mul, Sub},
     sync::Arc,
 };
@@ -19,6 +20,23 @@ pub(crate) struct SassNumber {
     pub num: Number,
     pub unit: Unit,
     pub as_slash: Option<Arc<(Self, Self)>>,
+}
+
+impl Hash for SassNumber {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        let (numer, denom) = match &self.unit {
+            Unit::Complex(complex) => (&complex.numer, &complex.denom),
+            _ => {
+                self.num.hash(state);
+                return;
+            }
+        };
+
+        let result =
+            (self.num.0 * Unit::canonical_multiplier(&numer)) / Unit::canonical_multiplier(&denom);
+
+        Number(result).hash(state);
+    }
 }
 
 pub(crate) fn conversion_factor(from: &Unit, to: &Unit) -> Option<f64> {

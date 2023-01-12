@@ -6,6 +6,7 @@ use std::{
 };
 
 use codemap::{Span, Spanned};
+use indexmap::IndexMap;
 
 use crate::{
     ast::{ArgumentResult, AstForwardRule, BuiltinMixin, Mixin},
@@ -15,7 +16,7 @@ use crate::{
     evaluate::{Environment, Visitor},
     selector::ExtensionStore,
     utils::{BaseMapView, MapView, MergedMapView, PrefixedMapView, PublicMemberMapView},
-    value::{SassFunction, SassMap, Value},
+    value::{SassFunction, SassMap, SpannedValueWrapper, Value},
 };
 
 use super::builtin_imports::QuoteKind;
@@ -403,11 +404,13 @@ impl Module {
                 .filter(|(key, _)| !key.as_str().starts_with('-'))
                 .map(|(key, value)| {
                     (
-                        Value::String(key.to_string(), QuoteKind::Quoted).span(span),
+                        SpannedValueWrapper(
+                            Value::String(key.to_string(), QuoteKind::Quoted).span(span),
+                        ),
                         Value::FunctionRef(Box::new(value)),
                     )
                 })
-                .collect::<Vec<_>>(),
+                .collect(),
         )
     }
 
@@ -420,11 +423,13 @@ impl Module {
                 .filter(|(key, _)| !key.as_str().starts_with('-'))
                 .map(|(key, value)| {
                     (
-                        Value::String(key.to_string(), QuoteKind::Quoted).span(span),
+                        SpannedValueWrapper(
+                            Value::String(key.to_string(), QuoteKind::Quoted).span(span),
+                        ),
                         value,
                     )
                 })
-                .collect::<Vec<_>>(),
+                .collect::<IndexMap<_, _>>(),
         )
     }
 }

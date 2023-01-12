@@ -1,6 +1,6 @@
 use std::{fmt, sync::Arc};
 
-use crate::interner::InternedString;
+use crate::{interner::InternedString, unit::conversion::CANONICAL_UNIT};
 
 pub(crate) use conversion::{known_compatibilities_by_unit, UNIT_CONVERSION_TABLE};
 
@@ -197,6 +197,26 @@ impl Unit {
             Unit::Dpi | Unit::Dpcm | Unit::Dppx => UnitKind::Resolution,
             Unit::None => UnitKind::None,
             Unit::Fr | Unit::Percent | Unit::Unknown(..) | Unit::Complex { .. } => UnitKind::Other,
+        }
+    }
+
+    pub fn canonical_multiplier(units: &[Unit]) -> f64 {
+        units.into_iter().fold(1.0, |init, new| {
+            init * new.canonical_multiplier_for_single_unit()
+        })
+    }
+
+    pub fn canonical_multiplier_for_single_unit(&self) -> f64 {
+        debug_assert!(!self.is_complex());
+        let inner_map = UNIT_CONVERSION_TABLE.get(self);
+        let canonical_unit = match CANONICAL_UNIT.get(self) {
+            Some(unit) => unit,
+            None => return 1.0,
+        };
+
+        match inner_map {
+            Some(map) => map.get(&canonical_unit).copied().unwrap_or(1.0),
+            None => 1.0,
         }
     }
 }

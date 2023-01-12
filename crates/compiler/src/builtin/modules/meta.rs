@@ -45,7 +45,7 @@ fn load_css(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<()> {
 
         let mut values = BTreeMap::new();
         for (key, value) in with {
-            let name = match key.node {
+            let name = match key.0.node {
                 Value::String(s, ..) => Identifier::from(s),
                 v => {
                     return Err((
@@ -60,7 +60,7 @@ fn load_css(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<()> {
                 // todo: write test for this
                 return Err((
                     format!("The variable {name} was configured twice.", name = name),
-                    key.span,
+                    key.0.span,
                 )
                     .into());
             }

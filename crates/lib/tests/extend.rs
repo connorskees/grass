@@ -1746,6 +1746,7 @@ test!(
     "@media screen {\n  a {\n    x: y;\n  }\n  @page {}\n}\n"
 );
 test!(
+    // todo: data race here? the final .bar didn't exist during 1 run
     escaped_selector,
     "// Escapes in selectors' identifiers should be normalized before `@extend` is
     // applied.

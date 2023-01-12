@@ -22,7 +22,7 @@ mod builtin_imports {
         error::SassResult,
         evaluate::Visitor,
         unit::Unit,
-        value::{CalculationArg, Number, SassFunction, SassMap, SassNumber, Value},
+        value::{CalculationArg, SpannedValueWrapper, Number, SassFunction, SassMap, SassNumber, Value},
         Options,
     };
 

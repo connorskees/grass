@@ -31,7 +31,8 @@ pub(crate) struct UserDefinedFunction {
 
 impl PartialEq for UserDefinedFunction {
     fn eq(&self, other: &Self) -> bool {
-        self.function == other.function && self.name == other.name
+        // effectively pointer equality based on where they were defined in the source
+        self.function.name == other.function.name
     }
 }
 
