@@ -119,7 +119,7 @@ impl ForwardedModule {
 
 #[derive(Debug, Clone)]
 pub(crate) struct ModuleScope {
-    pub variables: Arc<dyn MapView<Value = Value>>,
+    pub variables: Arc<dyn MapView<Value = Arc<Value>>>,
     pub mixins: Arc<dyn MapView<Value = Mixin>>,
     pub functions: Arc<dyn MapView<Value = SassFunction>>,
 }
@@ -294,7 +294,7 @@ impl Module {
         }
     }
 
-    pub fn get_var(&self, name: Spanned<Identifier>) -> SassResult<Value> {
+    pub fn get_var(&self, name: Spanned<Identifier>) -> SassResult<Arc<Value>> {
         let scope = self.scope();
 
         match scope.variables.get(name.node) {
@@ -303,7 +303,7 @@ impl Module {
         }
     }
 
-    pub fn get_var_no_err(&self, name: Identifier) -> Option<Value> {
+    pub fn get_var_no_err(&self, name: Identifier) -> Option<Arc<Value>> {
         let scope = self.scope();
 
         scope.variables.get(name)
@@ -315,7 +315,7 @@ impl Module {
         scope.mixins.get(name)
     }
 
-    pub fn update_var(&mut self, name: Spanned<Identifier>, value: Value) -> SassResult<()> {
+    pub fn update_var(&mut self, name: Spanned<Identifier>, value: Arc<Value>) -> SassResult<()> {
         let scope = match self {
             Self::Builtin { .. } => {
                 return Err(("Cannot modify built-in variable.", name.span).into())
@@ -351,7 +351,7 @@ impl Module {
 
         let scope = self.scope();
 
-        scope.variables.insert(ident, value);
+        scope.variables.insert(ident, Arc::new(value));
     }
 
     pub fn get_fn(&self, name: Identifier) -> Option<SassFunction> {
@@ -395,6 +395,24 @@ impl Module {
             .insert(ident, SassFunction::Builtin(Builtin::new(function), ident));
     }
 
+    pub fn insert_builtin_arc(
+        &mut self,
+        name: &'static str,
+        function: fn(ArgumentResult, &mut Visitor) -> SassResult<Arc<Value>>,
+    ) {
+        let ident = name.into();
+
+        let scope = match self {
+            Self::Builtin { scope } => scope,
+            _ => unreachable!(),
+        };
+
+        scope.functions.insert(
+            ident,
+            SassFunction::Builtin(Builtin::new_arc(function), ident),
+        );
+    }
+
     pub fn functions(&self, span: Span) -> SassMap {
         SassMap::new_with(
             self.scope()
@@ -407,7 +425,7 @@ impl Module {
                         SpannedValueWrapper(
                             Value::String(key.to_string(), QuoteKind::Quoted).span(span),
                         ),
-                        Value::FunctionRef(Box::new(value)),
+                        Arc::new(Value::FunctionRef(Box::new(value))),
                     )
                 })
                 .collect(),

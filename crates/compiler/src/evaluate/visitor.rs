@@ -20,7 +20,7 @@ use crate::{
             declare_module_color, declare_module_list, declare_module_map, declare_module_math,
             declare_module_meta, declare_module_selector, declare_module_string, Module,
         },
-        GLOBAL_FUNCTIONS,
+        BuiltinFnSignature, GLOBAL_FUNCTIONS,
     },
     common::{unvendor, BinaryOp, Identifier, ListSeparator, QuoteKind, UnaryOp},
     error::{SassError, SassResult},
@@ -97,6 +97,13 @@ impl UserDefinedCallable for Arc<CallableContentBlock> {
 pub(crate) struct CallableContentBlock {
     content: AstContentBlock,
     env: Environment,
+}
+
+pub(crate) fn unwrap_arc<T: Clone>(arc: Arc<T>) -> T {
+    match Arc::try_unwrap(arc) {
+        Ok(v) => v,
+        Err(arc) => (*arc).clone(),
+    }
 }
 
 pub(crate) struct Visitor<'a> {
@@ -189,14 +196,14 @@ impl<'a> Visitor<'a> {
         }
     }
 
-    fn visit_return_rule(&mut self, ret: AstReturn) -> SassResult<Option<Value>> {
+    fn visit_return_rule(&mut self, ret: AstReturn) -> SassResult<Option<Arc<Value>>> {
         let val = self.visit_expr(ret.val)?;
 
         Ok(Some(self.without_slash(val)))
     }
 
     // todo: we really don't have to return Option<Value> from all of these children
-    pub fn visit_stmt(&mut self, stmt: AstStmt) -> SassResult<Option<Value>> {
+    pub fn visit_stmt(&mut self, stmt: AstStmt) -> SassResult<Option<Arc<Value>>> {
         match stmt {
             AstStmt::RuleSet(ruleset) => self.visit_ruleset(ruleset),
             AstStmt::Style(style) => self.visit_style(style),
@@ -331,14 +338,10 @@ impl<'a> Visitor<'a> {
             if variable.is_guarded {
                 let old_value = (*config).borrow_mut().remove(variable.name.node);
 
-                if old_value.is_some()
-                    && !matches!(
-                        old_value,
-                        Some(ConfiguredValue {
-                            value: Value::Null,
-                            ..
-                        })
-                    )
+                if old_value
+                    .as_ref()
+                    .map(|v| *v.value != Value::Null)
+                    .unwrap_or(false)
                 {
                     new_values.insert(variable.name.node, old_value.unwrap());
                     continue;
@@ -715,7 +718,7 @@ impl<'a> Visitor<'a> {
         Err((msg, span).into())
     }
 
-    fn visit_import_rule(&mut self, import_rule: AstImportRule) -> SassResult<Option<Value>> {
+    fn visit_import_rule(&mut self, import_rule: AstImportRule) -> SassResult<Option<Arc<Value>>> {
         for import in import_rule.imports {
             match import {
                 AstImport::Sass(dynamic_import) => {
@@ -912,7 +915,7 @@ impl<'a> Visitor<'a> {
         Ok(())
     }
 
-    fn visit_debug_rule(&mut self, debug_rule: AstDebugRule) -> SassResult<Option<Value>> {
+    fn visit_debug_rule(&mut self, debug_rule: AstDebugRule) -> SassResult<Option<Arc<Value>>> {
         if self.options.quiet {
             return Ok(None);
         }
@@ -930,7 +933,10 @@ impl<'a> Visitor<'a> {
         Ok(None)
     }
 
-    fn visit_content_rule(&mut self, content_rule: AstContentRule) -> SassResult<Option<Value>> {
+    fn visit_content_rule(
+        &mut self,
+        content_rule: AstContentRule,
+    ) -> SassResult<Option<Arc<Value>>> {
         let span = content_rule.args.span;
         if let Some(content) = &self.env.content {
             #[allow(mutable_borrow_reservation_conflict)]
@@ -994,7 +1000,10 @@ impl<'a> Visitor<'a> {
         nodes[innermost_contiguous.unwrap()]
     }
 
-    fn visit_at_root_rule(&mut self, mut at_root_rule: AstAtRootRule) -> SassResult<Option<Value>> {
+    fn visit_at_root_rule(
+        &mut self,
+        mut at_root_rule: AstAtRootRule,
+    ) -> SassResult<Option<Arc<Value>>> {
         let query = match at_root_rule.query.clone() {
             Some(query) => {
                 let resolved = self.perform_interpolation(query.node, true)?;
@@ -1166,7 +1175,7 @@ impl<'a> Visitor<'a> {
         SelectorParser::new(sel_toks, allows_parent, allows_placeholder, span).parse()
     }
 
-    fn visit_extend_rule(&mut self, extend_rule: AstExtendRule) -> SassResult<Option<Value>> {
+    fn visit_extend_rule(&mut self, extend_rule: AstExtendRule) -> SassResult<Option<Arc<Value>>> {
         if !self.style_rule_exists() || self.declaration_name.is_some() {
             return Err((
                 "@extend may only be used within style rules.",
@@ -1252,7 +1261,7 @@ impl<'a> Visitor<'a> {
         CssMediaQuery::parse_list(&resolved, span)
     }
 
-    fn visit_media_rule(&mut self, media_rule: AstMedia) -> SassResult<Option<Value>> {
+    fn visit_media_rule(&mut self, media_rule: AstMedia) -> SassResult<Option<Arc<Value>>> {
         if self.declaration_name.is_some() {
             return Err((
                 "Media rules may not be used within nested declarations.",
@@ -1357,7 +1366,7 @@ impl<'a> Visitor<'a> {
     fn visit_unknown_at_rule(
         &mut self,
         unknown_at_rule: AstUnknownAtRule,
-    ) -> SassResult<Option<Value>> {
+    ) -> SassResult<Option<Arc<Value>>> {
         if self.declaration_name.is_some() {
             return Err((
                 "At-rules may not be used within nested declarations.",
@@ -1611,7 +1620,7 @@ impl<'a> Visitor<'a> {
         v
     }
 
-    fn visit_include_stmt(&mut self, include_stmt: AstInclude) -> SassResult<Option<Value>> {
+    fn visit_include_stmt(&mut self, include_stmt: AstInclude) -> SassResult<Option<Arc<Value>>> {
         let mixin = self
             .env
             .get_mixin(include_stmt.name, include_stmt.namespace)?;
@@ -1674,8 +1683,8 @@ impl<'a> Visitor<'a> {
         );
     }
 
-    fn visit_each_stmt(&mut self, each_stmt: AstEach) -> SassResult<Option<Value>> {
-        let list = self.visit_expr(each_stmt.list)?.as_list();
+    fn visit_each_stmt(&mut self, each_stmt: AstEach) -> SassResult<Option<Arc<Value>>> {
+        let list = unwrap_arc(self.visit_expr(each_stmt.list)?).as_list();
 
         // todo: not setting semi_global: true maybe means we can't assign to global scope when declared as global
         self.env.scopes_mut().enter_new_scope();
@@ -1689,10 +1698,12 @@ impl<'a> Visitor<'a> {
                     .scopes_mut()
                     .insert_var_last(each_stmt.variables[0], val);
             } else {
+                let null = Arc::new(Value::Null);
                 for (&var, val) in each_stmt.variables.iter().zip(
-                    val.as_list()
+                    unwrap_arc(val)
+                        .as_list()
                         .into_iter()
-                        .chain(std::iter::once(Value::Null).cycle()),
+                        .chain(std::iter::once(null).cycle()),
                 ) {
                     let val = self.without_slash(val);
                     self.env.scopes_mut().insert_var_last(var, val);
@@ -1713,13 +1724,12 @@ impl<'a> Visitor<'a> {
         Ok(result)
     }
 
-    fn visit_for_stmt(&mut self, for_stmt: AstFor) -> SassResult<Option<Value>> {
+    fn visit_for_stmt(&mut self, for_stmt: AstFor) -> SassResult<Option<Arc<Value>>> {
         let from_span = for_stmt.from.span;
         let to_span = for_stmt.to.span;
-        let from_number = self
-            .visit_expr(for_stmt.from.node)?
-            .assert_number(from_span)?;
-        let to_number = self.visit_expr(for_stmt.to.node)?.assert_number(to_span)?;
+        let from_number =
+            unwrap_arc(self.visit_expr(for_stmt.from.node)?).assert_number(from_span)?;
+        let to_number = unwrap_arc(self.visit_expr(for_stmt.to.node)?).assert_number(to_span)?;
 
         if !to_number.unit().comparable(from_number.unit()) {
             // todo: better error message here
@@ -1763,11 +1773,11 @@ impl<'a> Visitor<'a> {
         'outer: while i != to {
             self.env.scopes_mut().insert_var_last(
                 for_stmt.variable.node,
-                Value::Dimension(SassNumber {
+                Arc::new(Value::Dimension(SassNumber {
                     num: Number::from(i),
                     unit: from_number.unit().clone(),
                     as_slash: None,
-                }),
+                })),
             );
 
             for stmt in for_stmt.body.clone() {
@@ -1786,7 +1796,7 @@ impl<'a> Visitor<'a> {
         Ok(result)
     }
 
-    fn visit_while_stmt(&mut self, while_stmt: &AstWhile) -> SassResult<Option<Value>> {
+    fn visit_while_stmt(&mut self, while_stmt: &AstWhile) -> SassResult<Option<Arc<Value>>> {
         self.with_scope(true, true, |visitor| {
             let mut result = None;
 
@@ -1807,7 +1817,7 @@ impl<'a> Visitor<'a> {
         })
     }
 
-    fn visit_if_stmt(&mut self, if_stmt: AstIf) -> SassResult<Option<Value>> {
+    fn visit_if_stmt(&mut self, if_stmt: AstIf) -> SassResult<Option<Arc<Value>>> {
         let mut clause: Option<Vec<AstStmt>> = if_stmt.else_clause;
         for clause_to_check in if_stmt.if_clauses {
             if self.visit_expr(clause_to_check.condition)?.is_truthy() {
@@ -1836,7 +1846,7 @@ impl<'a> Visitor<'a> {
         Ok(result)
     }
 
-    fn visit_loud_comment(&mut self, comment: AstLoudComment) -> SassResult<Option<Value>> {
+    fn visit_loud_comment(&mut self, comment: AstLoudComment) -> SassResult<Option<Arc<Value>>> {
         if self.flags.in_function() {
             return Ok(None);
         }
@@ -1855,7 +1865,7 @@ impl<'a> Visitor<'a> {
         Ok(None)
     }
 
-    fn visit_variable_decl(&mut self, decl: AstVariableDecl) -> SassResult<Option<Value>> {
+    fn visit_variable_decl(&mut self, decl: AstVariableDecl) -> SassResult<Option<Arc<Value>>> {
         let name = Spanned {
             node: decl.name,
             span: decl.span,
@@ -1864,13 +1874,11 @@ impl<'a> Visitor<'a> {
         if decl.is_guarded {
             if decl.namespace.is_none() && self.env.at_root() {
                 let var_override = (*self.configuration).borrow_mut().remove(decl.name);
-                if !matches!(
-                    var_override,
-                    Some(ConfiguredValue {
-                        value: Value::Null,
-                        ..
-                    }) | None
-                ) {
+                if var_override
+                    .as_ref()
+                    .map(|v| *v.value != Value::Null)
+                    .unwrap_or(false)
+                {
                     self.env.insert_var(
                         name,
                         None,
@@ -1885,7 +1893,7 @@ impl<'a> Visitor<'a> {
             if self.env.var_exists(decl.name, decl.namespace)? {
                 let value = self.env.get_var(name, decl.namespace).unwrap();
 
-                if value != Value::Null {
+                if *value != Value::Null {
                     return Ok(None);
                 }
             }
@@ -1936,7 +1944,7 @@ impl<'a> Visitor<'a> {
                     let span = e.span;
                     let result = self.visit_expr(e.node)?;
                     // todo: span for specific expr
-                    self.serialize(result, QuoteKind::None, span)?
+                    self.serialize(&result, QuoteKind::None, span)?
                 }
                 None => unreachable!(),
             },
@@ -1949,7 +1957,7 @@ impl<'a> Visitor<'a> {
                         let span = e.span;
                         let result = self.visit_expr(e.node)?;
                         // todo: span for specific expr
-                        self.serialize(result, QuoteKind::None, span)
+                        self.serialize(&result, QuoteKind::None, span)
                     }
                 })
                 .collect::<SassResult<String>>()?,
@@ -1965,23 +1973,40 @@ impl<'a> Visitor<'a> {
         span: Span,
     ) -> SassResult<String> {
         let result = self.visit_expr(expr)?;
-        self.serialize(result, quote, span)
+        self.serialize(&result, quote, span)
     }
 
     #[allow(clippy::unused_self)]
-    fn without_slash(&mut self, v: Value) -> Value {
-        match v {
+    fn without_slash(&mut self, v: Arc<Value>) -> Arc<Value> {
+        match *v {
             Value::Dimension(SassNumber { .. }) if v.as_slash().is_some() => {
+                Arc::new(unwrap_arc(v).without_slash())
                 // todo: emit warning. we don't currently because it can be quite loud
                 // self.emit_warning(
                 //     Cow::Borrowed("Using / for division is deprecated and will be removed at some point in the future"),
                 //     self.span_before,
                 // );
             }
-            _ => {}
+            _ => v,
         }
 
-        v.without_slash()
+        // v.without_slash()
+    }
+
+    fn without_slash__arc_free(&mut self, v: Value) -> Value {
+        match v {
+            Value::Dimension(SassNumber { .. }) if v.as_slash().is_some() => {
+                v.without_slash()
+                // todo: emit warning. we don't currently because it can be quite loud
+                // self.emit_warning(
+                //     Cow::Borrowed("Using / for division is deprecated and will be removed at some point in the future"),
+                //     self.span_before,
+                // );
+            }
+            _ => v,
+        }
+
+        // v.without_slash()
     }
 
     fn eval_maybe_args(
@@ -2028,7 +2053,7 @@ impl<'a> Visitor<'a> {
 
         let mut separator = ListSeparator::Undecided;
 
-        match rest {
+        match unwrap_arc(rest) {
             Value::Map(rest) => self.add_rest_map(&mut named, rest)?,
             Value::List(elems, list_separator, _) => {
                 let mut list = elems
@@ -2041,7 +2066,7 @@ impl<'a> Visitor<'a> {
             Value::ArgList(arglist) => {
                 // todo: superfluous clone
                 for (&key, value) in arglist.keywords() {
-                    named.insert(key, self.without_slash(value.clone()));
+                    named.insert(key, self.without_slash(Arc::clone(value)));
                 }
 
                 let mut list = arglist
@@ -2052,8 +2077,8 @@ impl<'a> Visitor<'a> {
                 positional.append(&mut list);
                 separator = arglist.separator;
             }
-            _ => {
-                positional.push(self.without_slash(rest));
+            rest => {
+                positional.push(Arc::new(self.without_slash__arc_free(rest)));
             }
         }
 
@@ -2067,7 +2092,7 @@ impl<'a> Visitor<'a> {
             });
         }
 
-        match self.visit_expr(arguments.keyword_rest.unwrap())? {
+        match unwrap_arc(self.visit_expr(arguments.keyword_rest.unwrap())?) {
             Value::Map(keyword_rest) => {
                 self.add_rest_map(&mut named, keyword_rest)?;
 
@@ -2094,7 +2119,7 @@ impl<'a> Visitor<'a> {
 
     fn add_rest_map(
         &mut self,
-        named: &mut BTreeMap<Identifier, Value>,
+        named: &mut BTreeMap<Identifier, Arc<Value>>,
         rest: SassMap,
     ) -> SassResult<()> {
         for (key, val) in rest {
@@ -2201,7 +2226,10 @@ impl<'a> Visitor<'a> {
                         },
                     ));
 
-                    visitor.env.scopes_mut().insert_var_last(rest_arg, arg_list);
+                    visitor
+                        .env
+                        .scopes_mut()
+                        .insert_var_last(rest_arg, Arc::new(arg_list));
 
                     true
                 } else {
@@ -2251,7 +2279,7 @@ impl<'a> Visitor<'a> {
         func: SassFunction,
         arguments: ArgumentInvocation,
         span: Span,
-    ) -> SassResult<Value> {
+    ) -> SassResult<Arc<Value>> {
         self.run_function_callable_with_maybe_evaled(
             func,
             MaybeEvaledArguments::Invocation(arguments),
@@ -2264,11 +2292,14 @@ impl<'a> Visitor<'a> {
         func: SassFunction,
         arguments: MaybeEvaledArguments,
         span: Span,
-    ) -> SassResult<Value> {
+    ) -> SassResult<Arc<Value>> {
         match func {
             SassFunction::Builtin(func, _name) => {
                 let evaluated = self.eval_maybe_args(arguments, span)?;
-                let val = func.0(evaluated, self)?;
+                let val = match func.0 {
+                    BuiltinFnSignature::NoArc(func) => Arc::new(func(evaluated, self)?),
+                    BuiltinFnSignature::Arc(func) => func(evaluated, self)?,
+                };
                 Ok(self.without_slash(val))
             }
             SassFunction::UserDefined(UserDefinedFunction { function, env, .. }) => self
@@ -2332,11 +2363,11 @@ impl<'a> Visitor<'a> {
                     if !first {
                         buffer.push_str(", ");
                     }
-                    buffer.push_str(&self.serialize(rest, QuoteKind::Quoted, span)?);
+                    buffer.push_str(&self.serialize(&rest, QuoteKind::Quoted, span)?);
                 }
                 buffer.push(')');
 
-                Ok(Value::String(buffer, QuoteKind::None))
+                Ok(Arc::new(Value::String(buffer, QuoteKind::None)))
             }
         }
     }
@@ -2354,7 +2385,7 @@ impl<'a> Visitor<'a> {
         Ok(Value::List(elems, list.separator, list.brackets))
     }
 
-    fn visit_function_call_expr(&mut self, func_call: FunctionCallExpr) -> SassResult<Value> {
+    fn visit_function_call_expr(&mut self, func_call: FunctionCallExpr) -> SassResult<Arc<Value>> {
         let name = func_call.name;
 
         let func = match self.env.get_fn(name, func_call.namespace)? {
@@ -2411,7 +2442,7 @@ impl<'a> Visitor<'a> {
             if !first {
                 buffer.push_str(", ");
             }
-            buffer.push_str(&self.serialize(rest, QuoteKind::None, span)?);
+            buffer.push_str(&self.serialize(&rest, QuoteKind::None, span)?);
         }
 
         buffer.push(')');
@@ -2426,8 +2457,8 @@ impl<'a> Visitor<'a> {
         }
     }
 
-    fn visit_expr(&mut self, expr: AstExpr) -> SassResult<Value> {
-        Ok(match expr {
+    fn visit_expr(&mut self, expr: AstExpr) -> SassResult<Arc<Value>> {
+        Ok(Arc::new(match expr {
             AstExpr::Color(color) => Value::Color(color),
             AstExpr::Number { n, unit } => Value::Dimension(SassNumber {
                 num: n,
@@ -2436,34 +2467,38 @@ impl<'a> Visitor<'a> {
             }),
             AstExpr::List(list) => self.visit_list_expr(list)?,
             AstExpr::String(StringExpr(text, quote), ..) => self.visit_string(text, quote)?,
-            AstExpr::BinaryOp(binop) => self.visit_bin_op(
-                binop.lhs.clone(),
-                binop.op,
-                binop.rhs.clone(),
-                binop.allows_slash,
-                binop.span,
-            )?,
+            AstExpr::BinaryOp(binop) => {
+                return self.visit_bin_op(
+                    binop.lhs.clone(),
+                    binop.op,
+                    binop.rhs.clone(),
+                    binop.allows_slash,
+                    binop.span,
+                )
+            }
             AstExpr::True => Value::True,
             AstExpr::False => Value::False,
             AstExpr::Calculation { name, args } => {
                 self.visit_calculation_expr(name, args, self.span_before)?
             }
-            AstExpr::FunctionCall(func_call) => self.visit_function_call_expr(func_call)?,
-            AstExpr::If(if_expr) => self.visit_ternary((*if_expr).clone())?,
+            AstExpr::FunctionCall(func_call) => return self.visit_function_call_expr(func_call),
+            AstExpr::If(if_expr) => return self.visit_ternary((*if_expr).clone()),
             AstExpr::InterpolatedFunction(func) => {
                 self.visit_interpolated_func_expr((*func).clone())?
             }
             AstExpr::Map(map) => self.visit_map(map)?,
             AstExpr::Null => Value::Null,
-            AstExpr::Paren(expr) => self.visit_expr((*expr).clone())?,
+            AstExpr::Paren(expr) => return self.visit_expr((*expr).clone()),
             AstExpr::ParentSelector => self.visit_parent_selector(),
-            AstExpr::UnaryOp(op, expr, span) => self.visit_unary_op(op, (*expr).clone(), span)?,
-            AstExpr::Variable { name, namespace } => self.env.get_var(name, namespace)?,
+            AstExpr::UnaryOp(op, expr, span) => {
+                return self.visit_unary_op(op, (*expr).clone(), span)
+            }
+            AstExpr::Variable { name, namespace } => return self.env.get_var(name, namespace),
             AstExpr::Supports(condition) => Value::String(
                 self.visit_supports_condition((*condition).clone())?,
                 QuoteKind::None,
             ),
-        })
+        }))
     }
 
     fn visit_calculation_value(
@@ -2507,7 +2542,7 @@ impl<'a> Visitor<'a> {
             | AstExpr::FunctionCall { .. }
             | AstExpr::If(..) => {
                 let result = self.visit_expr(expr)?;
-                match result {
+                match unwrap_arc(result) {
                     Value::Dimension(SassNumber {
                         num,
                         unit,
@@ -2578,18 +2613,19 @@ impl<'a> Visitor<'a> {
         }
     }
 
-    fn visit_unary_op(&mut self, op: UnaryOp, expr: AstExpr, span: Span) -> SassResult<Value> {
+    fn visit_unary_op(&mut self, op: UnaryOp, expr: AstExpr, span: Span) -> SassResult<Arc<Value>> {
         let operand = self.visit_expr(expr)?;
 
         match op {
-            UnaryOp::Plus => operand.unary_plus(self, span),
-            UnaryOp::Neg => operand.unary_neg(self, span),
-            UnaryOp::Div => operand.unary_div(self, span),
-            UnaryOp::Not => Ok(operand.unary_not()),
+            UnaryOp::Plus => Value::unary_plus(operand, self, span),
+            UnaryOp::Neg => Value::unary_neg(operand, self, span),
+            UnaryOp::Div => Ok(Arc::new(operand.unary_div(self, span)?)),
+            UnaryOp::Not => Ok(Arc::new(operand.unary_not())),
         }
+        // todo!()
     }
 
-    fn visit_ternary(&mut self, if_expr: Ternary) -> SassResult<Value> {
+    fn visit_ternary(&mut self, if_expr: Ternary) -> SassResult<Arc<Value>> {
         if_arguments().verify(if_expr.0.positional.len(), &if_expr.0.named, if_expr.0.span)?;
 
         let mut positional = if_expr.0.positional;
@@ -2633,9 +2669,9 @@ impl<'a> Visitor<'a> {
             1 => match text.contents.pop() {
                 Some(InterpolationPart::String(s)) => s,
                 Some(InterpolationPart::Expr(Spanned { node, span })) => {
-                    match self.visit_expr(node)? {
-                        Value::String(s, ..) => s,
-                        e => self.serialize(e, QuoteKind::None, span)?,
+                    match &*self.visit_expr(node)? {
+                        Value::String(s, ..) => s.clone(),
+                        e => self.serialize(&e, QuoteKind::None, span)?,
                     }
                 }
                 None => unreachable!(),
@@ -2646,8 +2682,8 @@ impl<'a> Visitor<'a> {
                 .map(|part| match part {
                     InterpolationPart::String(s) => Ok(s),
                     InterpolationPart::Expr(Spanned { node, span }) => {
-                        match self.visit_expr(node)? {
-                            Value::String(s, ..) => Ok(s),
+                        match &*self.visit_expr(node)? {
+                            Value::String(s, ..) => Ok(s.clone()),
                             e => self.serialize(e, QuoteKind::None, span),
                         }
                     }
@@ -2666,12 +2702,12 @@ impl<'a> Visitor<'a> {
     fn visit_map(&mut self, map: AstSassMap) -> SassResult<Value> {
         let mut sass_map = SassMap::new();
 
-        for pair in map.0 {
+        for pair in (*map.0).clone() {
             let key_span = pair.0.span;
             let key = self.visit_expr(pair.0.node)?;
             let value = self.visit_expr(pair.1)?;
 
-            let spanned_key = key.span(key_span);
+            let spanned_key = unwrap_arc(key).span(key_span);
 
             if sass_map.key_exists(&spanned_key) {
                 return Err(("Duplicate key.", key_span).into());
@@ -2690,13 +2726,13 @@ impl<'a> Visitor<'a> {
         rhs: AstExpr,
         allows_slash: bool,
         span: Span,
-    ) -> SassResult<Value> {
+    ) -> SassResult<Arc<Value>> {
         let left = self.visit_expr(lhs)?;
 
         Ok(match op {
             BinaryOp::SingleEq => {
                 let right = self.visit_expr(rhs)?;
-                single_eq(&left, &right, self.options, span)?
+                Arc::new(single_eq(&left, &right, self.options, span)?)
             }
             BinaryOp::Or => {
                 if left.is_truthy() {
@@ -2714,44 +2750,49 @@ impl<'a> Visitor<'a> {
             }
             BinaryOp::Equal => {
                 let right = self.visit_expr(rhs)?;
-                Value::bool(left == right)
+                Arc::new(Value::bool(left == right))
             }
             BinaryOp::NotEqual => {
                 let right = self.visit_expr(rhs)?;
-                Value::bool(left != right)
+                Arc::new(Value::bool(left != right))
             }
             BinaryOp::GreaterThan
             | BinaryOp::GreaterThanEqual
             | BinaryOp::LessThan
             | BinaryOp::LessThanEqual => {
                 let right = self.visit_expr(rhs)?;
-                cmp(&left, &right, self.options, span, op)?
+                Arc::new(cmp(&left, &right, self.options, span, op)?)
             }
             BinaryOp::Plus => {
                 let right = self.visit_expr(rhs)?;
-                add(left, right, self.options, span)?
+                Arc::new(add(&left, &right, self.options, span)?)
             }
             BinaryOp::Minus => {
                 let right = self.visit_expr(rhs)?;
-                sub(left, right, self.options, span)?
+                Arc::new(sub(&left, &right, self.options, span)?)
             }
             BinaryOp::Mul => {
                 let right = self.visit_expr(rhs)?;
-                mul(left, right, self.options, span)?
+                Arc::new(mul(
+                    unwrap_arc(left),
+                    unwrap_arc(right),
+                    self.options,
+                    span,
+                )?)
             }
             BinaryOp::Div => {
                 let right = self.visit_expr(rhs)?;
 
-                let left_is_number = matches!(left, Value::Dimension { .. });
-                let right_is_number = matches!(right, Value::Dimension { .. });
+                let left_is_number = matches!(*left, Value::Dimension { .. });
+                let right_is_number = matches!(*right, Value::Dimension { .. });
 
                 if left_is_number && right_is_number && allows_slash {
-                    let result = div(left.clone(), right.clone(), self.options, span)?;
-                    return result.with_slash(
-                        left.assert_number(span)?,
-                        right.assert_number(span)?,
+                    let result = div(&left, &right, self.options, span)?;
+                    return Ok(Arc::new(result.with_slash(
+                        unwrap_arc(left).assert_number(span)?,
+                        unwrap_arc(right).assert_number(span)?,
                         span,
-                    );
+                    )?));
                 } else if left_is_number && right_is_number {
                     // todo: emit warning here. it prints too frequently, so we do not currently
                     // self.emit_warning(
@@ -2762,25 +2803,32 @@ impl<'a> Visitor<'a> {
                     // );
                 }
 
-                div(left, right, self.options, span)?
+                Arc::new(div(&left, &right, self.options, span)?)
             }
             BinaryOp::Rem => {
                 let right = self.visit_expr(rhs)?;
-                rem(left, right, self.options, span)?
+                Arc::new(rem(
+                    unwrap_arc(left),
+                    unwrap_arc(right),
+                    self.options,
+                    span,
+                )?)
             }
         })
     }
 
     // todo: superfluous taking `expr` by value
-    fn serialize(&mut self, mut expr: Value, quote: QuoteKind, span: Span) -> SassResult<String> {
+    fn serialize(&mut self, mut expr: &Value, quote: QuoteKind, span: Span) -> SassResult<String> {
         if quote == QuoteKind::None {
-            expr = expr.unquote();
+            expr.clone()
+                .unquote()
+                .to_css_string(span, self.options.is_compressed())
+        } else {
+            expr.to_css_string(span, self.options.is_compressed())
         }
-
-        expr.to_css_string(span, self.options.is_compressed())
     }
 
-    pub fn visit_ruleset(&mut self, ruleset: AstRuleSet) -> SassResult<Option<Value>> {
+    pub fn visit_ruleset(&mut self, ruleset: AstRuleSet) -> SassResult<Option<Arc<Value>>> {
         if self.declaration_name.is_some() {
             return Err((
                 "Style rules may not be used within nested declarations.",
@@ -2904,7 +2952,7 @@ impl<'a> Visitor<'a> {
         !self.flags.at_root_excluding_style_rule() && self.style_rule_ignoring_at_root.is_some()
     }
 
-    pub fn visit_style(&mut self, style: AstStyle) -> SassResult<Option<Value>> {
+    pub fn visit_style(&mut self, style: AstStyle) -> SassResult<Option<Arc<Value>>> {
         if !self.style_rule_exists()
             && !self.flags.in_unknown_at_rule()
             && !self.flags.in_keyframes()
@@ -2941,7 +2989,7 @@ impl<'a> Visitor<'a> {
                 self.css_tree.add_stmt(
                     CssStmt::Style(Style {
                         property: InternedString::get_or_intern(&name),
-                        value: Arc::new(value),
+                        value,
                         declared_as_custom_property: is_custom_property,
                     }),
                     self.parent,

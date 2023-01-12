@@ -9,7 +9,7 @@ pub(crate) fn length(mut args: ArgumentResult, visitor: &mut Visitor) -> SassRes
     }))
 }
 
-pub(crate) fn nth(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
+pub(crate) fn nth(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Arc<Value>> {
     args.max_args(2)?;
     let mut list = args.get_err(0, "list")?.as_list();
     let (n, unit) = match args.get_err(1, "n")? {
@@ -77,7 +77,7 @@ pub(crate) fn set_nth(mut args: ArgumentResult, visitor: &mut Visitor) -> SassRe
             Brackets::None,
         ),
         Value::Map(m) => (m.as_list(), ListSeparator::Comma, Brackets::None),
-        v => (vec![v], ListSeparator::Undecided, Brackets::None),
+        v => (vec![Arc::new(v)], ListSeparator::Undecided, Brackets::None),
     };
     let (n, unit) = match args.get_err(1, "n")? {
         Value::Dimension(SassNumber {
@@ -121,9 +121,9 @@ pub(crate) fn set_nth(mut args: ArgumentResult, visitor: &mut Visitor) -> SassRe
     let val = args.get_err(2, "value")?;
 
     if n.is_positive() {
-        list[n.assert_int_with_name("n", args.span())? as usize - 1] = val;
+        list[n.assert_int_with_name("n", args.span())? as usize - 1] = Arc::new(val);
     } else {
-        list[len - n.abs().assert_int_with_name("n", args.span())? as usize] = val;
+        list[len - n.abs().assert_int_with_name("n", args.span())? as usize] = Arc::new(val);
     }
 
     Ok(Value::List(list, sep, brackets))
@@ -133,7 +133,7 @@ pub(crate) fn append(mut args: ArgumentResult, visitor: &mut Visitor) -> SassRes
     args.max_args(3)?;
     let (mut list, sep, brackets) = match args.get_err(0, "list")? {
         Value::List(v, sep, b) => (v, sep, b),
-        v => (vec![v], ListSeparator::Undecided, Brackets::None),
+        v => (vec![Arc::new(v)], ListSeparator::Undecided, Brackets::None),
     };
     let val = args.get_err(1, "val")?;
     let sep = match args.default_arg(
@@ -169,7 +169,7 @@ pub(crate) fn append(mut args: ArgumentResult, visitor: &mut Visitor) -> SassRes
         }
     };
 
-    list.push(val);
+    list.push(Arc::new(val));
 
     Ok(Value::List(list, sep, brackets))
 }
@@ -179,12 +179,12 @@ pub(crate) fn join(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResul
     let (mut list1, sep1, brackets) = match args.get_err(0, "list1")? {
         Value::List(v, sep, brackets) => (v, sep, brackets),
         Value::Map(m) => (m.as_list(), ListSeparator::Comma, Brackets::None),
-        v => (vec![v], ListSeparator::Undecided, Brackets::None),
+        v => (vec![Arc::new(v)], ListSeparator::Undecided, Brackets::None),
     };
     let (list2, sep2) = match args.get_err(1, "list2")? {
         Value::List(v, sep, ..) => (v, sep),
         Value::Map(m) => (m.as_list(), ListSeparator::Comma),
-        v => (vec![v], ListSeparator::Undecided),
+        v => (vec![Arc::new(v)], ListSeparator::Undecided),
     };
     let sep = match args.default_arg(
         2,
@@ -259,7 +259,7 @@ pub(crate) fn index(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResu
     args.max_args(2)?;
     let list = args.get_err(0, "list")?.as_list();
     let value = args.get_err(1, "value")?;
-    let index = match list.into_iter().position(|v| v == value) {
+    let index = match list.into_iter().position(|v| *v == value) {
         Some(v) => Number::from(v + 1),
         None => return Ok(Value::Null),
     };
@@ -275,7 +275,7 @@ pub(crate) fn zip(args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Val
         .get_variadic()?
         .into_iter()
         .map(|x| x.node.as_list())
-        .collect::<Vec<Vec<Value>>>();
+        .collect::<Vec<Vec<Arc<Value>>>>();
 
     let len = lists.iter().map(Vec::len).min().unwrap_or(0);
 
@@ -290,7 +290,7 @@ pub(crate) fn zip(args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Val
     let result = (0..len)
         .map(|i| {
             let items = lists.iter().map(|v| v[i].clone()).collect();
-            Value::List(items, ListSeparator::Space, Brackets::None)
+            Arc::new(Value::List(items, ListSeparator::Space, Brackets::None))
         })
         .collect();
 
@@ -299,7 +299,7 @@ pub(crate) fn zip(args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Val
 
 pub(crate) fn declare(f: &mut GlobalFunctionMap) {
     f.insert("length", Builtin::new(length));
-    f.insert("nth", Builtin::new(nth));
+    f.insert("nth", Builtin::new_arc(nth));
     f.insert("list-separator", Builtin::new(list_separator));
     f.insert("set-nth", Builtin::new(set_nth));
     f.insert("append", Builtin::new(append));

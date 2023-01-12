@@ -17,7 +17,7 @@ use crate::{
 #[allow(clippy::type_complexity)]
 #[derive(Debug, Default, Clone)]
 pub(crate) struct Scopes {
-    variables: Arc<RefCell<Vec<Arc<RefCell<BTreeMap<Identifier, Value>>>>>>,
+    variables: Arc<RefCell<Vec<Arc<RefCell<BTreeMap<Identifier, Arc<Value>>>>>>>,
     mixins: Arc<RefCell<Vec<Arc<RefCell<BTreeMap<Identifier, Mixin>>>>>>,
     functions: Arc<RefCell<Vec<Arc<RefCell<BTreeMap<Identifier, SassFunction>>>>>>,
     len: Arc<Cell<usize>>,
@@ -52,7 +52,7 @@ impl Scopes {
         }
     }
 
-    pub fn global_variables(&self) -> Arc<RefCell<BTreeMap<Identifier, Value>>> {
+    pub fn global_variables(&self) -> Arc<RefCell<BTreeMap<Identifier, Arc<Value>>>> {
         debug_assert_eq!(self.len(), (*self.variables).borrow().len());
         Arc::clone(&(*self.variables).borrow()[0])
     }
@@ -115,7 +115,12 @@ impl Scopes {
 
 /// Variables
 impl Scopes {
-    pub fn insert_var(&mut self, idx: usize, name: Identifier, v: Value) -> Option<Value> {
+    pub fn insert_var(
+        &mut self,
+        idx: usize,
+        name: Identifier,
+        v: Arc<Value>,
+    ) -> Option<Arc<Value>> {
         debug_assert_eq!(self.len(), (*self.variables).borrow().len());
         (*(*self.variables).borrow_mut()[idx])
             .borrow_mut()
@@ -125,7 +130,7 @@ impl Scopes {
     /// Always insert this variable into the innermost scope
     ///
     /// Used, for example, for variables from `@each` and `@for`
-    pub fn insert_var_last(&mut self, name: Identifier, v: Value) -> Option<Value> {
+    pub fn insert_var_last(&mut self, name: Identifier, v: Arc<Value>) -> Option<Arc<Value>> {
         debug_assert_eq!(self.len(), (*self.variables).borrow().len());
         let last_idx = self.len() - 1;
         self.last_variable_index = Some((name, last_idx));
@@ -134,7 +139,7 @@ impl Scopes {
             .insert(name, v)
     }
 
-    pub fn get_var(&mut self, name: Spanned<Identifier>) -> SassResult<Value> {
+    pub fn get_var(&mut self, name: Spanned<Identifier>) -> SassResult<Arc<Value>> {
         debug_assert_eq!(self.len(), (*self.variables).borrow().len());
 
         match self.last_variable_index {

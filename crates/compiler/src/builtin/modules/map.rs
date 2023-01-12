@@ -4,7 +4,7 @@ use crate::builtin::{
 };
 
 pub(crate) fn declare(f: &mut Module) {
-    f.insert_builtin("get", map_get);
+    f.insert_builtin_arc("get", map_get);
     f.insert_builtin("has-key", map_has_key);
     f.insert_builtin("keys", map_keys);
     f.insert_builtin("merge", map_merge);

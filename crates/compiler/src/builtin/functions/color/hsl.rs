@@ -36,8 +36,14 @@ fn hsl_3_args(
                 Value::List(
                     if args.len() == 4 {
                         vec![hue, saturation, lightness, alpha]
+                            .into_iter()
+                            .map(Arc::new)
+                            .collect()
                     } else {
                         vec![hue, saturation, lightness]
+                            .into_iter()
+                            .map(Arc::new)
+                            .collect()
                     },
                     ListSeparator::Comma,
                     Brackets::None

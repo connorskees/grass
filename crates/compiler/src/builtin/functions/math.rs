@@ -253,7 +253,7 @@ pub(crate) fn divide(mut args: ArgumentResult, visitor: &mut Visitor) -> SassRes
     let number1 = args.get_err(0, "number1")?;
     let number2 = args.get_err(1, "number2")?;
 
-    div(number1, number2, visitor.options, args.span())
+    Ok(div(&number1, &number2, visitor.options, args.span())?)
 }
 
 pub(crate) fn declare(f: &mut GlobalFunctionMap) {

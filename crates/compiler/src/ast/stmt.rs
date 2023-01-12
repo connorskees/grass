@@ -404,12 +404,12 @@ impl Configuration {
 
 #[derive(Debug, Clone)]
 pub(crate) struct ConfiguredValue {
-    pub value: Value,
+    pub value: Arc<Value>,
     pub configuration_span: Option<Span>,
 }
 
 impl ConfiguredValue {
-    pub fn explicit(value: Value, configuration_span: Span) -> Self {
+    pub fn explicit(value: Arc<Value>, configuration_span: Span) -> Self {
         Self {
             value,
             configuration_span: Some(configuration_span),

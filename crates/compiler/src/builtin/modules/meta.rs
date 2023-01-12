@@ -158,7 +158,7 @@ fn calc_args(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Valu
         .args
         .into_iter()
         .map(|arg| {
-            Ok(match arg {
+            Ok(Arc::new(match arg {
                 CalculationArg::Number(num) => Value::Dimension(num),
                 CalculationArg::Calculation(calc) => Value::Calculation(calc),
                 CalculationArg::String(s) | CalculationArg::Interpolation(s) => {
@@ -168,7 +168,7 @@ fn calc_args(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Valu
                     serialize_calculation_arg(&arg, visitor.options, args.span())?,
                     QuoteKind::None,
                 ),
-            })
+            }))
         })
         .collect::<SassResult<Vec<_>>>()?;
 

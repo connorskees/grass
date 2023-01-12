@@ -123,7 +123,7 @@ impl Environment {
         &mut self,
         name: Spanned<Identifier>,
         namespace: Option<Spanned<Identifier>>,
-    ) -> SassResult<Value> {
+    ) -> SassResult<Arc<Value>> {
         if let Some(namespace) = namespace {
             let modules = (*self.modules).borrow();
             let module = modules.get(namespace.node, namespace.span)?;
@@ -146,7 +146,7 @@ impl Environment {
         &mut self,
         name: Spanned<Identifier>,
         namespace: Option<Spanned<Identifier>>,
-        value: Value,
+        value: Arc<Value>,
         is_global: bool,
         in_semi_global_scope: bool,
     ) -> SassResult<()> {
@@ -205,7 +205,7 @@ impl Environment {
         &mut self.scopes
     }
 
-    pub fn global_vars(&self) -> Arc<RefCell<BTreeMap<Identifier, Value>>> {
+    pub fn global_vars(&self) -> Arc<RefCell<BTreeMap<Identifier, Arc<Value>>>> {
         self.scopes.global_variables()
     }
 
@@ -217,7 +217,7 @@ impl Environment {
         self.scopes.global_functions()
     }
 
-    fn get_variable_from_global_modules(&self, name: Identifier) -> Option<Value> {
+    fn get_variable_from_global_modules(&self, name: Identifier) -> Option<Arc<Value>> {
         for module in &self.global_modules {
             if (**module).borrow().var_exists(name) {
                 return (**module).borrow().get_var_no_err(name);

@@ -2,6 +2,7 @@ use std::{
     collections::{BTreeMap, BTreeSet},
     iter::Iterator,
     mem,
+    sync::Arc,
 };
 
 use codemap::{Span, Spanned};
@@ -9,6 +10,7 @@ use codemap::{Span, Spanned};
 use crate::{
     common::{Identifier, ListSeparator},
     error::SassResult,
+    evaluate::unwrap_arc,
     utils::to_sentence,
     value::Value,
 };
@@ -159,8 +161,8 @@ pub(crate) enum MaybeEvaledArguments {
 
 #[derive(Debug, Clone)]
 pub(crate) struct ArgumentResult {
-    pub positional: Vec<Value>,
-    pub named: BTreeMap<Identifier, Value>,
+    pub positional: Vec<Arc<Value>>,
+    pub named: BTreeMap<Identifier, Arc<Value>>,
     pub separator: ListSeparator,
     pub span: Span,
     // todo: hack
@@ -173,6 +175,12 @@ impl ArgumentResult {
     /// Removes the argument
     pub fn get_named<T: Into<Identifier>>(&mut self, val: T) -> Option<Spanned<Value>> {
         self.named.remove(&val.into()).map(|n| Spanned {
+            node: unwrap_arc(n),
+            span: self.span,
+        })
+    }
+    pub fn get_named_arc<T: Into<Identifier>>(&mut self, val: T) -> Option<Spanned<Arc<Value>>> {
+        self.named.remove(&val.into()).map(|n| Spanned {
             node: n,
             span: self.span,
         })
@@ -184,7 +192,20 @@ impl ArgumentResult {
     pub fn get_positional(&mut self, idx: usize) -> Option<Spanned<Value>> {
         let val = match self.positional.get_mut(idx) {
             Some(v) => Some(Spanned {
-                node: mem::replace(v, Value::Null),
+                node: unwrap_arc(mem::replace(v, Arc::new(Value::Null))),
+                span: self.span,
+            }),
+            None => None,
+        };
+
+        self.touched.insert(idx);
+        val
+    }
+
+    pub fn get_positional_arc(&mut self, idx: usize) -> Option<Spanned<Arc<Value>>> {
+        let val = match self.positional.get_mut(idx) {
+            Some(v) => Some(Spanned {
+                node: mem::replace(v, Arc::new(Value::Null)),
                 span: self.span,
             }),
             None => None,
@@ -205,6 +226,16 @@ impl ArgumentResult {
         match self.get_named(name) {
             Some(v) => Ok(v.node),
             None => match self.get_positional(position) {
+                Some(v) => Ok(v.node),
+                None => Err((format!("Missing argument ${}.", name), self.span()).into()),
+            },
+        }
+    }
+
+    pub fn get_err_arc(&mut self, position: usize, name: &'static str) -> SassResult<Arc<Value>> {
+        match self.get_named_arc(name) {
+            Some(v) => Ok(v.node),
+            None => match self.get_positional_arc(position) {
                 Some(v) => Ok(v.node),
                 None => Err((format!("Missing argument ${}.", name), self.span()).into()),
             },
@@ -261,7 +292,7 @@ impl ArgumentResult {
 
     pub fn remove_positional(&mut self, position: usize) -> Option<Value> {
         if self.positional.len() > position {
-            Some(self.positional.remove(position))
+            Some(unwrap_arc(self.positional.remove(position)))
         } else {
             None
         }
@@ -291,7 +322,10 @@ impl ArgumentResult {
             .into_iter()
             .enumerate()
             .filter(|(idx, _)| !touched.contains(idx))
-            .map(|(_, node)| Spanned { node, span })
+            .map(|(_, node)| Spanned {
+                node: unwrap_arc(node),
+                span,
+            })
             .collect();
 
         Ok(args)

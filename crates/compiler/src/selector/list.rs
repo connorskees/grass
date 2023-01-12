@@ -3,6 +3,7 @@ use std::{
     fmt::{self, Write},
     hash::{Hash, Hasher},
     mem,
+    sync::Arc,
 };
 
 use codemap::Span;
@@ -96,17 +97,20 @@ impl SelectorList {
             self.components
                 .into_iter()
                 .map(|complex| {
-                    Value::List(
+                    Arc::new(Value::List(
                         complex
                             .components
                             .into_iter()
                             .map(|complex_component| {
-                                Value::String(complex_component.to_string(), QuoteKind::None)
+                                Arc::new(Value::String(
+                                    complex_component.to_string(),
+                                    QuoteKind::None,
+                                ))
                             })
                             .collect(),
                         ListSeparator::Space,
                         Brackets::None,
-                    )
+                    ))
                 })
                 .collect(),
             ListSeparator::Comma,

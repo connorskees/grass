@@ -16,7 +16,7 @@ fn slash(mut args: ArgumentResult, _visitor: &mut Visitor) -> SassResult<Value> 
     } else {
         args.get_variadic()?
             .into_iter()
-            .map(|arg| arg.node)
+            .map(|arg| Arc::new(arg.node))
             .collect()
     };
 
@@ -34,7 +34,7 @@ pub(crate) fn declare(f: &mut Module) {
     f.insert_builtin("join", join);
     f.insert_builtin("length", length);
     f.insert_builtin("separator", list_separator);
-    f.insert_builtin("nth", nth);
+    f.insert_builtin_arc("nth", nth);
     f.insert_builtin("set-nth", set_nth);
     f.insert_builtin("zip", zip);
     f.insert_builtin("slash", slash);

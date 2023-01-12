@@ -176,7 +176,7 @@ pub(crate) fn percentage_or_unitless(
 #[derive(Debug, Clone)]
 pub(crate) enum ParsedChannels {
     String(String),
-    List(Vec<Value>),
+    List(Vec<Arc<Value>>),
 }
 
 fn is_var_slash(value: &Value) -> bool {
@@ -202,7 +202,7 @@ pub(crate) fn parse_channels(
 
     let original_channels = channels.clone();
 
-    let mut alpha_from_slash_list = None;
+    let mut alpha_from_slash_list: Option<Arc<Value>> = None;
 
     if channels.separator() == ListSeparator::Slash {
         let list = channels.clone().as_list();
@@ -218,15 +218,15 @@ pub(crate) fn parse_channels(
                 .into());
         }
 
-        channels = list[0].clone();
+        channels = unwrap_arc(Arc::clone(&list[0]));
         let inner_alpha_from_slash_list = list[1].clone();
 
         if !alpha_from_slash_list
             .as_ref()
-            .map(Value::is_special_function)
+            .map(|v| v.is_special_function())
             .unwrap_or(false)
         {
-            inner_alpha_from_slash_list
+            (*inner_alpha_from_slash_list)
                 .clone()
                 .assert_number_with_name("alpha", span)?;
         }
@@ -273,7 +273,7 @@ pub(crate) fn parse_channels(
         )
             .into());
     } else if list.len() < 3 {
-        if list.iter().any(Value::is_var)
+        if list.iter().any(|v| v.is_var())
             || (!list.is_empty() && is_var_slash(list.last().unwrap()))
         {
             let fn_string = function_string(name, &[original_channels], visitor, span)?;
@@ -294,14 +294,14 @@ pub(crate) fn parse_channels(
     }
 
     #[allow(clippy::collapsible_match)]
-    match &list[2] {
+    match &*list[2] {
         Value::Dimension(SassNumber { as_slash, .. }) => match as_slash {
             Some(slash) => Ok(ParsedChannels::List(vec![
-                list[0].clone(),
-                list[1].clone(),
+                Arc::clone(&list[0]),
+                Arc::clone(&list[1]),
                 // todo: superfluous clones
-                Value::Dimension(slash.0.clone()),
-                Value::Dimension(slash.1.clone()),
+                Arc::new(Value::Dimension(slash.0.clone())),
+                Arc::new(Value::Dimension(slash.1.clone())),
             ])),
             None => Ok(ParsedChannels::List(list)),
         },

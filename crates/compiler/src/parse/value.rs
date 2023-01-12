@@ -697,7 +697,7 @@ impl<'a, 'c, P: StylesheetParser<'a>> ValueParser<'a, 'c, P> {
 
         parser.expect_char(')')?;
 
-        Ok(AstExpr::Map(AstSassMap(pairs)).span(parser.toks_mut().span_from(start)))
+        Ok(AstExpr::Map(AstSassMap(Arc::new(pairs))).span(parser.toks_mut().span_from(start)))
     }
 
     fn parse_paren_expr(&mut self, parser: &mut P) -> SassResult<Spanned<AstExpr>> {

@@ -1,4 +1,5 @@
 use std::{
+    borrow::Cow,
     cmp::Ordering,
     hash::{Hash, Hasher},
     sync::Arc,
@@ -10,7 +11,7 @@ use crate::{
     color::Color,
     common::{BinaryOp, Brackets, ListSeparator, QuoteKind},
     error::SassResult,
-    evaluate::Visitor,
+    evaluate::{unwrap_arc, Visitor},
     selector::Selector,
     serializer::{inspect_value, serialize_value},
     unit::Unit,
@@ -38,7 +39,7 @@ pub(crate) enum Value {
     False,
     Null,
     Dimension(SassNumber),
-    List(Vec<Value>, ListSeparator, Brackets),
+    List(Vec<Arc<Value>>, ListSeparator, Brackets),
     Color(Arc<Color>),
     String(String, QuoteKind),
     Map(SassMap),
@@ -229,6 +230,23 @@ impl Value {
         }
     }
 
+    pub fn assert_map_with_name(&self, name: &str, span: Span) -> SassResult<Cow<SassMap>> {
+        match self {
+            Value::Map(map) => Ok(Cow::Borrowed(map)),
+            Value::List(v, ..) if v.is_empty() => Ok(Cow::Owned(SassMap::new())),
+            Value::ArgList(v) if v.is_empty() => Ok(Cow::Owned(SassMap::new())),
+            _ => Err((
+                format!(
+                    "${name}: {} is not a map.",
+                    self.inspect(span)?,
+                    name = name,
+                ),
+                span,
+            )
+                .into()),
+        }
+    }
+
     pub fn assert_string_with_name(
         self,
         name: &str,
@@ -253,7 +271,7 @@ impl Value {
             Value::Null => true,
             Value::String(i, QuoteKind::None) if i.is_empty() => true,
             Value::List(_, _, Brackets::Bracketed) => false,
-            Value::List(v, ..) => v.iter().all(Value::is_blank),
+            Value::List(v, ..) => v.iter().all(|v| v.is_blank()),
             Value::ArgList(v, ..) => v.is_blank(),
             _ => false,
         }
@@ -291,9 +309,13 @@ impl Value {
     pub fn unquote(self) -> Self {
         match self {
             Value::String(s1, _) => Value::String(s1, QuoteKind::None),
-            Value::List(v, sep, bracket) => {
-                Value::List(v.into_iter().map(Value::unquote).collect(), sep, bracket)
-            }
+            Value::List(v, sep, bracket) => Value::List(
+                v.into_iter()
+                    .map(|v| Arc::new((*v).clone().unquote()))
+                    .collect(),
+                sep,
+                bracket,
+            ),
             v => v,
         }
     }
@@ -416,12 +438,12 @@ impl Value {
         })
     }
 
-    pub fn as_list(self) -> Vec<Value> {
+    pub fn as_list(self) -> Vec<Arc<Value>> {
         match self {
             Value::List(v, ..) => v,
             Value::Map(m) => m.as_list(),
             Value::ArgList(v) => v.elems,
-            v => vec![v],
+            v => vec![Arc::new(v)],
         }
     }
 
@@ -469,15 +491,15 @@ impl Value {
                 match sep {
                     ListSeparator::Comma => {
                         for complex in list {
-                            if let Value::String(text, ..) = complex {
-                                result.push(text);
+                            if let Value::String(text, ..) = &*complex {
+                                result.push(text.clone());
                             } else if let Value::List(
                                 _,
                                 ListSeparator::Space | ListSeparator::Undecided,
                                 ..,
-                            ) = complex
+                            ) = &*complex
                             {
-                                result.push(match complex.selector_string(span)? {
+                                result.push(match unwrap_arc(complex).selector_string(span)? {
                                     Some(v) => v,
                                     None => return Ok(None),
                                 });
@@ -489,8 +511,8 @@ impl Value {
                     ListSeparator::Slash => return Ok(None),
                     ListSeparator::Space | ListSeparator::Undecided => {
                         for compound in list {
-                            if let Value::String(text, ..) = compound {
-                                result.push(text);
+                            if let Value::String(text, ..) = &*compound {
+                                result.push(text.clone());
                             } else {
                                 return Ok(None);
                             }
@@ -504,31 +526,31 @@ impl Value {
         }))
     }
 
-    pub fn unary_plus(self, visitor: &mut Visitor, span: Span) -> SassResult<Self> {
-        Ok(match self {
-            Self::Dimension(SassNumber { .. }) => self,
+    pub fn unary_plus(val: Arc<Self>, visitor: &mut Visitor, span: Span) -> SassResult<Arc<Self>> {
+        Ok(match &*val {
+            Self::Dimension(SassNumber { .. }) => val,
             Self::Calculation(..) => {
                 return Err((
-                    format!("Undefined operation \"+{}\".", self.inspect(span)?),
+                    format!("Undefined operation \"+{}\".", val.inspect(span)?),
                     span,
                 )
                     .into())
             }
-            _ => Self::String(
+            _ => Arc::new(Self::String(
                 format!(
                     "+{}",
-                    &self.to_css_string(span, visitor.options.is_compressed())?
+                    &val.to_css_string(span, visitor.options.is_compressed())?
                 ),
                 QuoteKind::None,
-            ),
+            )),
         })
     }
 
-    pub fn unary_neg(self, visitor: &mut Visitor, span: Span) -> SassResult<Self> {
-        Ok(match self {
+    pub fn unary_neg(val: Arc<Self>, visitor: &mut Visitor, span: Span) -> SassResult<Arc<Self>> {
+        Ok(Arc::new(match &*val {
             Self::Calculation(..) => {
                 return Err((
-                    format!("Undefined operation \"-{}\".", self.inspect(span)?),
+                    format!("Undefined operation \"-{}\".", val.inspect(span)?),
                     span,
                 )
                     .into())
@@ -538,21 +560,21 @@ impl Value {
                 unit,
                 as_slash,
             }) => Self::Dimension(SassNumber {
-                num: -num,
-                unit,
-                as_slash,
+                num: -*num,
+                unit: unit.clone(),
+                as_slash: as_slash.clone(),
             }),
             _ => Self::String(
                 format!(
                     "-{}",
-                    &self.to_css_string(span, visitor.options.is_compressed())?
+                    &val.to_css_string(span, visitor.options.is_compressed())?
                 ),
                 QuoteKind::None,
             ),
-        })
+        }))
     }
 
-    pub fn unary_div(self, visitor: &mut Visitor, span: Span) -> SassResult<Self> {
+    pub fn unary_div(&self, visitor: &mut Visitor, span: Span) -> SassResult<Self> {
         Ok(Self::String(
             format!(
                 "/{}",
@@ -562,7 +584,7 @@ impl Value {
         ))
     }
 
-    pub fn unary_not(self) -> Self {
+    pub fn unary_not(&self) -> Self {
         match self {
             Self::False | Self::Null => Self::True,
             _ => Self::False,

@@ -10,7 +10,7 @@ use crate::{
     Options,
 };
 
-pub(crate) fn add(left: Value, right: Value, options: &Options, span: Span) -> SassResult<Value> {
+pub(crate) fn add(left: &Value, right: &Value, options: &Options, span: Span) -> SassResult<Value> {
     Ok(match left {
         Value::Calculation(..) => match right {
             Value::String(s, quotes) => Value::String(
@@ -19,7 +19,7 @@ pub(crate) fn add(left: Value, right: Value, options: &Options, span: Span) -> S
                     left.to_css_string(span, options.is_compressed())?,
                     s
                 ),
-                quotes,
+                *quotes,
             ),
             _ => {
                 return Err((
@@ -82,33 +82,33 @@ pub(crate) fn add(left: Value, right: Value, options: &Options, span: Span) -> S
                 }
                 if unit == unit2 {
                     Value::Dimension(SassNumber {
-                        num: num + num2,
-                        unit,
+                        num: *num + *num2,
+                        unit: unit.clone(),
                         as_slash: None,
                     })
-                } else if unit == Unit::None {
+                } else if *unit == Unit::None {
                     Value::Dimension(SassNumber {
-                        num: num + num2,
-                        unit: unit2,
+                        num: *num + *num2,
+                        unit: unit2.clone(),
                         as_slash: None,
                     })
-                } else if unit2 == Unit::None {
+                } else if *unit2 == Unit::None {
                     Value::Dimension(SassNumber {
-                        num: num + num2,
-                        unit,
+                        num: *num + *num2,
+                        unit: unit.clone(),
                         as_slash: None,
                     })
                 } else {
                     Value::Dimension(SassNumber {
-                        num: num + num2.convert(&unit2, &unit),
-                        unit,
+                        num: *num + num2.convert(&unit2, &unit),
+                        unit: unit.clone(),
                         as_slash: None,
                     })
                 }
             }
             Value::String(s, q) => Value::String(
                 format!("{}{}{}", num.to_string(options.is_compressed()), unit, s),
-                q,
+                *q,
             ),
             Value::Null => Value::String(
                 format!("{}{}", num.to_string(options.is_compressed()), unit),
@@ -166,10 +166,14 @@ pub(crate) fn add(left: Value, right: Value, options: &Options, span: Span) -> S
             }
         },
         Value::String(text, quotes) => match right {
-            Value::String(text2, ..) => Value::String(text + &text2, quotes),
+            Value::String(text2, ..) => Value::String(format!("{}{}", text, text2), *quotes),
             _ => Value::String(
-                text + &right.to_css_string(span, options.is_compressed())?,
-                quotes,
+                format!(
+                    "{}{}",
+                    text,
+                    right.to_css_string(span, options.is_compressed())?
+                ),
+                *quotes,
             ),
         },
         Value::List(..) | Value::ArgList(..) => match right {
@@ -179,7 +183,7 @@ pub(crate) fn add(left: Value, right: Value, options: &Options, span: Span) -> S
                     left.to_css_string(span, options.is_compressed())?,
                     s
                 ),
-                q,
+                *q,
             ),
             _ => Value::String(
                 format!(
@@ -193,7 +197,7 @@ pub(crate) fn add(left: Value, right: Value, options: &Options, span: Span) -> S
     })
 }
 
-pub(crate) fn sub(left: Value, right: Value, options: &Options, span: Span) -> SassResult<Value> {
+pub(crate) fn sub(left: &Value, right: &Value, options: &Options, span: Span) -> SassResult<Value> {
     Ok(match left {
         Value::Calculation(..) => {
             return Err((
@@ -227,26 +231,26 @@ pub(crate) fn sub(left: Value, right: Value, options: &Options, span: Span) -> S
                 }
                 if unit == unit2 {
                     Value::Dimension(SassNumber {
-                        num: num - num2,
-                        unit,
+                        num: *num - *num2,
+                        unit: unit.clone(),
                         as_slash: None,
                     })
-                } else if unit == Unit::None {
+                } else if *unit == Unit::None {
                     Value::Dimension(SassNumber {
-                        num: num - num2,
-                        unit: unit2,
+                        num: *num - *num2,
+                        unit: unit2.clone(),
                         as_slash: None,
                     })
-                } else if unit2 == Unit::None {
+                } else if *unit2 == Unit::None {
                     Value::Dimension(SassNumber {
-                        num: num - num2,
-                        unit,
+                        num: *num - *num2,
+                        unit: unit.clone(),
                         as_slash: None,
                     })
                 } else {
                     Value::Dimension(SassNumber {
-                        num: num - num2.convert(&unit2, &unit),
-                        unit,
+                        num: *num - num2.convert(&unit2, &unit),
+                        unit: unit.clone(),
                         as_slash: None,
                     })
                 }
@@ -453,24 +457,24 @@ pub(crate) fn single_eq(
     ))
 }
 
-pub(crate) fn div(left: Value, right: Value, options: &Options, span: Span) -> SassResult<Value> {
+pub(crate) fn div(left: &Value, right: &Value, options: &Options, span: Span) -> SassResult<Value> {
     Ok(match (left, right) {
         (Value::Dimension(num1), Value::Dimension(num2)) => {
             if num2.unit == Unit::None {
                 return Ok(Value::Dimension(SassNumber {
                     num: num1.num / num2.num,
-                    unit: num1.unit,
+                    unit: num1.unit.clone(),
                     as_slash: None,
                 }));
             }
 
             let n = SassNumber {
                 num: num1.num,
-                unit: num1.unit,
+                unit: num1.unit.clone(),
                 as_slash: None,
             } / SassNumber {
                 num: num2.num,
-                unit: num2.unit,
+                unit: num2.unit.clone(),
                 as_slash: None,
             };
 
