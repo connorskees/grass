@@ -30,6 +30,14 @@ pub(crate) fn conversion_factor(from: &Unit, to: &Unit) -> Option<f64> {
 }
 
 impl SassNumber {
+    pub fn new_unitless<N: Into<Number>>(n: N) -> Self {
+        Self {
+            num: n.into(),
+            unit: Unit::None,
+            as_slash: None,
+        }
+    }
+
     pub fn has_comparable_units(&self, other_unit: &Unit) -> bool {
         self.unit.comparable(other_unit)
     }

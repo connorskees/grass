@@ -2,72 +2,59 @@ use crate::builtin::builtin_imports::*;
 
 pub(crate) fn to_upper_case(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
-    match args.get_err(0, "string")? {
-        Value::String(mut i, q) => {
-            i.make_ascii_uppercase();
-            Ok(Value::String(i, q))
-        }
-        v => Err((
-            format!("$string: {} is not a string.", v.inspect(args.span())?),
-            args.span(),
-        )
-            .into()),
-    }
+    let (mut s, q) = args
+        .get_err(0, "string")?
+        .assert_string_with_name("string", args.span())?;
+
+    s.make_ascii_uppercase();
+
+    Ok(Value::String(s, q))
 }
 
 pub(crate) fn to_lower_case(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
-    match args.get_err(0, "string")? {
-        Value::String(mut i, q) => {
-            i.make_ascii_lowercase();
-            Ok(Value::String(i, q))
-        }
-        v => Err((
-            format!("$string: {} is not a string.", v.inspect(args.span())?),
-            args.span(),
-        )
-            .into()),
-    }
+
+    let (mut s, q) = args
+        .get_err(0, "string")?
+        .assert_string_with_name("string", args.span())?;
+
+    s.make_ascii_lowercase();
+
+    Ok(Value::String(s, q))
 }
 
 pub(crate) fn str_length(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
-    match args.get_err(0, "string")? {
-        Value::String(i, _) => Ok(Value::Dimension(SassNumber {
-            num: (Number::from(i.chars().count())),
-            unit: Unit::None,
-            as_slash: None,
-        })),
-        v => Err((
-            format!("$string: {} is not a string.", v.inspect(args.span())?),
-            args.span(),
-        )
-            .into()),
-    }
+    let s = args
+        .get_err(0, "string")?
+        .assert_string_with_name("string", args.span())?
+        .0;
+
+    Ok(Value::Dimension(SassNumber::new_unitless(
+        s.chars().count(),
+    )))
 }
 
 pub(crate) fn quote(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
-    match args.get_err(0, "string")? {
-        Value::String(i, _) => Ok(Value::String(i, QuoteKind::Quoted)),
-        v => Err((
-            format!("$string: {} is not a string.", v.inspect(args.span())?),
-            args.span(),
-        )
-            .into()),
-    }
+
+    let s = args
+        .get_err(0, "string")?
+        .assert_string_with_name("string", args.span())?
+        .0;
+
+    Ok(Value::String(s, QuoteKind::Quoted))
 }
 
 pub(crate) fn unquote(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
-    match args.get_err(0, "string")? {
-        i @ Value::String(..) => Ok(i.unquote()),
-        v => Err((
-            format!("$string: {} is not a string.", v.inspect(args.span())?),
-            args.span(),
-        )
-            .into()),
-    }
+
+    let s = args
+        .get_err(0, "string")?
+        .assert_string_with_name("string", args.span())?
+        .0;
+
+    Ok(Value::String(s, QuoteKind::None))
 }
 
 pub(crate) fn str_slice(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
@@ -100,11 +87,7 @@ pub(crate) fn str_slice(mut args: ArgumentResult, visitor: &mut Visitor) -> Sass
         .default_arg(
             2,
             "end-at",
-            Value::Dimension(SassNumber {
-                num: Number(-1.0),
-                unit: Unit::None,
-                as_slash: None,
-            }),
+            Value::Dimension(SassNumber::new_unitless(-1.0)),
         )
         .assert_number_with_name("end-at", span)?;
 
@@ -149,11 +132,7 @@ pub(crate) fn str_index(mut args: ArgumentResult, visitor: &mut Visitor) -> Sass
         None => return Ok(Value::Null),
     };
 
-    Ok(Value::Dimension(SassNumber {
-        num: Number::from(char_position),
-        unit: Unit::None,
-        as_slash: None,
-    }))
+    Ok(Value::Dimension(SassNumber::new_unitless(char_position)))
 }
 
 pub(crate) fn str_insert(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {

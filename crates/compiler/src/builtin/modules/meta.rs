@@ -19,16 +19,10 @@ fn load_css(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<()> {
 
     let span = args.span();
 
-    let url = match args.get_err(0, "module")? {
-        Value::String(s, ..) => s,
-        v => {
-            return Err((
-                format!("$module: {} is not a string.", v.inspect(span)?),
-                span,
-            )
-                .into())
-        }
-    };
+    let url = args
+        .get_err(0, "module")?
+        .assert_string_with_name("module", args.span())?
+        .0;
 
     let with = match args.default_arg(1, "with", Value::Null) {
         Value::Map(map) => Some(map),
@@ -45,16 +39,8 @@ fn load_css(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<()> {
 
         let mut values = BTreeMap::new();
         for (key, value) in with {
-            let name = match key.node {
-                Value::String(s, ..) => Identifier::from(s),
-                v => {
-                    return Err((
-                        format!("$with key: {} is not a string.", v.inspect(span)?),
-                        span,
-                    )
-                        .into())
-                }
-            };
+            let name =
+                Identifier::from(key.node.assert_string_with_name("with key", args.span())?.0);
 
             if values.contains_key(&name) {
                 // todo: write test for this
@@ -97,16 +83,11 @@ fn load_css(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<()> {
 fn module_functions(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
 
-    let module = match args.get_err(0, "module")? {
-        Value::String(s, ..) => s,
-        v => {
-            return Err((
-                format!("$module: {} is not a string.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
+    let module = Identifier::from(
+        args.get_err(0, "module")?
+            .assert_string_with_name("module", args.span())?
+            .0,
+    );
 
     Ok(Value::Map(
         (*(*visitor.env.modules)
@@ -120,16 +101,11 @@ fn module_functions(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResu
 fn module_variables(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
 
-    let module = match args.get_err(0, "module")? {
-        Value::String(s, ..) => s,
-        v => {
-            return Err((
-                format!("$module: {} is not a string.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
+    let module = Identifier::from(
+        args.get_err(0, "module")?
+            .assert_string_with_name("module", args.span())?
+            .0,
+    );
 
     Ok(Value::Map(
         (*(*visitor.env.modules)

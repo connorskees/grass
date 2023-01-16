@@ -2,11 +2,10 @@ use crate::builtin::builtin_imports::*;
 
 pub(crate) fn length(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
-    Ok(Value::Dimension(SassNumber {
-        num: (Number::from(args.get_err(0, "list")?.as_list().len())),
-        unit: Unit::None,
-        as_slash: None,
-    }))
+
+    let len = args.get_err(0, "list")?.as_list().len();
+
+    Ok(Value::Dimension(SassNumber::new_unitless(len)))
 }
 
 pub(crate) fn nth(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
@@ -260,14 +259,10 @@ pub(crate) fn index(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResu
     let list = args.get_err(0, "list")?.as_list();
     let value = args.get_err(1, "value")?;
     let index = match list.into_iter().position(|v| v == value) {
-        Some(v) => Number::from(v + 1),
+        Some(v) => v + 1,
         None => return Ok(Value::Null),
     };
-    Ok(Value::Dimension(SassNumber {
-        num: (index),
-        unit: Unit::None,
-        as_slash: None,
-    }))
+    Ok(Value::Dimension(SassNumber::new_unitless(index)))
 }
 
 pub(crate) fn zip(args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {

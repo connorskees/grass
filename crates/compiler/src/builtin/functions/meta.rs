@@ -33,51 +33,40 @@ fn if_(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
 
 pub(crate) fn feature_exists(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
-    match args.get_err(0, "feature")? {
-        #[allow(clippy::match_same_arms)]
-        Value::String(s, _) => Ok(match s.as_str() {
-            // A local variable will shadow a global variable unless
-            // `!global` is used.
-            "global-variable-shadowing" => Value::True,
-            // the @extend rule will affect selectors nested in pseudo-classes
-            // like :not()
-            "extend-selector-pseudoclass" => Value::True,
-            // Full support for unit arithmetic using units defined in the
-            // [Values and Units Level 3][] spec.
-            "units-level-3" => Value::True,
-            // The Sass `@error` directive is supported.
-            "at-error" => Value::True,
-            // The "Custom Properties Level 1" spec is supported. This means
-            // that custom properties are parsed statically, with only
-            // interpolation treated as SassScript.
-            "custom-property" => Value::True,
-            _ => Value::False,
-        }),
-        v => Err((
-            format!("$feature: {} is not a string.", v.inspect(args.span())?),
-            args.span(),
-        )
-            .into()),
-    }
+    let feature = args
+        .get_err(0, "feature")?
+        .assert_string_with_name("feature", args.span())?
+        .0;
+
+    #[allow(clippy::match_same_arms)]
+    Ok(match feature.as_str() {
+        // A local variable will shadow a global variable unless
+        // `!global` is used.
+        "global-variable-shadowing" => Value::True,
+        // the @extend rule will affect selectors nested in pseudo-classes
+        // like :not()
+        "extend-selector-pseudoclass" => Value::True,
+        // Full support for unit arithmetic using units defined in the
+        // [Values and Units Level 3][] spec.
+        "units-level-3" => Value::True,
+        // The Sass `@error` directive is supported.
+        "at-error" => Value::True,
+        // The "Custom Properties Level 1" spec is supported. This means
+        // that custom properties are parsed statically, with only
+        // interpolation treated as SassScript.
+        "custom-property" => Value::True,
+        _ => Value::False,
+    })
 }
 
 pub(crate) fn unit(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
-    let unit = match args.get_err(0, "number")? {
-        Value::Dimension(SassNumber {
-            num: _,
-            unit: u,
-            as_slash: _,
-        }) => u.to_string(),
-        v => {
-            return Err((
-                format!("$number: {} is not a number.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
-    Ok(Value::String(unit, QuoteKind::Quoted))
+
+    let number = args
+        .get_err(0, "number")?
+        .assert_number_with_name("number", args.span())?;
+
+    Ok(Value::String(number.unit.to_string(), QuoteKind::Quoted))
 }
 
 pub(crate) fn type_of(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
@@ -88,19 +77,11 @@ pub(crate) fn type_of(mut args: ArgumentResult, visitor: &mut Visitor) -> SassRe
 
 pub(crate) fn unitless(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
-    Ok(match args.get_err(0, "number")? {
-        Value::Dimension(SassNumber {
-            unit: Unit::None, ..
-        }) => Value::True,
-        Value::Dimension(SassNumber { .. }) => Value::False,
-        v => {
-            return Err((
-                format!("$number: {} is not a number.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    })
+    let number = args
+        .get_err(0, "number")?
+        .assert_number_with_name("number", args.span())?;
+
+    Ok(Value::bool(number.unit == Unit::None))
 }
 
 pub(crate) fn inspect(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
@@ -116,14 +97,14 @@ pub(crate) fn variable_exists(
     visitor: &mut Visitor,
 ) -> SassResult<Value> {
     args.max_args(1)?;
-    match args.get_err(0, "name")? {
-        Value::String(s, _) => Ok(Value::bool(visitor.env.var_exists(s.into(), None)?)),
-        v => Err((
-            format!("$name: {} is not a string.", v.inspect(args.span())?),
-            args.span(),
-        )
-            .into()),
-    }
+
+    let name = Identifier::from(
+        args.get_err(0, "name")?
+            .assert_string_with_name("name", args.span())?
+            .0,
+    );
+
+    Ok(Value::bool(visitor.env.var_exists(name, None)?))
 }
 
 pub(crate) fn global_variable_exists(
@@ -163,16 +144,11 @@ pub(crate) fn global_variable_exists(
 
 pub(crate) fn mixin_exists(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(2)?;
-    let name: Identifier = match args.get_err(0, "name")? {
-        Value::String(s, _) => s.into(),
-        v => {
-            return Err((
-                format!("$name: {} is not a string.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
+    let name = Identifier::from(
+        args.get_err(0, "name")?
+            .assert_string_with_name("name", args.span())?
+            .0,
+    );
 
     let module = match args.default_arg(1, "module", Value::Null) {
         Value::String(s, _) => Some(s),
@@ -203,16 +179,11 @@ pub(crate) fn function_exists(
 ) -> SassResult<Value> {
     args.max_args(2)?;
 
-    let name: Identifier = match args.get_err(0, "name")? {
-        Value::String(s, _) => s.into(),
-        v => {
-            return Err((
-                format!("$name: {} is not a string.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
+    let name = Identifier::from(
+        args.get_err(0, "name")?
+            .assert_string_with_name("name", args.span())?
+            .0,
+    );
 
     let module = match args.default_arg(1, "module", Value::Null) {
         Value::String(s, _) => Some(s),

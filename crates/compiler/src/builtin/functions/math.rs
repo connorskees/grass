@@ -16,74 +16,47 @@ pub(crate) fn percentage(mut args: ArgumentResult, visitor: &mut Visitor) -> Sas
 
 pub(crate) fn round(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
-    match args.get_err(0, "number")? {
-        // todo: better error message, consider finities
-        Value::Dimension(SassNumber { num: n, .. }) if n.is_nan() => {
-            Err(("Infinity or NaN toInt", args.span()).into())
-        }
-        Value::Dimension(SassNumber {
-            num: n,
-            unit: u,
-            as_slash: _,
-        }) => Ok(Value::Dimension(SassNumber {
-            num: (n.round()),
-            unit: u,
-            as_slash: None,
-        })),
-        v => Err((
-            format!("$number: {} is not a number.", v.inspect(args.span())?),
-            args.span(),
-        )
-            .into()),
+    let mut number = args
+        .get_err(0, "number")?
+        .assert_number_with_name("number", args.span())?;
+
+    if !number.num.is_finite() {
+        return Err(("Infinity or NaN toInt", args.span()).into());
     }
+
+    number.num = number.num.round();
+
+    Ok(Value::Dimension(number))
 }
 
 pub(crate) fn ceil(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
-    match args.get_err(0, "number")? {
-        // todo: better error message, consider finities
-        Value::Dimension(SassNumber { num: n, .. }) if n.is_nan() => {
-            Err(("Infinity or NaN toInt", args.span()).into())
-        }
-        Value::Dimension(SassNumber {
-            num: n,
-            unit: u,
-            as_slash: _,
-        }) => Ok(Value::Dimension(SassNumber {
-            num: (n.ceil()),
-            unit: u,
-            as_slash: None,
-        })),
-        v => Err((
-            format!("$number: {} is not a number.", v.inspect(args.span())?),
-            args.span(),
-        )
-            .into()),
+    let mut number = args
+        .get_err(0, "number")?
+        .assert_number_with_name("number", args.span())?;
+
+    if !number.num.is_finite() {
+        return Err(("Infinity or NaN toInt", args.span()).into());
     }
+
+    number.num = number.num.ceil();
+
+    Ok(Value::Dimension(number))
 }
 
 pub(crate) fn floor(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
-    match args.get_err(0, "number")? {
-        // todo: better error message, consider finities
-        Value::Dimension(SassNumber { num: n, .. }) if n.is_nan() => {
-            Err(("Infinity or NaN toInt", args.span()).into())
-        }
-        Value::Dimension(SassNumber {
-            num: n,
-            unit: u,
-            as_slash: _,
-        }) => Ok(Value::Dimension(SassNumber {
-            num: (n.floor()),
-            unit: u,
-            as_slash: None,
-        })),
-        v => Err((
-            format!("$number: {} is not a number.", v.inspect(args.span())?),
-            args.span(),
-        )
-            .into()),
+    let mut number = args
+        .get_err(0, "number")?
+        .assert_number_with_name("number", args.span())?;
+
+    if !number.num.is_finite() {
+        return Err(("Infinity or NaN toInt", args.span()).into());
     }
+
+    number.num = number.num.floor();
+
+    Ok(Value::Dimension(number))
 }
 
 pub(crate) fn abs(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
@@ -92,6 +65,7 @@ pub(crate) fn abs(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult
         .get_err(0, "number")?
         .assert_number_with_name("number", args.span())?;
 
+    // todo: test for nan+infinity
     num.num = num.num.abs();
 
     Ok(Value::Dimension(num))
@@ -120,22 +94,16 @@ pub(crate) fn random(mut args: ArgumentResult, visitor: &mut Visitor) -> SassRes
 
     if matches!(limit, Value::Null) {
         let mut rng = rand::thread_rng();
-        return Ok(Value::Dimension(SassNumber {
-            num: (Number::from(rng.gen_range(0.0..1.0))),
-            unit: Unit::None,
-            as_slash: None,
-        }));
+        return Ok(Value::Dimension(SassNumber::new_unitless(
+            rng.gen_range(0.0..1.0),
+        )));
     }
 
     let limit = limit.assert_number_with_name("limit", args.span())?.num;
     let limit_int = limit.assert_int_with_name("limit", args.span())?;
 
     if limit.is_one() {
-        return Ok(Value::Dimension(SassNumber {
-            num: (Number::one()),
-            unit: Unit::None,
-            as_slash: None,
-        }));
+        return Ok(Value::Dimension(SassNumber::new_unitless(1.0)));
     }
 
     if limit.is_zero() || limit.is_negative() {
@@ -147,11 +115,9 @@ pub(crate) fn random(mut args: ArgumentResult, visitor: &mut Visitor) -> SassRes
     }
 
     let mut rng = rand::thread_rng();
-    Ok(Value::Dimension(SassNumber {
-        num: (Number::from(rng.gen_range(0..limit_int) + 1)),
-        unit: Unit::None,
-        as_slash: None,
-    }))
+    Ok(Value::Dimension(SassNumber::new_unitless(
+        rng.gen_range(0..limit_int) + 1,
+    )))
 }
 
 pub(crate) fn min(args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {

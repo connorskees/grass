@@ -2,7 +2,10 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use crate::{builtin::builtin_imports::*, serializer::serialize_number, value::SassNumber};
 
-use super::rgb::{function_string, parse_channels, percentage_or_unitless, ParsedChannels};
+use super::{
+    rgb::{function_string, parse_channels, percentage_or_unitless},
+    ParsedChannels,
+};
 
 fn hsl_3_args(
     name: &'static str,
@@ -14,15 +17,7 @@ fn hsl_3_args(
     let hue = args.get_err(0, "hue")?;
     let saturation = args.get_err(1, "saturation")?;
     let lightness = args.get_err(2, "lightness")?;
-    let alpha = args.default_arg(
-        3,
-        "alpha",
-        Value::Dimension(SassNumber {
-            num: (Number::one()),
-            unit: Unit::None,
-            as_slash: None,
-        }),
-    );
+    let alpha = args.default_arg(3, "alpha", Value::Dimension(SassNumber::new_unitless(1.0)));
 
     if [&hue, &saturation, &lightness, &alpha]
         .iter()
@@ -195,25 +190,15 @@ fn darken(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> 
         .get_err(0, "color")?
         .assert_color_with_name("color", args.span())?;
 
-    let amount = match args.get_err(1, "amount")? {
-        Value::Dimension(SassNumber { num: n, .. }) if n.is_nan() => todo!(),
-        Value::Dimension(SassNumber {
-            num: n,
-            unit: u,
-            as_slash: _,
-        }) => bound!(args, "amount", n, u, 0, 100) / Number(100.0),
-        v => {
-            return Err((
-                format!(
-                    "$amount: {} is not a number.",
-                    v.to_css_string(args.span(), false)?
-                ),
-                args.span(),
-            )
-                .into())
-        }
-    };
-    Ok(Value::Color(Arc::new(color.darken(amount))))
+    let mut amount = args
+        .get_err(1, "amount")?
+        .assert_number_with_name("amount", args.span())?;
+
+    amount.assert_bounds("amount", 0.0, 100.0, args.span())?;
+
+    amount.num /= Number(100.0);
+
+    Ok(Value::Color(Arc::new(color.darken(amount.num))))
 }
 
 fn saturate(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
@@ -232,24 +217,14 @@ fn saturate(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value
         ));
     }
 
-    let amount = match args.get_err(1, "amount")? {
-        Value::Dimension(SassNumber { num: n, .. }) if n.is_nan() => todo!(),
-        Value::Dimension(SassNumber {
-            num: n,
-            unit: u,
-            as_slash: _,
-        }) => bound!(args, "amount", n, u, 0, 100) / Number(100.0),
-        v => {
-            return Err((
-                format!(
-                    "$amount: {} is not a number.",
-                    v.to_css_string(args.span(), false)?
-                ),
-                args.span(),
-            )
-                .into())
-        }
-    };
+    let mut amount = args
+        .get_err(1, "amount")?
+        .assert_number_with_name("amount", args.span())?;
+
+    amount.assert_bounds("amount", 0.0, 100.0, args.span())?;
+
+    amount.num /= Number(100.0);
+
     let color = match args.get_err(0, "color")? {
         Value::Color(c) => c,
         Value::Dimension(SassNumber {
@@ -271,7 +246,7 @@ fn saturate(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value
                 .into())
         }
     };
-    Ok(Value::Color(Arc::new(color.saturate(amount))))
+    Ok(Value::Color(Arc::new(color.saturate(amount.num))))
 }
 
 fn desaturate(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
@@ -279,25 +254,16 @@ fn desaturate(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Val
     let color = args
         .get_err(0, "color")?
         .assert_color_with_name("color", args.span())?;
-    let amount = match args.get_err(1, "amount")? {
-        Value::Dimension(SassNumber { num: n, .. }) if n.is_nan() => todo!(),
-        Value::Dimension(SassNumber {
-            num: n,
-            unit: u,
-            as_slash: _,
-        }) => bound!(args, "amount", n, u, 0, 100) / Number(100.0),
-        v => {
-            return Err((
-                format!(
-                    "$amount: {} is not a number.",
-                    v.to_css_string(args.span(), visitor.options.is_compressed())?
-                ),
-                args.span(),
-            )
-                .into())
-        }
-    };
-    Ok(Value::Color(Arc::new(color.desaturate(amount))))
+
+    let mut amount = args
+        .get_err(1, "amount")?
+        .assert_number_with_name("amount", args.span())?;
+
+    amount.assert_bounds("amount", 0.0, 100.0, args.span())?;
+
+    amount.num /= Number(100.0);
+
+    Ok(Value::Color(Arc::new(color.desaturate(amount.num))))
 }
 
 pub(crate) fn grayscale(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
@@ -335,32 +301,20 @@ pub(crate) fn complement(mut args: ArgumentResult, visitor: &mut Visitor) -> Sas
 
 pub(crate) fn invert(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(2)?;
-    let weight = match args.get(1, "weight") {
-        Some(Spanned {
-            node: Value::Dimension(SassNumber { num: n, .. }),
-            ..
-        }) if n.is_nan() => todo!(),
-        Some(Spanned {
-            node:
-                Value::Dimension(SassNumber {
-                    num: n,
-                    unit: u,
-                    as_slash: _,
-                }),
-            ..
-        }) => Some(bound!(args, "weight", n, u, 0, 100) / Number(100.0)),
-        None => None,
-        Some(v) => {
-            return Err((
-                format!(
-                    "$weight: {} is not a number.",
-                    v.to_css_string(args.span(), visitor.options.is_compressed())?
-                ),
-                args.span(),
-            )
-                .into())
-        }
-    };
+    let span = args.span();
+    let weight = args
+        .get(1, "weight")
+        .map::<SassResult<_>, _>(|weight| {
+            let mut weight = weight.node.assert_number_with_name("weight", span)?;
+
+            weight.assert_bounds("weight", 0.0, 100.0, span)?;
+
+            weight.num /= Number(100.0);
+
+            Ok(weight.num)
+        })
+        .transpose()?;
+
     match args.get_err(0, "color")? {
         Value::Color(c) => Ok(Value::Color(Arc::new(
             c.invert(weight.unwrap_or_else(Number::one)),

@@ -1,5 +1,7 @@
 use crate::{builtin::builtin_imports::*, serializer::inspect_number, value::fuzzy_round};
 
+use super::ParsedChannels;
+
 pub(crate) fn function_string(
     name: &'static str,
     args: &[Value],
@@ -173,12 +175,6 @@ pub(crate) fn percentage_or_unitless(
     Ok(value.clamp(0.0, max).0)
 }
 
-#[derive(Debug, Clone)]
-pub(crate) enum ParsedChannels {
-    String(String),
-    List(Vec<Value>),
-}
-
 fn is_var_slash(value: &Value) -> bool {
     match value {
         Value::String(text, QuoteKind::Quoted) => {
@@ -313,7 +309,6 @@ pub(crate) fn parse_channels(
     }
 }
 
-/// name: Either `rgb` or `rgba` depending on the caller
 fn inner_rgb(
     name: &'static str,
     mut args: ArgumentResult,
@@ -363,11 +358,7 @@ pub(crate) fn red(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult
         .get_err(0, "color")?
         .assert_color_with_name("color", args.span())?;
 
-    Ok(Value::Dimension(SassNumber {
-        num: color.red(),
-        unit: Unit::None,
-        as_slash: None,
-    }))
+    Ok(Value::Dimension(SassNumber::new_unitless(color.red())))
 }
 
 pub(crate) fn green(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
@@ -376,11 +367,7 @@ pub(crate) fn green(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResu
         .get_err(0, "color")?
         .assert_color_with_name("color", args.span())?;
 
-    Ok(Value::Dimension(SassNumber {
-        num: color.green(),
-        unit: Unit::None,
-        as_slash: None,
-    }))
+    Ok(Value::Dimension(SassNumber::new_unitless(color.green())))
 }
 
 pub(crate) fn blue(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
@@ -389,11 +376,7 @@ pub(crate) fn blue(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResul
         .get_err(0, "color")?
         .assert_color_with_name("color", args.span())?;
 
-    Ok(Value::Dimension(SassNumber {
-        num: color.blue(),
-        unit: Unit::None,
-        as_slash: None,
-    }))
+    Ok(Value::Dimension(SassNumber::new_unitless(color.blue())))
 }
 
 pub(crate) fn mix(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
@@ -409,11 +392,7 @@ pub(crate) fn mix(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult
     let weight = match args.default_arg(
         2,
         "weight",
-        Value::Dimension(SassNumber {
-            num: (Number(50.0)),
-            unit: Unit::None,
-            as_slash: None,
-        }),
+        Value::Dimension(SassNumber::new_unitless(50.0)),
     ) {
         Value::Dimension(SassNumber { num: n, .. }) if n.is_nan() => todo!(),
         Value::Dimension(SassNumber {

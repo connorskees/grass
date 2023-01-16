@@ -1,6 +1,6 @@
 use crate::builtin::builtin_imports::*;
 
-use super::rgb::{parse_channels, ParsedChannels};
+use super::{rgb::parse_channels, ParsedChannels};
 
 pub(crate) fn blackness(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;

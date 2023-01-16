@@ -206,8 +206,8 @@ fn log(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
         }
     };
 
-    Ok(Value::Dimension(SassNumber {
-        num: if let Some(base) = base {
+    Ok(Value::Dimension(SassNumber::new_unitless(
+        if let Some(base) = base {
             if base.is_zero() {
                 Number::zero()
             } else {
@@ -221,9 +221,7 @@ fn log(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
         } else {
             number.ln()
         },
-        unit: Unit::None,
-        as_slash: None,
-    }))
+    )))
 }
 
 fn pow(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
@@ -241,11 +239,9 @@ fn pow(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
         .assert_number_with_name("exponent", span)?;
     exponent.assert_no_units("exponent", span)?;
 
-    Ok(Value::Dimension(SassNumber {
-        num: base.num.pow(exponent.num),
-        unit: Unit::None,
-        as_slash: None,
-    }))
+    Ok(Value::Dimension(SassNumber::new_unitless(
+        base.num.pow(exponent.num),
+    )))
 }
 
 fn sqrt(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
@@ -255,11 +251,9 @@ fn sqrt(mut args: ArgumentResult, _: &mut Visitor) -> SassResult<Value> {
         .assert_number_with_name("number", args.span())?;
     number.assert_no_units("number", args.span())?;
 
-    Ok(Value::Dimension(SassNumber {
-        num: number.num.sqrt(),
-        unit: Unit::None,
-        as_slash: None,
-    }))
+    Ok(Value::Dimension(SassNumber::new_unitless(
+        number.num.sqrt(),
+    )))
 }
 
 macro_rules! trig_fn {
@@ -274,11 +268,9 @@ macro_rules! trig_fn {
                     num,
                     unit: unit @ (Unit::None | Unit::Rad | Unit::Deg | Unit::Grad | Unit::Turn),
                     ..
-                }) => Value::Dimension(SassNumber {
-                    num: Number(coerce_to_rad(num.0, unit).$name()),
-                    unit: Unit::None,
-                    as_slash: None,
-                }),
+                }) => {
+                    Value::Dimension(SassNumber::new_unitless(coerce_to_rad(num.0, unit).$name()))
+                }
                 v @ Value::Dimension(..) => {
                     return Err((
                         format!(
@@ -482,58 +474,30 @@ pub(crate) fn declare(f: &mut Module) {
 
     f.insert_builtin_var(
         "e",
-        Value::Dimension(SassNumber {
-            num: Number(std::f64::consts::E),
-            unit: Unit::None,
-            as_slash: None,
-        }),
+        Value::Dimension(SassNumber::new_unitless(std::f64::consts::E)),
     );
     f.insert_builtin_var(
         "pi",
-        Value::Dimension(SassNumber {
-            num: Number(std::f64::consts::PI),
-            unit: Unit::None,
-            as_slash: None,
-        }),
+        Value::Dimension(SassNumber::new_unitless(std::f64::consts::PI)),
     );
     f.insert_builtin_var(
         "epsilon",
-        Value::Dimension(SassNumber {
-            num: Number(std::f64::EPSILON),
-            unit: Unit::None,
-            as_slash: None,
-        }),
+        Value::Dimension(SassNumber::new_unitless(std::f64::EPSILON)),
     );
     f.insert_builtin_var(
         "max-safe-integer",
-        Value::Dimension(SassNumber {
-            num: Number(9007199254740991.0),
-            unit: Unit::None,
-            as_slash: None,
-        }),
+        Value::Dimension(SassNumber::new_unitless(9007199254740991.0)),
     );
     f.insert_builtin_var(
         "min-safe-integer",
-        Value::Dimension(SassNumber {
-            num: Number(-9007199254740991.0),
-            unit: Unit::None,
-            as_slash: None,
-        }),
+        Value::Dimension(SassNumber::new_unitless(-9007199254740991.0)),
     );
     f.insert_builtin_var(
         "max-number",
-        Value::Dimension(SassNumber {
-            num: Number(f64::MAX),
-            unit: Unit::None,
-            as_slash: None,
-        }),
+        Value::Dimension(SassNumber::new_unitless(f64::MAX)),
     );
     f.insert_builtin_var(
         "min-number",
-        Value::Dimension(SassNumber {
-            num: Number(f64::MIN_POSITIVE),
-            unit: Unit::None,
-            as_slash: None,
-        }),
+        Value::Dimension(SassNumber::new_unitless(f64::MIN_POSITIVE)),
     );
 }

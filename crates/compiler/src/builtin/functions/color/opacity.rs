@@ -32,21 +32,17 @@ mod test {
 
 pub(crate) fn alpha(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     if args.len() <= 1 {
-        match args.get_err(0, "color")? {
-            Value::Color(c) => Ok(Value::Dimension(SassNumber {
-                num: c.alpha(),
-                unit: Unit::None,
-                as_slash: None,
-            })),
-            Value::String(s, QuoteKind::None) if is_ms_filter(&s) => {
-                Ok(Value::String(format!("alpha({})", s), QuoteKind::None))
+        let color = args.get_err(0, "color")?;
+
+        if let Value::String(s, QuoteKind::None) = &color {
+            if is_ms_filter(s) {
+                return Ok(Value::String(format!("alpha({})", s), QuoteKind::None));
             }
-            v => Err((
-                format!("$color: {} is not a color.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into()),
         }
+
+        let color = color.assert_color_with_name("color", args.span())?;
+
+        Ok(Value::Dimension(SassNumber::new_unitless(color.alpha())))
     } else {
         let err = args.max_args(1);
         let args = args
@@ -72,11 +68,7 @@ pub(crate) fn opacity(mut args: ArgumentResult, visitor: &mut Visitor) -> SassRe
     args.max_args(1)?;
     match args.get_err(0, "color")? {
         Value::Dimension(SassNumber { num: n, .. }) if n.is_nan() => todo!(),
-        Value::Color(c) => Ok(Value::Dimension(SassNumber {
-            num: c.alpha(),
-            unit: Unit::None,
-            as_slash: None,
-        })),
+        Value::Color(c) => Ok(Value::Dimension(SassNumber::new_unitless(c.alpha()))),
         Value::Dimension(SassNumber {
             num,
             unit,
@@ -102,9 +94,9 @@ fn opacify(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value>
         .get_err(1, "amount")?
         .assert_number_with_name("amount", args.span())?;
 
-    let amount = bound!(args, "amount", amount.num, amount.unit(), 0, 1);
+    amount.assert_bounds("amount", 0.0, 1.0, args.span())?;
 
-    Ok(Value::Color(Arc::new(color.fade_in(amount))))
+    Ok(Value::Color(Arc::new(color.fade_in(amount.num))))
 }
 
 fn transparentize(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
@@ -112,22 +104,14 @@ fn transparentize(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult
     let color = args
         .get_err(0, "color")?
         .assert_color_with_name("color", args.span())?;
-    let amount = match args.get_err(1, "amount")? {
-        Value::Dimension(SassNumber { num: n, .. }) if n.is_nan() => todo!(),
-        Value::Dimension(SassNumber {
-            num: n,
-            unit: u,
-            as_slash: _,
-        }) => bound!(args, "amount", n, u, 0, 1),
-        v => {
-            return Err((
-                format!("$amount: {} is not a number.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
-    Ok(Value::Color(Arc::new(color.fade_out(amount))))
+
+    let amount = args
+        .get_err(1, "amount")?
+        .assert_number_with_name("amount", args.span())?;
+
+    amount.assert_bounds("amount", 0.0, 1.0, args.span())?;
+
+    Ok(Value::Color(Arc::new(color.fade_out(amount.num))))
 }
 
 pub(crate) fn declare(f: &mut GlobalFunctionMap) {
