@@ -98,7 +98,7 @@ pub(crate) fn hwb(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult
             args.span(),
         )? {
             ParsedChannels::String(s) => Err((
-                format!("Expected numeric channels, got \"{}\"", s),
+                format!("Expected numeric channels, got \"{}\".", s),
                 args.span(),
             )
                 .into()),

@@ -1534,7 +1534,7 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
             &base_name[start..end]
         };
 
-        let mut toks = Lexer::new_from_string(&namespace, url_span);
+        let mut toks = Lexer::new_from_string(namespace, url_span);
 
         // if namespace is empty, avoid attempting to parse an identifier from
         // an empty string, as there will be no span to emit

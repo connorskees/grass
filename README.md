@@ -25,6 +25,10 @@ All known missing features and bugs are tracked in [#19](https://github.com/conn
 
 `grass` is not a drop-in replacement for `libsass` and does not intend to be. If you are upgrading to `grass` from `libsass`, you may have to make modifications to your stylesheets, though these changes should not differ from those you would have to make if upgrading to `dart-sass`.
 
+## Performance
+
+`grass` is benchmarked against `dart-sass` and `sassc` (`libsass`) [here](https://github.com/connorskees/sass-perf). In general, `grass` appears to be ~2x faster than `dart-sass` and ~1.7x faster than `sassc`.
+
 ## Web Assembly
 
 `grass` experimentally releases a
@@ -80,9 +84,9 @@ The spec runner does not work on Windows.
 Using a modified version of the spec runner that ignores warnings and error spans (but does include error messages), `grass` achieves the following results:
 
 ```
-2022-01-07
-PASSING: 6152
-FAILING: 753
+2022-01-16
+PASSING: 6153
+FAILING: 752
 TOTAL: 6905
 ```
 

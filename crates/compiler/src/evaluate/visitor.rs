@@ -1161,7 +1161,7 @@ impl<'a> Visitor<'a> {
         allows_placeholder: bool,
         span: Span,
     ) -> SassResult<SelectorList> {
-        let sel_toks = Lexer::new_from_string(&selector_text, span);
+        let sel_toks = Lexer::new_from_string(selector_text, span);
 
         SelectorParser::new(sel_toks, allows_parent, allows_placeholder, span).parse()
     }

@@ -90,11 +90,9 @@ fn module_functions(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResu
     );
 
     Ok(Value::Map(
-        (*(*visitor.env.modules)
+        (*(*visitor.env.modules).borrow().get(module, args.span())?)
             .borrow()
-            .get(module.into(), args.span())?)
-        .borrow()
-        .functions(args.span()),
+            .functions(args.span()),
     ))
 }
 
@@ -108,11 +106,9 @@ fn module_variables(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResu
     );
 
     Ok(Value::Map(
-        (*(*visitor.env.modules)
+        (*(*visitor.env.modules).borrow().get(module, args.span())?)
             .borrow()
-            .get(module.into(), args.span())?)
-        .borrow()
-        .variables(args.span()),
+            .variables(args.span()),
     ))
 }
 
