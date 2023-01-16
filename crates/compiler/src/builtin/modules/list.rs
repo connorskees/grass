@@ -16,7 +16,7 @@ fn slash(mut args: ArgumentResult, _visitor: &mut Visitor) -> SassResult<Value> 
     } else {
         args.get_variadic()?
             .into_iter()
-            .map(|arg| Arc::new(arg.node))
+            .map(|arg| std::rc::Rc::new(arg.node))
             .collect()
     };
 

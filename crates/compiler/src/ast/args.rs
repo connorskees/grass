@@ -161,8 +161,8 @@ pub(crate) enum MaybeEvaledArguments {
 
 #[derive(Debug, Clone)]
 pub(crate) struct ArgumentResult {
-    pub positional: Vec<Arc<Value>>,
-    pub named: BTreeMap<Identifier, Arc<Value>>,
+    pub positional: Vec<std::rc::Rc<Value>>,
+    pub named: BTreeMap<Identifier, std::rc::Rc<Value>>,
     pub separator: ListSeparator,
     pub span: Span,
     // todo: hack
@@ -174,12 +174,21 @@ impl ArgumentResult {
     ///
     /// Removes the argument
     pub fn get_named<T: Into<Identifier>>(&mut self, val: T) -> Option<Spanned<Value>> {
+        if self.named.is_empty() {
+            return None;
+        }
         self.named.remove(&val.into()).map(|n| Spanned {
             node: unwrap_arc(n),
             span: self.span,
         })
     }
-    pub fn get_named_arc<T: Into<Identifier>>(&mut self, val: T) -> Option<Spanned<Arc<Value>>> {
+    pub fn get_named_arc<T: Into<Identifier>>(
+        &mut self,
+        val: T,
+    ) -> Option<Spanned<std::rc::Rc<Value>>> {
+        if self.named.is_empty() {
+            return None;
+        }
         self.named.remove(&val.into()).map(|n| Spanned {
             node: n,
             span: self.span,
@@ -192,7 +201,7 @@ impl ArgumentResult {
     pub fn get_positional(&mut self, idx: usize) -> Option<Spanned<Value>> {
         let val = match self.positional.get_mut(idx) {
             Some(v) => Some(Spanned {
-                node: unwrap_arc(mem::replace(v, Arc::new(Value::Null))),
+                node: unwrap_arc(mem::replace(v, std::rc::Rc::new(Value::Null))),
                 span: self.span,
             }),
             None => None,
@@ -202,10 +211,10 @@ impl ArgumentResult {
         val
     }
 
-    pub fn get_positional_arc(&mut self, idx: usize) -> Option<Spanned<Arc<Value>>> {
+    pub fn get_positional_arc(&mut self, idx: usize) -> Option<Spanned<std::rc::Rc<Value>>> {
         let val = match self.positional.get_mut(idx) {
             Some(v) => Some(Spanned {
-                node: mem::replace(v, Arc::new(Value::Null)),
+                node: mem::replace(v, std::rc::Rc::new(Value::Null)),
                 span: self.span,
             }),
             None => None,
@@ -232,7 +241,11 @@ impl ArgumentResult {
         }
     }
 
-    pub fn get_err_arc(&mut self, position: usize, name: &'static str) -> SassResult<Arc<Value>> {
+    pub fn get_err_arc(
+        &mut self,
+        position: usize,
+        name: &'static str,
+    ) -> SassResult<std::rc::Rc<Value>> {
         match self.get_named_arc(name) {
             Some(v) => Ok(v.node),
             None => match self.get_positional_arc(position) {

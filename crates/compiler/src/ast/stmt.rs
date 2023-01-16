@@ -299,46 +299,46 @@ pub(crate) struct ConfiguredVariable {
 
 #[derive(Debug, Clone)]
 pub(crate) struct Configuration {
-    pub values: Arc<dyn MapView<Value = ConfiguredValue>>,
+    pub values: std::rc::Rc<dyn MapView<Value = ConfiguredValue>>,
     #[allow(unused)]
-    pub original_config: Option<Arc<RefCell<Self>>>,
+    pub original_config: Option<std::rc::Rc<RefCell<Self>>>,
     pub span: Option<Span>,
 }
 
 impl Configuration {
     pub fn through_forward(
-        config: Arc<RefCell<Self>>,
+        config: std::rc::Rc<RefCell<Self>>,
         forward: &AstForwardRule,
-    ) -> Arc<RefCell<Self>> {
+    ) -> std::rc::Rc<RefCell<Self>> {
         if (*config).borrow().is_empty() {
-            return Arc::new(RefCell::new(Configuration::empty()));
+            return std::rc::Rc::new(RefCell::new(Configuration::empty()));
         }
 
-        let mut new_values = Arc::clone(&(*config).borrow().values);
+        let mut new_values = std::rc::Rc::clone(&(*config).borrow().values);
 
         // Only allow variables that are visible through the `@forward` to be
         // configured. These views support [Map.remove] so we can mark when a
         // configuration variable is used by removing it even when the underlying
         // map is wrapped.
         if let Some(prefix) = &forward.prefix {
-            new_values = Arc::new(UnprefixedMapView(new_values, prefix.clone()));
+            new_values = std::rc::Rc::new(UnprefixedMapView(new_values, prefix.clone()));
         }
 
         if let Some(shown_variables) = &forward.shown_variables {
-            new_values = Arc::new(LimitedMapView::safelist(new_values, shown_variables));
+            new_values = std::rc::Rc::new(LimitedMapView::safelist(new_values, shown_variables));
         } else if let Some(hidden_variables) = &forward.hidden_variables {
-            new_values = Arc::new(LimitedMapView::blocklist(new_values, hidden_variables));
+            new_values = std::rc::Rc::new(LimitedMapView::blocklist(new_values, hidden_variables));
         }
 
-        Arc::new(RefCell::new(Self::with_values(
+        std::rc::Rc::new(RefCell::new(Self::with_values(
             config,
-            Arc::clone(&new_values),
+            std::rc::Rc::clone(&new_values),
         )))
     }
 
     fn with_values(
-        config: Arc<RefCell<Self>>,
-        values: Arc<dyn MapView<Value = ConfiguredValue>>,
+        config: std::rc::Rc<RefCell<Self>>,
+        values: std::rc::Rc<dyn MapView<Value = ConfiguredValue>>,
     ) -> Self {
         Self {
             values,
@@ -367,7 +367,7 @@ impl Configuration {
 
     pub fn implicit(values: BTreeMap<Identifier, ConfiguredValue>) -> Self {
         Self {
-            values: Arc::new(BaseMapView(Arc::new(RefCell::new(values)))),
+            values: std::rc::Rc::new(BaseMapView(std::rc::Rc::new(RefCell::new(values)))),
             original_config: None,
             span: None,
         }
@@ -375,7 +375,7 @@ impl Configuration {
 
     pub fn explicit(values: BTreeMap<Identifier, ConfiguredValue>, span: Span) -> Self {
         Self {
-            values: Arc::new(BaseMapView(Arc::new(RefCell::new(values)))),
+            values: std::rc::Rc::new(BaseMapView(std::rc::Rc::new(RefCell::new(values)))),
             original_config: None,
             span: Some(span),
         }
@@ -383,7 +383,7 @@ impl Configuration {
 
     pub fn empty() -> Self {
         Self {
-            values: Arc::new(BaseMapView(Arc::new(RefCell::new(BTreeMap::new())))),
+            values: std::rc::Rc::new(BaseMapView(std::rc::Rc::new(RefCell::new(BTreeMap::new())))),
             original_config: None,
             span: None,
         }
@@ -394,22 +394,24 @@ impl Configuration {
     }
 
     #[allow(unused)]
-    pub fn original_config(config: Arc<RefCell<Configuration>>) -> Arc<RefCell<Configuration>> {
+    pub fn original_config(
+        config: std::rc::Rc<RefCell<Configuration>>,
+    ) -> std::rc::Rc<RefCell<Configuration>> {
         match (*config).borrow().original_config.as_ref() {
-            Some(v) => Arc::clone(v),
-            None => Arc::clone(&config),
+            Some(v) => std::rc::Rc::clone(v),
+            None => std::rc::Rc::clone(&config),
         }
     }
 }
 
 #[derive(Debug, Clone)]
 pub(crate) struct ConfiguredValue {
-    pub value: Arc<Value>,
+    pub value: std::rc::Rc<Value>,
     pub configuration_span: Option<Span>,
 }
 
 impl ConfiguredValue {
-    pub fn explicit(value: Arc<Value>, configuration_span: Span) -> Self {
+    pub fn explicit(value: std::rc::Rc<Value>, configuration_span: Span) -> Self {
         Self {
             value,
             configuration_span: Some(configuration_span),

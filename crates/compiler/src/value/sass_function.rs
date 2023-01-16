@@ -24,7 +24,7 @@ pub(crate) enum SassFunction {
 
 #[derive(Debug, Clone)]
 pub(crate) struct UserDefinedFunction {
-    pub function: Arc<AstFunctionDecl>,
+    pub function: std::rc::Rc<AstFunctionDecl>,
     pub name: Identifier,
     pub env: Environment,
 }

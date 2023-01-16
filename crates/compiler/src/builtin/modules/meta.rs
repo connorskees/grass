@@ -71,7 +71,7 @@ fn load_css(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<()> {
         configuration = Configuration::explicit(values, args.span());
     }
 
-    let _configuration = Arc::new(RefCell::new(configuration));
+    let _configuration = std::rc::Rc::new(RefCell::new(configuration));
 
     let style_sheet = visitor.load_style_sheet(url.as_ref(), false, args.span())?;
 
@@ -80,7 +80,7 @@ fn load_css(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<()> {
     // todo: support the $with argument to load-css
     // visitor.load_module(
     //     url.as_ref(),
-    //     Some(Arc::clone(&configuration)),
+    //     Some(std::rc::Rc::clone(&configuration)),
     //     true,
     //     args.span(),
     //     |visitor, module, stylesheet| {
@@ -158,7 +158,7 @@ fn calc_args(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Valu
         .args
         .into_iter()
         .map(|arg| {
-            Ok(Arc::new(match arg {
+            Ok(std::rc::Rc::new(match arg {
                 CalculationArg::Number(num) => Value::Dimension(num),
                 CalculationArg::Calculation(calc) => Value::Calculation(calc),
                 CalculationArg::String(s) | CalculationArg::Interpolation(s) => {

@@ -538,7 +538,7 @@ impl<'a, 'c, P: StylesheetParser<'a>> ValueParser<'a, 'c, P> {
             self.single_expression = Some(AstExpr::slash(left.node, right.node, span).span(span));
         } else {
             self.single_expression = Some(
-                AstExpr::BinaryOp(Arc::new(BinaryOpExpr {
+                AstExpr::BinaryOp(std::rc::Rc::new(BinaryOpExpr {
                     lhs: left.node,
                     op: operator,
                     rhs: right.node,
@@ -697,7 +697,8 @@ impl<'a, 'c, P: StylesheetParser<'a>> ValueParser<'a, 'c, P> {
 
         parser.expect_char(')')?;
 
-        Ok(AstExpr::Map(AstSassMap(Arc::new(pairs))).span(parser.toks_mut().span_from(start)))
+        Ok(AstExpr::Map(AstSassMap(std::rc::Rc::new(pairs)))
+            .span(parser.toks_mut().span_from(start)))
     }
 
     fn parse_paren_expr(&mut self, parser: &mut P) -> SassResult<Spanned<AstExpr>> {
@@ -742,7 +743,7 @@ impl<'a, 'c, P: StylesheetParser<'a>> ValueParser<'a, 'c, P> {
             parser
                 .flags_mut()
                 .set(ContextFlags::IN_PARENS, was_in_parentheses);
-            return Ok(AstExpr::Paren(Arc::new(first.node)).span(first.span));
+            return Ok(AstExpr::Paren(std::rc::Rc::new(first.node)).span(first.span));
         }
 
         parser.whitespace()?;
@@ -842,7 +843,9 @@ impl<'a, 'c, P: StylesheetParser<'a>> ValueParser<'a, 'c, P> {
             })
         ) {
             let color = self.parse_hex_color_contents(parser)?;
-            return Ok(AstExpr::Color(Arc::new(color)).span(parser.toks_mut().span_from(start)));
+            return Ok(
+                AstExpr::Color(std::rc::Rc::new(color)).span(parser.toks_mut().span_from(start))
+            );
         }
 
         let after_hash = parser.toks().cursor();
@@ -850,9 +853,8 @@ impl<'a, 'c, P: StylesheetParser<'a>> ValueParser<'a, 'c, P> {
         if is_hex_color(&ident) {
             parser.toks_mut().set_cursor(after_hash);
             let color = self.parse_hex_color_contents(parser)?;
-            return Ok(
-                AstExpr::Color(Arc::new(color)).span(parser.toks_mut().span_from(after_hash))
-            );
+            return Ok(AstExpr::Color(std::rc::Rc::new(color))
+                .span(parser.toks_mut().span_from(after_hash)));
         }
 
         let mut buffer = Interpolation::new();
@@ -940,7 +942,7 @@ impl<'a, 'c, P: StylesheetParser<'a>> ValueParser<'a, 'c, P> {
 
         let span = op_span.merge(parser.toks().current_span());
 
-        Ok(AstExpr::UnaryOp(operator, Arc::new(operand.node), span).span(span))
+        Ok(AstExpr::UnaryOp(operator, std::rc::Rc::new(operand.node), span).span(span))
     }
 
     fn expect_unary_operator(parser: &mut P) -> SassResult<UnaryOp> {
@@ -1159,7 +1161,7 @@ impl<'a, 'c, P: StylesheetParser<'a>> ValueParser<'a, 'c, P> {
             if plain == "if" && parser.toks().next_char_is('(') {
                 let call_args = parser.parse_argument_invocation(false, false)?;
                 let span = call_args.span;
-                return Ok(AstExpr::If(Arc::new(Ternary(call_args))).span(span));
+                return Ok(AstExpr::If(std::rc::Rc::new(Ternary(call_args))).span(span));
             } else if plain == "not" {
                 parser.whitespace()?;
 
@@ -1167,7 +1169,9 @@ impl<'a, 'c, P: StylesheetParser<'a>> ValueParser<'a, 'c, P> {
 
                 let span = parser.toks_mut().span_from(start);
 
-                return Ok(AstExpr::UnaryOp(UnaryOp::Not, Arc::new(value.node), span).span(span));
+                return Ok(
+                    AstExpr::UnaryOp(UnaryOp::Not, std::rc::Rc::new(value.node), span).span(span),
+                );
             }
 
             let lower_ref = lower.as_ref().unwrap();
@@ -1181,7 +1185,7 @@ impl<'a, 'c, P: StylesheetParser<'a>> ValueParser<'a, 'c, P> {
                 }
 
                 if let Some(color) = NAMED_COLORS.get_by_name(lower_ref.as_str()) {
-                    return Ok(AstExpr::Color(Arc::new(Color::new(
+                    return Ok(AstExpr::Color(std::rc::Rc::new(Color::new(
                         color[0],
                         color[1],
                         color[2],
@@ -1228,14 +1232,14 @@ impl<'a, 'c, P: StylesheetParser<'a>> ValueParser<'a, 'c, P> {
                     Ok(AstExpr::FunctionCall(FunctionCallExpr {
                         namespace: None,
                         name: Identifier::from(plain),
-                        arguments: Arc::new(arguments),
+                        arguments: std::rc::Rc::new(arguments),
                         span: parser.toks_mut().span_from(start),
                     })
                     .span(parser.toks_mut().span_from(start)))
                 } else {
                     let arguments = parser.parse_argument_invocation(false, false)?;
                     Ok(
-                        AstExpr::InterpolatedFunction(Arc::new(InterpolatedFunction {
+                        AstExpr::InterpolatedFunction(std::rc::Rc::new(InterpolatedFunction {
                             name: identifier,
                             arguments,
                             span: parser.toks_mut().span_from(start),
@@ -1288,7 +1292,7 @@ impl<'a, 'c, P: StylesheetParser<'a>> ValueParser<'a, 'c, P> {
         Ok(AstExpr::FunctionCall(FunctionCallExpr {
             namespace: Some(namespace),
             name: Identifier::from(name),
-            arguments: Arc::new(args),
+            arguments: std::rc::Rc::new(args),
             span,
         })
         .span(span))
@@ -1537,7 +1541,10 @@ impl<'a, 'c, P: StylesheetParser<'a>> ValueParser<'a, 'c, P> {
                 parser.whitespace()?;
                 parser.expect_char(')')?;
 
-                Ok(AstExpr::Paren(Arc::new(value)).span(parser.toks_mut().span_from(start)))
+                Ok(
+                    AstExpr::Paren(std::rc::Rc::new(value))
+                        .span(parser.toks_mut().span_from(start)),
+                )
             }
             _ if !parser.looking_at_identifier() => Err((
                 "Expected number, variable, function, or calculation.",
@@ -1569,7 +1576,7 @@ impl<'a, 'c, P: StylesheetParser<'a>> ValueParser<'a, 'c, P> {
                 if let Some(calc) = calculation {
                     Ok(calc)
                 } else if lowercase == "if" {
-                    Ok(AstExpr::If(Arc::new(Ternary(
+                    Ok(AstExpr::If(std::rc::Rc::new(Ternary(
                         parser.parse_argument_invocation(false, false)?,
                     )))
                     .span(parser.toks_mut().span_from(start)))
@@ -1577,7 +1584,9 @@ impl<'a, 'c, P: StylesheetParser<'a>> ValueParser<'a, 'c, P> {
                     Ok(AstExpr::FunctionCall(FunctionCallExpr {
                         namespace: None,
                         name: Identifier::from(ident),
-                        arguments: Arc::new(parser.parse_argument_invocation(false, false)?),
+                        arguments: std::rc::Rc::new(
+                            parser.parse_argument_invocation(false, false)?,
+                        ),
                         span: parser.toks_mut().span_from(start),
                     })
                     .span(parser.toks_mut().span_from(start)))
@@ -1602,7 +1611,7 @@ impl<'a, 'c, P: StylesheetParser<'a>> ValueParser<'a, 'c, P> {
 
                     let span = product.span.merge(rhs.span);
 
-                    product.node = AstExpr::BinaryOp(Arc::new(BinaryOpExpr {
+                    product.node = AstExpr::BinaryOp(std::rc::Rc::new(BinaryOpExpr {
                         lhs: product.node,
                         op: if op == '*' {
                             BinaryOp::Mul
@@ -1656,7 +1665,7 @@ impl<'a, 'c, P: StylesheetParser<'a>> ValueParser<'a, 'c, P> {
 
                     let span = sum.span.merge(rhs.span);
 
-                    sum = AstExpr::BinaryOp(Arc::new(BinaryOpExpr {
+                    sum = AstExpr::BinaryOp(std::rc::Rc::new(BinaryOpExpr {
                         lhs: sum.node,
                         op: if next == '+' {
                             BinaryOp::Plus

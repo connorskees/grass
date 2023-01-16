@@ -26,7 +26,7 @@ pub(crate) struct ListExpr {
 pub(crate) struct FunctionCallExpr {
     pub namespace: Option<Spanned<Identifier>>,
     pub name: Identifier,
-    pub arguments: Arc<ArgumentInvocation>,
+    pub arguments: std::rc::Rc<ArgumentInvocation>,
     pub span: Span,
 }
 
@@ -38,7 +38,7 @@ pub(crate) struct InterpolatedFunction {
 }
 
 #[derive(Debug, Clone, Default)]
-pub(crate) struct AstSassMap(pub Arc<Vec<(Spanned<AstExpr>, AstExpr)>>);
+pub(crate) struct AstSassMap(pub std::rc::Rc<Vec<(Spanned<AstExpr>, AstExpr)>>);
 
 #[derive(Debug, Clone)]
 pub(crate) struct BinaryOpExpr {
@@ -51,17 +51,17 @@ pub(crate) struct BinaryOpExpr {
 
 #[derive(Debug, Clone)]
 pub(crate) enum AstExpr {
-    BinaryOp(Arc<BinaryOpExpr>),
+    BinaryOp(std::rc::Rc<BinaryOpExpr>),
     True,
     False,
     Calculation {
         name: CalculationName,
         args: Vec<Self>,
     },
-    Color(Arc<Color>),
+    Color(std::rc::Rc<Color>),
     FunctionCall(FunctionCallExpr),
-    If(Arc<Ternary>),
-    InterpolatedFunction(Arc<InterpolatedFunction>),
+    If(std::rc::Rc<Ternary>),
+    InterpolatedFunction(std::rc::Rc<InterpolatedFunction>),
     List(ListExpr),
     Map(AstSassMap),
     Null,
@@ -69,11 +69,11 @@ pub(crate) enum AstExpr {
         n: Number,
         unit: Unit,
     },
-    Paren(Arc<Self>),
+    Paren(std::rc::Rc<Self>),
     ParentSelector,
     String(StringExpr, Span),
-    Supports(Arc<AstSupportsCondition>),
-    UnaryOp(UnaryOp, Arc<Self>, Span),
+    Supports(std::rc::Rc<AstSupportsCondition>),
+    UnaryOp(UnaryOp, std::rc::Rc<Self>, Span),
     Variable {
         name: Spanned<Identifier>,
         namespace: Option<Spanned<Identifier>>,
@@ -176,7 +176,7 @@ impl AstExpr {
     }
 
     pub fn slash(left: Self, right: Self, span: Span) -> Self {
-        Self::BinaryOp(Arc::new(BinaryOpExpr {
+        Self::BinaryOp(std::rc::Rc::new(BinaryOpExpr {
             lhs: left,
             op: BinaryOp::Div,
             rhs: right,

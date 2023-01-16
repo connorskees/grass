@@ -31,13 +31,13 @@ mod string;
 
 #[derive(Debug, Clone)]
 pub(crate) struct ForwardedModule {
-    inner: Arc<RefCell<Module>>,
+    inner: std::rc::Rc<RefCell<Module>>,
     #[allow(dead_code)]
     forward_rule: AstForwardRule,
 }
 
 impl ForwardedModule {
-    pub fn new(module: Arc<RefCell<Module>>, rule: AstForwardRule) -> Self {
+    pub fn new(module: std::rc::Rc<RefCell<Module>>, rule: AstForwardRule) -> Self {
         let scope = (*module).borrow().scope();
 
         let variables = Self::forwarded_map(
@@ -74,11 +74,11 @@ impl ForwardedModule {
     }
 
     fn forwarded_map<T: Clone + fmt::Debug + 'static>(
-        mut map: Arc<dyn MapView<Value = T>>,
+        mut map: std::rc::Rc<dyn MapView<Value = T>>,
         prefix: Option<&str>,
         safelist: Option<&HashSet<Identifier>>,
         blocklist: Option<&HashSet<Identifier>>,
-    ) -> Arc<dyn MapView<Value = T>> {
+    ) -> std::rc::Rc<dyn MapView<Value = T>> {
         debug_assert!(safelist.is_none() || blocklist.is_none());
 
         if prefix.is_none() && safelist.is_none() && blocklist.is_none() {
@@ -86,16 +86,16 @@ impl ForwardedModule {
         }
 
         if let Some(prefix) = prefix {
-            map = Arc::new(PrefixedMapView(map, prefix.to_owned()));
+            map = std::rc::Rc::new(PrefixedMapView(map, prefix.to_owned()));
         }
 
         map
     }
 
     pub fn if_necessary(
-        module: Arc<RefCell<Module>>,
+        module: std::rc::Rc<RefCell<Module>>,
         rule: AstForwardRule,
-    ) -> Arc<RefCell<Module>> {
+    ) -> std::rc::Rc<RefCell<Module>> {
         if rule.prefix.is_none()
             && rule.shown_mixins_and_functions.is_none()
             && rule.shown_variables.is_none()
@@ -110,7 +110,7 @@ impl ForwardedModule {
         {
             module
         } else {
-            Arc::new(RefCell::new(Module::Forwarded(ForwardedModule::new(
+            std::rc::Rc::new(RefCell::new(Module::Forwarded(ForwardedModule::new(
                 module, rule,
             ))))
         }
@@ -119,17 +119,21 @@ impl ForwardedModule {
 
 #[derive(Debug, Clone)]
 pub(crate) struct ModuleScope {
-    pub variables: Arc<dyn MapView<Value = Arc<Value>>>,
-    pub mixins: Arc<dyn MapView<Value = Mixin>>,
-    pub functions: Arc<dyn MapView<Value = SassFunction>>,
+    pub variables: std::rc::Rc<dyn MapView<Value = std::rc::Rc<Value>>>,
+    pub mixins: std::rc::Rc<dyn MapView<Value = Mixin>>,
+    pub functions: std::rc::Rc<dyn MapView<Value = SassFunction>>,
 }
 
 impl ModuleScope {
     pub fn new() -> Self {
         Self {
-            variables: Arc::new(BaseMapView(Arc::new(RefCell::new(BTreeMap::new())))),
-            mixins: Arc::new(BaseMapView(Arc::new(RefCell::new(BTreeMap::new())))),
-            functions: Arc::new(BaseMapView(Arc::new(RefCell::new(BTreeMap::new())))),
+            variables: std::rc::Rc::new(BaseMapView(std::rc::Rc::new(RefCell::new(
+                BTreeMap::new(),
+            )))),
+            mixins: std::rc::Rc::new(BaseMapView(std::rc::Rc::new(RefCell::new(BTreeMap::new())))),
+            functions: std::rc::Rc::new(BaseMapView(std::rc::Rc::new(RefCell::new(
+                BTreeMap::new(),
+            )))),
         }
     }
 }
@@ -153,7 +157,7 @@ pub(crate) enum Module {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct Modules(BTreeMap<Identifier, Arc<RefCell<Module>>>);
+pub(crate) struct Modules(BTreeMap<Identifier, std::rc::Rc<RefCell<Module>>>);
 
 impl Modules {
     pub fn new() -> Self {
@@ -163,7 +167,7 @@ impl Modules {
     pub fn insert(
         &mut self,
         name: Identifier,
-        module: Arc<RefCell<Module>>,
+        module: std::rc::Rc<RefCell<Module>>,
         span: Span,
     ) -> SassResult<()> {
         if self.0.contains_key(&name) {
@@ -179,9 +183,9 @@ impl Modules {
         Ok(())
     }
 
-    pub fn get(&self, name: Identifier, span: Span) -> SassResult<Arc<RefCell<Module>>> {
+    pub fn get(&self, name: Identifier, span: Span) -> SassResult<std::rc::Rc<RefCell<Module>>> {
         match self.0.get(&name) {
-            Some(v) => Ok(Arc::clone(v)),
+            Some(v) => Ok(std::rc::Rc::clone(v)),
             None => Err((
                 format!(
                     "There is no module with the namespace \"{}\".",
@@ -197,7 +201,7 @@ impl Modules {
         &mut self,
         name: Identifier,
         span: Span,
-    ) -> SassResult<&mut Arc<RefCell<Module>>> {
+    ) -> SassResult<&mut std::rc::Rc<RefCell<Module>>> {
         match self.0.get_mut(&name) {
             Some(v) => Ok(v),
             None => Err((
@@ -213,22 +217,22 @@ impl Modules {
 }
 
 fn member_map<V: fmt::Debug + Clone + 'static>(
-    local: Arc<dyn MapView<Value = V>>,
-    others: Vec<Arc<dyn MapView<Value = V>>>,
-) -> Arc<dyn MapView<Value = V>> {
+    local: std::rc::Rc<dyn MapView<Value = V>>,
+    others: Vec<std::rc::Rc<dyn MapView<Value = V>>>,
+) -> std::rc::Rc<dyn MapView<Value = V>> {
     let local_map = PublicMemberMapView(local);
 
     if others.is_empty() {
-        return Arc::new(local_map);
+        return std::rc::Rc::new(local_map);
     }
 
-    let mut all_maps: Vec<Arc<dyn MapView<Value = V>>> =
+    let mut all_maps: Vec<std::rc::Rc<dyn MapView<Value = V>>> =
         others.into_iter().filter(|map| !map.is_empty()).collect();
 
-    all_maps.push(Arc::new(local_map));
+    all_maps.push(std::rc::Rc::new(local_map));
 
     // todo: potential optimization when all_maps.len() == 1
-    Arc::new(MergedMapView::new(all_maps))
+    std::rc::Rc::new(MergedMapView::new(all_maps))
 }
 
 impl Module {
@@ -237,8 +241,8 @@ impl Module {
             let variables = (*env.forwarded_modules).borrow();
             let variables = variables
                 .iter()
-                .map(|module| Arc::clone(&(*module).borrow().scope().variables));
-            let this = Arc::new(BaseMapView(env.global_vars()));
+                .map(|module| std::rc::Rc::clone(&(*module).borrow().scope().variables));
+            let this = std::rc::Rc::new(BaseMapView(env.global_vars()));
             member_map(this, variables.collect())
         };
 
@@ -246,8 +250,8 @@ impl Module {
             let mixins = (*env.forwarded_modules).borrow();
             let mixins = mixins
                 .iter()
-                .map(|module| Arc::clone(&(*module).borrow().scope().mixins));
-            let this = Arc::new(BaseMapView(env.global_mixins()));
+                .map(|module| std::rc::Rc::clone(&(*module).borrow().scope().mixins));
+            let this = std::rc::Rc::new(BaseMapView(env.global_mixins()));
             member_map(this, mixins.collect())
         };
 
@@ -255,8 +259,8 @@ impl Module {
             let functions = (*env.forwarded_modules).borrow();
             let functions = functions
                 .iter()
-                .map(|module| Arc::clone(&(*module).borrow().scope().functions));
-            let this = Arc::new(BaseMapView(env.global_functions()));
+                .map(|module| std::rc::Rc::clone(&(*module).borrow().scope().functions));
+            let this = std::rc::Rc::new(BaseMapView(env.global_functions()));
             member_map(this, functions.collect())
         };
 
@@ -294,7 +298,7 @@ impl Module {
         }
     }
 
-    pub fn get_var(&self, name: Spanned<Identifier>) -> SassResult<Arc<Value>> {
+    pub fn get_var(&self, name: Spanned<Identifier>) -> SassResult<std::rc::Rc<Value>> {
         let scope = self.scope();
 
         match scope.variables.get(name.node) {
@@ -303,7 +307,7 @@ impl Module {
         }
     }
 
-    pub fn get_var_no_err(&self, name: Identifier) -> Option<Arc<Value>> {
+    pub fn get_var_no_err(&self, name: Identifier) -> Option<std::rc::Rc<Value>> {
         let scope = self.scope();
 
         scope.variables.get(name)
@@ -315,7 +319,11 @@ impl Module {
         scope.mixins.get(name)
     }
 
-    pub fn update_var(&mut self, name: Spanned<Identifier>, value: Arc<Value>) -> SassResult<()> {
+    pub fn update_var(
+        &mut self,
+        name: Spanned<Identifier>,
+        value: std::rc::Rc<Value>,
+    ) -> SassResult<()> {
         let scope = match self {
             Self::Builtin { .. } => {
                 return Err(("Cannot modify built-in variable.", name.span).into())
@@ -351,7 +359,7 @@ impl Module {
 
         let scope = self.scope();
 
-        scope.variables.insert(ident, Arc::new(value));
+        scope.variables.insert(ident, std::rc::Rc::new(value));
     }
 
     pub fn get_fn(&self, name: Identifier) -> Option<SassFunction> {
@@ -398,7 +406,7 @@ impl Module {
     pub fn insert_builtin_arc(
         &mut self,
         name: &'static str,
-        function: fn(ArgumentResult, &mut Visitor) -> SassResult<Arc<Value>>,
+        function: fn(ArgumentResult, &mut Visitor) -> SassResult<std::rc::Rc<Value>>,
     ) {
         let ident = name.into();
 
@@ -425,7 +433,7 @@ impl Module {
                         SpannedValueWrapper(
                             Value::String(key.to_string(), QuoteKind::Quoted).span(span),
                         ),
-                        Arc::new(Value::FunctionRef(Box::new(value))),
+                        std::rc::Rc::new(Value::FunctionRef(Box::new(value))),
                     )
                 })
                 .collect(),

@@ -97,12 +97,12 @@ impl SelectorList {
             self.components
                 .into_iter()
                 .map(|complex| {
-                    Arc::new(Value::List(
+                    std::rc::Rc::new(Value::List(
                         complex
                             .components
                             .into_iter()
                             .map(|complex_component| {
-                                Arc::new(Value::String(
+                                std::rc::Rc::new(Value::String(
                                     complex_component.to_string(),
                                     QuoteKind::None,
                                 ))

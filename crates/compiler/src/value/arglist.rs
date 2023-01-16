@@ -6,10 +6,10 @@ use super::Value;
 
 #[derive(Debug, Clone)]
 pub(crate) struct ArgList {
-    pub elems: Vec<Arc<Value>>,
-    were_keywords_accessed: Arc<Cell<bool>>,
+    pub elems: Vec<std::rc::Rc<Value>>,
+    were_keywords_accessed: std::rc::Rc<Cell<bool>>,
     // todo: special wrapper around this field to avoid having to make it private?
-    keywords: BTreeMap<Identifier, Arc<Value>>,
+    keywords: BTreeMap<Identifier, std::rc::Rc<Value>>,
     pub separator: ListSeparator,
 }
 
@@ -25,9 +25,9 @@ impl Eq for ArgList {}
 
 impl ArgList {
     pub fn new(
-        elems: Vec<Arc<Value>>,
-        were_keywords_accessed: Arc<Cell<bool>>,
-        keywords: BTreeMap<Identifier, Arc<Value>>,
+        elems: Vec<std::rc::Rc<Value>>,
+        were_keywords_accessed: std::rc::Rc<Cell<bool>>,
+        keywords: BTreeMap<Identifier, std::rc::Rc<Value>>,
         separator: ListSeparator,
     ) -> Self {
         debug_assert!(
@@ -55,12 +55,12 @@ impl ArgList {
         !self.is_empty() && (self.elems.iter().all(|v| v.is_blank()))
     }
 
-    pub fn keywords(&self) -> &BTreeMap<Identifier, Arc<Value>> {
+    pub fn keywords(&self) -> &BTreeMap<Identifier, std::rc::Rc<Value>> {
         (*self.were_keywords_accessed).set(true);
         &self.keywords
     }
 
-    pub fn into_keywords(self) -> BTreeMap<Identifier, Arc<Value>> {
+    pub fn into_keywords(self) -> BTreeMap<Identifier, std::rc::Rc<Value>> {
         (*self.were_keywords_accessed).set(true);
         self.keywords
     }

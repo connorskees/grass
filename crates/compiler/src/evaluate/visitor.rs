@@ -63,7 +63,7 @@ impl UserDefinedCallable for AstFunctionDecl {
     }
 }
 
-impl UserDefinedCallable for Arc<AstFunctionDecl> {
+impl UserDefinedCallable for std::rc::Rc<AstFunctionDecl> {
     fn name(&self) -> Identifier {
         self.name.node
     }
@@ -83,7 +83,7 @@ impl UserDefinedCallable for AstMixin {
     }
 }
 
-impl UserDefinedCallable for Arc<CallableContentBlock> {
+impl UserDefinedCallable for std::rc::Rc<CallableContentBlock> {
     fn name(&self) -> Identifier {
         Identifier::from("@content")
     }
@@ -99,8 +99,8 @@ pub(crate) struct CallableContentBlock {
     env: Environment,
 }
 
-pub(crate) fn unwrap_arc<T: Clone>(arc: Arc<T>) -> T {
-    match Arc::try_unwrap(arc) {
+pub(crate) fn unwrap_arc<T: Clone>(arc: std::rc::Rc<T>) -> T {
+    match std::rc::Rc::try_unwrap(arc) {
         Ok(v) => v,
         Err(arc) => (*arc).clone(),
     }
@@ -120,7 +120,7 @@ pub(crate) struct Visitor<'a> {
     pub is_plain_css: bool,
     css_tree: CssTree,
     parent: Option<CssTreeIdx>,
-    configuration: Arc<RefCell<Configuration>>,
+    configuration: std::rc::Rc<RefCell<Configuration>>,
     import_nodes: Vec<CssStmt>,
     pub options: &'a Options<'a>,
     pub map: &'a mut CodeMap,
@@ -159,7 +159,7 @@ impl<'a> Visitor<'a> {
             css_tree: CssTree::new(),
             parent: None,
             current_import_path,
-            configuration: Arc::new(RefCell::new(Configuration::empty())),
+            configuration: std::rc::Rc::new(RefCell::new(Configuration::empty())),
             is_plain_css: false,
             import_nodes: Vec::new(),
             options,
@@ -196,14 +196,14 @@ impl<'a> Visitor<'a> {
         }
     }
 
-    fn visit_return_rule(&mut self, ret: AstReturn) -> SassResult<Option<Arc<Value>>> {
+    fn visit_return_rule(&mut self, ret: AstReturn) -> SassResult<Option<std::rc::Rc<Value>>> {
         let val = self.visit_expr(ret.val)?;
 
         Ok(Some(self.without_slash(val)))
     }
 
     // todo: we really don't have to return Option<Value> from all of these children
-    pub fn visit_stmt(&mut self, stmt: AstStmt) -> SassResult<Option<Arc<Value>>> {
+    pub fn visit_stmt(&mut self, stmt: AstStmt) -> SassResult<Option<std::rc::Rc<Value>>> {
         match stmt {
             AstStmt::RuleSet(ruleset) => self.visit_ruleset(ruleset),
             AstStmt::Style(style) => self.visit_style(style),
@@ -252,17 +252,17 @@ impl<'a> Visitor<'a> {
     }
 
     fn visit_forward_rule(&mut self, forward_rule: AstForwardRule) -> SassResult<()> {
-        let old_config = Arc::clone(&self.configuration);
+        let old_config = std::rc::Rc::clone(&self.configuration);
         let adjusted_config =
-            Configuration::through_forward(Arc::clone(&old_config), &forward_rule);
+            Configuration::through_forward(std::rc::Rc::clone(&old_config), &forward_rule);
 
         if !forward_rule.configuration.is_empty() {
-            let new_configuration =
-                self.add_forward_configuration(Arc::clone(&adjusted_config), &forward_rule)?;
+            let new_configuration = self
+                .add_forward_configuration(std::rc::Rc::clone(&adjusted_config), &forward_rule)?;
 
             self.load_module(
                 forward_rule.url.as_path(),
-                Some(Arc::clone(&new_configuration)),
+                Some(std::rc::Rc::clone(&new_configuration)),
                 false,
                 forward_rule.span,
                 |visitor, module, _| {
@@ -329,9 +329,9 @@ impl<'a> Visitor<'a> {
     #[allow(clippy::unnecessary_unwrap)]
     fn add_forward_configuration(
         &mut self,
-        config: Arc<RefCell<Configuration>>,
+        config: std::rc::Rc<RefCell<Configuration>>,
         forward_rule: &AstForwardRule,
-    ) -> SassResult<Arc<RefCell<Configuration>>> {
+    ) -> SassResult<std::rc::Rc<RefCell<Configuration>>> {
         let mut new_values = BTreeMap::from_iter((*config).borrow().values.iter().into_iter());
 
         for variable in &forward_rule.configuration {
@@ -358,7 +358,7 @@ impl<'a> Visitor<'a> {
             );
         }
 
-        Ok(Arc::new(RefCell::new(
+        Ok(std::rc::Rc::new(RefCell::new(
             if !(*config).borrow().is_implicit() || (*config).borrow().is_empty() {
                 Configuration::explicit(new_values, forward_rule.span)
             } else {
@@ -368,8 +368,8 @@ impl<'a> Visitor<'a> {
     }
 
     fn remove_used_configuration(
-        upstream: &Arc<RefCell<Configuration>>,
-        downstream: &Arc<RefCell<Configuration>>,
+        upstream: &std::rc::Rc<RefCell<Configuration>>,
+        downstream: &std::rc::Rc<RefCell<Configuration>>,
         except: &HashSet<Identifier>,
     ) {
         let mut names_to_remove = Vec::new();
@@ -531,10 +531,10 @@ impl<'a> Visitor<'a> {
     fn execute(
         &mut self,
         stylesheet: StyleSheet,
-        configuration: Option<Arc<RefCell<Configuration>>>,
+        configuration: Option<std::rc::Rc<RefCell<Configuration>>>,
         // todo: different errors based on this
         _names_in_errors: bool,
-    ) -> SassResult<Arc<RefCell<Module>>> {
+    ) -> SassResult<std::rc::Rc<RefCell<Module>>> {
         let env = Environment::new();
         let mut extension_store = ExtensionStore::new(self.span_before);
 
@@ -596,10 +596,10 @@ impl<'a> Visitor<'a> {
     pub fn load_module(
         &mut self,
         url: &Path,
-        configuration: Option<Arc<RefCell<Configuration>>>,
+        configuration: Option<std::rc::Rc<RefCell<Configuration>>>,
         names_in_errors: bool,
         span: Span,
-        callback: impl Fn(&mut Self, Arc<RefCell<Module>>, StyleSheet) -> SassResult<()>,
+        callback: impl Fn(&mut Self, std::rc::Rc<RefCell<Module>>, StyleSheet) -> SassResult<()>,
     ) -> SassResult<()> {
         let builtin = match url.to_string_lossy().as_ref() {
             "sass:color" => Some(declare_module_color()),
@@ -635,7 +635,7 @@ impl<'a> Visitor<'a> {
 
             callback(
                 self,
-                Arc::new(RefCell::new(builtin)),
+                std::rc::Rc::new(RefCell::new(builtin)),
                 StyleSheet::new(false, PathBuf::from("")),
             )?;
             return Ok(());
@@ -653,7 +653,7 @@ impl<'a> Visitor<'a> {
 
     fn visit_use_rule(&mut self, use_rule: AstUseRule) -> SassResult<()> {
         let configuration = if use_rule.configuration.is_empty() {
-            Arc::new(RefCell::new(Configuration::empty()))
+            std::rc::Rc::new(RefCell::new(Configuration::empty()))
         } else {
             let mut values = BTreeMap::new();
 
@@ -666,7 +666,7 @@ impl<'a> Visitor<'a> {
                 );
             }
 
-            Arc::new(RefCell::new(Configuration::explicit(values, use_rule.span)))
+            std::rc::Rc::new(RefCell::new(Configuration::explicit(values, use_rule.span)))
         };
 
         let span = use_rule.span;
@@ -678,7 +678,7 @@ impl<'a> Visitor<'a> {
 
         self.load_module(
             &use_rule.url,
-            Some(Arc::clone(&configuration)),
+            Some(std::rc::Rc::clone(&configuration)),
             false,
             span,
             |visitor, module, _| {
@@ -694,7 +694,7 @@ impl<'a> Visitor<'a> {
     }
 
     pub fn assert_configuration_is_empty(
-        config: &Arc<RefCell<Configuration>>,
+        config: &std::rc::Rc<RefCell<Configuration>>,
         name_in_error: bool,
     ) -> SassResult<()> {
         let config = (**config).borrow();
@@ -718,7 +718,10 @@ impl<'a> Visitor<'a> {
         Err((msg, span).into())
     }
 
-    fn visit_import_rule(&mut self, import_rule: AstImportRule) -> SassResult<Option<Arc<Value>>> {
+    fn visit_import_rule(
+        &mut self,
+        import_rule: AstImportRule,
+    ) -> SassResult<Option<std::rc::Rc<Value>>> {
         for import in import_rule.imports {
             match import {
                 AstImport::Sass(dynamic_import) => {
@@ -915,7 +918,10 @@ impl<'a> Visitor<'a> {
         Ok(())
     }
 
-    fn visit_debug_rule(&mut self, debug_rule: AstDebugRule) -> SassResult<Option<Arc<Value>>> {
+    fn visit_debug_rule(
+        &mut self,
+        debug_rule: AstDebugRule,
+    ) -> SassResult<Option<std::rc::Rc<Value>>> {
         if self.options.quiet {
             return Ok(None);
         }
@@ -936,13 +942,13 @@ impl<'a> Visitor<'a> {
     fn visit_content_rule(
         &mut self,
         content_rule: AstContentRule,
-    ) -> SassResult<Option<Arc<Value>>> {
+    ) -> SassResult<Option<std::rc::Rc<Value>>> {
         let span = content_rule.args.span;
         if let Some(content) = &self.env.content {
             #[allow(mutable_borrow_reservation_conflict)]
             self.run_user_defined_callable(
                 MaybeEvaledArguments::Invocation(content_rule.args),
-                Arc::clone(content),
+                std::rc::Rc::clone(content),
                 &content.env.clone(),
                 span,
                 |content, visitor| {
@@ -1003,7 +1009,7 @@ impl<'a> Visitor<'a> {
     fn visit_at_root_rule(
         &mut self,
         mut at_root_rule: AstAtRootRule,
-    ) -> SassResult<Option<Arc<Value>>> {
+    ) -> SassResult<Option<std::rc::Rc<Value>>> {
         let query = match at_root_rule.query.clone() {
             Some(query) => {
                 let resolved = self.perform_interpolation(query.node, true)?;
@@ -1155,7 +1161,7 @@ impl<'a> Visitor<'a> {
         // todo: independency
 
         let func = SassFunction::UserDefined(UserDefinedFunction {
-            function: Arc::new(fn_decl),
+            function: std::rc::Rc::new(fn_decl),
             name,
             env: self.env.new_closure(),
         });
@@ -1175,7 +1181,10 @@ impl<'a> Visitor<'a> {
         SelectorParser::new(sel_toks, allows_parent, allows_placeholder, span).parse()
     }
 
-    fn visit_extend_rule(&mut self, extend_rule: AstExtendRule) -> SassResult<Option<Arc<Value>>> {
+    fn visit_extend_rule(
+        &mut self,
+        extend_rule: AstExtendRule,
+    ) -> SassResult<Option<std::rc::Rc<Value>>> {
         if !self.style_rule_exists() || self.declaration_name.is_some() {
             return Err((
                 "@extend may only be used within style rules.",
@@ -1261,7 +1270,7 @@ impl<'a> Visitor<'a> {
         CssMediaQuery::parse_list(&resolved, span)
     }
 
-    fn visit_media_rule(&mut self, media_rule: AstMedia) -> SassResult<Option<Arc<Value>>> {
+    fn visit_media_rule(&mut self, media_rule: AstMedia) -> SassResult<Option<std::rc::Rc<Value>>> {
         if self.declaration_name.is_some() {
             return Err((
                 "Media rules may not be used within nested declarations.",
@@ -1366,7 +1375,7 @@ impl<'a> Visitor<'a> {
     fn visit_unknown_at_rule(
         &mut self,
         unknown_at_rule: AstUnknownAtRule,
-    ) -> SassResult<Option<Arc<Value>>> {
+    ) -> SassResult<Option<std::rc::Rc<Value>>> {
         if self.declaration_name.is_some() {
             return Err((
                 "At-rules may not be used within nested declarations.",
@@ -1610,7 +1619,7 @@ impl<'a> Visitor<'a> {
 
     fn with_content<T>(
         &mut self,
-        content: Option<Arc<CallableContentBlock>>,
+        content: Option<std::rc::Rc<CallableContentBlock>>,
         callback: impl FnOnce(&mut Self) -> T,
     ) -> T {
         let old_content = self.env.content.take();
@@ -1620,7 +1629,10 @@ impl<'a> Visitor<'a> {
         v
     }
 
-    fn visit_include_stmt(&mut self, include_stmt: AstInclude) -> SassResult<Option<Arc<Value>>> {
+    fn visit_include_stmt(
+        &mut self,
+        include_stmt: AstInclude,
+    ) -> SassResult<Option<std::rc::Rc<Value>>> {
         let mixin = self
             .env
             .get_mixin(include_stmt.name, include_stmt.namespace)?;
@@ -1647,7 +1659,7 @@ impl<'a> Visitor<'a> {
                 self.flags.set(ContextFlags::IN_MIXIN, true);
 
                 let callable_content = content.map(|c| {
-                    Arc::new(CallableContentBlock {
+                    std::rc::Rc::new(CallableContentBlock {
                         content: c,
                         env: self.env.new_closure(),
                     })
@@ -1683,7 +1695,7 @@ impl<'a> Visitor<'a> {
         );
     }
 
-    fn visit_each_stmt(&mut self, each_stmt: AstEach) -> SassResult<Option<Arc<Value>>> {
+    fn visit_each_stmt(&mut self, each_stmt: AstEach) -> SassResult<Option<std::rc::Rc<Value>>> {
         let list = unwrap_arc(self.visit_expr(each_stmt.list)?).as_list();
 
         // todo: not setting semi_global: true maybe means we can't assign to global scope when declared as global
@@ -1698,7 +1710,7 @@ impl<'a> Visitor<'a> {
                     .scopes_mut()
                     .insert_var_last(each_stmt.variables[0], val);
             } else {
-                let null = Arc::new(Value::Null);
+                let null = std::rc::Rc::new(Value::Null);
                 for (&var, val) in each_stmt.variables.iter().zip(
                     unwrap_arc(val)
                         .as_list()
@@ -1724,7 +1736,7 @@ impl<'a> Visitor<'a> {
         Ok(result)
     }
 
-    fn visit_for_stmt(&mut self, for_stmt: AstFor) -> SassResult<Option<Arc<Value>>> {
+    fn visit_for_stmt(&mut self, for_stmt: AstFor) -> SassResult<Option<std::rc::Rc<Value>>> {
         let from_span = for_stmt.from.span;
         let to_span = for_stmt.to.span;
         let from_number =
@@ -1773,7 +1785,7 @@ impl<'a> Visitor<'a> {
         'outer: while i != to {
             self.env.scopes_mut().insert_var_last(
                 for_stmt.variable.node,
-                Arc::new(Value::Dimension(SassNumber {
+                std::rc::Rc::new(Value::Dimension(SassNumber {
                     num: Number::from(i),
                     unit: from_number.unit().clone(),
                     as_slash: None,
@@ -1796,7 +1808,10 @@ impl<'a> Visitor<'a> {
         Ok(result)
     }
 
-    fn visit_while_stmt(&mut self, while_stmt: &AstWhile) -> SassResult<Option<Arc<Value>>> {
+    fn visit_while_stmt(
+        &mut self,
+        while_stmt: &AstWhile,
+    ) -> SassResult<Option<std::rc::Rc<Value>>> {
         self.with_scope(true, true, |visitor| {
             let mut result = None;
 
@@ -1817,7 +1832,7 @@ impl<'a> Visitor<'a> {
         })
     }
 
-    fn visit_if_stmt(&mut self, if_stmt: AstIf) -> SassResult<Option<Arc<Value>>> {
+    fn visit_if_stmt(&mut self, if_stmt: AstIf) -> SassResult<Option<std::rc::Rc<Value>>> {
         let mut clause: Option<Vec<AstStmt>> = if_stmt.else_clause;
         for clause_to_check in if_stmt.if_clauses {
             if self.visit_expr(clause_to_check.condition)?.is_truthy() {
@@ -1846,7 +1861,10 @@ impl<'a> Visitor<'a> {
         Ok(result)
     }
 
-    fn visit_loud_comment(&mut self, comment: AstLoudComment) -> SassResult<Option<Arc<Value>>> {
+    fn visit_loud_comment(
+        &mut self,
+        comment: AstLoudComment,
+    ) -> SassResult<Option<std::rc::Rc<Value>>> {
         if self.flags.in_function() {
             return Ok(None);
         }
@@ -1865,7 +1883,10 @@ impl<'a> Visitor<'a> {
         Ok(None)
     }
 
-    fn visit_variable_decl(&mut self, decl: AstVariableDecl) -> SassResult<Option<Arc<Value>>> {
+    fn visit_variable_decl(
+        &mut self,
+        decl: AstVariableDecl,
+    ) -> SassResult<Option<std::rc::Rc<Value>>> {
         let name = Spanned {
             node: decl.name,
             span: decl.span,
@@ -1977,10 +1998,10 @@ impl<'a> Visitor<'a> {
     }
 
     #[allow(clippy::unused_self)]
-    fn without_slash(&mut self, v: Arc<Value>) -> Arc<Value> {
+    fn without_slash(&mut self, v: std::rc::Rc<Value>) -> std::rc::Rc<Value> {
         match *v {
             Value::Dimension(SassNumber { .. }) if v.as_slash().is_some() => {
-                Arc::new(unwrap_arc(v).without_slash())
+                std::rc::Rc::new(unwrap_arc(v).without_slash())
                 // todo: emit warning. we don't currently because it can be quite loud
                 // self.emit_warning(
                 //     Cow::Borrowed("Using / for division is deprecated and will be removed at some point in the future"),
@@ -2066,7 +2087,7 @@ impl<'a> Visitor<'a> {
             Value::ArgList(arglist) => {
                 // todo: superfluous clone
                 for (&key, value) in arglist.keywords() {
-                    named.insert(key, self.without_slash(Arc::clone(value)));
+                    named.insert(key, self.without_slash(std::rc::Rc::clone(value)));
                 }
 
                 let mut list = arglist
@@ -2078,7 +2099,7 @@ impl<'a> Visitor<'a> {
                 separator = arglist.separator;
             }
             rest => {
-                positional.push(Arc::new(self.without_slash__arc_free(rest)));
+                positional.push(std::rc::Rc::new(self.without_slash__arc_free(rest)));
             }
         }
 
@@ -2119,7 +2140,7 @@ impl<'a> Visitor<'a> {
 
     fn add_rest_map(
         &mut self,
-        named: &mut BTreeMap<Identifier, Arc<Value>>,
+        named: &mut BTreeMap<Identifier, std::rc::Rc<Value>>,
         rest: SassMap,
     ) -> SassResult<()> {
         for (key, val) in rest {
@@ -2203,7 +2224,7 @@ impl<'a> Visitor<'a> {
                     visitor.env.scopes_mut().insert_var_last(name, value);
                 }
 
-                let were_keywords_accessed = Arc::new(Cell::new(false));
+                let were_keywords_accessed = std::rc::Rc::new(Cell::new(false));
 
                 let num_named_args = evaluated.named.len();
 
@@ -2216,7 +2237,7 @@ impl<'a> Visitor<'a> {
 
                     let arg_list = Value::ArgList(ArgList::new(
                         rest,
-                        Arc::clone(&were_keywords_accessed),
+                        std::rc::Rc::clone(&were_keywords_accessed),
                         // todo: superfluous clone
                         evaluated.named.clone(),
                         if evaluated.separator == ListSeparator::Undecided {
@@ -2229,7 +2250,7 @@ impl<'a> Visitor<'a> {
                     visitor
                         .env
                         .scopes_mut()
-                        .insert_var_last(rest_arg, Arc::new(arg_list));
+                        .insert_var_last(rest_arg, std::rc::Rc::new(arg_list));
 
                     true
                 } else {
@@ -2279,7 +2300,7 @@ impl<'a> Visitor<'a> {
         func: SassFunction,
         arguments: ArgumentInvocation,
         span: Span,
-    ) -> SassResult<Arc<Value>> {
+    ) -> SassResult<std::rc::Rc<Value>> {
         self.run_function_callable_with_maybe_evaled(
             func,
             MaybeEvaledArguments::Invocation(arguments),
@@ -2292,12 +2313,12 @@ impl<'a> Visitor<'a> {
         func: SassFunction,
         arguments: MaybeEvaledArguments,
         span: Span,
-    ) -> SassResult<Arc<Value>> {
+    ) -> SassResult<std::rc::Rc<Value>> {
         match func {
             SassFunction::Builtin(func, _name) => {
                 let evaluated = self.eval_maybe_args(arguments, span)?;
                 let val = match func.0 {
-                    BuiltinFnSignature::NoArc(func) => Arc::new(func(evaluated, self)?),
+                    BuiltinFnSignature::NoArc(func) => std::rc::Rc::new(func(evaluated, self)?),
                     BuiltinFnSignature::Arc(func) => func(evaluated, self)?,
                 };
                 Ok(self.without_slash(val))
@@ -2367,7 +2388,7 @@ impl<'a> Visitor<'a> {
                 }
                 buffer.push(')');
 
-                Ok(Arc::new(Value::String(buffer, QuoteKind::None)))
+                Ok(std::rc::Rc::new(Value::String(buffer, QuoteKind::None)))
             }
         }
     }
@@ -2385,7 +2406,10 @@ impl<'a> Visitor<'a> {
         Ok(Value::List(elems, list.separator, list.brackets))
     }
 
-    fn visit_function_call_expr(&mut self, func_call: FunctionCallExpr) -> SassResult<Arc<Value>> {
+    fn visit_function_call_expr(
+        &mut self,
+        func_call: FunctionCallExpr,
+    ) -> SassResult<std::rc::Rc<Value>> {
         let name = func_call.name;
 
         let func = match self.env.get_fn(name, func_call.namespace)? {
@@ -2457,8 +2481,8 @@ impl<'a> Visitor<'a> {
         }
     }
 
-    fn visit_expr(&mut self, expr: AstExpr) -> SassResult<Arc<Value>> {
-        Ok(Arc::new(match expr {
+    fn visit_expr(&mut self, expr: AstExpr) -> SassResult<std::rc::Rc<Value>> {
+        Ok(std::rc::Rc::new(match expr {
             AstExpr::Color(color) => Value::Color(color),
             AstExpr::Number { n, unit } => Value::Dimension(SassNumber {
                 num: n,
@@ -2613,19 +2637,24 @@ impl<'a> Visitor<'a> {
         }
     }
 
-    fn visit_unary_op(&mut self, op: UnaryOp, expr: AstExpr, span: Span) -> SassResult<Arc<Value>> {
+    fn visit_unary_op(
+        &mut self,
+        op: UnaryOp,
+        expr: AstExpr,
+        span: Span,
+    ) -> SassResult<std::rc::Rc<Value>> {
         let operand = self.visit_expr(expr)?;
 
         match op {
             UnaryOp::Plus => Value::unary_plus(operand, self, span),
             UnaryOp::Neg => Value::unary_neg(operand, self, span),
-            UnaryOp::Div => Ok(Arc::new(operand.unary_div(self, span)?)),
-            UnaryOp::Not => Ok(Arc::new(operand.unary_not())),
+            UnaryOp::Div => Ok(std::rc::Rc::new(operand.unary_div(self, span)?)),
+            UnaryOp::Not => Ok(std::rc::Rc::new(operand.unary_not())),
         }
         // todo!()
     }
 
-    fn visit_ternary(&mut self, if_expr: Ternary) -> SassResult<Arc<Value>> {
+    fn visit_ternary(&mut self, if_expr: Ternary) -> SassResult<std::rc::Rc<Value>> {
         if_arguments().verify(if_expr.0.positional.len(), &if_expr.0.named, if_expr.0.span)?;
 
         let mut positional = if_expr.0.positional;
@@ -2726,13 +2755,13 @@ impl<'a> Visitor<'a> {
         rhs: AstExpr,
         allows_slash: bool,
         span: Span,
-    ) -> SassResult<Arc<Value>> {
+    ) -> SassResult<std::rc::Rc<Value>> {
         let left = self.visit_expr(lhs)?;
 
         Ok(match op {
             BinaryOp::SingleEq => {
                 let right = self.visit_expr(rhs)?;
-                Arc::new(single_eq(&left, &right, self.options, span)?)
+                std::rc::Rc::new(single_eq(&left, &right, self.options, span)?)
             }
             BinaryOp::Or => {
                 if left.is_truthy() {
@@ -2750,30 +2779,30 @@ impl<'a> Visitor<'a> {
             }
             BinaryOp::Equal => {
                 let right = self.visit_expr(rhs)?;
-                Arc::new(Value::bool(left == right))
+                std::rc::Rc::new(Value::bool(left == right))
             }
             BinaryOp::NotEqual => {
                 let right = self.visit_expr(rhs)?;
-                Arc::new(Value::bool(left != right))
+                std::rc::Rc::new(Value::bool(left != right))
             }
             BinaryOp::GreaterThan
             | BinaryOp::GreaterThanEqual
             | BinaryOp::LessThan
             | BinaryOp::LessThanEqual => {
                 let right = self.visit_expr(rhs)?;
-                Arc::new(cmp(&left, &right, self.options, span, op)?)
+                std::rc::Rc::new(cmp(&left, &right, self.options, span, op)?)
             }
             BinaryOp::Plus => {
                 let right = self.visit_expr(rhs)?;
-                Arc::new(add(&left, &right, self.options, span)?)
+                std::rc::Rc::new(add(&left, &right, self.options, span)?)
             }
             BinaryOp::Minus => {
                 let right = self.visit_expr(rhs)?;
-                Arc::new(sub(&left, &right, self.options, span)?)
+                std::rc::Rc::new(sub(&left, &right, self.options, span)?)
             }
             BinaryOp::Mul => {
                 let right = self.visit_expr(rhs)?;
-                Arc::new(mul(
+                std::rc::Rc::new(mul(
                     unwrap_arc(left),
                     unwrap_arc(right),
                     self.options,
@@ -2788,7 +2817,7 @@ impl<'a> Visitor<'a> {
 
                 if left_is_number && right_is_number && allows_slash {
                     let result = div(&left, &right, self.options, span)?;
-                    return Ok(Arc::new(result.with_slash(
+                    return Ok(std::rc::Rc::new(result.with_slash(
                         unwrap_arc(left).assert_number(span)?,
                         unwrap_arc(right).assert_number(span)?,
                         span,
@@ -2803,11 +2832,11 @@ impl<'a> Visitor<'a> {
                     // );
                 }
 
-                Arc::new(div(&left, &right, self.options, span)?)
+                std::rc::Rc::new(div(&left, &right, self.options, span)?)
             }
             BinaryOp::Rem => {
                 let right = self.visit_expr(rhs)?;
-                Arc::new(rem(
+                std::rc::Rc::new(rem(
                     unwrap_arc(left),
                     unwrap_arc(right),
                     self.options,
@@ -2828,7 +2857,7 @@ impl<'a> Visitor<'a> {
         }
     }
 
-    pub fn visit_ruleset(&mut self, ruleset: AstRuleSet) -> SassResult<Option<Arc<Value>>> {
+    pub fn visit_ruleset(&mut self, ruleset: AstRuleSet) -> SassResult<Option<std::rc::Rc<Value>>> {
         if self.declaration_name.is_some() {
             return Err((
                 "Style rules may not be used within nested declarations.",
@@ -2952,7 +2981,7 @@ impl<'a> Visitor<'a> {
         !self.flags.at_root_excluding_style_rule() && self.style_rule_ignoring_at_root.is_some()
     }
 
-    pub fn visit_style(&mut self, style: AstStyle) -> SassResult<Option<Arc<Value>>> {
+    pub fn visit_style(&mut self, style: AstStyle) -> SassResult<Option<std::rc::Rc<Value>>> {
         if !self.style_rule_exists()
             && !self.flags.in_unknown_at_rule()
             && !self.flags.in_keyframes()

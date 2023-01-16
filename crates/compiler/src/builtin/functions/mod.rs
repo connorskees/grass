@@ -3,7 +3,10 @@
 
 use std::{
     collections::{BTreeSet, HashMap},
-    sync::{atomic::{AtomicUsize, Ordering}, Arc},
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc,
+    },
 };
 
 use once_cell::sync::Lazy;
@@ -27,16 +30,13 @@ pub(crate) type GlobalFunctionMap = HashMap<&'static str, Builtin>;
 static FUNCTION_COUNT: AtomicUsize = AtomicUsize::new(0);
 
 #[derive(Clone)]
-pub(crate)enum BuiltinFnSignature {
+pub(crate) enum BuiltinFnSignature {
     NoArc(fn(ArgumentResult, &mut Visitor) -> SassResult<Value>),
-    Arc(fn(ArgumentResult, &mut Visitor) -> SassResult<Arc<Value>>),
+    Arc(fn(ArgumentResult, &mut Visitor) -> SassResult<std::rc::Rc<Value>>),
 }
 
 #[derive(Clone)]
-pub(crate) struct Builtin(
-    pub(crate) BuiltinFnSignature,
-    pub(crate) usize,
-);
+pub(crate) struct Builtin(pub(crate) BuiltinFnSignature, pub(crate) usize);
 
 impl Builtin {
     pub fn new(body: fn(ArgumentResult, &mut Visitor) -> SassResult<Value>) -> Builtin {
@@ -44,7 +44,9 @@ impl Builtin {
         Self(BuiltinFnSignature::NoArc(body), count)
     }
 
-    pub fn new_arc(body: fn(ArgumentResult, &mut Visitor) -> SassResult<Arc<Value>>) -> Builtin {
+    pub fn new_arc(
+        body: fn(ArgumentResult, &mut Visitor) -> SassResult<std::rc::Rc<Value>>,
+    ) -> Builtin {
         let count = FUNCTION_COUNT.fetch_add(1, Ordering::Relaxed);
         Self(BuiltinFnSignature::Arc(body), count)
     }

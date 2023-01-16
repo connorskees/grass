@@ -745,8 +745,9 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
                             buffer.add_char('(');
                         }
 
-                        buffer
-                            .add_expr(AstExpr::Supports(Arc::new(query)).span(self.span_before()));
+                        buffer.add_expr(
+                            AstExpr::Supports(std::rc::Rc::new(query)).span(self.span_before()),
+                        );
 
                         if !is_declaration {
                             buffer.add_char(')');
@@ -841,7 +842,7 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
                 StringExpr(contents, QuoteKind::None),
                 self.toks_mut().span_from(start),
             ),
-            None => AstExpr::InterpolatedFunction(Arc::new(InterpolatedFunction {
+            None => AstExpr::InterpolatedFunction(std::rc::Rc::new(InterpolatedFunction {
                 name: Interpolation::new_plain("url".to_owned()),
                 arguments: self.parse_argument_invocation(false, false)?,
                 span: self.toks_mut().span_from(start),

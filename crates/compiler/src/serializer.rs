@@ -691,7 +691,7 @@ impl<'a> Serializer<'a> {
 
     fn visit_list(
         &mut self,
-        list_elems: &[Arc<Value>],
+        list_elems: &[std::rc::Rc<Value>],
         sep: ListSeparator,
         brackets: Brackets,
         span: Span,
@@ -716,7 +716,7 @@ impl<'a> Serializer<'a> {
         }
 
         let (mut x, mut y);
-        let elems: &mut dyn Iterator<Item = &Arc<Value>> = if self.inspect {
+        let elems: &mut dyn Iterator<Item = &std::rc::Rc<Value>> = if self.inspect {
             x = list_elems.iter();
             &mut x
         } else {

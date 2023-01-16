@@ -19,7 +19,7 @@ use super::Number;
 pub(crate) struct SassNumber {
     pub num: Number,
     pub unit: Unit,
-    pub as_slash: Option<Arc<(Self, Self)>>,
+    pub as_slash: Option<std::rc::Rc<(Self, Self)>>,
 }
 
 impl Hash for SassNumber {

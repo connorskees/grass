@@ -17,20 +17,27 @@ use crate::{
 #[allow(clippy::type_complexity)]
 #[derive(Debug, Default, Clone)]
 pub(crate) struct Scopes {
-    variables: Arc<RefCell<Vec<Arc<RefCell<BTreeMap<Identifier, Arc<Value>>>>>>>,
-    mixins: Arc<RefCell<Vec<Arc<RefCell<BTreeMap<Identifier, Mixin>>>>>>,
-    functions: Arc<RefCell<Vec<Arc<RefCell<BTreeMap<Identifier, SassFunction>>>>>>,
-    len: Arc<Cell<usize>>,
+    variables:
+        std::rc::Rc<RefCell<Vec<std::rc::Rc<RefCell<BTreeMap<Identifier, std::rc::Rc<Value>>>>>>>,
+    mixins: std::rc::Rc<RefCell<Vec<std::rc::Rc<RefCell<BTreeMap<Identifier, Mixin>>>>>>,
+    functions: std::rc::Rc<RefCell<Vec<std::rc::Rc<RefCell<BTreeMap<Identifier, SassFunction>>>>>>,
+    len: std::rc::Rc<Cell<usize>>,
     pub last_variable_index: Option<(Identifier, usize)>,
 }
 
 impl Scopes {
     pub fn new() -> Self {
         Self {
-            variables: Arc::new(RefCell::new(vec![Arc::new(RefCell::new(BTreeMap::new()))])),
-            mixins: Arc::new(RefCell::new(vec![Arc::new(RefCell::new(BTreeMap::new()))])),
-            functions: Arc::new(RefCell::new(vec![Arc::new(RefCell::new(BTreeMap::new()))])),
-            len: Arc::new(Cell::new(1)),
+            variables: std::rc::Rc::new(RefCell::new(vec![std::rc::Rc::new(RefCell::new(
+                BTreeMap::new(),
+            ))])),
+            mixins: std::rc::Rc::new(RefCell::new(vec![std::rc::Rc::new(RefCell::new(
+                BTreeMap::new(),
+            ))])),
+            functions: std::rc::Rc::new(RefCell::new(vec![std::rc::Rc::new(RefCell::new(
+                BTreeMap::new(),
+            ))])),
+            len: std::rc::Rc::new(Cell::new(1)),
             last_variable_index: None,
         }
     }
@@ -38,31 +45,45 @@ impl Scopes {
     pub fn new_closure(&self) -> Self {
         debug_assert_eq!(self.len(), (*self.variables).borrow().len());
         Self {
-            variables: Arc::new(RefCell::new(
-                (*self.variables).borrow().iter().map(Arc::clone).collect(),
+            variables: std::rc::Rc::new(RefCell::new(
+                (*self.variables)
+                    .borrow()
+                    .iter()
+                    .map(std::rc::Rc::clone)
+                    .collect(),
             )),
-            mixins: Arc::new(RefCell::new(
-                (*self.mixins).borrow().iter().map(Arc::clone).collect(),
+            mixins: std::rc::Rc::new(RefCell::new(
+                (*self.mixins)
+                    .borrow()
+                    .iter()
+                    .map(std::rc::Rc::clone)
+                    .collect(),
             )),
-            functions: Arc::new(RefCell::new(
-                (*self.functions).borrow().iter().map(Arc::clone).collect(),
+            functions: std::rc::Rc::new(RefCell::new(
+                (*self.functions)
+                    .borrow()
+                    .iter()
+                    .map(std::rc::Rc::clone)
+                    .collect(),
             )),
-            len: Arc::new(Cell::new(self.len())),
+            len: std::rc::Rc::new(Cell::new(self.len())),
             last_variable_index: self.last_variable_index,
         }
     }
 
-    pub fn global_variables(&self) -> Arc<RefCell<BTreeMap<Identifier, Arc<Value>>>> {
+    pub fn global_variables(
+        &self,
+    ) -> std::rc::Rc<RefCell<BTreeMap<Identifier, std::rc::Rc<Value>>>> {
         debug_assert_eq!(self.len(), (*self.variables).borrow().len());
-        Arc::clone(&(*self.variables).borrow()[0])
+        std::rc::Rc::clone(&(*self.variables).borrow()[0])
     }
 
-    pub fn global_functions(&self) -> Arc<RefCell<BTreeMap<Identifier, SassFunction>>> {
-        Arc::clone(&(*self.functions).borrow()[0])
+    pub fn global_functions(&self) -> std::rc::Rc<RefCell<BTreeMap<Identifier, SassFunction>>> {
+        std::rc::Rc::clone(&(*self.functions).borrow()[0])
     }
 
-    pub fn global_mixins(&self) -> Arc<RefCell<BTreeMap<Identifier, Mixin>>> {
-        Arc::clone(&(*self.mixins).borrow()[0])
+    pub fn global_mixins(&self) -> std::rc::Rc<RefCell<BTreeMap<Identifier, Mixin>>> {
+        std::rc::Rc::clone(&(*self.mixins).borrow()[0])
     }
 
     pub fn find_var(&mut self, name: Identifier) -> Option<usize> {
@@ -93,13 +114,13 @@ impl Scopes {
         (*self.len).set(len + 1);
         (*self.variables)
             .borrow_mut()
-            .push(Arc::new(RefCell::new(BTreeMap::new())));
+            .push(std::rc::Rc::new(RefCell::new(BTreeMap::new())));
         (*self.mixins)
             .borrow_mut()
-            .push(Arc::new(RefCell::new(BTreeMap::new())));
+            .push(std::rc::Rc::new(RefCell::new(BTreeMap::new())));
         (*self.functions)
             .borrow_mut()
-            .push(Arc::new(RefCell::new(BTreeMap::new())));
+            .push(std::rc::Rc::new(RefCell::new(BTreeMap::new())));
     }
 
     pub fn exit_scope(&mut self) {
@@ -119,8 +140,8 @@ impl Scopes {
         &mut self,
         idx: usize,
         name: Identifier,
-        v: Arc<Value>,
-    ) -> Option<Arc<Value>> {
+        v: std::rc::Rc<Value>,
+    ) -> Option<std::rc::Rc<Value>> {
         debug_assert_eq!(self.len(), (*self.variables).borrow().len());
         (*(*self.variables).borrow_mut()[idx])
             .borrow_mut()
@@ -130,7 +151,11 @@ impl Scopes {
     /// Always insert this variable into the innermost scope
     ///
     /// Used, for example, for variables from `@each` and `@for`
-    pub fn insert_var_last(&mut self, name: Identifier, v: Arc<Value>) -> Option<Arc<Value>> {
+    pub fn insert_var_last(
+        &mut self,
+        name: Identifier,
+        v: std::rc::Rc<Value>,
+    ) -> Option<std::rc::Rc<Value>> {
         debug_assert_eq!(self.len(), (*self.variables).borrow().len());
         let last_idx = self.len() - 1;
         self.last_variable_index = Some((name, last_idx));
@@ -139,7 +164,7 @@ impl Scopes {
             .insert(name, v)
     }
 
-    pub fn get_var(&mut self, name: Spanned<Identifier>) -> SassResult<Arc<Value>> {
+    pub fn get_var(&mut self, name: Spanned<Identifier>) -> SassResult<std::rc::Rc<Value>> {
         debug_assert_eq!(self.len(), (*self.variables).borrow().len());
 
         match self.last_variable_index {

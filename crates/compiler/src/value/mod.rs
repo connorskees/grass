@@ -39,8 +39,8 @@ pub(crate) enum Value {
     False,
     Null,
     Dimension(SassNumber),
-    List(Vec<Arc<Value>>, ListSeparator, Brackets),
-    Color(Arc<Color>),
+    List(Vec<std::rc::Rc<Value>>, ListSeparator, Brackets),
+    Color(std::rc::Rc<Color>),
     String(String, QuoteKind),
     Map(SassMap),
     ArgList(ArgList),
@@ -189,7 +189,7 @@ impl Value {
         span: Span,
     ) -> SassResult<Self> {
         let mut number = self.assert_number(span)?;
-        number.as_slash = Some(Arc::new((numerator, denom)));
+        number.as_slash = Some(std::rc::Rc::new((numerator, denom)));
         Ok(Value::Dimension(number))
     }
 
@@ -215,7 +215,7 @@ impl Value {
         }
     }
 
-    pub fn assert_color_with_name(self, name: &str, span: Span) -> SassResult<Arc<Color>> {
+    pub fn assert_color_with_name(self, name: &str, span: Span) -> SassResult<std::rc::Rc<Color>> {
         match self {
             Value::Color(c) => Ok(c),
             _ => Err((
@@ -311,7 +311,7 @@ impl Value {
             Value::String(s1, _) => Value::String(s1, QuoteKind::None),
             Value::List(v, sep, bracket) => Value::List(
                 v.into_iter()
-                    .map(|v| Arc::new((*v).clone().unquote()))
+                    .map(|v| std::rc::Rc::new((*v).clone().unquote()))
                     .collect(),
                 sep,
                 bracket,
@@ -339,7 +339,7 @@ impl Value {
         }
     }
 
-    pub fn as_slash(&self) -> Option<Arc<(SassNumber, SassNumber)>> {
+    pub fn as_slash(&self) -> Option<std::rc::Rc<(SassNumber, SassNumber)>> {
         match self {
             Value::Dimension(SassNumber { as_slash, .. }) => as_slash.clone(),
             _ => None,
@@ -438,12 +438,12 @@ impl Value {
         })
     }
 
-    pub fn as_list(self) -> Vec<Arc<Value>> {
+    pub fn as_list(self) -> Vec<std::rc::Rc<Value>> {
         match self {
             Value::List(v, ..) => v,
             Value::Map(m) => m.as_list(),
             Value::ArgList(v) => v.elems,
-            v => vec![Arc::new(v)],
+            v => vec![std::rc::Rc::new(v)],
         }
     }
 
@@ -526,7 +526,11 @@ impl Value {
         }))
     }
 
-    pub fn unary_plus(val: Arc<Self>, visitor: &mut Visitor, span: Span) -> SassResult<Arc<Self>> {
+    pub fn unary_plus(
+        val: std::rc::Rc<Self>,
+        visitor: &mut Visitor,
+        span: Span,
+    ) -> SassResult<std::rc::Rc<Self>> {
         Ok(match &*val {
             Self::Dimension(SassNumber { .. }) => val,
             Self::Calculation(..) => {
@@ -536,7 +540,7 @@ impl Value {
                 )
                     .into())
             }
-            _ => Arc::new(Self::String(
+            _ => std::rc::Rc::new(Self::String(
                 format!(
                     "+{}",
                     &val.to_css_string(span, visitor.options.is_compressed())?
@@ -546,8 +550,12 @@ impl Value {
         })
     }
 
-    pub fn unary_neg(val: Arc<Self>, visitor: &mut Visitor, span: Span) -> SassResult<Arc<Self>> {
-        Ok(Arc::new(match &*val {
+    pub fn unary_neg(
+        val: std::rc::Rc<Self>,
+        visitor: &mut Visitor,
+        span: Span,
+    ) -> SassResult<std::rc::Rc<Self>> {
+        Ok(std::rc::Rc::new(match &*val {
             Self::Calculation(..) => {
                 return Err((
                     format!("Undefined operation \"-{}\".", val.inspect(span)?),

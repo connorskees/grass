@@ -15,34 +15,34 @@ use super::{scope::Scopes, visitor::CallableContentBlock};
 #[derive(Debug, Clone)]
 pub(crate) struct Environment {
     pub scopes: Scopes,
-    pub modules: Arc<RefCell<Modules>>,
-    pub global_modules: Vec<Arc<RefCell<Module>>>,
-    pub content: Option<Arc<CallableContentBlock>>,
-    pub forwarded_modules: Arc<RefCell<Vec<Arc<RefCell<Module>>>>>,
+    pub modules: std::rc::Rc<RefCell<Modules>>,
+    pub global_modules: Vec<std::rc::Rc<RefCell<Module>>>,
+    pub content: Option<std::rc::Rc<CallableContentBlock>>,
+    pub forwarded_modules: std::rc::Rc<RefCell<Vec<std::rc::Rc<RefCell<Module>>>>>,
 }
 
 impl Environment {
     pub fn new() -> Self {
         Self {
             scopes: Scopes::new(),
-            modules: Arc::new(RefCell::new(Modules::new())),
+            modules: std::rc::Rc::new(RefCell::new(Modules::new())),
             global_modules: Vec::new(),
             content: None,
-            forwarded_modules: Arc::new(RefCell::new(Vec::new())),
+            forwarded_modules: std::rc::Rc::new(RefCell::new(Vec::new())),
         }
     }
 
     pub fn new_closure(&self) -> Self {
         Self {
             scopes: self.scopes.new_closure(),
-            modules: Arc::clone(&self.modules),
-            global_modules: self.global_modules.iter().map(Arc::clone).collect(),
-            content: self.content.as_ref().map(Arc::clone),
-            forwarded_modules: Arc::clone(&self.forwarded_modules),
+            modules: std::rc::Rc::clone(&self.modules),
+            global_modules: self.global_modules.iter().map(std::rc::Rc::clone).collect(),
+            content: self.content.as_ref().map(std::rc::Rc::clone),
+            forwarded_modules: std::rc::Rc::clone(&self.forwarded_modules),
         }
     }
 
-    pub fn forward_module(&mut self, module: Arc<RefCell<Module>>, rule: AstForwardRule) {
+    pub fn forward_module(&mut self, module: std::rc::Rc<RefCell<Module>>, rule: AstForwardRule) {
         let view = ForwardedModule::if_necessary(module, rule);
         (*self.forwarded_modules).borrow_mut().push(view);
 
@@ -123,7 +123,7 @@ impl Environment {
         &mut self,
         name: Spanned<Identifier>,
         namespace: Option<Spanned<Identifier>>,
-    ) -> SassResult<Arc<Value>> {
+    ) -> SassResult<std::rc::Rc<Value>> {
         if let Some(namespace) = namespace {
             let modules = (*self.modules).borrow();
             let module = modules.get(namespace.node, namespace.span)?;
@@ -146,7 +146,7 @@ impl Environment {
         &mut self,
         name: Spanned<Identifier>,
         namespace: Option<Spanned<Identifier>>,
-        value: Arc<Value>,
+        value: std::rc::Rc<Value>,
         is_global: bool,
         in_semi_global_scope: bool,
     ) -> SassResult<()> {
@@ -205,19 +205,19 @@ impl Environment {
         &mut self.scopes
     }
 
-    pub fn global_vars(&self) -> Arc<RefCell<BTreeMap<Identifier, Arc<Value>>>> {
+    pub fn global_vars(&self) -> std::rc::Rc<RefCell<BTreeMap<Identifier, std::rc::Rc<Value>>>> {
         self.scopes.global_variables()
     }
 
-    pub fn global_mixins(&self) -> Arc<RefCell<BTreeMap<Identifier, Mixin>>> {
+    pub fn global_mixins(&self) -> std::rc::Rc<RefCell<BTreeMap<Identifier, Mixin>>> {
         self.scopes.global_mixins()
     }
 
-    pub fn global_functions(&self) -> Arc<RefCell<BTreeMap<Identifier, SassFunction>>> {
+    pub fn global_functions(&self) -> std::rc::Rc<RefCell<BTreeMap<Identifier, SassFunction>>> {
         self.scopes.global_functions()
     }
 
-    fn get_variable_from_global_modules(&self, name: Identifier) -> Option<Arc<Value>> {
+    fn get_variable_from_global_modules(&self, name: Identifier) -> Option<std::rc::Rc<Value>> {
         for module in &self.global_modules {
             if (**module).borrow().var_exists(name) {
                 return (**module).borrow().get_var_no_err(name);
@@ -250,7 +250,7 @@ impl Environment {
     pub fn add_module(
         &mut self,
         namespace: Option<Identifier>,
-        module: Arc<RefCell<Module>>,
+        module: std::rc::Rc<RefCell<Module>>,
         span: Span,
     ) -> SassResult<()> {
         match namespace {
@@ -275,9 +275,9 @@ impl Environment {
         Ok(())
     }
 
-    pub fn to_module(self, extension_store: ExtensionStore) -> Arc<RefCell<Module>> {
+    pub fn to_module(self, extension_store: ExtensionStore) -> std::rc::Rc<RefCell<Module>> {
         debug_assert!(self.at_root());
 
-        Arc::new(RefCell::new(Module::new_env(self, extension_store)))
+        std::rc::Rc::new(RefCell::new(Module::new_env(self, extension_store)))
     }
 }

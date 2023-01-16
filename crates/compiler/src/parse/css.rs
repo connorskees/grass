@@ -204,7 +204,7 @@ impl<'a> CssParser<'a> {
         }
 
         Ok(
-            AstExpr::InterpolatedFunction(Arc::new(InterpolatedFunction {
+            AstExpr::InterpolatedFunction(std::rc::Rc::new(InterpolatedFunction {
                 name: identifier,
                 arguments: ArgumentInvocation {
                     positional: arguments,

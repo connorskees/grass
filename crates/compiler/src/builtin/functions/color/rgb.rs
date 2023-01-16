@@ -72,7 +72,7 @@ fn inner_rgb_2_arg(
 
     let color = color.assert_color_with_name("color", args.span())?;
     let alpha = alpha.assert_number_with_name("alpha", args.span())?;
-    Ok(Value::Color(Arc::new(color.with_alpha(Number(
+    Ok(Value::Color(std::rc::Rc::new(color.with_alpha(Number(
         percentage_or_unitless(&alpha, 1.0, "alpha", args.span(), visitor)?,
     )))))
 }
@@ -120,7 +120,7 @@ fn inner_rgb_3_arg(
     let green = green.assert_number_with_name("green", span)?;
     let blue = blue.assert_number_with_name("blue", span)?;
 
-    Ok(Value::Color(Arc::new(Color::from_rgba_fn(
+    Ok(Value::Color(std::rc::Rc::new(Color::from_rgba_fn(
         Number(fuzzy_round(percentage_or_unitless(
             &red, 255.0, "red", span, visitor,
         )?)),
@@ -176,7 +176,7 @@ pub(crate) fn percentage_or_unitless(
 #[derive(Debug, Clone)]
 pub(crate) enum ParsedChannels {
     String(String),
-    List(Vec<Arc<Value>>),
+    List(Vec<std::rc::Rc<Value>>),
 }
 
 fn is_var_slash(value: &Value) -> bool {
@@ -202,7 +202,7 @@ pub(crate) fn parse_channels(
 
     let original_channels = channels.clone();
 
-    let mut alpha_from_slash_list: Option<Arc<Value>> = None;
+    let mut alpha_from_slash_list: Option<std::rc::Rc<Value>> = None;
 
     if channels.separator() == ListSeparator::Slash {
         let list = channels.clone().as_list();
@@ -218,7 +218,7 @@ pub(crate) fn parse_channels(
                 .into());
         }
 
-        channels = unwrap_arc(Arc::clone(&list[0]));
+        channels = unwrap_arc(std::rc::Rc::clone(&list[0]));
         let inner_alpha_from_slash_list = list[1].clone();
 
         if !alpha_from_slash_list
@@ -297,11 +297,11 @@ pub(crate) fn parse_channels(
     match &*list[2] {
         Value::Dimension(SassNumber { as_slash, .. }) => match as_slash {
             Some(slash) => Ok(ParsedChannels::List(vec![
-                Arc::clone(&list[0]),
-                Arc::clone(&list[1]),
+                std::rc::Rc::clone(&list[0]),
+                std::rc::Rc::clone(&list[1]),
                 // todo: superfluous clones
-                Arc::new(Value::Dimension(slash.0.clone())),
-                Arc::new(Value::Dimension(slash.1.clone())),
+                std::rc::Rc::new(Value::Dimension(slash.0.clone())),
+                std::rc::Rc::new(Value::Dimension(slash.1.clone())),
             ])),
             None => Ok(ParsedChannels::List(list)),
         },
@@ -432,7 +432,7 @@ pub(crate) fn mix(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult
                 .into())
         }
     };
-    Ok(Value::Color(Arc::new(color1.mix(&color2, weight))))
+    Ok(Value::Color(std::rc::Rc::new(color1.mix(&color2, weight))))
 }
 
 pub(crate) fn declare(f: &mut GlobalFunctionMap) {

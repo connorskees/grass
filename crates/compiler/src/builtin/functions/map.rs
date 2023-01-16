@@ -1,6 +1,9 @@
 use crate::builtin::builtin_imports::*;
 
-pub(crate) fn map_get(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Arc<Value>> {
+pub(crate) fn map_get(
+    mut args: ArgumentResult,
+    visitor: &mut Visitor,
+) -> SassResult<std::rc::Rc<Value>> {
     args.max_args(2)?;
     let key = args.get_err(1, "key")?;
     let map = args.get_err_arc(0, "map")?;
@@ -8,7 +11,7 @@ pub(crate) fn map_get(mut args: ArgumentResult, visitor: &mut Visitor) -> SassRe
 
     Ok(map
         .get_ref(&key.span(args.span()))
-        .unwrap_or_else(|| Arc::new(Value::Null)))
+        .unwrap_or_else(|| std::rc::Rc::new(Value::Null)))
 }
 
 pub(crate) fn map_has_key(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
@@ -26,7 +29,11 @@ pub(crate) fn map_keys(mut args: ArgumentResult, visitor: &mut Visitor) -> SassR
     let map = map.assert_map_with_name("map", args.span())?;
 
     Ok(Value::List(
-        map.into_owned().keys().into_iter().map(Arc::new).collect(),
+        map.into_owned()
+            .keys()
+            .into_iter()
+            .map(std::rc::Rc::new)
+            .collect(),
         ListSeparator::Comma,
         Brackets::None,
     ))
@@ -92,10 +99,10 @@ pub(crate) fn map_merge(mut args: ArgumentResult, visitor: &mut Visitor) -> Sass
         while let Some((key, queued_map)) = map_queue.pop() {
             match map_queue.last_mut() {
                 Some((_, map)) => {
-                    map.insert(key, Arc::new(Value::Map(queued_map)));
+                    map.insert(key, std::rc::Rc::new(Value::Map(queued_map)));
                 }
                 None => {
-                    map1.insert(key, Arc::new(Value::Map(queued_map)));
+                    map1.insert(key, std::rc::Rc::new(Value::Map(queued_map)));
                     break;
                 }
             }
@@ -161,10 +168,10 @@ pub(crate) fn map_set(mut args: ArgumentResult, visitor: &mut Visitor) -> SassRe
         while let Some((key, queued_map)) = map_queue.pop() {
             match map_queue.last_mut() {
                 Some((_, next_map)) => {
-                    next_map.insert(key, Arc::new(Value::Map(queued_map)));
+                    next_map.insert(key, std::rc::Rc::new(Value::Map(queued_map)));
                 }
                 None => {
-                    map.insert(key, Arc::new(Value::Map(queued_map)));
+                    map.insert(key, std::rc::Rc::new(Value::Map(queued_map)));
                     break;
                 }
             }

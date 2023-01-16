@@ -8,6 +8,6 @@ use crate::{interner::InternedString, value::Value};
 #[derive(Clone, Debug)]
 pub(crate) struct Style {
     pub property: InternedString,
-    pub value: Spanned<Arc<Value>>,
+    pub value: Spanned<std::rc::Rc<Value>>,
     pub declared_as_custom_property: bool,
 }
