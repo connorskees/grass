@@ -205,7 +205,6 @@ test!(
     "a {\n  color: 0;\n  color: true;\n}\n"
 );
 test!(
-    #[ignore = "weird rounding issues"]
     scientific_notation_very_large_positive,
     "a {\n  color: 1e100;\n}\n", "a {\n  color: 10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000;\n}\n"
 );

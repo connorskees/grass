@@ -351,9 +351,33 @@ test!(
     "a {\n  color: #d4f7d4;\n}\n"
 );
 test!(
+    scale_color_neg_lightness_and_pos_saturation,
+    "a {\n  color: scale-color(turquoise, $saturation: 24%, $lightness: -48%);\n}\n",
+    "a {\n  color: #10867a;\n}\n"
+);
+error!(
+    scale_color_named_arg_hue,
+    "a {\n  color: scale-color(red, $hue: 10%);\n}\n", "Error: No argument named $hue."
+);
+test!(
     scale_color_negative,
     "a {\n  color: scale-color(rgb(200, 150%, 170%), $green: -40%, $blue: 70%);\n}\n",
     "a {\n  color: #c899ff;\n}\n"
+);
+test!(
+    change_color_named_arg_hue,
+    "a {\n  color: change-color(blue, $hue: 150);\n}\n",
+    "a {\n  color: #00ff80;\n}\n"
+);
+test!(
+    adjust_color_named_arg_hue,
+    "a {\n  color: adjust-color(blue, $hue: 150);\n}\n",
+    "a {\n  color: #ff8000;\n}\n"
+);
+test!(
+    change_color_negative_hue,
+    "a {\n  color: change-color(red, $hue: -60);\n}\n",
+    "a {\n  color: fuchsia;\n}\n"
 );
 test!(
     scale_color_alpha,
@@ -605,6 +629,14 @@ test!(
     "a {\n  color: 0deg;\n  color: 100%;\n  color: 50%;\n  color: #ffe6e6;\n  color: 255;\n  color: 230;\n  color: 230;\n}\n"
 );
 test!(
+    slash_list_alpha,
+    "@use 'sass:list';
+    a {
+        color: rgb(list.slash(1 2 3, var(--c)));
+    }",
+    "a {\n  color: rgb(1, 2, 3, var(--c));\n}\n"
+);
+test!(
     rgb_two_arg_nan_alpha,
     "a {
         color: rgb(red, 0/0);
@@ -634,6 +666,10 @@ error!(
 error!(
     single_arg_saturate_expects_number,
     "a {\n  color: saturate(red);\n}\n", "Error: $amount: red is not a number."
+);
+error!(
+    saturate_two_arg_first_is_number,
+    "a {\n  color: saturate(1, 2);\n}\n", "Error: $color: 1 is not a color."
 );
 error!(
     hex_color_starts_with_number_non_hex_digit_at_position_2,

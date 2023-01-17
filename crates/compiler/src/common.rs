@@ -86,24 +86,12 @@ pub(crate) enum Brackets {
     Bracketed,
 }
 
-#[derive(Debug, Clone, Copy, Eq)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub(crate) enum ListSeparator {
     Space,
     Comma,
     Slash,
     Undecided,
-}
-
-impl PartialEq for ListSeparator {
-    #[allow(clippy::match_like_matches_macro)]
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Self::Space, Self::Space) => true,
-            (Self::Undecided, Self::Undecided) => true,
-            (Self::Comma, Self::Comma) => true,
-            _ => false,
-        }
-    }
 }
 
 impl ListSeparator {

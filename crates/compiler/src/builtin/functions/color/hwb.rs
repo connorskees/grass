@@ -1,6 +1,10 @@
 use crate::builtin::builtin_imports::*;
 
-use super::{rgb::parse_channels, ParsedChannels};
+use super::{
+    angle_value,
+    rgb::{parse_channels, percentage_or_unitless},
+    ParsedChannels,
+};
 
 pub(crate) fn blackness(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
@@ -33,56 +37,31 @@ pub(crate) fn whiteness(mut args: ArgumentResult, visitor: &mut Visitor) -> Sass
 fn hwb_inner(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     let span = args.span();
 
-    let hue = match args.get(0, "hue") {
-        Some(v) => match v.node {
-            Value::Dimension(SassNumber { num: n, .. }) if n.is_nan() => todo!(),
-            Value::Dimension(SassNumber { num: n, .. }) => n,
-            v => {
-                return Err((
-                    format!("$hue: {} is not a number.", v.inspect(args.span())?),
-                    args.span(),
-                )
-                    .into())
-            }
-        },
-        None => return Err(("Missing element $hue.", args.span()).into()),
-    };
+    let hue = angle_value(args.get_err(0, "hue")?, "hue", args.span())?;
 
     let whiteness = args
         .get_err(1, "whiteness")?
         .assert_number_with_name("whiteness", span)?;
     whiteness.assert_unit(&Unit::Percent, "whiteness", span)?;
+    whiteness.assert_bounds("whiteness", 0.0, 100.0, args.span())?;
 
     let blackness = args
         .get_err(2, "blackness")?
         .assert_number_with_name("blackness", span)?;
     blackness.assert_unit(&Unit::Percent, "blackness", span)?;
+    blackness.assert_bounds("blackness", 0.0, 100.0, args.span())?;
 
-    let alpha = match args.get(3, "alpha") {
-        Some(v) => match v.node {
-            Value::Dimension(SassNumber { num: n, .. }) if n.is_nan() => todo!(),
-            Value::Dimension(SassNumber {
-                num: n,
-                unit: Unit::Percent,
-                ..
-            }) => n / Number(100.0),
-            Value::Dimension(SassNumber { num: n, .. }) => n,
-            v => {
-                return Err((
-                    format!("$alpha: {} is not a number.", v.inspect(args.span())?),
-                    args.span(),
-                )
-                    .into())
-            }
-        },
-        None => Number::one(),
-    };
+    let alpha = args
+        .default_arg(3, "alpha", Value::Dimension(SassNumber::new_unitless(1.0)))
+        .assert_number_with_name("alpha", args.span())?;
+
+    let alpha = percentage_or_unitless(&alpha, 1.0, "alpha", args.span(), visitor)?;
 
     Ok(Value::Color(Arc::new(Color::from_hwb(
         hue,
         whiteness.num,
         blackness.num,
-        alpha,
+        Number(alpha),
     ))))
 }
 
@@ -114,7 +93,10 @@ pub(crate) fn hwb(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult
                 hwb_inner(args, visitor)
             }
         }
-    } else {
+    } else if args.len() == 3 || args.len() == 4 {
         hwb_inner(args, visitor)
+    } else {
+        args.max_args(1)?;
+        unreachable!()
     }
 }

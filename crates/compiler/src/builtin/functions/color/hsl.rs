@@ -3,6 +3,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use crate::{builtin::builtin_imports::*, serializer::serialize_number, value::SassNumber};
 
 use super::{
+    angle_value,
     rgb::{function_string, parse_channels, percentage_or_unitless},
     ParsedChannels,
 };
@@ -43,7 +44,7 @@ fn hsl_3_args(
         ));
     }
 
-    let hue = hue.assert_number_with_name("hue", span)?;
+    let hue = angle_value(hue, "hue", span)?;
     let saturation = saturation.assert_number_with_name("saturation", span)?;
     let lightness = lightness.assert_number_with_name("lightness", span)?;
     let alpha = percentage_or_unitless(
@@ -55,7 +56,7 @@ fn hsl_3_args(
     )?;
 
     Ok(Value::Color(Arc::new(Color::from_hsla_fn(
-        Number(hue.num.rem_euclid(360.0)),
+        Number(hue.rem_euclid(360.0)),
         saturation.num / Number(100.0),
         lightness.num / Number(100.0),
         Number(alpha),
@@ -162,10 +163,9 @@ pub(crate) fn adjust_hue(mut args: ArgumentResult, visitor: &mut Visitor) -> Sas
     let color = args
         .get_err(0, "color")?
         .assert_color_with_name("color", args.span())?;
-    let degrees = args
-        .get_err(1, "degrees")?
-        .assert_number_with_name("degrees", args.span())?
-        .num;
+    let degrees = angle_value(args.get_err(1, "degrees")?, "degrees", args.span())?;
+
+    dbg!(degrees);
 
     Ok(Value::Color(Arc::new(color.adjust_hue(degrees))))
 }
@@ -176,12 +176,15 @@ fn lighten(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value>
         .get_err(0, "color")?
         .assert_color_with_name("color", args.span())?;
 
-    let amount = args
+    let mut amount = args
         .get_err(1, "amount")?
         .assert_number_with_name("amount", args.span())?;
-    let amount = bound!(args, "amount", amount.num, amount.unit, 0, 100) / Number(100.0);
 
-    Ok(Value::Color(Arc::new(color.lighten(amount))))
+    amount.assert_bounds("amount", 0.0, 100.0, args.span())?;
+
+    amount.num /= Number(100.0);
+
+    Ok(Value::Color(Arc::new(color.lighten(amount.num))))
 }
 
 fn darken(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
@@ -225,27 +228,10 @@ fn saturate(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value
 
     amount.num /= Number(100.0);
 
-    let color = match args.get_err(0, "color")? {
-        Value::Color(c) => c,
-        Value::Dimension(SassNumber {
-            num: n,
-            unit: u,
-            as_slash: _,
-        }) => {
-            // todo: this branch should be superfluous/incorrect
-            return Ok(Value::String(
-                format!("saturate({}{})", n.inspect(), u),
-                QuoteKind::None,
-            ));
-        }
-        v => {
-            return Err((
-                format!("$color: {} is not a color.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
+    let color = args
+        .get_err(0, "color")?
+        .assert_color_with_name("color", args.span())?;
+
     Ok(Value::Color(Arc::new(color.saturate(amount.num))))
 }
 

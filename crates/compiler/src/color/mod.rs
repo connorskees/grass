@@ -373,6 +373,7 @@ impl Color {
 
     /// Create RGBA representation from HSLA values
     pub fn from_hsla(hue: Number, saturation: Number, lightness: Number, alpha: Number) -> Self {
+        let hue = hue % Number(360.0);
         let hsla = Hsl::new(hue, saturation.clamp(0.0, 1.0), lightness.clamp(0.0, 1.0));
 
         let scaled_hue = hue.0 / 360.0;

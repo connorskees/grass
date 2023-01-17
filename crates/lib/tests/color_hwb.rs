@@ -87,6 +87,11 @@ test!(
     "a {\n  color: rgba(77, 153, 153, 0);\n}\n"
 );
 test!(
+    hue_has_unit_rad,
+    "@use \"sass:color\";\na {\n  color: color.hwb(1rad, 30%, 40%);\n}\n",
+    "a {\n  color: #99964d;\n}\n"
+);
+test!(
     scale_whiteness,
     "a {\n  color: scale-color(#cc6666, $whiteness: 100%);\n}\n",
     "a {\n  color: #d5d5d5;\n}\n"
@@ -95,4 +100,14 @@ error!(
     hwb_whiteness_missing_pct,
     "@use \"sass:color\";\na {\n  color: color.hwb(0, 0, 100);\n}\n",
     "Error: $whiteness: Expected 0 to have unit \"%\"."
+);
+error!(
+    hwb_two_args,
+    "@use \"sass:color\";\na {\n  color: color.hwb(#123, 0.5);\n}\n",
+    "Error: Only 1 argument allowed, but 2 were passed."
+);
+error!(
+    hwb_blackness_too_high,
+    "@use \"sass:color\";\na {\n  color: color.hwb(0, 30%, 101%, 0.5);\n}\n",
+    "Error: $blackness: Expected 101% to be within 0% and 100%."
 );

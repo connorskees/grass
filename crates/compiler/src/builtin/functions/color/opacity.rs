@@ -94,7 +94,7 @@ fn opacify(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value>
         .get_err(1, "amount")?
         .assert_number_with_name("amount", args.span())?;
 
-    amount.assert_bounds("amount", 0.0, 1.0, args.span())?;
+    amount.assert_bounds_with_unit("amount", 0.0, 1.0, &Unit::None, args.span())?;
 
     Ok(Value::Color(Arc::new(color.fade_in(amount.num))))
 }
@@ -109,7 +109,7 @@ fn transparentize(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult
         .get_err(1, "amount")?
         .assert_number_with_name("amount", args.span())?;
 
-    amount.assert_bounds("amount", 0.0, 1.0, args.span())?;
+    amount.assert_bounds_with_unit("amount", 0.0, 1.0, &Unit::None, args.span())?;
 
     Ok(Value::Color(Arc::new(color.fade_out(amount.num))))
 }

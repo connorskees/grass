@@ -445,6 +445,14 @@ test!(
     }",
     "a {\n  color: comma;\n  color: comma;\n}\n"
 );
+test!(
+    slash_list_are_equal,
+    "@use 'sass:list';
+    a {
+        color: list.slash(a, b)==list.slash(a, b);
+    }",
+    "a {\n  color: true;\n}\n"
+);
 error!(
     nth_list_index_0,
     "a {\n  color: nth(a b c, 0);\n}\n", "Error: $n: List index may not be 0."
@@ -475,7 +483,7 @@ error!(
     "Error: $n: Invalid index 1px for a list with 0 elements."
 );
 error!(
-    #[ignore = ""]
+    #[ignore = "we don't error"]
     empty_list_is_invalid,
     "a {\n  color: ();\n}\n", "Error: () isn't a valid CSS value."
 );

@@ -217,11 +217,7 @@ pub(crate) fn parse_channels(
         channels = list[0].clone();
         let inner_alpha_from_slash_list = list[1].clone();
 
-        if !alpha_from_slash_list
-            .as_ref()
-            .map(Value::is_special_function)
-            .unwrap_or(false)
-        {
+        if !inner_alpha_from_slash_list.is_special_function() {
             inner_alpha_from_slash_list
                 .clone()
                 .assert_number_with_name("alpha", span)?;
@@ -395,11 +391,11 @@ pub(crate) fn mix(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult
         Value::Dimension(SassNumber::new_unitless(50.0)),
     ) {
         Value::Dimension(SassNumber { num: n, .. }) if n.is_nan() => todo!(),
-        Value::Dimension(SassNumber {
-            num: n,
-            unit: u,
-            as_slash: _,
-        }) => bound!(args, "weight", n, u, 0, 100) / Number(100.0),
+        Value::Dimension(mut num) => {
+            num.assert_bounds("weight", 0.0, 100.0, args.span())?;
+            num.num /= Number(100.0);
+            num.num
+        }
         v => {
             return Err((
                 format!(

@@ -267,13 +267,6 @@ impl ArgumentResult {
         }
     }
 
-    pub fn default_named_arg(&mut self, name: &'static str, default: Value) -> Value {
-        match self.get_named(name) {
-            Some(val) => val.node,
-            None => default,
-        }
-    }
-
     pub fn get_variadic(self) -> SassResult<Vec<Spanned<Value>>> {
         if let Some((name, _)) = self.named.iter().next() {
             return Err((format!("No argument named ${}.", name), self.span).into());

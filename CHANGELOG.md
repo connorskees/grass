@@ -8,6 +8,13 @@
 # 0.12.2 (unreleased)
 
 - implement an import cache, significantly improving the performance of certain pathological cases
+- slash lists can be compared using `==`
+- resolve rounding errors for extremely large numbers
+- potentially breaking bug fixes in certain color functions
+ - `color.hwb(..)` no longer allows whiteness or blackness values outside the bounds 0% to 100%
+ - `scale-color(..)` no longer allows the `$hue` argument. previously it was ignored
+ - `scale-color(..)`, `change-color(..)`, and `adjust-color(..)` no longer allow invalid combinations of arguments or unknown named arguments
+ - many functions that accept hues now convert other angle units (`rad`, `grad`, `turn`) to `deg`. previously the unit was ignored
 
 # 0.12.1
 

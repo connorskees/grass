@@ -285,17 +285,17 @@ test!(
 test!(
     hsl_with_turn_unit,
     "a {\n  color: hsl(8turn, 25%, 50%);\n}\n",
-    "a {\n  color: hsl(8deg, 25%, 50%);\n}\n"
+    "a {\n  color: hsl(0deg, 25%, 50%);\n}\n"
 );
 test!(
     hsl_with_rad_unit,
     "a {\n  color: hsl(8rad, 25%, 50%);\n}\n",
-    "a {\n  color: hsl(8deg, 25%, 50%);\n}\n"
+    "a {\n  color: hsl(98.3662361047deg, 25%, 50%);\n}\n"
 );
 test!(
     hsl_with_grad_unit,
     "a {\n  color: hsl(8grad, 25%, 50%);\n}\n",
-    "a {\n  color: hsl(8deg, 25%, 50%);\n}\n"
+    "a {\n  color: hsl(7.2deg, 25%, 50%);\n}\n"
 );
 test!(
     adjust_hue_nan,
@@ -340,4 +340,19 @@ test!(
     darken_green_channel_max,
     "a {\n  color: darken(rgb(50, 200, 100), 10);\n}\n",
     "a {\n  color: #289f50;\n}\n"
+);
+test!(
+    hue_adjust_color_over_360,
+    "a {\n  color: hue(adjust-color(blue, $hue: 150));\n}\n",
+    "a {\n  color: 30deg;\n}\n"
+);
+test!(
+    adjust_hue_rad,
+    "a {\n  color: adjust-hue(red, 60rad);\n}\n",
+    "a {\n  color: #00b4ff;\n}\n"
+);
+test!(
+    hsl_hue_rad,
+    "a {\n  color: hsl(60rad, 100%, 50%);\n}\n",
+    "a {\n  color: hsl(197.7467707849deg, 100%, 50%);\n}\n"
 );

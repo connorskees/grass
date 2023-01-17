@@ -1,283 +1,244 @@
-use crate::builtin::builtin_imports::*;
+use crate::{
+    builtin::{builtin_imports::*, color::angle_value},
+    utils::to_sentence,
+    value::fuzzy_round,
+};
 
-macro_rules! opt_rgba {
-    ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal) => {
-        let $name = match $args.default_named_arg($arg, Value::Null) {
-            Value::Dimension(SassNumber { num: n, .. }) if n.is_nan() => todo!(),
-            Value::Dimension(SassNumber {
-                num: n, unit: u, ..
-            }) => Some(bound!($args, $arg, n, u, $low, $high)),
-            Value::Null => None,
-            v => {
-                return Err((
-                    format!("${}: {} is not a number.", $arg, v.inspect($args.span())?),
-                    $args.span(),
-                )
-                    .into())
-            }
-        };
-    };
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+enum UpdateComponents {
+    Change,
+    Adjust,
+    Scale,
 }
 
-macro_rules! opt_hsl {
-    ($args:ident, $name:ident, $arg:literal, $low:literal, $high:literal) => {
-        let $name = match $args.default_named_arg($arg, Value::Null) {
-            Value::Dimension(SassNumber { num: n, .. }) if n.is_nan() => todo!(),
-            Value::Dimension(SassNumber {
-                num: n, unit: u, ..
-            }) => Some(bound!($args, $arg, n, u, $low, $high) / Number(100.0)),
-            Value::Null => None,
-            v => {
-                return Err((
-                    format!("${}: {} is not a number.", $arg, v.inspect($args.span())?),
-                    $args.span(),
-                )
-                    .into())
-            }
-        };
-    };
-}
-
-pub(crate) fn change_color(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
-    if args.get_positional(1).is_some() {
-        return Err((
-            "Only one positional argument is allowed. All other arguments must be passed by name.",
-            args.span(),
-        )
-            .into());
-    }
-
-    let color = args
-        .get_err(0, "color")?
-        .assert_color_with_name("color", args.span())?;
-
-    opt_rgba!(args, alpha, "alpha", 0, 1);
-    opt_rgba!(args, red, "red", 0, 255);
-    opt_rgba!(args, green, "green", 0, 255);
-    opt_rgba!(args, blue, "blue", 0, 255);
-
-    if red.is_some() || green.is_some() || blue.is_some() {
-        return Ok(Value::Color(Arc::new(Color::from_rgba(
-            red.unwrap_or_else(|| color.red()),
-            green.unwrap_or_else(|| color.green()),
-            blue.unwrap_or_else(|| color.blue()),
-            alpha.unwrap_or_else(|| color.alpha()),
-        ))));
-    }
-
-    let hue = match args.default_named_arg("hue", Value::Null) {
-        Value::Dimension(SassNumber { num: n, .. }) if n.is_nan() => todo!(),
-        Value::Dimension(SassNumber { num: n, .. }) => Some(n),
-        Value::Null => None,
-        v => {
-            return Err((
-                format!("$hue: {} is not a number.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
-
-    opt_hsl!(args, saturation, "saturation", 0, 100);
-    opt_hsl!(args, lightness, "lightness", 0, 100);
-
-    if hue.is_some() || saturation.is_some() || lightness.is_some() {
-        // Color::as_hsla() returns more exact values than Color::hue(), etc.
-        let (this_hue, this_saturation, this_lightness, this_alpha) = color.as_hsla();
-        return Ok(Value::Color(Arc::new(Color::from_hsla(
-            hue.unwrap_or(this_hue),
-            saturation.unwrap_or(this_saturation),
-            lightness.unwrap_or(this_lightness),
-            alpha.unwrap_or(this_alpha),
-        ))));
-    }
-
-    Ok(Value::Color(if let Some(a) = alpha {
-        Arc::new(color.with_alpha(a))
-    } else {
-        color
-    }))
-}
-
-pub(crate) fn adjust_color(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
-    let color = args
-        .get_err(0, "color")?
-        .assert_color_with_name("color", args.span())?;
-
-    opt_rgba!(args, alpha, "alpha", -1, 1);
-    opt_rgba!(args, red, "red", -255, 255);
-    opt_rgba!(args, green, "green", -255, 255);
-    opt_rgba!(args, blue, "blue", -255, 255);
-
-    if red.is_some() || green.is_some() || blue.is_some() {
-        return Ok(Value::Color(Arc::new(Color::from_rgba(
-            color.red() + red.unwrap_or_else(Number::zero),
-            color.green() + green.unwrap_or_else(Number::zero),
-            color.blue() + blue.unwrap_or_else(Number::zero),
-            color.alpha() + alpha.unwrap_or_else(Number::zero),
-        ))));
-    }
-
-    let hue = match args.default_named_arg("hue", Value::Null) {
-        Value::Dimension(SassNumber { num: n, .. }) if n.is_nan() => todo!(),
-        Value::Dimension(SassNumber { num: n, .. }) => Some(n),
-        Value::Null => None,
-        v => {
-            return Err((
-                format!("$hue: {} is not a number.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
-
-    opt_hsl!(args, saturation, "saturation", -100, 100);
-    opt_hsl!(args, lightness, "lightness", -100, 100);
-
-    if hue.is_some() || saturation.is_some() || lightness.is_some() {
-        // Color::as_hsla() returns more exact values than Color::hue(), etc.
-        let (this_hue, this_saturation, this_lightness, this_alpha) = color.as_hsla();
-        return Ok(Value::Color(Arc::new(Color::from_hsla(
-            this_hue + hue.unwrap_or_else(Number::zero),
-            this_saturation + saturation.unwrap_or_else(Number::zero),
-            this_lightness + lightness.unwrap_or_else(Number::zero),
-            this_alpha + alpha.unwrap_or_else(Number::zero),
-        ))));
-    }
-
-    Ok(Value::Color(if let Some(a) = alpha {
-        let temp_alpha = color.alpha();
-        Arc::new(color.with_alpha(temp_alpha + a))
-    } else {
-        color
-    }))
-}
-
-#[allow(clippy::cognitive_complexity)]
-// todo: refactor into rgb and hsl?
-pub(crate) fn scale_color(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
-    pub(crate) fn scale(val: Number, by: Number, max: Number) -> Number {
-        if by.is_zero() {
-            return val;
-        }
-        val + (if by.is_positive() { max - val } else { val }) * by
-    }
-
-    fn check_num(num: Spanned<Value>, name: &str, min: f64, max: f64) -> SassResult<Number> {
-        let span = num.span;
-        let mut num = num.node.assert_number_with_name(name, span)?;
-
-        num.assert_unit(&Unit::Percent, name, span)?;
-        num.assert_bounds(name, min, max, span)?;
-
-        num.num /= Number(100.0);
-
-        Ok(num.num)
-    }
-
-    fn get_arg(
-        args: &mut ArgumentResult,
-        name: &str,
-        min: f64,
-        max: f64,
-    ) -> SassResult<Option<Number>> {
-        Ok(match args.get(usize::MAX, name) {
-            Some(v) => Some(check_num(v, name, min, max)?),
-            None => None,
-        })
-    }
-
+fn update_components(
+    mut args: ArgumentResult,
+    visitor: &mut Visitor,
+    update: UpdateComponents,
+) -> SassResult<Value> {
     let span = args.span();
     let color = args
         .get_err(0, "color")?
         .assert_color_with_name("color", args.span())?;
 
-    let red = get_arg(&mut args, "red", -100.0, 100.0)?;
-    let green = get_arg(&mut args, "green", -100.0, 100.0)?;
-    let blue = get_arg(&mut args, "blue", -100.0, 100.0)?;
-    let alpha = get_arg(&mut args, "alpha", -100.0, 100.0)?;
-
-    if red.is_some() || green.is_some() || blue.is_some() {
-        return Ok(Value::Color(Arc::new(Color::from_rgba(
-            scale(color.red(), red.unwrap_or_else(Number::zero), Number(255.0)),
-            scale(
-                color.green(),
-                green.unwrap_or_else(Number::zero),
-                Number(255.0),
-            ),
-            scale(
-                color.blue(),
-                blue.unwrap_or_else(Number::zero),
-                Number(255.0),
-            ),
-            scale(
-                color.alpha(),
-                alpha.unwrap_or_else(Number::zero),
-                Number::one(),
-            ),
-        ))));
+    // todo: what if color is also passed by name
+    if args.positional.len() > 1 {
+        return Err((
+            "Only one positional argument is allowed. All other arguments must be passed by name.",
+            span,
+        )
+            .into());
     }
 
-    let saturation = get_arg(&mut args, "saturation", -100.0, 100.0)?;
-    let lightness = get_arg(&mut args, "lightness", -100.0, 100.0)?;
+    let check_num = |num: Spanned<Value>,
+                     name: &str,
+                     mut max: f64,
+                     assert_percent: bool,
+                     check_percent: bool|
+     -> SassResult<Number> {
+        let span = num.span;
+        let mut num = num.node.assert_number_with_name(name, span)?;
 
-    if saturation.is_some() || lightness.is_some() {
-        // Color::as_hsla() returns more exact values than Color::hue(), etc.
+        if update == UpdateComponents::Scale {
+            max = 100.0;
+        }
+
+        if assert_percent || update == UpdateComponents::Scale {
+            num.assert_unit(&Unit::Percent, name, span)?;
+            num.assert_bounds(
+                name,
+                if update == UpdateComponents::Change {
+                    0.0
+                } else {
+                    -max
+                },
+                max,
+                span,
+            )?;
+        } else {
+            num.assert_bounds_with_unit(
+                name,
+                if update == UpdateComponents::Change {
+                    0.0
+                } else {
+                    -max
+                },
+                max,
+                if check_percent {
+                    &Unit::Percent
+                } else {
+                    &Unit::None
+                },
+                span,
+            )?;
+        }
+
+        // todo: hack to check if rgb channel
+        if max == 100.0 {
+            num.num /= Number(100.0);
+        }
+
+        Ok(num.num)
+    };
+
+    let get_arg = |args: &mut ArgumentResult,
+                   name: &str,
+                   max: f64,
+                   assert_percent: bool,
+                   check_percent: bool|
+     -> SassResult<Option<Number>> {
+        Ok(match args.get(usize::MAX, name) {
+            Some(v) => Some(check_num(v, name, max, assert_percent, check_percent)?),
+            None => None,
+        })
+    };
+
+    let red = get_arg(&mut args, "red", 255.0, false, false)?;
+    let green = get_arg(&mut args, "green", 255.0, false, false)?;
+    let blue = get_arg(&mut args, "blue", 255.0, false, false)?;
+    let alpha = get_arg(&mut args, "alpha", 1.0, false, false)?;
+
+    let hue = if update == UpdateComponents::Scale {
+        None
+    } else {
+        args.get(usize::MAX, "hue")
+            .map(|v| angle_value(v.node, "hue", v.span))
+            .transpose()?
+    };
+
+    let saturation = get_arg(&mut args, "saturation", 100.0, false, true)?;
+    let lightness = get_arg(&mut args, "lightness", 100.0, false, true)?;
+    let whiteness = get_arg(&mut args, "whiteness", 100.0, true, true)?;
+    let blackness = get_arg(&mut args, "blackness", 100.0, true, true)?;
+
+    if !args.named.is_empty() {
+        let argument_word = if args.named.len() == 1 {
+            "argument"
+        } else {
+            "arguments"
+        };
+
+        let argument_names = to_sentence(
+            args.named
+                .keys()
+                .map(|key| format!("${key}", key = key))
+                .collect(),
+            "or",
+        );
+
+        return Err((
+            format!(
+                "No {argument_word} named {argument_names}.",
+                argument_word = argument_word,
+                argument_names = argument_names
+            ),
+            span,
+        )
+            .into());
+    }
+
+    let has_rgb = red.is_some() || green.is_some() || blue.is_some();
+    let has_sl = saturation.is_some() || lightness.is_some();
+    let has_wb = whiteness.is_some() || blackness.is_some();
+
+    if has_rgb && (has_sl || has_wb || hue.is_some()) {
+        let param_type = if has_wb { "HWB" } else { "HSL" };
+        return Err((
+            format!(
+                "RGB parameters may not be passed along with {} parameters.",
+                param_type
+            ),
+            span,
+        )
+            .into());
+    }
+
+    if has_sl && has_wb {
+        return Err((
+            "HSL parameters may not be passed along with HWB parameters.",
+            span,
+        )
+            .into());
+    }
+
+    fn update_value(
+        current: Number,
+        param: Option<Number>,
+        max: f64,
+        update: UpdateComponents,
+    ) -> Number {
+        let param = match param {
+            Some(p) => p,
+            None => return current,
+        };
+
+        match update {
+            UpdateComponents::Change => param,
+            UpdateComponents::Adjust => (param + current).clamp(0.0, max),
+            UpdateComponents::Scale => {
+                current
+                    + if param > Number(0.0) {
+                        Number(max) - current
+                    } else {
+                        current
+                    } * param
+            }
+        }
+    }
+
+    fn update_rgb(current: Number, param: Option<Number>, update: UpdateComponents) -> Number {
+        Number(fuzzy_round(update_value(current, param, 255.0, update).0))
+    }
+
+    let color = if has_rgb {
+        Arc::new(Color::from_rgba(
+            update_rgb(color.red(), red, update),
+            update_rgb(color.green(), green, update),
+            update_rgb(color.blue(), blue, update),
+            update_value(color.alpha(), alpha, 1.0, update),
+        ))
+    } else if has_wb {
+        Arc::new(Color::from_hwb(
+            if update == UpdateComponents::Change {
+                hue.unwrap_or_else(|| color.hue())
+            } else {
+                color.hue() + hue.unwrap_or_else(Number::zero)
+            },
+            update_value(color.whiteness(), whiteness, 1.0, update) * Number(100.0),
+            update_value(color.blackness(), blackness, 1.0, update) * Number(100.0),
+            update_value(color.alpha(), alpha, 1.0, update),
+        ))
+    } else if hue.is_some() || has_sl {
         let (this_hue, this_saturation, this_lightness, this_alpha) = color.as_hsla();
-        return Ok(Value::Color(Arc::new(Color::from_hsla(
-            scale(this_hue, Number::zero(), Number(360.0)),
-            scale(
-                this_saturation,
-                saturation.unwrap_or_else(Number::zero),
-                Number::one(),
-            ),
-            scale(
-                this_lightness,
-                lightness.unwrap_or_else(Number::zero),
-                Number::one(),
-            ),
-            scale(
-                this_alpha,
-                alpha.unwrap_or_else(Number::zero),
-                Number::one(),
-            ),
-        ))));
-    }
-
-    let whiteness = get_arg(&mut args, "whiteness", -100.0, 100.0)?;
-    let blackness = get_arg(&mut args, "blackness", -100.0, 100.0)?;
-
-    if whiteness.is_some() || blackness.is_some() {
-        let this_hue = color.hue();
-        let this_whiteness = color.whiteness() * Number(100.0);
-        let this_blackness = color.blackness() * Number(100.0);
-
-        return Ok(Value::Color(Arc::new(Color::from_hwb(
-            scale(this_hue, Number::zero(), Number(360.0)),
-            scale(
-                this_whiteness,
-                whiteness.unwrap_or_else(Number::zero),
-                Number(100.0),
-            ),
-            scale(
-                this_blackness,
-                blackness.unwrap_or_else(Number::zero),
-                Number(100.0),
-            ),
-            scale(
-                color.alpha(),
-                alpha.unwrap_or_else(Number::zero),
-                Number::one(),
-            ),
-        ))));
-    }
-
-    Ok(Value::Color(if let Some(a) = alpha {
-        let temp_alpha = color.alpha();
-        Arc::new(color.with_alpha(scale(temp_alpha, a, Number::one())))
+        Arc::new(Color::from_hsla(
+            if update == UpdateComponents::Change {
+                hue.unwrap_or(this_hue)
+            } else {
+                this_hue + hue.unwrap_or_else(Number::zero)
+            },
+            update_value(this_saturation, saturation, 1.0, update),
+            update_value(this_lightness, lightness, 1.0, update),
+            update_value(this_alpha, alpha, 1.0, update),
+        ))
+    } else if alpha.is_some() {
+        Arc::new(color.with_alpha(update_value(color.alpha(), alpha, 1.0, update)))
     } else {
         color
-    }))
+    };
+
+    Ok(Value::Color(color))
+}
+
+pub(crate) fn scale_color(args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
+    update_components(args, visitor, UpdateComponents::Scale)
+}
+
+pub(crate) fn change_color(args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
+    update_components(args, visitor, UpdateComponents::Change)
+}
+
+pub(crate) fn adjust_color(args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
+    update_components(args, visitor, UpdateComponents::Adjust)
 }
 
 pub(crate) fn ie_hex_str(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
