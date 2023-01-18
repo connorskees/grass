@@ -552,8 +552,9 @@ pub(crate) struct StyleSheet {
     pub body: Vec<AstStmt>,
     pub url: PathBuf,
     pub is_plain_css: bool,
-    pub uses: Vec<AstUseRule>,
-    pub forwards: Vec<AstForwardRule>,
+    /// Array of indices into body
+    pub uses: Vec<usize>,
+    pub forwards: Vec<usize>,
 }
 
 impl StyleSheet {

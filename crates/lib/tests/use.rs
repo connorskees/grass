@@ -702,4 +702,94 @@ fn use_variable_declared_in_two_modules() {
     );
 }
 
+#[test]
+fn import_module_using_same_builtin_module() {
+    let mut fs = TestFs::new();
+
+    fs.add_file(
+        "_a.scss",
+        r#"
+        @use "sass:meta";
+    "#,
+    );
+
+    fs.add_file(
+        "_b.scss",
+        r#"
+        $a: red;
+    "#,
+    );
+
+    let input = r#"
+        @use "sass:meta";
+        @import "a";
+    "#;
+
+    assert_eq!(
+        "",
+        &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
+    );
+}
+
+#[test]
+fn import_module_using_same_builtin_module_has_styles() {
+    let mut fs = TestFs::new();
+
+    fs.add_file(
+        "_a.scss",
+        r#"
+        @use "sass:meta";
+
+        a {
+            color: red;
+        }
+    "#,
+    );
+
+    fs.add_file(
+        "_b.scss",
+        r#"
+        $a: red;
+    "#,
+    );
+
+    let input = r#"
+        @use "sass:meta";
+        @import "a";
+    "#;
+
+    assert_eq!(
+        "a {\n  color: red;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
+    );
+}
+
+#[test]
+#[ignore = "we don't hermetically evaluate @extend"]
+fn use_module_with_extend() {
+    let mut fs = TestFs::new();
+
+    fs.add_file(
+        "_a.scss",
+        r#"
+        a {
+            @extend b;
+        }
+    "#,
+    );
+
+    let input = r#"
+        @use "a";
+        b {
+            color: red;
+        }
+    "#;
+
+    assert_err!(
+        input,
+        "Error: The target selector was not found.",
+        grass::Options::default().fs(&fs)
+    );
+}
+
 // todo: refactor these tests to use testfs where possible

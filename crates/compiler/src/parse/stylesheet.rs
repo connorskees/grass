@@ -202,6 +202,17 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
             Ok(Some(parser.parse_statement()?))
         })?;
 
+        for (idx, child) in style_sheet.body.iter().enumerate() {
+            match child {
+                AstStmt::VariableDecl(_) | AstStmt::LoudComment(_) | AstStmt::SilentComment(_) => {
+                    continue
+                }
+                AstStmt::Use(..) => style_sheet.uses.push(idx),
+                AstStmt::Forward(..) => style_sheet.forwards.push(idx),
+                _ => break,
+            }
+        }
+
         Ok(style_sheet)
     }
 

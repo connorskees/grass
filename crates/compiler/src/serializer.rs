@@ -285,12 +285,18 @@ impl<'a> Serializer<'a> {
             } else {
                 self.buffer.push(b',');
                 if complex.line_break {
-                    self.buffer.push(b'\n');
+                    self.write_newline();
                 } else {
                     self.write_optional_space();
                 }
             }
             self.write_complex_selector(complex);
+        }
+    }
+
+    fn write_newline(&mut self) {
+        if !self.options.is_compressed() {
+            self.buffer.push(b'\n');
         }
     }
 
@@ -398,13 +404,16 @@ impl<'a> Serializer<'a> {
         }
 
         self.write_float(color.red().0);
-        self.buffer.extend_from_slice(b", ");
+        self.buffer.extend_from_slice(b",");
+        self.write_optional_space();
         self.write_float(color.green().0);
-        self.buffer.extend_from_slice(b", ");
+        self.buffer.extend_from_slice(b",");
+        self.write_optional_space();
         self.write_float(color.blue().0);
 
         if !is_opaque {
-            self.buffer.extend_from_slice(b", ");
+            self.buffer.extend_from_slice(b",");
+            self.write_optional_space();
             self.write_float(color.alpha().0);
         }
 

@@ -26,7 +26,6 @@ test!(
     grass::Options::default().style(grass::OutputStyle::Compressed)
 );
 test!(
-    #[ignore = "regress selector compression"]
     compresses_selector_with_newline_after_comma,
     "a,\nb {\n  color: red;\n}\n",
     "a,b{color:red}",
@@ -100,7 +99,6 @@ test!(
     grass::Options::default().style(grass::OutputStyle::Compressed)
 );
 test!(
-    #[ignore = "we do not support compressed colors"]
     removes_leading_zero_in_number_under_1_in_rgba_alpha_channel,
     "a {\n  color: rgba(1, 1, 1, 0.5);\n}\n",
     "a{color:rgba(1,1,1,.5)}",

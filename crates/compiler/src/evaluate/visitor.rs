@@ -767,8 +767,9 @@ impl<'a> Visitor<'a> {
             || path_buf.extension() == Some(OsStr::new("css"))
         {
             let extension = path_buf.extension().unwrap();
-            try_path!(path.with_extension(format!(".import{}", extension.to_str().unwrap())));
-            try_path!(path);
+            try_path!(path_buf.with_extension(format!(".import{}", extension.to_str().unwrap())));
+            try_path!(path_buf);
+            // todo: consider load paths
             return None;
         }
 
@@ -882,9 +883,62 @@ impl<'a> Visitor<'a> {
             return Ok(());
         }
 
+        // todo:
+        let loads_user_defined_modules = true;
+
         // this todo should be unreachable, as we currently do not push
         // to stylesheet.uses or stylesheet.forwards
-        todo!()
+        // let mut children = Vec::new();
+        let env = self.env.for_import();
+
+        self.with_environment::<SassResult<()>, _>(env.clone(), |visitor| {
+            let old_parent = visitor.parent;
+            let old_configuration = Arc::clone(&visitor.configuration);
+
+            if loads_user_defined_modules {
+                visitor.parent = Some(CssTree::ROOT);
+            }
+
+            // This configuration is only used if it passes through a `@forward`
+            // rule, so we avoid creating unnecessary ones for performance reasons.
+            if !stylesheet.forwards.is_empty() {
+                visitor.configuration = Arc::new(RefCell::new(env.to_implicit_configuration()));
+            }
+
+            visitor.visit_stylesheet(stylesheet)?;
+
+            if loads_user_defined_modules {
+                visitor.parent = old_parent;
+            }
+            visitor.configuration = old_configuration;
+
+            Ok(())
+        })?;
+
+        // Create a dummy module with empty CSS and no extensions to make forwarded
+        // members available in the current import context and to combine all the
+        // CSS from modules used by [stylesheet].
+        let module = env.to_dummy_module(self.span_before);
+        self.env.import_forwards(module);
+
+        if loads_user_defined_modules {
+            //     if (module.transitivelyContainsCss) {
+            //       // If any transitively used module contains extensions, we need to
+            //       // clone all modules' CSS. Otherwise, it's possible that they'll be
+            //       // used or imported from another location that shouldn't have the same
+            //       // extensions applied.
+            //       await _combineCss(module,
+            //               clone: module.transitivelyContainsExtensions)
+            //           .accept(this);
+            //     }
+
+            //     var visitor = _ImportedCssVisitor(this);
+            //     for (var child in children) {
+            //       child.accept(visitor);
+            //     }
+        }
+
+        Ok(())
     }
 
     fn visit_static_import_rule(&mut self, static_import: AstPlainCssImport) -> SassResult<()> {

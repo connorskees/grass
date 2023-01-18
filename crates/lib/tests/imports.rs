@@ -483,6 +483,26 @@ fn chained_imports_in_directory() {
         &grass::from_string(input.to_string(), &grass::Options::default()).expect(input)
     );
 }
+
+#[test]
+fn explicit_file_extension_import_inside_index_file() {
+    let input =
+        "@import \"explicit_file_extension_import_inside_index_file\";\na {\n color: $a;\n}";
+    tempfile!(
+        "_a.scss",
+        "$a: red;",
+        dir = "explicit_file_extension_import_inside_index_file"
+    );
+    tempfile!(
+        "_index.scss",
+        "@import \"a.scss\";",
+        dir = "explicit_file_extension_import_inside_index_file"
+    );
+    assert_eq!(
+        "a {\n  color: red;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default()).expect(input)
+    );
+}
 error!(
     // note: dart-sass error is "expected more input."
     missing_input_after_import,
