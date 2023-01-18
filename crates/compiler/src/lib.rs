@@ -18,9 +18,9 @@ implementation.
 fn main() -> Result<(), Box<grass::Error>> {
     let css = grass::from_string(
         "a { b { color: &; } }".to_owned(),
-        &grass::Options::default()
+        &grass::Options::default().style(grass::OutputStyle::Compressed)
     )?;
-    assert_eq!(css, "a b {\n  color: a b;\n}\n");
+    assert_eq!(css, "a b{color:a b}");
     Ok(())
 }
 ```
