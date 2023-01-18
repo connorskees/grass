@@ -158,3 +158,31 @@ error!(
     comparable_non_number_arg_last,
     "a {\n  color: comparable(1, b);\n}\n", "Error: $number2: b is not a number."
 );
+error!(
+    percentage_no_args,
+    "a {\n  color: percentage();\n}\n", "Error: Missing argument $number."
+);
+error!(
+    round_no_args,
+    "a {\n  color: round();\n}\n", "Error: Missing argument $number."
+);
+error!(
+    ceil_no_args,
+    "a {\n  color: ceil();\n}\n", "Error: Missing argument $number."
+);
+error!(
+    floor_no_args,
+    "a {\n  color: floor();\n}\n", "Error: Missing argument $number."
+);
+error!(
+    abs_no_args,
+    "a {\n  color: abs();\n}\n", "Error: Missing argument $number."
+);
+error!(
+    comparable_no_args,
+    "a {\n  color: comparable();\n}\n", "Error: Missing argument $number1."
+);
+error!(
+    comparable_one_arg,
+    "a {\n  color: comparable(1);\n}\n", "Error: Missing argument $number2."
+);

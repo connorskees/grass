@@ -67,7 +67,6 @@ pub(crate) fn alpha(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResu
 pub(crate) fn opacity(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     match args.get_err(0, "color")? {
-        Value::Dimension(SassNumber { num: n, .. }) if n.is_nan() => todo!(),
         Value::Color(c) => Ok(Value::Dimension(SassNumber::new_unitless(c.alpha()))),
         Value::Dimension(SassNumber {
             num,

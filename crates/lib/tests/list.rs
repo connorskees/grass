@@ -438,6 +438,31 @@ test!(
     "a {\n  color: a, A, \"Noto Color Emoji\";\n}\n"
 );
 test!(
+    list_separator_of_map,
+    "a {\n  color: list-separator((a: b, c: d));\n}\n",
+    "a {\n  color: comma;\n}\n"
+);
+test!(
+    list_separator_of_empty_parens,
+    "a {\n  color: list-separator(());\n}\n",
+    "a {\n  color: space;\n}\n"
+);
+test!(
+    list_separator_of_unquoted_string,
+    "a {\n  color: list-separator(a);\n}\n",
+    "a {\n  color: space;\n}\n"
+);
+test!(
+    list_separator_of_arglist,
+    "@function foo($a...) {
+        @return list-separator($a);
+    }
+    a {
+        color: foo();
+    }",
+    "a {\n  color: comma;\n}\n"
+);
+test!(
     list_separator_of_empty_list_after_join,
     "a {
         color: list-separator(join(join((), (), comma), 1 2));

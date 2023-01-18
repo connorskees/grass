@@ -317,6 +317,23 @@ fn member_as_variable_assignment_toplevel() {
     );
 }
 
+#[test]
+fn forward_module_with_error() {
+    let mut fs = TestFs::new();
+
+    fs.add_file("_error.scss", r#"a { color: 1 + red; }"#);
+
+    let input = r#"
+        @forward "error";
+    "#;
+
+    assert_err!(
+        input,
+        r#"Error: Undefined operation "1 + red"."#,
+        grass::Options::default().fs(&fs)
+    );
+}
+
 error!(
     after_style_rule,
     r#"

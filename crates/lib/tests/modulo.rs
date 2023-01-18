@@ -175,6 +175,11 @@ test!(
     "a {\n  color: -5 % (-1/0);\n}\n",
     "a {\n  color: NaN;\n}\n"
 );
+test!(
+    zero_mod_negative,
+    "a {\n  color: 0 % -5;\n}\n",
+    "a {\n  color: 0;\n}\n"
+);
 error!(
     calculation_mod_calculation,
     "a {\n  color: calc(1rem + 1px) % calc(1rem + 1px);\n}\n",

@@ -11,6 +11,17 @@ test!(
     "@use \"sass:color\";\na {\n  color: color.blackness(white);\n}\n",
     "a {\n  color: 0%;\n}\n"
 );
+
+test!(
+    whiteness_black,
+    "@use \"sass:color\";\na {\n  color: color.whiteness(black);\n}\n",
+    "a {\n  color: 0%;\n}\n"
+);
+test!(
+    whiteness_white,
+    "@use \"sass:color\";\na {\n  color: color.whiteness(white);\n}\n",
+    "a {\n  color: 100%;\n}\n"
+);
 test!(
     blackness_approx_50_pct,
     "@use \"sass:color\";\na {\n  color: color.blackness(color.hwb(0, 0%, 50%));\n}\n",
@@ -110,4 +121,19 @@ error!(
     hwb_blackness_too_high,
     "@use \"sass:color\";\na {\n  color: color.hwb(0, 30%, 101%, 0.5);\n}\n",
     "Error: $blackness: Expected 101% to be within 0% and 100%."
+);
+error!(
+    blackness_no_args,
+    "@use \"sass:color\";\na {\n  color: color.blackness();\n}\n",
+    "Error: Missing argument $color."
+);
+error!(
+    whiteness_no_args,
+    "@use \"sass:color\";\na {\n  color: color.whiteness();\n}\n",
+    "Error: Missing argument $color."
+);
+error!(
+    hwb_var_channels,
+    "@use \"sass:color\";\na {\n  color: color.hwb(var(--foo));\n}\n",
+    "Error: Expected numeric channels, got \"hwb(var(--foo))\"."
 );

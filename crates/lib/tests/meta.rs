@@ -27,6 +27,23 @@ test!(
     "a {\n  color: 2;\n}\n"
 );
 test!(
+    if_is_global_fn,
+    "a {
+        $a: get-function(if);
+        color: call($a, true, 2, 3);
+        color: call($a, false, 2, 3);
+    }",
+    "a {\n  color: 2;\n  color: 3;\n}\n"
+);
+error!(
+    if_inside_call_does_not_lazily_eval_args,
+    "a {
+        $a: get-function(if);
+        color: call($a, true, 2, red % 5);
+    }",
+    "Error: Undefined operation \"red % 5\"."
+);
+test!(
     feature_exists_dbl_quoted,
     "a {\n  color: feature-exists(\"at-error\")\n}\n",
     "a {\n  color: true;\n}\n"
@@ -358,6 +375,18 @@ test!(
       color: inspect(get-function('empty', $css: true));
     }",
     "a {\n  color: get-function(\"empty\");\n}\n"
+);
+error!(
+    feature_exists_no_args,
+    "a {\n  color: feature-exists();\n}\n", "Error: Missing argument $feature."
+);
+error!(
+    unit_no_args,
+    "a {\n  color: unit();\n}\n", "Error: Missing argument $number."
+);
+error!(
+    unitless_no_args,
+    "a {\n  color: unitless();\n}\n", "Error: Missing argument $number."
 );
 
 // todo: if() with different combinations of named and positional args

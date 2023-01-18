@@ -252,6 +252,16 @@ test!(
     "a {\n  color: calc(1% + 3px - 2px);\n}\n"
 );
 test!(
+    inspect_calc,
+    "a {\n  color: inspect(calc(1% + 3px - 2px));\n}\n",
+    "a {\n  color: calc(1% + 3px - 2px);\n}\n"
+);
+test!(
+    calc_ne_number,
+    "a {\n  color: calc(1% + 3px - 2px) == 1px;\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
     calc_num_plus_interpolation,
     "a {\n  color: calc(1 + #{c});\n}\n",
     "a {\n  color: calc(1 + c);\n}\n"

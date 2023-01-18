@@ -640,4 +640,66 @@ fn module_functions_through_forward() {
     );
 }
 
+#[test]
+fn use_variable_declared_in_this_and_other_module() {
+    let mut fs = TestFs::new();
+
+    fs.add_file(
+        "_a.scss",
+        r#"
+        $a: blue;
+    "#,
+    );
+
+    let input = r#"
+        $a: red;
+        @use "a" as *;
+
+        a {
+            color: $a;
+        }
+    "#;
+
+    assert_err!(
+        input,
+        "Error: This module and the new module both define a variable named \"$a\".",
+        grass::Options::default().fs(&fs)
+    );
+}
+
+#[test]
+#[ignore = "we don't check for this"]
+fn use_variable_declared_in_two_modules() {
+    let mut fs = TestFs::new();
+
+    fs.add_file(
+        "_a.scss",
+        r#"
+        $a: blue;
+    "#,
+    );
+
+    fs.add_file(
+        "_b.scss",
+        r#"
+        $a: red;
+    "#,
+    );
+
+    let input = r#"
+        @use "a" as *;
+        @use "b" as *;
+
+        a {
+            color: $a;
+        }
+    "#;
+
+    assert_err!(
+        input,
+        "Error: This variable is available from multiple global modules.",
+        grass::Options::default().fs(&fs)
+    );
+}
+
 // todo: refactor these tests to use testfs where possible

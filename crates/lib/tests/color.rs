@@ -690,7 +690,75 @@ test!(
     "a {\n  color: #0000z;\n}\n",
     "a {\n  color: rgba(0, 0, 0, 0) z;\n}\n"
 );
+test!(
+    opacity_nan,
+    "a {\n  color: opacity(0/0);\n}\n",
+    "a {\n  color: opacity(NaN);\n}\n"
+);
+test!(
+    change_color_no_change,
+    "a {\n  color: change-color(red);\n}\n",
+    "a {\n  color: red;\n}\n"
+);
+test!(
+    change_color_hwb_hue,
+    "a {\n  color: change-color(red, $whiteness: 50%, $hue: 230);\n}\n",
+    "a {\n  color: #8095ff;\n}\n"
+);
 error!(
     hex_color_starts_with_number_non_hex_digit_at_position_6,
     "a {\n  color: #00000z;\n}\n", "Error: Expected hex digit."
+);
+error!(
+    opacity_arg_not_color_or_number,
+    "a {\n  color: opacity(a);\n}\n", "Error: $color: a is not a color."
+);
+error!(
+    ie_hex_str_no_args,
+    "a {\n  color: ie-hex-str();\n}\n", "Error: Missing argument $color."
+);
+error!(
+    opacify_no_args,
+    "a {\n  color: opacify();\n}\n", "Error: Missing argument $color."
+);
+error!(
+    opacify_one_arg,
+    "a {\n  color: opacify(red);\n}\n", "Error: Missing argument $amount."
+);
+error!(
+    transparentize_no_args,
+    "a {\n  color: transparentize();\n}\n", "Error: Missing argument $color."
+);
+error!(
+    transparentize_one_arg,
+    "a {\n  color: transparentize(red);\n}\n", "Error: Missing argument $amount."
+);
+error!(
+    adjust_color_sl_and_wb,
+    "a {\n  color: adjust-color(red, $saturation: 50%, $whiteness: 50%);\n}\n",
+    "Error: HSL parameters may not be passed along with HWB parameters."
+);
+error!(
+    adjust_color_rgb_and_sl,
+    "a {\n  color: adjust-color(red, $red: 50%, $saturation: 50%);\n}\n",
+    "Error: RGB parameters may not be passed along with HSL parameters."
+);
+error!(
+    adjust_color_rgb_and_wb,
+    "a {\n  color: adjust-color(red, $red: 50%, $whiteness: 50%);\n}\n",
+    "Error: RGB parameters may not be passed along with HWB parameters."
+);
+error!(
+    adjust_color_two_unknown_named_args,
+    "a {\n  color: adjust-color(red, $foo: 50%, $bar: 50%);\n}\n",
+    "Error: No arguments named $foo or $bar."
+);
+error!(
+    adjust_color_two_positional_args,
+    "a {\n  color: adjust-color(red, 50%);\n}\n",
+    "Error: Only one positional argument is allowed. All other arguments must be passed by name."
+);
+error!(
+    adjust_color_no_args,
+    "a {\n  color: adjust-color();\n}\n", "Error: Missing argument $color."
 );

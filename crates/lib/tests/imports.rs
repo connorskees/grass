@@ -316,6 +316,41 @@ fn imports_absolute_scss() {
 }
 
 #[test]
+fn imports_same_file_twice() {
+    let mut fs = TestFs::new();
+
+    fs.add_file("a.scss", r#"a { color: red; }"#);
+
+    let input = r#"
+        @import "a";
+        @import "a";
+    "#;
+
+    assert_eq!(
+        "a {\n  color: red;\n}\n\na {\n  color: red;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
+    );
+}
+
+#[test]
+fn imports_same_file_thrice() {
+    let mut fs = TestFs::new();
+
+    fs.add_file("a.scss", r#"a { color: red; }"#);
+
+    let input = r#"
+        @import "a";
+        @import "a";
+        @import "a";
+    "#;
+
+    assert_eq!(
+        "a {\n  color: red;\n}\n\na {\n  color: red;\n}\n\na {\n  color: red;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
+    );
+}
+
+#[test]
 fn imports_explicit_file_extension() {
     let mut fs = TestFs::new();
 

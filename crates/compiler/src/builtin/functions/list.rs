@@ -56,12 +56,7 @@ pub(crate) fn nth(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult
 pub(crate) fn list_separator(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
     Ok(Value::String(
-        match args.get_err(0, "list")? {
-            Value::List(_, sep, ..) => sep.name(),
-            Value::Map(..) | Value::ArgList(..) => ListSeparator::Comma.name(),
-            _ => ListSeparator::Space.name(),
-        }
-        .to_owned(),
+        args.get_err(0, "list")?.separator().name().to_owned(),
         QuoteKind::None,
     ))
 }

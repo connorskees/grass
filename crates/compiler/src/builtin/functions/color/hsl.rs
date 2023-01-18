@@ -165,8 +165,6 @@ pub(crate) fn adjust_hue(mut args: ArgumentResult, visitor: &mut Visitor) -> Sas
         .assert_color_with_name("color", args.span())?;
     let degrees = angle_value(args.get_err(1, "degrees")?, "degrees", args.span())?;
 
-    dbg!(degrees);
-
     Ok(Value::Color(Arc::new(color.adjust_hue(degrees))))
 }
 

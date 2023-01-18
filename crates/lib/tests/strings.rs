@@ -254,3 +254,48 @@ test!(
     "a {\n  color: str-index(\"c\\0308 a\", \"a\");\n}\n",
     "a {\n  color: 3;\n}\n"
 );
+error!(
+    to_lower_case_no_args,
+    "a {\n  color: to_lower_case();\n}\n", "Error: Missing argument $string."
+);
+error!(
+    str_length_no_args,
+    "a {\n  color: str_length();\n}\n", "Error: Missing argument $string."
+);
+error!(
+    quote_no_args,
+    "a {\n  color: quote();\n}\n", "Error: Missing argument $string."
+);
+error!(
+    unquote_no_args,
+    "a {\n  color: unquote();\n}\n", "Error: Missing argument $string."
+);
+error!(
+    str_slice_no_args,
+    "a {\n  color: str_slice();\n}\n", "Error: Missing argument $string."
+);
+error!(
+    str_index_no_args,
+    "a {\n  color: str_index();\n}\n", "Error: Missing argument $string."
+);
+error!(
+    str_insert_no_args,
+    "a {\n  color: str_insert();\n}\n", "Error: Missing argument $string."
+);
+test!(
+    unique_id_is_unique,
+    "$init: unique-id();
+    @for $_ from 0 to 100 {
+        @if $init == unique-id() {
+            @error 'got duplicate unique id: #{$init}';
+        }
+    }",
+    ""
+);
+test!(
+    unique_id_is_valid_identifier,
+    "@for $_ from 0 to 100 {
+        #{unique-id()} {}
+    }",
+    ""
+);

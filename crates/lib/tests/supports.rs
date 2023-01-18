@@ -138,13 +138,31 @@ test!(
 );
 test!(supports_empty_body, "@supports (a: b) {}", "");
 test!(
-    does_not_simplify_calculation_in_args,
+    calculation_not_in_declaration,
     "@supports (calc(1 + 1)) {
         a {
             color: red;
         }
     }",
     "@supports (calc(1 + 1)) {\n  a {\n    color: red;\n  }\n}\n"
+);
+test!(
+    ident_addition_on_rhs_of_declaration,
+    "@supports (a: a + b) {
+        a {
+            color: red;
+        }
+    }",
+    "@supports (a: ab) {\n  a {\n    color: red;\n  }\n}\n"
+);
+test!(
+    calculation_on_rhs_of_declaration,
+    "@supports (a: calc(1px + 1px)) {
+        a {
+            color: red;
+        }
+    }",
+    "@supports (a: calc(1px + 1px)) {\n  a {\n    color: red;\n  }\n}\n"
 );
 error!(
     supports_inside_declaration_body,

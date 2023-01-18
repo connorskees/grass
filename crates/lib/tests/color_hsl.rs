@@ -203,7 +203,7 @@ test!(
     "a {\n  color: 100%;\n}\n"
 );
 test!(
-    saturate_one_arg,
+    saturate_one_named_arg,
     "a {\n  color: saturate($amount: 50%);\n}\n",
     "a {\n  color: saturate(50%);\n}\n"
 );
@@ -355,4 +355,85 @@ test!(
     hsl_hue_rad,
     "a {\n  color: hsl(60rad, 100%, 50%);\n}\n",
     "a {\n  color: hsl(197.7467707849deg, 100%, 50%);\n}\n"
+);
+error!(
+    hsl_one_arg_bracketed,
+    "a {\n  color: hsl([1, 2, 3]);\n}\n",
+    "Error: $channels must be an unbracketed, space-separated list."
+);
+error!(
+    hue_arg_not_color,
+    "a {\n  color: hue(1);\n}\n", "Error: $color: 1 is not a color."
+);
+error!(
+    saturation_arg_not_color,
+    "a {\n  color: saturation(1);\n}\n", "Error: $color: 1 is not a color."
+);
+error!(
+    lightness_arg_not_color,
+    "a {\n  color: lightness(1);\n}\n", "Error: $color: 1 is not a color."
+);
+error!(
+    adjust_hue_first_arg_not_color,
+    "a {\n  color: adjust-hue(1, 5deg);\n}\n", "Error: $color: 1 is not a color."
+);
+error!(
+    hue_no_args,
+    "a {\n  color: hue();\n}\n", "Error: Missing argument $color."
+);
+error!(
+    saturation_no_args,
+    "a {\n  color: saturation();\n}\n", "Error: Missing argument $color."
+);
+error!(
+    lightness_no_args,
+    "a {\n  color: lightness();\n}\n", "Error: Missing argument $color."
+);
+error!(
+    adjust_hue_no_args,
+    "a {\n  color: adjust-hue();\n}\n", "Error: Missing argument $color."
+);
+error!(
+    adjust_hue_one_arg,
+    "a {\n  color: adjust-hue(red);\n}\n", "Error: Missing argument $degrees."
+);
+error!(
+    lighten_no_args,
+    "a {\n  color: lighten();\n}\n", "Error: Missing argument $color."
+);
+error!(
+    lighten_one_arg,
+    "a {\n  color: lighten(red);\n}\n", "Error: Missing argument $amount."
+);
+error!(
+    darken_no_args,
+    "a {\n  color: darken();\n}\n", "Error: Missing argument $color."
+);
+error!(
+    darken_one_arg,
+    "a {\n  color: darken(red);\n}\n", "Error: Missing argument $amount."
+);
+error!(
+    saturate_single_named_arg_not_amount,
+    "a {\n  color: saturate($a: red);\n}\n", "Error: Missing argument $amount."
+);
+error!(
+    saturate_no_args,
+    "a {\n  color: saturate();\n}\n", "Error: Missing argument $amount."
+);
+error!(
+    saturate_one_arg,
+    "a {\n  color: saturate(red);\n}\n", "Error: $amount: red is not a number."
+);
+error!(
+    desaturate_no_args,
+    "a {\n  color: desaturate();\n}\n", "Error: Missing argument $color."
+);
+error!(
+    desaturate_one_arg,
+    "a {\n  color: desaturate(red);\n}\n", "Error: Missing argument $amount."
+);
+error!(
+    complement_no_args,
+    "a {\n  color: complement();\n}\n", "Error: Missing argument $color."
 );

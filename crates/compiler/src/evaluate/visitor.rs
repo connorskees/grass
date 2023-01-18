@@ -829,13 +829,7 @@ impl<'a> Visitor<'a> {
         span: Span,
     ) -> SassResult<StyleSheet> {
         if let Some(name) = self.find_import(url.as_ref()) {
-            // assumption: most users use regular file paths for their imports.
-            // we do support importing syntactically invalid paths and paths that
-            // do not exist through the `Options::fs` API, so we fallback to the
-            // original name if necessary
-            let canonical = std::fs::canonicalize(&name).unwrap_or_else(|_| name.to_path_buf());
-
-            if let Some(style_sheet) = self.import_cache.get(&canonical) {
+            if let Some(style_sheet) = self.import_cache.get(&name) {
                 return Ok(style_sheet.clone());
             }
 
@@ -853,10 +847,10 @@ impl<'a> Visitor<'a> {
             self.flags
                 .set(ContextFlags::IS_USE_ALLOWED, old_is_use_allowed);
 
-            if self.files_seen.contains(&canonical) {
-                self.import_cache.insert(canonical, style_sheet.clone());
+            if self.files_seen.contains(&name) {
+                self.import_cache.insert(name, style_sheet.clone());
             } else {
-                self.files_seen.insert(canonical);
+                self.files_seen.insert(name);
             }
 
             return Ok(style_sheet);
@@ -2079,16 +2073,14 @@ impl<'a> Visitor<'a> {
                     touched: BTreeSet::new(),
                 })
             }
-            v => {
-                return Err((
-                    format!(
-                        "Variable keyword arguments must be a map (was {}).",
-                        v.inspect(arguments.span)?
-                    ),
-                    arguments.span,
-                )
-                    .into());
-            }
+            v => Err((
+                format!(
+                    "Variable keyword arguments must be a map (was {}).",
+                    v.inspect(arguments.span)?
+                ),
+                arguments.span,
+            )
+                .into()),
         }
     }
 

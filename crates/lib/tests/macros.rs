@@ -112,6 +112,19 @@ macro_rules! assert_err {
             ),
         }
     };
+    ($input:expr, $err:expr, $options:expr) => {
+        match grass::from_string($input.to_string(), &$options) {
+            Ok(..) => panic!("did not fail"),
+            Err(e) => assert_eq!(
+                $err,
+                e.to_string()
+                    .chars()
+                    .take_while(|c| *c != '\n')
+                    .collect::<String>()
+                    .as_str()
+            ),
+        }
+    };
 }
 
 /// Suitable for simple import tests. Does not properly implement path resolution --

@@ -81,6 +81,16 @@ test!(
     "a {\n  color: or(foo);\n}\n",
     "a {\n  color: or(foo);\n}\n"
 );
+test!(
+    rest_arg,
+    "a {
+        color: foo(red...);
+        color: foo(a, red...);
+        color: f#{o}o(red...);
+        color: f#{o}o(a, red...);
+    }",
+    "a {\n  color: foo(red);\n  color: foo(a, red);\n  color: foo(red);\n  color: foo(a, red);\n}\n"
+);
 error!(
     denies_keyword_arguments_to_interpolated_function,
     "a {\n  color: f#{o}o($a: red);\n}\n",
