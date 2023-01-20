@@ -119,6 +119,7 @@ pub(crate) struct TokenLexer<'a> {
     cursor: u32,
 }
 
+// todo: maybe char indices?
 impl<'a> TokenLexer<'a> {
     pub fn new(buf: Peekable<Chars<'a>>) -> TokenLexer<'a> {
         Self { buf, cursor: 0 }

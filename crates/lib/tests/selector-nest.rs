@@ -131,6 +131,16 @@ test!(
     "a {\n  color: selector-nest(\"c\", (d, e f));\n}\n",
     "a {\n  color: c d, c e f;\n}\n"
 );
+test!(
+    double_nested_parent_selector_inside_psuedo_class,
+    "a {\n  color: selector-nest(\"a\", \":matches(&:not(&))\");\n}\n",
+    "a {\n  color: :matches(a:not(a));\n}\n"
+);
+test!(
+    double_nested_parent_selector_inside_psuedo_class_as_part_of_complex,
+    "a {\n  color: selector-nest(\"a\", \":not(&):matches(:not(a))\");\n}\n",
+    "a {\n  color: :not(a):matches(:not(a));\n}\n"
+);
 error!(
     #[ignore = "https://github.com/sass/dart-sass/issues/966"]
     disallows_parent_selector_as_first_arg,
@@ -168,4 +178,9 @@ error!(
     empty_args,
     "a {\n  color: selector-nest();\n}\n",
     "Error: $selectors: At least one selector must be passed."
+);
+error!(
+    parent_ends_with_combinator_and_child_has_parent_selector_as_pseudo_element,
+    "a {\n  color: selector-nest(\"a >\", \":matches(&c)\");\n}\n",
+    "Error: Parent \"a >\" is incompatible with this selector."
 );

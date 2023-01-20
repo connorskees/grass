@@ -101,6 +101,11 @@ test!(
     "a {\n  color: selector-parse(\"b c, d e, f g\");\n}\n",
     "a {\n  color: b c, d e, f g;\n}\n"
 );
+test!(
+    not_pseudo_invisible,
+    "a {\n  color: selector-parse(\":not(%a)\");\n}\n",
+    "a {\n  color: *;\n}\n"
+);
 error!(
     invalid_selector,
     "a {\n  color: selector-parse(\"!!!!!!!!\");\n}\n", "Error: $selector: expected selector."

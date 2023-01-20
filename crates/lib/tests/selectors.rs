@@ -971,8 +971,16 @@ error!(
     ":nth-child(even#) {\n  color: &;\n}\n", "Error: expected \")\"."
 );
 error!(
-    a_n_plus_b_n_nothing_after_plus,
+    a_n_plus_b_n_double_nothing_after_plus,
     ":nth-child:nth-child(n+{}", "Error: Expected a number."
+);
+error!(
+    a_n_plus_b_n_nothing_after_plus,
+    ":nth-child(n+{}", "Error: Expected a number."
+);
+error!(
+    a_n_plus_b_n_non_numeric_after_plus,
+    ":nth-child(n+b) {}", "Error: Expected a number."
 );
 error!(nothing_after_period, ". {}", "Error: Expected identifier.");
 error!(nothing_after_hash, "# {}", "Error: Expected identifier.");

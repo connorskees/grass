@@ -469,6 +469,11 @@ test!(
     "a {\n  color: is-superselector(\"::-pfx-slotted(c d, e f)\", \"::-pfx-slotted(c d, e f)\");\n}\n",
     "a {\n  color: true;\n}\n"
 );
+test!(
+    other_complex_ends_in_combinator,
+    "a {\n  color: is-superselector(\"a > b\", \"a >\");\n}\n",
+    "a {\n  color: false;\n}\n"
+);
 
 // todo: /spec/core_functions/selector/is_superselector/simple/pseudo/selector_arg/
 // :not, :matches, :nth-child, :nth-last-child

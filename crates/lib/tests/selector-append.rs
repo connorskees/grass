@@ -74,3 +74,7 @@ error!(
     "a {\n  color: selector-append();\n}\n",
     "Error: $selectors: At least one selector must be passed."
 );
+error!(
+    append_two_type_selectors_with_namespace,
+    "a {\n  color: selector-append(\"a|a\", \"a|a\");\n}\n", "Error: Can't append a|a to a|a."
+);

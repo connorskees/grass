@@ -478,6 +478,22 @@ test!(
     }",
     "a {\n  color: true;\n}\n"
 );
+test!(
+    list_separator_slash,
+    "@use 'sass:list';
+    a {
+        color: list-separator(list.slash(a, b));
+    }",
+    "a {\n  color: slash;\n}\n"
+);
+test!(
+    list_slash,
+    "@use 'sass:list';
+    a {
+        color: list.slash(a, b, c);
+    }",
+    "a {\n  color: a / b / c;\n}\n"
+);
 error!(
     nth_list_index_0,
     "a {\n  color: nth(a b c, 0);\n}\n", "Error: $n: List index may not be 0."

@@ -678,3 +678,13 @@ test!(
     "a {\n  color: selector-unify(\":is(.c)\", \":is(.d)\");\n}\n",
     "a {\n  color: :is(.c):is(.d);\n}\n"
 );
+test!(
+    universal_and_class,
+    "a {\n  color: selector-unify(\"*\", \".a\");\n}\n",
+    "a {\n  color: .a;\n}\n"
+);
+test!(
+    universal_and_psuedo,
+    "a {\n  color: selector-unify(\"*\", \":a\");\n}\n",
+    "a {\n  color: :a;\n}\n"
+);

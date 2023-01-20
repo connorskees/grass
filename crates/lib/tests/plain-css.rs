@@ -195,6 +195,14 @@ error!(
     "Error: Interpolation isn't allowed in plain CSS.",
     grass::Options::default().input_syntax(InputSyntax::Css)
 );
+error!(
+    disallows_placeholder_selector,
+    "%a {
+        color: red;
+    }",
+    "Error: Placeholder selectors aren't allowed here.",
+    grass::Options::default().input_syntax(InputSyntax::Css)
+);
 test!(
     allows_rgb_function,
     "a {

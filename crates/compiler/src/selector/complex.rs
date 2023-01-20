@@ -5,6 +5,8 @@ use std::{
     sync::atomic::{AtomicU32, Ordering as AtomicOrdering},
 };
 
+use codemap::Span;
+
 use crate::error::SassResult;
 
 use super::{CompoundSelector, Pseudo, SelectorList, SimpleSelector, Specificity};
@@ -323,10 +325,11 @@ impl ComplexSelectorComponent {
 
     pub fn resolve_parent_selectors(
         self,
+        span: Span,
         parent: SelectorList,
     ) -> SassResult<Option<Vec<ComplexSelector>>> {
         match self {
-            Self::Compound(c) => c.resolve_parent_selectors(parent),
+            Self::Compound(c) => c.resolve_parent_selectors(span, parent),
             Self::Combinator(..) => todo!(),
         }
     }

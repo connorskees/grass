@@ -1,5 +1,7 @@
 use std::fmt::{self, Write};
 
+use codemap::Span;
+
 use crate::error::SassResult;
 
 use super::{
@@ -106,6 +108,7 @@ impl CompoundSelector {
     /// Returns `None` if `compound` doesn't contain any `SimpleSelector::Parent`s.
     pub fn resolve_parent_selectors(
         self,
+        span: Span,
         parent: SelectorList,
     ) -> SassResult<Option<Vec<ComplexSelector>>> {
         let contains_selector_pseudo = self.components.iter().any(|simple| {
@@ -163,7 +166,7 @@ impl CompoundSelector {
             )]));
         }
 
-        let span = parent.span;
+        let parent_span = parent.span;
 
         Ok(Some(
             parent
@@ -185,7 +188,7 @@ impl CompoundSelector {
 
                     if let Some(SimpleSelector::Parent(Some(suffix))) = self.components.first() {
                         let mut end = components.pop().unwrap();
-                        end.add_suffix(suffix, span)?;
+                        end.add_suffix(suffix, parent_span)?;
                         components.push(end);
                     }
 

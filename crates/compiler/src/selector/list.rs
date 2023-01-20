@@ -206,7 +206,7 @@ impl SelectorList {
                             if component.is_compound() {
                                 let resolved = match component
                                     .clone()
-                                    .resolve_parent_selectors(parent.clone())?
+                                    .resolve_parent_selectors(self.span, parent.clone())?
                                 {
                                     Some(r) => r,
                                     None => {
