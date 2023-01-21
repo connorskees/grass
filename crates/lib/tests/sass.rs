@@ -103,6 +103,20 @@ a
     "a + b {\n  color: red;\n}\n",
     grass::Options::default().input_syntax(InputSyntax::Sass)
 );
+test!(
+    if_else_if_else,
+    r#"
+a
+    @if false
+        color: red
+    @else if false
+        color: blue
+    @else
+        color: orange
+"#,
+    "a {\n  color: orange;\n}\n",
+    grass::Options::default().input_syntax(InputSyntax::Sass)
+);
 error!(
     multiline_comment_in_value_position,
     r#"

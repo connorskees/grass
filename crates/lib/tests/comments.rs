@@ -171,3 +171,5 @@ test!(
     "a { /**/ }\n"
 );
 test!(silent_comment_as_child, "a {\n// silent\n}\n", "");
+test!(single_hash_in_loud_comment, "/*#*/", "/*#*/\n");
+error!(unclosed_loud_comment, "/*", "Error: expected more input.");

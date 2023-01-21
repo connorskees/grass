@@ -528,3 +528,110 @@ error!(
     empty_list_is_invalid,
     "a {\n  color: ();\n}\n", "Error: () isn't a valid CSS value."
 );
+test!(
+    is_bracketed_empty_bracket_list,
+    "a {\n  color: is-bracketed([]);\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    is_bracketed_bracket_list_containing_space_list,
+    "a {\n  color: is-bracketed([a b]);\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    is_bracketed_bracket_list_containing_comma_list,
+    "a {\n  color: is-bracketed([a, b]);\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    is_bracketed_space_list,
+    "a {\n  color: is-bracketed(a b);\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    is_bracketed_number,
+    "a {\n  color: is-bracketed(1);\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+error!(
+    is_bracketed_two_args,
+    "a {\n  color: is-bracketed(a, b);\n}\n", "Error: Only 1 argument allowed, but 2 were passed."
+);
+error!(
+    nth_non_numeric_index,
+    "a {\n  color: nth(a b, c);\n}\n", "Error: $n: c is not a number."
+);
+error!(
+    set_nth_non_numeric_index,
+    "a {\n  color: set-nth(a b, c, d);\n}\n", "Error: $n: c is not a number."
+);
+error!(
+    set_nth_index_zero,
+    "a {\n  color: set-nth(a b, 0, d);\n}\n", "Error: $n: List index may not be 0."
+);
+error!(
+    set_nth_index_decimal,
+    "a {\n  color: set-nth(a b, 1.5, d);\n}\n", "Error: $n: 1.5 is not an int."
+);
+error!(
+    set_nth_index_negative_outside_range,
+    "a {\n  color: set-nth(a b, -3, d);\n}\n",
+    "Error: $n: Invalid index -3 for a list with 2 elements."
+);
+test!(
+    set_nth_index_negative_inside_range,
+    "a {\n  color: set-nth(a b, -1, d);\n}\n",
+    "a {\n  color: a d;\n}\n"
+);
+error!(
+    set_nth_index_infinity,
+    "a {\n  color: set-nth(a b, 1/0, d);\n}\n", "Error: $n: Infinity is not an int."
+);
+error!(
+    set_nth_index_negative_infinity,
+    "a {\n  color: set-nth(a b, -1/0, d);\n}\n", "Error: $n: -Infinity is not an int."
+);
+error!(
+    set_nth_decimal_outside_range,
+    "a {\n  color: set-nth(a b, 8.5, d);\n}\n", "Error: $n: 8.5 is not an int."
+);
+test!(
+    append_with_slash_separator,
+    "a {\n  color: append(a b, c, slash);\n}\n",
+    "a {\n  color: a / b / c;\n}\n"
+);
+error!(
+    append_invalid_separator,
+    "a {\n  color: append(a b, c, foo);\n}\n",
+    "Error: $separator: Must be \"space\", \"comma\", \"slash\", or \"auto\"."
+);
+test!(
+    join_with_slash_separator,
+    "a {\n  color: join(a, b, slash);\n}\n",
+    "a {\n  color: a / b;\n}\n"
+);
+error!(
+    join_invalid_separator,
+    "a {\n  color: join(a b, c, foo);\n}\n",
+    "Error: $separator: Must be \"space\", \"comma\", \"slash\", or \"auto\"."
+);
+error!(
+    join_invalid_separator_non_string,
+    "a {\n  color: join(a b, c, 1);\n}\n", "Error: $separator: 1 is not a string."
+);
+test!(
+    join_bracketed_true,
+    "a {\n  color: join(a, b, space, true);\n}\n",
+    "a {\n  color: [a b];\n}\n"
+);
+test!(
+    join_bracketed_truthy,
+    "a {\n  color: join(a, b, space, a);\n}\n",
+    "a {\n  color: [a b];\n}\n"
+);
+test!(
+    join_bracketed_falsey,
+    "a {\n  color: join(a, b, space, null);\n}\n",
+    "a {\n  color: a b;\n}\n"
+);
+test!(zip_no_args, "a {\n  color: zip();\n}\n", "");

@@ -581,6 +581,15 @@ test!(
     r#"@import "a" b c d(e) supports(f: g) h i j(k) l m (n: o), (p: q);"#,
     "@import \"a\" b c d(e) supports(f: g) h i j(k) l m (n: o), (p: q);\n"
 );
+test!(
+    import_supports_condition_with_paren,
+    r#"@import "a" supports(a(  /**/  ));"#,
+    "@import \"a\" supports(a( /**/ ));\n"
+);
+error!(
+    import_supports_condition_non_ident,
+    r#"@import "a" supports(1a)"#, "Error: expected \":\"."
+);
 error!(unclosed_single_quote, r#"@import '"#, "Error: Expected '.");
 error!(unclosed_double_quote, r#"@import ""#, "Error: Expected \".");
 error!(

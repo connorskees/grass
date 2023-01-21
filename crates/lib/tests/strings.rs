@@ -299,3 +299,12 @@ test!(
     }",
     ""
 );
+test!(
+    string_module_exists,
+    "@use 'sass:string';
+    a {
+        color: string.to-lower-case('AAA');
+    }
+    ",
+    "a {\n  color: \"aaa\";\n}\n"
+);

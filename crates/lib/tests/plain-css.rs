@@ -221,3 +221,31 @@ test!(
     "@supports (foo) {\n  a {\n    color: red;\n  }\n}\n",
     grass::Options::default().input_syntax(InputSyntax::Css)
 );
+test!(
+    custom_property,
+    "a {
+        --foo: /* */;
+    }",
+    "a {\n  --foo: /* */;\n}\n",
+    grass::Options::default().input_syntax(InputSyntax::Css)
+);
+error!(
+    single_nested_property,
+    "a {
+        b: {
+            c: d;
+        }
+    }",
+    "Error: Nested declarations aren't allowed in plain CSS.",
+    grass::Options::default().input_syntax(InputSyntax::Css)
+);
+error!(
+    single_nested_property_with_expression,
+    "a {
+        b: 2 {
+            c: d;
+        }
+    }",
+    "Error: Nested declarations aren't allowed in plain CSS.",
+    grass::Options::default().input_syntax(InputSyntax::Css)
+);

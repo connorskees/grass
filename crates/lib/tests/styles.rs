@@ -202,7 +202,6 @@ test!(
     "a {\n  color  /**/  : red;\n}\n",
     "a {\n  color: red;\n}\n"
 );
-// todo: many other strange edge cases like `.style: val` (dealing with ambiguity is hard for very little gain)
 test!(
     style_begins_with_asterisk_without_whitespace,
     "a {\n  *zoom: 1;\n}\n",
@@ -230,6 +229,20 @@ test!(
         white-space: nowrap;
     }",
     "a {\n  position: relative;\n}\nc {\n  white-space: nowrap;\n}\n"
+);
+test!(
+    symbol_before_property_name_hacks,
+    "a {
+        .color: foo;
+        #color: foo;
+        :color: foo;
+        *color: foo;
+        .--color: foo;
+        #--color: foo;
+        :--color: foo;
+        *--color: foo;
+    }",
+    "a {\n  .color: foo;\n  #color: foo;\n  :color: foo;\n  *color: foo;\n  .--color: foo;\n  #--color: foo;\n  :--color: foo;\n  *--color: foo;\n}\n"
 );
 error!(
     media_inside_nested_declaration,

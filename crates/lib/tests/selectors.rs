@@ -1008,6 +1008,35 @@ error!(
     child_selector_starts_with_forward_slash,
     "a { /b { } }", "Error: expected selector."
 );
+test!(
+    selector_module_exists,
+    "@use 'sass:selector';
+    a {
+        color: selector.parse('a');
+    }
+    ",
+    "a {\n  color: a;\n}\n"
+);
+test!(
+    selector_contains_url_without_parens,
+    "a url {\n  color: red;\n}\n",
+    "a url {\n  color: red;\n}\n"
+);
+test!(
+    selector_contains_capital_u,
+    "a U {\n  color: red;\n}\n",
+    "a U {\n  color: red;\n}\n"
+);
+test!(
+    selector_contains_url_with_quoted_string_inside_parens,
+    "a :url(\"foo.css\") {\n  color: red;\n}\n",
+    "a :url(\"foo.css\") {\n  color: red;\n}\n"
+);
+test!(
+    selector_contains_url_with_hash_inside_parens,
+    "a :url(#) {\n  color: red;\n}\n",
+    "a :url(#) {\n  color: red;\n}\n"
+);
 
 // todo:
 // [attr=url] {

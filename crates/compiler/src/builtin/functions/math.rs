@@ -99,8 +99,9 @@ pub(crate) fn random(mut args: ArgumentResult, visitor: &mut Visitor) -> SassRes
         )));
     }
 
-    let limit = limit.assert_number_with_name("limit", args.span())?.num;
+    let limit = limit.assert_number_with_name("limit", args.span())?;
     let limit_int = limit.assert_int_with_name("limit", args.span())?;
+    let limit = limit.num;
 
     if limit.is_one() {
         return Ok(Value::Dimension(SassNumber::new_unitless(1.0)));

@@ -309,10 +309,6 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
     }
 
     fn parse_at_root_query(&mut self) -> SassResult<Interpolation> {
-        if self.toks_mut().next_char_is('#') {
-            return self.parse_single_interpolation();
-        }
-
         let mut buffer = Interpolation::new();
         self.expect_char('(')?;
         buffer.add_char('(');

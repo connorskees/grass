@@ -87,6 +87,21 @@ test!(
     "a {\n  color: [(1, 2), (3, 4)];\n}\n"
 );
 test!(
+    inspect_map_with_bracketed_key_and_value,
+    "a {\n  color: inspect(([a, b]: [c, d]));\n}\n",
+    "a {\n  color: ([a, b]: [c, d]);\n}\n"
+);
+test!(
+    inspect_map_with_comma_separated_key_and_value,
+    "a {\n  color: inspect(((a, b): (c, d)));\n}\n",
+    "a {\n  color: ((a, b): (c, d));\n}\n"
+);
+test!(
+    inspect_slash_list_singleton,
+    "a {\n  color: inspect(join((a,), (), slash));\n}\n",
+    "a {\n  color: (a/);\n}\n"
+);
+test!(
     inspect_empty_list,
     "a {\n  color: inspect(())\n}\n",
     "a {\n  color: ();\n}\n"

@@ -152,7 +152,7 @@ pub(crate) fn str_insert(mut args: ArgumentResult, visitor: &mut Visitor) -> Sas
         .get_err(2, "index")?
         .assert_number_with_name("index", span)?;
     index.assert_no_units("index", span)?;
-    let index_int = index.num.assert_int_with_name("index", span)?;
+    let index_int = index.assert_int_with_name("index", span)?;
 
     if s1.is_empty() {
         return Ok(Value::String(substr, quotes));

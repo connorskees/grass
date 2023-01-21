@@ -11,32 +11,20 @@ pub(crate) fn length(mut args: ArgumentResult, visitor: &mut Visitor) -> SassRes
 pub(crate) fn nth(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(2)?;
     let mut list = args.get_err(0, "list")?.as_list();
-    let (n, unit) = match args.get_err(1, "n")? {
-        Value::Dimension(SassNumber {
-            num: n, unit: u, ..
-        }) if n.is_nan() => {
-            return Err((format!("$n: NaN{} is not an int.", u), args.span()).into())
-        }
-        Value::Dimension(SassNumber { num, unit, .. }) => (num, unit),
-        v => {
-            return Err((
-                format!("$n: {} is not a number.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
+    let index = args
+        .get_err(1, "n")?
+        .assert_number_with_name("n", args.span())?;
 
-    if n.is_zero() {
+    if index.num.is_zero() {
         return Err(("$n: List index may not be 0.", args.span()).into());
     }
 
-    if n.abs() > Number::from(list.len()) {
+    if index.num.abs() > Number::from(list.len()) {
         return Err((
             format!(
                 "$n: Invalid index {}{} for a list with {} elements.",
-                n.inspect(),
-                unit,
+                index.num.inspect(),
+                index.unit,
                 list.len()
             ),
             args.span(),
@@ -44,12 +32,13 @@ pub(crate) fn nth(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult
             .into());
     }
 
-    Ok(list.remove(if n.is_positive() {
-        let index = n.assert_int_with_name("n", args.span())? - 1;
-        debug_assert!(index > -1);
-        index as usize
+    let index_int = index.assert_int_with_name("n", args.span())?;
+
+    Ok(list.remove(if index.num.is_positive() {
+        debug_assert!(index_int > 0);
+        index_int as usize - 1
     } else {
-        list.len() - n.abs().assert_int_with_name("n", args.span())? as usize
+        list.len() - index_int.unsigned_abs() as usize
     }))
 }
 
@@ -73,34 +62,24 @@ pub(crate) fn set_nth(mut args: ArgumentResult, visitor: &mut Visitor) -> SassRe
         Value::Map(m) => (m.as_list(), ListSeparator::Comma, Brackets::None),
         v => (vec![v], ListSeparator::Undecided, Brackets::None),
     };
-    let (n, unit) = match args.get_err(1, "n")? {
-        Value::Dimension(SassNumber {
-            num: n, unit: u, ..
-        }) if n.is_nan() => {
-            return Err((format!("$n: NaN{} is not an int.", u), args.span()).into())
-        }
-        Value::Dimension(SassNumber { num, unit, .. }) => (num, unit),
-        v => {
-            return Err((
-                format!("$n: {} is not a number.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
+    let index = args
+        .get_err(1, "n")?
+        .assert_number_with_name("n", args.span())?;
 
-    if n.is_zero() {
+    if index.num.is_zero() {
         return Err(("$n: List index may not be 0.", args.span()).into());
     }
 
+    let index_int = index.assert_int_with_name("n", args.span())?;
+
     let len = list.len();
 
-    if n.abs() > Number::from(len) {
+    if index.num.abs() > Number::from(len) {
         return Err((
             format!(
                 "$n: Invalid index {}{} for a list with {} elements.",
-                n.inspect(),
-                unit,
+                index.num.inspect(),
+                index.unit,
                 len
             ),
             args.span(),
@@ -108,16 +87,12 @@ pub(crate) fn set_nth(mut args: ArgumentResult, visitor: &mut Visitor) -> SassRe
             .into());
     }
 
-    if n.is_decimal() {
-        return Err((format!("$n: {} is not an int.", n.inspect()), args.span()).into());
-    }
-
     let val = args.get_err(2, "value")?;
 
-    if n.is_positive() {
-        list[n.assert_int_with_name("n", args.span())? as usize - 1] = val;
+    if index_int.is_positive() {
+        list[index_int as usize - 1] = val;
     } else {
-        list[len - n.abs().assert_int_with_name("n", args.span())? as usize] = val;
+        list[len - index_int.unsigned_abs() as usize] = val;
     }
 
     Ok(Value::List(list, sep, brackets))

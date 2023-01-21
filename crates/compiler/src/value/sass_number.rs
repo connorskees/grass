@@ -12,7 +12,7 @@ use crate::{
     Options,
 };
 
-use super::Number;
+use super::{fuzzy_as_int, Number};
 
 #[derive(Debug, Clone)]
 pub(crate) struct SassNumber {
@@ -174,6 +174,21 @@ impl SassNumber {
 
     pub fn assert_bounds(&self, name: &str, min: f64, max: f64, span: Span) -> SassResult<()> {
         self.assert_bounds_with_unit(name, min, max, &self.unit, span)
+    }
+
+    pub fn assert_int_with_name(&self, name: &'static str, span: Span) -> SassResult<i64> {
+        match fuzzy_as_int(self.num.0) {
+            Some(i) => Ok(i),
+            None => Err((
+                format!(
+                    "${name}: {} is not an int.",
+                    inspect_number(self, &Options::default(), span)?,
+                    name = name,
+                ),
+                span,
+            )
+                .into()),
+        }
     }
 
     pub fn assert_bounds_with_unit(

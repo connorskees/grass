@@ -128,3 +128,21 @@ test!(
     "a{color:0;color:0}",
     grass::Options::default().style(grass::OutputStyle::Compressed)
 );
+test!(
+    color_can_be_three_hex,
+    "a {\n  color: white;\n}\n",
+    "a{color:#fff}",
+    grass::Options::default().style(grass::OutputStyle::Compressed)
+);
+test!(
+    color_cant_be_three_hex_but_hex_is_shorter,
+    "a {\n  color: aquamarine;\n}\n",
+    "a{color:#7fffd4}",
+    grass::Options::default().style(grass::OutputStyle::Compressed)
+);
+test!(
+    slash_list,
+    "@use 'sass:list'; a {\n  color: list.slash(a, b, c);\n}\n",
+    "a{color:a/b/c}",
+    grass::Options::default().style(grass::OutputStyle::Compressed)
+);

@@ -116,21 +116,6 @@ impl Number {
         }
     }
 
-    pub fn assert_int_with_name(self, name: &'static str, span: Span) -> SassResult<i64> {
-        match fuzzy_as_int(self.0) {
-            Some(i) => Ok(i),
-            None => Err((
-                format!(
-                    "${name}: {} is not an int.",
-                    self.to_string(false),
-                    name = name,
-                ),
-                span,
-            )
-                .into()),
-        }
-    }
-
     pub fn round(self) -> Self {
         Self(self.0.round())
     }
@@ -145,10 +130,6 @@ impl Number {
 
     pub fn abs(self) -> Self {
         Self(self.0.abs())
-    }
-
-    pub fn is_decimal(self) -> bool {
-        self.0.fract() != 0.0
     }
 
     pub fn clamp(self, min: f64, max: f64) -> Self {
