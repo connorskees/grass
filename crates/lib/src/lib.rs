@@ -1,7 +1,7 @@
 /*!
 This crate provides functionality for compiling [Sass](https://sass-lang.com/) to CSS.
 
-This crate targets compatability with the reference implementation in Dart. If
+This crate targets compatibility with the reference implementation in Dart. If
 upgrading from the [now deprecated](https://sass-lang.com/blog/libsass-is-deprecated)
 `libsass`, one may have to modify their stylesheets. These changes will not differ
 from those necessary to upgrade to `dart-sass`, and in general such changes should

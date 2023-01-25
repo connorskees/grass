@@ -1,6 +1,5 @@
 *.s[ac]ss
 *.css
-*.exe
 !input.scss
 !crates/static/_index.scss
 
@@ -11,6 +10,8 @@ coverage
 pkg
 flamegraph.svg
 perf*
+dhat*
+*.tar.gz
 
 # editor specific
 .idea
@@ -20,6 +21,7 @@ perf*
 *.py
 *.sh
 *.cmd
+*.exe
 
 # common Sass frameworks that may wish to live alongside grass for testing
 susy
@@ -33,3 +35,5 @@ sassline
 true
 dart-sass
 sass-fairy
+duomo
+ibm-cloud-cognitive

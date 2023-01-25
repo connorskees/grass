@@ -559,7 +559,7 @@ test!(
             font-weight: 200;
         }
     }",
-    "@media (url) {\n  a {\n    color: red;\n  }\n}\n"
+    "@media (min-width: 1px) {\n  .first {\n    font-weight: 100;\n  }\n  .second {\n    font-weight: 200;\n  }\n}\n"
 );
 test!(
     escaped_nullbyte_in_query,

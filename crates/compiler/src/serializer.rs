@@ -597,6 +597,12 @@ impl<'a> Serializer<'a> {
 
             if formatted.ends_with(".0") {
                 buffer.push_str(formatted.trim_end_matches('0').trim_end_matches('.'));
+            } else if n.is_infinite() {
+                buffer.push_str(
+                    format!("{:.10}", num)
+                        .trim_end_matches('0')
+                        .trim_end_matches('.'),
+                );
             } else {
                 buffer.push_str(&formatted);
             }

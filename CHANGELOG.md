@@ -3,6 +3,8 @@
 - error when `@extend` is used across `@media` boundaries
 - more robust support for NaN in builtin functions
 
+- support unquoted imports in the indented/SASS syntax
+
 -->
 
 # 0.12.2 (unreleased)
@@ -11,10 +13,12 @@
 - slash lists can be compared using `==`
 - resolve rounding errors for extremely large numbers
 - potentially breaking bug fixes in certain color functions
- - `color.hwb(..)` no longer allows whiteness or blackness values outside the bounds 0% to 100%
- - `scale-color(..)` no longer allows the `$hue` argument. previously it was ignored
- - `scale-color(..)`, `change-color(..)`, and `adjust-color(..)` no longer allow invalid combinations of arguments or unknown named arguments
- - many functions that accept hues now convert other angle units (`rad`, `grad`, `turn`) to `deg`. previously the unit was ignored
+  - `color.hwb(..)` no longer allows whiteness or blackness values outside the bounds 0% to 100%
+  - `scale-color(..)` no longer allows the `$hue` argument. previously it was ignored
+  - `scale-color(..)`, `change-color(..)`, and `adjust-color(..)` no longer allow invalid combinations of arguments or unknown named arguments
+  - many functions that accept hues now convert other angle units (`rad`, `grad`, `turn`) to `deg`. previously the unit was ignored
+- improve compressed output of selectors containing newlines and `rgba(..)` colors
+- improve resolution of imports containing explicit file extensions, e.g. `@import "foo.scss"`
 
 # 0.12.1
 
