@@ -5,7 +5,7 @@ use codemap::{CodeMap, Span};
 use crate::{
     ast::{CssStmt, MediaQuery, Style, SupportsRule},
     color::{Color, ColorFormat, NAMED_COLORS},
-    common::{Brackets, ListSeparator, QuoteKind},
+    common::{BinaryOp, Brackets, ListSeparator, QuoteKind},
     error::SassResult,
     selector::{
         Combinator, ComplexSelector, ComplexSelectorComponent, CompoundSelector, Namespace, Pseudo,
@@ -358,7 +358,8 @@ impl<'a> Serializer<'a> {
                     self.buffer.push(b')');
                 }
 
-                let operator_whitespace = !self.options.is_compressed() || op.precedence() == 1;
+                let operator_whitespace =
+                    !self.options.is_compressed() || matches!(op, BinaryOp::Plus | BinaryOp::Minus);
 
                 if operator_whitespace {
                     self.buffer.push(b' ');
