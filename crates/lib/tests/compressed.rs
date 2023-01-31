@@ -146,3 +146,9 @@ test!(
     "a{color:a/b/c}",
     grass::Options::default().style(grass::OutputStyle::Compressed)
 );
+test!(
+    calc,
+    "a {\n  width: calc(100% + 32px);\n}\n",
+    "a{width:calc(100% + 32px)}",
+    grass::Options::default().style(grass::OutputStyle::Compressed)
+);
