@@ -590,23 +590,11 @@ impl<'a> Serializer<'a> {
                     .trim_end_matches('.'),
             );
         } else {
-            let p = 10.0_f64.powi(10);
-
-            let n = (num * p).round() / p;
-
-            let formatted = n.to_string();
-
-            if formatted.ends_with(".0") {
-                buffer.push_str(formatted.trim_end_matches('0').trim_end_matches('.'));
-            } else if n.is_infinite() {
-                buffer.push_str(
-                    format!("{:.10}", num)
-                        .trim_end_matches('0')
-                        .trim_end_matches('.'),
-                );
-            } else {
-                buffer.push_str(&formatted);
-            }
+            buffer.push_str(
+                format!("{:.10}", num)
+                    .trim_end_matches('0')
+                    .trim_end_matches('.'),
+            );
         }
 
         if buffer.is_empty() || buffer == "-" || buffer == "-0" {
