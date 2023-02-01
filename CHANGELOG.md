@@ -7,7 +7,7 @@
 
 -->
 
-# 0.12.2 (unreleased)
+# 0.12.2
 
 - implement an import cache, significantly improving the performance of certain pathological cases
 - slash lists can be compared using `==`
@@ -19,6 +19,7 @@
   - many functions that accept hues now convert other angle units (`rad`, `grad`, `turn`) to `deg`. previously the unit was ignored
 - improve compressed output of selectors containing newlines and `rgba(..)` colors
 - improve resolution of imports containing explicit file extensions, e.g. `@import "foo.scss"`
+- fix bug in which whitespace was not emitted between `+` or `-` inside calc for compressed output ([#71](https://github.com/connorskees/grass/pull/71) by @ModProg)
 
 # 0.12.1
 

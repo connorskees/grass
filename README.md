@@ -84,10 +84,10 @@ The spec runner does not work on Windows.
 Using a modified version of the spec runner that ignores warnings and error spans (but does include error messages), `grass` achieves the following results:
 
 ```
-2022-01-17
-PASSING: 6271
-FAILING: 621
-TOTAL: 6905
+2022-01-31
+PASSING: 6248
+FAILING: 624
+TOTAL: 6892
 ```
 
 The majority of the failing tests are purely aesthetic, relating to whitespace
