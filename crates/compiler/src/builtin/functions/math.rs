@@ -65,7 +65,6 @@ pub(crate) fn abs(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult
         .get_err(0, "number")?
         .assert_number_with_name("number", args.span())?;
 
-    // todo: test for nan+infinity
     num.num = num.num.abs();
 
     Ok(Value::Dimension(num))
@@ -86,7 +85,6 @@ pub(crate) fn comparable(mut args: ArgumentResult, visitor: &mut Visitor) -> Sas
     Ok(Value::bool(unit1.comparable(&unit2)))
 }
 
-// TODO: write tests for this
 #[cfg(feature = "random")]
 pub(crate) fn random(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;

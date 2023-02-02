@@ -237,7 +237,6 @@ impl SassNumber {
             || known_compatibilities_by_unit(&other.unit).is_none()
     }
 
-    // todo: remove
     pub fn unit(&self) -> &Unit {
         &self.unit
     }

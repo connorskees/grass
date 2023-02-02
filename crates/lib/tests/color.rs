@@ -762,3 +762,13 @@ error!(
     adjust_color_no_args,
     "a {\n  color: adjust-color();\n}\n", "Error: Missing argument $color."
 );
+error!(
+    mix_weight_nan,
+    "a {\n  color: mix(red, blue, (0/0));\n}\n",
+    "Error: $weight: Expected NaN to be within 0 and 100."
+);
+error!(
+    mix_weight_infinity,
+    "a {\n  color: mix(red, blue, (1/0));\n}\n",
+    "Error: $weight: Expected Infinity to be within 0 and 100."
+);

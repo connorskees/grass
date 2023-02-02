@@ -36,6 +36,7 @@ error!(
     "a {\n  color: floor((0/0));\n}\n", "Error: Infinity or NaN toInt"
 );
 error!(
+    #[cfg(feature = "random")]
     unitless_nan_random_limit,
     "a {\n  color: random((0/0));\n}\n", "Error: $limit: NaN is not an int."
 );
@@ -115,6 +116,7 @@ test!(
     "a {\n  color: NaNdeg;\n}\n"
 );
 error!(
+    #[cfg(feature = "random")]
     unitful_nan_random,
     "@use \"sass:math\";\na {\n  color: random(math.acos(2));\n}\n",
     "Error: $limit: NaNdeg is not an int."

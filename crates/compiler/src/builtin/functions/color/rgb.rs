@@ -390,7 +390,6 @@ pub(crate) fn mix(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult
         "weight",
         Value::Dimension(SassNumber::new_unitless(50.0)),
     ) {
-        Value::Dimension(SassNumber { num: n, .. }) if n.is_nan() => todo!(),
         Value::Dimension(mut num) => {
             num.assert_bounds("weight", 0.0, 100.0, args.span())?;
             num.num /= Number(100.0);

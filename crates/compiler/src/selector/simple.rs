@@ -259,7 +259,7 @@ impl SimpleSelector {
             namespace1 = namespace;
             name1 = String::new();
         } else {
-            todo!("ArgumentError.value(selector1, 'selector1', 'must be a UniversalSelector or a TypeSelector')")
+            unreachable!("{:?} must be a universal selector or a type selector", self);
         }
 
         let namespace2;
@@ -271,7 +271,10 @@ impl SimpleSelector {
             namespace2 = name.namespace.clone();
             name2 = name.ident.clone();
         } else {
-            todo!("ArgumentError.value(selector2, 'selector2', 'must be a UniversalSelector or a TypeSelector');")
+            unreachable!(
+                "{:?} must be a universal selector or a type selector",
+                other
+            );
         }
 
         let namespace = if namespace1 == namespace2 || namespace2 == Namespace::Asterisk {

@@ -436,7 +436,7 @@ impl Value {
         allows_parent: bool,
         span: Span,
     ) -> SassResult<Selector> {
-        let string = match self.clone().selector_string(span)? {
+        let string = match self.clone().selector_string()? {
             Some(v) => v,
             None => return Err((format!("${}: {} is not a valid selector: it must be a string,\n a list of strings, or a list of lists of strings.", name, self.inspect(span)?), span).into()),
         };
@@ -448,8 +448,7 @@ impl Value {
         )?))
     }
 
-    #[allow(clippy::only_used_in_recursion)]
-    fn selector_string(self, span: Span) -> SassResult<Option<String>> {
+    fn selector_string(self) -> SassResult<Option<String>> {
         Ok(Some(match self {
             Value::String(text, ..) => text,
             Value::List(list, sep, ..) if !list.is_empty() => {
@@ -465,7 +464,7 @@ impl Value {
                                 ..,
                             ) = complex
                             {
-                                result.push(match complex.selector_string(span)? {
+                                result.push(match complex.selector_string()? {
                                     Some(v) => v,
                                     None => return Ok(None),
                                 });

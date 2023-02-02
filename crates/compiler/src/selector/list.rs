@@ -56,7 +56,6 @@ impl fmt::Display for SelectorList {
                 if complex.line_break {
                     f.write_char('\n')?;
                 } else {
-                    // todo: not emitted in compressed
                     f.write_char(' ')?;
                 }
             }

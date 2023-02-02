@@ -23,7 +23,6 @@ pub enum BinaryOp {
     Minus,
     Mul,
     Div,
-    // todo: maybe rename mod, since it is mod
     Rem,
     And,
     Or,

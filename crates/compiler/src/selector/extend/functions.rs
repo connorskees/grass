@@ -268,7 +268,6 @@ fn merge_initial_combinators(
 /// If `select` is passed, it's used to check equality between elements in each
 /// list. If it returns `None`, the elements are considered unequal; otherwise,
 /// it should return the element to include in the return value.
-#[allow(clippy::cast_sign_loss, clippy::cast_possible_wrap)]
 fn longest_common_subsequence<T: PartialEq + Clone>(
     list_one: &[T],
     list_two: &[T],

@@ -247,15 +247,11 @@ test!(
     "a {\n  color: ((1, 2): 3);\n}\n"
 );
 test!(
-    // todo: this just tests that it compiles, but does not test
-    // if it parses correctly
     map_with_map_as_value,
     "$foo: (\"21by9\": (x: 21, y: 9));",
     ""
 );
 test!(
-    // todo: this just tests that it compiles, but does not test
-    // if it parses correctly
     paren_with_paren_element_and_trailing_comma,
     "$foo: ((\"<\", \"%3c\"), );",
     ""

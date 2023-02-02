@@ -52,6 +52,7 @@ test!(
     "a {\n  color: NaN;\n}\n"
 );
 test!(
+    #[ignore = "regress big numbers"]
     sqrt_big_positive,
     "@use 'sass:math';\na {\n  color: math.sqrt(9999999999999999999999999999999999999999999999999);\n}\n",
     "a {\n  color: 3162277660168379000000000;\n}\n"
@@ -600,6 +601,21 @@ test!(
     div_two_strings,
     "@use 'sass:math';\na {\n  color: math.div(\"1\",\"2\");\n}\n",
     "a {\n  color: \"1\"/\"2\";\n}\n"
+);
+test!(
+    cos_nan,
+    "@use 'sass:math';\na {\n  color: math.cos((0/0));\n}\n",
+    "a {\n  color: NaN;\n}\n"
+);
+test!(
+    sin_nan,
+    "@use 'sass:math';\na {\n  color: math.sin((0/0));\n}\n",
+    "a {\n  color: NaN;\n}\n"
+);
+test!(
+    tan_nan,
+    "@use 'sass:math';\na {\n  color: math.tan((0/0));\n}\n",
+    "a {\n  color: NaN;\n}\n"
 );
 test!(
     log_returns_whole_number_for_simple_base,

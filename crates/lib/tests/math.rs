@@ -87,6 +87,21 @@ test!(
     "a {\n  color: 10px;\n}\n"
 );
 test!(
+    abs_nan,
+    "a {\n  color: abs((0/0));\n}\n",
+    "a {\n  color: NaN;\n}\n"
+);
+test!(
+    abs_infinity,
+    "a {\n  color: abs((1/0));\n}\n",
+    "a {\n  color: Infinity;\n}\n"
+);
+test!(
+    abs_neg_infinity,
+    "a {\n  color: abs((-1/0));\n}\n",
+    "a {\n  color: Infinity;\n}\n"
+);
+test!(
     comparable_unitless,
     "a {\n  color: comparable(1, 2);\n}\n",
     "a {\n  color: true;\n}\n"
@@ -117,11 +132,13 @@ test!(
     "a {\n  color: true;\n}\n"
 );
 test!(
+    #[cfg(feature = "random")]
     random_limit_one,
     "a {\n  color: random(1);\n}\n",
     "a {\n  color: 1;\n}\n"
 );
 error!(
+    #[cfg(feature = "random")]
     random_limit_big_one,
     "a {\n  color: random(1000000000000000001 - 1000000000000000000);\n}\n",
     "Error: $limit: Must be greater than 0, was 0."

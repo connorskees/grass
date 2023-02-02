@@ -263,7 +263,6 @@ macro_rules! trig_fn {
             let number = args.get_err(0, "number")?;
 
             Ok(match number {
-                Value::Dimension(SassNumber { num: n, .. }) if n.is_nan() => todo!(),
                 Value::Dimension(SassNumber {
                     num,
                     unit: unit @ (Unit::None | Unit::Rad | Unit::Deg | Unit::Grad | Unit::Turn),

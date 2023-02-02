@@ -1037,17 +1037,17 @@ test!(
     "a :url(#) {\n  color: red;\n}\n",
     "a :url(#) {\n  color: red;\n}\n"
 );
-
-// todo:
-// [attr=url] {
-//   color: red;
-// }
-
-// [attr=unit] {
-//   color: red;
-// }
-
-// todo: error test
-// :nth-child(n/**/of a) {
-//   color: &;
-// }
+test!(
+    attr_val_is_url,
+    "[attr=url] {\n  color: &;\n}\n",
+    "[attr=url] {\n  color: [attr=url];\n}\n"
+);
+test!(
+    attr_val_starts_with_u,
+    "[attr=unit] {\n  color: &;\n}\n",
+    "[attr=unit] {\n  color: [attr=unit];\n}\n"
+);
+error!(
+    nth_child_loud_comment_between_n_and_of,
+    ":nth-child(n/**/of a) {\n  color: &;\n}\n", "Error: expected \")\"."
+);

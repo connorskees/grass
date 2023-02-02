@@ -25,7 +25,6 @@ fn inverse_epsilon() -> f64 {
 
 /// Thin wrapper around `f64` providing utility functions and more accurate
 /// operations -- namely a Sass-compatible modulo
-// todo: potentially superfluous?
 #[derive(Clone, Copy, PartialOrd)]
 #[repr(transparent)]
 pub(crate) struct Number(pub f64);

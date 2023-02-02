@@ -32,7 +32,7 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
     // todo: make constant?
     fn is_indented(&mut self) -> bool;
     fn options(&self) -> &Options;
-    fn path(&mut self) -> &'a Path;
+    fn path(&mut self) -> &Path;
     fn map(&mut self) -> &mut CodeMap;
     fn span_before(&self) -> Span;
     fn current_indentation(&self) -> usize;

@@ -1238,7 +1238,7 @@ impl<'a> Visitor<'a> {
 
             let compound = match complex.components.first() {
                 Some(ComplexSelectorComponent::Compound(c)) => c,
-                Some(..) | None => todo!(),
+                Some(..) | None => unreachable!("checked by above condition"),
             };
             if compound.components.len() != 1 {
                 return Err((
