@@ -7,6 +7,12 @@
 
 -->
 
+# 0.12.3
+
+No visible changes for users of the `grass` crate
+
+Exposes more internals of the `grass_compiler` crate, allowing for custom functions implemented in rust to be accessed from Sass.
+
 # 0.12.2
 
 - implement an import cache, significantly improving the performance of certain pathological cases
@@ -56,12 +62,13 @@
 - implement `@import` conditions
 - remove dependency on `num-rational` and `beef`
 - support control flow inside declaration blocks
-For example:
+  For example:
+
 ```scss
 a {
   -webkit-: {
     @if 1 == 1 {
-      scrollbar: red
+      scrollbar: red;
     }
   }
 }
@@ -74,6 +81,7 @@ a {
   -webkit-scrollbar: red;
 }
 ```
+
 - always emit `rgb`/`rgba`/`hsl`/`hsla` for colors declared as such in expanded mode
 - more efficiently compress colors in compressed mode
 - treat `:where` the same as `:is` in extension
@@ -90,7 +98,7 @@ a {
 
 # 0.11.1
 
- - fix load path bug in which paths were searched for relative to the SCSS file, not the executable (#57)
+- fix load path bug in which paths were searched for relative to the SCSS file, not the executable (#57)
 
 # 0.11.0
 
