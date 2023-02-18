@@ -15,7 +15,7 @@ use crate::{
 use super::{fuzzy_as_int, Number};
 
 #[derive(Debug, Clone)]
-pub(crate) struct SassNumber {
+pub struct SassNumber {
     pub num: Number,
     pub unit: Unit,
     pub as_slash: Option<Arc<(Self, Self)>>,
@@ -53,7 +53,7 @@ impl SassNumber {
     }
 
     #[allow(clippy::collapsible_if)]
-    pub fn multiply_units(&self, mut num: f64, other_unit: Unit) -> SassNumber {
+    pub(crate) fn multiply_units(&self, mut num: f64, other_unit: Unit) -> SassNumber {
         let (numer_units, denom_units) = self.unit.clone().numer_and_denom();
         let (other_numer, other_denom) = other_unit.numer_and_denom();
 

@@ -63,8 +63,9 @@ impl Display for BinaryOp {
     }
 }
 
+/// Strings can either have quotes or not
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
-pub(crate) enum QuoteKind {
+pub enum QuoteKind {
     Quoted,
     None,
 }
@@ -79,14 +80,15 @@ impl Display for QuoteKind {
     }
 }
 
+/// Lists can either be bracketed or not
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(crate) enum Brackets {
+pub enum Brackets {
     None,
     Bracketed,
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
-pub(crate) enum ListSeparator {
+pub enum ListSeparator {
     Space,
     Comma,
     Slash,
@@ -115,7 +117,7 @@ impl ListSeparator {
 ///
 /// This struct protects that invariant by normalizing all underscores into hypens.
 #[derive(Clone, Eq, PartialEq, Hash, PartialOrd, Ord, Copy)]
-pub(crate) struct Identifier(InternedString);
+pub struct Identifier(InternedString);
 
 impl fmt::Debug for Identifier {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

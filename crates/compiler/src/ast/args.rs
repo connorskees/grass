@@ -131,11 +131,11 @@ impl ArgumentDeclaration {
 
 #[derive(Debug, Clone)]
 pub(crate) struct ArgumentInvocation {
-    pub positional: Vec<AstExpr>,
-    pub named: BTreeMap<Identifier, AstExpr>,
-    pub rest: Option<AstExpr>,
-    pub keyword_rest: Option<AstExpr>,
-    pub span: Span,
+    pub(crate) positional: Vec<AstExpr>,
+    pub(crate) named: BTreeMap<Identifier, AstExpr>,
+    pub(crate) rest: Option<AstExpr>,
+    pub(crate) keyword_rest: Option<AstExpr>,
+    pub(crate) span: Span,
 }
 
 impl ArgumentInvocation {
@@ -157,14 +157,18 @@ pub(crate) enum MaybeEvaledArguments {
     Evaled(ArgumentResult),
 }
 
+/// Function arguments that have been evaluated
+///
+/// Arguments may be passed either positionally or by name. Positional arguments
+/// may not come after named ones.
 #[derive(Debug, Clone)]
-pub(crate) struct ArgumentResult {
-    pub positional: Vec<Value>,
-    pub named: BTreeMap<Identifier, Value>,
-    pub separator: ListSeparator,
-    pub span: Span,
+pub struct ArgumentResult {
+    pub(crate) positional: Vec<Value>,
+    pub(crate) named: BTreeMap<Identifier, Value>,
+    pub(crate) separator: ListSeparator,
+    pub(crate) span: Span,
     // todo: hack
-    pub touched: BTreeSet<usize>,
+    pub(crate) touched: BTreeSet<usize>,
 }
 
 impl ArgumentResult {
@@ -180,7 +184,7 @@ impl ArgumentResult {
 
     /// Get a positional argument by 0-indexed position
     ///
-    /// Replaces argument with `Value::Null` gravestone
+    /// Replaces argument with [`Value::Null`] gravestone
     pub fn get_positional(&mut self, idx: usize) -> Option<Spanned<Value>> {
         let val = match self.positional.get_mut(idx) {
             Some(v) => Some(Spanned {
@@ -194,6 +198,11 @@ impl ArgumentResult {
         val
     }
 
+    /// Get an argument by either name or position
+    ///
+    /// If the named argument does not exist, then the position is checked. Like
+    /// [`ArgumentResult::get_named`] and [`ArgumentResult::get_positional`], this
+    /// function removes the argument or replaces it with a gravestone
     pub fn get<T: Into<Identifier>>(&mut self, position: usize, name: T) -> Option<Spanned<Value>> {
         match self.get_named(name) {
             Some(v) => Some(v),
@@ -201,7 +210,8 @@ impl ArgumentResult {
         }
     }
 
-    pub fn get_err(&mut self, position: usize, name: &'static str) -> SassResult<Value> {
+    /// Like [`ArgumentResult::get`], but returns a result if the argument doesn't exist
+    pub fn get_err(&mut self, position: usize, name: &str) -> SassResult<Value> {
         match self.get_named(name) {
             Some(v) => Ok(v.node),
             None => match self.get_positional(position) {
@@ -215,11 +225,12 @@ impl ArgumentResult {
         self.span
     }
 
-    pub fn len(&self) -> usize {
+    pub(crate) fn len(&self) -> usize {
         self.positional.len() + self.named.len()
     }
 
-    pub fn min_args(&self, min: usize) -> SassResult<()> {
+    /// Assert that this function has at least `min` number of args
+    pub(crate) fn min_args(&self, min: usize) -> SassResult<()> {
         let len = self.len();
         if len < min {
             if min == 1 {
@@ -230,6 +241,7 @@ impl ArgumentResult {
         Ok(())
     }
 
+    /// Assert that this function has at most `max` number of args
     pub fn max_args(&self, max: usize) -> SassResult<()> {
         let len = self.len();
         if len > max {
@@ -252,6 +264,8 @@ impl ArgumentResult {
         Ok(())
     }
 
+    /// Get an argument by name or position. If the argument does not exist, use
+    /// the default value provided
     pub fn default_arg(&mut self, position: usize, name: &'static str, default: Value) -> Value {
         match self.get(position, name) {
             Some(val) => val.node,
@@ -259,7 +273,7 @@ impl ArgumentResult {
         }
     }
 
-    pub fn remove_positional(&mut self, position: usize) -> Option<Value> {
+    pub(crate) fn remove_positional(&mut self, position: usize) -> Option<Value> {
         if self.positional.len() > position {
             Some(self.positional.remove(position))
         } else {
@@ -267,7 +281,7 @@ impl ArgumentResult {
         }
     }
 
-    pub fn get_variadic(self) -> SassResult<Vec<Spanned<Value>>> {
+    pub(crate) fn get_variadic(self) -> SassResult<Vec<Spanned<Value>>> {
         if let Some((name, _)) = self.named.iter().next() {
             return Err((format!("No argument named ${}.", name), self.span).into());
         }

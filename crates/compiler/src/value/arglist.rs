@@ -5,7 +5,7 @@ use crate::common::{Identifier, ListSeparator};
 use super::Value;
 
 #[derive(Debug, Clone)]
-pub(crate) struct ArgList {
+pub struct ArgList {
     pub elems: Vec<Value>,
     were_keywords_accessed: Arc<Cell<bool>>,
     // todo: special wrapper around this field to avoid having to make it private?

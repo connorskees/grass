@@ -27,7 +27,7 @@ fn inverse_epsilon() -> f64 {
 /// operations -- namely a Sass-compatible modulo
 #[derive(Clone, Copy, PartialOrd)]
 #[repr(transparent)]
-pub(crate) struct Number(pub f64);
+pub struct Number(pub f64);
 
 impl PartialEq for Number {
     fn eq(&self, other: &Self) -> bool {
@@ -84,6 +84,7 @@ pub(crate) fn fuzzy_less_than_or_equals(number1: f64, number2: f64) -> bool {
 }
 
 impl Number {
+    /// This differs from `std::cmp::min` when either value is NaN
     pub fn min(self, other: Self) -> Self {
         if self < other {
             self
@@ -92,6 +93,7 @@ impl Number {
         }
     }
 
+    /// This differs from `std::cmp::max` when either value is NaN
     pub fn max(self, other: Self) -> Self {
         if self > other {
             self

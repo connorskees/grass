@@ -7,7 +7,7 @@ use crate::{ast::AstFunctionDecl, builtin::Builtin, common::Identifier, evaluate
 /// The function name is stored in addition to the body
 /// for use in the builtin function `inspect()`
 #[derive(Clone, Eq, PartialEq)]
-pub(crate) enum SassFunction {
+pub enum SassFunction {
     // todo: Cow<'static>?
     /// Builtin functions are those that have been implemented in Rust and are
     /// in the global scope.
@@ -23,10 +23,10 @@ pub(crate) enum SassFunction {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct UserDefinedFunction {
-    pub function: Arc<AstFunctionDecl>,
+pub struct UserDefinedFunction {
+    pub(crate) function: Arc<AstFunctionDecl>,
     pub name: Identifier,
-    pub env: Environment,
+    pub(crate) env: Environment,
 }
 
 impl PartialEq for UserDefinedFunction {

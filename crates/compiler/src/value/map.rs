@@ -8,7 +8,7 @@ use crate::{
 };
 
 #[derive(Debug, Clone, Default)]
-pub(crate) struct SassMap(Vec<(Spanned<Value>, Value)>);
+pub struct SassMap(Vec<(Spanned<Value>, Value)>);
 
 impl PartialEq for SassMap {
     fn eq(&self, other: &Self) -> bool {

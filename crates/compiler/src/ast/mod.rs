@@ -8,6 +8,8 @@ pub(crate) use stmt::*;
 pub(crate) use style::*;
 pub(crate) use unknown::*;
 
+pub use args::ArgumentResult;
+
 mod args;
 mod css;
 mod expr;

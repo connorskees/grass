@@ -3,6 +3,7 @@
 
 use std::{
     collections::{BTreeSet, HashMap},
+    fmt,
     sync::atomic::{AtomicUsize, Ordering},
 };
 
@@ -23,11 +24,46 @@ pub(crate) type GlobalFunctionMap = HashMap<&'static str, Builtin>;
 
 static FUNCTION_COUNT: AtomicUsize = AtomicUsize::new(0);
 
+/// A function implemented in rust that is accessible from within Sass
+///
+///
+/// #### Usage
+/// ```rust
+/// use grass_compiler::{
+///     sass_value::{ArgumentResult, SassNumber, Value},
+///     Builtin, Options, Result as SassResult, Visitor,
+/// };
+///
+/// // An example function that looks up the length of an array or map and adds 2 to it
+/// fn length(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
+///     args.max_args(1)?;
+///
+///     let len = args.get_err(0, "list")?.as_list().len();
+///
+///     Ok(Value::Dimension(SassNumber::new_unitless(len + 2)))
+/// }
+///
+/// fn main() {
+///     let options = Options::default().add_custom_fn("length", Builtin::new(length));
+///     let css = grass_compiler::from_string("a { color: length([a, b]); }", &options).unwrap();
+///
+///     assert_eq!(css, "a {\n  color: 4;\n}\n");
+/// }
+/// ```
 #[derive(Clone)]
-pub(crate) struct Builtin(
-    pub fn(ArgumentResult, &mut Visitor) -> SassResult<Value>,
+pub struct Builtin(
+    pub(crate) fn(ArgumentResult, &mut Visitor) -> SassResult<Value>,
     usize,
 );
+
+impl fmt::Debug for Builtin {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Builtin")
+            .field("id", &self.1)
+            .field("fn_ptr", &(self.0 as usize))
+            .finish()
+    }
+}
 
 impl Builtin {
     pub fn new(body: fn(ArgumentResult, &mut Visitor) -> SassResult<Value>) -> Builtin {

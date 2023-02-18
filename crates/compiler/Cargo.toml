@@ -3,7 +3,7 @@ name = "grass_compiler"
 version = "0.12.2"
 edition = "2021"
 description = "Internal implementation of the grass compiler"
-readme = "../../README.md"
+readme = "README.md"
 license = "MIT"
 categories = ["web-programming"]
 keywords = ["scss", "sass", "css", "web"]
@@ -33,8 +33,10 @@ indexmap = "1.9.0"
 lasso = "0.6"
 
 [features]
-default = ["random"]
+default = ["random", "custom-builtin-fns"]
 # Option (enabled by default): enable the builtin functions `random([$limit])` and `unique-id()`
 random = ["rand"]
 # Option: expose JavaScript-friendly WebAssembly exports
 wasm-exports = ["wasm-bindgen"]
+# Option: expose internals necessary to implement custom builtin functions
+custom-builtin-fns = []

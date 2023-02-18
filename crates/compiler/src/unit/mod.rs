@@ -7,7 +7,7 @@ pub(crate) use conversion::{known_compatibilities_by_unit, UNIT_CONVERSION_TABLE
 mod conversion;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub(crate) enum Unit {
+pub enum Unit {
     // Absolute units
     /// Pixels
     Px,
@@ -41,7 +41,7 @@ pub(crate) enum Unit {
     /// found in the font used to render it
     Ic,
     /// Equal to the computed value of the line-height property on the root element
-    /// (typically <html>), converted to an absolute length
+    /// (typically \<html\>), converted to an absolute length
     Rlh,
 
     // Viewport relative units
@@ -104,9 +104,9 @@ pub(crate) enum Unit {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub(crate) struct ComplexUnit {
-    pub(crate) numer: Vec<Unit>,
-    pub(crate) denom: Vec<Unit>,
+pub struct ComplexUnit {
+    pub numer: Vec<Unit>,
+    pub denom: Vec<Unit>,
 }
 
 pub(crate) fn are_any_convertible(units1: &[Unit], units2: &[Unit]) -> bool {
@@ -135,7 +135,7 @@ pub(crate) enum UnitKind {
 }
 
 impl Unit {
-    pub fn new(mut numer: Vec<Self>, denom: Vec<Self>) -> Self {
+    pub(crate) fn new(mut numer: Vec<Self>, denom: Vec<Self>) -> Self {
         if denom.is_empty() && numer.is_empty() {
             Unit::None
         } else if denom.is_empty() && numer.len() == 1 {
@@ -145,7 +145,7 @@ impl Unit {
         }
     }
 
-    pub fn numer_and_denom(self) -> (Vec<Unit>, Vec<Unit>) {
+    pub(crate) fn numer_and_denom(self) -> (Vec<Unit>, Vec<Unit>) {
         match self {
             Self::Complex(complex) => (complex.numer.clone(), complex.denom.clone()),
             Self::None => (Vec::new(), Vec::new()),
@@ -153,17 +153,17 @@ impl Unit {
         }
     }
 
-    pub fn invert(self) -> Self {
+    pub(crate) fn invert(self) -> Self {
         let (numer, denom) = self.numer_and_denom();
 
         Self::new(denom, numer)
     }
 
-    pub fn is_complex(&self) -> bool {
+    pub(crate) fn is_complex(&self) -> bool {
         matches!(self, Unit::Complex(complex) if complex.numer.len() != 1 || !complex.denom.is_empty())
     }
 
-    pub fn comparable(&self, other: &Unit) -> bool {
+    pub(crate) fn comparable(&self, other: &Unit) -> bool {
         if other == &Unit::None {
             return true;
         }

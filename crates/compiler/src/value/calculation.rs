@@ -13,7 +13,7 @@ use crate::{
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) enum CalculationArg {
+pub enum CalculationArg {
     Number(SassNumber),
     Calculation(SassCalculation),
     String(String),
@@ -38,7 +38,7 @@ impl CalculationArg {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub(crate) enum CalculationName {
+pub enum CalculationName {
     Calc,
     Min,
     Max,
@@ -57,13 +57,13 @@ impl fmt::Display for CalculationName {
 }
 
 impl CalculationName {
-    pub fn in_min_or_max(self) -> bool {
+    pub(crate) fn in_min_or_max(self) -> bool {
         self == CalculationName::Min || self == CalculationName::Max
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct SassCalculation {
+pub struct SassCalculation {
     pub name: CalculationName,
     pub args: Vec<CalculationArg>,
 }

@@ -1,6 +1,9 @@
-use std::path::{Path, PathBuf};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
-use crate::{Fs, StdFs};
+use crate::{builtin::Builtin, Fs, StdFs};
 
 /// Configuration for Sass compilation
 ///
@@ -15,6 +18,7 @@ pub struct Options<'a> {
     pub(crate) unicode_error_messages: bool,
     pub(crate) quiet: bool,
     pub(crate) input_syntax: Option<InputSyntax>,
+    pub(crate) custom_fns: HashMap<String, Builtin>,
 }
 
 impl Default for Options<'_> {
@@ -28,6 +32,7 @@ impl Default for Options<'_> {
             unicode_error_messages: true,
             quiet: false,
             input_syntax: None,
+            custom_fns: HashMap::new(),
         }
     }
 }
@@ -139,7 +144,7 @@ impl<'a> Options<'a> {
     /// This option forces Sass to parse input using the given syntax.
     ///
     /// By default, Sass will attempt to read the file extension to determine
-    /// the syntax. If this is not possible, it will default to [`InputSyntax::Scss`]
+    /// the syntax. If this is not possible, it will default to [`InputSyntax::Scss`].
     ///
     /// This flag only affects the first file loaded. Files that are loaded using
     /// `@import`, `@use`, or `@forward` will always have their syntax inferred.
@@ -147,6 +152,19 @@ impl<'a> Options<'a> {
     #[inline]
     pub const fn input_syntax(mut self, syntax: InputSyntax) -> Self {
         self.input_syntax = Some(syntax);
+        self
+    }
+
+    /// Add a custom function accessible from within Sass
+    ///
+    /// See the [`Builtin`] documentation for additional information
+    #[must_use]
+    #[inline]
+    #[cfg(feature = "custom-builtin-fns")]
+    #[cfg(any(feature = "custom-builtin-fns", doc))]
+    #[cfg_attr(doc, doc(cfg(feature = "custom-builtin-fns")))]
+    pub fn add_custom_fn<S: Into<String>>(mut self, name: S, func: Builtin) -> Self {
+        self.custom_fns.insert(name.into(), func);
         self
     }
 

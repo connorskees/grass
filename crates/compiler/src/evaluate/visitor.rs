@@ -99,24 +99,26 @@ pub(crate) struct CallableContentBlock {
     env: Environment,
 }
 
-pub(crate) struct Visitor<'a> {
-    pub declaration_name: Option<String>,
-    pub flags: ContextFlags,
-    pub env: Environment,
-    pub style_rule_ignoring_at_root: Option<ExtendedSelector>,
+/// Evaluation context of the current execution
+#[derive(Debug)]
+pub struct Visitor<'a> {
+    pub(crate) declaration_name: Option<String>,
+    pub(crate) flags: ContextFlags,
+    pub(crate) env: Environment,
+    pub(crate) style_rule_ignoring_at_root: Option<ExtendedSelector>,
     // avoid emitting duplicate warnings for the same span
-    pub warnings_emitted: HashSet<Span>,
-    pub media_queries: Option<Vec<MediaQuery>>,
-    pub media_query_sources: Option<IndexSet<MediaQuery>>,
-    pub extender: ExtensionStore,
-    pub current_import_path: PathBuf,
-    pub is_plain_css: bool,
+    pub(crate) warnings_emitted: HashSet<Span>,
+    pub(crate) media_queries: Option<Vec<MediaQuery>>,
+    pub(crate) media_query_sources: Option<IndexSet<MediaQuery>>,
+    pub(crate) extender: ExtensionStore,
+    pub(crate) current_import_path: PathBuf,
+    pub(crate) is_plain_css: bool,
     css_tree: CssTree,
     parent: Option<CssTreeIdx>,
     configuration: Arc<RefCell<Configuration>>,
     import_nodes: Vec<CssStmt>,
-    pub options: &'a Options<'a>,
-    pub map: &'a mut CodeMap,
+    pub(crate) options: &'a Options<'a>,
+    pub(crate) map: &'a mut CodeMap,
     // todo: remove
     span_before: Span,
     import_cache: BTreeMap<PathBuf, StyleSheet>,
@@ -127,7 +129,7 @@ pub(crate) struct Visitor<'a> {
 }
 
 impl<'a> Visitor<'a> {
-    pub fn new(
+    pub(crate) fn new(
         path: &Path,
         options: &'a Options<'a>,
         map: &'a mut CodeMap,
@@ -163,7 +165,7 @@ impl<'a> Visitor<'a> {
         }
     }
 
-    pub fn visit_stylesheet(&mut self, mut style_sheet: StyleSheet) -> SassResult<()> {
+    pub(crate) fn visit_stylesheet(&mut self, mut style_sheet: StyleSheet) -> SassResult<()> {
         let was_in_plain_css = self.is_plain_css;
         self.is_plain_css = style_sheet.is_plain_css;
         mem::swap(&mut self.current_import_path, &mut style_sheet.url);
@@ -179,7 +181,7 @@ impl<'a> Visitor<'a> {
         Ok(())
     }
 
-    pub fn finish(mut self) -> Vec<CssStmt> {
+    pub(crate) fn finish(mut self) -> Vec<CssStmt> {
         let mut finished_tree = self.css_tree.finish();
         if self.import_nodes.is_empty() {
             finished_tree
@@ -196,7 +198,7 @@ impl<'a> Visitor<'a> {
     }
 
     // todo: we really don't have to return Option<Value> from all of these children
-    pub fn visit_stmt(&mut self, stmt: AstStmt) -> SassResult<Option<Value>> {
+    pub(crate) fn visit_stmt(&mut self, stmt: AstStmt) -> SassResult<Option<Value>> {
         match stmt {
             AstStmt::RuleSet(ruleset) => self.visit_ruleset(ruleset),
             AstStmt::Style(style) => self.visit_style(style),
@@ -590,7 +592,7 @@ impl<'a> Visitor<'a> {
         Ok(module)
     }
 
-    pub fn load_module(
+    pub(crate) fn load_module(
         &mut self,
         url: &Path,
         configuration: Option<Arc<RefCell<Configuration>>>,
@@ -690,7 +692,7 @@ impl<'a> Visitor<'a> {
         Ok(())
     }
 
-    pub fn assert_configuration_is_empty(
+    pub(crate) fn assert_configuration_is_empty(
         config: &Arc<RefCell<Configuration>>,
         name_in_error: bool,
     ) -> SassResult<()> {
@@ -860,7 +862,7 @@ impl<'a> Visitor<'a> {
         Err(("Can't find stylesheet to import.", span).into())
     }
 
-    pub fn load_style_sheet(
+    pub(crate) fn load_style_sheet(
         &mut self,
         url: &str,
         // default=false
@@ -1202,7 +1204,7 @@ impl<'a> Visitor<'a> {
         self.env.insert_fn(func);
     }
 
-    pub fn parse_selector_from_string(
+    pub(crate) fn parse_selector_from_string(
         &mut self,
         selector_text: &str,
         allows_parent: bool,
@@ -1507,7 +1509,7 @@ impl<'a> Visitor<'a> {
         Ok(None)
     }
 
-    pub fn emit_warning(&mut self, message: &str, span: Span) {
+    pub(crate) fn emit_warning(&mut self, message: &str, span: Span) {
         if self.options.quiet {
             return;
         }
@@ -2406,7 +2408,9 @@ impl<'a> Visitor<'a> {
         let func = match self.env.get_fn(name, func_call.namespace)? {
             Some(func) => func,
             None => {
-                if let Some(f) = GLOBAL_FUNCTIONS.get(name.as_str()) {
+                if let Some(f) = self.options.custom_fns.get(name.as_str()) {
+                    SassFunction::Builtin(f.clone(), name)
+                } else if let Some(f) = GLOBAL_FUNCTIONS.get(name.as_str()) {
                     SassFunction::Builtin(f.clone(), name)
                 } else {
                     if func_call.namespace.is_some() {
@@ -2830,7 +2834,7 @@ impl<'a> Visitor<'a> {
         expr.to_css_string(span, self.options.is_compressed())
     }
 
-    pub fn visit_ruleset(&mut self, ruleset: AstRuleSet) -> SassResult<Option<Value>> {
+    pub(crate) fn visit_ruleset(&mut self, ruleset: AstRuleSet) -> SassResult<Option<Value>> {
         if self.declaration_name.is_some() {
             return Err((
                 "Style rules may not be used within nested declarations.",
@@ -2954,7 +2958,7 @@ impl<'a> Visitor<'a> {
         !self.flags.at_root_excluding_style_rule() && self.style_rule_ignoring_at_root.is_some()
     }
 
-    pub fn visit_style(&mut self, style: AstStyle) -> SassResult<Option<Value>> {
+    pub(crate) fn visit_style(&mut self, style: AstStyle) -> SassResult<Option<Value>> {
         if !self.style_rule_exists()
             && !self.flags.in_unknown_at_rule()
             && !self.flags.in_keyframes()

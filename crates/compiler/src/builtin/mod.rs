@@ -2,9 +2,11 @@ mod functions;
 pub(crate) mod modules;
 
 pub(crate) use functions::{
-    color, list, map, math, meta, selector, string, Builtin, DISALLOWED_PLAIN_CSS_FUNCTION_NAMES,
+    color, list, map, math, meta, selector, string, DISALLOWED_PLAIN_CSS_FUNCTION_NAMES,
     GLOBAL_FUNCTIONS,
 };
+
+pub use functions::Builtin;
 
 /// Imports common to all builtin fns
 mod builtin_imports {

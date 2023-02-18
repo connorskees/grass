@@ -22,7 +22,7 @@ mod simple;
 
 // todo: delete this selector wrapper
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub(crate) struct Selector(pub SelectorList);
+pub struct Selector(pub(crate) SelectorList);
 
 impl Selector {
     /// Small wrapper around `SelectorList`'s method that turns an empty parent selector

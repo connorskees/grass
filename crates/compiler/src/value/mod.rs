@@ -14,12 +14,13 @@ use crate::{
     Options, OutputStyle,
 };
 
-pub(crate) use arglist::ArgList;
-pub(crate) use calculation::*;
-pub(crate) use map::SassMap;
-pub(crate) use number::*;
-pub(crate) use sass_function::{SassFunction, UserDefinedFunction};
-pub(crate) use sass_number::{conversion_factor, SassNumber};
+pub use arglist::ArgList;
+pub use calculation::*;
+pub use map::SassMap;
+pub use number::*;
+pub use sass_function::{SassFunction, UserDefinedFunction};
+pub(crate) use sass_number::conversion_factor;
+pub use sass_number::SassNumber;
 
 mod arglist;
 mod calculation;
@@ -29,7 +30,7 @@ mod sass_function;
 mod sass_number;
 
 #[derive(Debug, Clone)]
-pub(crate) enum Value {
+pub enum Value {
     True,
     False,
     Null,

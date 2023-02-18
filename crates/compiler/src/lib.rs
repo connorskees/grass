@@ -32,6 +32,7 @@ grass input.scss
 ```
 */
 
+#![cfg_attr(doc, feature(doc_cfg))]
 #![warn(clippy::all, clippy::cargo, clippy::dbg_macro)]
 #![deny(missing_debug_implementations)]
 #![allow(
@@ -94,8 +95,22 @@ pub use crate::error::{
 };
 pub use crate::fs::{Fs, NullFs, StdFs};
 pub use crate::options::{InputSyntax, Options, OutputStyle};
+pub use crate::{builtin::Builtin, evaluate::Visitor};
 pub(crate) use crate::{context_flags::ContextFlags, lexer::Token};
-use crate::{evaluate::Visitor, lexer::Lexer, parse::ScssParser};
+use crate::{lexer::Lexer, parse::ScssParser};
+
+pub mod sass_value {
+    pub use crate::{
+        ast::ArgumentResult,
+        color::Color,
+        common::{BinaryOp, Brackets, ListSeparator, QuoteKind},
+        unit::{ComplexUnit, Unit},
+        value::{
+            ArgList, CalculationArg, CalculationName, Number, SassCalculation, SassFunction,
+            SassMap, SassNumber, Value,
+        },
+    };
+}
 
 mod ast;
 mod builtin;
@@ -209,8 +224,8 @@ pub fn from_path<P: AsRef<Path>>(p: P, options: &Options) -> Result<String> {
 /// }
 /// ```
 #[inline]
-pub fn from_string(input: String, options: &Options) -> Result<String> {
-    from_string_with_file_name(input, "stdin", options)
+pub fn from_string<S: Into<String>>(input: S, options: &Options) -> Result<String> {
+    from_string_with_file_name(input.into(), "stdin", options)
 }
 
 #[cfg(feature = "wasm-exports")]

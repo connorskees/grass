@@ -6,7 +6,7 @@ use std::fmt::{self, Display};
 thread_local!(static STRINGS: RefCell<Rodeo<Spur>> = RefCell::new(Rodeo::default()));
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Ord, PartialOrd)]
-pub(crate) struct InternedString(Spur);
+pub struct InternedString(Spur);
 
 impl InternedString {
     pub fn get_or_intern<T: AsRef<str>>(s: T) -> Self {

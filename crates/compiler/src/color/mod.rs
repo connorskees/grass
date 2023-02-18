@@ -22,11 +22,11 @@ mod name;
 
 // todo: only store alpha once on color
 #[derive(Debug, Clone)]
-pub(crate) struct Color {
+pub struct Color {
     rgba: Rgb,
     hsla: Option<Hsl>,
     alpha: Number,
-    pub format: ColorFormat,
+    pub(crate) format: ColorFormat,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -55,7 +55,7 @@ impl PartialEq for Color {
 impl Eq for Color {}
 
 impl Color {
-    pub const fn new_rgba(
+    pub(crate) const fn new_rgba(
         red: Number,
         green: Number,
         blue: Number,
