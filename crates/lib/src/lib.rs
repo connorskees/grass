@@ -80,7 +80,10 @@ grass input.scss
     unknown_lints,
 )]
 
-pub use grass_compiler::*;
+pub use grass_compiler::{
+    from_path, from_string, Error, ErrorKind, Fs, InputSyntax, NullFs, Options, OutputStyle,
+    Result, StdFs,
+};
 
 /// Include CSS in your binary at compile time from a Sass source file
 ///
