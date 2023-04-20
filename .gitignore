@@ -5,7 +5,6 @@
 
 # devops
 /target
-Cargo.lock
 coverage
 pkg
 flamegraph.svg
