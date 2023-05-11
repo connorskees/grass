@@ -3,53 +3,26 @@ use crate::builtin::builtin_imports::*;
 pub(crate) fn map_get(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(2)?;
     let key = args.get_err(1, "key")?;
-    let map = match args.get_err(0, "map")? {
-        Value::Map(m) => m,
-        Value::List(v, ..) if v.is_empty() => SassMap::new(),
-        Value::ArgList(v) if v.is_empty() => SassMap::new(),
-        v => {
-            return Err((
-                format!("$map: {} is not a map.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
+    let map = args
+        .get_err(0, "map")?
+        .assert_map_with_name("map", args.span())?;
     Ok(map.get(&key).unwrap_or(Value::Null))
 }
 
 pub(crate) fn map_has_key(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(2)?;
     let key = args.get_err(1, "key")?;
-    let map = match args.get_err(0, "map")? {
-        Value::Map(m) => m,
-        Value::List(v, ..) if v.is_empty() => SassMap::new(),
-        Value::ArgList(v) if v.is_empty() => SassMap::new(),
-        v => {
-            return Err((
-                format!("$map: {} is not a map.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
+    let map = args
+        .get_err(0, "map")?
+        .assert_map_with_name("map", args.span())?;
     Ok(Value::bool(map.get(&key).is_some()))
 }
 
 pub(crate) fn map_keys(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
-    let map = match args.get_err(0, "map")? {
-        Value::Map(m) => m,
-        Value::List(v, ..) if v.is_empty() => SassMap::new(),
-        Value::ArgList(v) if v.is_empty() => SassMap::new(),
-        v => {
-            return Err((
-                format!("$map: {} is not a map.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
+    let map = args
+        .get_err(0, "map")?
+        .assert_map_with_name("map", args.span())?;
     Ok(Value::List(
         map.keys(),
         ListSeparator::Comma,
@@ -59,18 +32,9 @@ pub(crate) fn map_keys(mut args: ArgumentResult, visitor: &mut Visitor) -> SassR
 
 pub(crate) fn map_values(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(1)?;
-    let map = match args.get_err(0, "map")? {
-        Value::Map(m) => m,
-        Value::List(v, ..) if v.is_empty() => SassMap::new(),
-        Value::ArgList(v) if v.is_empty() => SassMap::new(),
-        v => {
-            return Err((
-                format!("$map: {} is not a map.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
+    let map = args
+        .get_err(0, "map")?
+        .assert_map_with_name("map", args.span())?;
     Ok(Value::List(
         map.values(),
         ListSeparator::Comma,
@@ -85,31 +49,13 @@ pub(crate) fn map_merge(mut args: ArgumentResult, visitor: &mut Visitor) -> Sass
 
     let map2_position = args.len().saturating_sub(1);
 
-    let mut map1 = match args.get_err(0, "map1")? {
-        Value::Map(m) => m,
-        Value::List(v, ..) if v.is_empty() => SassMap::new(),
-        Value::ArgList(v) if v.is_empty() => SassMap::new(),
-        v => {
-            return Err((
-                format!("$map1: {} is not a map.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
+    let mut map1 = args
+        .get_err(0, "map1")?
+        .assert_map_with_name("map1", args.span())?;
 
-    let map2 = match args.get_err(map2_position, "map2")? {
-        Value::Map(m) => m,
-        Value::List(v, ..) if v.is_empty() => SassMap::new(),
-        Value::ArgList(v) if v.is_empty() => SassMap::new(),
-        v => {
-            return Err((
-                format!("$map2: {} is not a map.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
+    let map2 = args
+        .get_err(map2_position, "map2")?
+        .assert_map_with_name("map2", args.span())?;
 
     let keys = args.get_variadic()?;
 
@@ -156,18 +102,9 @@ pub(crate) fn map_merge(mut args: ArgumentResult, visitor: &mut Visitor) -> Sass
 }
 
 pub(crate) fn map_remove(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
-    let mut map = match args.get_err(0, "map")? {
-        Value::Map(m) => m,
-        Value::List(v, ..) if v.is_empty() => SassMap::new(),
-        Value::ArgList(v) if v.is_empty() => SassMap::new(),
-        v => {
-            return Err((
-                format!("$map: {} is not a map.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
+    let mut map = args
+        .get_err(0, "map")?
+        .assert_map_with_name("map", args.span())?;
     let keys = args.get_variadic()?;
     for key in keys {
         map.remove(&key);
@@ -179,18 +116,9 @@ pub(crate) fn map_set(mut args: ArgumentResult, visitor: &mut Visitor) -> SassRe
     let key_position = args.len().saturating_sub(2);
     let value_position = args.len().saturating_sub(1);
 
-    let mut map = match args.get_err(0, "map")? {
-        Value::Map(m) => m,
-        Value::List(v, ..) if v.is_empty() => SassMap::new(),
-        Value::ArgList(v) if v.is_empty() => SassMap::new(),
-        v => {
-            return Err((
-                format!("$map: {} is not a map.", v.inspect(args.span())?),
-                args.span(),
-            )
-                .into())
-        }
-    };
+    let mut map = args
+        .get_err(0, "map")?
+        .assert_map_with_name("map", args.span())?;
 
     let key = Spanned {
         node: args.get_err(key_position, "key")?,

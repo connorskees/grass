@@ -7,6 +7,10 @@
 
 -->
 
+# TBD
+
+- implement builtin map-module function `map.deep-merge(..)`
+
 # 0.12.3
 
 No visible changes for users of the `grass` crate

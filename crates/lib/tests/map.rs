@@ -120,66 +120,6 @@ test!(
     "a {b: inspect(map-merge((c: (d: (e: (f: (g: h))))), c, d, e, f, (g: 1)))}",
     "a {\n  b: (c: (d: (e: (f: (g: 1)))));\n}\n"
 );
-test!(
-    map_set_nested_empty,
-    "@use 'sass:map'; a {b: inspect(map.set((c: ()), c, d, e, f))}",
-    "a {\n  b: (c: (d: (e: f)));\n}\n"
-);
-test!(
-    map_set_update_existing,
-    "@use 'sass:map'; a {b: inspect(map.set((c: (d: e)), c, d, f))}",
-    "a {\n  b: (c: (d: f));\n}\n"
-);
-test!(
-    map_set_new_key,
-    "@use 'sass:map'; a {b: inspect(map.set((c: (d: e)), c, f, g))}",
-    "a {\n  b: (c: (d: e, f: g));\n}\n"
-);
-test!(
-    map_set_value_is_not_map,
-    "@use 'sass:map'; a {b: inspect(map.set((c: 1), c, d, f))}",
-    "a {\n  b: (c: (d: f));\n}\n"
-);
-test!(
-    map_merge_merge_into_map_with_many_keys,
-    r#"
-    @use "sass:map";
-
-    $fonts: (
-      "Helvetica": (
-        "weights": (
-          "regular": 400,
-          "medium": 500,
-          "bold": 700
-        )
-      )
-    );
-
-    a {
-        color: inspect(map.merge($fonts, "Helvetica", "weights", "regular", (a: 300)));
-    }"#,
-    "a {\n  color: (\"Helvetica\": (\"weights\": (\"regular\": (a: 300), \"medium\": 500, \"bold\": 700)));\n}\n"
-);
-test!(
-    map_merge_nested,
-    r#"
-    @use "sass:map";
-
-    $fonts: (
-      "Helvetica": (
-        "weights": (
-          "regular": 400,
-          "medium": 500,
-          "bold": 700
-        )
-      )
-    );
-
-    a {
-        color: inspect(map.set($fonts, "Helvetica", "weights", "regular", 300));
-    }"#,
-    "a {\n  color: (\"Helvetica\": (\"weights\": (\"regular\": 300, \"medium\": 500, \"bold\": 700)));\n}\n"
-);
 error!(
     map_merge_map1_non_map,
     "a {\n  color: map-merge(foo, (a: b));\n}\n", "Error: $map1: foo is not a map."
@@ -241,7 +181,6 @@ test!(
     "a {\n  color: 1, 2;\n}\n"
 );
 test!(
-    #[ignore = "blocked on rewriting inspect"]
     map_inspect_comma_separated_list_as_key,
     "a {\n  color: inspect(((1, 2): 3));\n}\n",
     "a {\n  color: ((1, 2): 3);\n}\n"

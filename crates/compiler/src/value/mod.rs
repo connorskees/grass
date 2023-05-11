@@ -171,6 +171,23 @@ impl Value {
         }
     }
 
+    pub fn assert_map_with_name(self, name: &str, span: Span) -> SassResult<SassMap> {
+        match self {
+            Value::Map(m) => Ok(m),
+            Value::List(v, ..) if v.is_empty() => Ok(SassMap::new()),
+            Value::ArgList(v) if v.is_empty() => Ok(SassMap::new()),
+            _ => Err((
+                format!(
+                    "${name}: {} is not a map.",
+                    self.inspect(span)?,
+                    name = name,
+                ),
+                span,
+            )
+                .into()),
+        }
+    }
+
     pub fn assert_string_with_name(
         self,
         name: &str,
@@ -300,6 +317,15 @@ impl Value {
             }
             Value::Calculation(..) => true,
             _ => false,
+        }
+    }
+
+    pub fn try_map(&self) -> Option<SassMap> {
+        match &self {
+            Value::Map(m) => Some(m.clone()),
+            Value::List(v, ..) if v.is_empty() => Some(SassMap::new()),
+            Value::ArgList(v) if v.is_empty() => Some(SassMap::new()),
+            _ => None,
         }
     }
 
