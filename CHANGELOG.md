@@ -7,7 +7,7 @@
 
 -->
 
-# TBD
+# 0.12.4
 
 - implement builtin map-module functions `map.deep-merge(..)` and `map.deep-remove(..)`
 

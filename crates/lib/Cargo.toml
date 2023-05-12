@@ -1,6 +1,6 @@
 [package]
 name = "grass"
-version = "0.12.3"
+version = "0.12.4"
 description = "A Sass compiler written purely in Rust"
 readme = "../../README.md"
 license = "MIT"
@@ -24,8 +24,8 @@ path = "src/lib.rs"
 bench = false
 
 [dependencies]
-grass_compiler = { path = "../compiler", version = "0.12.3", default-features = false }
-include_sass = { path = "../include_sass", version = "0.12.3", optional = true }
+grass_compiler = { path = "../compiler", version = "0.12.4", default-features = false }
+include_sass = { path = "../include_sass", version = "0.12.4", optional = true }
 clap = { version = "2.34.0", optional = true }
 
 [features]
