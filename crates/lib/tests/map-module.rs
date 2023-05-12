@@ -133,3 +133,30 @@ test!(
     }"#,
     "a {\n  color: (c: (d: e));\n}\n"
 );
+test!(
+    deep_remove_key_dne,
+    r#"@use "sass:map";
+
+    a {
+        color: inspect(map.deep-remove((a: b), 1));
+    }"#,
+    "a {\n  color: (a: b);\n}\n"
+);
+test!(
+    deep_remove_nested_remove,
+    r#"@use "sass:map";
+
+    a {
+        color: inspect(map.deep-remove((c: (d: e)), c, d));
+    }"#,
+    "a {\n  color: (c: ());\n}\n"
+);
+test!(
+    deep_remove_nested_keys_dne,
+    r#"@use "sass:map";
+
+    a {
+        color: inspect(map.deep-remove((c: (d: e)), c, d, e, f, g));
+    }"#,
+    "a {\n  color: (c: (d: e));\n}\n"
+);

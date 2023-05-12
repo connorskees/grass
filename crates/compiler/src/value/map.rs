@@ -81,6 +81,10 @@ impl SassMap {
         self.0.into_iter().map(|(.., v)| v).collect()
     }
 
+    pub fn contains(&self, key: &Value) -> bool {
+        self.0.iter().any(|(k, ..)| &k.node == key)
+    }
+
     pub fn as_list(self) -> Vec<Value> {
         self.0
             .into_iter()

@@ -9,7 +9,7 @@
 
 # TBD
 
-- implement builtin map-module function `map.deep-merge(..)`
+- implement builtin map-module functions `map.deep-merge(..)` and `map.deep-remove(..)`
 
 # 0.12.3
 
