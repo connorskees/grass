@@ -846,6 +846,37 @@ fn import_module_using_same_builtin_module_has_styles() {
 }
 
 #[test]
+fn use_member_global_variable_assignment_toplevel() {
+    let mut fs = TestFs::new();
+
+    fs.add_file(
+        "other.scss",
+        r#"
+            $member: value;
+
+            @function get-member() {
+                @return $member
+            }
+    "#,
+    );
+
+    let input = r#"
+        @use "other" as *;
+
+        $member: new value;
+        
+        a {
+            b: get-member()
+        }
+    "#;
+
+    assert_eq!(
+        "a {\n  b: new value;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
+    );
+}
+
+#[test]
 #[ignore = "we don't hermetically evaluate @extend"]
 fn use_module_with_extend() {
     let mut fs = TestFs::new();

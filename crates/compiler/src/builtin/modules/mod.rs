@@ -14,7 +14,9 @@ use crate::{
     error::SassResult,
     evaluate::{Environment, Visitor},
     selector::ExtensionStore,
-    utils::{BaseMapView, MapView, MergedMapView, PrefixedMapView, PublicMemberMapView},
+    utils::{
+        BaseMapView, LimitedMapView, MapView, MergedMapView, PrefixedMapView, PublicMemberMapView,
+    },
     value::{SassFunction, SassMap, Value},
 };
 
@@ -27,6 +29,82 @@ mod math;
 mod meta;
 mod selector;
 mod string;
+
+/// A [Module] that only exposes members that aren't shadowed by a given
+/// blocklist of member names.
+#[derive(Debug, Clone)]
+pub(crate) struct ShadowedModule {
+    #[allow(dead_code)]
+    inner: Arc<RefCell<Module>>,
+    scope: ModuleScope,
+}
+
+impl ShadowedModule {
+    pub fn new(
+        module: Arc<RefCell<Module>>,
+        variables: Option<&HashSet<Identifier>>,
+        functions: Option<&HashSet<Identifier>>,
+        mixins: Option<&HashSet<Identifier>>,
+    ) -> Self {
+        let module_scope = module.borrow().scope();
+
+        let variables = Self::shadowed_map(Arc::clone(&module_scope.variables), variables);
+        let functions = Self::shadowed_map(Arc::clone(&module_scope.functions), functions);
+        let mixins = Self::shadowed_map(Arc::clone(&module_scope.mixins), mixins);
+
+        let new_scope = ModuleScope {
+            variables,
+            functions,
+            mixins,
+        };
+
+        Self {
+            inner: module,
+            scope: new_scope,
+        }
+    }
+
+    fn needs_blocklist<V: fmt::Debug + Clone>(
+        map: Arc<dyn MapView<Value = V>>,
+        blocklist: Option<&HashSet<Identifier>>,
+    ) -> bool {
+        blocklist.is_some()
+            && !map.is_empty()
+            && blocklist.unwrap().iter().any(|key| map.contains_key(*key))
+    }
+
+    fn shadowed_map<V: fmt::Debug + Clone + 'static>(
+        map: Arc<dyn MapView<Value = V>>,
+        blocklist: Option<&HashSet<Identifier>>,
+    ) -> Arc<dyn MapView<Value = V>> {
+        match blocklist {
+            Some(..) if !Self::needs_blocklist(Arc::clone(&map), blocklist) => map,
+            Some(blocklist) => Arc::new(LimitedMapView::blocklist(map, blocklist)),
+            None => map,
+        }
+    }
+
+    pub fn if_necessary(
+        module: Arc<RefCell<Module>>,
+        variables: Option<&HashSet<Identifier>>,
+        functions: Option<&HashSet<Identifier>>,
+        mixins: Option<&HashSet<Identifier>>,
+    ) -> Option<Arc<RefCell<Module>>> {
+        let module_scope = module.borrow().scope();
+
+        let needs_blocklist = Self::needs_blocklist(Arc::clone(&module_scope.variables), variables)
+            || Self::needs_blocklist(Arc::clone(&module_scope.functions), functions)
+            || Self::needs_blocklist(Arc::clone(&module_scope.mixins), mixins);
+
+        if needs_blocklist {
+            Some(Arc::new(RefCell::new(Module::Shadowed(Self::new(
+                module, variables, functions, mixins,
+            )))))
+        } else {
+            None
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub(crate) struct ForwardedModule {
@@ -149,10 +227,11 @@ pub(crate) enum Module {
         scope: ModuleScope,
     },
     Forwarded(ForwardedModule),
+    Shadowed(ShadowedModule),
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct Modules(BTreeMap<Identifier, Arc<RefCell<Module>>>);
+pub(crate) struct Modules(pub BTreeMap<Identifier, Arc<RefCell<Module>>>);
 
 impl Modules {
     pub fn new() -> Self {
@@ -279,16 +358,20 @@ impl Module {
         }
     }
 
-    fn scope(&self) -> ModuleScope {
+    pub(crate) fn scope(&self) -> ModuleScope {
         match self {
-            Self::Builtin { scope } | Self::Environment { scope, .. } => scope.clone(),
+            Self::Builtin { scope }
+            | Self::Environment { scope, .. }
+            | Self::Shadowed(ShadowedModule { scope, .. }) => scope.clone(),
             Self::Forwarded(forwarded) => (*forwarded.inner).borrow().scope(),
         }
     }
 
     fn set_scope(&mut self, new_scope: ModuleScope) {
         match self {
-            Self::Builtin { scope } | Self::Environment { scope, .. } => *scope = new_scope,
+            Self::Builtin { scope }
+            | Self::Environment { scope, .. }
+            | Self::Shadowed(ShadowedModule { scope, .. }) => *scope = new_scope,
             Self::Forwarded(forwarded) => (*forwarded.inner).borrow_mut().set_scope(new_scope),
         }
     }
@@ -319,7 +402,9 @@ impl Module {
             Self::Builtin { .. } => {
                 return Err(("Cannot modify built-in variable.", name.span).into())
             }
-            Self::Environment { scope, .. } => scope.clone(),
+            Self::Environment { scope, .. } | Self::Shadowed(ShadowedModule { scope, .. }) => {
+                scope.clone()
+            }
             Self::Forwarded(forwarded) => (*forwarded.inner).borrow_mut().scope(),
         };
 

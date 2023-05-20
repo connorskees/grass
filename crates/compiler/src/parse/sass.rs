@@ -71,15 +71,15 @@ impl<'a> BaseParser<'a> for SassParser<'a> {
 }
 
 impl<'a> StylesheetParser<'a> for SassParser<'a> {
-    fn is_plain_css(&mut self) -> bool {
+    fn is_plain_css(&self) -> bool {
         false
     }
 
-    fn is_indented(&mut self) -> bool {
+    fn is_indented(&self) -> bool {
         true
     }
 
-    fn path(&mut self) -> &'a Path {
+    fn path(&self) -> &'a Path {
         self.path
     }
 
@@ -91,7 +91,7 @@ impl<'a> StylesheetParser<'a> for SassParser<'a> {
         self.options
     }
 
-    fn flags(&mut self) -> &ContextFlags {
+    fn flags(&self) -> &ContextFlags {
         &self.flags
     }
 

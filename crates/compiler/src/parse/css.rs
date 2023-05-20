@@ -38,15 +38,15 @@ impl<'a> BaseParser<'a> for CssParser<'a> {
 }
 
 impl<'a> StylesheetParser<'a> for CssParser<'a> {
-    fn is_plain_css(&mut self) -> bool {
+    fn is_plain_css(&self) -> bool {
         true
     }
 
-    fn is_indented(&mut self) -> bool {
+    fn is_indented(&self) -> bool {
         false
     }
 
-    fn path(&mut self) -> &'a Path {
+    fn path(&self) -> &'a Path {
         self.path
     }
 
@@ -58,7 +58,7 @@ impl<'a> StylesheetParser<'a> for CssParser<'a> {
         self.options
     }
 
-    fn flags(&mut self) -> &ContextFlags {
+    fn flags(&self) -> &ContextFlags {
         &self.flags
     }
 

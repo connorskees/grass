@@ -113,6 +113,8 @@ pub struct Visitor<'a> {
     pub(crate) extender: ExtensionStore,
     pub(crate) current_import_path: PathBuf,
     pub(crate) is_plain_css: bool,
+    pub(crate) modules: BTreeMap<PathBuf, Arc<RefCell<Module>>>,
+    pub(crate) active_modules: BTreeSet<PathBuf>,
     css_tree: CssTree,
     parent: Option<CssTreeIdx>,
     configuration: Arc<RefCell<Configuration>>,
@@ -157,6 +159,8 @@ impl<'a> Visitor<'a> {
             configuration: Arc::new(RefCell::new(Configuration::empty())),
             is_plain_css: false,
             import_nodes: Vec::new(),
+            modules: BTreeMap::new(),
+            active_modules: BTreeSet::new(),
             options,
             span_before,
             map,
@@ -166,6 +170,7 @@ impl<'a> Visitor<'a> {
     }
 
     pub(crate) fn visit_stylesheet(&mut self, mut style_sheet: StyleSheet) -> SassResult<()> {
+        self.active_modules.insert(style_sheet.url.clone());
         let was_in_plain_css = self.is_plain_css;
         self.is_plain_css = style_sheet.is_plain_css;
         mem::swap(&mut self.current_import_path, &mut style_sheet.url);
@@ -177,6 +182,8 @@ impl<'a> Visitor<'a> {
 
         mem::swap(&mut self.current_import_path, &mut style_sheet.url);
         self.is_plain_css = was_in_plain_css;
+
+        self.active_modules.remove(&style_sheet.url);
 
         Ok(())
     }
@@ -366,6 +373,8 @@ impl<'a> Visitor<'a> {
         )))
     }
 
+    /// Remove configured values from [upstream] that have been removed from
+    /// [downstream], unless they match a name in [except].
     fn remove_used_configuration(
         upstream: &Arc<RefCell<Configuration>>,
         downstream: &Arc<RefCell<Configuration>>,
@@ -534,6 +543,40 @@ impl<'a> Visitor<'a> {
         // todo: different errors based on this
         _names_in_errors: bool,
     ) -> SassResult<Arc<RefCell<Module>>> {
+        let url = stylesheet.url.clone();
+
+        // todo: use canonical url for modules
+        if let Some(already_loaded) = self.modules.get(&stylesheet.url) {
+            let current_configuration =
+                configuration.unwrap_or_else(|| Arc::clone(&self.configuration));
+
+            if !current_configuration.borrow().is_implicit() {
+                //   if (!_moduleConfigurations[url]!.sameOriginal(currentConfiguration) &&
+                //       currentConfiguration is ExplicitConfiguration) {
+                //     var message = namesInErrors
+                //         ? "${p.prettyUri(url)} was already loaded, so it can't be "
+                //             "configured using \"with\"."
+                //         : "This module was already loaded, so it can't be configured using "
+                //             "\"with\".";
+
+                //     var existingSpan = _moduleNodes[url]?.span;
+                //     var configurationSpan = configuration == null
+                //         ? currentConfiguration.nodeWithSpan.span
+                //         : null;
+                //     var secondarySpans = {
+                //       if (existingSpan != null) existingSpan: "original load",
+                //       if (configurationSpan != null) configurationSpan: "configuration"
+                //     };
+
+                //     throw secondarySpans.isEmpty
+                //         ? _exception(message)
+                //         : _multiSpanException(message, "new load", secondarySpans);
+                //   }
+            }
+
+            return Ok(Arc::clone(already_loaded));
+        }
+
         let env = Environment::new();
         let mut extension_store = ExtensionStore::new(self.span_before);
 
@@ -589,6 +632,8 @@ impl<'a> Visitor<'a> {
 
         let module = env.to_module(extension_store);
 
+        self.modules.insert(url, Arc::clone(&module));
+
         Ok(module)
     }
 
@@ -635,7 +680,7 @@ impl<'a> Visitor<'a> {
             callback(
                 self,
                 Arc::new(RefCell::new(builtin)),
-                StyleSheet::new(false, PathBuf::from("")),
+                StyleSheet::new(false, url.to_path_buf()),
             )?;
             return Ok(());
         }
@@ -643,7 +688,21 @@ impl<'a> Visitor<'a> {
         // todo: decide on naming convention for style_sheet vs stylesheet
         let stylesheet = self.load_style_sheet(url.to_string_lossy().as_ref(), false, span)?;
 
+        let canonical_url = self
+            .options
+            .fs
+            .canonicalize(&stylesheet.url)
+            .unwrap_or_else(|_| stylesheet.url.clone());
+
+        if self.active_modules.contains(&canonical_url) {
+            return Err(("Module loop: this module is already being loaded.", span).into());
+        }
+
+        self.active_modules.insert(canonical_url.clone());
+
         let module = self.execute(stylesheet.clone(), configuration, names_in_errors)?;
+
+        self.active_modules.remove(&canonical_url);
 
         callback(self, module, stylesheet)?;
 
@@ -832,6 +891,7 @@ impl<'a> Visitor<'a> {
         span: Span,
     ) -> SassResult<StyleSheet> {
         if let Some(name) = self.find_import(url.as_ref()) {
+            let name = self.options.fs.canonicalize(&name).unwrap_or(name);
             if let Some(style_sheet) = self.import_cache.get(&name) {
                 return Ok(style_sheet.clone());
             }
@@ -875,6 +935,14 @@ impl<'a> Visitor<'a> {
 
     fn visit_dynamic_import_rule(&mut self, dynamic_import: &AstSassImport) -> SassResult<()> {
         let stylesheet = self.load_style_sheet(&dynamic_import.url, true, dynamic_import.span)?;
+
+        let url = stylesheet.url.clone();
+
+        if self.active_modules.contains(&url) {
+            return Err(("This file is already being loaded.", dynamic_import.span).into());
+        }
+
+        self.active_modules.insert(url.clone());
 
         // If the imported stylesheet doesn't use any modules, we can inject its
         // CSS directly into the current stylesheet. If it does use modules, we
@@ -924,6 +992,7 @@ impl<'a> Visitor<'a> {
         self.env.import_forwards(module);
 
         if loads_user_defined_modules {
+            // todo:
             //     if (module.transitivelyContainsCss) {
             //       // If any transitively used module contains extensions, we need to
             //       // clone all modules' CSS. Otherwise, it's possible that they'll be
@@ -939,6 +1008,8 @@ impl<'a> Visitor<'a> {
             //       child.accept(visitor);
             //     }
         }
+
+        self.active_modules.remove(&url);
 
         Ok(())
     }

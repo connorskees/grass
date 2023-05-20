@@ -180,6 +180,17 @@ impl<V: fmt::Debug + Clone, T: MapView<Value = V> + Clone> MapView for PrefixedM
     }
 }
 
+/// A mostly-unmodifiable view of a map that only allows certain keys to be
+/// accessed.
+///
+/// Whether or not the underlying map contains keys that aren't allowed, this
+/// view will behave as though it doesn't contain them.
+///
+/// The underlying map's values may change independently of this view, but its
+/// set of keys may not.
+///
+/// This is unmodifiable *except for the [remove] method*, which is used for
+/// `@used with` to mark configured variables as used.
 #[derive(Debug, Clone)]
 pub(crate) struct LimitedMapView<V: fmt::Debug + Clone, T: MapView<Value = V> + Clone>(
     pub T,
@@ -197,11 +208,11 @@ impl<V: fmt::Debug + Clone, T: MapView<Value = V> + Clone> LimitedMapView<V, T> 
         Self(map, keys)
     }
 
-    pub fn blocklist(map: T, keys: &HashSet<Identifier>) -> Self {
-        let keys = keys
-            .iter()
-            .copied()
-            .filter(|key| !map.contains_key(*key))
+    pub fn blocklist(map: T, blocklist: &HashSet<Identifier>) -> Self {
+        let keys = map
+            .keys()
+            .into_iter()
+            .filter(|key| !blocklist.contains(key))
             .collect();
 
         Self(map, keys)

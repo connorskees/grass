@@ -29,13 +29,6 @@ All known missing features and bugs are tracked in [#19](https://github.com/conn
 
 `grass` is benchmarked against `dart-sass` and `sassc` (`libsass`) [here](https://github.com/connorskees/sass-perf). In general, `grass` appears to be ~2x faster than `dart-sass` and ~1.7x faster than `sassc`.
 
-## Web Assembly
-
-`grass` experimentally releases a
-[WASM version of the library to npm](https://www.npmjs.com/package/@connorskees/grass),
-compiled using wasm-bindgen. To use `grass` in your JavaScript projects, run
-`npm install @connorskees/grass` to add it to your package.json. This version of grass is not currently well documented, but one can find example usage in the [`grassmeister` repository](https://github.com/connorskees/grassmeister).
-
 ## Cargo Features
 
 ### commandline
@@ -84,9 +77,9 @@ The spec runner does not work on Windows.
 Using a modified version of the spec runner that ignores warnings and error spans (but does include error messages), `grass` achieves the following results:
 
 ```
-2022-05-11
+2022-05-20
 PASSING: 6277
-FAILING: 596
+FAILING: 548
 TOTAL: 6905
 ```
 

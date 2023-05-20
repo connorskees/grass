@@ -17,9 +17,9 @@ use crate::{
 #[allow(clippy::type_complexity)]
 #[derive(Debug, Default, Clone)]
 pub(crate) struct Scopes {
-    variables: Arc<RefCell<Vec<Arc<RefCell<BTreeMap<Identifier, Value>>>>>>,
-    mixins: Arc<RefCell<Vec<Arc<RefCell<BTreeMap<Identifier, Mixin>>>>>>,
-    functions: Arc<RefCell<Vec<Arc<RefCell<BTreeMap<Identifier, SassFunction>>>>>>,
+    pub(crate) variables: Arc<RefCell<Vec<Arc<RefCell<BTreeMap<Identifier, Value>>>>>>,
+    pub(crate) mixins: Arc<RefCell<Vec<Arc<RefCell<BTreeMap<Identifier, Mixin>>>>>>,
+    pub(crate) functions: Arc<RefCell<Vec<Arc<RefCell<BTreeMap<Identifier, SassFunction>>>>>>,
     len: Arc<Cell<usize>>,
     pub last_variable_index: Option<(Identifier, usize)>,
 }
@@ -166,6 +166,10 @@ impl Scopes {
         }
 
         false
+    }
+
+    pub fn global_var_exists(&self, name: Identifier) -> bool {
+        self.global_variables().borrow().contains_key(&name)
     }
 }
 

@@ -349,6 +349,22 @@ fn imports_same_file_thrice() {
         &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
     );
 }
+#[test]
+fn imports_self() {
+    let mut fs = TestFs::new();
+
+    fs.add_file("input.scss", r#"@import "input";"#);
+
+    let input = r#"
+        @import "input";
+    "#;
+
+    assert_err!(
+        input,
+        "Error: This file is already being loaded.",
+        &grass::Options::default().fs(&fs)
+    );
+}
 
 #[test]
 fn imports_explicit_file_extension() {

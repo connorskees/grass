@@ -415,6 +415,13 @@ impl ConfiguredValue {
             configuration_span: Some(configuration_span),
         }
     }
+
+    pub fn implicit(value: Value) -> Self {
+        Self {
+            value,
+            configuration_span: None,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

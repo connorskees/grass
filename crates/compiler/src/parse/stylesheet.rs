@@ -28,15 +28,15 @@ use super::{
 /// SCSS share the behavior
 pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
     // todo: make constant?
-    fn is_plain_css(&mut self) -> bool;
+    fn is_plain_css(&self) -> bool;
     // todo: make constant?
-    fn is_indented(&mut self) -> bool;
+    fn is_indented(&self) -> bool;
     fn options(&self) -> &Options;
-    fn path(&mut self) -> &Path;
+    fn path(&self) -> &Path;
     fn map(&mut self) -> &mut CodeMap;
     fn span_before(&self) -> Span;
     fn current_indentation(&self) -> usize;
-    fn flags(&mut self) -> &ContextFlags;
+    fn flags(&self) -> &ContextFlags;
     fn flags_mut(&mut self) -> &mut ContextFlags;
 
     #[allow(clippy::type_complexity)]
@@ -185,7 +185,13 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
     }
 
     fn __parse(&mut self) -> SassResult<StyleSheet> {
-        let mut style_sheet = StyleSheet::new(self.is_plain_css(), self.path().to_path_buf());
+        let mut style_sheet = StyleSheet::new(
+            self.is_plain_css(),
+            self.options()
+                .fs
+                .canonicalize(self.path())
+                .unwrap_or_else(|_| self.path().to_path_buf()),
+        );
 
         // Allow a byte-order mark at the beginning of the document.
         self.scan_char('\u{feff}');

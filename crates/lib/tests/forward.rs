@@ -334,6 +334,173 @@ fn forward_module_with_error() {
     );
 }
 
+#[test]
+fn use_with_multi_load_forward() {
+    let mut fs = TestFs::new();
+
+    fs.add_file(
+        "_midstream.scss",
+        r#"
+        @forward "upstream";
+    "#,
+    );
+    fs.add_file(
+        "_upstream.scss",
+        r#"
+    $a: original !default;
+    "#,
+    );
+
+    let input = r#"
+        @use "upstream" with ($a: configured);
+        @use "midstream";
+        b {c: midstream.$a}
+    "#;
+
+    assert_eq!(
+        "b {\n  c: configured;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
+    );
+}
+
+#[test]
+fn forward_member_import_precedence_nested() {
+    let mut fs = TestFs::new();
+
+    fs.add_file(
+        "_midstream.scss",
+        r#"
+        @forward "upstream";
+    "#,
+    );
+    fs.add_file(
+        "_upstream.scss",
+        r#"
+        $a: in-upstream;
+    "#,
+    );
+
+    let input = r#"
+        b {
+            $a: in-input;
+        
+            @import "midstream";
+        
+            c: $a;
+        }
+    "#;
+
+    assert_eq!(
+        "b {\n  c: in-upstream;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
+    );
+}
+
+#[test]
+fn forward_with_through_forward_hide() {
+    let mut fs = TestFs::new();
+
+    fs.add_file(
+        "_downstream.scss",
+        r#"
+        @forward "midstream" with ($a: configured);
+    "#,
+    );
+    fs.add_file(
+        "_midstream.scss",
+        r#"
+        @forward "upstream" hide $b;
+    "#,
+    );
+    fs.add_file(
+        "_upstream.scss",
+        r#"
+        $a: original !default;
+        b {c: $a}
+    "#,
+    );
+
+    let input = r#"
+        @use "downstream";
+    "#;
+
+    assert_eq!(
+        "b {\n  c: configured;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
+    );
+}
+
+#[test]
+fn forward_with_through_forward_show() {
+    let mut fs = TestFs::new();
+
+    fs.add_file(
+        "_downstream.scss",
+        r#"
+        @forward "midstream" with ($a: configured);
+    "#,
+    );
+    fs.add_file(
+        "_midstream.scss",
+        r#"
+        @forward "upstream" show $a;
+    "#,
+    );
+    fs.add_file(
+        "_upstream.scss",
+        r#"
+        $a: original !default;
+        b {c: $a}
+    "#,
+    );
+
+    let input = r#"
+        @use "downstream";
+    "#;
+
+    assert_eq!(
+        "b {\n  c: configured;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
+    );
+}
+
+#[test]
+#[ignore = "incorrectly thinks there's a module loop"]
+fn import_forwarded_first_no_use() {
+    let mut fs = TestFs::new();
+
+    fs.add_file(
+        "first.scss",
+        r#"
+        $variable: value;
+    "#,
+    );
+    fs.add_file(
+        "first.import.scss",
+        r#"
+        @forward "first";
+    "#,
+    );
+    fs.add_file(
+        "second.scss",
+        r#"
+        a {
+            b: $variable;
+        }
+    "#,
+    );
+
+    let input = r#"
+        @import "first";
+        @import "second";
+    "#;
+
+    assert_eq!(
+        "a {\n  b: value;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
+    );
+}
+
 error!(
     after_style_rule,
     r#"
