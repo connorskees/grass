@@ -12,11 +12,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@master
 
-      - uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@master
         with:
-          profile: minimal
           toolchain: nightly
-          override: true
 
       - name: version info
         run: rustc --version; cargo --version;
@@ -30,16 +28,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@master
 
-      - uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@master
         with:
-          profile: minimal
           toolchain: stable
-          override: true
 
-      - uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
+      - run: cargo fmt --all -- --check
 
   clippy:
     runs-on: ubuntu-latest
@@ -47,16 +40,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@master
 
-      - uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@master
         with:
-          profile: minimal
           toolchain: stable
-          override: true
 
-      - uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args:  --features=macro -- -D warnings
+      - run: cargo clippy --features=macro -- -D warnings
 
   boostrap:
     runs-on: ubuntu-latest
@@ -64,11 +52,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@master
 
-      - uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@master
         with:
-          profile: minimal
           toolchain: stable
-          override: true
 
       - name: Build
         run: cargo build
@@ -100,11 +86,9 @@ jobs:
   #   steps:
   #     - name: Checkout
   #       uses: actions/checkout@master
-  #     - uses: actions-rs/toolchain@v1
+  #     - uses: dtolnay/rust-toolchain@master
   #       with:
-  #         profile: minimal
   #         toolchain: stable
-  #         override: true
   #     - name: version info
   #       run:  rustc --version; cargo --version;
   #     - name: Build binary
