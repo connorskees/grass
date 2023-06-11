@@ -144,7 +144,7 @@ pub(crate) fn add(left: Value, right: Value, options: &Options, span: Span) -> S
             }
         },
         c @ Value::Color(..) => match right {
-            // todo: we really cant add to any other types?
+            // todo: we really can't add to any other types?
             Value::String(..) | Value::Null | Value::List(..) => Value::String(
                 format!(
                     "{}{}",
