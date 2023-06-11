@@ -115,7 +115,7 @@ impl ListSeparator {
 
 /// In Sass, underscores and hyphens are considered equal when inside identifiers.
 ///
-/// This struct protects that invariant by normalizing all underscores into hypens.
+/// This struct protects that invariant by normalizing all underscores into hyphens.
 #[derive(Clone, Eq, PartialEq, Hash, PartialOrd, Ord, Copy)]
 pub struct Identifier(InternedString);
 

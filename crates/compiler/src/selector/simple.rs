@@ -190,7 +190,7 @@ impl SimpleSelector {
         }
     }
 
-    /// Returns the compoments of a `CompoundSelector` that matches only elements
+    /// Returns the components of a `CompoundSelector` that matches only elements
     /// matched by both this and `compound`.
     ///
     /// By default, this just returns a copy of `compound` with this selector

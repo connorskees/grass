@@ -62,7 +62,7 @@ impl ExtendedSelector {
 /// for this yet (we can't just use a `Vec` because linear insert)
 /// is too big of a penalty
 ///
-/// In pratice, I have yet to find a test case that can demonstrate
+/// In practice, I have yet to find a test case that can demonstrate
 /// an issue with storing a `RefCell`.
 #[derive(Clone, Debug)]
 pub(crate) struct SelectorHashSet(HashSet<ExtendedSelector>);

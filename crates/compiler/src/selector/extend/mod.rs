@@ -1149,7 +1149,7 @@ impl ExtensionStore {
 
             */
 
-            // If no extends actually happened (for example becaues unification
+            // If no extends actually happened (for example because unification
             // failed), we don't need to re-register the selector.
             let selector_as_selector = selector.clone().into_selector().0;
             if old_value == selector_as_selector {
