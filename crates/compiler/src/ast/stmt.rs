@@ -522,6 +522,7 @@ pub enum AstSupportsCondition {
 #[derive(Debug, Clone)]
 pub struct AstSupportsRule {
     pub condition: AstSupportsCondition,
+    // todo: rename body
     pub children: Vec<AstStmt>,
     pub span: Span,
 }

@@ -32,7 +32,7 @@ grass input.scss
 ```
 */
 
-#![cfg_attr(doc, feature(doc_cfg))]
+#![cfg_attr(doc_cfg, feature(doc_cfg))]
 #![warn(clippy::all, clippy::cargo, clippy::dbg_macro)]
 #![deny(missing_debug_implementations)]
 #![allow(

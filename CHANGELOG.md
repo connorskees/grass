@@ -11,6 +11,7 @@
 
  - fix various module system bugs when combined with `@import`
  - expose more AST internals in `grass_compiler`
+ - allow building docs with stable/beta rust compiler
 
 # 0.12.4
 

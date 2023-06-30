@@ -31,7 +31,7 @@ grass input.scss
 ```
 */
 
-#![cfg_attr(doc, feature(doc_cfg))]
+#![cfg_attr(doc_cfg, feature(doc_cfg))]
 #![warn(clippy::all, clippy::cargo, clippy::dbg_macro)]
 #![deny(missing_debug_implementations)]
 #![allow(
@@ -107,7 +107,7 @@ pub use grass_compiler::{
 /// for all options are used, except for output style, which is compressed.
 #[macro_export]
 #[cfg(any(feature = "macro", doc))]
-#[cfg_attr(doc, doc(cfg(feature = "macro")))]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "macro")))]
 macro_rules! include {
     ($path:literal) => {
         $crate::__internal::include_sass::include_sass!($path);

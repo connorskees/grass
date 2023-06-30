@@ -23,6 +23,12 @@ path = "src/lib.rs"
 # crate-type = ["cdylib", "rlib"]
 bench = false
 
+[package.metadata.docs.rs]
+# To build locally:
+# RUSTDOCFLAGS="--cfg doc_cfg" cargo +nightly doc --all-features --no-deps --open
+all-features = true
+rustdoc-args = ["--cfg", "doc_cfg"]
+
 [dependencies]
 grass_compiler = { path = "../compiler", version = "0.12.4", default-features = false }
 include_sass = { path = "../include_sass", version = "0.12.4", optional = true }

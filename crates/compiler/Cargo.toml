@@ -16,6 +16,12 @@ path = "src/lib.rs"
 # crate-type = ["cdylib", "rlib"]
 bench = false
 
+[package.metadata.docs.rs]
+# To build locally:
+# RUSTDOCFLAGS="--cfg doc_cfg" cargo +nightly doc --all-features --no-deps --open
+all-features = true
+rustdoc-args = ["--cfg", "doc_cfg"]
+
 [dependencies]
 # todo: use lazy_static
 once_cell = "1.15.0"
