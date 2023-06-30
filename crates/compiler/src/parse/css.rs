@@ -14,7 +14,7 @@ pub(crate) struct CssParser<'a> {
     // todo: likely superfluous
     pub map: &'a mut CodeMap,
     pub path: &'a Path,
-    pub span_before: Span,
+    pub empty_span: Span,
     pub flags: ContextFlags,
     pub options: &'a Options<'a>,
 }
@@ -70,8 +70,8 @@ impl<'a> StylesheetParser<'a> for CssParser<'a> {
         0
     }
 
-    fn span_before(&self) -> Span {
-        self.span_before
+    fn empty_span(&self) -> Span {
+        self.empty_span
     }
 
     const IDENTIFIER_LIKE: Option<fn(&mut Self) -> SassResult<Spanned<AstExpr>>> =
@@ -112,14 +112,14 @@ impl<'a> CssParser<'a> {
         toks: Lexer<'a>,
         map: &'a mut CodeMap,
         options: &'a Options<'a>,
-        span_before: Span,
+        empty_span: Span,
         file_name: &'a Path,
     ) -> Self {
         CssParser {
             toks,
             map,
             path: file_name,
-            span_before,
+            empty_span,
             flags: ContextFlags::empty(),
             options,
         }

@@ -11,7 +11,7 @@ pub(crate) struct SassParser<'a> {
     // todo: likely superfluous
     pub map: &'a mut CodeMap,
     pub path: &'a Path,
-    pub span_before: Span,
+    pub empty_span: Span,
     pub flags: ContextFlags,
     pub options: &'a Options<'a>,
     pub current_indentation: usize,
@@ -103,8 +103,8 @@ impl<'a> StylesheetParser<'a> for SassParser<'a> {
         self.current_indentation
     }
 
-    fn span_before(&self) -> Span {
-        self.span_before
+    fn empty_span(&self) -> Span {
+        self.empty_span
     }
 
     fn parse_style_rule_selector(&mut self) -> SassResult<Interpolation> {
@@ -353,7 +353,7 @@ impl<'a> SassParser<'a> {
         toks: Lexer<'a>,
         map: &'a mut CodeMap,
         options: &'a Options<'a>,
-        span_before: Span,
+        empty_span: Span,
         file_name: &'a Path,
     ) -> Self {
         let mut flags = ContextFlags::empty();
@@ -364,7 +364,7 @@ impl<'a> SassParser<'a> {
             toks,
             map,
             path: file_name,
-            span_before,
+            empty_span,
             flags,
             options,
             current_indentation: 0,

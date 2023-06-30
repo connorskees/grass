@@ -16,13 +16,13 @@ use crate::{
 use super::AstExpr;
 
 #[derive(Debug, Clone)]
-pub(crate) struct Argument {
+pub struct Argument {
     pub name: Identifier,
     pub default: Option<AstExpr>,
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct ArgumentDeclaration {
+pub struct ArgumentDeclaration {
     pub args: Vec<Argument>,
     pub rest: Option<Identifier>,
 }
@@ -130,7 +130,7 @@ impl ArgumentDeclaration {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct ArgumentInvocation {
+pub struct ArgumentInvocation {
     pub(crate) positional: Vec<AstExpr>,
     pub(crate) named: BTreeMap<Identifier, AstExpr>,
     pub(crate) rest: Option<AstExpr>,

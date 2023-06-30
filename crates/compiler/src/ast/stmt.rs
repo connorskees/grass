@@ -17,13 +17,13 @@ use crate::{
 
 #[derive(Debug, Clone)]
 #[allow(unused)]
-pub(crate) struct AstSilentComment {
+pub struct AstSilentComment {
     pub text: String,
     pub span: Span,
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct AstPlainCssImport {
+pub struct AstPlainCssImport {
     pub url: Interpolation,
     pub modifiers: Option<Interpolation>,
     #[allow(unused)]
@@ -31,25 +31,25 @@ pub(crate) struct AstPlainCssImport {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct AstSassImport {
+pub struct AstSassImport {
     pub url: String,
     pub span: Span,
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct AstIf {
+pub struct AstIf {
     pub if_clauses: Vec<AstIfClause>,
     pub else_clause: Option<Vec<AstStmt>>,
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct AstIfClause {
+pub struct AstIfClause {
     pub condition: AstExpr,
     pub body: Vec<AstStmt>,
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct AstFor {
+pub struct AstFor {
     pub variable: Spanned<Identifier>,
     pub from: Spanned<AstExpr>,
     pub to: Spanned<AstExpr>,
@@ -58,14 +58,14 @@ pub(crate) struct AstFor {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct AstReturn {
+pub struct AstReturn {
     pub val: AstExpr,
     #[allow(unused)]
     pub span: Span,
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct AstRuleSet {
+pub struct AstRuleSet {
     pub selector: Interpolation,
     pub body: Vec<AstStmt>,
     pub selector_span: Span,
@@ -73,7 +73,7 @@ pub(crate) struct AstRuleSet {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct AstStyle {
+pub struct AstStyle {
     pub name: Interpolation,
     pub value: Option<Spanned<AstExpr>>,
     pub body: Vec<AstStmt>,
@@ -87,30 +87,30 @@ impl AstStyle {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct AstEach {
+pub struct AstEach {
     pub variables: Vec<Identifier>,
     pub list: AstExpr,
     pub body: Vec<AstStmt>,
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct AstMedia {
+pub struct AstMedia {
     pub query: Interpolation,
     pub query_span: Span,
     pub body: Vec<AstStmt>,
     pub span: Span,
 }
 
-pub(crate) type CssMediaQuery = MediaQuery;
+pub type CssMediaQuery = MediaQuery;
 
 #[derive(Debug, Clone)]
-pub(crate) struct AstWhile {
+pub struct AstWhile {
     pub condition: AstExpr,
     pub body: Vec<AstStmt>,
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct AstVariableDecl {
+pub struct AstVariableDecl {
     pub namespace: Option<Spanned<Identifier>>,
     pub name: Identifier,
     pub value: AstExpr,
@@ -120,26 +120,26 @@ pub(crate) struct AstVariableDecl {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct AstFunctionDecl {
+pub struct AstFunctionDecl {
     pub name: Spanned<Identifier>,
     pub arguments: ArgumentDeclaration,
     pub children: Vec<AstStmt>,
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct AstDebugRule {
+pub struct AstDebugRule {
     pub value: AstExpr,
     pub span: Span,
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct AstWarn {
+pub struct AstWarn {
     pub value: AstExpr,
     pub span: Span,
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct AstErrorRule {
+pub struct AstErrorRule {
     pub value: AstExpr,
     pub span: Span,
 }
@@ -153,13 +153,13 @@ impl PartialEq for AstFunctionDecl {
 impl Eq for AstFunctionDecl {}
 
 #[derive(Debug, Clone)]
-pub(crate) struct AstLoudComment {
+pub struct AstLoudComment {
     pub text: Interpolation,
     pub span: Span,
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct AstMixin {
+pub struct AstMixin {
     pub name: Identifier,
     pub args: ArgumentDeclaration,
     pub body: Vec<AstStmt>,
@@ -168,18 +168,18 @@ pub(crate) struct AstMixin {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct AstContentRule {
+pub struct AstContentRule {
     pub args: ArgumentInvocation,
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct AstContentBlock {
+pub struct AstContentBlock {
     pub args: ArgumentDeclaration,
     pub body: Vec<AstStmt>,
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct AstInclude {
+pub struct AstInclude {
     pub namespace: Option<Spanned<Identifier>>,
     pub name: Spanned<Identifier>,
     pub args: ArgumentInvocation,
@@ -188,7 +188,7 @@ pub(crate) struct AstInclude {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct AstUnknownAtRule {
+pub struct AstUnknownAtRule {
     pub name: Interpolation,
     pub value: Option<Interpolation>,
     pub children: Option<Vec<AstStmt>>,
@@ -196,14 +196,15 @@ pub(crate) struct AstUnknownAtRule {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct AstExtendRule {
+pub struct AstExtendRule {
     pub value: Interpolation,
     pub is_optional: bool,
     pub span: Span,
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct AstAtRootRule {
+pub struct AstAtRootRule {
+    // todo: rename to body
     pub children: Vec<AstStmt>,
     pub query: Option<Spanned<Interpolation>>,
     #[allow(unused)]
@@ -211,7 +212,7 @@ pub(crate) struct AstAtRootRule {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct AtRootQuery {
+pub struct AtRootQuery {
     pub include: bool,
     pub names: HashSet<String>,
     pub all: bool,
@@ -239,7 +240,7 @@ impl AtRootQuery {
         (self.all || self.rule) != self.include
     }
 
-    pub fn excludes(&self, stmt: &CssStmt) -> bool {
+    pub(crate) fn excludes(&self, stmt: &CssStmt) -> bool {
         if self.all {
             return !self.include;
         }
@@ -266,12 +267,12 @@ impl Default for AtRootQuery {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct AstImportRule {
+pub struct AstImportRule {
     pub imports: Vec<AstImport>,
 }
 
 #[derive(Debug, Clone)]
-pub(crate) enum AstImport {
+pub enum AstImport {
     Plain(AstPlainCssImport),
     Sass(AstSassImport),
 }
@@ -283,7 +284,7 @@ impl AstImport {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct AstUseRule {
+pub struct AstUseRule {
     pub url: PathBuf,
     pub namespace: Option<String>,
     pub configuration: Vec<ConfiguredVariable>,
@@ -291,18 +292,18 @@ pub(crate) struct AstUseRule {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct ConfiguredVariable {
+pub struct ConfiguredVariable {
     pub name: Spanned<Identifier>,
     pub expr: Spanned<AstExpr>,
     pub is_guarded: bool,
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct Configuration {
-    pub values: Arc<dyn MapView<Value = ConfiguredValue>>,
+pub struct Configuration {
+    pub(crate) values: Arc<dyn MapView<Value = ConfiguredValue>>,
     #[allow(unused)]
-    pub original_config: Option<Arc<RefCell<Self>>>,
-    pub span: Option<Span>,
+    pub(crate) original_config: Option<Arc<RefCell<Self>>>,
+    pub(crate) span: Option<Span>,
 }
 
 impl Configuration {
@@ -403,7 +404,7 @@ impl Configuration {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct ConfiguredValue {
+pub struct ConfiguredValue {
     pub value: Value,
     pub configuration_span: Option<Span>,
 }
@@ -425,7 +426,7 @@ impl ConfiguredValue {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct AstForwardRule {
+pub struct AstForwardRule {
     pub url: PathBuf,
     pub shown_mixins_and_functions: Option<HashSet<Identifier>>,
     pub shown_variables: Option<HashSet<Identifier>>,
@@ -497,7 +498,7 @@ impl AstForwardRule {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) enum AstSupportsCondition {
+pub enum AstSupportsCondition {
     Anything {
         contents: Interpolation,
     },
@@ -519,14 +520,14 @@ pub(crate) enum AstSupportsCondition {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct AstSupportsRule {
+pub struct AstSupportsRule {
     pub condition: AstSupportsCondition,
     pub children: Vec<AstStmt>,
     pub span: Span,
 }
 
 #[derive(Debug, Clone)]
-pub(crate) enum AstStmt {
+pub enum AstStmt {
     If(AstIf),
     For(AstFor),
     Return(AstReturn),
@@ -555,12 +556,13 @@ pub(crate) enum AstStmt {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct StyleSheet {
+pub struct StyleSheet {
     pub body: Vec<AstStmt>,
     pub url: PathBuf,
     pub is_plain_css: bool,
-    /// Array of indices into body
+    /// Array of indices into `body`
     pub uses: Vec<usize>,
+    /// Array of indices into `body`
     pub forwards: Vec<usize>,
 }
 

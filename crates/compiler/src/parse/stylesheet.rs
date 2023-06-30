@@ -34,7 +34,7 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
     fn options(&self) -> &Options;
     fn path(&self) -> &Path;
     fn map(&mut self) -> &mut CodeMap;
-    fn span_before(&self) -> Span;
+    fn empty_span(&self) -> Span;
     fn current_indentation(&self) -> usize;
     fn flags(&self) -> &ContextFlags;
     fn flags_mut(&mut self) -> &mut ContextFlags;
@@ -184,6 +184,7 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
         Ok(stmts)
     }
 
+    // todo: rename
     fn __parse(&mut self) -> SassResult<StyleSheet> {
         let mut style_sheet = StyleSheet::new(
             self.is_plain_css(),
@@ -758,8 +759,7 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
                             buffer.add_char('(');
                         }
 
-                        buffer
-                            .add_expr(AstExpr::Supports(Arc::new(query)).span(self.span_before()));
+                        buffer.add_expr(AstExpr::Supports(Arc::new(query)).span(self.empty_span()));
 
                         if !is_declaration {
                             buffer.add_char(')');
@@ -1552,7 +1552,7 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
         // if namespace is empty, avoid attempting to parse an identifier from
         // an empty string, as there will be no span to emit
         let identifier = if namespace.is_empty() {
-            Err(("", self.span_before()).into())
+            Err(("", self.empty_span()).into())
         } else {
             mem::swap(self.toks_mut(), &mut toks);
             let ident = self.parse_identifier(false, false);

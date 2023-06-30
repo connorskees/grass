@@ -3,7 +3,7 @@ use codemap::Spanned;
 use super::AstExpr;
 
 #[derive(Debug, Clone)]
-pub(crate) struct Interpolation {
+pub struct Interpolation {
     pub contents: Vec<InterpolationPart>,
 }
 
@@ -81,7 +81,7 @@ impl Interpolation {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) enum InterpolationPart {
+pub enum InterpolationPart {
     String(String),
     Expr(Spanned<AstExpr>),
 }

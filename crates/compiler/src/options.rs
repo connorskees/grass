@@ -191,7 +191,12 @@ pub enum InputSyntax {
 
 impl InputSyntax {
     pub(crate) fn for_path(path: &Path) -> Self {
-        match path.extension().and_then(|ext| ext.to_str()) {
+        match path
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .map(str::to_ascii_lowercase)
+            .as_deref()
+        {
             Some("css") => Self::Css,
             Some("sass") => Self::Sass,
             _ => Self::Scss,

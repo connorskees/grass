@@ -11,7 +11,7 @@ pub(crate) struct MediaRule {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
-pub(crate) struct MediaQuery {
+pub struct MediaQuery {
     pub modifier: Option<String>,
     pub media_type: Option<String>,
     pub conditions: Vec<String>,
@@ -60,7 +60,7 @@ impl MediaQuery {
     }
 
     #[allow(clippy::if_not_else)]
-    pub fn merge(&self, other: &Self) -> MediaQueryMergeResult {
+    pub(crate) fn merge(&self, other: &Self) -> MediaQueryMergeResult {
         if !self.conjunction || !other.conjunction {
             return MediaQueryMergeResult::Unrepresentable;
         }

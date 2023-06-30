@@ -9,6 +9,9 @@
 
 # 0.13.0
 
+ - fix various module system bugs when combined with `@import`
+ - expose more AST internals in `grass_compiler`
+
 # 0.12.4
 
 - implement builtin map-module functions `map.deep-merge(..)` and `map.deep-remove(..)`

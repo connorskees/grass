@@ -84,6 +84,7 @@ grass input.scss
 use std::path::Path;
 
 use parse::{CssParser, SassParser, StylesheetParser};
+use sass_ast::StyleSheet;
 use serializer::Serializer;
 #[cfg(feature = "wasm-exports")]
 use wasm_bindgen::prelude::*;
@@ -112,6 +113,12 @@ pub mod sass_value {
     };
 }
 
+pub mod sass_ast {
+    pub use crate::ast::*;
+}
+
+pub use codemap;
+
 mod ast;
 mod builtin;
 mod color;
@@ -133,6 +140,42 @@ mod value;
 fn raw_to_parse_error(map: &CodeMap, err: Error, unicode: bool) -> Box<Error> {
     let (message, span) = err.raw();
     Box::new(Error::from_loc(message, map.look_up_span(span), unicode))
+}
+
+pub fn parse_stylesheet<P: AsRef<Path>>(
+    input: String,
+    file_name: P,
+    options: &Options,
+) -> Result<StyleSheet> {
+    // todo: much of this logic is duplicated in `from_string_with_file_name`
+    let mut map = CodeMap::new();
+    let path = file_name.as_ref();
+    let file = map.add_file(path.to_string_lossy().into_owned(), input);
+    let empty_span = file.span.subspan(0, 0);
+    let lexer = Lexer::new_from_file(&file);
+
+    let input_syntax = options
+        .input_syntax
+        .unwrap_or_else(|| InputSyntax::for_path(path));
+
+    let stylesheet = match input_syntax {
+        InputSyntax::Scss => {
+            ScssParser::new(lexer, &mut map, options, empty_span, file_name.as_ref()).__parse()
+        }
+        InputSyntax::Sass => {
+            SassParser::new(lexer, &mut map, options, empty_span, file_name.as_ref()).__parse()
+        }
+        InputSyntax::Css => {
+            CssParser::new(lexer, &mut map, options, empty_span, file_name.as_ref()).__parse()
+        }
+    };
+
+    let stylesheet = match stylesheet {
+        Ok(v) => v,
+        Err(e) => return Err(raw_to_parse_error(&map, *e, options.unicode_error_messages)),
+    };
+
+    Ok(stylesheet)
 }
 
 fn from_string_with_file_name<P: AsRef<Path>>(

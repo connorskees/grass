@@ -111,7 +111,10 @@ pub struct Visitor<'a> {
     pub(crate) media_queries: Option<Vec<MediaQuery>>,
     pub(crate) media_query_sources: Option<IndexSet<MediaQuery>>,
     pub(crate) extender: ExtensionStore,
-    pub(crate) current_import_path: PathBuf,
+
+    /// The complete file path of the current file being visited. Imports are
+    /// resolved relative to this path
+    pub current_import_path: PathBuf,
     pub(crate) is_plain_css: bool,
     pub(crate) modules: BTreeMap<PathBuf, Arc<RefCell<Module>>>,
     pub(crate) active_modules: BTreeSet<PathBuf>,
@@ -119,10 +122,10 @@ pub struct Visitor<'a> {
     parent: Option<CssTreeIdx>,
     configuration: Arc<RefCell<Configuration>>,
     import_nodes: Vec<CssStmt>,
-    pub(crate) options: &'a Options<'a>,
+    pub options: &'a Options<'a>,
     pub(crate) map: &'a mut CodeMap,
     // todo: remove
-    span_before: Span,
+    empty_span: Span,
     import_cache: BTreeMap<PathBuf, StyleSheet>,
     /// As a simple heuristic, we don't cache the results of an import unless it
     /// has been seen in the past. In the majority of cases, files are imported
@@ -131,16 +134,16 @@ pub struct Visitor<'a> {
 }
 
 impl<'a> Visitor<'a> {
-    pub(crate) fn new(
+    pub fn new(
         path: &Path,
         options: &'a Options<'a>,
         map: &'a mut CodeMap,
-        span_before: Span,
+        empty_span: Span,
     ) -> Self {
         let mut flags = ContextFlags::empty();
         flags.set(ContextFlags::IN_SEMI_GLOBAL_SCOPE, true);
 
-        let extender = ExtensionStore::new(span_before);
+        let extender = ExtensionStore::new(empty_span);
 
         let current_import_path = path.to_path_buf();
 
@@ -162,7 +165,7 @@ impl<'a> Visitor<'a> {
             modules: BTreeMap::new(),
             active_modules: BTreeSet::new(),
             options,
-            span_before,
+            empty_span,
             map,
             import_cache: BTreeMap::new(),
             files_seen: BTreeSet::new(),
@@ -433,7 +436,7 @@ impl<'a> Visitor<'a> {
                 self.parenthesize_supports_condition(*condition, None)?
             )),
             AstSupportsCondition::Interpolation(expr) => {
-                self.evaluate_to_css(expr, QuoteKind::None, self.span_before)
+                self.evaluate_to_css(expr, QuoteKind::None, self.empty_span)
             }
             AstSupportsCondition::Declaration { name, value } => {
                 let old_in_supports_decl = self.flags.in_supports_declaration();
@@ -448,9 +451,9 @@ impl<'a> Visitor<'a> {
 
                 let result = format!(
                     "({}:{}{})",
-                    self.evaluate_to_css(name, QuoteKind::Quoted, self.span_before)?,
+                    self.evaluate_to_css(name, QuoteKind::Quoted, self.empty_span)?,
                     if is_custom_property { "" } else { " " },
-                    self.evaluate_to_css(value, QuoteKind::Quoted, self.span_before)?,
+                    self.evaluate_to_css(value, QuoteKind::Quoted, self.empty_span)?,
                 );
 
                 self.flags
@@ -578,7 +581,7 @@ impl<'a> Visitor<'a> {
         }
 
         let env = Environment::new();
-        let mut extension_store = ExtensionStore::new(self.span_before);
+        let mut extension_store = ExtensionStore::new(self.empty_span);
 
         self.with_environment::<SassResult<()>, _>(env.new_closure(), |visitor| {
             let old_parent = visitor.parent;
@@ -795,7 +798,7 @@ impl<'a> Visitor<'a> {
     /// <https://sass-lang.com/documentation/at-rules/import#finding-the-file>
     /// <https://sass-lang.com/documentation/at-rules/import#load-paths>
     #[allow(clippy::cognitive_complexity)]
-    fn find_import(&self, path: &Path) -> Option<PathBuf> {
+    pub fn find_import(&self, path: &Path) -> Option<PathBuf> {
         let path_buf = if path.is_absolute() {
             path.into()
         } else {
@@ -869,17 +872,17 @@ impl<'a> Visitor<'a> {
         &mut self,
         lexer: Lexer,
         path: &Path,
-        span_before: Span,
+        empty_span: Span,
     ) -> SassResult<StyleSheet> {
         match InputSyntax::for_path(path) {
             InputSyntax::Scss => {
-                ScssParser::new(lexer, self.map, self.options, span_before, path).__parse()
+                ScssParser::new(lexer, self.map, self.options, empty_span, path).__parse()
             }
             InputSyntax::Sass => {
-                SassParser::new(lexer, self.map, self.options, span_before, path).__parse()
+                SassParser::new(lexer, self.map, self.options, empty_span, path).__parse()
             }
             InputSyntax::Css => {
-                CssParser::new(lexer, self.map, self.options, span_before, path).__parse()
+                CssParser::new(lexer, self.map, self.options, empty_span, path).__parse()
             }
         }
     }
@@ -988,7 +991,7 @@ impl<'a> Visitor<'a> {
         // Create a dummy module with empty CSS and no extensions to make forwarded
         // members available in the current import context and to combine all the
         // CSS from modules used by [stylesheet].
-        let module = env.to_dummy_module(self.span_before);
+        let module = env.to_dummy_module(self.empty_span);
         self.env.import_forwards(module);
 
         if loads_user_defined_modules {
@@ -2096,7 +2099,7 @@ impl<'a> Visitor<'a> {
                 // todo: emit warning. we don't currently because it can be quite loud
                 // self.emit_warning(
                 //     Cow::Borrowed("Using / for division is deprecated and will be removed at some point in the future"),
-                //     self.span_before,
+                //     self.empty_span,
                 // );
             }
             _ => {}
@@ -2567,7 +2570,7 @@ impl<'a> Visitor<'a> {
             AstExpr::True => Value::True,
             AstExpr::False => Value::False,
             AstExpr::Calculation { name, args } => {
-                self.visit_calculation_expr(name, args, self.span_before)?
+                self.visit_calculation_expr(name, args, self.empty_span)?
             }
             AstExpr::FunctionCall(func_call) => self.visit_function_call_expr(func_call)?,
             AstExpr::If(if_expr) => self.visit_ternary((*if_expr).clone())?,

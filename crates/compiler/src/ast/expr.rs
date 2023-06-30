@@ -13,17 +13,17 @@ use super::{ArgumentInvocation, AstSupportsCondition, Interpolation, Interpolati
 
 /// Represented by the `if` function
 #[derive(Debug, Clone)]
-pub(crate) struct Ternary(pub ArgumentInvocation);
+pub struct Ternary(pub ArgumentInvocation);
 
 #[derive(Debug, Clone)]
-pub(crate) struct ListExpr {
+pub struct ListExpr {
     pub elems: Vec<Spanned<AstExpr>>,
     pub separator: ListSeparator,
     pub brackets: Brackets,
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct FunctionCallExpr {
+pub struct FunctionCallExpr {
     pub namespace: Option<Spanned<Identifier>>,
     pub name: Identifier,
     pub arguments: Arc<ArgumentInvocation>,
@@ -31,17 +31,17 @@ pub(crate) struct FunctionCallExpr {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct InterpolatedFunction {
+pub struct InterpolatedFunction {
     pub name: Interpolation,
     pub arguments: ArgumentInvocation,
     pub span: Span,
 }
 
 #[derive(Debug, Clone, Default)]
-pub(crate) struct AstSassMap(pub Vec<(Spanned<AstExpr>, AstExpr)>);
+pub struct AstSassMap(pub Vec<(Spanned<AstExpr>, AstExpr)>);
 
 #[derive(Debug, Clone)]
-pub(crate) struct BinaryOpExpr {
+pub struct BinaryOpExpr {
     pub lhs: AstExpr,
     pub op: BinaryOp,
     pub rhs: AstExpr,
@@ -50,7 +50,7 @@ pub(crate) struct BinaryOpExpr {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) enum AstExpr {
+pub enum AstExpr {
     BinaryOp(Arc<BinaryOpExpr>),
     True,
     False,
@@ -83,7 +83,7 @@ pub(crate) enum AstExpr {
 // todo: make quotes bool
 // todo: track span inside
 #[derive(Debug, Clone)]
-pub(crate) struct StringExpr(pub Interpolation, pub QuoteKind);
+pub struct StringExpr(pub Interpolation, pub QuoteKind);
 
 impl StringExpr {
     fn quote_inner_text(

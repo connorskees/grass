@@ -21,11 +21,11 @@ use super::{scope::Scopes, visitor::CallableContentBlock};
 #[derive(Debug, Clone)]
 pub(crate) struct Environment {
     pub scopes: Scopes,
-    pub modules: Arc<RefCell<Modules>>,
-    pub global_modules: Vec<Arc<RefCell<Module>>>,
+    pub modules: Mutable<Modules>,
+    pub global_modules: Vec<Mutable<Module>>,
     pub content: Option<Arc<CallableContentBlock>>,
-    pub forwarded_modules: Arc<RefCell<Vec<Arc<RefCell<Module>>>>>,
-    pub imported_modules: Arc<RefCell<Vec<Arc<RefCell<Module>>>>>,
+    pub forwarded_modules: Mutable<Vec<Mutable<Module>>>,
+    pub imported_modules: Mutable<Vec<Mutable<Module>>>,
     #[allow(clippy::type_complexity)]
     pub nested_forwarded_modules: Option<Mutable<Vec<Mutable<Vec<Mutable<Module>>>>>>,
 }
@@ -175,7 +175,6 @@ impl Environment {
                 imported_modules.extend(forwarded.borrow().iter().map(Arc::clone));
                 forwarded_modules.extend(forwarded.borrow().iter().map(Arc::clone));
             } else {
-                self.scopes.last_variable_index = None;
                 self.nested_forwarded_modules
                     .get_or_insert_with(|| {
                         Arc::new(RefCell::new(
