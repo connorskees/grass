@@ -58,6 +58,11 @@ grass input.scss
     clippy::cast_precision_loss,
     clippy::float_cmp,
 
+    // todo: unignore once we bump MSRV
+    clippy::format_push_string,
+    clippy::unnecessary_unwrap,
+    clippy::needless_late_init,
+
     unknown_lints,
 )]
 

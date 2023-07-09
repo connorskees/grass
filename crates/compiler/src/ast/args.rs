@@ -250,7 +250,7 @@ impl ArgumentResult {
         let len = self.len();
         if len > max {
             let mut err = String::with_capacity(50);
-            #[allow(clippy::format_push_string)]
+            #[allow(unknown_lints, clippy::format_push_string)]
             err.push_str(&format!("Only {max} argument", max = max));
             if max != 1 {
                 err.push('s');

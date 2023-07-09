@@ -1196,10 +1196,9 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
 
             let right = self.supports_condition_in_parens()?;
             operation = Some(AstSupportsCondition::Operation {
-                left: Box::new(
-                    operation
-                        .unwrap_or(AstSupportsCondition::Interpolation(expression.clone().node)),
-                ),
+                left: Box::new(operation.unwrap_or_else(|| {
+                    AstSupportsCondition::Interpolation(expression.clone().node)
+                })),
                 operator: operator.clone(),
                 right: Box::new(right),
             });
