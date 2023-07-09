@@ -9,9 +9,10 @@
 
 # 0.13.0
 
- - fix various module system bugs when combined with `@import`
+ - fix various module system bugs when combined with `@import`. this is potentially breaking in rare cases where users were relying on the incorrect behavior
  - expose more AST internals in `grass_compiler`
  - allow building docs with stable/beta rust compiler
+ - support `...$keys` argument to `map-get(..)`/`map.get(..)` (#83)
 
 # 0.12.4
 
