@@ -351,21 +351,21 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
                     node: query,
                     span: query_span,
                 }),
-                children,
+                body: children,
                 span: self.toks_mut().span_from(start),
             }
         } else if self.looking_at_children()? {
             let children = self.with_children(Self::parse_statement)?.node;
             AstAtRootRule {
                 query: None,
-                children,
+                body: children,
                 span: self.toks_mut().span_from(start),
             }
         } else {
             let child = self.parse_style_rule(None, None)?;
             AstAtRootRule {
                 query: None,
-                children: vec![child],
+                body: vec![child],
                 span: self.toks_mut().span_from(start),
             }
         }))
@@ -586,7 +586,7 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
                 span: name_span,
             },
             arguments,
-            children,
+            body: children,
         }))
     }
 
@@ -1154,7 +1154,7 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
         Ok(AstStmt::UnknownAtRule(AstUnknownAtRule {
             name,
             value,
-            children,
+            body: children,
             span: self.toks_mut().span_from(start),
         }))
     }
@@ -1388,7 +1388,7 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
 
         Ok(AstStmt::Supports(AstSupportsRule {
             condition,
-            children: children.node,
+            body: children.node,
             span: children.span,
         }))
     }

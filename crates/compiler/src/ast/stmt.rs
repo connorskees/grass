@@ -123,7 +123,7 @@ pub struct AstVariableDecl {
 pub struct AstFunctionDecl {
     pub name: Spanned<Identifier>,
     pub arguments: ArgumentDeclaration,
-    pub children: Vec<AstStmt>,
+    pub body: Vec<AstStmt>,
 }
 
 #[derive(Debug, Clone)]
@@ -191,7 +191,7 @@ pub struct AstInclude {
 pub struct AstUnknownAtRule {
     pub name: Interpolation,
     pub value: Option<Interpolation>,
-    pub children: Option<Vec<AstStmt>>,
+    pub body: Option<Vec<AstStmt>>,
     pub span: Span,
 }
 
@@ -204,8 +204,7 @@ pub struct AstExtendRule {
 
 #[derive(Debug, Clone)]
 pub struct AstAtRootRule {
-    // todo: rename to body
-    pub children: Vec<AstStmt>,
+    pub body: Vec<AstStmt>,
     pub query: Option<Spanned<Interpolation>>,
     #[allow(unused)]
     pub span: Span,
@@ -522,8 +521,7 @@ pub enum AstSupportsCondition {
 #[derive(Debug, Clone)]
 pub struct AstSupportsRule {
     pub condition: AstSupportsCondition,
-    // todo: rename body
-    pub children: Vec<AstStmt>,
+    pub body: Vec<AstStmt>,
     pub span: Span,
 }
 

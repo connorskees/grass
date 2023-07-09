@@ -492,7 +492,7 @@ impl<'a> Visitor<'a> {
             false,
         );
 
-        let children = supports_rule.children;
+        let children = supports_rule.body;
 
         self.with_parent(
             css_supports_rule,
@@ -1157,7 +1157,7 @@ impl<'a> Visitor<'a> {
         // have created.
         if Some(root) == self.parent {
             self.with_scope::<SassResult<()>, _>(false, true, |visitor| {
-                for stmt in at_root_rule.children {
+                for stmt in at_root_rule.body {
                     let result = visitor.visit_stmt(stmt)?;
                     debug_assert!(result.is_none());
                 }
@@ -1199,7 +1199,7 @@ impl<'a> Visitor<'a> {
             inner_copy.map(|p| self.css_tree.add_stmt(p, None))
         };
 
-        let body = mem::take(&mut at_root_rule.children);
+        let body = mem::take(&mut at_root_rule.body);
 
         self.with_scope_for_at_root::<SassResult<()>, _>(inner_copy, &query, |visitor| {
             for stmt in body {
@@ -1497,7 +1497,7 @@ impl<'a> Visitor<'a> {
             .map(|v| self.interpolation_to_value(v, true, true))
             .transpose()?;
 
-        if unknown_at_rule.children.is_none() {
+        if unknown_at_rule.body.is_none() {
             let stmt = CssStmt::UnknownAtRule(
                 UnknownAtRule {
                     name,
@@ -1522,7 +1522,7 @@ impl<'a> Visitor<'a> {
             self.flags.set(ContextFlags::IN_UNKNOWN_AT_RULE, true);
         }
 
-        let children = unknown_at_rule.children.unwrap();
+        let children = unknown_at_rule.body.unwrap();
 
         let stmt = CssStmt::UnknownAtRule(
             UnknownAtRule {
@@ -2395,7 +2395,7 @@ impl<'a> Visitor<'a> {
             }
             SassFunction::UserDefined(UserDefinedFunction { function, env, .. }) => self
                 .run_user_defined_callable(arguments, function, &env, span, |function, visitor| {
-                    for stmt in function.children.clone() {
+                    for stmt in function.body.clone() {
                         let result = visitor.visit_stmt(stmt)?;
 
                         if let Some(val) = result {
