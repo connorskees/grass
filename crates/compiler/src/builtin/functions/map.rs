@@ -1,12 +1,43 @@
 use crate::builtin::builtin_imports::*;
 
+/// map.get($map, $key, $keys...)
+/// map-get($map, $key, $keys...)
+///
+/// If $keys is empty, returns the value in $map associated with $key.
+/// If $map doesn’t have a value associated with $key, returns null.
+/// If $keys is not empty, follows the set of keys including $key and
+/// excluding the last key in $keys, from left to right, to find the
+/// nested map targeted for searching.
+/// Returns the value in the targeted map associated with the last key
+/// in $keys.
+/// Returns null if the map does not have a value associated with the
+/// key, or if any key in $keys is missing from a map or references a
+/// value that is not a map.
+///
+/// https://sass-lang.com/documentation/modules/map/
 pub(crate) fn map_get(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
-    args.max_args(2)?;
     let key = args.get_err(1, "key")?;
     let map = args
         .get_err(0, "map")?
         .assert_map_with_name("map", args.span())?;
-    Ok(map.get(&key).unwrap_or(Value::Null))
+
+    // since we already extracted the map and first key,
+    // neither will be returned in the variadic args list
+    let keys = args.get_variadic()?;
+
+    let mut val = map.get(&key).unwrap_or(Value::Null);
+    for key in keys {
+        // if at any point we find a value that's not a map,
+        // we return null
+        let val_map = match val.try_map() {
+            Some(val_map) => val_map,
+            None => return Ok(Value::Null),
+        };
+
+        val = val_map.get(&key).unwrap_or(Value::Null);
+    }
+
+    Ok(val)
 }
 
 pub(crate) fn map_has_key(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
