@@ -6,6 +6,11 @@ test!(
     "a {\n  color: b;\n}\n"
 );
 test!(
+    map_get_key_exists_named,
+    "a {\n  color: map-get($map: (a: b), $key: a);\n}\n",
+    "a {\n  color: b;\n}\n"
+);
+test!(
     map_get_key_does_not_exist,
     "a {\n  color: map-get((a: b), foo);\n}\n",
     ""
@@ -18,6 +23,36 @@ test!(
 error!(
     map_get_non_map,
     "a {\n  color: map-get(foo, foo);\n}\n", "Error: $map: foo is not a map."
+);
+test!(
+    map_get_nested,
+    "a {\n  color: map-get((a: (b: (c: d))), a, b, c);\n}\n",
+    "a {\n  color: d;\n}\n"
+);
+// it's an odd thing to do, but the spec suggests that the user
+// can call the function like:
+//     map.get("key2", "key3", $map: $my-map, $key: "key1")
+// in this case we are to use the named argument $key as the
+// first key and use the positional arguments at the front as
+// $keys.  this test verifies this behavior.
+test!(
+    map_get_nested_named_and_positional,
+    "a {\n  color: map-get(b, c, $map: (a: (b: (c: d))), $key: a);\n}\n",
+    "a {\n  color: d;\n}\n"
+);
+test!(
+    map_get_nested_key_does_not_exist,
+    "a {\n  color: map-get((a: (b: (c: d))), a, d, e, f);\n}\n",
+    ""
+);
+test!(
+    map_get_nested_non_map,
+    "a {\n  color: map-get((a: (b: c)), a, b, c, d);\n}\n",
+    ""
+);
+error!(
+    map_get_no_args,
+    "a {\n  color: map-get();\n}\n", "Error: Missing argument $key."
 );
 error!(
     map_get_one_arg,

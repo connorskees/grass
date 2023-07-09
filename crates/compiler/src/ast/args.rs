@@ -233,10 +233,14 @@ impl ArgumentResult {
     pub(crate) fn min_args(&self, min: usize) -> SassResult<()> {
         let len = self.len();
         if len < min {
-            if min == 1 {
-                return Err(("At least one argument must be passed.", self.span()).into());
-            }
-            todo!("min args greater than one")
+            let phrase = match min {
+                1 => "one argument",
+                2 => "two arguments",
+                3 => "three arguments",
+                _ => todo!("min args greater than three"),
+            };
+
+            return Err((format!("At least {phrase} must be passed."), self.span()).into());
         }
         Ok(())
     }
