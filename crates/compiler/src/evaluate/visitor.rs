@@ -797,7 +797,7 @@ impl<'a> Visitor<'a> {
     ///
     /// <https://sass-lang.com/documentation/at-rules/import#finding-the-file>
     /// <https://sass-lang.com/documentation/at-rules/import#load-paths>
-    #[allow(clippy::cognitive_complexity)]
+    #[allow(clippy::cognitive_complexity, clippy::redundant_clone)]
     pub fn find_import(&self, path: &Path) -> Option<PathBuf> {
         let path_buf = if path.is_absolute() {
             path.into()

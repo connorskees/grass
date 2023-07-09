@@ -37,46 +37,26 @@ grass input.scss
 #![deny(missing_debug_implementations)]
 #![allow(
     clippy::use_self,
-    clippy::missing_docs_in_private_items,
-    clippy::unreachable,
-    clippy::module_name_repetitions,
     // filter isn't fallible
     clippy::manual_filter_map,
-    clippy::new_ret_no_self,
     renamed_and_removed_lints,
     clippy::unknown_clippy_lints,
     clippy::single_match,
-    clippy::unimplemented,
-    clippy::option_if_let_else,
-    clippy::branches_sharing_code,
-    clippy::derive_partial_eq_without_eq,
-
-    // temporarily allowed while under heavy development.
-    // eventually these allows should be refactored away
-    // to no longer be necessary
-    clippy::too_many_lines,
-    clippy::cast_possible_truncation,
+    clippy::new_without_default,
     clippy::single_match_else,
-    clippy::redundant_pub_crate,
-    // the api is changing too often to allot this
-    clippy::missing_errors_doc,
-    clippy::missing_const_for_fn,
     clippy::multiple_crate_versions,
-
     clippy::wrong_self_convention,
-    clippy::items_after_statements,
-    // this is only available on nightly
+    clippy::comparison_chain,
+
+    // these features are only available on nightly
     clippy::unnested_or_patterns,
     clippy::uninlined_format_args,
 
-    // todo:
+    // todo: these should be enabled
     clippy::cast_sign_loss,
     clippy::cast_lossless,
     clippy::cast_precision_loss,
     clippy::float_cmp,
-    clippy::wildcard_imports,
-    clippy::comparison_chain,
-    clippy::bool_to_int_with_if,
 
     unknown_lints,
 )]
