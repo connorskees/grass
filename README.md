@@ -77,9 +77,9 @@ The spec runner does not work on Windows.
 Using a modified version of the spec runner that ignores warnings and error spans (but does include error messages), `grass` achieves the following results:
 
 ```
-2022-05-20
-PASSING: 6277
-FAILING: 548
+2023-07-09
+PASSING: 6230
+FAILING: 545
 TOTAL: 6905
 ```
 
@@ -91,4 +91,4 @@ around comments in expanded mode or error messages.
 The minimum supported rust version (MSRV) of `grass` is `1.56.0`. An increase to the MSRV will correspond with a minor version bump. The current MSRV is not a hard minimum, but future bugfix
 versions of `grass` are not guaranteed to work on versions prior to this.
 
-`grass` currently targets `dart-sass` version `1.54.3`. An increase to this number will correspond to a either a minor or bugfix version bump, depending on the changes.
+`grass` currently targets `dart-sass` version `1.54.3`. An increase to this number will correspond to either a minor or bugfix version bump, depending on the changes.
