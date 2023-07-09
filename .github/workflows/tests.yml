@@ -14,7 +14,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: "1.56.0"
+          toolchain: "1.57.0"
 
       - name: version info
         run: rustc --version; cargo --version;
@@ -30,7 +30,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: "1.56.0"
+          toolchain: "1.57.0"
 
       - run: cargo fmt --all -- --check
 
@@ -42,7 +42,7 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: "1.56.0"
+          toolchain: "1.57.0"
 
       - run: cargo clippy --features=macro -- -D warnings
 
