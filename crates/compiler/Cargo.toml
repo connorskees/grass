@@ -18,8 +18,7 @@ bench = false
 
 [package.metadata.docs.rs]
 # To build locally:
-# RUSTDOCFLAGS="--cfg doc_cfg" cargo +nightly doc --all-features --no-deps --open
-all-features = true
+# RUSTDOCFLAGS="--cfg doc_cfg" cargo +nightly doc --no-deps --open
 rustdoc-args = ["--cfg", "doc_cfg"]
 
 [dependencies]

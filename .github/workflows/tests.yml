@@ -32,7 +32,9 @@ jobs:
         with:
           toolchain: "1.59.0"
 
-      - run: cargo fmt --all -- --check
+      - run: |
+          rustup component add clippy
+          cargo fmt --all -- --check
 
   clippy:
     runs-on: ubuntu-latest
@@ -44,7 +46,9 @@ jobs:
         with:
           toolchain: "1.59.0"
 
-      - run: cargo clippy --features=macro -- -D warnings
+      - run: |
+          rustup component add rustfmt
+          cargo clippy --features=macro -- -D warnings
 
   boostrap:
     runs-on: ubuntu-latest

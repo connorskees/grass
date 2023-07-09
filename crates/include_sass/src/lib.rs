@@ -4,6 +4,7 @@ use std::{cell::RefCell, collections::HashSet, path::PathBuf};
 
 use grass_compiler::StdFs;
 use proc_macro::TokenStream;
+#[cfg(not(feature = "nightly"))]
 use quote::format_ident;
 use syn::{parse_macro_input, LitStr};
 
