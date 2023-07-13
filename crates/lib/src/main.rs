@@ -8,7 +8,6 @@ use clap::{arg_enum, App, AppSettings, Arg};
 
 use grass::{from_path, from_string, Options, OutputStyle};
 
-// TODO remove this
 arg_enum! {
     #[derive(Eq, PartialEq, Debug)]
     pub enum Style {
@@ -30,7 +29,7 @@ fn main() -> std::io::Result<()> {
         .setting(AppSettings::ColoredHelp)
         .version(env!("CARGO_PKG_VERSION"))
         .about("A near-feature-complete Sass compiler written purely in Rust")
-        .version_short("v")
+        .version_short('v')
         .arg(
             Arg::with_name("STDIN")
                 .long("stdin")
@@ -44,7 +43,7 @@ fn main() -> std::io::Result<()> {
         )
         .arg(
             Arg::with_name("LOAD_PATH")
-                .short("I")
+                .short('I')
                 .long("load-path")
                 .help("A path to use when resolving imports. May be passed multiple times.")
                 .multiple(true)
@@ -54,8 +53,8 @@ fn main() -> std::io::Result<()> {
         .arg(
             Arg::with_name("STYLE")
                 // this is required for compatibility with ruby sass
-                .short("t") // FIXME change this to short_alias later
-                .short("s")
+                .short_alias('t')
+                .short('s')
                 .long("style")
                 .help("Minified or expanded output")
                 .default_value("expanded")
@@ -131,14 +130,14 @@ fn main() -> std::io::Result<()> {
         )
         .arg(
             Arg::with_name("INTERACTIVE")
-                .short("i")
+                .short('i')
                 .long("interactive")
                 .hidden(true)
                 .help("Run an interactive SassScript shell.")
         )
         .arg(
             Arg::with_name("NO_COLOR")
-                .short("c")
+                .short('c')
                 .long("no-color")
                 .hidden(true)
                 .help("Whether to use terminal colors for messages.")
@@ -156,7 +155,7 @@ fn main() -> std::io::Result<()> {
         )
         .arg(
             Arg::with_name("QUIET")
-                .short("q")
+                .short('q')
                 .long("quiet")
                 .help("Don't print warnings."),
         )

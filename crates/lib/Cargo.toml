@@ -32,7 +32,7 @@ rustdoc-args = ["--cfg", "doc_cfg"]
 [dependencies]
 grass_compiler = { path = "../compiler", version = "=0.13.0", default-features = false }
 include_sass = { path = "../include_sass", version = "0.13.0", optional = true }
-clap = { version = "2.34.0", optional = true }
+clap = { version = "3.2.23", optional = true }
 
 [features]
 # todo: no commandline by default
