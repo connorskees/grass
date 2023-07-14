@@ -9,6 +9,7 @@ categories = ["web-programming"]
 keywords = ["scss", "sass", "css", "web"]
 repository = "https://github.com/connorskees/grass"
 authors = ["Connor Skees <39542938+ConnorSkees@users.noreply.github.com>"]
+rust-version = "1.64.0"
 
 [lib]
 name = "grass_compiler"

@@ -7,6 +7,12 @@
 
 -->
 
+# 0.13.1
+
+ - update `clap` dependency to 4.x.x to silence `atty` security warning
+ - bump MSRV to 1.64.0 for new `clap` version
+ - fix bug in which `--no-charset` flag wasn't respected
+
 # 0.13.0
 
  - fix various module system bugs when combined with `@import`. this is potentially breaking in rare cases where users were relying on the incorrect behavior

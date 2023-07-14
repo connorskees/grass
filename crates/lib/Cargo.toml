@@ -11,6 +11,7 @@ authors = ["Connor Skees <39542938+ConnorSkees@users.noreply.github.com>"]
 edition = "2021"
 include = ["src", "Cargo.toml", "README.md", "CHANGELOG.md", "Cargo.lock", "LICENSE"]
 default-run = "grass"
+rust-version = "1.64.0"
 
 [[bin]]
 name = "grass"
