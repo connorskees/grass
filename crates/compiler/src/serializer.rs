@@ -646,9 +646,9 @@ impl<'a> Serializer<'a> {
         // SAFETY: todo
         let mut as_string = unsafe { String::from_utf8_unchecked(self.buffer) };
 
-        if is_not_ascii && self.options.is_compressed() {
+        if is_not_ascii && self.options.is_compressed() && self.options.allows_charset {
             as_string.insert(0, '\u{FEFF}');
-        } else if is_not_ascii {
+        } else if is_not_ascii && self.options.allows_charset {
             as_string.insert_str(0, "@charset \"UTF-8\";\n");
         }
 

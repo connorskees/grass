@@ -4,7 +4,7 @@ use std::{
     path::Path,
 };
 
-use clap::{value_parser, Arg, ArgEnum, Command, PossibleValue};
+use clap::{value_parser, Arg, ArgAction, ArgEnum, Command, PossibleValue};
 
 use grass::{from_path, from_string, Options, OutputStyle};
 
@@ -46,13 +46,14 @@ impl ArgEnum for SourceMapUrls {
     }
 }
 
-fn main() -> std::io::Result<()> {
-    let matches = Command::new("grass")
+fn cli() -> Command<'static> {
+    Command::new("grass")
         .version(env!("CARGO_PKG_VERSION"))
         .about("A near-feature-complete Sass compiler written purely in Rust")
         .mut_arg("version", |arg| arg.short('v'))
         .arg(
             Arg::new("STDIN")
+                .action(ArgAction::SetTrue)
                 .long("stdin")
                 .help("Read the stylesheet from stdin"),
         )
@@ -67,7 +68,7 @@ fn main() -> std::io::Result<()> {
                 .short('I')
                 .long("load-path")
                 .help("A path to use when resolving imports. May be passed multiple times.")
-                .multiple_occurrences(true)
+                .action(ArgAction::Append)
                 .takes_value(true)
                 .value_parser(value_parser!(String))
                 .number_of_values(1)
@@ -86,6 +87,7 @@ fn main() -> std::io::Result<()> {
         )
         .arg(
             Arg::new("NO_CHARSET")
+                .action(ArgAction::SetTrue)
                 .long("no-charset")
                 .help("Don't emit a @charset or BOM for CSS with non-ASCII characters."),
         )
@@ -172,11 +174,13 @@ fn main() -> std::io::Result<()> {
         )
         .arg(
             Arg::new("NO_UNICODE")
+                .action(ArgAction::SetTrue)
                 .long("no-unicode")
                 .help("Whether to use Unicode characters for messages.")
         )
         .arg(
             Arg::new("QUIET")
+                .action(ArgAction::SetTrue)
                 .short('q')
                 .long("quiet")
                 .help("Don't print warnings."),
@@ -199,7 +203,10 @@ fn main() -> std::io::Result<()> {
                 .hide(true)
                 .takes_value(true)
         )
-        .get_matches();
+}
+
+fn main() -> std::io::Result<()> {
+    let matches = cli().get_matches();
 
     let load_paths = matches
         .get_many::<String>("LOAD_PATH")
@@ -213,12 +220,12 @@ fn main() -> std::io::Result<()> {
     let options = &Options::default()
         .load_paths(&load_paths)
         .style(style)
-        .quiet(matches.is_present("QUIET"))
-        .unicode_error_messages(!matches.is_present("NO_UNICODE"))
-        .allows_charset(!matches.is_present("NO_CHARSET"));
+        .quiet(matches.get_flag("QUIET"))
+        .unicode_error_messages(!matches.get_flag("NO_UNICODE"))
+        .allows_charset(!matches.get_flag("NO_CHARSET"));
 
     let (mut stdout_write, mut file_write);
-    let buf_out: &mut dyn Write = if let Some(path) = matches.get_one::<&str>("OUTPUT") {
+    let buf_out: &mut dyn Write = if let Some(path) = matches.get_one::<String>("OUTPUT") {
         file_write = OpenOptions::new()
             .create(true)
             .write(true)
@@ -233,7 +240,7 @@ fn main() -> std::io::Result<()> {
     buf_out.write_all(
         if let Some(name) = matches.get_one::<String>("INPUT") {
             from_path(name, options)
-        } else if matches.is_present("STDIN") {
+        } else if matches.get_flag("STDIN") {
             from_string(
                 {
                     let mut buffer = String::new();
@@ -252,4 +259,14 @@ fn main() -> std::io::Result<()> {
         .as_bytes(),
     )?;
     Ok(())
+}
+
+#[cfg(test)]
+mod test {
+    use crate::cli;
+
+    #[test]
+    fn verify() {
+        cli().debug_assert();
+    }
 }

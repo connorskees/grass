@@ -1,3 +1,5 @@
+use grass_compiler::OutputStyle;
+
 #[macro_use]
 mod macros;
 
@@ -57,3 +59,41 @@ error!(
     invalid_charset_value_unterminated_loud_comment,
     "@charset /*", "Error: expected more input."
 );
+
+#[test]
+fn charset_not_allowed_expanded() {
+    let input = r#"
+        a {
+            color: 🦆;
+        }
+    "#;
+
+    assert_eq!(
+        "a {\n  color: 🦆;\n}\n",
+        &grass::from_string(
+            input.to_string(),
+            &grass::Options::default().allows_charset(false)
+        )
+        .expect(input)
+    );
+}
+
+#[test]
+fn charset_not_allowed_compressed() {
+    let input = r#"
+        a {
+            color: 🦆;
+        }
+    "#;
+
+    assert_eq!(
+        "a{color:🦆}",
+        &grass::from_string(
+            input.to_string(),
+            &grass::Options::default()
+                .allows_charset(false)
+                .style(OutputStyle::Compressed)
+        )
+        .expect(input)
+    );
+}
