@@ -4,7 +4,7 @@ use std::{
     path::Path,
 };
 
-use clap::{value_parser, Arg, ArgAction, ArgEnum, Command, PossibleValue};
+use clap::{builder::PossibleValue, value_parser, Arg, ArgAction, Command, ValueEnum};
 
 use grass::{from_path, from_string, Options, OutputStyle};
 
@@ -14,12 +14,12 @@ pub enum Style {
     Compressed,
 }
 
-impl ArgEnum for Style {
+impl ValueEnum for Style {
     fn value_variants<'a>() -> &'a [Self] {
         &[Self::Expanded, Self::Compressed]
     }
 
-    fn to_possible_value<'a>(&self) -> Option<PossibleValue<'a>> {
+    fn to_possible_value(&self) -> Option<PossibleValue> {
         Some(match self {
             Self::Expanded => PossibleValue::new("expanded"),
             Self::Compressed => PossibleValue::new("compressed"),
@@ -33,12 +33,12 @@ pub enum SourceMapUrls {
     Absolute,
 }
 
-impl ArgEnum for SourceMapUrls {
+impl ValueEnum for SourceMapUrls {
     fn value_variants<'a>() -> &'a [Self] {
         &[Self::Relative, Self::Absolute]
     }
 
-    fn to_possible_value<'a>(&self) -> Option<PossibleValue<'a>> {
+    fn to_possible_value(&self) -> Option<PossibleValue> {
         Some(match self {
             Self::Relative => PossibleValue::new("relative"),
             Self::Absolute => PossibleValue::new("absolute"),
@@ -46,11 +46,18 @@ impl ArgEnum for SourceMapUrls {
     }
 }
 
-fn cli() -> Command<'static> {
+fn cli() -> Command {
     Command::new("grass")
         .version(env!("CARGO_PKG_VERSION"))
-        .about("A near-feature-complete Sass compiler written purely in Rust")
-        .mut_arg("version", |arg| arg.short('v'))
+        .about("A Sass compiler written purely in Rust")
+        .disable_version_flag(true)
+        .arg(
+            Arg::new("version")
+                .action(ArgAction::Version)
+                .long("version")
+                .short('v')
+                .global(true)
+        )
         .arg(
             Arg::new("STDIN")
                 .action(ArgAction::SetTrue)
@@ -69,9 +76,8 @@ fn cli() -> Command<'static> {
                 .long("load-path")
                 .help("A path to use when resolving imports. May be passed multiple times.")
                 .action(ArgAction::Append)
-                .takes_value(true)
                 .value_parser(value_parser!(String))
-                .number_of_values(1)
+                .num_args(1)
         )
         .arg(
             Arg::new("STYLE")
@@ -82,7 +88,7 @@ fn cli() -> Command<'static> {
                 .help("Minified or expanded output")
                 .default_value("expanded")
                 .ignore_case(true)
-                .takes_value(true)
+                .num_args(1)
                 .value_parser(value_parser!(Style)),
         )
         .arg(
@@ -117,7 +123,7 @@ fn cli() -> Command<'static> {
                 .help("How to link from source maps to source files.")
                 .default_value("relative")
                 .ignore_case(true)
-                .takes_value(true)
+                .num_args(1)
                 .value_parser(value_parser!(SourceMapUrls)),
         )
         .arg(
@@ -201,7 +207,7 @@ fn cli() -> Command<'static> {
             Arg::new("PRECISION")
                 .long("precision")
                 .hide(true)
-                .takes_value(true)
+                .num_args(1)
         )
 }
 
