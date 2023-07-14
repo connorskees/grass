@@ -4,188 +4,210 @@ use std::{
     path::Path,
 };
 
-use clap::{arg_enum, App, AppSettings, Arg};
+use clap::{value_parser, Arg, ArgEnum, Command, PossibleValue};
 
 use grass::{from_path, from_string, Options, OutputStyle};
 
-arg_enum! {
-    #[derive(Eq, PartialEq, Debug)]
-    pub enum Style {
-        Expanded,
-        Compressed,
+#[derive(Eq, PartialEq, Debug, Clone, Copy)]
+pub enum Style {
+    Expanded,
+    Compressed,
+}
+
+impl ArgEnum for Style {
+    fn value_variants<'a>() -> &'a [Self] {
+        &[Self::Expanded, Self::Compressed]
+    }
+
+    fn to_possible_value<'a>(&self) -> Option<PossibleValue<'a>> {
+        Some(match self {
+            Self::Expanded => PossibleValue::new("expanded"),
+            Self::Compressed => PossibleValue::new("compressed"),
+        })
     }
 }
 
-arg_enum! {
-    #[derive(Eq, PartialEq, Debug)]
-    pub enum SourceMapUrls {
-        Relative,
-        Absolute,
+#[derive(Eq, PartialEq, Debug, Clone)]
+pub enum SourceMapUrls {
+    Relative,
+    Absolute,
+}
+
+impl ArgEnum for SourceMapUrls {
+    fn value_variants<'a>() -> &'a [Self] {
+        &[Self::Relative, Self::Absolute]
+    }
+
+    fn to_possible_value<'a>(&self) -> Option<PossibleValue<'a>> {
+        Some(match self {
+            Self::Relative => PossibleValue::new("relative"),
+            Self::Absolute => PossibleValue::new("absolute"),
+        })
     }
 }
 
 fn main() -> std::io::Result<()> {
-    let matches = App::new("grass")
-        .setting(AppSettings::ColoredHelp)
+    let matches = Command::new("grass")
         .version(env!("CARGO_PKG_VERSION"))
         .about("A near-feature-complete Sass compiler written purely in Rust")
-        .version_short('v')
+        .mut_arg("version", |arg| arg.short('v'))
         .arg(
-            Arg::with_name("STDIN")
+            Arg::new("STDIN")
                 .long("stdin")
                 .help("Read the stylesheet from stdin"),
         )
         .arg(
-            Arg::with_name("INDENTED")
+            Arg::new("INDENTED")
                 .long("indented")
-                .hidden(true)
+                .hide(true)
                 .help("Use the indented syntax for input from stdin"),
         )
         .arg(
-            Arg::with_name("LOAD_PATH")
+            Arg::new("LOAD_PATH")
                 .short('I')
                 .long("load-path")
                 .help("A path to use when resolving imports. May be passed multiple times.")
-                .multiple(true)
+                .multiple_occurrences(true)
                 .takes_value(true)
+                .value_parser(value_parser!(String))
                 .number_of_values(1)
         )
         .arg(
-            Arg::with_name("STYLE")
+            Arg::new("STYLE")
                 // this is required for compatibility with ruby sass
                 .short_alias('t')
                 .short('s')
                 .long("style")
                 .help("Minified or expanded output")
                 .default_value("expanded")
-                .case_insensitive(true)
-                .possible_values(&Style::variants())
-                .takes_value(true),
+                .ignore_case(true)
+                .takes_value(true)
+                .value_parser(value_parser!(Style)),
         )
         .arg(
-            Arg::with_name("NO_CHARSET")
+            Arg::new("NO_CHARSET")
                 .long("no-charset")
                 .help("Don't emit a @charset or BOM for CSS with non-ASCII characters."),
         )
         .arg(
-            Arg::with_name("UPDATE")
+            Arg::new("UPDATE")
                 .long("update")
-                .hidden(true)
+                .hide(true)
                 .help("Only compile out-of-date stylesheets."),
         )
         .arg(
-            Arg::with_name("NO_ERROR_CSS")
+            Arg::new("NO_ERROR_CSS")
                 .long("no-error-css")
-                .hidden(true)
+                .hide(true)
                 .help("When an error occurs, don't emit a stylesheet describing it."),
         )
         // Source maps
         .arg(
-            Arg::with_name("NO_SOURCE_MAP")
+            Arg::new("NO_SOURCE_MAP")
                 .long("no-source-map")
-                .hidden(true)
+                .hide(true)
                 .help("Whether to generate source maps."),
         )
         .arg(
-            Arg::with_name("SOURCE_MAP_URLS")
+            Arg::new("SOURCE_MAP_URLS")
                 .long("source-map-urls")
-                .hidden(true)
+                .hide(true)
                 .help("How to link from source maps to source files.")
                 .default_value("relative")
-                .case_insensitive(true)
-                .possible_values(&SourceMapUrls::variants())
-                .takes_value(true),
+                .ignore_case(true)
+                .takes_value(true)
+                .value_parser(value_parser!(SourceMapUrls)),
         )
         .arg(
-            Arg::with_name("EMBED_SOURCES")
+            Arg::new("EMBED_SOURCES")
                 .long("embed-sources")
-                .hidden(true)
+                .hide(true)
                 .help("Embed source file contents in source maps."),
         )
         .arg(
-            Arg::with_name("EMBED_SOURCE_MAP")
+            Arg::new("EMBED_SOURCE_MAP")
                 .long("embed-source-map")
-                .hidden(true)
+                .hide(true)
                 .help("Embed source map contents in CSS."),
         )
         // Other
         .arg(
-            Arg::with_name("WATCH")
+            Arg::new("WATCH")
                 .long("watch")
-                .hidden(true)
+                .hide(true)
                 .help("Watch stylesheets and recompile when they change."),
         )
         .arg(
-            Arg::with_name("POLL")
+            Arg::new("POLL")
                 .long("poll")
-                .hidden(true)
+                .hide(true)
                 .help("Manually check for changes rather than using a native watcher. Only valid with --watch.")
                 .requires("WATCH"),
         )
         .arg(
-            Arg::with_name("NO_STOP_ON_ERROR")
+            Arg::new("NO_STOP_ON_ERROR")
                 .long("no-stop-on-error")
-                .hidden(true)
+                .hide(true)
                 .help("Continue to compile more files after error is encountered.")
         )
         .arg(
-            Arg::with_name("INTERACTIVE")
+            Arg::new("INTERACTIVE")
                 .short('i')
                 .long("interactive")
-                .hidden(true)
+                .hide(true)
                 .help("Run an interactive SassScript shell.")
         )
         .arg(
-            Arg::with_name("NO_COLOR")
+            Arg::new("NO_COLOR")
                 .short('c')
                 .long("no-color")
-                .hidden(true)
+                .hide(true)
                 .help("Whether to use terminal colors for messages.")
         )
         .arg(
-            Arg::with_name("VERBOSE")
+            Arg::new("VERBOSE")
                 .long("verbose")
-                .hidden(true)
+                .hide(true)
                 .help("Print all deprecation warnings even when they're repetitive.")
         )
         .arg(
-            Arg::with_name("NO_UNICODE")
+            Arg::new("NO_UNICODE")
                 .long("no-unicode")
                 .help("Whether to use Unicode characters for messages.")
         )
         .arg(
-            Arg::with_name("QUIET")
+            Arg::new("QUIET")
                 .short('q')
                 .long("quiet")
                 .help("Don't print warnings."),
         )
         .arg(
-            Arg::with_name("INPUT")
-                .required_unless("STDIN")
-                .help("SCSS files"),
+            Arg::new("INPUT")
+                .value_parser(value_parser!(String))
+                .required_unless_present("STDIN")
+                .help("Sass files"),
         )
         .arg(
-            Arg::with_name("OUTPUT")
-                .help("Output SCSS file")
+            Arg::new("OUTPUT")
+                .help("Output CSS file")
         )
 
         // Hidden, legacy arguments
         .arg(
-            Arg::with_name("PRECISION")
+            Arg::new("PRECISION")
                 .long("precision")
-                .hidden(true)
+                .hide(true)
                 .takes_value(true)
         )
         .get_matches();
 
     let load_paths = matches
-        .values_of("LOAD_PATH")
+        .get_many::<String>("LOAD_PATH")
         .map_or_else(Vec::new, |vals| vals.map(Path::new).collect());
 
-    let style = match &matches.value_of("STYLE").unwrap().to_lowercase() as &str {
-        "expanded" => OutputStyle::Expanded,
-        "compressed" => OutputStyle::Compressed,
-        _ => unreachable!(),
+    let style = match &matches.get_one::<Style>("STYLE").unwrap() {
+        Style::Expanded => OutputStyle::Expanded,
+        Style::Compressed => OutputStyle::Compressed,
     };
 
     let options = &Options::default()
@@ -196,7 +218,7 @@ fn main() -> std::io::Result<()> {
         .allows_charset(!matches.is_present("NO_CHARSET"));
 
     let (mut stdout_write, mut file_write);
-    let buf_out: &mut dyn Write = if let Some(path) = matches.value_of("OUTPUT") {
+    let buf_out: &mut dyn Write = if let Some(path) = matches.get_one::<&str>("OUTPUT") {
         file_write = OpenOptions::new()
             .create(true)
             .write(true)
@@ -209,7 +231,7 @@ fn main() -> std::io::Result<()> {
     };
 
     buf_out.write_all(
-        if let Some(name) = matches.value_of("INPUT") {
+        if let Some(name) = matches.get_one::<String>("INPUT") {
             from_path(name, options)
         } else if matches.is_present("STDIN") {
             from_string(
