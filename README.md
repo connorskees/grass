@@ -37,10 +37,7 @@ All known missing features and bugs are tracked in [#19](https://github.com/conn
 
 ### random
 
-(enabled by default): enable the builtin functions `random([$limit])` and `unique-id()`
-
-In the future this feature will be removed when it is no longer necessary to rely on `rand` for
-random numbers.
+(enabled by default): enable the builtin functions [`random([$limit])`](https://sass-lang.com/documentation/modules/math/#random) and [`unique-id()`](https://sass-lang.com/documentation/modules/string/#unique-id)
 
 ### macro
 
