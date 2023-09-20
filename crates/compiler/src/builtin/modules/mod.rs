@@ -138,14 +138,15 @@ impl ForwardedModule {
             rule.hidden_mixins_and_functions.as_ref(),
         );
 
-        (*module).borrow_mut().set_scope(ModuleScope {
+        let mut inner = module.borrow().clone();
+        inner.set_scope(ModuleScope {
             variables,
             mixins,
             functions,
         });
 
         ForwardedModule {
-            inner: module,
+            inner: Arc::new(RefCell::new(inner)),
             forward_rule: rule,
         }
     }
