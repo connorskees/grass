@@ -501,6 +501,40 @@ fn import_forwarded_first_no_use() {
     );
 }
 
+#[test]
+fn forward_same_module_with_and_without_prefix() {
+    let mut fs = TestFs::new();
+
+    fs.add_file(
+        "_midstream.scss",
+        r#"
+            @forward "upstream";
+            @forward "upstream" as b-*;
+        "#,
+    );
+    fs.add_file(
+        "_upstream.scss",
+        r#"
+            @mixin a() {
+                c {
+                    d: e
+                }
+            }
+        "#,
+    );
+
+    let input = r#"
+        @use "midstream";
+
+        @include midstream.a;
+    "#;
+
+    assert_eq!(
+        "c {\n  d: e;\n}\n",
+        &grass::from_string(input.to_string(), &grass::Options::default().fs(&fs)).expect(input)
+    );
+}
+
 error!(
     after_style_rule,
     r#"
