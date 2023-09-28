@@ -168,12 +168,14 @@ fn cli() -> Command {
         .arg(
             Arg::new("NO_COLOR")
                 .short('c')
+                .action(ArgAction::SetTrue)
                 .long("no-color")
                 .hide(true)
                 .help("Whether to use terminal colors for messages.")
         )
         .arg(
             Arg::new("VERBOSE")
+                .action(ArgAction::SetTrue)
                 .long("verbose")
                 .hide(true)
                 .help("Print all deprecation warnings even when they're repetitive.")

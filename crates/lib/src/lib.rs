@@ -72,9 +72,7 @@ pub use grass_compiler::{
 
 /// Include CSS in your binary at compile time from a Sass source file
 ///
-/// ```
-/// static CSS: &str = grass::include!("../static/_index.scss");
-/// ```
+/// `static CSS: &str = grass::include!("../static/_index.scss");`
 ///
 /// This requires the `"macro"` feature, which is not enabled by default.
 ///

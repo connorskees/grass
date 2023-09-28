@@ -108,6 +108,8 @@ impl ShadowedModule {
 
 #[derive(Debug, Clone)]
 pub(crate) struct ForwardedModule {
+    scope: ModuleScope,
+    #[allow(dead_code)]
     inner: Arc<RefCell<Module>>,
     #[allow(dead_code)]
     forward_rule: AstForwardRule,
@@ -138,15 +140,16 @@ impl ForwardedModule {
             rule.hidden_mixins_and_functions.as_ref(),
         );
 
-        (*module).borrow_mut().set_scope(ModuleScope {
+        let scope = ModuleScope {
             variables,
             mixins,
             functions,
-        });
+        };
 
         ForwardedModule {
             inner: module,
             forward_rule: rule,
+            scope,
         }
     }
 
@@ -362,17 +365,8 @@ impl Module {
         match self {
             Self::Builtin { scope }
             | Self::Environment { scope, .. }
+            | Self::Forwarded(ForwardedModule { scope, .. })
             | Self::Shadowed(ShadowedModule { scope, .. }) => scope.clone(),
-            Self::Forwarded(forwarded) => (*forwarded.inner).borrow().scope(),
-        }
-    }
-
-    fn set_scope(&mut self, new_scope: ModuleScope) {
-        match self {
-            Self::Builtin { scope }
-            | Self::Environment { scope, .. }
-            | Self::Shadowed(ShadowedModule { scope, .. }) => *scope = new_scope,
-            Self::Forwarded(forwarded) => (*forwarded.inner).borrow_mut().set_scope(new_scope),
         }
     }
 
@@ -402,10 +396,9 @@ impl Module {
             Self::Builtin { .. } => {
                 return Err(("Cannot modify built-in variable.", name.span).into())
             }
-            Self::Environment { scope, .. } | Self::Shadowed(ShadowedModule { scope, .. }) => {
-                scope.clone()
-            }
-            Self::Forwarded(forwarded) => (*forwarded.inner).borrow_mut().scope(),
+            Self::Environment { scope, .. }
+            | Self::Forwarded(ForwardedModule { scope, .. })
+            | Self::Shadowed(ShadowedModule { scope, .. }) => scope.clone(),
         };
 
         if scope.variables.insert(name.node, value).is_none() {
