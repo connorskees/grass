@@ -268,10 +268,8 @@ where
         for simple in &compound.components {
             if did_write {
                 self.write_simple_selector(simple)?;
-            } else {
-                if self.write_simple_selector(simple)? {
-                    did_write = true;
-                }
+            } else if self.write_simple_selector(simple)? {
+                did_write = true;
             }
         }
 
