@@ -1,10 +1,12 @@
 pub(crate) use chars::*;
 pub(crate) use map_view::*;
 pub(crate) use strings::*;
+pub(crate) use writer::*;
 
 mod chars;
 mod map_view;
 mod strings;
+mod writer;
 
 #[allow(clippy::case_sensitive_file_extension_comparisons)]
 pub(crate) fn is_plain_css_import(url: &str) -> bool {
