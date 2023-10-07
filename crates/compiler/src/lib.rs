@@ -243,6 +243,9 @@ fn write_from_string_with_file_name<P: AsRef<Path>, W: Write>(
 ///
 /// n.b. `grass` does not currently support files or paths that are not valid UTF-8
 ///
+/// This function is quite inefficient when given an unbuffered writer;
+/// wrap sinks of this type in [`std::io::BufWriter`].
+///
 /// ```
 /// # use grass_compiler as grass;
 /// fn main() -> Result<(), Box<grass::Error>> {
@@ -283,6 +286,9 @@ pub fn from_path<P: AsRef<Path>>(p: P, options: &Options) -> Result<String> {
 }
 
 /// Compile CSS from a string, and write output to `writer`.
+///
+/// This function is quite inefficient when given an unbuffered writer;
+/// wrap sinks of this type in [`std::io::BufWriter`].
 ///
 /// ```
 /// # use grass_compiler as grass;
