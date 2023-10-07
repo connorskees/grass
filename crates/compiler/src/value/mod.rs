@@ -582,4 +582,14 @@ impl Value {
             _ => Self::False,
         }
     }
+
+    pub(crate) fn is_ascii(&self) -> bool {
+        match self {
+            Value::List(values, _, _) => values.iter().all(Value::is_ascii),
+            Value::String(name, _) => name.is_ascii(),
+            Value::Map(map) => map.is_ascii(),
+            Value::ArgList(args) => args.elems.iter().all(Value::is_ascii),
+            _ => true,
+        }
+    }
 }

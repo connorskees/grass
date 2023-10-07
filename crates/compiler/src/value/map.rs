@@ -107,6 +107,10 @@ impl SassMap {
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
+
+    pub(crate) fn is_ascii(&self) -> bool {
+        self.0.iter().all(|(k, v)| k.is_ascii() && v.is_ascii())
+    }
 }
 
 impl IntoIterator for SassMap {
