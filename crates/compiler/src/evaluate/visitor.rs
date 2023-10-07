@@ -131,6 +131,7 @@ pub struct Visitor<'a> {
     /// has been seen in the past. In the majority of cases, files are imported
     /// at most once.
     files_seen: BTreeSet<PathBuf>,
+    pub(crate) is_ascii: bool,
 }
 
 impl<'a> Visitor<'a> {
@@ -169,6 +170,7 @@ impl<'a> Visitor<'a> {
             map,
             import_cache: BTreeMap::new(),
             files_seen: BTreeSet::new(),
+            is_ascii: true, // assume ASCII contents by default
         }
     }
 
@@ -2783,6 +2785,10 @@ impl<'a> Visitor<'a> {
             ContextFlags::IN_SUPPORTS_DECLARATION,
             old_in_supports_declaration,
         );
+
+        if self.is_ascii && !result.is_ascii() {
+            self.is_ascii = false;
+        }
 
         Ok(Value::String(result, quote))
     }

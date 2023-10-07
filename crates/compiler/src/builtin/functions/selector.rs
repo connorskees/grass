@@ -120,7 +120,7 @@ pub(crate) fn selector_append(args: ArgumentResult, visitor: &mut Visitor) -> Sa
                                                 &parent.0,
                                                 visitor.options,
                                                 span
-                                            )
+                                            )?
                                         ),
                                         span,
                                     )
@@ -134,7 +134,7 @@ pub(crate) fn selector_append(args: ArgumentResult, visitor: &mut Visitor) -> Sa
                                 format!(
                                     "Can't append {} to {}.",
                                     complex,
-                                    serialize_selector_list(&parent.0, visitor.options, span)
+                                    serialize_selector_list(&parent.0, visitor.options, span)?
                                 ),
                                 span,
                             )
