@@ -201,7 +201,10 @@ impl Unit {
     }
 
     pub(crate) fn is_ascii(&self) -> bool {
-        matches!(self, Unit::Unknown(unit) if unit.resolve_ref().is_ascii())
+        match self {
+            Unit::Unknown(unit) => unit.resolve_ref().is_ascii(),
+            _ => true,
+        }
     }
 }
 
