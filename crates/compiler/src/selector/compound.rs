@@ -241,4 +241,8 @@ impl CompoundSelector {
             }
         })
     }
+
+    pub(crate) fn is_ascii(&self) -> bool {
+        self.components.iter().all(SimpleSelector::is_ascii)
+    }
 }

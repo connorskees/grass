@@ -258,6 +258,10 @@ impl SelectorList {
                 .any(|complex2| complex2.is_super_selector(complex1))
         })
     }
+
+    pub fn is_ascii(&self) -> bool {
+        self.components.iter().all(ComplexSelector::is_ascii)
+    }
 }
 
 fn flatten_vertically<A: std::fmt::Debug>(iterable: Vec<Vec<A>>) -> Vec<A> {

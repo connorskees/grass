@@ -164,6 +164,11 @@ impl Attribute {
             span: parser.toks.span_from(start),
         })
     }
+
+    pub(crate) fn is_ascii(&self) -> bool {
+        // The modifier is an ASCII character if present.
+        self.attr.ident.is_ascii() && self.value.is_ascii()
+    }
 }
 
 impl Display for Attribute {

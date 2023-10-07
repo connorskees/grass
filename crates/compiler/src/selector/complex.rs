@@ -268,6 +268,12 @@ impl ComplexSelector {
             }
         })
     }
+
+    pub(crate) fn is_ascii(&self) -> bool {
+        self.components
+            .iter()
+            .all(ComplexSelectorComponent::is_ascii)
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Copy, Hash)]
@@ -338,6 +344,13 @@ impl ComplexSelectorComponent {
         match self {
             Self::Compound(c) => c,
             Self::Combinator(..) => unreachable!(),
+        }
+    }
+
+    pub(crate) fn is_ascii(&self) -> bool {
+        match self {
+            ComplexSelectorComponent::Combinator(_) => true,
+            ComplexSelectorComponent::Compound(c) => c.is_ascii(),
         }
     }
 }
