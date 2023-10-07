@@ -390,7 +390,9 @@ impl SimpleSelector {
 
     pub(crate) fn is_ascii(&self) -> bool {
         match self {
-            SimpleSelector::Id(text) | SimpleSelector::Class(text) => text.is_ascii(),
+            SimpleSelector::Type(QualifiedName { ident: text, .. })
+            | SimpleSelector::Id(text)
+            | SimpleSelector::Class(text) => text.is_ascii(),
             SimpleSelector::Attribute(attr) => attr.is_ascii(),
             _ => true,
         }

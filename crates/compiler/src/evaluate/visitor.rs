@@ -2555,11 +2555,17 @@ impl<'a> Visitor<'a> {
     fn visit_expr(&mut self, expr: AstExpr) -> SassResult<Value> {
         Ok(match expr {
             AstExpr::Color(color) => Value::Color(color),
-            AstExpr::Number { n, unit } => Value::Dimension(SassNumber {
-                num: n,
-                unit,
-                as_slash: None,
-            }),
+            AstExpr::Number { n, unit } => {
+                if self.is_ascii && !unit.is_ascii() {
+                    self.is_ascii = false;
+                }
+
+                Value::Dimension(SassNumber {
+                    num: n,
+                    unit,
+                    as_slash: None,
+                })
+            }
             AstExpr::List(list) => self.visit_list_expr(list)?,
             AstExpr::String(StringExpr(text, quote), ..) => self.visit_string(text, quote)?,
             AstExpr::BinaryOp(binop) => self.visit_bin_op(
@@ -2786,10 +2792,6 @@ impl<'a> Visitor<'a> {
             old_in_supports_declaration,
         );
 
-        if self.is_ascii && !result.is_ascii() {
-            self.is_ascii = false;
-        }
-
         Ok(Value::String(result, quote))
     }
 
@@ -2979,6 +2981,10 @@ impl<'a> Visitor<'a> {
             .extender
             .add_selector(parsed_selector, &self.media_queries);
 
+        if self.is_ascii && !selector.is_ascii() {
+            self.is_ascii = false;
+        }
+
         let rule = CssStmt::RuleSet {
             selector: selector.clone(),
             body: Vec::new(),
@@ -3071,6 +3077,10 @@ impl<'a> Visitor<'a> {
             // If the value is an empty list, preserve it, because converting it to CSS
             // will throw an error that we want the user to see.
             if !value.is_blank() || value.is_empty_list() {
+                if self.is_ascii && !value.is_ascii() {
+                    self.is_ascii = false;
+                }
+
                 // todo: superfluous clones?
                 self.css_tree.add_stmt(
                     CssStmt::Style(Style {

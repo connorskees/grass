@@ -55,6 +55,10 @@ impl ExtendedSelector {
     pub fn set_inner(&mut self, selector: SelectorList) {
         self.0.replace(selector);
     }
+
+    pub(crate) fn is_ascii(&self) -> bool {
+        self.0.borrow().is_ascii()
+    }
 }
 
 /// There is the potential for danger here by modifying the hash

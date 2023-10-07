@@ -972,7 +972,7 @@ where
         }
 
         if force_double_quote {
-            self.writer.write_ch(b'"')?;
+            buffer.push(b'"');
             self.writer.write_all(&buffer)?;
         } else {
             let quote = if has_double_quote { b'\'' } else { b'"' };
