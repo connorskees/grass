@@ -206,9 +206,9 @@ fn write_from_string_with_file_name<P: AsRef<Path>, W: Write>(
     let is_ascii = visitor.is_ascii;
     let stmts = visitor.finish();
 
-    let mut serializer = Serializer::new(options, &map, false, empty_span, is_ascii, writer);
+    let mut serializer = Serializer::new(options, &map, false, empty_span, writer);
 
-    serializer.start()?;
+    serializer.start(is_ascii)?;
 
     let mut prev_was_group_end = false;
     let mut prev_requires_semicolon = false;

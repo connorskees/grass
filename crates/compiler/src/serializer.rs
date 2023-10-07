@@ -26,7 +26,7 @@ pub(crate) fn serialize_selector_list(
 ) -> SassResult<String> {
     let map = CodeMap::new();
     let mut buf = Vec::new();
-    let mut serializer = Serializer::new(options, &map, false, span, list.is_ascii(), &mut buf);
+    let mut serializer = Serializer::new(options, &map, false, span, &mut buf);
 
     serializer.write_selector_list(list)?;
 
@@ -41,7 +41,7 @@ pub(crate) fn serialize_calculation_arg(
 ) -> SassResult<String> {
     let map = CodeMap::new();
     let mut buf = Vec::new();
-    let mut serializer = Serializer::new(options, &map, false, span, true, &mut buf);
+    let mut serializer = Serializer::new(options, &map, false, span, &mut buf);
 
     serializer.write_calculation_arg(arg)?;
 
@@ -56,7 +56,7 @@ pub(crate) fn serialize_number(
 ) -> SassResult<String> {
     let map = CodeMap::new();
     let mut buf = Vec::new();
-    let mut serializer = Serializer::new(options, &map, false, span, true, &mut buf);
+    let mut serializer = Serializer::new(options, &map, false, span, &mut buf);
 
     serializer.visit_number(number)?;
 
@@ -67,7 +67,7 @@ pub(crate) fn serialize_number(
 pub(crate) fn serialize_value(val: &Value, options: &Options, span: Span) -> SassResult<String> {
     let map = CodeMap::new();
     let mut buf = Vec::new();
-    let mut serializer = Serializer::new(options, &map, false, span, val.is_ascii(), &mut buf);
+    let mut serializer = Serializer::new(options, &map, false, span, &mut buf);
 
     serializer.visit_value(val, span)?;
 
@@ -78,7 +78,7 @@ pub(crate) fn serialize_value(val: &Value, options: &Options, span: Span) -> Sas
 pub(crate) fn inspect_value(val: &Value, options: &Options, span: Span) -> SassResult<String> {
     let map = CodeMap::new();
     let mut buf = Vec::new();
-    let mut serializer = Serializer::new(options, &map, true, span, val.is_ascii(), &mut buf);
+    let mut serializer = Serializer::new(options, &map, true, span, &mut buf);
 
     serializer.visit_value(val, span)?;
 
@@ -89,7 +89,7 @@ pub(crate) fn inspect_value(val: &Value, options: &Options, span: Span) -> SassR
 pub(crate) fn inspect_float(number: f64, options: &Options, span: Span) -> SassResult<String> {
     let map = CodeMap::new();
     let mut buf = Vec::new();
-    let mut serializer = Serializer::new(options, &map, true, span, true, &mut buf);
+    let mut serializer = Serializer::new(options, &map, true, span, &mut buf);
 
     serializer.write_float(number)?;
 
@@ -100,7 +100,7 @@ pub(crate) fn inspect_float(number: f64, options: &Options, span: Span) -> SassR
 pub(crate) fn inspect_map(map: &SassMap, options: &Options, span: Span) -> SassResult<String> {
     let code_map = CodeMap::new();
     let mut buf = Vec::new();
-    let mut serializer = Serializer::new(options, &code_map, true, span, map.is_ascii(), &mut buf);
+    let mut serializer = Serializer::new(options, &code_map, true, span, &mut buf);
 
     serializer.visit_map(map, span)?;
 
@@ -115,7 +115,7 @@ pub(crate) fn inspect_function_ref(
 ) -> SassResult<String> {
     let code_map = CodeMap::new();
     let mut buf = Vec::new();
-    let mut serializer = Serializer::new(options, &code_map, true, span, true, &mut buf);
+    let mut serializer = Serializer::new(options, &code_map, true, span, &mut buf);
 
     serializer.visit_function_ref(func, span)?;
 
@@ -130,7 +130,7 @@ pub(crate) fn inspect_number(
 ) -> SassResult<String> {
     let map = CodeMap::new();
     let mut buf = Vec::new();
-    let mut serializer = Serializer::new(options, &map, true, span, true, &mut buf);
+    let mut serializer = Serializer::new(options, &map, true, span, &mut buf);
 
     serializer.visit_number(number)?;
 
@@ -145,7 +145,6 @@ pub(crate) struct Serializer<'a, W> {
     indent_width: usize,
     // todo: use this field
     _quote: bool,
-    is_ascii: bool,
     writer: W,
     map: &'a CodeMap,
     span: Span,
@@ -160,7 +159,6 @@ where
         map: &'a CodeMap,
         inspect: bool,
         span: Span,
-        is_ascii: bool,
         writer: W,
     ) -> Self {
         Self {
@@ -170,7 +168,6 @@ where
             indent_width: 2,
             options,
             writer,
-            is_ascii,
             map,
             span,
         }
@@ -700,10 +697,10 @@ where
         Ok(())
     }
 
-    pub fn start(&mut self) -> SassResult<()> {
-        if !self.is_ascii && self.options.is_compressed() && self.options.allows_charset {
+    pub fn start(&mut self, is_ascii: bool) -> SassResult<()> {
+        if !is_ascii && self.options.is_compressed() && self.options.allows_charset {
             self.writer.write_all("\u{FEFF}".as_bytes())?;
-        } else if !self.is_ascii && self.options.allows_charset {
+        } else if !is_ascii && self.options.allows_charset {
             self.writer.write_all(b"@charset \"UTF-8\";\n")?;
         }
 
