@@ -246,7 +246,9 @@ fn write_from_string_with_file_name<P: AsRef<Path>, W: Write>(
 /// ```
 /// # use grass_compiler as grass;
 /// fn main() -> Result<(), Box<grass::Error>> {
-///     let css = grass::from_path("input.scss", &grass::Options::default())?;
+///     use std::fs::File;
+///     let mut out = File::create("output.css")?;
+///     grass::write_from_path("input.scss", &grass::Options::default(), out)?;
 ///     Ok(())
 /// }
 /// ```
@@ -285,8 +287,9 @@ pub fn from_path<P: AsRef<Path>>(p: P, options: &Options) -> Result<String> {
 /// ```
 /// # use grass_compiler as grass;
 /// fn main() -> Result<(), Box<grass::Error>> {
-///     let css = grass::from_string("a { b { color: &; } }".to_string(), &grass::Options::default())?;
-///     assert_eq!(css, "a b {\n  color: a b;\n}\n");
+///     use std::fs::File;
+///     let mut out = File::create("output.css")?;
+///     grass::write_from_string("a { b { color: &; } }".to_string(), &grass::Options::default(), out)?;
 ///     Ok(())
 /// }
 /// ```
