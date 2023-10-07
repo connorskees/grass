@@ -199,6 +199,10 @@ impl Unit {
             Unit::Fr | Unit::Percent | Unit::Unknown(..) | Unit::Complex { .. } => UnitKind::Other,
         }
     }
+
+    pub(crate) fn is_ascii(&self) -> bool {
+        matches!(self, Unit::Unknown(unit) if unit.resolve_ref().is_ascii())
+    }
 }
 
 impl From<String> for Unit {
