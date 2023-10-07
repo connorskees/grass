@@ -66,6 +66,7 @@ grass input.scss
     unknown_lints,
 )]
 
+use std::io::Write;
 use std::path::Path;
 
 use parse::{CssParser, SassParser, StylesheetParser};
@@ -102,6 +103,7 @@ pub mod sass_ast {
     pub use crate::ast::*;
 }
 
+use crate::serializer::requires_semicolon;
 pub use codemap;
 
 mod ast;
@@ -163,11 +165,12 @@ pub fn parse_stylesheet<P: AsRef<Path>>(
     Ok(stylesheet)
 }
 
-fn from_string_with_file_name<P: AsRef<Path>>(
+fn write_from_string_with_file_name<P: AsRef<Path>, W: Write>(
     input: String,
     file_name: P,
     options: &Options,
-) -> Result<String> {
+    writer: W,
+) -> Result<()> {
     let mut map = CodeMap::new();
     let path = file_name.as_ref();
     let file = map.add_file(path.to_string_lossy().into_owned(), input);
@@ -200,29 +203,60 @@ fn from_string_with_file_name<P: AsRef<Path>>(
         Ok(_) => {}
         Err(e) => return Err(raw_to_parse_error(&map, *e, options.unicode_error_messages)),
     }
+    let is_ascii = visitor.is_ascii;
     let stmts = visitor.finish();
 
-    let mut serializer = Serializer::new(options, &map, false, empty_span);
+    let mut serializer = Serializer::new(options, &map, false, empty_span, is_ascii, writer);
+
+    serializer.start()?;
 
     let mut prev_was_group_end = false;
     let mut prev_requires_semicolon = false;
+    let mut is_first_group = true;
     for stmt in stmts {
         if stmt.is_invisible() {
             continue;
         }
 
         let is_group_end = stmt.is_group_end();
-        let requires_semicolon = Serializer::requires_semicolon(&stmt);
+        let requires_semicolon = requires_semicolon(&stmt);
 
         serializer
-            .visit_group(stmt, prev_was_group_end, prev_requires_semicolon)
+            .visit_group(
+                stmt,
+                prev_was_group_end,
+                prev_requires_semicolon,
+                is_first_group,
+            )
             .map_err(|e| raw_to_parse_error(&map, *e, options.unicode_error_messages))?;
 
         prev_was_group_end = is_group_end;
         prev_requires_semicolon = requires_semicolon;
+        is_first_group = false;
     }
 
-    Ok(serializer.finish(prev_requires_semicolon))
+    let wrote = !is_ascii || !is_first_group;
+    serializer.finish(prev_requires_semicolon, wrote)
+}
+
+/// Compile CSS from a path, and write output to `writer`.
+///
+/// n.b. `grass` does not currently support files or paths that are not valid UTF-8
+///
+/// ```
+/// # use grass_compiler as grass;
+/// fn main() -> Result<(), Box<grass::Error>> {
+///     let css = grass::from_path("input.scss", &grass::Options::default())?;
+///     Ok(())
+/// }
+/// ```
+pub fn write_from_path<P: AsRef<Path>, W: Write>(p: P, options: &Options, writer: W) -> Result<()> {
+    write_from_string_with_file_name(
+        String::from_utf8(options.fs.read(p.as_ref())?)?,
+        p,
+        options,
+        writer,
+    )
 }
 
 /// Compile CSS from a path
@@ -238,7 +272,30 @@ fn from_string_with_file_name<P: AsRef<Path>>(
 /// ```
 #[inline]
 pub fn from_path<P: AsRef<Path>>(p: P, options: &Options) -> Result<String> {
-    from_string_with_file_name(String::from_utf8(options.fs.read(p.as_ref())?)?, p, options)
+    let mut buf = Vec::new();
+
+    write_from_path(p, options, &mut buf)?;
+
+    // SAFETY: todo
+    Ok(unsafe { String::from_utf8_unchecked(buf) })
+}
+
+/// Compile CSS from a string, and write output to `writer`.
+///
+/// ```
+/// # use grass_compiler as grass;
+/// fn main() -> Result<(), Box<grass::Error>> {
+///     let css = grass::from_string("a { b { color: &; } }".to_string(), &grass::Options::default())?;
+///     assert_eq!(css, "a b {\n  color: a b;\n}\n");
+///     Ok(())
+/// }
+/// ```
+pub fn write_from_string<S: Into<String>, W: Write>(
+    input: S,
+    options: &Options,
+    writer: W,
+) -> Result<()> {
+    write_from_string_with_file_name(input.into(), "stdin", options, writer)
 }
 
 /// Compile CSS from a string
@@ -253,7 +310,12 @@ pub fn from_path<P: AsRef<Path>>(p: P, options: &Options) -> Result<String> {
 /// ```
 #[inline]
 pub fn from_string<S: Into<String>>(input: S, options: &Options) -> Result<String> {
-    from_string_with_file_name(input.into(), "stdin", options)
+    let mut buf = Vec::new();
+
+    write_from_string(input, options, &mut buf)?;
+
+    // SAFETY: todo
+    Ok(unsafe { String::from_utf8_unchecked(buf) })
 }
 
 #[cfg(feature = "wasm-exports")]
