@@ -10,13 +10,13 @@ keywords = ["scss", "sass", "css", "web"]
 repository = "https://github.com/connorskees/grass"
 authors = ["Connor Skees <39542938+ConnorSkees@users.noreply.github.com>"]
 include = ["src", "Cargo.toml", "../README.md", "../CHANGELOG.md", "../LICENSE"]
-rust-version = "1.64.0"
+rust-version = "1.70"
 
 [lib]
 proc-macro = true
 
 [dependencies]
-syn = { version = "1.0.103", default-features = false }
+syn = { version = "2", default-features = false }
 grass_compiler = { path = "../compiler", version = "=0.13.0" }
 quote = { version = "1.0.23", default-features = false }
 
