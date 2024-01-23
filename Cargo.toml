@@ -18,3 +18,16 @@ lto = true
 codegen-units = 1
 panic = 'abort'
 strip = true
+
+[package]
+name = 'grass-wasm'
+edition = "2021"
+
+[lib]
+path = "crates/lib/src/lib.rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+wasm-bindgen = "0.2"
+grass_compiler = { path = "crates/compiler" }
+getrandom = { version = "0.2", features = ["js"] }
