@@ -1,14 +1,12 @@
 name: 'Build WebAssembly'
 
 on:
-  push:
-    branches:
-      - master
+  release:
       
   workflow_dispatch:
     inputs:
       build:
-        description: 'Build WASM files.'
+        description: 'Build WebAssembly binding files.'
 
 jobs:
   build:
