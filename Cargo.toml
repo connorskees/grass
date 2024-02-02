@@ -22,6 +22,7 @@ strip = true
 [package]
 name = 'grass-wasm'
 edition = "2021"
+version = "v0.1.0"
 
 [lib]
 path = "crates/lib/src/lib.rs"
