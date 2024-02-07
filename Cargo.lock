@@ -154,7 +154,7 @@ dependencies = [
 
 [[package]]
 name = "grass"
-version = "0.13.1"
+version = "0.13.2"
 dependencies = [
  "clap",
  "grass_compiler",
@@ -165,7 +165,7 @@ dependencies = [
 
 [[package]]
 name = "grass_compiler"
-version = "0.13.0"
+version = "0.13.2"
 dependencies = [
  "codemap",
  "indexmap",
@@ -193,7 +193,7 @@ checksum = "290f1a1d9242c78d09ce40a5e87e7554ee637af1351968159f4952f028f75604"
 
 [[package]]
 name = "include_sass"
-version = "0.13.0"
+version = "0.13.2"
 dependencies = [
  "grass_compiler",
  "quote",

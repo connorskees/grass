@@ -1,6 +1,6 @@
 [package]
 name = "include_sass"
-version = "0.13.0"
+version = "0.13.2"
 edition = "2021"
 description = "Internal implementation of the grass::include! macro"
 readme = "../../README.md"
@@ -17,7 +17,7 @@ proc-macro = true
 
 [dependencies]
 syn = { version = "2", default-features = false }
-grass_compiler = { path = "../compiler", version = "=0.13.0" }
+grass_compiler = { path = "../compiler", version = "=0.13.2" }
 quote = { version = "1.0.23", default-features = false }
 
 [features]
