@@ -33,7 +33,6 @@ rustdoc-args = ["--cfg", "doc_cfg"]
 
 [dependencies]
 # wasm-bindgen = "0.2"
-wasm-exports = ["wasm-bindgen"]
 getrandom = { version = "0.2", features = ["js"] }
 grass_compiler = { path = "../compiler", version = "=0.13.2", default-features = false }
 include_sass = { path = "../include_sass", version = "0.13.2", optional = true }
@@ -45,7 +44,7 @@ default = ["commandline", "random"]
 # Option (enabled by default): build a binary using clap
 commandline = ["clap"]
 random = ["grass_compiler/random"]
-wasm-exports = ["grass_compiler/wasm-exports"]
+wasm-exports = ["grass_compiler/wasm-exports", "wasm-bindgen"]
 # Option: include the proc macro `include_sass!`
 macro = ["include_sass"]
 nightly = ["include_sass/nightly"]
