@@ -21,7 +21,7 @@ required-features = ["commandline"]
 [lib]
 name = "grass"
 path = "src/lib.rs"
-crate-type = ["cdylib", "rlib"]
+# crate-type = ["cdylib", "rlib"]
 bench = false
 
 
@@ -32,8 +32,8 @@ features = ["macro"]
 rustdoc-args = ["--cfg", "doc_cfg"]
 
 [dependencies]
-wasm-bindgen = "0.2"
-getrandom = { version = "0.2", features = ["js"] }
+# wasm-bindgen = "0.2"
+# getrandom = { version = "0.2", features = ["js"] }
 grass_compiler = { path = "../compiler", version = "=0.13.2", default-features = false }
 include_sass = { path = "../include_sass", version = "0.13.2", optional = true }
 clap = { version = "4.3.10", optional = true }
