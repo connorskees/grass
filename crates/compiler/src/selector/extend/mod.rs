@@ -1119,7 +1119,8 @@ impl ExtensionStore {
             // was replaced due to :not() expansion, we must get rid of the old
             // version.
             if !contains_extension {
-                sources.remove(&extension.extender);
+                // todo: evaluate whether we could get away with swap_remove
+                sources.shift_remove(&extension.extender);
             }
         }
         additional_extensions

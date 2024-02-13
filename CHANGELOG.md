@@ -7,6 +7,12 @@
 
 -->
 
+# 0.13.2
+
+ - update rustix dependency to silence security warning
+ - fix @forward statement altering the scope of the forwarded module (#85) by @kketch
+ - bump MSRV to 1.70.0
+
 # 0.13.1
 
  - update `clap` dependency to 4.x.x to silence `atty` security warning
