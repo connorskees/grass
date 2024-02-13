@@ -21,7 +21,7 @@ required-features = ["commandline"]
 [lib]
 name = "grass"
 path = "src/lib.rs"
-# crate-type = ["cdylib", "rlib"]
+crate-type = ["cdylib", "rlib"]
 bench = false
 
 
