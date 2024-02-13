@@ -32,7 +32,7 @@ features = ["macro"]
 rustdoc-args = ["--cfg", "doc_cfg"]
 
 [dependencies]
-# wasm-bindgen = "0.2"
+wasm-bindgen = "0.2"
 getrandom = { version = "0.2", features = ["js"] }
 grass_compiler = { path = "../compiler", version = "=0.13.2", default-features = false }
 include_sass = { path = "../include_sass", version = "0.13.2", optional = true }
