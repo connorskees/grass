@@ -50,7 +50,7 @@ jobs:
           rustup component add clippy
           cargo clippy --features=macro -- -D warnings
 
-  boostrap:
+  bootstrap:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

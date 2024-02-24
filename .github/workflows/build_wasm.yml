@@ -1,0 +1,35 @@
+name: 'Build WebAssembly'
+
+on:
+  push:
+    tags: [ '*' ]
+      
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 'Checkout Repository'
+      uses: actions/checkout@v4
+        
+    - name: 'Install wasm-pack'
+      run: |
+        curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+        export PATH="$HOME/.cargo/bin:$PATH"
+    
+    - name: 'Build WebAssembly'
+      run: |
+        rustup target add wasm32-unknown-unknown
+        pushd ./crates/lib
+        wasm-pack build --release --target web --out-name index
+        popd
+        mkdir -p artifacts
+        find crates/lib/pkg -type f \( -name "*.js" -o -name "*.d.ts" -o -name "*.wasm" \) -exec cp {} artifacts \;
+        
+    - name: 'Upload Artifacts'
+      uses: actions/upload-artifact@v4
+      with:
+        name: 'wasm'
+        path: artifacts/*
