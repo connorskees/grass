@@ -1,10 +1,12 @@
 use std::{
     borrow::Cow,
+    cell::RefCell,
     collections::BTreeMap,
     path::{Path, PathBuf},
 };
 
-use grass::Fs;
+use grass::{Fs, Logger};
+use grass_compiler::codemap::SpanLoc;
 
 #[macro_export]
 macro_rules! test {
@@ -160,5 +162,34 @@ impl Fs for TestFs {
 
     fn read(&self, path: &Path) -> std::io::Result<Vec<u8>> {
         Ok(self.files.get(path).unwrap().as_bytes().to_vec())
+    }
+}
+
+#[derive(Debug, Default)]
+struct TestLoggerState {
+    debug_messages: Vec<String>,
+    warning_messages: Vec<String>,
+}
+
+#[derive(Debug, Default)]
+pub struct TestLogger(RefCell<TestLoggerState>);
+
+impl TestLogger {
+    pub fn debug_messages(&self) -> Vec<String> {
+        self.0.borrow().debug_messages.clone()
+    }
+
+    pub fn warning_messages(&self) -> Vec<String> {
+        self.0.borrow().warning_messages.clone()
+    }
+}
+
+impl Logger for TestLogger {
+    fn debug(&self, _location: SpanLoc, message: &str) {
+        self.0.borrow_mut().debug_messages.push(message.into());
+    }
+
+    fn warning(&self, _location: SpanLoc, message: &str) {
+        self.0.borrow_mut().warning_messages.push(message.into());
     }
 }
