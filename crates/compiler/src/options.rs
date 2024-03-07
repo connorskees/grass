@@ -3,7 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::{builtin::Builtin, Fs, StdFs};
+use crate::{builtin::Builtin, Fs, Logger, StdFs, StdLogger};
 
 /// Configuration for Sass compilation
 ///
@@ -12,10 +12,12 @@ use crate::{builtin::Builtin, Fs, StdFs};
 #[derive(Debug)]
 pub struct Options<'a> {
     pub(crate) fs: &'a dyn Fs,
+    pub(crate) logger: &'a dyn Logger,
     pub(crate) style: OutputStyle,
     pub(crate) load_paths: Vec<PathBuf>,
     pub(crate) allows_charset: bool,
     pub(crate) unicode_error_messages: bool,
+    // TODO: remove in favor of NullLogger
     pub(crate) quiet: bool,
     pub(crate) input_syntax: Option<InputSyntax>,
     pub(crate) custom_fns: HashMap<String, Builtin>,
@@ -26,6 +28,7 @@ impl Default for Options<'_> {
     fn default() -> Self {
         Self {
             fs: &StdFs,
+            logger: &StdLogger,
             style: OutputStyle::Expanded,
             load_paths: Vec::new(),
             allows_charset: true,
@@ -49,6 +52,16 @@ impl<'a> Options<'a> {
         self
     }
 
+    /// This option allows you to define how log events should be handled
+    ///
+    /// Be default, [`StdLogger`] is used, which writes all events to standard output.
+    #[must_use]
+    #[inline]
+    pub fn logger(mut self, logger: &'a dyn Logger) -> Self {
+        self.logger = logger;
+        self
+    }
+
     /// `grass` currently offers 2 different output styles
     ///
     ///  - [`OutputStyle::Expanded`] writes each selector and declaration on its own line.
@@ -67,10 +80,12 @@ impl<'a> Options<'a> {
     /// when compiling. By default, Sass emits warnings
     /// when deprecated features are used or when the
     /// `@warn` rule is encountered. It also silences the
-    /// `@debug` rule.
+    /// `@debug` rule. Setting this option to `true` will
+    /// stop all events from reaching the assigned [`logger`].
     ///
     /// By default, this value is `false` and warnings are emitted.
     #[must_use]
+    #[deprecated = "use `logger(&NullLogger)` instead"]
     #[inline]
     pub const fn quiet(mut self, quiet: bool) -> Self {
         self.quiet = quiet;

@@ -80,6 +80,7 @@ pub use crate::error::{
     PublicSassErrorKind as ErrorKind, SassError as Error, SassResult as Result,
 };
 pub use crate::fs::{Fs, NullFs, StdFs};
+pub use crate::logger::{Logger, NullLogger, StdLogger};
 pub use crate::options::{InputSyntax, Options, OutputStyle};
 pub use crate::{builtin::Builtin, evaluate::Visitor};
 pub(crate) use crate::{context_flags::ContextFlags, lexer::Token};
@@ -114,6 +115,7 @@ mod evaluate;
 mod fs;
 mod interner;
 mod lexer;
+mod logger;
 mod options;
 mod parse;
 mod selector;

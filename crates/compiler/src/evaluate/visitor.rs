@@ -1042,14 +1042,10 @@ impl<'a> Visitor<'a> {
         }
 
         let message = self.visit_expr(debug_rule.value)?;
+        let message = message.inspect(debug_rule.span)?;
 
         let loc = self.map.look_up_span(debug_rule.span);
-        eprintln!(
-            "{}:{} DEBUG: {}",
-            loc.file.name(),
-            loc.begin.line + 1,
-            message.inspect(debug_rule.span)?
-        );
+        self.options.logger.debug(loc, message.as_str());
 
         Ok(None)
     }
@@ -1588,13 +1584,7 @@ impl<'a> Visitor<'a> {
             return;
         }
         let loc = self.map.look_up_span(span);
-        eprintln!(
-            "Warning: {}\n    ./{}:{}:{}",
-            message,
-            loc.file.name(),
-            loc.begin.line + 1,
-            loc.begin.column + 1
-        );
+        self.options.logger.warning(loc, message);
     }
 
     fn visit_warn_rule(&mut self, warn_rule: AstWarn) -> SassResult<()> {
