@@ -308,3 +308,30 @@ test!(
     ",
     "a {\n  color: \"aaa\";\n}\n"
 );
+test!(
+    str_split_abc_space,
+    "@use 'sass:string';
+    foo {
+        bar: string.split('a b c', ' ');
+    }
+    ",
+    "foo {\n  bar: [\"a\", \"b\", \"c\"];\n}\n"
+);
+test!(
+    str_split_abc_space_1,
+    "@use 'sass:string';
+    foo {
+        bar: string.split('a b c', ' ', 1);
+    }
+    ",
+    "foo {\n  bar: [\"a\", \"b c\"];\n}\n"
+);
+test!(
+    str_split_rgb_comma,
+    "@use 'sass:string';
+    foo {
+        bar: string.split('red,green,blue', ',');
+    }
+    ",
+    "foo {\n  bar: [\"red\", \"green\", \"blue\"];\n}\n"
+);
