@@ -115,6 +115,53 @@ pub(crate) fn str_slice(mut args: ArgumentResult, visitor: &mut Visitor) -> Sass
     }
 }
 
+/// https://sass-lang.com/documentation/modules/string/#split
+///
+/// Returns a bracketed, comma-separated list of substrings of $string
+/// that are separated by $separator. The $separators aren’t included
+/// in these substrings.
+///
+/// If $limit is a number 1 or higher, this splits on at most that many
+/// $separators (and so returns at most $limit + 1 strings). The last
+/// substring contains the rest of the string, including any remaining
+/// $separators.
+pub(crate) fn str_split(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
+    args.max_args(3)?;
+
+    let s1 = args
+        .get_err(0, "string")?
+        .assert_string_with_name("string", args.span())?
+        .0;
+
+    let separator = args
+        .get_err(1, "separator")?
+        .assert_string_with_name("separator", args.span())?
+        .0;
+
+    let limit = args.default_arg(2, "limit", Value::Null);
+
+    let vec = if matches!(limit, Value::Null) {
+        s1.split(&separator)
+            .map(|s| Value::String(s.to_string(), QuoteKind::Quoted))
+            .collect()
+    } else {
+        let limit = limit.assert_number_with_name("limit", args.span())?;
+        let limit_int = limit.assert_int_with_name("limit", args.span())?;
+        if limit_int < 1 {
+            return Err((
+                format!("$limit: Must be greater than 1, was {}.", limit_int),
+                args.span(),
+            )
+                .into());
+        }
+        // note: `1 + limit_int` is required to match dart-sass
+        s1.splitn(1 + limit_int as usize, &separator)
+            .map(|s| Value::String(s.to_string(), QuoteKind::Quoted))
+            .collect()
+    };
+    Ok(Value::List(vec, ListSeparator::Comma, Brackets::Bracketed))
+}
+
 pub(crate) fn str_index(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
     args.max_args(2)?;
     let s1 = args
