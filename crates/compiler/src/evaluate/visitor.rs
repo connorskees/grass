@@ -875,15 +875,9 @@ impl<'a> Visitor<'a> {
         empty_span: Span,
     ) -> SassResult<StyleSheet> {
         match InputSyntax::for_path(path) {
-            InputSyntax::Scss => {
-                ScssParser::new(lexer, self.map, self.options, empty_span, path).__parse()
-            }
-            InputSyntax::Sass => {
-                SassParser::new(lexer, self.map, self.options, empty_span, path).__parse()
-            }
-            InputSyntax::Css => {
-                CssParser::new(lexer, self.map, self.options, empty_span, path).__parse()
-            }
+            InputSyntax::Scss => ScssParser::new(lexer, self.options, empty_span, path).__parse(),
+            InputSyntax::Sass => SassParser::new(lexer, self.options, empty_span, path).__parse(),
+            InputSyntax::Css => CssParser::new(lexer, self.options, empty_span, path).__parse(),
         }
     }
 

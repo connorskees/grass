@@ -1,6 +1,6 @@
 use std::{collections::BTreeMap, path::Path, sync::Arc};
 
-use codemap::{CodeMap, Span, Spanned};
+use codemap::{Span, Spanned};
 
 use crate::{
     ast::*, builtin::DISALLOWED_PLAIN_CSS_FUNCTION_NAMES, common::QuoteKind, error::SassResult,
@@ -11,8 +11,6 @@ use super::{value::ValueParser, BaseParser, StylesheetParser};
 
 pub(crate) struct CssParser<'a> {
     pub toks: Lexer<'a>,
-    // todo: likely superfluous
-    pub map: &'a mut CodeMap,
     pub path: &'a Path,
     pub empty_span: Span,
     pub flags: ContextFlags,
@@ -48,10 +46,6 @@ impl<'a> StylesheetParser<'a> for CssParser<'a> {
 
     fn path(&self) -> &'a Path {
         self.path
-    }
-
-    fn map(&mut self) -> &mut CodeMap {
-        self.map
     }
 
     fn options(&self) -> &Options {
@@ -110,14 +104,12 @@ impl<'a> StylesheetParser<'a> for CssParser<'a> {
 impl<'a> CssParser<'a> {
     pub fn new(
         toks: Lexer<'a>,
-        map: &'a mut CodeMap,
         options: &'a Options<'a>,
         empty_span: Span,
         file_name: &'a Path,
     ) -> Self {
         CssParser {
             toks,
-            map,
             path: file_name,
             empty_span,
             flags: ContextFlags::empty(),

@@ -147,13 +147,13 @@ pub fn parse_stylesheet<P: AsRef<Path>>(
 
     let stylesheet = match input_syntax {
         InputSyntax::Scss => {
-            ScssParser::new(lexer, &mut map, options, empty_span, file_name.as_ref()).__parse()
+            ScssParser::new(lexer, options, empty_span, file_name.as_ref()).__parse()
         }
         InputSyntax::Sass => {
-            SassParser::new(lexer, &mut map, options, empty_span, file_name.as_ref()).__parse()
+            SassParser::new(lexer, options, empty_span, file_name.as_ref()).__parse()
         }
         InputSyntax::Css => {
-            CssParser::new(lexer, &mut map, options, empty_span, file_name.as_ref()).__parse()
+            CssParser::new(lexer, options, empty_span, file_name.as_ref()).__parse()
         }
     };
 
@@ -182,13 +182,13 @@ fn from_string_with_file_name<P: AsRef<Path>>(
 
     let stylesheet = match input_syntax {
         InputSyntax::Scss => {
-            ScssParser::new(lexer, &mut map, options, empty_span, file_name.as_ref()).__parse()
+            ScssParser::new(lexer, options, empty_span, file_name.as_ref()).__parse()
         }
         InputSyntax::Sass => {
-            SassParser::new(lexer, &mut map, options, empty_span, file_name.as_ref()).__parse()
+            SassParser::new(lexer, options, empty_span, file_name.as_ref()).__parse()
         }
         InputSyntax::Css => {
-            CssParser::new(lexer, &mut map, options, empty_span, file_name.as_ref()).__parse()
+            CssParser::new(lexer, options, empty_span, file_name.as_ref()).__parse()
         }
     };
 

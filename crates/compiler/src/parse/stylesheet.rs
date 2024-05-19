@@ -7,7 +7,7 @@ use std::{
     sync::Arc,
 };
 
-use codemap::{CodeMap, Span, Spanned};
+use codemap::{Span, Spanned};
 
 use crate::{
     ast::*,
@@ -33,7 +33,6 @@ pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
     fn is_indented(&self) -> bool;
     fn options(&self) -> &Options;
     fn path(&self) -> &Path;
-    fn map(&mut self) -> &mut CodeMap;
     fn empty_span(&self) -> Span;
     fn current_indentation(&self) -> usize;
     fn flags(&self) -> &ContextFlags;

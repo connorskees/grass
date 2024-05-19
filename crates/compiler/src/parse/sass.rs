@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use codemap::{CodeMap, Span};
+use codemap::Span;
 
 use crate::{ast::*, error::SassResult, lexer::Lexer, ContextFlags, Options, Token};
 
@@ -8,8 +8,6 @@ use super::{BaseParser, StylesheetParser};
 
 pub(crate) struct SassParser<'a> {
     pub toks: Lexer<'a>,
-    // todo: likely superfluous
-    pub map: &'a mut CodeMap,
     pub path: &'a Path,
     pub empty_span: Span,
     pub flags: ContextFlags,
@@ -81,10 +79,6 @@ impl<'a> StylesheetParser<'a> for SassParser<'a> {
 
     fn path(&self) -> &'a Path {
         self.path
-    }
-
-    fn map(&mut self) -> &mut CodeMap {
-        self.map
     }
 
     fn options(&self) -> &Options {
@@ -351,7 +345,6 @@ impl<'a> StylesheetParser<'a> for SassParser<'a> {
 impl<'a> SassParser<'a> {
     pub fn new(
         toks: Lexer<'a>,
-        map: &'a mut CodeMap,
         options: &'a Options<'a>,
         empty_span: Span,
         file_name: &'a Path,
@@ -362,7 +355,6 @@ impl<'a> SassParser<'a> {
 
         SassParser {
             toks,
-            map,
             path: file_name,
             empty_span,
             flags,

@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use codemap::{CodeMap, Span};
+use codemap::Span;
 
 use crate::{lexer::Lexer, ContextFlags, Options};
 
@@ -8,8 +8,6 @@ use super::{BaseParser, StylesheetParser};
 
 pub(crate) struct ScssParser<'a> {
     pub toks: Lexer<'a>,
-    // todo: likely superfluous
-    pub map: &'a mut CodeMap,
     pub path: &'a Path,
     pub empty_span: Span,
     pub flags: ContextFlags,
@@ -19,7 +17,6 @@ pub(crate) struct ScssParser<'a> {
 impl<'a> ScssParser<'a> {
     pub fn new(
         toks: Lexer<'a>,
-        map: &'a mut CodeMap,
         options: &'a Options<'a>,
         empty_span: Span,
         file_name: &'a Path,
@@ -30,7 +27,6 @@ impl<'a> ScssParser<'a> {
 
         ScssParser {
             toks,
-            map,
             path: file_name,
             empty_span,
             flags,
@@ -60,10 +56,6 @@ impl<'a> StylesheetParser<'a> for ScssParser<'a> {
 
     fn path(&self) -> &'a Path {
         self.path
-    }
-
-    fn map(&mut self) -> &mut CodeMap {
-        self.map
     }
 
     fn options(&self) -> &Options {
