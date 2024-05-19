@@ -148,24 +148,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "190092ea657667030ac6a35e305e62fc4dd69fd98ac98631e5d3a2b1575a12b5"
 dependencies = [
  "cfg-if",
+ "js-sys",
  "libc",
  "wasi",
+ "wasm-bindgen",
 ]
 
 [[package]]
 name = "grass"
-version = "0.13.2"
+version = "0.13.3"
 dependencies = [
  "clap",
+ "getrandom",
  "grass_compiler",
  "include_sass",
  "paste",
  "tempfile",
+ "wasm-bindgen",
 ]
 
 [[package]]
 name = "grass_compiler"
-version = "0.13.2"
+version = "0.13.3"
 dependencies = [
  "codemap",
  "indexmap",
@@ -193,7 +197,7 @@ checksum = "290f1a1d9242c78d09ce40a5e87e7554ee637af1351968159f4952f028f75604"
 
 [[package]]
 name = "include_sass"
-version = "0.13.2"
+version = "0.13.3"
 dependencies = [
  "grass_compiler",
  "quote",
@@ -208,6 +212,15 @@ checksum = "824b2ae422412366ba479e8111fd301f7b5faece8149317bb81925979a53f520"
 dependencies = [
  "equivalent",
  "hashbrown 0.14.3",
+]
+
+[[package]]
+name = "js-sys"
+version = "0.3.68"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "406cda4b368d531c842222cf9d2600a9a4acce8d29423695379c6868a143a9ee"
+dependencies = [
+ "wasm-bindgen",
 ]
 
 [[package]]

@@ -1,6 +1,6 @@
 [package]
 name = "grass"
-version = "0.13.2"
+version = "0.13.3"
 description = "A Sass compiler written purely in Rust"
 readme = "../../README.md"
 license = "MIT"
@@ -9,7 +9,14 @@ keywords = ["scss", "sass", "css", "web"]
 repository = "https://github.com/connorskees/grass"
 authors = ["Connor Skees <39542938+ConnorSkees@users.noreply.github.com>"]
 edition = "2021"
-include = ["src", "Cargo.toml", "README.md", "CHANGELOG.md", "Cargo.lock", "LICENSE"]
+include = [
+    "src",
+    "Cargo.toml",
+    "README.md",
+    "CHANGELOG.md",
+    "Cargo.lock",
+    "LICENSE",
+]
 default-run = "grass"
 rust-version = "1.70"
 
@@ -34,8 +41,8 @@ rustdoc-args = ["--cfg", "doc_cfg"]
 [dependencies]
 wasm-bindgen = { version = "0.2", optional = true }
 getrandom = { version = "0.2", features = ["js"] }
-grass_compiler = { path = "../compiler", version = "=0.13.2", default-features = false }
-include_sass = { path = "../include_sass", version = "0.13.2", optional = true }
+grass_compiler = { path = "../compiler", version = "=0.13.3", default-features = false }
+include_sass = { path = "../include_sass", version = "0.13.3", optional = true }
 clap = { version = "4.3.10", optional = true }
 
 [features]
