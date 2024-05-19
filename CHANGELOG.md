@@ -7,24 +7,29 @@
 
 -->
 
+# 0.13.3
+
+- implement builtin string-module function `string.split(..)` (#96) by @xpe
+- implement functionality for intercepting logs (#93) by cryocz
+
 # 0.13.2
 
- - update rustix dependency to silence security warning
- - fix @forward statement altering the scope of the forwarded module (#85) by @kketch
- - bump MSRV to 1.70.0
+- update rustix dependency to silence security warning
+- fix @forward statement altering the scope of the forwarded module (#85) by @kketch
+- bump MSRV to 1.70.0
 
 # 0.13.1
 
- - update `clap` dependency to 4.x.x to silence `atty` security warning
- - bump MSRV to 1.64.0 for new `clap` version
- - fix bug in which `--no-charset` flag wasn't respected
+- update `clap` dependency to 4.x.x to silence `atty` security warning
+- bump MSRV to 1.64.0 for new `clap` version
+- fix bug in which `--no-charset` flag wasn't respected
 
 # 0.13.0
 
- - fix various module system bugs when combined with `@import`. this is potentially breaking in rare cases where users were relying on the incorrect behavior
- - expose more AST internals in `grass_compiler`
- - allow building docs with stable/beta rust compiler
- - support `...$keys` argument to `map-get(..)`/`map.get(..)` (#83)
+- fix various module system bugs when combined with `@import`. this is potentially breaking in rare cases where users were relying on the incorrect behavior
+- expose more AST internals in `grass_compiler`
+- allow building docs with stable/beta rust compiler
+- support `...$keys` argument to `map-get(..)`/`map.get(..)` (#83)
 
 # 0.12.4
 
