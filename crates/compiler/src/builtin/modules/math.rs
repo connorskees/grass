@@ -481,7 +481,7 @@ pub(crate) fn declare(f: &mut Module) {
     );
     f.insert_builtin_var(
         "epsilon",
-        Value::Dimension(SassNumber::new_unitless(std::f64::EPSILON)),
+        Value::Dimension(SassNumber::new_unitless(f64::EPSILON)),
     );
     f.insert_builtin_var(
         "max-safe-integer",

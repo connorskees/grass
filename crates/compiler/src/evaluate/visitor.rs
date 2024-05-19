@@ -337,7 +337,7 @@ impl<'a> Visitor<'a> {
         config: Arc<RefCell<Configuration>>,
         forward_rule: &AstForwardRule,
     ) -> SassResult<Arc<RefCell<Configuration>>> {
-        let mut new_values = BTreeMap::from_iter((*config).borrow().values.iter().into_iter());
+        let mut new_values = BTreeMap::from_iter((*config).borrow().values.iter());
 
         for variable in &forward_rule.configuration {
             if variable.is_guarded {
@@ -1386,9 +1386,9 @@ impl<'a> Visitor<'a> {
             Some(merged_queries) if merged_queries.is_empty() => return Ok(None),
             Some(..) => {
                 let mut set = IndexSet::new();
-                set.extend(self.media_query_sources.clone().unwrap().into_iter());
-                set.extend(self.media_queries.clone().unwrap().into_iter());
-                set.extend(queries1.clone().into_iter());
+                set.extend(self.media_query_sources.clone().unwrap());
+                set.extend(self.media_queries.clone().unwrap());
+                set.extend(queries1.clone());
                 set
             }
             None => IndexSet::new(),
@@ -2626,9 +2626,7 @@ impl<'a> Visitor<'a> {
                         as_slash,
                     }),
                     Value::Calculation(calc) => CalculationArg::Calculation(calc),
-                    Value::String(s, quotes) if quotes == QuoteKind::None => {
-                        CalculationArg::String(s)
-                    }
+                    Value::String(s, QuoteKind::None) => CalculationArg::String(s),
                     value => {
                         return Err((
                             format!(

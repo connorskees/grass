@@ -348,7 +348,7 @@ impl Configuration {
     }
 
     pub fn first(&self) -> Option<Spanned<Identifier>> {
-        let name = *self.values.keys().get(0)?;
+        let name = *self.values.keys().first()?;
         let value = self.values.get(name)?;
 
         Some(Spanned {

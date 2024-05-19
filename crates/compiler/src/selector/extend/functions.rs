@@ -186,7 +186,7 @@ fn weave_parents(
         choices.push(
             chunks(&mut groups_one, &mut groups_two, |sequence| {
                 complex_is_parent_superselector(
-                    match sequence.get(0) {
+                    match sequence.front() {
                         Some(v) => v.clone(),
                         None => return true,
                     },
@@ -235,14 +235,14 @@ fn merge_initial_combinators(
 ) -> Option<Vec<Combinator>> {
     let mut combinators_one: Vec<Combinator> = Vec::new();
 
-    while let Some(ComplexSelectorComponent::Combinator(c)) = components_one.get(0) {
+    while let Some(ComplexSelectorComponent::Combinator(c)) = components_one.front() {
         combinators_one.push(*c);
         components_one.pop_front();
     }
 
     let mut combinators_two = Vec::new();
 
-    while let Some(ComplexSelectorComponent::Combinator(c)) = components_two.get(0) {
+    while let Some(ComplexSelectorComponent::Combinator(c)) = components_two.front() {
         combinators_two.push(*c);
         components_two.pop_front();
     }
@@ -565,7 +565,7 @@ fn first_if_root(queue: &mut VecDeque<ComplexSelectorComponent>) -> Option<Compo
     if queue.is_empty() {
         return None;
     }
-    if let Some(ComplexSelectorComponent::Compound(c)) = queue.get(0) {
+    if let Some(ComplexSelectorComponent::Compound(c)) = queue.front() {
         if !has_root(c) {
             return None;
         }
