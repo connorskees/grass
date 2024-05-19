@@ -1578,7 +1578,7 @@ impl<'a> Visitor<'a> {
             return;
         }
         let loc = self.map.look_up_span(span);
-        self.options.logger.warning(loc, message);
+        self.options.logger.warn(loc, message);
     }
 
     fn visit_warn_rule(&mut self, warn_rule: AstWarn) -> SassResult<()> {

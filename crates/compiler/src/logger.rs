@@ -1,16 +1,18 @@
 use codemap::SpanLoc;
 use std::fmt::Debug;
 
-/// Sink for log messages
+/// A trait to allow replacing logging mechanisms
 pub trait Logger: Debug {
-    /// Logs message from a `@debug` statement
+    /// Logs message from a [`@debug`](https://sass-lang.com/documentation/at-rules/debug/)
+    /// statement
     fn debug(&self, location: SpanLoc, message: &str);
 
-    /// Logs message from a `@warn` statement
-    fn warning(&self, location: SpanLoc, message: &str);
+    /// Logs message from a [`@warn`](https://sass-lang.com/documentation/at-rules/warn/)
+    /// statement
+    fn warn(&self, location: SpanLoc, message: &str);
 }
 
-/// Logs events to standard error
+/// Logs events to standard error, through [`eprintln!`]
 #[derive(Debug)]
 pub struct StdLogger;
 
@@ -26,7 +28,7 @@ impl Logger for StdLogger {
     }
 
     #[inline]
-    fn warning(&self, location: SpanLoc, message: &str) {
+    fn warn(&self, location: SpanLoc, message: &str) {
         eprintln!(
             "Warning: {}\n    ./{}:{}:{}",
             message,
@@ -37,7 +39,7 @@ impl Logger for StdLogger {
     }
 }
 
-/// Discards all log events
+/// Discards all logs
 #[derive(Debug)]
 pub struct NullLogger;
 
@@ -46,5 +48,5 @@ impl Logger for NullLogger {
     fn debug(&self, _location: SpanLoc, _message: &str) {}
 
     #[inline]
-    fn warning(&self, _location: SpanLoc, _message: &str) {}
+    fn warn(&self, _location: SpanLoc, _message: &str) {}
 }

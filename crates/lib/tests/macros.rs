@@ -189,7 +189,7 @@ impl Logger for TestLogger {
         self.0.borrow_mut().debug_messages.push(message.into());
     }
 
-    fn warning(&self, _location: SpanLoc, message: &str) {
+    fn warn(&self, _location: SpanLoc, message: &str) {
         self.0.borrow_mut().warning_messages.push(message.into());
     }
 }
