@@ -311,27 +311,91 @@ test!(
 test!(
     str_split_abc_space,
     "@use 'sass:string';
-    foo {
-        bar: string.split('a b c', ' ');
+    a {
+        color: string.split('a b c', ' ');
     }
     ",
-    "foo {\n  bar: [\"a\", \"b\", \"c\"];\n}\n"
+    "a {\n  color: [\"a\", \"b\", \"c\"];\n}\n"
 );
 test!(
     str_split_abc_space_1,
     "@use 'sass:string';
-    foo {
-        bar: string.split('a b c', ' ', 1);
+    a {
+        color: string.split('a b c', ' ', 1);
     }
     ",
-    "foo {\n  bar: [\"a\", \"b c\"];\n}\n"
+    "a {\n  color: [\"a\", \"b c\"];\n}\n"
 );
 test!(
     str_split_rgb_comma,
     "@use 'sass:string';
-    foo {
-        bar: string.split('red,green,blue', ',');
+    a {
+        color: string.split('red,green,blue', ',');
     }
     ",
-    "foo {\n  bar: [\"red\", \"green\", \"blue\"];\n}\n"
+    "a {\n  color: [\"red\", \"green\", \"blue\"];\n}\n"
+);
+test!(
+    str_split_big_limit,
+    "@use 'sass:string';
+    a {
+        color: string.split('red,green,blue', ',', 9223372036854775808);
+    }
+    ",
+    "a {\n  color: [\"red\", \"green\", \"blue\"];\n}\n"
+);
+error!(
+    str_split_negative_limit,
+    "@use 'sass:string';
+    a {
+        color: string.split('red,green,blue', ',', -1);
+    }
+    ",
+    "Error: $limit: Must be 1 or greater, was -1."
+);
+error!(
+    str_split_zero_limit,
+    "@use 'sass:string';
+    a {
+        color: string.split('red,green,blue', ',', 0);
+    }
+    ",
+    "Error: $limit: Must be 1 or greater, was 0."
+);
+error!(
+    str_split_string_limit,
+    "@use 'sass:string';
+    a {
+        color: string.split('red,green,blue', ',', '0');
+    }
+    ",
+    "Error: $limit: \"0\" is not a number."
+);
+error!(
+    str_split_first_arg_not_string,
+    "@use 'sass:string';
+    a {
+        color: string.split(1, ',');
+    }
+    ",
+    "Error: $string: 1 is not a string."
+);
+error!(
+    str_split_second_arg_not_string,
+    "@use 'sass:string';
+    a {
+        color: string.split('1', 2);
+    }
+    ",
+    "Error: $separator: 2 is not a string."
+);
+error!(
+    #[ignore = "overflow issue"]
+    str_split_limit_above_i64_max,
+    "@use 'sass:string';
+    a {
+        color: string.split('1', '1', 36893488147419103232);
+    }
+    ",
+    "Error: $limit: 36893488147419103000 is not an int."
 );

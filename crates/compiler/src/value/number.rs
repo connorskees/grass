@@ -53,6 +53,7 @@ pub(crate) fn fuzzy_as_int(num: f64) -> Option<i64> {
     let rounded = num.round();
 
     if fuzzy_equals(num, rounded) {
+        // todo: this can oveflow
         Some(rounded as i64)
     } else {
         None

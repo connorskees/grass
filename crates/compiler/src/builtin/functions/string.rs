@@ -149,7 +149,7 @@ pub(crate) fn str_split(mut args: ArgumentResult, visitor: &mut Visitor) -> Sass
         let limit_int = limit.assert_int_with_name("limit", args.span())?;
         if limit_int < 1 {
             return Err((
-                format!("$limit: Must be greater than 1, was {}.", limit_int),
+                format!("$limit: Must be 1 or greater, was {}.", limit_int),
                 args.span(),
             )
                 .into());
