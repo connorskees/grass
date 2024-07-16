@@ -3,6 +3,8 @@ name: 'Build WebAssembly'
 on:
   push:
     tags: [ '*' ]
+    branches:
+      - master
       
   workflow_dispatch:
 
