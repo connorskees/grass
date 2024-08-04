@@ -152,3 +152,9 @@ test!(
     "a{width:calc(100% + 32px)}",
     grass::Options::default().style(grass::OutputStyle::Compressed)
 );
+test!(
+    cyan_normalized_to_aqua,
+    "a {\n  color: cyan;\n}\n",
+    "a{color:aqua}",
+    grass::Options::default().style(grass::OutputStyle::Compressed)
+);

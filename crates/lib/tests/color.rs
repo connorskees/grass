@@ -705,6 +705,16 @@ test!(
     "a {\n  color: change-color(red, $whiteness: 50%, $hue: 230);\n}\n",
     "a {\n  color: #8095ff;\n}\n"
 );
+test!(
+    aqua_alias,
+    "a {\n  color: cyan == aqua;\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    fuchsia_alias,
+    "a {\n  color: magenta == fuchsia;\n}\n",
+    "a {\n  color: true;\n}\n"
+);
 error!(
     hex_color_starts_with_number_non_hex_digit_at_position_6,
     "a {\n  color: #00000z;\n}\n", "Error: Expected hex digit."
