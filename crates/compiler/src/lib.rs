@@ -47,21 +47,14 @@ grass input.scss
     clippy::multiple_crate_versions,
     clippy::wrong_self_convention,
     clippy::comparison_chain,
-
-    // these features are only available on nightly
-    clippy::unnested_or_patterns,
-    clippy::uninlined_format_args,
+    clippy::unwrap_or_default,
+    clippy::manual_unwrap_or_default,
 
     // todo: these should be enabled
-    clippy::cast_sign_loss,
-    clippy::cast_lossless,
-    clippy::cast_precision_loss,
-    clippy::float_cmp,
+    clippy::arc_with_non_send_sync,
 
     // todo: unignore once we bump MSRV
-    clippy::format_push_string,
-    clippy::unnecessary_unwrap,
-    clippy::needless_late_init,
+    clippy::assigning_clones,
 
     unknown_lints,
 )]

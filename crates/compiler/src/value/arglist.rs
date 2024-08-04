@@ -1,4 +1,4 @@
-use std::{cell::Cell, collections::BTreeMap, sync::Arc};
+use std::{cell::Cell, collections::BTreeMap, rc::Rc};
 
 use crate::common::{Identifier, ListSeparator};
 
@@ -7,7 +7,7 @@ use super::Value;
 #[derive(Debug, Clone)]
 pub struct ArgList {
     pub elems: Vec<Value>,
-    were_keywords_accessed: Arc<Cell<bool>>,
+    were_keywords_accessed: Rc<Cell<bool>>,
     // todo: special wrapper around this field to avoid having to make it private?
     keywords: BTreeMap<Identifier, Value>,
     pub separator: ListSeparator,
@@ -26,7 +26,7 @@ impl Eq for ArgList {}
 impl ArgList {
     pub fn new(
         elems: Vec<Value>,
-        were_keywords_accessed: Arc<Cell<bool>>,
+        were_keywords_accessed: Rc<Cell<bool>>,
         keywords: BTreeMap<Identifier, Value>,
         separator: ListSeparator,
     ) -> Self {

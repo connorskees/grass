@@ -363,6 +363,7 @@ impl SassCalculation {
                         BinaryOp::Plus
                     }
                 } else {
+                    // todo: do we need this branch?
                 }
                 right = CalculationArg::Number(n);
             }

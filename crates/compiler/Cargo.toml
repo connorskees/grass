@@ -23,7 +23,7 @@ bench = false
 rustdoc-args = ["--cfg", "doc_cfg"]
 
 [dependencies]
-# todo: use lazy_static
+# todo: replace with std::cell::LazyCell (msrv 1.80.0)
 once_cell = "1.15.0"
 # todo: use xorshift for random numbers
 rand = { version = "0.8", optional = true }

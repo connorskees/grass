@@ -6,6 +6,7 @@ use std::{
     iter::FromIterator,
     mem,
     path::{Path, PathBuf},
+    rc::Rc,
     sync::Arc,
 };
 
@@ -120,7 +121,7 @@ pub struct Visitor<'a> {
     pub(crate) active_modules: BTreeSet<PathBuf>,
     css_tree: CssTree,
     parent: Option<CssTreeIdx>,
-    configuration: Arc<RefCell<Configuration>>,
+    configuration: Rc<RefCell<Configuration>>,
     import_nodes: Vec<CssStmt>,
     pub options: &'a Options<'a>,
     pub(crate) map: &'a mut CodeMap,
@@ -159,7 +160,7 @@ impl<'a> Visitor<'a> {
             css_tree: CssTree::new(),
             parent: None,
             current_import_path,
-            configuration: Arc::new(RefCell::new(Configuration::empty())),
+            configuration: Rc::new(RefCell::new(Configuration::empty())),
             is_plain_css: false,
             import_nodes: Vec::new(),
             modules: BTreeMap::new(),
@@ -257,17 +258,16 @@ impl<'a> Visitor<'a> {
     }
 
     fn visit_forward_rule(&mut self, forward_rule: AstForwardRule) -> SassResult<()> {
-        let old_config = Arc::clone(&self.configuration);
-        let adjusted_config =
-            Configuration::through_forward(Arc::clone(&old_config), &forward_rule);
+        let old_config = Rc::clone(&self.configuration);
+        let adjusted_config = Configuration::through_forward(Rc::clone(&old_config), &forward_rule);
 
         if !forward_rule.configuration.is_empty() {
             let new_configuration =
-                self.add_forward_configuration(Arc::clone(&adjusted_config), &forward_rule)?;
+                self.add_forward_configuration(Rc::clone(&adjusted_config), &forward_rule)?;
 
             self.load_module(
                 forward_rule.url.as_path(),
-                Some(Arc::clone(&new_configuration)),
+                Some(Rc::clone(&new_configuration)),
                 false,
                 forward_rule.span,
                 |visitor, module, _| {
@@ -334,9 +334,9 @@ impl<'a> Visitor<'a> {
     #[allow(clippy::unnecessary_unwrap)]
     fn add_forward_configuration(
         &mut self,
-        config: Arc<RefCell<Configuration>>,
+        config: Rc<RefCell<Configuration>>,
         forward_rule: &AstForwardRule,
-    ) -> SassResult<Arc<RefCell<Configuration>>> {
+    ) -> SassResult<Rc<RefCell<Configuration>>> {
         let mut new_values = BTreeMap::from_iter((*config).borrow().values.iter());
 
         for variable in &forward_rule.configuration {
@@ -367,7 +367,7 @@ impl<'a> Visitor<'a> {
             );
         }
 
-        Ok(Arc::new(RefCell::new(
+        Ok(Rc::new(RefCell::new(
             if !(*config).borrow().is_implicit() || (*config).borrow().is_empty() {
                 Configuration::explicit(new_values, forward_rule.span)
             } else {
@@ -379,8 +379,8 @@ impl<'a> Visitor<'a> {
     /// Remove configured values from [upstream] that have been removed from
     /// [downstream], unless they match a name in [except].
     fn remove_used_configuration(
-        upstream: &Arc<RefCell<Configuration>>,
-        downstream: &Arc<RefCell<Configuration>>,
+        upstream: &Rc<RefCell<Configuration>>,
+        downstream: &Rc<RefCell<Configuration>>,
         except: &HashSet<Identifier>,
     ) {
         let mut names_to_remove = Vec::new();
@@ -542,7 +542,7 @@ impl<'a> Visitor<'a> {
     fn execute(
         &mut self,
         stylesheet: StyleSheet,
-        configuration: Option<Arc<RefCell<Configuration>>>,
+        configuration: Option<Rc<RefCell<Configuration>>>,
         // todo: different errors based on this
         _names_in_errors: bool,
     ) -> SassResult<Arc<RefCell<Module>>> {
@@ -551,7 +551,7 @@ impl<'a> Visitor<'a> {
         // todo: use canonical url for modules
         if let Some(already_loaded) = self.modules.get(&stylesheet.url) {
             let current_configuration =
-                configuration.unwrap_or_else(|| Arc::clone(&self.configuration));
+                configuration.unwrap_or_else(|| Rc::clone(&self.configuration));
 
             if !current_configuration.borrow().is_implicit() {
                 //   if (!_moduleConfigurations[url]!.sameOriginal(currentConfiguration) &&
@@ -643,7 +643,7 @@ impl<'a> Visitor<'a> {
     pub(crate) fn load_module(
         &mut self,
         url: &Path,
-        configuration: Option<Arc<RefCell<Configuration>>>,
+        configuration: Option<Rc<RefCell<Configuration>>>,
         names_in_errors: bool,
         span: Span,
         callback: impl Fn(&mut Self, Arc<RefCell<Module>>, StyleSheet) -> SassResult<()>,
@@ -714,7 +714,7 @@ impl<'a> Visitor<'a> {
 
     fn visit_use_rule(&mut self, use_rule: AstUseRule) -> SassResult<()> {
         let configuration = if use_rule.configuration.is_empty() {
-            Arc::new(RefCell::new(Configuration::empty()))
+            Rc::new(RefCell::new(Configuration::empty()))
         } else {
             let mut values = BTreeMap::new();
 
@@ -727,7 +727,7 @@ impl<'a> Visitor<'a> {
                 );
             }
 
-            Arc::new(RefCell::new(Configuration::explicit(values, use_rule.span)))
+            Rc::new(RefCell::new(Configuration::explicit(values, use_rule.span)))
         };
 
         let span = use_rule.span;
@@ -739,7 +739,7 @@ impl<'a> Visitor<'a> {
 
         self.load_module(
             &use_rule.url,
-            Some(Arc::clone(&configuration)),
+            Some(Rc::clone(&configuration)),
             false,
             span,
             |visitor, module, _| {
@@ -755,7 +755,7 @@ impl<'a> Visitor<'a> {
     }
 
     pub(crate) fn assert_configuration_is_empty(
-        config: &Arc<RefCell<Configuration>>,
+        config: &Rc<RefCell<Configuration>>,
         name_in_error: bool,
     ) -> SassResult<()> {
         let config = (**config).borrow();
@@ -960,7 +960,7 @@ impl<'a> Visitor<'a> {
 
         self.with_environment::<SassResult<()>, _>(env.clone(), |visitor| {
             let old_parent = visitor.parent;
-            let old_configuration = Arc::clone(&visitor.configuration);
+            let old_configuration = Rc::clone(&visitor.configuration);
 
             if loads_user_defined_modules {
                 visitor.parent = Some(CssTree::ROOT);
@@ -969,7 +969,7 @@ impl<'a> Visitor<'a> {
             // This configuration is only used if it passes through a `@forward`
             // rule, so we avoid creating unnecessary ones for performance reasons.
             if !stylesheet.forwards.is_empty() {
-                visitor.configuration = Arc::new(RefCell::new(env.to_implicit_configuration()));
+                visitor.configuration = Rc::new(RefCell::new(env.to_implicit_configuration()));
             }
 
             visitor.visit_stylesheet(stylesheet)?;
@@ -2284,7 +2284,7 @@ impl<'a> Visitor<'a> {
                     visitor.env.scopes_mut().insert_var_last(name, value);
                 }
 
-                let were_keywords_accessed = Arc::new(Cell::new(false));
+                let were_keywords_accessed = Rc::new(Cell::new(false));
 
                 let num_named_args = evaluated.named.len();
 
@@ -2297,7 +2297,7 @@ impl<'a> Visitor<'a> {
 
                     let arg_list = Value::ArgList(ArgList::new(
                         rest,
-                        Arc::clone(&were_keywords_accessed),
+                        Rc::clone(&were_keywords_accessed),
                         // todo: superfluous clone
                         evaluated.named.clone(),
                         if evaluated.separator == ListSeparator::Undecided {

@@ -18,7 +18,7 @@ pub(crate) struct KeyframesSelectorParser {
     toks: Lexer,
 }
 
-impl<'a> BaseParser for KeyframesSelectorParser {
+impl BaseParser for KeyframesSelectorParser {
     fn toks(&self) -> &Lexer {
         &self.toks
     }
