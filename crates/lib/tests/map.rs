@@ -255,6 +255,67 @@ test!(
     "a {\n  color: inspect((a: b, !important: c));\n}\n",
     "a {\n  color: (a: b, !important: c);\n}\n"
 );
+test!(
+    map_has_key_multiple_keys_true,
+    r#"
+    @use "sass:map";
+    $fonts: (
+        "Helvetica": (
+          "weights": (
+            "regular": 400,
+            "medium": 500,
+            "bold": 700
+          )
+        )
+    );
+    a {
+        color: map.has-key($fonts, "Helvetica", "weights", "regular");
+    }"#,
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    map_has_key_multiple_keys_false,
+    r#"
+    @use "sass:map";
+    $fonts: (
+        "Helvetica": (
+          "weights": (
+            "regular": 400,
+            "medium": 500,
+            "bold": 700
+          )
+        )
+    );
+    a {
+        color: map.has-key($fonts, "Helvetica", "colors");
+    }"#,
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    map_has_key_multiple_keys_value_is_null,
+    "a {\n  color: map-has-key((a: (b: null)), \"a\", \"b\");\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    map_has_key_multiple_keys_value_is_false,
+    "a {\n  color: map-has-key((a: (b: false)), \"a\", \"b\");\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    map_has_key_multiple_keys_deeply_nested,
+    "a {\n  color: map-has-key((a: (b: (c: (d: (e: (f: (g: (h: (i: (j: (k: (l: m)))))))))))), a, b, c, d, e, f, g, h, i, j, k, l);\n}\n",
+    "a {\n  color: true;\n}\n"
+);
+test!(
+    map_has_key_multiple_keys_empty_map,
+    "a {\n  color: map-has-key((), a, b, c);\n}\n",
+    "a {\n  color: false;\n}\n"
+);
+test!(
+    map_has_key_multiple_keys_value_isnt_map,
+    "a {\n  color: map-has-key((a: (b: 5)), a, b, c);\n}\n",
+    "a {\n  color: false;\n}\n"
+);
 error!(
     bang_identifier_not_important_as_key,
     "a {\n  color: inspect((a: b, !a: c));\n}\n", r#"Error: expected ")"."#

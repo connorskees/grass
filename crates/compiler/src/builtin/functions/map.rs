@@ -41,12 +41,34 @@ pub(crate) fn map_get(mut args: ArgumentResult, visitor: &mut Visitor) -> SassRe
 }
 
 pub(crate) fn map_has_key(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
-    args.max_args(2)?;
     let key = args.get_err(1, "key")?;
     let map = args
         .get_err(0, "map")?
         .assert_map_with_name("map", args.span())?;
-    Ok(Value::bool(map.get(&key).is_some()))
+
+    // since we already extracted the map and first key,
+    // neither will be returned in the variadic args list
+    let keys = args.get_variadic()?;
+
+    let mut val = match map.get(&key) {
+        Some(v) => v,
+        None => return Ok(Value::False),
+    };
+    for key in keys {
+        // if at any point we find a value that's not a map,
+        // we return null
+        let val_map = match val.try_map() {
+            Some(val_map) => val_map,
+            None => return Ok(Value::False),
+        };
+
+        val = match val_map.get(&key) {
+            Some(v) => v,
+            None => return Ok(Value::False),
+        };
+    }
+
+    Ok(Value::True)
 }
 
 pub(crate) fn map_keys(mut args: ArgumentResult, visitor: &mut Visitor) -> SassResult<Value> {
