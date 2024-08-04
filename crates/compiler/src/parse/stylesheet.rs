@@ -23,10 +23,9 @@ use super::{
     BaseParser, DeclarationOrBuffer, ScssParser, VariableDeclOrInterpolation, RESERVED_IDENTIFIERS,
 };
 
-// todo: can we simplify lifetimes (by maybe not storing reference to lexer)
 /// Default implementations are oriented towards the SCSS syntax, as both CSS and
 /// SCSS share the behavior
-pub(crate) trait StylesheetParser<'a>: BaseParser<'a> + Sized {
+pub(crate) trait StylesheetParser<'a>: BaseParser + Sized {
     // todo: make constant?
     fn is_plain_css(&self) -> bool;
     // todo: make constant?

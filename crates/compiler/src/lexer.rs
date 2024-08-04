@@ -1,4 +1,4 @@
-use std::{borrow::Cow, iter::Peekable, str::Chars, sync::Arc};
+use std::{iter::Peekable, str::Chars, sync::Arc};
 
 use codemap::{File, Span};
 
@@ -11,9 +11,8 @@ pub(crate) struct Token {
 }
 
 #[derive(Debug, Clone)]
-// todo: remove lifetime as Cow is now superfluous
-pub(crate) struct Lexer<'a> {
-    buf: Cow<'a, [Token]>,
+pub(crate) struct Lexer {
+    buf: Vec<Token>,
     entire_span: Span,
     cursor: usize,
     /// If the input this lexer is spanned over is larger than the original span.
@@ -21,7 +20,7 @@ pub(crate) struct Lexer<'a> {
     is_expanded: bool,
 }
 
-impl<'a> Lexer<'a> {
+impl Lexer {
     pub fn raw_text(&self, start: usize) -> String {
         self.buf[start..self.cursor]
             .iter()
@@ -97,7 +96,7 @@ impl<'a> Lexer<'a> {
     }
 }
 
-impl<'a> Iterator for Lexer<'a> {
+impl Iterator for Lexer {
     type Item = Token;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -151,7 +150,7 @@ impl<'a> Iterator for TokenLexer<'a> {
     }
 }
 
-impl<'a> Lexer<'a> {
+impl Lexer {
     pub fn new_from_file(file: &Arc<File>) -> Self {
         let buf = TokenLexer::new(file.source().chars().peekable()).collect();
         Self::new(buf, file.span, false)
@@ -166,7 +165,7 @@ impl<'a> Lexer<'a> {
 
     fn new(buf: Vec<Token>, entire_span: Span, is_expanded: bool) -> Self {
         Lexer {
-            buf: Cow::Owned(buf),
+            buf,
             cursor: 0,
             entire_span,
             is_expanded,

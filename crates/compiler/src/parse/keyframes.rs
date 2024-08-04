@@ -14,22 +14,22 @@ impl fmt::Display for KeyframesSelector {
     }
 }
 
-pub(crate) struct KeyframesSelectorParser<'a> {
-    toks: Lexer<'a>,
+pub(crate) struct KeyframesSelectorParser {
+    toks: Lexer,
 }
 
-impl<'a> BaseParser<'a> for KeyframesSelectorParser<'a> {
-    fn toks(&self) -> &Lexer<'a> {
+impl<'a> BaseParser for KeyframesSelectorParser {
+    fn toks(&self) -> &Lexer {
         &self.toks
     }
 
-    fn toks_mut(&mut self) -> &mut Lexer<'a> {
+    fn toks_mut(&mut self) -> &mut Lexer {
         &mut self.toks
     }
 }
 
-impl<'a> KeyframesSelectorParser<'a> {
-    pub fn new(toks: Lexer<'a>) -> KeyframesSelectorParser<'a> {
+impl KeyframesSelectorParser {
+    pub fn new(toks: Lexer) -> KeyframesSelectorParser {
         KeyframesSelectorParser { toks }
     }
 

@@ -2,22 +2,22 @@ use crate::{ast::MediaQuery, error::SassResult, lexer::Lexer};
 
 use super::BaseParser;
 
-pub(crate) struct MediaQueryParser<'a> {
-    pub toks: Lexer<'a>,
+pub(crate) struct MediaQueryParser {
+    pub toks: Lexer,
 }
 
-impl<'a> BaseParser<'a> for MediaQueryParser<'a> {
-    fn toks(&self) -> &Lexer<'a> {
+impl BaseParser for MediaQueryParser {
+    fn toks(&self) -> &Lexer {
         &self.toks
     }
 
-    fn toks_mut(&mut self) -> &mut Lexer<'a> {
+    fn toks_mut(&mut self) -> &mut Lexer {
         &mut self.toks
     }
 }
 
-impl<'a> MediaQueryParser<'a> {
-    pub fn new(toks: Lexer<'a>) -> MediaQueryParser<'a> {
+impl MediaQueryParser {
+    pub fn new(toks: Lexer) -> MediaQueryParser {
         MediaQueryParser { toks }
     }
 

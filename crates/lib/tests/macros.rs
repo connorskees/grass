@@ -174,6 +174,7 @@ struct TestLoggerState {
 #[derive(Debug, Default)]
 pub struct TestLogger(RefCell<TestLoggerState>);
 
+#[allow(unused)]
 impl TestLogger {
     pub fn debug_messages(&self) -> Vec<String> {
         self.0.borrow().debug_messages.clone()

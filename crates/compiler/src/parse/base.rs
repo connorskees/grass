@@ -5,10 +5,9 @@ use crate::{
     Token,
 };
 
-// todo: can we simplify lifetimes (by maybe not storing reference to lexer)
-pub(crate) trait BaseParser<'a> {
-    fn toks(&self) -> &Lexer<'a>;
-    fn toks_mut(&mut self) -> &mut Lexer<'a>;
+pub(crate) trait BaseParser {
+    fn toks(&self) -> &Lexer;
+    fn toks_mut(&mut self) -> &mut Lexer;
 
     fn whitespace_without_comments(&mut self) {
         while matches!(

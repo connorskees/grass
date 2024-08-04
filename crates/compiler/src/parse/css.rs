@@ -10,19 +10,19 @@ use crate::{
 use super::{value::ValueParser, BaseParser, StylesheetParser};
 
 pub(crate) struct CssParser<'a> {
-    pub toks: Lexer<'a>,
+    pub toks: Lexer,
     pub path: &'a Path,
     pub empty_span: Span,
     pub flags: ContextFlags,
     pub options: &'a Options<'a>,
 }
 
-impl<'a> BaseParser<'a> for CssParser<'a> {
-    fn toks(&self) -> &Lexer<'a> {
+impl<'a> BaseParser for CssParser<'a> {
+    fn toks(&self) -> &Lexer {
         &self.toks
     }
 
-    fn toks_mut(&mut self) -> &mut Lexer<'a> {
+    fn toks_mut(&mut self) -> &mut Lexer {
         &mut self.toks
     }
 
@@ -103,7 +103,7 @@ impl<'a> StylesheetParser<'a> for CssParser<'a> {
 
 impl<'a> CssParser<'a> {
     pub fn new(
-        toks: Lexer<'a>,
+        toks: Lexer,
         options: &'a Options<'a>,
         empty_span: Span,
         file_name: &'a Path,

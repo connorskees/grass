@@ -7,7 +7,7 @@ use crate::{lexer::Lexer, ContextFlags, Options};
 use super::{BaseParser, StylesheetParser};
 
 pub(crate) struct ScssParser<'a> {
-    pub toks: Lexer<'a>,
+    pub toks: Lexer,
     pub path: &'a Path,
     pub empty_span: Span,
     pub flags: ContextFlags,
@@ -16,7 +16,7 @@ pub(crate) struct ScssParser<'a> {
 
 impl<'a> ScssParser<'a> {
     pub fn new(
-        toks: Lexer<'a>,
+        toks: Lexer,
         options: &'a Options<'a>,
         empty_span: Span,
         file_name: &'a Path,
@@ -35,12 +35,12 @@ impl<'a> ScssParser<'a> {
     }
 }
 
-impl<'a> BaseParser<'a> for ScssParser<'a> {
-    fn toks(&self) -> &Lexer<'a> {
+impl<'a> BaseParser for ScssParser<'a> {
+    fn toks(&self) -> &Lexer {
         &self.toks
     }
 
-    fn toks_mut(&mut self) -> &mut Lexer<'a> {
+    fn toks_mut(&mut self) -> &mut Lexer {
         &mut self.toks
     }
 }

@@ -7,7 +7,7 @@ use crate::{ast::*, error::SassResult, lexer::Lexer, ContextFlags, Options, Toke
 use super::{BaseParser, StylesheetParser};
 
 pub(crate) struct SassParser<'a> {
-    pub toks: Lexer<'a>,
+    pub toks: Lexer,
     pub path: &'a Path,
     pub empty_span: Span,
     pub flags: ContextFlags,
@@ -18,12 +18,12 @@ pub(crate) struct SassParser<'a> {
     pub next_indentation_end: Option<usize>,
 }
 
-impl<'a> BaseParser<'a> for SassParser<'a> {
-    fn toks(&self) -> &Lexer<'a> {
+impl<'a> BaseParser for SassParser<'a> {
+    fn toks(&self) -> &Lexer {
         &self.toks
     }
 
-    fn toks_mut(&mut self) -> &mut Lexer<'a> {
+    fn toks_mut(&mut self) -> &mut Lexer {
         &mut self.toks
     }
 
@@ -344,7 +344,7 @@ impl<'a> StylesheetParser<'a> for SassParser<'a> {
 
 impl<'a> SassParser<'a> {
     pub fn new(
-        toks: Lexer<'a>,
+        toks: Lexer,
         options: &'a Options<'a>,
         empty_span: Span,
         file_name: &'a Path,

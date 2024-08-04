@@ -33,30 +33,30 @@ const SELECTOR_PSEUDO_CLASSES: [&str; 9] = [
 /// Pseudo-element selectors that take unadorned selectors as arguments.
 const SELECTOR_PSEUDO_ELEMENTS: [&str; 1] = ["slotted"];
 
-pub(crate) struct SelectorParser<'a> {
+pub(crate) struct SelectorParser {
     /// Whether this parser allows the parent selector `&`.
     allows_parent: bool,
 
     /// Whether this parser allows placeholder selectors beginning with `%`.
     allows_placeholder: bool,
 
-    pub toks: Lexer<'a>,
+    pub toks: Lexer,
 
     span: Span,
 }
 
-impl<'a> BaseParser<'a> for SelectorParser<'a> {
-    fn toks(&self) -> &Lexer<'a> {
+impl BaseParser for SelectorParser {
+    fn toks(&self) -> &Lexer {
         &self.toks
     }
 
-    fn toks_mut(&mut self) -> &mut Lexer<'a> {
+    fn toks_mut(&mut self) -> &mut Lexer {
         &mut self.toks
     }
 }
 
-impl<'a> SelectorParser<'a> {
-    pub fn new(toks: Lexer<'a>, allows_parent: bool, allows_placeholder: bool, span: Span) -> Self {
+impl SelectorParser {
+    pub fn new(toks: Lexer, allows_parent: bool, allows_placeholder: bool, span: Span) -> Self {
         Self {
             toks,
             allows_parent,
