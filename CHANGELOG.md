@@ -7,6 +7,11 @@
 
 -->
 
+# TBD
+
+- support `...$keys` argument to `map-has-key(..)`/`map.has-key(..)`
+- parse [aliased colors](https://developer.mozilla.org/en-US/docs/Web/CSS/named-color#description) (e.g. `cyan` for `aqua`) as colors rather than identifiers
+
 # 0.13.3
 
 - implement builtin string-module function `string.split(..)` (#96) by @xpe
