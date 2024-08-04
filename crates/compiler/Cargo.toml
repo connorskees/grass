@@ -1,6 +1,6 @@
 [package]
 name = "grass_compiler"
-version = "0.13.3"
+version = "0.13.4"
 edition = "2021"
 description = "Internal implementation of the grass compiler"
 readme = "README.md"
