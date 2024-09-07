@@ -155,7 +155,7 @@ pub(crate) fn str_split(mut args: ArgumentResult, visitor: &mut Visitor) -> Sass
                 .into());
         }
         // note: `1 + limit_int` is required to match dart-sass
-        s1.splitn(1 + limit_int as usize, &separator)
+        s1.splitn(limit_int.saturating_add(1) as usize, &separator)
             .map(|s| Value::String(s.to_string(), QuoteKind::Quoted))
             .collect()
     };
