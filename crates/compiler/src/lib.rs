@@ -248,7 +248,7 @@ pub fn from_path<P: AsRef<Path>>(p: P, options: &Options) -> Result<String> {
 /// ```
 #[inline]
 pub fn from_string<S: Into<String>>(input: S, options: &Options) -> Result<String> {
-    from_string_with_file_name(input.into(), "stdin", options)
+    from_string_with_file_name(input.into(), "", options)
 }
 
 #[cfg(feature = "wasm-exports")]

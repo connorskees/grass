@@ -799,73 +799,76 @@ impl<'a> Visitor<'a> {
     /// <https://sass-lang.com/documentation/at-rules/import#load-paths>
     #[allow(clippy::cognitive_complexity, clippy::redundant_clone)]
     pub fn find_import(&self, path: &Path) -> Option<PathBuf> {
-        let path_buf = if path.is_absolute() {
-            path.into()
-        } else {
-            self.current_import_path
-                .parent()
-                .unwrap_or_else(|| Path::new(""))
-                .join(path)
-        };
-
-        macro_rules! try_path {
-            ($path:expr) => {
-                let path = $path;
-                let dirname = path.parent().unwrap_or_else(|| Path::new(""));
-                let basename = path.file_name().unwrap_or_else(|| OsStr::new(".."));
-
-                let partial = dirname.join(format!("_{}", basename.to_str().unwrap()));
-
-                if self.options.fs.is_file(&path) {
-                    return Some(path.to_path_buf());
-                }
-
-                if self.options.fs.is_file(&partial) {
-                    return Some(partial);
-                }
-            };
+        fn test_path(options: &Options, path: impl AsRef<Path>) -> Option<PathBuf> {
+            let path = path.as_ref();
+            options.fs.is_file(path).then(|| path.to_path_buf())
         }
 
-        if path_buf.extension() == Some(OsStr::new("scss"))
-            || path_buf.extension() == Some(OsStr::new("sass"))
-            || path_buf.extension() == Some(OsStr::new("css"))
-        {
-            let extension = path_buf.extension().unwrap();
-            try_path!(path_buf.with_extension(format!(".import{}", extension.to_str().unwrap())));
-            try_path!(path_buf);
-            // todo: consider load paths
-            return None;
-        }
+        fn test_extension(
+            options: &Options,
+            path: impl AsRef<Path>,
+            extension: impl AsRef<Path>,
+        ) -> Option<PathBuf> {
+            let path = path.as_ref();
+            let extension = extension.as_ref();
 
-        macro_rules! try_path_with_extensions {
-            ($path:expr) => {
-                let path = $path;
-                try_path!(path.with_extension("import.sass"));
-                try_path!(path.with_extension("import.scss"));
-                try_path!(path.with_extension("import.css"));
-                try_path!(path.with_extension("sass"));
-                try_path!(path.with_extension("scss"));
-                try_path!(path.with_extension("css"));
-            };
-        }
-
-        try_path_with_extensions!(path_buf.clone());
-
-        if self.options.fs.is_dir(&path_buf) {
-            try_path_with_extensions!(path_buf.join("index"));
-        }
-
-        for load_path in &self.options.load_paths {
-            let path_buf = load_path.join(path);
-
-            try_path_with_extensions!(&path_buf);
-
-            if self.options.fs.is_dir(&path_buf) {
-                try_path_with_extensions!(path_buf.join("index"));
+            if !path.ends_with(extension) {
+                test_path(options, path.with_extension(extension))
+            } else {
+                None
             }
         }
 
-        None
+        fn try_path_with_extensions(options: &Options, path: impl AsRef<Path>) -> Option<PathBuf> {
+            let path = path.as_ref();
+
+            test_path(options, path)
+                .or_else(|| test_extension(options, path, "import.sass"))
+                .or_else(|| test_extension(options, path, "import.scss"))
+                .or_else(|| test_extension(options, path, "import.css"))
+                .or_else(|| test_extension(options, path, "sass"))
+                .or_else(|| test_extension(options, path, "scss"))
+                .or_else(|| test_extension(options, path, "css"))
+        }
+
+        fn try_path(options: &Options, path: impl AsRef<Path>) -> Option<PathBuf> {
+            let path = path.as_ref();
+
+            try_path_with_extensions(options, path)
+                .or_else(|| {
+                    let parent_dir = path.parent()?;
+                    let path_name = path.file_name().and_then(OsStr::to_str)?;
+
+                    if path_name.starts_with('_') {
+                        // already a partial file name, so skip
+                        return None;
+                    }
+
+                    try_path_with_extensions(options, parent_dir.join(format!("_{path_name}")))
+                })
+                .or_else(|| test_path(options, path.join("index.sass")))
+                .or_else(|| test_path(options, path.join("index.scss")))
+                .or_else(|| test_path(options, path.join("_index.scss")))
+                .or_else(|| test_path(options, path.join("_index.scss")))
+        }
+
+        let initial_path = {
+            if path.is_absolute() {
+                path.to_path_buf()
+            } else {
+                self.current_import_path
+                    .parent()
+                    .unwrap_or(Path::new(""))
+                    .join(path)
+            }
+        };
+
+        try_path(self.options, &initial_path).or_else(|| {
+            self.options
+                .load_paths
+                .iter()
+                .find_map(|load_path| try_path(self.options, load_path.join(path)))
+        })
     }
 
     fn parse_file(
