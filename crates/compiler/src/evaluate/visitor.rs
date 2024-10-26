@@ -799,38 +799,60 @@ impl<'a> Visitor<'a> {
     /// <https://sass-lang.com/documentation/at-rules/import#load-paths>
     #[allow(clippy::cognitive_complexity, clippy::redundant_clone)]
     pub fn find_import(&self, path: &Path) -> Option<PathBuf> {
-        fn try_path_with_extensions(options: &Options, path: impl AsRef<Path>) -> Option<PathBuf> {
-            fn test_path(options: &Options, path: impl AsRef<Path>) -> Option<PathBuf> {
-                options
-                    .fs
-                    .is_file(path.as_ref())
-                    .then(|| path.as_ref().to_path_buf())
-            }
+        fn test_path(options: &Options, path: impl AsRef<Path>) -> Option<PathBuf> {
+            let path = path.as_ref();
+            options.fs.is_file(path).then(|| path.to_path_buf())
+        }
 
-            test_path(options, path.as_ref())
-                .or_else(|| test_path(options, path.as_ref().with_extension("import.sass")))
-                .or_else(|| test_path(options, path.as_ref().with_extension("import.scss")))
-                .or_else(|| test_path(options, path.as_ref().with_extension("import.css")))
-                .or_else(|| test_path(options, path.as_ref().with_extension("sass")))
-                .or_else(|| test_path(options, path.as_ref().with_extension("scss")))
-                .or_else(|| test_path(options, path.as_ref().with_extension("css")))
+        fn test_extension(
+            options: &Options,
+            path: impl AsRef<Path>,
+            extension: impl AsRef<Path>,
+        ) -> Option<PathBuf> {
+            let path = path.as_ref();
+            let extension = extension.as_ref();
+
+            if !path.ends_with(extension) {
+                test_path(options, path.with_extension(extension))
+            } else {
+                None
+            }
+        }
+
+        fn try_path_with_extensions(options: &Options, path: impl AsRef<Path>) -> Option<PathBuf> {
+            let path = path.as_ref();
+
+            test_path(options, path)
+                .or_else(|| test_extension(options, path, "import.sass"))
+                .or_else(|| test_extension(options, path, "import.scss"))
+                .or_else(|| test_extension(options, path, "import.css"))
+                .or_else(|| test_extension(options, path, "sass"))
+                .or_else(|| test_extension(options, path, "scss"))
+                .or_else(|| test_extension(options, path, "css"))
         }
 
         fn try_path(options: &Options, path: impl AsRef<Path>) -> Option<PathBuf> {
-            try_path_with_extensions(options, path.as_ref()).or_else(|| {
-                let parent_dir = path.as_ref().parent()?;
-                let path_name = path.as_ref().file_name().and_then(OsStr::to_str)?;
+            let path = path.as_ref();
 
-                if path_name.starts_with('_') {
-                    // already a partial file name, so skip
-                    return None;
-                }
+            try_path_with_extensions(options, path)
+                .or_else(|| {
+                    let parent_dir = path.parent()?;
+                    let path_name = path.file_name().and_then(OsStr::to_str)?;
 
-                try_path_with_extensions(options, parent_dir.join(format!("_{path_name}")))
-            })
+                    if path_name.starts_with('_') {
+                        // already a partial file name, so skip
+                        return None;
+                    }
+
+                    try_path_with_extensions(options, parent_dir.join(format!("_{path_name}")))
+                })
+                .or_else(|| test_path(options, path.join("index.sass")))
+                .or_else(|| test_path(options, path.join("index.scss")))
+                .or_else(|| test_path(options, path.join("_index.scss")))
+                .or_else(|| test_path(options, path.join("_index.scss")))
         }
 
-        let path = {
+        let initial_path = {
             if path.is_absolute() {
                 path.to_path_buf()
             } else {
@@ -841,11 +863,11 @@ impl<'a> Visitor<'a> {
             }
         };
 
-        try_path(self.options, &path).or_else(|| {
+        try_path(self.options, &initial_path).or_else(|| {
             self.options
                 .load_paths
                 .iter()
-                .find_map(|load_path| try_path(self.options, load_path.join(&path)))
+                .find_map(|load_path| try_path(self.options, load_path.join(path)))
         })
     }
 
