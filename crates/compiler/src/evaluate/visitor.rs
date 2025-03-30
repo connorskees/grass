@@ -2566,7 +2566,7 @@ impl<'a> Visitor<'a> {
             AstExpr::Paren(expr) => self.visit_expr((*expr).clone())?,
             AstExpr::ParentSelector => self.visit_parent_selector(),
             AstExpr::UnaryOp(op, expr, span) => self.visit_unary_op(op, (*expr).clone(), span)?,
-            AstExpr::Variable { name, namespace } => self.env.get_var(name, namespace)?,
+            AstExpr::Variable { name, namespace } => self.visit_variable(name, namespace)?,
             AstExpr::Supports(condition) => Value::String(
                 self.visit_supports_condition((*condition).clone())?,
                 QuoteKind::None,
@@ -3078,5 +3078,23 @@ impl<'a> Visitor<'a> {
         }
 
         Ok(None)
+    }
+
+    fn visit_variable(
+        &mut self,
+        name: Spanned<Identifier>,
+        namespace: Option<Spanned<Identifier>>,
+    ) -> SassResult<Value> {
+        self.env.get_var(name, namespace).or_else(|e| {
+            if namespace.is_none() {
+                if let Some(v) = self.options.custom_vars.get(name.as_str()) {
+                    Ok(v.clone())
+                } else {
+                    Err(e)
+                }
+            } else {
+                Err(e)
+            }
+        })
     }
 }

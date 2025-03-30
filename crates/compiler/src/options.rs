@@ -3,7 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::{builtin::Builtin, Fs, Logger, StdFs, StdLogger};
+use crate::{builtin::Builtin, value::Value, Fs, Logger, StdFs, StdLogger};
 
 /// Configuration for Sass compilation
 ///
@@ -20,6 +20,7 @@ pub struct Options<'a> {
     pub(crate) quiet: bool,
     pub(crate) input_syntax: Option<InputSyntax>,
     pub(crate) custom_fns: HashMap<String, Builtin>,
+    pub(crate) custom_vars: HashMap<String, Value>,
 }
 
 impl Default for Options<'_> {
@@ -35,6 +36,7 @@ impl Default for Options<'_> {
             quiet: false,
             input_syntax: None,
             custom_fns: HashMap::new(),
+            custom_vars: HashMap::new(),
         }
     }
 }
@@ -174,6 +176,13 @@ impl<'a> Options<'a> {
     #[cfg_attr(doc_cfg, doc(cfg(feature = "custom-builtin-fns")))]
     pub fn add_custom_fn<S: Into<String>>(mut self, name: S, func: Builtin) -> Self {
         self.custom_fns.insert(name.into(), func);
+        self
+    }
+
+    #[must_use]
+    #[inline]
+    pub fn add_custom_var<S: Into<String>>(mut self, name: S, value: Value) -> Self {
+        self.custom_vars.insert(name.into(), value);
         self
     }
 
